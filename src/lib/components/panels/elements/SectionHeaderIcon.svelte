@@ -18,7 +18,7 @@ let {
 </script>
 
 <div
-  class="focus:outline-none focus:ring-0 {isNarrow ? 'px-2 py-2' : ''}"
+  class="bits-theme focus:outline-none focus:ring-0 {isNarrow ? 'px-2 py-2' : ''}"
   onclick={isNarrow && href ? onNavigate : undefined}
   role="presentation"
 >

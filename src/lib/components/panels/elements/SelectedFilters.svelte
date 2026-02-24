@@ -22,6 +22,6 @@ let displayText = $derived(
 )
 </script>
 
-<div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+<div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
   <p class="pb-2 text-sm text-base-content/60">{@html displayText}</p>
 </div>

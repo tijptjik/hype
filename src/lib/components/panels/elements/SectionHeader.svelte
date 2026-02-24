@@ -37,9 +37,9 @@ let {
 >()
 
 let focusVisibleClass = $derived(
-  iconColorClass == 'text-secondary'
+  iconColorClass === 'text-secondary'
     ? 'focus-visible:text-secondary'
-    : iconColorClass == 'text-accent'
+    : iconColorClass === 'text-accent'
       ? 'focus-visible:text-accent'
       : 'focus-visible:text-primary',
 )
@@ -47,8 +47,8 @@ let focusVisibleClass = $derived(
 let href = $derived(
   !panelProps.isAdmin ||
     panelProps.panelType !== 'admin' ||
-    (resourceType == panelProps.active?.resourceType &&
-      panelProps.active?.resourceRef == false)
+    (resourceType === panelProps.active?.resourceType &&
+      panelProps.active?.resourceRef === false)
     ? null
     : getUrlForResourceIndex(resourceType),
 )

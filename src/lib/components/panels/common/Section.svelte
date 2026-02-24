@@ -50,8 +50,8 @@ const onNavigate = (e: MouseEvent) => {
       return
     }
     if (
-      resourceType == panelProps.active.resourceType &&
-      panelProps.active.resourceRef == false
+      resourceType === panelProps.active.resourceType &&
+      panelProps.active.resourceRef === false
     ) {
       onToggle(e)
     } else {
@@ -63,9 +63,9 @@ const onNavigate = (e: MouseEvent) => {
 </script>
 
 <section
-  class="flex min-h-0 flex-col overflow-hidden bg-black caret-transparent {isOpen
-    ? 'flex-grow-0'
-    : 'flex-shrink-0'} {panelProps.position === 'left' && !panelProps.isNarrow
+  class="bits-theme flex min-h-0 flex-col overflow-hidden bg-black caret-transparent {isOpen
+    ? 'grow-0'
+    : 'shrink-0'} {panelProps.position === 'left' && !panelProps.isNarrow
     ? 'pr-4'
     : ''}"
 >

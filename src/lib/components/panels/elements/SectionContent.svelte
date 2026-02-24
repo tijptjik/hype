@@ -18,13 +18,13 @@ let {
 
 {#if isOpen && children}
   <div
-    class="flex min-h-0 flex-grow flex-col bg-black caret-white"
+    class="flex min-h-0 grow flex-col bg-black caret-white"
     transition:slide={{ duration: 200 }}
   >
     {@render children()}
   </div>
 {:else if collapsedContent}
-  <div class="flex min-h-0 flex-shrink-0 flex-grow flex-col">
+  <div class="flex min-h-0 shrink-0 grow flex-col">
     {@render collapsedContent()}
   </div>
 {/if}
