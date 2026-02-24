@@ -399,7 +399,11 @@ export const updateProjectByIdWithConcurrency = async (
   params: {
     id: Id
     updatedAt: string
-    data: { code: string; capabilities: ProjectDB['capabilities'] }
+    data: {
+      organisationId: ProjectDB['organisationId']
+      code: string
+      capabilities: ProjectDB['capabilities']
+    }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
   const [updated] = await db
