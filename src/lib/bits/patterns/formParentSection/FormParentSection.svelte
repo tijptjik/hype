@@ -36,7 +36,7 @@ function toImageSrc(organisation: ParentSectionOrganisationItem): string | null 
   if (!organisation.image) return null
   try {
     return getURLfromImage({
-      image: organisation.image as any,
+      image: organisation.image as Parameters<typeof getURLfromImage>[0]['image'],
       transformation: 'c_fill,h_96,w_96',
     })
   } catch {
