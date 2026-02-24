@@ -164,7 +164,7 @@ $effect(() => {
     </div>
   {/if}
 
-  <UserCard.Wrapper isAnimated>
+  <UserCard.Wrapper class="bits-form__user-card-wrapper--spacious" isAnimated>
     {#each renderedRoles as userRole (userRole.userId)}
       <UserCard.Root class="bits-form__user-card-root--full">
         <UserCard.Avatar
