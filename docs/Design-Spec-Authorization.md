@@ -172,33 +172,6 @@ Working notes for designing a unified authorization system with hierarchical own
   - unrelated authenticated user
   - anonymous actor (future-path expectation)
 
-## Policy Matrix (v1, Organisation)
-
-### Action-Level Matrix
-| Action | Core hub admin | Scoped non-core hub admin (same hub) | Non-core hub admin (other hub) | Organisation owner | Organisation member | Unrelated authenticated user | Anonymous |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `createOrganisation` | Allow | Allow | Deny | Deny | Deny | Deny | Deny |
-| `updateOrganisation.fields` (non-restricted fields) | Allow | Allow | Deny | Allow | Deny | Deny | Deny |
-| `updateOrganisation.publish` (`isPublished`) | Allow | Allow | Deny | Allow | Deny | Deny | Deny |
-| `updateOrganisation.manageRoles` (`userRoles`) | Allow | Allow | Deny | Allow | Deny | Deny | Deny |
-
-### Field-Level Matrix (`updateOrganisation.fields`)
-| Field group | Core hub admin | Scoped non-core hub admin (same hub) | Organisation owner |
-| --- | --- | --- | --- |
-| `hubId`, `isCoreInclusive` | Allow | Deny | Deny |
-| `isHubExclusive` | Allow | Allow | Deny |
-| Other organisation fields | Allow | Allow | Allow |
-
-### Validation/Integrity Matrix
-| Flow | Rule | Expected result |
-| --- | --- | --- |
-| Create | `userRoles` empty | Deny (`invalid`) |
-| Create | No owner in `userRoles` | Deny (`invalid`) |
-| Create | `code` in reserved list | Deny (`invalid`) |
-| Update | `meta.updatedAt` differs from persisted `updatedAt` | Deny (`invalid`, stale write) |
-| Create/Update role mutation | Result has zero owners | Deny (`invalid`) |
-| Unauthorized create/update | Any unauthorized actor | Deny (`403` + machine-readable code) |
-
 ### Why policy-in-code first
 - Stronger refactor safety with TypeScript types and compile-time checks.
 - Faster iteration while role semantics and field-level constraints are still
@@ -273,7 +246,8 @@ Working notes for designing a unified authorization system with hierarchical own
   - include `meta.updatedAt` in form payload
   - reject stale updates when payload `updatedAt` does not match persisted record
 - Implementation shape:
-  - implement `authorize(...)` for organisation now
+  - central `authorize(...)` is implemented for `organisation`
+  - `projectPolicyMap` exists, but central dispatcher wiring for `project` is a pending refactor
   - unsupported resource types return `NOT_IMPLEMENTED`
   - use guarded remote wrappers to enforce consistent checks
 - Audit logging of allow/deny writes: roadmap item.

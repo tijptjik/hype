@@ -74,6 +74,11 @@ Examples :
 
 ### Capabilities
 
+#### Capability Policy Actions
+
+- `manageCapabilities` (project-level capability config): allowed for `SuperAdmin`, relevant scoped `Hub Admin`, `Organisation Owner`, `Project Owner`; denied for `Project Maintainer` and below.
+- `assignCapabilities` (project role capability assignment): allowed for `SuperAdmin`, relevant scoped `Hub Admin`, `Organisation Owner`, `Project Owner`, and `Project Maintainer`; denied for lower roles.
+
 #### User
 No Dash / Admin access.
 
@@ -132,15 +137,3 @@ Note `deleteEventAttendence` is not available - user no shows are marked with `E
 - In the `app`, Maintainers get the ability to *also* show unpublished + unreviewed items (i.e. “Pending Review”, Owner additionally have the ability to show unpublished + reviewed (i.e. “Unpublished”) ; and or archived items (i.e. “Deleted”). These options are available in addition to the “Published” option – this is the default option and is the only one activated on load. 
 - `Members` ordinarily don’t have any additional capabilities, but they show up in the project member list so that other roles can be assigned to them. However, when they have ‘responsibilities’ assigned to them (e.g. ‘Support Manager’, ‘Whip’,’)
 - `Users` don’t have any admin rights, but they show up as valid values for events - only project users can attend project “events".
-
-### Project Matrix
-
-| Actor group | List published | List unpublished | List archived | Read published | Read unpublished | Read archived | Create project | Update non-i18n fields | Update i18n fields | Manage roles | Publish/Unpublish | Archive/Restore |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Unauthenticated | No | No | No | No | No | No | No | No | No | No | No | No |
-| Breadline User (Project User) | Yes | No | No | Yes | No | No | No | No | No | No | No | No |
-| Project Member | Yes | Yes | No | Yes | Yes | No | No | No | No | No | No | No |
-| Project Translator | Yes | Yes | No | Yes | Yes | No | No | No | Yes | No | No | No |
-| Project Maintainer | Yes | Yes | No | Yes | Yes | No | No | Yes | Yes | Yes | No | No |
-| {Organisation, Project} Owner | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| {Super, Hub} Admin | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
