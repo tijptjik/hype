@@ -552,6 +552,7 @@ export const archiveOrganisation = guardedCommand(
         user,
         userRoles,
         resource: {
+          id: probed.id,
           hubId: probed.hubId,
         },
       }),
