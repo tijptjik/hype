@@ -365,6 +365,8 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('PROJECT_NOT_FOUND')),
   )
 
+  const { organisationId: _submittedOrganisationId, ...submittedDataForUpdate } = data
+
   // Apply role-based authorization for core update fields.
   const updateDecision = authorizeProjectUpdateForSubmission({
     user,
@@ -374,7 +376,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       organisationId: current.organisationId,
       hubId: current.hubId,
     },
-    submittedData: data,
+    submittedData: submittedDataForUpdate,
   })
   if (!updateDecision.allowed) {
     invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
@@ -433,9 +435,40 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     }
   }
 
-  // TODO Allow projects to be moved between organisations.
+  // Allow projects to be assigned to or moved between organisations.
   if (data.organisationId !== current.organisationId) {
-    invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
+    const targetOrganisationScope = requireValue(
+      await probeOrganisationHubForProject(db, data.organisationId as Id),
+      () => invalid(issue('ORGANISATION_NOT_FOUND')),
+    )
+
+    const createOnTargetDecision = authorizeProjectCreateForSubmission({
+      user,
+      userRoles,
+      organisationId: data.organisationId,
+      resourceHubId: targetOrganisationScope.hubId,
+      submittedData: data,
+    })
+    if (!createOnTargetDecision.allowed) {
+      invalid(
+        issue(toIssueDetailMessage(createOnTargetDecision.code ?? 'INSUFFICIENT_ROLE')),
+      )
+    }
+
+    const deleteOnSourceDecision = authorizeProjectDeleteForSubmission({
+      user,
+      userRoles,
+      resource: {
+        id: current.id,
+        organisationId: current.organisationId,
+        hubId: current.hubId,
+      },
+    })
+    if (!deleteOnSourceDecision.allowed) {
+      invalid(
+        issue(toIssueDetailMessage(deleteOnSourceDecision.code ?? 'INSUFFICIENT_ROLE')),
+      )
+    }
   }
 
   // Perform additional auth checks if capabilities changed.
@@ -484,6 +517,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       id: current.id as Id,
       updatedAt: updatedAt as string,
       data: {
+        organisationId: data.organisationId,
         code: normalizedCode,
         capabilities: data.capabilities ?? {},
       },
@@ -501,7 +535,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     db,
     toPersistedProjectUserRoles(submittedRolesWithCapabilities, current.id),
     current.id as Id,
-    current.organisationId as Id,
+    data.organisationId as Id,
   )
 
   if (hasSubmittedProperties) {
