@@ -1689,6 +1689,15 @@ export type ProjectSubmitUpdatesParams<TEntityResult, TListResult> = {
   entityQuery: TEntityResult
   listQuery: TListResult
 }
+export type ProjectOwnerRoleSeedOrganisation = {
+  data?: {
+    userRoles?: Array<{
+      userId: string
+      role: string
+      user?: User | null
+    }>
+  } | null
+} | null
 export type ProjectGetResponse = EntityResponse<Project>
 export type ProjectGetState = ProjectGetResponse | null
 export type ProjectPublishInput = z.input<typeof PublishProjectSchema>
