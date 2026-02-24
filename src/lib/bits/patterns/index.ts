@@ -1,4 +1,5 @@
 export * from './entityImage'
+export * from './formParentSection'
 export * from './formUserRolesSection'
 export * from './formOrganisationsSection'
 export * from './formI18nSection'
