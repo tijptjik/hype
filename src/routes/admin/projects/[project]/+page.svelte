@@ -366,6 +366,7 @@ const canDeleteProject = $derived.by(() => {
   }).allowed
 })
 const canEditImagePresentationMode = $derived(canSubmitProject && isCurrentRefLoaded)
+const canEditImageDropzone = $derived(canEditProject && isCurrentRefLoaded)
 const canSetParentOrganisation = $derived.by(() => {
   const projectData = project?.data
   return canSetProjectParentOrganisation({
@@ -999,6 +1000,7 @@ $effect(() => {
           }
         : undefined}
       canEditPresentationMode={canEditImagePresentationMode}
+      canEditDropzone={canEditImageDropzone}
       {onPresentationModeCommitted}
     />
   </Main.Section>

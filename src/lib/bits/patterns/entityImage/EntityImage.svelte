@@ -30,6 +30,7 @@ let {
   currentImage = null,
   ctx,
   canEditPresentationMode = true,
+  canEditDropzone = true,
   onPresentationModeCommitted,
 }: {
   page: Page
@@ -38,6 +39,7 @@ let {
   currentImage?: ImageCtxEnvelope | null
   ctx?: ImageEditCtx
   canEditPresentationMode?: boolean
+  canEditDropzone?: boolean
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
 } = $props()
 
@@ -160,7 +162,7 @@ $effect(() => {
             </SectionHeader>
             <main class="bits-entity-image__viewer">
               <Viewer
-                isDropzone={true}
+                isDropzone={canEditDropzone}
                 layout={isCoverPresentationMode ? 'cover' : 'contain'}
                 onActiveImageChange={image => {
                   viewerActiveImage = image

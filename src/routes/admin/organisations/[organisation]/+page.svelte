@@ -314,6 +314,7 @@ const canSubmitOrganisation = $derived(
 const canEditImagePresentationMode = $derived(
   canSubmitOrganisation && isCurrentRefLoaded,
 )
+const canEditImageDropzone = $derived(canEditOrganisation && isCurrentRefLoaded)
 
 // § Handlers
 
@@ -691,6 +692,7 @@ $effect(() => {
           }
         : undefined}
       canEditPresentationMode={canEditImagePresentationMode}
+      canEditDropzone={canEditImageDropzone}
       {onPresentationModeCommitted}
     />
   </Main.Section>

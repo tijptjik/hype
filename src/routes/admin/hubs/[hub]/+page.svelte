@@ -347,6 +347,7 @@ const canPublishHub = $derived(hubPermissions.canPublish)
 const canDeleteHub = $derived(hubPermissions.canDelete)
 const canSubmitHub = $derived(isNewHubRef ? canCreateHub : canEditHub)
 const canEditImagePresentationMode = $derived(canSubmitHub && isCurrentRefLoaded)
+const canEditImageDropzone = $derived(canEditHub && isCurrentRefLoaded)
 const canSetCoreInclusive = $derived(canCreateHub)
 const allowedOrganisationIds = $derived.by(() => {
   if (adminCtx.appCtx.isSuperAdmin()) return null
@@ -826,6 +827,7 @@ $effect(() => {
             }
           : undefined}
       canEditPresentationMode={canEditImagePresentationMode}
+      canEditDropzone={canEditImageDropzone}
       {onPresentationModeCommitted}
     />
   </Main.Section>
