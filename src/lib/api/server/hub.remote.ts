@@ -5,6 +5,7 @@ import {
   getDuplicateValues,
   hasRoleMembershipChanged,
   requireValue,
+  toBooleanStateResponseShape,
   toCreatedResponseShape,
   validateUniqueNonReservedCode,
 } from '$lib/api/services'
@@ -424,12 +425,7 @@ export const publishHub = guardedCommand(PublishHubSchema, async (params, ctx) =
     },
   )
 
-  return {
-    data: {
-      id: persisted.id,
-      isPublished: persisted.isPublished,
-    },
-  }
+  return toBooleanStateResponseShape(persisted, 'isPublished')
 })
 
 /**
@@ -469,12 +465,7 @@ export const archiveHub = guardedCommand(RemoveHubSchema, async (params, ctx) =>
     },
   )
 
-  return {
-    data: {
-      id: persisted.id,
-      isArchived: persisted.isArchived,
-    },
-  }
+  return toBooleanStateResponseShape(persisted, 'isArchived')
 })
 
 /* ----------------- */

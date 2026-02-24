@@ -32,6 +32,7 @@ import {
   getDuplicateValues,
   hasRoleMembershipChanged,
   requireValue,
+  toBooleanStateResponseShape,
   toCreatedResponseShape,
   validateUniqueNonReservedCode,
 } from '$lib/api/services'
@@ -406,6 +407,7 @@ export const organisationForm = guardedForm(
       invalid(issue(toIssueDetailMessage('STALE_WRITE')))
     }
 
+    // Enforce uniqueness of code.
     await validateUniqueNonReservedCode({
       code: normalizedCode,
       current,
@@ -417,18 +419,17 @@ export const organisationForm = guardedForm(
     })
 
     // Persist main record atomically with optimistic concurrency.
-    const result = await updateOrganisationByIdWithConcurrency(db, {
-      id: current.id,
-      updatedAt: updatedAt as string,
-      data: {
-        code: normalizedCode,
-        url: data.url.trim() === '' ? null : data.url.trim(),
-        capabilities: data.capabilities ?? {},
-      },
-    })
-
-    const persisted = requireValue(result, () =>
-      invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
+    const persisted = requireValue(
+      await updateOrganisationByIdWithConcurrency(db, {
+        id: current.id,
+        updatedAt: updatedAt as string,
+        data: {
+          code: normalizedCode,
+          url: data.url.trim() === '' ? null : data.url.trim(),
+          capabilities: data.capabilities ?? {},
+        },
+      }),
+      () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
     )
 
     // Persist related i18n and role assignments.
@@ -496,12 +497,7 @@ export const publishOrganisation = guardedCommand(
       },
     )
 
-    return {
-      data: {
-        id: persisted.id,
-        isPublished: persisted.isPublished,
-      },
-    }
+    return toBooleanStateResponseShape(persisted, 'isPublished')
   },
 )
 
@@ -552,11 +548,6 @@ export const archiveOrganisation = guardedCommand(
       },
     )
 
-    return {
-      data: {
-        id: persisted.id,
-        isArchived: persisted.isArchived,
-      },
-    }
+    return toBooleanStateResponseShape(persisted, 'isArchived')
   },
 )

@@ -32,6 +32,20 @@ export const toCreatedResponseShape = <T extends { id: string; modifiedAt: strin
   },
 })
 
+export const toBooleanStateResponseShape = <
+  K extends 'isPublished' | 'isArchived',
+  T extends { id: string } & Record<K, boolean>,
+>(
+  value: T,
+  field: K,
+): { data: { id: string } & Record<K, boolean> } =>
+  ({
+    data: {
+      id: value.id,
+      [field]: value[field],
+    },
+  }) as { data: { id: string } & Record<K, boolean> }
+
 export const hasRoleMembershipChanged = (
   submittedRoles: Array<{ userId: string; role: string }>,
   existingRoles: Array<{ userId: string; role: string }>,
