@@ -72,7 +72,7 @@ export const organisation = sqliteTable('organisation', {
   })
     .$type<CapabilityDefinitions>()
     .notNull()
-    .default('{}'),
+    .default({} as CapabilityDefinitions),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {

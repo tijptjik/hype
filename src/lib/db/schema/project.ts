@@ -44,7 +44,7 @@ export const project = sqliteTable('project', {
   })
     .$type<CapabilityDefinitions>()
     .notNull()
-    .default('{}'),
+    .default({} as CapabilityDefinitions),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
