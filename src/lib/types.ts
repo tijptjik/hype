@@ -854,7 +854,7 @@ export type Prisms = { organisation: Code[]; project: Code[]; layer: Id[] }
 // NAVIGATION :: FACETS
 /* -------- */
 
-export const Facets = ['core', 'address', 'images', 'fields'] as const
+export const Facets = ['core', 'capabilities', 'address', 'images', 'fields'] as const
 export type FacetType = (typeof Facets)[number]
 
 /* ----------------- */
