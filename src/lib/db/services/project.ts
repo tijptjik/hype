@@ -1,7 +1,24 @@
 // DRIZZLE
-import { and, eq, type SQL } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  like,
+  or,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from 'drizzle-orm'
 // SCHEMA
-import { project, projectI18n, projectRole, organisationRole, feature } from '../schema'
+import {
+  feature,
+  organisation,
+  organisationRole,
+  project,
+  projectI18n,
+  projectRole,
+} from '../schema'
 // AUTH
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 // DB
@@ -10,7 +27,12 @@ import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { toImageEnvelope } from './image'
 import { ImageContextResource } from '$lib/enums'
 // ZOD
-import { ProjectAPI, ProjectCollectionAPI } from '../zod'
+import {
+  ProjectAPI,
+  ProjectCardProfileAPI,
+  ProjectDetailProfileAPI,
+  ProjectListProfileAPI,
+} from '../zod'
 // SERVICES
 import { createPropertiesWithRelated, updatePropertiesWithRelated } from './property'
 import { getProjectHubFilter } from './hub'
@@ -34,12 +56,16 @@ import type {
   ProjectDBRaw,
   ProjectRoleDB,
   PropertyDBRaw,
-  HubOpts,
+  ProjectProfile,
   PropertyI18nDB,
   PropertyValueI18nDB,
   PropertyValueDBRaw,
   Code,
   HubOptsExtended,
+  ListResponse,
+  ProjectListByProfile,
+  QueryParams,
+  SessionUser,
 } from '$lib/types'
 
 // ═══════════════════════
@@ -56,15 +82,15 @@ import type {
 //    - createI18n
 //    - updateI18n
 //    - ensureOrganisationMembership
-//    - createMaintainerRoles
-//    - updateMaintainerRoles
+//    - createProjectUserRoles
+//    - updateProjectUserRoles
 //
 // 3. CRUD :: ORCHESTRATION
 //    - createProjectWithRelated
 //    - updateProjectWithRelated
 //
 // 4. ROLES
-//    - listMaintainerRoles
+//    - listProjectUserRoles
 //    - mergeOrganisationRoles
 //
 // 5. UTILS :: SHAPING
@@ -84,17 +110,117 @@ export const listProjects = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-): Promise<any[]> => {
-  // Apply hub filtering if opts is provided
-  const hubFilter = getProjectHubFilter(db, opts)
-  if (hubFilter) {
-    conditions.push(hubFilter)
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    ignoreHubFilter?: boolean
+    filtersToApply?: QueryParams
+  },
+): Promise<ListResponse<ProjectDBRaw>> => {
+  const startedAt = Date.now()
+  if (!query?.ignoreHubFilter) {
+    const hubFilter = getProjectHubFilter(db, opts)
+    if (hubFilter) {
+      conditions.push(hubFilter)
+    }
   }
 
-  return await db.query.project.findMany({
+  if (query?.q) {
+    const search = query.q.toLowerCase()
+    const searchColumns = query.searchColumns || ['code', 'name', 'description']
+    const searchConditions: SQL<unknown>[] = []
+
+    const baseColumns = searchColumns.filter(column => column === 'code')
+    for (const column of baseColumns) {
+      const projectColumn = project[column as keyof typeof project]
+      if (projectColumn) {
+        searchConditions.push(like(sql`lower(${projectColumn})`, `%${search}%`))
+      }
+    }
+
+    const i18nColumns = searchColumns.filter(column =>
+      ['name', 'description'].includes(column),
+    )
+    if (i18nColumns.length > 0) {
+      const i18nSearchConditions: SQL<unknown>[] = []
+      for (const column of i18nColumns) {
+        if (column === 'name') {
+          i18nSearchConditions.push(
+            sql`lower("projectI18n"."name") like ${`%${search}%`}`,
+          )
+        } else if (column === 'description') {
+          i18nSearchConditions.push(
+            sql`("projectI18n"."description" IS NOT NULL AND lower("projectI18n"."description") like ${`%${search}%`})`,
+          )
+        }
+      }
+
+      if (i18nSearchConditions.length > 0) {
+        const combinedConditions =
+          i18nSearchConditions.length === 1
+            ? i18nSearchConditions[0]
+            : sql`(${sql.join(i18nSearchConditions, sql` OR `)})`
+        searchConditions.push(
+          sql`EXISTS (
+            SELECT 1 FROM "projectI18n"
+            WHERE "projectI18n"."projectId" = ${project.id}
+            AND ${combinedConditions}
+          )`,
+        )
+      }
+    }
+
+    if (searchConditions.length > 0) {
+      if (searchConditions.length === 1) {
+        conditions.push(searchConditions[0])
+      } else {
+        const combinedSearchCondition = or(...searchConditions)
+        if (combinedSearchCondition) {
+          conditions.push(combinedSearchCondition)
+        }
+      }
+    }
+  }
+
+  const sortBy = sorting?.sortBy || 'modifiedAt'
+  const sortOrder = sorting?.sortOrder || 'desc'
+  const sortColumn = project[sortBy as keyof typeof project]
+  if (!sortColumn) {
+    throw new Error(`Invalid sort column: ${sortBy}`)
+  }
+  const orderBy =
+    sortOrder === 'desc' ? desc(sortColumn as AnyColumn) : asc(sortColumn as AnyColumn)
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  const data = await db.query.project.findMany({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
+    where: whereClause,
+    limit: pagination?.limit,
+    offset: pagination?.offset,
+    orderBy,
   })
+  const countQuery = db.select({ count: sql<number>`count(*)` }).from(project)
+  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
+  const totalCount = Number(totalRows[0]?.count || 0)
+  const offset = pagination?.offset ?? 0
+  const hasMore = offset + data.length < totalCount
+  const nextOffset = hasMore ? offset + data.length : null
+  const durationMs = Date.now() - startedAt
+
+  return {
+    data: data as ProjectDBRaw[],
+    limit: pagination?.limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters: query?.filtersToApply,
+    q: query?.q,
+    durationMs,
+  }
 }
 
 export const getProject = async (
@@ -121,6 +247,7 @@ export const probeProjectQuery = async (
 ): Promise<{
   id: string
   organisationId: string
+  hubId: string | null
   isPublished: boolean
   isArchived: boolean
 } | null> => {
@@ -128,10 +255,12 @@ export const probeProjectQuery = async (
     .select({
       id: project.id,
       organisationId: project.organisationId,
+      hubId: organisation.hubId,
       isPublished: project.isPublished,
       isArchived: project.isArchived,
     })
     .from(project)
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
     .where(
       params.refKey === 'code'
         ? eq(project.code, params.ref)
@@ -162,6 +291,8 @@ export const probeProjectForUpdate = async (
   id: string
   code: string
   organisationId: string
+  capabilities: ProjectDB['capabilities']
+  hubId: string | null
   modifiedAt: string
 } | null> => {
   const [current] = await db
@@ -169,9 +300,12 @@ export const probeProjectForUpdate = async (
       id: project.id,
       code: project.code,
       organisationId: project.organisationId,
+      capabilities: project.capabilities,
+      hubId: organisation.hubId,
       modifiedAt: project.modifiedAt,
     })
     .from(project)
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
     .where(eq(project.id, projectId))
     .limit(1)
 
@@ -181,13 +315,15 @@ export const probeProjectForUpdate = async (
 export const probeProjectForCommand = async (
   db: Database,
   projectId: Id,
-): Promise<{ id: string; organisationId: string } | null> => {
+): Promise<{ id: string; organisationId: string; hubId: string | null } | null> => {
   const [current] = await db
     .select({
       id: project.id,
       organisationId: project.organisationId,
+      hubId: organisation.hubId,
     })
     .from(project)
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
     .where(eq(project.id, projectId))
     .limit(1)
 
@@ -198,10 +334,26 @@ export const resolveProjectCommandProbe = async (
   db: Database,
   projectId: Id,
   onNotFound: () => never,
-): Promise<{ id: string; organisationId: string }> => {
+): Promise<{ id: string; organisationId: string; hubId: string | null }> => {
   const probed = await probeProjectForCommand(db, projectId)
   if (!probed) return onNotFound()
   return probed
+}
+
+export const probeOrganisationHubForProject = async (
+  db: Database,
+  organisationId: Id,
+): Promise<{ organisationId: string; hubId: string | null } | null> => {
+  const [row] = await db
+    .select({
+      organisationId: organisation.id,
+      hubId: organisation.hubId,
+    })
+    .from(organisation)
+    .where(eq(organisation.id, organisationId))
+    .limit(1)
+
+  return row ?? null
 }
 
 /**
@@ -245,7 +397,7 @@ export const updateProjectByIdWithConcurrency = async (
   params: {
     id: Id
     updatedAt: string
-    data: { code: string }
+    data: { code: string; capabilities: ProjectDB['capabilities'] }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
   const [updated] = await db
@@ -347,12 +499,12 @@ export const updateI18n = async (
 /**
  * Ensures users are added as members to the organisation if they're not already
  * @param db - The database instance
- * @param maintainerRoles - Array of maintainer roles
+ * @param userRoles - Array of maintainer roles
  * @param organisationId - The ID of the organisation
  */
 const ensureOrganisationMembership = async (
   db: Database,
-  maintainerRoles: ProjectRoleNew[],
+  userRoles: ProjectRoleNew[],
   organisationId: string,
 ) => {
   // Get existing organization roles
@@ -364,7 +516,7 @@ const ensureOrganisationMembership = async (
   const existingOrgUserIds = orgRoles.map(role => role.userId)
 
   // Find users that need to be added to organization
-  const newOrgUsers = maintainerRoles
+  const newOrgUsers = userRoles
     .map(role => role.userId)
     .filter(userId => !existingOrgUserIds.includes(userId))
 
@@ -384,74 +536,79 @@ const ensureOrganisationMembership = async (
  * Creates maintainer roles for a project
  * Also ensures that new maintainers are added as members to the parent organisation
  * @param db - The database instance
- * @param maintainerRoles - Array of new maintainer roles to create
+ * @param userRoles - Array of new maintainer roles to create
  * @param projectId - The ID of the project
  * @param organisationId - The ID of the parent organisation
  * @returns Array of created maintainer roles with associated user information
  */
-export const createMaintainerRoles = async (
+export const createProjectUserRoles = async (
   db: Database,
-  maintainerRoles: ProjectRoleNew[],
+  userRoles: ProjectRoleNew[],
   projectId: string,
   organisationId: string,
 ): Promise<ProjectRoleNew[]> => {
   // Ensure users are members of the organisation
-  await ensureOrganisationMembership(db, maintainerRoles, organisationId)
+  await ensureOrganisationMembership(db, userRoles, organisationId)
 
   return await insertManyRelated(
     db,
     projectRole,
-    maintainerRoles as ProjectRoleDB[],
+    userRoles as ProjectRoleDB[],
     'projectId',
     projectId,
   )
 }
 
-export const toPersistedProjectMaintainerRoles = (
-  maintainerRoles: Array<{ userId: string; role: string }>,
+export const toPersistedProjectUserRoles = (
+  userRoles: Array<{
+    userId: string
+    role: string
+    capabilities?: ProjectRoleNew['capabilities']
+  }>,
   projectId: string,
 ): ProjectRoleNew[] =>
-  maintainerRoles.map(userRole => ({
+  userRoles.map(userRole => ({
     projectId,
     userId: userRole.userId,
     role: userRole.role,
+    capabilities: userRole.capabilities ?? {},
   }))
 
 /**
  * Updates maintainer roles for a project by deleting existing ones and creating new ones
  * Also ensures that new maintainers are added as members to the parent organisation
  * @param db - The database instance
- * @param maintainerRoles - Array of maintainer roles to update
+ * @param userRoles - Array of maintainer roles to update
  * @param projectId - The ID of the project
  * @param organisationId - The ID of the parent organisation
  * @returns Array of updated maintainer roles with associated user information
  */
-export const updateMaintainerRoles = async (
+export const updateProjectUserRoles = async (
   db: Database,
-  maintainerRoles: ProjectRoleNew[],
+  userRoles: ProjectRoleNew[],
   projectId: Id,
   organisationId: Id,
 ) => {
   // Ensure users are members of the organisation
-  await ensureOrganisationMembership(db, maintainerRoles, organisationId)
+  await ensureOrganisationMembership(db, userRoles, organisationId)
 
   // Now proceed with updating project roles
   return await replaceManyRelated(
     db,
     projectRole,
-    maintainerRoles as ProjectRoleDB[],
+    userRoles as ProjectRoleDB[],
     projectRole.projectId,
     projectId,
   )
 }
 
-export const syncProjectMaintainerRoles = async (
+export const syncProjectUserRoles = async (
   db: Database,
-  maintainerRoles: ProjectRoleNew[],
+  userRoles: ProjectRoleNew[],
   projectId: Id,
   organisationId: Id,
 ) => {
-  return await updateMaintainerRoles(db, maintainerRoles, projectId, organisationId)
+  return await updateProjectUserRoles(db, userRoles, projectId, organisationId)
 }
 
 // ═══════════════════════
@@ -471,13 +628,13 @@ export const createProjectWithRelated = async (db: Database, data: ProjectNew) =
     data.i18n as Record<Locale, ProjectI18nNew>,
     project.id,
   )
-  await createMaintainerRoles(
+  await createProjectUserRoles(
     db,
-    data.maintainerRoles as ProjectRoleDB[],
+    data.userRoles as ProjectRoleDB[],
     project.id,
     project.organisationId,
   )
-  const maintainerRoles = await listMaintainerRoles(db, project.id)
+  const userRoles = await listProjectUserRoles(db, project.id)
 
   let properties: Property[] = []
   if (data.properties && Array.isArray(data.properties) && data.properties.length > 0) {
@@ -488,7 +645,7 @@ export const createProjectWithRelated = async (db: Database, data: ProjectNew) =
     )
   }
 
-  return { ...project, i18n, maintainerRoles, properties }
+  return { ...project, i18n, userRoles, properties }
 }
 
 /**
@@ -506,13 +663,8 @@ export const updateProjectWithRelated = async (
   const codeToUse = lookupCode || data.code
   const project = await updateProject(db, data, codeToUse)
   const i18n = await updateI18n(db, data.i18n as any, project.id)
-  await updateMaintainerRoles(
-    db,
-    data.maintainerRoles,
-    project.id,
-    project.organisationId,
-  )
-  const maintainerRoles = await listMaintainerRoles(db, project.id)
+  await updateProjectUserRoles(db, data.userRoles, project.id, project.organisationId)
+  const userRoles = await listProjectUserRoles(db, project.id)
 
   let properties: Property[] = []
   // properties can be null in an update if none are sent, or empty array to delete all
@@ -520,7 +672,7 @@ export const updateProjectWithRelated = async (
     properties = await updatePropertiesWithRelated(db, data.properties, project.id)
   }
 
-  return { ...project, i18n, maintainerRoles, properties }
+  return { ...project, i18n, userRoles, properties }
 }
 
 /**
@@ -529,7 +681,7 @@ export const updateProjectWithRelated = async (
  * @param projectId - The ID of the project
  * @returns Array of maintainer roles with associated user information
  */
-export const listMaintainerRoles = async (db: Database, projectId: string) => {
+export const listProjectUserRoles = async (db: Database, projectId: string) => {
   return await db.query.projectRole.findMany({
     with: {
       user: true,
@@ -546,17 +698,17 @@ export const listMaintainerRoles = async (db: Database, projectId: string) => {
  * Rebuilds form data from database entities
  * @param project - The project database entity
  * @param translations - Array of project translations
- * @param maintainerRoles - Array of project maintainer roles
+ * @param userRoles - Array of project maintainer roles
  * @param properties - Array of project properties
  * @returns Validated form data
  */
 export const toFormShape = async (
   project: ProjectDBRaw,
   i18n: ProjectI18nNew[],
-  maintainerRoles: ProjectRoleNew[],
+  userRoles: ProjectRoleNew[],
   properties: PropertyNew[],
 ): Promise<Project> => {
-  const normalizedMaintainerRoles = maintainerRoles.map(userRole => ({
+  const normalizedUserRoles = userRoles.map(userRole => ({
     ...userRole,
     capabilities: userRole.capabilities ?? {},
   }))
@@ -564,7 +716,7 @@ export const toFormShape = async (
   const formData: Project = {
     ...project,
     i18n: transformI18nSafely(i18n) as any,
-    maintainerRoles: normalizedMaintainerRoles,
+    userRoles: normalizedUserRoles,
     properties: properties
       .sort((a, b) => {
         // Primary sort: 'classifier' before 'specifier'
@@ -601,27 +753,27 @@ export const toFormShape = async (
  * Builds response data from database entities
  * @param project - The project database entity
  * @param translations - Array of project translations
- * @param maintainerRoles - Array of project maintainer roles
+ * @param userRoles - Array of project maintainer roles
  * @param properties - Array of project properties
  * @returns A parsed response shape
  */
 export const toResponseShape = async (
   project: ProjectDBRaw,
-  i18n: ProjectI18nNew[],
-  maintainerRoles: ProjectRoleNew[],
-  properties: PropertyDBRaw[],
-  isCollection: boolean = false,
+  i18n: ProjectI18nNew[] = [],
+  userRoles: ProjectRoleNew[] = [],
+  properties: PropertyDBRaw[] = [],
+  profile: ProjectProfile = 'detail',
 ) => {
-  const profile = isCollection ? 'list' : 'detail'
-  const normalizedMaintainerRoles = maintainerRoles.map(userRole => ({
+  const imageProfile = profile === 'admin' ? 'admin' : profile
+  const normalizedUserRoles = (userRoles ?? []).map(userRole => ({
     ...userRole,
     capabilities: userRole.capabilities ?? {},
   }))
   const data = {
     ...project,
-    i18n: transformI18nSafely(i18n),
-    maintainerRoles: normalizedMaintainerRoles,
-    properties: properties.map((property: PropertyDBRaw) => ({
+    i18n: transformI18nSafely(i18n ?? []),
+    userRoles: normalizedUserRoles,
+    properties: (properties ?? []).map((property: PropertyDBRaw) => ({
       ...property,
       i18n: transformI18nSafely(property.i18n),
       values:
@@ -633,14 +785,79 @@ export const toResponseShape = async (
     image: project.image
       ? toImageEnvelope(
           project.image as any,
-          profile,
+          imageProfile,
           ImageContextResource.project,
           project.id,
         )
       : null,
   }
 
-  return isCollection ? ProjectCollectionAPI.parse(data) : ProjectAPI.parse(data)
+  if (profile === 'admin') {
+    return ProjectAPI.parse(data)
+  }
+  if (profile === 'detail') {
+    return ProjectDetailProfileAPI.parse(data)
+  }
+  if (profile === 'card') {
+    return ProjectCardProfileAPI.parse(data)
+  }
+  return ProjectListProfileAPI.parse(data)
+}
+
+export const toListResponseShape = async <P extends ProjectProfile = 'list'>(
+  result: ListResponse<ProjectDBRaw>,
+  _user: SessionUser | undefined,
+  profile: P = 'list' as P,
+): Promise<ListResponse<ProjectListByProfile<P>>> => {
+  const {
+    data: projects,
+    limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
+  } = result
+
+  const data = await Promise.all(
+    projects.map(async project => {
+      try {
+        return await toResponseShape(
+          project,
+          project.i18n ?? [],
+          project.userRoles ?? [],
+          project.properties ?? [],
+          profile,
+        )
+      } catch (err) {
+        console.error('[project.toListResponseShape] failed to shape project', {
+          projectId: project.id,
+          projectCode: project.code,
+          profile,
+          error: err,
+        })
+        throw err
+      }
+    }),
+  )
+
+  return {
+    data: data as Array<ProjectListByProfile<P>>,
+    limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
+  }
 }
 
 // ═══════════════════════
@@ -684,12 +901,12 @@ export async function mergeOrganisationRoles(
   })
 
   // Get existing maintainer user IDs
-  const existingUserIds = result.maintainerRoles.map(userRole => userRole.userId) || []
+  const existingUserIds = result.userRoles.map(userRole => userRole.userId) || []
 
   // Add organization users that aren't already maintainers
   orgRoles.forEach((orgRole: OrganisationRolePartialExtra) => {
     if (!existingUserIds.includes(orgRole.userId)) {
-      result.maintainerRoles.push({
+      result.userRoles.push({
         projectId: result.id,
         userId: orgRole.userId,
         role: 'member',
