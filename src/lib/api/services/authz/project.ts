@@ -29,11 +29,13 @@ import type {
 //
 // 3. ROLE RESOLUTION
 //    - hasAnyProjectRole
-//    - hasProjectRole
 //    - hasProjectOwnerRole
 //    - hasProjectTranslatorRole
 //    - hasHubAdminRole
 //    - canManageProject
+//    - resolveProjectParentOrganisationScope
+//    - canSetProjectParentOrganisation
+//    - canCreateAnyProject
 //
 // 4. INPUT NORMALIZERS
 //    - toProjectSubmittedFields
@@ -107,6 +109,12 @@ export type ProjectAuthTarget = {
   resourceHubId?: string | null
 }
 
+export type ProjectParentOrganisationScope = {
+  allowAll: boolean
+  organisationIds: string[]
+  hubIds: string[]
+}
+
 /* ----------------- */
 // POLICY CONSTANTS
 /* -------- */
@@ -154,10 +162,6 @@ const logProjectReject = (
 
 const hasAnyProjectRole = (roles: UserRoleDisco[]): boolean =>
   roles.some(role => role.type === 'project')
-
-const hasProjectRole = (roles: UserRoleDisco[], projectId?: string): boolean =>
-  Boolean(projectId) &&
-  roles.some(role => role.type === 'project' && role.projectId === projectId)
 
 const hasProjectOwnerRole = (roles: UserRoleDisco[], projectId?: string): boolean =>
   Boolean(projectId) &&
@@ -214,6 +218,88 @@ const canManageProject = (roles: UserRoleDisco[], projectId?: string): boolean =
       role.projectId === projectId &&
       (role.role === 'maintainer' || role.role === 'owner'),
   )
+
+const getOwnedOrganisationIds = (roles: UserRoleDisco[]): string[] =>
+  roles
+    .filter(
+      (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
+        role.type === 'organisation' &&
+        role.role === 'owner' &&
+        typeof role.organisationId === 'string',
+    )
+    .map(role => role.organisationId)
+
+const hasAnyOwnedOrganisation = (roles: UserRoleDisco[]): boolean =>
+  getOwnedOrganisationIds(roles).length > 0
+
+export const canCreateAnyProject = (
+  actor: ProjectAuthActor,
+  options: { resourceHubId?: string | null } = {},
+): boolean => {
+  if (actor.isSuperAdmin) return true
+  if (isRelevantHubAdmin(actor.userRoles, options.resourceHubId)) return true
+  return hasAnyOwnedOrganisation(actor.userRoles)
+}
+
+export const resolveProjectParentOrganisationScope = (params: {
+  actor: ProjectAuthActor
+  sourceHubId?: string | null
+  createContextHubId?: string | null
+  isCreateMode?: boolean
+}): ProjectParentOrganisationScope => {
+  if (params.actor.isSuperAdmin || isCoreHubAdmin(params.actor.userRoles)) {
+    return {
+      allowAll: true,
+      organisationIds: [],
+      hubIds: [],
+    }
+  }
+
+  const organisationIds = getOwnedOrganisationIds(params.actor.userRoles)
+  const scopedHubAdminIds = Array.from(getScopedHubAdminIds(params.actor.userRoles))
+  const requestedHubIds =
+    params.isCreateMode && typeof params.createContextHubId === 'string'
+      ? [params.createContextHubId]
+      : typeof params.sourceHubId === 'string'
+        ? [params.sourceHubId]
+        : []
+
+  const hubIds = requestedHubIds.filter(hubId => scopedHubAdminIds.includes(hubId))
+
+  return {
+    allowAll: false,
+    organisationIds,
+    hubIds,
+  }
+}
+
+export const canSetProjectParentOrganisation = (params: {
+  actor: ProjectAuthActor
+  source?: Required<
+    Pick<ProjectAuthTarget, 'resourceId' | 'organisationId' | 'resourceHubId'>
+  > | null
+  createContextHubId?: string | null
+  isCreateMode?: boolean
+}): boolean => {
+  if (params.isCreateMode) {
+    return canCreateAnyProject(params.actor, {
+      resourceHubId: params.createContextHubId,
+    })
+  }
+
+  if (!params.source) return false
+
+  const canDeleteSource = authorizeProjectDelete(params.actor, params.source).allowed
+  if (!canDeleteSource) return false
+
+  const scope = resolveProjectParentOrganisationScope({
+    actor: params.actor,
+    sourceHubId: params.source.resourceHubId,
+    isCreateMode: false,
+  })
+
+  return scope.allowAll || scope.organisationIds.length > 0 || scope.hubIds.length > 0
+}
 
 /* ----------------- */
 // INPUT NORMALIZERS

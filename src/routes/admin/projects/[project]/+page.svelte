@@ -20,6 +20,7 @@ import {
   resetLocaleFields,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
+  updateFormData,
   updateUserRoleSelection,
 } from '$lib/client/services/form'
 import {
@@ -28,7 +29,6 @@ import {
   overrideProjectListItemBoolean,
   toProjectFormInput,
 } from '$lib/client/services/project'
-import { canCreateProjects, canUpdateProject } from '$lib/client/services/auth'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -40,6 +40,7 @@ import {
   projectForm,
   publishProject,
 } from '$lib/api/server/project.remote'
+import { getOrganisations } from '$lib/api/server/organisation.remote'
 // SCHEMA
 import { ProjectPreflightFormData } from '$lib/db/zod'
 // CONFIG
@@ -50,16 +51,28 @@ import {
   FormCreditFields,
   FormI18nDescriptorFields,
   FormI18nSection,
+  FormParentOrganisationSection,
   FormSpecifiersFields,
   FormUserRolesSection,
   GridSpacer,
   Main,
 } from '$lib/bits'
+import type { ParentSectionOrganisationItem } from '$lib/bits'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
 // NAVIGATION
 import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
+// AUTHZ
+import {
+  authorizeProjectDelete,
+  authorizeProjectPublish,
+  authorizeProjectUpdate,
+  canCreateAnyProject,
+  canSetProjectParentOrganisation,
+  resolveProjectParentOrganisationScope,
+  toProjectAuthActor,
+} from '$lib/api/services/authz'
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
@@ -68,12 +81,14 @@ import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
 // TYPES
 import type {
+  FormDataUpdaterForm,
   ImageCtxEnvelope,
   Locale,
   ProjectBooleanField,
+  ProjectGetResponse,
   ProjectRoleUser,
+  ResourceContext,
   User,
-  FormDataUpdaterForm,
 } from '$lib/types'
 
 // § Context
@@ -117,14 +132,17 @@ let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let selectedUsersById = $state<Record<string, User>>({})
+let selectedParentOrganisationById = $state<
+  Record<string, ParentSectionOrganisationItem>
+>({})
 let hasAutoEnteredEditForNew = $state(false)
-let hierarchy = $state<{ organisation: any; project: any } | null>(null)
+let hierarchy = $state<ResourceContext | null>(null)
 
 // § State - Data
 
-type ProjectGetState = any
-let project: ProjectGetState = $state(null)
-let committedProject: ProjectGetState = $state(null)
+type ProjectGetState = ProjectGetResponse | null
+let project = $state<ProjectGetState>(null)
+let committedProject = $state<ProjectGetState>(null)
 
 const commitProjectState = (value: ProjectGetState): void => {
   committedProject = value
@@ -303,21 +321,77 @@ const imageProviderProps = $derived.by(() => {
 // § Auth
 
 const currentUser = $derived(adminCtx.appCtx.getUser())
-const canCreateProject = $derived(
-  canCreateProjects(currentUser as any, parentOrganisationId || undefined),
+const currentHub = $derived(adminCtx.appCtx.hub)
+const authActor = $derived.by(() => toProjectAuthActor(currentUser))
+const createContextHubId = $derived.by(() =>
+  currentHub?.isCore ? null : (currentHub?.id ?? null),
+)
+const canCreateProject = $derived.by(() =>
+  canCreateAnyProject(authActor, { resourceHubId: createContextHubId }),
 )
 const canEditProject = $derived.by(() => {
   const projectData = project?.data
   if (!projectData) return false
-  return canUpdateProject(
-    currentUser as any,
-    projectData.id,
-    projectData.organisationId,
-  )
+  return authorizeProjectUpdate(
+    authActor,
+    {
+      resourceId: projectData.id,
+      organisationId: projectData.organisationId,
+      resourceHubId: hierarchy?.organisation?.hubId ?? null,
+    },
+    ['code'],
+  ).allowed
 })
 const canSubmitProject = $derived(isNewProjectRef ? canCreateProject : canEditProject)
-const canPublishProject = $derived(canEditProject)
-const canDeleteProject = $derived(canEditProject)
+const canPublishProject = $derived.by(() => {
+  const projectData = project?.data
+  if (!projectData) return false
+  return authorizeProjectPublish(authActor, {
+    resourceId: projectData.id,
+    organisationId: projectData.organisationId,
+    resourceHubId: hierarchy?.organisation?.hubId ?? null,
+  }).allowed
+})
+const canDeleteProject = $derived.by(() => {
+  const projectData = project?.data
+  if (!projectData) return false
+  return authorizeProjectDelete(authActor, {
+    resourceId: projectData.id,
+    organisationId: projectData.organisationId,
+    resourceHubId: hierarchy?.organisation?.hubId ?? null,
+  }).allowed
+})
+const canEditImagePresentationMode = $derived(canSubmitProject && isCurrentRefLoaded)
+const canSetParentOrganisation = $derived.by(() => {
+  const projectData = project?.data
+  return canSetProjectParentOrganisation({
+    actor: authActor,
+    isCreateMode: isNewProjectRef,
+    createContextHubId,
+    source: projectData
+      ? {
+          resourceId: projectData.id,
+          organisationId: projectData.organisationId,
+          resourceHubId: hierarchy?.organisation?.hubId ?? null,
+        }
+      : null,
+  })
+})
+const parentOrganisationIdValue = $derived(
+  String(formCtx.form.fields.data.organisationId.value() ?? ''),
+)
+const hiddenParentOrganisationInputAttrs = $derived.by(() => {
+  if (!parentOrganisationIdValue) return null
+  return formCtx.form.fields.data.organisationId.as('hidden', parentOrganisationIdValue)
+})
+const selectedParentOrganisation = $derived.by(() => {
+  if (!parentOrganisationIdValue) return null
+  const selected = selectedParentOrganisationById[parentOrganisationIdValue]
+  if (selected) return selected
+  if (hierarchy?.organisation?.id === parentOrganisationIdValue)
+    return hierarchy.organisation
+  return null
+})
 
 // § Handlers
 
@@ -391,13 +465,92 @@ function onRoleChange(userId: string, role: ProjectRoleType): void {
   revalidateAfterProgrammaticChange()
 }
 
+function onReplaceParentOrganisation(
+  organisation: ParentSectionOrganisationItem,
+): void {
+  selectedParentOrganisationById = {
+    [organisation.id]: organisation,
+  }
+  updateFormData(formCtx.form as any, (data: any) => {
+    data.organisationId = organisation.id
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+async function onSearchParentOrganisations(
+  query: string,
+): Promise<ParentSectionOrganisationItem[]> {
+  if (!canSetParentOrganisation) return []
+
+  const profileMeta = { isAdminRequest: true, profile: 'admin' as const }
+  const baseParams = {
+    q: query,
+    prisms: adminCtx.appCtx.state.prisms,
+    meta: profileMeta,
+  }
+
+  const scope = resolveProjectParentOrganisationScope({
+    actor: authActor,
+    isCreateMode: isNewProjectRef,
+    createContextHubId,
+    sourceHubId: hierarchy?.organisation?.hubId ?? null,
+  })
+
+  if (scope.allowAll) {
+    const result = await getOrganisations({
+      ...baseParams,
+      conditions: { isArchived: false },
+    })
+    return result.data as ParentSectionOrganisationItem[]
+  }
+
+  const queries: Array<Promise<{ data: ParentSectionOrganisationItem[] }>> = []
+
+  if (scope.organisationIds.length > 0) {
+    queries.push(
+      getOrganisations({
+        ...baseParams,
+        conditions: {
+          id: scope.organisationIds,
+          isArchived: false,
+        },
+      }) as Promise<{ data: ParentSectionOrganisationItem[] }>,
+    )
+  }
+
+  if (scope.hubIds.length > 0) {
+    queries.push(
+      getOrganisations({
+        ...baseParams,
+        conditions: {
+          hubId: scope.hubIds,
+          isArchived: false,
+        },
+      }) as Promise<{ data: ParentSectionOrganisationItem[] }>,
+    )
+  }
+
+  if (queries.length === 0) return []
+
+  const results = await Promise.all(queries)
+  const byId = new Map<string, ParentSectionOrganisationItem>()
+  for (const result of results) {
+    for (const organisation of result.data) {
+      byId.set(organisation.id, organisation)
+    }
+  }
+
+  return Array.from(byId.values())
+}
+
 async function refreshProject(ref: string = projectRef): Promise<ProjectGetState> {
   if (ref === NEW_REF) return null
-  return await getProject({
+  return (await getProject({
     ref,
     refKey: 'code',
     meta: { isAdminRequest: true, profile: 'admin' },
-  }).catch(() => null)
+  }).catch(() => null)) as ProjectGetState
 }
 
 async function handleProjectStateToggle({
@@ -491,6 +644,7 @@ function onSubmit(): void {
 }
 
 function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
+  if (!canEditImagePresentationMode) return
   if (project?.data?.image) {
     project.data.image.image.presentationMode = nextMode
   }
@@ -546,7 +700,7 @@ $effect(() => {
   let cancelled = false
   void adminCtx.appCtx.getHierarchy(currentProject).then(result => {
     if (cancelled) return
-    hierarchy = result as { organisation: any; project: any }
+    hierarchy = result
   })
 
   return () => {
@@ -712,18 +866,26 @@ $effect(() => {
         {/snippet}
 
         {#snippet right()}
-          {@const organisationId = String(formCtx.form.fields.data.organisationId.value() ?? '')}
-
-          {#if organisationId.length > 0}
-            {@const organisationHiddenAttrs = formCtx.form.fields.data.organisationId.as('hidden', organisationId)}
-            <input {...organisationHiddenAttrs}>
-          {/if}
           <FormSpecifiersFields
             form={formCtx.form}
             fields={['code']}
             {isEditing}
             {isRequiredInPreflight}
           />
+          {#if canSetParentOrganisation}
+            <FormParentOrganisationSection
+              title="Parent Organisation"
+              subtitle="This project belongs to"
+              parent={selectedParentOrganisation as any}
+              hiddenOrganisationInputAttrs={hiddenParentOrganisationInputAttrs}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewProjectRef}
+              onSearchOrganisations={onSearchParentOrganisations}
+              onReplaceParent={onReplaceParentOrganisation}
+            />
+          {/if}
         {/snippet}
       </GridSpacer>
     </Main.Form>
@@ -751,6 +913,7 @@ $effect(() => {
             ctxId: project.data.id,
           }
         : undefined}
+      canEditPresentationMode={canEditImagePresentationMode}
       {onPresentationModeCommitted}
     />
   </Main.Section>

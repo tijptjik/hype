@@ -121,6 +121,9 @@ export {
   authorizeProjectPublishForSubmission,
   authorizeProjectDelete,
   authorizeProjectDeleteForSubmission,
+  canCreateAnyProject,
+  canSetProjectParentOrganisation,
+  resolveProjectParentOrganisationScope,
   ensureProjectCommandAllowed,
   projectPolicyMap,
 } from './project'
