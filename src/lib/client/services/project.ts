@@ -1,12 +1,16 @@
 // I18N
 import { toLocaleFromOrganisationFormLocaleKey } from '$lib/i18n'
+// ENUMS
+import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
 // TYPES
 import type {
   Locale,
   Project,
   ProjectBooleanField,
   ProjectFormInput,
+  ProjectOwnerRoleSeedOrganisation,
   ProjectSubmitUpdatesParams,
+  User,
 } from '$lib/types'
 
 function normalizeProjectFormLocale(
@@ -131,4 +135,71 @@ export function getProjectSubmitUpdates<TEntityResult, TListResult>({
 > {
   if (!projectId) return []
   return [entityQuery, listQuery]
+}
+
+export async function seedOwnerRolesForNewProject(params: {
+  organisationId: string
+  isNewProjectRef: boolean
+  formUserRoleValues: Array<{ userId: string; role: string }>
+  autoSeededOwnerOrganisationIds: Set<string>
+  ownerRoleSeedAttempt: number
+  validateAttempt: (attempt: number) => boolean
+  getOrganisationById: (
+    organisationId: string,
+  ) => Promise<ProjectOwnerRoleSeedOrganisation>
+}): Promise<{
+  nextOwnerRoleSeedAttempt: number
+  shouldApply: boolean
+  shouldMarkSeeded: boolean
+  ownerRoles: Array<{ userId: string; role: ProjectRoleType }>
+  selectedOwners: Record<string, User>
+}> {
+  const shouldSkip =
+    !params.organisationId ||
+    !params.isNewProjectRef ||
+    params.formUserRoleValues.length > 0 ||
+    params.autoSeededOwnerOrganisationIds.has(params.organisationId)
+  if (shouldSkip) {
+    return {
+      nextOwnerRoleSeedAttempt: params.ownerRoleSeedAttempt,
+      shouldApply: false,
+      shouldMarkSeeded: false,
+      ownerRoles: [],
+      selectedOwners: {},
+    }
+  }
+
+  const nextOwnerRoleSeedAttempt = params.ownerRoleSeedAttempt + 1
+  const result = await params
+    .getOrganisationById(params.organisationId)
+    .catch(() => null)
+  if (!result?.data || !params.validateAttempt(nextOwnerRoleSeedAttempt)) {
+    return {
+      nextOwnerRoleSeedAttempt,
+      shouldApply: false,
+      shouldMarkSeeded: false,
+      ownerRoles: [],
+      selectedOwners: {},
+    }
+  }
+
+  const ownerRoles = (result.data.userRoles ?? [])
+    .filter(userRole => userRole.role === OrganisationRoleType.owner)
+    .map(userRole => ({
+      userId: userRole.userId,
+      role: ProjectRoleType.owner,
+    }))
+  const selectedOwners = Object.fromEntries(
+    (result.data.userRoles ?? [])
+      .filter(userRole => userRole.role === OrganisationRoleType.owner && userRole.user)
+      .map(userRole => [userRole.userId, userRole.user]),
+  ) as Record<string, User>
+
+  return {
+    nextOwnerRoleSeedAttempt,
+    shouldApply: ownerRoles.length > 0,
+    shouldMarkSeeded: true,
+    ownerRoles,
+    selectedOwners,
+  }
 }
