@@ -15,7 +15,7 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 // CONSTRAINTS
-import { getDefaultConstraints, getLocales, getMaintainerRoles } from '../constraints'
+import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
 // ZOD SCHEMAS
 import { UserBasic } from './user'
@@ -136,7 +136,7 @@ export const ProjectCollectionAPI = ProjectBase.extend({
 
 export const ProjectAPI = ProjectBase.extend({
   i18n: getLocales(ProjectI18nBase),
-  userRoles: getMaintainerRoles(ProjectRoleBaseExtra),
+  userRoles: z.array(ProjectRoleBaseExtra).default([]),
   properties: z.array(PropertyAPI).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
@@ -144,7 +144,7 @@ export const ProjectAPI = ProjectBase.extend({
 
 export const ProjectInsertAPI = ProjectInsert.extend({
   i18n: getLocales(ProjectI18nInsert),
-  userRoles: getMaintainerRoles(ProjectRoleInsertExtra),
+  userRoles: z.array(ProjectRoleInsertExtra).default([]),
   properties: z.array(PropertyInsertAPI).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
@@ -152,7 +152,7 @@ export const ProjectInsertAPI = ProjectInsert.extend({
 
 export const ProjectUpdateAPI = ProjectUpdate.extend({
   i18n: getLocales(ProjectI18nUpdate),
-  userRoles: getMaintainerRoles(ProjectRoleUpdateExtra),
+  userRoles: z.array(ProjectRoleUpdateExtra).default([]),
   properties: z.array(PropertyUpdateAPI).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
@@ -204,7 +204,7 @@ export const ProjectI18nByLocaleFormData = z.object({
 
 export const ProjectUserRolesFormData = z.preprocess(
   value => (value === undefined || value === null ? [] : value),
-  z.array(ProjectRoleFormData).refine(schema => schema.length > 0, 'Add a User'),
+  z.array(ProjectRoleFormData),
 )
 
 export const ProjectEntityFormData = z.object({

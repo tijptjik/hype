@@ -156,6 +156,7 @@ vi.mock('$lib/db/services/project', () => ({
   createProjectUserRoles: vi.fn(async () => undefined),
   createProject: vi.fn(async () => null),
   getProject: mockLoadProject,
+  listOrganisationOwnerRoleAssignments: vi.fn(async () => []),
   listProjectRoleAssignments: mockListProjectRoleAssignments,
   listProjects: vi.fn(async () => ({
     data: [],
