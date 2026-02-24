@@ -27,6 +27,7 @@ import {
   getProjectSubmitUpdates,
   overrideProjectEntityBoolean,
   overrideProjectListItemBoolean,
+  seedOwnerRolesForNewProject as resolveOwnerRoleSeedForNewProject,
   toProjectFormInput,
 } from '$lib/client/services/project'
 // CONTEXT
@@ -40,7 +41,7 @@ import {
   projectForm,
   publishProject,
 } from '$lib/api/server/project.remote'
-import { getOrganisations } from '$lib/api/server/organisation.remote'
+import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
 // SCHEMA
 import { ProjectPreflightFormData } from '$lib/db/zod'
 // CONFIG
@@ -135,6 +136,8 @@ let selectedUsersById = $state<Record<string, User>>({})
 let selectedParentOrganisationById = $state<
   Record<string, ParentSectionOrganisationItem>
 >({})
+let autoSeededOwnerOrganisationIds = $state<Set<string>>(new Set())
+let ownerRoleSeedAttempt = $state(0)
 let hasAutoEnteredEditForNew = $state(false)
 let hierarchy = $state<ResourceContext | null>(null)
 
@@ -631,6 +634,8 @@ function onReset(): void {
     formCtx.form.fields.set(toProjectFormInput(committedProject.data))
     return
   }
+  autoSeededOwnerOrganisationIds = new Set()
+  ownerRoleSeedAttempt += 1
   formCtx.reset()
 }
 
@@ -740,6 +745,49 @@ $effect(() => {
   if (canSubmitProject) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
+})
+
+$effect(() => {
+  if (!isNewProjectRef) return
+  const organisationId = parentOrganisationIdValue
+  if (!organisationId) return
+  if (formUserRoleValues.length > 0) return
+  void resolveOwnerRoleSeedForNewProject({
+    organisationId,
+    isNewProjectRef,
+    formUserRoleValues,
+    autoSeededOwnerOrganisationIds,
+    ownerRoleSeedAttempt,
+    validateAttempt: attempt =>
+      attempt === ownerRoleSeedAttempt + 1 &&
+      formUserRoleValues.length === 0 &&
+      parentOrganisationIdValue === organisationId,
+    getOrganisationById: async targetOrganisationId =>
+      await getOrganisation({
+        ref: targetOrganisationId,
+        refKey: 'id',
+        meta: { isAdminRequest: true, profile: 'admin' },
+      }),
+  }).then(seed => {
+    ownerRoleSeedAttempt = seed.nextOwnerRoleSeedAttempt
+    if (!seed.shouldMarkSeeded) return
+
+    autoSeededOwnerOrganisationIds = new Set([
+      ...Array.from(autoSeededOwnerOrganisationIds),
+      organisationId,
+    ])
+    if (!seed.shouldApply) return
+
+    selectedUsersById = {
+      ...selectedUsersById,
+      ...seed.selectedOwners,
+    }
+    updateFormData(formCtx.form as any, (data: any) => {
+      data.userRoles = seed.ownerRoles
+      return data
+    })
+    revalidateAfterProgrammaticChange()
+  })
 })
 
 $effect(() => {
