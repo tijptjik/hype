@@ -442,7 +442,7 @@ export function isFormLevelIssue(issue: unknown): boolean {
   const path = (issue as { path?: unknown }).path
   // Issues with related models are treated as form-level issues.
   if (!Array.isArray(path) || path.length === 0) return true
-  return path[0] === 'data' && path[1] === 'userRoles'
+  return path[0] === 'data' && (path[1] === 'userRoles' || path[1] === 'organisationId')
 }
 
 export function toIssueChipParts(message: string): { code: string; detail: string } {

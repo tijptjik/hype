@@ -88,6 +88,7 @@
   "admin__authz_stale_write": "此記錄在你開啟表單後已被更新。請重新整理後再試。",
   "admin__validation_attribution_is_required": "必填 - 例如姓名或組織名稱",
   "admin__validation_license_is_required": "必填 - 例如 CC-0、CC-BY-SA 或 Copyright",
+  "admin__validation_organisation_is_required": "請指定組織",
   "admin__validation_lte_128_chars": "最多為128個字元",
   "admin__geo_lookup_address_at_location": "取得位置位址",
   "admin__geo_lookup_address_at_location_loading": "正在尋找地址……",

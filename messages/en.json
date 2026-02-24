@@ -88,6 +88,7 @@
   "admin__authz_stale_write": "This record changed since you loaded the form. Refresh and try again.",
   "admin__validation_attribution_is_required": "Required - e.g. a name or organization",
   "admin__validation_license_is_required": "Required - e.g CC-0, CC-BY-SA or Copyright",
+  "admin__validation_organisation_is_required": "Assign to an Organisation",
   "admin__validation_lte_128_chars": "Maximum of 128 characters",
   "admin__geo_lookup_address_at_location": "Get address for location",
   "admin__geo_lookup_address_at_location_loading": "Looking up address...",
