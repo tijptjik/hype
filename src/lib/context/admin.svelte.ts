@@ -523,13 +523,22 @@ export class AdminCtx {
 
   hubsQueryFn = async () => {
     if (!this.appCtx.isAdmin()) return []
-    const result = (await getHubs({
-      conditions: this.appCtx.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      meta: { isAdminRequest: true, profile: 'card' },
-    })) as ListResponse<Hub>
-    return result.data
+    try {
+      const result = (await getHubs({
+        conditions: this.appCtx.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        meta: { isAdminRequest: true, profile: 'card' },
+      })) as ListResponse<Hub>
+      return result.data
+    } catch (err) {
+      const status =
+        typeof err === 'object' && err && 'status' in err
+          ? Number((err as { status?: unknown }).status)
+          : undefined
+      if (status === 403) return []
+      throw err
+    }
   }
 
   // Initialize data using appCtx's refresh methods
