@@ -209,7 +209,7 @@ export const ProjectUserRolesFormData = z.preprocess(
 
 export const ProjectEntityFormData = z.object({
   organisationId: z
-    .string()
+    .string({ message: m.admin__validation_organisation_is_required() })
     .min(1, { message: m.admin__validation_organisation_is_required() }),
   code: z
     .string()
