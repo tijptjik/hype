@@ -1809,7 +1809,34 @@ export const organisationAuthorizationActions = [
 export type OrganisationAuthorizationAction =
   (typeof organisationAuthorizationActions)[number]
 
-export type AuthorizationAction = OrganisationAuthorizationAction
+export const projectAuthorizationActions = [
+  'listProjects',
+  'readProject',
+  'createProject',
+  'updateProject',
+  'manageProjectRoles',
+  'manageCapabilities',
+  'assignCapabilities',
+  'publishProject',
+  'deleteProject',
+] as const
+export type ProjectAuthorizationAction = (typeof projectAuthorizationActions)[number]
+
+export const hubAuthorizationActions = [
+  'listHubs',
+  'readHub',
+  'createHub',
+  'updateHub',
+  'manageHubRoles',
+  'publishHub',
+  'deleteHub',
+] as const
+export type HubAuthorizationAction = (typeof hubAuthorizationActions)[number]
+
+export type AuthorizationAction =
+  | OrganisationAuthorizationAction
+  | ProjectAuthorizationAction
+  | HubAuthorizationAction
 
 export const organisationAuthorizationFields = [
   'code',
@@ -1828,12 +1855,30 @@ export const projectAuthorizationFields = [
   'organisationId',
   'code',
   'i18n',
+  'capabilities',
   'userRoles',
+  'projectRoleCapabilities',
   'properties',
   'isPublished',
   'isArchived',
 ] as const
 export type ProjectAuthorizationField = (typeof projectAuthorizationFields)[number]
+
+export const hubAuthorizationFields = [
+  'code',
+  'domain',
+  'i18n',
+  'userRoles',
+  'organisations',
+  'isPublished',
+  'isArchived',
+] as const
+export type HubAuthorizationField = (typeof hubAuthorizationFields)[number]
+
+export type AuthorizationField =
+  | OrganisationAuthorizationField
+  | ProjectAuthorizationField
+  | HubAuthorizationField
 
 export const authorizationDenyCodes = [
   'UNAUTHENTICATED',
@@ -1850,11 +1895,60 @@ export type AuthorizeParams = {
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
   isAnonymous?: boolean
+  isSuperAdmin?: boolean
   resourceType: AuthorizationResourceType
   action: AuthorizationAction
   resourceId?: string
+  organisationId?: string | null
+  resourceHubId?: string | null
+  fields?: AuthorizationField[]
+  requestedState?: {
+    isPublished?: boolean
+    isArchived?: boolean
+  }
+}
+
+export type OrganisationAuthorizeParams = {
+  userId?: string | null
+  userRoles: UserRoleDisco[]
+  isAuthenticated?: boolean
+  isAnonymous?: boolean
+  action: OrganisationAuthorizationAction
+  resourceId?: string
   resourceHubId?: string | null
   fields?: OrganisationAuthorizationField[]
+  requestedState?: {
+    isPublished?: boolean
+    isArchived?: boolean
+  }
+}
+
+export type ProjectAuthorizeParams = {
+  userId?: string | null
+  userRoles: UserRoleDisco[]
+  isAuthenticated?: boolean
+  isAnonymous?: boolean
+  isSuperAdmin?: boolean
+  action: ProjectAuthorizationAction
+  resourceId?: string
+  organisationId?: string | null
+  resourceHubId?: string | null
+  fields?: ProjectAuthorizationField[]
+  requestedState?: {
+    isPublished?: boolean
+    isArchived?: boolean
+  }
+}
+
+export type HubAuthorizeParams = {
+  userId?: string | null
+  userRoles: UserRoleDisco[]
+  isAuthenticated?: boolean
+  isAnonymous?: boolean
+  action: HubAuthorizationAction
+  resourceId?: string
+  resourceHubId?: string | null
+  fields?: HubAuthorizationField[]
   requestedState?: {
     isPublished?: boolean
     isArchived?: boolean
