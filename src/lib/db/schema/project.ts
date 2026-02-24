@@ -7,6 +7,7 @@ import { image } from './image'
 import { user } from './user'
 // ENUM
 import { ProjectRoleType, supportedLocales } from '../../enums'
+import type { CapabilityDefinitions, ProjectRoleCapabilities } from '../../types'
 
 /* ============================================================================
  * PROJECT MANAGEMENT
@@ -36,6 +37,14 @@ export const project = sqliteTable('project', {
     onDelete: 'set null',
     onUpdate: 'cascade',
   }),
+  // Configurable capability labels and assignable keys for this project.
+  // When present, this overrides organisation-level capability definitions.
+  capabilities: text('capabilities', {
+    mode: 'json',
+  })
+    .$type<CapabilityDefinitions>()
+    .notNull()
+    .default('{}'),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
@@ -101,15 +110,6 @@ export const projectI18n = sqliteTable(
  * - capabilities: JSON object mapping capability types to boolean values
  *   Allows for fine-grained permission control beyond the base role
  */
-
-/**
- * Type for project role capabilities
- */
-export type ProjectRoleCapabilities = {
-  manageBakeries?: boolean
-  manageVolunteers?: boolean
-  manageDropOffs?: boolean
-}
 
 export const projectRole = sqliteTable(
   'projectRole',

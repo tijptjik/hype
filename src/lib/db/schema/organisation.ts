@@ -7,6 +7,7 @@ import { user } from './user'
 import { hub } from './hub'
 // ENUM
 import { OrganisationRoleType, supportedLocales } from '../../enums'
+import type { CapabilityDefinitions } from '../../types'
 
 /* ============================================================================
  * ORGANIZATION MANAGEMENT
@@ -65,6 +66,13 @@ export const organisation = sqliteTable('organisation', {
   isCoreInclusive: integer('isCoreInclusive', { mode: 'boolean' })
     .notNull()
     .default(true),
+  // Configurable capability labels and assignable keys for this organisation's projects.
+  capabilities: text('capabilities', {
+    mode: 'json',
+  })
+    .$type<CapabilityDefinitions>()
+    .notNull()
+    .default('{}'),
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(true),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
