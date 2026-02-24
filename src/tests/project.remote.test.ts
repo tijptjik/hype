@@ -4,6 +4,7 @@ const {
   mockProjectFormDataParse,
   mockToLocaleRecordFromOrganisationFormI18n,
   mockProbeProjectForUpdate,
+  mockLoadProject,
   mockProbeOrganisationHubForProject,
   mockListProjectRoleAssignments,
   mockUpdateProjectByIdWithConcurrency,
@@ -17,6 +18,7 @@ const {
   mockProjectFormDataParse: vi.fn((input: unknown) => input),
   mockToLocaleRecordFromOrganisationFormI18n: vi.fn(() => ({})),
   mockProbeProjectForUpdate: vi.fn(async () => null),
+  mockLoadProject: vi.fn(async () => null),
   mockProbeOrganisationHubForProject: vi.fn(async () => null),
   mockListProjectRoleAssignments: vi.fn(async () => []),
   mockUpdateProjectByIdWithConcurrency: vi.fn(async () => null),
@@ -145,13 +147,15 @@ vi.mock('$lib/api/services/authz', () => ({
       .map(role => `${role.userId}:${role.role}`)
       .sort()
       .join('|'),
+  toProjectStableAuthzSignature: (value: unknown) => JSON.stringify(value ?? null),
+  normalizeProjectI18nForFormInput: (i18n: unknown) => i18n ?? {},
 }))
 
 vi.mock('$lib/db/services/project', () => ({
   createI18n: vi.fn(async () => undefined),
   createProjectUserRoles: vi.fn(async () => undefined),
   createProject: vi.fn(async () => null),
-  getProject: vi.fn(async () => null),
+  getProject: mockLoadProject,
   listProjectRoleAssignments: mockListProjectRoleAssignments,
   listProjects: vi.fn(async () => ({
     data: [],
@@ -241,6 +245,15 @@ describe('project.remote form organisation move authz', () => {
       code: 'project-code',
       capabilities: {},
       modifiedAt: '2026-02-24T00:00:00.000Z',
+    })
+    mockLoadProject.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      code: 'project-code',
+      capabilities: {},
+      i18n: { en: {}, zhHans: {}, zhHant: {} },
+      properties: [],
+      userRoles: [{ userId: 'u-1', role: 'owner', capabilities: {} }],
     })
     mockProbeOrganisationHubForProject.mockResolvedValue({
       id: 'org-2',

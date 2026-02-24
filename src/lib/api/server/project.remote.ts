@@ -372,10 +372,16 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Load the full persisted entity so field-level auth can compare against real DB state.
   const currentWithRelations = requireValue(
-    await db.query.project.findFirst({
-      with: getProjectWithRelations('admin'),
-      where: eq(project.id, current.id),
-    }),
+    await loadProject(
+      db,
+      getProjectWithRelations('admin'),
+      [eq(project.id, current.id)],
+      {
+        ...ctx.event.locals.hub,
+        isSuperAdmin: user.superAdmin || false,
+        isAdminRequest: ctx.isAdminRequest,
+      },
+    ),
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
   const currentEntity = requireValue(
