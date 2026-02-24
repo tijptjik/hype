@@ -12,6 +12,72 @@ import type {
   UserRoleDisco,
 } from '$lib/types'
 
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. AUTH INPUT TYPES
+//    - OrganisationPolicyHandler (type)
+//    - OrganisationAuthActor (type)
+//    - OrganisationAuthTarget (type)
+//
+// 2. POLICY CONSTANTS
+//    - ORGANISATION_CORE_ADMIN_ONLY_FIELDS
+//    - ORGANISATION_HUB_ADMIN_ONLY_FIELDS
+//
+// 3. ROLE RESOLUTION
+//    - isOrganisationOwner
+//    - hasOrganisationRole
+//    - hasAnyOrganisationRole
+//    - isRelevantHubAdmin
+//
+// 4. INPUT NORMALIZERS
+//    - toOrganisationSubmittedFields
+//    - toOrganisationUserRoleSignature
+//
+// 5. ACTOR RESOLUTION
+//    - toOrganisationAuthActor
+//    - toOrganisationSubmissionActor
+//
+// 6. READ/LIST POLICY EVALUATION
+//    - evaluateOrganisationReadStatePolicy
+//
+// 7. ACTION POLICIES
+//    - createOrganisationPolicy
+//    - readOrganisationPolicy
+//    - listOrganisationsPolicy
+//    - updateOrganisationPolicy
+//    - publishOrganisationPolicy
+//    - manageOrganisationRolesPolicy
+//    - deleteOrganisationPolicy
+//
+// 8. READ/LIST AUTHORIZATION
+//    - authorizeOrganisationRead
+//    - authorizeOrganisationReadForProbe
+//    - authorizeOrganisationList
+//    - authorizeOrganisationListForContext
+//
+// 9. WRITE AUTHORIZATION
+//    - authorizeOrganisationCreate
+//    - authorizeOrganisationCreateForSubmission
+//    - authorizeOrganisationUpdate
+//    - authorizeOrganisationUpdateForSubmission
+//    - authorizeOrganisationManageRoles
+//    - authorizeOrganisationManageRolesForSubmission
+//    - authorizeOrganisationPublish
+//    - authorizeOrganisationPublishForSubmission
+//    - authorizeOrganisationDelete
+//    - authorizeOrganisationDeleteForSubmission
+//
+// 10. COMMAND AUTHORIZATION
+//     - ensureOrganisationCommandAllowed
+//
+// 11. ACTION PERMISSIONS
+//     - resolveOrganisationActionPermissions
+//
+// 12. POLICY MAP
+//     - organisationPolicyMap
+
 type OrganisationPolicyHandler = (params: AuthorizeParams) => AuthorizationDecision
 
 /* ----------------- */
@@ -24,6 +90,7 @@ export type OrganisationAuthActor = {
   isAuthenticated?: boolean
   isAnonymous?: boolean
 }
+
 type OrganisationAuthTarget = {
   resourceId?: string
   resourceHubId?: string | null
@@ -78,6 +145,73 @@ const isRelevantHubAdmin = (
   if (!organisationHubId) return false
   return getScopedHubAdminIds(roles).has(organisationHubId)
 }
+
+/* ----------------- */
+// INPUT NORMALIZERS
+/* -------- */
+
+export const toOrganisationSubmittedFields = (
+  data: Partial<Record<OrganisationAuthorizationField, unknown>>,
+): OrganisationAuthorizationField[] => {
+  const fields: OrganisationAuthorizationField[] = []
+  if ('code' in data) fields.push('code')
+  if ('url' in data) fields.push('url')
+  if ('i18n' in data) fields.push('i18n')
+  if ('userRoles' in data) fields.push('userRoles')
+  return fields
+}
+
+export const toOrganisationUserRoleSignature = (
+  userRoles: Array<{ userId: string; role: string }>,
+): string =>
+  userRoles
+    .map(role => `${role.userId}:${role.role}`)
+    .sort((a, b) => a.localeCompare(b))
+    .join('|')
+
+/* ----------------- */
+// ACTOR RESOLUTION
+/* -------- */
+
+export const toOrganisationAuthActor = (user: unknown): OrganisationAuthActor => {
+  if (!user || typeof user !== 'object') {
+    return {
+      userId: undefined,
+      userRoles: [],
+      isAuthenticated: false,
+      isAnonymous: false,
+    }
+  }
+
+  const userId = (() => {
+    const value = (user as { id?: unknown }).id
+    return typeof value === 'string' ? value : undefined
+  })()
+  const userRoles = (() => {
+    const value = (user as { roles?: unknown }).roles
+    return Array.isArray(value) ? (value as UserRoleDisco[]) : []
+  })()
+  const isAnonymous = (user as { isAnonymous?: unknown }).isAnonymous === true
+
+  return {
+    userId,
+    userRoles,
+    isAuthenticated: Boolean(userId) && !isAnonymous,
+    isAnonymous,
+  }
+}
+
+const toOrganisationSubmissionActor = (
+  user: { id: string; isAnonymous?: boolean },
+  userRoles: UserRoleDisco[],
+): OrganisationAuthActor => ({
+  ...toOrganisationAuthActor({
+    id: user.id,
+    isAnonymous: user.isAnonymous,
+    roles: userRoles,
+  }),
+  userRoles,
+})
 
 /* ----------------- */
 // READ/LIST POLICY EVALUATION
@@ -213,73 +347,6 @@ const manageOrganisationRolesPolicy: OrganisationPolicyHandler = params => {
 
 const deleteOrganisationPolicy: OrganisationPolicyHandler = params =>
   createOrganisationPolicy(params)
-
-/* ----------------- */
-// INPUT NORMALIZERS
-/* -------- */
-
-export const toOrganisationSubmittedFields = (
-  data: Partial<Record<OrganisationAuthorizationField, unknown>>,
-): OrganisationAuthorizationField[] => {
-  const fields: OrganisationAuthorizationField[] = []
-  if ('code' in data) fields.push('code')
-  if ('url' in data) fields.push('url')
-  if ('i18n' in data) fields.push('i18n')
-  if ('userRoles' in data) fields.push('userRoles')
-  return fields
-}
-
-export const toOrganisationUserRoleSignature = (
-  userRoles: Array<{ userId: string; role: string }>,
-): string =>
-  userRoles
-    .map(role => `${role.userId}:${role.role}`)
-    .sort((a, b) => a.localeCompare(b))
-    .join('|')
-
-/* ----------------- */
-// ACTOR RESOLUTION
-/* -------- */
-
-export const toOrganisationAuthActor = (user: unknown): OrganisationAuthActor => {
-  if (!user || typeof user !== 'object') {
-    return {
-      userId: undefined,
-      userRoles: [],
-      isAuthenticated: false,
-      isAnonymous: false,
-    }
-  }
-
-  const userId = (() => {
-    const value = (user as { id?: unknown }).id
-    return typeof value === 'string' ? value : undefined
-  })()
-  const userRoles = (() => {
-    const value = (user as { roles?: unknown }).roles
-    return Array.isArray(value) ? (value as UserRoleDisco[]) : []
-  })()
-  const isAnonymous = (user as { isAnonymous?: unknown }).isAnonymous === true
-
-  return {
-    userId,
-    userRoles,
-    isAuthenticated: Boolean(userId) && !isAnonymous,
-    isAnonymous,
-  }
-}
-
-const toOrganisationSubmissionActor = (
-  user: { id: string; isAnonymous?: boolean },
-  userRoles: UserRoleDisco[],
-): OrganisationAuthActor => ({
-  ...toOrganisationAuthActor({
-    id: user.id,
-    isAnonymous: user.isAnonymous,
-    roles: userRoles,
-  }),
-  userRoles,
-})
 
 /* ----------------- */
 // READ/LIST AUTHORIZATION
