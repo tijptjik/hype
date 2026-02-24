@@ -89,6 +89,14 @@ export const toProjectProfile = (
     ? (value as ProjectProfile)
     : fallback
 
+export const toLookupConditions = (params: {
+  ref: string
+  refKey?: 'id' | 'code'
+}): Partial<ProjectDB> =>
+  params.refKey === 'code'
+    ? ({ code: params.ref } as Partial<ProjectDB>)
+    : ({ id: params.ref as Id } as Partial<ProjectDB>)
+
 export const toRequestedListState = (params: Partial<ProjectDB>) => ({
   isPublished: typeof params.isPublished === 'boolean' ? params.isPublished : true,
   isArchived: typeof params.isArchived === 'boolean' ? params.isArchived : false,

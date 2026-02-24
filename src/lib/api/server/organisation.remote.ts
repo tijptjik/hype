@@ -3,8 +3,6 @@ import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remot
 import { error } from '@sveltejs/kit'
 // I18N
 import { toLocaleRecordFromOrganisationFormI18n } from '$lib/i18n'
-// DRIZZLE
-import { eq } from 'drizzle-orm'
 // UTILS
 import { nanoid } from 'nanoid'
 // AUTHORIZATION
@@ -34,12 +32,14 @@ import {
   getDuplicateValues,
   hasRoleMembershipChanged,
   requireValue,
+  toCreatedResponseShape,
   validateUniqueNonReservedCode,
 } from '$lib/api/services'
 import {
   createI18n,
   createOrganisation,
   createUserRoles,
+  listOrganisationRoleAssignments,
   listOrganisations,
   probeExistingOrganisation,
   probeOrganisationForUpdate,
@@ -58,7 +58,7 @@ import {
 // UTILS
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // SCHEMA
-import { organisation, organisationRole } from '$lib/db/schema'
+import { organisation } from '$lib/db/schema'
 // SCHEMA
 import {
   ListQueryParamsSchema,
@@ -194,7 +194,6 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
       userRoles,
       probe,
     })
-
     if (!readDecision.allowed) {
       throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
@@ -349,12 +348,7 @@ export const organisationForm = guardedForm(
         created.id,
       )
 
-      return {
-        data: {
-          id: created.id,
-          modifiedAt: created.modifiedAt,
-        },
-      }
+      return toCreatedResponseShape(created)
     }
 
     const targetOrganisationId = requireValue(organisationId, () =>
@@ -381,14 +375,8 @@ export const organisationForm = guardedForm(
       invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
 
-    const existingRoleRows = await db
-      .select({
-        userId: organisationRole.userId,
-        role: organisationRole.role,
-      })
-      .from(organisationRole)
-      .where(eq(organisationRole.organisationId, current.id))
     // Apply role-management authorization only when role membership changed.
+    const existingRoleRows = await listOrganisationRoleAssignments(db, current.id)
     if (
       hasRoleMembershipChanged(
         submittedRoles,
@@ -452,12 +440,7 @@ export const organisationForm = guardedForm(
     )
 
     // Return persisted identity and write token.
-    return {
-      data: {
-        id: persisted.id,
-        modifiedAt: persisted.modifiedAt,
-      },
-    }
+    return toCreatedResponseShape(persisted)
   },
 )
 

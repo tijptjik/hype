@@ -543,6 +543,19 @@ export const createHubUserRoles = async (
   await db.insert(hubRole).values(toPersistedHubUserRoles(roles, hubId))
 }
 
+export const listHubRoleAssignments = async (
+  db: Database,
+  hubId: string,
+): Promise<Array<{ userId: string; role: string }>> => {
+  return await db
+    .select({
+      userId: hubRole.userId,
+      role: hubRole.role,
+    })
+    .from(hubRole)
+    .where(eq(hubRole.hubId, hubId))
+}
+
 export const syncHubUserRoles = async (
   db: Parameters<typeof createHub>[0],
   roles: Array<{ userId: string; role: string }>,

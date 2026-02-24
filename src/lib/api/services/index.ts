@@ -23,6 +23,15 @@ export const requireValue = <T>(
   return value
 }
 
+export const toCreatedResponseShape = <T extends { id: string; modifiedAt: string }>(
+  value: T,
+): { data: { id: string; modifiedAt: string } } => ({
+  data: {
+    id: value.id,
+    modifiedAt: value.modifiedAt,
+  },
+})
+
 export const hasRoleMembershipChanged = (
   submittedRoles: Array<{ userId: string; role: string }>,
   existingRoles: Array<{ userId: string; role: string }>,

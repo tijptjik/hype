@@ -5,12 +5,11 @@ import {
   getDuplicateValues,
   hasRoleMembershipChanged,
   requireValue,
+  toCreatedResponseShape,
   validateUniqueNonReservedCode,
 } from '$lib/api/services'
 // I18N
 import { toLocaleRecordFromOrganisationFormI18n } from '$lib/i18n'
-// DRIZZLE
-import { eq } from 'drizzle-orm'
 // UTILS
 import { nanoid } from 'nanoid'
 import {
@@ -54,6 +53,7 @@ import {
   probeHubQuery,
   updateI18n,
   syncHubUserRoles,
+  listHubRoleAssignments,
   listHubOrganisationLookups,
   listHubs,
   getHub as loadHub,
@@ -62,7 +62,7 @@ import {
 // API UTILS
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // SCHEMA
-import { hub, hubRole } from '$lib/db/schema'
+import { hub } from '$lib/db/schema'
 // ZOD
 import {
   ListQueryParamsSchema,
@@ -289,12 +289,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     await createHubUserRoles(db, submittedRoles, created.id)
     await syncHubOrganisations(db, created.id, submittedOrganisations)
 
-    return {
-      data: {
-        id: created.id,
-        modifiedAt: created.modifiedAt,
-      },
-    }
+    return toCreatedResponseShape(created)
   }
 
   // Resolve target id for update flow.
@@ -316,13 +311,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
   }
 
-  const existingRoleRows = await db
-    .select({
-      userId: hubRole.userId,
-      role: hubRole.role,
-    })
-    .from(hubRole)
-    .where(eq(hubRole.hubId, current.id))
+  const existingRoleRows = await listHubRoleAssignments(db, current.id)
 
   // Apply role-management authorization only when role membership changed.
   if (
@@ -391,12 +380,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   await syncHubOrganisations(db, current.id, submittedOrganisations)
 
   // Return persisted identity and write token.
-  return {
-    data: {
-      id: persisted.id,
-      modifiedAt: persisted.modifiedAt,
-    },
-  }
+  return toCreatedResponseShape(persisted)
 })
 
 /* ----------------- */

@@ -64,8 +64,10 @@ import type {
   HubOptsExtended,
   ListResponse,
   ProjectListByProfile,
+  ProjectEntityByProfile,
   QueryParams,
   SessionUser,
+  EntityResponse,
 } from '$lib/types'
 
 // ═══════════════════════
@@ -690,6 +692,26 @@ export const listProjectUserRoles = async (db: Database, projectId: string) => {
   })
 }
 
+export const listProjectRoleAssignments = async (
+  db: Database,
+  projectId: string,
+): Promise<
+  Array<{
+    userId: string
+    role: string
+    capabilities: ProjectRoleDB['capabilities']
+  }>
+> => {
+  return await db
+    .select({
+      userId: projectRole.userId,
+      role: projectRole.role,
+      capabilities: projectRole.capabilities,
+    })
+    .from(projectRole)
+    .where(eq(projectRole.projectId, projectId))
+}
+
 // ═══════════════════════
 // 4. ROLES
 // ═══════════════════════
@@ -802,6 +824,30 @@ export const toResponseShape = async (
     return ProjectCardProfileAPI.parse(data)
   }
   return ProjectListProfileAPI.parse(data)
+}
+
+export const toEntityResponseShape = async <P extends ProjectProfile = 'detail'>(
+  project: ProjectDBRaw | null,
+  profile: P = 'detail' as P,
+): Promise<EntityResponse<ProjectEntityByProfile<P>>> => {
+  const startedAt = Date.now()
+
+  if (!project) {
+    return { data: null, durationMs: Date.now() - startedAt }
+  }
+
+  const data = await toResponseShape(
+    project,
+    project.i18n ?? [],
+    project.userRoles ?? [],
+    project.properties ?? [],
+    profile,
+  )
+
+  return {
+    data: data as ProjectEntityByProfile<P>,
+    durationMs: Date.now() - startedAt,
+  }
 }
 
 export const toListResponseShape = async <P extends ProjectProfile = 'list'>(

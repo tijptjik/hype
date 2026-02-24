@@ -522,6 +522,19 @@ export const listUserRoles = async (
   })
 }
 
+export const listOrganisationRoleAssignments = async (
+  db: Database,
+  organisationId: string,
+): Promise<Array<{ userId: string; role: string }>> => {
+  return await db
+    .select({
+      userId: organisationRole.userId,
+      role: organisationRole.role,
+    })
+    .from(organisationRole)
+    .where(eq(organisationRole.organisationId, organisationId))
+}
+
 /**
  * Creates user roles for an organisation
  * @param db - The database instance
