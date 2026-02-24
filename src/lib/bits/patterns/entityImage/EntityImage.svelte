@@ -29,6 +29,7 @@ let {
   imageProviderProps,
   currentImage = null,
   ctx,
+  canEditPresentationMode = true,
   onPresentationModeCommitted,
 }: {
   page: Page
@@ -36,6 +37,7 @@ let {
   imageProviderProps: ImageCtxConstructorOptions
   currentImage?: ImageCtxEnvelope | null
   ctx?: ImageEditCtx
+  canEditPresentationMode?: boolean
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
 } = $props()
 
@@ -72,6 +74,7 @@ function setPresentationModeFeedback(
 }
 
 async function onPresentationModeChange(nextChecked: boolean | null): Promise<void> {
+  if (!canEditPresentationMode) return
   isUpdatingPresentationMode = true
   setPresentationModeFeedback('loading')
   try {
@@ -145,7 +148,9 @@ $effect(() => {
                   </span>
                   <Switch
                     checked={isCoverPresentationMode}
-                    disabled={!hasActiveImage || isUpdatingPresentationMode}
+                    disabled={!canEditPresentationMode ||
+                      !hasActiveImage ||
+                      isUpdatingPresentationMode}
                     leftText="Contain"
                     rightText="Cover"
                     onCheckedChange={value => void onPresentationModeChange(value)}
