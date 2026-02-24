@@ -105,7 +105,7 @@ import type {
  * Visibility flags (`isPublished`, `isArchived`) are applied only when explicitly requested.
  */
 const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
-  const { db, user, userRoles } = ctx
+  const { db, user, userRoles, event } = ctx
   // Resolve desired `profile`.
   const profile = toHubProfile(params.meta?.profile, 'list')
 
@@ -118,12 +118,17 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
   const requestedListState = toRequestedListState(queryParams as Partial<HubDB>)
 
   // Apply role-based authorization.
-  const listDecision = authorizeHubList({
-    userId: user.id,
-    userRoles,
-    isAuthenticated: true,
-    isAnonymous: user.isAnonymous,
-  })
+  const listDecision = authorizeHubList(
+    {
+      userId: user.id,
+      userRoles,
+      isAuthenticated: true,
+      isAnonymous: user.isAnonymous,
+    },
+    {
+      resourceHubId: event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
+    },
+  )
   if (!listDecision.allowed) {
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
