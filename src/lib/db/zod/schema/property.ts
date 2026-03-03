@@ -91,6 +91,35 @@ export const PropertyUpdateAPI = PropertyUpdate.extend({
   max: z.coerce.number().int().nullish(),
 })
 
+/* ----------------- */
+// PROPERTY REMOTE SCHEMAS
+/* -------- */
+
+export const ProjectPropertiesQuery = z.object({
+  projectId: z.string().min(1),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+export const ProjectPropertiesFormMeta = z.object({
+  projectId: z.string().optional(),
+  updatedAt: z.string().min(1).optional(),
+  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+})
+
+export const ProjectPropertiesFormEntity = z.object({
+  projectId: z.string().min(1).optional(),
+  properties: z.array(z.union([PropertyInsertAPI, PropertyUpdateAPI])),
+})
+
+export const ProjectPropertiesFormData = z.object({
+  meta: ProjectPropertiesFormMeta.optional(),
+  data: ProjectPropertiesFormEntity,
+})
+
 // INTERMEDIATE
 
 export const PropertyValueRaw = PropertyValueBase.extend({
