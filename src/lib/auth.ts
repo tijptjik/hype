@@ -1,13 +1,14 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { customSession, anonymous, username } from 'better-auth/plugins'
 // CONFIG
 import { authConfig } from './auth/config'
 // DB SCHEMA
-import type * as schema from '$lib/db/schema/index'
+import * as schema from '$lib/db/schema/index'
+// DRIZZLE
+import { drizzle } from 'drizzle-orm/d1'
 // TYPES
-import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import type {
   UserRoleDisco,
   UserLayer,
@@ -52,19 +53,20 @@ export function getBaseUrlFromRequestHeaders(headers: Headers): string {
  * Create a single auth instance with the D1 database, environment variables, and a specific base URL.
  * This function is called internally by getAuthForRequest.
  *
- * @param db - The Drizzle D1 database instance
- * @param env - Environment variables containing auth secrets and OAuth credentials
+ * @param env - Environment variables containing D1 binding, auth secrets, and OAuth credentials
  * @param baseURL - The base URL for this auth instance (e.g., https://example.com)
  */
 function createAuthInstance(
-  db: DrizzleD1Database<typeof schema>,
   env: {
+    DB: MiniflareD1Database
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
   },
   baseURL: string,
 ) {
+  const db = drizzle(env.DB, { schema })
+
   return betterAuth({
     // COMMON CONFIG
     ...authConfig,
@@ -73,9 +75,7 @@ function createAuthInstance(
     // ENV
     secret: env.AUTH_SECRET,
     // DB
-    database: drizzleAdapter(db, {
-      provider: 'sqlite',
-    }),
+    database: env.DB,
     // DATABASE HOOKS
     databaseHooks: {
       user: {
@@ -210,14 +210,13 @@ function createAuthInstance(
  * Auth instances are cached by base URL to support multiple domains.
  *
  * @param headers - The request headers to extract the base URL from
- * @param db - The Drizzle D1 database instance
- * @param env - Environment variables containing auth secrets and OAuth credentials
+ * @param env - Environment variables containing D1 binding, auth secrets, and OAuth credentials
  * @returns An auth instance configured for this request's domain
  */
 export const getAuthForRequest = (
   headers: Headers,
-  db: DrizzleD1Database<typeof schema>,
   env: {
+    DB: MiniflareD1Database
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
@@ -232,7 +231,7 @@ export const getAuthForRequest = (
   }
 
   // Create new instance for this base URL
-  const auth = createAuthInstance(db, env, baseURL)
+  const auth = createAuthInstance(env, baseURL)
   authInstances.set(baseURL, auth)
 
   return auth

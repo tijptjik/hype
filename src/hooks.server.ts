@@ -108,13 +108,9 @@ const handle_auth: Handle = async ({ event, resolve }) => {
       return resolve(event)
     }
 
-    // DB
-    const db = drizzle(event.platform.env.DB as unknown as MiniflareD1Database, {
-      schema,
-    })
-
     // AUTH - Get auth instance for this request's base URL
-    const auth = getAuthForRequest(event.request.headers, db, {
+    const auth = getAuthForRequest(event.request.headers, {
+      DB: event.platform.env.DB,
       AUTH_SECRET: event.platform.env.AUTH_SECRET,
       AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
       AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
