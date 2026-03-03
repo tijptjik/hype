@@ -1,6 +1,13 @@
-import { property } from '$lib/db/schema/index'
-import type { QueryParams, UserRoleDisco, SessionUser } from '$lib/types'
+import { property, project as projectTable } from '$lib/db/schema/index'
+import type {
+  Database,
+  Prisms,
+  QueryParams,
+  UserRoleDisco,
+  SessionUser,
+} from '$lib/types'
 import type { SQL } from 'drizzle-orm'
+import { inArray } from 'drizzle-orm'
 import { applyQueryFilters } from '..'
 
 /********************
@@ -18,6 +25,36 @@ export const propertyCollectionWithRelations = {
 
 export const propertyEntityWithRelations = {
   ...propertyCollectionWithRelations,
+}
+
+/* ----------------- */
+// REMOTE FUNCTION REFACTOR
+/* -------- */
+
+export const toPropertyPrismConditions = async (params: {
+  db: Database
+  prisms: Prisms
+  conditions?: SQL<unknown>[]
+}): Promise<SQL<unknown>[]> => {
+  const scopedConditions = [...(params.conditions ?? [])]
+
+  if (params.prisms.project.length > 0) {
+    scopedConditions.push(inArray(property.projectId, params.prisms.project))
+    return scopedConditions
+  }
+
+  if (params.prisms.organisation.length > 0) {
+    const projectsInOrgs = await params.db.query.project.findMany({
+      where: inArray(projectTable.organisationId, params.prisms.organisation),
+      columns: { id: true },
+    })
+    const projectIds = projectsInOrgs.map(project => project.id)
+    if (projectIds.length > 0) {
+      scopedConditions.push(inArray(property.projectId, projectIds))
+    }
+  }
+
+  return scopedConditions
 }
 
 /**
