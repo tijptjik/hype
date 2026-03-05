@@ -1,6 +1,8 @@
 export { default as Search } from './Search.svelte'
+export { default as LocalSearch } from './LocalSearch.svelte'
 export type {
   SearchProps,
+  LocalSearchProps,
   SearchResultMap,
   SearchBarProps,
   SearchResultItemProps,

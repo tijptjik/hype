@@ -74,7 +74,30 @@ export const OrganisationRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabiliti
     manageDropOffs: z.boolean().optional(),
   })
 
-const CapabilityBase = CapabilityRoot.optional()
+const toCapabilityValue = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return value
+  }
+}
+
+const CapabilityBase = z.preprocess(value => {
+  if (!Array.isArray(value)) return toCapabilityValue(value)
+
+  const normalized = value
+    .map(toCapabilityValue)
+    .filter(item => item !== undefined && item !== null)
+  if (normalized.length === 0) return undefined
+
+  const objectCandidate = [...normalized]
+    .reverse()
+    .find(item => typeof item === 'object' && !Array.isArray(item))
+  return objectCandidate ?? normalized[normalized.length - 1]
+}, CapabilityRoot.optional())
 
 // ═══════════════════════
 // 2. BASE / RELATIONAL PRIMITIVES

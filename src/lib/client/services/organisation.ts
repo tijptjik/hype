@@ -1,9 +1,12 @@
 // ENUMS
 import type { OrganisationRoleType } from '$lib/enums'
+import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '$lib/capabilities'
 // I18N
 import { toLocaleCode, toLocaleKey } from '$lib/i18n'
 // TYPES
 import type {
+  CapabilityDefinition,
+  CapabilityDefinitions,
   Locale,
   OrganisationBooleanField,
   Organisation,
@@ -26,6 +29,27 @@ function normalizeOrganisationFormLocale(
   }
 }
 
+function normalizeOrganisationCapabilities(
+  capabilities: CapabilityDefinitions | null | undefined,
+): CapabilityDefinitions {
+  if (!capabilities) return {}
+  const normalized: CapabilityDefinitions = {}
+  for (const [rawKey, rawDefinition] of Object.entries(capabilities)) {
+    if (!isProjectCapabilityKey(rawKey)) continue
+    const defaults = CAPABILITY_I18N_BY_KEY[rawKey]
+    const definition = (rawDefinition ?? {}) as CapabilityDefinition
+    const labels = definition.i18n ?? {}
+    normalized[rawKey] = {
+      i18n: {
+        en: labels.en ?? defaults.en ?? rawKey,
+        zhHans: labels.zhHans ?? defaults.zhHans ?? defaults.en ?? rawKey,
+        zhHant: labels.zhHant ?? defaults.zhHant ?? defaults.en ?? rawKey,
+      },
+    }
+  }
+  return normalized
+}
+
 export function toOrganisationFormInput(
   data?: Organisation | null,
 ): OrganisationFormInput {
@@ -35,6 +59,7 @@ export function toOrganisationFormInput(
       data: {
         code: '',
         url: '',
+        capabilities: {},
         i18n: {
           en: normalizeOrganisationFormLocale(undefined),
           zhHans: normalizeOrganisationFormLocale(undefined),
@@ -55,6 +80,7 @@ export function toOrganisationFormInput(
     data: {
       code: data.code,
       url: data.url ?? '',
+      capabilities: normalizeOrganisationCapabilities(data.capabilities),
       i18n: {
         en: normalizeOrganisationFormLocale(data.i18n?.en),
         zhHans: normalizeOrganisationFormLocale(data.i18n?.zhHans),
@@ -168,6 +194,8 @@ export function overrideOrganisationEntityFromFormInput(
     typeof (formData.data as { url?: unknown } | undefined)?.url === 'string'
       ? ((formData.data as { url?: string }).url ?? '')
       : undefined
+  const nextCapabilities = (formData.data as { capabilities?: unknown } | undefined)
+    ?.capabilities as CapabilityDefinitions | undefined
   return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
     ...current,
     data: current.data
@@ -175,6 +203,9 @@ export function overrideOrganisationEntityFromFormInput(
           ...current.data,
           ...(nextCode !== undefined ? { code: nextCode } : {}),
           ...(nextUrl !== undefined ? { url: nextUrl } : {}),
+          ...(nextCapabilities !== undefined
+            ? { capabilities: normalizeOrganisationCapabilities(nextCapabilities) }
+            : {}),
           i18n: {
             ...((current.data.i18n as Record<string, Record<string, unknown>>) ?? {}),
             ...Object.fromEntries(

@@ -6,7 +6,7 @@ import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -25,6 +25,7 @@ import {
   removeUserRoleSelection,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
+  updateFormData,
   updateUserRoleSelection,
 } from '$lib/client/services/form'
 import {
@@ -50,12 +51,18 @@ import {
 } from '$lib/api/services/authz'
 // SCHEMA
 import { OrganisationPreflightFormData } from '$lib/db/zod'
+import {
+  CAPABILITY_I18N_BY_KEY,
+  CAPABILITY_KEYS,
+  getCapabilityLabel,
+} from '$lib/capabilities'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // BITS COMPONENTS
 import {
   FormI18nDescriptorFields,
   FormI18nSection,
+  OrganisationCapabilities,
   FormSpecifiersFields,
   FormUserRolesSection,
   GridSpacer,
@@ -90,7 +97,10 @@ import type {
   UserRoleFieldNameResolverForm,
   FormDataUpdaterForm,
   OrganisationDB,
+  CapabilityDefinitions,
+  CapabilityKey,
 } from '$lib/types'
+import type { CapabilityFormFields, CapabilitySearchOption } from '$lib/bits'
 
 // § Context
 
@@ -100,13 +110,6 @@ const headerCtrl = getHeaderCtrl()
 // § Config
 
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.organisation)
-const resolvedFacetTabs = $derived.by(() =>
-  isNewOrganisationRef
-    ? getAdminFacetTabsForResource(FirstClassResource.organisation, {
-        coreOnly: true,
-      })
-    : facetTabs,
-)
 
 const resourceEditorPage = createResourceEditorPage({
   headerCtrl,
@@ -118,6 +121,7 @@ const resourceEditorPage = createResourceEditorPage({
 
 const organisationRef = $derived(page.params.organisation as string)
 const locales = $derived(getLocaleOrder(getLocale()))
+const currentFormLocale = $derived(toLocaleKey(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
@@ -147,6 +151,7 @@ const commitOrganisationState = (value: OrganisationGetState): void => {
 // § Derived State - Flags
 
 const isCoreFacet = $derived(activeFacet === 'core')
+const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
@@ -231,6 +236,17 @@ const formLevelIssues = $derived.by((): string[] => {
     .filter((message: string | null): message is string => Boolean(message))
   return Array.from(new Set(messages))
 })
+const capabilityIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'capabilities'
+    })
+    .map(toIssueMessage)
+    .filter((message: string | null): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
 
 // USER ROLES
 
@@ -259,6 +275,81 @@ const userRoles = $derived.by(() =>
     usersById: selectedUsersById,
   }),
 )
+
+// CAPABILITIES
+
+const capabilityFormUpdater = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<{
+    capabilities?: CapabilityDefinitions
+  }>,
+)
+const formCapabilityDefinitions = $derived(
+  (formCtx.form.fields.value().data?.capabilities ?? {}) as CapabilityDefinitions,
+)
+const selectedCapabilityKeys = $derived.by(() =>
+  CAPABILITY_KEYS.filter(
+    capabilityKey =>
+      formCapabilityDefinitions[capabilityKey] !== null &&
+      formCapabilityDefinitions[capabilityKey] !== undefined,
+  ),
+)
+const selectedCapabilityIds = $derived(
+  selectedCapabilityKeys.map(capabilityKey => capabilityKey),
+)
+const capabilitySearchOptions = $derived(
+  CAPABILITY_KEYS.map(
+    key =>
+      ({
+        id: key,
+        key,
+        i18n: CAPABILITY_I18N_BY_KEY[key],
+      }) satisfies CapabilitySearchOption,
+  ),
+)
+
+const capabilityLabelsByKey = CAPABILITY_I18N_BY_KEY
+const shouldSubmitEmptyCapabilities = $derived(selectedCapabilityKeys.length === 0)
+
+function onAddCapability(option: CapabilitySearchOption): void {
+  updateFormData(capabilityFormUpdater, data => {
+    const nextCapabilities = { ...(data.capabilities ?? {}) }
+    nextCapabilities[option.key] = {
+      i18n: {
+        en: CAPABILITY_I18N_BY_KEY[option.key].en ?? option.key,
+        zhHans:
+          CAPABILITY_I18N_BY_KEY[option.key].zhHans ??
+          CAPABILITY_I18N_BY_KEY[option.key].en ??
+          option.key,
+        zhHant:
+          CAPABILITY_I18N_BY_KEY[option.key].zhHant ??
+          CAPABILITY_I18N_BY_KEY[option.key].en ??
+          option.key,
+      },
+    }
+    data.capabilities = nextCapabilities
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onRemoveCapability(capabilityKey: CapabilityKey): void {
+  updateFormData(capabilityFormUpdater, data => {
+    if (!data.capabilities) return data
+    const nextCapabilities = { ...data.capabilities }
+    delete nextCapabilities[capabilityKey]
+    data.capabilities = nextCapabilities
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function getCapabilityDisplayLabel(capabilityKey: CapabilityKey): string {
+  const labels = formCapabilityDefinitions[capabilityKey]?.i18n
+  return (
+    labels?.[currentFormLocale]?.trim() ||
+    getCapabilityLabel(capabilityKey, currentFormLocale)
+  )
+}
 
 // IMAGE
 
@@ -308,6 +399,17 @@ const organisationPermissions = $derived.by(() => {
 const canCreateOrganisation = $derived(organisationPermissions.canCreate)
 const canEditOrganisation = $derived(organisationPermissions.canEdit)
 const canPublishOrganisation = $derived(organisationPermissions.canPublish)
+const resolvedFacetTabs = $derived.by(() => {
+  if (isNewOrganisationRef) {
+    return getAdminFacetTabsForResource(FirstClassResource.organisation, {
+      coreOnly: true,
+    })
+  }
+  if (canEditOrganisation) return facetTabs
+  const tabs = new Map(facetTabs)
+  tabs.delete('capabilities')
+  return tabs
+})
 const canSubmitOrganisation = $derived(
   isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,
 )
@@ -514,7 +616,9 @@ $effect(() => {
     },
     setFacetForRef: nextRef => {
       untrack(() => {
-        const nextFacet = adminCtx.activeFacet === 'images' ? 'images' : 'core'
+        const currentFacet = adminCtx.activeFacet
+        const nextFacet =
+          currentFacet && resolvedFacetTabs.has(currentFacet) ? currentFacet : 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.organisation)
       })
     },
@@ -528,7 +632,7 @@ $effect(() => {
   const ref = organisationRef
   const title =
     (isNewOrganisationRef ? `${NEW_TITLE} ${m.any_small_midge_aim()}` : undefined) ??
-    organisation?.data?.i18n?.[getLocale()]?.name ??
+    organisation?.data?.i18n?.[getLocaleKey()]?.name ??
     organisation?.data?.code ??
     m.any_small_midge_aim()
   const facetKey = Array.from(resolvedFacetTabs.keys()).join('|')
@@ -570,6 +674,13 @@ $effect(() => {
   if (canSubmitOrganisation) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
+})
+
+// Capabilities facet is only available to users who can edit organisations.
+$effect(() => {
+  if (activeFacet !== 'capabilities') return
+  if (canEditOrganisation) return
+  adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
 })
 
 // Wire stable header action handlers once.
@@ -616,12 +727,13 @@ $effect(() => {
 </script>
 
 <Main.Root>
-  <Main.Section isVisible={isCoreFacet} transition="fade">
-    <Main.Form
-      bind:formEl={contentsElement}
-      attrs={formCtx.attributes}
-      isReady={Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef))}
-    >
+  <Main.Form
+    bind:formEl={contentsElement}
+    attrs={formCtx.attributes}
+    isReady={Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef))}
+    class="space-y-4"
+  >
+    <Main.Section isVisible={isCoreFacet} transition="fade">
       <FormI18nSection
         title={m.admin__forms_common_descriptors()}
         {locales}
@@ -673,8 +785,30 @@ $effect(() => {
           />
         {/snippet}
       </GridSpacer>
-    </Main.Form>
-  </Main.Section>
+    </Main.Section>
+    <Main.Section
+      isVisible={isCapabilitiesFacet && canEditOrganisation}
+      transition="fade"
+    >
+      <OrganisationCapabilities
+        {selectedCapabilityKeys}
+        {capabilitySearchOptions}
+        {selectedCapabilityIds}
+        {currentFormLocale}
+        {locales}
+        {isEditing}
+        {capabilityLabelsByKey}
+        formCapabilityFields={formCtx.form.fields.data.capabilities as CapabilityFormFields}
+        {shouldSubmitEmptyCapabilities}
+        {capabilityIssues}
+        {isRequiredInPreflight}
+        {getCapabilityDisplayLabel}
+        {onAddCapability}
+        {onRemoveCapability}
+        onEnterEditMode={() => headerCtrl.setEditing(true)}
+      />
+    </Main.Section>
+  </Main.Form>
   <Main.Section
     isVisible={isImagesFacet}
     transition="fade"

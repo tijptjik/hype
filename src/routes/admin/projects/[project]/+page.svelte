@@ -271,15 +271,13 @@ const configuredProjectForm = configureForm(() => ({
       currentValue: currentFormSnapshot.data?.properties,
       baselineValue:
         (baselineFormInput.data as ProjectSubmitBaselineRelations).properties ?? [],
-      toEffective: ({ submittedValue }) => {
-        if (!Array.isArray(submittedValue)) {
-          throw new Error(
-            'Invariant failed: project form submit must include data.properties as an array.',
-          )
-        }
-        return normalizePropertiesForSubmit(
-          submittedValue as Array<Record<string, unknown>>,
-        )
+      toEffective: ({ submittedValue, currentValue, baselineValue }) => {
+        const raw =
+          submittedValue ??
+          currentValue ??
+          (Array.isArray(baselineValue) ? baselineValue : [])
+        if (!Array.isArray(raw)) return []
+        return normalizePropertiesForSubmit(raw as Array<Record<string, unknown>>)
       },
       toComparableEffective: value => value,
       toComparableBaseline: value =>

@@ -21,6 +21,19 @@ export interface SearchProps<T> {
   class?: string
 }
 
+export interface LocalSearchProps<T> {
+  options: T[]
+  placeholder?: string
+  focusOnMount?: boolean
+  maxResults?: number
+  excludeIds?: string[]
+  getItemId?: (item: T) => string
+  getSearchText?: (item: T) => string
+  onSelect: (item: T) => void
+  resultMap: SearchResultMap<T>
+  class?: string
+}
+
 export interface SearchBarProps {
   query?: string
   placeholder?: string
