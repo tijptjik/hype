@@ -344,7 +344,7 @@ export const organisationForm = guardedForm(
         code: normalizedCode,
         url: data.url.trim() === '' ? null : data.url.trim(),
         hubId: activeHubId,
-        capabilities: data.capabilities ?? {},
+        ...(data.capabilities !== undefined ? { capabilities: data.capabilities } : {}),
       })
 
       await createI18n(
@@ -435,7 +435,9 @@ export const organisationForm = guardedForm(
         data: {
           code: normalizedCode,
           url: data.url.trim() === '' ? null : data.url.trim(),
-          capabilities: data.capabilities ?? {},
+          ...(data.capabilities !== undefined
+            ? { capabilities: data.capabilities }
+            : {}),
         },
       }),
       () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),

@@ -383,7 +383,7 @@ export const updateOrganisationByIdWithConcurrency = async (
     data: {
       code: string
       url: string | null
-      capabilities: OrganisationDB['capabilities']
+      capabilities?: OrganisationDB['capabilities']
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
