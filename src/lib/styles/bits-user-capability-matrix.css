@@ -4,38 +4,86 @@
   }
 
   .bits-theme .bits-user-capability-matrix__header {
-    @apply min-h-16 h-16 items-center pt-0 pb-0;
+    @apply min-h-8 items-center pt-0 pb-0;
   }
 
   .bits-theme .bits-user-capability-matrix__table-wrap {
-    @apply w-full overflow-x-auto rounded-xl border-2 border-primary/40 bg-glass-300 p-2;
+    @apply inline-block w-auto max-w-full overflow-x-auto rounded-xl border-2 border-primary/40 bg-glass-300 p-2;
+    width: fit-content;
+    align-self: flex-start;
+    max-height: calc((2.95rem * 20) + 3.5rem);
+    overflow-y: auto;
   }
 
   .bits-theme .bits-user-capability-matrix__table {
-    @apply w-full border-collapse;
-    min-width: 36rem;
+    @apply border-separate;
+    border-spacing: 0;
+    width: max-content;
+    max-width: calc(14rem + (var(--bits-user-capability-column-count, 1) * 5rem));
   }
 
   .bits-theme .bits-user-capability-matrix__head-cell {
     @apply text-left text-xs font-semibold uppercase text-primary/90;
+    @apply sticky top-0;
+    z-index: 20;
   }
 
   .bits-theme .bits-user-capability-matrix__head-cell--user {
-    @apply pl-2 pb-2;
-    width: 16rem;
-    min-width: 16rem;
+    @apply px-2 pb-2 align-bottom;
+    width: auto;
+    white-space: nowrap;
+    @apply sticky left-0;
+    z-index: 30;
   }
 
   .bits-theme .bits-user-capability-matrix__head-cell--capability {
-    @apply pb-2 align-bottom text-center;
-    width: 4rem;
-    min-width: 4rem;
-    height: 7rem;
+    @apply px-1 py-1 align-bottom text-center;
+    width: 5rem;
+    min-width: 5rem;
+    max-width: 5rem;
+    min-height: 3.25rem;
+    height: auto;
+  }
+
+  .bits-theme .bits-user-capability-matrix__head-user-wrap {
+    @apply flex items-end justify-between gap-2;
+  }
+
+  .bits-theme .bits-user-capability-matrix__head-user-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-primary/90;
+  }
+
+  .bits-theme .bits-user-capability-matrix__head-capability-wrap {
+    @apply flex h-full w-full flex-col items-center justify-end gap-1;
   }
 
   .bits-theme .bits-user-capability-matrix__head-label {
-    @apply inline-block origin-bottom-left whitespace-nowrap text-xxs tracking-wide;
-    transform: rotate(-70deg) translateY(0.65rem);
+    @apply block w-full truncate text-center text-xxs tracking-wide normal-case;
+  }
+
+  .bits-theme .bits-user-capability-matrix__sort-buttons {
+    @apply flex items-center gap-0.5;
+  }
+
+  .bits-theme .bits-user-capability-matrix__sort-btn {
+    @apply flex h-5 w-5 items-center justify-center rounded-md border border-transparent text-primary/70 transition;
+  }
+
+  .bits-theme .bits-user-capability-matrix__sort-btn:hover {
+    @apply border-primary/35 bg-glass-200 text-primary;
+  }
+
+  .bits-theme .bits-user-capability-matrix__sort-btn--active {
+    @apply text-white/70;
+  }
+
+  .bits-theme .bits-user-capability-matrix__sort-btn svg {
+    @apply h-3.5 w-3.5;
+  }
+
+  .bits-theme
+    .bits-user-capability-matrix__sort-buttons.bits-user-capability-matrix__sort-buttons--capability {
+    @apply w-full justify-center;
   }
 
   .bits-theme .bits-user-capability-matrix__row {
@@ -44,11 +92,13 @@
 
   .bits-theme .bits-user-capability-matrix__user-cell {
     @apply px-2 py-2 text-left;
+    @apply sticky left-0;
+    z-index: 10;
   }
 
   .bits-theme .bits-user-capability-matrix__user-name {
     @apply block truncate text-sm font-semibold;
-    max-width: 14rem;
+    max-width: 20rem;
   }
 
   .bits-theme .bits-user-capability-matrix__user-role {
