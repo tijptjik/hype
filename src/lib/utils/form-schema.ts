@@ -27,16 +27,26 @@ function unwrapSchema(schema: SchemaLike | undefined): SchemaLike | undefined {
   if (!schema) return undefined
   let current = schema
   for (let i = 0; i < 10; i++) {
+    const currentDef = (current._def ?? current.def ?? {}) as Record<string, unknown>
+    const hasShape = Boolean(current.shape ?? currentDef.shape)
+    const hasElement = Boolean(
+      current.element ?? currentDef.element ?? currentDef.items,
+    )
+    // Stop unwrapping at structural container schemas (object/array-like).
+    if (hasShape || hasElement) break
+
     if (typeof current.unwrap === 'function') {
       const unwrapped = current.unwrap()
       if (unwrapped === current) break
       current = unwrapped
       continue
     }
-    const def = current._def ?? {}
-    const innerType = (def.innerType ?? def.schema) as SchemaLike | undefined
-    if (innerType && innerType !== current) {
-      current = innerType
+    const def = currentDef
+    const nextSchema = (def.innerType ?? def.schema ?? def.out ?? def.in) as
+      | SchemaLike
+      | undefined
+    if (nextSchema && nextSchema !== current) {
+      current = nextSchema
       continue
     }
     break
@@ -48,7 +58,7 @@ function getShape(
   schema: SchemaLike | undefined,
 ): Record<string, SchemaLike> | undefined {
   if (!schema) return undefined
-  const shape = schema.shape ?? schema._def?.shape
+  const shape = schema.shape ?? schema._def?.shape ?? schema.def?.shape
   if (typeof shape === 'function') return shape() as Record<string, SchemaLike>
   return shape as Record<string, SchemaLike> | undefined
 }
@@ -64,7 +74,9 @@ function getSchemaAtPath(
     if (typeof segment === 'number') {
       const element = (unwrapped.element ??
         unwrapped._def?.element ??
-        unwrapped._def?.type) as SchemaLike | undefined
+        unwrapped.def?.element ??
+        unwrapped._def?.items ??
+        unwrapped.def?.items) as SchemaLike | undefined
       current = element
       continue
     }
