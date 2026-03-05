@@ -30,6 +30,7 @@ Run all commands with Bun:
 - Refactor roadmap is tracked in `docs/refactor-roadmap.md`
 - Refactor checklist/TODOs are tracked in `docs/refactor-todo.md`
 - Component architecture and boundary rules are defined in `docs/Component Architecture.md`
+- Deferred/intentional-later DB migrations are tracked in `docs/Deferred-Migrations.md`
 
 ## Coding Style & Naming Conventions
 - Formatter/linter: Biome (`biome.json`).
@@ -76,6 +77,7 @@ Run all commands with Bun:
   - Use `eq`/`and`/`or` for conditions.
   - Use `insert`/`select`/`update`/`delete` patterns for CRUD.
   - Define schema relations with `relations`.
+  - If a schema/API rename is shipped without a physical DB migration (for compatibility or staged rollout), add an entry to `docs/Deferred-Migrations.md` in the same PR.
 - `paraglide-js` - i18n:
   - Use Paraglide for translations in `messages/`.
   - Supported locales are `en`, `zh-hans`, and `zh-hant`.
