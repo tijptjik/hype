@@ -212,8 +212,10 @@ export const getHub = getHubQuery as typeof getHubQuery &
  * @param input - Form payload parsed by `HubFormData`.
  * @returns A promise resolving to `{ data: { id, modifiedAt } }`.
  * @remarks
- * - `mode: 'create'` (or no mode with no update token) creates a new hub.
- * - Other submissions follow update flow and enforce optimistic concurrency via `meta.updatedAt`.
+ * - `mode` must be explicitly `create` or `update`.
+ * - `create` submissions cannot include `meta.id`.
+ * - `update` submissions must include `meta.id` and pass optimistic concurrency via
+ *   `meta.updatedAt`.
  * - Image updates are intentionally excluded from this form flow and managed separately.
  * - Role and organisation scope checks are enforced before persistence.
  */
@@ -226,6 +228,10 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
   const hubId = meta?.id?.trim()
   const mode = meta?.mode
+  const isSupportedMode = mode === 'create' || mode === 'update'
+  if (!isSupportedMode) {
+    invalid(issue(toIssueDetailMessage('INVALID_MODE')))
+  }
   const normalizedCode = data.code.trim()
   const normalizedDomain = data.domain.trim()
   const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
@@ -255,7 +261,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('MISSING_HUB_ID'))
   }
 
-  const isCreateMode = !hubId && (!mode || mode === 'create') && !meta?.updatedAt
+  const isCreateMode = mode === 'create'
 
   if (isCreateMode) {
     // Apply role-based authorization.

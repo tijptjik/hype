@@ -255,9 +255,10 @@ export const getOrganisation = getOrganisationQuery as typeof getOrganisationQue
  * @param params.data - Organisation form data (`code`, `url`, `i18n`, `userRoles`).
  * @returns A promise resolving to `{ data: { id, modifiedAt } }`.
  * @remarks
- * `mode: 'create'` with no `meta.id` triggers create behavior; all other submissions
- * are treated as updates and require `meta.id`.
- * Update flow enforces optimistic concurrency via `meta.updatedAt === current.modifiedAt`.
+ * - `mode` must be explicitly `create` or `update`.
+ * - `create` submissions cannot include `meta.id`.
+ * - `update` submissions must include `meta.id` and pass optimistic concurrency via
+ *   `meta.updatedAt`.
  * Authorization is checked before uniqueness lookups to avoid leaking existence details.
  */
 export const organisationForm = guardedForm(
@@ -274,10 +275,13 @@ export const organisationForm = guardedForm(
 
     const organisationId = meta?.id?.trim()
     const mode = meta?.mode
+    const isSupportedMode = mode === 'create' || mode === 'update'
+    if (!isSupportedMode) {
+      invalid(issue(toIssueDetailMessage('INVALID_MODE')))
+    }
     const normalizedCode = data.code.trim()
     const activeHubId = event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null)
     const isExplicitCreateMode = mode === 'create'
-    const hasUpdateToken = Boolean(meta?.updatedAt)
     const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
     const duplicateSubmittedRoleUserIds = getDuplicateValues(
       submittedRoles.map(userRole => userRole.userId),

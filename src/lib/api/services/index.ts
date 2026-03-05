@@ -60,6 +60,9 @@ export const validateUniqueNonReservedCode = async (params: {
   onReserved: () => void
   onConflict: () => void
 }): Promise<void> => {
+  // Update flow: unchanged code should always pass uniqueness checks.
+  if (params.current && params.code === params.current.code) return
+
   const isReserved =
     params.isReservedCode(params.code) &&
     (!params.current || params.code !== params.current.code)

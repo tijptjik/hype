@@ -243,9 +243,10 @@ export const getProject = getProjectQuery
  * @param input - Form payload parsed by `ProjectFormData`.
  * @returns A promise resolving to `{ data: { id, modifiedAt } }`.
  * @remarks
- * - `mode: 'create'` (or no mode with no update token) creates a new project.
- * - Other submissions follow update flow and enforce optimistic concurrency via
- *   `meta.updatedAt`.
+ * - `mode` must be explicitly `create` or `update`.
+ * - `create` submissions cannot include `meta.id`.
+ * - `update` submissions must include `meta.id` and pass optimistic concurrency
+ *   via `meta.updatedAt`.
  * - Role membership changes, role capability assignment changes, and project capability
  *   config changes are authorized independently (`manageProjectRoles`,
  *   `assignCapabilities`, `manageCapabilities`).
@@ -259,6 +260,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   const projectId = meta?.id?.trim()
   const mode = meta?.mode
+  const isSupportedMode = mode === 'create' || mode === 'update'
+  if (!isSupportedMode) {
+    invalid(issue(toIssueDetailMessage('INVALID_MODE')))
+  }
   const normalizedCode = data.code.trim()
   const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
   const submittedRolesWithCapabilities = submittedRoles.map(role => ({
@@ -298,9 +303,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('MISSING_PROJECT_ID'))
   }
 
-  const isCreateMode = !projectId && !meta?.updatedAt && (!mode || mode === 'create')
+  // Create/update mode is explicit and validated above.
+  const isCreateMode = mode === 'create'
 
   if (isCreateMode) {
+    if (projectId) {
+      invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
+    }
     // Apply role-based authorization.
     const organisationScope = requireValue(
       await probeOrganisationHubForProject(db, data.organisationId as Id),
