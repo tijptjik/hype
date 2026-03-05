@@ -10,7 +10,8 @@ import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'
-import { ProjectPropertyFormData, PropertyAPI } from './property'
+import { ProjectPropertyFormData } from './property'
+import { PropertyAPI } from './deprecated/property'
 import { ImageContextEnvelopeAPI } from './image'
 import { UserBasic } from './user'
 
@@ -59,9 +60,9 @@ export const ProjectCapabilitiesSchema: z.ZodType<ProjectCapabilities> = z.objec
 
 export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
   z.object({
-    manageBakeries: z.boolean().optional(),
-    manageVolunteers: z.boolean().optional(),
-    manageDropOffs: z.boolean().optional(),
+    manageBakeries: FormBoolean.optional(),
+    manageVolunteers: FormBoolean.optional(),
+    manageDropOffs: FormBoolean.optional(),
   })
 
 const toProjectCapabilitiesValue = (value: unknown): unknown => {
