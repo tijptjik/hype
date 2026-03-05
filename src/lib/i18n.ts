@@ -9,9 +9,49 @@ import type {
   OrganisationFormLocaleKey,
   PropertyValueI18nDB,
   UserPreferences,
+  WritableI18nRecord,
 } from '$lib/types'
 import type { Resource } from '$lib/types'
 import { supportedLocales } from './enums'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. RUNTIME LOCALE ACCESS
+//    - getLocale
+//    - setLocale
+//
+// 2. LOCALE KEY/CODE CONVERSIONS
+//    - getLocaleOrder
+//    - toLocaleKey
+//    - toLocaleCode
+//    - normalizeLocaleCode
+//
+// 3. FORM I18N RECORD HELPERS
+//    - toLocaleRecordFromOrganisationFormI18n
+//    - toFormLocaleRecord
+//    - ensureLocaleEntryForWrite
+//    - normalizeI18nLocaleRecord
+//
+// 4. LOCALE FALLBACKS
+//    - getFallbackLocales
+//
+// 5. TRANSLATION RESOLUTION
+//    - getI18n
+//    - getFPI18n
+//
+// 6. LOCALE LABELS / EXPORTS
+//    - localeLabels
+//    - m, runtime
+//
+// 7. TRANSLATION API HELPERS
+//    - translateText
+//    - translateI18nFields
+
+// ═══════════════════════
+// 1. RUNTIME LOCALE ACCESS
+// ═══════════════════════
 
 /**
  * Get the current locale with Paraglide. Wrapping for type safety.
@@ -28,6 +68,10 @@ export function getLocale(): Locale {
 export function setLocale(locale: Locale) {
   runtime.setLocale(locale as any)
 }
+
+// ═══════════════════════
+// 2. LOCALE KEY/CODE CONVERSIONS
+// ═══════════════════════
 
 /**
  * Get canonical locale order for rendering and fallback checks.
@@ -58,6 +102,21 @@ export function toLocaleCode(localeKey: OrganisationFormLocaleKey): Locale {
 }
 
 /**
+ * Normalize an incoming locale identifier to canonical locale code where possible.
+ * Accepts form keys (`zhHans`, `zhHant`) and locale codes (`zh-hans`, `zh-hant`).
+ */
+export function normalizeLocaleCode(input: string): string {
+  if (input === 'zhHans' || input === 'zhHant' || input === 'en') {
+    return toLocaleCode(input as OrganisationFormLocaleKey)
+  }
+  return input
+}
+
+// ═══════════════════════
+// 3. FORM I18N RECORD HELPERS
+// ═══════════════════════
+
+/**
  * Convert organisation form i18n map keys (`en`, `zhHans`, `zhHant`) to locale keys.
  * @param i18n - Form-keyed i18n object.
  * @returns Locale-keyed i18n object.
@@ -73,6 +132,65 @@ export function toLocaleRecordFromOrganisationFormI18n<T>(
 }
 
 /**
+ * Normalize any partial organisation-form i18n map to canonical form keys.
+ * @param i18n - Form-keyed i18n object.
+ * @returns Canonical form-keyed i18n object.
+ */
+export function toFormLocaleRecord<T>(
+  i18n: Partial<Record<OrganisationFormLocaleKey, T>> | null | undefined,
+): Partial<Record<OrganisationFormLocaleKey, T>> | null | undefined {
+  if (!i18n) return i18n
+  return {
+    ...(i18n.en !== undefined ? { en: i18n.en } : {}),
+    ...(i18n.zhHans !== undefined ? { zhHans: i18n.zhHans } : {}),
+    ...(i18n.zhHant !== undefined ? { zhHant: i18n.zhHant } : {}),
+  }
+}
+
+/**
+ * Ensure a writable form-locale entry exists for the provided locale and return it.
+ * @param i18n - Mutable form-keyed i18n record.
+ * @param locale - App locale to map into form keys.
+ * @returns Existing or newly created locale entry.
+ */
+export function ensureLocaleEntryForWrite(
+  i18n: WritableI18nRecord | null | undefined,
+  locale: Locale,
+): Record<string, unknown> | null {
+  if (!i18n) return null
+  const formLocale = toLocaleKey(locale)
+  if (!i18n[formLocale]) {
+    i18n[formLocale] = {
+      locale: toLocaleCode(formLocale),
+    }
+  }
+  return i18n[formLocale] as Record<string, unknown>
+}
+
+/**
+ * Normalize an i18n map to canonical locale-code keys and ensure each entry has `locale`.
+ */
+export function normalizeI18nLocaleRecord<T extends Record<string, unknown>>(
+  i18n: Record<string, T>,
+): Record<string, T> {
+  const normalized: Record<string, T> = {}
+  for (const [rawLocale, entry] of Object.entries(i18n)) {
+    const entryLocale =
+      typeof entry?.locale === 'string' ? normalizeLocaleCode(entry.locale) : undefined
+    const locale = entryLocale ?? normalizeLocaleCode(rawLocale)
+    normalized[locale] = {
+      ...entry,
+      locale,
+    } as T
+  }
+  return normalized
+}
+
+// ═══════════════════════
+// 4. LOCALE FALLBACKS
+// ═══════════════════════
+
+/**
  * Get the fallback locales for a given locale.
  * @param locale - The locale to get the fallback locales for.
  * @returns All supported locales, excluding the given locale.
@@ -80,6 +198,10 @@ export function toLocaleRecordFromOrganisationFormI18n<T>(
 export function getFallbackLocales(locale: Locale): Locale[] {
   return supportedLocales.filter((nextLocale: Locale) => nextLocale !== locale)
 }
+
+// ═══════════════════════
+// 5. TRANSLATION RESOLUTION
+// ═══════════════════════
 
 /**
  * Get the translated value of a field from an object using user preferences.
@@ -230,6 +352,10 @@ export function getFPI18n(
   return fallback
 }
 
+// ═══════════════════════
+// 6. LOCALE LABELS / EXPORTS
+// ═══════════════════════
+
 /**
  * Labels for the locales.
  * @returns The labels for the locales.
@@ -243,7 +369,10 @@ export const localeLabels = [
 // EXPORT PARAGLIDE
 export { m, runtime }
 
-// EXPORT CUSTOM FUNCTIONS
+// ═══════════════════════
+// 7. TRANSLATION API HELPERS
+// ═══════════════════════
+
 export async function translateText(
   sourceLang: Locale,
   targetLang: Locale,
