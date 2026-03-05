@@ -59,10 +59,21 @@ const displayClass = $derived(
 
 const displayValue = $derived(value?.trim() || placeholder || ' ')
 const isGenAiDisabled = $derived(!isEditing || disabled)
+
+function handleValueChange(nextValue: string): void {
+  onValueChange?.(nextValue)
+  if (isTranslated && isGenAI) onToggleGenAI?.()
+}
 </script>
 
 <label class={wrapperClass} for={id}>
-  <Label for={id} text={label} {required} issues={isEditing ? issues : undefined} />
+  <Label
+    for={id}
+    text={label}
+    {required}
+    {isEditing}
+    issues={isEditing ? issues : undefined}
+  />
 
   <div class={controlWrapClass}>
     {#if isEditing}
@@ -77,7 +88,7 @@ const isGenAiDisabled = $derived(!isEditing || disabled)
         {disabled}
         {readonly}
         {rows}
-        {onValueChange}
+        onValueChange={handleValueChange}
       />
     {:else}
       <div class={displayClass}>{displayValue}</div>
