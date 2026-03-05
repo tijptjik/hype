@@ -1,5 +1,4 @@
 <script lang="ts">
-import { fade } from 'svelte/transition'
 import type { MainSectionProps } from './main.types'
 
 let {
@@ -10,29 +9,24 @@ let {
 }: MainSectionProps = $props()
 
 const sectionClass = $derived(
-  ['bits-theme bits-main__section', className].filter(Boolean).join(' '),
+  [
+    'bits-theme bits-main__section',
+    transition === 'fade' ? 'bits-main__section--fade' : '',
+    transition === 'fade' && !isVisible ? 'bits-main__section--faded' : '',
+    transition !== 'fade' && !isVisible ? 'bits-main__section--hidden' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' '),
 )
 </script>
 
 {#if transition === 'fade'}
-  {#if isVisible}
-    <section
-      class={sectionClass}
-      in:fade={{ duration: 180 }}
-      out:fade={{ duration: 180 }}
-    >
-      {@render children?.()}
-    </section>
-  {/if}
+  <section class={sectionClass} aria-hidden={!isVisible} inert={!isVisible}>
+    {@render children?.()}
+  </section>
 {:else}
-  <section
-    class={[
-      sectionClass,
-      isVisible ? '' : 'bits-main__section--hidden',
-    ]
-      .filter(Boolean)
-      .join(' ')}
-  >
+  <section class={sectionClass} hidden={!isVisible} aria-hidden={!isVisible}>
     {@render children?.()}
   </section>
 {/if}
