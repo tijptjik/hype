@@ -291,7 +291,7 @@
   "curly_bland_crab_arrive": "Are you sure?",
   "whole_deft_penguin_enchant": "Delete",
   "red_formal_jackal_mix": "This is a destructive action.",
-  "warm_calm_badger_bask": "Deleting this field eliminates the associated filter control and entries in the info panel.",
+  "warm_calm_badger_bask": "Deleting this field also deletes the values on all features which use it. The data will be lost, and this action is irreversible once saved. Do you wish to continue?",
   "hour_solid_goat_aim": "This action is irreversible.",
   "best_swift_opossum_inspire": "DESTROY",
   "active_nice_cougar_cook": "If you remove yourself as owner or member, you will lose edit or access rights respectively",

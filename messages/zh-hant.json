@@ -291,7 +291,7 @@
   "curly_bland_crab_arrive": "你確定嗎？",
   "whole_deft_penguin_enchant": "刪除",
   "red_formal_jackal_mix": "這操作將會徹底移除所有資料。",
-  "warm_calm_badger_bask": "刪除此欄目將同時移除相關的篩選選項和資訊版面中的條目和資料。",
+  "warm_calm_badger_bask": "刪除此欄位也會刪除所有已指派給它的值。相關資料將會遺失，儲存後此操作無法復原。是否繼續？",
   "hour_solid_goat_aim": "此操作不可逆轉。",
   "best_swift_opossum_inspire": "徹底移除",
   "active_nice_cougar_cook": "如果你將自己從擁有者或成員名單中移除，你將失去編輯或存取權限",
