@@ -31,18 +31,35 @@
   }
 
   .bits-theme .bits-form__label-text {
-    @apply text-sm font-bold uppercase;
-    color: color-mix(in oklab, white 80%, transparent);
+    @apply text-sm font-bold;
+    color: color-mix(in oklab, #fcc 66%, transparent);
   }
 
   .bits-theme .bits-form__label-required {
     color: var(--color-error);
-    margin-left: 2px;
+    margin-left: 0;
     min-height: 0;
     font-size: 1.25rem;
     line-height: 1;
     vertical-align: super;
     transform: translateY(-0.08rem);
+  }
+
+  .bits-theme .bits-form__label-required-slot {
+    margin-left: 2px;
+    width: 0.7rem;
+    height: 1em;
+    position: relative;
+    display: inline-block;
+    flex: 0 0 0.7rem;
+  }
+
+  .bits-theme .bits-form__label-required-floating {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: flex-start;
+    justify-content: flex-start;
   }
 
   .bits-theme .bits-form__error {
@@ -71,8 +88,12 @@
     background-color: var(--color-glass-100);
   }
 
-  .bits-theme .bits-form__control-wrap--textarea {
-    min-height: 118px;
+  .bits-theme .bits-form__control-wrap--textarea.bits-form__control-wrap--editing {
+    max-height: 516px;
+  }
+
+  .bits-form__control.bits-form__control--textarea.bits-form__control--display.bits-form__control--textarea-readonly {
+    padding-bottom: 16px;
   }
 
   .bits-theme .bits-form__control-wrap:focus-within {
@@ -93,12 +114,26 @@
     @apply h-12 px-2 py-2;
   }
 
-  .bits-theme .bits-form__control--textarea {
-    @apply resize-none px-2 py-3.5;
-    min-height: 8rem;
-    max-height: 32rem;
-    overflow-y: hidden;
+  .bits-theme .bits-form__control--input[type="number"] {
+    -moz-appearance: textfield;
   }
+
+  .bits-theme .bits-form__control--input[type="number"]::-webkit-outer-spin-button,
+  .bits-theme .bits-form__control--input[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    margin: 0;
+  }
+
+  .bits-theme .bits-form__control--textarea {
+    @apply resize-none px-2 py-3.5 min-h-32 max-h-128;
+    overflow: hidden;
+  }
+
+  /*.bits-theme textarea.bits-form__control--textarea {*/
+  /*max-height: calc(32rem - 10px);*/
+  /*}*/
 
   .bits-theme .bits-form__control--placeholder::placeholder {
     color: color-mix(in oklab, var(--color-foreground) 55%, transparent);
@@ -110,11 +145,27 @@
   }
 
   .bits-theme .bits-form__control--translated {
-    @apply pr-10;
+    @apply pr-8;
   }
 
   .bits-theme .bits-form__control--display {
     @apply cursor-default;
+  }
+
+  .bits-theme .bits-form__control-wrap--skeleton {
+    min-height: 3rem;
+    display: flex;
+    margin-top: calc(1.25rem + 0.375rem + 3px);
+    align-items: center;
+    padding: 0 0.75rem;
+    background-color: oklab(0.340019 0.0468577 -0.00637265 / 0.2);
+    /*border-color: color-mix(in oklab, #b08aa8 18%, transparent);*/
+    /*box-shadow: inset 0 0 0 1px color-mix(in oklab, #6f4a68 16%, transparent);*/
+  }
+
+  .bits-theme .bits-form__control-wrap--skeleton-label-covered {
+    min-height: calc(3rem + 1.25rem + 0.375rem + 4px);
+    margin-top: 0;
   }
 
   .bits-theme .bits-form__control--input.bits-form__control--display {
@@ -124,8 +175,11 @@
 
   .bits-theme
     .bits-form__control.bits-form__control--textarea.bits-form__control--display {
-    margin-bottom: 2px;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    overflow-x: hidden;
+    overflow-y: scroll;
   }
 
   /* ----------------- */
