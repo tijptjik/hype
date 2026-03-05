@@ -224,7 +224,7 @@ export const assertProjectMaintainerOrMemberOrSuperAdmin = (
  */
 export const assertId = (formData: any, key: string = 'Id'): void | Response => {
   if (!formData.id) {
-    return error(401, m.brief_jumpy_firefox_bump({ key }))
+    return error(401, m.field_is_required({ field: key }))
   }
 }
 

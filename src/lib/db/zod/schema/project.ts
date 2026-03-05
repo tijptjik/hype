@@ -170,12 +170,12 @@ export const ProjectUpdateAPI = ProjectUpdate.extend({
 export const ProjectI18nFormData = z.object({
   name: z
     .string()
-    .min(1, { message: m.admin__validation_name_is_required() })
+    .min(1, { message: m.field_is_required({ field: m.field_name() }) })
     .max(128, { message: m.admin__validation_lte_128_chars() }),
   nameGen: FormBoolean.default(false),
   nameShort: z
     .string()
-    .min(1, { message: m.admin__validation_short_name_is_required() })
+    .min(1, { message: m.field_is_required({ field: m.field_short_name() }) })
     .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   nameShortGen: FormBoolean.default(false),
   description: z
@@ -185,18 +185,20 @@ export const ProjectI18nFormData = z.object({
   descriptionGen: FormBoolean.optional(),
   license: z
     .string()
-    .min(1, { message: m.admin__validation_license_is_required() })
+    .min(1, { message: m.field_is_required({ field: m.field_license() }) })
     .max(128, { message: m.admin__validation_lte_128_chars() }),
   licenseGen: FormBoolean.optional(),
   attribution: z
     .string()
-    .min(1, { message: m.admin__validation_attribution_is_required() })
+    .min(1, { message: m.field_is_required({ field: m.field_attribution() }) })
     .max(128, { message: m.admin__validation_lte_128_chars() }),
   attributionGen: FormBoolean.optional(),
 })
 
 export const ProjectRoleFormData = z.object({
-  userId: z.string().min(1),
+  userId: z
+    .string()
+    .min(1, { message: m.field_is_required({ field: m.field_user() }) }),
   role: ProjectRoleBase.shape.role,
   capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
@@ -213,10 +215,11 @@ const ProjectPropertiesFormData = z.array(ProjectPropertyFormData).optional()
 
 export const ProjectEntityFormData = z.object({
   organisationId: z
-    .string({ message: m.admin__validation_organisation_is_required() })
-    .min(1, { message: m.admin__validation_organisation_is_required() }),
+    .string({ message: m.field_is_required({ field: m.field_organisation() }) })
+    .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
   code: z
     .string()
+    .min(1, { message: m.field_is_required({ field: m.field_code() }) })
     .min(2, { message: m.admin__validation_code_is_required() })
     .max(24, { message: m.admin__validation_code_lte_24_chars() })
     .regex(/^[a-zA-Z0-9_$]*$/, {

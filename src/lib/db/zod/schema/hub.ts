@@ -136,11 +136,11 @@ export const HubRaw = HubBase.extend({
 export const HubI18nFormData = z.object({
   name: z
     .string()
-    .min(1, { message: m.admin__validation_name_is_required() })
+    .min(1, { message: m.field_is_required({ field: m.field_name() }) })
     .max(128, { message: m.admin__validation_lte_128_chars() }),
   nameShort: z
     .string()
-    .min(1, { message: m.admin__validation_short_name_is_required() })
+    .min(1, { message: m.field_is_required({ field: m.field_short_name() }) })
     .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   description: z
     .string()
@@ -152,7 +152,9 @@ export const HubI18nFormData = z.object({
 })
 
 export const HubRoleFormData = z.object({
-  userId: z.string().min(1),
+  userId: z
+    .string()
+    .min(1, { message: m.field_is_required({ field: m.field_user() }) }),
   role: HubRoleBase.shape.role,
 })
 
@@ -168,7 +170,9 @@ export const HubUserRolesFormData = z.preprocess(
 )
 
 export const HubOrganisationFormData = z.object({
-  organisationId: z.string().min(1),
+  organisationId: z
+    .string()
+    .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
   isCoreInclusive: FormBoolean.default(true),
   isHubExclusive: FormBoolean.default(false),
 })
@@ -176,6 +180,7 @@ export const HubOrganisationFormData = z.object({
 export const HubEntityFormData = z.object({
   code: z
     .string()
+    .min(1, { message: m.field_is_required({ field: m.field_code() }) })
     .min(2, { message: m.admin__validation_code_is_required() })
     .max(24, { message: m.admin__validation_code_lte_24_chars() })
     .regex(/^[a-zA-Z0-9_$]*$/, {

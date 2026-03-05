@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { m } from '$lib/i18n'
-import { supportedLocales } from '$lib/enums'
 import type {
   feature,
   featureI18n,
@@ -112,7 +111,7 @@ export const getLocales = (
   requiredStringKeys: string[] = ['value', 'label'],
 ) =>
   z
-    .partialRecord(z.enum(supportedLocales as [string, ...string[]]), model)
+    .partialRecord(z.enum(['en', 'zhHans', 'zhHant']), model)
     .optional()
     .nullable()
     .refine(
@@ -123,7 +122,7 @@ export const getLocales = (
         }
 
         // If i18n exists, validate only the locales that are present
-        return Object.entries(i18nObject).every(([locale, localeSpecificObject]) => {
+        return Object.entries(i18nObject).every(([_locale, localeSpecificObject]) => {
           if (!localeSpecificObject) {
             return true
           }
