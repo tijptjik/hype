@@ -8,7 +8,7 @@
   }
 
   .bits-theme .bits-user-capability-matrix__table-wrap {
-    @apply inline-block w-auto max-w-full overflow-x-auto rounded-xl border-2 border-primary/40 bg-glass-300 p-2;
+    @apply inline-block w-auto max-w-full overflow-x-auto rounded-xl border-3 border-primary bg-glass-300 p-2 shadow-xl;
     width: fit-content;
     align-self: flex-start;
     max-height: calc((2.95rem * 20) + 3.5rem);
