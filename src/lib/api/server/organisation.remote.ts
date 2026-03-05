@@ -304,10 +304,15 @@ export const organisationForm = guardedForm(
       invalid(issue('MISSING_ORGANISATION_ID'))
     }
 
-    const isCreateMode =
-      !organisationId && !hasUpdateToken && (!mode || isExplicitCreateMode)
+    // Create mode must be explicit.
+    // This prevents update submissions with missing meta fields from being
+    // misrouted into create flow and raising misleading code-conflict errors.
+    const isCreateMode = isExplicitCreateMode
 
     if (isCreateMode) {
+      if (organisationId) {
+        invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
+      }
       // Apply role-based authorization.
       const createDecision = authorizeOrganisationCreateForSubmission({
         user,
