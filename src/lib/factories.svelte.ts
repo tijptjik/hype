@@ -46,6 +46,51 @@ const mergeWithDescriptors = <T extends object, U extends object>(
   return merged
 }
 
+const toSubmitWriteToken = (
+  result: unknown,
+): { id?: string; updatedAt?: string } | null => {
+  if (!result || typeof result !== 'object') return null
+  const data = (result as { data?: unknown }).data
+  if (!data || typeof data !== 'object') return null
+
+  const id = (data as { id?: unknown }).id
+  const modifiedAt = (data as { modifiedAt?: unknown }).modifiedAt
+  const updatedAt = (data as { updatedAt?: unknown }).updatedAt
+
+  const resolvedId = typeof id === 'string' && id.trim().length > 0 ? id : undefined
+  const resolvedUpdatedAt =
+    typeof modifiedAt === 'string' && modifiedAt.trim().length > 0
+      ? modifiedAt
+      : typeof updatedAt === 'string' && updatedAt.trim().length > 0
+        ? updatedAt
+        : undefined
+
+  if (!resolvedId && !resolvedUpdatedAt) return null
+  return {
+    ...(resolvedId ? { id: resolvedId } : {}),
+    ...(resolvedUpdatedAt ? { updatedAt: resolvedUpdatedAt } : {}),
+  }
+}
+
+const syncMetaWriteTokenFromResult = <TFormValue extends Record<string, unknown>>(
+  form: { fields: { value: () => TFormValue; set: (value: TFormValue) => void } },
+  result: unknown,
+): void => {
+  const token = toSubmitWriteToken(result)
+  if (!token) return
+
+  const current = form.fields.value()
+  const currentMeta = (current as { meta?: Record<string, unknown> }).meta ?? {}
+  form.fields.set({
+    ...current,
+    meta: {
+      ...currentMeta,
+      ...(token.id ? { id: token.id } : {}),
+      ...(token.updatedAt ? { updatedAt: token.updatedAt } : {}),
+    },
+  } as TFormValue)
+}
+
 // Insert meta hidden inputs into the form
 // This is necessary because the form data is not available in the `onsubmit` hook.
 const syncMetaHiddenInputs = (
@@ -309,6 +354,17 @@ export function configureForm<Input = RemoteFormInput>(
         const submitIssues = form.fields.allIssues() ?? []
         const hasIssues = submitIssues.length > 0
         const success = !hasIssues
+        if (success) {
+          syncMetaWriteTokenFromResult(
+            form as unknown as {
+              fields: {
+                value: () => Record<string, unknown>
+                set: (value: Record<string, unknown>) => void
+              }
+            },
+            form.result,
+          )
+        }
         resultDispatched = true
         const outcome: SubmitOutcome = {
           success,
@@ -350,6 +406,10 @@ export function configureForm<Input = RemoteFormInput>(
     })
 
     const enhancedRecord = enhanced as Record<string | symbol, unknown>
+    const enhancedOnSubmit =
+      typeof enhancedRecord.onsubmit === 'function'
+        ? (enhancedRecord.onsubmit as (event: SubmitEvent) => unknown)
+        : undefined
     const enhancedOnInput =
       typeof enhancedRecord.oninput === 'function'
         ? (enhancedRecord.oninput as (event: Event) => unknown)
@@ -360,6 +420,11 @@ export function configureForm<Input = RemoteFormInput>(
         : undefined
 
     return mergeWithDescriptors(enhanced, {
+      onsubmit: (event: SubmitEvent) => {
+        const currentMeta = (form.fields.value() as { meta?: unknown } | null)?.meta
+        syncMetaHiddenInputs(formEl, currentMeta)
+        enhancedOnSubmit?.(event)
+      },
       oninput: (event: Event) => {
         enhancedOnInput?.(event)
         if (wasSubmitAttempted) runDebouncedValidate()
@@ -500,8 +565,8 @@ export function configureForm<Input = RemoteFormInput>(
         form.fields.set({
           ...current,
           meta: {
-            ...(current.meta ?? {}),
             ...options.meta,
+            ...(current.meta ?? {}),
           },
         } as Parameters<typeof form.fields.set>[0])
       }
