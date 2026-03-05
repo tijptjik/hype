@@ -1,10 +1,13 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
-import { untrack } from 'svelte'
+import { tick, untrack } from 'svelte'
+import type { RemoteForm } from '@sveltejs/kit'
+// ENUMS
+import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleOrder, toOrganisationFormLocaleKey } from '$lib/i18n'
+import { getLocale, getLocaleOrder, toLocaleKey } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -15,6 +18,7 @@ import {
   getNameForToast,
   guardRefDesync,
   isFormLevelIssue,
+  prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
   resetLocaleFields,
@@ -25,12 +29,29 @@ import {
 } from '$lib/client/services/form'
 import {
   getProjectSubmitUpdates,
+  normalizePropertiesForSubmit,
   overrideProjectEntityBoolean,
   overrideProjectListItemBoolean,
   resolveDefaultProjectOrganisationIdForCreate,
   seedOwnerRolesForNewProject as resolveOwnerRoleSeedForNewProject,
+  toStableSignature,
+  toStableUserRoles,
   toProjectFormInput,
 } from '$lib/client/services/project'
+import {
+  addProjectPropertyForType,
+  changeProjectPropertyRank,
+  getPropertiesByType,
+  removeProjectPropertyForType,
+  resetProjectPropertyLocale,
+  translateProjectPropertyLocale,
+  updateProjectPropertyBase,
+  updateProjectPropertyI18n,
+  updateProjectPropertyValueI18n,
+  addProjectPropertyValue,
+  removeProjectPropertyValue,
+  reorderProjectPropertyValue,
+} from '$lib/client/services/property'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -55,6 +76,7 @@ import {
   FormI18nSection,
   FormParentOrganisationSection,
   FormSpecifiersFields,
+  FormFieldsSection,
   FormUserRolesSection,
   GridSpacer,
   Main,
@@ -86,11 +108,17 @@ import type {
   FormDataUpdaterForm,
   ImageCtxEnvelope,
   Locale,
+  OrganisationGetState,
   ProjectBooleanField,
+  ProjectSubmitDraft,
   ProjectGetResponse,
+  ProjectFormInput,
+  Property,
   ProjectRoleUser,
   ResourceContext,
+  UserRoleFieldNameResolverForm,
   User,
+  Id,
 } from '$lib/types'
 
 // § Context
@@ -163,7 +191,11 @@ const isNewProjectRef = $derived(projectRef === NEW_REF)
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewProjectRef) return true
-  return guardRefDesync(project as any, committedProject as any, projectRef)
+  return guardRefDesync(
+    project as unknown as OrganisationGetState,
+    committedProject as unknown as OrganisationGetState,
+    projectRef,
+  )
 })
 
 // § Form
@@ -176,8 +208,64 @@ const translatableI18nFieldsBySection: Record<
   descriptor: ['name', 'nameShort', 'description'],
   credit: ['license', 'attribution'],
 }
+let sectionRemoveModes = $state<Record<PropertySectionType, boolean>>({
+  classifier: false,
+  specifier: false,
+})
+
 const configuredProjectForm = configureForm(() => ({
-  form: projectForm as any,
+  form: projectForm,
+  onsubmit: ({ data }) => {
+    const submittedPayload = prepareSubmitPayloadMeta(data as ProjectSubmitDraft, {
+      defaultMode: isNewProjectRef ? 'create' : 'update',
+      resolveUpdateId: () => project?.data?.id ?? committedProject?.data?.id ?? '',
+    })
+
+    const baselineFormInput = toProjectFormInput(committedProject?.data, {
+      organisationId: parentOrganisationId,
+    })
+
+    const currentFormSnapshot = formCtx.form.fields.value() as ProjectCurrentFormDraft
+
+    applyChangedRelationField({
+      data: submittedPayload.data,
+      key: 'userRoles',
+      submittedValue: submittedPayload.data.userRoles,
+      currentValue: currentFormSnapshot.data?.userRoles,
+      baselineValue:
+        (baselineFormInput.data as ProjectSubmitBaselineRelations).userRoles ?? [],
+      toEffective: ({ submittedValue, currentValue }) =>
+        submittedValue ?? currentValue ?? [],
+      toComparableEffective: value => toStableUserRoles(value),
+      toComparableBaseline: value => toStableUserRoles(value),
+      toSignature: toStableSignature,
+    })
+
+    applyChangedRelationField({
+      data: submittedPayload.data,
+      key: 'properties',
+      submittedValue: submittedPayload.data.properties,
+      currentValue: currentFormSnapshot.data?.properties,
+      baselineValue:
+        (baselineFormInput.data as ProjectSubmitBaselineRelations).properties ?? [],
+      toEffective: ({ submittedValue }) => {
+        if (!Array.isArray(submittedValue)) {
+          throw new Error(
+            'Invariant failed: project form submit must include data.properties as an array.',
+          )
+        }
+        return normalizePropertiesForSubmit(
+          submittedValue as Array<Record<string, unknown>>,
+        )
+      },
+      toComparableEffective: value => value,
+      toComparableBaseline: value =>
+        normalizePropertiesForSubmit(value as Array<Record<string, unknown>>),
+      toSignature: toStableSignature,
+    })
+
+    return submittedPayload
+  },
   ...createResourceFormConfig({
     formEl: contentsElement,
     key: projectRef,
