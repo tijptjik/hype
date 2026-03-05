@@ -21,5 +21,5 @@ export interface TextInputProps {
   controlClass?: string
   inputClass?: string
   onValueChange?: (value: string) => void
-  onToggleGenAI?: (event: MouseEvent) => void
+  onToggleGenAI?: (event?: Event) => void
 }

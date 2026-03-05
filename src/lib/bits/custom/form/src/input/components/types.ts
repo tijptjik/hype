@@ -25,6 +25,6 @@ export interface FormTextAreaPrimitiveProps extends FormControlPrimitiveProps {
 export interface FormGenAIProps {
   isGenAI: boolean
   disabled?: boolean
-  onToggle?: (event: MouseEvent) => void
+  onToggle?: (event?: Event) => void
   class?: string
 }

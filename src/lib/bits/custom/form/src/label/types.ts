@@ -7,6 +7,7 @@ export interface FormLabelProps {
   for?: string
   text?: string
   required?: boolean
+  isEditing?: boolean
   issues?: FormIssueValue
   class?: string
   textClass?: string

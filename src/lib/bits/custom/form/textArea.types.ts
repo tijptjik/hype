@@ -20,5 +20,5 @@ export interface TextAreaProps {
   class?: string
   controlClass?: string
   onValueChange?: (value: string) => void
-  onToggleGenAI?: (event: MouseEvent) => void
+  onToggleGenAI?: (event?: Event) => void
 }
