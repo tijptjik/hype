@@ -92,6 +92,13 @@
       "when": 1771896079116,
       "tag": "0012_capabilities_scope_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1772600000000,
+      "tag": "0013_normalize_camel_locale_values",
+      "breakpoints": true
     }
   ]
 }
