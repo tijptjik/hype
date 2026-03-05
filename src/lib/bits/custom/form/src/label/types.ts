@@ -23,6 +23,7 @@ export interface FormLabelTextProps {
 
 export interface FormLabelRequiredProps {
   required?: boolean
+  isEditing?: boolean
   requiredSymbol?: string
   class?: string
 }

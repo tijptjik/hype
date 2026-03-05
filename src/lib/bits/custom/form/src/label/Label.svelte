@@ -6,6 +6,7 @@ let {
   for: htmlFor,
   text,
   required = false,
+  isEditing = true,
   issues,
   class: className = '',
   textClass = '',
@@ -18,7 +19,7 @@ let {
   <div class="bits-form__label-row">
     <span class="bits-form__label-title">
       <LabelPrimitive.Text for={htmlFor} {text} class={textClass} />
-      <LabelPrimitive.Required {required} class={requiredClass} />
+      <LabelPrimitive.Required {required} {isEditing} class={requiredClass} />
     </span>
   </div>
   <LabelPrimitive.Error {issues} class={errorClass} />
