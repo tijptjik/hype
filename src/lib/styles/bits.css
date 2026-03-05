@@ -10,10 +10,12 @@
 @import "./bits-header.css";
 @import "./bits-main.css";
 @import "./bits-organisation-capabilities.css";
+@import "./bits-project-capabilities.css";
 @import "./bits-pattern-header.css";
 @import "./bits-search.css";
 @import "./bits-separator.css";
 @import "./bits-switch.css";
+@import "./bits-user-capability-matrix.css";
 
 @layer theme {
   .bits-theme {

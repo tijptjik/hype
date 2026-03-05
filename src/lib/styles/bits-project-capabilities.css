@@ -1,0 +1,53 @@
+@layer components {
+  .bits-theme .bits-project-capabilities {
+    @apply flex flex-col gap-4;
+    container-type: inline-size;
+    container-name: bits-project-capabilities-section;
+  }
+
+  .bits-theme .bits-project-capabilities__header {
+    @apply min-h-16 h-16 items-center pt-0 pb-0;
+  }
+
+  .bits-theme .bits-project-capabilities__list {
+    --bits-project-capability-grid-gap: calc(var(--spacing) * 3);
+    display: grid;
+    gap: var(--bits-project-capability-grid-gap);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  @container bits-project-capabilities-section (min-width: 48rem) {
+    .bits-theme .bits-project-capabilities__list {
+      grid-template-columns: repeat(
+          2,
+          minmax(0, calc((100% - var(--bits-project-capability-grid-gap)) / 2))
+        );
+    }
+  }
+
+  @container bits-project-capabilities-section (min-width: 72rem) {
+    .bits-theme .bits-project-capabilities__list {
+      grid-template-columns: repeat(
+          3,
+          minmax(0, calc((100% - (var(--bits-project-capability-grid-gap) * 2)) / 3))
+        );
+    }
+  }
+
+  .bits-theme .bits-project-capabilities__card-root {
+    width: 100%;
+  }
+
+  .bits-theme .bits-project-capabilities__card-icon-wrap {
+    @apply flex h-16 w-16 shrink-0 items-center justify-center bg-base-100;
+  }
+
+  .bits-theme .bits-project-capabilities__card-icon {
+    @apply h-6 w-6 text-primary;
+  }
+
+  .bits-theme .bits-project-capabilities__card-switch-wrap {
+    @apply flex h-full items-center pr-4;
+  }
+}

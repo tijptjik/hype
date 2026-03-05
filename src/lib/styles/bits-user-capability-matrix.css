@@ -1,0 +1,65 @@
+@layer components {
+  .bits-theme .bits-user-capability-matrix {
+    @apply flex flex-col gap-2;
+  }
+
+  .bits-theme .bits-user-capability-matrix__header {
+    @apply min-h-16 h-16 items-center pt-0 pb-0;
+  }
+
+  .bits-theme .bits-user-capability-matrix__table-wrap {
+    @apply w-full overflow-x-auto rounded-xl border-2 border-primary/40 bg-glass-300 p-2;
+  }
+
+  .bits-theme .bits-user-capability-matrix__table {
+    @apply w-full border-collapse;
+    min-width: 36rem;
+  }
+
+  .bits-theme .bits-user-capability-matrix__head-cell {
+    @apply text-left text-xs font-semibold uppercase text-primary/90;
+  }
+
+  .bits-theme .bits-user-capability-matrix__head-cell--user {
+    @apply pl-2 pb-2;
+    width: 16rem;
+    min-width: 16rem;
+  }
+
+  .bits-theme .bits-user-capability-matrix__head-cell--capability {
+    @apply pb-2 align-bottom text-center;
+    width: 4rem;
+    min-width: 4rem;
+    height: 7rem;
+  }
+
+  .bits-theme .bits-user-capability-matrix__head-label {
+    @apply inline-block origin-bottom-left whitespace-nowrap text-xxs tracking-wide;
+    transform: rotate(-70deg) translateY(0.65rem);
+  }
+
+  .bits-theme .bits-user-capability-matrix__row {
+    @apply border-t border-primary/25;
+  }
+
+  .bits-theme .bits-user-capability-matrix__user-cell {
+    @apply px-2 py-2 text-left;
+  }
+
+  .bits-theme .bits-user-capability-matrix__user-name {
+    @apply block truncate text-sm font-semibold;
+    max-width: 14rem;
+  }
+
+  .bits-theme .bits-user-capability-matrix__user-role {
+    @apply block text-xxs uppercase tracking-wide text-neutral-content/80;
+  }
+
+  .bits-theme .bits-user-capability-matrix__cell {
+    @apply px-1 py-2 text-center;
+  }
+
+  .bits-theme .bits-user-capability-matrix__cell .bits-checkbox-field {
+    @apply justify-center;
+  }
+}
