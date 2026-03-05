@@ -7,17 +7,12 @@ import { hub } from '$lib/db/schema/index'
 // DB
 import { transformI18nSafely } from '$lib/db'
 // ZOD
-import { HubAPI, HubCollectionAPI } from '$lib/db/zod/schema/hub'
+import { HubDetailProfileAPI, HubListProfileAPI } from '$lib/db/zod/schema/hub'
 import { superValidate } from 'sveltekit-superforms'
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { ImageContextResource } from '$lib/enums'
-import {
-  HubCardProfileAPI,
-  HubDetailProfileAPI,
-  HubListProfileAPI,
-  HubProfile,
-} from '$lib/db/zod'
+import { HubCardProfileAPI, HubProfile } from '$lib/db/zod'
 import { toBooleanOrUndefined } from '$lib/api/services'
 // TYPES
 import { sql, type SQL } from 'drizzle-orm'
@@ -30,7 +25,6 @@ import type {
   Id,
   HubOptsExtended,
   QueryParams,
-  HubOpts,
   SessionUser,
   HubDBRaw,
   EntityResponse,
@@ -305,7 +299,7 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
   }
   const form = await superValidate(
     transformedHub as unknown as Parameters<typeof superValidate>[0],
-    zod(HubAPI) as unknown as Parameters<typeof superValidate>[1],
+    zod(HubDetailProfileAPI) as unknown as Parameters<typeof superValidate>[1],
   )
   return form as SuperValidated<Hub>
 }
@@ -348,8 +342,8 @@ export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = fal
   }
 
   return isCollection
-    ? HubCollectionAPI.parse(transformedHub)
-    : HubAPI.parse(transformedHub)
+    ? HubListProfileAPI.parse(transformedHub)
+    : HubDetailProfileAPI.parse(transformedHub)
 }
 
 /********************
