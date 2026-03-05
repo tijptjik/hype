@@ -15,6 +15,7 @@ import {
 } from '$lib/api/services'
 import {
   getProjectWithRelations,
+  normalizeSubmittedPropertyRanks,
   toLookupConditions,
   toQueryConditions,
   toProjectProfile,
@@ -42,6 +43,7 @@ import {
 } from '$lib/api/services/authz'
 // DB
 import {
+  cascadeProjectOrganisationToDescendants,
   createI18n,
   createProjectUserRoles,
   createProject,
@@ -186,7 +188,7 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'admin')
 
-  // Probe the requested organisation for flags.
+  // Probe the requested project for flags.
   const probe = await probeProjectQuery(db, {
     ref: params.ref,
     refKey: params.refKey,
@@ -252,6 +254,10 @@ export const getProject = getProjectQuery
  *   `assignCapabilities`, `manageCapabilities`).
  */
 export const projectForm = guardedForm('unchecked', async (input, ctx) => {
+  /* ----------------- */
+  // FORM INPUT NORMALIZATION
+  /* -------- */
+
   // Parse and normalize submitted form input.
   const params = ProjectFormData.parse(input)
   const { db, user, userRoles, invalid } = ctx
@@ -265,21 +271,30 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
   const normalizedCode = data.code.trim()
-  const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
+  const hasSubmittedUserRoles = Object.hasOwn(data, 'userRoles')
+  const submittedRoles =
+    hasSubmittedUserRoles && Array.isArray(data.userRoles) ? data.userRoles : []
   const submittedRolesWithCapabilities = submittedRoles.map(role => ({
     ...role,
     capabilities: role.capabilities ?? {},
   }))
   const hasSubmittedProperties = Object.hasOwn(data, 'properties')
-  const submittedProperties = Array.isArray(data.properties) ? data.properties : []
-  const duplicateSubmittedRoleUserIds = getDuplicateValues(
-    submittedRoles.map(role => role.userId),
-  )
+  const submittedProperties =
+    hasSubmittedProperties && Array.isArray(data.properties) ? data.properties : []
+  const normalizedSubmittedProperties =
+    normalizeSubmittedPropertyRanks(submittedProperties)
+  const duplicateSubmittedRoleUserIds = hasSubmittedUserRoles
+    ? getDuplicateValues(submittedRoles.map(role => role.userId))
+    : []
   const duplicateSubmittedPropertyKeys = getDuplicateValues(
-    submittedProperties
+    normalizedSubmittedProperties
       .map(property => property?.key)
       .filter((key): key is string => typeof key === 'string' && key.trim().length > 0),
   )
+
+  /* ----------------- */
+  // INVARIANT VALIDATION
+  /* -------- */
 
   // Validate payload invariants.
   if (duplicateSubmittedRoleUserIds.length > 0) {
@@ -306,10 +321,11 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // Create/update mode is explicit and validated above.
   const isCreateMode = mode === 'create'
 
+  /* ----------------- */
+  // CREATE FLOW
+  /* -------- */
+
   if (isCreateMode) {
-    if (projectId) {
-      invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
-    }
     // Apply role-based authorization.
     const organisationScope = requireValue(
       await probeOrganisationHubForProject(db, data.organisationId as Id),
@@ -358,10 +374,16 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       created.organisationId,
     )
 
-    if (submittedProperties.length > 0) {
+    if (normalizedSubmittedProperties.length > 0) {
+      const submittedPropertiesWithProjectId = normalizedSubmittedProperties.map(
+        property => ({
+          ...property,
+          projectId: created.id,
+        }),
+      )
       await createPropertiesWithRelated(
         db,
-        submittedProperties as PropertyNew[],
+        submittedPropertiesWithProjectId as PropertyNew[],
         created.id,
       )
     }
@@ -369,7 +391,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     return toCreatedResponseShape(created)
   }
 
-  const targetProjectId = projectId as Id
+  /* ----------------- */
+  // UPDATE FLOW
+  /* -------- */
+
+  const targetProjectId = requireValue(projectId, () =>
+    invalid(issue('MISSING_PROJECT_ID')),
+  ) as Id
 
   // Load current record for update flow.
   const current = requireValue(await probeProjectForUpdate(db, targetProjectId), () =>
@@ -395,64 +423,79 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
 
+  /* ----------------- */
+  // UPDATE FLOW: DIFF DETECTION
+  /* -------- */
+
   // Read current role assignments so membership/capability changes can be authorized separately.
-  const existingRoleRows = await listProjectRoleAssignments(db, current.id)
+  const existingRoleRows = hasSubmittedUserRoles
+    ? await listProjectRoleAssignments(db, current.id)
+    : []
   // Detect membership changes (add/remove/swap users or roles) for manage-roles auth checks.
-  const roleMembershipChanged = hasRoleMembershipChanged(
-    submittedRoles,
-    existingRoleRows,
-    toProjectUserRoleSignature,
-  )
+  const roleMembershipChanged = hasSubmittedUserRoles
+    ? hasRoleMembershipChanged(
+        submittedRoles,
+        existingRoleRows,
+        toProjectUserRoleSignature,
+      )
+    : false
   // Detect per-role capability assignment changes for assign-capabilities auth checks.
-  const roleCapabilityAssignmentsChanged =
-    toProjectUserRoleCapabilitiesSignature(
-      submittedRolesWithCapabilities.map(role => ({
-        userId: role.userId,
-        capabilities: role.capabilities,
-      })),
-    ) !==
-    toProjectUserRoleCapabilitiesSignature(
-      existingRoleRows.map(role => ({
-        userId: role.userId,
-        capabilities: role.capabilities ?? {},
-      })),
-    )
-  // Detect property changes only when the properties section was part of the submitted payload.
+  const roleCapabilityAssignmentsChanged = hasSubmittedUserRoles
+    ? toProjectUserRoleCapabilitiesSignature(
+        submittedRolesWithCapabilities.map(role => ({
+          userId: role.userId,
+          capabilities: role.capabilities,
+        })),
+      ) !==
+      toProjectUserRoleCapabilitiesSignature(
+        existingRoleRows.map(role => ({
+          userId: role.userId,
+          capabilities: role.capabilities ?? {},
+        })),
+      )
+    : false
+  // Detect property set changes only when properties were submitted.
   const propertiesChanged =
     hasSubmittedProperties &&
-    toProjectStableAuthzSignature(submittedProperties) !==
+    toProjectStableAuthzSignature(normalizedSubmittedProperties) !==
       toProjectStableAuthzSignature(currentEntity.properties ?? [])
   // Compare normalized i18n payloads so translator-only submissions resolve to i18n field auth.
   const i18nChanged =
     toProjectStableAuthzSignature(data.i18n) !==
     toProjectStableAuthzSignature(normalizeProjectI18nForFormInput(currentEntity.i18n))
+  const organisationChanged = data.organisationId !== current.organisationId
+  const projectCapabilitiesChanged =
+    toProjectStableAuthzSignature(data.capabilities ?? {}) !==
+    toProjectStableAuthzSignature(current.capabilities ?? {})
+  const authResource = {
+    id: current.id,
+    organisationId: current.organisationId,
+    hubId: current.hubId,
+  }
 
   // Build the submitted field set from actual diffs so authz checks changed fields only.
   const submittedDataForUpdate: Partial<Record<ProjectAuthorizationField, unknown>> = {}
   if (normalizedCode !== current.code) submittedDataForUpdate.code = normalizedCode
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
-  if (
-    toProjectStableAuthzSignature(data.capabilities ?? {}) !==
-    toProjectStableAuthzSignature(current.capabilities ?? {})
-  ) {
+  if (projectCapabilitiesChanged) {
     submittedDataForUpdate.capabilities = data.capabilities ?? {}
   }
   if (roleMembershipChanged || roleCapabilityAssignmentsChanged) {
     submittedDataForUpdate.userRoles = submittedRolesWithCapabilities
   }
   if (propertiesChanged) {
-    submittedDataForUpdate.properties = submittedProperties
+    submittedDataForUpdate.properties = normalizedSubmittedProperties
   }
+
+  /* ----------------- */
+  // UPDATE FLOW: AUTHORIZATION
+  /* -------- */
 
   // Apply role-based authorization for core update fields.
   const updateDecision = authorizeProjectUpdateForSubmission({
     user,
     userRoles,
-    resource: {
-      id: current.id,
-      organisationId: current.organisationId,
-      hubId: current.hubId,
-    },
+    resource: authResource,
     submittedData: submittedDataForUpdate,
   })
   if (!updateDecision.allowed) {
@@ -464,11 +507,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     const roleDecision = authorizeProjectManageRolesForSubmission({
       user,
       userRoles,
-      resource: {
-        id: current.id,
-        organisationId: current.organisationId,
-        hubId: current.hubId,
-      },
+      resource: authResource,
     })
     if (!roleDecision.allowed) {
       invalid(issue(toIssueDetailMessage(roleDecision.code ?? 'INSUFFICIENT_ROLE')))
@@ -480,11 +519,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     const assignDecision = authorizeProjectAssignCapabilitiesForSubmission({
       user,
       userRoles,
-      resource: {
-        id: current.id,
-        organisationId: current.organisationId,
-        hubId: current.hubId,
-      },
+      resource: authResource,
     })
     if (!assignDecision.allowed) {
       invalid(issue(toIssueDetailMessage(assignDecision.code ?? 'INSUFFICIENT_ROLE')))
@@ -492,7 +527,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   // Allow projects to be assigned to or moved between organisations.
-  if (data.organisationId !== current.organisationId) {
+  if (organisationChanged) {
     const targetOrganisationScope = requireValue(
       await probeOrganisationHubForProject(db, data.organisationId as Id),
       () => invalid(issue('ORGANISATION_NOT_FOUND')),
@@ -514,11 +549,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     const deleteOnSourceDecision = authorizeProjectDeleteForSubmission({
       user,
       userRoles,
-      resource: {
-        id: current.id,
-        organisationId: current.organisationId,
-        hubId: current.hubId,
-      },
+      resource: authResource,
     })
     if (!deleteOnSourceDecision.allowed) {
       invalid(
@@ -526,20 +557,12 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       )
     }
   }
-
   // Perform additional auth checks if capabilities changed.
-  const projectCapabilitiesChanged =
-    JSON.stringify(data.capabilities ?? {}) !==
-    JSON.stringify(current.capabilities ?? {})
   if (projectCapabilitiesChanged) {
     const manageCapabilitiesDecision = authorizeProjectManageCapabilitiesForSubmission({
       user,
       userRoles,
-      resource: {
-        id: current.id,
-        organisationId: current.organisationId,
-        hubId: current.hubId,
-      },
+      resource: authResource,
     })
     if (!manageCapabilitiesDecision.allowed) {
       invalid(
@@ -549,6 +572,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       )
     }
   }
+
+  /* ----------------- */
+  // UPDATE FLOW: CONCURRENCY + UNIQUENESS
+  /* -------- */
 
   // Enforce optimistic concurrency guard.
   const updatedAt = meta?.updatedAt
@@ -567,6 +594,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
   })
 
+  /* ----------------- */
+  // UPDATE FLOW: PERSISTENCE
+  /* -------- */
+
   // Persist main record atomically with optimistic concurrency.
   const persisted = requireValue(
     await updateProjectByIdWithConcurrency(db, {
@@ -581,21 +612,47 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
   )
 
+  if (organisationChanged) {
+    await cascadeProjectOrganisationToDescendants(db, {
+      projectId: current.id as Id,
+      organisationId: data.organisationId as Id,
+    })
+  }
+
+  /* ----------------- */
+  // UPDATE FLOW: RELATED RECORD SYNC
+  /* -------- */
+
   // Persist related i18n,role assignments, and properties
   await updateI18n(
     db,
     toLocaleRecordFromOrganisationFormI18n<ProjectI18nPartial>(data.i18n),
     current.id,
   )
-  await syncProjectUserRoles(
-    db,
-    toPersistedProjectUserRoles(submittedRolesWithCapabilities, current.id),
-    current.id as Id,
-    data.organisationId as Id,
-  )
+  if (
+    hasSubmittedUserRoles &&
+    (roleMembershipChanged || roleCapabilityAssignmentsChanged)
+  ) {
+    await syncProjectUserRoles(
+      db,
+      toPersistedProjectUserRoles(submittedRolesWithCapabilities, current.id),
+      current.id as Id,
+      data.organisationId as Id,
+    )
+  }
 
-  if (hasSubmittedProperties) {
-    await updatePropertiesWithRelated(db, submittedProperties as Property[], current.id)
+  if (hasSubmittedProperties && propertiesChanged) {
+    const submittedPropertiesWithProjectId = normalizedSubmittedProperties.map(
+      property => ({
+        ...property,
+        projectId: current.id,
+      }),
+    )
+    await updatePropertiesWithRelated(
+      db,
+      submittedPropertiesWithProjectId as Property[],
+      current.id,
+    )
   }
 
   return toCreatedResponseShape(persisted)

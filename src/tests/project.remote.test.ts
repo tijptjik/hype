@@ -8,6 +8,8 @@ const {
   mockProbeOrganisationHubForProject,
   mockListProjectRoleAssignments,
   mockUpdateProjectByIdWithConcurrency,
+  mockCascadeProjectOrganisationToDescendants,
+  mockUpdatePropertiesWithRelated,
   mockUpdateI18n,
   mockSyncProjectUserRoles,
   mockAuthorizeProjectUpdateForSubmission,
@@ -22,6 +24,8 @@ const {
   mockProbeOrganisationHubForProject: vi.fn(async () => null),
   mockListProjectRoleAssignments: vi.fn(async () => []),
   mockUpdateProjectByIdWithConcurrency: vi.fn(async () => null),
+  mockCascadeProjectOrganisationToDescendants: vi.fn(async () => undefined),
+  mockUpdatePropertiesWithRelated: vi.fn(async () => []),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncProjectUserRoles: vi.fn(async () => undefined),
   mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
@@ -176,6 +180,7 @@ vi.mock('$lib/db/services/project', () => ({
   toPersistedProjectUserRoles: vi.fn((roles: unknown[]) => roles),
   toListResponseShape: vi.fn((value: unknown) => value),
   updateI18n: mockUpdateI18n,
+  cascadeProjectOrganisationToDescendants: mockCascadeProjectOrganisationToDescendants,
   updateProjectArchivedStateById: vi.fn(async () => null),
   updateProjectByIdWithConcurrency: mockUpdateProjectByIdWithConcurrency,
   updateProjectPublishedStateById: vi.fn(async () => null),
@@ -183,7 +188,7 @@ vi.mock('$lib/db/services/project', () => ({
 
 vi.mock('$lib/db/services/property', () => ({
   createPropertiesWithRelated: vi.fn(async () => undefined),
-  updatePropertiesWithRelated: vi.fn(async () => undefined),
+  updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
 }))
 
 vi.mock('$lib/i18n', () => ({
@@ -316,6 +321,13 @@ describe('project.remote form organisation move authz', () => {
       'project-1',
       'org-2',
     )
+    expect(mockCascadeProjectOrganisationToDescendants).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        projectId: 'project-1',
+        organisationId: 'org-2',
+      },
+    )
     expect(result).toEqual({
       data: {
         id: 'project-1',
@@ -356,6 +368,82 @@ describe('project.remote form organisation move authz', () => {
 
     expect(mockAuthorizeProjectCreateForSubmission).not.toHaveBeenCalled()
     expect(mockAuthorizeProjectDeleteForSubmission).not.toHaveBeenCalled()
+    expect(mockCascadeProjectOrganisationToDescendants).not.toHaveBeenCalled()
     expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledTimes(1)
+  })
+
+  it('normalizes submitted property ranks per type before persistence', async () => {
+    const payload = buildUpdatePayload('org-1')
+    payload.data.properties = [
+      {
+        id: 'p-class-a',
+        key: 'class-a',
+        type: 'classifier',
+        rank: 9,
+        values: [
+          { id: 'pv-a-1', rank: 8, i18n: { en: {}, zhHans: {}, zhHant: {} } },
+          { id: 'pv-a-2', rank: 3, i18n: { en: {}, zhHans: {}, zhHant: {} } },
+        ],
+      },
+      { id: 'p-class-b', key: 'class-b', type: 'classifier', rank: 2 },
+      { id: 'p-spec-a', key: 'spec-a', type: 'specifier' },
+    ] as any
+
+    await remote.projectForm(payload, throwingInvalid)
+
+    expect(mockUpdatePropertiesWithRelated).toHaveBeenCalledWith(
+      expect.any(Object),
+      [
+        expect.objectContaining({
+          id: 'p-class-a',
+          type: 'classifier',
+          rank: 1,
+          values: [
+            expect.objectContaining({ id: 'pv-a-2', rank: 0 }),
+            expect.objectContaining({ id: 'pv-a-1', rank: 1 }),
+          ],
+        }),
+        expect.objectContaining({ id: 'p-class-b', type: 'classifier', rank: 0 }),
+        expect.objectContaining({ id: 'p-spec-a', type: 'specifier', rank: 0 }),
+      ],
+      'project-1',
+    )
+  })
+
+  it('skips role/property submission and persistence when userRoles and properties are omitted', async () => {
+    const payload = {
+      meta: {
+        id: 'project-1',
+        mode: 'update' as const,
+        updatedAt: '2026-02-24T00:00:00.000Z',
+      },
+      data: {
+        organisationId: 'org-1',
+        code: 'project-code',
+        i18n: { en: {}, zhHans: {}, zhHant: {} },
+        capabilities: {},
+      },
+    }
+
+    const result = await remote.projectForm(payload, throwingInvalid)
+
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.not.objectContaining({
+          userRoles: expect.anything(),
+          properties: expect.anything(),
+        }),
+      }),
+    )
+    expect(mockListProjectRoleAssignments).not.toHaveBeenCalled()
+    expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
+    expect(mockUpdatePropertiesWithRelated).not.toHaveBeenCalled()
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({
+      data: {
+        id: 'project-1',
+        modifiedAt: '2026-02-24T01:00:00.000Z',
+      },
+    })
   })
 })
