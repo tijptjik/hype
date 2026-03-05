@@ -1,5 +1,12 @@
 // DRIZZLE
 import { eq, inArray, or, type SQL } from 'drizzle-orm'
+// CAPABILITIES
+import {
+  getCapabilityKeysFromDefinitions,
+  isProjectCapabilityKey,
+  normalizeProjectCapabilities,
+  normalizeProjectRoleCapabilities,
+} from '$lib/capabilities'
 // API
 import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
 // AUTH
@@ -17,10 +24,11 @@ import { isSuperAdmin } from '$lib/client/services/auth'
 import { project } from '$lib/db/schema/index'
 // DB
 import { applyPrismConstraints, isFieldUnique } from '$lib/db'
-import { FirstClassResource, HierarchicalResource } from '$lib/enums'
+import { FirstClassResource, HierarchicalResource, ProjectRoleType } from '$lib/enums'
 import { toBooleanOrUndefined } from '$lib/api/services'
 // TYPES
 import type {
+  CapabilityDefinitions,
   UserRoleDisco,
   ProjectNew,
   Prisms,
@@ -142,6 +150,58 @@ export const normalizeSubmittedPropertyRanks = <
   }
 
   return normalized as T[]
+}
+
+export const mergeProjectCapabilitiesForOrganisation = (
+  projectCapabilities: unknown,
+  organisationCapabilityDefinitions: CapabilityDefinitions | null | undefined,
+) => {
+  const merged = normalizeProjectCapabilities(projectCapabilities)
+  const availableKeys = new Set(
+    getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions),
+  )
+
+  for (const key of Object.keys(merged)) {
+    if (!isProjectCapabilityKey(key)) continue
+    if (availableKeys.has(key)) continue
+    merged[key] = false
+  }
+
+  return merged
+}
+
+export const sanitizeSubmittedRoleCapabilities = (
+  submittedRoles: Array<{
+    userId: string
+    role: string
+    capabilities?: unknown
+  }>,
+  projectCapabilities: ReturnType<typeof normalizeProjectCapabilities>,
+  organisationCapabilityDefinitions: CapabilityDefinitions | null | undefined,
+) => {
+  const availableKeys = new Set(
+    getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions),
+  )
+
+  return submittedRoles.map(role => {
+    const nextCapabilities = normalizeProjectRoleCapabilities(role.capabilities)
+    for (const key of Object.keys(nextCapabilities)) {
+      if (!isProjectCapabilityKey(key)) continue
+      if (!availableKeys.has(key) || !projectCapabilities[key]) {
+        nextCapabilities[key] = false
+      }
+    }
+    if (role.role === ProjectRoleType.user) {
+      for (const key of Object.keys(nextCapabilities)) {
+        if (!isProjectCapabilityKey(key)) continue
+        nextCapabilities[key] = false
+      }
+    }
+    return {
+      ...role,
+      capabilities: nextCapabilities,
+    }
+  })
 }
 
 export const toLookupConditions = (params: {
