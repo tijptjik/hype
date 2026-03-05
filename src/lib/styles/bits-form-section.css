@@ -5,6 +5,7 @@
   .bits-theme .bits-form__section,
   .bits-theme .bits-form__i18n-section {
     @apply z-10 flex flex-col gap-0 rounded-2xl pb-4;
+    overflow: visible;
   }
 
   .bits-theme .bits-form__grid-spacer {
@@ -54,7 +55,9 @@
   }
 
   .bits-theme .bits-form__section-header--with-center {
-    @apply items-center pt-0 pb-0;
+    @apply grid items-center pt-0 pb-0;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: calc(var(--spacing) * 2);
   }
 
   .bits-theme .bits-form__section-header-left {
@@ -75,15 +78,33 @@
   }
 
   .bits-theme .bits-form__section-header-center {
-    @apply absolute left-1/2 top-1/2;
-    transform: translate(-50%, -50%);
-    width: min(100%, 56rem);
-    z-index: 3;
+    @apply min-w-0;
+    width: auto;
     pointer-events: none;
   }
 
   .bits-theme .bits-form__section-header-center-content {
     @apply flex w-full justify-center;
+  }
+
+  .bits-theme .bits-form__section-header--with-center .bits-form__section-header-left {
+    grid-column: 1;
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .bits-theme
+    .bits-form__section-header--with-center
+    .bits-form__section-header-center {
+    grid-column: 2;
+    justify-self: center;
+    max-width: 100%;
+  }
+
+  .bits-theme .bits-form__section-header--with-center .bits-form__section-header-right {
+    grid-column: 3;
+    justify-self: end;
+    min-width: 0;
   }
 
   .bits-theme .bits-form__section-header-right .bits-btn {
