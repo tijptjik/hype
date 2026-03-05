@@ -11,6 +11,7 @@ import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/
 import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHub, getHubs } from '$lib/api/server/hub.remote'
 import { getProject, getProjects } from '$lib/api/server/project.remote'
+import { getProperties, getProperty } from '$lib/api/server/property.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -553,6 +554,10 @@ export class AppCtx {
       list: getHubs,
       get: getHub,
     }
+    this.remoteMap[FirstClassResource.property] = {
+      list: getProperties as unknown as RemoteListFn<unknown, unknown>,
+      get: getProperty as unknown as RemoteGetFn<unknown, unknown>,
+    }
   }
 
   // Initialize default query map (can be overridden by AdminCtx)
@@ -760,8 +765,15 @@ export class AppCtx {
   }
 
   propertiesQueryFn = async (): Promise<Property[]> => {
-    const url = this.buildApiUrl(FirstClassResource.property, undefined, true, false)
-    return fetchOrThrow<Property[]>(url)
+    const remoteList = this.remoteMap[FirstClassResource.property].list
+    if (!remoteList) {
+      throw new Error('Property remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {},
+      prisms: this.state.prisms,
+    })) as ListResponse<Property>
+    return result.data
   }
 
   userFeaturesQueryFn = async (): Promise<UserFeature[]> => {

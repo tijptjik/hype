@@ -4,6 +4,7 @@ import { getLocale } from '$lib/i18n'
 import { fetchOrThrow } from '$lib/index'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
+import { getProperties } from '$lib/api/server/property.remote'
 // SERVICES
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
@@ -517,8 +518,17 @@ export class AdminCtx {
   }
 
   propertiesQueryFn = async () => {
-    const url = this.buildApiUrl(FirstClassResource.property)
-    return fetchOrThrow<Property[]>(url)
+    const remoteList =
+      this.appCtx.remoteMap[FirstClassResource.property].list ??
+      (getProperties as unknown as (
+        params: Record<string, unknown>,
+      ) => Promise<ListResponse<Property>>)
+    const result = await remoteList({
+      conditions: {},
+      prisms: this.appCtx.state.prisms,
+      meta: { isAdminRequest: true },
+    })
+    return result.data
   }
 
   hubsQueryFn = async () => {

@@ -15,10 +15,12 @@ let {
   fieldDiscriminator,
   fieldKey,
   field,
+  isEditing = true,
   ...fieldProps
 }: FieldPropsExtended & {
   fieldDiscriminator: FieldDiscriminator
   locale: LocaleExtended
+  isEditing?: boolean
 } = $props()
 
 // STATE : FORM
@@ -42,7 +44,7 @@ let id = $derived(
 {:else}
   <label class="form-control w-full">
     <!-- {#if fieldDiscriminator !== 'specifier'} -->
-    <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} />
+    <FieldLabel {field} {fieldRoot} {fieldIndex} {fieldKey} {constraints} {isEditing} />
     <!-- {/if} -->
     <div class="flex items-center gap-2 rounded-lg bg-glass-100 pl-2 pr-1">
       <Select
