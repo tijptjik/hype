@@ -2,6 +2,11 @@
 import { toLocaleCode, toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
+// CAPABILITIES
+import {
+  normalizeProjectCapabilities,
+  normalizeProjectRoleCapabilities,
+} from '$lib/capabilities'
 // TYPES
 import type {
   Locale,
@@ -172,6 +177,7 @@ export function toProjectFormInput(
           zhHans: normalizeProjectFormLocale(undefined),
           zhHant: normalizeProjectFormLocale(undefined),
         },
+        capabilities: normalizeProjectCapabilities(undefined),
         userRoles: [],
         properties: [],
       },
@@ -193,9 +199,11 @@ export function toProjectFormInput(
         zhHans: normalizeProjectFormLocale(data.i18n?.zhHans),
         zhHant: normalizeProjectFormLocale(data.i18n?.zhHant),
       },
+      capabilities: normalizeProjectCapabilities(data.capabilities),
       userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
         role: userRole.role,
+        capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
       })),
       properties: cloneProjectProperties(data.properties),
     },
