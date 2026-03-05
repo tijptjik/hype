@@ -3,7 +3,7 @@ import { m } from '$lib/i18n'
 import type {
   CapabilityDefinition,
   CapabilityDefinitions,
-  ProjectCapabilityKey,
+  CapabilityKey,
 } from '$lib/types'
 // ZOD
 import { z } from 'zod'
@@ -28,7 +28,7 @@ export const OrganisationCapabilityDefinitionSchema: z.ZodType<CapabilityDefinit
   })
 
 export const OrganisationCapabilityDefinitionsSchema: z.ZodType<CapabilityDefinitions> =
-  z.record(z.custom<ProjectCapabilityKey>(), OrganisationCapabilityDefinitionSchema)
+  z.record(z.custom<CapabilityKey>(), OrganisationCapabilityDefinitionSchema)
 
 /* ----------------- */
 // ORGANISATION CORE SCHEMAS

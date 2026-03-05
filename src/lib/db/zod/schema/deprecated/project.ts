@@ -4,7 +4,7 @@ import { ProjectRoleType } from '$lib/enums'
 import type {
   CapabilityDefinitions,
   CapabilityDefinition,
-  ProjectCapabilityKey,
+  CapabilityKey,
   ProjectRoleCapabilities,
 } from '$lib/types'
 // ZOD
@@ -38,7 +38,7 @@ export const ProjectCapabilityDefinitionSchema: z.ZodType<CapabilityDefinition> 
   })
 
 export const ProjectCapabilityDefinitionsSchema: z.ZodType<CapabilityDefinitions> =
-  z.record(z.custom<ProjectCapabilityKey>(), ProjectCapabilityDefinitionSchema)
+  z.record(z.custom<CapabilityKey>(), ProjectCapabilityDefinitionSchema)
 
 /* ----------------- */
 // PROJECT CORE SCHEMAS
