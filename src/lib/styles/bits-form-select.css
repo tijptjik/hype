@@ -25,6 +25,10 @@
     @apply block min-w-0 truncate;
   }
 
+  .bits-theme button.bits-form__select-trigger .bits-form__select-label {
+    @apply pl-1.5;
+  }
+
   .bits-theme .bits-form__select-trigger-icon {
     @apply ml-auto h-4 w-4 shrink-0 opacity-70;
   }
@@ -33,8 +37,12 @@
     color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
   }
 
+  .bits-theme .bits-form__select-display-wrap {
+    @apply h-12 flex items-center;
+  }
+
   .bits-theme .bits-form__select-display {
-    @apply inline-flex h-12 w-full items-center bg-transparent px-3 pr-9 text-sm;
+    @apply inline-flex w-full items-center bg-transparent pl-2.5 pr-7 text-sm;
     color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
   }
 

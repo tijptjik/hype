@@ -37,9 +37,11 @@ function handleValueChange(nextValue: string): void {
 
 {#if !isEditing}
   <div
-    class={`bits-form__select-display bits-form__select-display--${variant} ${displayClass} ${className}`}
+    class={`bits-form__control-wrap bits-form__select-display-wrap ${displayClass} ${className}`}
   >
-    <span class="bits-form__select-label">{selectedLabel}</span>
+    <div class={`bits-form__select-display bits-form__select-display--${variant}`}>
+      <span class="bits-form__select-label">{selectedLabel}</span>
+    </div>
   </div>
 {:else}
   <SelectPrimitive.Root
