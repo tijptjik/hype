@@ -500,7 +500,9 @@ export function getGenAiState(
   if (!localeData) return false
   if (field === 'name') return Boolean(localeData.nameGen)
   if (field === 'nameShort') return Boolean(localeData.nameShortGen)
-  return Boolean(localeData.descriptionGen)
+  if (field === 'description') return Boolean(localeData.descriptionGen)
+  if (field === 'license') return Boolean(localeData.licenseGen)
+  return Boolean(localeData.attributionGen)
 }
 
 export function toggleGenAiField<
@@ -511,6 +513,8 @@ export function toggleGenAiField<
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
+        licenseGen?: FormBooleanValue
+        attributionGen?: FormBooleanValue
       }
     >
   },
@@ -518,7 +522,12 @@ export function toggleGenAiField<
   updateFormData(form, data => {
     const formLocaleKey = toOrganisationFormLocaleKey(locale)
     if (!data.i18n?.[formLocaleKey]) return data
-    const fieldName = `${field}Gen` as 'nameGen' | 'nameShortGen' | 'descriptionGen'
+    const fieldName = `${field}Gen` as
+      | 'nameGen'
+      | 'nameShortGen'
+      | 'descriptionGen'
+      | 'licenseGen'
+      | 'attributionGen'
     const nextValue = !data.i18n[formLocaleKey][fieldName]
     data.i18n[formLocaleKey][fieldName] = nextValue
     return data
