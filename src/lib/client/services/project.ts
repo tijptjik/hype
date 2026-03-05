@@ -9,16 +9,44 @@ import {
 } from '$lib/capabilities'
 // TYPES
 import type {
+  CapabilityKey,
   Locale,
   Project,
+  ProjectCapabilities,
   ProjectBooleanField,
   ProjectFormInput,
   ProjectParentOrganisationScope,
+  ProjectRoleCapabilities,
   PropertyDiscriminator,
   ProjectOwnerRoleSeedOrganisation,
   ProjectSubmitUpdatesParams,
   User,
 } from '$lib/types'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. BASE FORM SHAPING
+//    - toProjectFormInput
+//    - toProjectIdentityPatch
+//
+// 2. STABLE NORMALIZATION
+//    - toStableSignature
+//    - toStableUserRoles
+//    - normalizePropertiesForSubmit
+//
+// 3. SUBMIT UPDATE HELPERS
+//    - getProjectSubmitUpdates
+//    - resolveDefaultProjectOrganisationIdForCreate
+//    - seedOwnerRolesForNewProject
+//
+// 4. PROJECT CAPABILITY HELPERS
+//    - normalizeProjectCapabilitiesForSubmit
+//    - toComparableProjectUserRolesForSubmit
+//    - toUserRolesWithRoleChange
+//    - toProjectCapabilitiesAndRolesForToggle
+//    - toUserRolesForCapabilityToggle
 
 function normalizeProjectFormLocale(
   locale: Partial<ProjectFormInput['data']['i18n']['en']> | null | undefined,
@@ -281,6 +309,139 @@ export function resolveDefaultProjectOrganisationIdForCreate(params: {
   const uniqueOrganisationIds = Array.from(new Set(params.scope.organisationIds))
   if (uniqueOrganisationIds.length !== 1) return null
   return uniqueOrganisationIds[0] ?? null
+}
+
+export function normalizeProjectCapabilitiesForSubmit(params: {
+  submittedCapabilities: unknown
+  fallbackCapabilities: unknown
+  availableCapabilityKeys: CapabilityKey[]
+}): ProjectCapabilities {
+  const availableCapabilitySet = new Set(params.availableCapabilityKeys)
+  const normalized = normalizeProjectCapabilities(
+    params.submittedCapabilities ?? params.fallbackCapabilities,
+  )
+  for (const capabilityKey of Object.keys(normalized)) {
+    if (!availableCapabilitySet.has(capabilityKey as CapabilityKey)) {
+      normalized[capabilityKey as CapabilityKey] = false
+    }
+  }
+  return normalized
+}
+
+export function toComparableProjectUserRolesForSubmit(
+  value: unknown,
+  params: {
+    availableCapabilityKeys: CapabilityKey[]
+    normalizedProjectCapabilities: ProjectCapabilities
+  },
+): Array<{ userId: string; role: string; capabilities: ProjectRoleCapabilities }> {
+  if (!Array.isArray(value)) return []
+  const availableCapabilitySet = new Set(params.availableCapabilityKeys)
+
+  return value
+    .filter(
+      (
+        item,
+      ): item is {
+        userId: string
+        role: string
+        capabilities?: ProjectRoleCapabilities
+      } =>
+        Boolean(item) &&
+        typeof item === 'object' &&
+        typeof (item as { userId?: unknown }).userId === 'string' &&
+        typeof (item as { role?: unknown }).role === 'string',
+    )
+    .map(item => {
+      const normalizedRoleCapabilities = normalizeProjectRoleCapabilities(
+        item.capabilities,
+      )
+      for (const capabilityKey of Object.keys(normalizedRoleCapabilities)) {
+        if (!availableCapabilitySet.has(capabilityKey as CapabilityKey)) {
+          normalizedRoleCapabilities[capabilityKey as CapabilityKey] = false
+        }
+        if (!params.normalizedProjectCapabilities[capabilityKey as CapabilityKey]) {
+          normalizedRoleCapabilities[capabilityKey as CapabilityKey] = false
+        }
+      }
+      if (item.role === ProjectRoleType.user) {
+        for (const capabilityKey of Object.keys(normalizedRoleCapabilities)) {
+          normalizedRoleCapabilities[capabilityKey as CapabilityKey] = false
+        }
+      }
+      return {
+        userId: item.userId,
+        role: item.role,
+        capabilities: normalizedRoleCapabilities,
+      }
+    })
+    .sort((a, b) => a.userId.localeCompare(b.userId))
+}
+
+export function toUserRolesWithRoleChange(params: {
+  userRoles: NonNullable<ProjectFormInput['data']['userRoles']> | undefined
+  userId: string
+  role: ProjectRoleType
+}): NonNullable<ProjectFormInput['data']['userRoles']> {
+  return (params.userRoles ?? []).map(userRole => {
+    if (userRole.userId !== params.userId) return userRole
+    return {
+      ...userRole,
+      role: params.role,
+      capabilities:
+        params.role === ProjectRoleType.user
+          ? normalizeProjectRoleCapabilities(undefined)
+          : normalizeProjectRoleCapabilities(userRole.capabilities),
+    }
+  })
+}
+
+export function toProjectCapabilitiesAndRolesForToggle(params: {
+  capabilities: unknown
+  userRoles: NonNullable<ProjectFormInput['data']['userRoles']> | undefined
+  capabilityKey: CapabilityKey
+  value: boolean
+}): {
+  capabilities: ProjectCapabilities
+  userRoles: NonNullable<ProjectFormInput['data']['userRoles']>
+} {
+  const nextCapabilities = normalizeProjectCapabilities(params.capabilities)
+  nextCapabilities[params.capabilityKey] = params.value
+
+  const nextUserRoles = (params.userRoles ?? []).map(userRole => {
+    const nextRoleCapabilities = normalizeProjectRoleCapabilities(userRole.capabilities)
+    if (!params.value) nextRoleCapabilities[params.capabilityKey] = false
+    return {
+      ...userRole,
+      capabilities: nextRoleCapabilities,
+    }
+  })
+
+  return { capabilities: nextCapabilities, userRoles: nextUserRoles }
+}
+
+export function toUserRolesForCapabilityToggle(params: {
+  userRoles: NonNullable<ProjectFormInput['data']['userRoles']> | undefined
+  userId: string
+  capabilityKey: CapabilityKey
+  value: boolean
+}): NonNullable<ProjectFormInput['data']['userRoles']> {
+  return (params.userRoles ?? []).map(userRole => {
+    if (userRole.userId !== params.userId) return userRole
+    if (userRole.role === ProjectRoleType.user) {
+      return {
+        ...userRole,
+        capabilities: normalizeProjectRoleCapabilities(undefined),
+      }
+    }
+
+    const nextRoleCapabilities = normalizeProjectRoleCapabilities(userRole.capabilities)
+    nextRoleCapabilities[params.capabilityKey] = params.value
+    return {
+      ...userRole,
+      capabilities: nextRoleCapabilities,
+    }
+  })
 }
 
 export async function seedOwnerRolesForNewProject(params: {

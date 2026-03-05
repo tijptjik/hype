@@ -28,14 +28,24 @@ import {
   updateUserRoleSelection,
 } from '$lib/client/services/form'
 import {
+  getCapabilityKeysFromDefinitions,
+  getCapabilityLabel,
+  normalizeProjectCapabilities,
+  normalizeProjectRoleCapabilities,
+} from '$lib/capabilities'
+import {
   getProjectSubmitUpdates,
+  normalizeProjectCapabilitiesForSubmit,
   normalizePropertiesForSubmit,
   overrideProjectEntityBoolean,
   overrideProjectListItemBoolean,
   resolveDefaultProjectOrganisationIdForCreate,
   seedOwnerRolesForNewProject as resolveOwnerRoleSeedForNewProject,
+  toComparableProjectUserRolesForSubmit,
+  toProjectCapabilitiesAndRolesForToggle,
   toStableSignature,
-  toStableUserRoles,
+  toUserRolesForCapabilityToggle,
+  toUserRolesWithRoleChange,
   toProjectFormInput,
 } from '$lib/client/services/project'
 import {
@@ -84,6 +94,7 @@ import {
   FormParentOrganisationSection,
   FormSpecifiersFields,
   FormFieldsSection,
+  ProjectCapabilities,
   FormUserRolesSection,
   GridSpacer,
   Main,
@@ -112,15 +123,19 @@ import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
 // TYPES
 import type {
+  CapabilityDefinitions,
+  CapabilityKey,
   FormDataUpdaterForm,
   ImageCtxEnvelope,
   Locale,
   OrganisationGetState,
   ProjectBooleanField,
   ProjectCurrentFormDraft,
+  ProjectRoleCapabilities,
   PropertyDiscriminator,
   ProjectSubmitBaselineRelations,
   ProjectSubmitDraft,
+  ProjectOwnerRoleSeedOrganisation,
   ProjectGetResponse,
   ProjectFormInput,
   Property,
@@ -139,13 +154,15 @@ const headerCtrl = getHeaderCtrl()
 // § Config
 
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.project)
-const resolvedFacetTabs = $derived.by(() =>
-  isNewProjectRef
+const resolvedFacetTabs = $derived.by(() => {
+  const tabs = isNewProjectRef
     ? getAdminFacetTabsForResource(FirstClassResource.project, {
         coreOnly: true,
       })
-    : facetTabs,
-)
+    : new Map(facetTabs)
+  if (!hasAnyProjectCapabilitiesConfigured) tabs.delete('capabilities')
+  return tabs
+})
 
 const resourceEditorPage = createResourceEditorPage({
   headerCtrl,
@@ -157,6 +174,7 @@ const resourceEditorPage = createResourceEditorPage({
 
 const projectRef = $derived(page.params.project as string)
 const locales = $derived(getLocaleOrder(getLocale()))
+const currentFormLocale = $derived(toLocaleKey(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
@@ -194,6 +212,7 @@ const commitProjectState = (value: ProjectGetState): void => {
 // § Derived State - Flags
 
 const isCoreFacet = $derived(activeFacet === 'core')
+const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
@@ -232,8 +251,8 @@ let sectionRemoveModes = $state<Record<PropertyDiscriminator, boolean>>({
 
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
-  form: projectForm,
-  onsubmit: ({ data }) => {
+  form: projectForm as never,
+  onsubmit: (({ data }: { data: ProjectSubmitDraft }) => {
     // Normalize submit envelope (`meta` + `data`) and enforce mode/id invariants.
     const submittedPayload = prepareSubmitPayloadMeta(data as ProjectSubmitDraft, {
       defaultMode: isNewProjectRef ? 'create' : 'update',
@@ -247,6 +266,13 @@ const configuredProjectForm = configureForm(() => ({
 
     // Current in-memory form snapshot (post-user edits).
     const currentFormSnapshot = formCtx.form.fields.value() as ProjectCurrentFormDraft
+    // Normalize project capability availability and enforce organisation scope.
+    const normalizedProjectCapabilities = normalizeProjectCapabilitiesForSubmit({
+      submittedCapabilities: submittedPayload.data.capabilities,
+      fallbackCapabilities: currentFormSnapshot.data?.capabilities,
+      availableCapabilityKeys: availableProjectCapabilityKeys,
+    })
+    submittedPayload.data.capabilities = normalizedProjectCapabilities
 
     // Submit userRoles only when materially changed.
     applyChangedRelationField({
@@ -258,8 +284,16 @@ const configuredProjectForm = configureForm(() => ({
         (baselineFormInput.data as ProjectSubmitBaselineRelations).userRoles ?? [],
       toEffective: ({ submittedValue, currentValue }) =>
         submittedValue ?? currentValue ?? [],
-      toComparableEffective: value => toStableUserRoles(value),
-      toComparableBaseline: value => toStableUserRoles(value),
+      toComparableEffective: value =>
+        toComparableProjectUserRolesForSubmit(value, {
+          availableCapabilityKeys: availableProjectCapabilityKeys,
+          normalizedProjectCapabilities,
+        }),
+      toComparableBaseline: value =>
+        toComparableProjectUserRolesForSubmit(value, {
+          availableCapabilityKeys: availableProjectCapabilityKeys,
+          normalizedProjectCapabilities,
+        }),
       toSignature: toStableSignature,
     })
 
@@ -271,11 +305,12 @@ const configuredProjectForm = configureForm(() => ({
       currentValue: currentFormSnapshot.data?.properties,
       baselineValue:
         (baselineFormInput.data as ProjectSubmitBaselineRelations).properties ?? [],
-      toEffective: ({ submittedValue, currentValue, baselineValue }) => {
+      toEffective: ({ submittedValue, currentValue }) => {
         const raw =
           submittedValue ??
           currentValue ??
-          (Array.isArray(baselineValue) ? baselineValue : [])
+          (baselineFormInput.data as ProjectSubmitBaselineRelations).properties ??
+          []
         if (!Array.isArray(raw)) return []
         return normalizePropertiesForSubmit(raw as Array<Record<string, unknown>>)
       },
@@ -285,12 +320,12 @@ const configuredProjectForm = configureForm(() => ({
       toSignature: toStableSignature,
     })
 
-    return submittedPayload
-  },
+    return submittedPayload as typeof data
+  }) as never,
   ...createResourceFormConfig({
     formEl: contentsElement,
     key: projectRef,
-    schema: ProjectPreflightFormData,
+    schema: ProjectPreflightFormData as never,
     data: toProjectFormInput(committedProject?.data, {
       organisationId: parentOrganisationId,
     }),
@@ -604,12 +639,17 @@ const formUserRoleValues = $derived(
   (formCtx.form.fields.value().data?.userRoles ?? []) as Array<{
     userId: string
     role: string
+    capabilities?: ProjectRoleCapabilities
   }>,
 )
 // Narrowed adapter for user-role mutators.
 const userRoleUpdaterForm = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
-    userRoles?: Array<{ userId: string; role: string }>
+    userRoles?: Array<{
+      userId: string
+      role: string
+      capabilities?: ProjectRoleCapabilities
+    }>
   }>,
 )
 // Resolver for role-field names/hidden attrs in template wiring.
@@ -637,6 +677,35 @@ const hiddenUserIdInputAttrs = $derived.by(() => {
     })
     .filter(Boolean) as Array<Record<string, unknown>>
 })
+const hiddenProjectCapabilityInputAttrs = $derived.by(() => {
+  const capabilityFields = formCtx.form.fields.data.capabilities
+  return availableProjectCapabilityKeys
+    .map(capabilityKey => {
+      const field = capabilityFields?.[capabilityKey]
+      if (!field || typeof field.as !== 'function') return null
+      const value = formProjectCapabilities[capabilityKey] ? 'true' : 'false'
+      return field.as('hidden', value)
+    })
+    .filter(Boolean) as Array<Record<string, unknown>>
+})
+const hiddenUserRoleCapabilityInputAttrs = $derived.by(() => {
+  const rows = userRoleFieldResolverForm.fields.data?.userRoles ?? []
+  return formUserRoleValues.flatMap(
+    (userRole, index) =>
+      availableProjectCapabilityKeys
+        .map(capabilityKey => {
+          const field = rows[index]?.capabilities?.[capabilityKey]
+          if (!field || typeof field.as !== 'function') return null
+          const value =
+            normalizeProjectRoleCapabilities(userRole.capabilities)[capabilityKey] ===
+            true
+              ? 'true'
+              : 'false'
+          return field.as('hidden', value)
+        })
+        .filter(Boolean) as Array<Record<string, unknown>>,
+  )
+})
 // Select field names keyed by userId for role dropdown binding.
 const roleFieldNameByUserId = $derived.by(() => {
   const rows = userRoleFieldResolverForm.fields.data?.userRoles ?? []
@@ -651,15 +720,19 @@ const roleFieldNameByUserId = $derived.by(() => {
 // Display-ready project role rows merged from persisted roles + current form edits.
 const projectUserRoles = $derived.by(() => {
   const baseRoles = (project?.data?.userRoles ?? []) as ProjectRoleUser[]
-  const roleByUserId = new Map(formUserRoleValues.map(role => [role.userId, role.role]))
+  const roleByUserId = new Map(formUserRoleValues.map(role => [role.userId, role]))
 
   return formUserRoleValues.flatMap(formUserRole => {
     const baseRole = baseRoles.find(userRole => userRole.userId === formUserRole.userId)
     if (baseRole) {
+      const formRole = roleByUserId.get(formUserRole.userId)
       return [
         {
           ...baseRole,
-          role: roleByUserId.get(formUserRole.userId) ?? baseRole.role,
+          role: formRole?.role ?? baseRole.role,
+          capabilities: normalizeProjectRoleCapabilities(
+            formRole?.capabilities ?? baseRole.capabilities,
+          ),
         },
       ]
     }
@@ -672,6 +745,7 @@ const projectUserRoles = $derived.by(() => {
         projectId: project?.data?.id ?? '',
         userId: formUserRole.userId,
         role: formUserRole.role,
+        capabilities: normalizeProjectRoleCapabilities(formUserRole.capabilities),
         user: {
           id: selectedUser.id,
           name: selectedUser.name,
@@ -681,6 +755,108 @@ const projectUserRoles = $derived.by(() => {
       } as ProjectRoleUser,
     ]
   })
+})
+
+// CAPABILITIES
+
+const capabilityIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      if (!Array.isArray(path)) return false
+      return (
+        path[0] === 'data' && (path[1] === 'capabilities' || path[1] === 'userRoles')
+      )
+    })
+    .map(toIssueMessage)
+    .filter((message: string | null): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
+
+const organisationCapabilityDefinitions = $derived.by(() => {
+  const fromHierarchy = (
+    hierarchy?.organisation as { capabilities?: CapabilityDefinitions } | undefined
+  )?.capabilities
+  if (fromHierarchy && typeof fromHierarchy === 'object') return fromHierarchy
+
+  const selected = selectedParentOrganisationById[parentOrganisationIdValue] as
+    | { capabilities?: CapabilityDefinitions }
+    | undefined
+  const fromSelected = selected?.capabilities
+  if (fromSelected && typeof fromSelected === 'object') return fromSelected
+
+  return {} as CapabilityDefinitions
+})
+
+const availableProjectCapabilityKeys = $derived(
+  getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions),
+)
+const hasAnyProjectCapabilitiesConfigured = $derived(
+  availableProjectCapabilityKeys.length > 0,
+)
+
+const formProjectCapabilities = $derived(
+  normalizeProjectCapabilities(formCtx.form.fields.value().data?.capabilities),
+)
+
+const enabledProjectCapabilityKeys = $derived.by(() =>
+  availableProjectCapabilityKeys.filter(key => formProjectCapabilities[key] === true),
+)
+
+const projectCapabilityLabelByKey = $derived.by(
+  () =>
+    Object.fromEntries(
+      availableProjectCapabilityKeys.map(key => {
+        const label =
+          organisationCapabilityDefinitions[key]?.i18n?.[currentFormLocale] ||
+          organisationCapabilityDefinitions[key]?.i18n?.en ||
+          getCapabilityLabel(key, currentFormLocale)
+        return [key, label]
+      }),
+    ) as Partial<Record<CapabilityKey, string>>,
+)
+
+const capabilityMatrixRows = $derived.by(() =>
+  projectUserRoles
+    .filter(userRole => userRole.role !== ProjectRoleType.user)
+    .map(userRole => ({
+      userId: userRole.userId,
+      name: userRole.user?.name ?? userRole.userId,
+      role: String(userRole.role),
+      capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
+    })),
+)
+
+$effect(() => {
+  const organisationId = parentOrganisationIdValue
+  if (!organisationId) return
+
+  const selected = selectedParentOrganisationById[organisationId] as
+    | { capabilities?: CapabilityDefinitions }
+    | undefined
+  const hasCapabilities =
+    selected?.capabilities && typeof selected.capabilities === 'object'
+  if (hasCapabilities) return
+
+  let cancelled = false
+  void getOrganisation({
+    ref: organisationId,
+    refKey: 'id',
+    meta: { isAdminRequest: true, profile: 'admin' },
+  }).then(result => {
+    if (cancelled) return
+    if (!result?.data) return
+
+    selectedParentOrganisationById = {
+      ...selectedParentOrganisationById,
+      [organisationId]: result.data as ParentSectionOrganisationItem,
+    }
+  })
+
+  return () => {
+    cancelled = true
+  }
 })
 
 // IMAGE
@@ -702,7 +878,6 @@ const imageProviderProps = $derived.by(() => {
             ctxType: ImageContextResource.project,
             ctxId: projectData?.id,
             organisation: hierarchy.organisation,
-            project: hierarchy.project,
           }
         : undefined,
   }
@@ -872,6 +1047,46 @@ function onRoleChange(userId: string, role: ProjectRoleType): void {
     entity: project,
     userId,
     role,
+  })
+  updateFormData(userRoleUpdaterForm, data => {
+    data.userRoles = toUserRolesWithRoleChange({
+      userRoles: data.userRoles,
+      userId,
+      role,
+    })
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onToggleProjectCapability(capabilityKey: CapabilityKey, value: boolean): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    const next = toProjectCapabilitiesAndRolesForToggle({
+      capabilities: data.capabilities,
+      userRoles: data.userRoles,
+      capabilityKey,
+      value,
+    })
+    data.capabilities = next.capabilities
+    data.userRoles = next.userRoles
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onToggleUserCapability(params: {
+  userId: string
+  capabilityKey: CapabilityKey
+  value: boolean
+}): void {
+  updateFormData(userRoleUpdaterForm, data => {
+    data.userRoles = toUserRolesForCapabilityToggle({
+      userRoles: data.userRoles,
+      userId: params.userId,
+      capabilityKey: params.capabilityKey,
+      value: params.value,
+    })
+    return data
   })
   revalidateAfterProgrammaticChange()
 }
@@ -1209,11 +1424,11 @@ $effect(() => {
       formUserRoleValues.length === 0 &&
       parentOrganisationIdValue === organisationId,
     getOrganisationById: async targetOrganisationId =>
-      await getOrganisation({
+      (await getOrganisation({
         ref: targetOrganisationId,
         refKey: 'id',
         meta: { isAdminRequest: true, profile: 'admin' },
-      }),
+      })) as ProjectOwnerRoleSeedOrganisation,
   }).then(seed => {
     ownerRoleSeedAttempt = seed.nextOwnerRoleSeedAttempt
     if (!seed.shouldMarkSeeded) return
@@ -1327,7 +1542,7 @@ $effect(() => {
           {@const formLocale = toLocaleKey(locale)}
           <FormCreditFields
             form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[formLocale]}
+            fields={formCtx.form.fields.data.i18n[formLocale] as never}
             {formLocale}
             {locale}
             {isEditing}
@@ -1386,6 +1601,21 @@ $effect(() => {
       </GridSpacer>
     </Main.Section>
     <Main.Section
+      isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
+      transition="fade"
+    >
+      <ProjectCapabilities
+        {capabilityIssues}
+        availableCapabilityKeys={availableProjectCapabilityKeys}
+        enabledCapabilityKeys={enabledProjectCapabilityKeys}
+        capabilityLabelByKey={projectCapabilityLabelByKey}
+        matrixRows={capabilityMatrixRows}
+        {isEditing}
+        onToggleCapability={onToggleProjectCapability}
+        onToggleCell={onToggleUserCapability}
+      />
+    </Main.Section>
+    <Main.Section
       isVisible={isFieldsFacet}
       transition="fade"
       class="bits-theme flex gap-4 min-h-0 flex-col"
@@ -1432,6 +1662,15 @@ $effect(() => {
         />
       {/each}
     </Main.Section>
+
+    <div class="hidden" aria-hidden="true">
+      {#each hiddenProjectCapabilityInputAttrs as inputAttrs, index (index)}
+        <input {...inputAttrs}>
+      {/each}
+      {#each hiddenUserRoleCapabilityInputAttrs as inputAttrs, index (index)}
+        <input {...inputAttrs}>
+      {/each}
+    </div>
   </Main.Form>
   <Main.Section
     isVisible={isImagesFacet}
