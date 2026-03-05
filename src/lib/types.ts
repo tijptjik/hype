@@ -877,26 +877,21 @@ export interface LocaleBundle {
   [key: string]: unknown
 }
 
-export type CapabilityLabelI18n = {
+export type CapabilityI18nRoot = {
   en?: string
   zhHans?: string
   zhHant?: string
 }
 
-export type ProjectCapabilityKey =
-  | 'manageBakeries'
-  | 'manageVolunteers'
-  | 'manageDropOffs'
+export type CapabilityKey = 'manageBakeries' | 'manageVolunteers' | 'manageDropOffs'
 
 export type CapabilityDefinition = {
-  i18n?: CapabilityLabelI18n
+  i18n: CapabilityI18nRoot
 }
 
-export type CapabilityDefinitions = Partial<
-  Record<ProjectCapabilityKey, CapabilityDefinition>
->
+export type CapabilityDefinitions = Partial<Record<CapabilityKey, CapabilityDefinition>>
 
-export type ProjectRoleCapabilities = Partial<Record<ProjectCapabilityKey, boolean>>
+export type ProjectRoleCapabilities = Partial<Record<CapabilityKey, boolean>>
 
 /* ----------------- */
 // HTML

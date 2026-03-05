@@ -3,7 +3,8 @@ import { m } from '$lib/i18n'
 import type {
   CapabilityDefinition,
   CapabilityDefinitions,
-  ProjectCapabilityKey,
+  CapabilityKey,
+  ProjectRoleCapabilities,
 } from '$lib/types'
 // ZOD
 import { z } from 'zod'
@@ -23,6 +24,7 @@ import { ImageContextEnvelopeAPI } from './image'
 // 1. CAPABILITY SCHEMAS
 //    - OrganisationCapabilityDefinitionSchema
 //    - OrganisationCapabilityDefinitionsSchema
+//    - OrganisationRoleCapabilitiesSchema
 //
 // 2. BASE / RELATIONAL PRIMITIVES
 //    - OrganisationBase
@@ -61,9 +63,16 @@ export const CabilityDefinitionSchema: z.ZodType<CapabilityDefinition> = z.objec
 })
 
 export const CapabilityRoot: z.ZodType<CapabilityDefinitions> = z.record(
-  z.custom<ProjectCapabilityKey>(),
+  z.custom<CapabilityKey>(),
   CabilityDefinitionSchema,
 )
+
+export const OrganisationRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
+  z.object({
+    manageBakeries: z.boolean().optional(),
+    manageVolunteers: z.boolean().optional(),
+    manageDropOffs: z.boolean().optional(),
+  })
 
 const CapabilityBase = CapabilityRoot.optional()
 
