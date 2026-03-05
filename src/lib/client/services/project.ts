@@ -9,6 +9,7 @@ import type {
   ProjectBooleanField,
   ProjectFormInput,
   ProjectParentOrganisationScope,
+  PropertyDiscriminator,
   ProjectOwnerRoleSeedOrganisation,
   ProjectSubmitUpdatesParams,
   User,
@@ -131,7 +132,7 @@ export function normalizePropertiesForSubmit(
     return property
   })
 
-  const assignRankForType = (type: 'classifier' | 'specifier'): void => {
+  const assignRankForType = (type: PropertyDiscriminator): void => {
     const items = normalized
       .map((item, index) => ({ item, index }))
       .filter(({ item }) => {

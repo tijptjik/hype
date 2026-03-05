@@ -31,6 +31,11 @@ import type {
   FormBooleanValue,
   OrganisationGetState,
   OrganisationRoleUser,
+  ResolveChangedRelationParams,
+  ChangedRelationResolution,
+  ApplyChangedRelationFieldParams,
+  ResourceSubmitDraft,
+  ResourceSubmitMode,
   User,
 } from '$lib/types'
 
@@ -243,6 +248,92 @@ export function createResourceEditorPage({
       headerCtrl.clearFormActions()
     },
   }
+}
+
+/**
+ * Ensure submit payload includes `meta` and `data`, infer/normalize `meta.mode`,
+ * and populate `meta.id` for update submissions when omitted.
+ */
+export function prepareSubmitPayloadMeta<TData extends Record<string, unknown>>(
+  payload: ResourceSubmitDraft<TData>,
+  params: {
+    defaultMode: ResourceSubmitMode
+    resolveUpdateId?: () => string | null | undefined
+  },
+): ResourceSubmitDraft<TData> & {
+  meta: { id?: unknown; mode: ResourceSubmitMode }
+  data: TData
+} {
+  if (!payload.meta) payload.meta = {}
+  if (!payload.data) payload.data = {} as TData
+
+  const currentMode = payload.meta.mode
+  const inferredMode: ResourceSubmitMode =
+    currentMode === 'create' || currentMode === 'replace' || currentMode === 'update'
+      ? currentMode
+      : params.defaultMode
+  payload.meta.mode = inferredMode
+
+  if (inferredMode === 'update') {
+    const submittedId =
+      typeof payload.meta.id === 'string' ? payload.meta.id.trim() : ''
+    if (!submittedId) {
+      payload.meta.id = params.resolveUpdateId?.() ?? ''
+    }
+  }
+
+  return payload as ResourceSubmitDraft<TData> & {
+    meta: { id?: unknown; mode: ResourceSubmitMode }
+    data: TData
+  }
+}
+
+/**
+ * Resolve relation field effective value and whether it changed versus baseline.
+ */
+export function resolveChangedRelation<TEffective>({
+  submittedValue,
+  currentValue,
+  baselineValue,
+  toEffective,
+  toComparableEffective,
+  toComparableBaseline,
+  toSignature,
+}: ResolveChangedRelationParams<TEffective>): ChangedRelationResolution<TEffective> {
+  const effective = toEffective({ submittedValue, currentValue })
+  const changed =
+    toSignature(toComparableEffective(effective)) !==
+    toSignature(toComparableBaseline(baselineValue))
+
+  return {
+    effective,
+    changed,
+  }
+}
+
+/**
+ * Keep relation keys in submit payload only when they materially changed.
+ */
+export function applyChangedRelationField<
+  TData extends Record<string, unknown>,
+  TKey extends keyof TData,
+  TEffective,
+>({
+  data,
+  key,
+  ...params
+}: ApplyChangedRelationFieldParams<
+  TData,
+  TKey,
+  TEffective
+>): ChangedRelationResolution<TEffective> {
+  const result = resolveChangedRelation(params)
+  if (result.changed) {
+    data[key] = result.effective as TData[TKey]
+  } else {
+    delete data[key]
+  }
+  return result
 }
 
 export function guardRefDesync(

@@ -69,6 +69,13 @@ import type {
 // 3.2 PROJECT PROPERTY FORM :: PUBLIC MUTATORS
 //    - Read/filter helper
 //      - getPropertiesByType
+//      - getCurrentProjectProperties
+//      - getProjectPropertyFieldsForIndex
+//      - getPropertyFormIssues
+//      - getPropertyIssuesForTypeFromFormIssues
+//      - getPropertyIssueItemIdsForTypeFromFormIssues
+//      - stopEvent
+//      - scrollWithMovedProperty
 //    - Property mutators
 //      - addProjectPropertyForType
 //      - removeProjectPropertyForType
@@ -609,6 +616,143 @@ export function getPropertiesByType(
   return (properties || [])
     .filter(property => property.type === fieldDiscriminator)
     .sort((a, b) => a.rank - b.rank)
+}
+
+export function getCurrentProjectProperties(
+  form: FormDataUpdaterForm<{ properties?: Property[] }>,
+): Property[] {
+  return (form.fields.value().data?.properties ?? []).map(property => property)
+}
+
+export function getProjectPropertyFieldsForIndex(
+  form: unknown,
+  propertyIndex: number,
+): unknown {
+  const formFields = (
+    form as {
+      fields?: { data?: { properties?: unknown[] } }
+    }
+  )?.fields
+  return formFields?.data?.properties?.[propertyIndex]
+}
+
+function getIssuePropertyIndex(issue: {
+  message: string
+  path?: Array<string | number>
+}): number | null {
+  const path = issue.path
+  if (!Array.isArray(path)) return null
+  const index = path[2]
+  if (typeof index === 'number') return Number.isInteger(index) ? index : null
+  if (typeof index === 'string' && /^\d+$/u.test(index)) return Number(index)
+  return null
+}
+
+export function getPropertyFormIssues(
+  issues: unknown[] | null | undefined,
+): Array<{ message: string; path?: Array<string | number> }> {
+  if (!Array.isArray(issues)) return []
+  return issues.filter(issue => {
+    if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+    const path = (issue as { path?: unknown }).path
+    return Array.isArray(path) && path[0] === 'data' && path[1] === 'properties'
+  }) as Array<{ message: string; path?: Array<string | number> }>
+}
+
+export function getPropertyIssuesForTypeFromFormIssues(params: {
+  issues: Array<{ message: string; path?: Array<string | number> }>
+  properties: Property[]
+  type: PropertyDiscriminator
+}): string[] {
+  const messages = params.issues
+    .filter(issue => {
+      const index = getIssuePropertyIndex(issue)
+      if (index == null) {
+        return params.properties.some(property => property.type === params.type)
+      }
+      return false
+    })
+    .map(issue => issue.message)
+    .filter(Boolean)
+  return Array.from(new Set(messages))
+}
+
+export function getPropertyIssueItemIdsForTypeFromFormIssues(params: {
+  issues: Array<{ message: string; path?: Array<string | number> }>
+  properties: Property[]
+  type: PropertyDiscriminator
+}): Id[] {
+  const ids = params.issues
+    .map(issue => {
+      const index = getIssuePropertyIndex(issue)
+      if (index == null) return null
+      const property = params.properties[index]
+      if (!property || property.type !== params.type) return null
+      return property.id
+    })
+    .filter((id): id is Id => Boolean(id))
+  return Array.from(new Set(ids))
+}
+
+export function stopEvent(event: Event): void {
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+export async function scrollWithMovedProperty(
+  propertyId: Id,
+  move: () => void,
+  afterMove: () => Promise<void>,
+): Promise<void> {
+  const getScrollContainer = (element: HTMLElement): HTMLElement | Window => {
+    let current: HTMLElement | null = element.parentElement
+    while (current) {
+      const style = getComputedStyle(current)
+      const canScrollY =
+        (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+        current.scrollHeight > current.clientHeight
+      if (canScrollY) return current
+      current = current.parentElement
+    }
+    return window
+  }
+
+  const getLayoutTopWithin = (
+    element: HTMLElement,
+    container: HTMLElement | Window,
+  ): number => {
+    let top = 0
+    let current: HTMLElement | null = element
+    while (current) {
+      top += current.offsetTop
+      const next = current.offsetParent as HTMLElement | null
+      if (container !== window && next === container) break
+      current = next
+    }
+    return top
+  }
+
+  const propertyElement = document.getElementById(`property-wrapper-${propertyId}`)
+  if (!propertyElement) return
+  const scrollContainer = getScrollContainer(propertyElement)
+  const startTop = getLayoutTopWithin(propertyElement, scrollContainer)
+
+  move()
+  await afterMove()
+
+  const movedElement = document.getElementById(`property-wrapper-${propertyId}`)
+  if (!movedElement) return
+  const endTop = getLayoutTopWithin(movedElement, scrollContainer)
+
+  const delta = endTop - startTop
+  if (!delta) return
+  if (scrollContainer === window) {
+    window.scrollBy({ top: delta, behavior: 'auto' })
+    return
+  }
+  if (scrollContainer instanceof HTMLElement) {
+    scrollContainer.scrollTop += delta
+  }
 }
 
 // ───────────────────────

@@ -31,6 +31,7 @@ import type {
   QueryParams,
   Project,
   SessionUser,
+  PropertyDiscriminator,
 } from '$lib/types'
 import type { SuperValidated } from 'sveltekit-superforms'
 
@@ -103,7 +104,7 @@ export const normalizeSubmittedPropertyRanks = <
     return Number.POSITIVE_INFINITY
   }
 
-  const assignByType = (type: 'classifier' | 'specifier'): void => {
+  const assignByType = (type: PropertyDiscriminator): void => {
     normalized
       .map((property, index) => ({ property, index }))
       .filter(({ property }) => property.type === type)
