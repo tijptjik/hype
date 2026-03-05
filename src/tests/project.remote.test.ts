@@ -7,6 +7,7 @@ const {
   mockLoadProject,
   mockProbeOrganisationHubForProject,
   mockListProjectRoleAssignments,
+  mockMergeOrganisationCapabilities,
   mockUpdateProjectByIdWithConcurrency,
   mockCascadeProjectOrganisationToDescendants,
   mockUpdatePropertiesWithRelated,
@@ -23,6 +24,10 @@ const {
   mockLoadProject: vi.fn(async () => null),
   mockProbeOrganisationHubForProject: vi.fn(async () => null),
   mockListProjectRoleAssignments: vi.fn(async () => []),
+  mockMergeOrganisationCapabilities: vi.fn(
+    async (_db: unknown, _organisationId: string, projectCapabilities: unknown) =>
+      projectCapabilities ?? {},
+  ),
   mockUpdateProjectByIdWithConcurrency: vi.fn(async () => null),
   mockCascadeProjectOrganisationToDescendants: vi.fn(async () => undefined),
   mockUpdatePropertiesWithRelated: vi.fn(async () => []),
@@ -170,6 +175,19 @@ vi.mock('$lib/api/services/project', () => ({
     return normalized as T[]
   },
   toLookupConditions: vi.fn(() => ({})),
+  sanitizeSubmittedRoleCapabilities: vi.fn(
+    (
+      submittedRoles: Array<{
+        userId: string
+        role: string
+        capabilities?: unknown
+      }>,
+    ) =>
+      submittedRoles.map(role => ({
+        ...role,
+        capabilities: role.capabilities ?? {},
+      })),
+  ),
   toQueryConditions: vi.fn(() => ({ conditions: [], filtersToApply: {} })),
   toProjectProfile: vi.fn((_value: unknown, fallback: string) => fallback),
   toRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
@@ -215,6 +233,7 @@ vi.mock('$lib/db/services/project', () => ({
   getProject: mockLoadProject,
   listOrganisationOwnerRoleAssignments: vi.fn(async () => []),
   listProjectRoleAssignments: mockListProjectRoleAssignments,
+  mergeOrganisationCapabilities: mockMergeOrganisationCapabilities,
   listProjects: vi.fn(async () => ({
     data: [],
     limit: 0,
