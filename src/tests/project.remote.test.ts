@@ -116,6 +116,59 @@ vi.mock('$lib/api/services', () => ({
 
 vi.mock('$lib/api/services/project', () => ({
   getProjectWithRelations: vi.fn(() => ({})),
+  normalizeSubmittedPropertyRanks: <
+    T extends { type?: unknown; rank?: unknown; values?: unknown },
+  >(
+    properties: T[],
+  ): T[] => {
+    const normalized = properties.map(property => ({ ...property }))
+    const asRank = (value: unknown): number => {
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      if (typeof value === 'string' && value.trim() && !Number.isNaN(Number(value))) {
+        return Number(value)
+      }
+      return Number.POSITIVE_INFINITY
+    }
+
+    const assignByType = (type: 'classifier' | 'specifier'): void => {
+      normalized
+        .map((property, index) => ({ property, index }))
+        .filter(({ property }) => property.type === type)
+        .sort((a, b) => {
+          const aRank = asRank(a.property.rank)
+          const bRank = asRank(b.property.rank)
+          if (aRank !== bRank) return aRank - bRank
+          return a.index - b.index
+        })
+        .forEach(({ property }, rank) => {
+          property.rank = rank
+        })
+    }
+
+    assignByType('classifier')
+    assignByType('specifier')
+
+    for (const property of normalized) {
+      if (!Array.isArray(property.values)) continue
+      const values = property.values as Array<
+        { rank?: unknown } & Record<string, unknown>
+      >
+      property.values = values
+        .map((value, index) => ({ value: { ...value }, index }))
+        .sort((a, b) => {
+          const aRank = asRank(a.value.rank)
+          const bRank = asRank(b.value.rank)
+          if (aRank !== bRank) return aRank - bRank
+          return a.index - b.index
+        })
+        .map(({ value }, rank) => ({
+          ...value,
+          rank,
+        }))
+    }
+
+    return normalized as T[]
+  },
   toLookupConditions: vi.fn(() => ({})),
   toQueryConditions: vi.fn(() => ({ conditions: [], filtersToApply: {} })),
   toProjectProfile: vi.fn((_value: unknown, fallback: string) => fallback),
@@ -315,12 +368,7 @@ describe('project.remote form organisation move authz', () => {
         }),
       }),
     )
-    expect(mockSyncProjectUserRoles).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.any(Array),
-      'project-1',
-      'org-2',
-    )
+    expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
     expect(mockCascadeProjectOrganisationToDescendants).toHaveBeenCalledWith(
       expect.any(Object),
       {
