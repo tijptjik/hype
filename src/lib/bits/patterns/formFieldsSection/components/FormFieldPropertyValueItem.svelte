@@ -22,7 +22,7 @@ let {
   use:draggable={draggableConfig}
   use:droppable={droppableConfig}
 >
-  {@render content?.()}
+  {@render content()}
 
   {#if isEditing && optionRemoveMode}
     <button

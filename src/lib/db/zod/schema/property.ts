@@ -74,7 +74,7 @@ export const ProjectPropertyFormData = z.object({
   id: z.string().optional(),
   projectId: z.string().optional(),
   type: z.string().min(1),
-  isTranslatable: z.coerce.boolean<boolean>().optional(),
+  isTranslatable: FormBoolean.optional(),
   key: z
     .string()
     .min(1, { message: m.field_is_required({ field: m.field_code() }) })

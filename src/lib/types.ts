@@ -1076,6 +1076,11 @@ export type ConfigureFormResourceResultOptions<Input> = {
   onRedirect?: (ctx: { data: Input; success: boolean }) => void | Promise<void>
 }
 
+export type FormIssueLike = {
+  message: string
+  path?: Array<string | number>
+}
+
 export type UserRoleFieldNameResolverForm = {
   fields: {
     value: () => {
@@ -2341,6 +2346,47 @@ export type WritableI18nRecord = Record<string, Record<string, unknown>>
 export type PropertyTranslationOrigin =
   | { type: 'label' | 'placeholder' }
   | { type: 'value'; valueId: Id }
+
+// Shared prop contract for the project property card body component.
+export type FormFieldCardBodyProps = {
+  property: Property
+  propertyIndex: number
+  sectionRank: number
+  propertyFields?: unknown
+  locales: Locale[]
+  classifierComponents: readonly string[]
+  specifierComponents: readonly string[]
+  isRequiredInPreflight: (path: Array<string | number>) => boolean
+  isEditing?: boolean
+  onUpdateBase: (
+    propertyId: Id,
+    key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable',
+    value: string | number | null | boolean,
+  ) => void
+  onUpdateI18n: (
+    propertyId: Id,
+    locale: Locale,
+    key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
+    value: string | boolean,
+  ) => void
+  onAddValue: (propertyId: Id) => void
+  onRemoveValue: (propertyId: Id, valueId: Id) => void
+  onMoveValue: (propertyId: Id, valueId: Id, targetIndex: number) => void
+  removeMode?: boolean
+  onUpdateValueI18n: (
+    propertyId: Id,
+    valueId: Id,
+    locale: Locale,
+    key: 'value',
+    value: string,
+  ) => void
+  onTranslateLocale: (
+    propertyId: Id,
+    sourceLocale: Locale,
+    targetLocale: Locale,
+  ) => Promise<boolean | void>
+  onResetLocale: (propertyId: Id, targetLocale: Locale) => void | Promise<void>
+}
 
 /* ----------------- */
 // PROPERTIES :: RELATIONAL
