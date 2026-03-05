@@ -385,6 +385,55 @@ export const createJsonPathCondition = (
 // 6. TRANSFORMATIONS :: LOCALE
 // ═══════════════════════
 
+function toFormLocaleKey(locale: string): string {
+  if (locale === 'zh-hans') return 'zhHans'
+  if (locale === 'zh-hant') return 'zhHant'
+  return locale
+}
+
+function toDbLocaleKey(locale: string): string {
+  if (locale === 'zhHans') return 'zh-hans'
+  if (locale === 'zhHant') return 'zh-hant'
+  return locale
+}
+
+function normalizeLocaleRecordEntries<T extends Record<string, unknown>>(
+  i18n: Record<string, T>,
+): Record<string, T> {
+  return Object.entries(i18n).reduce(
+    (acc, [rawLocale, entry]) => {
+      const inferredLocale = toDbLocaleKey(rawLocale)
+      const locale =
+        typeof entry?.locale === 'string' && entry.locale.length > 0
+          ? toDbLocaleKey(entry.locale)
+          : inferredLocale
+      acc[locale] = {
+        ...entry,
+        locale,
+      } as T
+      return acc
+    },
+    {} as Record<string, T>,
+  )
+}
+
+function toFormLocaleRecord<T extends Record<string, unknown>>(
+  i18n: Record<string, T> | null,
+): Record<string, T> | null {
+  if (!i18n) return null
+  return Object.entries(i18n).reduce(
+    (acc, [rawLocale, entry]) => {
+      const locale =
+        typeof entry?.locale === 'string' && entry.locale.length > 0
+          ? entry.locale
+          : rawLocale
+      acc[toFormLocaleKey(locale)] = entry
+      return acc
+    },
+    {} as Record<string, T>,
+  )
+}
+
 // Helper function to safely transform i18n data
 export const transformI18nSafely = (
   i18n: any[] | Record<string, any> | null | undefined,
@@ -393,11 +442,12 @@ export const transformI18nSafely = (
   if (!i18n) return fallback
 
   if (Array.isArray(i18n)) {
-    return i18n.length > 0 ? toLocaleMap(i18n) : fallback
+    return i18n.length > 0 ? toFormLocaleRecord(toLocaleMap(i18n)) : fallback
   }
 
   // Already transformed or is a Record
-  return i18n
+  const normalized = normalizeLocaleRecordEntries(i18n as Record<string, any>)
+  return toFormLocaleRecord(normalized)
 }
 
 // Helper function to check if an object is already a transformed locale map
@@ -439,11 +489,7 @@ export const toLocaleMap = <T extends LocaleBundle>(
 
   // If it's an array, proceed with transformation
   if (Array.isArray(i18n)) {
-    if (i18n.length === 0) {
-      return Object.fromEntries(
-        supportedLocales.map(locale => [locale, {} as T]),
-      ) as Record<Locale, T>
-    }
+    if (i18n.length === 0) return null
     return i18n.reduce(
       (acc: Record<Locale, T>, bundle: T) => {
         acc[bundle.locale] = bundle
@@ -453,11 +499,9 @@ export const toLocaleMap = <T extends LocaleBundle>(
     )
   }
 
-  // Fallback for unexpected input
-  console.warn('Unexpected i18n format:', i18n)
-  return Object.fromEntries(
-    supportedLocales.map(locale => [locale, {} as T]),
-  ) as Record<Locale, T>
+  // Strict contract: do not fabricate locale entries for invalid shapes.
+  console.error('Invalid i18n format:', i18n)
+  return null
 }
 
 // ═══════════════════════
@@ -563,11 +607,22 @@ export const toRelatedRecords = <
   foreignKeyValue: string,
   keyName: K = 'id' as K,
 ): Array<T & Record<K, KeyValue> & Record<F, string>> => {
-  return Object.entries(data).map(([key, value]) => ({
-    ...value,
-    [keyName]: key as KeyValue,
-    [foreignKeyName]: foreignKeyValue,
-  }))
+  return Object.entries(data).map(([rawKey, rawValue]) => {
+    const isLocaleKey = keyName === 'locale'
+    const key = (isLocaleKey ? toDbLocaleKey(rawKey) : rawKey) as KeyValue
+    const valueRecord = rawValue as Record<string, unknown>
+    const normalizedLocale =
+      isLocaleKey && typeof valueRecord.locale === 'string'
+        ? toDbLocaleKey(valueRecord.locale)
+        : undefined
+
+    return {
+      ...(rawValue as T),
+      ...(normalizedLocale ? ({ locale: normalizedLocale } as Partial<T>) : {}),
+      [keyName]: key,
+      [foreignKeyName]: foreignKeyValue,
+    }
+  })
 }
 
 // ═══════════════════════
