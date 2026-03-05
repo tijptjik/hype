@@ -7,6 +7,15 @@
     @apply block absolute inset-6;
   }
 
+  .bits-main__section--fade {
+    transition: opacity 180ms ease;
+  }
+
+  .bits-main__section--faded {
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .bits-main__section--hidden {
     @apply hidden;
   }
