@@ -30,11 +30,11 @@ import { toImageEnvelope } from './image'
 import { ImageContextResource } from '$lib/enums'
 // ZOD
 import {
-  ProjectAPI,
+  ProjectAdminProfileAPI,
   ProjectCardProfileAPI,
   ProjectDetailProfileAPI,
   ProjectListProfileAPI,
-} from '../zod'
+} from '../zod/schema/project'
 // SERVICES
 import { createPropertiesWithRelated, updatePropertiesWithRelated } from './property'
 import { getProjectHubFilter } from './hub'
@@ -815,7 +815,7 @@ export const toFormShape = async (
         ) as any)
       : null,
   }
-  return ProjectAPI.parse(formData)
+  return ProjectAdminProfileAPI.parse(formData)
 }
 
 /**
@@ -862,7 +862,7 @@ export const toResponseShape = async (
   }
 
   if (profile === 'admin') {
-    return ProjectAPI.parse(data)
+    return ProjectAdminProfileAPI.parse(data)
   }
   if (profile === 'detail') {
     return ProjectDetailProfileAPI.parse(data)

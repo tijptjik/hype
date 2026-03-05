@@ -133,7 +133,7 @@ import type {
   OrganisationUpdate,
   OrganisationUpdateAPI,
   OrganisationUpdateSuperAdminAPI,
-  ProjectAPI,
+  ProjectAdminProfileAPI,
   ProjectBase,
   ProjectProfile as ProjectProfileSchema,
   ProjectListProfileAPI,
@@ -1656,7 +1656,7 @@ export type ProjectDBPartial = z.infer<typeof ProjectUpdate>
 /* -------- */
 
 // Project with all fields, including userRoles & translations, and User
-export type Project = z.infer<typeof ProjectAPI>
+export type Project = z.infer<typeof ProjectAdminProfileAPI>
 // Like Project, but without the projectId in userRoles and translations
 export type ProjectNew = z.infer<typeof ProjectInsertAPI>
 // Like Project, but with all fields optional

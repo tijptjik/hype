@@ -10,8 +10,9 @@ import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'
-import { ProjectPropertyFormData } from './property'
+import { ProjectPropertyFormData, PropertyAPI } from './property'
 import { ImageContextEnvelopeAPI } from './image'
+import { UserBasic } from './user'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -107,6 +108,11 @@ export const ProjectI18nBase = createSelectSchema(projectI18n)
 
 export const ProjectRoleBase = createSelectSchema(projectRole)
 
+export const ProjectRoleWithUser = ProjectRoleBase.extend({
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
+  user: UserBasic.nullish(),
+})
+
 // ═══════════════════════
 // 3. REMOTE FORM SCHEMAS
 // ═══════════════════════
@@ -188,6 +194,14 @@ export const ProjectFormData = z.object({
 })
 
 export const ProjectPreflightFormData = ProjectFormData
+
+export const ProjectAdminProfileAPI = ProjectBase.extend({
+  i18n: getLocales(ProjectI18nBase),
+  userRoles: z.array(ProjectRoleWithUser).default([]),
+  properties: z.array(PropertyAPI).nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
+  publisher: UserBasic.nullish(),
+})
 
 // ═══════════════════════
 // 4. REMOTE COMMAND SCHEMAS
