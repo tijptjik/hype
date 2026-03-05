@@ -1,5 +1,6 @@
 <script lang="ts">
 import { m } from '$lib/i18n'
+import { getGenAiState, toggleGenAiField } from '$lib/client/services/form'
 import { TextInput } from '$lib/bits/custom/form'
 import type { Locale } from '$lib/types'
 import type { FormIssueValue } from '$lib/bits/custom/form/src/label/types'
@@ -22,12 +23,14 @@ type CreditLocaleFields = {
 }
 
 let {
+  form,
   fields,
   formLocale,
   locale,
   isEditing = false,
   isRequiredInPreflight,
 }: {
+  form: any
   fields: CreditLocaleFields
   formLocale: string
   locale: Locale
@@ -41,7 +44,7 @@ const licenseRequired = $derived(
   isRequiredInPreflight(['data', 'i18n', formLocale, 'license']),
 )
 const licenseIssues = $derived(licenseField.issues())
-const licenseGenValue = $derived(fields.licenseGen.value())
+const licenseGenValue = $derived(getGenAiState(form, locale, 'license'))
 const licenseGenAttrs = $derived(
   fields.licenseGen.as('hidden', licenseGenValue ? 'true' : 'false'),
 )
@@ -52,7 +55,7 @@ const attributionRequired = $derived(
   isRequiredInPreflight(['data', 'i18n', formLocale, 'attribution']),
 )
 const attributionIssues = $derived(attributionField.issues())
-const attributionGenValue = $derived(fields.attributionGen.value())
+const attributionGenValue = $derived(getGenAiState(form, locale, 'attribution'))
 const attributionGenAttrs = $derived(
   fields.attributionGen.as('hidden', attributionGenValue ? 'true' : 'false'),
 )
@@ -67,6 +70,8 @@ const attributionGenAttrs = $derived(
   isTranslated={true}
   required={licenseRequired}
   {isEditing}
+  isGenAI={licenseGenValue}
+  onToggleGenAI={() => toggleGenAiField(form, locale, 'license')}
   value={(licenseAttrs as { value?: string }).value ?? ''}
   issues={licenseIssues}
   inputAttrs={licenseAttrs as Record<string, unknown>}
@@ -78,6 +83,8 @@ const attributionGenAttrs = $derived(
   isTranslated={true}
   required={attributionRequired}
   {isEditing}
+  isGenAI={attributionGenValue}
+  onToggleGenAI={() => toggleGenAiField(form, locale, 'attribution')}
   value={(attributionAttrs as { value?: string }).value ?? ''}
   issues={attributionIssues}
   inputAttrs={attributionAttrs as Record<string, unknown>}
