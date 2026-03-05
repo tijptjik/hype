@@ -7,7 +7,7 @@ import { image } from './image'
 import { user } from './user'
 // ENUM
 import { ProjectRoleType, supportedLocales } from '../../enums'
-import type { CapabilityDefinitions, ProjectRoleCapabilities } from '../../types'
+import type { ProjectCapabilities, ProjectRoleCapabilities } from '../../types'
 
 /* ============================================================================
  * PROJECT MANAGEMENT
@@ -37,14 +37,18 @@ export const project = sqliteTable('project', {
     onDelete: 'set null',
     onUpdate: 'cascade',
   }),
-  // Configurable capability labels and assignable keys for this project.
-  // When present, this overrides organisation-level capability definitions.
+  // Project-level capability availability map.
+  // Keys set to true are available for assignment in projectRole.capabilities.
   capabilities: text('capabilities', {
     mode: 'json',
   })
-    .$type<CapabilityDefinitions>()
+    .$type<ProjectCapabilities>()
     .notNull()
-    .default({} as CapabilityDefinitions),
+    .default({
+      manageBakeries: false,
+      manageVolunteers: false,
+      manageDropOffs: false,
+    } as ProjectCapabilities),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   localIsPublished: integer('localIsPublished', { mode: 'boolean' }),

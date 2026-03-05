@@ -886,10 +886,12 @@ export type CapabilityI18nRoot = {
 export type CapabilityKey = 'manageBakeries' | 'manageVolunteers' | 'manageDropOffs'
 
 export type CapabilityDefinition = {
-  i18n: CapabilityI18nRoot
+  i18n?: CapabilityI18nRoot
 }
 
 export type CapabilityDefinitions = Partial<Record<CapabilityKey, CapabilityDefinition>>
+
+export type ProjectCapabilities = Record<CapabilityKey, boolean>
 
 export type ProjectRoleCapabilities = Partial<Record<CapabilityKey, boolean>>
 
@@ -1087,6 +1089,12 @@ export type UserRoleFieldNameResolverForm = {
       userRoles?: Array<{
         role?: { as: (type: 'select') => { name?: string } }
         userId?: { as: (type: 'hidden', value: string) => Record<string, unknown> }
+        capabilities?: Partial<
+          Record<
+            CapabilityKey,
+            { as: (type: 'hidden', value: string) => Record<string, unknown> }
+          >
+        >
       }>
     }
   }
@@ -1699,6 +1707,7 @@ export type ProjectListParamsByProfile<P extends ProjectProfile> = Omit<
 export type ProjectFormInput = z.input<typeof ProjectFormData>
 export type ProjectBooleanField = 'isPublished' | 'isArchived'
 export type ProjectSubmitBaselineRelations = {
+  capabilities?: ProjectFormInput['data']['capabilities']
   userRoles?: unknown
   properties?: ProjectFormInput['data']['properties']
 }
@@ -1728,6 +1737,7 @@ export type ResourceSubmitMetaDraft = {
 }
 export type ProjectCurrentFormDraft = {
   data?: {
+    capabilities?: unknown
     userRoles?: unknown
     properties?: unknown
   }
@@ -1761,6 +1771,7 @@ export type ApplyChangedRelationFieldParams<
   key: TKey
 } & ResolveChangedRelationParams<TEffective>
 export type ProjectSubmitDraft = ResourceSubmitDraft<{
+  capabilities?: unknown
   userRoles?: unknown
   properties?: unknown
 }>

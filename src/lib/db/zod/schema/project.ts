@@ -1,11 +1,6 @@
 // I18N
 import { m } from '$lib/i18n'
-import type {
-  CapabilityDefinition,
-  CapabilityDefinitions,
-  CapabilityKey,
-  ProjectRoleCapabilities,
-} from '$lib/types'
+import type { ProjectCapabilities, ProjectRoleCapabilities } from '$lib/types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -14,7 +9,7 @@ import { createSelectSchema } from 'drizzle-zod'
 import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
-import { FormI18nRoot, getLocales } from '../constraints'
+import { getLocales } from '../constraints'
 import { ProjectPropertyFormData } from './property'
 import { ImageContextEnvelopeAPI } from './image'
 
@@ -23,8 +18,7 @@ import { ImageContextEnvelopeAPI } from './image'
 // ═══════════════════════
 //
 // 1. CAPABILITY SCHEMAS
-//    - CabilityDefinitionSchema
-//    - CapabilityRoot
+//    - ProjectCapabilitiesSchema
 //    - ProjectRoleCapabilitiesSchema
 //
 // 2. BASE / RELATIONAL PRIMITIVES
@@ -56,14 +50,11 @@ import { ImageContextEnvelopeAPI } from './image'
 // 1. CAPABILITY SCHEMAS
 // ═══════════════════════
 
-export const CabilityDefinitionSchema: z.ZodType<CapabilityDefinition> = z.object({
-  i18n: FormI18nRoot.optional(),
+export const ProjectCapabilitiesSchema: z.ZodType<ProjectCapabilities> = z.object({
+  manageBakeries: FormBoolean.default(false),
+  manageVolunteers: FormBoolean.default(false),
+  manageDropOffs: FormBoolean.default(false),
 })
-
-export const CapabilityRoot: z.ZodType<CapabilityDefinitions> = z.record(
-  z.custom<CapabilityKey>(),
-  CabilityDefinitionSchema,
-)
 
 export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
   z.object({
@@ -72,14 +63,44 @@ export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
     manageDropOffs: z.boolean().optional(),
   })
 
-const CapabilityBase = CapabilityRoot.optional()
+const toProjectCapabilitiesValue = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return value
+  }
+}
+
+const ProjectCapabilitiesBase = z.preprocess(
+  value => {
+    if (!Array.isArray(value)) return toProjectCapabilitiesValue(value)
+
+    const normalized = value
+      .map(toProjectCapabilitiesValue)
+      .filter(item => item !== undefined && item !== null)
+    if (normalized.length === 0) return undefined
+
+    const objectCandidate = [...normalized]
+      .reverse()
+      .find(item => typeof item === 'object' && !Array.isArray(item))
+    return objectCandidate ?? normalized[normalized.length - 1]
+  },
+  ProjectCapabilitiesSchema.default({
+    manageBakeries: false,
+    manageVolunteers: false,
+    manageDropOffs: false,
+  }),
+)
 
 // ═══════════════════════
 // 2. BASE / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
 export const ProjectBase = createSelectSchema(project).extend({
-  capabilities: CapabilityBase,
+  capabilities: ProjectCapabilitiesBase,
 })
 
 export const ProjectI18nBase = createSelectSchema(projectI18n)
@@ -149,7 +170,7 @@ export const ProjectEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   i18n: ProjectI18nByLocaleFormData,
-  capabilities: CapabilityBase,
+  capabilities: ProjectCapabilitiesBase,
   userRoles: ProjectUserRolesFormData.optional(),
   properties: ProjectPropertiesFormData,
 })
