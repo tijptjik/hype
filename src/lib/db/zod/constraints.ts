@@ -66,6 +66,15 @@ export const constraints: Record<string, z.ZodType<any>> = {
     .nullish(),
 }
 
+/**
+ * Canonical form-locale i18n label/value object shape used across resources.
+ */
+export const FormI18nRoot = z.object({
+  en: z.string().optional(),
+  zhHans: z.string().optional(),
+  zhHant: z.string().optional(),
+})
+
 export const getDefaultConstraints = (
   table:
     | typeof organisation
