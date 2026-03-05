@@ -2,17 +2,17 @@
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
-import type { RemoteForm } from '@sveltejs/kit'
 // ENUMS
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
 import {
   addUserRoleSelection,
+  applyChangedRelationField,
   createResourceEditorPage,
   createResourceFormConfig,
   getNameForToast,
@@ -41,9 +41,16 @@ import {
 import {
   addProjectPropertyForType,
   changeProjectPropertyRank,
+  getCurrentProjectProperties,
+  getPropertyFormIssues,
+  getPropertyIssueItemIdsForTypeFromFormIssues,
+  getPropertyIssuesForTypeFromFormIssues,
+  getProjectPropertyFieldsForIndex,
   getPropertiesByType,
   removeProjectPropertyForType,
   resetProjectPropertyLocale,
+  scrollWithMovedProperty,
+  stopEvent,
   translateProjectPropertyLocale,
   updateProjectPropertyBase,
   updateProjectPropertyI18n,
@@ -110,6 +117,9 @@ import type {
   Locale,
   OrganisationGetState,
   ProjectBooleanField,
+  ProjectCurrentFormDraft,
+  PropertyDiscriminator,
+  ProjectSubmitBaselineRelations,
   ProjectSubmitDraft,
   ProjectGetResponse,
   ProjectFormInput,
@@ -200,7 +210,13 @@ const isCurrentRefLoaded = $derived.by(() => {
 
 // § Form
 
+// ═══════════════════════
+// 1. FORM CONFIG + SUBMIT SHAPING
+// ═══════════════════════
+
+// Named i18n sections rendered in the project form.
 type ProjectI18nSectionKey = 'descriptor' | 'credit'
+// Fields eligible for machine translation/reset per i18n section.
 const translatableI18nFieldsBySection: Record<
   ProjectI18nSectionKey,
   ReadonlyArray<'name' | 'nameShort' | 'description' | 'license' | 'attribution'>
@@ -208,25 +224,31 @@ const translatableI18nFieldsBySection: Record<
   descriptor: ['name', 'nameShort', 'description'],
   credit: ['license', 'attribution'],
 }
-let sectionRemoveModes = $state<Record<PropertySectionType, boolean>>({
+// Per-section "remove mode" state used by classifier/specifier cards.
+let sectionRemoveModes = $state<Record<PropertyDiscriminator, boolean>>({
   classifier: false,
   specifier: false,
 })
 
+// Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
   form: projectForm,
   onsubmit: ({ data }) => {
+    // Normalize submit envelope (`meta` + `data`) and enforce mode/id invariants.
     const submittedPayload = prepareSubmitPayloadMeta(data as ProjectSubmitDraft, {
       defaultMode: isNewProjectRef ? 'create' : 'update',
       resolveUpdateId: () => project?.data?.id ?? committedProject?.data?.id ?? '',
     })
 
+    // Last committed server state used as baseline for changed-only relation submission.
     const baselineFormInput = toProjectFormInput(committedProject?.data, {
       organisationId: parentOrganisationId,
     })
 
+    // Current in-memory form snapshot (post-user edits).
     const currentFormSnapshot = formCtx.form.fields.value() as ProjectCurrentFormDraft
 
+    // Submit userRoles only when materially changed.
     applyChangedRelationField({
       data: submittedPayload.data,
       key: 'userRoles',
@@ -241,6 +263,7 @@ const configuredProjectForm = configureForm(() => ({
       toSignature: toStableSignature,
     })
 
+    // Submit properties only when materially changed and with canonical ranks.
     applyChangedRelationField({
       data: submittedPayload.data,
       key: 'properties',
@@ -292,6 +315,7 @@ const configuredProjectForm = configureForm(() => ({
     resourceType: FirstClassResource.project,
     getEntity: () => project,
     refreshResource: async ({ data, shouldRedirect }) => {
+      // Reload committed entity after successful submit (or non-redirect save).
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshProject(shouldRedirect ? submittedCode : undefined)
       commitProjectState(refreshed)
@@ -302,14 +326,192 @@ const configuredProjectForm = configureForm(() => ({
   }),
 }))
 
+// Bound form controller for template/actions.
 const formCtx = $derived(configuredProjectForm())
+// Required-field resolver from preflight schema.
 const isRequiredInPreflight = createSchemaRequiredInferer(ProjectPreflightFormData)
+// Dirty flag exposed to header actions.
 const isDirty = $derived(Boolean(formCtx.dirty))
 
+// Narrowed form adapter for property-only mutators.
+const projectPropertyFormAdapter = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<{ id?: Id; properties?: Property[] }>,
+)
+
+// ═══════════════════════
+// 2. PROPERTY FORM ACTIONS + MUTATORS
+// ═══════════════════════
+
+// Factory for section-scoped property actions (classifier/specifier).
+function createPropertyActions(
+  type: PropertyDiscriminator,
+  getCount: () => number,
+  clearRemoveMode: () => void,
+) {
+  return {
+    add: (event: Event): void => {
+      stopEvent(event)
+      if (!headerCtrl.state.isEditing && canSubmitProject) {
+        headerCtrl.setEditing(true)
+      }
+      addProjectPropertyForType(
+        projectPropertyFormAdapter,
+        type,
+        project?.data?.id ?? '',
+        classifierComponentTypes,
+        specifierComponentTypes,
+      )
+      revalidateAfterProgrammaticChange()
+    },
+    remove: (event: Event, propertyId: Id): void => {
+      stopEvent(event)
+      removeProjectPropertyForType(projectPropertyFormAdapter, type, propertyId)
+      if (getCount() <= 1) clearRemoveMode()
+      revalidateAfterProgrammaticChange()
+    },
+    increaseRank: async (event: Event, propertyId: Id): Promise<void> => {
+      stopEvent(event)
+      await scrollWithMovedProperty(
+        propertyId,
+        () => {
+          changeProjectPropertyRank(projectPropertyFormAdapter, type, propertyId, 'up')
+        },
+        async () => {
+          await tick()
+          await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
+        },
+      )
+      revalidateAfterProgrammaticChange()
+    },
+    decreaseRank: async (event: Event, propertyId: Id): Promise<void> => {
+      stopEvent(event)
+      await scrollWithMovedProperty(
+        propertyId,
+        () => {
+          changeProjectPropertyRank(
+            projectPropertyFormAdapter,
+            type,
+            propertyId,
+            'down',
+          )
+        },
+        async () => {
+          await tick()
+          await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
+        },
+      )
+      revalidateAfterProgrammaticChange()
+    },
+  }
+}
+
+// Action set for classifier properties.
+const classifierActions = createPropertyActions(
+  'classifier',
+  () => classifierPropsInSection.length,
+  () => {
+    sectionRemoveModes.classifier = false
+  },
+)
+
+// Action set for specifier properties.
+const specifierActions = createPropertyActions(
+  'specifier',
+  () => specifierPropsInSection.length,
+  () => {
+    sectionRemoveModes.specifier = false
+  },
+)
+
+// Update base property fields (`key`, `component`, numeric bounds, translatability).
+const updatePropertyBase = (
+  propertyId: Id,
+  key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable',
+  value: string | number | null | boolean,
+): void => {
+  updateProjectPropertyBase(projectPropertyFormAdapter, propertyId, key, value)
+  revalidateAfterProgrammaticChange()
+}
+
+// Update property i18n fields for a locale.
+const updatePropertyI18n = (
+  propertyId: Id,
+  locale: Locale,
+  key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
+  value: string | boolean,
+): void => {
+  updateProjectPropertyI18n(projectPropertyFormAdapter, propertyId, locale, key, value)
+  revalidateAfterProgrammaticChange()
+}
+
+// Append a new value option to a classifier property.
+const addPropertyValue = (propertyId: Id): void => {
+  addProjectPropertyValue(projectPropertyFormAdapter, propertyId)
+  revalidateAfterProgrammaticChange()
+}
+
+// Remove a value option from a classifier property.
+const removePropertyValue = (propertyId: Id, valueId: Id): void => {
+  removeProjectPropertyValue(projectPropertyFormAdapter, propertyId, valueId)
+  revalidateAfterProgrammaticChange()
+}
+
+// Reorder property value options.
+const movePropertyValue = (propertyId: Id, valueId: Id, targetIndex: number): void => {
+  reorderProjectPropertyValue(
+    projectPropertyFormAdapter,
+    propertyId,
+    valueId,
+    targetIndex,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+// Update localised value text for a property value row.
+const updatePropertyValueI18n = (
+  propertyId: Id,
+  valueId: Id,
+  locale: Locale,
+  key: 'value',
+  value: string,
+): void => {
+  updateProjectPropertyValueI18n(
+    projectPropertyFormAdapter,
+    propertyId,
+    valueId,
+    locale,
+    key,
+    value,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+// Sorted classifier properties shown in the classifier section.
+const classifierPropsInSection = $derived(
+  getPropertiesByType(
+    getCurrentProjectProperties(projectPropertyFormAdapter),
+    'classifier',
+  ),
+)
+
+// Sorted specifier properties shown in the specifier section.
+const specifierPropsInSection = $derived(
+  getPropertiesByType(
+    getCurrentProjectProperties(projectPropertyFormAdapter),
+    'specifier',
+  ),
+)
+
+// ═══════════════════════
+// 3. PROPERTY ISSUE DERIVATION
+// ═══════════════════════
+
+// Optional gate for suppressing form-level issues during controlled transitions.
 const visibleAllIssues = $derived.by((): unknown[] =>
   suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
 )
 
+// De-duplicated form-level issue messages for section header display.
 const formLevelIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
     .filter(isFormLevelIssue)
@@ -318,21 +520,117 @@ const formLevelIssues = $derived.by((): string[] => {
   return Array.from(new Set(messages))
 })
 
-// USER ROLES
+// Property-scoped issue rows parsed from the full issue list.
+const propertyFormIssues = $derived.by(
+  (): Array<{ message: string; path?: Array<string | number> }> =>
+    getPropertyFormIssues(visibleAllIssues),
+)
 
+// Resolved issue messages for one property discriminator section.
+function getPropertyIssuesForType(type: PropertyDiscriminator): string[] {
+  return getPropertyIssuesForTypeFromFormIssues({
+    issues: propertyFormIssues,
+    properties: getCurrentProjectProperties(projectPropertyFormAdapter),
+    type,
+  })
+}
+
+// Resolved property IDs that currently have issues in one section.
+function getPropertyIssueItemIdsForType(type: PropertyDiscriminator): Id[] {
+  return getPropertyIssueItemIdsForTypeFromFormIssues({
+    issues: propertyFormIssues,
+    properties: getCurrentProjectProperties(projectPropertyFormAdapter),
+    type,
+  })
+}
+
+// Classifier issue chips shown in section header.
+const classifierPropertyIssues = $derived.by(() =>
+  getPropertyIssuesForType('classifier'),
+)
+
+// Specifier issue chips shown in section header.
+const specifierPropertyIssues = $derived.by(() => getPropertyIssuesForType('specifier'))
+
+// Classifier property IDs with issue highlighting.
+const classifierIssueItemIds = $derived.by(() =>
+  getPropertyIssueItemIdsForType('classifier'),
+)
+
+// Specifier property IDs with issue highlighting.
+const specifierIssueItemIds = $derived.by(() =>
+  getPropertyIssueItemIdsForType('specifier'),
+)
+
+// Unified config model for rendering classifier/specifier field sections.
+const fieldSections = $derived.by(
+  (): Array<{
+    type: PropertyDiscriminator
+    title: string
+    description: string
+    items: Property[]
+    issues: string[]
+    actions: typeof classifierActions
+    issueItemIds: Id[]
+    removeMode: boolean
+  }> => [
+    {
+      type: 'classifier',
+      title: m.admin__forms_common_classifiers(),
+      description: m.admin__forms_common_classifiers_subtitle(),
+      items: classifierPropsInSection,
+      issues: classifierPropertyIssues,
+      actions: classifierActions,
+      issueItemIds: classifierIssueItemIds,
+      removeMode: sectionRemoveModes.classifier,
+    },
+    {
+      type: 'specifier',
+      title: m.admin__forms_common_specifiers(),
+      description: m.admin__forms_common_specifiers_subtitle(),
+      items: specifierPropsInSection,
+      issues: specifierPropertyIssues,
+      actions: specifierActions,
+      issueItemIds: specifierIssueItemIds,
+      removeMode: sectionRemoveModes.specifier,
+    },
+  ],
+)
+
+// ═══════════════════════
+// 4. USER ROLE FORM STATE + PROJECTIONS
+// ═══════════════════════
+
+// Current editable user-role rows from form state.
 const formUserRoleValues = $derived(
   (formCtx.form.fields.value().data?.userRoles ?? []) as Array<{
     userId: string
     role: string
   }>,
 )
+// Narrowed adapter for user-role mutators.
 const userRoleUpdaterForm = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
     userRoles?: Array<{ userId: string; role: string }>
   }>,
 )
+// Resolver for role-field names/hidden attrs in template wiring.
+const userRoleFieldResolverForm = $derived(
+  formCtx.form as unknown as UserRoleFieldNameResolverForm,
+)
+// Generic entity-data update adapter for project form payload.
+const projectEntityUpdaterForm = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<ProjectFormInput['data']>,
+)
+// Narrowed i18n-only adapter for translation/reset helpers.
+const projectI18nUpdaterForm = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<
+    Pick<ProjectFormInput['data'], 'i18n'>
+  >,
+)
+// Hidden-input attrs for stable userId submission across role rows.
 const hiddenUserIdInputAttrs = $derived.by(() => {
-  const rows = (formCtx.form as any).fields?.data?.userRoles ?? []
+  const rows = userRoleFieldResolverForm.fields.data?.userRoles ?? []
   return formUserRoleValues
     .map((userRole, index) => {
       const userId = typeof userRole.userId === 'string' ? userRole.userId : ''
@@ -341,8 +639,9 @@ const hiddenUserIdInputAttrs = $derived.by(() => {
     })
     .filter(Boolean) as Array<Record<string, unknown>>
 })
+// Select field names keyed by userId for role dropdown binding.
 const roleFieldNameByUserId = $derived.by(() => {
-  const rows = (formCtx.form as any).fields?.data?.userRoles ?? []
+  const rows = userRoleFieldResolverForm.fields.data?.userRoles ?? []
   return Object.fromEntries(
     formUserRoleValues.map((userRole, index) => [
       userRole.userId,
@@ -351,6 +650,7 @@ const roleFieldNameByUserId = $derived.by(() => {
   ) as Record<string, string>
 })
 
+// Display-ready project role rows merged from persisted roles + current form edits.
 const projectUserRoles = $derived.by(() => {
   const baseRoles = (project?.data?.userRoles ?? []) as ProjectRoleUser[]
   const roleByUserId = new Map(formUserRoleValues.map(role => [role.userId, role.role]))
@@ -505,7 +805,7 @@ async function onTranslate(
   const section =
     sectionKey === 'credit' ? ('credit' as const) : ('descriptor' as const)
   const translated = await translateLocaleIntoEmptyFields({
-    form: formCtx.form as any,
+    form: projectI18nUpdaterForm,
     sourceLocale,
     targetLocale,
     fields: [...translatableI18nFieldsBySection[section]],
@@ -518,10 +818,30 @@ function onResetLocale(targetLocale: Locale, sectionKey: string = 'descriptor'):
   const section =
     sectionKey === 'credit' ? ('credit' as const) : ('descriptor' as const)
   resetLocaleFields({
-    form: formCtx.form as any,
+    form: projectI18nUpdaterForm,
     targetLocale,
     fields: [...translatableI18nFieldsBySection[section]],
   })
+  revalidateAfterProgrammaticChange()
+}
+
+async function onTranslatePropertyLocale(
+  propertyId: Id,
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> {
+  const translated = await translateProjectPropertyLocale(
+    projectPropertyFormAdapter,
+    propertyId,
+    sourceLocale,
+    targetLocale,
+  )
+  if (translated) revalidateAfterProgrammaticChange()
+  return translated
+}
+
+function onResetPropertyLocale(propertyId: Id, targetLocale: Locale): void {
+  resetProjectPropertyLocale(projectPropertyFormAdapter, propertyId, targetLocale)
   revalidateAfterProgrammaticChange()
 }
 
@@ -533,7 +853,7 @@ function onAddUser(user: User): void {
     user,
     defaultRole: ProjectRoleType.maintainer,
     foreignKey: 'projectId',
-  } as any)
+  })
   revalidateAfterProgrammaticChange()
 }
 
@@ -544,7 +864,7 @@ function onRemoveUser(userId: string): void {
     form: userRoleUpdaterForm,
     entity: project,
     userId,
-  } as any)
+  })
   revalidateAfterProgrammaticChange()
 }
 
@@ -554,7 +874,7 @@ function onRoleChange(userId: string, role: ProjectRoleType): void {
     entity: project,
     userId,
     role,
-  } as any)
+  })
   revalidateAfterProgrammaticChange()
 }
 
@@ -564,7 +884,7 @@ function onReplaceParentOrganisation(
   selectedParentOrganisationById = {
     [organisation.id]: organisation,
   }
-  updateFormData(formCtx.form as any, (data: any) => {
+  updateFormData(projectEntityUpdaterForm, data => {
     data.organisationId = organisation.id
     return data
   })
@@ -760,7 +1080,9 @@ $effect(() => {
     },
     setFacetForRef: nextRef => {
       untrack(() => {
-        const nextFacet = adminCtx.activeFacet === 'images' ? 'images' : 'core'
+        const currentFacet = adminCtx.activeFacet
+        const nextFacet =
+          currentFacet && resolvedFacetTabs.has(currentFacet) ? currentFacet : 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.project)
       })
     },
@@ -774,14 +1096,14 @@ $effect(() => {
   const ref = projectRef
   const title =
     (isNewProjectRef ? `${NEW_TITLE} ${m.deft_mealy_ant_vent()}` : undefined) ??
-    project?.data?.i18n?.[getLocale()]?.name ??
+    project?.data?.i18n?.[getLocaleKey()]?.name ??
     project?.data?.code ??
     m.deft_mealy_ant_vent()
   const facetKey = Array.from(resolvedFacetTabs.keys()).join('|')
   const headerKey = `${ref}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, ProjectIcon, resolvedFacetTabs as any)
+  headerCtrl.setHeaderForEntity(title, ProjectIcon, new Map(resolvedFacetTabs))
 })
 
 // Archived entities are read-only until restored.
@@ -865,7 +1187,7 @@ $effect(() => {
     selectedParentOrganisationById = {
       [defaultOrganisationId]: result.data as ParentSectionOrganisationItem,
     }
-    updateFormData(formCtx.form as any, (data: any) => {
+    updateFormData(projectEntityUpdaterForm, data => {
       data.organisationId = defaultOrganisationId
       return data
     })
@@ -908,7 +1230,7 @@ $effect(() => {
       ...selectedUsersById,
       ...seed.selectedOwners,
     }
-    updateFormData(formCtx.form as any, (data: any) => {
+    updateFormData(projectEntityUpdaterForm, data => {
       data.userRoles = seed.ownerRoles
       return data
     })
@@ -962,12 +1284,13 @@ $effect(() => {
 </script>
 
 <Main.Root>
-  <Main.Section isVisible={isCoreFacet} transition="fade">
-    <Main.Form
-      bind:formEl={contentsElement}
-      attrs={formCtx.attributes}
-      isReady={Boolean(formCtx.form?.fields && (project?.data || isNewProjectRef))}
-    >
+  <Main.Form
+    bind:formEl={contentsElement}
+    attrs={formCtx.attributes}
+    isReady={Boolean(formCtx.form?.fields && (project?.data || isNewProjectRef))}
+    class="space-y-4"
+  >
+    <Main.Section isVisible={isCoreFacet} transition="fade">
       <FormI18nSection
         title={m.admin__forms_common_descriptors()}
         {locales}
@@ -981,7 +1304,7 @@ $effect(() => {
         {/snippet}
 
         {#snippet children(locale)}
-          {@const formLocale = toOrganisationFormLocaleKey(locale)}
+          {@const formLocale = toLocaleKey(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[formLocale]}
@@ -1003,8 +1326,9 @@ $effect(() => {
         {isEditing}
       >
         {#snippet children(locale)}
-          {@const formLocale = toOrganisationFormLocaleKey(locale)}
+          {@const formLocale = toLocaleKey(locale)}
           <FormCreditFields
+            form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[formLocale]}
             {formLocale}
             {locale}
@@ -1062,15 +1386,55 @@ $effect(() => {
           {/if}
         {/snippet}
       </GridSpacer>
-    </Main.Form>
-  </Main.Section>
-
-  <Main.Section
-    isVisible={isFieldsFacet}
-    transition="fade"
-    class="flex min-h-0 flex-col"
-  > </Main.Section>
-
+    </Main.Section>
+    <Main.Section
+      isVisible={isFieldsFacet}
+      transition="fade"
+      class="bits-theme flex gap-4 min-h-0 flex-col"
+    >
+      {#each fieldSections as section (section.type)}
+        <FormFieldsSection
+          items={section.items}
+          title={section.title}
+          description={section.description}
+          issues={section.issues}
+          actions={section.actions}
+          issueItemIds={section.issueItemIds}
+          canEdit={canSubmitProject && isCurrentRefLoaded}
+          {isEditing}
+          removeMode={section.removeMode}
+          onRemoveModeChange={value => {
+            sectionRemoveModes[section.type] = value
+          }}
+          card={{
+              removeMode: section.removeMode,
+              locales,
+              isEditing,
+              isRequiredInPreflight,
+              classifierComponents: classifierComponentTypes,
+              specifierComponents: specifierComponentTypes,
+              onIncreaseRank: section.actions.increaseRank,
+              onDecreaseRank: section.actions.decreaseRank,
+              onRemove: section.actions.remove,
+              onUpdateBase: updatePropertyBase,
+              onUpdateI18n: updatePropertyI18n,
+              onAddValue: addPropertyValue,
+              onRemoveValue: removePropertyValue,
+              onMoveValue: movePropertyValue,
+              onUpdateValueI18n: updatePropertyValueI18n,
+              onTranslateLocale: onTranslatePropertyLocale,
+              onResetLocale: onResetPropertyLocale,
+              getPropertyIndex: (propertyId, _sectionIndex) =>
+                getCurrentProjectProperties(projectPropertyFormAdapter).findIndex(
+                  candidate => candidate.id === propertyId,
+                ),
+              getPropertyFields: (_propertyId, propertyIndex) =>
+                getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            }}
+        />
+      {/each}
+    </Main.Section>
+  </Main.Form>
   <Main.Section
     isVisible={isImagesFacet}
     transition="fade"
