@@ -5,9 +5,27 @@ import { z } from 'zod'
 // CONSTRAINTS
 import { FormBoolean } from '../form'
 
-/* ----------------- */
-// PROPERTY REMOTE FORM SCHEMAS
-/* -------- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. REMOTE FORM SCHEMAS
+//    - PropertyI18nFormData
+//    - PropertyI18nByLocaleFormData
+//    - PropertyValueI18nFormData
+//    - PropertyValueI18nByLocaleFormData
+//    - ProjectPropertyValueFormData
+//    - ProjectPropertyFormData
+//
+// 2. REMOTE FUNCTION SCHEMAS
+//    - ProjectPropertiesQuery
+//    - ProjectPropertiesFormMeta
+//    - ProjectPropertiesFormEntity
+//    - ProjectPropertiesFormData
+
+// ═══════════════════════
+// 1. REMOTE FORM SCHEMAS
+// ═══════════════════════
 
 const PROPERTY_KEY_IDENTIFIER_REGEX = /^[A-Za-z_$][A-Za-z0-9_$]*$/u
 
@@ -71,9 +89,9 @@ export const ProjectPropertyFormData = z.object({
   i18n: PropertyI18nByLocaleFormData,
 })
 
-/* ----------------- */
-// PROPERTY REMOTE FUNCTION SCHEMAS
-/* -------- */
+// ═══════════════════════
+// 2. REMOTE FUNCTION SCHEMAS
+// ═══════════════════════
 
 export const ProjectPropertiesQuery = z.object({
   projectId: z.string().min(1),

@@ -14,7 +14,7 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 // CONSTRAINTS
-import { getDefaultConstraints, getLocales } from '../../constraints'
+import { FormI18nRoot, getDefaultConstraints, getLocales } from '../../constraints'
 // ZOD SCHEMAS
 import { UserBasic } from '../user'
 import { PropertyAPI, PropertyInsertAPI, PropertyUpdateAPI } from './property'
@@ -32,15 +32,9 @@ export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
     manageVolunteers: z.boolean().optional(),
     manageDropOffs: z.boolean().optional(),
   })
-export const ProjectCapabilityLabelI18nSchema = z.object({
-  en: z.string().optional(),
-  zhHans: z.string().optional(),
-  zhHant: z.string().optional(),
-})
-
 export const ProjectCapabilityDefinitionSchema: z.ZodType<CapabilityDefinition> =
   z.object({
-    i18n: ProjectCapabilityLabelI18nSchema.optional(),
+    i18n: FormI18nRoot.optional(),
   })
 
 export const ProjectCapabilityDefinitionsSchema: z.ZodType<CapabilityDefinitions> =

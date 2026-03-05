@@ -2,21 +2,77 @@
 import { m } from '$lib/i18n'
 // ZOD
 import { z } from 'zod'
+// DRIZZLE
+import { createSelectSchema } from 'drizzle-zod'
+// DRIZZLE SCHEMA
+import {
+  hub,
+  hubI18n,
+  hubRole,
+  organisation,
+  organisationI18n,
+} from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
-import {
-  HubBase,
-  HubI18nBase,
-  HubRoleBase,
-  HubRoleWithUser,
-  HubOrganisationWithI18n,
-} from './deprecated/hub'
 import { ImageContextEnvelopeAPI } from './image'
+import { UserBasic } from './user'
 
-/* ----------------- */
-// HUB REMOTE FORM SCHEMAS
-/* -------- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. BASE / RELATIONAL PRIMITIVES
+//    - HubBase
+//    - HubI18nBase
+//    - HubRoleBase
+//    - HubRoleWithUser
+//    - HubOrganisationWithI18n
+//
+// 2. REMOTE FORM SCHEMAS
+//    - HubI18nFormData
+//    - HubRoleFormData
+//    - HubI18nByLocaleFormData
+//    - HubUserRolesFormData
+//    - HubOrganisationFormData
+//    - HubEntityFormData
+//    - HubFormMeta
+//    - HubFormData
+//    - HubPreflightFormData
+//
+// 3. REMOTE COMMAND SCHEMAS
+//    - PublishHubSchema
+//    - RemoveHubSchema
+//
+// 4. REMOTE PROFILE SCHEMAS
+//    - HubProfile
+//    - HubListProfileAPI
+//    - HubCardProfileAPI
+//    - HubDetailProfileAPI
+
+// ═══════════════════════
+// 1. BASE / RELATIONAL PRIMITIVES
+// ═══════════════════════
+
+export const HubBase = createSelectSchema(hub)
+
+export const HubI18nBase = createSelectSchema(hubI18n)
+
+export const HubRoleBase = createSelectSchema(hubRole)
+
+export const HubRoleWithUser = HubRoleBase.extend({
+  user: UserBasic,
+})
+
+const HubOrganisationBase = createSelectSchema(organisation)
+export const HubOrganisationWithI18n = HubOrganisationBase.extend({
+  i18n: getLocales(createSelectSchema(organisationI18n)),
+  image: ImageContextEnvelopeAPI.nullish(),
+})
+
+// ═══════════════════════
+// 2. REMOTE FORM SCHEMAS
+// ═══════════════════════
 
 export const HubI18nFormData = z.object({
   name: z
@@ -91,6 +147,10 @@ export const HubFormData = z.object({
 
 export const HubPreflightFormData = HubFormData
 
+// ═══════════════════════
+// 3. REMOTE COMMAND SCHEMAS
+// ═══════════════════════
+
 export const PublishHubSchema = z.object({
   id: z.string().min(1),
   state: z.coerce.boolean<boolean>(),
@@ -111,9 +171,9 @@ export const RemoveHubSchema = z.object({
     .optional(),
 })
 
-/* ----------------- */
-// HUB REMOTE PROFILE SCHEMAS
-/* -------- */
+// ═══════════════════════
+// 4. REMOTE PROFILE SCHEMAS
+// ═══════════════════════
 
 export const HubProfile = z.enum(['list', 'card', 'detail', 'admin'])
 

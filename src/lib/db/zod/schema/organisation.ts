@@ -1,21 +1,87 @@
 // I18N
 import { m } from '$lib/i18n'
+import type {
+  CapabilityDefinition,
+  CapabilityDefinitions,
+  ProjectCapabilityKey,
+} from '$lib/types'
 // ZOD
 import { z } from 'zod'
+// DRIZZLE
+import { createSelectSchema } from 'drizzle-zod'
+// DRIZZLE SCHEMA
+import { organisation, organisationI18n, organisationRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
-import { getLocales } from '../constraints'
-import {
-  OrganisationCapabilityDefinitionsSchema,
-  OrganisationBase,
-  OrganisationI18nBase,
-  OrganisationRoleBase,
-} from './deprecated/organisation'
+import { FormI18nRoot, getLocales } from '../constraints'
 import { ImageContextEnvelopeAPI } from './image'
 
-/* ----------------- */
-// ORGANISATION REMOTE FORM SCHEMAS
-/* -------- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. CAPABILITY SCHEMAS
+//    - OrganisationCapabilityDefinitionSchema
+//    - OrganisationCapabilityDefinitionsSchema
+//
+// 2. BASE / RELATIONAL PRIMITIVES
+//    - OrganisationBase
+//    - OrganisationI18nBase
+//    - OrganisationRoleBase
+//
+// 3. REMOTE FORM SCHEMAS
+//    - OrganisationI18nFormData
+//    - OrganisationRoleFormData
+//    - OrganisationI18nByLocaleFormData
+//    - OrganisationUserRolesFormData
+//    - OrganisationEntityFormData
+//    - OrganisationFormMeta
+//    - OrganisationFormData
+//    - OrganisationPreflightFormData
+//    - OrganisationCreateFormData
+//    - OrganisationReplaceFormData
+//    - OrganisationUpdateFormData
+//
+// 4. REMOTE COMMAND SCHEMAS
+//    - PublishOrganisationSchema
+//    - RemoveOrganisationSchema
+//
+// 5. REMOTE PROFILE SCHEMAS
+//    - OrganisationProfile
+//    - OrganisationListProfileAPI
+//    - OrganisationCardProfileAPI
+//    - OrganisationDetailProfileAPI
+
+// ═══════════════════════
+// 1. CAPABILITY SCHEMAS
+// ═══════════════════════
+
+export const CabilityDefinitionSchema: z.ZodType<CapabilityDefinition> = z.object({
+  i18n: FormI18nRoot.optional(),
+})
+
+export const CapabilityRoot: z.ZodType<CapabilityDefinitions> = z.record(
+  z.custom<ProjectCapabilityKey>(),
+  CabilityDefinitionSchema,
+)
+
+const CapabilityBase = CapabilityRoot.optional()
+
+// ═══════════════════════
+// 2. BASE / RELATIONAL PRIMITIVES
+// ═══════════════════════
+
+export const OrganisationBase = createSelectSchema(organisation).extend({
+  capabilities: CapabilityBase,
+})
+
+export const OrganisationI18nBase = createSelectSchema(organisationI18n)
+
+export const OrganisationRoleBase = createSelectSchema(organisationRole)
+
+// ═══════════════════════
+// 3. REMOTE FORM SCHEMAS
+// ═══════════════════════
 
 export const OrganisationI18nFormData = z.object({
   name: z
@@ -69,7 +135,7 @@ export const OrganisationEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   url: z.union([z.literal(''), z.url({ message: m.admin__validation_url_invalid() })]),
-  capabilities: OrganisationCapabilityDefinitionsSchema.optional().default({}),
+  capabilities: CapabilityBase,
   i18n: OrganisationI18nByLocaleFormData,
   userRoles: OrganisationUserRolesFormData,
 })
@@ -110,6 +176,10 @@ export const OrganisationUpdateFormData = z.object({
   ),
 })
 
+// ═══════════════════════
+// 4. REMOTE COMMAND SCHEMAS
+// ═══════════════════════
+
 export const PublishOrganisationSchema = z.object({
   id: z.string().min(1),
   state: z.coerce.boolean<boolean>(),
@@ -130,9 +200,9 @@ export const RemoveOrganisationSchema = z.object({
     .optional(),
 })
 
-/* ----------------- */
-// ORGANISATION REMOTE PROFILE SCHEMAS
-/* -------- */
+// ═══════════════════════
+// 5. REMOTE PROFILE SCHEMAS
+// ═══════════════════════
 
 export const OrganisationProfile = z.enum(['list', 'card', 'detail', 'admin'])
 

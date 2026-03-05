@@ -12,20 +12,19 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import { organisation, organisationI18n, organisationRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
-import { getDefaultConstraints, getLocales, getUserRoles } from '../../constraints'
+import {
+  FormI18nRoot,
+  getDefaultConstraints,
+  getLocales,
+  getUserRoles,
+} from '../../constraints'
 import { UserBasic } from '../user'
 import { ImageBase, ImageContextEnvelopeAPI } from '../image'
 import { HubBasic } from './hub'
 
-export const OrganisationCapabilityLabelI18nSchema = z.object({
-  en: z.string().optional(),
-  zhHans: z.string().optional(),
-  zhHant: z.string().optional(),
-})
-
 export const OrganisationCapabilityDefinitionSchema: z.ZodType<CapabilityDefinition> =
   z.object({
-    i18n: OrganisationCapabilityLabelI18nSchema.optional(),
+    i18n: FormI18nRoot.optional(),
   })
 
 export const OrganisationCapabilityDefinitionsSchema: z.ZodType<CapabilityDefinitions> =
