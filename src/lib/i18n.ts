@@ -20,6 +20,7 @@ import { supportedLocales } from './enums'
 //
 // 1. RUNTIME LOCALE ACCESS
 //    - getLocale
+//    - getLocaleKey
 //    - setLocale
 //
 // 2. LOCALE KEY/CODE CONVERSIONS
@@ -59,6 +60,14 @@ import { supportedLocales } from './enums'
  */
 export function getLocale(): Locale {
   return runtime.getLocale() as Locale
+}
+
+/**
+ * Get the current locale as organisation-form locale key (`en`, `zhHans`, `zhHant`).
+ * @returns The current form locale key.
+ */
+export function getLocaleKey(): OrganisationFormLocaleKey {
+  return toLocaleKey(getLocale())
 }
 
 /**

@@ -1698,6 +1698,10 @@ export type ProjectListParamsByProfile<P extends ProjectProfile> = Omit<
 
 export type ProjectFormInput = z.input<typeof ProjectFormData>
 export type ProjectBooleanField = 'isPublished' | 'isArchived'
+export type ProjectSubmitBaselineRelations = {
+  userRoles?: unknown
+  properties?: ProjectFormInput['data']['properties']
+}
 export type ProjectSubmitUpdatesParams<TEntityResult, TListResult> = {
   projectId?: string | null
   entityQuery: TEntityResult
@@ -1717,6 +1721,49 @@ export type ProjectGetState = ProjectGetResponse | null
 export type ProjectPublishInput = z.input<typeof PublishProjectSchema>
 export type ProjectArchiveInput = z.input<typeof RemoveProjectSchema>
 export type ProjectPreflightInput = z.input<typeof ProjectPreflightFormData>
+export type ResourceSubmitMode = 'create' | 'replace' | 'update'
+export type ResourceSubmitMetaDraft = {
+  id?: unknown
+  mode?: unknown
+}
+export type ProjectCurrentFormDraft = {
+  data?: {
+    userRoles?: unknown
+    properties?: unknown
+  }
+}
+export type ResourceSubmitDraft<TData extends Record<string, unknown>> = {
+  meta?: ResourceSubmitMetaDraft
+  data?: TData
+}
+export type ChangedRelationResolution<TEffective> = {
+  effective: TEffective
+  changed: boolean
+}
+export type ResolveChangedRelationParams<TEffective> = {
+  submittedValue: unknown
+  currentValue: unknown
+  baselineValue: unknown
+  toEffective: (params: {
+    submittedValue: unknown
+    currentValue: unknown
+  }) => TEffective
+  toComparableEffective: (value: TEffective) => unknown
+  toComparableBaseline: (value: unknown) => unknown
+  toSignature: (value: unknown) => string
+}
+export type ApplyChangedRelationFieldParams<
+  TData extends Record<string, unknown>,
+  TKey extends keyof TData,
+  TEffective,
+> = {
+  data: TData
+  key: TKey
+} & ResolveChangedRelationParams<TEffective>
+export type ProjectSubmitDraft = ResourceSubmitDraft<{
+  userRoles?: unknown
+  properties?: unknown
+}>
 
 /* ----------------- */
 // PROJECTS :: RELATIONAL
