@@ -51,15 +51,15 @@ const rootClass = $derived(
     {#if right}
       {@render right()}
     {:else}
-      {#each actions as action}
+      {#each actions as action, index (action.key ?? `${action.text ?? 'action'}-${index}`)}
         <SectionHeaderPrimitive.Action {...action} />
       {/each}
 
-      {#each flags as flag}
+      {#each flags as flag, index (flag.key ?? `${flag.label ?? 'flag'}-${index}`)}
         <SectionHeaderPrimitive.Flag {...flag} />
       {/each}
 
-      {#each triggers as trigger}
+      {#each triggers as trigger, index (trigger.key ?? `${trigger.text ?? 'trigger'}-${index}`)}
         <SectionHeaderPrimitive.Trigger {...trigger} />
       {/each}
     {/if}
