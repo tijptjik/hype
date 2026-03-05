@@ -10,6 +10,12 @@ import {
   type AnyColumn,
   type SQL,
 } from 'drizzle-orm'
+// CAPABILITIES
+import {
+  getCapabilityKeysFromDefinitions,
+  isProjectCapabilityKey,
+  normalizeProjectCapabilities,
+} from '$lib/capabilities'
 // SCHEMA
 import {
   feature,
@@ -40,6 +46,7 @@ import { createPropertiesWithRelated, updatePropertiesWithRelated } from './prop
 import { getProjectHubFilter } from './hub'
 // TYPES
 import type {
+  CapabilityDefinitions,
   ProjectDBNew,
   ProjectDB,
   ProjectI18nDB,
@@ -358,6 +365,35 @@ export const probeOrganisationHubForProject = async (
     .limit(1)
 
   return row ?? null
+}
+
+export const mergeOrganisationCapabilities = async (
+  db: Database,
+  organisationId: Id,
+  projectCapabilities: unknown,
+): Promise<ProjectDB['capabilities']> => {
+  const [organisationRow] = await db
+    .select({
+      capabilities: organisation.capabilities,
+    })
+    .from(organisation)
+    .where(eq(organisation.id, organisationId))
+    .limit(1)
+
+  const merged = normalizeProjectCapabilities(projectCapabilities)
+  const availableKeys = new Set(
+    getCapabilityKeysFromDefinitions(
+      organisationRow?.capabilities as CapabilityDefinitions | null | undefined,
+    ),
+  )
+
+  for (const key of Object.keys(merged)) {
+    if (!isProjectCapabilityKey(key)) continue
+    if (availableKeys.has(key)) continue
+    merged[key] = false
+  }
+
+  return merged
 }
 
 /**
