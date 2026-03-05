@@ -18,6 +18,8 @@ import { property, propertyI18n, propertyValue, propertyValueI18n } from '../sch
 // ZOD
 import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { PropertyAPI, PropertyInsert, PropertyUpdate, PropertyUpdateAPI } from '../zod'
+// I18N
+import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type {
@@ -284,8 +286,11 @@ export const createPropertyValueI18n = async (
   i18n: Record<Locale, PropertyValueI18nNew>,
   propertyValueId: string,
 ): Promise<PropertyValueI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, PropertyValueI18nNew>,
+  )
   const relatedRecords = toRelatedRecords(
-    i18n,
+    normalizedI18n,
     'propertyValueId',
     propertyValueId,
     'locale',
@@ -311,8 +316,11 @@ export const updatePropertyValueI18n = async (
   i18n: Record<Locale, PropertyValueI18nPartial>,
   propertyValueId: string,
 ): Promise<PropertyValueI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, PropertyValueI18nPartial>,
+  )
   const relatedRecords = toRelatedRecords(
-    i18n,
+    normalizedI18n,
     'propertyValueId',
     propertyValueId,
     'locale',
@@ -367,26 +375,34 @@ export const upsertProjectProperties = async (
     p => (p as Property).id && existingPropsMap.has((p as Property).id),
   ) as Property[]
 
-  // Delete
-  if (propsToDelete.length > 0) {
-    // Cascading delete should handle related i18n, values, and value_i18n
-    await delMany(
-      db,
-      property,
-      property.id,
-      propsToDelete.map(p => p.id),
-    )
+  // Validate create payloads before mutating existing records.
+  // This prevents destructive deletes when incoming create rows are invalid.
+  const parsedCreateBasePayloads: Array<ReturnType<typeof PropertyInsert.parse>> = []
+  for (const propData of propsToCreate) {
+    const {
+      i18n: _i18nData,
+      values: _valuesData,
+      ...basePropData
+    } = propData as PropertyNew
+    const parsedBase = PropertyInsert.parse({
+      ...basePropData,
+      projectId,
+    })
+    parsedCreateBasePayloads.push(parsedBase)
   }
 
   // Create
   const createdResults: Property[] = []
-  for (const propData of propsToCreate) {
+  for (const [index, propData] of propsToCreate.entries()) {
     const {
       i18n: i18nData,
       values: valuesData,
-      ...basePropData
+      ..._basePropData
     } = propData as PropertyNew
-    const parsedBase = PropertyInsert.parse(basePropData) // Validate and get defaults
+    const parsedBase = parsedCreateBasePayloads[index]
+    if (!parsedBase) {
+      throw new Error('FAILED_TO_RESOLVE_PARSED_PROPERTY_CREATE_PAYLOAD')
+    }
     const newBaseProp = await createBaseProperty(db, {
       ...parsedBase,
       projectId,
@@ -434,22 +450,41 @@ export const upsertProjectProperties = async (
       parsedBase as InferInsertModel<typeof property>,
       propData.id!,
     )
-
+    const normalizedPropertyI18n = normalizeI18nLocaleRecord(
+      (i18nData || {}) as Record<string, PropertyI18nPartial>,
+    )
     const updatedTranslations = await updateI18n(
       db,
-      i18nData || ({} as Record<Locale, PropertyI18nPartial>),
+      normalizedPropertyI18n as Record<Locale, PropertyI18nPartial>,
       propData.id!,
     )
 
+    const normalizedValuesData = Array.isArray(valuesData)
+      ? valuesData
+          .map((value, index) => ({ value, index }))
+          .sort((a, b) => {
+            const aRank =
+              typeof a.value.rank === 'number' && Number.isFinite(a.value.rank)
+                ? a.value.rank
+                : Number.POSITIVE_INFINITY
+            const bRank =
+              typeof b.value.rank === 'number' && Number.isFinite(b.value.rank)
+                ? b.value.rank
+                : Number.POSITIVE_INFINITY
+            if (aRank !== bRank) return aRank - bRank
+            return a.index - b.index
+          })
+          .map(({ value }, rank) => ({ ...value, rank }))
+      : []
+
     const syncedValues = valuesData
-      ? await syncPropertyValues(db, valuesData, propData.id!)
+      ? await syncPropertyValues(db, normalizedValuesData, propData.id!)
       : []
 
     const updatedPropValuesWithTranslations: PropertyValue[] = []
     for (const syncedVal of syncedValues) {
       // syncedVal is PropertyValueDB
       const incomingValData = valuesData?.find(v => v.id === syncedVal.id) // incomingValData is PropertyValue from input
-
       let valTranslations: PropertyValueI18nDB[] = []
       if (
         incomingValData &&
@@ -485,6 +520,16 @@ export const upsertProjectProperties = async (
       i18n: transformI18nSafely(updatedTranslations),
       values: updatedPropValuesWithTranslations,
     } as Property)
+  }
+
+  // Delete stale properties after successful create/update processing.
+  if (propsToDelete.length > 0) {
+    await delMany(
+      db,
+      property,
+      property.id,
+      propsToDelete.map(p => p.id),
+    )
   }
 
   return [...createdResults, ...updatedResults].sort(
