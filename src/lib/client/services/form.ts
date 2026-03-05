@@ -1,5 +1,5 @@
 import { toast } from 'svelte-sonner'
-import { getLocale, toOrganisationFormLocaleKey, translateI18nFields } from '$lib/i18n'
+import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
 import type { Component } from 'svelte'
 import type { FirstClassResource } from '$lib/enums'
@@ -327,7 +327,7 @@ export async function handleResourceFormSubmissionResult({
     return asTrimmedString(localeValues?.[field])
   }
   const getSubmittedName = (field: string): string =>
-    getSubmittedNameAtLocale(toOrganisationFormLocaleKey(getLocale()), field) ||
+    getSubmittedNameAtLocale(toLocaleKey(getLocale()), field) ||
     asTrimmedString(submittedData?.[field]) ||
     asTrimmedString(submittedRoot?.[field])
 
@@ -495,7 +495,7 @@ export function getGenAiState(
   locale: Locale,
   field: GenAiField,
 ): boolean {
-  const formLocale = toOrganisationFormLocaleKey(locale)
+  const formLocale = toLocaleKey(locale)
   const localeData = form.fields.value().data?.i18n?.[formLocale]
   if (!localeData) return false
   if (field === 'name') return Boolean(localeData.nameGen)
@@ -520,7 +520,7 @@ export function toggleGenAiField<
   },
 >(form: FormDataUpdaterForm<T>, locale: Locale, field: GenAiField): void {
   updateFormData(form, data => {
-    const formLocaleKey = toOrganisationFormLocaleKey(locale)
+    const formLocaleKey = toLocaleKey(locale)
     if (!data.i18n?.[formLocaleKey]) return data
     const fieldName = `${field}Gen` as
       | 'nameGen'
@@ -579,7 +579,7 @@ export async function translateLocaleIntoEmptyFields<
     'zh-hans': 'zhHans',
     'zh-hant': 'zhHant',
   }
-  const targetFormLocale = toOrganisationFormLocaleKey(targetLocale)
+  const targetFormLocale = toLocaleKey(targetLocale)
   const targetLocaleData = currentFormData.i18n?.[targetFormLocale]
   if (!targetLocaleData) return false
 
@@ -660,7 +660,7 @@ export function resetLocaleFields<
   fields = DEFAULT_TRANSLATABLE_FIELDS,
 }: ResetLocaleFieldsParams<TFormData>): void {
   updateFormData(form, data => {
-    const targetFormLocale = toOrganisationFormLocaleKey(targetLocale)
+    const targetFormLocale = toLocaleKey(targetLocale)
     const targetLocaleData = data.i18n?.[targetFormLocale]
     if (!targetLocaleData) return data
 

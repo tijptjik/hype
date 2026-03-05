@@ -1,8 +1,5 @@
 // I18N
-import {
-  toLocaleFromOrganisationFormLocaleKey,
-  toOrganisationFormLocaleKey,
-} from '$lib/i18n'
+import { toLocaleCode, toLocaleKey } from '$lib/i18n'
 // TYPES
 import type {
   Hub,
@@ -56,8 +53,8 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
       domain: data.domain ?? '',
       i18n: {
         en: normalizeHubFormLocale(data.i18n?.en),
-        zhHans: normalizeHubFormLocale(data.i18n?.['zh-hans']),
-        zhHant: normalizeHubFormLocale(data.i18n?.['zh-hant']),
+        zhHans: normalizeHubFormLocale(data.i18n?.zhHans),
+        zhHant: normalizeHubFormLocale(data.i18n?.zhHant),
       },
       userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
@@ -133,8 +130,8 @@ export function toHubIdentityPatch(
   name: string
   nameShort: string
 } {
-  const formLocale = toOrganisationFormLocaleKey(locale)
-  const entityLocale = toLocaleFromOrganisationFormLocaleKey(formLocale)
+  const formLocale = toLocaleKey(locale)
+  const entityLocale = toLocaleCode(formLocale)
   const localeData = formData.data?.i18n?.[formLocale]
 
   return {

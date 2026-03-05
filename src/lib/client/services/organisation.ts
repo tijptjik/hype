@@ -1,10 +1,7 @@
 // ENUMS
 import type { OrganisationRoleType } from '$lib/enums'
 // I18N
-import {
-  toLocaleFromOrganisationFormLocaleKey,
-  toOrganisationFormLocaleKey,
-} from '$lib/i18n'
+import { toLocaleCode, toLocaleKey } from '$lib/i18n'
 // TYPES
 import type {
   Locale,
@@ -60,8 +57,8 @@ export function toOrganisationFormInput(
       url: data.url ?? '',
       i18n: {
         en: normalizeOrganisationFormLocale(data.i18n?.en),
-        zhHans: normalizeOrganisationFormLocale(data.i18n?.['zh-hans']),
-        zhHant: normalizeOrganisationFormLocale(data.i18n?.['zh-hant']),
+        zhHans: normalizeOrganisationFormLocale(data.i18n?.zhHans),
+        zhHant: normalizeOrganisationFormLocale(data.i18n?.zhHant),
       },
       userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
@@ -100,8 +97,8 @@ export function toOrganisationIdentityPatch(
   formData: OrganisationFormInput,
   locale: Locale,
 ): OrganisationIdentityPatch {
-  const formLocale = toOrganisationFormLocaleKey(locale)
-  const entityLocale = toLocaleFromOrganisationFormLocaleKey(formLocale)
+  const formLocale = toLocaleKey(locale)
+  const entityLocale = toLocaleCode(formLocale)
   const localeData = formData.data?.i18n?.[formLocale]
 
   return {
@@ -124,7 +121,7 @@ function toOrganisationEntityI18nPatchFromFormInput(
   const next: Record<string, Partial<OrganisationFormI18nValue>> = {}
 
   for (const formLocaleKey of formLocaleKeys) {
-    const entityLocaleKey = toLocaleFromOrganisationFormLocaleKey(formLocaleKey)
+    const entityLocaleKey = toLocaleCode(formLocaleKey)
     const localeData = formI18n[formLocaleKey]
     if (!localeData || typeof localeData !== 'object') continue
 

@@ -40,7 +40,7 @@ export function getLocaleOrder(locale: Locale): Locale[] {
   return ['zh-hans', 'zh-hant', 'en']
 }
 
-export function toOrganisationFormLocaleKey(locale: Locale): OrganisationFormLocaleKey {
+export function toLocaleKey(locale: Locale): OrganisationFormLocaleKey {
   if (locale === 'zh-hans') return 'zhHans'
   if (locale === 'zh-hant') return 'zhHant'
   return 'en'
@@ -51,9 +51,7 @@ export function toOrganisationFormLocaleKey(locale: Locale): OrganisationFormLoc
  * @param localeKey - Form locale key.
  * @returns Locale value used by entity i18n payloads.
  */
-export function toLocaleFromOrganisationFormLocaleKey(
-  localeKey: OrganisationFormLocaleKey,
-): Locale {
+export function toLocaleCode(localeKey: OrganisationFormLocaleKey): Locale {
   if (localeKey === 'zhHans') return 'zh-hans'
   if (localeKey === 'zhHant') return 'zh-hant'
   return 'en'
