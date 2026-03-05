@@ -177,17 +177,12 @@ export const sanitizeSubmittedRoleCapabilities = (
     capabilities?: unknown
   }>,
   projectCapabilities: ReturnType<typeof normalizeProjectCapabilities>,
-  organisationCapabilityDefinitions: CapabilityDefinitions | null | undefined,
 ) => {
-  const availableKeys = new Set(
-    getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions),
-  )
-
   return submittedRoles.map(role => {
     const nextCapabilities = normalizeProjectRoleCapabilities(role.capabilities)
     for (const key of Object.keys(nextCapabilities)) {
       if (!isProjectCapabilityKey(key)) continue
-      if (!availableKeys.has(key) || !projectCapabilities[key]) {
+      if (!projectCapabilities[key]) {
         nextCapabilities[key] = false
       }
     }

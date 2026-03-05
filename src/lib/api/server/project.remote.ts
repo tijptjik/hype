@@ -16,6 +16,7 @@ import {
 import {
   getProjectWithRelations,
   normalizeSubmittedPropertyRanks,
+  sanitizeSubmittedRoleCapabilities,
   toLookupConditions,
   toQueryConditions,
   toProjectProfile,
@@ -50,6 +51,7 @@ import {
   getProject as loadProject,
   listProjectRoleAssignments,
   listProjects,
+  mergeOrganisationCapabilities,
   probeOrganisationHubForProject,
   probeExistingProject,
   probeProjectQuery,
@@ -233,8 +235,19 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     isAdminRequest,
   })
 
+  const normalizedResult = result
+    ? {
+        ...result,
+        capabilities: await mergeOrganisationCapabilities(
+          db,
+          probe.organisationId as Id,
+          result.capabilities,
+        ),
+      }
+    : null
+
   // Return loaded record with desired profile.
-  return toEntityResponseShape(result ?? null, profile)
+  return toEntityResponseShape(normalizedResult ?? null, profile)
 })
 
 export const getProject = getProjectQuery
@@ -274,10 +287,15 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   const hasSubmittedUserRoles = Object.hasOwn(data, 'userRoles')
   const submittedRoles =
     hasSubmittedUserRoles && Array.isArray(data.userRoles) ? data.userRoles : []
-  const submittedRolesWithCapabilities = submittedRoles.map(role => ({
-    ...role,
-    capabilities: role.capabilities ?? {},
-  }))
+  const submittedProjectCapabilities = await mergeOrganisationCapabilities(
+    db,
+    data.organisationId as Id,
+    data.capabilities,
+  )
+  const submittedRolesWithCapabilities = sanitizeSubmittedRoleCapabilities(
+    submittedRoles,
+    submittedProjectCapabilities,
+  )
   const hasSubmittedProperties = Object.hasOwn(data, 'properties')
   const submittedProperties =
     hasSubmittedProperties && Array.isArray(data.properties) ? data.properties : []
@@ -357,7 +375,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       id: nanoid(12),
       organisationId: data.organisationId,
       code: normalizedCode,
-      capabilities: data.capabilities ?? {},
+      capabilities: submittedProjectCapabilities,
       isPublished: false,
       isArchived: false,
     })
@@ -465,7 +483,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     toProjectStableAuthzSignature(normalizeProjectI18nForFormInput(currentEntity.i18n))
   const organisationChanged = data.organisationId !== current.organisationId
   const projectCapabilitiesChanged =
-    toProjectStableAuthzSignature(data.capabilities ?? {}) !==
+    toProjectStableAuthzSignature(submittedProjectCapabilities) !==
     toProjectStableAuthzSignature(current.capabilities ?? {})
   const authResource = {
     id: current.id,
@@ -478,7 +496,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (normalizedCode !== current.code) submittedDataForUpdate.code = normalizedCode
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
   if (projectCapabilitiesChanged) {
-    submittedDataForUpdate.capabilities = data.capabilities ?? {}
+    submittedDataForUpdate.capabilities = submittedProjectCapabilities
   }
   if (roleMembershipChanged || roleCapabilityAssignmentsChanged) {
     submittedDataForUpdate.userRoles = submittedRolesWithCapabilities
@@ -606,7 +624,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       data: {
         organisationId: data.organisationId,
         code: normalizedCode,
-        capabilities: data.capabilities ?? {},
+        capabilities: submittedProjectCapabilities,
       },
     }),
     () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
