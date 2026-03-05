@@ -37,7 +37,7 @@ export const GET: RequestHandler = async ({ params, locals, platform, request })
     const result = await getProperty(db, propertyEntityWithRelations, conditions)
 
     if (!result) {
-      return error(404, m.brief_jumpy_firefox_bump({ key: 'Property' }))
+      return error(404, m.field_is_required({ field: m.field_property() }))
     }
 
     // RESPONSE : Build the response shape

@@ -4,7 +4,7 @@ import { page } from '$app/state'
 import { untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleOrder, toOrganisationFormLocaleKey } from '$lib/i18n'
+import { getLocale, getLocaleOrder, toLocaleKey } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -748,7 +748,7 @@ $effect(() => {
         {/snippet}
 
         {#snippet children(locale)}
-          {@const formLocale = toOrganisationFormLocaleKey(locale)}
+          {@const formLocale = toLocaleKey(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[formLocale]}

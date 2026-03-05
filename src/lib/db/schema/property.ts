@@ -36,10 +36,10 @@ export const property = sqliteTable('property', {
   })
     .notNull()
     .default(FieldDiscriminator.classifier),
+  key: text('key').notNull(),
   isTranslatable: integer('isTranslatable', { mode: 'boolean' })
     .notNull()
     .default(true),
-  key: text('key').notNull(),
   rank: integer('rank').notNull().default(0),
   component: text('component', {
     enum: Object.values(PropertyComponentType) as [string, ...string[]],
@@ -48,7 +48,7 @@ export const property = sqliteTable('property', {
     .default(PropertyComponentType.SelectField),
   min: integer('min'),
   max: integer('max'),
-  isUserContributed: integer('isUserContributed', { mode: 'boolean' })
+  isUserContributable: integer('isUserContributed', { mode: 'boolean' })
     .notNull()
     .default(true),
   createdAt: text('createdAt')

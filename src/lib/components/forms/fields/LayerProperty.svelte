@@ -85,10 +85,10 @@ let { form } = fieldProps.form
                 <Icon src={Pencil} class="size-4" />{m.grand_such_bullock_play()}
               </span>
               <input
-                name={`${property?.id}_isUserContributed`}
+                name={`${property?.id}_isUserContributable`}
                 type="checkbox"
                 class="toggle toggle-primary toggle-sm"
-                checked={!item?.isUserContributed}
+                checked={!item?.isUserContributable}
                 onchange={() => {
                   form.update(($form: any) => {
                     if (
@@ -98,7 +98,7 @@ let { form } = fieldProps.form
                       const currentProperty = ($form as any)[fieldRoot][index] as any;
                       const updatedProperty = {
                         ...currentProperty,
-                        isUserContributed: !item?.isUserContributed
+                        isUserContributable: !item?.isUserContributable
                       };
 
                       (($form as any)[fieldRoot][index] as any) = updatedProperty;

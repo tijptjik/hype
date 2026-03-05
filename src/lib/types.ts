@@ -8,7 +8,6 @@ import type TextareaField from '$lib/components/forms/fields/Textarea.svelte'
 import type SelectField from '$lib/components/forms/fields/Select.svelte'
 import type RangeField from '$lib/components/forms/fields/Range.svelte'
 import type UsersField from '$lib/components/forms/fields/Users.svelte'
-import type ListField from '$lib/components/forms/fields/List.svelte'
 import type ToggleField from '$lib/components/forms/fields/Toggle.svelte'
 import type DisplayField from '$lib/components/forms/fields/Display.svelte'
 // ENUMS
@@ -1124,7 +1123,12 @@ export type HubOrganisationFieldNameResolverForm = {
 
 export type HubOrganisationHiddenInputAttrs = Record<string, unknown>
 
-export type GenAiField = 'name' | 'nameShort' | 'description'
+export type GenAiField =
+  | 'name'
+  | 'nameShort'
+  | 'description'
+  | 'license'
+  | 'attribution'
 export type I18nTranslatableField =
   | 'name'
   | 'nameShort'
@@ -1555,14 +1559,24 @@ export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omi
 // ORGANISATIONS :: REMOTE FORMS
 /* -------- */
 
-export type OrganisationFormInput = z.input<typeof OrganisationFormData>
-export type OrganisationFormLocaleKey = keyof OrganisationFormInput['data']['i18n']
-export type OrganisationFormLocaleInput =
-  OrganisationFormInput['data']['i18n'][OrganisationFormLocaleKey]
-export type OrganisationFormLocaleSource =
-  | Partial<OrganisationFormLocaleInput>
+export type I18nFormInputShape = {
+  data: {
+    i18n: Record<string, unknown>
+  }
+}
+export type FormLocaleKey<TForm extends I18nFormInputShape> =
+  keyof TForm['data']['i18n']
+export type FormLocaleInput<TForm extends I18nFormInputShape> =
+  TForm['data']['i18n'][FormLocaleKey<TForm>]
+export type FormLocaleSource<TForm extends I18nFormInputShape> =
+  | Partial<FormLocaleInput<TForm>>
   | null
   | undefined
+
+export type OrganisationFormInput = z.input<typeof OrganisationFormData>
+export type OrganisationFormLocaleKey = FormLocaleKey<OrganisationFormInput>
+export type OrganisationFormLocaleInput = FormLocaleInput<OrganisationFormInput>
+export type OrganisationFormLocaleSource = FormLocaleSource<OrganisationFormInput>
 export type OrganisationBooleanField = 'isPublished' | 'isArchived'
 export type OrganisationIdentityPatch = {
   code: string
@@ -1755,7 +1769,6 @@ export type FieldComponent =
   | typeof TextareaField
   | typeof UsersField
   | typeof CustomField
-  | typeof ListField
   | typeof ToggleField
   | typeof DisplayField
 
@@ -2268,6 +2281,19 @@ export type Property = z.infer<typeof PropertyAPI>
 export type PropertyNew = z.infer<typeof PropertyInsertAPI>
 // Like Property, but with all fields optional
 export type PropertyPartial = z.infer<typeof PropertyUpdateAPI>
+// Minimal project property form payload used by client-side form mutators
+export type PropertyFormData = {
+  id?: Id
+  properties?: Property[]
+}
+// Property section discriminator used for typed ordering/editing operations
+export type PropertyDiscriminator = 'classifier' | 'specifier'
+// Generic writable i18n map shape used by form-side mutation helpers
+export type WritableI18nRecord = Record<string, Record<string, unknown>>
+// Translation patch origin markers for project property locale translation flow
+export type PropertyTranslationOrigin =
+  | { type: 'label' | 'placeholder' }
+  | { type: 'value'; valueId: Id }
 
 /* ----------------- */
 // PROPERTIES :: RELATIONAL

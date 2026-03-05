@@ -1189,7 +1189,7 @@ export function getFeatureCardEditableProperties(
           property &&
           (property.type === 'classifier' || property.type === 'specifier') &&
           layerProp.isVisible === true &&
-          layerProp.isUserContributed === true &&
+          layerProp.isUserContributable === true &&
           (isGradeProperty ? property.key === 'grade' : property.key !== 'grade')
         )
       })

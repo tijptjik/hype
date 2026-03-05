@@ -1,6 +1,3 @@
-// SVELTE
-import { derived, type Writable } from 'svelte/store'
-// UTILITIES
 // COMPONENTS
 import InputField from '$lib/components/forms/fields/Input.svelte'
 import SelectField from '$lib/components/forms/fields/Select.svelte'
@@ -8,11 +5,10 @@ import RangeField from '$lib/components/forms/fields/Range.svelte'
 import TextareaField from '$lib/components/forms/fields/Textarea.svelte'
 import UsersField from '$lib/components/forms/fields/Users.svelte'
 import CustomField from '$lib/components/forms/fields/Property.svelte'
-import ListField from '$lib/components/forms/fields/List.svelte'
 import ToggleField from '$lib/components/forms/fields/Toggle.svelte'
 import DisplayField from '$lib/components/forms/fields/Display.svelte'
 // TYPES
-import type { RequestEvent } from '@sveltejs/kit'
+import type { Writable } from 'svelte/store'
 import type {
   Field,
   Locale,
@@ -71,7 +67,6 @@ export const getFieldComponent = (componentType?: FieldComponentType) => {
     TextareaField: TextareaField,
     UsersField: UsersField,
     CustomField: CustomField,
-    ListField: ListField,
     ToggleField: ToggleField,
     DisplayField: DisplayField,
   }[componentType]
