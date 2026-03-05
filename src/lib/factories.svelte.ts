@@ -31,6 +31,21 @@ const hasDefinedValue = (value: unknown): boolean => {
 const isServerIssue = (issue: RemoteFormIssue): boolean =>
   (issue as RemoteFormIssue & { server?: unknown }).server === true
 
+const mergeWithDescriptors = <T extends object, U extends object>(
+  base: T,
+  extra: U,
+): T & U => {
+  const merged = {} as T & U
+  for (const source of [base, extra]) {
+    for (const key of Reflect.ownKeys(source)) {
+      const descriptor = Object.getOwnPropertyDescriptor(source, key)
+      if (!descriptor) continue
+      Object.defineProperty(merged, key, descriptor)
+    }
+  }
+  return merged
+}
+
 // Insert meta hidden inputs into the form
 // This is necessary because the form data is not available in the `onsubmit` hook.
 const syncMetaHiddenInputs = (
@@ -252,105 +267,109 @@ export function configureForm<Input = RemoteFormInput>(
     await onresult?.(outcome)
   }
 
-  const attributes = $derived(
-    Object.assign(
-      form.enhance(async ({ submit, form: formEl, data }) => {
-        if (submitting) return
+  const attributes = $derived.by(() => {
+    const enhanced = form.enhance(async ({ submit, form: formEl, data }) => {
+      if (submitting) return
 
-        const typedData = data as Input
-        const bf =
-          !onsubmit || (await onsubmit({ dirty, form: formEl, data: typedData }))
-        if (!bf) {
-          return
+      const typedData = data as Input
+      const bf = !onsubmit || (await onsubmit({ dirty, form: formEl, data: typedData }))
+      if (!bf) return
+      // Lock immediately so rapid repeat submits cannot race preflight and send
+      // duplicate requests with the same optimistic-concurrency token.
+      submitting = true
+      beginSubmitAttempt()
+
+      const preflightIssues = await validate()
+      const hasPreflightIssues = preflightIssues.length > 0
+      if (hasPreflightIssues) {
+        await focusInvalid(preflightIssues)
+        const outcome: SubmitOutcome = { success: false, issues: preflightIssues }
+        isSubmitRequested = false
+        await dispatchResult(outcome, typedData)
+        submitting = false
+        return
+      }
+
+      const wasDirty = dirty
+      let resultDispatched = false
+      try {
+        dirty = false
+        const updates = await onsubmitupdates?.({
+          dirty,
+          form: formEl,
+          data: typedData,
+        })
+        if (updates && updates.length > 0) {
+          await submit().updates(...updates)
+        } else {
+          await submit()
         }
-        // Lock immediately so rapid repeat submits cannot race preflight and send
-        // duplicate requests with the same optimistic-concurrency token.
-        submitting = true
-        beginSubmitAttempt()
+        submitted = true
 
-        const preflightIssues = await validate()
-        const hasPreflightIssues = preflightIssues.length > 0
-        if (hasPreflightIssues) {
-          await focusInvalid(preflightIssues)
-          const outcome: SubmitOutcome = { success: false, issues: preflightIssues }
-          isSubmitRequested = false
-          await dispatchResult(outcome, typedData)
-          submitting = false
-          return
+        const submitIssues = form.fields.allIssues() ?? []
+        const hasIssues = submitIssues.length > 0
+        const success = !hasIssues
+        resultDispatched = true
+        const outcome: SubmitOutcome = {
+          success,
+          result: form.result,
+          issues: hasIssues ? submitIssues : undefined,
         }
+        if (success) clearSubmitAttemptState()
+        else isSubmitRequested = false
+        await dispatchResult(outcome, typedData)
 
-        const wasDirty = dirty
-        let resultDispatched = false
-        try {
+        if (!success) {
+          dirty = wasDirty
+          await focusInvalid(submitIssues)
+          onissues?.({ issues: submitIssues })
+        } else {
+          // Re-baseline dirty tracking against the committed post-submit form state.
+          await tick()
+          initial = $state.snapshot(form.fields.value()) as FormData
           dirty = false
-          const updates = await onsubmitupdates?.({
-            dirty,
-            form: formEl,
-            data: typedData,
-          })
-          if (updates && updates.length > 0) {
-            await submit().updates(...updates)
-          } else {
-            await submit()
-          }
-          submitted = true
-
+          lastIssues = undefined
+        }
+      } catch (error) {
+        // TODO Add a error toast
+        if (!resultDispatched) {
           const submitIssues = form.fields.allIssues() ?? []
           const hasIssues = submitIssues.length > 0
-          const success = !hasIssues
-          resultDispatched = true
           const outcome: SubmitOutcome = {
-            success,
-            result: form.result,
+            success: false,
             issues: hasIssues ? submitIssues : undefined,
+            error: hasIssues ? undefined : (error as Error).message,
           }
-          if (success) clearSubmitAttemptState()
-          else isSubmitRequested = false
+          isSubmitRequested = false
           await dispatchResult(outcome, typedData)
-
-          if (!success) {
-            dirty = wasDirty
-            await focusInvalid(submitIssues)
-            onissues?.({ issues: submitIssues })
-          } else {
-            // Re-baseline dirty tracking against the committed post-submit form state.
-            await tick()
-            initial = $state.snapshot(form.fields.value()) as FormData
-            dirty = false
-            lastIssues = undefined
-          }
-        } catch (error) {
-          // TODO Add a error toast
-          if (!resultDispatched) {
-            const submitIssues = form.fields.allIssues() ?? []
-            const hasIssues = submitIssues.length > 0
-            const outcome: SubmitOutcome = {
-              success: false,
-              issues: hasIssues ? submitIssues : undefined,
-              error: hasIssues ? undefined : (error as Error).message,
-            }
-            isSubmitRequested = false
-            await dispatchResult(outcome, typedData)
-          }
-          dirty = wasDirty
-        } finally {
-          submitting = false
         }
-      }),
-      {
-        onsubmit: () => {
-          syncMetaHiddenInputs(
-            formEl,
-            (form.fields.value() as { meta?: unknown })?.meta,
-          )
-          return focusInvalid()
-        },
-        oninput: () => {
-          if (wasSubmitAttempted) debouncedValidate.call()
-        },
+        dirty = wasDirty
+      } finally {
+        submitting = false
+      }
+    })
+
+    const enhancedRecord = enhanced as Record<string | symbol, unknown>
+    const enhancedOnInput =
+      typeof enhancedRecord.oninput === 'function'
+        ? (enhancedRecord.oninput as (event: Event) => unknown)
+        : undefined
+    const enhancedOnChange =
+      typeof enhancedRecord.onchange === 'function'
+        ? (enhancedRecord.onchange as (event: Event) => unknown)
+        : undefined
+
+    return mergeWithDescriptors(enhanced, {
+      oninput: (event: Event) => {
+        enhancedOnInput?.(event)
+        if (wasSubmitAttempted) runDebouncedValidate()
       },
-    ),
-  )
+      onchange: (event: Event) => {
+        enhancedOnChange?.(event)
+        if (wasSubmitAttempted) runDebouncedValidate()
+      },
+    })
+  })
 
   const result = $derived(form.result)
   const issues = $derived(form.fields.issues())
@@ -392,19 +411,31 @@ export function configureForm<Input = RemoteFormInput>(
 
   const debouncedValidate = debounce(() => validate({ preflightOnly: false }), 300)
 
+  function runDebouncedValidate(): void {
+    if (typeof debouncedValidate === 'function') {
+      debouncedValidate()
+      return
+    }
+    const maybeWithCall = debouncedValidate as { call?: () => unknown }
+    maybeWithCall.call?.()
+  }
+
   async function validate(
     options: { preflightOnly?: boolean } = { preflightOnly: true },
   ): Promise<RemoteFormIssue[]> {
     const preflightOnly = options.preflightOnly ?? true
     await form.validate({ includeUntouched: true, preflightOnly })
     const nextIssues = form.fields.allIssues() ?? []
+    const preflightIssues = preflightOnly
+      ? nextIssues.filter(issue => !isServerIssue(issue))
+      : nextIssues
     if (onissues && !deepEqual(lastIssues ?? [], nextIssues)) {
       onissues({ issues: nextIssues })
     }
     if (nextIssues.length > 0) lastIssues = nextIssues
     else lastIssues = undefined
     if (!preflightOnly) return nextIssues
-    return nextIssues.filter(issue => !isServerIssue(issue))
+    return preflightIssues
   }
 
   async function focusInvalid(currentIssues?: RemoteFormIssue[]) {
@@ -474,6 +505,7 @@ export function configureForm<Input = RemoteFormInput>(
           },
         } as Parameters<typeof form.fields.set>[0])
       }
+      syncMetaHiddenInputs(formEl, (form.fields.value() as { meta?: unknown })?.meta)
       beginSubmitAttempt()
       formEl?.requestSubmit()
     },
