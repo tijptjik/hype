@@ -1,5 +1,5 @@
 // I18N
-import { toLocaleFromOrganisationFormLocaleKey } from '$lib/i18n'
+import { toLocaleCode, toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
 // TYPES
@@ -35,6 +35,22 @@ type ProjectFormDefaults = {
   organisationId?: string
 }
 
+function cloneProjectProperties(
+  properties: Project['properties'] | null | undefined,
+): ProjectFormInput['data']['properties'] {
+  if (!properties) return []
+  return properties.map(property => ({
+    ...property,
+    i18n: toFormLocaleRecord(property.i18n) as typeof property.i18n,
+    values: Array.isArray(property.values)
+      ? property.values.map(value => ({
+          ...value,
+          i18n: toFormLocaleRecord(value.i18n) as typeof value.i18n,
+        }))
+      : property.values,
+  }))
+}
+
 export function toProjectFormInput(
   data?: Project | null,
   defaults?: ProjectFormDefaults,
@@ -68,14 +84,14 @@ export function toProjectFormInput(
       code: data.code,
       i18n: {
         en: normalizeProjectFormLocale(data.i18n?.en),
-        zhHans: normalizeProjectFormLocale(data.i18n?.['zh-hans']),
-        zhHant: normalizeProjectFormLocale(data.i18n?.['zh-hant']),
+        zhHans: normalizeProjectFormLocale(data.i18n?.zhHans),
+        zhHant: normalizeProjectFormLocale(data.i18n?.zhHant),
       },
       userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
         role: userRole.role,
       })),
-      properties: data.properties ?? [],
+      properties: cloneProjectProperties(data.properties),
     },
   }
 }
@@ -116,7 +132,7 @@ export function toProjectIdentityPatch(
 } {
   const formLocale =
     locale === 'zh-hans' ? 'zhHans' : locale === 'zh-hant' ? 'zhHant' : 'en'
-  const entityLocale = toLocaleFromOrganisationFormLocaleKey(formLocale)
+  const entityLocale = toLocaleCode(formLocale)
   const localeData = formData.data?.i18n?.[formLocale]
 
   return {
