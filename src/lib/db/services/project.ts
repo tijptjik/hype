@@ -13,11 +13,13 @@ import {
 // SCHEMA
 import {
   feature,
+  layer,
   organisation,
   organisationRole,
   project,
   projectI18n,
   projectRole,
+  task,
 } from '../schema'
 // AUTH
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
@@ -416,6 +418,29 @@ export const updateProjectByIdWithConcurrency = async (
     })
 
   return updated ?? null
+}
+
+export const cascadeProjectOrganisationToDescendants = async (
+  db: Database,
+  params: {
+    projectId: Id
+    organisationId: Id
+  },
+): Promise<void> => {
+  await db
+    .update(layer)
+    .set({ organisationId: params.organisationId })
+    .where(eq(layer.projectId, params.projectId))
+
+  await db
+    .update(feature)
+    .set({ organisationId: params.organisationId })
+    .where(eq(feature.projectId, params.projectId))
+
+  await db
+    .update(task)
+    .set({ organisationId: params.organisationId })
+    .where(eq(task.projectId, params.projectId))
 }
 
 export const updateProjectPublishedStateById = async (
