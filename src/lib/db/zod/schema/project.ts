@@ -19,7 +19,12 @@ import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
 // ZOD SCHEMAS
 import { UserBasic } from './user'
-import { PropertyAPI, PropertyInsertAPI, PropertyUpdateAPI } from './property'
+import {
+  ProjectPropertyFormData,
+  PropertyAPI,
+  PropertyInsertAPI,
+  PropertyUpdateAPI,
+} from './property'
 import { ImageContextEnvelopeAPI } from './image'
 import { OrganisationI18nBase } from './organisation'
 import { OrganisationBase } from './organisation'
@@ -202,10 +207,9 @@ export const ProjectI18nByLocaleFormData = z.object({
   zhHant: ProjectI18nFormData,
 })
 
-export const ProjectUserRolesFormData = z.preprocess(
-  value => (value === undefined || value === null ? [] : value),
-  z.array(ProjectRoleFormData),
-)
+export const ProjectUserRolesFormData = z.array(ProjectRoleFormData)
+
+const ProjectPropertiesFormData = z.array(ProjectPropertyFormData).optional()
 
 export const ProjectEntityFormData = z.object({
   organisationId: z
@@ -219,9 +223,9 @@ export const ProjectEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   i18n: ProjectI18nByLocaleFormData,
-  capabilities: ProjectCapabilityDefinitionsSchema.optional().default({}),
-  userRoles: ProjectUserRolesFormData,
-  properties: z.array(z.union([PropertyInsertAPI, PropertyUpdateAPI])).optional(),
+  capabilities: ProjectCapabilityDefinitionsSchema.optional(),
+  userRoles: ProjectUserRolesFormData.optional(),
+  properties: ProjectPropertiesFormData,
 })
 
 export const ProjectFormMeta = z.object({
