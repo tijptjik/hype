@@ -51,6 +51,111 @@ function cloneProjectProperties(
   }))
 }
 
+function toNumericRank(input: unknown): number {
+  if (typeof input === 'number' && Number.isFinite(input)) return input
+  if (typeof input === 'string' && input.trim() && !Number.isNaN(Number(input))) {
+    return Number(input)
+  }
+  return Number.POSITIVE_INFINITY
+}
+
+/**
+ * Build a deterministic JSON signature by recursively sorting object keys.
+ * Used to compare nested form payloads (for example user roles/properties)
+ * without false diffs caused by key ordering.
+ */
+export function toStableSignature(value: unknown): string {
+  const normalize = (input: unknown): unknown => {
+    if (Array.isArray(input)) return input.map(item => normalize(item))
+    if (!input || typeof input !== 'object') return input
+    const entries = Object.entries(input as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => [key, normalize(item)])
+    return Object.fromEntries(entries)
+  }
+
+  return JSON.stringify(normalize(value))
+}
+
+/**
+ * Canonicalize user-role arrays before change detection.
+ * Used during project form submit to avoid noisy diffs from UI ordering and
+ * to compare only role identity (`userId`, `role`).
+ */
+export function toStableUserRoles(
+  value: unknown,
+): Array<{ userId: string; role: string }> {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(
+      (item): item is { userId: string; role: string } =>
+        Boolean(item) &&
+        typeof item === 'object' &&
+        typeof (item as { userId?: unknown }).userId === 'string' &&
+        typeof (item as { role?: unknown }).role === 'string',
+    )
+    .map(item => ({ userId: item.userId, role: item.role }))
+    .sort((a, b) => a.userId.localeCompare(b.userId) || a.role.localeCompare(b.role))
+}
+
+/**
+ * Normalize project properties into canonical rank order for submission:
+ * - value ranks are re-assigned by sorted order
+ * - property ranks are re-assigned independently for classifier/specifier types
+ *
+ * This is used before diffing/sending `data.properties` so semantically identical
+ * edits produce stable payloads and only real changes are submitted.
+ */
+export function normalizePropertiesForSubmit(
+  value: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const normalized = value.map(item => {
+    const property = { ...item }
+
+    if (Array.isArray(property.values)) {
+      const propertyValues = property.values as Array<Record<string, unknown>>
+      property.values = propertyValues
+        .map((propertyValue, index) => ({ propertyValue, index }))
+        .sort((a, b) => {
+          const aRank = toNumericRank(a.propertyValue.rank)
+          const bRank = toNumericRank(b.propertyValue.rank)
+          if (aRank !== bRank) return aRank - bRank
+          return a.index - b.index
+        })
+        .map(({ propertyValue }, rank) => ({
+          ...propertyValue,
+          rank,
+        }))
+    }
+
+    return property
+  })
+
+  const assignRankForType = (type: 'classifier' | 'specifier'): void => {
+    const items = normalized
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => {
+        if (!item || typeof item !== 'object') return false
+        return (item as Record<string, unknown>).type === type
+      })
+      .sort((a, b) => {
+        const aRank = toNumericRank((a.item as Record<string, unknown>).rank)
+        const bRank = toNumericRank((b.item as Record<string, unknown>).rank)
+        if (aRank !== bRank) return aRank - bRank
+        return a.index - b.index
+      })
+
+    items.forEach(({ item }, rank) => {
+      ;(item as Record<string, unknown>).rank = rank
+    })
+  }
+
+  assignRankForType('classifier')
+  assignRankForType('specifier')
+
+  return normalized
+}
+
 export function toProjectFormInput(
   data?: Project | null,
   defaults?: ProjectFormDefaults,
