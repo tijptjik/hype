@@ -1,0 +1,17 @@
+@layer components {
+  .bits-theme .bits-form__capabilities-empty {
+    @apply flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center;
+  }
+
+  .bits-theme .bits-form__capabilities-empty-title {
+    @apply text-2xl font-mono font-semibold;
+  }
+
+  .bits-theme .bits-form__capabilities-empty-description {
+    @apply max-w-2xl;
+  }
+
+  .bits-theme .bits-form__capabilities-empty-cta {
+    @apply mt-1;
+  }
+}
