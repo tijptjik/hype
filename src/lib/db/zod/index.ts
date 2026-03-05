@@ -18,11 +18,13 @@ export * from './schema/user'
 // ORGANISATION SCHEMAS
 /* -------- */
 export * from './schema/organisation'
+export * from './schema/deprecated/organisation'
 
 /* ----------------- */
 // PROJECT SCHEMAS
 /* -------- */
 export * from './schema/project'
+export * from './schema/deprecated/project'
 
 /* ----------------- */
 // LAYER SCHEMAS
@@ -38,6 +40,7 @@ export * from './schema/feature'
 // PROPERTY SCHEMAS
 /* -------- */
 export * from './schema/property'
+export * from './schema/deprecated/property'
 
 /* ----------------- */
 // TASK SCHEMAS
@@ -53,6 +56,7 @@ export * from './schema/image'
 // HUB SCHEMAS
 /* -------- */
 export * from './schema/hub'
+export * from './schema/deprecated/hub'
 
 /* ----------------- */
 // USER API SCHEMAS - AVOID CIRCULAR DEPENDENCIES
@@ -63,9 +67,9 @@ import { z } from 'zod'
 import { UserBase, UserUpdate, UserBasic, UserCurrent } from './schema/user'
 import { UserLayerBase, UserLayerUpdate, UserLayerInsert } from './schema/layer'
 import { UserFeatureBase, UserFeatureInsert, UserFeatureUpdate } from './schema/feature'
-import { OrganisationRoleBase } from './schema/organisation'
-import { ProjectRoleBase } from './schema/project'
-import { HubRoleBase } from './schema/hub'
+import { OrganisationRoleBase } from './schema/deprecated/organisation'
+import { ProjectRoleBase } from './schema/deprecated/project'
+import { HubRoleBase } from './schema/deprecated/hub'
 
 export const UserAPI = UserBasic.extend({
   userLayers: z.array(UserLayerBase),

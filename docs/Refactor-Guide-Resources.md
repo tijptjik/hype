@@ -77,6 +77,32 @@
   - relation sync
   - reusable SQL conditions (for example search text predicates)
 
+## Schema Lifecycle (Important)
+- Do not mass-deprecate all `db/zod/schema/*` resources at once.
+- Deprecate schemas per-resource only after that resource has:
+  - remote query parity (`get<Resource>s`, `get<Resource>`)
+  - remote mutation parity (`<resource>Form`, commands)
+  - page wiring migrated to remote/`configureForm(...)`
+  - appCtx/adminCtx loaders migrated off `/api/<resource>`
+- Keep backwards-compatible exports during transition.
+
+### Recommended Layout During Transition
+- Active remote contract file:
+  - `src/lib/db/zod/schema/<resource>.ts`
+  - Contains remote form/command/profile schemas used by remote handlers and pages.
+- Legacy compatibility file:
+  - `src/lib/db/zod/schema/deprecated/<resource>.ts`
+  - Contains legacy DB/API/base/raw schemas still required by existing consumers.
+- Bridge rule:
+  - `schema/<resource>.ts` should re-export deprecated schemas until all imports are migrated.
+
+### Exit Criteria To Delete Deprecated Schemas
+- `rg "schema/deprecated/<resource>|<LegacySchemaName>" src/lib src/routes src/tests` has no active consumers.
+- `src/lib/types.ts` no longer imports deprecated-only schema symbols for that resource.
+- `src/lib/db/zod/index.ts` no longer relies on deprecated-only exports for that resource.
+- Feature/layer/task or other composed schemas no longer reference that resource's deprecated base/API schemas.
+- Remote and page tests pass for that resource without deprecated imports.
+
 ## Page Wiring Consistency
 - Use `configureForm(...)` with:
   - `schema`
@@ -155,6 +181,10 @@
 - Contract checklist:
   - Use shared response shapers (`toEntityResponseShape`, `toListResponseShape`) rather than inline return objects.
   - Profile resolution helper exists in `api/services/<resource>.ts` (for example `to<Resource>Profile`).
+  - If deprecating schemas for a resource:
+    - `schema/<resource>.ts` contains only remote-facing contracts and explicit compatibility re-exports.
+    - legacy schemas are moved to `schema/deprecated/<resource>.ts`.
+    - no net type break in `src/lib/types.ts`.
 - Runtime checklist:
   - Manually load admin list + detail for allowed and denied actors.
   - Confirm no runtime fetch errors (`Network response was not ok`) and no hidden-input runtime crashes.

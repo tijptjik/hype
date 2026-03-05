@@ -25,7 +25,7 @@ import {
   PropertyValueAPI,
   PropertyValueInsertAPI,
   PropertyValueUpdateAPI,
-} from './property'
+} from './deprecated/property'
 import { UserBasic } from './user'
 // ENUMS
 import { supportedLocales } from '$lib/enums'

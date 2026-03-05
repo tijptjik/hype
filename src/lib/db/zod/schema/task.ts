@@ -5,24 +5,19 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 // SCHEMA
 import { task, taskImage } from '$lib/db/schema/index'
 // ZOD SCHEMAS
-import { UserBase, UserBasic } from './user'
+import { UserBasic } from './user'
 import { ImageBase } from './image'
 import { FeatureAPI, FeatureBase, FeatureI18nBase, FeaturePropertyAPI } from './feature'
-import { ProjectBase, ProjectI18nBase } from './project'
-import { OrganisationBase, OrganisationI18nBase } from './organisation'
+import { ProjectBase, ProjectI18nBase } from './deprecated/project'
+import { OrganisationBase, OrganisationI18nBase } from './deprecated/organisation'
 import {
   PropertyBase,
   PropertyI18nBase,
   PropertyValueBase,
   PropertyValueI18nBase,
-} from './property'
+} from './deprecated/property'
 // ENUMS
-import {
-  TaskType,
-  TaskReviewOutcome,
-  TaskReviewAction,
-  supportedLocales,
-} from '$lib/enums'
+import { TaskType, TaskReviewOutcome, TaskReviewAction } from '$lib/enums'
 import { getLocales } from '..'
 
 /* ----------------- */

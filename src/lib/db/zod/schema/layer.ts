@@ -12,7 +12,7 @@ import {
   PropertyInsertAPI,
   PropertyValueBase,
   PropertyValueI18nBase,
-} from './property'
+} from './deprecated/property'
 import { UserBasic } from './user'
 // TYPES
 import type { LayerMetadata } from '$lib/types'
