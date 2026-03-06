@@ -3,7 +3,7 @@
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // LIB
 import { ADMIN_PATH } from '$lib/index'
@@ -36,7 +36,7 @@ type Props = {
 }
 
 let { entity, keyMap, header, content, actions, footer, onImageClick }: Props = $props()
-let locale = $derived(getLocale())
+let localeKey = $derived(getLocaleKey())
 
 // Utility function to get nested property values using dot notation
 const getNestedValue = (obj: any, path: string): any => {
@@ -78,7 +78,7 @@ const getPropertyValue = (entity: any, keyPath: string, useI18n = true): any => 
 
   if (useI18n && (keyPath.includes('.i18n.') || keyPath.startsWith('i18n.'))) {
     // Get the i18n object for this specific field path
-    const fieldI18nObject = getI18nObject(entity, locale, keyPath)
+    const fieldI18nObject = getI18nObject(entity, localeKey, keyPath)
     // Extract the property name after .i18n
     const propertyName = keyPath.includes('.i18n.')
       ? keyPath.split('.i18n.')[1]
