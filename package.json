@@ -65,7 +65,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
     "@changesets/cli": "^2.30.0",
-    "@cloudflare/vite-plugin": "^1.26.0",
+    "@cloudflare/vite-plugin": "^1.26.1",
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
     "@commitlint/cz-commitlint": "^20.4.3",
@@ -92,7 +92,7 @@
     "vite-node": "^5.3.0",
     "vite-plugin-node-polyfills": "^0.25.0",
     "vitest": "^4.0.18",
-    "wrangler": "^4.70.0"
+    "wrangler": "^4.71.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -107,7 +107,7 @@
   ],
   "dependencies": {
     "@emeraldpay/hashicon": "^0.5.2",
-    "@inlang/paraglide-js": "^2.13.1",
+    "@inlang/paraglide-js": "^2.13.2",
     "@mapbox/tilebelt": "^2.0.3",
     "@placemarkio/geo-viewport": "^1.0.2",
     "@sillvva/utils": "^0.8.2",
@@ -124,9 +124,9 @@
     "@turf/bbox": "^7.3.4",
     "@types/proj4": "^2.19.0",
     "baseline-browser-mapping": "^2.10.0",
-    "better-auth": "^1.5.3",
+    "better-auth": "^1.5.4",
     "bits-ui": "^2.16.3",
-    "caniuse-lite": "^1.0.30001776",
+    "caniuse-lite": "^1.0.30001777",
     "coordinate-parser": "^1.0.7",
     "daisyui": "^5.5.19",
     "date-fns": "^4.1.0",
