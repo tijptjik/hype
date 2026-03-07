@@ -19,13 +19,12 @@ import {
   OrganisationUpdateAPI,
   ProjectInsertAPI,
   ProjectUpdateAPI,
-  LayerInsertAPI,
-  LayerUpdateAPI,
   FeatureInsertAPI,
   FeatureUpdateAPI,
   HubInsertAPI,
   HubUpdateAPI,
 } from '$lib/db/zod'
+import { LayerInsertAPI, LayerUpdateAPI } from '$lib/db/zod/schema/deprecated/layer'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
