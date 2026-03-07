@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -67,8 +67,8 @@ let entities: Layer[] = $derived(
       {#snippet header()}
         <Image
           src="https://placehold.co/600x400/3c1535/CB37C1?font=source-sans-pro&text={entity
-            .i18n?.[getLocale()]?.name}"
-          alt={entity.i18n?.[getLocale()]?.name || ''}
+            .i18n?.[getLocaleKey()]?.name}"
+          alt={entity.i18n?.[getLocaleKey()]?.name || ''}
           layout="cover"
         />
       {/snippet}
