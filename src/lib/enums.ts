@@ -233,6 +233,7 @@ export enum PropertyComponentType {
 export const propertyComponentTypes = Object.values(PropertyComponentType)
 export enum PropertyScope {
   project = 'project',
+  organisation = 'organisation',
   global = 'global',
 }
 export const propertyScopes = Object.values(PropertyScope)
