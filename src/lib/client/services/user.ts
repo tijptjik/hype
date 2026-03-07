@@ -1,7 +1,4 @@
-import {
-  setUserLayerDefaults,
-  updateUserProfile,
-} from '$lib/api/server/user.remote'
+import { setUserLayerDefaults, updateUserProfile } from '$lib/api/server/user.remote'
 import { m } from '$lib/i18n'
 import { normalizeUsername, validateUsername } from '$lib/utils/username'
 // TYPES

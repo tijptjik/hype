@@ -99,6 +99,41 @@
       "when": 1772600000000,
       "tag": "0013_normalize_camel_locale_values",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1772864910451,
+      "tag": "0014_drop_user_display_username",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1772864950000,
+      "tag": "0015_global_properties",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1772864980000,
+      "tag": "0016_property_project_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1772865000288,
+      "tag": "0017_seed_core_global_properties",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1772866164422,
+      "tag": "0018_mtr_exit_global_property",
+      "breakpoints": true
     }
   ]
 }
