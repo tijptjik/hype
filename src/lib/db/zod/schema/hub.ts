@@ -16,6 +16,7 @@ import {
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
 import { ImageContextEnvelopeAPI } from './image'
+import { ProjectPropertyFormData, PropertyAPI } from './property'
 import { UserBasic } from './user'
 
 // ═══════════════════════
@@ -131,6 +132,7 @@ export const HubEntityFormData = z.object({
   i18n: HubI18nByLocaleFormData,
   userRoles: HubUserRolesFormData,
   organisations: z.array(HubOrganisationFormData).default([]),
+  properties: z.array(ProjectPropertyFormData).default([]),
 })
 
 export const HubFormMeta = z.object({
@@ -202,4 +204,5 @@ export const HubCardProfileAPI = HubListProfileAPI.extend({
 export const HubDetailProfileAPI = HubCardProfileAPI.extend({
   userRoles: z.array(HubRoleWithUser),
   organisations: z.array(HubOrganisationWithI18n),
+  properties: z.array(PropertyAPI).default([]),
 })
