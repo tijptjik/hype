@@ -4,7 +4,6 @@ import { getLocale } from '$lib/i18n'
 import { fetchOrThrow } from '$lib/index'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
-import { getProperties } from '$lib/api/server/property.remote'
 // SERVICES
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
@@ -502,8 +501,18 @@ export class AdminCtx {
   }
 
   layersQueryFn = async () => {
-    const url = this.buildApiUrl(FirstClassResource.layer)
-    return fetchOrThrow<Layer[]>(url)
+    const remoteList = this.appCtx.remoteMap[FirstClassResource.layer].list
+    if (!remoteList) {
+      throw new Error('Layer remote list function is not configured.')
+    }
+    const result = await remoteList({
+      conditions: this.appCtx.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      prisms: this.appCtx.state.prisms,
+      meta: { isAdminRequest: true, profile: 'card' },
+    })
+    return result.data
   }
 
   featuresQueryFn = async () => {
@@ -518,11 +527,10 @@ export class AdminCtx {
   }
 
   propertiesQueryFn = async () => {
-    const remoteList =
-      this.appCtx.remoteMap[FirstClassResource.property].list ??
-      (getProperties as unknown as (
-        params: Record<string, unknown>,
-      ) => Promise<ListResponse<Property>>)
+    const remoteList = this.appCtx.remoteMap[FirstClassResource.property].list
+    if (!remoteList) {
+      throw new Error('Property remote list function is not configured.')
+    }
     const result = await remoteList({
       conditions: {},
       prisms: this.appCtx.state.prisms,
