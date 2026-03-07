@@ -11,7 +11,7 @@ import * as schema from '$lib/db/schema/index'
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
 // SERVICES
-import { hubEntityWithRelations, toResponseShape } from '$lib/api/services/hub'
+import { hubEntityWithRelations, toHubResponseShape } from '$lib/api/services/hub'
 // TYPES
 import type { HubOptsExtended, Session, SessionUser } from '$lib/types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
@@ -74,7 +74,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       where: eq(schema.hub.code, hubOpts.code),
     })
     if (hubDb) {
-      const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended
+      const hub = toHubResponseShape(hubDb as never, 'detail') as HubOptsExtended
       event.locals.hub = hub
     }
   } else if (db && event.locals && hubOpts.domain) {
@@ -83,7 +83,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       where: eq(schema.hub.domain, hubOpts.domain),
     })
     if (hubDb) {
-      const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended
+      const hub = toHubResponseShape(hubDb as never, 'detail') as HubOptsExtended
       event.locals.hub = hub
     }
   } else {
