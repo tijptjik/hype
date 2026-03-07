@@ -11,7 +11,7 @@ import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'
 import { ProjectPropertyFormData } from './property'
-import { PropertyAPI } from './property'
+import { PropertyAdminProfileAPI } from './property'
 import { ImageContextEnvelopeAPI } from './image'
 import { UserBasic } from './user'
 
@@ -23,7 +23,7 @@ import { UserBasic } from './user'
 //    - ProjectCapabilitiesSchema
 //    - ProjectRoleCapabilitiesSchema
 //
-// 2. BASE / RELATIONAL PRIMITIVES
+// 2. DB / RELATIONAL PRIMITIVES
 //    - ProjectBase
 //    - ProjectI18nBase
 //    - ProjectRoleBase
@@ -47,6 +47,7 @@ import { UserBasic } from './user'
 //    - ProjectListProfileAPI
 //    - ProjectCardProfileAPI
 //    - ProjectDetailProfileAPI
+//    - ProjectAdminProfileAPI
 
 // ═══════════════════════
 // 1. CAPABILITY SCHEMAS
@@ -98,7 +99,7 @@ const ProjectCapabilitiesBase = z.preprocess(
 )
 
 // ═══════════════════════
-// 2. BASE / RELATIONAL PRIMITIVES
+// 2. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
 export const ProjectBase = createSelectSchema(project).extend({
@@ -196,14 +197,6 @@ export const ProjectFormData = z.object({
 
 export const ProjectPreflightFormData = ProjectFormData
 
-export const ProjectAdminProfileAPI = ProjectBase.extend({
-  i18n: getLocales(ProjectI18nBase),
-  userRoles: z.array(ProjectRoleWithUser).default([]),
-  properties: z.array(PropertyAPI).nullish(),
-  image: ImageContextEnvelopeAPI.nullish(),
-  publisher: UserBasic.nullish(),
-})
-
 // ═══════════════════════
 // 4. REMOTE COMMAND SCHEMAS
 // ═══════════════════════
@@ -260,4 +253,12 @@ export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({
 
 export const ProjectDetailProfileAPI = ProjectCardProfileAPI.extend({
   ...ProjectDetailFields.shape,
+})
+
+export const ProjectAdminProfileAPI = ProjectBase.extend({
+  i18n: getLocales(ProjectI18nBase),
+  userRoles: z.array(ProjectRoleWithUser).default([]),
+  properties: z.array(PropertyAdminProfileAPI).nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
+  publisher: UserBasic.nullish(),
 })

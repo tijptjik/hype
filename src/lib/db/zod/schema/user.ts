@@ -11,12 +11,50 @@ import {
   userFeature,
 } from '$lib/db/schema/index'
 
-/* ============================================================================
- * USER SCHEMAS
- * ============================================================================
- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. SUPPORTING SCHEMAS
+//    - UsernameSchema
+//    - UserRoleDiscoSchema
+//
+// 2. DB / RELATIONAL PRIMITIVES
+//    - UserBase
+//    - UserBasic
+//
+// 3. REMOTE PROFILE SCHEMAS
+//    - UserAttributionProfileAPI
+//    - UserAdminListProfileAPI
+//    - UserCardProfileAPI
+//    - UserLeaderboardProfileAPI
+//    - UserDetailProfileAPI
+//    - UserSelfProfileAPI
+//    - UserAdminProfileAPI
+//    - UserProfile
+//
+// 4. REMOTE UPDATE SCHEMAS
+//    - UserUpdate
+//    - UserUpdateAPI
+//
+// 5. REMOTE QUERY / LOOKUP SCHEMAS
+//    - UserSearchQueryParamsSchema
+//    - UserHydrationSchema
+//    - UserHydrationAttributionProfileAPI
+//    - UserHydrationCardProfileAPI
+//    - GetUserParamsSchema
+//    - UpdateUserParamsSchema
+//    - GetUserLayersParamsSchema
+//    - SetUserLayerDefaultsSchema
+//    - GetUserFeaturesParamsSchema
+//    - UserFeatureListProfileAPI
+//    - AddUserFeatureToListSchema
+//    - RemoveUserFeatureFromListSchema
 
-// Define JSON object schemas for user fields
+// ═══════════════════════
+// 1. SUPPORTING SCHEMAS
+// ═══════════════════════
+
 const UserPreferencesSchema = z
   .object({
     fallbackLocales: z.array(z.string()).nullish(),
@@ -84,6 +122,10 @@ export const UserRoleDiscoSchema = z.union([
   }),
 ])
 
+// ═══════════════════════
+// 2. DB / RELATIONAL PRIMITIVES
+// ═══════════════════════
+
 export const UserBase = createSelectSchema(user)
 
 export const UserBasic = UserBase.pick({
@@ -92,6 +134,10 @@ export const UserBasic = UserBase.pick({
   image: true,
   attribution: true,
 } as const)
+
+// ═══════════════════════
+// 3. REMOTE PROFILE SCHEMAS
+// ═══════════════════════
 
 const UserContributionSummaryFields = z.object({
   contributedFeatures: z.record(z.string(), z.array(z.string())),
@@ -180,6 +226,10 @@ export const UserProfile = z.enum([
   'admin',
 ])
 
+// ═══════════════════════
+// 4. REMOTE UPDATE SCHEMAS
+// ═══════════════════════
+
 export const UserUpdate = createUpdateSchema(user).omit({
   id: true,
   createdAt: true,
@@ -190,9 +240,9 @@ export const UserUpdateAPI = UserUpdate.extend({
   username: UsernameSchema.optional(),
 })
 
-/* ----------------- */
-// USER SEARCH SCHEMAS
-/* -------- */
+// ═══════════════════════
+// 5. REMOTE QUERY / LOOKUP SCHEMAS
+// ═══════════════════════
 
 export const UserRoleFilterSchema = z
   .object({
