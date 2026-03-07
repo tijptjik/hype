@@ -2,11 +2,13 @@ import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
+import { hub } from './hub'
 import { project } from './project'
 // ENUM
 import {
   FieldDiscriminator,
   PropertyComponentType,
+  PropertyScope,
   supportedLocales,
 } from '../../enums'
 
@@ -28,9 +30,19 @@ export const property = sqliteTable('property', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
-  projectId: text('projectId')
+  projectId: text('projectId').references(() => project.id, {
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+  }),
+  hubId: text('hubId').references(() => hub.id, {
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+  }),
+  scope: text('scope', {
+    enum: Object.values(PropertyScope) as [string, ...string[]],
+  })
     .notNull()
-    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    .default(PropertyScope.project),
   type: text('type', {
     enum: Object.values(FieldDiscriminator) as [string, ...string[]],
   })
@@ -48,9 +60,12 @@ export const property = sqliteTable('property', {
     .default(PropertyComponentType.SelectField),
   min: integer('min'),
   max: integer('max'),
-  isUserContributable: integer('isUserContributed', { mode: 'boolean' })
+  isUserContributable: integer('isUserContributable', { mode: 'boolean' })
     .notNull()
     .default(true),
+  isDefaultEnabled: integer('isDefaultEnabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
@@ -59,6 +74,26 @@ export const property = sqliteTable('property', {
     .$onUpdate(() => new Date().toISOString())
     .notNull(),
 })
+
+/**
+ * Project property assignments
+ * @remarks
+ * Links projects to global properties they have opted into.
+ * `rank` controls the display order of assigned global properties within the project.
+ */
+export const projectProperty = sqliteTable(
+  'projectProperty',
+  {
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [primaryKey({ columns: [table.projectId, table.propertyId] })],
+)
 
 /**
  * Property translations
@@ -94,6 +129,8 @@ export const propertyValue = sqliteTable('propertyValue', {
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Priority in the rank order of the property values - lower numbers are shown first
   rank: integer('rank').notNull().default(0),
+  // Canonical value for non-translatable classifier values.
+  value: text('value'),
 })
 
 /**
