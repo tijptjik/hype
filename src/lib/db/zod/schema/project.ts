@@ -11,7 +11,7 @@ import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'
 import { ProjectPropertyFormData } from './property'
-import { PropertyAPI } from './deprecated/property'
+import { PropertyAPI } from './property'
 import { ImageContextEnvelopeAPI } from './image'
 import { UserBasic } from './user'
 

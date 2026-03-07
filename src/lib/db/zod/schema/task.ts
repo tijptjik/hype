@@ -8,14 +8,14 @@ import { task, taskImage } from '$lib/db/schema/index'
 import { UserBasic } from './user'
 import { ImageBase } from './image'
 import { FeatureAPI, FeatureBase, FeatureI18nBase, FeaturePropertyAPI } from './feature'
-import { ProjectBase, ProjectI18nBase } from './deprecated/project'
-import { OrganisationBase, OrganisationI18nBase } from './deprecated/organisation'
+import { ProjectBase, ProjectI18nBase } from './project'
+import { OrganisationBase, OrganisationI18nBase } from './organisation'
 import {
   PropertyBase,
   PropertyI18nBase,
   PropertyValueBase,
   PropertyValueI18nBase,
-} from './deprecated/property'
+} from './property'
 // ENUMS
 import { TaskType, TaskReviewOutcome, TaskReviewAction } from '$lib/enums'
 import { getLocales } from '..'
