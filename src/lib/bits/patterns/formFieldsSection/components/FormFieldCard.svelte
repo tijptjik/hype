@@ -19,6 +19,7 @@ let {
   classifierComponents,
   specifierComponents,
   isRequiredInPreflight,
+  allIssues = [],
   isEditing = true,
   onIncreaseRank,
   onDecreaseRank,
@@ -28,9 +29,12 @@ let {
   onAddValue,
   onRemoveValue,
   onMoveValue,
+  onUpdateValue,
   onUpdateValueI18n,
   onTranslateLocale,
   onResetLocale,
+  presentation = 'full',
+  sourceTag = null,
 }: FormFieldCardProps = $props()
 
 let collapsed = $state(false)
@@ -39,6 +43,8 @@ let collapsed = $state(false)
 <article class="bits-project-field-card">
   <FormFieldCardHeader
     {property}
+    {presentation}
+    {sourceTag}
     {totalItems}
     {isEditing}
     {removeMode}
@@ -49,52 +55,58 @@ let collapsed = $state(false)
     onToggleCollapse={() => (collapsed = !collapsed)}
     onToggleIsTranslatable={(propertyId, value) =>
       onUpdateBase(propertyId, 'isTranslatable', value)}
+    onToggleIsDefaultEnabled={(propertyId, value) =>
+      onUpdateBase(propertyId, 'isDefaultEnabled', value)}
   />
 
-  {#snippet cardBodyContent()}
-    <div class="bits-project-field-card__body-inner">
-      <FormFieldCardBody
-        {property}
-        {propertyIndex}
-        {sectionRank}
-        {propertyFields}
-        {locales}
-        {classifierComponents}
-        {specifierComponents}
-        {isRequiredInPreflight}
-        {isEditing}
-        {onUpdateBase}
-        {onUpdateI18n}
-        {onAddValue}
-        {onRemoveValue}
-        {onMoveValue}
-        {removeMode}
-        {onUpdateValueI18n}
-        {onTranslateLocale}
-        {onResetLocale}
-      />
-    </div>
-  {/snippet}
+  {#if presentation === 'full'}
+    {#snippet cardBodyContent()}
+      <div class="bits-project-field-card__body-inner">
+        <FormFieldCardBody
+          {property}
+          {propertyIndex}
+          {sectionRank}
+          {propertyFields}
+          {allIssues}
+          {locales}
+          {classifierComponents}
+          {specifierComponents}
+          {isRequiredInPreflight}
+          {isEditing}
+          {onUpdateBase}
+          {onUpdateI18n}
+          {onAddValue}
+          {onRemoveValue}
+          {onMoveValue}
+          {onUpdateValue}
+          {removeMode}
+          {onUpdateValueI18n}
+          {onTranslateLocale}
+          {onResetLocale}
+        />
+      </div>
+    {/snippet}
 
-  <!--
-    We keep two branches on purpose:
-    - visible branch uses Svelte's `slide` transition for expand/collapse
-    - hidden branch preserves a non-visible DOM fallback instead of removing the section entirely
-  -->
-  {#if !collapsed}
-    <div
-      class="bits-project-field-card__body"
-      in:slide={{ duration: 240, easing: cubicInOut }}
-      out:slide={{ duration: 220, easing: cubicInOut }}
-    >
-      {@render cardBodyContent()}
-    </div>
-  {:else}
-    <div
-      class="bits-project-field-card__body bits-project-field-card__body--hidden"
-      aria-hidden
-    >
-      {@render cardBodyContent()}
-    </div>
+    <!--
+      We keep two branches on purpose:
+      - visible branch uses Svelte's `slide` transition for expand/collapse
+      - hidden branch preserves a non-visible DOM fallback instead of removing the section entirely
+    -->
+    {#if !collapsed}
+      <div
+        class="bits-project-field-card__body"
+        in:slide={{ duration: 240, easing: cubicInOut }}
+        out:slide={{ duration: 220, easing: cubicInOut }}
+      >
+        {@render cardBodyContent()}
+      </div>
+    {:else}
+      <div
+        class="bits-project-field-card__body bits-project-field-card__body--hidden"
+        aria-hidden
+      >
+        {@render cardBodyContent()}
+      </div>
+    {/if}
   {/if}
 </article>

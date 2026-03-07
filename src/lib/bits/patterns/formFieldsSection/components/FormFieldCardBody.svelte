@@ -20,6 +20,7 @@ let {
   propertyIndex,
   sectionRank,
   propertyFields,
+  allIssues = [],
   locales,
   classifierComponents,
   specifierComponents,
@@ -31,6 +32,7 @@ let {
   onRemoveValue,
   onMoveValue,
   removeMode = false,
+  onUpdateValue,
   onUpdateValueI18n,
   onTranslateLocale,
   onResetLocale,
@@ -46,6 +48,9 @@ const componentOptions = $derived<SelectItem[]>(
 const canShowRange = $derived(property.component === 'RangeField')
 const canShowValues = $derived(
   property.type === 'classifier' && property.component === 'SelectField',
+)
+const valuesAreTranslatable = $derived(
+  property.type !== 'classifier' || Boolean(property.isTranslatable),
 )
 const sortedValues = $derived(
   (property.values || []).slice().sort((a, b) => a.rank - b.rank),
@@ -85,11 +90,23 @@ function getLocaleEntry<T extends Record<string, unknown>>(
 
 function getValueDisplayText(valueId: string, locale: Locale): string {
   const match = sortedValues.find(value => value.id === valueId)
+  if (!valuesAreTranslatable) {
+    if (typeof match?.value === 'string')
+      return sanitizeDragPayloadArtifacts(match.value)
+  }
   const localeValue = getLocaleEntry(
     match?.i18n as Record<string, { value?: string }> | null | undefined,
     locale,
   )
-  return sanitizeDragPayloadArtifacts(localeValue?.value ?? '')
+  const fallbackValue =
+    typeof match?.value === 'string'
+      ? match.value
+      : Object.values(
+          (match?.i18n as Record<string, { value?: string }> | null | undefined) ?? {},
+        ).find(
+          entry => typeof entry?.value === 'string' && entry.value.trim().length > 0,
+        )?.value
+  return sanitizeDragPayloadArtifacts(localeValue?.value ?? fallbackValue ?? '')
 }
 
 function getPropertyField(pathSuffix: Array<string | number>): unknown {
@@ -107,11 +124,23 @@ function getFieldIssues(
 ): FormIssueLike[] | undefined {
   const field = getPropertyField(pathSuffix)
   if (!field || typeof field !== 'object' || typeof field.issues !== 'function')
-    return undefined
+    return getFallbackIssues(pathSuffix)
   const issues = field.issues()
-  return Array.isArray(issues) && issues.length > 0
-    ? (issues as FormIssueLike[])
-    : undefined
+  if (Array.isArray(issues) && issues.length > 0) return issues as FormIssueLike[]
+  return getFallbackIssues(pathSuffix)
+}
+
+function getFallbackIssues(
+  pathSuffix: Array<string | number>,
+): FormIssueLike[] | undefined {
+  const fullPath = [...propertyPathPrefix, ...pathSuffix]
+  const matches = (allIssues ?? []).filter(issue => {
+    const issuePath = issue.path
+    if (!Array.isArray(issuePath)) return false
+    if (issuePath.length !== fullPath.length) return false
+    return fullPath.every((segment, index) => issuePath[index] === segment)
+  })
+  return matches.length > 0 ? matches : undefined
 }
 
 function getFieldAttrs(
@@ -165,6 +194,11 @@ function getPropertyGenState(
 function getValueIssues(valueId: string, locale: Locale): FormIssueLike[] | undefined {
   const valueIndex = (property.values || []).findIndex(value => value.id === valueId)
   if (valueIndex < 0) return undefined
+  if (!valuesAreTranslatable) {
+    return isPrimary(locale)
+      ? getFieldIssues(['values', valueIndex, 'value'])
+      : undefined
+  }
   const formLocale = toLocaleKey(locale)
   return getFieldIssues(['values', valueIndex, 'i18n', formLocale, 'value'])
 }
@@ -191,6 +225,11 @@ function onValueBlur(event: FocusEvent, valueId: string, locale: Locale): void {
   const rawValue = target.textContent?.trim() ?? ''
   const nextValue = sanitizeDragPayloadArtifacts(rawValue)
   target.textContent = nextValue
+  if (!valuesAreTranslatable) {
+    if (!isPrimary(locale)) return
+    onUpdateValue(property.id, valueId, 'value', nextValue)
+    return
+  }
   onUpdateValueI18n(property.id, valueId, locale, 'value', nextValue)
 }
 
@@ -199,6 +238,11 @@ function onValueInput(event: Event, valueId: string, locale: Locale): void {
   const target = event.currentTarget as HTMLElement
   const rawValue = target.textContent ?? ''
   const nextValue = sanitizeDragPayloadArtifacts(rawValue)
+  if (!valuesAreTranslatable) {
+    if (!isPrimary(locale)) return
+    onUpdateValue(property.id, valueId, 'value', nextValue)
+    return
+  }
   onUpdateValueI18n(property.id, valueId, locale, 'value', nextValue)
 }
 
@@ -388,6 +432,24 @@ $effect(() => {
 
         <input
           type="hidden"
+          name={`data.properties[${propertyIndex}].scope`}
+          value={property.scope ?? 'project'}
+        >
+
+        <input
+          type="hidden"
+          name={`data.properties[${propertyIndex}].hubId`}
+          value={property.hubId ?? ''}
+        >
+
+        <input
+          type="hidden"
+          name={`data.properties[${propertyIndex}].isDefaultEnabled`}
+          value={property.isDefaultEnabled ? 'true' : 'false'}
+        >
+
+        <input
+          type="hidden"
           name={`data.properties[${propertyIndex}].isTranslatable`}
           value={property.isTranslatable ? 'true' : 'false'}
         >
@@ -515,6 +577,8 @@ $effect(() => {
               <FormFieldPropertyValueItem
                 {isEditing}
                 {optionRemoveMode}
+                isPlaceholder={!valuesAreTranslatable && !showCoreFields}
+                hasIssues={Boolean(getValueIssues(value.id, locale)?.length)}
                 valueId={value.id}
                 propertyId={property.id}
                 onRemove={(propertyId, valueId) => onRemoveValue(propertyId, valueId)}
@@ -530,34 +594,51 @@ $effect(() => {
                       <input {...valueRankInputAttrs} type="hidden">
                     {/if}
                   {/if}
-                  <input
-                    type="hidden"
-                    name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].i18n.${formLocale}.value`}
-                    value={getValueDisplayText(value.id, locale)}
-                  >
+                  {#if valuesAreTranslatable}
+                    <input
+                      type="hidden"
+                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].i18n.${formLocale}.value`}
+                      value={getValueDisplayText(value.id, locale)}
+                    >
+                  {:else if showCoreFields}
+                    <input
+                      type="hidden"
+                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].value`}
+                      value={getValueDisplayText(value.id, locale)}
+                    >
+                  {/if}
 
-                  <button
-                    type="button"
-                    class={`bits-project-field-card__value-handle ${!isEditing ? 'bits-project-field-card__value-handle--disabled' : ''}`}
-                    tabindex={isEditing ? 0 : -1}
-                    aria-hidden={!isEditing}
-                  >
-                    <GripVertical />
-                  </button>
+                  {#if valuesAreTranslatable || showCoreFields}
+                    <button
+                      type="button"
+                      class={`bits-project-field-card__value-handle ${!isEditing ? 'bits-project-field-card__value-handle--disabled' : ''}`}
+                      tabindex={isEditing ? 0 : -1}
+                      aria-hidden={!isEditing}
+                    >
+                      <GripVertical />
+                    </button>
+                  {/if}
 
-                  <div
-                    class={`bits-project-field-card__value-editable ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
-                    contenteditable={isEditing && !showCoreFields ? 'plaintext-only' : isEditing}
-                    tabindex={isEditing ? 0 : -1}
-                    use:bindValueEditable={{ valueId: value.id, locale }}
-                    onbeforeinput={preventDropBeforeInput}
-                    oninput={event => onValueInput(event, value.id, locale)}
-                    ondragover={preventNativeDropOver}
-                    ondrop={preventNativeDropInsert}
-                    onfocus={onValueFocus}
-                    ondblclick={onValueDoubleClick}
-                    onblur={event => onValueBlur(event, value.id, locale)}
-                  ></div>
+                  {#if valuesAreTranslatable || showCoreFields}
+                    <div
+                      class={`bits-project-field-card__value-editable ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                      contenteditable={isEditing && (!showCoreFields || !valuesAreTranslatable) ? 'plaintext-only' : isEditing}
+                      tabindex={isEditing ? 0 : -1}
+                      use:bindValueEditable={{ valueId: value.id, locale }}
+                      onbeforeinput={preventDropBeforeInput}
+                      oninput={event => onValueInput(event, value.id, locale)}
+                      ondragover={preventNativeDropOver}
+                      ondrop={preventNativeDropInsert}
+                      onfocus={onValueFocus}
+                      ondblclick={onValueDoubleClick}
+                      onblur={event => onValueBlur(event, value.id, locale)}
+                    ></div>
+                  {:else}
+                    <div
+                      class="bits-project-field-card__value-placeholder"
+                      aria-hidden="true"
+                    ></div>
+                  {/if}
                   {#if getValueIssues(value.id, locale)?.length}
                     <div class="bits-form__error">
                       {getValueIssues(value.id, locale)?.map(issue => issue.message).join(' ')}

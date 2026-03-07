@@ -72,6 +72,8 @@ vi.mock('$lib/api', () => ({
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
+vi.mock('$lib/types', () => ({}))
+
 vi.mock('$lib/api/services/authz', () => ({
   isReservedCode: (_value: string) => false,
   toAuthMessage: mockToAuthMessage,
@@ -107,10 +109,52 @@ vi.mock('$lib/api/services/organisation', () => ({
   toOrganisationProfile: mockToOrganisationProfile,
 }))
 
+vi.mock('$lib/api/services/project', () => ({
+  normalizeSubmittedPropertyRanks: <T>(properties: T[]) => properties,
+}))
+
+vi.mock('$lib/api/services', () => ({
+  getDuplicateValues: (values: string[]) => {
+    const seen = new Set<string>()
+    const duplicates: string[] = []
+    for (const value of values) {
+      if (seen.has(value)) duplicates.push(value)
+      seen.add(value)
+    }
+    return duplicates
+  },
+  hasRoleMembershipChanged: (
+    submitted: Array<{ userId: string; role: string }>,
+    existing: Array<{ userId: string; role: string }>,
+    toSignature: (roles: Array<{ userId: string; role: string }>) => string,
+  ) => toSignature(submitted) !== toSignature(existing),
+  requireValue: <T>(value: T | null | undefined, onEmpty: () => never): T => {
+    if (value === null || value === undefined) return onEmpty()
+    return value
+  },
+  toCreatedResponseShape: (value: { id: string; modifiedAt?: string }) => ({
+    data: {
+      id: value.id,
+      modifiedAt: value.modifiedAt,
+    },
+  }),
+  toBooleanStateResponseShape: (
+    value: Record<string, unknown>,
+    stateKey: 'isPublished' | 'isArchived',
+  ) => ({
+    data: {
+      id: value.id,
+      [stateKey]: value[stateKey],
+    },
+  }),
+  validateUniqueNonReservedCode: vi.fn(async () => undefined),
+}))
+
 vi.mock('$lib/db/services/organisation', () => ({
   createI18n: vi.fn(),
   createOrganisation: vi.fn(),
   createUserRoles: vi.fn(),
+  listOrganisationRoleAssignments: vi.fn(async () => []),
   listOrganisations: mockListOrganisations,
   probeExistingOrganisation: vi.fn(async () => null),
   probeOrganisationForUpdate: vi.fn(async () => null),
@@ -126,6 +170,10 @@ vi.mock('$lib/db/services/organisation', () => ({
   toPersistedOrganisationUserRoles: vi.fn(),
   toEntityResponseShape: vi.fn((value: unknown) => ({ data: value })),
   toListResponseShape: vi.fn((value: unknown) => value),
+}))
+
+vi.mock('$lib/db/services/property', () => ({
+  syncOrganisationProperties: vi.fn(async () => undefined),
 }))
 
 vi.mock('$lib/db/schema', () => ({
@@ -153,10 +201,12 @@ vi.mock('$lib/db/zod', () => ({
 }))
 
 vi.mock('$lib/i18n', () => ({
-  m: {
-    admin__validation_code_already_exists: () => 'Code already exists',
-    missing_permissions: () => 'Missing Permissions',
-  },
+  m: new Proxy(
+    {},
+    {
+      get: () => () => '',
+    },
+  ),
   toLocaleRecordFromOrganisationFormI18n: vi.fn(),
 }))
 

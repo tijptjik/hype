@@ -89,7 +89,17 @@ vi.mock('$lib/db/zod', () => ({
 }))
 
 vi.mock('$lib/i18n', () => ({
+  m: new Proxy(
+    {},
+    {
+      get: () => () => '',
+    },
+  ),
   toLocaleRecordFromOrganisationFormI18n: mockToLocaleRecordFromOrganisationFormI18n,
+}))
+
+vi.mock('$lib/api/services/project', () => ({
+  normalizeSubmittedPropertyRanks: <T>(properties: T[]) => properties,
 }))
 
 vi.mock('$lib/api', () => ({
@@ -150,6 +160,10 @@ vi.mock('$lib/db/services/hub', () => ({
   listHubs: vi.fn(),
   getHub: vi.fn(),
   syncHubOrganisations: mockSyncHubOrganisations,
+}))
+
+vi.mock('$lib/db/services/property', () => ({
+  syncHubGlobalProperties: vi.fn(async () => undefined),
 }))
 
 vi.mock('$lib/db/schema', () => ({

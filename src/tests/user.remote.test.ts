@@ -39,6 +39,18 @@ vi.mock('$lib/api', () => ({
   setupRequestHandler: mockSetupRequestHandler,
 }))
 
+vi.mock('$lib/types', () => ({}))
+
+vi.mock('$lib/enums', () => ({
+  HierarchicalResource: {
+    feature: 'feature',
+  },
+}))
+
+vi.mock('$lib/db', () => ({
+  applyPrismConstraints: vi.fn(() => []),
+}))
+
 vi.mock('$lib/api/services/authz', () => ({
   toAuthMessage: mockToAuthMessage,
   canSearchUsers: (params: {
@@ -62,7 +74,39 @@ vi.mock('$lib/api/services/authz', () => ({
   },
 }))
 
+vi.mock('$lib/api/services/user', () => ({
+  assertPermissionsToUpdateUser: vi.fn(),
+  getUserQueryContext: vi.fn(() => ({ conditions: [] })),
+  isPrivilegedArchivedSearchRequested: (state: { isArchived: boolean | null }) =>
+    state.isArchived === true || state.isArchived === null,
+  toEntityRoleExistsCondition: vi.fn(() => ({ fn: 'exists' })),
+  toParentChainCondition: vi.fn(async () => ({ fn: 'parent-chain' })),
+  toRequestedSearchState: (conditions: { isArchived?: unknown }) => ({
+    isArchived:
+      conditions.isArchived === undefined
+        ? false
+        : (conditions.isArchived as boolean | null),
+  }),
+  toUserSearchPagingAndSorting: (params: {
+    pagination?: { limit?: number; offset?: number }
+    sorting?: { sortBy?: string; sortOrder?: string }
+  }) => ({
+    limit: Math.min(params.pagination?.limit ?? 20, 100),
+    offset: params.pagination?.offset ?? 0,
+    sortBy:
+      params.sorting?.sortBy === 'email' ||
+      params.sorting?.sortBy === 'createdAt' ||
+      params.sorting?.sortBy === 'updatedAt'
+        ? params.sorting.sortBy
+        : 'name',
+    sortOrder: params.sorting?.sortOrder === 'desc' ? 'desc' : 'asc',
+  }),
+  userEntityWithRelations: {},
+}))
+
 vi.mock('$lib/api/server/remote', () => ({
+  guardedQuery: (_schema: unknown, handler: unknown) => handler,
+  guardedCommand: (_schema: unknown, handler: unknown) => handler,
   guardedBatchByIdQuery:
     (_schema: unknown, fn: unknown) =>
     async (arg: { id: string; meta?: { profile?: string } }) => {
@@ -90,12 +134,34 @@ vi.mock('$lib/db/services/user', () => ({
   toEntityResponseShape: mockToEntityResponseShape,
 }))
 
+vi.mock('$lib/db/services/hub', () => ({
+  getFeatureHubFilter: vi.fn(() => undefined),
+}))
+
 vi.mock('$lib/db/zod', () => ({
+  AddUserFeatureToListSchema: {},
+  GetUserFeaturesParamsSchema: {},
+  GetUserLayersParamsSchema: {},
+  GetUserParamsSchema: {},
+  RemoveUserFeatureFromListSchema: {},
+  SetUserLayerDefaultsSchema: {},
+  UpdateUserParamsSchema: {},
+  UserAdminListProfileAPI: {
+    parse: (value: unknown) => value,
+  },
   UserHydrationSchema: {},
   UserSearchQueryParamsSchema: {},
 }))
 
-vi.mock('$lib/db/schema', () => ({
+vi.mock('$lib/db/schema/index', () => ({
+  feature: {
+    id: 'feature.id',
+    organisationId: 'feature.organisationId',
+  },
+  featureImage: {
+    featureId: 'featureImage.featureId',
+    imageId: 'featureImage.imageId',
+  },
   user: {
     id: 'user.id',
     name: 'user.name',
@@ -197,7 +263,7 @@ describe('user.remote', () => {
     expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'admin')
   })
 
-  it('getUserForAttribution defaults profile to admin when context is admin', async () => {
+  it('getUserForAttribution defaults profile to card when context is admin', async () => {
     const row = { id: 'u-1', isArchived: false, attribution: 'A' }
     mockSetupRequestHandler.mockResolvedValue({
       db: {},
@@ -213,17 +279,17 @@ describe('user.remote', () => {
 
     await remote.getUserForAttribution({ id: 'u-1' })
 
-    expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'admin')
+    expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'card')
   })
 
-  it('getUserForAttribution defaults profile to privacy for non-admin context', async () => {
+  it('getUserForAttribution defaults profile to attribution for non-admin context', async () => {
     const row = { id: 'u-1', isArchived: false, attribution: 'A' }
     mockGetUsersForHydration.mockResolvedValue([row])
     mockToEntityResponseShape.mockReturnValue({ id: 'u-1', attribution: 'A' })
 
     await remote.getUserForAttribution({ id: 'u-1' })
 
-    expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'privacy')
+    expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'attribution')
   })
 
   it('searchUsers caps limit at 100 and parses count rows', async () => {

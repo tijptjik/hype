@@ -6,6 +6,7 @@ let {
   class: className = '',
   isVisible = true,
   transition = 'none',
+  attrs = {},
 }: MainSectionProps = $props()
 
 const sectionClass = $derived(
@@ -22,11 +23,16 @@ const sectionClass = $derived(
 </script>
 
 {#if transition === 'fade'}
-  <section class={sectionClass} aria-hidden={!isVisible} inert={!isVisible}>
+  <section
+    {...attrs}
+    class={sectionClass}
+    aria-hidden={!isVisible}
+    inert={!isVisible}
+  >
     {@render children?.()}
   </section>
 {:else}
-  <section class={sectionClass} hidden={!isVisible} aria-hidden={!isVisible}>
+  <section {...attrs} class={sectionClass} hidden={!isVisible} aria-hidden={!isVisible}>
     {@render children?.()}
   </section>
 {/if}

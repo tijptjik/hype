@@ -10,6 +10,7 @@ export interface MainSectionProps {
   class?: string
   isVisible?: boolean
   transition?: 'none' | 'fade'
+  attrs?: Record<string, unknown>
 }
 
 export interface MainFormProps {

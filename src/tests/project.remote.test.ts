@@ -260,6 +260,9 @@ vi.mock('$lib/db/services/project', () => ({
 
 vi.mock('$lib/db/services/property', () => ({
   createPropertiesWithRelated: vi.fn(async () => undefined),
+  listResolvedProjectProperties: vi.fn(async () => []),
+  seedDefaultInheritedPropertiesForProject: vi.fn(async () => undefined),
+  syncProjectInheritedProperties: vi.fn(async () => undefined),
   updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
 }))
 
@@ -285,6 +288,15 @@ vi.mock('$lib/db/schema', () => ({
     isPublished: 'project.isPublished',
     isArchived: 'project.isArchived',
     modifiedAt: 'project.modifiedAt',
+  },
+  projectProperty: {
+    projectId: 'projectProperty.projectId',
+    propertyId: 'projectProperty.propertyId',
+    rank: 'projectProperty.rank',
+  },
+  property: {
+    id: 'property.id',
+    scope: 'property.scope',
   },
 }))
 
@@ -349,7 +361,20 @@ describe('project.remote form organisation move authz', () => {
     mockAuthorizeProjectDeleteForSubmission.mockReturnValue({ allowed: true })
 
     mockGuardedContext.mockResolvedValue({
-      db: {},
+      db: {
+        query: {
+          property: {
+            findMany: vi.fn(async () => [
+              { id: 'p-class-a', scope: 'project' },
+              { id: 'p-class-b', scope: 'project' },
+              { id: 'p-spec-a', scope: 'project' },
+            ]),
+          },
+          projectProperty: {
+            findMany: vi.fn(async () => []),
+          },
+        },
+      },
       user: { id: 'u-1', isAnonymous: false, superAdmin: false },
       userRoles: [],
       isAdminRequest: true,
