@@ -61,26 +61,26 @@ export * from './schema/hub'
 // ZOD
 import { z } from 'zod'
 import { UserBase } from './schema/user'
-import { UserLayerBase, UserLayerUpdate } from './schema/layer'
+import { UserLayerRecord, UserLayerRecordUpdate } from './schema/layer'
 import { UserFeatureBase, UserFeatureUpdate } from './schema/feature'
 import { OrganisationRoleBase } from './schema/organisation'
 import { ProjectRoleBase } from './schema/project'
 import { HubRoleBase } from './schema/hub'
 
-export const UserLayerAPI = UserLayerBase.extend({
+export const UserLayerAPI = UserLayerRecord.extend({
   user: UserBase.optional(),
-  layer: UserLayerBase.optional(),
+  layer: UserLayerRecord.optional(),
 })
 
 // There is no UserInsertAPI because users are created by AuthJS
 
-export const UserLayerUpdateAPI = UserLayerUpdate.extend({
+export const UserLayerUpdateAPI = UserLayerRecordUpdate.extend({
   // These are required for the upsert operation
   userId: z.string(),
   layerId: z.string(),
   // These are optional for the response shape
   user: UserBase.optional(),
-  layer: UserLayerBase.optional(),
+  layer: UserLayerRecord.optional(),
 })
 
 export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
@@ -93,7 +93,7 @@ export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
 })
 
 export const UserBaseRaw = UserBase.extend({
-  userLayers: z.array(UserLayerBase),
+  userLayers: z.array(UserLayerRecord),
   userFeatures: z.array(UserFeatureBase),
   hubRoles: z.array(HubRoleBase),
   organisationRoles: z.array(OrganisationRoleBase),
