@@ -6,6 +6,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
+import { updateUserProfile } from '$lib/api/server/user.remote'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import { PencilSquare, InformationCircle, Check, Heart } from '@steeze-ui/heroicons'
@@ -18,9 +19,9 @@ const cardCtx = getCardCtx()
 const appCtx = getAppCtx()
 
 // STATE
-let editedAttribution = $state(appCtx.getUser()!.attribution || '')
-let originalAttribution = $state(appCtx.getUser()!.attribution || '')
-let editing = $state(!(appCtx.getUser()!.attribution || '').trim())
+let editedAttribution = $state(appCtx.getUser()?.attribution || '')
+let originalAttribution = $state(appCtx.getUser()?.attribution || '')
+let editing = $state(!(appCtx.getUser()?.attribution || '').trim())
 let timer: ReturnType<typeof setTimeout>
 let isInfoExpanded = $state(false)
 let isSaveSuccess = $state(false)
@@ -82,13 +83,12 @@ async function saveAttribution() {
   }
 
   try {
-    const response = await fetch(`/api/users/${appCtx.user.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ attribution: editedAttribution }),
+    const response = await updateUserProfile({
+      id: appCtx.user.id,
+      data: { attribution: editedAttribution },
     })
 
-    if (response.ok) {
+    if (response?.data) {
       if (appCtx.user) {
         appCtx.user.attribution = editedAttribution
         cardCtx.setAttribution(editedAttribution)
@@ -99,7 +99,7 @@ async function saveAttribution() {
         }, 2000)
       }
     } else {
-      console.error('Failed to update attribution:', await response.text())
+      console.error('Failed to update attribution')
     }
   } catch (error) {
     console.error('Error updating attribution:', error)
@@ -277,6 +277,7 @@ $effect(() => {
     {/if}
     <div class="swap {editing || isSaveSuccess ? '' : 'swap-active'}">
       <button
+        type="button"
         id="checkmark-button"
         class="{buttonClasses} swap-off"
         onclick={(e) => handleButtonClick(e, startEdit)}
@@ -289,6 +290,7 @@ $effect(() => {
         />
       </button>
       <button
+        type="button"
         id="pencil-button"
         class="{buttonClasses} swap-on"
         onclick={(e) => handleButtonClick(e, saveAttribution)}

@@ -1,3 +1,4 @@
+import { updateUserProfile } from '$lib/api/server/user.remote'
 // TYPES
 import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types'
 
@@ -11,10 +12,9 @@ export const updateLocale = async (userId: Id, locale: Locale) => {
 
   // API : Update user's preferred locale
   try {
-    await fetch(`/api/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale }),
+    await updateUserProfile({
+      id: userId,
+      data: { locale },
     })
 
     // AUTH : Signal to client that it should refresh its session
@@ -43,12 +43,12 @@ const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>()
  */
 export const debouncedUpdateUser = async (
   userId: Id,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   options: {
     delay?: number
     timerKey?: string
-    onSuccess?: (data: any) => void
-    onError?: (error: any) => void
+    onSuccess?: (data: Record<string, unknown>) => void
+    onError?: (error: unknown) => void
   } = {},
 ) => {
   const { delay = 750, timerKey = 'default', onSuccess, onError } = options
@@ -68,17 +68,16 @@ export const debouncedUpdateUser = async (
   // TIMER : Set new timeout
   const timer = setTimeout(async () => {
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      const response = await updateUserProfile({
+        id: userId,
+        data,
       })
 
-      if (response.ok) {
+      if (response?.data) {
         onSuccess?.(data)
       } else {
-        const errorText = await response.text()
-        console.error('Failed to update user data:', errorText)
+        const errorText = 'Failed to update user data'
+        console.error(errorText)
         onError?.(new Error(errorText))
       }
     } catch (error) {
@@ -113,7 +112,7 @@ export const debouncedUpdateUserAttribution = async (
   userId: Id,
   attribution: string,
   onSuccess?: (attribution: string) => void,
-  onError?: (error: any) => void,
+  onError?: (error: unknown) => void,
 ) => {
   await debouncedUpdateUser(
     userId,
