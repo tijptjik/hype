@@ -5,13 +5,21 @@ import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation'
 // GEO
 import { bbox } from '@turf/bbox'
 // I18N
-import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n'
+import {
+  getFallbackLocales,
+  getLocale,
+  getLocaleKey,
+  setLocale,
+  getI18n,
+} from '$lib/i18n'
 // LIB
 import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index'
 import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHub, getHubs } from '$lib/api/server/hub.remote'
 import { getProject, getProjects } from '$lib/api/server/project.remote'
+import { getLayer, getLayers } from '$lib/api/server/layer.remote'
 import { getProperties, getProperty } from '$lib/api/server/property.remote'
+import { getUser, getUserFeatures } from '$lib/api/server/user.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -550,6 +558,10 @@ export class AppCtx {
       list: getProjects as unknown as RemoteListFn<unknown, unknown>,
       get: getProject as unknown as RemoteGetFn<unknown, unknown>,
     }
+    this.remoteMap[FirstClassResource.layer] = {
+      list: getLayers,
+      get: getLayer,
+    }
     this.remoteMap[FirstClassResource.hub] = {
       list: getHubs,
       get: getHub,
@@ -557,6 +569,9 @@ export class AppCtx {
     this.remoteMap[FirstClassResource.property] = {
       list: getProperties as unknown as RemoteListFn<unknown, unknown>,
       get: getProperty as unknown as RemoteGetFn<unknown, unknown>,
+    }
+    this.remoteMap[FirstClassResource.user] = {
+      get: getUser as unknown as RemoteGetFn<unknown, unknown>,
     }
   }
 
@@ -667,7 +682,9 @@ export class AppCtx {
 
   // ASSERT :: User is SuperAdmin
   isSuperAdmin(): boolean {
-    return this.user?.superAdmin === true
+    return Boolean(
+      this.user && 'superAdmin' in this.user && this.user.superAdmin === true,
+    )
   }
 
   // ASSERT :: App is in admin dashboard
@@ -755,8 +772,19 @@ export class AppCtx {
   }
 
   layersQueryFn = async (): Promise<Layer[]> => {
-    const url = this.buildApiUrl(FirstClassResource.layer)
-    return fetchOrThrow<Layer[]>(url)
+    const remoteList = this.remoteMap[FirstClassResource.layer].list
+    if (!remoteList) {
+      throw new Error('Layer remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+      meta: { profile: 'card' },
+    })) as ListResponse<Layer>
+    return result.data
   }
 
   featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
@@ -780,18 +808,35 @@ export class AppCtx {
     if (!this.user?.id) {
       return []
     }
-    const response = await fetch(`/api/userFeatures?userId=${this.user.id}`)
-    if (!response.ok) throw new Error('Network response was not ok')
-    const data = await response.json()
-    // Ensure we always return an array, even if API returns null/undefined
-    return Array.isArray(data) ? data : []
+    const response = (await getUserFeatures({
+      userId: this.user.id,
+      sorting: {
+        sortBy: 'modifiedAt',
+        sortOrder: 'desc',
+      },
+    })) as unknown as { data?: UserFeature[] | null }
+    return Array.isArray(response.data) ? response.data : []
   }
 
   userQueryFn = async (): Promise<UserProfile | null> => {
-    const includePrisms = this.state.panels.profile.ctx?.observePrisms
-    const userRef = this.state.panels.profile.ctx?.username || this.user?.id
-    const url = this.buildApiUrl(FirstClassResource.user, userRef, includePrisms)
-    return fetchOrThrow<UserProfile>(url)
+    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
+    const isSelfProfile =
+      !requestedUsername || requestedUsername === (this.user?.username ?? null)
+    const userRef = isSelfProfile ? this.user?.id : requestedUsername
+    if (!userRef) return null
+
+    const refKey = isSelfProfile ? 'id' : 'username'
+    const profile = isSelfProfile ? 'self' : 'detail'
+
+    const response = (await getUser({
+      ref: userRef,
+      refKey,
+      meta: {
+        profile,
+      },
+    })) as { data?: UserProfile | null }
+
+    return response.data ?? null
   }
 
   invalidateAndRefresh = async (
@@ -1456,7 +1501,8 @@ export class AppCtx {
     entity: T,
     query: string,
   ) => {
-    const textObject = entity.i18n?.[getLocale()]
+    const localeKey = getLocaleKey()
+    const textObject = entity.i18n?.[localeKey] ?? entity.i18n?.en
     const contributor = isFeature(entity) ? entity.contributor?.name : ''
     if (!textObject) return false
     return (
@@ -2917,51 +2963,33 @@ export class AppCtx {
     )
   }
 
-  setUserDisplayUsername = async (
-    displayUsername: string,
-    onSuccess?: (displayUsername: string) => void,
+  setUsername = async (
+    username: string,
+    onSuccess?: (username: string) => void,
+    onInvalid?: (issues: import('@sveltejs/kit').RemoteFormIssue[]) => void,
     onError?: (error: any) => void,
   ) => {
     if (!this.user) return
 
-    // Import validation and conversion functions
-    const { validateDisplayUsername, makeUrlSafeUsername } = await import(
-      '$lib/utils/username'
+    const { debouncedUpdateUsername, validateUsernameIssues } = await import(
+      '$lib/client/services/user'
     )
-
-    // Validate before proceeding
-    if (!validateDisplayUsername(displayUsername)) {
-      onError?.(
-        new Error(
-          'Invalid display username: spaces and special characters are not allowed',
-        ),
-      )
+    const { normalizedUsername, issues } = validateUsernameIssues(username)
+    if (issues.length > 0) {
+      onInvalid?.(issues)
       return
     }
 
-    // Create URL-safe username (matching server logic)
-    const urlSafeUsername = makeUrlSafeUsername(displayUsername)
-
-    // Update user state immediately for optimistic updates (match what server will return)
     this.setUser({
       ...this.user,
-      displayUsername,
-      username: urlSafeUsername,
+      username: normalizedUsername,
     } as CurrentUser)
 
-    // Use generic debounced update function directly
-    const { debouncedUpdateUser } = await import('$lib/client/services/user')
-
-    await debouncedUpdateUser(
-      (this.user as CurrentUser).id,
-      { displayUsername },
-      {
-        delay: 300,
-        timerKey: 'displayUsername',
-        onSuccess: () => onSuccess?.(displayUsername),
-        onError,
-      },
-    )
+    await debouncedUpdateUsername((this.user as CurrentUser).id, normalizedUsername, {
+      onSuccess,
+      onInvalid,
+      onError,
+    })
   }
 
   getUserLayers = (): UserLayer[] => {
