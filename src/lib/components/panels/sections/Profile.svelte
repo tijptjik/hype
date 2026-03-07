@@ -8,11 +8,10 @@ import { signOut } from '$lib/auth/client'
 import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import { validateUsernameIssues } from '$lib/client/services/user'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import { PencilSquare, Check, ArrowPath, XMark } from '@steeze-ui/heroicons'
-// UTILS
-import { validateDisplayUsername } from '$lib/utils/username'
 // ENUMS
 import { Panel } from '$lib/enums'
 
@@ -39,7 +38,7 @@ let errorTimer: ReturnType<typeof setTimeout>
 
 // VALIDATION
 $effect(() => {
-  if (editedUsername && !validateDisplayUsername(editedUsername)) {
+  if (editedUsername && validateUsernameIssues(editedUsername).issues.length > 0) {
     showErrorIndicator = true
     clearTimeout(errorTimer)
     errorTimer = setTimeout(() => {
@@ -55,7 +54,7 @@ $effect(() => {
 const startEditingUsername = () => {
   const user = appCtx.getUser()
   if (user) {
-    editedUsername = user.displayUsername || user.username || ''
+    editedUsername = user.username || ''
     isEditingUsername = true
     // Focus the input after it renders
     setTimeout(() => {
@@ -73,7 +72,7 @@ const saveUsername = async () => {
   if (!user || !editedUsername.trim()) return
 
   // Validate before saving
-  if (!validateDisplayUsername(editedUsername.trim())) {
+  if (validateUsernameIssues(editedUsername.trim()).issues.length > 0) {
     showErrorIndicator = true
     clearTimeout(errorTimer)
     errorTimer = setTimeout(() => {
@@ -85,7 +84,7 @@ const saveUsername = async () => {
   isLoadingUsername = true
 
   // Use appCtx method which handles optimistic updates and debounced API calls
-  await appCtx.setUserDisplayUsername(
+  await appCtx.setUsername(
     editedUsername.trim(),
     // onSuccess
     () => {
@@ -96,6 +95,15 @@ const saveUsername = async () => {
       clearTimeout(successTimer)
       successTimer = setTimeout(() => {
         showSuccessIndicator = false
+      }, 2500)
+    },
+    // onInvalid
+    () => {
+      isLoadingUsername = false
+      showErrorIndicator = true
+      clearTimeout(errorTimer)
+      errorTimer = setTimeout(() => {
+        showErrorIndicator = false
       }, 2500)
     },
     // onError
@@ -200,7 +208,7 @@ const handleKeydown = (event: KeyboardEvent) => {
           >
             {#if appCtx.getUser()}
               {@const user = appCtx.getUser()!}
-              {user.displayUsername ?? user.username ?? user.name ?? 'Anonymous User'}
+              {user.username ?? ('name' in user ? user.name : null) ?? m.anonymous()}
             {/if}
           </span>
         {:else}
@@ -219,7 +227,7 @@ const handleKeydown = (event: KeyboardEvent) => {
             <span class="font-medium text-white">
               {#if appCtx.getUser()}
                 {@const user = appCtx.getUser()!}
-                {user.displayUsername ?? user.username ?? user.name ?? 'Anonymous User'}
+                {user.username ?? ('name' in user ? user.name : null) ?? m.anonymous()}
               {/if}
             </span>
           {/if}

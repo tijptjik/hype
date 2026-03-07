@@ -3,6 +3,7 @@ import { slide } from 'svelte/transition'
 import { Button } from '$lib/bits/core'
 import { Search, SectionHeader } from '$lib/bits/custom'
 import { LayerCard } from '$lib/bits/patterns/layerCard'
+import { m } from '$lib/i18n'
 import ReplaceIcon from 'virtual:icons/lucide/replace'
 import XIcon from 'virtual:icons/lucide/x'
 import type {
@@ -79,7 +80,7 @@ $effect(() => {
           class="bits-form__section-header-actions flex w-full flex-row items-center justify-end gap-0"
         >
           <Button
-            text={isAdding ? m.cancel() : 'Replace'}
+            text={isAdding ? m.cancel() : m.replace()}
             style="ghost"
             color="light"
             size="sm"

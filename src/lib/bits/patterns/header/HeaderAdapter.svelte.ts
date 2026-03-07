@@ -97,7 +97,9 @@ export function useHeaderAdapter(
   const showAvatar = $derived(!appCtx.state.panels.settings.isOpen)
   const currentUser = $derived(appCtx.user ?? null)
   const currentUserName = $derived(
-    currentUser?.displayUsername ?? currentUser?.name ?? currentUser?.username ?? null,
+    currentUser?.username ??
+      (currentUser && 'name' in currentUser ? currentUser.name : null) ??
+      null,
   )
   const currentUserImage = $derived(currentUser?.image ?? null)
   const controlsMode = $derived(headerCtrl.state.controlsMode)

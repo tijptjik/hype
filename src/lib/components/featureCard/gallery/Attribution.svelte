@@ -46,7 +46,7 @@ $effect(() => {
     return
   }
 
-  const profile = appCtx.isAdmin() ? 'admin' : 'privacy'
+  const profile = appCtx.isAdmin() ? 'card' : 'attribution'
   void getUserForAttribution({
     id: contributorId,
     meta: {

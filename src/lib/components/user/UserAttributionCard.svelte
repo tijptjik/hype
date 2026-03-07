@@ -37,7 +37,9 @@ let formattedDate = $derived(
       : formatDate(date)
     : '',
 )
-let userProfile: 'admin' | 'privacy' = $derived(appCtx.isAdmin() ? 'admin' : 'privacy')
+let userProfile: 'card' | 'attribution' = $derived(
+  appCtx.isAdmin() ? 'card' : 'attribution',
+)
 
 const isAdminUser = (user: UserHydrationResult): user is UserHydrationAdminProfile =>
   Boolean(user && 'name' in user && 'image' in user)

@@ -1,6 +1,12 @@
-import { updateUserProfile } from '$lib/api/server/user.remote'
+import {
+  setUserLayerDefaults,
+  updateUserProfile,
+} from '$lib/api/server/user.remote'
+import { m } from '$lib/i18n'
+import { normalizeUsername, validateUsername } from '$lib/utils/username'
 // TYPES
 import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types'
+import type { RemoteFormIssue } from '@sveltejs/kit'
 
 /**
  * Update the user's preferred locale on the server and in Paraglide's locale store. This triggers a page reload so the user can see the new locale immediately.
@@ -34,6 +40,25 @@ export const updateLocale = async (userId: Id, locale: Locale) => {
 
 // Generic debounced timers
 const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+export const validateUsernameIssues = (
+  username: string,
+): { normalizedUsername: string; issues: RemoteFormIssue[] } => {
+  const normalizedUsername = normalizeUsername(username)
+  const issues = validateUsername(normalizedUsername)
+    ? []
+    : [
+        {
+          message: m.validation__username_invalid(),
+          path: ['username'],
+        } satisfies RemoteFormIssue,
+      ]
+
+  return {
+    normalizedUsername,
+    issues,
+  }
+}
 
 /**
  * Generic debounced user update function
@@ -126,18 +151,62 @@ export const debouncedUpdateUserAttribution = async (
   )
 }
 
+export const debouncedUpdateUsername = async (
+  userId: Id,
+  username: string,
+  options: {
+    onSuccess?: (username: string) => void
+    onInvalid?: (issues: RemoteFormIssue[]) => void
+    onError?: (error: unknown) => void
+  } = {},
+) => {
+  const { normalizedUsername, issues } = validateUsernameIssues(username)
+  if (issues.length > 0) {
+    options.onInvalid?.(issues)
+    return { normalizedUsername, issues }
+  }
+
+  await debouncedUpdateUser(
+    userId,
+    { username: normalizedUsername },
+    {
+      delay: 300,
+      timerKey: 'username',
+      onSuccess: () => options.onSuccess?.(normalizedUsername),
+      onError: options.onError,
+    },
+  )
+
+  return {
+    normalizedUsername,
+    issues,
+  }
+}
+
 export const debouncedUpdateUserLayers = (userId: Id, userLayers: UserLayer[]) => {
   // ASSERT : We have userLayers
   if (!userLayers) return
 
-  debouncedUpdateUser(
-    userId,
-    { userLayers },
-    {
-      delay: 750,
-      timerKey: 'userLayers',
-    },
-  )
+  const existingTimer = debouncedTimers.get('userLayers')
+  if (existingTimer) {
+    clearTimeout(existingTimer)
+  }
+
+  const timer = setTimeout(async () => {
+    try {
+      await setUserLayerDefaults({
+        userId,
+        layers: userLayers.map(layer => ({
+          layerId: layer.layerId,
+          isVisibleOnLoad: Boolean(layer.isVisibleOnLoad),
+        })),
+      })
+    } finally {
+      debouncedTimers.delete('userLayers')
+    }
+  }, 750)
+
+  debouncedTimers.set('userLayers', timer)
 }
 
 export const debouncedUpdateUserExperimental = (

@@ -71,10 +71,6 @@ export const authConfig = {
         type: 'string' as const,
         required: false,
       },
-      displayUsername: {
-        type: 'string' as const,
-        required: false,
-      },
       isAnonymous: {
         type: 'boolean' as const,
         required: true,

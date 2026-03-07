@@ -90,7 +90,6 @@ function createAuthInstance(
                 data: {
                   ...user,
                   username,
-                  displayUsername: username,
                 },
               }
             }
@@ -245,7 +244,6 @@ export type SessionUser = Session['user'] & {
   attribution: string
   isArchived: boolean
   username: string | null
-  displayUsername: string | null
   isAnonymous: boolean
   preferences: UserPreferences
   experimental: UserExperimental

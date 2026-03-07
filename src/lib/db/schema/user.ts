@@ -28,7 +28,6 @@ export const user = sqliteTable('user', {
     .$defaultFn(() => nanoid(12)),
   name: text('name'),
   username: text('username').unique(),
-  displayUsername: text('displayUsername').unique(),
   email: text('email').unique(),
   emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
   image: text('image'),

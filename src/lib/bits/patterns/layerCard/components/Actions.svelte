@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Switch } from '$lib/bits/custom'
+import { m } from '$lib/i18n'
 import type { LayerCardActionsProps } from '../layerCard.types'
 
 let {
@@ -14,14 +15,14 @@ let {
 
 <div class={`bits-form__layer-card-actions ${className}`}>
   <Switch
-    leftText="Use"
+    leftText={m.use()}
     checked={isVisible}
     disabled={!isEditing}
     size="sm"
     onCheckedChange={value => onVisibleChange?.(value === true)}
   />
   <Switch
-    leftText="UGC"
+    leftText={m.contributable()}
     checked={isUserContributable}
     disabled={!isEditing}
     size="sm"
