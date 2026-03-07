@@ -6,7 +6,13 @@ import { hub, hubI18n, hubRole } from './hub'
 import { organisation, organisationI18n, organisationRole } from './organisation'
 import { project, projectI18n, projectRole } from './project'
 import { layer, layerI18n, layerProperty } from './layer'
-import { property, propertyI18n, propertyValue, propertyValueI18n } from './property'
+import {
+  property,
+  propertyI18n,
+  propertyValue,
+  propertyValueI18n,
+  projectProperty,
+} from './property'
 import { feature, featureI18n, featureProperty, featurePropertyI18n } from './feature'
 import { image, featureImage } from './image'
 import { task, taskImage } from './task'
@@ -95,6 +101,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   i18n: many(projectI18n),
   userRoles: many(projectRole),
   properties: many(property),
+  globalProperties: many(projectProperty),
   layers: many(layer),
   tasks: many(task),
   image: one(image, {
@@ -188,9 +195,14 @@ export const propertyRelations = relations(property, ({ one, many }) => ({
     fields: [property.projectId],
     references: [project.id],
   }),
+  hub: one(hub, {
+    fields: [property.hubId],
+    references: [hub.id],
+  }),
   values: many(propertyValue),
   i18n: many(propertyI18n),
   layerProperties: many(layerProperty),
+  projectAssignments: many(projectProperty),
 }))
 
 /**
@@ -223,6 +235,17 @@ export const propertyValueI18nRelations = relations(propertyValueI18n, ({ one })
   propertyValue: one(propertyValue, {
     fields: [propertyValueI18n.propertyValueId],
     references: [propertyValue.id],
+  }),
+}))
+
+export const projectPropertyRelations = relations(projectProperty, ({ one }) => ({
+  project: one(project, {
+    fields: [projectProperty.projectId],
+    references: [project.id],
+  }),
+  property: one(property, {
+    fields: [projectProperty.propertyId],
+    references: [property.id],
   }),
 }))
 
@@ -421,6 +444,7 @@ export const hubRelations = relations(hub, ({ one, many }) => ({
   i18n: many(hubI18n),
   organisations: many(organisation),
   userRoles: many(hubRole, { relationName: 'hubUserRoles' }),
+  properties: many(property),
   image: one(image, {
     fields: [hub.imageId],
     references: [image.id],
