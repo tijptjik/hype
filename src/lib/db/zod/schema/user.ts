@@ -3,9 +3,13 @@ import { z } from 'zod'
 // DRIZZLE
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { user } from '$lib/db/schema/user'
-// CONSTRAINTS
-// import { FeatureBase } from './feature';
+import {
+  hubRole,
+  organisationRole,
+  projectRole,
+  user,
+  userFeature,
+} from '$lib/db/schema/index'
 
 /* ============================================================================
  * USER SCHEMAS
@@ -46,34 +50,99 @@ const UserExperimentalSchema = z
   })
   .nullish()
 
+const JsonStringWithFallback = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(value => {
+    if (typeof value !== 'string') return value
+    try {
+      return JSON.parse(value)
+    } catch {
+      return {}
+    }
+  }, schema)
+
+export const UsernameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(32)
+  .regex(/^[a-z0-9_]+$/)
+
+const HubRoleBase = createSelectSchema(hubRole)
+const OrganisationRoleBase = createSelectSchema(organisationRole)
+const ProjectRoleBase = createSelectSchema(projectRole)
+const UserFeatureBase = createSelectSchema(userFeature)
+
+export const UserRoleDiscoSchema = z.union([
+  HubRoleBase.extend({
+    type: z.literal('hub'),
+  }),
+  OrganisationRoleBase.extend({
+    type: z.literal('organisation'),
+  }),
+  ProjectRoleBase.extend({
+    type: z.literal('project'),
+  }),
+])
+
 export const UserBase = createSelectSchema(user)
+
 export const UserBasic = UserBase.pick({
   id: true,
   name: true,
   image: true,
   attribution: true,
 } as const)
-export const UserProfileAPI = UserBase.pick({
-  id: true,
-  name: true,
-  username: true,
-  displayUsername: true,
-  image: true,
-  attribution: true,
-  createdAt: true,
-} as const).extend({
+
+const UserContributionSummaryFields = z.object({
   contributedFeatures: z.record(z.string(), z.array(z.string())),
   contributedImages: z.record(z.string(), z.array(z.string())),
   reportedMissingCount: z.number(),
   newPhotoCount: z.number(),
   newFeatureCount: z.number(),
-  superAdmin: z.boolean().nullish(),
 })
-export const UserCurrent = UserBase.pick({
+
+export const UserAttributionProfileAPI = UserBase.pick({
+  id: true,
+  username: true,
+  attribution: true,
+} as const)
+
+export const UserAdminListProfileAPI = UserBase.pick({
   id: true,
   name: true,
   username: true,
-  displayUsername: true,
+  email: true,
+  image: true,
+} as const)
+
+export const UserCardProfileAPI = UserBase.pick({
+  id: true,
+  username: true,
+  image: true,
+  attribution: true,
+} as const)
+
+export const UserLeaderboardProfileAPI = UserBase.pick({
+  id: true,
+  username: true,
+} as const).extend({
+  reportedMissingCount: z.number(),
+  newPhotoCount: z.number(),
+  newFeatureCount: z.number(),
+})
+
+export const UserDetailProfileAPI = UserCardProfileAPI.extend({
+  contributedFeatures: UserContributionSummaryFields.shape.contributedFeatures,
+  contributedImages: UserContributionSummaryFields.shape.contributedImages,
+  reportedMissingCount: UserContributionSummaryFields.shape.reportedMissingCount,
+  newPhotoCount: UserContributionSummaryFields.shape.newPhotoCount,
+  newFeatureCount: UserContributionSummaryFields.shape.newFeatureCount,
+})
+
+export const UserSelfProfileAPI = UserBase.pick({
+  id: true,
+  name: true,
+  username: true,
   image: true,
   attribution: true,
   locale: true,
@@ -81,26 +150,45 @@ export const UserCurrent = UserBase.pick({
   experimental: true,
   isAnonymous: true,
 } as const).extend({
-  // Override JSON fields with proper types - transform strings to objects
-  preferences: z.string().transform(str => {
-    try {
-      const parsed = JSON.parse(str)
-      return UserPreferencesSchema.parse(parsed)
-    } catch {
-      return UserPreferencesSchema.parse({})
-    }
-  }),
-  experimental: z.string().transform(str => {
-    try {
-      const parsed = JSON.parse(str)
-      return UserExperimentalSchema.parse(parsed)
-    } catch {
-      return UserExperimentalSchema.parse({})
-    }
-  }),
+  preferences: JsonStringWithFallback(UserPreferencesSchema),
+  experimental: JsonStringWithFallback(UserExperimentalSchema),
 })
 
-export const UserUpdate = createUpdateSchema(user)
+export const UserAdminProfileAPI = UserAdminListProfileAPI.extend({
+  attribution: UserSelfProfileAPI.shape.attribution,
+  locale: UserSelfProfileAPI.shape.locale,
+  preferences: UserSelfProfileAPI.shape.preferences,
+  experimental: UserSelfProfileAPI.shape.experimental,
+  isAnonymous: UserSelfProfileAPI.shape.isAnonymous,
+  contributedFeatures: UserDetailProfileAPI.shape.contributedFeatures,
+  contributedImages: UserDetailProfileAPI.shape.contributedImages,
+  reportedMissingCount: UserDetailProfileAPI.shape.reportedMissingCount,
+  newPhotoCount: UserDetailProfileAPI.shape.newPhotoCount,
+  newFeatureCount: UserDetailProfileAPI.shape.newFeatureCount,
+  roles: z.array(UserRoleDiscoSchema),
+  createdAt: UserBase.shape.createdAt,
+  modifiedAt: UserBase.shape.updatedAt,
+})
+
+export const UserProfile = z.enum([
+  'attribution',
+  'adminList',
+  'card',
+  'leaderboard',
+  'detail',
+  'self',
+  'admin',
+])
+
+export const UserUpdate = createUpdateSchema(user).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+})
+
+export const UserUpdateAPI = UserUpdate.extend({
+  username: UsernameSchema.optional(),
+})
 
 /* ----------------- */
 // USER SEARCH SCHEMAS
@@ -162,7 +250,7 @@ export const UserSearchQueryParamsSchema = z.object({
 export const UserHydrationMetaSchema = z
   .object({
     isAdminRequest: z.boolean().optional(),
-    profile: z.enum(['privacy', 'admin']).optional(),
+    profile: z.enum(['attribution', 'card']).optional(),
   })
   .optional()
 
@@ -171,16 +259,112 @@ export const UserHydrationSchema = z.object({
   meta: UserHydrationMetaSchema,
 })
 
-export const UserHydrationPrivacyProfileAPI = UserBase.pick({
-  id: true,
-  attribution: true,
+export const UserHydrationAttributionProfileAPI = UserAttributionProfileAPI
+
+export const UserHydrationCardProfileAPI = UserCardProfileAPI.extend({
+  name: UserBase.shape.name,
 })
 
-const UserHydrationAdminFields = UserBase.pick({
-  name: true,
-  image: true,
+/* ----------------- */
+// USER RELATION REMOTE CONTRACT SCHEMAS
+/* -------- */
+
+const UserRemoteMetaSchema = z
+  .object({
+    isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    profile: UserProfile.optional(),
+  })
+  .optional()
+
+export const GetUserParamsSchema = z.object({
+  ref: z.string().min(1),
+  refKey: z.enum(['id', 'username']).optional(),
+  meta: UserRemoteMetaSchema,
 })
 
-export const UserHydrationAdminProfileAPI = UserHydrationPrivacyProfileAPI.extend({
-  ...UserHydrationAdminFields.shape,
+export const UpdateUserParamsSchema = z.object({
+  id: z.string().min(1),
+  data: UserUpdateAPI,
+  meta: UserRemoteMetaSchema,
+})
+
+export const GetUserLayersParamsSchema = z.object({
+  userId: z.string().min(1).optional(),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+const UserLayerDefaultsItemSchema = z.object({
+  layerId: z.string().min(1),
+  isVisibleOnLoad: z.boolean(),
+})
+
+export const SetUserLayerDefaultsSchema = z.object({
+  userId: z.string().min(1).optional(),
+  layers: z.array(UserLayerDefaultsItemSchema).default([]),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+export const GetUserFeaturesParamsSchema = z.object({
+  userId: z.string().min(1).optional(),
+  conditions: z
+    .object({
+      isVisited: z.boolean().nullable().optional(),
+      isWishlisted: z.boolean().nullable().optional(),
+    })
+    .optional(),
+  pagination: z
+    .object({
+      limit: z.number().int().positive().optional(),
+      offset: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+  sorting: z
+    .object({
+      sortBy: z.enum(['visitedAt', 'createdAt', 'modifiedAt']).optional(),
+      sortOrder: z.enum(['asc', 'desc']).optional(),
+    })
+    .optional(),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+export const UserFeatureListProfileAPI = UserFeatureBase.pick({
+  featureId: true,
+  isVisited: true,
+  isWishlisted: true,
+  visitedAt: true,
+})
+
+export const AddUserFeatureToListSchema = z.object({
+  userId: z.string().min(1).optional(),
+  featureId: z.string().min(1),
+  list: z.enum(['wishlist', 'visited']),
+  visitedAt: z.string().optional().nullable(),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+export const RemoveUserFeatureFromListSchema = z.object({
+  userId: z.string().min(1).optional(),
+  featureId: z.string().min(1),
+  list: z.enum(['wishlist', 'visited']),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
 })
