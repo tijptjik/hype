@@ -653,8 +653,8 @@ export class AppCtx {
   }
 
   initialFetch = async (): Promise<void> => {
-    // Fetch all resources in parallel without cascading
-    await Promise.all([
+    // Fetch all resources in parallel without letting one failing query block app init.
+    const results = await Promise.allSettled([
       // All resource types in parallel
       this.refreshOrganisations(false),
       this.refreshProjects(false),
@@ -665,6 +665,15 @@ export class AppCtx {
       this.refreshUserFeatures(false),
       this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
     ])
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error(
+          '[AppCtx][initialFetch] Resource bootstrap failed:',
+          result.reason,
+        )
+      }
+    }
   }
 
   initStatsCache = (): void => {
