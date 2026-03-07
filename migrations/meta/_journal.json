@@ -148,6 +148,13 @@
       "when": 1772875200000,
       "tag": "0020_property_organisation_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1772893055633,
+      "tag": "0021_hkfoodworks_capabilities",
+      "breakpoints": true
     }
   ]
 }
