@@ -9,14 +9,16 @@ import {
   project,
 } from '../schema'
 import {
-  OrganisationAPI,
   OrganisationCardProfileAPI,
-  OrganisationCollectionAPI,
-  OrganisationSuperAdminAPI,
-  OrganisationCollectionSuperAdminAPI,
   OrganisationDetailProfileAPI,
   OrganisationListProfileAPI,
 } from '../zod'
+import {
+  OrganisationAPI,
+  OrganisationCollectionAPI,
+  OrganisationCollectionSuperAdminAPI,
+  OrganisationSuperAdminAPI,
+} from '../zod/schema/deprecated/organisation'
 // SERVICES
 import { toRelatedRecords, transformI18nSafely } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'

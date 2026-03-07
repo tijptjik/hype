@@ -16,14 +16,14 @@ import {
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
 import { ImageContextEnvelopeAPI } from './image'
-import { ProjectPropertyFormData, PropertyAPI } from './property'
+import { ProjectPropertyFormData, PropertyAdminProfileAPI } from './property'
 import { UserBasic } from './user'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// 1. BASE / RELATIONAL PRIMITIVES
+// 1. DB / RELATIONAL PRIMITIVES
 //    - HubBase
 //    - HubI18nBase
 //    - HubRoleBase
@@ -50,9 +50,10 @@ import { UserBasic } from './user'
 //    - HubListProfileAPI
 //    - HubCardProfileAPI
 //    - HubDetailProfileAPI
+//    - HubAdminProfileAPI
 
 // ═══════════════════════
-// 1. BASE / RELATIONAL PRIMITIVES
+// 1. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
 export const HubBase = createSelectSchema(hub)
@@ -204,5 +205,7 @@ export const HubCardProfileAPI = HubListProfileAPI.extend({
 export const HubDetailProfileAPI = HubCardProfileAPI.extend({
   userRoles: z.array(HubRoleWithUser),
   organisations: z.array(HubOrganisationWithI18n),
-  properties: z.array(PropertyAPI).default([]),
+  properties: z.array(PropertyAdminProfileAPI).default([]),
 })
+
+export const HubAdminProfileAPI = HubDetailProfileAPI

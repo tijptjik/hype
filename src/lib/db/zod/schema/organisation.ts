@@ -26,7 +26,7 @@ import { ImageContextEnvelopeAPI } from './image'
 //    - OrganisationCapabilityDefinitionsSchema
 //    - OrganisationRoleCapabilitiesSchema
 //
-// 2. BASE / RELATIONAL PRIMITIVES
+// 2. DB / RELATIONAL PRIMITIVES
 //    - OrganisationBase
 //    - OrganisationI18nBase
 //    - OrganisationRoleBase
@@ -53,6 +53,7 @@ import { ImageContextEnvelopeAPI } from './image'
 //    - OrganisationListProfileAPI
 //    - OrganisationCardProfileAPI
 //    - OrganisationDetailProfileAPI
+//    - OrganisationAdminProfileAPI
 
 // ═══════════════════════
 // 1. CAPABILITY SCHEMAS
@@ -100,7 +101,7 @@ const CapabilityBase = z.preprocess(value => {
 }, CapabilityRoot.optional())
 
 // ═══════════════════════
-// 2. BASE / RELATIONAL PRIMITIVES
+// 2. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
 export const OrganisationBase = createSelectSchema(organisation).extend({
@@ -269,3 +270,5 @@ export const OrganisationCardProfileAPI = OrganisationListProfileAPI.extend({
 export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
   ...OrganisationDetailFields.shape,
 })
+
+export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI
