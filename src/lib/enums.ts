@@ -231,6 +231,11 @@ export enum PropertyComponentType {
   ToggleField = 'ToggleField',
 }
 export const propertyComponentTypes = Object.values(PropertyComponentType)
+export enum PropertyScope {
+  project = 'project',
+  global = 'global',
+}
+export const propertyScopes = Object.values(PropertyScope)
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const
 export const specifierComponentTypes = ['InputField', 'TextareaField'] as const
 
