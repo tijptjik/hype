@@ -18,7 +18,7 @@ const usernameConfig: Config = {
  * e.g., "quickbluewhale", "cleverpurplecat"
  */
 export function generateRandomUsername(): string {
-  return uniqueNamesGenerator(usernameConfig)
+  return normalizeUsername(uniqueNamesGenerator(usernameConfig))
 }
 
 /**
@@ -30,27 +30,22 @@ export function generateUsernameFromId(userId: string): string {
     seed: userId,
   }
 
-  return uniqueNamesGenerator(seedConfig)
+  return normalizeUsername(uniqueNamesGenerator(seedConfig))
 }
 
 /**
- * Converts a display username to a URL-safe username
- * Removes spaces, special characters, and converts to lowercase
+ * Normalize a username to the app-safe canonical form.
  */
-export function makeUrlSafeUsername(displayUsername: string): string {
-  return displayUsername
+export function normalizeUsername(username: string): string {
+  return username
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric characters
-    .slice(0, 32) // Limit to 32 characters
+    .replace(/[^a-z0-9_]/g, '')
+    .slice(0, 32)
 }
 
 /**
- * Validates that a display username contains no spaces and is not empty
+ * Validates that a username already matches the canonical app-safe format.
  */
-export function validateDisplayUsername(displayUsername: string): boolean {
-  return (
-    displayUsername.trim().length > 0 &&
-    !displayUsername.includes(' ') &&
-    displayUsername.trim() === displayUsername
-  )
+export function validateUsername(username: string): boolean {
+  return /^[a-z0-9_]{1,32}$/.test(username)
 }
