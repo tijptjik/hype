@@ -335,7 +335,9 @@ export const capitalizeFirstLetter = (text: string | null) => {
 
 export const fetchOrThrow = async <T>(url: string): Promise<T> => {
   const response = await fetch(url)
-  if (!response.ok) throw new Error('Network response was not ok')
+  if (!response.ok) {
+    throw new Error(`Network response was not ok for ${url} (${response.status})`)
+  }
   return (await response.json()) as T
 }
 
