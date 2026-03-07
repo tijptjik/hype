@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { hub } from './hub'
+import { organisation } from './organisation'
 import { project } from './project'
 // ENUM
 import {
@@ -31,6 +32,10 @@ export const property = sqliteTable('property', {
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
   projectId: text('projectId').references(() => project.id, {
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+  }),
+  organisationId: text('organisationId').references(() => organisation.id, {
     onDelete: 'cascade',
     onUpdate: 'cascade',
   }),
