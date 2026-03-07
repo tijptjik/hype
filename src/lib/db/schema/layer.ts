@@ -105,7 +105,7 @@ export const layerProperty = sqliteTable('layerProperty', {
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true),
-  isUserContributable: integer('isUserContributed', { mode: 'boolean' })
+  isUserContributable: integer('isUserContributable', { mode: 'boolean' })
     .notNull()
     .default(true),
 })
