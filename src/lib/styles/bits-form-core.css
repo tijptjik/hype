@@ -164,7 +164,7 @@
   }
 
   .bits-theme .bits-form__control-wrap--skeleton-label-covered {
-    min-height: calc(3rem + 1.25rem + 0.375rem + 4px);
+    min-height: calc(3rem + 1.25rem + 0.375rem + 1px);
     margin-top: 0;
   }
 
