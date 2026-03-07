@@ -500,6 +500,7 @@
   "replace": "Replace",
   "use": "Use",
   "contributable": "Contributable",
+  "default_enabled": "Default",
   "number__1": "One",
   "feature__graphemes": "Graphemes",
   "profile__role_type__contributor": "Contributor",

@@ -500,6 +500,7 @@
   "replace": "替換",
   "use": "使用",
   "contributable": "可供用戶貢獻",
+  "default_enabled": "預設啟用",
   "number__1": "一",
   "feature__graphemes": "字素",
   "profile__role_type__contributor": "貢獻者用戶",

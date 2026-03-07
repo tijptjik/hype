@@ -134,6 +134,13 @@
       "when": 1772866164422,
       "tag": "0018_mtr_exit_global_property",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1772873056203,
+      "tag": "0019_property_value_direct_values",
+      "breakpoints": true
     }
   ]
 }
