@@ -16,6 +16,8 @@ import { organisation, organisationI18n, organisationRole } from '$lib/db/schema
 import { FormBoolean } from '../form'
 import { FormI18nRoot, getLocales } from '../constraints'
 import { ImageContextEnvelopeAPI } from './image'
+import { ProjectPropertyFormData, PropertyAdminProfileAPI } from './property'
+import { UserBasic } from './user'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -171,6 +173,7 @@ export const OrganisationEntityFormData = z.object({
   capabilities: CapabilityBase,
   i18n: OrganisationI18nByLocaleFormData,
   userRoles: OrganisationUserRolesFormData,
+  properties: z.array(ProjectPropertyFormData).default([]),
 })
 
 export const OrganisationFormMeta = z.object({
@@ -271,4 +274,11 @@ export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
   ...OrganisationDetailFields.shape,
 })
 
-export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI
+export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
+  userRoles: z
+    .array(OrganisationRoleBase.extend({ user: UserBasic.nullish() }))
+    .default([]),
+  capabilities: CapabilityBase,
+  properties: z.array(PropertyAdminProfileAPI).default([]),
+  publisher: UserBasic.nullish(),
+})
