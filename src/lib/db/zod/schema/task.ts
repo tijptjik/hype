@@ -11,18 +11,40 @@ import { FeatureAPI, FeatureBase, FeatureI18nBase, FeaturePropertyAPI } from './
 import { ProjectBase, ProjectI18nBase } from './project'
 import { OrganisationBase, OrganisationI18nBase } from './organisation'
 import {
-  PropertyBase,
-  PropertyI18nBase,
-  PropertyValueBase,
-  PropertyValueI18nBase,
+  PropertyI18nRecord,
+  PropertyRecord,
+  PropertyValueI18nRecord,
+  PropertyValueRecord,
 } from './property'
 // ENUMS
 import { TaskType, TaskReviewOutcome, TaskReviewAction } from '$lib/enums'
 import { getLocales } from '..'
 
-/* ----------------- */
-// TASK CORE
-/* -------- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. DB / RELATIONAL PRIMITIVES
+//    - TaskBase
+//    - TaskInsert
+//    - TaskUpdate
+//    - TaskImageBase
+//    - TaskImageInsert
+//    - TaskImageUpdate
+//
+// 2. INTERMEDIATE RAW SCHEMAS
+//    - TaskBaseRaw
+//
+// 3. REMOTE PROFILE / API SCHEMAS
+//    - TaskCollectionAPI
+//    - TaskAPI
+//    - TaskInsertAPI
+//    - TaskUpdateAPI
+//    - TaskImageUpdateAPI
+
+// ═══════════════════════
+// 1. DB / RELATIONAL PRIMITIVES
+// ═══════════════════════
 
 export const TaskBase = createSelectSchema(task).extend({
   type: z.enum(Object.values(TaskType) as [string, ...string[]]),
@@ -47,17 +69,13 @@ export const TaskUpdate = createUpdateSchema(task).extend({
     .optional(),
 })
 
-/* ----------------- */
-// TASK RELATIONAL SCHEMAS :: IMAGES
-/* -------- */
-
 export const TaskImageBase = createSelectSchema(taskImage)
 export const TaskImageInsert = createInsertSchema(taskImage)
 export const TaskImageUpdate = createUpdateSchema(taskImage)
 
-/* ----------------- */
-// TASK API SCHEMAS
-/* -------- */
+// ═══════════════════════
+// 2. INTERMEDIATE RAW SCHEMAS
+// ═══════════════════════
 
 export const TaskBaseRaw = TaskBase.extend({
   organisation: OrganisationBase.extend({
@@ -71,11 +89,11 @@ export const TaskBaseRaw = TaskBase.extend({
     properties: z
       .array(
         FeaturePropertyAPI.extend({
-          property: PropertyBase.extend({
-            i18n: z.array(PropertyI18nBase).optional().nullable(),
+          property: PropertyRecord.extend({
+            i18n: z.array(PropertyI18nRecord).optional().nullable(),
           }),
-          propertyValue: PropertyValueBase.extend({
-            i18n: z.array(PropertyValueI18nBase).optional().nullable(),
+          propertyValue: PropertyValueRecord.extend({
+            i18n: z.array(PropertyValueI18nRecord).optional().nullable(),
           })
             .optional()
             .nullable(),
@@ -95,6 +113,10 @@ export const TaskBaseRaw = TaskBase.extend({
   contributor: UserBasic.optional().nullable(),
   reviewer: UserBasic.optional().nullable(),
 })
+
+// ═══════════════════════
+// 3. REMOTE PROFILE / API SCHEMAS
+// ═══════════════════════
 
 export const TaskCollectionAPI = TaskBase.extend({
   organisation: OrganisationBase.extend({
@@ -128,11 +150,11 @@ export const TaskAPI = TaskBase.extend({
     i18n: getLocales(FeatureI18nBase),
     properties: z.array(
       FeaturePropertyAPI.extend({
-        property: PropertyBase.extend({
-          i18n: getLocales(PropertyI18nBase),
+        property: PropertyRecord.extend({
+          i18n: getLocales(PropertyI18nRecord),
         }),
-        propertyValue: PropertyValueBase.extend({
-          i18n: getLocales(PropertyValueI18nBase),
+        propertyValue: PropertyValueRecord.extend({
+          i18n: getLocales(PropertyValueI18nRecord),
         })
           .optional()
           .nullable(),

@@ -9,22 +9,21 @@ import {
   featureImage,
   featureProperty,
   featurePropertyI18n,
+  image,
   userFeature,
 } from '$lib/db/schema/index'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 // ZOD SCHEMAS
 import {
-  PropertyAPI,
-  PropertyBase,
-  PropertyI18nBase,
-  PropertyInsertAPI,
-  PropertyUpdateAPI,
-  PropertyValueI18nBase,
-  PropertyValueBase,
-  PropertyValueAPI,
-  PropertyValueInsertAPI,
-  PropertyValueUpdateAPI,
+  PropertyAdminProfileAPI,
+  PropertyDetailProfileAPI,
+  PropertyI18nRecord,
+  PropertyRecord,
+  PropertyValueAdminProfileAPI,
+  PropertyValueDetailProfileAPI,
+  PropertyValueI18nRecord,
+  PropertyValueRecord,
 } from './property'
 import { UserBasic } from './user'
 // ENUMS
@@ -33,13 +32,47 @@ import { supportedLocales } from '$lib/enums'
 import type { AddressMeta, AddressProperties, ImageCtxEnvelope } from '$lib/types'
 import type { GeometryObject } from 'geojson'
 
-/* ----------------- */
-// LOCAL SCHEMAS (Private - not exported to avoid circular dependencies)
-/* -------- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. DB / RELATIONAL PRIMITIVES
+//    - FeatureBase
+//    - FeatureInsert
+//    - FeatureUpdate
+//    - FeatureI18nBase
+//    - FeatureI18nInsert
+//    - FeatureI18nUpdate
+//    - FeaturePropertyBase
+//    - FeaturePropertyInsert
+//    - FeaturePropertyUpdate
+//    - FeaturePropertyI18nBase
+//    - FeaturePropertyI18nInsert
+//    - FeaturePropertyI18nUpdate
+//    - UserFeatureBase
+//    - UserFeatureInsert
+//    - UserFeatureUpdate
+//
+// 2. REMOTE PROFILE / API SCHEMAS
+//    - FeaturePropertyCollectionAPI
+//    - FeaturePropertyAPI
+//    - FeaturePropertyInsertAPI
+//    - FeaturePropertyUpdateAPI
+//    - FeaturePropertyToMerge
+//    - FeatureCollectionAPI
+//    - FeatureAPI
+//    - FeatureInsertAPI
+//    - FeatureUpdateAPI
+//    - UserFeatureAPI
+//    - UserFeatureInsertAPI
+//    - FeatureClientExt
+//
+// 3. INTERMEDIATE RAW SCHEMAS
+//    - FeatureRaw
 
-/* ----------------- */
-// FEATURE CORE
-/* -------- */
+// ═══════════════════════
+// 1. DB / RELATIONAL PRIMITIVES
+// ═══════════════════════
 
 export const FeatureBase = createSelectSchema(feature)
 export const FeatureInsert = createInsertSchema(feature).extend({
@@ -55,10 +88,6 @@ export const FeatureInsert = createInsertSchema(feature).extend({
 export const FeatureUpdate = createUpdateSchema(feature).extend({
   ...getDefaultConstraints(feature),
 })
-
-/* ----------------- */
-// FEATURE RELATIONAL :: I18N
-/* -------- */
 
 export const FeatureI18nBase = createSelectSchema(featureI18n).extend({
   ...getDefaultConstraints(featureI18n),
@@ -83,10 +112,6 @@ export const FeatureI18nUpdate = createUpdateSchema(featureI18n).extend({
 // TYPE HELPER: Extract the available i18n field keys
 export type FeatureI18nFieldKeys = keyof z.infer<typeof FeatureI18nInsert>
 
-/* ----------------- */
-// FEATURE RELATIONAL SCHEMAS :: PROPERTY CORE SCHEMAS
-/* -------- */
-
 export const FeaturePropertyBase = createSelectSchema(featureProperty).extend({
   // value can be string, number, boolean, or null. Zod schema should reflect this.
   // For simplicity, keeping as string().nullable() but this might need to be z.any() or a union for more flexibility if type is not always string.
@@ -106,10 +131,6 @@ export const FeaturePropertyUpdate = createUpdateSchema(featureProperty).extend(
   featureId: z.string().optional(),
 })
 
-/* ----------------- */
-// FEATURE RELATIONAL SCHEMAS :: PROPERTY I18N
-/* -------- */
-
 export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n)
 export const FeaturePropertyI18nInsert = createInsertSchema(featurePropertyI18n).omit({
   featureId: true,
@@ -117,45 +138,41 @@ export const FeaturePropertyI18nInsert = createInsertSchema(featurePropertyI18n)
 })
 export const FeaturePropertyI18nUpdate = createUpdateSchema(featurePropertyI18n)
 
-/* ----------------- */
-// FEATURE API SCHEMAS :: PROPERTY
-/* -------- */
+// ═══════════════════════
+// 2. REMOTE PROFILE / API SCHEMAS
+// ═══════════════════════
 
 export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
-  property: PropertyAPI.optional(),
+  property: PropertyDetailProfileAPI.optional(),
   i18n: getLocales(FeaturePropertyI18nBase).nullish(),
-  propertyValue: PropertyValueAPI.nullish(),
+  propertyValue: PropertyValueDetailProfileAPI.nullish(),
 })
 
 export const FeaturePropertyAPI = FeaturePropertyBase.extend({
   // Assuming a nested 'property' (the definition) and its i18n
-  property: PropertyAPI.optional(), // The actual Property definition (e.g., name, type)
+  property: PropertyDetailProfileAPI.optional(), // The actual Property definition (e.g., name, type)
   // If FeatureProperty itself has direct translations (e.g. for its 'value' if it's translatable text)
   i18n: getLocales(FeaturePropertyI18nBase).nullish(), // Optional if not all feature properties have i18n
   // If the value points to a PropertyValue entity - used for categorical properties
-  propertyValue: PropertyValueAPI.nullish(),
+  propertyValue: PropertyValueDetailProfileAPI.nullish(),
 })
 
 export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
-  property: PropertyInsertAPI.optional(),
+  property: PropertyAdminProfileAPI.optional(),
   i18n: getLocales(FeaturePropertyI18nInsert).nullish(),
-  propertyValue: PropertyValueInsertAPI.nullish(),
+  propertyValue: PropertyValueAdminProfileAPI.nullish(),
 })
 
 export const FeaturePropertyUpdateAPI = FeaturePropertyUpdate.extend({
-  property: PropertyUpdateAPI.optional(),
+  property: PropertyAdminProfileAPI.optional(),
   i18n: getLocales(FeaturePropertyI18nUpdate).nullish(),
-  propertyValue: PropertyValueUpdateAPI.optional(),
+  propertyValue: PropertyValueAdminProfileAPI.optional(),
 })
 
 export const FeaturePropertyToMerge = FeaturePropertyCollectionAPI.extend({
   id: z.string().optional(),
   i18n: getLocales(FeaturePropertyI18nBase).nullish(),
 })
-
-/* ----------------- */
-// FEATURE RELATIONAL SCHEMAS :: USER
-/* -------- */
 
 export const UserFeatureBase = createSelectSchema(userFeature)
 export const UserFeatureInsert = createInsertSchema(userFeature).extend({
@@ -165,10 +182,6 @@ export const UserFeatureInsert = createInsertSchema(userFeature).extend({
 })
 export const UserFeatureUpdate = createUpdateSchema(userFeature)
 export const UserFeatureUpdateExtended = UserFeatureUpdate.extend({})
-
-/* ----------------- */
-// FEATURE API
-/* -------- */
 
 // Basic feature collection schema - optimized for performance
 export const FeatureCollectionAPI = FeatureBase.omit({
@@ -237,9 +250,9 @@ export const FeatureClientExt = FeatureCollectionAPI.extend({
   }),
 })
 
-/* ----------------- */
-// FEATURE INTERMEDIATE SCHEMAS
-/* -------- */
+// ═══════════════════════
+// 3. INTERMEDIATE RAW SCHEMAS
+// ═══════════════════════
 
 export const FeatureRaw = FeatureBase.extend({
   images: z
@@ -261,12 +274,12 @@ export const FeatureRaw = FeatureBase.extend({
   properties: z
     .array(
       FeaturePropertyBase.extend({
-        property: PropertyBase.extend({
-          i18n: z.array(PropertyI18nBase).optional(),
+        property: PropertyRecord.extend({
+          i18n: z.array(PropertyI18nRecord).optional(),
           values: z
             .array(
-              PropertyValueBase.extend({
-                i18n: z.array(PropertyValueI18nBase).optional(),
+              PropertyValueRecord.extend({
+                i18n: z.array(PropertyValueI18nRecord).optional(),
               }),
             )
             .optional(),
