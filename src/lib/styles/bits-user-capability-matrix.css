@@ -19,7 +19,7 @@
     @apply border-separate;
     border-spacing: 0;
     width: max-content;
-    max-width: calc(14rem + (var(--bits-user-capability-column-count, 1) * 5rem));
+    max-width: none;
   }
 
   .bits-theme .bits-user-capability-matrix__head-cell {
@@ -38,9 +38,9 @@
 
   .bits-theme .bits-user-capability-matrix__head-cell--capability {
     @apply px-1 py-1 align-bottom text-center;
-    width: 5rem;
-    min-width: 5rem;
-    max-width: 5rem;
+    width: max-content;
+    min-width: max-content;
+    max-width: none;
     min-height: 3.25rem;
     height: auto;
   }
@@ -58,7 +58,8 @@
   }
 
   .bits-theme .bits-user-capability-matrix__head-label {
-    @apply block w-full truncate text-center text-xxs tracking-wide normal-case;
+    @apply block w-full text-center text-xxs tracking-wide normal-case;
+    white-space: nowrap;
   }
 
   .bits-theme .bits-user-capability-matrix__sort-buttons {
