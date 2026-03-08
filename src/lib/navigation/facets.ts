@@ -55,7 +55,12 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   Record<FirstClassResource, readonly FacetType[]>
 > = {
   hub: [ADMIN_FACETS.core, ADMIN_FACETS.fields, ADMIN_FACETS.images],
-  organisation: [ADMIN_FACETS.core, ADMIN_FACETS.capabilities, ADMIN_FACETS.images],
+  organisation: [
+    ADMIN_FACETS.core,
+    ADMIN_FACETS.capabilities,
+    ADMIN_FACETS.fields,
+    ADMIN_FACETS.images,
+  ],
   project: [
     ADMIN_FACETS.core,
     ADMIN_FACETS.capabilities,
