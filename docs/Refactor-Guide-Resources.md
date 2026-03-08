@@ -109,6 +109,10 @@
   - `data` from `to<Resource>FormInput(...)`
   - `submitUpdates` built from remote query references
 - Keep hidden input generation explicit and aligned with zod form payload shape.
+- Facet visibility must not unmount form sections:
+  - Do not wrap facet sections in `{#if isFacet}` when those sections contain form inputs.
+  - Use `Main.Section isVisible={...}` (or equivalent mounted-visibility container) so inputs remain in the DOM and submit payloads stay complete.
+  - Reason: conditional unmounting drops hidden inputs (for example `projectId`, `organisationId`, `i18n`) and causes false validation failures on submit.
 - Keep header/status controls wired through page-local handlers only.
 - Ensure action button behavior is container-aware:
   - left/right section constraints explicit
