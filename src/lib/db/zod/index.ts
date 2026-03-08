@@ -67,14 +67,14 @@ import { OrganisationRoleBase } from './schema/organisation'
 import { ProjectRoleBase } from './schema/project'
 import { HubRoleBase } from './schema/hub'
 
-export const UserLayerAPI = UserLayerRecord.extend({
+export const UserLayerDetailProfileAPI = UserLayerRecord.extend({
   user: UserBase.optional(),
   layer: UserLayerRecord.optional(),
 })
 
 // There is no UserInsertAPI because users are created by AuthJS
 
-export const UserLayerUpdateAPI = UserLayerRecordUpdate.extend({
+export const SetUserLayerDefaultsItemSchema = UserLayerRecordUpdate.extend({
   // These are required for the upsert operation
   userId: z.string(),
   layerId: z.string(),
