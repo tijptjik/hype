@@ -129,6 +129,21 @@ export {
   ensureProjectCommandAllowed,
   projectPolicyMap,
 } from './project'
+export {
+  toLayerAuthActor,
+  resolveLayerListReadPolicy,
+  resolveLayerListReadScope,
+  resolveLayerResourceVisibilityPolicy,
+  authorizeLayerListForContext,
+  authorizeLayerReadForProbe,
+  authorizeLayerCreateForSubmission,
+  authorizeLayerUpdateForSubmission,
+  authorizeLayerPublishForSubmission,
+  authorizeLayerDeleteForSubmission,
+  ensureLayerCommandAllowed,
+  resolveLayerActionPermissions,
+  resolveLayerProjectSelectionScope,
+} from './layer'
 export { authorizeImageList, authorizeImageRead } from './image'
 export { canSearchUsers, canOverrideUserSearchArchivedFilter } from './user'
 

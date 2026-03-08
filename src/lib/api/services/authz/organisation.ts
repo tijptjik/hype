@@ -184,6 +184,7 @@ export const toOrganisationSubmittedFields = (
   if ('url' in data) fields.push('url')
   if ('i18n' in data) fields.push('i18n')
   if ('userRoles' in data) fields.push('userRoles')
+  if ('properties' in data) fields.push('properties')
   return fields
 }
 
