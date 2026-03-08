@@ -176,6 +176,13 @@
       "when": 1772932140000,
       "tag": "0024_merge_project_grade_into_global_grade",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1772934000000,
+      "tag": "0025_property_scope_hub_cleanup",
+      "breakpoints": true
     }
   ]
 }
