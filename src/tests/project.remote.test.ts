@@ -11,6 +11,7 @@ const {
   mockUpdateProjectByIdWithConcurrency,
   mockCascadeProjectOrganisationToDescendants,
   mockUpdatePropertiesWithRelated,
+  mockListResolvedProjectProperties,
   mockUpdateI18n,
   mockSyncProjectUserRoles,
   mockAuthorizeProjectUpdateForSubmission,
@@ -31,6 +32,7 @@ const {
   mockUpdateProjectByIdWithConcurrency: vi.fn(async () => null),
   mockCascadeProjectOrganisationToDescendants: vi.fn(async () => undefined),
   mockUpdatePropertiesWithRelated: vi.fn(async () => []),
+  mockListResolvedProjectProperties: vi.fn(async () => []),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncProjectUserRoles: vi.fn(async () => undefined),
   mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
@@ -260,7 +262,7 @@ vi.mock('$lib/db/services/project', () => ({
 
 vi.mock('$lib/db/services/property', () => ({
   createPropertiesWithRelated: vi.fn(async () => undefined),
-  listResolvedProjectProperties: vi.fn(async () => []),
+  listResolvedProjectProperties: mockListResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject: vi.fn(async () => undefined),
   syncProjectInheritedProperties: vi.fn(async () => undefined),
   updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
@@ -356,6 +358,7 @@ describe('project.remote form organisation move authz', () => {
       id: 'project-1',
       modifiedAt: '2026-02-24T01:00:00.000Z',
     })
+    mockListResolvedProjectProperties.mockResolvedValue([])
     mockAuthorizeProjectUpdateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeProjectCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeProjectDeleteForSubmission.mockReturnValue({ allowed: true })
@@ -537,5 +540,53 @@ describe('project.remote form organisation move authz', () => {
         modifiedAt: '2026-02-24T01:00:00.000Z',
       },
     })
+  })
+
+  it('preserves existing local project properties when submitted snapshot omits them', async () => {
+    mockListResolvedProjectProperties.mockResolvedValue([
+      {
+        id: 'p-local-existing',
+        key: 'existingLocal',
+        type: 'classifier',
+        rank: 0,
+        scope: 'project',
+        projectId: 'project-1',
+        hubId: null,
+        organisationId: null,
+        component: 'SelectField',
+        isTranslatable: true,
+        isDefaultEnabled: false,
+        values: [],
+        i18n: { en: {}, zhHans: {}, zhHant: {} },
+      },
+    ] as any)
+
+    const payload = buildUpdatePayload('org-1')
+    payload.data.properties = [
+      {
+        id: 'g-global-1',
+        key: 'globalField',
+        type: 'classifier',
+        rank: 0,
+        scope: 'hub',
+        hubId: 'hub-a',
+        values: [],
+        i18n: { en: {}, zhHans: {}, zhHant: {} },
+      },
+    ] as any
+
+    await remote.projectForm(payload, throwingInvalid)
+
+    expect(mockUpdatePropertiesWithRelated).toHaveBeenCalledWith(
+      expect.any(Object),
+      [
+        expect.objectContaining({
+          id: 'p-local-existing',
+          scope: 'project',
+          projectId: 'project-1',
+        }),
+      ],
+      'project-1',
+    )
   })
 })

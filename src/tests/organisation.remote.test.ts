@@ -20,6 +20,7 @@ const {
   mockUpdateOrganisationArchivedStateById,
   mockLoadOrganisation,
   mockListOrganisations,
+  mockCascadeOrganisationCapabilitiesToProjects,
 } = vi.hoisted(() => ({
   mockGetRequestEvent: vi.fn(),
   mockSetupRequestHandler: vi.fn(),
@@ -42,6 +43,7 @@ const {
   mockUpdateOrganisationArchivedStateById: vi.fn(),
   mockLoadOrganisation: vi.fn(),
   mockListOrganisations: vi.fn(),
+  mockCascadeOrganisationCapabilitiesToProjects: vi.fn(async () => undefined),
 }))
 
 vi.mock(
@@ -174,6 +176,11 @@ vi.mock('$lib/db/services/organisation', () => ({
 
 vi.mock('$lib/db/services/property', () => ({
   syncOrganisationProperties: vi.fn(async () => undefined),
+}))
+
+vi.mock('$lib/db/services/project', () => ({
+  cascadeOrganisationCapabilitiesToProjects:
+    mockCascadeOrganisationCapabilitiesToProjects,
 }))
 
 vi.mock('$lib/db/schema', () => ({
@@ -404,5 +411,54 @@ describe('organisation.remote authz', () => {
     await expect(
       remote.publishOrganisation({ id: 'org-1', state: true }),
     ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('organisationForm cascades capability removals to projects and project roles', async () => {
+    const organisationServices = await import('$lib/db/services/organisation')
+    const probeOrganisationForUpdate = vi.mocked(
+      organisationServices.probeOrganisationForUpdate,
+    )
+    const updateOrganisationByIdWithConcurrency = vi.mocked(
+      organisationServices.updateOrganisationByIdWithConcurrency,
+    )
+
+    probeOrganisationForUpdate.mockResolvedValue({
+      id: 'org-1',
+      code: 'org-code',
+      hubId: 'hub-a',
+      capabilities: {
+        manageBakeries: { i18n: {} },
+        manageVolunteers: { i18n: {} },
+      },
+      modifiedAt: '2026-03-08T00:00:00.000Z',
+    })
+    updateOrganisationByIdWithConcurrency.mockResolvedValue({
+      id: 'org-1',
+      modifiedAt: '2026-03-08T00:00:01.000Z',
+    })
+
+    await remote.organisationForm({
+      meta: {
+        id: 'org-1',
+        mode: 'update',
+        updatedAt: '2026-03-08T00:00:00.000Z',
+      },
+      data: {
+        code: 'org-code',
+        url: '',
+        i18n: { en: {}, zhHans: {}, zhHant: {} },
+        userRoles: [{ userId: 'u-1', role: 'owner' }],
+        capabilities: {
+          manageBakeries: { i18n: {} },
+        },
+      },
+    })
+
+    expect(mockCascadeOrganisationCapabilitiesToProjects).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        organisationId: 'org-1',
+      }),
+    )
   })
 })
