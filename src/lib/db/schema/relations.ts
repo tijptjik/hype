@@ -60,6 +60,7 @@ export const organisationRelations = relations(organisation, ({ one, many }) => 
     fields: [organisation.hubId],
     references: [hub.id],
   }),
+  properties: many(property),
   projects: many(project),
   tasks: many(task),
 }))
@@ -194,6 +195,10 @@ export const propertyRelations = relations(property, ({ one, many }) => ({
   project: one(project, {
     fields: [property.projectId],
     references: [project.id],
+  }),
+  organisation: one(organisation, {
+    fields: [property.organisationId],
+    references: [organisation.id],
   }),
   hub: one(hub, {
     fields: [property.hubId],
