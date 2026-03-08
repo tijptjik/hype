@@ -14,9 +14,59 @@ import {
 } from '$lib/enums'
 import { UserBase } from './user'
 
-/* ----------------- */
-// IMAGE CORE SCHEMAS
-/* -------- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. SUPPORTING SCHEMAS
+//    - EXIFBasic
+//
+// 2. DB / RELATIONAL PRIMITIVES
+//    - ImageBase
+//    - ImageBasic
+//    - ImageInsert
+//    - ImageUpdate
+//    - FeatureImageBase
+//    - FeatureImageInsert
+//    - FeatureImageUpdate
+//
+// 3. REMOTE PROFILE SCHEMAS
+//    - ImageProfile
+//    - ImageListProfileAPI
+//    - ImageCardProfileAPI
+//    - ImageDetailProfileAPI
+//    - ImageAdminProfileAPI
+//    - ImageContextEnvelopeAPI
+//
+// 4. REMOTE MUTATION SCHEMAS
+//    - FeatureImageAPI
+//    - ImageAPI
+//    - ImageInsertAPI
+//    - ImageInsertWithFeatureAPI
+//    - ImageInsertWithProjectOrOrganisationAPI
+//    - ImageInsertWithHubAPI
+//    - ImageUpdateAPI
+//    - FeatureImageUpdateAPI
+//
+// 5. INTERMEDIATE SCHEMAS
+//    - ImageFlat
+//    - ImageFlatUpdate
+//    - ImageBaseRaw
+//
+// 6. REMOTE FUNCTION SCHEMAS
+//    - ImageRequestMetaSchema
+//    - ImagesByContextSchema
+//    - ImagesByIdsSchema
+//    - ImageByIdSchema
+//    - UpdateImageSchema
+//    - SetImageIntentSchema
+//    - SetImagePublishedSchema
+//    - DeleteImageSchema
+//    - CloudinarySignatureSchema
+
+// ═══════════════════════
+// 1. SUPPORTING SCHEMAS
+// ═══════════════════════
 
 export const EXIFBasic = z.object({
   Copyright: z.string().nullish(),
@@ -37,6 +87,10 @@ export const EXIFBasic = z.object({
   LensInfo: z.string().nullish(),
   RawFileName: z.string().nullish(),
 })
+
+// ═══════════════════════
+// 2. DB / RELATIONAL PRIMITIVES
+// ═══════════════════════
 
 export const ImageBase = createSelectSchema(image).extend({
   metadata: EXIFBasic.nullish(),
@@ -78,9 +132,57 @@ export const FeatureImageInsert = createInsertSchema(featureImage).extend({
 
 export const FeatureImageUpdate = createUpdateSchema(featureImage)
 
-/* ----------------- */
-// IMAGE API SCHEMAS
-/* -------- */
+// ═══════════════════════
+// 3. REMOTE PROFILE SCHEMAS
+// ═══════════════════════
+
+const ImageListFields = ImageBase.pick({
+  id: true,
+  cdn: true,
+  env: true,
+  cdnId: true,
+  publicId: true,
+  version: true,
+  presentationMode: true,
+  capturedAt: true,
+  contributorId: true,
+  createdAt: true,
+  modifiedAt: true,
+})
+
+export const ImageProfile = z.enum(['list', 'card', 'detail', 'admin'])
+
+export const ImageListProfileAPI = ImageListFields
+export const ImageCardProfileAPI = ImageListProfileAPI
+// Alias for compatibility with organisation profile semantics.
+export const ImageDetailProfileAPI = ImageCardProfileAPI
+const ImageAdminFields = ImageBase.pick({
+  originalFilename: true,
+  originalExtension: true,
+  originalWidth: true,
+  originalHeight: true,
+  cameraModel: true,
+  credit: true,
+  latitude: true,
+  longitude: true,
+})
+export const ImageAdminProfileAPI = ImageDetailProfileAPI.extend({
+  ...ImageAdminFields.shape,
+})
+
+export const ImageContextEnvelopeAPI = z.object({
+  ctxType: z.string(), // ImageContextType
+  ctxId: z.string(), // Id
+  // New envelope contract: profile-based image payloads only.
+  image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
+  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  isPublished: z.boolean().nullish(),
+  publishedAt: z.string().nullish(),
+})
+
+// ═══════════════════════
+// 4. REMOTE MUTATION SCHEMAS
+// ═══════════════════════
 
 export const FeatureImageAPI = FeatureImageBase.extend({
   feature: z.lazy(() => FeatureBase),
@@ -102,20 +204,6 @@ export const ImageAPI = ImageBase.extend({
   organisationId: z.string().nullish(),
   projectId: z.string().nullish(),
   layerId: z.string().nullish(),
-})
-
-const ImageListFields = ImageBase.pick({
-  id: true,
-  cdn: true,
-  env: true,
-  cdnId: true,
-  publicId: true,
-  version: true,
-  presentationMode: true,
-  capturedAt: true,
-  contributorId: true,
-  createdAt: true,
-  modifiedAt: true,
 })
 
 export const ImageInsertAPI = ImageInsert.extend({
@@ -151,19 +239,9 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
   image: ImageBase,
 })
 
-export const ImageContextEnvelopeAPI = z.object({
-  ctxType: z.string(), // ImageContextType
-  ctxId: z.string(), // Id
-  // New envelope contract: profile-based image payloads only.
-  image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
-  isPublished: z.boolean().nullish(),
-  publishedAt: z.string().nullish(),
-})
-
-/* ----------------- */
-// INTERMEDIATE
-/* -------- */
+// ═══════════════════════
+// 5. INTERMEDIATE SCHEMAS
+// ═══════════════════════
 
 export const ImageFlat = ImageBase.extend({
   featureId: z.string().nullish(),
@@ -187,9 +265,9 @@ export const ImageBaseRaw = ImageBase.extend({
   contributor: UserBase,
 })
 
-/* ----------------- */
-// SVELTE REMOTE FUNCTION REFACTOR
-/* -------- */
+// ═══════════════════════
+// 6. REMOTE FUNCTION SCHEMAS
+// ═══════════════════════
 
 export const ImageRequestMetaSchema = z
   .object({
@@ -197,25 +275,6 @@ export const ImageRequestMetaSchema = z
     profile: z.enum(['list', 'card', 'detail', 'admin']).optional(),
   })
   .optional()
-
-export const ImageProfile = z.enum(['list', 'card', 'detail', 'admin'])
-
-export const ImageListProfileAPI = ImageListFields
-// Alias for compatibility with organisation profile semantics.
-export const ImageDetailProfileAPI = ImageListProfileAPI
-const ImageAdminFields = ImageBase.pick({
-  originalFilename: true,
-  originalExtension: true,
-  originalWidth: true,
-  originalHeight: true,
-  cameraModel: true,
-  credit: true,
-  latitude: true,
-  longitude: true,
-})
-export const ImageAdminProfileAPI = ImageDetailProfileAPI.extend({
-  ...ImageAdminFields.shape,
-})
 
 export const ImageContextTypeExtendedSchema = z.enum([
   ...Object.values(ImageContextResource),
