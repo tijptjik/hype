@@ -28,6 +28,7 @@ import {
   toLookupConditions,
   toRequestedListState,
 } from '$lib/api/services/organisation'
+import { normalizeSubmittedPropertyRanks } from '$lib/api/services/project'
 import {
   getDuplicateValues,
   hasRoleMembershipChanged,
@@ -56,6 +57,7 @@ import {
   toEntityResponseShape,
   toListResponseShape,
 } from '$lib/db/services/organisation'
+import { syncOrganisationProperties } from '$lib/db/services/property'
 // UTILS
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // SCHEMA
@@ -280,9 +282,17 @@ export const organisationForm = guardedForm(
       invalid(issue(toIssueDetailMessage('INVALID_MODE')))
     }
     const normalizedCode = data.code.trim()
-    const activeHubId = event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null)
+    const activeHubId = event.locals.hub?.isCore
+      ? null
+      : ((event.locals.hub as { id?: string } | null | undefined)?.id ?? null)
     const isExplicitCreateMode = mode === 'create'
     const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
+    const hasSubmittedPropertiesField = Object.hasOwn(data, 'properties')
+    const submittedProperties = Array.isArray(data.properties) ? data.properties : []
+    const normalizedSubmittedProperties =
+      hasSubmittedPropertiesField && Array.isArray(data.properties)
+        ? normalizeSubmittedPropertyRanks(submittedProperties)
+        : []
     const duplicateSubmittedRoleUserIds = getDuplicateValues(
       submittedRoles.map(userRole => userRole.userId),
     )
@@ -357,6 +367,12 @@ export const organisationForm = guardedForm(
         toPersistedOrganisationUserRoles(data.userRoles, created.id),
         created.id,
       )
+      if (normalizedSubmittedProperties.length > 0) {
+        await syncOrganisationProperties(db, {
+          organisationId: created.id,
+          properties: normalizedSubmittedProperties,
+        })
+      }
 
       return toCreatedResponseShape(created)
     }
@@ -450,6 +466,12 @@ export const organisationForm = guardedForm(
       toPersistedOrganisationUserRoles(data.userRoles, current.id),
       current.id,
     )
+    if (hasSubmittedPropertiesField) {
+      await syncOrganisationProperties(db, {
+        organisationId: current.id,
+        properties: normalizedSubmittedProperties,
+      })
+    }
 
     // Return persisted identity and write token.
     return toCreatedResponseShape(persisted)

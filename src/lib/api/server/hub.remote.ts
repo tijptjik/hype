@@ -23,6 +23,7 @@ import {
   toQueryConditions,
   toRequestedListState,
 } from '$lib/api/services/hub'
+import { normalizeSubmittedPropertyRanks } from '$lib/api/services/project'
 // AUTHORIZATION
 import {
   authorizeHubReadForProbe,
@@ -60,6 +61,7 @@ import {
   getHub as loadHub,
   syncHubOrganisations,
 } from '$lib/db/services/hub'
+import { syncHubGlobalProperties } from '$lib/db/services/property'
 // API UTILS
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // SCHEMA
@@ -220,6 +222,15 @@ export const getHub = getHubQuery as typeof getHubQuery &
  * - Role and organisation scope checks are enforced before persistence.
  */
 export const hubForm = guardedForm('unchecked', async (input, ctx) => {
+  const rawData =
+    input && typeof input === 'object' && 'data' in input
+      ? (input as { data?: unknown }).data
+      : undefined
+  const hasSubmittedPropertiesField =
+    Boolean(rawData) &&
+    typeof rawData === 'object' &&
+    Object.hasOwn(rawData, 'properties')
+
   // Parse and normalize submitted form input.
   const params = HubFormData.parse(input)
   const { db, user, userRoles, invalid } = ctx
@@ -238,6 +249,11 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   const submittedOrganisations = Array.isArray(data.organisations)
     ? data.organisations
     : []
+  const submittedProperties = Array.isArray(data.properties) ? data.properties : []
+  const normalizedSubmittedProperties =
+    hasSubmittedPropertiesField && Array.isArray(data.properties)
+      ? normalizeSubmittedPropertyRanks(submittedProperties)
+      : []
 
   const duplicateSubmittedRoleUserIds = getDuplicateValues(
     submittedRoles.map(userRole => userRole.userId),
@@ -295,6 +311,10 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     await createI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), created.id)
     await createHubUserRoles(db, submittedRoles, created.id)
     await syncHubOrganisations(db, created.id, submittedOrganisations)
+    await syncHubGlobalProperties(db, {
+      hubId: created.id,
+      properties: normalizedSubmittedProperties,
+    })
 
     return toCreatedResponseShape(created)
   }
@@ -385,6 +405,12 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   await updateI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), current.id)
   await syncHubUserRoles(db, submittedRoles, current.id)
   await syncHubOrganisations(db, current.id, submittedOrganisations)
+  if (hasSubmittedPropertiesField) {
+    await syncHubGlobalProperties(db, {
+      hubId: current.id,
+      properties: normalizedSubmittedProperties,
+    })
+  }
 
   // Return persisted identity and write token.
   return toCreatedResponseShape(persisted)

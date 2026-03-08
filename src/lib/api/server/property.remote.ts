@@ -15,6 +15,7 @@ import { authorizeProjectReadForProbe, toAuthMessage } from '$lib/api/services/a
 import { property } from '$lib/db/schema'
 import {
   listProperties,
+  listResolvedProjectProperties,
   getProperty as loadProperty,
   toResponseShape,
 } from '$lib/db/services/property'
@@ -190,12 +191,10 @@ export const getProjectProperties = guardedQuery(
       throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
-    const rows = await listProperties(db, propertyCollectionWithRelations, [
-      eq(property.projectId, params.projectId),
-    ])
-
     return {
-      data: rows.map(row => toPropertyResponse(row)).sort((a, b) => a.rank - b.rank),
+      data: (await listResolvedProjectProperties(db, params.projectId)).sort(
+        (a, b) => a.rank - b.rank,
+      ),
       meta: {
         isAdminRequest: ctx.isAdminRequest,
         projectId: params.projectId,
