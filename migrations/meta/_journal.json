@@ -162,6 +162,20 @@
       "when": 1772893596255,
       "tag": "0022_breadline_project_capabilities",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1772928235324,
+      "tag": "0023_breadline_hub_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1772932140000,
+      "tag": "0024_merge_project_grade_into_global_grade",
+      "breakpoints": true
     }
   ]
 }
