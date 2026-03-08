@@ -10,8 +10,6 @@ import * as schema from '$lib/db/schema/index'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
-// SERVICES
-import { hubEntityWithRelations, toHubResponseShape } from '$lib/api/services/hub'
 // TYPES
 import type { HubOptsExtended, Session, SessionUser } from '$lib/types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
@@ -47,6 +45,13 @@ const handle_cors = (async ({ event, resolve }) => {
  * It is used to filter the data in the database.
  */
 const handle_hub: Handle = async ({ event, resolve }) => {
+  const hubServices = await import('$lib/api/services/hub')
+  const { getHubFromDomain } = hubServices
+  const toHubShape =
+    typeof hubServices.toHubResponseShape === 'function'
+      ? hubServices.toHubResponseShape
+      : (row: unknown) => row
+
   // Get host from headers
   const host = event.request.headers.get('host')
 
@@ -54,8 +59,11 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   const hubCode = event.platform?.env?.PUBLIC_HUB_CODE
 
   // Parse hub info from domain without DB lookup
-  const { getHubFromDomain } = await import('$lib/api/services/hub')
-  const hubOpts = getHubFromDomain(host, hubCode)
+  const hubOpts = getHubFromDomain(host, hubCode) as Partial<HubOptsExtended> & {
+    code?: string
+    domain?: string | null
+    isCore?: boolean
+  }
 
   // If on Core hub, don't lookup the hub in the database
   if (hubOpts.isCore) {
@@ -70,20 +78,26 @@ const handle_hub: Handle = async ({ event, resolve }) => {
 
   if (db && event.locals && hubOpts.code) {
     const hubDb = await db.query.hub.findFirst({
-      with: hubEntityWithRelations,
+      with: {
+        i18n: true,
+        image: true,
+      },
       where: eq(schema.hub.code, hubOpts.code),
     })
     if (hubDb) {
-      const hub = toHubResponseShape(hubDb as never, 'detail') as HubOptsExtended
+      const hub = toHubShape(hubDb as never, 'list') as HubOptsExtended
       event.locals.hub = hub
     }
   } else if (db && event.locals && hubOpts.domain) {
     const hubDb = await db.query.hub.findFirst({
-      with: hubEntityWithRelations,
+      with: {
+        i18n: true,
+        image: true,
+      },
       where: eq(schema.hub.domain, hubOpts.domain),
     })
     if (hubDb) {
-      const hub = toHubResponseShape(hubDb as never, 'detail') as HubOptsExtended
+      const hub = toHubShape(hubDb as never, 'list') as HubOptsExtended
       event.locals.hub = hub
     }
   } else {
