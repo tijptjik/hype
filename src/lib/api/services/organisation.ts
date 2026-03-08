@@ -70,6 +70,16 @@ export const getOrganisationWithRelations = (
       publisher: {
         columns: userColumnsWithPrivacyProtected,
       },
+      properties: {
+        with: {
+          i18n: true,
+          values: {
+            with: {
+              i18n: true,
+            },
+          },
+        },
+      },
       ...(isSuperAdmin ? { hub: true } : {}),
     }
   }
@@ -268,7 +278,7 @@ export const assertPermissionsToCreateOrganisation = (
 export const assertPermissionsToUpdateOrganisation = (
   user: SessionUser,
   request: Request,
-  formData: OrganisationDB,
+  formData: Record<string, unknown> & { id?: string },
   userRoles: UserRoleDisco[],
 ) => {
   // Run all access control assertions
@@ -276,7 +286,7 @@ export const assertPermissionsToUpdateOrganisation = (
     () => assertUserLoggedIn(user as any),
     () => assertAdminRequest(request),
     () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, formData.id!),
-    () => assertIsCoreInclusiveModifiedBySuperAdmin(user, formData),
+    () => assertIsCoreInclusiveModifiedBySuperAdmin(user, formData as any),
   )
 
   if (assertionError) return assertionError
@@ -311,7 +321,7 @@ export const assertCodeUnique = async (
  */
 export const isAccessLostUponSuccess = (
   user: SessionUser,
-  formData: OrganisationNew,
+  formData: { id?: string; userRoles: UserRoleDisco[] },
   userRoles?: UserRoleDisco[],
 ) => {
   const userRolesToCheck = userRoles || formData.userRoles
@@ -319,7 +329,7 @@ export const isAccessLostUponSuccess = (
     !(userRolesToCheck as UserRoleDisco[]).some(
       role =>
         role.type === 'organisation' &&
-        role.organisationId === formData.id &&
+        role.organisationId === (formData as { id?: string }).id &&
         role.userId === user.id,
     ) && !user.superAdmin
   )
