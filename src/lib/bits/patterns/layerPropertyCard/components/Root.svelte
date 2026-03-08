@@ -1,9 +1,9 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
 import { Card } from '$lib/bits/custom'
-import type { LayerCardRootProps } from '../layerCard.types'
+import type { LayerPropertyCardRootProps } from '../layerPropertyCard.types'
 
-type Props = LayerCardRootProps & { children?: Snippet }
+type Props = LayerPropertyCardRootProps & { children?: Snippet }
 
 let { class: className = '', children }: Props = $props()
 </script>

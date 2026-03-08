@@ -1,19 +1,21 @@
-export interface LayerCardWrapperProps {
+export interface LayerPropertyCardWrapperProps {
   class?: string
   isAnimated?: boolean
+  flipDisabled?: boolean
 }
 
-export interface LayerCardRootProps {
+export interface LayerPropertyCardRootProps {
   class?: string
 }
 
-export interface LayerCardBodyProps {
+export interface LayerPropertyCardBodyProps {
   name?: string | null
-  code?: string | null
+  scopeLabel?: string | null
+  scopeTone?: 'global' | 'hub' | 'org' | 'project'
   class?: string
 }
 
-export interface LayerCardActionsProps {
+export interface LayerPropertyCardActionsProps {
   isVisible: boolean
   isUserContributable: boolean
   isEditing?: boolean
