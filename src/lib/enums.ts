@@ -234,7 +234,7 @@ export const propertyComponentTypes = Object.values(PropertyComponentType)
 export enum PropertyScope {
   project = 'project',
   organisation = 'organisation',
-  global = 'global',
+  hub = 'hub',
 }
 export const propertyScopes = Object.values(PropertyScope)
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const

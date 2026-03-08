@@ -203,9 +203,10 @@ export const ProjectPropertyValueFormData = z.object({
 
 export const ProjectPropertyFormData = z.object({
   id: z.string().optional(),
-  projectId: z.string().optional(),
+  scope: z.enum(['hub', 'organisation', 'project']).default('project'),
   hubId: z.string().nullish().optional(),
-  scope: z.enum(['project', 'global']).default('project'),
+  organisationId: z.string().nullish().optional(),
+  projectId: z.string().optional(),
   isDefaultEnabled: FormBoolean.default(false),
   type: z.string().min(1),
   isTranslatable: FormBoolean.optional(),
