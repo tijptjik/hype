@@ -183,6 +183,13 @@
       "when": 1772934000000,
       "tag": "0025_property_scope_hub_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1772935200000,
+      "tag": "0026_backfill_hub_property_default_enabled",
+      "breakpoints": true
     }
   ]
 }
