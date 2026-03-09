@@ -608,6 +608,30 @@ const formLevelIssues = $derived.by((): string[] => {
   return toFormLevelIssueMessages(visibleAllIssues)
 })
 
+const parentOrganisationIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'organisationId'
+    })
+    .map(toIssueMessage)
+    .filter((message): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
+
+const userRoleSectionIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'userRoles'
+    })
+    .map(toIssueMessage)
+    .filter((message): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
+
 const facetIssueState = $derived.by(() =>
   resolveFacetTabsWithIssues({
     issues: visibleAllIssues,
@@ -1763,6 +1787,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
+            issues={userRoleSectionIssues}
             userRoles={projectUserRoles as any}
             {hiddenUserIdInputAttrs}
             {roleFieldNameByUserId}
@@ -1788,6 +1813,7 @@ $effect(() => {
             <FormParentOrganisationSection
               title="Parent Organisation"
               subtitle="This project belongs to"
+              issues={parentOrganisationIssues}
               parent={selectedParentOrganisation as any}
               hiddenOrganisationInputAttrs={hiddenParentOrganisationInputAttrs}
               {isEditing}

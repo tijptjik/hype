@@ -2,8 +2,10 @@
 import { slide } from 'svelte/transition'
 import { Button } from '$lib/bits/core'
 import { Search, SectionHeader } from '$lib/bits/custom'
+import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 import { OrganisationCard } from '$lib/bits/patterns/organisationCard'
 import { getImageSrc } from '$lib/client/services/image'
+import { m } from '$lib/i18n'
 import ReplaceIcon from 'virtual:icons/lucide/replace'
 import XIcon from 'virtual:icons/lucide/x'
 import type {
@@ -14,6 +16,7 @@ import type {
 let {
   title,
   subtitle,
+  issues = [],
   parent,
   hiddenOrganisationInputAttrs = null,
   isEditing = true,
@@ -63,6 +66,13 @@ $effect(() => {
 })
 
 $effect(() => {
+  if (!showModeUi) return
+  if (!isSubmitRequested) return
+  if (issues.length === 0) return
+  isAdding = true
+})
+
+$effect(() => {
   if (hasAutoOpenedAdding) return
   if (!startInAddingMode) return
   if (!showModeUi) return
@@ -74,13 +84,16 @@ $effect(() => {
 
 <section class={`bits-form__section bits-form__hub-orgs ${className}`}>
   <SectionHeader {title} description={subtitle} class="bits-form__hub-orgs-header">
+    {#snippet center()}
+      <SectionHeaderPrimitive.Issues {issues} />
+    {/snippet}
     {#snippet right()}
       {#if isEditing}
         <div
           class="bits-form__hub-orgs-header-actions flex flex-row items-center justify-end gap-0"
         >
           <Button
-            text={isAdding ? 'Cancel' : 'Replace'}
+            text={isAdding ? m.cancel() : m.replace()}
             style="ghost"
             color="light"
             size="sm"
@@ -100,7 +113,7 @@ $effect(() => {
       class="bits-form__hub-orgs-search"
     >
       <Search
-        placeholder="Search organisations..."
+        placeholder={m.forms__search_placeholder()}
         focusOnMount={true}
         onInput={onSearchOrganisations as any}
         excludeIds={currentParentId ? [currentParentId] : []}

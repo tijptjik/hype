@@ -261,6 +261,17 @@ const visibleAllIssues = $derived.by((): unknown[] =>
 const formLevelIssues = $derived.by((): string[] => {
   return toFormLevelIssueMessages(visibleAllIssues)
 })
+const userRoleSectionIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'userRoles'
+    })
+    .map(toIssueMessage)
+    .filter((message: string | null): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
 const capabilityIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
     .filter(issue => {
@@ -1044,6 +1055,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
+            issues={userRoleSectionIssues}
             isSubmitting={formCtx.submitting}
             isSubmitRequested={formCtx.isSubmitRequested}
             startInAddingMode={isNewOrganisationRef}

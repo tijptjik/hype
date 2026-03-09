@@ -26,6 +26,7 @@ export interface ParentSectionProjectItem {
 export interface FormParentSectionProps {
   title: string
   subtitle?: string
+  issues?: string[]
   parent: ParentSectionOrganisationItem | null
   hiddenOrganisationInputAttrs?: Record<string, unknown> | null
   isEditing?: boolean

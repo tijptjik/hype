@@ -272,14 +272,20 @@ const visibleAllIssues = $derived.by((): unknown[] =>
 )
 
 const formLevelIssues = $derived.by((): string[] => {
-  const isPropertyIssue = (issue: unknown): boolean => {
-    if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
-    const path = (issue as { path?: unknown }).path
-    return Array.isArray(path) && path[0] === 'data' && path[1] === 'properties'
-  }
-
   const messages = visibleAllIssues
-    .filter(issue => isFormLevelIssue(issue) || !isPropertyIssue(issue))
+    .filter(issue => isFormLevelIssue(issue))
+    .map(toIssueMessage)
+    .filter((message: string | null): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
+
+const userRoleSectionIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'userRoles'
+    })
     .map(toIssueMessage)
     .filter((message: string | null): message is string => Boolean(message))
   return Array.from(new Set(messages))
@@ -1111,6 +1117,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
+            issues={userRoleSectionIssues}
             userRoles={hubUserRoles as any}
             {roleFieldNameByUserId}
             {hiddenUserIdInputAttrs}

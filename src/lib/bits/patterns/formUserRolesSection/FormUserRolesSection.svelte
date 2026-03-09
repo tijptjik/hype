@@ -2,6 +2,7 @@
 import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
 import { SectionHeader, Search } from '$lib/bits/custom'
+import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 import { OrganisationRoleType } from '$lib/enums'
 import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import * as FormUserRolesSectionPrimitive from './components'
@@ -13,6 +14,7 @@ import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types
 let {
   title,
   subtitle,
+  issues = [],
   userRoles,
   hiddenUserIdInputAttrs = [],
   roleFieldNameByUserId = {},
@@ -112,6 +114,14 @@ $effect(() => {
 })
 
 $effect(() => {
+  if (!showModeUi) return
+  if (!isSubmitRequested) return
+  if (issues.length === 0) return
+  isAdding = true
+  isRemoving = false
+})
+
+$effect(() => {
   if (isSubmitting) return
   stableRoles = sortedRoles
 })
@@ -128,6 +138,9 @@ $effect(() => {
 
 <section class={rootClass}>
   <SectionHeader {title} description={subtitle} class="flex-nowrap items-center">
+    {#snippet center()}
+      <SectionHeaderPrimitive.Issues {issues} />
+    {/snippet}
     {#snippet right()}
       <FormUserRolesSectionPrimitive.Actions
         {isAdding}

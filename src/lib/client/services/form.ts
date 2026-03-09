@@ -676,14 +676,13 @@ export function toUniqueIssueMessages(issues: unknown[] | undefined | null): str
 
 /**
  * Classifies whether an issue should be surfaced at the form level.
- * Used by editor pages to keep section headers focused on high-level blocking issues.
+ * Used by editor pages to keep section headers focused on true root-level blocking issues.
+ * Field-scoped and relation-scoped validation should render on their own sections instead.
  */
 export function isFormLevelIssue(issue: unknown): boolean {
   if (!issue || typeof issue !== 'object' || !('path' in issue)) return true
   const path = (issue as { path?: unknown }).path
-  // Issues with related models are treated as form-level issues.
-  if (!Array.isArray(path) || path.length === 0) return true
-  return path[0] === 'data' && (path[1] === 'userRoles' || path[1] === 'organisationId')
+  return !Array.isArray(path) || path.length === 0
 }
 
 /**

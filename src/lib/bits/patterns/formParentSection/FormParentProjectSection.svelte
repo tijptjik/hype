@@ -29,6 +29,7 @@ let {
 }: FormParentProjectSectionProps = $props()
 
 let isAdding = $state(false)
+let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 
 const showModeUi = $derived(isEditing && !isSubmitting)
@@ -55,6 +56,20 @@ $effect(() => {
 $effect(() => {
   if (showModeUi) return
   isAdding = false
+})
+
+$effect(() => {
+  if (isSubmitRequested && !wasSubmitRequested) {
+    isAdding = false
+  }
+  wasSubmitRequested = isSubmitRequested
+})
+
+$effect(() => {
+  if (!showModeUi) return
+  if (!isSubmitRequested) return
+  if (issues.length === 0) return
+  isAdding = true
 })
 
 $effect(() => {

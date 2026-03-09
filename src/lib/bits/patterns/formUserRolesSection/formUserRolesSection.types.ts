@@ -5,6 +5,7 @@ import type { User, UserSearchQueryOptions } from '$lib/db/zod/schema/user.types
 export interface FormUserRolesSectionProps {
   title?: string
   subtitle?: string
+  issues?: string[]
   userRoles: OrganisationRoleUser[]
   hiddenUserIdInputAttrs?: Array<Record<string, unknown>>
   roleFieldNameByUserId?: Record<string, string>
