@@ -176,6 +176,8 @@
   - Validate hidden-input payload completeness and section-specific controls.
 - Step 6: Cleanup.
   - Delete legacy REST endpoints only after Steps 1-5 pass.
+  - Add a sectioned TOC to `src/lib/api/services/<resource>.ts` and reorder helpers to match it.
+  - Do not add this TOC work to `feature` or `task` until those resources enter the refactor pass; revisit them explicitly at that stage.
 
 ## Mandatory Pre-Merge Checks (No Silent Failures)
 - Remote parity checklist:
