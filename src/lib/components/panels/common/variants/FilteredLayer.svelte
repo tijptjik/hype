@@ -73,7 +73,8 @@ const {
       <div class="flex flex-col items-start gap-0">
         <ResourceHierarchyPath {hierarchy} />
         <p class="font-light">
-          {getI18n(layer, 'nameShort', appCtx.getUserPreferences())}
+          {appCtx.getContextualLayerName(layer, false, false) ||
+            getI18n(layer, 'nameShort', appCtx.getUserPreferences())}
         </p>
       </div>
     </div>
@@ -86,7 +87,7 @@ const {
           ? 'group-hover:bg-secondary/75 group-focus-visible:bg-secondary/75'
           : ''}"
       ></div>
-      <p class="font-light">{getI18n(layer, 'name', appCtx.getUserPreferences())}</p>
+      <p class="font-light">{appCtx.getContextualLayerName(layer, false, false)}</p>
     </div>
   {/if}
   <div
