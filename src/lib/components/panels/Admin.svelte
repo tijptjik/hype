@@ -52,10 +52,10 @@ let panelProps: PanelProps = $derived({
 </script>
 
 <Panel {...panelProps} bind:panelContainer>
-  <div class="flex h-full flex-col">
+  <div class="flex h-full min-h-0 flex-col">
     <AdminHeader title={m.menu_admin()} {...panelProps} />
-    <div class="flex-grow-1 flex h-full flex-col justify-between">
-      <div class="flex-grow-1 flex h-full flex-col overflow-hidden overscroll-none">
+    <div class="flex-grow-1 flex min-h-0 flex-col">
+      <div class="flex-grow-1 flex min-h-0 flex-col overflow-hidden overscroll-none">
         <div class="flex-grow-1 flex min-h-0 flex-col">
           <Organisations {...panelProps}>
             {#snippet filteredItem(
@@ -178,7 +178,7 @@ let panelProps: PanelProps = $derived({
           </Layers>
         </div>
       </div>
-      <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col items-end">
+      <div class="flex w-full flex-shrink-0 flex-col items-end">
         <AdminFooter {...panelProps} />
       </div>
     </div>
