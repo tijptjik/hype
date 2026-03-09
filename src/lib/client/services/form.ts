@@ -274,6 +274,11 @@ export function prepareSubmitPayloadMeta<TData extends Record<string, unknown>>(
       : params.defaultMode
   payload.meta.mode = inferredMode
 
+  if (inferredMode === 'create') {
+    delete payload.meta.id
+    delete (payload.meta as { updatedAt?: unknown }).updatedAt
+  }
+
   if (inferredMode === 'update') {
     const submittedId =
       typeof payload.meta.id === 'string' ? payload.meta.id.trim() : ''
@@ -534,6 +539,118 @@ export function isFormLevelIssue(issue: unknown): boolean {
   // Issues with related models are treated as form-level issues.
   if (!Array.isArray(path) || path.length === 0) return true
   return path[0] === 'data' && (path[1] === 'userRoles' || path[1] === 'organisationId')
+}
+
+const toIssuePathSegments = (issue: unknown): string[] => {
+  if (!issue || typeof issue !== 'object' || !('path' in issue)) return []
+  const path = (issue as { path?: unknown }).path
+  if (!Array.isArray(path)) return []
+  return path.map(segment => String(segment))
+}
+
+const toIssueFieldNameCandidates = (issue: unknown): string[] => {
+  const segments = toIssuePathSegments(issue)
+  if (segments.length === 0) return []
+
+  const dot = segments.join('.')
+  const bracket = segments.reduce((acc, segment, index) => {
+    if (index === 0) return segment
+    return /^\d+$/u.test(segment) ? `${acc}[${segment}]` : `${acc}.${segment}`
+  }, '')
+
+  return Array.from(new Set([dot, bracket]))
+}
+
+const collectFacetFieldNames = (
+  formEl: HTMLFormElement,
+  supportedFacets: Set<FacetType>,
+): Map<FacetType, Set<string>> => {
+  const namesByFacet = new Map<FacetType, Set<string>>()
+  const facetSections = formEl.querySelectorAll<HTMLElement>('[data-facet-id]')
+
+  for (const section of Array.from(facetSections)) {
+    const rawFacet = section.dataset.facetId
+    if (!rawFacet || !supportedFacets.has(rawFacet as FacetType)) continue
+    const facet = rawFacet as FacetType
+    const names = namesByFacet.get(facet) ?? new Set<string>()
+    const controls = section.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >('input[name], select[name], textarea[name]')
+    for (const control of Array.from(controls)) {
+      if (!control.name) continue
+      names.add(control.name)
+    }
+    namesByFacet.set(facet, names)
+  }
+
+  return namesByFacet
+}
+
+const toFacetFromIssuePath = (
+  issue: unknown,
+  supportedFacets: Set<FacetType>,
+  facetFieldNames: Map<FacetType, Set<string>>,
+): FacetType => {
+  const candidates = toIssueFieldNameCandidates(issue)
+  if (candidates.length > 0) {
+    for (const [facet, names] of Array.from(facetFieldNames.entries())) {
+      if (!supportedFacets.has(facet)) continue
+      const hasMatch = candidates.some(candidate =>
+        Array.from(names).some(
+          name =>
+            name === candidate ||
+            name.startsWith(`${candidate}.`) ||
+            name.startsWith(`${candidate}[`),
+        ),
+      )
+      if (hasMatch) return facet
+    }
+  }
+
+  return supportedFacets.has('core')
+    ? 'core'
+    : (Array.from(supportedFacets)[0] ?? 'core')
+}
+
+export function resolveFacetIssueSummary(params: {
+  issues: unknown[] | null | undefined
+  facets: Map<FacetType, unknown>
+  formEl?: HTMLFormElement
+}): {
+  firstFacetWithIssues: FacetType | null
+  facetsWithIssues: Set<FacetType>
+} {
+  const supportedFacets = new Set(Array.from(params.facets.keys()))
+  const facetFieldNames =
+    params.formEl != null
+      ? collectFacetFieldNames(params.formEl, supportedFacets)
+      : new Map<FacetType, Set<string>>()
+  const facetsWithIssues = new Set<FacetType>()
+  let firstFacetWithIssues: FacetType | null = null
+
+  for (const issue of params.issues ?? []) {
+    const facet = toFacetFromIssuePath(issue, supportedFacets, facetFieldNames)
+    if (!supportedFacets.has(facet)) continue
+    if (!firstFacetWithIssues) firstFacetWithIssues = facet
+    facetsWithIssues.add(facet)
+  }
+
+  return { firstFacetWithIssues, facetsWithIssues }
+}
+
+export function withFacetIssueIndicators(
+  facets: Map<FacetType, { label: string; icon?: Component | null }>,
+  facetsWithIssues: Set<FacetType>,
+): Map<FacetType, { label: string; icon?: Component | null; hasIssues?: boolean }> {
+  return new Map(
+    Array.from(facets.entries()).map(([facet, config]) => [
+      facet,
+      {
+        ...config,
+        hasIssues: facetsWithIssues.has(facet),
+      },
+    ]),
+  )
 }
 
 export function toIssueChipParts(message: string): { code: string; detail: string } {
@@ -822,13 +939,27 @@ export function guardUserRolesDesync({
     }
 
     const selectedUser = usersById?.[formUserRole.userId]
-    if (!selectedUser) {
-      console.warn('[form] Missing user details for role row', {
-        userId: formUserRole.userId,
-        organisationId: organisationId ?? '',
-      })
-      return []
+    const fallbackUser: User = {
+      id: formUserRole.userId,
+      name: formUserRole.userId,
+      username: formUserRole.userId,
+      email: '',
+      image: null,
+      attribution: '',
+      locale: null,
+      preferences: null,
+      experimental: null,
+      isAnonymous: false,
+      contributedFeatures: {},
+      contributedImages: {},
+      reportedMissingCount: 0,
+      newPhotoCount: 0,
+      newFeatureCount: 0,
+      roles: [],
+      createdAt: '',
+      modifiedAt: '',
     }
+    const resolvedUser = selectedUser ?? fallbackUser
 
     return [
       {
@@ -836,10 +967,10 @@ export function guardUserRolesDesync({
         userId: formUserRole.userId,
         role: formUserRole.role as OrganisationRoleUser['role'],
         user: {
-          id: selectedUser.id,
-          name: selectedUser.name,
-          image: selectedUser.image,
-          attribution: selectedUser.attribution,
+          id: resolvedUser.id,
+          name: resolvedUser.name,
+          image: resolvedUser.image,
+          attribution: resolvedUser.attribution,
         },
       } as OrganisationRoleUser,
     ]
