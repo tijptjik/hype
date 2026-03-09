@@ -8,20 +8,17 @@ import {
   normalizeProjectRoleCapabilities,
 } from '$lib/capabilities'
 // TYPES
+import type { CapabilityKey, Locale, User } from '$lib/types'
+import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'
 import type {
-  CapabilityKey,
-  Locale,
   Project,
-  ProjectCapabilities,
   ProjectBooleanField,
+  ProjectCapabilities,
   ProjectFormInput,
-  ProjectParentOrganisationScope,
-  ProjectRoleCapabilities,
-  PropertyDiscriminator,
   ProjectOwnerRoleSeedOrganisation,
+  ProjectRoleCapabilities,
   ProjectSubmitUpdatesParams,
-  User,
-} from '$lib/types'
+} from '$lib/db/zod/schema/project.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -82,7 +79,7 @@ function cloneProjectProperties(
           i18n: toFormLocaleRecord(value.i18n) as typeof value.i18n,
         }))
       : property.values,
-  }))
+  })) as ProjectFormInput['data']['properties']
 }
 
 function toNumericRank(input: unknown): number {
@@ -135,7 +132,7 @@ export function toStableUserRoles(
 /**
  * Normalize project properties into canonical rank order for submission:
  * - value ranks are re-assigned by sorted order
- * - property ranks are re-assigned independently for classifier/specifier types
+ * - property ranks are re-assigned as a single unified ordering
  *
  * This is used before diffing/sending `data.properties` so semantically identical
  * edits produce stable payloads and only real changes are submitted.
@@ -160,34 +157,59 @@ export function normalizePropertiesForSubmit(
           ...propertyValue,
           rank,
         }))
+
+      if (property.type === 'classifier' && property.isTranslatable === false) {
+        property.values = (property.values as Array<Record<string, unknown>>).map(
+          propertyValue => {
+            const valueI18n =
+              propertyValue.i18n && typeof propertyValue.i18n === 'object'
+                ? (propertyValue.i18n as Record<string, { value?: unknown }>)
+                : {}
+            const directValue =
+              typeof propertyValue.value === 'string'
+                ? propertyValue.value
+                : (['en', 'zhHans', 'zhHant']
+                    .map(localeKey => valueI18n[localeKey]?.value)
+                    .find(
+                      candidate =>
+                        typeof candidate === 'string' && candidate.trim().length > 0,
+                    ) ??
+                  Object.values(valueI18n)
+                    .map(entry => entry?.value)
+                    .find(
+                      candidate =>
+                        typeof candidate === 'string' && candidate.trim().length > 0,
+                    ) ??
+                  '')
+
+            return {
+              ...propertyValue,
+              value: directValue,
+            }
+          },
+        )
+
+        for (const propertyValue of property.values as Array<Record<string, unknown>>) {
+          delete propertyValue.i18n
+        }
+      }
     }
 
     return property
   })
 
-  const assignRankForType = (type: PropertyDiscriminator): void => {
-    const items = normalized
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) => {
-        if (!item || typeof item !== 'object') return false
-        return (item as Record<string, unknown>).type === type
-      })
-      .sort((a, b) => {
-        const aRank = toNumericRank((a.item as Record<string, unknown>).rank)
-        const bRank = toNumericRank((b.item as Record<string, unknown>).rank)
-        if (aRank !== bRank) return aRank - bRank
-        return a.index - b.index
-      })
-
-    items.forEach(({ item }, rank) => {
-      ;(item as Record<string, unknown>).rank = rank
-    })
-  }
-
-  assignRankForType('classifier')
-  assignRankForType('specifier')
-
   return normalized
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const aRank = toNumericRank((a.item as Record<string, unknown>).rank)
+      const bRank = toNumericRank((b.item as Record<string, unknown>).rank)
+      if (aRank !== bRank) return aRank - bRank
+      return a.index - b.index
+    })
+    .map(({ item }, rank) => ({
+      ...(item as Record<string, unknown>),
+      rank,
+    }))
 }
 
 export function toProjectFormInput(
@@ -490,16 +512,15 @@ export async function seedOwnerRolesForNewProject(params: {
     }
   }
 
-  const ownerRoles = (result.data.userRoles ?? [])
-    .filter(userRole => userRole.role === OrganisationRoleType.owner)
-    .map(userRole => ({
-      userId: userRole.userId,
-      role: ProjectRoleType.owner,
-    }))
+  const ownerRoleRows = (result.data.userRoles ?? []).filter(
+    userRole => userRole.role === OrganisationRoleType.owner && userRole.user,
+  )
+  const ownerRoles = ownerRoleRows.map(userRole => ({
+    userId: userRole.userId,
+    role: ProjectRoleType.owner,
+  }))
   const selectedOwners = Object.fromEntries(
-    (result.data.userRoles ?? [])
-      .filter(userRole => userRole.role === OrganisationRoleType.owner && userRole.user)
-      .map(userRole => [userRole.userId, userRole.user]),
+    ownerRoleRows.map(userRole => [userRole.userId, userRole.user]),
   ) as Record<string, User>
 
   return {
