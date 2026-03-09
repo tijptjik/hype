@@ -8,25 +8,14 @@ import {
   organisationRole,
   project,
 } from '../schema'
-import {
-  OrganisationAdminProfileAPI,
-  OrganisationCardProfileAPI,
-  OrganisationDetailProfileAPI,
-  OrganisationListProfileAPI,
-} from '../zod'
 // SERVICES
-import { toRelatedRecords, transformI18nSafely } from '..'
+import { toRelatedRecords } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { getOrganisationHubFilter } from './hub'
-import { toImageEnvelope } from './image'
-import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type { AnyColumn, InferInsertModel, SQL } from 'drizzle-orm'
 import type {
   OrganisationDB,
-  OrganisationNewWithI18n,
-  OrganisationWithI18n,
-  Organisation,
   Id,
   Database,
   OrganisationDBNew,
@@ -38,14 +27,9 @@ import type {
   OrganisationDBPartial,
   OrganisationDBRaw,
   OrganisationI18nDB,
-  OrganisationEntityByProfile,
-  OrganisationListByProfile,
-  OrganisationProfile,
   OrganisationRoleDB,
   HubOptsExtended,
   ListResponse,
-  EntityResponse,
-  SessionUser,
   OrganisationProbe,
   OrganisationUpdateProbe,
   OrganisationCommandProbe,
@@ -55,49 +39,135 @@ import type {
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// 1. CRUD :: CORE OPERATIONS
-//    - fetch
-//      - listOrganisations
-//      - getOrganisation
-//    - probe
-//      - probeOrganisationQuery
-//      - probeExistingOrganisation
-//      - probeOrganisationForUpdate
-//      - probeOrganisationForCommand
-//      - resolveOrganisationCommandProbe
-//    - persist
-//      - createOrganisation
-//      - updateOrganisation
-//      - updateOrganisationById
-//      - updateOrganisationByIdWithConcurrency
-//      - updateOrganisationPublishedStateById
-//      - updateOrganisationArchivedStateById
-//
-// 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
+// 1.1 CRUD :: CREATE
+//    - createOrganisation
 //    - createI18n
-//    - updateI18n
-//
-// 3. CRUD :: RELATIONAL OPERATIONS (OrganisationRole)
-//    - listUserRoles
 //    - createUserRoles
-//    - toPersistedOrganisationUserRoles
-//    - syncOrganisationUserRoles
 //
-// 4. CRUD :: ORCHESTRATION
-//    - createOrganisationWithRelated
-//    - updateOrganisationWithRelated
+// 1.2 CRUD :: CREATE (SHAPING)
+//    - toUserRoles
 //
-// 5. UTILS :: SHAPING
-//    - toProfileResponseShape
-//    - toEntityResponseShape
-//    - toListResponseShape
+// 2.1 CRUD :: READ
+//    - listOrganisations
+//    - getOrganisation
 //
-// 6. UTILS :: LOOKUPS
+// 2.2 CRUD :: READ (PROBES)
+//    - probeOrganisationQuery
+//    - probeExistingOrganisation
+//    - probeOrganisationForUpdate
+//    - probeOrganisationForCommand
+//    - resolveOrganisationCommandProbe
+//
+// 2.3 CRUD :: READ (RELATED)
+//    - listUserRoles
+//    - listUserRoleAssignments
+//
+// 2.4 CRUD :: READ (LOOKUPS)
 //    - getOrganisationForFeatureId
 //    - getOrganisationForProjectId
 //
+// 3.1 CRUD :: UPDATE
+//    - updateOrganisation
+//    - updateOrganisationById
+//    - updateOrganisationByIdWithConcurrency
+//    - updateOrganisationPublishedStateById
+//    - updateOrganisationArchivedStateById
+//    - updateI18n
+//
+// 3.2 CRUD :: UPDATE (SYNC)
+//    - syncUserRoles
+//
+// 4. CRUD :: DELETE
+//    - No hard delete helpers in this module (intentional)
+
 // ═══════════════════════
-// 1. CRUD :: CORE OPERATIONS
+// 1.1 CRUD :: CREATE
+// ═══════════════════════
+
+/**
+ * Creates a new organisation in the database
+ * @param db - The database instance
+ * @param data - The organisation data to insert
+ * @returns The newly created organisation
+ * @throws {Error} If the organisation creation fails
+ */
+export const createOrganisation = async (
+  db: Database,
+  data: OrganisationDBNew,
+): Promise<OrganisationDB> =>
+  await insert(db, organisation, {
+    ...data,
+    isPublished: data.isPublished ?? false,
+  })
+
+/**
+ * Creates relational i18n records for an organisation
+ * @param db - The database instance
+ * @param i18n - Record of translations for each target locale
+ * @param organisationId - The ID of the organisation
+ * @returns The created translations
+ */
+export const createI18n = async (
+  db: Database,
+  i18n: Record<Locale, OrganisationI18nNew>,
+  organisationId: string,
+): Promise<OrganisationI18nDB[]> => {
+  const relatedRecords = toRelatedRecords(
+    i18n,
+    'organisationId',
+    organisationId,
+    'locale',
+  ) as InferInsertModel<typeof organisationI18n>[]
+
+  return await insertManyRelated(
+    db,
+    organisationI18n,
+    relatedRecords,
+    'organisationId',
+    organisationId,
+  )
+}
+
+/**
+ * Creates user roles for an organisation
+ * @param db - The database instance
+ * @param userRoles - Array of new user roles to create
+ * @param organisationId - The ID of the organisation
+ * @returns Array of created user roles with associated user information
+ */
+export const createUserRoles = async (
+  db: Database,
+  userRoles: OrganisationRoleNew[],
+  organisationId: string,
+): Promise<OrganisationRoleDB[]> => {
+  return await insertManyRelated(
+    db,
+    organisationRole,
+    userRoles,
+    'organisationId',
+    organisationId,
+  )
+}
+
+// ═══════════════════════
+// 1.2 CRUD :: CREATE (SHAPING)
+// ═══════════════════════
+
+/**
+ * Maps organisation form role rows into persisted role rows bound to organisationId.
+ */
+export const toUserRoles = (
+  userRoles: Array<{ userId: string; role: string }>,
+  organisationId: string,
+): Array<{ organisationId: string; userId: string; role: string }> =>
+  userRoles.map(userRole => ({
+    organisationId,
+    userId: userRole.userId,
+    role: userRole.role,
+  }))
+
+// ═══════════════════════
+// 2.1 CRUD :: READ
 // ═══════════════════════
 
 export const listOrganisations = async (
@@ -245,6 +315,10 @@ export const getOrganisation = async (
   })
 }
 
+// ═══════════════════════
+// 2.2 CRUD :: READ (PROBES)
+// ═══════════════════════
+
 export const probeOrganisationQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
@@ -325,21 +399,82 @@ export const resolveOrganisationCommandProbe = async (
   return probed
 }
 
+// ═══════════════════════
+// 2.3 CRUD :: READ (RELATED)
+// ═══════════════════════
+
 /**
- * Creates a new organisation in the database
+ * Reads user roles for an organisation
  * @param db - The database instance
- * @param data - The organisation data to insert
- * @returns The newly created organisation
- * @throws {Error} If the organisation creation fails
+ * @param organisationId - The ID of the organisation
+ * @returns Array of user roles with associated user information
  */
-export const createOrganisation = async (
+export const listUserRoles = async (
   db: Database,
-  data: OrganisationDBNew,
-): Promise<OrganisationDB> =>
-  await insert(db, organisation, {
-    ...data,
-    isPublished: data.isPublished ?? false,
+  organisationId: string,
+): Promise<OrganisationRoleDB[]> => {
+  return await db.query.organisationRole.findMany({
+    with: {
+      user: true,
+    },
+    where: eq(organisationRole.organisationId, organisationId),
   })
+}
+
+export const listUserRoleAssignments = async (
+  db: Database,
+  organisationId: string,
+): Promise<Array<{ userId: string; role: string }>> => {
+  return await db
+    .select({
+      userId: organisationRole.userId,
+      role: organisationRole.role,
+    })
+    .from(organisationRole)
+    .where(eq(organisationRole.organisationId, organisationId))
+}
+
+// ═══════════════════════
+// 2.4 CRUD :: READ (LOOKUPS)
+// ═══════════════════════
+
+/**
+ * Retrieves the organisation associated with a feature ID
+ * @param db - The database instance
+ * @param featureId - The ID of the feature
+ * @returns The associated organisation or undefined if not found
+ */
+export const getOrganisationForFeatureId = async (
+  db: Database,
+  featureId: Id,
+): Promise<OrganisationDB | undefined> => {
+  const record = await db.query.feature.findFirst({
+    where: eq(feature.id, featureId),
+    with: { layer: { with: { project: { with: { organisation: true } } } } },
+  })
+  return record?.layer?.project?.organisation || undefined
+}
+
+/**
+ * Retrieves the organisation associated with a project ID
+ * @param db - The database instance
+ * @param projectId - The ID of the project
+ * @returns The associated organisation or undefined if not found
+ */
+export const getOrganisationForProjectId = async (
+  db: Database,
+  projectId: Id,
+): Promise<OrganisationDB | undefined> => {
+  const record = await db.query.project.findFirst({
+    where: eq(project.id, projectId),
+    with: { organisation: true },
+  })
+  return record?.organisation || undefined
+}
+
+// ═══════════════════════
+// 3.1 CRUD :: UPDATE
+// ═══════════════════════
 
 /**
  * Updates an existing organisation in the database
@@ -434,38 +569,6 @@ export const updateOrganisationArchivedStateById = async (
   return updated ?? null
 }
 
-// ═══════════════════════
-// 2. CRUD :: RELATIONAL OPERATIONS (OrganisationI18n)
-// ═══════════════════════
-
-/**
- * Creates relational i18n records for an organisation
- * @param db - The database instance
- * @param i18n - Record of translations for each target locale
- * @param organisationId - The ID of the organisation
- * @returns The created translations
- */
-export const createI18n = async (
-  db: Database,
-  i18n: Record<Locale, OrganisationI18nNew>,
-  organisationId: string,
-): Promise<OrganisationI18nDB[]> => {
-  const relatedRecords = toRelatedRecords(
-    i18n,
-    'organisationId',
-    organisationId,
-    'locale',
-  ) as InferInsertModel<typeof organisationI18n>[]
-
-  return await insertManyRelated(
-    db,
-    organisationI18n,
-    relatedRecords,
-    'organisationId',
-    organisationId,
-  )
-}
-
 /**
  * Updates translations for an organisation by deleting existing ones and creating new ones
  * @param db - The database instance
@@ -495,73 +598,8 @@ export const updateI18n = async (
 }
 
 // ═══════════════════════
-// 3. CRUD :: RELATIONAL OPERATIONS (OrganisationRole)
+// 3.2 CRUD :: UPDATE (SYNC)
 // ═══════════════════════
-
-/**
- * Reads user roles for an organisation
- * @param db - The database instance
- * @param organisationId - The ID of the organisation
- * @returns Array of user roles with associated user information
- */
-export const listUserRoles = async (
-  db: Database,
-  organisationId: string,
-): Promise<OrganisationRoleDB[]> => {
-  return await db.query.organisationRole.findMany({
-    with: {
-      user: true,
-    },
-    where: eq(organisationRole.organisationId, organisationId),
-  })
-}
-
-export const listOrganisationRoleAssignments = async (
-  db: Database,
-  organisationId: string,
-): Promise<Array<{ userId: string; role: string }>> => {
-  return await db
-    .select({
-      userId: organisationRole.userId,
-      role: organisationRole.role,
-    })
-    .from(organisationRole)
-    .where(eq(organisationRole.organisationId, organisationId))
-}
-
-/**
- * Creates user roles for an organisation
- * @param db - The database instance
- * @param userRoles - Array of new user roles to create
- * @param organisationId - The ID of the organisation
- * @returns Array of created user roles with associated user information
- */
-export const createUserRoles = async (
-  db: Database,
-  userRoles: OrganisationRoleNew[],
-  organisationId: string,
-): Promise<OrganisationRoleDB[]> => {
-  return await insertManyRelated(
-    db,
-    organisationRole,
-    userRoles,
-    'organisationId',
-    organisationId,
-  )
-}
-
-/**
- * Maps organisation form role rows into persisted role rows bound to organisationId.
- */
-export const toPersistedOrganisationUserRoles = (
-  userRoles: Array<{ userId: string; role: string }>,
-  organisationId: string,
-): Array<{ organisationId: string; userId: string; role: string }> =>
-  userRoles.map(userRole => ({
-    organisationId,
-    userId: userRole.userId,
-    role: userRole.role,
-  }))
 
 /**
  * Updates user roles for an organisation by deleting existing ones and creating new ones
@@ -570,7 +608,7 @@ export const toPersistedOrganisationUserRoles = (
  * @param organisationId - The ID of the organisation
  * @returns Array of updated user roles with associated user information
  */
-export const syncOrganisationUserRoles = async (
+export const syncUserRoles = async (
   db: Database,
   userRoles: OrganisationRoleNew[],
   organisationId: string,
@@ -585,206 +623,6 @@ export const syncOrganisationUserRoles = async (
 }
 
 // ═══════════════════════
-// 4. CRUD :: ORCHESTRATION
+// 4. CRUD :: DELETE
 // ═══════════════════════
-
-/**
- * Creates a new organisation with translations and user roles
- * @param db - The database instance
- * @param data - The organisation data to insert
- * @returns The newly created organisation
- */
-export const createOrganisationWithRelated = async (
-  db: Database,
-  data: OrganisationNewWithI18n,
-) => {
-  const organisation = await createOrganisation(db, data)
-  const i18n = await createI18n(db, data.i18n, organisation.id)
-  await createUserRoles(db, data.userRoles, organisation.id)
-  const userRoles = await listUserRoles(db, organisation.id)
-  // organisation.image is null upon creation
-  // organisation.publisher is null upon creation, as it's unpublished by default.
-  return { ...organisation, i18n, userRoles }
-}
-
-/**
- * Updates an organisation with translations and user roles
- * @param db - The database instance
- * @param data - The organisation data to insert
- * @param lookupCode - Optional code to lookup the organisation (defaults to data.code)
- * @returns The newly created organisation
- */
-export const updateOrganisationWithRelated = async (
-  db: Database,
-  data: OrganisationWithI18n,
-  lookupCode?: string,
-) => {
-  const codeToUse = lookupCode || data.code
-  const organisation = await updateOrganisation(db, data, codeToUse)
-  const i18n = await updateI18n(db, data.i18n, organisation.id)
-  await syncOrganisationUserRoles(db, data.userRoles, organisation.id)
-  const userRoles = await listUserRoles(db, organisation.id)
-  return { ...organisation, i18n, userRoles }
-}
-
-// ═══════════════════════
-// 5. UTILS :: SHAPING
-// ═══════════════════════
-
-const toProfileResponseShape = async (
-  organisation: OrganisationDBRaw,
-  profile: OrganisationProfile,
-  _isCollection: boolean,
-  _isSuperAdmin: boolean,
-): Promise<Organisation | Record<string, unknown>> => {
-  const orgWithProperties = organisation as OrganisationDBRaw & {
-    propertyAssignments?: Array<{
-      property?: {
-        i18n?: unknown
-        values?: Array<{ i18n?: unknown }>
-      } | null
-    }>
-    properties?: Array<{
-      i18n?: unknown
-      values?: Array<{ i18n?: unknown }>
-    }>
-  }
-
-  const assignmentProperties = (orgWithProperties.propertyAssignments ?? [])
-    .map(assignment => assignment?.property)
-    .filter((item: unknown): item is Record<string, unknown> => Boolean(item))
-  const rawProperties = (
-    assignmentProperties.length > 0
-      ? assignmentProperties
-      : (orgWithProperties.properties ?? [])
-  ) as Array<{
-    i18n?: unknown
-    values?: Array<{ i18n?: unknown }>
-  }>
-  const data = {
-    ...organisation,
-    i18n: transformI18nSafely(organisation.i18n),
-    userRoles: organisation.userRoles,
-    properties: rawProperties.map(property => ({
-      ...property,
-      i18n: transformI18nSafely(property.i18n as unknown),
-      values: (property.values ?? []).map(value => ({
-        ...value,
-        i18n: transformI18nSafely(value.i18n as unknown),
-      })),
-    })),
-    image: organisation.image
-      ? toImageEnvelope(
-          organisation.image,
-          profile,
-          ImageContextResource.organisation,
-          organisation.id,
-        )
-      : null,
-  }
-
-  if (profile === 'list') return OrganisationListProfileAPI.parse(data)
-  if (profile === 'card') return OrganisationCardProfileAPI.parse(data)
-  if (profile === 'detail') return OrganisationDetailProfileAPI.parse(data)
-  return OrganisationAdminProfileAPI.parse(data) as unknown as Organisation
-}
-
-export const toEntityResponseShape = async <P extends OrganisationProfile = 'detail'>(
-  organisation: OrganisationDBRaw | null,
-  user?: SessionUser,
-  profile: P = 'detail' as P,
-): Promise<EntityResponse<OrganisationEntityByProfile<P>>> => {
-  const startedAt = Date.now()
-
-  if (!organisation) {
-    return { data: null, durationMs: Date.now() - startedAt }
-  }
-
-  const data = await toProfileResponseShape(
-    organisation,
-    profile,
-    false,
-    user?.superAdmin || false,
-  )
-  return {
-    data: data as OrganisationEntityByProfile<P>,
-    durationMs: Date.now() - startedAt,
-  }
-}
-
-export const toListResponseShape = async <P extends OrganisationProfile = 'list'>(
-  result: ListResponse<OrganisationDBRaw>,
-  user: SessionUser | undefined,
-  profile: P = 'list' as P,
-): Promise<ListResponse<OrganisationListByProfile<P>>> => {
-  const {
-    data: organisations,
-    limit,
-    offset,
-    totalCount,
-    hasMore,
-    nextOffset,
-    sortBy,
-    sortOrder,
-    appliedFilters,
-    q,
-    durationMs,
-  } = result
-  const data = await Promise.all(
-    organisations.map(organisation =>
-      toProfileResponseShape(organisation, profile, true, user?.superAdmin || false),
-    ),
-  )
-
-  return {
-    data: data as Array<OrganisationListByProfile<P>>,
-    limit,
-    offset,
-    totalCount,
-    hasMore,
-    nextOffset,
-    sortBy,
-    sortOrder,
-    appliedFilters,
-    q,
-    durationMs,
-  }
-}
-
-// ═══════════════════════
-// 6. UTILS :: LOOKUPS
-// ═══════════════════════
-
-/**
- * Retrieves the organisation associated with a feature ID
- * @param db - The database instance
- * @param featureId - The ID of the feature
- * @returns The associated organisation or undefined if not found
- */
-export const getOrganisationForFeatureId = async (
-  db: Database,
-  featureId: Id,
-): Promise<OrganisationDB | undefined> => {
-  const record = await db.query.feature.findFirst({
-    where: eq(feature.id, featureId),
-    with: { layer: { with: { project: { with: { organisation: true } } } } },
-  })
-  return record?.layer?.project?.organisation || undefined
-}
-
-/**
- * Retrieves the organisation associated with a project ID
- * @param db - The database instance
- * @param projectId - The ID of the project
- * @returns The associated organisation or undefined if not found
- */
-export const getOrganisationForProjectId = async (
-  db: Database,
-  projectId: Id,
-): Promise<OrganisationDB | undefined> => {
-  const record = await db.query.project.findFirst({
-    where: eq(project.id, projectId),
-    with: { organisation: true },
-  })
-  return record?.organisation || undefined
-}
+// No hard delete helpers in this module by design.
