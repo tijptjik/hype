@@ -1,35 +1,16 @@
 // ENV
 import { and, asc, desc, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
-// FORMS
-import { superValidate } from 'sveltekit-superforms'
 import { user, userFeature, userLayer } from '../schema'
-// ZOD
-import { zod4 as zod } from 'sveltekit-superforms/adapters'
-import {
-  UserAPI,
-  UserCollectionAPI,
-  UserHydrationAdminProfileAPI,
-  UserHydrationPrivacyProfileAPI,
-  UserProfileAPI,
-} from '../zod'
 // TYPES
-import type { SuperValidated } from 'sveltekit-superforms'
 import type {
   Id,
   UserPartial,
   UserLayerDB,
-  User,
   UserDB,
   UserRoleDisco,
   Database,
   UserFeatureDB,
-  UserFeatureNew,
   UserLayerNew,
-  UserRaw,
-  CurrentUser,
-  UserProfile,
-  UserHydrationEntityByProfile,
-  UserHydrationProfile,
 } from '$lib/types'
 import { update } from '../crud'
 
@@ -40,26 +21,30 @@ import { update } from '../crud'
 // 1. COMMON
 //    - userColumnsWithPrivacyProtected (const)
 //
-// 2. CRUD :: CORE OPERATIONS
-//    - listUsers
-//    - searchUsers
+// 2.1 CRUD :: READ
 //    - getUser
 //    - getUserById
 //    - getUsersForHydration
+//
+// 2.2 CRUD :: READ (SEARCH)
+//    - searchUsersByConditions
+//    - toSearchCondition
+//
+// 2.3 CRUD :: READ (RELATED)
+//    - getUserRoles
+//    - getUserLayersByUserId
+//    - getUserFeaturesByUserId
+//
+// 3.1 CRUD :: UPDATE
 //    - updateUser
 //
-// 3. CRUD :: RELATIONAL OPERATIONS
-//    - updateUserWithRelated
+// 3.2 CRUD :: UPDATE (RELATED)
 //    - updateUserLayers
-//    - updateUserFeatures
+//    - upsertUserFeatureState
+//    - removeUserFeatureListState
 //
-// 4. ROLES
-//    - getUserRoles
-//
-// 5. UTILS :: SHAPING
-//    - toFormShape
-//    - toEntityResponseShape
-//    - toResponseShape
+// 4. CRUD :: DELETE
+//    - No hard delete helpers in this module (intentional)
 //
 
 // ═══════════════════════
@@ -74,41 +59,18 @@ export const userColumnsWithPrivacyProtected = {
 }
 
 // ═══════════════════════
-// 2. CRUD :: CORE OPERATIONS
+// 2.1 CRUD :: READ
 // ═══════════════════════
 
-export const listUsers = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = [],
-): Promise<UserRaw[]> => {
-  return await db.query.user.findMany({
-    with: withRelations,
-    where: and(...conditions),
-  })
-}
-
-export const searchUsers = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = [],
-  search: string,
-  searchColumns: string[] = ['name', 'email'],
-): Promise<UserRaw[]> => {
-  const searchConditions = searchColumns
-    .map(column => {
-      const userColumn = user[column as keyof typeof user]
-      if (!userColumn) return null
-      return like(sql`lower(${userColumn})`, `%${search.toLowerCase()}%`)
-    })
-    .filter(Boolean) as SQL<unknown>[]
-
-  return await db.query.user.findMany({
-    with: withRelations,
-    where: and(...conditions, or(...searchConditions)),
-  })
-}
-
+/**
+ * Loads a single user with optional relation graph and column projection.
+ *
+ * @param db - Database handle.
+ * @param withRelations - Drizzle relation graph to hydrate.
+ * @param conditions - SQL predicates applied with `AND`.
+ * @param columns - Optional column projection for the base `user` table.
+ * @returns Matching user row or `undefined`.
+ */
 export const getUser = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -121,17 +83,34 @@ export const getUser = async (
     ...(columns ? { columns } : {}),
   })
 
+/**
+ * Loads a single user by id.
+ *
+ * @param db - Database handle.
+ * @param userId - Target user id.
+ * @param columns - Optional column projection for the base `user` table.
+ * @returns Matching user row or `undefined`.
+ */
 export const getUserById = async (
   db: Database,
   userId: Id,
   columns?: Record<string, boolean>,
 ): Promise<UserDB | undefined> => await getUser(db, {}, [eq(user.id, userId)], columns)
 
+/**
+ * Loads lightweight user rows used by attribution/card hydration flows.
+ *
+ * @param db - Database handle.
+ * @param ids - User ids to fetch.
+ * @returns Minimal user payloads preserving privacy constraints.
+ */
 export const getUsersForHydration = async (
   db: Database,
   ids: Id[],
 ): Promise<
-  Array<Pick<UserDB, 'id' | 'name' | 'image' | 'attribution' | 'isArchived'>>
+  Array<
+    Pick<UserDB, 'id' | 'name' | 'image' | 'attribution' | 'username' | 'isArchived'>
+  >
 > => {
   if (ids.length === 0) return []
 
@@ -141,12 +120,24 @@ export const getUsersForHydration = async (
       name: user.name,
       image: user.image,
       attribution: user.attribution,
+      username: user.username,
       isArchived: user.isArchived,
     })
     .from(user)
     .where(inArray(user.id, ids))
 }
 
+// ═══════════════════════
+// 2.2 CRUD :: READ (SEARCH)
+// ═══════════════════════
+
+/**
+ * Executes paginated user search from prebuilt SQL conditions.
+ *
+ * @param db - Database handle.
+ * @param params - Search conditions, paging, and sorting options.
+ * @returns Page data and total count.
+ */
 export const searchUsersByConditions = async (
   db: Database,
   params: {
@@ -160,9 +151,9 @@ export const searchUsersByConditions = async (
   data: Array<{
     id: string
     name: string | null
+    username: string | null
     email: string | null
     image: unknown
-    attribution: string | null
   }>
   totalCount: number
 }> => {
@@ -180,9 +171,9 @@ export const searchUsersByConditions = async (
     .select({
       id: user.id,
       name: user.name,
+      username: user.username,
       email: user.email,
       image: user.image,
-      attribution: user.attribution,
     })
     .from(user)
     .where(and(...params.conditions))
@@ -201,7 +192,13 @@ export const searchUsersByConditions = async (
   }
 }
 
-export const toUserSearchTextCondition = (q: string): SQL<unknown> => {
+/**
+ * Builds a case-insensitive full-text-like condition across searchable user fields.
+ *
+ * @param q - Raw search text.
+ * @returns SQL condition that can be appended to user queries.
+ */
+export const toSearchCondition = (q: string): SQL<unknown> => {
   const qLike = `%${q.toLowerCase()}%`
   return (
     or(
@@ -213,91 +210,24 @@ export const toUserSearchTextCondition = (q: string): SQL<unknown> => {
   )
 }
 
-/**
- * Updates an existing user in the database
- * @param db - The database instance
- * @param data - The user data to update
- * @param userId - The ID of the user to update
- * @returns The updated user
- * @throws {Error} If the user update fails or user is not found
- */
-export const updateUser = async (
-  db: Database,
-  data: UserPartial,
-  userId: Id,
-): Promise<UserDB> => await update(db, user, data, user.id, userId)
-
-// UPDATE
-export const updateUserWithRelated = async (
-  db: Database,
-  data: User,
-  userId: Id,
-): Promise<User> => {
-  // Extract userLayers from data
-  const userBase = await updateUser(db, data, userId)
-  const userLayers = await updateUserLayers(db, data.userLayers, userId)
-  const userFeatures = await updateUserFeatures(db, data.userFeatures, userId)
-  return { ...userBase, userLayers, userFeatures } as User
-}
-
-// USER LAYER PREFERENCES
-export const updateUserLayers = async (
-  db: Database,
-  userLayers: UserLayerNew[],
-  userId: Id,
-): Promise<UserLayerDB[]> => {
-  // Delete existing layer preferences
-  await db.delete(userLayer).where(eq(userLayer.userId, userId))
-
-  // If no new preferences, we're done
-  if (!userLayers?.length) return []
-
-  // Insert new layer preferences
-  return await db.insert(userLayer).values(userLayers).returning()
-}
-
-export const updateUserFeatures = async (
-  db: Database,
-  userFeatures: UserFeatureNew[],
-  userId: Id,
-): Promise<UserFeatureDB[]> => {
-  // Delete existing feature preferences
-  await db.delete(userFeature).where(eq(userFeature.userId, userId))
-
-  // If no new preferences, we're done
-  if (!userFeatures?.length) return []
-
-  // Insert new feature preferences
-  return await db.insert(userFeature).values(userFeatures).returning()
-}
+// ═══════════════════════
+// 2.3 CRUD :: READ (RELATED)
+// ═══════════════════════
 
 /**
- * Fetches and constructs user roles from the database.
- * @param db - The database instance to query.
- * @param userId - The ID of the user to fetch roles for.
- * @returns A Promise that resolves to an array of UserRole objects.
+ * Fetches and constructs user roles from hub, organisation, and project scopes.
+ *
+ * @param db - Database handle.
+ * @param userId - Target user id.
+ * @returns Combined role list with explicit `type` discriminator per scope.
  *
  * @remarks
- * This function performs two separate database queries:
- * 1. It fetches organisation roles for the user.
- * 2. It fetches project roles for the user, including associated organisation information.
- *
- * The results are then mapped into UserRole objects and combined into a single array.
- *
- * Organisation roles are structured as:
- * - type: 'organisation'
- * - role: The user's role in the organisation
- * - organisation: The organisation
- * - organisation.i18n: The organisation's text content
- *
- * Project roles are structured as:
- * - type: 'project'
- * - role: The user's role in the project
- * - project: The project
- * - project.i18n: The project's text content
- * - project.organisation: The project's organisation
+ * This combines:
+ * - hub roles (`type: 'hub'`)
+ * - organisation roles (`type: 'organisation'`)
+ * - project roles (`type: 'project'`)
+ * so callers can evaluate cross-scope permissions from one payload.
  */
-
 export const getUserRoles = async (
   db: Database,
   userId: Id,
@@ -356,140 +286,256 @@ export const getUserRoles = async (
   ] as UserRoleDisco[]
 }
 
-/********************
- *  5. UTILS :: SHAPING
- ************/
+/**
+ * Loads per-user layer defaults.
+ *
+ * @param db - Database handle.
+ * @param userId - Target user id.
+ * @returns Layer preference rows for the user.
+ */
+export const getUserLayersByUserId = async (
+  db: Database,
+  userId: Id,
+): Promise<UserLayerDB[]> =>
+  await db.select().from(userLayer).where(eq(userLayer.userId, userId))
 
 /**
- * Rebuilds form data from database entities
- * @param user - The user database entity
- * @param userLayers - Array of user layer preferences
- * @param userFeatures - Array of user feature interactions
- * @returns Validated form data
+ * Loads paginated feature list-state rows (`visited` / `wishlist`) for a user.
+ *
+ * @param db - Database handle.
+ * @param params - User id plus optional filters, pagination, and sorting.
+ * @returns Feature state rows and total count.
  */
-export const toFormShape = async (
-  user: UserDB,
-  userLayers: UserLayerDB[] = [],
-  userFeatures: any[] = [],
-): Promise<SuperValidated<User>> => {
-  const formData: User = {
-    ...user,
-    userLayers,
-    userFeatures,
+export const getUserFeaturesByUserId = async (
+  db: Database,
+  params: {
+    userId: Id
+    conditions?: {
+      isVisited?: boolean | null
+      isWishlisted?: boolean | null
+    }
+    pagination?: {
+      limit?: number
+      offset?: number
+    }
+    sorting?: {
+      sortBy?: 'visitedAt' | 'createdAt' | 'modifiedAt'
+      sortOrder?: 'asc' | 'desc'
+    }
+  },
+): Promise<{ data: UserFeatureDB[]; totalCount: number }> => {
+  const conditions: SQL<unknown>[] = [eq(userFeature.userId, params.userId)]
+  const isVisited = params.conditions?.isVisited
+  const isWishlisted = params.conditions?.isWishlisted
+  if (isVisited !== undefined && isVisited !== null) {
+    conditions.push(eq(userFeature.isVisited, isVisited))
   }
-  // @ts-expect-error TODO - Fix Zod type error
-  const form = await superValidate(formData, zod(UserAPI) as any)
-  return form as SuperValidated<User>
+  if (isWishlisted !== undefined && isWishlisted !== null) {
+    conditions.push(eq(userFeature.isWishlisted, isWishlisted))
+  }
+
+  const limit = Math.min(params.pagination?.limit ?? 50, 100)
+  const offset = params.pagination?.offset ?? 0
+  const sortBy = params.sorting?.sortBy ?? 'modifiedAt'
+  const sortOrder = params.sorting?.sortOrder === 'asc' ? 'asc' : 'desc'
+  const sortColumn =
+    sortBy === 'visitedAt'
+      ? userFeature.visitedAt
+      : sortBy === 'createdAt'
+        ? userFeature.createdAt
+        : userFeature.modifiedAt
+  const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn)
+
+  const data = await db
+    .select()
+    .from(userFeature)
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(limit)
+    .offset(offset)
+
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(userFeature)
+    .where(and(...conditions))
+
+  return {
+    data,
+    totalCount: Number(countRow?.count ?? 0),
+  }
 }
 
-export const toEntityResponseShape = <P extends UserHydrationProfile = 'privacy'>(
-  userEntity: Pick<UserDB, 'id' | 'attribution' | 'name' | 'image'> | null | undefined,
-  profile: P = 'privacy' as P,
-): UserHydrationEntityByProfile<P> | null => {
-  if (!userEntity) return null
+// ═══════════════════════
+// 3.1 CRUD :: UPDATE
+// ═══════════════════════
 
-  if (profile === 'admin') {
-    return UserHydrationAdminProfileAPI.parse(
-      userEntity,
-    ) as UserHydrationEntityByProfile<P>
-  }
+/**
+ * Updates an existing user in the database
+ * @param db - The database instance
+ * @param data - The user data to update
+ * @param userId - The ID of the user to update
+ * @returns The updated user
+ * @throws {Error} If the user update fails or user is not found
+ */
+export const updateUser = async (
+  db: Database,
+  data: UserPartial,
+  userId: Id,
+): Promise<UserDB> => await update(db, user, data, user.id, userId)
 
-  return UserHydrationPrivacyProfileAPI.parse(
-    userEntity,
-  ) as UserHydrationEntityByProfile<P>
+// ═══════════════════════
+// 3.2 CRUD :: UPDATE (RELATED)
+// ═══════════════════════
+
+/**
+ * Replaces a user's layer defaults with the submitted list.
+ *
+ * @param db - Database handle.
+ * @param userLayers - Layer preference rows to persist.
+ * @param userId - Target user id.
+ * @returns Persisted user-layer rows.
+ */
+export const updateUserLayers = async (
+  db: Database,
+  userLayers: UserLayerNew[],
+  userId: Id,
+): Promise<UserLayerDB[]> => {
+  // Delete existing layer preferences
+  await db.delete(userLayer).where(eq(userLayer.userId, userId))
+
+  // If no new preferences, we're done
+  if (!userLayers?.length) return []
+
+  // Insert new layer preferences
+  return await db.insert(userLayer).values(userLayers).returning()
 }
 
 /**
- * Builds response data from database entities
- * @param user - The user database entity (can be partial from queries)
- * @param userLayers - Array of user layer preferences
- * @param userFeatures - Array of user feature interactions
- * @param isCollection - Whether this is for a collection response
- * @returns A parsed response shape
+ * Upserts one user-feature list-state row.
+ *
+ * @param db - Database handle.
+ * @param params - User/feature ids plus optional state fields.
+ * @returns Persisted feature state row.
  */
-export const toResponseShape = async (
-  user: UserRaw,
-  userLayers: UserLayerDB[] = [],
-  userFeatures: any[] = [],
-  isCollection: boolean = false,
-  isSuperAdmin: boolean = false,
-): Promise<User | UserProfile | CurrentUser> => {
-  // Process contributor data if available
-  let contributedFeatures: any = []
-  let contributedImages: any = []
+export const upsertUserFeatureState = async (
+  db: Database,
+  params: {
+    userId: Id
+    featureId: Id
+    isVisited?: boolean
+    isWishlisted?: boolean
+    visitedAt?: string | null
+  },
+): Promise<UserFeatureDB> => {
+  const [existing] = await db
+    .select()
+    .from(userFeature)
+    .where(
+      and(
+        eq(userFeature.userId, params.userId),
+        eq(userFeature.featureId, params.featureId),
+      ),
+    )
+    .limit(1)
 
-  // Group by project - return Record<projectId, id[]>
-  const featuresGrouped: Record<string, string[]> = {}
-  const imagesGrouped: Record<string, string[]> = {}
-
-  // Group features by projectId
-  if ((user as any).contributedFeatures) {
-    ;(user as any).contributedFeatures
-      .filter((feature: any) => feature.isPublished)
-      .sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-      .forEach((feature: any) => {
-        if (!featuresGrouped[feature.projectId]) {
-          featuresGrouped[feature.projectId] = []
-        }
-        featuresGrouped[feature.projectId].push(feature.id)
+  if (existing) {
+    const [updated] = await db
+      .update(userFeature)
+      .set({
+        isVisited: params.isVisited ?? existing.isVisited,
+        isWishlisted: params.isWishlisted ?? existing.isWishlisted,
+        visitedAt:
+          params.visitedAt !== undefined ? params.visitedAt : existing.visitedAt,
       })
+      .where(
+        and(
+          eq(userFeature.userId, params.userId),
+          eq(userFeature.featureId, params.featureId),
+        ),
+      )
+      .returning()
+
+    return updated as UserFeatureDB
   }
 
-  // Group images by their feature's projectId
-  if ((user as any).contributedImages) {
-    ;(user as any).contributedImages
-      .filter((image: any) => image.featureImage && image.featureImage.isPublished)
-      .sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-      .forEach((image: any) => {
-        const projectId = image.featureImage?.feature?.projectId
-        if (projectId) {
-          if (!imagesGrouped[projectId]) {
-            imagesGrouped[projectId] = []
-          }
-          imagesGrouped[projectId].push(image.id)
+  const [created] = await db
+    .insert(userFeature)
+    .values({
+      userId: params.userId,
+      featureId: params.featureId,
+      isVisited: params.isVisited ?? false,
+      isWishlisted: params.isWishlisted ?? false,
+      visitedAt: params.visitedAt ?? null,
+    })
+    .returning()
+
+  return created as UserFeatureDB
+}
+
+/**
+ * Removes one list flag (`wishlist` or `visited`) from a user-feature row.
+ * If both flags become false, the row is deleted.
+ *
+ * @param db - Database handle.
+ * @param params - User/feature ids and list flag to clear.
+ * @returns Updated row, or `null` when deleted/missing.
+ */
+export const removeUserFeatureListState = async (
+  db: Database,
+  params: {
+    userId: Id
+    featureId: Id
+    list: 'wishlist' | 'visited'
+  },
+): Promise<UserFeatureDB | null> => {
+  const [existing] = await db
+    .select()
+    .from(userFeature)
+    .where(
+      and(
+        eq(userFeature.userId, params.userId),
+        eq(userFeature.featureId, params.featureId),
+      ),
+    )
+    .limit(1)
+
+  if (!existing) return null
+
+  const nextState =
+    params.list === 'wishlist'
+      ? {
+          isWishlisted: false,
+          isVisited: existing.isVisited,
+          visitedAt: existing.visitedAt,
         }
-      })
+      : {
+          isWishlisted: existing.isWishlisted,
+          isVisited: false,
+          visitedAt: null,
+        }
+
+  if (!nextState.isWishlisted && !nextState.isVisited) {
+    await db
+      .delete(userFeature)
+      .where(
+        and(
+          eq(userFeature.userId, params.userId),
+          eq(userFeature.featureId, params.featureId),
+        ),
+      )
+    return null
   }
 
-  contributedFeatures = featuresGrouped
-  contributedImages = imagesGrouped
+  const [updated] = await db
+    .update(userFeature)
+    .set(nextState)
+    .where(
+      and(
+        eq(userFeature.userId, params.userId),
+        eq(userFeature.featureId, params.featureId),
+      ),
+    )
+    .returning()
 
-  // Count tasks by type
-  const tasks = (user as any).contributedTasks || []
-  const reportedMissingCount = tasks.filter(
-    (task: any) => task.type === 'reportedMissing',
-  ).length
-  const newPhotoCount = tasks.filter((task: any) => task.type === 'newPhoto').length
-  const newFeatureCount = tasks.filter((task: any) => task.type === 'newFeature').length
-
-  const data: any = {
-    ...user,
-    userLayers,
-    userFeatures,
-    roles: [
-      ...user.hubRoles.map(role => ({
-        ...role,
-        type: 'hub',
-      })),
-      ...user.organisationRoles.map(role => ({
-        ...role,
-        type: 'organisation',
-      })),
-      ...user.projectRoles.map(role => ({
-        ...role,
-        type: 'project',
-      })),
-    ] as UserRoleDisco[],
-    // Add contributor data - arrays of IDs
-    contributedFeatures,
-    contributedImages,
-    reportedMissingCount,
-    newPhotoCount,
-    newFeatureCount,
-    ...(isSuperAdmin ? { superAdmin: true } : {}),
-  }
-
-  return isCollection
-    ? (UserCollectionAPI.parse(data) as User)
-    : (UserProfileAPI.parse(data) as UserProfile)
+  return updated as UserFeatureDB
 }
