@@ -32,23 +32,25 @@ import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type {
-  Property,
-  PropertyDB,
-  PropertyNew,
-  ProjectPropertyForm,
-  PropertyI18nDB,
-  PropertyI18nNew,
-  PropertyValue,
-  PropertyValueNew,
-  PropertyValueDB,
-  PropertyValueI18nDB,
-  PropertyValueI18nPartial,
   Locale,
   Database,
-  PropertyI18nPartial,
-  PropertyValueI18nNew,
-  PropertyDBRaw,
 } from '$lib/types'
+import type {
+  Property,
+  PropertyDB,
+  PropertyDBRaw,
+  PropertyI18nDB,
+  PropertyI18nNew,
+  PropertyI18nPartial,
+  PropertyNew,
+  PropertyValue,
+  PropertyValueDB,
+  PropertyValueI18nDB,
+  PropertyValueI18nNew,
+  PropertyValueI18nPartial,
+  PropertyValueNew,
+  ProjectPropertyForm,
+} from '$lib/db/zod/schema/property.types'
 import { syncProperties } from './layer'
 
 // ═══════════════════════

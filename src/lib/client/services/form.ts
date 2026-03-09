@@ -34,8 +34,8 @@ import type {
   ApplyChangedRelationFieldParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
-  User,
 } from '$lib/types'
+import type { User } from '$lib/db/zod/schema/user.types'
 import type {
   OrganisationGetState,
   OrganisationRoleUser,

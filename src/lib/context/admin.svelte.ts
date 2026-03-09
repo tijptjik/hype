@@ -29,7 +29,6 @@ import type {
   Code,
   Resource,
   FilteredResources,
-  Property,
   ViewFilters,
   Locale,
   FilterTriState,
@@ -37,6 +36,7 @@ import type {
   NavigableResource,
   FilterState,
 } from '../types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'

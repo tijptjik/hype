@@ -8,16 +8,10 @@ import type { HeaderCrumb } from '$lib/bits/custom/header'
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { AppCtx } from '$lib/context/app.svelte'
-import type {
-  Code,
-  FacetType,
-  Id,
-  NavigableResource,
-  Resource,
-  Organisation,
-  Project,
-  Hub,
-} from '$lib/types'
+import type { Code, FacetType, Id, NavigableResource, Resource } from '$lib/types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Hub } from '$lib/db/zod/schema/hub.types'
 
 function isNavigable(resource: unknown): resource is NavigableResource {
   return (

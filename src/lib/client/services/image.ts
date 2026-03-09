@@ -18,10 +18,7 @@ import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
 // TYPES
-import type {
-  ImageNew,
-  ParamsToSign,
-} from '$lib/types'
+import type { ParamsToSign } from '$lib/types'
 import type {
   Image,
   ImageContextEnvelope,
@@ -35,6 +32,7 @@ import type {
   Metadata,
   LngLat,
   SignData,
+  ImageNew,
 } from '$lib/db/zod/schema/image.types'
 // CONTEXT
 import type { ImageCtx } from '$lib/context/image.svelte'

@@ -27,8 +27,8 @@ import type {
   LayerMetadata,
   ListResponse,
   QueryParams,
-  Property,
 } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type {
   LayerCommandProbe,
   LayerDB,

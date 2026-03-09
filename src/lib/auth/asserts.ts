@@ -6,10 +6,10 @@ import { m } from '$lib/i18n'
 import type {
   Code,
   Id,
-  OrganisationPartial,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
+import type { OrganisationPartial } from '$lib/db/zod/schema/organisation.types'
 import { error } from '@sveltejs/kit'
 
 /**

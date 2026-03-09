@@ -36,15 +36,14 @@ import type {
   TaskNew,
   TaskDB,
   TaskDBPartial,
-  Image,
   TaskCreation,
-  ImageUploadCtx,
   Id,
   Database,
   UserContributedFeature,
   HubOpts,
   TaskDBRaw,
 } from '$lib/types'
+import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
 // API SERVICES
 import { createUserContributedFeature } from '$lib/api/services/feature'
 

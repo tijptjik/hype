@@ -86,6 +86,12 @@
   - appCtx/adminCtx loaders migrated off `/api/<resource>`
 - Keep backwards-compatible exports during transition.
 
+## Type Collation
+- Apply the colocated type extraction rules in [`Refactor-Guide-Resource-Types.md`](/home/io/code/hype/docs/Refactor-Guide-Resource-Types.md) alongside each resource pass.
+- This is not limited to first-class resources:
+  - include adjacent schema-owned type surfaces such as `property`, `image`, and generic API query schema types when they are touched by the resource migration
+  - for upcoming `feature` and `task` passes, treat this collateral type collation as part of the same refactor scope, not follow-up cleanup
+
 ### Recommended Layout During Transition
 - Active remote contract file:
   - `src/lib/db/zod/schema/<resource>.ts`

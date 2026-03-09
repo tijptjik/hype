@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { overrideOrganisationEntityFromFormInput } from '$lib/client/services/organisation'
-import type { OrganisationFormInput } from '$lib/types'
+import type { OrganisationFormInput } from '$lib/db/zod/schema/organisation.types'
 
 describe('organisation service overrides', () => {
   it('does not overwrite i18n/code/url when role-only submit payload omits them', () => {

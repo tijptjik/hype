@@ -41,40 +41,6 @@ import type {
   FeatureRaw,
   FeatureUpdate,
   FeatureUpdateAPI,
-  ImageAPI,
-  ImageBase,
-  ImageBaseRaw,
-  ImageBasic,
-  ImageFlat,
-  ImageFlatUpdate,
-  ImageInsert,
-  ImageInsertAPI,
-  ImageInsertWithFeatureAPI,
-  ImageInsertWithProjectOrOrganisationAPI,
-  ImageProfile as ImageProfileSchema,
-  ImageListProfileAPI,
-  ImageDetailProfileAPI,
-  ImageAdminProfileAPI,
-  ImageUpdate,
-  ImageUpdateAPI,
-  PropertyAdminProfileAPI,
-  PropertyDetailProfileAPI,
-  PropertyI18nRecord,
-  PropertyI18nRecordCreate,
-  PropertyI18nRecordUpdate,
-  PropertyRecord,
-  PropertyRecordCreate,
-  PropertyRecordRaw,
-  PropertyRecordUpdate,
-  PropertyValueAdminProfileAPI,
-  PropertyValueDetailProfileAPI,
-  PropertyValueI18nRecord,
-  PropertyValueI18nRecordCreate,
-  PropertyValueI18nRecordUpdate,
-  PropertyValueRawRecord,
-  PropertyValueRecord,
-  PropertyValueRecordCreate,
-  PropertyValueRecordUpdate,
   TaskAPI,
   TaskBase,
   TaskBaseRaw,
@@ -107,10 +73,7 @@ import type {
   LayerNew,
   LayerProfile,
 } from './db/zod/schema/layer.types'
-import type {
-  UserFeature,
-  UserProfile,
-} from './db/zod/schema/user.types'
+import type { UserFeature, UserProfile } from './db/zod/schema/user.types'
 import type {
   Organisation,
   OrganisationDB,
@@ -130,7 +93,91 @@ import type {
   ProjectNew,
   ProjectRole,
 } from './db/zod/schema/project.types'
-import type { ProjectPropertyFormData as ProjectPropertyFormDataSchema } from './db/zod/schema/property'
+import type {
+  FeatureImage,
+  FeatureImageDB,
+  FeatureImageDBNew,
+  FeatureImageDBPartial,
+  FeatureImageNew,
+  FeatureImagePartial,
+  Image,
+  ImageAdminProfile,
+  ImageByIdParams,
+  ImageByIdParamsByProfile,
+  ImageByIdResponse,
+  ImageCollectionResponse,
+  ImageContextEnvelope,
+  ImageContextType,
+  ImageCtxEnvelope,
+  ImageDB,
+  ImageDBBasic,
+  ImageDBFlat,
+  ImageDBFlatUpdate,
+  ImageDBNew,
+  ImageDBPartial,
+  ImageDBRaw,
+  ImageDetailProfile,
+  ImageEditCtx,
+  ImageEntityByProfile,
+  ImageListByProfile,
+  ImageListProfile,
+  ImageNew,
+  ImageNewWithFeature,
+  ImageNewWithProjectOrOrganisation,
+  ImagePartial,
+  ImageProfile,
+  ImageRemoteMeta,
+  ImagesForContextParams,
+  ImagesForContextParamsByProfile,
+  ImagesForIdsParams,
+  ImagesForIdsParamsByProfile,
+  ImageUpload,
+  ImageUploadCtx,
+  Intent,
+  LoadStatus,
+  LngLat,
+  Metadata,
+  SetImageIntentParams,
+  SetImagePublishedParams,
+  SignData,
+  UpdateImageParams,
+  UploadedPhoto,
+  UploadStatus,
+  EXIF,
+  DeleteImageParams,
+  CloudinarySignatureParams,
+  CreateImageParams,
+} from './db/zod/schema/image.types'
+import type {
+  FormFieldCardBodyProps,
+  ProjectPropertyForm,
+  Property,
+  PropertyAdminProfile,
+  PropertyDB,
+  PropertyDBNew,
+  PropertyDBPartial,
+  PropertyDBRaw,
+  PropertyDiscriminator,
+  PropertyFormData,
+  PropertyI18nDB,
+  PropertyI18nNew,
+  PropertyI18nPartial,
+  PropertyNew,
+  PropertyPartial,
+  PropertyTranslationOrigin,
+  PropertyValue,
+  PropertyValueAdminProfile,
+  PropertyValueDB,
+  PropertyValueDBRaw,
+  PropertyValueI18nDB,
+  PropertyValueI18nNew,
+  PropertyValueI18nPartial,
+  PropertyValueNew,
+  PropertyValueNewDB,
+  PropertyValuePartial,
+  PropertyValuePartialDB,
+  WritableI18nRecord,
+} from './db/zod/schema/property.types'
 // TYPES
 import type { Component, Snippet } from 'svelte'
 import type { Page, RemoteFormIssue } from '@sveltejs/kit'
@@ -1804,377 +1851,6 @@ export type TaskCreation = NewFeatureTask | ReportedMissingTask | NewPhotoTask
 /* ----------------- */
 // PROPERTIES
 /* -------- */
-
-/* ----------------- */
-// PROPERTIES :: DB
-/* -------- */
-
-// Property with all its own fields.
-export type PropertyDB = z.infer<typeof PropertyRecord>
-// Property without relations, for use in inserting a new property
-export type PropertyDBNew = z.infer<typeof PropertyRecordCreate>
-// Property without relations, for use in partially updating a property
-export type PropertyDBPartial = z.infer<typeof PropertyRecordUpdate>
-// Property, with relations in DB form - used as an intermediate type for DB operations
-export type PropertyDBRaw = z.infer<typeof PropertyRecordRaw>
-
-/* ----------------- */
-// PROPERTIES :: API
-/* -------- */
-
-// Property with all fields, including translations and values
-export type Property = z.infer<typeof PropertyDetailProfileAPI>
-export type PropertyAdminProfile = z.infer<typeof PropertyAdminProfileAPI>
-export type PropertyNew = PropertyAdminProfile
-export type PropertyPartial = Partial<PropertyAdminProfile>
-export type ProjectPropertyForm = z.infer<typeof ProjectPropertyFormDataSchema>
-// Minimal project property form payload used by client-side form mutators
-export type PropertyFormData = {
-  id?: Id
-  properties?: Property[]
-}
-// Property section discriminator used for typed ordering/editing operations
-export type PropertyDiscriminator = 'classifier' | 'specifier'
-// Generic writable i18n map shape used by form-side mutation helpers
-export type WritableI18nRecord = Record<string, Record<string, unknown>>
-// Translation patch origin markers for project property locale translation flow
-export type PropertyTranslationOrigin =
-  | { type: 'label' | 'placeholder' }
-  | { type: 'value'; valueId: Id }
-
-// Shared prop contract for the project property card body component.
-export type FormFieldCardBodyProps = {
-  property: Property
-  propertyIndex: number
-  sectionRank: number
-  propertyFields?: unknown
-  allIssues?: FormIssueLike[]
-  locales: Locale[]
-  classifierComponents: readonly string[]
-  specifierComponents: readonly string[]
-  isRequiredInPreflight: (path: Array<string | number>) => boolean
-  isEditing?: boolean
-  onUpdateBase: (
-    propertyId: Id,
-    key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable' | 'isDefaultEnabled',
-    value: string | number | null | boolean,
-  ) => void
-  onUpdateI18n: (
-    propertyId: Id,
-    locale: Locale,
-    key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
-    value: string | boolean,
-  ) => void
-  onAddValue: (propertyId: Id) => void
-  onRemoveValue: (propertyId: Id, valueId: Id) => void
-  onMoveValue: (propertyId: Id, valueId: Id, targetIndex: number) => void
-  removeMode?: boolean
-  onUpdateValue: (propertyId: Id, valueId: Id, key: 'value', value: string) => void
-  onUpdateValueI18n: (
-    propertyId: Id,
-    valueId: Id,
-    locale: Locale,
-    key: 'value',
-    value: string,
-  ) => void
-  onTranslateLocale: (
-    propertyId: Id,
-    sourceLocale: Locale,
-    targetLocale: Locale,
-  ) => Promise<boolean | void>
-  onResetLocale: (propertyId: Id, targetLocale: Locale) => void | Promise<void>
-  onLayoutMutationStart?: () => void
-}
-
-/* ----------------- */
-// PROPERTIES :: RELATIONAL
-/* -------- */
-
-// propertyI18n, but with the propertyId - for use in DB seeding & selects
-export type PropertyI18nDB = z.infer<typeof PropertyI18nRecord>
-// propertyI18n, but without propertyId - for use in API insertions
-export type PropertyI18nNew = z.infer<typeof PropertyI18nRecordCreate>
-// Same as PropertyI18nNew, but all fields are optional
-export type PropertyI18nPartial = z.infer<typeof PropertyI18nRecordUpdate>
-
-// propertyValue, but with the propertyId - for use in DB seeding & selects
-export type PropertyValueDB = z.infer<typeof PropertyValueRecord>
-export type PropertyValueDBRaw = z.infer<typeof PropertyValueRawRecord>
-
-// propertyValue, but without propertyId - for use in API insertions
-export type PropertyValueNewDB = z.infer<typeof PropertyValueRecordCreate>
-// Same as PropertyValueNew, but all fields are optional
-export type PropertyValuePartialDB = z.infer<typeof PropertyValueRecordUpdate>
-
-export type PropertyValueI18nDB = z.infer<typeof PropertyValueI18nRecord>
-// propertyValueI18n, but without propertyValueId - for use in API insertions
-export type PropertyValueI18nNew = z.infer<typeof PropertyValueI18nRecordCreate>
-// Same as PropertyValueI18nNew, but all fields are optional
-export type PropertyValueI18nPartial = z.infer<typeof PropertyValueI18nRecordUpdate>
-
-// PropertyValue, but with i18n, for use in API
-export type PropertyValue = z.infer<typeof PropertyValueDetailProfileAPI>
-export type PropertyValueAdminProfile = z.infer<typeof PropertyValueAdminProfileAPI>
-export type PropertyValueNew = PropertyValueAdminProfile
-export type PropertyValuePartial = Partial<PropertyValueAdminProfile>
-
-/* ----------------- */
-// IMAGES
-/* -------- */
-
-export type ImageDB = z.infer<typeof ImageBase>
-export type ImageDBBasic = z.infer<typeof ImageBasic>
-export type ImageDBNew = z.infer<typeof ImageInsert>
-export type ImageDBPartial = z.infer<typeof ImageUpdate>
-export type ImageDBFlat = z.infer<typeof ImageFlat>
-export type ImageDBFlatUpdate = z.infer<typeof ImageFlatUpdate>
-export type ImageDBRaw = z.infer<typeof ImageBaseRaw>
-
-export type Image = z.infer<typeof ImageAPI>
-export type ImageListProfile = z.infer<typeof ImageListProfileAPI>
-export type ImageDetailProfile = z.infer<typeof ImageDetailProfileAPI>
-export type ImageAdminProfile = z.infer<typeof ImageAdminProfileAPI>
-export type ImageProfile = z.infer<typeof ImageProfileSchema>
-export type ImageNew = z.infer<typeof ImageInsertAPI>
-export type ImageNewWithFeature = z.infer<typeof ImageInsertWithFeatureAPI>
-export type ImageNewWithProjectOrOrganisation = z.infer<
-  typeof ImageInsertWithProjectOrOrganisationAPI
->
-export type ImagePartial = z.infer<typeof ImageUpdateAPI>
-export type ImageUpdateData = Omit<ImagePartial, 'ctxType' | 'refId'>
-export type ImageEntityByProfile<P extends ImageProfile> = P extends 'list'
-  ? ImageListProfile
-  : P extends 'card'
-    ? ImageListProfile
-    : P extends 'detail'
-      ? ImageDetailProfile
-      : ImageAdminProfile
-export type ImageListByProfile<P extends ImageProfile> = P extends 'list'
-  ? ImageListProfile
-  : P extends 'card'
-    ? ImageListProfile
-    : P extends 'detail'
-      ? ImageDetailProfile
-      : ImageAdminProfile
-
-export type ImageContextEnvelope<P extends ImageProfile = 'list'> = {
-  ctxType: ImageContextType
-  ctxId: Id
-  image: ImageListByProfile<P>
-  intent?: Intent | null
-  isPublished?: boolean | null
-  publishedAt?: string | null
-}
-
-export type ImageCtxEnvelope = Omit<ImageContextEnvelope<'detail'>, 'image'> & {
-  image: Image & {
-    preview?: string
-    file?: File
-  }
-}
-
-export type FeatureImageDB = z.infer<typeof FeatureImageBase>
-export type FeatureImageDBNew = z.infer<typeof FeatureImageInsert>
-export type FeatureImageDBPartial = z.infer<typeof FeatureImageUpdate>
-
-export type FeatureImage = z.infer<typeof FeatureImageBase>
-export type FeatureImageNew = z.infer<typeof FeatureImageInsert>
-export type FeatureImagePartial = z.infer<typeof FeatureImageUpdate>
-
-/* ----------------- */
-// IMAGES :: METADATA
-/* -------- */
-
-export type Intent =
-  | 'canonical'
-  | 'closeUp'
-  | 'context'
-  | 'general'
-  | 'research'
-  | 'undefined'
-
-export type EXIF = {
-  CopyrightNotice: string
-  Copyright: string
-  Credit: string
-  DateTimeOriginal: string
-  CreateDate: string
-  ModifyDate: string
-  GPSLatitude: string
-  GPSLongitude: string
-  'By-line': string
-  [key: string]: string
-}
-
-export type LngLat = {
-  latitude?: string
-  longitude?: string
-}
-
-export type Metadata = Record<string, string>
-
-/* ----------------- */
-// IMAGES :: UPLOAD
-/* -------- */
-
-export type LoadStatus = 'initial' | 'uploaded' | 'loading' | 'loaded' | 'error'
-export type UploadStatus =
-  | 'idle'
-  | 'staged'
-  | 'uploading'
-  | 'uploaded'
-  | 'error'
-  | 'invalidated'
-export type ImageUpload = {
-  file: File
-  status: UploadStatus
-  retries: number
-  imageToReplace?: ImageCtxEnvelope
-  preview?: string
-}
-
-export type UploadedPhoto = {
-  file: File
-  previewUrl: string
-}
-
-export type ImageUploadCtx = {
-  // ResourceType which the image is associated with
-  ctxType: ImageContextResource
-  // ID of the entity which the image is associated with
-  ctxId: Id
-  // Hub context (required for hub uploads when code-based folder naming is needed)
-  hub?: HubDB
-  // Parent Organisation (required for organisation/project/feature)
-  organisation?: OrganisationDB
-  // Parent Project
-  project?: ProjectDB
-  // Image to replace is used to determine the image being replaced
-  imageToReplace?: ImageCtxEnvelope
-}
-
-export type ImageEditCtx = {
-  // ResourceType which the image is associated with
-  ctxType: ImageContextResource
-  // ID of the entity which the image is associated with
-  ctxId: Id
-}
-
-export type ImageContextType = ImageContextResource | ImageContextResourceExtended
-
-export type ImageRemoteMeta = {
-  isAdminRequest?: boolean
-  profile?: ImageProfile
-}
-
-export type ImagesForContextParams = {
-  ctxType: ImageContextType
-  ctxId: Id
-  ctxNarrowingType?: ImageContextResourceExtended
-  ctxNarrowingId?: Id
-  pagination?: {
-    limit?: number
-    offset?: number
-  }
-  sorting?: {
-    sortBy?: string
-    sortOrder?: 'asc' | 'desc'
-  }
-  meta?: ImageRemoteMeta
-}
-
-export type ImagesForContextParamsByProfile<P extends ImageProfile> = Omit<
-  ImagesForContextParams,
-  'meta'
-> & {
-  meta?: ImageRemoteMeta & { profile?: P }
-}
-
-export type ImagesForIdsParams = {
-  ids: Id[]
-  meta?: ImageRemoteMeta
-}
-
-export type ImagesForIdsParamsByProfile<P extends ImageProfile> = Omit<
-  ImagesForIdsParams,
-  'meta'
-> & {
-  meta?: ImageRemoteMeta & { profile?: P }
-}
-
-export type ImageByIdParams = {
-  id: Id
-  meta?: ImageRemoteMeta
-}
-
-export type ImageByIdParamsByProfile<P extends ImageProfile> = Omit<
-  ImageByIdParams,
-  'meta'
-> & {
-  meta?: ImageRemoteMeta & { profile?: P }
-}
-
-export type CreateImageParams = {
-  data: ImageNew
-  meta?: ImageRemoteMeta
-}
-
-export type UpdateImageParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  data: Record<string, unknown>
-  meta?: ImageRemoteMeta
-}
-
-export type SetImageIntentParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  intent: Intent
-  featureId?: Id
-  isPublished?: boolean
-  meta?: ImageRemoteMeta
-}
-
-export type SetImagePublishedParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  featureId?: Id
-  isPublished: boolean
-  meta?: ImageRemoteMeta
-}
-
-export type DeleteImageParams = {
-  id: Id
-  ctxType: ImageContextType
-  ctxId: Id
-  meta?: ImageRemoteMeta
-}
-
-export type CloudinarySignatureParams = {
-  paramsToSign: ParamsToSign
-  meta?: ImageRemoteMeta
-}
-
-export type ImageCollectionResponse<P extends ImageProfile = 'list'> = EntityResponse<
-  Array<ImageContextEnvelope<P>>
-> & {
-  profile: P
-}
-
-export type ImageByIdResponse<P extends ImageProfile = 'detail'> =
-  EntityResponse<ImageContextEnvelope<P> | null> & {
-    profile: P
-  }
-
-export type SignData = {
-  cloudname: string
-  apikey: string
-  timestamp: string
-  signature: string
-}
 
 export type ParamsToSign = {
   folder: string

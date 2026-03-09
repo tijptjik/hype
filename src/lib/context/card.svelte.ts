@@ -3,7 +3,7 @@ import { setContext, getContext } from 'svelte'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
 // TYPES
-import type { UploadedPhoto } from '$lib/types'
+import type { UploadedPhoto } from '$lib/db/zod/schema/image.types'
 
 export class CardCtx {
   state = $state({

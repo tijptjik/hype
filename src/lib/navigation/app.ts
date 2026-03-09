@@ -26,8 +26,8 @@ import type {
   Locale,
   FeatureFromCollection,
   Feature,
-  Image,
 } from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
 
 // ═══════════════════════

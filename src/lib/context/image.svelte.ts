@@ -28,7 +28,6 @@ import type {
   ImageContextConfig,
   Feature,
 } from '$lib/types'
-import type { UploadStatus } from '$lib/types'
 import type {
   Image,
   ImageCtxEnvelope,
@@ -37,6 +36,7 @@ import type {
   ImageUploadCtx,
   Intent,
   LoadStatus,
+  UploadStatus,
 } from '$lib/db/zod/schema/image.types'
 import type { HubDB } from '$lib/db/zod/schema/hub.types'
 import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'

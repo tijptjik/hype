@@ -33,13 +33,13 @@ import type {
   Database,
   EntityResponse,
   Id,
-  Image,
   ListResponse,
   Prisms,
   QueryParams,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 import type {
   ProjectAdminDBRaw,
   ProjectCardDBRaw,

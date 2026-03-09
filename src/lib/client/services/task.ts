@@ -4,9 +4,8 @@ import type {
   UserContributedFeature,
   Feature,
   Id,
-  UploadedPhoto,
 } from '$lib/types'
-import type { ImageUpload } from '$lib/db/zod/schema/image.types'
+import type { ImageUpload, UploadedPhoto } from '$lib/db/zod/schema/image.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'

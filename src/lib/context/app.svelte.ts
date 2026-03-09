@@ -68,12 +68,10 @@ import type {
   FilteredResources,
   FilterTriState,
   Id,
-  Image,
   LayoutMode,
   Locale,
   NavigableResource,
   NewFeatureTask,
-  Property,
   Resource,
   ResourceContext,
   ResourceTypeWithChildren,
@@ -86,6 +84,8 @@ import type {
   RemoteListFn,
   RemoteGetFn,
 } from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'

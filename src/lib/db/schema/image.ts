@@ -12,7 +12,7 @@ import { feature } from './feature'
 // ENUM
 import { ImageCDN, ImageEnv, ImageIntent, ImagePresentationMode } from '../../enums'
 // TYPES
-import type { EXIF } from '../../types'
+import type { EXIF } from '../zod/schema/image.types'
 
 /* ============================================================================
  * IMAGE MANAGEMENT

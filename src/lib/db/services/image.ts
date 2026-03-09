@@ -29,25 +29,23 @@ import {
   ImageIntentPublic,
 } from '$lib/enums'
 // TYPES
+import type { Id, Database, EntityResponse } from '$lib/types'
 import type {
   FeatureImage,
   FeatureImageDB,
-  Id,
-  ImageDBNew,
-  Database,
-  ImageDBPartial,
   Image,
+  ImageContextEnvelope,
+  ImageContextType,
   ImageDB,
   ImageDBFlat,
   ImageDBFlatUpdate,
-  ImageProfile,
+  ImageDBNew,
+  ImageDBPartial,
   ImageEntityByProfile,
   ImageListByProfile,
-  EntityResponse,
-  ImageContextEnvelope,
-  ImageContextType,
+  ImageProfile,
   Intent,
-} from '$lib/types'
+} from '$lib/db/zod/schema/image.types'
 import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
 // UTILS
 import { sortImages } from '$lib/client/services/image'

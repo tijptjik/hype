@@ -52,15 +52,12 @@ import type {
   FeaturePropertyDB,
   FeaturePropertyMerge,
   Id,
-  Layer,
-  LayerDB,
-  LayerDBRaw,
   Locale,
   NewFeatureProperty,
-  ImageDB,
-  ImageDBFlat,
   HubOptsExtended,
 } from '$lib/types'
+import type { ImageDB, ImageDBFlat } from '$lib/db/zod/schema/image.types'
+import type { Layer, LayerDB, LayerDBRaw } from '$lib/db/zod/schema/layer.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
