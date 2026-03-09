@@ -1,114 +1,77 @@
-// API
-import { applyQueryFilters } from '$lib/api'
-// AUTH
-import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/asserts'
 // LIB
 import { toBooleanOrUndefined } from '$lib/api/services'
 // SCHEMA
 import { hub, hubProperty } from '$lib/db/schema/index'
 // DB
 import { transformI18nSafely } from '$lib/db'
-// ZOD
-import { HubDetailProfileAPI, HubListProfileAPI } from '$lib/db/zod/schema/hub'
-import { superValidate } from 'sveltekit-superforms'
-import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { toImageEnvelope } from '$lib/db/services/image'
+// ZOD
+import {
+  HubCardProfileAPI,
+  HubDetailProfileAPI,
+  HubListProfileAPI,
+  HubProfile,
+} from '$lib/db/zod'
+// ENUMS
 import { ImageContextResource } from '$lib/enums'
-import { HubCardProfileAPI, HubProfile } from '$lib/db/zod'
 // TYPES
 import { asc, sql, type SQL } from 'drizzle-orm'
 import type {
+  EntityResponse,
   Hub,
   HubDB,
+  HubDBRaw,
   HubEntityByProfile,
   HubListByProfile,
+  HubOptsExtended,
   HubProfile as HubProfileType,
   Id,
-  HubOptsExtended,
-  QueryParams,
-  SessionUser,
-  HubDBRaw,
-  EntityResponse,
   ListResponse,
 } from '$lib/types'
-import type { SuperValidated } from 'sveltekit-superforms'
 
 type UnknownRecord = Record<string, unknown>
 type ToImageArg = Parameters<typeof toImageEnvelope>[0]
 
-const mapPropertyValuesWithI18n = (values: unknown): UnknownRecord[] =>
-  ((values as UnknownRecord[] | undefined) ?? []).map(value => ({
-    ...value,
-    i18n: transformI18nSafely(value.i18n as never),
-  }))
-
-const mapPropertiesWithI18n = (properties: unknown): UnknownRecord[] =>
-  ((properties as UnknownRecord[] | undefined) ?? []).map(property => ({
-    ...property,
-    i18n: transformI18nSafely(property.i18n as never),
-    values: mapPropertyValuesWithI18n(property.values),
-  }))
-
-const mapPropertiesFromAssignments = (row: UnknownRecord): UnknownRecord[] => {
-  const assignments = ((row.propertyAssignments as UnknownRecord[] | undefined) ?? [])
-    .map(item => item.property as UnknownRecord | null)
-    .filter((item): item is UnknownRecord => Boolean(item))
-
-  if (assignments.length > 0) {
-    return assignments.map((property, rank) => ({
-      ...property,
-      rank,
-      i18n: transformI18nSafely(property.i18n as never),
-      values: mapPropertyValuesWithI18n(property.values),
-    }))
-  }
-
-  return mapPropertiesWithI18n(row.properties)
-}
-
-const mapOrganisationsWithImage = (
-  organisations: unknown,
-  view: 'card' | 'list',
-): UnknownRecord[] =>
-  ((organisations as UnknownRecord[] | undefined) ?? []).map(organisation => ({
-    ...organisation,
-    i18n: transformI18nSafely(organisation.i18n as never),
-    image: organisation.image
-      ? toImageEnvelope(
-          organisation.image as unknown as ToImageArg,
-          view,
-          ImageContextResource.organisation,
-          organisation.id as string,
-        )
-      : null,
-  }))
-
-const toTransformedHubForListView = (hub: HubDBRaw): Record<string, unknown> => ({
-  ...hub,
-  i18n: transformI18nSafely(hub.i18n),
-  image: hub.image
-    ? toImageEnvelope(
-        hub.image as unknown as ToImageArg,
-        'list',
-        ImageContextResource.hub,
-        hub.id,
-      )
-    : null,
-  userRoles: hub.userRoles ?? [],
-  organisations: mapOrganisationsWithImage(hub.organisations, 'list'),
-  properties: mapPropertiesFromAssignments(hub as unknown as UnknownRecord),
-})
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// DB RELATIONS
+// - hubCollectionWithRelations
+// - hubEntityWithRelations
+//
+// PROFILE SHAPING
+// - toHubProfile
+// - toProfileResponseShape
+// - toEntityResponseShape
+// - toListResponseShape
+//
+// QUERY CONTEXT
+// - toLookupConditions
+// - toRequestedListState
+// - toQueryConditions
+//
+// HUB DOMAIN MAPPING
+// - getHubFromDomain
+// - isCore
 
 // ═══════════════════════
-// WITH RELATIONS
+// DB RELATIONS
 // ═══════════════════════
 
-// Simple relations for hub collection
+/**
+ * Baseline relation graph for hub collection reads.
+ * Keeps list endpoints lightweight while still providing display i18n and image data.
+ */
 export const hubCollectionWithRelations = {
   i18n: true,
   image: true,
 }
 
+/**
+ * Full relation graph for hub entity reads.
+ * Includes user roles, organisations, and ordered property assignments for admin/detail flows.
+ */
 export const hubEntityWithRelations = {
   i18n: true,
   image: true,
@@ -158,9 +121,13 @@ export const hubEntityWithRelations = {
 }
 
 // ═══════════════════════
-// QUERY HELPERS
+// PROFILE SHAPING
 // ═══════════════════════
 
+/**
+ * Normalizes unknown profile input to a supported hub profile value.
+ * Falls back when value is missing or invalid.
+ */
 export const toHubProfile = (
   value: unknown,
   fallback: HubProfileType,
@@ -169,28 +136,71 @@ export const toHubProfile = (
   return parsed.success ? parsed.data : fallback
 }
 
-export const toLookupConditions = (params: {
-  ref: string
-  refKey?: 'id' | 'code'
-}): Partial<HubDB> =>
-  params.refKey === 'code'
-    ? ({ code: params.ref } as Partial<HubDB>)
-    : ({ id: params.ref as Id } as Partial<HubDB>)
+/**
+ * Normalizes property-value rows so nested i18n is consistently transformed.
+ */
+const mapPropertyValuesWithI18n = (values: unknown): UnknownRecord[] =>
+  ((values as UnknownRecord[] | undefined) ?? []).map(value => ({
+    ...value,
+    i18n: transformI18nSafely(value.i18n as never),
+  }))
 
-export const toRequestedListState = (conditions: Partial<HubDB>) => ({
-  isPublished: toBooleanOrUndefined(conditions.isPublished) ?? true,
-  isArchived: toBooleanOrUndefined(conditions.isArchived) ?? false,
-})
+/**
+ * Normalizes property rows and their nested values to transformed i18n maps.
+ */
+const mapPropertiesWithI18n = (properties: unknown): UnknownRecord[] =>
+  ((properties as UnknownRecord[] | undefined) ?? []).map(property => ({
+    ...property,
+    i18n: transformI18nSafely(property.i18n as never),
+    values: mapPropertyValuesWithI18n(property.values),
+  }))
 
-export const toQueryConditions = (
-  params: { refKey?: 'id' | 'code' },
-  queryParams: Partial<HubDB>,
-): SQL<unknown>[] =>
-  params.refKey === 'code'
-    ? [sql`${hub.code} = ${queryParams.code as string}`]
-    : [sql`${hub.id} = ${queryParams.id as Id}`]
+/**
+ * Projects assigned properties from `propertyAssignments` when present.
+ * Falls back to direct `properties` relation for compatibility with mixed query shapes.
+ */
+const mapPropertiesFromAssignments = (row: UnknownRecord): UnknownRecord[] => {
+  const assignments = ((row.propertyAssignments as UnknownRecord[] | undefined) ?? [])
+    .map(item => item.property as UnknownRecord | null)
+    .filter((item): item is UnknownRecord => Boolean(item))
 
-export const toHubResponseShape = <P extends HubProfileType>(
+  if (assignments.length > 0) {
+    return assignments.map((property, rank) => ({
+      ...property,
+      rank,
+      i18n: transformI18nSafely(property.i18n as never),
+      values: mapPropertyValuesWithI18n(property.values),
+    }))
+  }
+
+  return mapPropertiesWithI18n(row.properties)
+}
+
+/**
+ * Normalizes organisation relation rows and shapes image envelopes for requested view density.
+ */
+const mapOrganisationsWithImage = (
+  organisations: unknown,
+  view: 'card' | 'list',
+): UnknownRecord[] =>
+  ((organisations as UnknownRecord[] | undefined) ?? []).map(organisation => ({
+    ...organisation,
+    i18n: transformI18nSafely(organisation.i18n as never),
+    image: organisation.image
+      ? toImageEnvelope(
+          organisation.image as unknown as ToImageArg,
+          view,
+          ImageContextResource.organisation,
+          organisation.id as string,
+        )
+      : null,
+  }))
+
+/**
+ * Shapes a raw hub row into a profile-specific API payload.
+ * Ensures i18n and nested relation payloads are normalized for frontend consumption.
+ */
+const toProfileResponseShape = <P extends HubProfileType>(
   row: HubDBRaw,
   profile: P,
 ): HubEntityByProfile<P> => {
@@ -218,21 +228,29 @@ export const toHubResponseShape = <P extends HubProfileType>(
     properties: mapPropertiesFromAssignments(row as UnknownRecord) as Hub['properties'],
   }
 
-  if (profile === 'list')
+  if (profile === 'list') {
     return HubListProfileAPI.parse(shaped) as HubEntityByProfile<P>
-  if (profile === 'card')
+  }
+  if (profile === 'card') {
     return HubCardProfileAPI.parse(shaped) as HubEntityByProfile<P>
+  }
   return HubDetailProfileAPI.parse(shaped) as HubEntityByProfile<P>
 }
 
-export const toHubEntityResponse = <P extends HubProfileType>(
+/**
+ * Wraps a single hub row in the standard entity response envelope.
+ */
+export const toEntityResponseShape = <P extends HubProfileType>(
   data: HubDBRaw | null,
   profile: P,
 ): EntityResponse<HubEntityByProfile<P> | null> => ({
-  data: data ? toHubResponseShape(data, profile) : null,
+  data: data ? toProfileResponseShape(data, profile) : null,
 })
 
-export const toHubListResponse = <P extends HubProfileType>(params: {
+/**
+ * Wraps hub collection rows in the standard paginated list response envelope.
+ */
+export const toListResponseShape = <P extends HubProfileType>(params: {
   data: HubDBRaw[]
   profile: P
   limit?: number | undefined
@@ -242,7 +260,7 @@ export const toHubListResponse = <P extends HubProfileType>(params: {
   nextOffset?: number | null
 }): ListResponse<HubListByProfile<P>> => ({
   data: params.data.map(row =>
-    toHubResponseShape(row, params.profile),
+    toProfileResponseShape(row, params.profile),
   ) as HubListByProfile<P>[],
   limit: params.limit ?? undefined,
   offset: params.offset ?? 0,
@@ -252,12 +270,47 @@ export const toHubListResponse = <P extends HubProfileType>(params: {
 })
 
 // ═══════════════════════
+// QUERY CONTEXT
+// ═══════════════════════
+
+/**
+ * Builds lookup conditions from route references.
+ * Supports both id and code key strategies.
+ */
+export const toLookupConditions = (params: {
+  ref: string
+  refKey?: 'id' | 'code'
+}): Partial<HubDB> =>
+  params.refKey === 'code'
+    ? ({ code: params.ref } as Partial<HubDB>)
+    : ({ id: params.ref as Id } as Partial<HubDB>)
+
+/**
+ * Resolves requested hub list visibility state with safe public defaults.
+ */
+export const toRequestedListState = (conditions: Partial<HubDB>) => ({
+  isPublished: toBooleanOrUndefined(conditions.isPublished) ?? true,
+  isArchived: toBooleanOrUndefined(conditions.isArchived) ?? false,
+})
+
+/**
+ * Converts validated lookup params into SQL where conditions.
+ */
+export const toQueryConditions = (
+  params: { refKey?: 'id' | 'code' },
+  queryParams: Partial<HubDB>,
+): SQL<unknown>[] =>
+  params.refKey === 'code'
+    ? [sql`${hub.code} = ${queryParams.code as string}`]
+    : [sql`${hub.id} = ${queryParams.id as Id}`]
+
+// ═══════════════════════
 // HUB DOMAIN MAPPING
 // ═══════════════════════
 
 /**
- * Parses host to determine hub identifier without DB lookup
- * Returns hub identifier object for efficient filtering
+ * Resolves hub lookup hints from host/domain input without a DB read.
+ * This allows early request scoping in hooks and manifest routes.
  */
 export function getHubFromDomain(
   host: string | null,
@@ -288,13 +341,10 @@ export function getHubFromDomain(
     },
   }
 
-  // Default to core
   if (!host) return coreConfig
 
-  // Remove port number if present
   const domain = host.split(':')[0]
 
-  // localhost -> core (development)
   if (
     domain === 'localhost' ||
     domain === '127.0.0.1' ||
@@ -305,99 +355,20 @@ export function getHubFromDomain(
     return hubCode && hubCode !== 'core' ? { code: hubCode } : coreConfig
   }
 
-  // hype.hk -> core || preview.hype.hk -> core (preview)
   if (domain === 'hype.hk' || domain === 'preview.hype.hk') {
     return coreConfig
   }
 
-  // subdomain.hype.hk -> use subdomain as hub code
   if (domain.endsWith('.hype.hk')) {
     const subdomain = domain.replace('.hype.hk', '')
     return { code: subdomain }
   }
 
-  // custom domain -> use full domain as hub domain
   return { domain }
 }
 
 /**
- * Get the query context for the organisation resource - filters the query based on the user's roles, and the query parameters.
- * @param session - The session object
- * @param request - The request object
- * @param params - The query parameters
- * @param userRoles - The user roles
+ * Convenience helper indicating whether hub context should be treated as core scope.
  */
-export const getHubQueryContext = (params: QueryParams) => {
-  // SETUP : Only superadmins can query hubs, so we
-  // don't need to filter by anything other than the query params.
-  const conditions: SQL<unknown>[] = []
-  const excludeColumns: string[] = []
-
-  if (Object.keys(params).length > 0) {
-    applyQueryFilters(hub, params, conditions)
-  }
-
-  return { params, conditions, excludeColumns }
-}
-
-/********************
- *  5. UTILS :: SHAPING
- ************/
-
-/**
- * Rebuilds form data from database entities
- * @param hub - The hub database entity
- * @returns Validated form data
- */
-export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> => {
-  const transformedHub = toTransformedHubForListView(hub)
-  const form = await superValidate(
-    transformedHub as unknown as Parameters<typeof superValidate>[0],
-    zod(HubDetailProfileAPI) as unknown as Parameters<typeof superValidate>[1],
-  )
-  return form as SuperValidated<Hub>
-}
-
-/**
- * Builds response data from database entities
- * @param hub - The hub database entity (can be partial from queries)
- * @returns A parsed response shape
- */
-export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = false) => {
-  const transformedHub = toTransformedHubForListView(hub)
-
-  return isCollection
-    ? HubListProfileAPI.parse(transformedHub)
-    : HubDetailProfileAPI.parse(transformedHub)
-}
-
-/********************
- *  ACCESS CONTROL
- ************/
-/**
- * Get the context for updating a hub
- * @param user - The user object
- * @param formData - The form data
- * @param refId - The code from the URL parameter
- * @returns Object containing validation and access control context
- * @remarks We don't need to assert code in params equals code in form,
- * as we want to allow the users to change the code of the hub.
- */
-export const assertPermissionsToUpdateHub = (user: SessionUser) => {
-  // Run all access control assertions
-  const assertionError = runAssertions(
-    () =>
-      assertUserLoggedIn(user as unknown as Parameters<typeof assertUserLoggedIn>[0]),
-    () => assertSuperAdmin(user),
-  )
-
-  if (assertionError) return assertionError
-}
-
-/********************
- *  UTILS
- ************/
-
-export const isCore = (hub: HubOptsExtended): boolean => {
-  return hub.code === 'core' || hub.code === undefined
-}
+export const isCore = (hub: HubOptsExtended): boolean =>
+  hub.code === 'core' || hub.code === undefined

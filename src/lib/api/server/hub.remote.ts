@@ -14,8 +14,8 @@ import { nanoid } from 'nanoid'
 import {
   hubCollectionWithRelations,
   hubEntityWithRelations,
-  toHubEntityResponse,
-  toHubListResponse,
+  toEntityResponseShape,
+  toListResponseShape,
   toHubProfile,
   toLookupConditions,
   toQueryConditions,
@@ -158,7 +158,7 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
   )
 
   // Return loaded records with desired profile.
-  return toHubListResponse({
+  return toListResponseShape({
     data: rows,
     profile,
     limit: params.pagination?.limit,
@@ -210,7 +210,7 @@ const getHubQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   // Resolve desired `profile`
   const profile = toHubProfile(params.meta?.profile, 'detail')
   // Return loaded record with desired profile
-  return toHubEntityResponse(result ?? null, profile)
+  return toEntityResponseShape(result ?? null, profile)
 })
 
 export const getHub = getHubQuery as typeof getHubQuery &
