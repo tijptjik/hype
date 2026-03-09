@@ -5,8 +5,8 @@ import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
   Locale,
+  LocaleKey,
   Neighbourhood,
-  OrganisationFormLocaleKey,
   PropertyValueI18nDB,
   UserPreferences,
   WritableI18nRecord,
@@ -30,7 +30,6 @@ import { supportedLocales } from './enums'
 //    - normalizeLocaleCode
 //
 // 3. FORM I18N RECORD HELPERS
-//    - toLocaleRecordFromOrganisationFormI18n
 //    - toFormLocaleRecord
 //    - ensureLocaleEntryForWrite
 //    - normalizeI18nLocaleRecord
@@ -66,7 +65,7 @@ export function getLocale(): Locale {
  * Get the current locale as organisation-form locale key (`en`, `zhHans`, `zhHant`).
  * @returns The current form locale key.
  */
-export function getLocaleKey(): OrganisationFormLocaleKey {
+export function getLocaleKey(): LocaleKey {
   return toLocaleKey(getLocale())
 }
 
@@ -93,7 +92,7 @@ export function getLocaleOrder(locale: Locale): Locale[] {
   return ['zh-hans', 'zh-hant', 'en']
 }
 
-export function toLocaleKey(locale: Locale): OrganisationFormLocaleKey {
+export function toLocaleKey(locale: Locale): LocaleKey {
   if (locale === 'zh-hans') return 'zhHans'
   if (locale === 'zh-hant') return 'zhHant'
   return 'en'
@@ -104,7 +103,7 @@ export function toLocaleKey(locale: Locale): OrganisationFormLocaleKey {
  * @param localeKey - Form locale key.
  * @returns Locale value used by entity i18n payloads.
  */
-export function toLocaleCode(localeKey: OrganisationFormLocaleKey): Locale {
+export function toLocaleCode(localeKey: LocaleKey): Locale {
   if (localeKey === 'zhHans') return 'zh-hans'
   if (localeKey === 'zhHant') return 'zh-hant'
   return 'en'
@@ -116,7 +115,7 @@ export function toLocaleCode(localeKey: OrganisationFormLocaleKey): Locale {
  */
 export function normalizeLocaleCode(input: string): string {
   if (input === 'zhHans' || input === 'zhHant' || input === 'en') {
-    return toLocaleCode(input as OrganisationFormLocaleKey)
+    return toLocaleCode(input as LocaleKey)
   }
   return input
 }
@@ -126,34 +125,35 @@ export function normalizeLocaleCode(input: string): string {
 // ═══════════════════════
 
 /**
- * Convert organisation form i18n map keys (`en`, `zhHans`, `zhHant`) to locale keys.
- * @param i18n - Form-keyed i18n object.
- * @returns Locale-keyed i18n object.
- */
-export function toLocaleRecordFromOrganisationFormI18n<T>(
-  i18n: Record<OrganisationFormLocaleKey, T>,
-): Record<Locale, T> {
-  return {
-    en: i18n.en,
-    'zh-hans': i18n.zhHans,
-    'zh-hant': i18n.zhHant,
-  }
-}
-
-/**
  * Normalize any partial organisation-form i18n map to canonical form keys.
  * @param i18n - Form-keyed i18n object.
  * @returns Canonical form-keyed i18n object.
  */
 export function toFormLocaleRecord<T>(
-  i18n: Partial<Record<OrganisationFormLocaleKey, T>> | null | undefined,
-): Partial<Record<OrganisationFormLocaleKey, T>> | null | undefined {
+  i18n:
+    | Partial<Record<LocaleKey, T>>
+    | Partial<Record<Locale, T>>
+    | Record<string, T>
+    | null
+    | undefined,
+): Partial<Record<LocaleKey, T>> | null | undefined {
   if (!i18n) return i18n
-  return {
-    ...(i18n.en !== undefined ? { en: i18n.en } : {}),
-    ...(i18n.zhHans !== undefined ? { zhHans: i18n.zhHans } : {}),
-    ...(i18n.zhHant !== undefined ? { zhHant: i18n.zhHant } : {}),
+
+  const out: Partial<Record<LocaleKey, T>> = {}
+  for (const [rawKey, value] of Object.entries(i18n)) {
+    const normalizedLocale = normalizeLocaleCode(rawKey)
+    if (
+      normalizedLocale !== 'en' &&
+      normalizedLocale !== 'zh-hans' &&
+      normalizedLocale !== 'zh-hant'
+    ) {
+      continue
+    }
+    const formLocaleKey = toLocaleKey(normalizedLocale)
+    out[formLocaleKey] = value
   }
+
+  return out
 }
 
 /**
@@ -236,78 +236,26 @@ export function getI18n<T>(
   if (!obj) return fallback || defaultFallback
 
   // ASSERT : Text Object provided - else use the (default) fallback.
-  let i18nObj: Record<Locale, T>
+  let i18nObj: Record<string, T>
   if ('i18n' in obj && obj.i18n) {
-    i18nObj = obj.i18n as Record<Locale, T>
+    i18nObj = obj.i18n as Record<string, T>
   } else {
-    i18nObj = obj as Record<Locale, T>
+    i18nObj = obj as Record<string, T>
   }
 
-  // CONFIG : Locale, Options and Keys
-  const locale = getLocale() as Locale
-
-  // Set options based on user preferences
+  // CONFIG : Locale key only (no locale fallback chain)
+  const localeKey = getLocaleKey()
   const opts = {
     fallback: fallback || defaultFallback,
-    fallbackLocales: userPreferences.fallbackLocales,
-    allowMachineTranslation: userPreferences.allowMachineTranslation,
-    preferFallbackInCurrentLocale: userPreferences.preferFallbackInCurrentLocale,
   }
 
   // indicator for machine-translated values
   const genField = `${field}Gen`
 
-  // SWITCH : BEST CASE : The field is available in the preferred locale as
-  //  a human-provided value
-  const translation = i18nObj[locale]?.[field as keyof T] as string
-  if (translation && (!i18nObj[locale]?.[genField as keyof T] || skipGenFieldCheck))
+  // SWITCH : BEST CASE : The field is available in the preferred locale key.
+  const translation = i18nObj[localeKey]?.[field as keyof T] as string
+  if (translation && (!i18nObj[localeKey]?.[genField as keyof T] || skipGenFieldCheck))
     return translation
-
-  // SWITCH : FALLBACK LOCALE CASE - The field is available in a secondary
-  //   locale accepted by the user, and is a human-provided value.
-  for (const fallbackLocale of opts.fallbackLocales) {
-    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string
-    if (
-      translation &&
-      (!i18nObj[fallbackLocale]?.[genField as keyof T] || skipGenFieldCheck)
-    )
-      return translation
-  }
-
-  // SWITCH : FALLBACK VALUE CASE : If configured to prefer a generic fallback over any machine-translated values (and no human ones were found yet), return the generic fallback.
-  if (opts?.preferFallbackInCurrentLocale && opts.fallback) return opts.fallback
-
-  // SWITCH : AI <3 CASE : The field is available in the current locale,
-  // as a machine-translated value, and the user allows machine translations.
-  if (translation && opts.allowMachineTranslation) return translation
-
-  // SWITCH : FALLBACK LOCALE AI CASE - The field is available in a secondary
-  //   locale accepted by the user, is a machine-translated value, but the user
-  //   accepts machine translations.
-  for (const fallbackLocale of opts.fallbackLocales) {
-    const translation = i18nObj[fallbackLocale]?.[field as keyof T] as string
-    if (translation && opts.allowMachineTranslation) return translation
-  }
-
-  // TODO : Implement machine translation for missing translations
-  // SWITCH : MISSING TRANSLATIONS AI CASE
-  // If no translation is available in the fallback locales even if machine translations are allowed, we will assume that there is no translation available in any of the available locales. In that case, generate a machine translation.
-  // if (opts?.allowMachineTranslation) {
-  //   // First find a locale which has a translation for the field.
-  //   for (const supportedLocale of Object.keys(obj)) {
-  //     const translation = obj[supportedLocale as keyof typeof obj]?.[
-  //       field as keyof T
-  //     ] as string;
-  //     if (translation) {
-  //       let machineTranslation = await translateText(
-  //         supportedLocale as Locale,
-  //         locale,
-  //         [translation]
-  //       ).then((machineTranslation) => machineTranslation[0]);
-  //       return machineTranslation;
-  //     }
-  //   }
-  // }
 
   // SWTICH : CATCHALL CASE
   // If all prior attempts to get a translation (human, allowed machine, or newly generated machine) have failed or were skipped due to preferences, this is the last resort.
