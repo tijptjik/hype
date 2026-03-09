@@ -41,13 +41,92 @@ import type {
   OrganisationRoleUser,
 } from '$lib/db/zod/schema/organisation.types'
 
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// CODE REF NAVIGATION
+// - toSubmittedCode
+// - shouldRedirectToSubmittedCode
+// - navigateToSubmittedCode
+// - createCodeRefResourceResult
+//
+// RESOURCE EDITOR FACTORIES
+// - createResourceFormConfig
+// - createResourceEditorPage
+//
+// SUBMIT PAYLOAD NORMALIZATION
+// - prepareSubmitPayloadMeta
+// - resolveChangedRelation
+// - applyChangedRelationField
+// - guardRefDesync
+//
+// SUBMISSION RESULT HANDLERS
+// - handleSubmissionResult
+// - handleResourceFormSubmissionResult
+//
+// HEADER STATE
+// - wireHeaderFormActionHandlers
+// - toHeaderFormActionStatusSignature
+// - syncHeaderFormActionStatus
+// - getNameForToast
+//
+// ISSUE MESSAGES
+// - toIssueMessage
+// - toUniqueIssueMessages
+// - isFormLevelIssue
+// - toFormLevelIssueMessages
+//
+// FACET ISSUE MAPPING
+// - toIssuePathSegments
+// - toIssueFieldNameCandidates
+// - collectFacetFieldNames
+// - toFacetFromIssuePath
+// - resolveFacetIssueSummary
+// - withFacetIssueIndicators
+//
+// FACET ISSUE + ACTION HELPERS
+// - resolveFacetTabsWithIssues
+// - toIssueChipParts
+// - getRoleFieldNameByUserId
+// - revalidateAfterSubmitAttempt
+// - handleResourceBooleanStateToggle
+// - getUserRoleHiddenInputAttrs
+//
+// I18N + GEN-AI HELPERS
+// - getGenAiState
+// - toggleGenAiField
+// - translateLocaleIntoEmptyFields
+// - resetLocaleFields
+//
+// FORM DATA + ROLE DISPLAY
+// - updateFormData
+// - resolveDisplayUserRoles
+// - guardUserRolesDesync
+// - toggleEntityDataBoolean
+//
+// USER ROLE EDITING
+// - addUserRoleSelection
+// - removeUserRoleSelection
+// - updateUserRoleSelection
+
+/********************
+ *  CODE REF NAVIGATION
+ ************/
+/**
+ * Extracts a submitted `data.code` value from a resource form payload.
+ * Used by redirect helpers so code-based admin editors can detect ref changes
+ * without depending on resource-specific form shapes.
+ */
 const toSubmittedCode = (data: unknown): string => {
   const code = (data as { data?: { code?: unknown } })?.data?.code
   return typeof code === 'string' ? code.trim() : ''
 }
 
-// Keep redirect helpers local to form services so tests/routes that only need
-// form helpers do not eagerly import the full navigation module graph.
+/**
+ * Determines whether a successful submit should redirect to a newly submitted code ref.
+ * Used by code-based admin editors so renaming a resource code updates the route.
+ */
 const shouldRedirectToSubmittedCode = ({
   adminCtx,
   data,
@@ -69,6 +148,10 @@ const shouldRedirectToSubmittedCode = ({
   )
 }
 
+/**
+ * Navigates an admin editor to the submitted code-based resource ref.
+ * Kept local so form helpers do not eagerly pull in the navigation graph.
+ */
 const navigateToSubmittedCode = ({
   adminCtx,
   resourceType,
@@ -90,6 +173,10 @@ const navigateToSubmittedCode = ({
   })
 }
 
+/**
+ * Builds standard code-ref success and redirect handlers for resource forms.
+ * Used by admin editors that key their routes by resource code instead of id.
+ */
 export function createCodeRefResourceResult({
   adminCtx,
   headerCtrl,
@@ -113,6 +200,13 @@ export function createCodeRefResourceResult({
   }
 }
 
+/********************
+ *  RESOURCE EDITOR FACTORIES
+ ************/
+/**
+ * Produces the shared `configureForm(...)` config shape for resource editors.
+ * Used to centralize form wiring, submit update hooks, and post-submit refresh behavior.
+ */
 export function createResourceFormConfig<Input>({
   formEl,
   key,
@@ -131,7 +225,7 @@ export function createResourceFormConfig<Input>({
   data: Input
   submitUpdates: (ctx: {
     data: Input
-  }) => Promise<Array<RemoteQuery<any> | RemoteQueryOverride> | undefined>
+  }) => Promise<Array<RemoteQuery<unknown> | RemoteQueryOverride> | undefined>
   adminCtx: AdminCtx
   headerCtrl: FormHeaderController
   resourceType: FirstClassResource
@@ -151,7 +245,7 @@ export function createResourceFormConfig<Input>({
   data: Input
   onsubmitupdates: (ctx: {
     data: Input
-  }) => Promise<Array<RemoteQuery<any> | RemoteQueryOverride> | undefined>
+  }) => Promise<Array<RemoteQuery<unknown> | RemoteQueryOverride> | undefined>
   resourceResult: {
     onSuccess: () => void
     shouldRedirect: (ctx: { data: unknown; success: boolean }) => boolean
@@ -185,6 +279,10 @@ export function createResourceFormConfig<Input>({
   }
 }
 
+/**
+ * Creates shared page-controller helpers for resource editor routes.
+ * Used to synchronize route loading, header state, and shared header actions.
+ */
 export function createResourceEditorPage({
   headerCtrl,
   icon,
@@ -252,6 +350,9 @@ export function createResourceEditorPage({
   }
 }
 
+/********************
+ *  SUBMIT PAYLOAD NORMALIZATION
+ ************/
 /**
  * Ensure submit payload includes `meta` and `data`, infer/normalize `meta.mode`,
  * and populate `meta.id` for update submissions when omitted.
@@ -343,6 +444,10 @@ export function applyChangedRelationField<
   return result
 }
 
+/**
+ * Verifies that both live and committed entity state still match the active route ref.
+ * Used by code-based editors to block submit/toggle actions while route/entity state drifts.
+ */
 export function guardRefDesync(
   organisationState: OrganisationGetState,
   committedOrganisationState: OrganisationGetState,
@@ -358,7 +463,14 @@ export function guardRefDesync(
   )
 }
 
-export async function handleSubmissionResult({
+/********************
+ *  SUBMISSION RESULT HANDLERS
+ ************/
+/**
+ * Runs the canonical success/error/invalid/fallback submission-result branching.
+ * Used by callers that need custom side effects without re-implementing result precedence.
+ */
+async function handleSubmissionResult({
   success,
   issues,
   error,
@@ -385,6 +497,10 @@ export async function handleSubmissionResult({
   await onFallback()
 }
 
+/**
+ * Handles a resource form submission result with standard toast and refresh behavior.
+ * Used by shared form factories so editor pages get consistent success/error UX.
+ */
 export async function handleResourceFormSubmissionResult({
   success,
   issues,
@@ -429,45 +545,61 @@ export async function handleResourceFormSubmissionResult({
     asTrimmedString(submittedData?.[field]) ||
     asTrimmedString(submittedRoot?.[field])
 
-  if (success) {
-    const name = getSubmittedName(nameKey)
-    toast.success(`${successPrefix}${name ? ` ${name}` : ''}`)
-    await refreshResource()
-    await onSuccess?.()
-    return
-  }
-
-  if (error) {
-    toast.error(error)
-    return
-  }
-
-  if ((issues?.length ?? 0) > 0) {
-    if (firstIssueMessage) {
-      const { code, detail } = toIssueParts(firstIssueMessage)
-      toast.error(code, { description: detail })
-      return
-    }
-    toast.error(invalidMessage)
-    return
-  }
-
-  toast.error(fallbackErrorMessage)
+  await handleSubmissionResult({
+    success,
+    issues,
+    error,
+    onSuccess: async () => {
+      const name = getSubmittedName(nameKey)
+      toast.success(`${successPrefix}${name ? ` ${name}` : ''}`)
+      await refreshResource()
+      await onSuccess?.()
+    },
+    onError: async issueError => {
+      toast.error(issueError)
+    },
+    onInvalid: async currentIssues => {
+      if (firstIssueMessage) {
+        const { code, detail } = toIssueParts(firstIssueMessage)
+        toast.error(code, { description: detail })
+        return
+      }
+      if ((currentIssues?.length ?? 0) > 0) {
+        toast.error(invalidMessage)
+      }
+    },
+    onFallback: async () => {
+      toast.error(fallbackErrorMessage)
+    },
+  })
 }
 
-export function wireHeaderFormActionHandlers({
+/********************
+ *  HEADER STATE
+ ************/
+/**
+ * Pushes the current page's form action handlers into the shared header controller.
+ * Used by resource page helpers to keep header action wiring centralized.
+ */
+function wireHeaderFormActionHandlers({
   headerCtrl,
   handlers,
 }: WireHeaderFormActionHandlersParams): void {
   headerCtrl.setFormActions(handlers)
 }
 
-export function toHeaderFormActionStatusSignature(
-  status: HeaderFormActionStatus,
-): string {
+/**
+ * Serializes header form-action state into a stable signature string.
+ * Used to suppress redundant header controller updates during reactive churn.
+ */
+function toHeaderFormActionStatusSignature(status: HeaderFormActionStatus): string {
   return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}|${status.canEdit}|${status.canPublish}|${status.showDeleteAction}|${status.showPublishAction}`
 }
 
+/**
+ * Updates header action status only when the effective state actually changed.
+ * Used by editor pages to avoid unnecessary header controller writes.
+ */
 export function syncHeaderFormActionStatus({
   headerCtrl,
   status,
@@ -479,6 +611,10 @@ export function syncHeaderFormActionStatus({
   return signature
 }
 
+/**
+ * Resolves the best available display name for toast messages from entity data.
+ * Used by publish/archive flows so success messages stay readable across resources.
+ */
 export function getNameForToast(
   entity: { data?: Record<string, unknown> | null } | null | undefined,
   key: string = 'shortName',
@@ -511,30 +647,37 @@ export function getNameForToast(
   return asTrimmedString((data as Record<string, unknown>).code)
 }
 
+/********************
+ *  ISSUE MESSAGES
+ ************/
+/**
+ * Extracts a string message from an arbitrary validation issue payload.
+ * Used by issue helpers so routes and components can work against unknown issue shapes.
+ */
 export function toIssueMessage(issue: unknown): string | null {
   if (!issue || typeof issue !== 'object' || !('message' in issue)) return null
   const message = (issue as { message?: unknown }).message
   return typeof message === 'string' ? message : null
 }
 
-export function getIssueMessagesForPath(
-  issues: unknown[] | undefined,
-  path: Array<string | number>,
-): string[] | undefined {
-  if (!Array.isArray(issues) || path.length === 0) return undefined
+/**
+ * Normalizes an arbitrary issue array into a stable, deduplicated list of messages.
+ * Used by editor pages to derive compact issue summaries without repeating
+ * message extraction logic.
+ */
+export function toUniqueIssueMessages(issues: unknown[] | undefined | null): string[] {
+  if (!Array.isArray(issues)) return []
   const messages = issues
-    .filter(issue => {
-      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
-      const issuePath = (issue as { path?: unknown }).path
-      if (!Array.isArray(issuePath) || issuePath.length !== path.length) return false
-      return path.every((segment, index) => issuePath[index] === segment)
-    })
     .map(toIssueMessage)
     .filter((message): message is string => Boolean(message))
 
-  return messages.length > 0 ? messages : undefined
+  return Array.from(new Set(messages))
 }
 
+/**
+ * Classifies whether an issue should be surfaced at the form level.
+ * Used by editor pages to keep section headers focused on high-level blocking issues.
+ */
 export function isFormLevelIssue(issue: unknown): boolean {
   if (!issue || typeof issue !== 'object' || !('path' in issue)) return true
   const path = (issue as { path?: unknown }).path
@@ -543,6 +686,24 @@ export function isFormLevelIssue(issue: unknown): boolean {
   return path[0] === 'data' && (path[1] === 'userRoles' || path[1] === 'organisationId')
 }
 
+/**
+ * Filters visible issues down to form-level messages and deduplicates them.
+ * Used by editor shells so route files can derive top-level form issues with one call.
+ */
+export function toFormLevelIssueMessages(
+  issues: unknown[] | undefined | null,
+): string[] {
+  if (!Array.isArray(issues)) return []
+  return toUniqueIssueMessages(issues.filter(isFormLevelIssue))
+}
+
+/********************
+ *  FACET ISSUE MAPPING
+ ************/
+/**
+ * Converts an issue path into normalized string segments.
+ * Used by facet issue mapping helpers to compare issue locations against form controls.
+ */
 const toIssuePathSegments = (issue: unknown): string[] => {
   if (!issue || typeof issue !== 'object' || !('path' in issue)) return []
   const path = (issue as { path?: unknown }).path
@@ -550,6 +711,10 @@ const toIssuePathSegments = (issue: unknown): string[] => {
   return path.map(segment => String(segment))
 }
 
+/**
+ * Produces candidate field-name representations for an issue path.
+ * Used to match issue paths against DOM control names in facet sections.
+ */
 const toIssueFieldNameCandidates = (issue: unknown): string[] => {
   const segments = toIssuePathSegments(issue)
   if (segments.length === 0) return []
@@ -563,6 +728,10 @@ const toIssueFieldNameCandidates = (issue: unknown): string[] => {
   return Array.from(new Set([dot, bracket]))
 }
 
+/**
+ * Collects all control names mounted within each facet section of a form.
+ * Used to map validation issues back to the facet that owns the affected fields.
+ */
 const collectFacetFieldNames = (
   formEl: HTMLFormElement,
   supportedFacets: Set<FacetType>,
@@ -588,6 +757,10 @@ const collectFacetFieldNames = (
   return namesByFacet
 }
 
+/**
+ * Resolves the owning facet for a single validation issue.
+ * Used by facet issue summaries so hidden facets can still be highlighted or activated.
+ */
 const toFacetFromIssuePath = (
   issue: unknown,
   supportedFacets: Set<FacetType>,
@@ -614,7 +787,11 @@ const toFacetFromIssuePath = (
     : (Array.from(supportedFacets)[0] ?? 'core')
 }
 
-export function resolveFacetIssueSummary(params: {
+/**
+ * Summarizes which facets contain validation issues and which one should be focused first.
+ * Used by editor pages to drive facet badges and submit-time facet switching.
+ */
+function resolveFacetIssueSummary(params: {
   issues: unknown[] | null | undefined
   facets: Map<FacetType, unknown>
   formEl?: HTMLFormElement
@@ -640,7 +817,11 @@ export function resolveFacetIssueSummary(params: {
   return { firstFacetWithIssues, facetsWithIssues }
 }
 
-export function withFacetIssueIndicators(
+/**
+ * Applies `hasIssues` flags to a facet-tab map.
+ * Used by editor headers so facet tabs can render issue styling consistently.
+ */
+function withFacetIssueIndicators(
   facets: Map<FacetType, { label: string; icon?: Component | null }>,
   facetsWithIssues: Set<FacetType>,
 ): Map<FacetType, { label: string; icon?: Component | null; hasIssues?: boolean }> {
@@ -655,6 +836,40 @@ export function withFacetIssueIndicators(
   )
 }
 
+/********************
+ *  FACET ISSUE + ACTION HELPERS
+ ************/
+/**
+ * Resolves both facet issue summary and facet-tab issue indicators in one step.
+ * Used by editor pages to keep header-tab issue wiring orchestration-only.
+ */
+export function resolveFacetTabsWithIssues(params: {
+  issues: unknown[] | null | undefined
+  facets: Map<FacetType, { label: string; icon?: Component | null }>
+  formEl?: HTMLFormElement
+}): {
+  facetIssueSummary: ReturnType<typeof resolveFacetIssueSummary>
+  facetTabsWithIssues: ReturnType<typeof withFacetIssueIndicators>
+} {
+  const facetIssueSummary = resolveFacetIssueSummary({
+    issues: params.issues,
+    facets: params.facets,
+    formEl: params.formEl,
+  })
+
+  return {
+    facetIssueSummary,
+    facetTabsWithIssues: withFacetIssueIndicators(
+      params.facets,
+      facetIssueSummary.facetsWithIssues,
+    ),
+  }
+}
+
+/**
+ * Splits a toast/issue string into code/detail parts for chip presentation.
+ * Used by section issue chips so error codes and descriptions can render separately.
+ */
 export function toIssueChipParts(message: string): { code: string; detail: string } {
   const parts = message.split(':')
   if (parts.length < 2) return { code: 'INVALID', detail: message }
@@ -663,6 +878,10 @@ export function toIssueChipParts(message: string): { code: string; detail: strin
   return { code, detail }
 }
 
+/**
+ * Resolves the current role-field input name for each selected user id.
+ * Used by role editors that need hidden inputs aligned with dynamic user-role rows.
+ */
 export function getRoleFieldNameByUserId(
   form: UserRoleFieldNameResolverForm,
 ): Record<string, string> {
@@ -677,6 +896,10 @@ export function getRoleFieldNameByUserId(
   )
 }
 
+/**
+ * Triggers form validation only after the user has already attempted a submit.
+ * Used by programmatic form changes so editors avoid noisy validation before first submit.
+ */
 export function revalidateAfterSubmitAttempt(params: {
   wasSubmitAttempted: boolean
   validate: () => Promise<unknown>
@@ -686,6 +909,44 @@ export function revalidateAfterSubmitAttempt(params: {
   return true
 }
 
+/**
+ * Executes the common editor boolean-toggle flow: set busy, mutate, apply
+ * optimistic overrides, refresh source state, and show success/error feedback.
+ * Used by resource pages to keep publish/archive handlers orchestration-only.
+ */
+export async function handleResourceBooleanStateToggle<TState>(params: {
+  current: { id: string; [key: string]: unknown } | null | undefined
+  field: string
+  successWhenTrue: string
+  successWhenFalse: string
+  setBusy: (value: boolean) => void
+  mutate: (payload: { id: string; state: boolean }) => Promise<unknown>
+  applyOptimistic: (nextState: boolean) => void
+  refresh: () => Promise<TState>
+  commit: (next: TState) => void
+  onError?: () => void
+}): Promise<void> {
+  const current = params.current
+  if (!current) return
+
+  const nextState = !current[params.field]
+  try {
+    params.setBusy(true)
+    await params.mutate({ id: current.id, state: nextState })
+    params.applyOptimistic(nextState)
+    params.commit(await params.refresh())
+    toast.success(nextState ? params.successWhenTrue : params.successWhenFalse)
+  } catch {
+    params.onError?.()
+  } finally {
+    params.setBusy(false)
+  }
+}
+
+/**
+ * Produces hidden user-id input attrs for the current user-role rows.
+ * Used by editors that render custom user-role UIs outside the direct form field tree.
+ */
 export function getUserRoleHiddenInputAttrs(
   form: UserRoleFieldNameResolverForm,
   userRoles: Array<{ userId: string }>,
@@ -696,10 +957,14 @@ export function getUserRoleHiddenInputAttrs(
     .filter((attrs): attrs is UserRoleHiddenInputAttrs => Boolean(attrs))
 }
 
-/* ----------------- */
-// GEN-AI HELPERS
-/* -------- */
+/********************
+ *  I18N + GEN-AI HELPERS
+ ************/
 
+/**
+ * Resolves the current generator-toggle state for one i18n field and locale.
+ * Used by i18n field components to render generator affordances consistently.
+ */
 export function getGenAiState(
   form: GenAiStateResolverForm,
   locale: Locale,
@@ -715,6 +980,10 @@ export function getGenAiState(
   return Boolean(localeData.attributionGen)
 }
 
+/**
+ * Toggles the generator-state boolean for one i18n field and locale.
+ * Used by descriptor/credit fields to keep generator flags in sync with UI toggles.
+ */
 export function toggleGenAiField<
   T extends {
     i18n?: Record<
@@ -757,6 +1026,10 @@ const DEFAULT_TRANSLATABLE_FIELDS: I18nTranslatableField[] = [
 const toGenField = (field: I18nTranslatableField): `${I18nTranslatableField}Gen` =>
   `${field}Gen`
 
+/**
+ * Machine-translates empty fields from a source locale into a target locale.
+ * Used by editor pages to seed untranslated locale content without overwriting manual text.
+ */
 export async function translateLocaleIntoEmptyFields<
   TFormData extends {
     i18n?: Record<
@@ -846,6 +1119,10 @@ export async function translateLocaleIntoEmptyFields<
   return true
 }
 
+/**
+ * Clears the selected locale fields and their generator flags.
+ * Used by locale reset actions to restore a clean untranslated state.
+ */
 export function resetLocaleFields<
   TFormData extends {
     i18n?: Record<
@@ -882,6 +1159,13 @@ export function resetLocaleFields<
   })
 }
 
+/********************
+ *  FORM DATA + ROLE DISPLAY
+ ************/
+/**
+ * Applies an updater to cloned form `data` while preserving the outer form state shape.
+ * Used by client-side editor helpers so nested data updates stay immutable and predictable.
+ */
 export function updateFormData<T>(
   form: FormDataUpdaterForm<T>,
   updater: (data: T) => T,
@@ -901,6 +1185,10 @@ export function updateFormData<T>(
   })
 }
 
+/**
+ * Overlays current form role values onto persisted role rows by user id.
+ * Used by role UIs so display rows reflect in-progress edits without losing base metadata.
+ */
 export function resolveDisplayUserRoles<
   TUserRole extends { userId: string; role: string },
 >({ baseRoles, formUserRoles }: ResolveDisplayUserRolesParams<TUserRole>): TUserRole[] {
@@ -914,6 +1202,10 @@ export function resolveDisplayUserRoles<
   }))
 }
 
+/**
+ * Reconciles persisted organisation role rows with current form role selections.
+ * Used when selected users or unsaved role edits drift from the original entity payload.
+ */
 export function guardUserRolesDesync({
   baseRoles,
   formUserRoles,
@@ -989,6 +1281,10 @@ export function guardUserRolesDesync({
 // ENTITY HELPERS
 /* -------- */
 
+/**
+ * Returns a copy of an entity state object with one boolean field toggled in `data`.
+ * Used by lightweight client helpers that need local boolean state overrides.
+ */
 export function toggleEntityDataBoolean<
   TEntity extends { data?: Record<string, unknown> | null } | null,
 >(entity: TEntity, key: string, nextChecked: boolean | null): TEntity {
@@ -1002,6 +1298,13 @@ export function toggleEntityDataBoolean<
   } as TEntity
 }
 
+/********************
+ *  USER ROLE EDITING
+ ************/
+/**
+ * Adds a selected user role to both form state and optimistic entity state.
+ * Used by resource editors with managed user-role assignment UIs.
+ */
 export function addUserRoleSelection<
   TEntity extends { data?: Record<string, unknown> | null } | null,
   TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
@@ -1047,6 +1350,10 @@ export function addUserRoleSelection<
   } as TEntity
 }
 
+/**
+ * Removes a selected user role from both form state and optimistic entity state.
+ * Used by resource editors with removable user-role assignment rows.
+ */
 export function removeUserRoleSelection<
   TEntity extends { data?: Record<string, unknown> | null } | null,
   TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
@@ -1074,6 +1381,10 @@ export function removeUserRoleSelection<
   } as TEntity
 }
 
+/**
+ * Updates one selected user role in both form state and optimistic entity state.
+ * Used by resource editors when a role dropdown changes for an existing row.
+ */
 export function updateUserRoleSelection<
   TEntity extends { data?: Record<string, unknown> | null } | null,
   TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
