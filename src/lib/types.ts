@@ -3521,7 +3521,7 @@ export interface HubOpts {
   code?: string
   domain?: string | null
   isCore: boolean
-  i18n: Record<Locale, Partial<HubI18nDB>>
+  i18n: Record<LocaleKey, Partial<HubI18nDB>>
   isSuperAdmin?: boolean
   id?: string
 }
@@ -3530,7 +3530,7 @@ export interface HubOptsExtended extends Hub {
   id?: string
   code?: string
   domain?: string | null
-  i18n: Record<Locale, Partial<HubI18nDB>>
+  i18n: Record<LocaleKey, Partial<HubI18nDB>>
   isSuperAdmin: boolean
   isAdminRequest: boolean
   isCore: boolean

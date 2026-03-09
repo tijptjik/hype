@@ -1,5 +1,5 @@
 import { browser } from '$app/environment'
-import { getLocale } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 import { QueryClient } from '@tanstack/svelte-query'
 // TYPES
 import type { HubOpts } from '$lib/types'
@@ -10,6 +10,14 @@ export const prerender = false
 export const trailingSlash = 'never'
 
 export async function load({ data }) {
+  const hub = data.hub as HubOpts
+  const locale = getLocaleKey()
+  const localizedHubI18n = hub.i18n?.[locale]
+  const fallbackHubI18n = hub.i18n?.en ?? Object.values(hub.i18n ?? {})[0]
+
+  /**
+   * @deprecated Remove once we have fully moved to svelte remote functions
+   */
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -26,15 +34,10 @@ export async function load({ data }) {
   return {
     queryClient,
     PUBLIC_SVELTE_QUERY_DEVTOOLS: data.PUBLIC_SVELTE_QUERY_DEVTOOLS,
-    hub: data.hub as HubOpts,
-    title:
-      (data.hub as HubOpts).i18n?.[getLocale()]?.name ??
-      (data.hub as HubOpts).i18n?.en.name,
-    site_name:
-      (data.hub as HubOpts).i18n?.[getLocale()]?.name ??
-      (data.hub as HubOpts).i18n?.en.name,
+    hub,
+    title: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',
+    site_name: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',
     site_description:
-      (data.hub as HubOpts).i18n?.[getLocale()]?.description ??
-      (data.hub as HubOpts).i18n?.en.description,
+      localizedHubI18n?.description ?? fallbackHubI18n?.description ?? '',
   }
 }

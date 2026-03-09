@@ -11,9 +11,32 @@ import * as schema from '$lib/db/schema/index'
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
 // TYPES
-import type { HubOptsExtended, Session, SessionUser } from '$lib/types'
+import type { HubOptsExtended, LocaleKey, Session, SessionUser } from '$lib/types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import { isAdminRequest } from '$lib/api'
+
+type HubShapeResult = { data: unknown }
+type HubServiceModule = typeof import('$lib/api/services/hub')
+type HubEntityShaper = (
+  row: unknown,
+  profile: 'list',
+) => HubShapeResult | Promise<HubShapeResult>
+
+const EMPTY_HUB_I18N: Record<LocaleKey, Record<string, never>> = {
+  en: {},
+  zhHans: {},
+  zhHant: {},
+}
+
+const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtended => ({
+  code: hub?.code,
+  domain: hub?.domain ?? null,
+  id: hub?.id,
+  i18n: hub?.i18n ?? EMPTY_HUB_I18N,
+  isSuperAdmin: hub?.isSuperAdmin ?? false,
+  isAdminRequest: hub?.isAdminRequest ?? false,
+  isCore: hub?.isCore ?? hub?.code === 'core',
+})
 
 // ═══════════════════════
 // CORS HOOK
@@ -45,25 +68,9 @@ const handle_cors = (async ({ event, resolve }) => {
  * It is used to filter the data in the database.
  */
 const handle_hub: Handle = async ({ event, resolve }) => {
-  const hubServices = await import('$lib/api/services/hub')
+  const hubServices: HubServiceModule = await import('$lib/api/services/hub')
   const { getHubFromDomain } = hubServices
-  const toHubShape =
-    typeof hubServices.toEntityResponseShape === 'function'
-      ? (row: unknown) =>
-          (
-            hubServices.toEntityResponseShape as (
-              data: unknown,
-              profile: 'list',
-            ) => { data: unknown }
-          )(row, 'list').data
-      : typeof (hubServices as { toProfileResponseShape?: unknown })
-            .toProfileResponseShape === 'function'
-        ? (
-            hubServices as {
-              toProfileResponseShape: (row: unknown, profile: 'list') => unknown
-            }
-          ).toProfileResponseShape
-        : (row: unknown) => row
+  const toHubShape: HubEntityShaper = hubServices.toEntityResponseShape
 
   // Get host from headers
   const host = event.request.headers.get('host')
@@ -80,7 +87,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
 
   // If on Core hub, don't lookup the hub in the database
   if (hubOpts.isCore) {
-    event.locals.hub = hubOpts as HubOptsExtended
+    event.locals.hub = toHubLocalsShape(hubOpts)
     return resolve(event)
   }
 
@@ -98,8 +105,8 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       where: eq(schema.hub.code, hubOpts.code),
     })
     if (hubDb) {
-      const hub = toHubShape(hubDb as never, 'list') as HubOptsExtended
-      event.locals.hub = hub
+      const hub = await toHubShape(hubDb, 'list')
+      event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else if (db && event.locals && hubOpts.domain) {
     const hubDb = await db.query.hub.findFirst({
@@ -110,12 +117,12 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       where: eq(schema.hub.domain, hubOpts.domain),
     })
     if (hubDb) {
-      const hub = toHubShape(hubDb as never, 'list') as HubOptsExtended
-      event.locals.hub = hub
+      const hub = await toHubShape(hubDb, 'list')
+      event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else {
     // Default to Core
-    event.locals.hub = hubOpts as HubOptsExtended
+    event.locals.hub = toHubLocalsShape(hubOpts)
   }
 
   return resolve(event)
@@ -164,7 +171,7 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
     })
 
     // Safely assign session and user data
-    if (sessionData && sessionData.session && sessionData.user) {
+    if (sessionData?.session && sessionData.user) {
       event.locals.session = sessionData.session as Session
       event.locals.user = sessionData.user as SessionUser
     }

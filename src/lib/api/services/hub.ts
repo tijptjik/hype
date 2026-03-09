@@ -319,6 +319,7 @@ export function getHubFromDomain(
   const coreConfig = {
     code: 'core',
     domain: 'hype.hk',
+    isCore: true,
     i18n: {
       en: {
         locale: 'en',
@@ -326,13 +327,13 @@ export function getHubFromDomain(
         nameShort: 'HYPE',
         description: 'Beautiful Hong Kong',
       },
-      'zh-hant': {
+      zhHant: {
         locale: 'zh-hant',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
         description: '美丽的香港',
       },
-      'zh-hans': {
+      zhHans: {
         locale: 'zh-hans',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
