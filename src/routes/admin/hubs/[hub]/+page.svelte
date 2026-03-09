@@ -18,14 +18,13 @@ import {
   getRoleFieldNameByUserId,
   isFormLevelIssue,
   prepareSubmitPayloadMeta,
-  resolveFacetIssueSummary,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
+  resolveFacetTabsWithIssues,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-  withFacetIssueIndicators,
   resetLocaleFields,
 } from '$lib/client/services/form'
 import {
@@ -286,17 +285,15 @@ const formLevelIssues = $derived.by((): string[] => {
   return Array.from(new Set(messages))
 })
 
-const facetIssueSummary = $derived.by(() =>
-  resolveFacetIssueSummary({
+const facetIssueState = $derived.by(() =>
+  resolveFacetTabsWithIssues({
     issues: visibleAllIssues,
     facets: resolvedFacetTabs,
     formEl: contentsElement,
   }),
 )
-
-const resolvedFacetTabsWithIssues = $derived.by(() =>
-  withFacetIssueIndicators(resolvedFacetTabs, facetIssueSummary.facetsWithIssues),
-)
+const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
+const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
 
 $effect(() => {
   if (!formCtx.wasSubmitAttempted) return

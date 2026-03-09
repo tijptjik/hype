@@ -17,17 +17,15 @@ import {
   createResourceFormConfig,
   getNameForToast,
   guardRefDesync,
-  isFormLevelIssue,
   prepareSubmitPayloadMeta,
-  resolveFacetIssueSummary,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
+  resolveFacetTabsWithIssues,
   resetLocaleFields,
-  toIssueMessage,
+  toFormLevelIssueMessages,
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-  withFacetIssueIndicators,
 } from '$lib/client/services/form'
 import {
   getCapabilityKeysFromDefinitions,
@@ -607,24 +605,18 @@ const visibleAllIssues = $derived.by((): unknown[] =>
 
 // De-duplicated form-level issue messages for section header display.
 const formLevelIssues = $derived.by((): string[] => {
-  const messages = visibleAllIssues
-    .filter(isFormLevelIssue)
-    .map(toIssueMessage)
-    .filter((message: string | null): message is string => Boolean(message))
-  return Array.from(new Set(messages))
+  return toFormLevelIssueMessages(visibleAllIssues)
 })
 
-const facetIssueSummary = $derived.by(() =>
-  resolveFacetIssueSummary({
+const facetIssueState = $derived.by(() =>
+  resolveFacetTabsWithIssues({
     issues: visibleAllIssues,
     facets: resolvedFacetTabs,
     formEl: contentsElement,
   }),
 )
-
-const resolvedFacetTabsWithIssues = $derived.by(() =>
-  withFacetIssueIndicators(resolvedFacetTabs, facetIssueSummary.facetsWithIssues),
-)
+const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
+const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
 
 $effect(() => {
   const properties = formCtx.form.fields.value().data?.properties as

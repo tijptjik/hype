@@ -19,16 +19,15 @@ import {
   getRoleFieldNameByUserId,
   guardRefDesync,
   guardUserRolesDesync,
-  isFormLevelIssue,
-  resolveFacetIssueSummary,
   revalidateAfterSubmitAttempt,
   resetLocaleFields,
   removeUserRoleSelection,
+  resolveFacetTabsWithIssues,
+  toFormLevelIssueMessages,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-  withFacetIssueIndicators,
 } from '$lib/client/services/form'
 import {
   getOrganisationSubmitUpdates,
@@ -260,11 +259,7 @@ const visibleAllIssues = $derived.by((): unknown[] =>
 )
 
 const formLevelIssues = $derived.by((): string[] => {
-  const messages = visibleAllIssues
-    .filter(isFormLevelIssue)
-    .map(toIssueMessage)
-    .filter((message: string | null): message is string => Boolean(message))
-  return Array.from(new Set(messages))
+  return toFormLevelIssueMessages(visibleAllIssues)
 })
 const capabilityIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
@@ -278,17 +273,15 @@ const capabilityIssues = $derived.by((): string[] => {
   return Array.from(new Set(messages))
 })
 
-const facetIssueSummary = $derived.by(() =>
-  resolveFacetIssueSummary({
+const facetIssueState = $derived.by(() =>
+  resolveFacetTabsWithIssues({
     issues: visibleAllIssues,
     facets: resolvedFacetTabs,
     formEl: contentsElement,
   }),
 )
-
-const resolvedFacetTabsWithIssues = $derived.by(() =>
-  withFacetIssueIndicators(resolvedFacetTabs, facetIssueSummary.facetsWithIssues),
-)
+const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
+const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
 
 const organisationPropertyFormAdapter = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
