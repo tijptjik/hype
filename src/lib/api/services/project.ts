@@ -37,14 +37,17 @@ import type {
   ListResponse,
   PersistedProjectLocalPropertyCandidate,
   Prisms,
+  ProjectAdminDBRaw,
+  ProjectCardDBRaw,
   ProjectRoleCapabilities,
   ProjectDB,
-  ProjectDBRaw,
   ProjectEntityByProfile,
   ProjectInheritedPropertySyncItem,
+  ProjectListDBRaw,
   ProjectListByProfile,
   ProjectLocalPropertyCandidate,
   ProjectProfile,
+  ProjectQueryRowByProfile,
   QueryParams,
   SessionUser,
   SubmittedPropertyScopeCandidate,
@@ -126,6 +129,12 @@ const projectEntityWithRelations = {
   publisher: true,
 }
 
+type ProjectRelationsByProfile<P extends ProjectProfile> = P extends 'admin'
+  ? typeof projectEntityWithRelations
+  : P extends 'card' | 'detail'
+    ? typeof projectCollectionWithRelations
+    : { i18n: true }
+
 /**
  * Resolves the relation graph required for the requested project profile.
  * Uses a lightweight graph for public/detail reads and the full graph for admin flows.
@@ -133,20 +142,20 @@ const projectEntityWithRelations = {
  * @param profile - Requested response profile.
  * @returns Drizzle relation shape for the project query.
  */
-export const getProjectWithRelations = (
-  profile: ProjectProfile,
-): Record<string, boolean | object> => {
+export const getProjectWithRelations = <P extends ProjectProfile>(
+  profile: P,
+): ProjectRelationsByProfile<P> => {
   if (profile === 'admin') {
-    return projectEntityWithRelations
+    return projectEntityWithRelations as ProjectRelationsByProfile<P>
   }
 
   if (profile === 'card' || profile === 'detail') {
-    return projectCollectionWithRelations
+    return projectCollectionWithRelations as ProjectRelationsByProfile<P>
   }
 
   return {
     i18n: true,
-  }
+  } as ProjectRelationsByProfile<P>
 }
 
 /********************
@@ -154,14 +163,12 @@ export const getProjectWithRelations = (
  ************/
 const projectProfiles = ['list', 'card', 'detail', 'admin'] as const
 
-type ProjectResponseRow = Omit<
-  ProjectDBRaw,
-  'capabilities' | 'i18n' | 'properties' | 'userRoles'
-> & {
-  capabilities?: ProjectDBRaw['capabilities'] | ProjectDB['capabilities']
-  i18n?: ProjectDBRaw['i18n']
-  properties?: ProjectDBRaw['properties']
-  userRoles?: ProjectDBRaw['userRoles']
+type ProjectResponseRow = ProjectDB & {
+  i18n?: ProjectListDBRaw['i18n']
+  image?: ProjectCardDBRaw['image']
+  properties?: ProjectAdminDBRaw['properties']
+  publisher?: ProjectAdminDBRaw['publisher']
+  userRoles?: ProjectAdminDBRaw['userRoles']
 }
 
 /**
@@ -248,7 +255,7 @@ const toProfileResponseShape = async (
  * @returns Entity response envelope with typed project payload.
  */
 export const toEntityResponseShape = async <P extends ProjectProfile = 'detail'>(
-  row: ProjectResponseRow | null,
+  row: ProjectQueryRowByProfile<P> | null,
   profile: P = 'detail' as P,
 ): Promise<EntityResponse<ProjectEntityByProfile<P>>> => {
   const startedAt = Date.now()
@@ -257,11 +264,12 @@ export const toEntityResponseShape = async <P extends ProjectProfile = 'detail'>
     return { data: null, durationMs: Date.now() - startedAt }
   }
 
+  const responseRow: ProjectResponseRow = row
   const data = await toProfileResponseShape(
-    row,
-    row.i18n ?? [],
-    row.userRoles ?? [],
-    row.properties ?? [],
+    responseRow,
+    responseRow.i18n ?? [],
+    responseRow.userRoles ?? [],
+    responseRow.properties ?? [],
     profile,
   )
 
@@ -281,7 +289,7 @@ export const toEntityResponseShape = async <P extends ProjectProfile = 'detail'>
  * @returns List response envelope with typed project payloads.
  */
 export const toListResponseShape = async <P extends ProjectProfile = 'list'>(
-  result: ListResponse<ProjectDBRaw>,
+  result: ListResponse<ProjectQueryRowByProfile<P>>,
   _user: SessionUser | undefined,
   profile: P = 'list' as P,
 ): Promise<ListResponse<ProjectListByProfile<P>>> => {
@@ -302,11 +310,12 @@ export const toListResponseShape = async <P extends ProjectProfile = 'list'>(
   const data = await Promise.all(
     rows.map(async row => {
       try {
+        const responseRow: ProjectResponseRow = row
         return await toProfileResponseShape(
-          row,
-          row.i18n ?? [],
-          row.userRoles ?? [],
-          row.properties ?? [],
+          responseRow,
+          responseRow.i18n ?? [],
+          responseRow.userRoles ?? [],
+          responseRow.properties ?? [],
           profile,
         )
       } catch (err) {

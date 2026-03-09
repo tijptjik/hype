@@ -14,7 +14,6 @@ import {
   validateUniqueNonReservedCode,
 } from '$lib/api/services'
 import {
-  getProjectWithRelations,
   mergeProjectInheritedPropertySyncItems,
   normalizeSubmittedPropertyRanks,
   resolveCanonicalScopeByPropertyId,
@@ -167,7 +166,7 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   // Load records from DB.
   const result = await listProjects(
     db,
-    getProjectWithRelations(profile),
+    profile,
     conditions,
     {
       ...event.locals.hub,
@@ -246,7 +245,7 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   )
 
   // Load record from DB.
-  const result = await loadProject(db, getProjectWithRelations(profile), conditions, {
+  const result = await loadProject(db, profile, conditions, {
     ...event.locals.hub,
     isSuperAdmin: user.superAdmin || false,
     isAdminRequest,
@@ -258,7 +257,9 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
         properties:
           profile === 'admin'
             ? await listResolvedProjectProperties(db, result.id)
-            : result.properties,
+            : 'properties' in result
+              ? result.properties
+              : undefined,
         capabilities: await mergeOrganisationCapabilities(
           db,
           probe.organisationId as Id,
@@ -458,16 +459,11 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Load the full persisted entity so field-level auth can compare against real DB state.
   const currentWithRelations = requireValue(
-    await loadProject(
-      db,
-      getProjectWithRelations('admin'),
-      [eq(project.id, current.id)],
-      {
-        ...ctx.event.locals.hub,
-        isSuperAdmin: user.superAdmin || false,
-        isAdminRequest: ctx.isAdminRequest,
-      },
-    ),
+    await loadProject(db, 'admin', [eq(project.id, current.id)], {
+      ...ctx.event.locals.hub,
+      isSuperAdmin: user.superAdmin || false,
+      isAdminRequest: ctx.isAdminRequest,
+    }),
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
   const currentEntity = requireValue(

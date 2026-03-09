@@ -4,7 +4,7 @@ import type { ProjectCapabilities, ProjectRoleCapabilities } from '$lib/types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
-import { createSelectSchema } from 'drizzle-zod'
+import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
@@ -27,6 +27,11 @@ import { UserBasic } from './user'
 //    - ProjectBase
 //    - ProjectI18nBase
 //    - ProjectRoleBase
+//    - ProjectRoleWithUser
+//    - ProjectRoleUpdateExtra
+//    - ProjectListRow
+//    - ProjectCardRow
+//    - ProjectAdminRow
 //
 // 3. REMOTE FORM SCHEMAS
 //    - ProjectI18nFormData
@@ -113,6 +118,40 @@ export const ProjectRoleBase = createSelectSchema(projectRole)
 export const ProjectRoleWithUser = ProjectRoleBase.extend({
   capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
   user: UserBasic.nullish(),
+})
+
+export const ProjectRoleUpdateExtra = createUpdateSchema(projectRole).extend({
+  role: ProjectRoleBase.shape.role,
+  user: UserBasic,
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
+})
+
+/**
+ * Hydrated DB row used for list profile project queries.
+ * Keeps i18n in array form because locale-map shaping happens in API services.
+ */
+export const ProjectListRow = ProjectBase.extend({
+  i18n: z.array(ProjectI18nBase).nullish(),
+})
+
+/**
+ * Hydrated DB row used for card/detail project queries.
+ * Extends the list row with raw image relation data for envelope shaping.
+ */
+export const ProjectCardRow = ProjectListRow.extend({
+  image: z.unknown().nullish(),
+})
+
+/**
+ * Hydrated DB row used for admin project queries.
+ * Includes role/user, property, image, and publisher relations needed by edit flows.
+ */
+export const ProjectAdminRow = ProjectBase.extend({
+  i18n: z.array(ProjectI18nBase).nullish(),
+  userRoles: z.array(ProjectRoleWithUser).nullish(),
+  properties: z.array(PropertyAdminProfileAPI).nullish(),
+  image: z.unknown().nullish(),
+  publisher: UserBasic.nullish(),
 })
 
 // ═══════════════════════

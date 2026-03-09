@@ -31,6 +31,7 @@ import {
 // DB
 import { toRelatedRecords } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
+import { userColumnsWithPrivacyProtected } from './user'
 // ZOD
 import { getProjectHubFilter } from './hub'
 // TYPES
@@ -46,7 +47,10 @@ import type {
   Database,
   LocaleKey,
   ProjectDBPartial,
-  ProjectDBRaw,
+  ProjectAdminDBRaw,
+  ProjectCardDBRaw,
+  ProjectListDBRaw,
+  ProjectProfile,
   ProjectRoleDB,
   HubOptsExtended,
   ListResponse,
@@ -218,6 +222,38 @@ export const toUserRoles = (
     capabilities: userRole.capabilities ?? {},
   }))
 
+const projectListRelations = {
+  i18n: true,
+} as const
+
+const projectCardRelations = {
+  i18n: true,
+  image: true,
+} as const
+
+const projectAdminRelations = {
+  i18n: true,
+  userRoles: {
+    with: {
+      user: {
+        columns: userColumnsWithPrivacyProtected,
+      },
+    },
+  },
+  properties: {
+    with: {
+      i18n: true,
+      values: {
+        with: {
+          i18n: true,
+        },
+      },
+    },
+  },
+  image: true,
+  publisher: true,
+} as const
+
 // ═══════════════════════
 // 2.1 CRUD :: READ
 // ═══════════════════════
@@ -226,9 +262,65 @@ export const toUserRoles = (
  * listProjects operation.
  * Used by project DB workflows to keep persistence behavior centralized.
  */
-export const listProjects = async (
+export function listProjects(
   db: Database,
-  withRelations: Record<string, boolean | object> = {},
+  profile: 'admin',
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    ignoreHubFilter?: boolean
+    filtersToApply?: QueryParams
+  },
+): Promise<ListResponse<ProjectAdminDBRaw>>
+export function listProjects(
+  db: Database,
+  profile: 'card' | 'detail',
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    ignoreHubFilter?: boolean
+    filtersToApply?: QueryParams
+  },
+): Promise<ListResponse<ProjectCardDBRaw>>
+export function listProjects(
+  db: Database,
+  profile: 'list',
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    ignoreHubFilter?: boolean
+    filtersToApply?: QueryParams
+  },
+): Promise<ListResponse<ProjectListDBRaw>>
+export function listProjects(
+  db: Database,
+  profile: ProjectProfile,
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    ignoreHubFilter?: boolean
+    filtersToApply?: QueryParams
+  },
+): Promise<ListResponse<ProjectListDBRaw | ProjectCardDBRaw | ProjectAdminDBRaw>>
+export async function listProjects(
+  db: Database,
+  profile: ProjectProfile,
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
   pagination?: { limit?: number; offset?: number },
@@ -239,7 +331,7 @@ export const listProjects = async (
     ignoreHubFilter?: boolean
     filtersToApply?: QueryParams
   },
-): Promise<ListResponse<ProjectDBRaw>> => {
+): Promise<ListResponse<ProjectListDBRaw | ProjectCardDBRaw | ProjectAdminDBRaw>> {
   const startedAt = Date.now()
   if (!query?.ignoreHubFilter) {
     const hubFilter = getProjectHubFilter(db, opts)
@@ -314,13 +406,30 @@ export const listProjects = async (
   const orderBy =
     sortOrder === 'desc' ? desc(sortColumn as AnyColumn) : asc(sortColumn as AnyColumn)
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-  const data = await db.query.project.findMany({
-    with: withRelations,
+  const baseQuery = {
     where: whereClause,
     limit: pagination?.limit,
     offset: pagination?.offset,
     orderBy,
-  })
+  } as const
+
+  let data: ProjectListDBRaw[] | ProjectCardDBRaw[] | ProjectAdminDBRaw[]
+  if (profile === 'admin') {
+    data = await db.query.project.findMany({
+      ...baseQuery,
+      with: projectAdminRelations,
+    })
+  } else if (profile === 'card' || profile === 'detail') {
+    data = await db.query.project.findMany({
+      ...baseQuery,
+      with: projectCardRelations,
+    })
+  } else {
+    data = await db.query.project.findMany({
+      ...baseQuery,
+      with: projectListRelations,
+    })
+  }
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(project)
   const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
   const totalCount = Number(totalRows[0]?.count || 0)
@@ -330,7 +439,7 @@ export const listProjects = async (
   const durationMs = Date.now() - startedAt
 
   return {
-    data: data as ProjectDBRaw[],
+    data,
     limit: pagination?.limit,
     offset,
     totalCount,
@@ -347,25 +456,64 @@ export const listProjects = async (
 /**
  * Loads a single project with optional relation graph and hub scoping.
  * @param db - The database instance.
- * @param withRelations - Optional relation graph to include.
+ * @param profile - Requested query profile.
  * @param conditions - Optional SQL predicates.
  * @param opts - Hub filtering options.
  * @returns The matching project or `undefined`.
  */
-export const getProject = async (
+export function getProject(
   db: Database,
-  withRelations: Record<string, boolean | object> = {},
+  profile: 'admin',
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+): Promise<ProjectAdminDBRaw | undefined>
+export function getProject(
+  db: Database,
+  profile: 'card' | 'detail',
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+): Promise<ProjectCardDBRaw | undefined>
+export function getProject(
+  db: Database,
+  profile: 'list',
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+): Promise<ProjectListDBRaw | undefined>
+export function getProject(
+  db: Database,
+  profile: ProjectProfile,
+  conditions: SQL<unknown>[],
+  opts: HubOptsExtended,
+): Promise<ProjectListDBRaw | ProjectCardDBRaw | ProjectAdminDBRaw | undefined>
+export async function getProject(
+  db: Database,
+  profile: ProjectProfile,
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-): Promise<ProjectDBRaw | undefined> => {
+): Promise<ProjectListDBRaw | ProjectCardDBRaw | ProjectAdminDBRaw | undefined> {
   const hubFilter = getProjectHubFilter(db, opts)
   if (hubFilter) {
     conditions.push(hubFilter)
   }
 
+  const where = conditions.length > 0 ? and(...conditions) : undefined
+  if (profile === 'admin') {
+    return await db.query.project.findFirst({
+      with: projectAdminRelations,
+      where,
+    })
+  }
+
+  if (profile === 'card' || profile === 'detail') {
+    return await db.query.project.findFirst({
+      with: projectCardRelations,
+      where,
+    })
+  }
+
   return await db.query.project.findFirst({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
+    with: projectListRelations,
+    where,
   })
 }
 
