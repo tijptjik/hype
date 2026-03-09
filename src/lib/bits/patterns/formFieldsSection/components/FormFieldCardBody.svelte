@@ -48,6 +48,7 @@ const componentOptions = $derived<SelectItem[]>(
   ).map(component => ({ value: component, label: component })),
 )
 const canShowRange = $derived(property.component === 'RangeField')
+const rangeBoundsAreRequired = $derived(canShowRange)
 const canShowValues = $derived(
   property.type === 'classifier' && property.component === 'SelectField',
 )
@@ -158,7 +159,26 @@ function getFallbackIssues(
     const issuePath = issue.path
     if (!Array.isArray(issuePath)) return false
     if (issuePath.length !== fullPath.length) return false
-    return fullPath.every((segment, index) => issuePath[index] === segment)
+    return fullPath.every((segment, index) => {
+      const issueSegment = issuePath[index]
+      if (issueSegment === segment) return true
+      if (
+        typeof segment === 'number' &&
+        typeof issueSegment === 'string' &&
+        /^\d+$/u.test(issueSegment)
+      ) {
+        return Number(issueSegment) === segment
+      }
+      if (
+        typeof segment === 'string' &&
+        typeof issueSegment === 'number' &&
+        Number.isInteger(issueSegment) &&
+        /^\d+$/u.test(segment)
+      ) {
+        return Number(segment) === issueSegment
+      }
+      return false
+    })
   })
   return matches.length > 0 ? matches : undefined
 }
@@ -783,6 +803,7 @@ $effect(() => {
               label={m.admin__forms_property_minimum()}
               inputType="number"
               value={(minAttrs as { value?: string }).value ?? (property.min == null ? '' : String(property.min))}
+              required={rangeBoundsAreRequired}
               issues={minIssues}
               {isEditing}
               inputAttrs={minAttrs}
@@ -791,6 +812,7 @@ $effect(() => {
               label={m.admin__forms_property_maximum()}
               inputType="number"
               value={(maxAttrs as { value?: string }).value ?? (property.max == null ? '' : String(property.max))}
+              required={rangeBoundsAreRequired}
               issues={maxIssues}
               {isEditing}
               inputAttrs={maxAttrs}

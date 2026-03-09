@@ -1,4 +1,5 @@
 // COMPONENTS
+import type { Component } from 'svelte'
 import InputField from '$lib/components/forms/fields/Input.svelte'
 import SelectField from '$lib/components/forms/fields/Select.svelte'
 import RangeField from '$lib/components/forms/fields/Range.svelte'
@@ -22,6 +23,8 @@ import type {
 } from './types'
 import type { Task } from 'maplibre-gl'
 import { getLocale } from './i18n'
+
+type RenderableFieldComponentType = Exclude<FieldComponentType, 'ListField'>
 
 /**
  * Convenience functions to prevent event handlers from being called multiple times
@@ -58,18 +61,23 @@ export function toTitleCase(str: string) {
   )
 }
 
-export const getFieldComponent = (componentType?: FieldComponentType) => {
+const fieldComponentByType: Record<RenderableFieldComponentType, Component> = {
+  InputField,
+  SelectField,
+  RangeField,
+  TextareaField,
+  UsersField,
+  CustomField,
+  ToggleField,
+  DisplayField,
+}
+// @deprecated
+export const getFieldComponent = (
+  componentType?: FieldComponentType,
+): Component | undefined => {
   if (!componentType) return undefined
-  return {
-    InputField: InputField,
-    SelectField: SelectField,
-    RangeField: RangeField,
-    TextareaField: TextareaField,
-    UsersField: UsersField,
-    CustomField: CustomField,
-    ToggleField: ToggleField,
-    DisplayField: DisplayField,
-  }[componentType]
+  if (componentType === 'ListField') return undefined
+  return fieldComponentByType[componentType]
 }
 
 export function loadScript(src: string) {

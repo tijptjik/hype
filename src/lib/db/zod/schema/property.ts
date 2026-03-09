@@ -62,23 +62,57 @@ import { FormBoolean } from '../form'
 // ═══════════════════════
 
 const PROPERTY_KEY_IDENTIFIER_REGEX = /^[A-Za-z_$][A-Za-z0-9_$]*$/u
+const RANGE_FIELD_COMPONENT = 'RangeField'
+
+const withRangeFieldBoundsRequirement = <TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
+): TSchema =>
+  schema.superRefine((value: unknown, ctx) => {
+    if (!value || typeof value !== 'object') return
+
+    const record = value as {
+      component?: unknown
+      min?: unknown
+      max?: unknown
+    }
+
+    if (record.component !== RANGE_FIELD_COMPONENT) return
+
+    if (record.min === undefined || record.min === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['min'],
+        message: m.field_is_required({ field: m.admin__forms_property_minimum() }),
+      })
+    }
+
+    if (record.max === undefined || record.max === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['max'],
+        message: m.field_is_required({ field: m.admin__forms_property_maximum() }),
+      })
+    }
+  }) as TSchema
 
 export const PropertyRecord = createSelectSchema(property)
 export const ProjectPropertyRecord = createSelectSchema(projectProperty)
 
-export const PropertyRecordCreate = createInsertSchema(property).extend({
-  ...getDefaultConstraints(property),
-  key: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_code() }) })
-    .regex(PROPERTY_KEY_IDENTIFIER_REGEX, {
-      message: m.admin__validation_key_valid_characters(),
-    }),
-  type: z.string().min(1),
-  component: z.string().min(1),
-  min: z.coerce.number().int().nullish(),
-  max: z.coerce.number().int().nullish(),
-})
+export const PropertyRecordCreate = withRangeFieldBoundsRequirement(
+  createInsertSchema(property).extend({
+    ...getDefaultConstraints(property),
+    key: z
+      .string()
+      .min(1, { message: m.field_is_required({ field: m.field_code() }) })
+      .regex(PROPERTY_KEY_IDENTIFIER_REGEX, {
+        message: m.admin__validation_key_valid_characters(),
+      }),
+    type: z.string().min(1),
+    component: z.string().min(1),
+    min: z.coerce.number().int().nullish(),
+    max: z.coerce.number().int().nullish(),
+  }),
+)
 
 export const PropertyRecordUpdate = createUpdateSchema(property).extend({
   ...getDefaultConstraints(property),
@@ -205,29 +239,31 @@ export const ProjectPropertyValueFormData = z.object({
   i18n: PropertyValueI18nByLocaleFormData.optional(),
 })
 
-export const ProjectPropertyFormData = z.object({
-  id: z.string().optional(),
-  scope: z.enum(['hub', 'organisation', 'project']).default('project'),
-  hubId: z.string().nullish().optional(),
-  organisationId: z.string().nullish().optional(),
-  projectId: z.string().optional(),
-  isEnabled: FormBoolean.default(true),
-  isDefaultEnabled: FormBoolean.default(false),
-  type: z.string().min(1).optional(),
-  isTranslatable: FormBoolean.optional(),
-  key: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_code() }) })
-    .regex(PROPERTY_KEY_IDENTIFIER_REGEX, {
-      message: m.admin__validation_key_valid_characters(),
-    }),
-  rank: z.coerce.number().int().optional(),
-  component: z.string().min(1),
-  min: z.coerce.number().int().nullish(),
-  max: z.coerce.number().int().nullish(),
-  values: z.array(ProjectPropertyValueFormData).nullish(),
-  i18n: PropertyI18nByLocaleFormData,
-})
+export const ProjectPropertyFormData = withRangeFieldBoundsRequirement(
+  z.object({
+    id: z.string().optional(),
+    scope: z.enum(['hub', 'organisation', 'project']).default('project'),
+    hubId: z.string().nullish().optional(),
+    organisationId: z.string().nullish().optional(),
+    projectId: z.string().optional(),
+    isEnabled: FormBoolean.default(true),
+    isDefaultEnabled: FormBoolean.default(false),
+    type: z.string().min(1).optional(),
+    isTranslatable: FormBoolean.optional(),
+    key: z
+      .string()
+      .min(1, { message: m.field_is_required({ field: m.field_code() }) })
+      .regex(PROPERTY_KEY_IDENTIFIER_REGEX, {
+        message: m.admin__validation_key_valid_characters(),
+      }),
+    rank: z.coerce.number().int().optional(),
+    component: z.string().min(1),
+    min: z.coerce.number().int().nullish(),
+    max: z.coerce.number().int().nullish(),
+    values: z.array(ProjectPropertyValueFormData).nullish(),
+    i18n: PropertyI18nByLocaleFormData,
+  }),
+)
 
 // ═══════════════════════
 // 4. REMOTE FUNCTION SCHEMAS

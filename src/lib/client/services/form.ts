@@ -765,6 +765,15 @@ const toFacetFromIssuePath = (
   supportedFacets: Set<FacetType>,
   facetFieldNames: Map<FacetType, Set<string>>,
 ): FacetType => {
+  const segments = toIssuePathSegments(issue)
+  if (
+    supportedFacets.has('fields') &&
+    segments[0] === 'data' &&
+    segments[1] === 'properties'
+  ) {
+    return 'fields'
+  }
+
   const candidates = toIssueFieldNameCandidates(issue)
   if (candidates.length > 0) {
     for (const [facet, names] of Array.from(facetFieldNames.entries())) {
