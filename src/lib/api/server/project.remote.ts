@@ -15,7 +15,15 @@ import {
 } from '$lib/api/services'
 import {
   getProjectWithRelations,
+  mergeProjectInheritedPropertySyncItems,
   normalizeSubmittedPropertyRanks,
+  resolveCanonicalScopeByPropertyId,
+  splitSubmittedPropertiesByScope,
+  toEntityResponseShape,
+  toListResponseShape,
+  toPreservedLocalPropertiesForProject,
+  toSubmittedLocalPropertiesWithProjectId,
+  toSubmittedPropertyIdSet,
   sanitizeSubmittedRoleCapabilities,
   toLookupConditions,
   toQueryConditions,
@@ -58,9 +66,7 @@ import {
   probeProjectForUpdate,
   resolveProjectCommandProbe,
   syncProjectUserRoles,
-  toEntityResponseShape,
   toPersistedProjectUserRoles,
-  toListResponseShape,
   updateI18n,
   updateProjectArchivedStateById,
   updateProjectByIdWithConcurrency,
@@ -68,6 +74,9 @@ import {
 } from '$lib/db/services/project'
 import {
   createPropertiesWithRelated,
+  listResolvedProjectProperties,
+  seedDefaultInheritedPropertiesForProject,
+  syncProjectInheritedProperties,
   updatePropertiesWithRelated,
 } from '$lib/db/services/property'
 // I18N
@@ -238,6 +247,10 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   const normalizedResult = result
     ? {
         ...result,
+        properties:
+          profile === 'admin'
+            ? await listResolvedProjectProperties(db, result.id)
+            : result.properties,
         capabilities: await mergeOrganisationCapabilities(
           db,
           probe.organisationId as Id,
@@ -301,6 +314,15 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     hasSubmittedProperties && Array.isArray(data.properties) ? data.properties : []
   const normalizedSubmittedProperties =
     normalizeSubmittedPropertyRanks(submittedProperties)
+  const canonicalScopeByPropertyId = await resolveCanonicalScopeByPropertyId(
+    db,
+    normalizedSubmittedProperties,
+  )
+  const { local: submittedLocalProperties, inherited: submittedInheritedProperties } =
+    splitSubmittedPropertiesByScope(
+      normalizedSubmittedProperties,
+      canonicalScopeByPropertyId,
+    )
   const duplicateSubmittedRoleUserIds = hasSubmittedUserRoles
     ? getDuplicateValues(submittedRoles.map(role => role.userId))
     : []
@@ -393,18 +415,30 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     )
 
     if (normalizedSubmittedProperties.length > 0) {
-      const submittedPropertiesWithProjectId = normalizedSubmittedProperties.map(
-        property => ({
-          ...property,
-          projectId: created.id,
-        }),
-      )
-      await createPropertiesWithRelated(
-        db,
-        submittedPropertiesWithProjectId as PropertyNew[],
+      const submittedPropertiesWithProjectId = toSubmittedLocalPropertiesWithProjectId(
+        submittedLocalProperties,
         created.id,
       )
+      if (submittedPropertiesWithProjectId.length > 0) {
+        await createPropertiesWithRelated(
+          db,
+          submittedPropertiesWithProjectId as PropertyNew[],
+          created.id,
+        )
+      }
+      await syncProjectInheritedProperties(db, {
+        projectId: created.id,
+        properties: mergeProjectInheritedPropertySyncItems(
+          submittedPropertiesWithProjectId,
+          submittedInheritedProperties,
+        ),
+      })
     }
+    await seedDefaultInheritedPropertiesForProject(db, {
+      projectId: created.id,
+      hubId: organisationScope.hubId,
+      startingRank: submittedLocalProperties.length,
+    })
 
     return toCreatedResponseShape(created)
   }
@@ -440,6 +474,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     (await toEntityResponseShape(currentWithRelations, 'admin')).data,
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
+  currentEntity.properties = await listResolvedProjectProperties(db, current.id)
 
   /* ----------------- */
   // UPDATE FLOW: DIFF DETECTION
@@ -472,11 +507,6 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         })),
       )
     : false
-  // Detect property set changes only when properties were submitted.
-  const propertiesChanged =
-    hasSubmittedProperties &&
-    toProjectStableAuthzSignature(normalizedSubmittedProperties) !==
-      toProjectStableAuthzSignature(currentEntity.properties ?? [])
   // Compare normalized i18n payloads so translator-only submissions resolve to i18n field auth.
   const i18nChanged =
     toProjectStableAuthzSignature(data.i18n) !==
@@ -501,7 +531,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (roleMembershipChanged || roleCapabilityAssignmentsChanged) {
     submittedDataForUpdate.userRoles = submittedRolesWithCapabilities
   }
-  if (propertiesChanged) {
+  if (hasSubmittedProperties) {
     submittedDataForUpdate.properties = normalizedSubmittedProperties
   }
 
@@ -659,18 +689,43 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     )
   }
 
-  if (hasSubmittedProperties && propertiesChanged) {
-    const submittedPropertiesWithProjectId = normalizedSubmittedProperties.map(
-      property => ({
-        ...property,
-        projectId: current.id,
-      }),
-    )
-    await updatePropertiesWithRelated(
-      db,
-      submittedPropertiesWithProjectId as Property[],
+  if (hasSubmittedProperties) {
+    const submittedPropertiesWithProjectId = toSubmittedLocalPropertiesWithProjectId(
+      submittedLocalProperties,
       current.id,
     )
+    const submittedLocalPropertyIds = toSubmittedPropertyIdSet(
+      submittedPropertiesWithProjectId,
+    )
+    const existingLocalProperties = (currentEntity.properties ?? []).filter(
+      property => property.scope === 'project',
+    )
+    const shouldPreserveExistingLocalProperties =
+      submittedPropertiesWithProjectId.length === 0 &&
+      existingLocalProperties.length > 0
+    const preservedLocalProperties = shouldPreserveExistingLocalProperties
+      ? toPreservedLocalPropertiesForProject({
+          existingLocalProperties,
+          submittedLocalPropertyIds,
+          projectId: current.id,
+        })
+      : []
+    const localPropertiesToPersist = [
+      ...submittedPropertiesWithProjectId,
+      ...preservedLocalProperties,
+    ]
+    await updatePropertiesWithRelated(
+      db,
+      localPropertiesToPersist as Property[],
+      current.id,
+    )
+    await syncProjectInheritedProperties(db, {
+      projectId: current.id,
+      properties: mergeProjectInheritedPropertySyncItems(
+        localPropertiesToPersist,
+        submittedInheritedProperties,
+      ),
+    })
   }
 
   return toCreatedResponseShape(persisted)

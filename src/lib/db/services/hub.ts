@@ -22,6 +22,8 @@ import type {
   Database,
   HubDBRaw,
   HubDB,
+  HubDBNew,
+  HubNew,
   HubDBPartial,
   Code,
   Locale,
@@ -393,6 +395,7 @@ export const probeHubQuery = async (
   const [probe] = await db
     .select({
       id: hub.id,
+      code: hub.code,
       isPublished: hub.isPublished,
       isArchived: hub.isArchived,
     })
@@ -458,7 +461,7 @@ export const resolveHubCommandProbe = async (
   return probed
 }
 
-export const createHub = async (db: Database, data: any): Promise<HubDB> => {
+export const createHub = async (db: Database, data: HubDBNew): Promise<HubDB> => {
   const [created] = await db.insert(hub).values(data).returning()
   return created
 }
@@ -653,13 +656,8 @@ export const createI18n = async (
   i18n: Record<Locale, HubI18nNew>,
   hubId: string,
 ): Promise<HubI18nDB[]> => {
-  return await insertManyRelated(
-    db,
-    hubI18n,
-    toRelatedRecords(i18n, 'hubId', hubId, 'locale') as any,
-    'hubId',
-    hubId,
-  )
+  const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
+  return await insertManyRelated(db, hubI18n, records, 'hubId', hubId)
 }
 
 /**
@@ -674,13 +672,8 @@ export const updateI18n = async (
   i18n: Record<Locale, HubI18nPartial>,
   hubId: string,
 ): Promise<HubI18nDB[]> => {
-  return await replaceManyRelated(
-    db,
-    hubI18n,
-    toRelatedRecords(i18n, 'hubId', hubId, 'locale') as any,
-    hubI18n.hubId,
-    hubId,
-  )
+  const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
+  return await replaceManyRelated(db, hubI18n, records, hubI18n.hubId, hubId)
 }
 
 // ═══════════════════════
@@ -693,11 +686,8 @@ export const updateI18n = async (
  * @param data - The hub data to create
  * @returns The newly created hub with i18n data
  */
-export const createHubWithRelated = async (
-  db: Database,
-  data: any, // Using any to avoid complex type issues
-) => {
-  const hub = await createHub(db, data)
+export const createHubWithRelated = async (db: Database, data: HubNew) => {
+  const hub = await createHub(db, data as HubDBNew)
 
   // Create i18n if provided
   let i18n: HubI18nDB[] = []
@@ -706,7 +696,7 @@ export const createHubWithRelated = async (
   }
 
   // Initialize organisations as empty array (will be assigned later if needed)
-  const organisations: any[] = []
+  const organisations: Array<Record<string, never>> = []
 
   const result = { ...hub, i18n, organisations }
 
@@ -722,7 +712,7 @@ export const createHubWithRelated = async (
  */
 export const updateHubWithRelated = async (
   db: Database,
-  data: any, // Using any to avoid complex type issues
+  data: HubNew,
   lookupCode?: string,
 ) => {
   const codeToUse = lookupCode || data.code

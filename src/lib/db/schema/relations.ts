@@ -12,6 +12,8 @@ import {
   propertyValue,
   propertyValueI18n,
   projectProperty,
+  hubProperty,
+  organisationProperty,
 } from './property'
 import { feature, featureI18n, featureProperty, featurePropertyI18n } from './feature'
 import { image, featureImage } from './image'
@@ -61,6 +63,7 @@ export const organisationRelations = relations(organisation, ({ one, many }) => 
     references: [hub.id],
   }),
   properties: many(property),
+  propertyAssignments: many(organisationProperty),
   projects: many(project),
   tasks: many(task),
 }))
@@ -208,6 +211,8 @@ export const propertyRelations = relations(property, ({ one, many }) => ({
   i18n: many(propertyI18n),
   layerProperties: many(layerProperty),
   projectAssignments: many(projectProperty),
+  hubAssignments: many(hubProperty),
+  organisationAssignments: many(organisationProperty),
 }))
 
 /**
@@ -253,6 +258,31 @@ export const projectPropertyRelations = relations(projectProperty, ({ one }) => 
     references: [property.id],
   }),
 }))
+
+export const hubPropertyRelations = relations(hubProperty, ({ one }) => ({
+  hub: one(hub, {
+    fields: [hubProperty.hubId],
+    references: [hub.id],
+  }),
+  property: one(property, {
+    fields: [hubProperty.propertyId],
+    references: [property.id],
+  }),
+}))
+
+export const organisationPropertyRelations = relations(
+  organisationProperty,
+  ({ one }) => ({
+    organisation: one(organisation, {
+      fields: [organisationProperty.organisationId],
+      references: [organisation.id],
+    }),
+    property: one(property, {
+      fields: [organisationProperty.propertyId],
+      references: [property.id],
+    }),
+  }),
+)
 
 /**
  * Feature relations
@@ -450,6 +480,7 @@ export const hubRelations = relations(hub, ({ one, many }) => ({
   organisations: many(organisation),
   userRoles: many(hubRole, { relationName: 'hubUserRoles' }),
   properties: many(property),
+  propertyAssignments: many(hubProperty),
   image: one(image, {
     fields: [hub.imageId],
     references: [image.id],

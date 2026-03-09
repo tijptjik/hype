@@ -15,6 +15,7 @@ import {
   getCapabilityKeysFromDefinitions,
   isProjectCapabilityKey,
   normalizeProjectCapabilities,
+  normalizeProjectRoleCapabilities,
 } from '$lib/capabilities'
 // SCHEMA
 import {
@@ -71,6 +72,7 @@ import type {
   PropertyValueDBRaw,
   Code,
   HubOptsExtended,
+  Image,
   ListResponse,
   ProjectListByProfile,
   ProjectEntityByProfile,
@@ -239,7 +241,7 @@ export const getProject = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-): Promise<any | undefined> => {
+): Promise<ProjectDBRaw | undefined> => {
   // Apply hub filtering if opts is provided
   const hubFilter = getProjectHubFilter(db, opts)
   if (hubFilter) {
@@ -396,6 +398,70 @@ export const mergeOrganisationCapabilities = async (
   return merged
 }
 
+export const cascadeOrganisationCapabilitiesToProjects = async (
+  db: Database,
+  params: {
+    organisationId: Id
+    organisationCapabilities: CapabilityDefinitions | null | undefined
+  },
+): Promise<void> => {
+  const allowedKeys = new Set(
+    getCapabilityKeysFromDefinitions(params.organisationCapabilities),
+  )
+  const projectRows = await db
+    .select({
+      id: project.id,
+      capabilities: project.capabilities,
+    })
+    .from(project)
+    .where(eq(project.organisationId, params.organisationId))
+
+  for (const projectRow of projectRows) {
+    const nextProjectCapabilities = normalizeProjectCapabilities(
+      projectRow.capabilities,
+    )
+    for (const key of Object.keys(nextProjectCapabilities)) {
+      if (!isProjectCapabilityKey(key)) continue
+      if (allowedKeys.has(key)) continue
+      nextProjectCapabilities[key] = false
+    }
+
+    await db
+      .update(project)
+      .set({ capabilities: nextProjectCapabilities })
+      .where(eq(project.id, projectRow.id))
+
+    const projectRoleRows = await db
+      .select({
+        userId: projectRole.userId,
+        capabilities: projectRole.capabilities,
+      })
+      .from(projectRole)
+      .where(eq(projectRole.projectId, projectRow.id))
+
+    for (const roleRow of projectRoleRows) {
+      const nextRoleCapabilities = normalizeProjectRoleCapabilities(
+        roleRow.capabilities,
+      )
+      for (const key of Object.keys(nextRoleCapabilities)) {
+        if (!isProjectCapabilityKey(key)) continue
+        if (nextProjectCapabilities[key]) continue
+        nextRoleCapabilities[key] = false
+      }
+
+      await db
+        .update(projectRole)
+        .set({ capabilities: nextRoleCapabilities })
+        .where(
+          and(
+            eq(projectRole.projectId, projectRow.id),
+            eq(projectRole.userId, roleRow.userId),
+          ),
+        )
+    }
+  }
+}
+
 /**
  * Creates a new project in the database
  * @param db - The database instance
@@ -533,13 +599,8 @@ export const createI18n = async (
   i18n: Record<Locale, ProjectI18nNew>,
   projectId: string,
 ): Promise<ProjectI18nDB[]> => {
-  return await insertManyRelated(
-    db,
-    projectI18n,
-    toRelatedRecords(i18n, 'projectId', projectId, 'locale') as any,
-    'projectId',
-    projectId,
-  )
+  const records = toRelatedRecords(i18n, 'projectId', projectId, 'locale')
+  return await insertManyRelated(db, projectI18n, records, 'projectId', projectId)
 }
 
 /**
@@ -554,10 +615,11 @@ export const updateI18n = async (
   i18n: Record<Locale, ProjectI18nPartial>,
   projectId: string,
 ): Promise<ProjectI18nDB[]> => {
+  const records = toRelatedRecords(i18n, 'projectId', projectId, 'locale')
   return await replaceManyRelated(
     db,
     projectI18n,
-    toRelatedRecords(i18n, 'projectId', projectId, 'locale') as any,
+    records,
     projectI18n.projectId,
     projectId,
   )
@@ -729,7 +791,11 @@ export const updateProjectWithRelated = async (
 ) => {
   const codeToUse = lookupCode || data.code
   const project = await updateProject(db, data, codeToUse)
-  const i18n = await updateI18n(db, data.i18n as any, project.id)
+  const i18n = await updateI18n(
+    db,
+    data.i18n as Record<Locale, ProjectI18nPartial>,
+    project.id,
+  )
   await updateProjectUserRoles(db, data.userRoles, project.id, project.organisationId)
   const userRoles = await listProjectUserRoles(db, project.id)
 
@@ -820,7 +886,7 @@ export const toFormShape = async (
 
   const formData: Project = {
     ...project,
-    i18n: transformI18nSafely(i18n) as any,
+    i18n: transformI18nSafely(i18n) as unknown as Project['i18n'],
     userRoles: normalizedUserRoles,
     properties: properties
       .sort((a, b) => {
@@ -836,19 +902,19 @@ export const toFormShape = async (
       })
       .map(property => ({
         ...property,
-        i18n: transformI18nSafely(property.i18n as PropertyI18nDB[]) as any,
+        i18n: transformI18nSafely(property.i18n as PropertyI18nDB[]) as unknown,
         values: (property.values as PropertyValueDBRaw[]).map(value => ({
           ...value,
-          i18n: transformI18nSafely(value.i18n as PropertyValueI18nDB[]) as any,
+          i18n: transformI18nSafely(value.i18n as PropertyValueI18nDB[]) as unknown,
         })),
       })) as Property[],
     image: project.image
       ? (toImageEnvelope(
-          project.image as any,
+          project.image as Image,
           'detail',
           ImageContextResource.project,
           project.id,
-        ) as any)
+        ) as unknown as Project['image'])
       : null,
   }
   return ProjectAdminProfileAPI.parse(formData)
@@ -889,7 +955,7 @@ export const toResponseShape = async (
     })),
     image: project.image
       ? toImageEnvelope(
-          project.image as any,
+          project.image as Image,
           imageProfile,
           ImageContextResource.project,
           project.id,
@@ -1016,7 +1082,7 @@ export const getProjectForFeatureId = async (
 // ═══════════════════════
 
 export async function mergeOrganisationRoles(
-  db: any,
+  db: Database,
   result: Project,
 ): Promise<Project> {
   // Get organization roles for the project's organization

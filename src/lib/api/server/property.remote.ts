@@ -9,6 +9,7 @@ import {
   getPropertyQueryContext,
   propertyCollectionWithRelations,
   toPropertyPrismConditions,
+  toPropertyResponseShape,
 } from '$lib/api/services/property'
 import { authorizeProjectReadForProbe, toAuthMessage } from '$lib/api/services/authz'
 // DB
@@ -17,7 +18,6 @@ import {
   listProperties,
   listResolvedProjectProperties,
   getProperty as loadProperty,
-  toResponseShape,
 } from '$lib/db/services/property'
 import { probeProjectQuery } from '$lib/db/services/project'
 // SCHEMA
@@ -39,19 +39,6 @@ const PropertyEntityQuery = z.object({
     })
     .optional(),
 })
-
-const toPropertyResponse = (
-  row: {
-    i18n?: unknown
-    values?: Array<{ i18n?: unknown }>
-  } & Record<string, unknown>,
-) =>
-  toResponseShape(
-    row,
-    row.i18n,
-    row.values || [],
-    row.values?.flatMap(value => value.i18n || []) || [],
-  )
 
 const toProjectReadDecision = async (params: {
   db: Parameters<typeof probeProjectQuery>[0]
@@ -124,7 +111,7 @@ const getPropertiesQuery = guardedQuery(ListQueryParamsSchema, async (params, ct
   }
 
   return {
-    data: filteredRows.map(row => toPropertyResponse(row)),
+    data: filteredRows.map(row => toPropertyResponseShape(row)),
   }
 })
 
@@ -141,6 +128,11 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
   ])
 
   if (!result) {
+    return {
+      data: null,
+    }
+  }
+  if (typeof result.projectId !== 'string' || result.projectId.length === 0) {
     return {
       data: null,
     }
@@ -162,7 +154,7 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
   }
 
   return {
-    data: toPropertyResponse(result),
+    data: toPropertyResponseShape(result),
   }
 })
 
@@ -193,7 +185,7 @@ export const getProjectProperties = guardedQuery(
 
     return {
       data: (await listResolvedProjectProperties(db, params.projectId)).sort(
-        (a, b) => a.rank - b.rank,
+        (a, b) => (a.rank ?? 0) - (b.rank ?? 0),
       ),
       meta: {
         isAdminRequest: ctx.isAdminRequest,

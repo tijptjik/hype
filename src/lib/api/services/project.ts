@@ -21,25 +21,44 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { project } from '$lib/db/schema/index'
+import { project, property as propertyTable } from '$lib/db/schema/index'
 // DB
 import { applyPrismConstraints, isFieldUnique } from '$lib/db'
+import {
+  toEntityResponseShape as toProjectEntityResponseShapeFromDb,
+  toListResponseShape as toProjectListResponseShapeFromDb,
+  toResponseShape as toProjectResponseShapeFromDb,
+} from '$lib/db/services/project'
 import { FirstClassResource, HierarchicalResource, ProjectRoleType } from '$lib/enums'
-import { toBooleanOrUndefined } from '$lib/api/services'
+import {
+  inferPropertyDiscriminatorFromComponent,
+  toBooleanOrUndefined,
+} from '$lib/api/services'
 // TYPES
 import type {
   CapabilityDefinitions,
   UserRoleDisco,
+  SubmittedPropertyScopeCandidate,
+  ProjectInheritedPropertySyncItem,
+  ProjectLocalPropertyCandidate,
+  PersistedProjectLocalPropertyCandidate,
   ProjectNew,
   Prisms,
   ProjectDB,
+  ProjectDBRaw,
   ProjectProfile,
+  ProjectI18nNew,
+  ProjectRoleNew,
   Database,
   Id,
+  ListResponse,
+  ProjectEntityByProfile,
+  ProjectListByProfile,
+  PropertyDBRaw,
   QueryParams,
   Project,
   SessionUser,
-  PropertyDiscriminator,
+  EntityResponse,
 } from '$lib/types'
 import type { SuperValidated } from 'sveltekit-superforms'
 
@@ -98,8 +117,59 @@ export const toProjectProfile = (
     ? (value as ProjectProfile)
     : fallback
 
+/**
+ * Shapes a project row into a profile-specific wire response payload.
+ *
+ * @param project - Base project row.
+ * @param i18n - Optional project i18n rows.
+ * @param userRoles - Optional project role rows.
+ * @param properties - Optional project property rows.
+ * @param profile - Output response profile.
+ * @returns Parsed project response payload.
+ */
+export const toResponseShape = async (
+  project: ProjectDBRaw,
+  i18n: ProjectI18nNew[] = [],
+  userRoles: ProjectRoleNew[] = [],
+  properties: PropertyDBRaw[] = [],
+  profile: ProjectProfile = 'detail',
+) => toProjectResponseShapeFromDb(project, i18n, userRoles, properties, profile)
+
+/**
+ * Shapes a single project entity into an API entity response envelope.
+ *
+ * @param project - Project row or `null`.
+ * @param profile - Output response profile.
+ * @returns Entity response envelope with typed project payload.
+ */
+export const toEntityResponseShape = async <P extends ProjectProfile = 'detail'>(
+  project: ProjectDBRaw | null,
+  profile: P = 'detail' as P,
+): Promise<EntityResponse<ProjectEntityByProfile<P>>> =>
+  toProjectEntityResponseShapeFromDb(project, profile)
+
+/**
+ * Shapes a paginated project result into an API list response envelope.
+ *
+ * @param result - Paginated project rows from DB service.
+ * @param user - Optional session user.
+ * @param profile - Output response profile.
+ * @returns List response envelope with typed project payloads.
+ */
+export const toListResponseShape = async <P extends ProjectProfile = 'list'>(
+  result: ListResponse<ProjectDBRaw>,
+  user: SessionUser | undefined,
+  profile: P = 'list' as P,
+): Promise<ListResponse<ProjectListByProfile<P>>> =>
+  toProjectListResponseShapeFromDb(result, user, profile)
+
 export const normalizeSubmittedPropertyRanks = <
-  T extends { type?: unknown; rank?: unknown; values?: unknown },
+  T extends {
+    type?: unknown
+    component?: unknown
+    rank?: unknown
+    values?: unknown
+  },
 >(
   properties: T[],
 ): T[] => {
@@ -112,23 +182,22 @@ export const normalizeSubmittedPropertyRanks = <
     return Number.POSITIVE_INFINITY
   }
 
-  const assignByType = (type: PropertyDiscriminator): void => {
-    normalized
-      .map((property, index) => ({ property, index }))
-      .filter(({ property }) => property.type === type)
-      .sort((a, b) => {
-        const aRank = asRank(a.property.rank)
-        const bRank = asRank(b.property.rank)
-        if (aRank !== bRank) return aRank - bRank
-        return a.index - b.index
-      })
-      .forEach(({ property }, rank) => {
-        property.rank = rank
-      })
-  }
+  normalized.forEach(property => {
+    const inferredType = inferPropertyDiscriminatorFromComponent(property.component)
+    if (inferredType) property.type = inferredType
+  })
 
-  assignByType('classifier')
-  assignByType('specifier')
+  normalized
+    .map((property, index) => ({ property, index }))
+    .sort((a, b) => {
+      const aRank = asRank(a.property.rank)
+      const bRank = asRank(b.property.rank)
+      if (aRank !== bRank) return aRank - bRank
+      return a.index - b.index
+    })
+    .forEach(({ property }, rank) => {
+      property.rank = rank
+    })
 
   for (const property of normalized) {
     if (!Array.isArray(property.values)) continue
@@ -151,6 +220,171 @@ export const normalizeSubmittedPropertyRanks = <
 
   return normalized as T[]
 }
+
+/**
+ * Resolves submitted property scope using canonical DB scope when available.
+ * @param property Submitted property candidate.
+ * @param canonicalScopeByPropertyId Canonical scope lookup keyed by property id.
+ * @returns Resolved scope string or `undefined` when no scope is available.
+ */
+const resolveSubmittedPropertyScope = (
+  property: SubmittedPropertyScopeCandidate,
+  canonicalScopeByPropertyId: Map<string, string>,
+): string | undefined => {
+  const canonicalScope =
+    typeof property?.id === 'string'
+      ? canonicalScopeByPropertyId.get(property.id)
+      : undefined
+  return (
+    canonicalScope ?? (typeof property.scope === 'string' ? property.scope : undefined)
+  )
+}
+
+/**
+ * Splits submitted properties into local (`project`) and inherited scopes.
+ * @param properties Submitted properties.
+ * @param canonicalScopeByPropertyId Canonical scope lookup keyed by property id.
+ * @returns Grouped submitted properties by local and inherited scope.
+ */
+export const splitSubmittedPropertiesByScope = <
+  T extends SubmittedPropertyScopeCandidate,
+>(
+  properties: T[],
+  canonicalScopeByPropertyId: Map<string, string>,
+): { local: T[]; inherited: T[] } => {
+  const local: T[] = []
+  const inherited: T[] = []
+
+  for (const property of properties) {
+    if (
+      resolveSubmittedPropertyScope(property, canonicalScopeByPropertyId) === 'project'
+    ) {
+      local.push(property)
+      continue
+    }
+    inherited.push(property)
+  }
+
+  return { local, inherited }
+}
+
+/**
+ * Resolves canonical property scopes for submitted properties from persisted rows.
+ * @param db Database handle.
+ * @param properties Submitted properties that may include ids.
+ * @returns Map of property id to canonical scope.
+ */
+export const resolveCanonicalScopeByPropertyId = async <
+  T extends SubmittedPropertyScopeCandidate,
+>(
+  db: Database,
+  properties: T[],
+): Promise<Map<string, string>> => {
+  const submittedPropertyIds = properties
+    .map(property => property?.id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+
+  const canonicalScopeByPropertyId = new Map<string, string>()
+  if (submittedPropertyIds.length === 0) {
+    return canonicalScopeByPropertyId
+  }
+
+  const scopeRows = await db.query.property.findMany({
+    columns: { id: true, scope: true },
+    where: inArray(propertyTable.id, submittedPropertyIds),
+  })
+
+  for (const scopeRow of scopeRows) {
+    canonicalScopeByPropertyId.set(scopeRow.id, scopeRow.scope)
+  }
+
+  return canonicalScopeByPropertyId
+}
+
+/**
+ * Normalizes submitted local properties into project-scoped persisted candidates.
+ * @param properties Submitted local properties.
+ * @param projectId Target project id.
+ * @returns Local properties with enforced project linkage and scope defaults.
+ */
+export const toSubmittedLocalPropertiesWithProjectId = <
+  T extends ProjectLocalPropertyCandidate,
+>(
+  properties: T[],
+  projectId: Id,
+): Array<T & { projectId: Id; hubId: null; scope: 'project'; isEnabled: true }> =>
+  properties.map(property => ({
+    ...property,
+    projectId,
+    hubId: null,
+    scope: 'project',
+    isEnabled: true,
+  }))
+
+/**
+ * Collects a set of valid property ids from submitted property-like records.
+ * @param properties Property-like records.
+ * @returns Set of non-empty string ids.
+ */
+export const toSubmittedPropertyIdSet = <T extends { id?: unknown }>(
+  properties: T[],
+): Set<string> =>
+  new Set(
+    properties
+      .map(property => property.id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0),
+  )
+
+/**
+ * Normalizes existing persisted project-local properties for re-persisting.
+ * @param properties Existing local properties.
+ * @param projectId Target project id.
+ * @returns Local properties with enforced project linkage and project scope.
+ */
+export const toPersistedLocalPropertiesForProject = <
+  T extends PersistedProjectLocalPropertyCandidate,
+>(
+  properties: T[],
+  projectId: Id,
+): Array<T & { projectId: Id; hubId: null; scope: 'project' }> =>
+  properties.map(property => ({
+    ...property,
+    projectId,
+    hubId: null,
+    scope: 'project',
+  }))
+
+/**
+ * Returns project-local properties that should be preserved when no local
+ * properties are newly submitted.
+ * @param params Existing local properties and submitted local ids.
+ * @returns Preserved local properties normalized for persistence.
+ */
+export const toPreservedLocalPropertiesForProject = <
+  T extends PersistedProjectLocalPropertyCandidate,
+>(params: {
+  existingLocalProperties: T[]
+  submittedLocalPropertyIds: Set<string>
+  projectId: Id
+}): Array<T & { projectId: Id; hubId: null; scope: 'project' }> => {
+  if (params.existingLocalProperties.length === 0) return []
+  return toPersistedLocalPropertiesForProject(
+    params.existingLocalProperties.filter(
+      property => !params.submittedLocalPropertyIds.has(property.id),
+    ),
+    params.projectId,
+  )
+}
+
+/**
+ * Flattens local and inherited property groups into sync payload items.
+ * @param groups Property groups to merge.
+ * @returns Flat list compatible with inherited-property sync payloads.
+ */
+export const mergeProjectInheritedPropertySyncItems = (
+  ...groups: Array<Array<Record<string, unknown>>>
+): ProjectInheritedPropertySyncItem[] =>
+  groups.flat() as unknown as ProjectInheritedPropertySyncItem[]
 
 export const mergeProjectCapabilitiesForOrganisation = (
   projectCapabilities: unknown,
@@ -434,13 +668,13 @@ export const assertCodeUnique = async (
  */
 export const isAccessLostUponSuccess = (
   user: SessionUser,
-  formData: ProjectNew,
+  formData: { id?: string; userRoles: UserRoleDisco[] },
   userRoles?: UserRoleDisco[],
 ) => {
-  const userRolesToCheck = userRoles || (formData.userRoles as UserRoleDisco[])
+  const userRolesToCheck = userRoles || formData.userRoles
   return (
     !userRolesToCheck.some(
-      (role: UserRoleDisco) =>
+      role =>
         role.type === 'project' &&
         role.projectId === formData.id &&
         role.userId === user.id,

@@ -1,7 +1,8 @@
 // DRIZZLE
-import { eq, inArray, type SQL } from 'drizzle-orm'
+import { asc, eq, inArray, type SQL } from 'drizzle-orm'
+import { error } from '@sveltejs/kit'
 // LIB
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { applyQueryFilters, removeExcludedColumns, toStableSignature } from '$lib/api'
 import { toBooleanOrUndefined } from '$lib/api/services'
 // AUTH
 import {
@@ -14,17 +15,28 @@ import {
 } from '$lib/auth/asserts'
 // DB
 import { isFieldUnique } from '$lib/db'
+import {
+  toEntityResponseShape as toOrganisationEntityResponseShapeFromDb,
+  toListResponseShape as toOrganisationListResponseShapeFromDb,
+} from '$lib/db/services/organisation'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { organisation } from '$lib/db/schema/index'
+import { organisation, organisationProperty } from '$lib/db/schema/index'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type {
+  CapabilityDefinitions,
   Database,
+  EntityResponse,
   Id,
+  ListResponse,
+  OrganisationDBRaw,
+  OrganisationEntityByProfile,
+  OrganisationListByProfile,
   OrganisationProfile,
+  OrganisationPartial,
   Organisation,
   OrganisationDB,
   OrganisationNew,
@@ -80,6 +92,21 @@ export const getOrganisationWithRelations = (
           },
         },
       },
+      propertyAssignments: {
+        orderBy: [asc(organisationProperty.rank)],
+        with: {
+          property: {
+            with: {
+              i18n: true,
+              values: {
+                with: {
+                  i18n: true,
+                },
+              },
+            },
+          },
+        },
+      },
       ...(isSuperAdmin ? { hub: true } : {}),
     }
   }
@@ -106,6 +133,36 @@ export const toOrganisationProfile = (
   (organisationProfiles as readonly string[]).includes(value)
     ? (value as OrganisationProfile)
     : fallback
+
+/**
+ * Shapes a single organisation entity into an API entity response envelope.
+ *
+ * @param organisation - Organisation row or `null`.
+ * @param user - Optional session user for super-admin shaping behavior.
+ * @param profile - Output response profile.
+ * @returns Entity response envelope with typed organisation payload.
+ */
+export const toEntityResponseShape = async <P extends OrganisationProfile = 'detail'>(
+  organisation: OrganisationDBRaw | null,
+  user?: SessionUser,
+  profile: P = 'detail' as P,
+): Promise<EntityResponse<OrganisationEntityByProfile<P>>> =>
+  toOrganisationEntityResponseShapeFromDb(organisation, user, profile)
+
+/**
+ * Shapes a paginated organisation result into an API list response envelope.
+ *
+ * @param result - Paginated organisation rows from DB service.
+ * @param user - Optional session user for profile shaping behavior.
+ * @param profile - Output response profile.
+ * @returns List response envelope with typed organisation payloads.
+ */
+export const toListResponseShape = async <P extends OrganisationProfile = 'list'>(
+  result: ListResponse<OrganisationDBRaw>,
+  user: SessionUser | undefined,
+  profile: P = 'list' as P,
+): Promise<ListResponse<OrganisationListByProfile<P>>> =>
+  toOrganisationListResponseShapeFromDb(result, user, profile)
 
 export const toLookupConditions = (params: {
   ref: string
@@ -135,7 +192,7 @@ const toTriStateBoolean = (value: unknown): boolean | null | undefined => {
 
 const applyTriStateBooleanCondition = (
   conditions: SQL<unknown>[],
-  column: any,
+  column: typeof organisation.isPublished | typeof organisation.isArchived,
   value: boolean | null | undefined,
 ) => {
   if (value === true) conditions.push(eq(column, true))
@@ -281,12 +338,18 @@ export const assertPermissionsToUpdateOrganisation = (
   formData: Record<string, unknown> & { id?: string },
   userRoles: UserRoleDisco[],
 ) => {
+  const organisationId = formData.id
+  if (typeof organisationId !== 'string' || organisationId.length === 0) {
+    return error(400, 'Organisation id is required')
+  }
+
   // Run all access control assertions
   const assertionError = runAssertions(
-    () => assertUserLoggedIn(user as any),
+    () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
-    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, formData.id!),
-    () => assertIsCoreInclusiveModifiedBySuperAdmin(user, formData as any),
+    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, organisationId),
+    () =>
+      assertIsCoreInclusiveModifiedBySuperAdmin(user, formData as OrganisationPartial),
   )
 
   if (assertionError) return assertionError
@@ -334,3 +397,17 @@ export const isAccessLostUponSuccess = (
     ) && !user.superAdmin
   )
 }
+
+/**
+ * Determines whether organisation capabilities changed in a submitted update.
+ * @param params Submitted/current capability values and field presence.
+ * @returns True when capability field was submitted and value differs.
+ */
+export const hasOrganisationCapabilitiesChanged = (params: {
+  hasSubmittedCapabilitiesField: boolean
+  submittedCapabilities: CapabilityDefinitions | null | undefined
+  currentCapabilities: CapabilityDefinitions | null | undefined
+}): boolean =>
+  params.hasSubmittedCapabilitiesField &&
+  toStableSignature(params.submittedCapabilities ?? {}) !==
+    toStableSignature(params.currentCapabilities ?? {})

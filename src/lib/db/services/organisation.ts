@@ -9,16 +9,11 @@ import {
   project,
 } from '../schema'
 import {
+  OrganisationAdminProfileAPI,
   OrganisationCardProfileAPI,
   OrganisationDetailProfileAPI,
   OrganisationListProfileAPI,
 } from '../zod'
-import {
-  OrganisationAPI,
-  OrganisationCollectionAPI,
-  OrganisationCollectionSuperAdminAPI,
-  OrganisationSuperAdminAPI,
-} from '../zod/schema/deprecated/organisation'
 // SERVICES
 import { toRelatedRecords, transformI18nSafely } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
@@ -32,9 +27,6 @@ import type {
   OrganisationNewWithI18n,
   OrganisationWithI18n,
   Organisation,
-  OrganisationCollection,
-  OrganisationCollectionSuperAdmin,
-  OrganisationSuperAdmin,
   Id,
   Database,
   OrganisationDBNew,
@@ -42,7 +34,6 @@ import type {
   QueryParams,
   OrganisationI18nNew,
   OrganisationI18nPartial,
-  OrganisationFormInput,
   OrganisationRoleNew,
   OrganisationDBPartial,
   OrganisationDBRaw,
@@ -298,6 +289,7 @@ export const probeOrganisationForUpdate = async (
       id: organisation.id,
       code: organisation.code,
       hubId: organisation.hubId,
+      capabilities: organisation.capabilities,
       modifiedAt: organisation.modifiedAt,
     })
     .from(organisation)
@@ -562,7 +554,7 @@ export const createUserRoles = async (
  * Maps organisation form role rows into persisted role rows bound to organisationId.
  */
 export const toPersistedOrganisationUserRoles = (
-  userRoles: OrganisationFormInput['data']['userRoles'],
+  userRoles: Array<{ userId: string; role: string }>,
   organisationId: string,
 ): Array<{ organisationId: string; userId: string; role: string }> =>
   userRoles.map(userRole => ({
@@ -642,23 +634,48 @@ export const updateOrganisationWithRelated = async (
 const toProfileResponseShape = async (
   organisation: OrganisationDBRaw,
   profile: OrganisationProfile,
-  isCollection: boolean,
-  isSuperAdmin: boolean,
-):
-  | Organisation
-  | OrganisationSuperAdmin
-  | OrganisationCollection
-  | OrganisationCollectionSuperAdmin
-  | OrganisationListProfile
-  | OrganisationCardProfile
-  | OrganisationDetailProfile => {
+  _isCollection: boolean,
+  _isSuperAdmin: boolean,
+): Promise<Organisation | Record<string, unknown>> => {
+  const orgWithProperties = organisation as OrganisationDBRaw & {
+    propertyAssignments?: Array<{
+      property?: {
+        i18n?: unknown
+        values?: Array<{ i18n?: unknown }>
+      } | null
+    }>
+    properties?: Array<{
+      i18n?: unknown
+      values?: Array<{ i18n?: unknown }>
+    }>
+  }
+
+  const assignmentProperties = (orgWithProperties.propertyAssignments ?? [])
+    .map(assignment => assignment?.property)
+    .filter((item: unknown): item is Record<string, unknown> => Boolean(item))
+  const rawProperties = (
+    assignmentProperties.length > 0
+      ? assignmentProperties
+      : (orgWithProperties.properties ?? [])
+  ) as Array<{
+    i18n?: unknown
+    values?: Array<{ i18n?: unknown }>
+  }>
   const data = {
     ...organisation,
     i18n: transformI18nSafely(organisation.i18n),
     userRoles: organisation.userRoles,
+    properties: rawProperties.map(property => ({
+      ...property,
+      i18n: transformI18nSafely(property.i18n as unknown),
+      values: (property.values ?? []).map(value => ({
+        ...value,
+        i18n: transformI18nSafely(value.i18n as unknown),
+      })),
+    })),
     image: organisation.image
       ? toImageEnvelope(
-          organisation.image as Image,
+          organisation.image,
           profile,
           ImageContextResource.organisation,
           organisation.id,
@@ -669,14 +686,7 @@ const toProfileResponseShape = async (
   if (profile === 'list') return OrganisationListProfileAPI.parse(data)
   if (profile === 'card') return OrganisationCardProfileAPI.parse(data)
   if (profile === 'detail') return OrganisationDetailProfileAPI.parse(data)
-
-  return isCollection
-    ? isSuperAdmin
-      ? OrganisationCollectionSuperAdminAPI.parse(data)
-      : OrganisationCollectionAPI.parse(data)
-    : isSuperAdmin
-      ? OrganisationSuperAdminAPI.parse(data)
-      : OrganisationAPI.parse(data)
+  return OrganisationAdminProfileAPI.parse(data) as unknown as Organisation
 }
 
 export const toEntityResponseShape = async <P extends OrganisationProfile = 'detail'>(

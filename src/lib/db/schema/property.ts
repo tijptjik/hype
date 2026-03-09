@@ -31,15 +31,15 @@ export const property = sqliteTable('property', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
-  projectId: text('projectId').references(() => project.id, {
-    onDelete: 'cascade',
-    onUpdate: 'cascade',
-  }),
   organisationId: text('organisationId').references(() => organisation.id, {
     onDelete: 'cascade',
     onUpdate: 'cascade',
   }),
   hubId: text('hubId').references(() => hub.id, {
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+  }),
+  projectId: text('projectId').references(() => project.id, {
     onDelete: 'cascade',
     onUpdate: 'cascade',
   }),
@@ -54,10 +54,6 @@ export const property = sqliteTable('property', {
     .notNull()
     .default(FieldDiscriminator.classifier),
   key: text('key').notNull(),
-  isTranslatable: integer('isTranslatable', { mode: 'boolean' })
-    .notNull()
-    .default(true),
-  rank: integer('rank').notNull().default(0),
   component: text('component', {
     enum: Object.values(PropertyComponentType) as [string, ...string[]],
   })
@@ -65,6 +61,9 @@ export const property = sqliteTable('property', {
     .default(PropertyComponentType.SelectField),
   min: integer('min'),
   max: integer('max'),
+  isTranslatable: integer('isTranslatable', { mode: 'boolean' })
+    .notNull()
+    .default(true),
   isUserContributable: integer('isUserContributable', { mode: 'boolean' })
     .notNull()
     .default(true),
@@ -95,9 +94,57 @@ export const projectProperty = sqliteTable(
     propertyId: text('propertyId')
       .notNull()
       .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    // isEnabled and isDefaultEnabled are used to control the display of the property, but
+    // only for hub and organisational properties, not project properties. For those, we
+    // use the isEnabled and isDefaultEnabled columns in projectProperty. This allows for
+    // users to configure defaults (which are defined here) and project-specific overrides.
+    isEnabled: integer('isEnabled', { mode: 'boolean' }).notNull().default(true),
+    isDefaultEnabled: integer('isDefaultEnabled', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     rank: integer('rank').notNull().default(0),
   },
   table => [primaryKey({ columns: [table.projectId, table.propertyId] })],
+)
+
+/**
+ * Hub property assignments
+ * @remarks
+ * Links hubs to their scoped properties and persists rank order across all
+ * property components/types.
+ */
+export const hubProperty = sqliteTable(
+  'hubProperty',
+  {
+    hubId: text('hubId')
+      .notNull()
+      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [primaryKey({ columns: [table.hubId, table.propertyId] })],
+)
+
+/**
+ * Organisation property assignments
+ * @remarks
+ * Links organisations to their scoped properties and persists rank order across
+ * all property components/types.
+ */
+export const organisationProperty = sqliteTable(
+  'organisationProperty',
+  {
+    organisationId: text('organisationId')
+      .notNull()
+      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [primaryKey({ columns: [table.organisationId, table.propertyId] })],
 )
 
 /**

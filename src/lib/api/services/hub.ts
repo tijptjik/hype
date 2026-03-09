@@ -2,8 +2,10 @@
 import { applyQueryFilters } from '$lib/api'
 // AUTH
 import { assertUserLoggedIn, assertSuperAdmin, runAssertions } from '$lib/auth/asserts'
+// LIB
+import { toBooleanOrUndefined } from '$lib/api/services'
 // SCHEMA
-import { hub } from '$lib/db/schema/index'
+import { hub, hubProperty } from '$lib/db/schema/index'
 // DB
 import { transformI18nSafely } from '$lib/db'
 // ZOD
@@ -13,9 +15,8 @@ import { zod4 as zod } from 'sveltekit-superforms/adapters'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { ImageContextResource } from '$lib/enums'
 import { HubCardProfileAPI, HubProfile } from '$lib/db/zod'
-import { toBooleanOrUndefined } from '$lib/api/services'
 // TYPES
-import { sql, type SQL } from 'drizzle-orm'
+import { asc, sql, type SQL } from 'drizzle-orm'
 import type {
   Hub,
   HubDB,
@@ -32,6 +33,72 @@ import type {
 } from '$lib/types'
 import type { SuperValidated } from 'sveltekit-superforms'
 
+type UnknownRecord = Record<string, unknown>
+type ToImageArg = Parameters<typeof toImageEnvelope>[0]
+
+const mapPropertyValuesWithI18n = (values: unknown): UnknownRecord[] =>
+  ((values as UnknownRecord[] | undefined) ?? []).map(value => ({
+    ...value,
+    i18n: transformI18nSafely(value.i18n as never),
+  }))
+
+const mapPropertiesWithI18n = (properties: unknown): UnknownRecord[] =>
+  ((properties as UnknownRecord[] | undefined) ?? []).map(property => ({
+    ...property,
+    i18n: transformI18nSafely(property.i18n as never),
+    values: mapPropertyValuesWithI18n(property.values),
+  }))
+
+const mapPropertiesFromAssignments = (row: UnknownRecord): UnknownRecord[] => {
+  const assignments = ((row.propertyAssignments as UnknownRecord[] | undefined) ?? [])
+    .map(item => item.property as UnknownRecord | null)
+    .filter((item): item is UnknownRecord => Boolean(item))
+
+  if (assignments.length > 0) {
+    return assignments.map((property, rank) => ({
+      ...property,
+      rank,
+      i18n: transformI18nSafely(property.i18n as never),
+      values: mapPropertyValuesWithI18n(property.values),
+    }))
+  }
+
+  return mapPropertiesWithI18n(row.properties)
+}
+
+const mapOrganisationsWithImage = (
+  organisations: unknown,
+  view: 'card' | 'list',
+): UnknownRecord[] =>
+  ((organisations as UnknownRecord[] | undefined) ?? []).map(organisation => ({
+    ...organisation,
+    i18n: transformI18nSafely(organisation.i18n as never),
+    image: organisation.image
+      ? toImageEnvelope(
+          organisation.image as unknown as ToImageArg,
+          view,
+          ImageContextResource.organisation,
+          organisation.id as string,
+        )
+      : null,
+  }))
+
+const toTransformedHubForListView = (hub: HubDBRaw): Record<string, unknown> => ({
+  ...hub,
+  i18n: transformI18nSafely(hub.i18n),
+  image: hub.image
+    ? toImageEnvelope(
+        hub.image as unknown as ToImageArg,
+        'list',
+        ImageContextResource.hub,
+        hub.id,
+      )
+    : null,
+  userRoles: hub.userRoles ?? [],
+  organisations: mapOrganisationsWithImage(hub.organisations, 'list'),
+  properties: mapPropertiesFromAssignments(hub as unknown as UnknownRecord),
+})
+
 // ═══════════════════════
 // WITH RELATIONS
 // ═══════════════════════
@@ -45,6 +112,31 @@ export const hubCollectionWithRelations = {
 export const hubEntityWithRelations = {
   i18n: true,
   image: true,
+  propertyAssignments: {
+    orderBy: [asc(hubProperty.rank)],
+    with: {
+      property: {
+        with: {
+          i18n: true,
+          values: {
+            with: {
+              i18n: true,
+            },
+          },
+        },
+      },
+    },
+  },
+  properties: {
+    with: {
+      i18n: true,
+      values: {
+        with: {
+          i18n: true,
+        },
+      },
+    },
+  },
   userRoles: {
     with: {
       user: {
@@ -119,20 +211,11 @@ export const toHubResponseShape = <P extends HubProfileType>(
       ...userRole,
       user: userRole.user,
     })),
-    organisations: (
-      (row.organisations as Array<Record<string, unknown>> | undefined) ?? []
-    ).map(organisationRow => ({
-      ...organisationRow,
-      i18n: transformI18nSafely(organisationRow.i18n as never),
-      image: organisationRow.image
-        ? toImageEnvelope(
-            organisationRow.image as never,
-            'card',
-            ImageContextResource.organisation,
-            organisationRow.id as string,
-          )
-        : null,
-    })),
+    organisations: mapOrganisationsWithImage(
+      row.organisations,
+      'card',
+    ) as Hub['organisations'],
+    properties: mapPropertiesFromAssignments(row as UnknownRecord) as Hub['properties'],
   }
 
   if (profile === 'list')
@@ -267,36 +350,7 @@ export const getHubQueryContext = (params: QueryParams) => {
  * @returns Validated form data
  */
 export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> => {
-  type ToImageArg = Parameters<typeof toImageEnvelope>[0]
-  // Transform the hub data structure
-  const transformedHub = {
-    ...hub,
-    i18n: transformI18nSafely(hub.i18n),
-    image: hub.image
-      ? toImageEnvelope(
-          hub.image as unknown as ToImageArg,
-          'list',
-          ImageContextResource.hub,
-          hub.id,
-        )
-      : null,
-    userRoles: hub.userRoles ?? [],
-    organisations:
-      hub.organisations?.map(organisation => {
-        return {
-          ...organisation,
-          i18n: transformI18nSafely(organisation.i18n),
-          image: organisation.image
-            ? toImageEnvelope(
-                organisation.image as unknown as ToImageArg,
-                'list',
-                ImageContextResource.organisation,
-                organisation.id,
-              )
-            : null,
-        }
-      }) || [],
-  }
+  const transformedHub = toTransformedHubForListView(hub)
   const form = await superValidate(
     transformedHub as unknown as Parameters<typeof superValidate>[0],
     zod(HubDetailProfileAPI) as unknown as Parameters<typeof superValidate>[1],
@@ -310,36 +364,7 @@ export const toFormShape = async (hub: HubDBRaw): Promise<SuperValidated<Hub>> =
  * @returns A parsed response shape
  */
 export const toResponseShape = async (hub: HubDBRaw, isCollection: boolean = false) => {
-  type ToImageArg = Parameters<typeof toImageEnvelope>[0]
-  // Transform the hub data structure
-  const transformedHub = {
-    ...hub,
-    i18n: transformI18nSafely(hub.i18n),
-    image: hub.image
-      ? toImageEnvelope(
-          hub.image as unknown as ToImageArg,
-          'list',
-          ImageContextResource.hub,
-          hub.id,
-        )
-      : null,
-    userRoles: hub.userRoles ?? [],
-    organisations:
-      hub.organisations?.map(organisation => {
-        return {
-          ...organisation,
-          i18n: transformI18nSafely(organisation.i18n),
-          image: organisation.image
-            ? toImageEnvelope(
-                organisation.image as unknown as ToImageArg,
-                'list',
-                ImageContextResource.organisation,
-                organisation.id,
-              )
-            : null,
-        }
-      }) || [],
-  }
+  const transformedHub = toTransformedHubForListView(hub)
 
   return isCollection
     ? HubListProfileAPI.parse(transformedHub)

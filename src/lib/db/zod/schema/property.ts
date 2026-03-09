@@ -146,11 +146,15 @@ export const PropertyValueAdminProfileAPI = PropertyValueDetailProfileAPI
 export const PropertyProfile = z.enum(['detail', 'admin'])
 
 export const PropertyDetailProfileAPI = PropertyRecord.extend({
+  rank: z.number().int().optional(),
+  isEnabled: z.boolean().optional(),
   i18n: getLocales(PropertyI18nRecord),
   values: z.array(PropertyValueDetailProfileAPI).nullish(),
 })
 
 export const PropertyAdminProfileAPI = PropertyRecord.extend({
+  rank: z.number().int().optional(),
+  isEnabled: z.boolean().optional(),
   i18n: getLocales(PropertyI18nRecord),
   values: z.array(PropertyValueAdminProfileAPI).nullish(),
 })
@@ -207,8 +211,9 @@ export const ProjectPropertyFormData = z.object({
   hubId: z.string().nullish().optional(),
   organisationId: z.string().nullish().optional(),
   projectId: z.string().optional(),
+  isEnabled: FormBoolean.default(true),
   isDefaultEnabled: FormBoolean.default(false),
-  type: z.string().min(1),
+  type: z.string().min(1).optional(),
   isTranslatable: FormBoolean.optional(),
   key: z
     .string()

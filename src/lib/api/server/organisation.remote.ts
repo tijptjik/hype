@@ -22,8 +22,11 @@ import {
 } from '$lib/api/services/authz'
 // SERVICES
 import {
+  hasOrganisationCapabilitiesChanged,
   toQueryConditions,
   getOrganisationWithRelations,
+  toEntityResponseShape,
+  toListResponseShape,
   toOrganisationProfile,
   toLookupConditions,
   toRequestedListState,
@@ -54,10 +57,9 @@ import {
   updateOrganisationArchivedStateById,
   syncOrganisationUserRoles,
   toPersistedOrganisationUserRoles,
-  toEntityResponseShape,
-  toListResponseShape,
 } from '$lib/db/services/organisation'
 import { syncOrganisationProperties } from '$lib/db/services/property'
+import { cascadeOrganisationCapabilitiesToProjects } from '$lib/db/services/project'
 // UTILS
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // SCHEMA
@@ -71,6 +73,7 @@ import {
   RemoveOrganisationSchema,
 } from '$lib/db/zod'
 import type {
+  CapabilityDefinitions,
   EntityResponse,
   Id,
   ListResponse,
@@ -288,6 +291,7 @@ export const organisationForm = guardedForm(
     const isExplicitCreateMode = mode === 'create'
     const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
     const hasSubmittedPropertiesField = Object.hasOwn(data, 'properties')
+    const hasSubmittedCapabilitiesField = Object.hasOwn(data, 'capabilities')
     const submittedProperties = Array.isArray(data.properties) ? data.properties : []
     const normalizedSubmittedProperties =
       hasSubmittedPropertiesField && Array.isArray(data.properties)
@@ -386,6 +390,13 @@ export const organisationForm = guardedForm(
       await probeOrganisationForUpdate(db, targetOrganisationId),
       () => invalid(issue('ORGANISATION_NOT_FOUND')),
     )
+    const capabilitiesChanged = hasOrganisationCapabilitiesChanged({
+      hasSubmittedCapabilitiesField,
+      submittedCapabilities:
+        (data.capabilities as CapabilityDefinitions | null | undefined) ?? null,
+      currentCapabilities:
+        (current.capabilities as CapabilityDefinitions | null | undefined) ?? null,
+    })
 
     // Apply role-based authorization for core update fields.
     const updateDecision = authorizeOrganisationUpdateForSubmission({
@@ -466,6 +477,13 @@ export const organisationForm = guardedForm(
       toPersistedOrganisationUserRoles(data.userRoles, current.id),
       current.id,
     )
+    if (capabilitiesChanged) {
+      await cascadeOrganisationCapabilitiesToProjects(db, {
+        organisationId: current.id as Id,
+        organisationCapabilities:
+          (data.capabilities as CapabilityDefinitions | null | undefined) ?? null,
+      })
+    }
     if (hasSubmittedPropertiesField) {
       await syncOrganisationProperties(db, {
         organisationId: current.id,

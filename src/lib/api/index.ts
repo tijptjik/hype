@@ -29,7 +29,7 @@ import {
 import { isOrganisation, isProject, isLayer, isFeature } from '$lib/types'
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms'
-import type { SQL, Table, Column } from 'drizzle-orm'
+import type { AnyColumn, SQL, Table } from 'drizzle-orm'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import type {
   Feature,
@@ -43,7 +43,6 @@ import type {
   ResourceNew,
   ResourceType,
   Task,
-  UserRoleDisco,
   QueryParams,
   PaginationParams,
   DbTable,
@@ -68,7 +67,7 @@ export const getSessionOrError = async (
   return { user: locals.user, session: locals.session }
 }
 
-export const JSONResponseOrError = async (result: any): Promise<Response> => {
+export const JSONResponseOrError = async (result: unknown): Promise<Response> => {
   if (!result) {
     return error(404, "These aren't the signs you're looking for")
   }
@@ -92,14 +91,32 @@ export const SuperFormErrorResponse = (
 /**
  * Utility function to handle ZodError logging with formatted output
  */
-export const logZodError = (err: any, fallbackMessage: string = 'Error occurred') => {
-  if (err && typeof err === 'object' && 'issues' in err) {
+export const logZodError = (
+  err: unknown,
+  fallbackMessage: string = 'Error occurred',
+) => {
+  if (
+    err &&
+    typeof err === 'object' &&
+    'issues' in err &&
+    Array.isArray((err as { issues?: unknown }).issues)
+  ) {
     console.error('Validation errors:')
-    ;(err as any).issues.forEach((issue: any) => {
-      const path = issue.path ? issue.path.join('.') : 'unknown'
-      const expected = issue.expected || 'unknown'
-      const received = issue.received || 'unknown'
-      console.error(`${issue.message} :: ${path} :: ${expected} -> ${received}`)
+    ;(
+      err as {
+        issues: Array<{
+          path?: unknown[]
+          expected?: unknown
+          received?: unknown
+          message?: unknown
+        }>
+      }
+    ).issues.forEach(issue => {
+      const path = Array.isArray(issue.path) ? issue.path.join('.') : 'unknown'
+      const expected = String(issue.expected ?? 'unknown')
+      const received = String(issue.received ?? 'unknown')
+      const message = String(issue.message ?? 'Unknown validation issue')
+      console.error(`${message} :: ${path} :: ${expected} -> ${received}`)
     })
   } else {
     console.error(fallbackMessage, err)
@@ -145,7 +162,10 @@ function getResourceRef<T extends Resource>(resource: T): string {
   if (isOrganisationOrProject(resource)) {
     return resource.code
   }
-  return resource.id!
+  if (typeof resource.id === 'string' && resource.id.length > 0) {
+    return resource.id
+  }
+  throw error(400, 'Resource id is required')
 }
 
 // ================================================
@@ -275,8 +295,8 @@ const resourceConfig: Record<
 type LoadFormDataOptions<T extends Record<string, unknown>> = {
   entity: string
   resourcePath: string
-  insertSchema: z.ZodRecord<any, any>
-  updateSchema: z.ZodRecord<any, any>
+  insertSchema: z.ZodType<T>
+  updateSchema: z.ZodType<T>
   fetch: typeof fetch
   user?: SessionUser
   parentId?: string
@@ -335,7 +355,7 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   parentRef?: string
   parentResourceType?: Omit<HierarchicalResource, 'task'>
   keyToParent?: string
-  insertSchema: z.ZodRecord<any, any>
+  insertSchema: z.ZodType<T>
   user?: SessionUser
   fetch: typeof window.fetch
 }): Promise<SuperValidated<T>> {
@@ -369,7 +389,7 @@ async function prepareNewForm<T extends Record<string, unknown>>({
   // HANDLE : Initialise the form with the insert schema
   // @ts-expect-error - Complex type handling for organisation user roles
   const form = await superValidate<T>(zod(insertSchema))
-  let initialData: Record<string, any> = {
+  let initialData: Record<string, unknown> = {
     ...form.data,
     resourceType,
   }
@@ -424,7 +444,7 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
 }: {
   resourceType: HierarchicalResource
   entityRef: string
-  updateSchema: z.ZodRecord<any, any>
+  updateSchema: z.ZodType<T>
   fetch: typeof window.fetch
 }): Promise<{
   form: SuperValidated<T>
@@ -455,23 +475,36 @@ async function prepareExistingForm<T extends Record<string, unknown>>({
 }
 
 const getImageIfNeeded = async (
-  formData: any,
+  formData: unknown,
   fetch: typeof window.fetch,
 ): Promise<{ image: Image | null; images: Image[] | null }> => {
   const hasImages = isFeature(formData)
   const needsImage = isProject(formData) || isOrganisation(formData)
+  const record =
+    typeof formData === 'object' && formData !== null
+      ? (formData as { image?: unknown; images?: unknown; imageId?: unknown })
+      : {}
+
+  const imageId =
+    typeof record.imageId === 'string' && record.imageId.length > 0
+      ? record.imageId
+      : null
+
   return {
-    image: (hasImages && formData.image !== undefined
-      ? formData.image
-      : needsImage && formData.imageId
-        ? await fetchImage(formData.imageId, fetch)
+    image: (hasImages && record.image !== undefined
+      ? (record.image as Image)
+      : needsImage && imageId
+        ? await fetchImage(imageId, fetch)
         : null) as Image | null,
-    images: (hasImages && formData.images !== undefined ? formData.images : null) as
+    images: (hasImages && Array.isArray(record.images) ? record.images : null) as
       | Image[]
       | null,
   }
 }
 
+/**
+ * @deprecated Use resource-specific remote form loaders instead of the generic API form loader.
+ */
 export async function loadFormData<T extends Record<string, unknown>>({
   entity,
   resourcePath,
@@ -571,7 +604,7 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
       }
 
       layer.properties.push({
-        layerId: layer.id!, // Assuming layer.id is defined; handle if new layer might not have id
+        layerId: layer.id ?? NEW_REF,
         propertyId: conformedProjectProp.id,
         isVisible: false,
         property: conformedProjectProp,
@@ -807,7 +840,7 @@ export const applyQueryFilters = <T extends Table>(
       }
 
       // Type assertion to ensure column exists on table and is a Drizzle column
-      const tableColumn = table[column as keyof T] as unknown as Column<any, any, any>
+      const tableColumn = table[column as keyof T] as unknown as AnyColumn
 
       // TODO Deprecated - Backward compatibility for deprecated URL-based string booleans.
       if (value === 'true' || value === 'false') {
@@ -862,7 +895,7 @@ export const isAdminRequest = (
     const requestUrl = new URL(request.url)
     if (
       requestUrl.pathname === ADMIN_PATH ||
-      requestUrl.pathname.startsWith(ADMIN_PATH + '/')
+      requestUrl.pathname.startsWith(`${ADMIN_PATH}/`)
     ) {
       return true
     }
@@ -901,6 +934,31 @@ export const removeExcludedColumns = (
     Object.entries(queryParams).filter(([key]) => !excludeColumns.includes(key)),
   )
 }
+
+/**
+ * Produces a deterministic, recursively sorted structure for stable comparisons.
+ * @param value Input value to normalize.
+ * @returns A recursively normalized value with object keys sorted and `undefined` removed.
+ */
+export const toStableComparable = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(item => toStableComparable(item))
+  if (!value || typeof value !== 'object') return value
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, toStableComparable(item)]),
+  )
+}
+
+/**
+ * Builds a deterministic JSON signature for deep equality-style checks.
+ * @param value Input value to serialize.
+ * @returns Stable JSON string signature.
+ */
+export const toStableSignature = (value: unknown): string =>
+  JSON.stringify(toStableComparable(value))
 
 /**
  * Get the prisms from the URL
