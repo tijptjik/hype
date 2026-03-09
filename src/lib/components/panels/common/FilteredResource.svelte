@@ -50,6 +50,7 @@ const {
 } & PanelProps = $props()
 
 let bgHoverClass = $derived(getHoverColor(selectedClass.replace('bg-', 'text-')))
+let dotBaseClass = $derived(isSelected ? selectedClass : 'bg-base-content/30')
 
 let name = $derived(
   getI18n(
@@ -132,13 +133,12 @@ function hideTooltip() {
     {:else}
       <div
         onclick={panelProps.isNarrow ? onNavigate : onToggle}
-        class="h-2 w-2 rounded-full group-hover:{isSelected
+        class="h-2 w-2 rounded-full {dotBaseClass} group-hover:{isSelected
           ? bgHoverClass
-          : 'bg-base-content/30'} group-focus-visible:{isSelected
+          : 'bg-base-content/50'} group-focus-visible:{isSelected
           ? bgHoverClass
-          : 'bg-base-content/30'}
-      {isSelected ? selectedClass : ''} {panelProps.isNarrow && !isSelected
-          ? 'outline outline-2 outline-offset-2'
+          : 'bg-base-content/50'} {panelProps.isNarrow && !isSelected
+          ? 'outline-2 outline-offset-2'
           : ''} {isCurrentActive
           ? 'outline-white group-hover:scale-[160%] group-hover:outline-1 group-hover:outline-offset-0'
           : 'outline-base-content/30'} {isCurrentActive
