@@ -10,25 +10,11 @@ import type {
   OrganisationBooleanField,
   OrganisationFormInput,
   OrganisationFormLocaleSource,
+  OrganisationFormSource,
   OrganisationIdentityPatch,
+  OrganisationPropertySource,
   OrganisationSubmitUpdatesParams,
 } from '$lib/db/zod/schema/organisation.types'
-
-type OrganisationPropertySource = NonNullable<
-  OrganisationFormInput['data']['properties']
->[number]
-type OrganisationFormSource = {
-  id?: string
-  modifiedAt?: string
-  code?: string
-  url?: string | null
-  capabilities?: CapabilityDefinitions | null
-  i18n?: Partial<
-    Record<'en' | 'zhHans' | 'zhHant', OrganisationFormLocaleSource>
-  > | null
-  userRoles?: Array<{ userId?: string; role?: string }>
-  properties?: OrganisationPropertySource[] | null
-}
 
 function cloneOrganisationProperties(
   properties: OrganisationPropertySource[] | null | undefined,

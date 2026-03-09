@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import type {
+  CapabilityDefinitions,
   EntityResponse,
   FormLocaleInput,
   FormLocaleSource,
@@ -99,6 +100,21 @@ export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omi
 export type OrganisationFormInput = z.input<typeof OrganisationFormData>
 export type OrganisationFormLocaleInput = FormLocaleInput<OrganisationFormInput>
 export type OrganisationFormLocaleSource = FormLocaleSource<OrganisationFormInput>
+export type OrganisationPropertySource = NonNullable<
+  OrganisationFormInput['data']['properties']
+>[number]
+export type OrganisationFormSource = {
+  id?: string
+  modifiedAt?: string
+  code?: string
+  url?: string | null
+  capabilities?: CapabilityDefinitions | null
+  i18n?: Partial<
+    Record<'en' | 'zhHans' | 'zhHant', OrganisationFormLocaleSource>
+  > | null
+  userRoles?: Array<{ userId?: string; role?: string }>
+  properties?: OrganisationPropertySource[] | null
+}
 export type OrganisationBooleanField = 'isPublished' | 'isArchived'
 export type OrganisationIdentityPatch = {
   code: string
