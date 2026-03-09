@@ -48,44 +48,142 @@ import type {
   PropertyValueI18nNew,
   PropertyDBRaw,
 } from '$lib/types'
-import { syncLayerProperties } from './layer'
+import { syncProperties } from './layer'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// 1. CRUD :: CORE OPERATIONS
+// 1.1 CRUD :: CREATE
+//    - createBaseProperty
+//    - createI18n
+//    - createPropertyValues
+//    - createPropertyValueI18n
+//
+// 2.1 CRUD :: READ
 //    - listProperties
 //    - getProperty
-//    - createBaseProperty
+//    - listHubScopedProperties
+//    - listOrganisationScopedProperties
+//    - listResolvedProjectProperties
+//
+// 2.2 CRUD :: READ (LOOKUPS)
+//    - getCoreHubId
+//    - getProjectHubId
+//    - getProjectOrganisationId
+//
+// 3.1 CRUD :: UPDATE
 //    - updateBaseProperty
-//
-// 2.1 CRUD :: RELATIONAL OPERATIONS (PropertyI18n)
-//    - createI18n
 //    - updateI18n
-//
-// 2.2 CRUD :: RELATIONAL OPERATIONS (PropertyValue)
-//    - createPropertyValues
 //    - syncPropertyValues
-//
-// 2.3 CRUD :: RELATIONAL OPERATIONS (PropertyValueI18n)
-//    - createPropertyValueI18n
 //    - updatePropertyValueI18n
 //
-// 3. CRUD :: ORCHESTRATION
+// 3.2 CRUD :: UPDATE (SYNC)
 //    - upsertProjectProperties
-//    - createPropertiesWithRelated
-//    - updatePropertiesWithRelated
+//    - seedDefaultInheritedPropertiesForProject
+//    - syncProjectInheritedProperties
+//    - syncHubProperties
+//    - syncOrganisationProperties
 //
-// 4. UTILS :: SHAPING
-//    - toFormShape
-//    - toResponseShape
-//
+// 4. COMMON
+//    - propertyWithRelations (const)
+//    - inferPropertyTypeFromComponent
 
 // ═══════════════════════
-// 1. CRUD :: CORE OPERATIONS
+// 1.1 CRUD :: CREATE
 // ═══════════════════════
+/**
+ * Creates a new base property record.
+ * @param db Database instance
+ * @param data Data for the new property (parsed by Zod schema, e.g., PropertyRecordCreate)
+ * @returns The newly created property record from DB.
+ */
+export const createBaseProperty = async (
+  db: Database,
+  data: InferInsertModel<typeof property>,
+): Promise<PropertyDB> => {
+  return await insert<typeof property>(db, property, data)
+}
 
+/**
+ * Creates relational i18n records for a property.
+ * @param db Database instance
+ * @param i18n A record where keys are locales and values are the i18n data for that locale.
+ * @param propertyId The ID of the parent property.
+ * @returns Array of created propertyI18n records.
+ */
+export const createI18n = async (
+  db: Database,
+  i18n: Record<Locale, PropertyI18nNew>,
+  propertyId: string,
+): Promise<PropertyI18nDB[]> => {
+  const relatedRecords = toRelatedRecords(
+    i18n,
+    'propertyId',
+    propertyId,
+    'locale',
+  ) as InferInsertModel<typeof propertyI18n>[]
+  return await insertManyRelated(
+    db,
+    propertyI18n,
+    relatedRecords,
+    'propertyId',
+    propertyId,
+  )
+}
+
+/**
+ * Creates multiple property value records.
+ * @param db Database instance
+ * @param values Array of new property value data.
+ * @param propertyId The ID of the parent property.
+ * @returns Array of created propertyValue records.
+ */
+export const createPropertyValues = async (
+  db: Database,
+  values: PropertyValueNew[],
+  propertyId: string,
+): Promise<PropertyValueDB[]> => {
+  const dataToInsert = values.map(val => ({
+    ...val, // Spread PropertyValueNew
+    propertyId: propertyId,
+  })) as InferInsertModel<typeof propertyValue>[]
+  return await insertMany(db, propertyValue, dataToInsert)
+}
+
+/**
+ * Creates internationalization records for a single property value.
+ * @param db Database instance
+ * @param i18n Record of i18n data for the property value.
+ * @param propertyValueId The ID of the parent property value.
+ * @returns Array of created propertyValueI18n records.
+ */
+export const createPropertyValueI18n = async (
+  db: Database,
+  i18n: Record<Locale, PropertyValueI18nNew>,
+  propertyValueId: string,
+): Promise<PropertyValueI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, PropertyValueI18nNew>,
+  )
+  const relatedRecords = toRelatedRecords(
+    normalizedI18n,
+    'propertyValueId',
+    propertyValueId,
+    'locale',
+  ) as InferInsertModel<typeof propertyValueI18n>[]
+  return await insertManyRelated(
+    db,
+    propertyValueI18n,
+    relatedRecords,
+    'propertyValueId',
+    propertyValueId,
+  )
+}
+
+// ═══════════════════════
+// 2.1 CRUD :: READ
+// ═══════════════════════
 /**
  * List properties with filtering and access control
  */
@@ -99,6 +197,14 @@ export const listProperties = async (
     where: conditions.length > 0 ? and(...conditions) : undefined,
   })
 
+/**
+ * Loads a single property row using caller-provided predicates.
+ *
+ * @param db - Database handle.
+ * @param withRelations - Relation graph to hydrate.
+ * @param conditions - SQL predicates combined with `AND`.
+ * @returns Matching property row or `undefined`.
+ */
 export const getProperty = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -111,57 +217,15 @@ export const getProperty = async (
   return result
 }
 
-const propertyWithRelations = {
-  i18n: true,
-  values: {
-    with: {
-      i18n: true,
-    },
-  },
-} as const
-
-const inferPropertyTypeFromComponent = (
-  component: unknown,
-): 'classifier' | 'specifier' => {
-  return inferPropertyDiscriminatorFromComponent(component) ?? 'specifier'
-}
-
-export const getCoreHubId = async (db: Database): Promise<string | null> => {
-  const coreHub = await db.query.hub.findFirst({
-    columns: { id: true },
-    where: eq(hub.code, 'core'),
-  })
-  return coreHub?.id ?? null
-}
-
-export const getProjectHubId = async (
-  db: Database,
-  projectId: string,
-): Promise<string | null> => {
-  const [row] = await db
-    .select({ hubId: organisation.hubId })
-    .from(project)
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(eq(project.id, projectId))
-    .limit(1)
-
-  return row?.hubId ?? null
-}
-
-export const getProjectOrganisationId = async (
-  db: Database,
-  projectId: string,
-): Promise<string | null> => {
-  const [row] = await db
-    .select({ organisationId: project.organisationId })
-    .from(project)
-    .where(eq(project.id, projectId))
-    .limit(1)
-
-  return row?.organisationId ?? null
-}
-
-export const listHubGlobalProperties = async (
+/**
+ * Lists hub-scoped global properties in effective display order.
+ * Assigned rows keep persisted assignment rank; unassigned rows are appended by key.
+ *
+ * @param db - Database handle.
+ * @param hubId - Target hub id.
+ * @returns Ordered hub property payloads.
+ */
+export const listHubScopedProperties = async (
   db: Database,
   hubId: string,
 ): Promise<Property[]> => {
@@ -199,6 +263,14 @@ export const listHubGlobalProperties = async (
   return [...assignedProperties, ...rankedUnassigned]
 }
 
+/**
+ * Lists organisation-scoped properties in effective display order.
+ * Assigned rows keep persisted assignment rank; unassigned rows are appended.
+ *
+ * @param db - Database handle.
+ * @param organisationId - Target organisation id.
+ * @returns Ordered organisation property payloads.
+ */
 export const listOrganisationScopedProperties = async (
   db: Database,
   organisationId: string,
@@ -238,35 +310,14 @@ export const listOrganisationScopedProperties = async (
   return [...assignedProperties, ...rankedUnassigned]
 }
 
-export const listProjectAssignedGlobalProperties = async (
-  db: Database,
-  projectId: string,
-): Promise<Property[]> => {
-  const rows = await db.query.projectProperty.findMany({
-    where: eq(projectProperty.projectId, projectId),
-    with: {
-      property: {
-        with: propertyWithRelations,
-      },
-    },
-    orderBy: [asc(projectProperty.rank)],
-  })
-
-  return rows
-    .map(row => {
-      if (!row.property) return null
-      return {
-        ...toPropertyResponseFromRaw(row.property, row.rank),
-        isEnabled: Boolean((row as { isEnabled?: unknown }).isEnabled ?? true),
-        isDefaultEnabled: Boolean(
-          (row as { isDefaultEnabled?: unknown }).isDefaultEnabled ??
-            row.property.isDefaultEnabled,
-        ),
-      } as Property
-    })
-    .filter((row): row is Property => Boolean(row))
-}
-
+/**
+ * Resolves the complete project property set:
+ * local project properties + inherited organisation/hub properties + assignment flags.
+ *
+ * @param db - Database handle.
+ * @param projectId - Target project id.
+ * @returns Fully resolved project property list with deterministic ranks.
+ */
 export const listResolvedProjectProperties = async (
   db: Database,
   projectId: string,
@@ -314,7 +365,7 @@ export const listResolvedProjectProperties = async (
       organisationId ? listOrganisationScopedProperties(db, organisationId) : [],
       scopedHubIds.length > 0
         ? Promise.all(
-            scopedHubIds.map(hubId => listHubGlobalProperties(db, hubId)),
+            scopedHubIds.map(hubId => listHubScopedProperties(db, hubId)),
           ).then(rows => rows.flat())
         : [],
     ])
@@ -366,19 +417,67 @@ export const listResolvedProjectProperties = async (
   return [...assignedProperties, ...unassignedProperties]
 }
 
+// ═══════════════════════
+// 2.2 CRUD :: READ (LOOKUPS)
+// ═══════════════════════
 /**
- * Creates a new base property record.
- * @param db Database instance
- * @param data Data for the new property (parsed by Zod schema, e.g., PropertyRecordCreate)
- * @returns The newly created property record from DB.
+ * Resolves the core hub id.
+ *
+ * @param db - Database handle.
+ * @returns Core hub id, or `null` when not configured.
  */
-export const createBaseProperty = async (
-  db: Database,
-  data: InferInsertModel<typeof property>,
-): Promise<PropertyDB> => {
-  return await insert<typeof property>(db, property, data)
+export const getCoreHubId = async (db: Database): Promise<string | null> => {
+  const coreHub = await db.query.hub.findFirst({
+    columns: { id: true },
+    where: eq(hub.code, 'core'),
+  })
+  return coreHub?.id ?? null
 }
 
+/**
+ * Resolves a project's owning hub id through organisation linkage.
+ *
+ * @param db - Database handle.
+ * @param projectId - Target project id.
+ * @returns Hub id, or `null` when the project has no hub scope.
+ */
+export const getProjectHubId = async (
+  db: Database,
+  projectId: string,
+): Promise<string | null> => {
+  const [row] = await db
+    .select({ hubId: organisation.hubId })
+    .from(project)
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .where(eq(project.id, projectId))
+    .limit(1)
+
+  return row?.hubId ?? null
+}
+
+/**
+ * Resolves a project's organisation id.
+ *
+ * @param db - Database handle.
+ * @param projectId - Target project id.
+ * @returns Organisation id, or `null` when missing.
+ */
+export const getProjectOrganisationId = async (
+  db: Database,
+  projectId: string,
+): Promise<string | null> => {
+  const [row] = await db
+    .select({ organisationId: project.organisationId })
+    .from(project)
+    .where(eq(project.id, projectId))
+    .limit(1)
+
+  return row?.organisationId ?? null
+}
+
+// ═══════════════════════
+// 3.1 CRUD :: UPDATE
+// ═══════════════════════
 /**
  * Updates an existing base property record.
  * @param db Database instance
@@ -392,37 +491,6 @@ export const updateBaseProperty = async (
   propertyId: string,
 ): Promise<PropertyDB> => {
   return await update<typeof property>(db, property, data, property.id, propertyId)
-}
-
-// ═══════════════════════
-// 2.1 CRUD :: RELATIONAL OPERATIONS (PropertyI18n)
-// ═══════════════════════
-
-/**
- * Creates relational i18n records for a property.
- * @param db Database instance
- * @param i18n A record where keys are locales and values are the i18n data for that locale.
- * @param propertyId The ID of the parent property.
- * @returns Array of created propertyI18n records.
- */
-export const createI18n = async (
-  db: Database,
-  i18n: Record<Locale, PropertyI18nNew>,
-  propertyId: string,
-): Promise<PropertyI18nDB[]> => {
-  const relatedRecords = toRelatedRecords(
-    i18n,
-    'propertyId',
-    propertyId,
-    'locale',
-  ) as InferInsertModel<typeof propertyI18n>[]
-  return await insertManyRelated(
-    db,
-    propertyI18n,
-    relatedRecords,
-    'propertyId',
-    propertyId,
-  )
 }
 
 /**
@@ -450,29 +518,6 @@ export const updateI18n = async (
     propertyI18n.propertyId,
     propertyId,
   )
-}
-
-// ═══════════════════════
-// 2.2 CRUD :: RELATIONAL OPERATIONS (PropertyValue)
-// ═══════════════════════
-
-/**
- * Creates multiple property value records.
- * @param db Database instance
- * @param values Array of new property value data.
- * @param propertyId The ID of the parent property.
- * @returns Array of created propertyValue records.
- */
-export const createPropertyValues = async (
-  db: Database,
-  values: PropertyValueNew[],
-  propertyId: string,
-): Promise<PropertyValueDB[]> => {
-  const dataToInsert = values.map(val => ({
-    ...val, // Spread PropertyValueNew
-    propertyId: propertyId,
-  })) as InferInsertModel<typeof propertyValue>[]
-  return await insertMany(db, propertyValue, dataToInsert)
 }
 
 /**
@@ -534,40 +579,6 @@ export const syncPropertyValues = async (
   })
 }
 
-// ═══════════════════════
-// 2.3 CRUD :: RELATIONAL OPERATIONS (PropertyValueI18n)
-// ═══════════════════════
-
-/**
- * Creates internationalization records for a single property value.
- * @param db Database instance
- * @param i18n Record of i18n data for the property value.
- * @param propertyValueId The ID of the parent property value.
- * @returns Array of created propertyValueI18n records.
- */
-export const createPropertyValueI18n = async (
-  db: Database,
-  i18n: Record<Locale, PropertyValueI18nNew>,
-  propertyValueId: string,
-): Promise<PropertyValueI18nDB[]> => {
-  const normalizedI18n = normalizeI18nLocaleRecord(
-    i18n as Record<string, PropertyValueI18nNew>,
-  )
-  const relatedRecords = toRelatedRecords(
-    normalizedI18n,
-    'propertyValueId',
-    propertyValueId,
-    'locale',
-  ) as InferInsertModel<typeof propertyValueI18n>[]
-  return await insertManyRelated(
-    db,
-    propertyValueI18n,
-    relatedRecords,
-    'propertyValueId',
-    propertyValueId,
-  )
-}
-
 /**
  * Updates internationalization records for a single property value (replaces all existing for that value).
  * @param db Database instance
@@ -599,7 +610,7 @@ export const updatePropertyValueI18n = async (
 }
 
 // ═══════════════════════
-// 3. CRUD :: ORCHESTRATION
+// 3.2 CRUD :: UPDATE (SYNC)
 // ═══════════════════════
 
 /**
@@ -831,28 +842,12 @@ export const upsertProjectProperties = async (
 }
 
 /**
- * Creates properties and all their related data (i18n, values, value i18n) for a project.
+ * Seeds inherited property assignments during project creation.
+ * Pulls defaults from scoped hubs and organisation, then writes ordered assignments.
+ *
+ * @param db - Database handle.
+ * @param params - Project id, hub scope, and optional rank offset.
  */
-export const createPropertiesWithRelated = async (
-  db: Database,
-  propertiesData: PropertyNew[],
-  projectId: string,
-): Promise<Property[]> => {
-  return upsertProjectProperties(db, propertiesData, projectId)
-}
-
-/**
- * Updates properties and all their related data for a project.
- * This is effectively an upsert operation for the collection of properties.
- */
-export const updatePropertiesWithRelated = async (
-  db: Database,
-  propertiesData: Property[],
-  projectId: string,
-): Promise<Property[]> => {
-  return await upsertProjectProperties(db, propertiesData, projectId)
-}
-
 export const seedDefaultInheritedPropertiesForProject = async (
   db: Database,
   params: {
@@ -898,6 +893,13 @@ export const seedDefaultInheritedPropertiesForProject = async (
   )
 }
 
+/**
+ * Synchronizes project inherited assignments from submitted form state,
+ * then cascades resolved visibility defaults to child layers.
+ *
+ * @param db - Database handle.
+ * @param params - Project id and submitted inherited property rows.
+ */
 export const syncProjectInheritedProperties = async (
   db: Database,
   params: {
@@ -1021,38 +1023,18 @@ export const syncProjectInheritedProperties = async (
     db,
     params.projectId,
   )
-  await syncLayerProperties(db, params.projectId, resolvedProjectProperties)
+  await syncProperties(db, params.projectId, resolvedProjectProperties)
 }
 
 /**
- * Lists persisted project-property assignment rows in rank order.
- * @param db Database handle.
- * @param projectId Target project id.
- * @returns Persisted assignment rows for debug/audit use.
+ * Synchronizes a hub's global property catalog and assignment ranks.
+ * Handles create/update/delete of properties, value translations, and hub rank links.
+ *
+ * @param db - Database handle.
+ * @param params - Hub id and submitted property collection.
+ * @returns Persisted ordered property list.
  */
-export const listProjectPropertyAssignments = async (
-  db: Database,
-  projectId: string,
-): Promise<
-  Array<{
-    propertyId: string
-    isEnabled: boolean
-    isDefaultEnabled: boolean
-    rank: number
-  }>
-> =>
-  await db.query.projectProperty.findMany({
-    where: eq(projectProperty.projectId, projectId),
-    columns: {
-      propertyId: true,
-      isEnabled: true,
-      isDefaultEnabled: true,
-      rank: true,
-    },
-    orderBy: [asc(projectProperty.rank)],
-  })
-
-export const syncHubGlobalProperties = async (
+export const syncHubProperties = async (
   db: Database,
   params: {
     hubId: string
@@ -1275,6 +1257,14 @@ export const syncHubGlobalProperties = async (
     .sort((left, right) => left.rank - right.rank)
 }
 
+/**
+ * Synchronizes an organisation's scoped property catalog and assignment ranks.
+ * Handles create/update/delete of properties, value translations, and organisation rank links.
+ *
+ * @param db - Database handle.
+ * @param params - Organisation id and submitted property collection.
+ * @returns Persisted ordered property list.
+ */
 export const syncOrganisationProperties = async (
   db: Database,
   params: {
@@ -1506,4 +1496,30 @@ export const syncOrganisationProperties = async (
       rank: persistedRankById.get(item.id) ?? 0,
     }))
     .sort((left, right) => left.rank - right.rank)
+}
+
+// ═══════════════════════
+// 4. COMMON
+// ═══════════════════════
+
+/**
+ * Relation graph used when resolving property + value translations in one query.
+ */
+const propertyWithRelations = {
+  i18n: true,
+  values: {
+    with: {
+      i18n: true,
+    },
+  },
+} as const
+
+/**
+ * Resolves the persisted property discriminator from submitted component identity.
+ * Defaults to `specifier` when component cannot be mapped.
+ */
+const inferPropertyTypeFromComponent = (
+  component: unknown,
+): 'classifier' | 'specifier' => {
+  return inferPropertyDiscriminatorFromComponent(component) ?? 'specifier'
 }
