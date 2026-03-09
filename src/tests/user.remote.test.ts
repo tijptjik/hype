@@ -95,6 +95,48 @@ vi.mock('$lib/api/services/user', () => ({
         ? false
         : (conditions.isArchived as boolean | null),
   }),
+  toUserSearchQueryPlan: vi.fn(
+    async (
+      _db: unknown,
+      params: {
+        q?: string
+        conditions?: { isArchived?: boolean | null }
+        pagination?: { limit?: number; offset?: number }
+        sorting?: { sortBy?: string; sortOrder?: string }
+      },
+    ) => {
+      const requestedState = {
+        isArchived:
+          params.conditions?.isArchived === undefined
+            ? false
+            : params.conditions.isArchived,
+      }
+      const conditions: unknown[] = []
+      if (requestedState.isArchived !== null) {
+        conditions.push({
+          fn: 'eq',
+          left: 'user.isArchived',
+          right: requestedState.isArchived,
+        })
+      }
+      if (params.q?.trim()) {
+        conditions.push(mockToUserSearchTextCondition(params.q.trim()))
+      }
+      return {
+        requestedState,
+        conditions,
+        limit: Math.min(params.pagination?.limit ?? 20, 100),
+        offset: params.pagination?.offset ?? 0,
+        sortBy:
+          params.sorting?.sortBy === 'email' ||
+          params.sorting?.sortBy === 'createdAt' ||
+          params.sorting?.sortBy === 'updatedAt'
+            ? params.sorting.sortBy
+            : 'name',
+        sortOrder: params.sorting?.sortOrder === 'desc' ? 'desc' : 'asc',
+      }
+    },
+  ),
   toUserSearchPagingAndSorting: (params: {
     pagination?: { limit?: number; offset?: number }
     sorting?: { sortBy?: string; sortOrder?: string }
@@ -113,13 +155,48 @@ vi.mock('$lib/api/services/user', () => ({
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
-  guardedQuery: (_schema: unknown, handler: unknown) => handler,
-  guardedCommand: (_schema: unknown, handler: unknown) => handler,
+  guardedQuery:
+    (_schema: unknown, handler: unknown) =>
+    async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
+      const event = mockGetRequestEvent()
+      const baseCtx = await mockSetupRequestHandler(event)
+      return (handler as (params: unknown, ctx: unknown) => Promise<unknown>)(arg, {
+        ...baseCtx,
+        event,
+        isAdminRequest:
+          arg?.meta?.isAdminRequest === undefined
+            ? Boolean((baseCtx as { isAdminRequest?: unknown }).isAdminRequest)
+            : arg.meta.isAdminRequest === true,
+      })
+    },
+  guardedCommand:
+    (_schema: unknown, handler: unknown) =>
+    async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
+      const event = mockGetRequestEvent()
+      const baseCtx = await mockSetupRequestHandler(event)
+      return (handler as (params: unknown, ctx: unknown) => Promise<unknown>)(arg, {
+        ...baseCtx,
+        event,
+        isAdminRequest:
+          arg?.meta?.isAdminRequest === undefined
+            ? Boolean((baseCtx as { isAdminRequest?: unknown }).isAdminRequest)
+            : arg.meta.isAdminRequest === true,
+      })
+    },
   guardedBatchByIdQuery:
     (_schema: unknown, fn: unknown) =>
     async (arg: { id: string; meta?: { profile?: string } }) => {
       const event = mockGetRequestEvent()
-      const ctx = await mockSetupRequestHandler(event)
+      const baseCtx = await mockSetupRequestHandler(event)
+      const ctx = {
+        ...baseCtx,
+        event,
+        isAdminRequest:
+          (arg.meta as { isAdminRequest?: boolean } | undefined)?.isAdminRequest ===
+          undefined
+            ? Boolean((baseCtx as { isAdminRequest?: unknown }).isAdminRequest)
+            : (arg.meta as { isAdminRequest?: boolean }).isAdminRequest === true,
+      }
       const resolver = await (
         fn as (params: {
           args: Array<{ id: string; meta?: { profile?: string } }>
