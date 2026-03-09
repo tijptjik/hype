@@ -15,8 +15,17 @@ export interface SectionHeaderProps {
   flags?: SectionHeaderFlag[]
   actions?: SectionHeaderAction[]
   triggers?: SectionHeaderTrigger[]
+  onCollapsableToggle?: (nextCollapsed: boolean, event: MouseEvent) => void
+  isCollapsableCollapsed?: boolean
+  collapsableExpandLabel?: string
+  collapsableCollapseLabel?: string
+  onVisibilityToggle?: (nextVisible: boolean, event: MouseEvent) => void
+  isVisibilityOn?: boolean
+  visibilityOnLabel?: string
+  visibilityOffLabel?: string
   left?: Snippet
   center?: Snippet
   right?: Snippet
+  children?: Snippet
   class?: string
 }
