@@ -19,7 +19,7 @@ let {
 
 {#if isEditing}
   <div
-    class="bits-form__section-header-actions flex w-full flex-row items-center justify-end gap-0"
+    class="bits-form__section-header-actions inline-flex w-auto flex-row items-center justify-end gap-0"
   >
     {#if !isAdding}
       <Button

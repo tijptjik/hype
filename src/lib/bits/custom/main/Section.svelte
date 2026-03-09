@@ -23,12 +23,7 @@ const sectionClass = $derived(
 </script>
 
 {#if transition === 'fade'}
-  <section
-    {...attrs}
-    class={sectionClass}
-    aria-hidden={!isVisible}
-    inert={!isVisible}
-  >
+  <section {...attrs} class={sectionClass} aria-hidden={!isVisible} inert={!isVisible}>
     {@render children?.()}
   </section>
 {:else}

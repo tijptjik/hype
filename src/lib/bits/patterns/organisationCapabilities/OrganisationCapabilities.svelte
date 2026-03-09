@@ -58,7 +58,7 @@ $effect(() => {
     <SectionHeader
       title={m.resources__capabilities()}
       description={m.admin__forms_capabilities_add_subtitle()}
-      class="bits-form__hub-orgs-header"
+      class="bits-form__capabilities-header"
     >
       {#snippet center()}
         <OrganisationCapabilitiesSearch
