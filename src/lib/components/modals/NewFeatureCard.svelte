@@ -31,9 +31,9 @@ import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '$lib/enum
 import type {
   NewFeatureWithLocationAndParents,
   OrganisationDB,
-  ProjectDB,
   Feature,
 } from '$lib/types'
+import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

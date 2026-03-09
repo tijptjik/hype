@@ -9,11 +9,10 @@ import type {
   LayerNew,
   Organisation,
   OrganisationNew,
-  Project,
-  ProjectNew,
   Ref,
   ResourceType,
 } from '$lib/types'
+import type { Project, ProjectNew } from '$lib/db/zod/schema/project.types'
 
 const DEPRECATED_FORM_CONTEXT_MESSAGE =
   'Deprecated: $lib/context/form.svelte has been removed. Migrate to route-local configureForm(...) / Main.Form state instead.'
@@ -139,7 +138,7 @@ export function setForm(
 export function setForm(
   _resourceType: ResourceType,
   _entity: Ref,
-  _form: SuperValidated<unknown>,
+  _form: SuperValidated<Record<string, unknown>>,
   _adminCtx: AdminCtx,
 ): never {
   return failDeprecatedFormContext()

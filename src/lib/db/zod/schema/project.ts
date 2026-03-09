@@ -1,10 +1,13 @@
 // I18N
 import { m } from '$lib/i18n'
-import type { ProjectCapabilities, ProjectRoleCapabilities } from '$lib/types'
+import type {
+  ProjectCapabilities,
+  ProjectRoleCapabilities,
+} from '$lib/db/zod/schema/project.types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
-import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import { project, projectI18n, projectRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
@@ -25,8 +28,15 @@ import { UserBasic } from './user'
 //
 // 2. DB / RELATIONAL PRIMITIVES
 //    - ProjectBase
+//    - ProjectInsert
+//    - ProjectUpdate
 //    - ProjectI18nBase
+//    - ProjectI18nInsert
+//    - ProjectI18nUpdate
 //    - ProjectRoleBase
+//    - ProjectRoleInsert
+//    - ProjectRoleUpdate
+//    - ProjectRoleAPI
 //    - ProjectRoleWithUser
 //    - ProjectRoleUpdateExtra
 //    - ProjectListRow
@@ -111,9 +121,33 @@ export const ProjectBase = createSelectSchema(project).extend({
   capabilities: ProjectCapabilitiesBase,
 })
 
+export const ProjectInsert = createInsertSchema(project).extend({
+  capabilities: ProjectCapabilitiesBase,
+})
+
+export const ProjectUpdate = createUpdateSchema(project).extend({
+  capabilities: ProjectCapabilitiesBase.optional(),
+})
+
 export const ProjectI18nBase = createSelectSchema(projectI18n)
 
+export const ProjectI18nInsert = createInsertSchema(projectI18n).omit({
+  projectId: true,
+  locale: true,
+})
+
+export const ProjectI18nUpdate = createUpdateSchema(projectI18n).omit({
+  projectId: true,
+  locale: true,
+})
+
 export const ProjectRoleBase = createSelectSchema(projectRole)
+
+export const ProjectRoleInsert = createInsertSchema(projectRole).omit({
+  projectId: true,
+})
+
+export const ProjectRoleUpdate = createUpdateSchema(projectRole)
 
 export const ProjectRoleWithUser = ProjectRoleBase.extend({
   capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
@@ -123,6 +157,10 @@ export const ProjectRoleWithUser = ProjectRoleBase.extend({
 export const ProjectRoleUpdateExtra = createUpdateSchema(projectRole).extend({
   role: ProjectRoleBase.shape.role,
   user: UserBasic,
+  capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
+})
+
+export const ProjectRoleAPI = ProjectRoleBase.extend({
   capabilities: ProjectRoleCapabilitiesSchema.optional().default({}),
 })
 

@@ -90,13 +90,8 @@ import { nanoid } from 'nanoid'
 // SCHEMA
 import { project } from '$lib/db/schema'
 // TYPES
-import type {
-  Id,
-  Prisms,
-  ProjectAuthorizationField,
-  ProjectDB,
-  QueryParams,
-} from '$lib/types'
+import type { Id, Prisms, ProjectAuthorizationField, QueryParams } from '$lib/types'
+import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

@@ -126,26 +126,6 @@ import type {
   GetQueryParamsSchema,
   OrganisationRoleBase,
   OrganisationUpdate,
-  ProjectAdminProfileAPI,
-  ProjectBase,
-  ProjectProfile as ProjectProfileSchema,
-  ProjectListProfileAPI,
-  ProjectCardProfileAPI,
-  ProjectDetailProfileAPI,
-  ProjectFormData,
-  ProjectEntityFormData,
-  ProjectPreflightFormData,
-  ProjectI18nBase,
-  ProjectI18nInsert,
-  ProjectI18nUpdate,
-  ProjectInsert,
-  PublishProjectSchema,
-  RemoveProjectSchema,
-  ProjectRoleAPI,
-  ProjectRoleBase,
-  ProjectRoleInsert,
-  ProjectRoleUpdate,
-  ProjectUpdate,
   PropertyAdminProfileAPI,
   PropertyDetailProfileAPI,
   PropertyI18nRecord,
@@ -214,10 +194,12 @@ import type {
   OrganisationUpdateSuperAdminAPI,
 } from './db/zod/schema/deprecated/organisation'
 import type {
-  ProjectRaw,
-  ProjectRoleUpdateExtra,
-  ProjectRoleWithUser,
-} from './db/zod/schema/deprecated/project'
+  Project,
+  ProjectDB,
+  ProjectI18nDB,
+  ProjectNew,
+  ProjectRole,
+} from './db/zod/schema/project.types'
 import type { ProjectPropertyFormData as ProjectPropertyFormDataSchema } from './db/zod/schema/property'
 // TYPES
 import type { Component, Snippet } from 'svelte'
@@ -904,10 +886,6 @@ export type CapabilityDefinition = {
 }
 
 export type CapabilityDefinitions = Partial<Record<CapabilityKey, CapabilityDefinition>>
-
-export type ProjectCapabilities = Record<CapabilityKey, boolean>
-
-export type ProjectRoleCapabilities = Partial<Record<CapabilityKey, boolean>>
 
 /* ----------------- */
 // HTML
@@ -1652,135 +1630,10 @@ export type OrganisationGetResponse = EntityResponse<
 >
 export type OrganisationGetState = OrganisationGetResponse | null
 
-/* ----------------- */
-// ORGANISATIONS :: RELATIONAL
-/* -------- */
-
-// organisationI18n, but with the organisationId - for use in DB seeding & selects
-export type OrganisationI18nDB = z.infer<typeof OrganisationI18nBase>
-// organisationI18n, but without organisationId - for use in API insertions
-export type OrganisationI18nNew = z.infer<typeof OrganisationI18nInsert>
-// Same as OrganisationI18nNew, but all fields are optional
-export type OrganisationI18nPartial = z.infer<typeof OrganisationI18nUpdate>
-
-export type OrganisationRole = z.infer<typeof OrganisationRoleAPI>
-export type OrganisationRoleUser = z.infer<typeof OrganisationRoleWithUser>
-
-// organisationRole, but with the organisationId - for use in DB seeding & selects
-export type OrganisationRoleDB = z.infer<typeof OrganisationRoleBase>
-// organisationRole, but without organisationId - for use in API insertions
-export type OrganisationRoleNew = z.infer<typeof OrganisationRoleInsert>
-// Same as OrganisationRoleNew, but all fields are optional
-export type OrganisationRolePartial = z.infer<typeof OrganisationRoleUpdate>
-export type OrganisationRolePartialExtra = z.infer<typeof OrganisationRoleUpdateExtra>
-
-export type OrganisationDBRaw = z.infer<typeof OrganisationRaw>
-
-/* ----------------- */
-// PROJECTS
-/* -------- */
-
-/* ----------------- */
-// PROJECTS :: DB
-/* -------- */
-
-// Project with all its own fields.
-export type ProjectDB = z.infer<typeof ProjectBase>
-// Project without relations, for use in inserting a new project
-export type ProjectDBNew = z.infer<typeof ProjectInsert>
-// Project without relations, for use in partiall updating a project
-export type ProjectDBPartial = z.infer<typeof ProjectUpdate>
-
-/* ----------------- */
-// PROJECTS :: API
-/* -------- */
-
-// Project with all fields, including userRoles & translations, and User
-export type Project = z.infer<typeof ProjectAdminProfileAPI>
-// Like Project, but without the projectId in userRoles and translations
-export type ProjectNew = z.infer<typeof ProjectEntityFormData>
-// Like Project, but with all fields optional
-export type ProjectPartial = Partial<ProjectNew>
-export type ProjectListParams = z.infer<typeof ListQueryParamsSchema>
-export type ProjectGetParams = z.infer<typeof GetQueryParamsSchema>
-export type ProjectProfile = z.infer<typeof ProjectProfileSchema>
-export type ProjectListProfile = z.infer<typeof ProjectListProfileAPI>
-export type ProjectCardProfile = z.infer<typeof ProjectCardProfileAPI>
-export type ProjectDetailProfile = z.infer<typeof ProjectDetailProfileAPI>
-export type ProjectEntityByProfile<P extends ProjectProfile> = P extends 'list'
-  ? ProjectListProfile
-  : P extends 'card'
-    ? ProjectCardProfile
-    : P extends 'detail'
-      ? ProjectDetailProfile
-      : Project
-export type ProjectListByProfile<P extends ProjectProfile> = P extends 'list'
-  ? ProjectListProfile
-  : P extends 'card'
-    ? ProjectCardProfile
-    : P extends 'detail'
-      ? ProjectDetailProfile
-      : Project
-export type ProjectGetParamsByProfile<P extends ProjectProfile> = Omit<
-  ProjectGetParams,
-  'meta'
-> & {
-  meta?: {
-    isAdminRequest?: boolean
-    profile?: P
-  }
-}
-export type ProjectListParamsByProfile<P extends ProjectProfile> = Omit<
-  ProjectListParams,
-  'meta'
-> & {
-  meta?: {
-    isAdminRequest?: boolean
-    profile?: P
-  }
-}
-
-/* ----------------- */
-// PROJECTS :: REMOTE FORMS
-/* -------- */
-
-export type ProjectFormInput = z.input<typeof ProjectFormData>
-export type ProjectBooleanField = 'isPublished' | 'isArchived'
-export type ProjectSubmitBaselineRelations = {
-  capabilities?: ProjectFormInput['data']['capabilities']
-  userRoles?: unknown
-  properties?: ProjectFormInput['data']['properties']
-}
-export type ProjectSubmitUpdatesParams<TEntityResult, TListResult> = {
-  projectId?: string | null
-  entityQuery: TEntityResult
-  listQuery: TListResult
-}
-export type ProjectOwnerRoleSeedOrganisation = {
-  data?: {
-    userRoles?: Array<{
-      userId: string
-      role: string
-      user?: User | null
-    }>
-  } | null
-} | null
-export type ProjectGetResponse = EntityResponse<Project>
-export type ProjectGetState = ProjectGetResponse | null
-export type ProjectPublishInput = z.input<typeof PublishProjectSchema>
-export type ProjectArchiveInput = z.input<typeof RemoveProjectSchema>
-export type ProjectPreflightInput = z.input<typeof ProjectPreflightFormData>
 export type ResourceSubmitMode = 'create' | 'replace' | 'update'
 export type ResourceSubmitMetaDraft = {
   id?: unknown
   mode?: unknown
-}
-export type ProjectCurrentFormDraft = {
-  data?: {
-    capabilities?: unknown
-    userRoles?: unknown
-    properties?: unknown
-  }
 }
 export type ResourceSubmitDraft<TData extends Record<string, unknown>> = {
   meta?: ResourceSubmitMetaDraft
@@ -1810,39 +1663,30 @@ export type ApplyChangedRelationFieldParams<
   data: TData
   key: TKey
 } & ResolveChangedRelationParams<TEffective>
-export type ProjectSubmitDraft = ResourceSubmitDraft<{
-  capabilities?: unknown
-  userRoles?: unknown
-  properties?: unknown
-}>
 
 /* ----------------- */
-// PROJECTS :: RELATIONAL
+// ORGANISATIONS :: RELATIONAL
 /* -------- */
 
-// projectI18n, but with the projectId - for use in DB seeding & selects
-export type ProjectI18nDB = z.infer<typeof ProjectI18nBase>
-// projectI18n, but without projectId - for use in API insertions
-export type ProjectI18nNew = z.infer<typeof ProjectI18nInsert>
-// Same as ProjectI18nNew, but all fields are optional
-export type ProjectI18nPartial = z.infer<typeof ProjectI18nUpdate>
+// organisationI18n, but with the organisationId - for use in DB seeding & selects
+export type OrganisationI18nDB = z.infer<typeof OrganisationI18nBase>
+// organisationI18n, but without organisationId - for use in API insertions
+export type OrganisationI18nNew = z.infer<typeof OrganisationI18nInsert>
+// Same as OrganisationI18nNew, but all fields are optional
+export type OrganisationI18nPartial = z.infer<typeof OrganisationI18nUpdate>
 
-export type ProjectI18n = z.infer<typeof ProjectI18nBase>
+export type OrganisationRole = z.infer<typeof OrganisationRoleAPI>
+export type OrganisationRoleUser = z.infer<typeof OrganisationRoleWithUser>
 
-// projectRole, but with the projectId - for use in DB seeding & selects
-export type ProjectRole = z.infer<typeof ProjectRoleAPI>
-export type ProjectRoleUser = z.infer<typeof ProjectRoleWithUser>
-export type ProjectRoleDB = z.infer<typeof ProjectRoleBase>
-// projectRole, but without projectId - for use in API insertions
-export type ProjectRoleNew = z.infer<typeof ProjectRoleInsert>
-// Same as ProjectRoleNew, but all fields are optional
-export type ProjectRolePartial = z.infer<typeof ProjectRoleUpdate>
-export type ProjectRolePartialExtra = z.infer<typeof ProjectRoleUpdateExtra>
+// organisationRole, but with the organisationId - for use in DB seeding & selects
+export type OrganisationRoleDB = z.infer<typeof OrganisationRoleBase>
+// organisationRole, but without organisationId - for use in API insertions
+export type OrganisationRoleNew = z.infer<typeof OrganisationRoleInsert>
+// Same as OrganisationRoleNew, but all fields are optional
+export type OrganisationRolePartial = z.infer<typeof OrganisationRoleUpdate>
+export type OrganisationRolePartialExtra = z.infer<typeof OrganisationRoleUpdateExtra>
 
-/* ----------------- */
-// PROJECTS : FIELDS
-/* -------- */
-
+export type OrganisationDBRaw = z.infer<typeof OrganisationRaw>
 export type FieldDiscriminator = `${FieldDiscriminatorEnum}`
 
 export const fieldComponentTypes = [
@@ -1876,45 +1720,6 @@ export type RangeFilterValue = {
   rangeMin: number
   rangeMax: number
 }
-
-export type SubmittedPropertyScopeCandidate = {
-  id?: unknown
-  scope?: unknown
-}
-
-export type ProjectInheritedPropertySyncCandidate = SubmittedPropertyScopeCandidate & {
-  isEnabled?: unknown
-  isDefaultEnabled?: unknown
-}
-
-export type ProjectInheritedPropertySyncItem = {
-  id: string
-  scope: string
-  isEnabled?: boolean
-  isDefaultEnabled?: boolean
-}
-
-export type ProjectLocalPropertyCandidate = {
-  id?: unknown
-  projectId?: unknown
-  hubId?: unknown
-  scope?: unknown
-  isEnabled?: unknown
-}
-
-export type PersistedProjectLocalPropertyCandidate = {
-  id: string
-  scope?: unknown
-  projectId?: unknown
-  hubId?: unknown
-}
-
-/* ----------------- */
-// PROJECTS : FIELDS : INTERMEDIATE VALUE
-/* -------- */
-
-// Project, with relations in DB form - used as an intermediate type for DB operations
-export type ProjectDBRaw = z.infer<typeof ProjectRaw>
 
 export type IntermediateValue = {
   id: string

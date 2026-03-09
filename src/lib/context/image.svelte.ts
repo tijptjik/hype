@@ -33,12 +33,12 @@ import type {
   Id,
   HubDB,
   OrganisationDB,
-  ProjectDB,
   ImageUploadCtx,
   ImageCtxConstructorOptions,
   ImageContextConfig,
   Feature,
 } from '$lib/types'
+import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 import { addParamToUrl } from '$lib/navigation'
 
 // ═══════════════════════

@@ -4,8 +4,8 @@ import type {
   CapabilityDefinition,
   CapabilityDefinitions,
   CapabilityKey,
-  ProjectRoleCapabilities,
 } from '$lib/types'
+import type { ProjectRoleCapabilities } from './project.types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE

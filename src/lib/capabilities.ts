@@ -5,9 +5,11 @@ import type {
   CapabilityDefinitions,
   CapabilityI18nRoot,
   CapabilityKey,
+} from '$lib/types'
+import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,
-} from '$lib/types'
+} from '$lib/db/zod/schema/project.types'
 
 export const CAPABILITY_KEYS = [
   'manageBakeries',

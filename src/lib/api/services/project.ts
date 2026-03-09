@@ -35,11 +35,14 @@ import type {
   Id,
   Image,
   ListResponse,
-  PersistedProjectLocalPropertyCandidate,
   Prisms,
+  QueryParams,
+  SessionUser,
+  UserRoleDisco,
+} from '$lib/types'
+import type {
   ProjectAdminDBRaw,
   ProjectCardDBRaw,
-  ProjectRoleCapabilities,
   ProjectDB,
   ProjectEntityByProfile,
   ProjectInheritedPropertySyncItem,
@@ -48,11 +51,10 @@ import type {
   ProjectLocalPropertyCandidate,
   ProjectProfile,
   ProjectQueryRowByProfile,
-  QueryParams,
-  SessionUser,
+  ProjectRoleCapabilities,
+  PersistedProjectLocalPropertyCandidate,
   SubmittedPropertyScopeCandidate,
-  UserRoleDisco,
-} from '$lib/types'
+} from '$lib/db/zod/schema/project.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

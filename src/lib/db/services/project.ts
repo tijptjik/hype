@@ -37,25 +37,27 @@ import { getProjectHubFilter } from './hub'
 // TYPES
 import type {
   CapabilityDefinitions,
-  ProjectDBNew,
-  ProjectDB,
-  ProjectI18nDB,
-  ProjectI18nNew,
-  ProjectI18nPartial,
   Id,
-  ProjectRoleNew,
   Database,
   LocaleKey,
-  ProjectDBPartial,
-  ProjectAdminDBRaw,
-  ProjectCardDBRaw,
-  ProjectListDBRaw,
-  ProjectProfile,
-  ProjectRoleDB,
   HubOptsExtended,
   ListResponse,
   QueryParams,
 } from '$lib/types'
+import type {
+  ProjectAdminDBRaw,
+  ProjectCardDBRaw,
+  ProjectDB,
+  ProjectDBNew,
+  ProjectDBPartial,
+  ProjectI18nDB,
+  ProjectI18nNew,
+  ProjectI18nPartial,
+  ProjectListDBRaw,
+  ProjectProfile,
+  ProjectRoleDB,
+  ProjectRoleNew,
+} from '$lib/db/zod/schema/project.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -869,7 +871,7 @@ export const updateI18n = async (
   return await replaceManyRelated(
     db,
     projectI18n,
-    records,
+    records as never,
     projectI18n.projectId,
     projectId,
   )

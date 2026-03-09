@@ -7,7 +7,10 @@ import { image } from './image'
 import { user } from './user'
 // ENUM
 import { ProjectRoleType, supportedLocales } from '../../enums'
-import type { ProjectCapabilities, ProjectRoleCapabilities } from '../../types'
+import type {
+  ProjectCapabilities,
+  ProjectRoleCapabilities,
+} from '../zod/schema/project.types'
 
 /* ============================================================================
  * PROJECT MANAGEMENT
