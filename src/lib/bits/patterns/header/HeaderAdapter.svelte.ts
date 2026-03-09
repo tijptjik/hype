@@ -1,14 +1,24 @@
+// CONSTANTS
+import { NEW_REF } from '$lib/constants'
+// CONTEXT
+import { getHeaderCtrl } from '$lib/context/header.svelte'
+// LIB
 import { getBreadcrumbs } from '$lib/navigation'
 import { navigateOnAdmin } from '$lib/navigation'
+import { authorizeHubList, toHubAuthActor } from '$lib/api/services/authz/hub'
+// I18N
+import { m } from '$lib/i18n'
+// ICONS
+import Trash2 from 'virtual:icons/lucide/trash-2'
+// ENUMS
+import { FirstClassResource, Panel, ResourcePath } from '$lib/enums'
+// TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { HeaderLayoutMode, HeaderProps } from './header.types'
 import type { Component } from 'svelte'
 import type { FilterState } from '$lib/types'
 import type { HeaderCrumb } from '$lib/bits/custom/header'
-import { FirstClassResource, Panel, ResourcePath } from '$lib/enums'
-import { NEW_REF } from '$lib/constants'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
 
 /**
  * Adapter that wires Admin/App context state into the header pattern component API.
@@ -42,13 +52,17 @@ export function useHeaderAdapter(
     query = appCtx.state.filters[resourceType].text || ''
   })
 
-  // Resolve breadcrumbs for entity routes and clear them for index routes.
+  // Resolve breadcrumbs for entity routes and clear them only for index routes.
+  // Keep previous crumbs during transient route-switch gaps to avoid header flicker.
   $effect(() => {
     const resourceType = adminCtx.activeResourceType
     const resourceRef = adminCtx.activeResourceRef
 
-    if (!resourceType || !resourceRef) {
+    if (resourceRef === false) {
       crumbs = []
+      return
+    }
+    if (!resourceType || typeof resourceRef !== 'string' || resourceRef.length === 0) {
       return
     }
 
@@ -61,9 +75,7 @@ export function useHeaderAdapter(
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          crumbs = []
-        }
+        // Keep the last known crumbs on fetch failure to avoid visual pop.
       })
 
     return () => {
@@ -111,6 +123,15 @@ export function useHeaderAdapter(
   const headerHref = $derived.by(() => {
     if (!headerResourceType) return undefined
     if (!(headerResourceType in ResourcePath)) return undefined
+
+    if (headerResourceType === FirstClassResource.hub) {
+      const actor = toHubAuthActor(appCtx.user)
+      const hubId = appCtx.hub?.id ?? null
+      if (!hubId) return undefined
+      const decision = authorizeHubList(actor, { resourceHubId: hubId })
+      if (!decision.allowed) return undefined
+    }
+
     return `/admin/${ResourcePath[headerResourceType as FirstClassResource]}`
   })
   const isTainted = $derived(Boolean(formActions?.dirty ?? false))
@@ -124,6 +145,12 @@ export function useHeaderAdapter(
   const canPublish = $derived(Boolean(formActions?.canPublish ?? true))
   const showDeleteAction = $derived(Boolean(formActions?.showDeleteAction ?? true))
   const showPublishAction = $derived(Boolean(formActions?.showPublishAction ?? true))
+  const showDeleteMenuAction = $derived(
+    showDeleteAction && !isDeleted && Boolean(formActions?.toggleDelete),
+  )
+  const deleteMenuLabel = $derived(
+    headerTitle ? `${m.forms__delete()} ${headerTitle}` : m.forms__delete(),
+  )
 
   // Reset editing state when navigating between resources/routes.
   $effect(() => {
@@ -268,6 +295,12 @@ export function useHeaderAdapter(
       icon: (headerIcon ?? undefined) as Component | undefined,
       href: headerHref,
       crumbs,
+      menuAction: {
+        visible: showDeleteMenuAction,
+        label: deleteMenuLabel,
+        icon: Trash2,
+        onSelect: handleDeleteToggle,
+      },
     },
     newAction: {
       isCreatable: resolvedVisibility.showNew,

@@ -17,11 +17,19 @@ let {
     <ul class="bits-pattern-header__facets">
       {#each items as facet (facet.ref)}
         {@const isActive = active === facet.ref || (active === false && facet.ref === 'core')}
+        {@const color = facet.hasIssues ? 'error' : isActive ? 'primary' : 'neutral'}
+        {@const facetButtonClass = [
+          'bits-pattern-header__facet-btn',
+          facet.hasIssues ? 'bits-pattern-header__facet-btn--issue' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         <li class="bits-pattern-header__facet-item">
           <Button
             text={facet.label}
-            color={isActive ? 'primary' : 'neutral'}
+            {color}
             style="ghost"
+            class={facetButtonClass}
             iconComponent={facet.icon}
             {hideLabel}
             onClick={() => onFacetChange?.(facet.ref)}

@@ -38,7 +38,9 @@ const measurementKey = $derived(
     title: title.text ?? '',
     description: title.description ?? '',
     crumbs: title.crumbs?.map(crumb => `${crumb.name}:${crumb.href}`) ?? [],
-    facets: facetItems.map(facet => `${facet.ref}:${facet.label}`),
+    facets: facetItems.map(
+      facet => `${facet.ref}:${facet.label}:${facet.hasIssues ? '1' : '0'}`,
+    ),
     controlMode,
     isCreatable: showNew,
     isFilterable: showFilter,
@@ -60,6 +62,7 @@ const measurementKey = $derived(
       icon={title.icon}
       href={title.href}
       crumbs={title.crumbs}
+      menuAction={title.menuAction}
       hideDescription={!showDescription}
       hideTitle={!showTitle}
     />

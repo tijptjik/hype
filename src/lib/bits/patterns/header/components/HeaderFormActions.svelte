@@ -55,6 +55,7 @@ function handlePrimaryAction(): void {
   }
 
   if (!isTainted) {
+    onReset?.()
     onEditingToggle?.(false)
     return
   }
@@ -121,18 +122,6 @@ function handlePrimaryAction(): void {
       onClick={() => onDeleteToggle?.()}
     />
   {:else if isEditing}
-    {#if showDeleteAction}
-      <Button
-        text={deleteLabel}
-        color={isDeleted ? 'warning' : 'error'}
-        style="ghost"
-        icon={deleteIcon}
-        {hideLabel}
-        disabled={isInFlight}
-        onClick={() => onDeleteToggle?.()}
-      />
-    {/if}
-
     {#if canEdit}
       <Button
         text={m.forms__save()}

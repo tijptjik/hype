@@ -8,6 +8,69 @@
     @apply flex min-w-0 flex-1 items-center gap-4;
   }
 
+  .bits-theme .bits-pattern-header__title-group {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-trigger {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent;
+    color: color-mix(in oklab, var(--color-base-content) 82%, black);
+    background: color-mix(in oklab, var(--color-base-300) 56%, transparent);
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-trigger:hover {
+    background: color-mix(in oklab, var(--color-base-300) 74%, transparent);
+    color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-trigger:focus-visible {
+    outline: 2px solid var(--color-neutral);
+    outline-offset: 2px;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-trigger-icon,
+  .bits-pattern-header__title-menu-trigger-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-content,
+  .bits-pattern-header__title-menu-content {
+    @apply z-50 min-w-44 rounded-lg border p-1 shadow-none;
+    border-color: color-mix(in oklab, white 16%, transparent);
+    background: #000;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-item,
+  .bits-pattern-header__title-menu-item {
+    @apply flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium;
+    cursor: pointer;
+    color: color-mix(in oklab, var(--color-base-content) 92%, white 8%);
+    transition: background-color 0.15s ease;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-item:hover,
+  .bits-theme .bits-pattern-header__title-menu-item[data-highlighted],
+  .bits-pattern-header__title-menu-item:hover,
+  .bits-pattern-header__title-menu-item[data-highlighted] {
+    background: color-mix(in oklab, var(--color-base-300) 88%, transparent);
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-item--danger,
+  .bits-pattern-header__title-menu-item--danger {
+    color: color-mix(in oklab, var(--color-base-content) 92%, white 8%);
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-item-icon,
+  .bits-pattern-header__title-menu-item-icon {
+    @apply h-4 w-4 shrink-0;
+    color: color-mix(in oklab, var(--color-error) 82%, white 18%);
+  }
+
   .bits-theme .bits-pattern-header__right {
     @apply ml-4 flex items-center gap-3;
   }
@@ -48,11 +111,48 @@
   }
 
   .bits-theme .bits-pattern-header__facets {
-    @apply flex items-center gap-2 bg-base-300 rounded-xl;
+    @apply flex h-10 items-stretch gap-2 bg-base-300 rounded-xl;
   }
 
   .bits-theme .bits-pattern-header__facet-item {
-    @apply h-10;
+    @apply h-full;
+  }
+
+  .bits-theme .bits-pattern-header__facet-btn {
+    @apply h-full;
+  }
+
+  .bits-theme .bits-pattern-header__facet-btn--issue {
+    --btn-bg: var(--color-error);
+    --btn-fg: var(--color-white);
+    --btn-border: color-mix(in oklab, var(--color-error) 90%, black);
+    --btn-hover-bg: color-mix(in oklab, var(--color-error) 92%, black);
+    --btn-hover-fg: var(--color-white);
+    --btn-active-bg: color-mix(in oklab, var(--color-error) 84%, black);
+    --btn-active-fg: var(--color-white);
+  }
+
+  .bits-theme
+    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue {
+    background-color: var(--color-error);
+    color: var(--color-white);
+    border-color: color-mix(in oklab, var(--color-error) 88%, black);
+  }
+
+  .bits-theme
+    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue:hover,
+  .bits-theme
+    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue:focus-visible {
+    background-color: color-mix(in oklab, var(--color-error) 92%, black);
+    color: var(--color-white);
+    border-color: color-mix(in oklab, var(--color-error) 96%, black);
+  }
+
+  .bits-theme
+    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue:active {
+    background-color: color-mix(in oklab, var(--color-error) 84%, black);
+    color: var(--color-white);
+    border-color: color-mix(in oklab, var(--color-error) 90%, black);
   }
 
   .bits-theme .bits-pattern-header__view-actions {

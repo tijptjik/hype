@@ -4,12 +4,20 @@ import type { HeaderCrumb } from '$lib/bits/custom/header'
 
 export type HeaderLayoutMode = 'card' | 'table' | 'list'
 
+export interface HeaderTitleMenuActionConfig {
+  visible?: boolean
+  label?: string
+  icon?: Component
+  onSelect?: () => void
+}
+
 export interface HeaderTitleConfig {
   text?: string
   description?: string
   icon?: Component
   href?: string
   crumbs?: HeaderCrumb[]
+  menuAction?: HeaderTitleMenuActionConfig
 }
 
 export interface HeaderNewConfig {
@@ -28,6 +36,7 @@ export interface HeaderFacetItem {
   ref: string
   label: string
   icon?: Component | null
+  hasIssues?: boolean
 }
 
 export interface HeaderFacetsConfig {

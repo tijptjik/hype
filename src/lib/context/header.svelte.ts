@@ -113,7 +113,10 @@ export class HeaderCtrl {
    */
   setFacets(
     facets:
-      | Map<FacetType, string | { label: string; icon?: Component | null }>
+      | Map<
+          FacetType,
+          string | { label: string; icon?: Component | null; hasIssues?: boolean }
+        >
       | HeaderFacetItem[],
   ): void {
     this.state.meta.facets = this.normalizeFacetItems(facets)
@@ -163,7 +166,10 @@ export class HeaderCtrl {
   setHeaderForEntity(
     title: string,
     icon: Component,
-    facets: Map<FacetType, string | { label: string; icon?: Component | null }>,
+    facets: Map<
+      FacetType,
+      string | { label: string; icon?: Component | null; hasIssues?: boolean }
+    >,
   ): void {
     this.applyEntityMeta(title, icon, facets)
     this.showControls('form')
@@ -266,7 +272,10 @@ export class HeaderCtrl {
   private applyEntityMeta(
     title: string,
     icon: Component,
-    facets: Map<FacetType, string | { label: string; icon?: Component | null }>,
+    facets: Map<
+      FacetType,
+      string | { label: string; icon?: Component | null; hasIssues?: boolean }
+    >,
   ): void {
     this.state.meta.title = title
     this.state.meta.icon = icon
@@ -280,7 +289,10 @@ export class HeaderCtrl {
    */
   private normalizeFacetItems(
     facets:
-      | Map<FacetType, string | { label: string; icon?: Component | null }>
+      | Map<
+          FacetType,
+          string | { label: string; icon?: Component | null; hasIssues?: boolean }
+        >
       | HeaderFacetItem[],
   ): HeaderFacetItem[] {
     return Array.isArray(facets)
@@ -297,6 +309,7 @@ export class HeaderCtrl {
             ref,
             label: value.label,
             icon: value.icon ?? null,
+            hasIssues: value.hasIssues === true,
           }
         })
   }
