@@ -129,8 +129,6 @@ $effect(() => {
               class="bits-entity-image__header"
               size="sm"
             >
-              {#snippet center()}
-              {/snippet}
               {#snippet right()}
                 <div class="bits-entity-image__switch-wrap">
                   <span class="bits-entity-image__feedback">

@@ -13,6 +13,14 @@
 
   .bits-theme .bits-entity-image__header {
     @apply pl-1;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-entity-image__header .bits-form__section-header-right {
+    width: auto;
+    flex: 0 0 auto;
+    min-width: max-content;
+    overflow: visible;
   }
 
   .bits-theme .bits-entity-image__switch-wrap {

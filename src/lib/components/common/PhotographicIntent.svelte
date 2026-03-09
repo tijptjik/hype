@@ -1,24 +1,28 @@
 <script lang="ts">
 import { intentDisplay } from '$lib/client/services/image'
+import { setImageIntent } from '$lib/api/server/image.remote'
+import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type { Intent } from '$lib/types'
 
-let { intent, imageId }: { intent: Intent; imageId: string } = $props()
+let {
+  intent,
+  imageId,
+  featureId,
+}: { intent: Intent; imageId: string; featureId: string } = $props()
 
 // TODO Replace this with the intention widget from Gallery
-const updateIntent = async (newIntent: string) => {
+const updateIntent = async (newIntent: Intent) => {
   try {
-    const response = await fetch(`/api/images/${imageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ featureImage: { intent: newIntent } }),
+    await setImageIntent({
+      id: imageId,
+      ctxType: ImageContextResource.feature,
+      ctxId: featureId,
+      featureId,
+      intent: newIntent,
+      meta: { isAdminRequest: true },
     })
-
-    if (!response.ok) {
-      throw new Error('Failed to update intent')
-    }
-
-    intent = newIntent as Intent
+    intent = newIntent
   } catch (error) {
     console.error('Error updating intent:', error)
   }
