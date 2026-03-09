@@ -1,6 +1,7 @@
 export interface CardWrapperProps {
   class?: string
   isAnimated?: boolean
+  flipDisabled?: boolean
 }
 
 export interface CardRootProps {
