@@ -20,6 +20,7 @@ import {
   guardRefDesync,
   guardUserRolesDesync,
   isFormLevelIssue,
+  resolveFacetIssueSummary,
   revalidateAfterSubmitAttempt,
   resetLocaleFields,
   removeUserRoleSelection,
@@ -27,6 +28,7 @@ import {
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
+  withFacetIssueIndicators,
 } from '$lib/client/services/form'
 import {
   getOrganisationSubmitUpdates,
@@ -34,6 +36,24 @@ import {
   overrideOrganisationListItemBoolean,
   toOrganisationFormInput,
 } from '$lib/client/services/organisation'
+import {
+  addProjectPropertyForType,
+  addProjectPropertyValue,
+  changeProjectPropertyRankUnified,
+  getCurrentProjectProperties,
+  getProjectPropertyFieldsForIndex,
+  getPropertyFormIssues,
+  removeProjectProperty,
+  removeProjectPropertyValue,
+  reorderProjectPropertyValue,
+  resetProjectPropertyLocale,
+  stopEvent,
+  translateProjectPropertyLocale,
+  updateProjectPropertyBase,
+  updateProjectPropertyI18n,
+  updateProjectPropertyValue,
+  updateProjectPropertyValueI18n,
+} from '$lib/client/services/property'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -62,6 +82,7 @@ import { NEW_REF, NEW_TITLE } from '$lib/constants'
 import {
   FormI18nDescriptorFields,
   FormI18nSection,
+  FormFieldsSection,
   OrganisationCapabilities,
   FormSpecifiersFields,
   FormUserRolesSection,
@@ -79,27 +100,34 @@ import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
 // ICONS
+import Blend from 'virtual:icons/lucide/blend'
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
+import Type from 'virtual:icons/lucide/type'
 // ENUMS
 import {
   FirstClassResource,
   ImageContextResource,
   OrganisationRoleType,
 } from '$lib/enums'
+import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // TYPES
 import type {
   ImageCtxEnvelope,
   Locale,
   User,
-  OrganisationGetState,
-  OrganisationRoleUser,
-  OrganisationToggleField,
   UserRoleFieldNameResolverForm,
   FormDataUpdaterForm,
-  OrganisationDB,
+  Property,
+  Id,
   CapabilityDefinitions,
   CapabilityKey,
 } from '$lib/types'
+import type {
+  OrganisationBooleanField,
+  OrganisationDB,
+  OrganisationGetState,
+  OrganisationRoleUser,
+} from '$lib/db/zod/schema/organisation.types'
 import type { CapabilityFormFields, CapabilitySearchOption } from '$lib/bits'
 
 // § Context
@@ -135,6 +163,7 @@ let contentsElement: HTMLFormElement | undefined = $state()
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
+let fieldsLayoutMutationVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
 let hasAutoEnteredEditForNew = $state(false)
 
@@ -152,6 +181,7 @@ const commitOrganisationState = (value: OrganisationGetState): void => {
 
 const isCoreFacet = $derived(activeFacet === 'core')
 const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
+const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
@@ -184,7 +214,7 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
     // optimistic view-only entity tweaks (e.g. role UI rows) cannot
     // rehydrate stale i18n values back into the live form.
     data: toOrganisationFormInput(
-      committedOrganisation?.data,
+      committedOrganisation?.data as any,
     ) as OrganisationRemoteFormInput,
     submitUpdates: async ({ data }) =>
       getOrganisationSubmitUpdates({
@@ -213,7 +243,7 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
       )
       commitOrganisationState(refreshed)
       if (refreshed?.data) {
-        formCtx.form.fields.set(toOrganisationFormInput(refreshed.data))
+        formCtx.form.fields.set(toOrganisationFormInput(refreshed.data as any))
       }
     },
   }),
@@ -247,6 +277,234 @@ const capabilityIssues = $derived.by((): string[] => {
     .filter((message: string | null): message is string => Boolean(message))
   return Array.from(new Set(messages))
 })
+
+const facetIssueSummary = $derived.by(() =>
+  resolveFacetIssueSummary({
+    issues: visibleAllIssues,
+    facets: resolvedFacetTabs,
+    formEl: contentsElement,
+  }),
+)
+
+const resolvedFacetTabsWithIssues = $derived.by(() =>
+  withFacetIssueIndicators(resolvedFacetTabs, facetIssueSummary.facetsWithIssues),
+)
+
+const organisationPropertyFormAdapter = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
+)
+
+let fieldRemoveMode = $state(false)
+
+function createPropertyActions(getCount: () => number) {
+  return {
+    add: (event: Event): void => {
+      stopEvent(event)
+      if (!headerCtrl.state.isEditing && canSubmitOrganisation) {
+        headerCtrl.setEditing(true)
+      }
+      addProjectPropertyForType(
+        organisationPropertyFormAdapter,
+        'classifier',
+        '',
+        classifierComponentTypes,
+        specifierComponentTypes,
+        {
+          projectId: null,
+          organisationId: organisation?.data?.id ?? null,
+          hubId: null,
+          scope: 'organisation',
+          isDefaultEnabled: false,
+        },
+      )
+      revalidateAfterProgrammaticChange()
+    },
+    remove: (event: Event, propertyId: Id): void => {
+      stopEvent(event)
+      removeProjectProperty(organisationPropertyFormAdapter, propertyId)
+      if (getCount() <= 1) fieldRemoveMode = false
+      revalidateAfterProgrammaticChange()
+    },
+    increaseRank: (event: Event, propertyId: Id): void => {
+      stopEvent(event)
+      changeProjectPropertyRankUnified(
+        organisationPropertyFormAdapter,
+        propertyId,
+        'up',
+      )
+      revalidateAfterProgrammaticChange()
+    },
+    decreaseRank: (event: Event, propertyId: Id): void => {
+      stopEvent(event)
+      changeProjectPropertyRankUnified(
+        organisationPropertyFormAdapter,
+        propertyId,
+        'down',
+      )
+      revalidateAfterProgrammaticChange()
+    },
+  }
+}
+
+const updatePropertyBase = (
+  propertyId: Id,
+  key:
+    | 'key'
+    | 'component'
+    | 'min'
+    | 'max'
+    | 'isTranslatable'
+    | 'isDefaultEnabled'
+    | 'isEnabled',
+  value: string | number | null | boolean,
+): void => {
+  updateProjectPropertyBase(organisationPropertyFormAdapter, propertyId, key, value)
+  revalidateAfterProgrammaticChange()
+}
+
+const updatePropertyI18n = (
+  propertyId: Id,
+  locale: Locale,
+  key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
+  value: string | boolean,
+): void => {
+  updateProjectPropertyI18n(
+    organisationPropertyFormAdapter,
+    propertyId,
+    locale,
+    key,
+    value,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+const addPropertyValue = (propertyId: Id): void => {
+  addProjectPropertyValue(organisationPropertyFormAdapter, propertyId)
+  revalidateAfterProgrammaticChange()
+}
+
+const removePropertyValue = (propertyId: Id, valueId: Id): void => {
+  removeProjectPropertyValue(organisationPropertyFormAdapter, propertyId, valueId)
+  revalidateAfterProgrammaticChange()
+}
+
+const movePropertyValue = (propertyId: Id, valueId: Id, targetIndex: number): void => {
+  reorderProjectPropertyValue(
+    organisationPropertyFormAdapter,
+    propertyId,
+    valueId,
+    targetIndex,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+const updatePropertyValueI18n = (
+  propertyId: Id,
+  valueId: Id,
+  locale: Locale,
+  key: 'value',
+  value: string,
+): void => {
+  updateProjectPropertyValueI18n(
+    organisationPropertyFormAdapter,
+    propertyId,
+    valueId,
+    locale,
+    key,
+    value,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+const updatePropertyValue = (
+  propertyId: Id,
+  valueId: Id,
+  key: 'value',
+  value: string,
+): void => {
+  updateProjectPropertyValue(
+    organisationPropertyFormAdapter,
+    propertyId,
+    valueId,
+    key,
+    value,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+const onTranslatePropertyLocale = async (
+  propertyId: Id,
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> => {
+  const translated = await translateProjectPropertyLocale(
+    organisationPropertyFormAdapter,
+    propertyId,
+    sourceLocale,
+    targetLocale,
+  )
+  if (translated) revalidateAfterProgrammaticChange()
+  return translated
+}
+
+const onResetPropertyLocale = (propertyId: Id, targetLocale: Locale): void => {
+  resetProjectPropertyLocale(organisationPropertyFormAdapter, propertyId, targetLocale)
+  revalidateAfterProgrammaticChange()
+}
+
+const organisationFieldsInSection = $derived(
+  [...getCurrentProjectProperties(organisationPropertyFormAdapter)].sort(
+    (left, right) => (left.rank ?? 0) - (right.rank ?? 0),
+  ),
+)
+
+const fieldActions = createPropertyActions(() => organisationFieldsInSection.length)
+
+const propertyFormIssues = $derived.by(
+  (): Array<{ message: string; path?: Array<string | number> }> =>
+    getPropertyFormIssues(visibleAllIssues),
+)
+
+const fieldSectionIssues = $derived.by(() => {
+  const messages = propertyFormIssues.map(issue => issue.message).filter(Boolean)
+  return Array.from(new Set(messages))
+})
+
+const fieldSectionIssueItemIds = $derived.by(() => {
+  const properties = getCurrentProjectProperties(organisationPropertyFormAdapter)
+  return Array.from(
+    new Set(
+      propertyFormIssues
+        .map(issue => {
+          const path = issue.path
+          if (!Array.isArray(path)) return null
+          const index = path[2]
+          if (typeof index !== 'number') return null
+          return properties[index]?.id ?? null
+        })
+        .filter((id): id is Id => Boolean(id)),
+    ),
+  )
+})
+
+function resolveOrganisationPropertyTypeTag(property: Property): {
+  label?: string
+  title?: string
+  tone: 'global' | 'hub' | 'org' | 'project'
+  iconComponent?: typeof Blend
+} {
+  return property.type === 'classifier'
+    ? {
+        tone: 'org',
+        title: m.admin__forms_common_categorical_field(),
+        iconComponent: Blend,
+      }
+    : {
+        tone: 'org',
+        title: m.admin__forms_common_free_form_field(),
+        iconComponent: Type,
+      }
+}
 
 // USER ROLES
 
@@ -382,7 +640,9 @@ const currentHub = $derived(adminCtx.appCtx.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
 const organisationPermissions = $derived.by(() => {
   const organisationData = organisation?.data
-  const newEntityHubId = currentHub?.isCore ? null : (currentHub?.id ?? null)
+  const newEntityHubId = currentHub?.isCore
+    ? null
+    : ((currentHub as { id?: string } | null | undefined)?.id ?? null)
   return resolveOrganisationActionPermissions(
     currentActor,
     organisationData
@@ -507,7 +767,7 @@ async function handleOrganisationStateToggle({
   setBusy,
   mutate,
 }: {
-  field: OrganisationToggleField
+  field: OrganisationBooleanField
   successWhenTrue: string
   successWhenFalse: string
   setBusy: (value: boolean) => void
@@ -576,11 +836,13 @@ async function onDeleteToggle(): Promise<void> {
 }
 
 function onReset(): void {
+  fieldRemoveMode = false
+  fieldsLayoutMutationVersion += 1
   suppressFormLevelIssues = true
   formCtx.clearSubmitAttemptState()
   if (committedOrganisation?.data) {
     organisation = committedOrganisation
-    formCtx.form.fields.set(toOrganisationFormInput(committedOrganisation.data))
+    formCtx.form.fields.set(toOrganisationFormInput(committedOrganisation.data as any))
     return
   }
   formCtx.reset()
@@ -591,8 +853,12 @@ function onSubmit(): void {
   if (!isCurrentRefLoaded) {
     return
   }
+  if (isNewOrganisationRef) {
+    formCtx.requestSubmit({ meta: { mode: 'create' } })
+    return
+  }
   const baseMeta = committedOrganisation?.data
-    ? (toOrganisationFormInput(committedOrganisation.data).meta ?? {})
+    ? (toOrganisationFormInput(committedOrganisation.data as any).meta ?? {})
     : undefined
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
@@ -635,11 +901,22 @@ $effect(() => {
     organisation?.data?.i18n?.[getLocaleKey()]?.name ??
     organisation?.data?.code ??
     m.any_small_midge_aim()
-  const facetKey = Array.from(resolvedFacetTabs.keys()).join('|')
+  const facetKey = Array.from(resolvedFacetTabsWithIssues.entries())
+    .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
+    .join('|')
   const headerKey = `${ref}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, OrganisationIcon, resolvedFacetTabs)
+  headerCtrl.setHeaderForEntity(title, OrganisationIcon, resolvedFacetTabsWithIssues)
+})
+
+$effect(() => {
+  if (!formCtx.wasSubmitAttempted) return
+  if (visibleAllIssues.length === 0) return
+  const targetFacet = facetIssueSummary.firstFacetWithIssues
+  if (!targetFacet) return
+  if (activeFacet === targetFacet) return
+  adminCtx.setFacet(targetFacet, organisationRef, FirstClassResource.organisation)
 })
 
 // Archived entities are read-only until restored.
@@ -680,6 +957,12 @@ $effect(() => {
 $effect(() => {
   if (activeFacet !== 'capabilities') return
   if (canEditOrganisation) return
+  adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
+})
+
+// Guard unsupported facet states (for permission-constrained views).
+$effect(() => {
+  if (resolvedFacetTabs.has(activeFacet)) return
   adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
 })
 
@@ -733,7 +1016,11 @@ $effect(() => {
     isReady={Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef))}
     class="space-y-4"
   >
-    <Main.Section isVisible={isCoreFacet} transition="fade">
+    <Main.Section
+      isVisible={isCoreFacet}
+      transition="fade"
+      attrs={{ 'data-facet-id': 'core' }}
+    >
       <FormI18nSection
         title={m.admin__forms_common_descriptors()}
         {locales}
@@ -789,6 +1076,7 @@ $effect(() => {
     <Main.Section
       isVisible={isCapabilitiesFacet && canEditOrganisation}
       transition="fade"
+      attrs={{ 'data-facet-id': 'capabilities' }}
     >
       <OrganisationCapabilities
         {selectedCapabilityKeys}
@@ -808,11 +1096,65 @@ $effect(() => {
         onEnterEditMode={() => headerCtrl.setEditing(true)}
       />
     </Main.Section>
+    <Main.Section
+      isVisible={isFieldsFacet}
+      transition="fade"
+      class="bits-theme flex gap-4 min-h-0 flex-col"
+      attrs={{ 'data-facet-id': 'fields' }}
+    >
+      <FormFieldsSection
+        items={organisationFieldsInSection}
+        title={m.admin__forms_common_fields()}
+        description={m.admin__forms_common_fields_subtitle()}
+        issues={fieldSectionIssues}
+        actions={fieldActions}
+        issueItemIds={fieldSectionIssueItemIds}
+        layoutMutationVersion={fieldsLayoutMutationVersion}
+        canEdit={canSubmitOrganisation && isCurrentRefLoaded}
+        {isEditing}
+        removeMode={fieldRemoveMode}
+        onRemoveModeChange={value => {
+          fieldRemoveMode = value
+        }}
+        card={{
+          removeMode: fieldRemoveMode,
+          locales,
+          isEditing,
+          isRequiredInPreflight,
+          allIssues: visibleAllIssues as Array<{
+            message: string
+            path?: Array<string | number>
+          }>,
+          classifierComponents: classifierComponentTypes,
+          specifierComponents: specifierComponentTypes,
+          onIncreaseRank: fieldActions.increaseRank,
+          onDecreaseRank: fieldActions.decreaseRank,
+          onRemove: fieldActions.remove,
+          onUpdateBase: updatePropertyBase,
+          onUpdateI18n: updatePropertyI18n,
+          onAddValue: addPropertyValue,
+          onRemoveValue: removePropertyValue,
+          onMoveValue: movePropertyValue,
+          onUpdateValue: updatePropertyValue,
+          onUpdateValueI18n: updatePropertyValueI18n,
+          onTranslateLocale: onTranslatePropertyLocale,
+          onResetLocale: onResetPropertyLocale,
+          getPropertyIndex: (propertyId, _sectionIndex) =>
+            getCurrentProjectProperties(organisationPropertyFormAdapter).findIndex(
+              candidate => candidate.id === propertyId,
+            ),
+          getPropertyFields: (_propertyId, propertyIndex) =>
+            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+          resolveSourceTag: resolveOrganisationPropertyTypeTag,
+        }}
+      />
+    </Main.Section>
   </Main.Form>
   <Main.Section
     isVisible={isImagesFacet}
     transition="fade"
     class="flex min-h-0 flex-col"
+    attrs={{ 'data-facet-id': 'images' }}
   >
     <EntityImage
       {page}
