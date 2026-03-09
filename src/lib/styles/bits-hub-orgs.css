@@ -1,11 +1,16 @@
 @layer components {
-  .bits-theme .bits-form__hub-orgs {
+  .bits-theme .bits-form__section.bits-form__hub-orgs {
     display: flex;
     flex-direction: column;
     gap: calc(var(--spacing) * 2);
     position: relative;
     z-index: 80;
     overflow: visible;
+  }
+
+  .bits-theme .bits-form__section.bits-form__hub-orgs.bits-form__hub-orgs--search-open {
+    z-index: 200;
+    isolation: isolate;
   }
 
   .bits-theme .bits-form__hub-orgs-header {
@@ -74,20 +79,32 @@
     background: var(--color-background-secondary);
   }
 
-  .bits-theme .bits-form__hub-orgs-search {
+  .bits-theme .bits-form__section.bits-form__hub-orgs .bits-form__hub-orgs-search {
     padding-inline: calc(var(--spacing) * 1.5);
     position: relative;
     z-index: 60;
     overflow: visible;
   }
 
-  .bits-theme .bits-form__hub-orgs-search .bits-search {
+  .bits-theme
+    .bits-form__section.bits-form__hub-orgs
+    .bits-form__hub-orgs-search
+    .bits-search {
     position: relative;
     z-index: 60;
   }
 
-  .bits-theme .bits-form__hub-orgs-search .bits-search__results {
-    z-index: 70;
+  .bits-theme
+    .bits-form__section.bits-form__hub-orgs
+    .bits-form__hub-orgs-search
+    .bits-search__results {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: calc(var(--spacing) * 1.5);
+    padding-inline: 0;
+    z-index: 170;
   }
 
   .bits-theme .bits-form__hub-orgs-warning {

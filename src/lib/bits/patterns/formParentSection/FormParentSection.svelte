@@ -82,7 +82,9 @@ $effect(() => {
 })
 </script>
 
-<section class={`bits-form__section bits-form__hub-orgs ${className}`}>
+<section
+  class={`bits-form__section bits-form__hub-orgs ${isAdding && showModeUi ? 'bits-form__hub-orgs--search-open' : ''} ${className}`}
+>
   <SectionHeader {title} description={subtitle} class="bits-form__hub-orgs-header">
     {#snippet center()}
       <SectionHeaderPrimitive.Issues {issues} />
