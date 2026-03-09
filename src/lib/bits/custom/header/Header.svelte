@@ -41,9 +41,7 @@ const resolvedStyle = $derived(style ?? undefined)
 </script>
 
 <HeaderPrimitive.Root bind:ref {id} class={rootClass} style={resolvedStyle}>
-  {#if crumbs.length > 0}
-    <HeaderBreadcrumbs {crumbs} />
-  {/if}
+  <HeaderBreadcrumbs {crumbs} />
 
   {#if IconComponent}
     <HeaderPrimitive.Icon

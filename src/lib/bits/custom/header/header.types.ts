@@ -4,7 +4,7 @@ export type HeaderSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 export interface HeaderCrumb {
   name: string
-  href: string
+  href?: string
 }
 
 export interface HeaderProps {

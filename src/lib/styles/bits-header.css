@@ -122,18 +122,24 @@
   }
 
   .bits-theme .bits-header__breadcrumbs {
-    @apply flex items-center gap-2 text-sm font-medium;
+    @apply grid items-center text-sm font-medium;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    column-gap: 0.5rem;
     grid-column: 1;
     grid-row: 1;
     width: fit-content;
     max-width: 100%;
-    flex-wrap: nowrap;
     white-space: nowrap;
     color: color-mix(in oklab, var(--color-base-content) 74%, black);
   }
 
   .bits-theme .bits-header--with-icon .bits-header__breadcrumbs {
     grid-column: 2;
+  }
+
+  .bits-theme .bits-header__breadcrumb-item {
+    @apply inline-flex items-center gap-2;
   }
 
   .bits-theme .bits-header__breadcrumb-link {

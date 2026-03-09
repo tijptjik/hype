@@ -59,16 +59,27 @@ class:to-fuchsia-800={!isIndex} -->
                 <div
                   class="hidden items-center space-x-2 text-sm font-medium text-gray-300 @md:flex"
                 >
-                  {#each breadcrumbs as parent, i}
-                    <a
-                      draggable="false"
-                      out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
-                      in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
-                      href={parent.href}
-                      class="inline-block h-5 select-none overflow-hidden whitespace-nowrap hover:text-white"
-                    >
-                      {parent.name}
-                    </a>
+                  {#each breadcrumbs as parent, i (parent.href ?? `current:${parent.name}`)}
+                    {#if parent.href}
+                      <a
+                        draggable="false"
+                        out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                        in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                        href={parent.href}
+                        class="inline-block h-5 select-none overflow-hidden whitespace-nowrap hover:text-white"
+                      >
+                        {parent.name}
+                      </a>
+                    {:else}
+                      <span
+                        out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                        in:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
+                        class="inline-block h-5 select-none overflow-hidden whitespace-nowrap"
+                        aria-current="page"
+                      >
+                        {parent.name}
+                      </span>
+                    {/if}
                     {#if i < breadcrumbs.length - 1}
                       <span
                         out:slide={{ duration: 200, delay: 100 * i, axis: 'x' }}
