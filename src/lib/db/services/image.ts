@@ -256,7 +256,7 @@ export const getImageForContextType = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   isAdminMode: boolean = false,
 ): Promise<ImageDBFlat[] | ImageDB[]> => {
-  let images: ImageDBFlat[]
+  let images: ImageDBFlat[] | ImageDB[] = []
   if (ctxType === ImageContextResource.feature) {
     images = await getImagesForFeature(db, conditions, pagination, sorting)
   } else if (ctxType === ImageContextResource.hub) {
@@ -299,7 +299,7 @@ export const getImagesForFeature = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDBFlat[]> => {
   const orderBy = toOrderBy(sorting)
-  return (await db
+  const query = db
     .select({
       ...getTableColumns(image),
       intent: featureImage.intent,
@@ -312,8 +312,18 @@ export const getImagesForFeature = async (
     .leftJoin(user, eq(image.contributorId, user.id))
     .where(and(...conditions))
     .orderBy(orderBy)
-    .limit(pagination?.limit)
-    .offset(pagination?.offset)) as ImageDBFlat[]
+  if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
+    return (await query
+      .limit(pagination.limit)
+      .offset(pagination.offset)) as ImageDBFlat[]
+  }
+  if (typeof pagination?.limit === 'number') {
+    return (await query.limit(pagination.limit)) as ImageDBFlat[]
+  }
+  if (typeof pagination?.offset === 'number') {
+    return (await query.offset(pagination.offset)) as ImageDBFlat[]
+  }
+  return (await query) as ImageDBFlat[]
 }
 
 /**
@@ -330,7 +340,7 @@ export const getImagesForTask = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDBFlat[]> => {
   const orderBy = toOrderBy(sorting)
-  return (await db
+  const query = db
     .select({
       ...getTableColumns(image),
       intent: featureImage.intent,
@@ -344,8 +354,18 @@ export const getImagesForTask = async (
     .leftJoin(user, eq(image.contributorId, user.id))
     .where(and(...conditions))
     .orderBy(orderBy)
-    .limit(pagination?.limit)
-    .offset(pagination?.offset)) as ImageDBFlat[]
+  if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
+    return (await query
+      .limit(pagination.limit)
+      .offset(pagination.offset)) as ImageDBFlat[]
+  }
+  if (typeof pagination?.limit === 'number') {
+    return (await query.limit(pagination.limit)) as ImageDBFlat[]
+  }
+  if (typeof pagination?.offset === 'number') {
+    return (await query.offset(pagination.offset)) as ImageDBFlat[]
+  }
+  return (await query) as ImageDBFlat[]
 }
 
 export const getImageForProject = async (
@@ -355,14 +375,22 @@ export const getImageForProject = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDB[]> => {
   const orderBy = toOrderBy(sorting)
-  return await db
+  const query = db
     .select({ ...getTableColumns(image) })
     .from(image)
     .innerJoin(project, eq(image.id, project.imageId))
     .where(and(...conditions))
     .orderBy(orderBy)
-    .limit(pagination?.limit)
-    .offset(pagination?.offset)
+  if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
+    return await query.limit(pagination.limit).offset(pagination.offset)
+  }
+  if (typeof pagination?.limit === 'number') {
+    return await query.limit(pagination.limit)
+  }
+  if (typeof pagination?.offset === 'number') {
+    return await query.offset(pagination.offset)
+  }
+  return await query
 }
 
 export const getImageForOrganisation = async (
@@ -372,14 +400,22 @@ export const getImageForOrganisation = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDB[]> => {
   const orderBy = toOrderBy(sorting)
-  return await db
+  const query = db
     .select({ ...getTableColumns(image) })
     .from(image)
     .innerJoin(organisation, eq(image.id, organisation.imageId))
     .where(and(...conditions))
     .orderBy(orderBy)
-    .limit(pagination?.limit)
-    .offset(pagination?.offset)
+  if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
+    return await query.limit(pagination.limit).offset(pagination.offset)
+  }
+  if (typeof pagination?.limit === 'number') {
+    return await query.limit(pagination.limit)
+  }
+  if (typeof pagination?.offset === 'number') {
+    return await query.offset(pagination.offset)
+  }
+  return await query
 }
 
 export const getImageForHub = async (
@@ -389,14 +425,22 @@ export const getImageForHub = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDB[]> => {
   const orderBy = toOrderBy(sorting)
-  return await db
+  const query = db
     .select({ ...getTableColumns(image) })
     .from(image)
     .innerJoin(hub, eq(image.id, hub.imageId))
     .where(and(...conditions))
     .orderBy(orderBy)
-    .limit(pagination?.limit)
-    .offset(pagination?.offset)
+  if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
+    return await query.limit(pagination.limit).offset(pagination.offset)
+  }
+  if (typeof pagination?.limit === 'number') {
+    return await query.limit(pagination.limit)
+  }
+  if (typeof pagination?.offset === 'number') {
+    return await query.offset(pagination.offset)
+  }
+  return await query
 }
 
 export const getImagesForUser = async (
@@ -406,13 +450,21 @@ export const getImagesForUser = async (
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
 ): Promise<ImageDB[]> => {
   const orderBy = toOrderBy(sorting)
-  return await db
+  const query = db
     .select({ ...getTableColumns(image) })
     .from(image)
     .where(and(...conditions))
     .orderBy(orderBy)
-    .limit(pagination?.limit)
-    .offset(pagination?.offset)
+  if (typeof pagination?.limit === 'number' && typeof pagination?.offset === 'number') {
+    return await query.limit(pagination.limit).offset(pagination.offset)
+  }
+  if (typeof pagination?.limit === 'number') {
+    return await query.limit(pagination.limit)
+  }
+  if (typeof pagination?.offset === 'number') {
+    return await query.offset(pagination.offset)
+  }
+  return await query
 }
 
 // ═══════════════════════
