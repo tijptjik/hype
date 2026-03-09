@@ -22,7 +22,8 @@ import { image, featureImage, project, organisation, hub } from '$lib/db/schema/
 import {
   getImageById as loadImageById,
   toImageEntityResponseShape,
-  toResponseShape,
+  toResponseShape as toImageResponseShapeFromDb,
+  toResponseShapeProjectOrOrganisation as toImageProjectOrOrganisationResponseShapeFromDb,
   updateFeatureImage,
   updateImage as updateImageRecord,
 } from '$lib/db/services/image'
@@ -36,6 +37,7 @@ import type {
   ImageNew,
   ImageDBFlat,
   HubOpts,
+  HubOptsExtended,
   SessionUser,
   ImageContextType,
   ParamsToSign,
@@ -45,7 +47,7 @@ import type {
   ImageContextEnvelope,
 } from '$lib/types'
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
-import { error } from '@sveltejs/kit'
+import { error, type RequestEvent } from '@sveltejs/kit'
 import { applyResourceContextConstraints } from '$lib/db/services/image'
 import { getProjectIdForFeatureId } from '$lib/db/services/feature'
 import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
@@ -109,6 +111,32 @@ export const toImageProfile = (value: unknown, fallback: ImageProfile): ImagePro
   typeof value === 'string' && (imageProfiles as readonly string[]).includes(value)
     ? (value as ImageProfile)
     : fallback
+
+/**
+ * Shapes an image record plus optional feature-image fields into API wire format.
+ *
+ * @param image - Base image row.
+ * @param featureImage - Optional related feature-image row.
+ * @param attribution - Optional contributor attribution string.
+ * @returns Flattened image payload for API responses.
+ */
+export const toResponseShape = async (
+  image: Parameters<typeof toImageResponseShapeFromDb>[0],
+  featureImage: Parameters<typeof toImageResponseShapeFromDb>[1],
+  attribution: string | undefined,
+): Promise<ImageDBFlat> => toImageResponseShapeFromDb(image, featureImage, attribution)
+
+/**
+ * Shapes a project/organisation scoped image into API wire format.
+ *
+ * @param image - Base image row.
+ * @param attribution - Optional contributor attribution string.
+ * @returns Image payload for API responses.
+ */
+export const toResponseShapeProjectOrOrganisation = async (
+  image: Parameters<typeof toImageProjectOrOrganisationResponseShapeFromDb>[0],
+  attribution: string | undefined,
+): Promise<Image> => toImageProjectOrOrganisationResponseShapeFromDb(image, attribution)
 
 // ═══════════════════════
 // 2. COMMON
@@ -266,6 +294,17 @@ export const getImageByIdsQueryContext = (
   return { conditions }
 }
 
+const toHubOptsExtended = (
+  hubOpts: HubOpts,
+  user: SessionUser,
+  request: Request,
+): HubOptsExtended =>
+  ({
+    ...(hubOpts as HubOptsExtended),
+    isAdminRequest: isAdminRequest(request),
+    isSuperAdmin: Boolean(user.superAdmin),
+  }) as HubOptsExtended
+
 // ═══════════════════════
 // 4. ASSERTIONS
 // ═══════════════════════
@@ -289,10 +328,11 @@ export const assertPermissionsToCreateImage = async (
   ]
 
   let contextAssertion = () => {} // Placeholder for context-specific assertion
+  const hubOptsExtended = toHubOptsExtended(hubOpts, user, request)
 
   switch (ctxType) {
     case ImageContextResource.feature: {
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts)
+      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOptsExtended)
       contextAssertion = () =>
         assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
       break
@@ -337,10 +377,11 @@ export const assertPermissionsToUpdateImage = async (
   // 1. Users with specific roles in the context (feature's project members/maintainers, organisation's owners, project's maintainers).
   // 2. SuperAdmins.
   let contextAssertion = () => {} // Placeholder
+  const hubOptsExtended = toHubOptsExtended(hubOpts, user, request)
 
   switch (ctxType) {
     case ImageContextResource.feature: {
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOpts)
+      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOptsExtended)
       contextAssertion = () =>
         assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
       break
@@ -438,7 +479,7 @@ export const updateImageForContext = async (args: {
   user: SessionUser
   userId: Id
   userRoles: UserRoleDisco[]
-  event: App.RequestEvent
+  event: RequestEvent
   id: string
   ctxType: ImageContextType
   ctxId: string

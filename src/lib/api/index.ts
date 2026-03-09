@@ -936,6 +936,21 @@ export const removeExcludedColumns = (
 }
 
 /**
+ * Parses a tri-state boolean-like value.
+ * Returns `true`, `false`, `null`, or `undefined` when not coercible.
+ */
+export const toTriStateBoolean = (value: unknown): boolean | null | undefined => {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  if (value === true || value === false) return value
+  if (value === 'true') return true
+  if (value === 'false') return false
+  if (value === 1) return true
+  if (value === 0) return false
+  return undefined
+}
+
+/**
  * Produces a deterministic, recursively sorted structure for stable comparisons.
  * @param value Input value to normalize.
  * @returns A recursively normalized value with object keys sorted and `undefined` removed.

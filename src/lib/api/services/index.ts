@@ -1,3 +1,5 @@
+import { toStableSignature, toTriStateBoolean } from '$lib/api'
+
 export const toBooleanOrUndefined = (value: unknown): boolean | undefined => {
   if (value === true || value === false) return value
   if (value === 'true') return true
@@ -8,9 +10,10 @@ export const toBooleanOrUndefined = (value: unknown): boolean | undefined => {
 export const toTriStateBooleanOrUndefined = (
   value: unknown,
 ): boolean | null | undefined => {
-  if (value === null) return null
-  return toBooleanOrUndefined(value)
+  return toTriStateBoolean(value)
 }
+
+export { toStableSignature }
 
 export const getDuplicateValues = <T>(values: T[]): T[] =>
   values.filter((value, index, array) => array.indexOf(value) !== index)
@@ -75,4 +78,26 @@ export const validateUniqueNonReservedCode = async (params: {
   if (persisted && (!params.current || persisted.id !== params.current.id)) {
     params.onConflict()
   }
+}
+
+/**
+ * Infers property discriminator type from the UI field component identifier.
+ *
+ * @param component - Submitted field component key.
+ * @returns Inferred discriminator or `undefined` when component is not recognized.
+ */
+export const inferPropertyDiscriminatorFromComponent = (
+  component: unknown,
+): 'classifier' | 'specifier' | undefined => {
+  if (
+    component === 'SelectField' ||
+    component === 'RangeField' ||
+    component === 'ToggleField'
+  ) {
+    return 'classifier'
+  }
+  if (component === 'InputField' || component === 'TextareaField') {
+    return 'specifier'
+  }
+  return undefined
 }
