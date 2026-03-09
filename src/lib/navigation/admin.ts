@@ -4,6 +4,7 @@ import { goto } from '$app/navigation'
 import { ADMIN_PATH } from '$lib/constants'
 // ENUMS
 import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums'
+import type { HeaderCrumb } from '$lib/bits/custom/header'
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { AppCtx } from '$lib/context/app.svelte'
@@ -11,13 +12,14 @@ import type {
   Code,
   FacetType,
   Id,
+  NavigableResource,
   Resource,
   Organisation,
   Project,
   Hub,
 } from '$lib/types'
 
-function isNavigable(resource: unknown): resource is FirstClassResource {
+function isNavigable(resource: unknown): resource is NavigableResource {
   return (
     Object.values(FirstClassResource).includes(resource as FirstClassResource) &&
     resource !== FirstClassResource.property
@@ -117,7 +119,7 @@ export async function getBreadcrumbs(
   appCtx: AppCtx,
   resourceType: FirstClassResource,
   resourceRef: Id | Code,
-): Promise<{ name: string; href: string }[]> {
+): Promise<HeaderCrumb[]> {
   try {
     const currentResource = await appCtx.getResourceByRef(resourceType, resourceRef)
     if (!currentResource) {
@@ -125,7 +127,32 @@ export async function getBreadcrumbs(
     }
 
     const hierarchy = await appCtx.getHierarchy(currentResource)
-    const breadcrumbs: { name: string; href: string }[] = []
+    const hierarchyHub = (hierarchy as { hub?: unknown }).hub
+    const breadcrumbs: HeaderCrumb[] = []
+
+    const getHubCrumbName = (value: unknown): string => {
+      const code =
+        typeof (value as { code?: unknown })?.code === 'string'
+          ? ((value as { code: string }).code ?? '').trim()
+          : ''
+      const i18n = (value as { i18n?: Record<string, { nameShort?: string | null }> })
+        ?.i18n
+      const shortName = (
+        i18n?.en?.nameShort ??
+        i18n?.zhHans?.nameShort ??
+        i18n?.zhHant?.nameShort ??
+        ''
+      ).trim()
+      return code || shortName || 'Hub'
+    }
+
+    if (resourceType === FirstClassResource.hub) {
+      return [{ name: getHubCrumbName(hierarchyHub ?? currentResource) }]
+    }
+
+    if (hierarchyHub) {
+      breadcrumbs.push({ name: getHubCrumbName(hierarchyHub) })
+    }
 
     const projectOrganisationCode = async (): Promise<string | null> => {
       if (resourceType !== FirstClassResource.project) return null
@@ -160,34 +187,48 @@ export async function getBreadcrumbs(
         ? await projectOrganisationCode()
         : (hierarchy.organisation?.code ?? null)
 
-    if (organisationCode && resourceType !== 'organisation') {
+    if (
+      organisationCode &&
+      hierarchy.organisation &&
+      resourceType !== FirstClassResource.organisation
+    ) {
+      const organisationName =
+        appCtx.getContextualOrganisationName(hierarchy.organisation, false, false) ??
+        hierarchy.organisation.code
       breadcrumbs.push({
-        name: appCtx.getContextualOrganisationName(
-          hierarchy.organisation,
-          false,
-          false,
-        ),
+        name: organisationName,
         href: `${ADMIN_PATH}/${ResourcePath.organisation}/${organisationCode}`,
       })
     }
 
-    if (hierarchy.project && resourceType !== 'project') {
+    if (hierarchy.project && resourceType !== FirstClassResource.project) {
+      const projectName =
+        appCtx.getContextualProjectName(hierarchy.project, false, false) ??
+        hierarchy.project.code
       breadcrumbs.push({
-        name: appCtx.getContextualProjectName(hierarchy.project, false, false),
+        name: projectName,
         href: `${ADMIN_PATH}/${ResourcePath.project}/${hierarchy.project.code}`,
       })
     }
 
-    if (hierarchy.layer && resourceType !== 'layer') {
+    if (hierarchy.layer && resourceType !== FirstClassResource.layer) {
+      const layerName =
+        appCtx.getContextualLayerName(hierarchy.layer, false, false) ??
+        hierarchy.layer.id
       breadcrumbs.push({
-        name: appCtx.getContextualLayerName(hierarchy.layer, false, false),
+        name: layerName,
         href: `${ADMIN_PATH}/${ResourcePath.layer}/${hierarchy.layer.id}`,
       })
     }
 
-    if (hierarchy.feature && resourceType !== 'feature') {
+    if (hierarchy.feature && resourceType !== FirstClassResource.feature) {
+      const feature = hierarchy.feature as Parameters<
+        typeof appCtx.getContextualFeatureName
+      >[0]
+      const featureName =
+        appCtx.getContextualFeatureName(feature) ?? hierarchy.feature.id
       breadcrumbs.push({
-        name: appCtx.getContextualFeatureName(hierarchy.feature, false),
+        name: featureName,
         href: `${ADMIN_PATH}/${ResourcePath.feature}/${hierarchy.feature.id}`,
       })
     }
