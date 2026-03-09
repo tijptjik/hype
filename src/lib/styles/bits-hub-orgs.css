@@ -3,15 +3,53 @@
     display: flex;
     flex-direction: column;
     gap: calc(var(--spacing) * 2);
+    position: relative;
+    z-index: 80;
+    overflow: visible;
   }
 
   .bits-theme .bits-form__hub-orgs-header {
     align-items: center;
   }
 
+  .bits-theme .bits-form__hub-orgs-header .bits-form__section-header-right {
+    width: auto;
+    flex: 0 0 auto;
+    min-width: max-content;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__hub-orgs-header-actions {
+    width: max-content;
+    min-width: max-content;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .bits-theme
+    .bits-form__hub-orgs-header.bits-form__section-header--with-center
+    .bits-form__section-header-right {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: max-content;
+    justify-self: end;
+    overflow: visible;
+  }
+
   .bits-theme .bits-form__hub-orgs-actions {
     display: flex;
     gap: calc(var(--spacing) * 1.5);
+  }
+
+  .bits-theme .bits-form__hub-orgs-replace-btn {
+    gap: calc(var(--spacing) * 1.5);
+    padding-inline: 1rem;
+    min-width: fit-content;
+  }
+
+  .bits-theme .bits-form__hub-orgs-replace-btn:disabled,
+  .bits-theme .bits-form__hub-orgs-replace-btn[aria-disabled="true"] {
+    opacity: 0.7;
   }
 
   .bits-theme .bits-form__hub-orgs-action,
@@ -38,6 +76,18 @@
 
   .bits-theme .bits-form__hub-orgs-search {
     padding-inline: calc(var(--spacing) * 1.5);
+    position: relative;
+    z-index: 60;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__hub-orgs-search .bits-search {
+    position: relative;
+    z-index: 60;
+  }
+
+  .bits-theme .bits-form__hub-orgs-search .bits-search__results {
+    z-index: 70;
   }
 
   .bits-theme .bits-form__hub-orgs-warning {

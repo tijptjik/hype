@@ -261,6 +261,36 @@ export function getURLfromImage(opts: {
 }
 
 /**
+ * Safely resolves a display URL from mixed image payload shapes.
+ * Accepts plain URL strings, image envelopes, or bare image objects.
+ */
+export function getImageSrc(
+  input: unknown,
+  options: { transformation?: string } = {},
+): string | null {
+  if (!input) return null
+  if (typeof input === 'string') return input
+
+  const transformation = options.transformation ?? 'c_fill,h_96,w_96'
+
+  try {
+    const imageEnvelope =
+      input && typeof input === 'object' && 'image' in input
+        ? (input as ImageContextEnvelope | ImageCtxEnvelope)
+        : ({
+            image: input,
+          } as ImageContextEnvelope)
+
+    return getURLfromImage({
+      image: imageEnvelope,
+      transformation,
+    })
+  } catch {
+    return null
+  }
+}
+
+/**
  * Transforms a Cloudinary API response into a partial NewImageAPI object.
  * @param response - The raw Cloudinary API response.
  * @returns A partial NewImageAPI object.

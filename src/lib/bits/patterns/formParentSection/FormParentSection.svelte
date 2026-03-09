@@ -3,7 +3,7 @@ import { slide } from 'svelte/transition'
 import { Button } from '$lib/bits/core'
 import { Search, SectionHeader } from '$lib/bits/custom'
 import { OrganisationCard } from '$lib/bits/patterns/organisationCard'
-import { getURLfromImage } from '$lib/client/services/image'
+import { getImageSrc } from '$lib/client/services/image'
 import ReplaceIcon from 'virtual:icons/lucide/replace'
 import XIcon from 'virtual:icons/lucide/x'
 import type {
@@ -31,18 +31,6 @@ let hasAutoOpenedAdding = $state(false)
 
 const showModeUi = $derived(isEditing && !isSubmitting)
 const currentParentId = $derived(parent?.id ?? '')
-
-function toImageSrc(organisation: ParentSectionOrganisationItem): string | null {
-  if (!organisation.image) return null
-  try {
-    return getURLfromImage({
-      image: organisation.image as Parameters<typeof getURLfromImage>[0]['image'],
-      transformation: 'c_fill,h_96,w_96',
-    })
-  } catch {
-    return null
-  }
-}
 
 function toggleAdding(): void {
   isAdding = !isAdding
@@ -89,7 +77,7 @@ $effect(() => {
     {#snippet right()}
       {#if isEditing}
         <div
-          class="bits-form__section-header-actions flex w-full flex-row items-center justify-end gap-0"
+          class="bits-form__hub-orgs-header-actions flex flex-row items-center justify-end gap-0"
         >
           <Button
             text={isAdding ? 'Cancel' : 'Replace'}
@@ -98,8 +86,8 @@ $effect(() => {
             size="sm"
             iconComponent={isAdding ? XIcon : ReplaceIcon}
             onClick={toggleAdding}
-            disabled={!isEditing || isSubmitting}
-            class="bits-form__section-header-action-btn whitespace-nowrap h-10"
+            disabled={isSubmitting}
+            class="bits-form__hub-orgs-replace-btn whitespace-nowrap h-10"
           />
         </div>
       {/if}
@@ -119,7 +107,10 @@ $effect(() => {
         getItemId={(organisation: any) => organisation.id}
         onSelect={handleReplaceParent as any}
         resultMap={{
-          image: (organisation: any) => toImageSrc(organisation as ParentSectionOrganisationItem),
+          image: (organisation: any) =>
+            getImageSrc((organisation as ParentSectionOrganisationItem).image, {
+              transformation: 'c_fill,h_96,w_96',
+            }),
           title: (organisation: any) =>
             organisation.i18n?.en?.name || organisation.code,
           descriminator: (organisation: any) => organisation.code ?? null,
@@ -132,7 +123,9 @@ $effect(() => {
     {#if parent}
       <OrganisationCard.Root>
         <OrganisationCard.Media
-          image={toImageSrc(parent)}
+          image={getImageSrc(parent.image, {
+            transformation: 'c_fill,h_96,w_96',
+          })}
           alt={parent.i18n?.en?.name || parent.code}
         />
         <OrganisationCard.Body
