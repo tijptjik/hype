@@ -64,7 +64,7 @@ const filteredLayers = $derived(filterLayers(layers, searchTerm))
 let isDefaultOpen = $derived(browser ? window.innerHeight > 1000 : false)
 
 let handleReset = () => {
-  if (selectedLayers.length == 0) {
+  if (selectedLayers.length === 0) {
     appCtx.closePanel(panelProps.panelType)
   } else {
     appCtx.resetLayers()
@@ -95,7 +95,7 @@ let handleReset = () => {
   defaultOpen={isDefaultOpen}
   {...panelProps}
 >
-  {#if layers.length > 4}
+  {#if layers.length > 4 && !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   <ResourceContainer>
