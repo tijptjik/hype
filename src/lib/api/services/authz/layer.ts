@@ -1,13 +1,10 @@
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
 import { error } from '@sveltejs/kit'
-import {
-  applyTriStateBooleanCondition,
-  removeExcludedColumns,
-  toTriStateBoolean,
-} from '$lib/api'
+import { removeExcludedColumns, toTriStateBoolean } from '$lib/api'
 import { shouldLogAuthzDeny, toActorPolicyBase, toAuthMessage } from '.'
 import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 import { applyPrismConstraints } from '$lib/db'
+import { applyTriStateBooleanCondition } from '$lib/db/query'
 import { layer } from '$lib/db/schema'
 import { HierarchicalResource } from '$lib/enums'
 import type {
