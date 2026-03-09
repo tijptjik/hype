@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { tick } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
 import { m, toLocaleKey } from '$lib/i18n'
@@ -57,6 +58,10 @@ const sortedValues = $derived(
   (property.values || []).slice().sort((a, b) => a.rank - b.rank),
 )
 const valueEditableRefs = new Map<string, HTMLElement>()
+let pendingAddedValueFocus = $state<{
+  locale: Locale
+  expectedCount: number
+} | null>(null)
 
 const primaryLocale = $derived(locales[0] as Locale)
 const propertyPathPrefix = $derived<Array<string | number>>([
@@ -78,6 +83,20 @@ function sanitizeDragPayloadArtifacts(input: string): string {
 
 function getValueRefKey(valueId: string, locale: Locale): string {
   return `${valueId}:${locale}`
+}
+
+function getLocaleArticleSelector(locale: Locale): string {
+  return `[data-locale="${locale}"]`
+}
+
+/**
+ * Resolve the locale-card grid that owns the currently focused control.
+ * Keeps keyboard routing scoped to this property card instead of querying the whole document.
+ */
+function getLocaleGridFromTarget(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof HTMLElement)) return null
+  const article = target.closest<HTMLElement>('article[data-locale]')
+  return article?.parentElement as HTMLElement | null
 }
 
 function getLocaleEntry<T extends Record<string, unknown>>(
@@ -159,6 +178,133 @@ function getFieldName(pathSuffix: Array<string | number>): string | undefined {
     return undefined
   const attrs = field.as('text') as { name?: unknown }
   return typeof attrs?.name === 'string' ? attrs.name : undefined
+}
+
+function withCoreFieldAttrs(
+  attrs: Record<string, unknown>,
+  locale: Locale,
+  field: 'key' | 'label' | 'placeholder',
+): Record<string, unknown> {
+  const forwardedKeydown = attrs.onkeydown
+  return {
+    ...attrs,
+    'data-property-core-field': field,
+    onkeydown: (event: KeyboardEvent) => {
+      if (typeof forwardedKeydown === 'function') {
+        forwardedKeydown(event)
+      }
+      if (!event.defaultPrevented) {
+        onCoreFieldKeydown(event, locale, field)
+      }
+    },
+  }
+}
+
+type CoreFieldKey = 'key' | 'label' | 'placeholder' | 'component'
+
+/**
+ * Find a specific core field inside one locale card.
+ */
+function getCoreFieldElement(
+  localeGrid: HTMLElement | null,
+  locale: Locale,
+  field: CoreFieldKey,
+): HTMLElement | null {
+  if (!localeGrid) return null
+  return localeGrid.querySelector<HTMLElement>(
+    `${getLocaleArticleSelector(locale)} [data-property-core-field="${field}"]`,
+  )
+}
+
+/**
+ * Collect translation-bar buttons for one locale card.
+ * We intentionally do not filter by tabindex because this helper is used to
+ * override browser navigation and may need to focus controls before the bar
+ * becomes naturally tabbable.
+ */
+function getTranslationBarButtons(
+  localeGrid: HTMLElement | null,
+  locale: Locale,
+): HTMLElement[] {
+  const localeArticle = localeGrid?.querySelector<HTMLElement>(
+    getLocaleArticleSelector(locale),
+  )
+  if (!localeArticle) return []
+  return Array.from(
+    localeArticle.querySelectorAll<HTMLElement>('.bits-form__i18n-translation-source'),
+  )
+}
+
+/**
+ * Focus the trailing control in the translation bar for the current locale.
+ * This gives Shift+Tab from the first field a stable "go to translation tools" target.
+ */
+function focusTranslationBar(localeGrid: HTMLElement | null, locale: Locale): boolean {
+  const buttons = getTranslationBarButtons(localeGrid, locale)
+  const target = buttons[buttons.length - 1]
+  if (!target) return false
+  target.focus()
+  return true
+}
+
+/**
+ * Focus the canonical Add action in the first locale card.
+ * Used as the handoff from core locale fields into the values area.
+ */
+function focusFirstValueAction(localeGrid: HTMLElement | null): boolean {
+  const firstLocale = locales[0]
+  if (!localeGrid || !firstLocale) return false
+  const localeArticle = localeGrid.querySelector<HTMLElement>(
+    getLocaleArticleSelector(firstLocale),
+  )
+  const target = localeArticle?.querySelector<HTMLElement>(
+    '[data-property-value-action="add"]',
+  )
+  if (!target) return false
+  target.focus()
+  return true
+}
+
+/**
+ * Override Tab / Shift+Tab only at the boundaries of the core fields.
+ * Browser tab order still handles the normal flow inside each locale card.
+ */
+function onCoreFieldKeydown(
+  event: KeyboardEvent,
+  locale: Locale,
+  field: CoreFieldKey,
+): void {
+  if (!isEditing || !canShowValues) return
+  if (event.key !== 'Tab') return
+
+  const localeGrid = getLocaleGridFromTarget(event.currentTarget)
+  const isPrimaryLocale = isPrimary(locale)
+  const firstField = isPrimaryLocale ? 'key' : 'label'
+  const lastField = isPrimaryLocale ? 'component' : 'placeholder'
+
+  if (event.shiftKey && field === firstField) {
+    if (focusTranslationBar(localeGrid, locale)) {
+      preventDefaultAndPropagation(event)
+    }
+    return
+  }
+
+  if (!event.shiftKey && field === lastField) {
+    const localeIndex = locales.indexOf(locale)
+    const nextLocale = locales[localeIndex + 1]
+    const nextTarget = nextLocale
+      ? getCoreFieldElement(localeGrid, nextLocale, 'label')
+      : null
+    if (nextTarget) {
+      preventDefaultAndPropagation(event)
+      nextTarget.focus()
+      return
+    }
+
+    if (focusFirstValueAction(localeGrid)) {
+      preventDefaultAndPropagation(event)
+    }
+  }
 }
 
 function getFieldAttrsWithValue(
@@ -326,6 +472,75 @@ function onValueDoubleClick(event: MouseEvent): void {
   selectAllEditableContent(target)
 }
 
+function resolveAdjacentValueEditable(
+  valueId: string,
+  locale: Locale,
+  direction: 1 | -1,
+): HTMLElement | null {
+  const localeIndex = locales.indexOf(locale)
+  const valueIndex = sortedValues.findIndex(value => value.id === valueId)
+  if (localeIndex < 0 || valueIndex < 0) return null
+
+  let nextLocaleIndex = localeIndex
+  let nextValueIndex = valueIndex
+
+  while (true) {
+    if (direction === 1) {
+      if (nextLocaleIndex + 1 < locales.length) {
+        nextLocaleIndex += 1
+      } else if (nextValueIndex + 1 < sortedValues.length) {
+        nextValueIndex += 1
+        nextLocaleIndex = 0
+      } else {
+        return null
+      }
+    } else {
+      if (nextLocaleIndex - 1 >= 0) {
+        nextLocaleIndex -= 1
+      } else if (nextValueIndex - 1 >= 0) {
+        nextValueIndex -= 1
+        nextLocaleIndex = locales.length - 1
+      } else {
+        return null
+      }
+    }
+
+    const nextValue = sortedValues[nextValueIndex]
+    const nextLocale = locales[nextLocaleIndex]
+    if (!nextValue || !nextLocale) return null
+
+    const target = valueEditableRefs.get(getValueRefKey(nextValue.id, nextLocale))
+    if (target) return target
+  }
+}
+
+async function onValueEnter(event: KeyboardEvent, locale: Locale): Promise<void> {
+  if (!isEditing) return
+  if (event.key !== 'Enter') return
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+
+  preventDefaultAndPropagation(event)
+  onLayoutMutationStart?.()
+  pendingAddedValueFocus = {
+    locale,
+    expectedCount: (property.values || []).length + 1,
+  }
+  await tick()
+  onAddValue(property.id)
+}
+
+function onValueTab(event: KeyboardEvent, valueId: string, locale: Locale): void {
+  if (!isEditing) return
+  if (event.key !== 'Tab') return
+
+  const target = resolveAdjacentValueEditable(valueId, locale, event.shiftKey ? -1 : 1)
+  if (!target) return
+
+  preventDefaultAndPropagation(event)
+  target.focus()
+  queueMicrotask(() => selectAllEditableContent(target))
+}
+
 function bindValueEditable(
   node: HTMLElement,
   params: { valueId: string; locale: Locale },
@@ -375,6 +590,28 @@ $effect(() => {
       }
     }
   }
+})
+
+$effect(() => {
+  const pending = pendingAddedValueFocus
+  if (!pending) return
+  if (sortedValues.length < pending.expectedCount) return
+
+  const newestValue = sortedValues[sortedValues.length - 1]
+  if (!newestValue) {
+    pendingAddedValueFocus = null
+    return
+  }
+
+  const key = getValueRefKey(newestValue.id, pending.locale)
+  const node = valueEditableRefs.get(key)
+  if (!node) return
+
+  pendingAddedValueFocus = null
+  queueMicrotask(() => {
+    node.focus()
+    selectAllEditableContent(node)
+  })
 })
 </script>
 
@@ -460,7 +697,7 @@ $effect(() => {
           value={(keyAttrs as { value?: string }).value ?? (property.key ?? '')}
           issues={keyIssues}
           {isEditing}
-          inputAttrs={keyAttrs}
+          inputAttrs={withCoreFieldAttrs(keyAttrs, locale, 'key')}
         />
       {:else}
         <Skeleton isLabelCovered={false} />
@@ -482,7 +719,11 @@ $effect(() => {
           )?.label ?? '')}
         issues={getFieldIssues(['i18n', formLocale, 'label'])}
         {isEditing}
-        inputAttrs={getFieldAttrs(['i18n', formLocale, 'label'], 'text')}
+        inputAttrs={withCoreFieldAttrs(
+          getFieldAttrs(['i18n', formLocale, 'label'], 'text'),
+          locale,
+          'label',
+        )}
       />
 
       <TextInput
@@ -502,7 +743,11 @@ $effect(() => {
           )?.placeholder ?? '')}
         issues={getFieldIssues(['i18n', formLocale, 'placeholder'])}
         {isEditing}
-        inputAttrs={getFieldAttrs(['i18n', formLocale, 'placeholder'], 'text')}
+        inputAttrs={withCoreFieldAttrs(
+          getFieldAttrs(['i18n', formLocale, 'placeholder'], 'text'),
+          locale,
+          'placeholder',
+        )}
       />
 
       {#if showCoreFields}
@@ -515,6 +760,10 @@ $effect(() => {
           issues={componentIssues}
           {isEditing}
           name={componentAttrs.name}
+          wrapperAttrs={{
+            'data-property-core-field': 'component',
+            onkeydown: (event: KeyboardEvent) => onCoreFieldKeydown(event, locale, 'component'),
+          }}
           onValueChange={value => {
             onLayoutMutationStart?.()
             onUpdateBase(property.id, 'component', value)
@@ -620,7 +869,7 @@ $effect(() => {
                     <button
                       type="button"
                       class={`bits-project-field-card__value-handle ${!isEditing ? 'bits-project-field-card__value-handle--disabled' : ''}`}
-                      tabindex={isEditing ? 0 : -1}
+                      tabindex={-1}
                       aria-hidden={!isEditing}
                     >
                       <GripVertical />
@@ -634,6 +883,10 @@ $effect(() => {
                       tabindex={isEditing ? 0 : -1}
                       use:bindValueEditable={{ valueId: value.id, locale }}
                       onbeforeinput={preventDropBeforeInput}
+                      onkeydown={event => {
+                        onValueTab(event, value.id, locale)
+                        void onValueEnter(event, locale)
+                      }}
                       oninput={event => onValueInput(event, value.id, locale)}
                       ondragover={preventNativeDropOver}
                       ondrop={preventNativeDropInsert}

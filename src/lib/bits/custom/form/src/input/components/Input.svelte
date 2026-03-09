@@ -47,6 +47,13 @@ function handleInput(event: Event): void {
   value = target.value
   onValueChange?.(value)
 }
+
+function handleKeydown(event: KeyboardEvent): void {
+  const forwardedHandler = attrs?.onkeydown
+  if (typeof forwardedHandler === 'function') {
+    forwardedHandler(event)
+  }
+}
 </script>
 
 <input
@@ -61,4 +68,5 @@ function handleInput(event: Event): void {
   placeholder={resolvedPlaceholder}
   class={inputClass}
   oninput={handleInput}
+  onkeydown={handleKeydown}
 >

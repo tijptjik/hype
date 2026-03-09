@@ -19,6 +19,7 @@ let {
   class: className = '',
   displayClass = '',
   triggerClass = '',
+  triggerAttrs = {},
   contentClass = '',
   onValueChange,
 }: SelectProps = $props()
@@ -54,6 +55,7 @@ function handleValueChange(nextValue: string): void {
     onValueChange={handleValueChange}
   >
     <SelectPrimitive.Trigger
+      {...triggerAttrs}
       class={`bits-form__select-trigger bits-form__select-trigger--${variant} ${triggerClass} ${className}`}
       aria-label={placeholder}
     >

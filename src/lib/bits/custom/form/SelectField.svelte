@@ -17,9 +17,11 @@ let {
   variant = 'default',
   issues,
   class: className = '',
+  wrapperAttrs = {},
   selectClass = '',
   displayClass = '',
   triggerClass = '',
+  triggerAttrs = {},
   contentClass = '',
   onValueChange,
 }: SelectFieldProps = $props()
@@ -36,7 +38,7 @@ const wrapperClass = $derived(
 )
 </script>
 
-<label class={wrapperClass} for={id}>
+<label {...wrapperAttrs} class={wrapperClass} for={id}>
   <Label
     for={id}
     text={label}
@@ -57,6 +59,7 @@ const wrapperClass = $derived(
     class={selectClass}
     {displayClass}
     {triggerClass}
+    {triggerAttrs}
     {contentClass}
     {onValueChange}
   />

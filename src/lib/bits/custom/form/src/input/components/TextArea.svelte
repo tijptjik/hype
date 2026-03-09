@@ -45,6 +45,13 @@ function handleInput(event: Event): void {
   onValueChange?.(value)
 }
 
+function handleKeydown(event: KeyboardEvent): void {
+  const forwardedHandler = attrs?.onkeydown
+  if (typeof forwardedHandler === 'function') {
+    forwardedHandler(event)
+  }
+}
+
 function adjustHeight(): void {
   if (!textareaElement) return
 
@@ -77,4 +84,5 @@ $effect(() => {
   placeholder={resolvedPlaceholder}
   class={textareaClass}
   oninput={handleInput}
+  onkeydown={handleKeydown}
 ></textarea>

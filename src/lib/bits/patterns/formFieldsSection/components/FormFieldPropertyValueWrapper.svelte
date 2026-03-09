@@ -39,6 +39,7 @@ let {
             size="sm"
             style="ghost"
             color="light"
+            attrs={{ 'data-property-value-action': 'add' }}
             iconComponent={ListPlus}
             disabled={optionRemoveMode}
             onClick={onAdd}
@@ -49,6 +50,7 @@ let {
             size="sm"
             style="ghost"
             color="light"
+            attrs={{ 'data-property-value-action': 'remove-toggle' }}
             iconComponent={X}
             onClick={onToggleRemoveMode}
             class="bits-project-field-card__value-action-btn"

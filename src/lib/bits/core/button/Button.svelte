@@ -7,6 +7,7 @@ let {
   text,
   disabled = false,
   hideLabel = false,
+  attrs = {},
   icon,
   iconComponent: IconComponent,
   href,
@@ -49,6 +50,7 @@ function handleClick(event: MouseEvent) {
 
 {#if href}
   <Button.Root
+    {...attrs}
     {href}
     class={classes}
     aria-label={shouldHideLabel ? text : undefined}
@@ -69,6 +71,7 @@ function handleClick(event: MouseEvent) {
   </Button.Root>
 {:else}
   <Button.Root
+    {...attrs}
     {type}
     class={classes}
     aria-label={shouldHideLabel ? text : undefined}

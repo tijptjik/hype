@@ -22,6 +22,7 @@ export interface ButtonProps {
   text: string
   disabled?: boolean
   hideLabel?: boolean
+  attrs?: Record<string, unknown>
   icon?: Snippet
   iconComponent?: Component | null
   href?: string

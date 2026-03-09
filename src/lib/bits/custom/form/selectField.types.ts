@@ -15,9 +15,11 @@ export interface SelectFieldProps {
   variant?: SelectProps['variant']
   issues?: FormIssueValue
   class?: string
+  wrapperAttrs?: Record<string, unknown>
   selectClass?: string
   displayClass?: string
   triggerClass?: string
+  triggerAttrs?: Record<string, unknown>
   contentClass?: string
   onValueChange?: (value: string) => void
 }

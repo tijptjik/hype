@@ -16,6 +16,7 @@ export interface SelectProps {
   class?: string
   displayClass?: string
   triggerClass?: string
+  triggerAttrs?: Record<string, unknown>
   contentClass?: string
   onValueChange?: (value: string) => void
 }
