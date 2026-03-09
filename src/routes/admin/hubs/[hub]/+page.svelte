@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
-import { untrack } from 'svelte'
+import { tick, untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
 import { getLocale, getLocaleOrder, toLocaleKey } from '$lib/i18n'
@@ -10,18 +10,22 @@ import { toast } from 'svelte-sonner'
 // SERVICES
 import {
   addUserRoleSelection,
+  applyChangedRelationField,
   createResourceEditorPage,
   createResourceFormConfig,
+  guardRefDesync,
   getUserRoleHiddenInputAttrs,
   getRoleFieldNameByUserId,
-  guardRefDesync,
   isFormLevelIssue,
+  prepareSubmitPayloadMeta,
+  resolveFacetIssueSummary,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
+  withFacetIssueIndicators,
   resetLocaleFields,
 } from '$lib/client/services/form'
 import {
@@ -31,6 +35,29 @@ import {
   overrideHubListItemBoolean,
   toHubFormInput,
 } from '$lib/client/services/hub'
+import {
+  normalizePropertiesForSubmit,
+  toStableSignature,
+} from '$lib/client/services/project'
+import {
+  addProjectPropertyForType,
+  addProjectPropertyValue,
+  changeProjectPropertyRankUnified,
+  getCurrentProjectProperties,
+  getProjectPropertyFieldsForIndex,
+  getPropertyFormIssues,
+  removeProjectProperty,
+  removeProjectPropertyValue,
+  reorderProjectPropertyValue,
+  resetProjectPropertyLocale,
+  scrollWithMovedProperty,
+  stopEvent,
+  translateProjectPropertyLocale,
+  updateProjectPropertyValue,
+  updateProjectPropertyBase,
+  updateProjectPropertyI18n,
+  updateProjectPropertyValueI18n,
+} from '$lib/client/services/property'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -51,6 +78,7 @@ import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // BITS COMPONENTS
 import {
   EntityImage,
+  FormFieldsSection,
   FormOrganisationsSection,
   FormHubSpecifiersFields,
   FormI18nDescriptorFields,
@@ -67,19 +95,30 @@ import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
+import Blend from 'virtual:icons/lucide/blend'
 import HubIcon from 'virtual:icons/lucide/building-2'
+import Type from 'virtual:icons/lucide/type'
 // ENUMS
-import { FirstClassResource, HubRoleType, ImageContextResource } from '$lib/enums'
+import {
+  classifierComponentTypes,
+  FirstClassResource,
+  HubRoleType,
+  ImageContextResource,
+  specifierComponentTypes,
+} from '$lib/enums'
 // TYPES
 import type {
+  Id,
   ImageCtxEnvelope,
   Locale,
-  HubRoleUser,
+  Property,
   User,
+  UserRoleDisco,
   UserRoleFieldNameResolverForm,
   HubOrganisationFieldNameResolverForm,
   FormDataUpdaterForm,
 } from '$lib/types'
+import type { HubGetState, HubRoleUser } from '$lib/db/zod/schema/hub.types'
 
 // § Context
 
@@ -120,13 +159,14 @@ let contentsElement: HTMLFormElement | undefined = $state()
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
+let lastLoggedIssueSignature = $state('')
+let fieldsLayoutMutationVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
 let selectedOrganisationsById = $state<Record<string, any>>({})
 let hasAutoEnteredEditForNew = $state(false)
 
 // § State - Data
 
-type HubGetState = any
 let hub: HubGetState = $state(null)
 let committedHub: HubGetState = $state(null)
 
@@ -138,6 +178,7 @@ const commitHubState = (value: HubGetState): void => {
 // § Derived State - Flags
 
 const isCoreFacet = $derived(activeFacet === 'core')
+const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewHubRef = $derived(hubRef === NEW_REF)
@@ -152,6 +193,42 @@ const isCurrentRefLoaded = $derived.by(() => {
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
 const configuredHubForm = configureForm<any>(() => ({
   form: hubForm as any,
+  onsubmit: (({ data }: { data: any }) => {
+    const submittedPayload = prepareSubmitPayloadMeta(data, {
+      defaultMode: isNewHubRef ? 'create' : 'update',
+      resolveUpdateId: () => hub?.data?.id ?? committedHub?.data?.id ?? '',
+    })
+    if (isNewHubRef) {
+      submittedPayload.meta.mode = 'create'
+      delete submittedPayload.meta.id
+      delete (submittedPayload.meta as { updatedAt?: unknown }).updatedAt
+    }
+
+    const baselineFormInput = toHubFormInput(committedHub?.data)
+    const currentFormSnapshot = formCtx.form.fields.value() as {
+      data?: { properties?: Array<Record<string, unknown>> }
+    }
+
+    applyChangedRelationField({
+      data: submittedPayload.data,
+      key: 'properties',
+      submittedValue: submittedPayload.data.properties,
+      currentValue: currentFormSnapshot.data?.properties,
+      baselineValue: baselineFormInput.data?.properties ?? [],
+      toEffective: ({ submittedValue, currentValue }) => {
+        const raw =
+          submittedValue ?? currentValue ?? baselineFormInput.data?.properties ?? []
+        if (!Array.isArray(raw)) return []
+        return normalizePropertiesForSubmit(raw as Array<Record<string, unknown>>)
+      },
+      toComparableEffective: value => value,
+      toComparableBaseline: value =>
+        normalizePropertiesForSubmit(value as Array<Record<string, unknown>>),
+      toSignature: toStableSignature,
+    })
+
+    return submittedPayload as typeof data
+  }) as never,
   ...createResourceFormConfig<any>({
     formEl: contentsElement,
     key: hubRef,
@@ -196,12 +273,250 @@ const visibleAllIssues = $derived.by((): unknown[] =>
 )
 
 const formLevelIssues = $derived.by((): string[] => {
+  const isPropertyIssue = (issue: unknown): boolean => {
+    if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+    const path = (issue as { path?: unknown }).path
+    return Array.isArray(path) && path[0] === 'data' && path[1] === 'properties'
+  }
+
   const messages = visibleAllIssues
-    .filter(isFormLevelIssue)
+    .filter(issue => isFormLevelIssue(issue) || !isPropertyIssue(issue))
     .map(toIssueMessage)
     .filter((message: string | null): message is string => Boolean(message))
   return Array.from(new Set(messages))
 })
+
+const facetIssueSummary = $derived.by(() =>
+  resolveFacetIssueSummary({
+    issues: visibleAllIssues,
+    facets: resolvedFacetTabs,
+    formEl: contentsElement,
+  }),
+)
+
+const resolvedFacetTabsWithIssues = $derived.by(() =>
+  withFacetIssueIndicators(resolvedFacetTabs, facetIssueSummary.facetsWithIssues),
+)
+
+$effect(() => {
+  if (!formCtx.wasSubmitAttempted) return
+  const issues = formCtx.allIssues ?? []
+  if (issues.length === 0) return
+  const signature = toStableSignature(issues)
+  if (signature === lastLoggedIssueSignature) return
+  lastLoggedIssueSignature = signature
+  console.log('[admin.hubs.form][issues]', issues)
+})
+
+// GLOBAL PROPERTIES
+
+const hubPropertyFormAdapter = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
+)
+
+function createPropertyActions(getCount: () => number) {
+  return {
+    add: (event: Event): void => {
+      stopEvent(event)
+      if (!headerCtrl.state.isEditing && canSubmitHub) {
+        headerCtrl.setEditing(true)
+      }
+      addProjectPropertyForType(
+        hubPropertyFormAdapter,
+        'classifier',
+        '',
+        classifierComponentTypes,
+        specifierComponentTypes,
+        {
+          projectId: null,
+          hubId: hub?.data?.id ?? null,
+          scope: 'hub',
+          isDefaultEnabled: false,
+        },
+      )
+      revalidateAfterProgrammaticChange()
+    },
+    remove: (event: Event, propertyId: Id): void => {
+      stopEvent(event)
+      removeProjectProperty(hubPropertyFormAdapter, propertyId)
+      if (getCount() <= 1) fieldRemoveMode = false
+      revalidateAfterProgrammaticChange()
+    },
+    increaseRank: async (event: Event, propertyId: Id): Promise<void> => {
+      stopEvent(event)
+      await scrollWithMovedProperty(
+        propertyId,
+        () => {
+          changeProjectPropertyRankUnified(hubPropertyFormAdapter, propertyId, 'up')
+        },
+        async () => {
+          await tick()
+          await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
+        },
+      )
+      revalidateAfterProgrammaticChange()
+    },
+    decreaseRank: async (event: Event, propertyId: Id): Promise<void> => {
+      stopEvent(event)
+      await scrollWithMovedProperty(
+        propertyId,
+        () => {
+          changeProjectPropertyRankUnified(hubPropertyFormAdapter, propertyId, 'down')
+        },
+        async () => {
+          await tick()
+          await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
+        },
+      )
+      revalidateAfterProgrammaticChange()
+    },
+  }
+}
+
+let fieldRemoveMode = $state(false)
+
+const updatePropertyBase = (
+  propertyId: Id,
+  key:
+    | 'key'
+    | 'component'
+    | 'min'
+    | 'max'
+    | 'isTranslatable'
+    | 'isDefaultEnabled'
+    | 'isEnabled',
+  value: string | number | null | boolean,
+): void => {
+  updateProjectPropertyBase(hubPropertyFormAdapter, propertyId, key, value)
+  revalidateAfterProgrammaticChange()
+}
+
+const updatePropertyI18n = (
+  propertyId: Id,
+  locale: Locale,
+  key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
+  value: string | boolean,
+): void => {
+  updateProjectPropertyI18n(hubPropertyFormAdapter, propertyId, locale, key, value)
+  revalidateAfterProgrammaticChange()
+}
+
+const addPropertyValue = (propertyId: Id): void => {
+  addProjectPropertyValue(hubPropertyFormAdapter, propertyId)
+  revalidateAfterProgrammaticChange()
+}
+
+const removePropertyValue = (propertyId: Id, valueId: Id): void => {
+  removeProjectPropertyValue(hubPropertyFormAdapter, propertyId, valueId)
+  revalidateAfterProgrammaticChange()
+}
+
+const movePropertyValue = (propertyId: Id, valueId: Id, targetIndex: number): void => {
+  reorderProjectPropertyValue(hubPropertyFormAdapter, propertyId, valueId, targetIndex)
+  revalidateAfterProgrammaticChange()
+}
+
+const updatePropertyValueI18n = (
+  propertyId: Id,
+  valueId: Id,
+  locale: Locale,
+  key: 'value',
+  value: string,
+): void => {
+  updateProjectPropertyValueI18n(
+    hubPropertyFormAdapter,
+    propertyId,
+    valueId,
+    locale,
+    key,
+    value,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
+const updatePropertyValue = (
+  propertyId: Id,
+  valueId: Id,
+  key: 'value',
+  value: string,
+): void => {
+  updateProjectPropertyValue(hubPropertyFormAdapter, propertyId, valueId, key, value)
+  revalidateAfterProgrammaticChange()
+}
+
+const onTranslatePropertyLocale = async (
+  propertyId: Id,
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> => {
+  const translated = await translateProjectPropertyLocale(
+    hubPropertyFormAdapter,
+    propertyId,
+    sourceLocale,
+    targetLocale,
+  )
+  if (translated) revalidateAfterProgrammaticChange()
+  return translated
+}
+
+const onResetPropertyLocale = (propertyId: Id, targetLocale: Locale): void => {
+  resetProjectPropertyLocale(hubPropertyFormAdapter, propertyId, targetLocale)
+  revalidateAfterProgrammaticChange()
+}
+
+const hubFieldsInSection = $derived(
+  [...getCurrentProjectProperties(hubPropertyFormAdapter)].sort(
+    (left, right) => (left.rank ?? 0) - (right.rank ?? 0),
+  ),
+)
+
+const fieldActions = createPropertyActions(() => hubFieldsInSection.length)
+
+const propertyFormIssues = $derived.by(
+  (): Array<{ message: string; path?: Array<string | number> }> =>
+    getPropertyFormIssues(visibleAllIssues),
+)
+
+const fieldSectionIssues = $derived.by(() => {
+  const messages = propertyFormIssues.map(issue => issue.message).filter(Boolean)
+  return Array.from(new Set(messages))
+})
+
+const fieldSectionIssueItemIds = $derived.by(() => {
+  const properties = getCurrentProjectProperties(hubPropertyFormAdapter)
+  return Array.from(
+    new Set(
+      propertyFormIssues
+        .map(issue => {
+          const path = issue.path
+          if (!Array.isArray(path)) return null
+          const index = path[2]
+          if (typeof index !== 'number') return null
+          return properties[index]?.id ?? null
+        })
+        .filter((id): id is Id => Boolean(id)),
+    ),
+  )
+})
+
+function resolveHubPropertyTypeTag(property: Property): {
+  label?: string
+  title?: string
+  tone: 'global' | 'hub' | 'org' | 'project'
+  iconComponent?: typeof Blend
+} {
+  return property.type === 'classifier'
+    ? {
+        tone: 'hub',
+        title: m.admin__forms_common_categorical_field(),
+        iconComponent: Blend,
+      }
+    : {
+        tone: 'hub',
+        title: m.admin__forms_common_free_form_field(),
+        iconComponent: Type,
+      }
+}
 
 // USER ROLES
 
@@ -348,11 +663,14 @@ const canDeleteHub = $derived(hubPermissions.canDelete)
 const canSubmitHub = $derived(isNewHubRef ? canCreateHub : canEditHub)
 const canEditImagePresentationMode = $derived(canSubmitHub && isCurrentRefLoaded)
 const canEditImageDropzone = $derived(canEditHub && isCurrentRefLoaded)
-const canSetCoreInclusive = $derived(canCreateHub)
+const canSetCoreInclusive = $derived(canSubmitHub)
 const allowedOrganisationIds = $derived.by(() => {
   if (adminCtx.appCtx.isSuperAdmin()) return null
   const user = adminCtx.appCtx.getUser()
-  const roles = Array.isArray(user?.roles) ? user.roles : []
+  const roles =
+    user && typeof user === 'object' && 'roles' in user && Array.isArray(user.roles)
+      ? (user.roles as UserRoleDisco[])
+      : []
   const ids = roles
     .filter(role => role.type === 'organisation')
     .map(role => role.organisationId)
@@ -517,11 +835,15 @@ async function onSearchOrganisations(query: string): Promise<any[]> {
 
 async function refreshHub(ref: string = hubRef): Promise<HubGetState> {
   if (ref === NEW_REF) return null
-  return await getHub({
-    ref,
-    refKey: 'code',
-    meta: { isAdminRequest: true, profile: 'detail' },
-  }).catch(() => null)
+  try {
+    return await getHub({
+      ref,
+      refKey: 'code',
+      meta: { isAdminRequest: true, profile: 'detail' },
+    })
+  } catch {
+    return hub ?? committedHub ?? null
+  }
 }
 
 async function handleHubStateToggle({
@@ -594,6 +916,8 @@ async function onDeleteToggle(): Promise<void> {
 }
 
 function onReset(): void {
+  fieldRemoveMode = false
+  fieldsLayoutMutationVersion += 1
   suppressFormLevelIssues = true
   formCtx.clearSubmitAttemptState()
   if (committedHub?.data) {
@@ -607,6 +931,10 @@ function onReset(): void {
 function onSubmit(): void {
   suppressFormLevelIssues = false
   if (!isCurrentRefLoaded) return
+  if (isNewHubRef) {
+    formCtx.requestSubmit({ meta: { mode: 'create' } })
+    return
+  }
   const baseMeta = committedHub?.data
     ? (toHubFormInput(committedHub.data).meta ?? {})
     : undefined
@@ -635,7 +963,12 @@ $effect(() => {
     },
     setFacetForRef: nextRef => {
       untrack(() => {
-        const nextFacet = adminCtx.activeFacet === 'images' ? 'images' : 'core'
+        const nextFacet =
+          adminCtx.activeFacet === 'images'
+            ? 'images'
+            : adminCtx.activeFacet === 'fields'
+              ? 'fields'
+              : 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.hub)
       })
     },
@@ -651,11 +984,22 @@ $effect(() => {
     hub?.data?.i18n?.[getLocale()]?.name ??
     hub?.data?.code ??
     m.hub__title()
-  const facetKey = Array.from(resolvedFacetTabs.keys()).join('|')
+  const facetKey = Array.from(resolvedFacetTabsWithIssues.entries())
+    .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
+    .join('|')
   const headerKey = `${ref}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, HubIcon, resolvedFacetTabs)
+  headerCtrl.setHeaderForEntity(title, HubIcon, resolvedFacetTabsWithIssues)
+})
+
+$effect(() => {
+  if (!formCtx.wasSubmitAttempted) return
+  if (visibleAllIssues.length === 0) return
+  const targetFacet = facetIssueSummary.firstFacetWithIssues
+  if (!targetFacet) return
+  if (activeFacet === targetFacet) return
+  adminCtx.setFacet(targetFacet, hubRef, FirstClassResource.hub)
 })
 
 $effect(() => {
@@ -730,11 +1074,15 @@ $effect(() => {
 </script>
 
 <Main.Root>
-  <Main.Section isVisible={isCoreFacet} transition="fade">
-    <Main.Form
-      bind:formEl={contentsElement}
-      attrs={formCtx.attributes}
-      isReady={Boolean(formCtx.form?.fields && (hub?.data || isNewHubRef))}
+  <Main.Form
+    bind:formEl={contentsElement}
+    attrs={formCtx.attributes}
+    isReady={Boolean(formCtx.form?.fields && (hub?.data || isNewHubRef))}
+  >
+    <Main.Section
+      isVisible={isCoreFacet}
+      transition="fade"
+      attrs={{ 'data-facet-id': 'core' }}
     >
       <FormI18nSection
         title={m.admin__forms_common_descriptors()}
@@ -811,10 +1159,68 @@ $effect(() => {
           />
         {/snippet}
       </GridSpacer>
-    </Main.Form>
-  </Main.Section>
+    </Main.Section>
 
-  <Main.Section isVisible={isImagesFacet} transition="fade">
+    <Main.Section
+      isVisible={isFieldsFacet}
+      transition="fade"
+      class="bits-theme flex gap-4 min-h-0 flex-col"
+      attrs={{ 'data-facet-id': 'fields' }}
+    >
+      <FormFieldsSection
+        items={hubFieldsInSection}
+        title={m.admin__forms_common_fields()}
+        description={m.admin__forms_common_fields_subtitle()}
+        issues={fieldSectionIssues}
+        actions={fieldActions}
+        issueItemIds={fieldSectionIssueItemIds}
+        layoutMutationVersion={fieldsLayoutMutationVersion}
+        canEdit={canSubmitHub && isCurrentRefLoaded}
+        {isEditing}
+        removeMode={fieldRemoveMode}
+        onRemoveModeChange={value => {
+          fieldRemoveMode = value
+        }}
+        card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              getCurrentProjectProperties(hubPropertyFormAdapter).findIndex(
+                candidate => candidate.id === propertyId,
+              ),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveSourceTag: resolveHubPropertyTypeTag,
+          }}
+      />
+    </Main.Section>
+  </Main.Form>
+
+  <Main.Section
+    isVisible={isImagesFacet}
+    transition="fade"
+    attrs={{ 'data-facet-id': 'images' }}
+  >
     <EntityImage
       {page}
       entityId={hub?.data?.id}
