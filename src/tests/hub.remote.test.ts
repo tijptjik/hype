@@ -146,6 +146,7 @@ vi.mock('$lib/api/services/hub', () => ({
 vi.mock('$lib/db/services/hub', () => ({
   createHub: mockCreateHub,
   createI18n: mockCreateI18n,
+  createUserRoles: mockCreateHubUserRoles,
   createHubUserRoles: mockCreateHubUserRoles,
   probeExistingHub: mockProbeExistingHub,
   probeHubForUpdate: mockProbeHubForUpdate,
@@ -154,7 +155,10 @@ vi.mock('$lib/db/services/hub', () => ({
   updateHubPublishedStateById: vi.fn(async () => null),
   updateHubArchivedStateById: vi.fn(async () => null),
   updateI18n: mockUpdateI18n,
+  syncUserRoles: mockSyncHubUserRoles,
   syncHubUserRoles: mockSyncHubUserRoles,
+  syncOrganisations: mockSyncHubOrganisations,
+  listUserRoles: mockListHubRoleAssignments,
   listHubRoleAssignments: mockListHubRoleAssignments,
   listHubOrganisationLookups: vi.fn(async () => []),
   listHubs: vi.fn(),
@@ -163,6 +167,7 @@ vi.mock('$lib/db/services/hub', () => ({
 }))
 
 vi.mock('$lib/db/services/property', () => ({
+  syncHubProperties: vi.fn(async () => undefined),
   syncHubGlobalProperties: vi.fn(async () => undefined),
 }))
 

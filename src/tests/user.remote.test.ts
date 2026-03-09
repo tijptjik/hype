@@ -79,6 +79,7 @@ vi.mock('$lib/api/services/user', () => ({
   getUserQueryContext: vi.fn(() => ({ conditions: [] })),
   isPrivilegedArchivedSearchRequested: (state: { isArchived: boolean | null }) =>
     state.isArchived === true || state.isArchived === null,
+  toEntityResponseShape: mockToEntityResponseShape,
   toEntityRoleExistsCondition: vi.fn(() => ({ fn: 'exists' })),
   toParentChainCondition: vi.fn(async () => ({ fn: 'parent-chain' })),
   toRequestedSearchState: (conditions: { isArchived?: unknown }) => ({
@@ -131,7 +132,14 @@ vi.mock('$lib/db/services/user', () => ({
   getUsersForHydration: mockGetUsersForHydration,
   searchUsersByConditions: mockSearchUsersByConditions,
   toUserSearchTextCondition: mockToUserSearchTextCondition,
-  toEntityResponseShape: mockToEntityResponseShape,
+  toSearchCondition: mockToUserSearchTextCondition,
+  getUser: vi.fn(),
+  getUserFeaturesByUserId: vi.fn(),
+  getUserLayersByUserId: vi.fn(),
+  removeUserFeatureListState: vi.fn(),
+  updateUser: vi.fn(),
+  updateUserLayers: vi.fn(),
+  upsertUserFeatureState: vi.fn(),
 }))
 
 vi.mock('$lib/db/services/hub', () => ({

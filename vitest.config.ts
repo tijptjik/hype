@@ -5,12 +5,82 @@ const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run'
 
 export default defineConfig({
   resolve: {
-    alias: {
-      $lib: resolve(__dirname, 'src/lib'),
-      '$app/server': resolve(__dirname, 'src/tests/mocks/app-server.ts'),
-      '$app/navigation': resolve(__dirname, 'src/tests/mocks/app-navigation.ts'),
-      'svelte-sonner': resolve(__dirname, 'src/tests/mocks/svelte-sonner.ts'),
-    },
+    alias: [
+      {
+        find: /^\$lib$/,
+        replacement: resolve(__dirname, 'src/tests/mocks/lib-root.ts'),
+      },
+      {
+        find: /^\$lib\/(.*)$/,
+        replacement: `${resolve(__dirname, 'src/lib')}/$1`,
+      },
+      {
+        find: '$app/server',
+        replacement: resolve(__dirname, 'src/tests/mocks/app-server.ts'),
+      },
+      {
+        find: '$app/navigation',
+        replacement: resolve(__dirname, 'src/tests/mocks/app-navigation.ts'),
+      },
+      {
+        find: '$lib/context/form.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/form-context.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Property.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Input.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Textarea.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Select.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Range.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Users.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Toggle.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: '$lib/components/forms/fields/Display.svelte',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
+        find: /^sveltekit-superforms\/adapters$/,
+        replacement: resolve(
+          __dirname,
+          'src/tests/mocks/sveltekit-superforms-adapters.ts',
+        ),
+      },
+      {
+        find: /^sveltekit-superforms\/client$/,
+        replacement: resolve(
+          __dirname,
+          'src/tests/mocks/sveltekit-superforms-client.ts',
+        ),
+      },
+      {
+        find: /^sveltekit-superforms$/,
+        replacement: resolve(__dirname, 'src/tests/mocks/sveltekit-superforms.ts'),
+      },
+      {
+        find: 'svelte-sonner',
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-sonner.ts'),
+      },
+    ],
   },
   test: {
     environment: 'jsdom',

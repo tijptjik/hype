@@ -177,6 +177,57 @@ vi.mock('$lib/api/services/project', () => ({
     return normalized as T[]
   },
   toLookupConditions: vi.fn(() => ({})),
+  resolveCanonicalScopeByPropertyId: vi.fn(async () => new Map()),
+  splitSubmittedPropertiesByScope: vi.fn((properties: unknown[]) => ({
+    local: properties.filter(property =>
+      (() => {
+        const scope = (property as { scope?: unknown } | null | undefined)?.scope
+        return scope === undefined || scope === null || scope === 'project'
+      })(),
+    ),
+    inherited: properties.filter(property =>
+      (() => {
+        const scope = (property as { scope?: unknown } | null | undefined)?.scope
+        return scope !== undefined && scope !== null && scope !== 'project'
+      })(),
+    ),
+  })),
+  toSubmittedLocalPropertiesWithProjectId: vi.fn(
+    (properties: unknown[], projectId: string) =>
+      properties.map(property => ({
+        ...(property as Record<string, unknown>),
+        projectId,
+        scope: 'project',
+      })),
+  ),
+  toSubmittedPropertyIdSet: vi.fn(
+    (properties: Array<{ id?: unknown }>) =>
+      new Set(
+        properties
+          .map(property => property.id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+  ),
+  toPreservedLocalPropertiesForProject: vi.fn(
+    (params: {
+      existingLocalProperties: Array<{ id: string; projectId?: string; scope?: string }>
+      submittedLocalPropertyIds: Set<string>
+      projectId: string
+    }) =>
+      params.existingLocalProperties
+        .filter(property => !params.submittedLocalPropertyIds.has(property.id))
+        .map(property => ({
+          ...property,
+          projectId: params.projectId,
+          hubId: null,
+          scope: 'project',
+        })),
+  ),
+  mergeProjectInheritedPropertySyncItems: vi.fn(
+    (submittedInherited: unknown[], _persistedInherited: unknown[]) =>
+      submittedInherited,
+  ),
+  toEntityResponseShape: vi.fn(async (value: unknown) => ({ data: value })),
   sanitizeSubmittedRoleCapabilities: vi.fn(
     (
       submittedRoles: Array<{
@@ -264,6 +315,7 @@ vi.mock('$lib/db/services/property', () => ({
   listResolvedProjectProperties: mockListResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject: vi.fn(async () => undefined),
   syncProjectInheritedProperties: vi.fn(async () => undefined),
+  upsertProjectProperties: mockUpdatePropertiesWithRelated,
   updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
 }))
 

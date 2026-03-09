@@ -109,6 +109,18 @@ vi.mock('$lib/api/services/organisation', () => ({
   toRequestedListState: mockToRequestedListState,
   getOrganisationWithRelations: mockGetOrganisationWithRelations,
   toOrganisationProfile: mockToOrganisationProfile,
+  toListResponseShape: vi.fn((value: unknown) => value),
+  toEntityResponseShape: vi.fn((value: unknown) => ({ data: value })),
+  hasOrganisationCapabilitiesChanged: vi.fn(
+    (params: {
+      hasSubmittedCapabilitiesField: boolean
+      submittedCapabilities: unknown
+      currentCapabilities: unknown
+    }) =>
+      params.hasSubmittedCapabilitiesField &&
+      JSON.stringify(params.submittedCapabilities ?? {}) !==
+        JSON.stringify(params.currentCapabilities ?? {}),
+  ),
 }))
 
 vi.mock('$lib/api/services/project', () => ({
@@ -156,6 +168,7 @@ vi.mock('$lib/db/services/organisation', () => ({
   createI18n: vi.fn(),
   createOrganisation: vi.fn(),
   createUserRoles: vi.fn(),
+  listUserRoleAssignments: vi.fn(async () => []),
   listOrganisationRoleAssignments: vi.fn(async () => []),
   listOrganisations: mockListOrganisations,
   probeExistingOrganisation: vi.fn(async () => null),
@@ -168,7 +181,9 @@ vi.mock('$lib/db/services/organisation', () => ({
   updateOrganisationByIdWithConcurrency: vi.fn(async () => null),
   updateOrganisationPublishedStateById: mockUpdateOrganisationPublishedStateById,
   updateOrganisationArchivedStateById: mockUpdateOrganisationArchivedStateById,
+  syncUserRoles: vi.fn(),
   syncOrganisationUserRoles: vi.fn(),
+  toUserRoles: vi.fn((roles: unknown[]) => roles),
   toPersistedOrganisationUserRoles: vi.fn(),
   toEntityResponseShape: vi.fn((value: unknown) => ({ data: value })),
   toListResponseShape: vi.fn((value: unknown) => value),
