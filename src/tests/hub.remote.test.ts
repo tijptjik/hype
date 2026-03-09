@@ -130,8 +130,8 @@ vi.mock('$lib/api/services/authz', () => ({
 vi.mock('$lib/api/services/hub', () => ({
   hubCollectionWithRelations: {},
   hubEntityWithRelations: {},
-  toHubEntityResponse: vi.fn((row: unknown) => ({ data: row })),
-  toHubListResponse: vi.fn((value: unknown) => value),
+  toEntityResponseShape: vi.fn((row: unknown) => ({ data: row })),
+  toListResponseShape: vi.fn((value: unknown) => value),
   toHubProfile: vi.fn((value: unknown, fallback: string) =>
     typeof value === 'string' ? value : fallback,
   ),

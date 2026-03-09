@@ -48,9 +48,22 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   const hubServices = await import('$lib/api/services/hub')
   const { getHubFromDomain } = hubServices
   const toHubShape =
-    typeof hubServices.toHubResponseShape === 'function'
-      ? hubServices.toHubResponseShape
-      : (row: unknown) => row
+    typeof hubServices.toEntityResponseShape === 'function'
+      ? (row: unknown) =>
+          (
+            hubServices.toEntityResponseShape as (
+              data: unknown,
+              profile: 'list',
+            ) => { data: unknown }
+          )(row, 'list').data
+      : typeof (hubServices as { toProfileResponseShape?: unknown })
+            .toProfileResponseShape === 'function'
+        ? (
+            hubServices as {
+              toProfileResponseShape: (row: unknown, profile: 'list') => unknown
+            }
+          ).toProfileResponseShape
+        : (row: unknown) => row
 
   // Get host from headers
   const host = event.request.headers.get('host')
