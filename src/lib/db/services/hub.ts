@@ -23,8 +23,6 @@ import type {
   HubDBRaw,
   HubDB,
   HubDBNew,
-  HubDBPartial,
-  Code,
   Locale,
   HubOptsExtended,
   HubI18nNew,
@@ -74,7 +72,6 @@ import { hubEntityWithRelations } from '$lib/api/services/hub'
 //    - listOrganisations
 //
 // 3.1 CRUD :: UPDATE
-//    - updateHub
 //    - updateHubByIdWithConcurrency
 //    - updateHubPublishedStateById
 //    - updateHubArchivedStateById
@@ -100,6 +97,10 @@ import { hubEntityWithRelations } from '$lib/api/services/hub'
 // 1.1 CRUD :: CREATE
 // ═══════════════════════
 
+/**
+ * createHub operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const createHub = async (db: Database, data: HubDBNew): Promise<HubDB> => {
   const [created] = await db.insert(hub).values(data).returning()
   return created
@@ -121,6 +122,10 @@ export const createI18n = async (
   return await insertManyRelated(db, hubI18n, records, 'hubId', hubId)
 }
 
+/**
+ * createUserRoles operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const createUserRoles = async (
   db: Parameters<typeof createHub>[0],
   roles: Array<{ userId: string; role: string }>,
@@ -148,6 +153,10 @@ const toUserRoles = (
 // 2.1 CRUD :: READ
 // ═══════════════════════
 
+/**
+ * listHubs operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const listHubs = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -158,6 +167,13 @@ export const listHubs = async (
     where: conditions.length > 0 ? and(...conditions) : undefined,
   })
 
+/**
+ * Loads a single hub using provided conditions and relation graph.
+ * @param db - The database instance.
+ * @param withRelations - Optional relation graph.
+ * @param conditions - Optional SQL predicates.
+ * @returns Matching hub row or `undefined`.
+ */
 export const getHub = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -168,12 +184,20 @@ export const getHub = async (
     where: and(...conditions),
   })
 
+/**
+ * getHubByCode operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const getHubByCode = async (
   db: Database,
   code: string,
 ): Promise<HubDBRaw | undefined> =>
   await getHub(db, hubEntityWithRelations, [eq(hub.code, code)])
 
+/**
+ * getHubByDomain operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const getHubByDomain = async (
   db: Database,
   domain: string,
@@ -280,6 +304,10 @@ export const getHubCodeForTask = async (
 // 2.3 CRUD :: READ (PROBES)
 // ═══════════════════════
 
+/**
+ * probeHubQuery operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const probeHubQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
@@ -298,6 +326,10 @@ export const probeHubQuery = async (
   return probe ?? null
 }
 
+/**
+ * probeExistingHub operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const probeExistingHub = async (
   db: Database,
   code: string,
@@ -311,6 +343,10 @@ export const probeExistingHub = async (
   return existing ?? null
 }
 
+/**
+ * probeHubForUpdate operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const probeHubForUpdate = async (
   db: Database,
   hubId: Id,
@@ -328,6 +364,10 @@ export const probeHubForUpdate = async (
   return current ?? null
 }
 
+/**
+ * probeHubForCommand operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const probeHubForCommand = async (
   db: Database,
   hubId: Id,
@@ -343,6 +383,10 @@ export const probeHubForCommand = async (
   return current ?? null
 }
 
+/**
+ * resolveHubCommandProbe operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const resolveHubCommandProbe = async (
   db: Database,
   hubId: Id,
@@ -357,6 +401,10 @@ export const resolveHubCommandProbe = async (
 // 2.4 CRUD :: READ (RELATED)
 // ═══════════════════════
 
+/**
+ * listUserRoles operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const listUserRoles = async (
   db: Database,
   hubId: string,
@@ -370,6 +418,10 @@ export const listUserRoles = async (
     .where(eq(hubRole.hubId, hubId))
 }
 
+/**
+ * listOrganisations operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const listOrganisations = async (
   db: Database,
   organisationIds: string[],
@@ -398,15 +450,12 @@ export const listOrganisations = async (
 // 3.1 CRUD :: UPDATE
 // ═══════════════════════
 
-export const updateHub = async (
-  db: Database,
-  data: HubDBPartial,
-  code: Code,
-): Promise<HubDBRaw> => {
-  const [updated] = await db.update(hub).set(data).where(eq(hub.code, code)).returning()
-  return updated
-}
-
+/**
+ * Updates hub fields with optimistic concurrency guard on `modifiedAt`.
+ * @param db - The database instance.
+ * @param params - Update payload including expected `updatedAt`.
+ * @returns Updated id/modifiedAt pair or `null` when stale/missing.
+ */
 export const updateHubByIdWithConcurrency = async (
   db: Database,
   params: {
@@ -427,6 +476,12 @@ export const updateHubByIdWithConcurrency = async (
   return updated ?? null
 }
 
+/**
+ * Toggles published state for a hub.
+ * @param db - The database instance.
+ * @param params - Target id and next publish state.
+ * @returns Updated id/state pair or `null`.
+ */
 export const updateHubPublishedStateById = async (
   db: Database,
   params: { id: Id; state: boolean },
@@ -443,6 +498,12 @@ export const updateHubPublishedStateById = async (
   return updated ?? null
 }
 
+/**
+ * Toggles archived state for a hub.
+ * @param db - The database instance.
+ * @param params - Target id and next archived state.
+ * @returns Updated id/state pair or `null`.
+ */
 export const updateHubArchivedStateById = async (
   db: Database,
   params: { id: Id; state: boolean },
@@ -479,6 +540,10 @@ export const updateI18n = async (
 // 3.2 CRUD :: UPDATE (SYNC)
 // ═══════════════════════
 
+/**
+ * syncUserRoles operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const syncUserRoles = async (
   db: Parameters<typeof createHub>[0],
   roles: Array<{ userId: string; role: string }>,
@@ -489,6 +554,10 @@ export const syncUserRoles = async (
   await db.insert(hubRole).values(toUserRoles(roles, hubId))
 }
 
+/**
+ * syncOrganisations operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
 export const syncOrganisations = async (
   db: Parameters<typeof createHub>[0],
   hubId: string,

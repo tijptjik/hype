@@ -67,7 +67,6 @@ import type {
 //    - getOrganisationForProjectId
 //
 // 3.1 CRUD :: UPDATE
-//    - updateOrganisation
 //    - updateOrganisationById
 //    - updateOrganisationByIdWithConcurrency
 //    - updateOrganisationPublishedStateById
@@ -170,6 +169,10 @@ export const toUserRoles = (
 // 2.1 CRUD :: READ
 // ═══════════════════════
 
+/**
+ * listOrganisations operation.
+ * Used by organisation DB workflows to keep persistence behavior centralized.
+ */
 export const listOrganisations = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -297,6 +300,10 @@ export const listOrganisations = async (
   }
 }
 
+/**
+ * getOrganisation operation.
+ * Used by organisation DB workflows to keep persistence behavior centralized.
+ */
 export const getOrganisation = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -319,6 +326,12 @@ export const getOrganisation = async (
 // 2.2 CRUD :: READ (PROBES)
 // ═══════════════════════
 
+/**
+ * Probes organisation visibility/scope fields for read authorization.
+ * @param db - The database instance.
+ * @param params - Lookup reference and key selector.
+ * @returns Minimal probe payload or `null`.
+ */
 export const probeOrganisationQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
@@ -341,6 +354,10 @@ export const probeOrganisationQuery = async (
   return probe ?? null
 }
 
+/**
+ * probeExistingOrganisation operation.
+ * Used by organisation DB workflows to keep persistence behavior centralized.
+ */
 export const probeExistingOrganisation = async (
   db: Database,
   code: string,
@@ -354,6 +371,12 @@ export const probeExistingOrganisation = async (
   return existing ?? null
 }
 
+/**
+ * Probes mutable organisation fields for update authorization and stale-write checks.
+ * @param db - The database instance.
+ * @param organisationId - Target organisation id.
+ * @returns Minimal update probe payload or `null`.
+ */
 export const probeOrganisationForUpdate = async (
   db: Database,
   organisationId: Id,
@@ -373,6 +396,10 @@ export const probeOrganisationForUpdate = async (
   return current ?? null
 }
 
+/**
+ * probeOrganisationForCommand operation.
+ * Used by organisation DB workflows to keep persistence behavior centralized.
+ */
 export const probeOrganisationForCommand = async (
   db: Database,
   organisationId: Id,
@@ -389,6 +416,13 @@ export const probeOrganisationForCommand = async (
   return current ?? null
 }
 
+/**
+ * Resolves organisation command probe or delegates to not-found branch.
+ * @param db - The database instance.
+ * @param organisationId - Target organisation id.
+ * @param onNotFound - Callback invoked when target is missing.
+ * @returns Command probe payload.
+ */
 export const resolveOrganisationCommandProbe = async (
   db: Database,
   organisationId: Id,
@@ -421,6 +455,10 @@ export const listUserRoles = async (
   })
 }
 
+/**
+ * listUserRoleAssignments operation.
+ * Used by organisation DB workflows to keep persistence behavior centralized.
+ */
 export const listUserRoleAssignments = async (
   db: Database,
   organisationId: string,
@@ -477,21 +515,6 @@ export const getOrganisationForProjectId = async (
 // ═══════════════════════
 
 /**
- * Updates an existing organisation in the database
- * @param db - The database instance
- * @param data - The updated organisation data
- * @param ref - The organisation code reference
- * @returns The updated organisation
- * @throws {Error} If the organisation update fails or organisation is not found
- */
-export const updateOrganisation = async (
-  db: Database,
-  data: OrganisationDBPartial,
-  ref: string,
-): Promise<OrganisationDB> =>
-  await update(db, organisation, data, organisation.code, ref)
-
-/**
  * Updates an existing organisation in the database by ID
  * @param db - The database instance
  * @param data - The updated organisation data
@@ -504,6 +527,12 @@ export const updateOrganisationById = async (
   id: Id,
 ): Promise<OrganisationDB> => await update(db, organisation, data, organisation.id, id)
 
+/**
+ * Updates organisation fields with optimistic concurrency guard on `modifiedAt`.
+ * @param db - The database instance.
+ * @param params - Update payload including expected `updatedAt`.
+ * @returns Updated id/modifiedAt pair or `null` when stale/missing.
+ */
 export const updateOrganisationByIdWithConcurrency = async (
   db: Database,
   params: {
@@ -533,6 +562,12 @@ export const updateOrganisationByIdWithConcurrency = async (
   return updated ?? null
 }
 
+/**
+ * Toggles published state and publication metadata for an organisation.
+ * @param db - The database instance.
+ * @param params - Target id, next publish state, and publisher id.
+ * @returns Updated id/state pair or `null`.
+ */
 export const updateOrganisationPublishedStateById = async (
   db: Database,
   params: { id: Id; state: boolean; publisherId: string | null },
@@ -553,6 +588,12 @@ export const updateOrganisationPublishedStateById = async (
   return updated ?? null
 }
 
+/**
+ * Toggles archived state for an organisation.
+ * @param db - The database instance.
+ * @param params - Target id and next archived state.
+ * @returns Updated id/state pair or `null`.
+ */
 export const updateOrganisationArchivedStateById = async (
   db: Database,
   params: { id: Id; state: boolean },

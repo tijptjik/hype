@@ -48,7 +48,6 @@ import type {
   ProjectDBPartial,
   ProjectDBRaw,
   ProjectRoleDB,
-  Code,
   HubOptsExtended,
   ListResponse,
   QueryParams,
@@ -88,7 +87,6 @@ import type {
 //    - mergeOrganisationCapabilities
 //
 // 3.1 CRUD :: UPDATE
-//    - updateProject
 //    - updateProjectById
 //    - updateProjectByIdWithConcurrency
 //    - updateProjectPublishedStateById
@@ -224,6 +222,10 @@ export const toUserRoles = (
 // 2.1 CRUD :: READ
 // ═══════════════════════
 
+/**
+ * listProjects operation.
+ * Used by project DB workflows to keep persistence behavior centralized.
+ */
 export const listProjects = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -342,6 +344,14 @@ export const listProjects = async (
   }
 }
 
+/**
+ * Loads a single project with optional relation graph and hub scoping.
+ * @param db - The database instance.
+ * @param withRelations - Optional relation graph to include.
+ * @param conditions - Optional SQL predicates.
+ * @param opts - Hub filtering options.
+ * @returns The matching project or `undefined`.
+ */
 export const getProject = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
@@ -363,6 +373,12 @@ export const getProject = async (
 // 2.2 CRUD :: READ (PROBES)
 // ═══════════════════════
 
+/**
+ * Probes project visibility/scope fields for read authorization.
+ * @param db - The database instance.
+ * @param params - Lookup reference and key selector.
+ * @returns Minimal probe payload or `null`.
+ */
 export const probeProjectQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
@@ -393,6 +409,10 @@ export const probeProjectQuery = async (
   return probe ?? null
 }
 
+/**
+ * probeExistingProject operation.
+ * Used by project DB workflows to keep persistence behavior centralized.
+ */
 export const probeExistingProject = async (
   db: Database,
   code: string,
@@ -406,6 +426,12 @@ export const probeExistingProject = async (
   return existing ?? null
 }
 
+/**
+ * Probes mutable project fields for update authorization and stale-write checks.
+ * @param db - The database instance.
+ * @param projectId - Target project id.
+ * @returns Minimal update probe payload or `null`.
+ */
 export const probeProjectForUpdate = async (
   db: Database,
   projectId: Id,
@@ -434,6 +460,10 @@ export const probeProjectForUpdate = async (
   return current ?? null
 }
 
+/**
+ * probeProjectForCommand operation.
+ * Used by project DB workflows to keep persistence behavior centralized.
+ */
 const probeProjectForCommand = async (
   db: Database,
   projectId: Id,
@@ -452,6 +482,13 @@ const probeProjectForCommand = async (
   return current ?? null
 }
 
+/**
+ * Resolves project command probe or delegates to caller-provided not-found branch.
+ * @param db - The database instance.
+ * @param projectId - Target project id.
+ * @param onNotFound - Callback invoked when target project is missing.
+ * @returns Command probe payload.
+ */
 export const resolveProjectCommandProbe = async (
   db: Database,
   projectId: Id,
@@ -462,6 +499,10 @@ export const resolveProjectCommandProbe = async (
   return probed
 }
 
+/**
+ * probeOrganisationHubForProject operation.
+ * Used by project DB workflows to keep persistence behavior centralized.
+ */
 export const probeOrganisationHubForProject = async (
   db: Database,
   organisationId: Id,
@@ -482,6 +523,10 @@ export const probeOrganisationHubForProject = async (
 // 2.3 CRUD :: READ (RELATED)
 // ═══════════════════════
 
+/**
+ * listUserRoleAssignments operation.
+ * Used by project DB workflows to keep persistence behavior centralized.
+ */
 export const listUserRoleAssignments = async (
   db: Database,
   projectId: string,
@@ -528,6 +573,10 @@ export const getProjectForFeatureId = async (
 // 2.5 CRUD :: READ (MERGING)
 // ═══════════════════════
 
+/**
+ * mergeOrganisationCapabilities operation.
+ * Used by project DB workflows to keep persistence behavior centralized.
+ */
 export const mergeOrganisationCapabilities = async (
   db: Database,
   organisationId: Id,
@@ -562,24 +611,26 @@ export const mergeOrganisationCapabilities = async (
 // ═══════════════════════
 
 /**
- * Updates an existing project in the database.
+ * Applies partial updates to a project by id.
+ * Used by image/media flows that update one field without concurrency metadata.
  * @param db - The database instance.
- * @param data - The updated project data.
- * @param ref - The project code reference.
- * @returns The updated project.
+ * @param data - Partial project fields to update.
+ * @param id - Project id.
+ * @returns Updated project row.
  */
-export const updateProject = async (
-  db: Database,
-  data: ProjectDBPartial,
-  ref: Code,
-): Promise<ProjectDB> => await update(db, project, data, project.code, ref)
-
 export const updateProjectById = async (
   db: Database,
   data: ProjectDBPartial,
   id: Id,
 ): Promise<ProjectDB> => await update(db, project, data, project.id, id)
 
+/**
+ * Updates project core fields with optimistic concurrency guard on `modifiedAt`.
+ * Used by remote form updates to prevent stale writes.
+ * @param db - The database instance.
+ * @param params - Update payload including expected `updatedAt`.
+ * @returns Updated id/modifiedAt pair, or `null` when stale/missing.
+ */
 export const updateProjectByIdWithConcurrency = async (
   db: Database,
   params: {
@@ -604,6 +655,12 @@ export const updateProjectByIdWithConcurrency = async (
   return updated ?? null
 }
 
+/**
+ * Toggles published state and publication metadata for a project.
+ * @param db - The database instance.
+ * @param params - Target id, next publish state, and publisher id.
+ * @returns Updated id/state pair or `null`.
+ */
 export const updateProjectPublishedStateById = async (
   db: Database,
   params: { id: Id; state: boolean; publisherId: string | null },
@@ -624,6 +681,12 @@ export const updateProjectPublishedStateById = async (
   return updated ?? null
 }
 
+/**
+ * Toggles archived state for a project.
+ * @param db - The database instance.
+ * @param params - Target id and next archived state.
+ * @returns Updated id/state pair or `null`.
+ */
 export const updateProjectArchivedStateById = async (
   db: Database,
   params: { id: Id; state: boolean },
@@ -668,6 +731,14 @@ export const updateI18n = async (
 // 3.2 CRUD :: UPDATE (SYNC)
 // ═══════════════════════
 
+/**
+ * Replaces all project role assignments after ensuring organisation membership.
+ * @param db - The database instance.
+ * @param userRoles - Persisted project role rows.
+ * @param projectId - Target project id.
+ * @param organisationId - Parent organisation id.
+ * @returns Replaced project role rows.
+ */
 export const syncUserRoles = async (
   db: Database,
   userRoles: ProjectRoleNew[],
@@ -684,6 +755,11 @@ export const syncUserRoles = async (
   )
 }
 
+/**
+ * Cascades parent organisation id changes to descendant layer/feature/task rows.
+ * @param db - The database instance.
+ * @param params - Target project and organisation ids.
+ */
 export const cascadeOrganisationToDescendants = async (
   db: Database,
   params: {
@@ -707,6 +783,11 @@ export const cascadeOrganisationToDescendants = async (
     .where(eq(task.projectId, params.projectId))
 }
 
+/**
+ * Cascades organisation capability restrictions into child projects and project roles.
+ * @param db - The database instance.
+ * @param params - Organisation id and effective organisation capabilities.
+ */
 export const cascadeOrganisationCapabilitiesToProjects = async (
   db: Database,
   params: {
