@@ -59,7 +59,6 @@ import type {
   Cache,
   Code,
   ControlMode,
-  CurrentUser,
   DeepPartial,
   FacetType,
   Feature,
@@ -81,11 +80,6 @@ import type {
   SessionUser,
   Task,
   ListResponse,
-  UserExperimental,
-  UserFeature,
-  UserLayer,
-  UserPreferences,
-  UserProfile,
   Ref,
   HubOptsExtended,
   RemoteMap,
@@ -96,6 +90,14 @@ import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type {
+  CurrentUser,
+  UserExperimental,
+  UserFeature,
+  UserLayer,
+  UserPreferences,
+  UserProfile,
+} from '$lib/db/zod/schema/user.types'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { PlaceCtx } from './place.svelte'

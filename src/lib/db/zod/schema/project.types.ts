@@ -6,7 +6,6 @@ import type {
   ResolveChangedRelationParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
-  User,
 } from '$lib/types'
 import type {
   GetQueryParamsSchema,
@@ -39,6 +38,7 @@ import type {
   PublishProjectSchema,
   RemoveProjectSchema,
 } from '$lib/db/zod/schema/project'
+import type { User } from '$lib/db/zod/schema/user.types'
 
 export type ProjectDB = z.infer<typeof ProjectBase>
 export type ProjectDBNew = z.infer<typeof ProjectInsert>

@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
 import { userLayer, layer } from '$lib/db/schema/index'
 // TYPES
-import type { UserLayer, UserRoleDisco, SessionUser, Id } from '$lib/types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Database, UserRoleDisco, SessionUser, Id } from '$lib/types'
+import type { UserLayer } from '$lib/db/zod/schema/user.types'
 
 /**
  * Fetches and constructs user layers from the database.
@@ -16,18 +16,21 @@ import type { Layer } from '$lib/db/zod/schema/layer.types'
  * including those inherited from their organisation roles.
  * It then maps these layers into UserLayer objects and returns them.
  */
-export async function getUserLayers(db: any, userId: string): Promise<UserLayer[]> {
+export async function getUserLayers(
+  db: Database,
+  userId: string,
+): Promise<UserLayer[]> {
   // Fetch user layers
   let userLayers = await db.select().from(userLayer).where(eq(userLayer.userId, userId))
 
   // If no layers exist, create default layer
   if (userLayers.length === 0) {
     // First, get the layer data
-    const defaultLayers = (await db
-      .select()
+    const defaultLayers = await db
+      .select({ id: layer.id })
       .from(layer)
       .where(eq(layer.isDefaultVisible, true))
-      .all()) as Layer[]
+      .all()
 
     if (!defaultLayers) {
       console.error('Default layers not found')

@@ -9,13 +9,12 @@ import * as schema from '$lib/db/schema/index'
 import { drizzle } from 'drizzle-orm/d1'
 // TYPES
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { UserRoleDisco, Locale } from '$lib/types'
 import type {
-  UserRoleDisco,
+  UserExperimental,
   UserLayer,
   UserPreferences,
-  UserExperimental,
-  Locale,
-} from '$lib/types'
+} from '$lib/db/zod/schema/user.types'
 import type { user as userSchema } from '$lib/db/schema/user'
 
 // ═══════════════════════════════════════════════════════════════

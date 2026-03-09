@@ -18,7 +18,7 @@ import {
   CubeTransparent,
   ExclamationTriangle,
 } from '@steeze-ui/heroicons'
-import type { UserProfile } from '$lib/types'
+import type { UserProfile } from '$lib/db/zod/schema/user.types'
 
 // PROPS
 type Props = {

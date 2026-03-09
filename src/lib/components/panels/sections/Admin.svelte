@@ -5,7 +5,11 @@ import Section from '$lib/components/panels/common/Section.svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
-import type { AdminPreferences, AdminPreferenceCode, PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/types'
+import type {
+  AdminPreferenceCode,
+  AdminPreferences,
+} from '$lib/db/zod/schema/user.types'
 
 // CONTEXT
 const adminCtx = getAdminCtx()

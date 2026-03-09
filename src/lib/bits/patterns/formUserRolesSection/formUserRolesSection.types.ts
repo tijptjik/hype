@@ -1,6 +1,6 @@
 import type { OrganisationRoleType } from '$lib/enums'
-import type { User, UserSearchQueryOptions } from '$lib/types'
 import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'
+import type { User, UserSearchQueryOptions } from '$lib/db/zod/schema/user.types'
 
 export interface FormUserRolesSectionProps {
   title?: string

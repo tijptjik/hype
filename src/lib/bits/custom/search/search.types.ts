@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import type { UserSearchQueryOptions } from '$lib/types'
+import type { UserSearchQueryOptions } from '$lib/db/zod/schema/user.types'
 
 export interface SearchResultMap<T> {
   image: (item: T) => string | null | undefined

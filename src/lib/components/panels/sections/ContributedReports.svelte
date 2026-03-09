@@ -6,7 +6,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import type { UserProfile } from '$lib/types'
+import type { UserProfile } from '$lib/db/zod/schema/user.types'
 
 // PROPS
 let { userData }: { userData?: UserProfile } = $props()

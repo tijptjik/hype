@@ -4,12 +4,12 @@ import { userFeature } from '$lib/db/schema/index'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // TYPES
+import type { Database } from '$lib/types'
 import type {
-  Database,
   UserFeature,
   UserFeatureDBNew,
   UserFeaturePartial,
-} from '$lib/types'
+} from '$lib/db/zod/schema/user.types'
 
 // ═══════════════════════
 // 1. LIST :: USER FEATURES
@@ -37,9 +37,14 @@ export async function upsertUserFeature(
   targetUserId: string, // ID of the user whose feature is being upserted
   data: UserFeaturePartial,
 ): Promise<UserFeature> {
+  const featureId = data.featureId
+  if (!featureId) {
+    throw new Error('featureId is required to upsert user feature state')
+  }
+
   const recordToUpsert: UserFeatureDBNew = {
     userId: targetUserId,
-    featureId: data.featureId!,
+    featureId,
     isVisited: data.isVisited,
     isWishlisted: data.isWishlisted,
     visitedAt: data.visitedAt,

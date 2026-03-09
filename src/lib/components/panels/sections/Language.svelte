@@ -11,7 +11,8 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { supportedLocales, localeNames } from '$lib/enums'
 // TYPES
-import type { UserPreferences, PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/types'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

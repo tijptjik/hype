@@ -61,13 +61,13 @@ import { HierarchicalResource } from '$lib/enums'
 // UTILS
 import { normalizeUsername, validateUsername } from '$lib/utils/username'
 // TYPES
+import type { Id } from '$lib/types'
 import type {
-  Id,
   UserHydrationResult,
   UserParentChainRoleFilter,
-  UserRoleFilter,
   UserRaw,
-} from '$lib/types'
+  UserRoleFilter,
+} from '$lib/db/zod/schema/user.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

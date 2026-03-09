@@ -7,7 +7,10 @@ import { formatDistanceToNow } from 'date-fns'
 import { getUserForAttribution } from '$lib/api/server/user.remote'
 import { getAppCtx } from '$lib/context/app.svelte'
 import Image from '../common/Image.svelte'
-import type { UserHydrationAdminProfile, UserHydrationResult } from '$lib/types'
+import type {
+  UserHydrationAdminProfile,
+  UserHydrationResult,
+} from '$lib/db/zod/schema/user.types'
 
 type Props = {
   userId: string | null

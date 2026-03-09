@@ -27,8 +27,8 @@ import type {
   FeatureFromCollection,
   Feature,
   Image,
-  UserFeatureWithHierarchy,
 } from '$lib/types'
+import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
 
 // ═══════════════════════
 // 1. CORE NAVIGATION

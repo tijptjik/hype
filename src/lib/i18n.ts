@@ -8,10 +8,10 @@ import type {
   LocaleKey,
   Neighbourhood,
   PropertyValueI18nDB,
-  UserPreferences,
   WritableI18nRecord,
 } from '$lib/types'
 import type { Resource } from '$lib/types'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 import { supportedLocales } from './enums'
 
 // ═══════════════════════
@@ -228,7 +228,7 @@ export function getI18n<T>(
     | Record<Locale, T>
     | undefined,
   field: string,
-  userPreferences: UserPreferences,
+  _userPreferences: UserPreferences,
   fallback?: string,
   skipGenFieldCheck?: boolean,
 ): string {

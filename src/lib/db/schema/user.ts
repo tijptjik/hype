@@ -5,9 +5,7 @@ import { nanoid } from 'nanoid'
 import { feature } from './feature'
 import { layer } from './layer'
 // ENUM
-import { SupportedLocales, supportedLocales } from '../../enums'
-// TYPES
-import type { UserExperimental, UserPreferences } from '../../types'
+import { SupportedLocales } from '../../enums'
 
 /* ============================================================================
  * USER MANAGEMENT

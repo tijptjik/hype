@@ -33,9 +33,6 @@ import type {
   ViewFilters,
   Locale,
   FilterTriState,
-  CurrentUser,
-  UserPreferences,
-  AdminPreferences,
   FeatureFromCollection,
   NavigableResource,
   FilterState,
@@ -44,6 +41,11 @@ import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type {
+  AdminPreferences,
+  CurrentUser,
+  UserPreferences,
+} from '$lib/db/zod/schema/user.types'
 
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM

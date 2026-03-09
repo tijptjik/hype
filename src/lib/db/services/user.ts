@@ -2,16 +2,14 @@
 import { and, asc, desc, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
 import { user, userFeature, userLayer } from '../schema'
 // TYPES
+import type { Id, UserRoleDisco, Database } from '$lib/types'
 import type {
-  Id,
-  UserPartial,
-  UserLayerDB,
   UserDB,
-  UserRoleDisco,
-  Database,
   UserFeatureDB,
+  UserLayerDB,
   UserLayerNew,
-} from '$lib/types'
+  UserPartial,
+} from '$lib/db/zod/schema/user.types'
 import { update } from '../crud'
 
 // ═══════════════════════

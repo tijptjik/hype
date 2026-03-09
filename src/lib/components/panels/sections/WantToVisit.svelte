@@ -17,7 +17,7 @@ import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures
 // NAVIGATION
 import { navigateToStarred } from '$lib/navigation'
 // TYPES
-import type { UserFeatureWithHierarchy } from '$lib/types'
+import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

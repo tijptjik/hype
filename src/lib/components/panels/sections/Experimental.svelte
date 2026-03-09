@@ -6,10 +6,12 @@ import Section from '$lib/components/panels/common/Section.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type {
-  ExperimentalFeatureConfig,
-  UserExperimental,
   PanelProps,
 } from '$lib/types'
+import type {
+  ExperimentalFeatureConfig,
+  UserExperimental,
+} from '$lib/db/zod/schema/user.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

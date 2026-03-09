@@ -2,7 +2,8 @@ import { setUserLayerDefaults, updateUserProfile } from '$lib/api/server/user.re
 import { m } from '$lib/i18n'
 import { normalizeUsername, validateUsername } from '$lib/utils/username'
 // TYPES
-import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types'
+import type { Id, Locale } from '$lib/types'
+import type { UserLayer, UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { RemoteFormIssue } from '@sveltejs/kit'
 
 /**

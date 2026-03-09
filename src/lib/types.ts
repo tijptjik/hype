@@ -66,8 +66,6 @@ import type {
   ImageAdminProfileAPI,
   ImageUpdate,
   ImageUpdateAPI,
-  ListQueryParamsSchema,
-  GetQueryParamsSchema,
   PropertyAdminProfileAPI,
   PropertyDetailProfileAPI,
   PropertyI18nRecord,
@@ -94,33 +92,6 @@ import type {
   TaskInsertAPI,
   TaskUpdate,
   TaskUpdateAPI,
-  UserAdminListProfileAPI,
-  UserAdminProfileAPI,
-  UserAttributionProfileAPI,
-  UserBase,
-  UserBaseRaw,
-  UserCardProfileAPI,
-  UserDetailProfileAPI,
-  UserFeatureAPI,
-  UserFeatureBase,
-  UserFeatureInsert,
-  UserFeatureInsertAPI,
-  UserFeatureListProfileAPI,
-  UserFeatureUpdate,
-  UserFeatureUpdateAPI,
-  UserHydrationAttributionProfileAPI,
-  UserHydrationCardProfileAPI,
-  UserLayerDetailProfileAPI,
-  UserLayerRecord,
-  UserLayerRecordCreate,
-  UserLayerRecordUpdate,
-  SetUserLayerDefaultsItemSchema,
-  UserLeaderboardProfileAPI,
-  UserProfile as UserProfileSchema,
-  UserUpdate,
-  UserUpdateAPI,
-  UserSearchQueryParamsSchema,
-  UserSelfProfileAPI,
 } from './db/zod'
 import type {
   Hub,
@@ -146,9 +117,12 @@ import type {
   LayerProfile,
 } from './db/zod/schema/layer.types'
 import type {
+  UserFeature,
+  UserProfile,
+} from './db/zod/schema/user.types'
+import type {
   Organisation,
   OrganisationDB,
-  OrganisationGetState,
   OrganisationEntityByProfile,
   OrganisationGetParamsByProfile,
   OrganisationI18nDB,
@@ -157,7 +131,6 @@ import type {
   OrganisationNew,
   OrganisationProfile,
   OrganisationRole,
-  OrganisationRoleUser,
 } from './db/zod/schema/organisation.types'
 import type {
   Project,
@@ -802,9 +775,6 @@ export type ListQueryParams<
   sortOrder?: 'asc' | 'desc'
   q?: string
 }
-export type UserSearchQueryParams = z.input<typeof UserSearchQueryParamsSchema>
-export type UserSearchQueryOptions = Omit<UserSearchQueryParams, 'q'>
-
 /* ----------------- */
 // NAVIGATION :: PRISMS
 /* -------- */
@@ -1222,25 +1192,6 @@ export type ResetLocaleFieldsParams<
   fields?: I18nTranslatableField[]
 }
 
-export type UserRoleEntityType = 'hub' | 'organisation' | 'project'
-export type UserParentEntityType = 'organisation' | 'project'
-
-export type UserRoleFilter = {
-  entityType: UserRoleEntityType
-  entityId: string
-  role?: string
-  roles?: string[]
-  anyRole?: boolean
-}
-
-export type UserParentChainRoleFilter = {
-  fromEntityType: UserParentEntityType
-  fromEntityId: string
-  role?: string
-  roles?: string[]
-  anyRole?: boolean
-}
-
 /* ----------------- */
 // FORM FIELDS
 /* -------- */
@@ -1337,72 +1288,6 @@ export type ResourceDB =
 export type FormI18n<T> = Record<Locale, T>
 
 /* ----------------- */
-// USERS
-/* -------- */
-
-/* ----------------- */
-// USERS :: DB
-/* -------- */
-
-export type UserDB = z.infer<typeof UserBase>
-export type UserDBPartial = z.infer<typeof UserUpdate>
-export type UserRaw = z.infer<typeof UserBaseRaw>
-
-export type UserLayerDB = z.infer<typeof UserLayerRecord>
-export type UserLayerDBPartial = z.infer<typeof UserLayerRecordUpdate>
-
-/* ----------------- */
-// USERS :: API
-/* -------- */
-
-export type User = z.infer<typeof UserAdminProfileAPI>
-export type CurrentUser = z.infer<typeof UserSelfProfileAPI> & {
-  userLayers: UserLayer[]
-  userFeatures?: UserFeature[]
-  roles?: UserRoleDisco[]
-  superAdmin?: boolean | null
-}
-export type UserProfile = z.infer<typeof UserDetailProfileAPI>
-export type UserCollection = z.infer<typeof UserAdminListProfileAPI>
-export type UserPartial = z.infer<typeof UserUpdateAPI>
-export type UserAttributionProfile = z.infer<typeof UserAttributionProfileAPI>
-export type UserAdminListProfile = z.infer<typeof UserAdminListProfileAPI>
-export type UserCardProfile = z.infer<typeof UserCardProfileAPI>
-export type UserLeaderboardProfile = z.infer<typeof UserLeaderboardProfileAPI>
-export type UserDetailProfile = z.infer<typeof UserDetailProfileAPI>
-export type UserSelfProfile = z.infer<typeof UserSelfProfileAPI>
-export type UserAdminProfile = z.infer<typeof UserAdminProfileAPI>
-export type UserProfileKey = z.infer<typeof UserProfileSchema>
-export type UserEntityByProfile<P extends UserProfileKey> = P extends 'attribution'
-  ? UserAttributionProfile
-  : P extends 'adminList'
-    ? UserAdminListProfile
-    : P extends 'card'
-      ? UserCardProfile
-      : P extends 'leaderboard'
-        ? UserLeaderboardProfile
-        : P extends 'self'
-          ? UserSelfProfile
-          : P extends 'admin'
-            ? UserAdminProfile
-            : UserDetailProfile
-
-export type UserLayer = z.infer<typeof UserLayerDetailProfileAPI>
-export type UserLayerNew = z.infer<typeof UserLayerRecordCreate>
-export type UserLayerPartial = z.infer<typeof SetUserLayerDefaultsItemSchema>
-export type UserHydrationProfile = 'attribution' | 'card'
-export type UserHydrationPrivacyProfile = z.infer<
-  typeof UserHydrationAttributionProfileAPI
->
-export type UserHydrationAdminProfile = z.infer<typeof UserHydrationCardProfileAPI>
-export type UserHydrationEntityByProfile<P extends UserHydrationProfile> =
-  P extends 'card' ? UserHydrationAdminProfile : UserHydrationPrivacyProfile
-export type UserHydrationResult =
-  | UserHydrationPrivacyProfile
-  | UserHydrationAdminProfile
-  | null
-
-/* ----------------- */
 // USERS :: JOIN
 /* -------- */
 
@@ -1425,36 +1310,6 @@ export type OrganisationJoinConfig = {
 /* -------- */
 
 // JSON type objects for user preferences and experimental features
-
-export type AdminPreferences = {
-  isAdminMapCollapsed?: boolean
-  isPrimaryPanelCollapsed?: boolean
-  isPrimaryPanelAutoHide?: boolean
-}
-
-export type AdminPreferenceCode =
-  | 'isAdminMapCollapsed'
-  | 'isPrimaryPanelCollapsed'
-  | 'isPrimaryPanelAutoHide'
-
-export type UserPreferences = {
-  fallbackLocales: Locale[]
-  allowMachineTranslation: boolean
-  preferFallbackInCurrentLocale: boolean
-  isTranslateButtonVisible: boolean
-  admin?: AdminPreferences
-}
-
-export type UserExperimental = {
-  contributorMode: boolean
-  noLabelsMode: boolean
-}
-
-export type ExperimentalFeatureConfig = {
-  name: string
-  description: string
-  code: keyof UserExperimental
-}
 
 export type I18nFormInputShape = {
   data: {
@@ -2350,23 +2205,6 @@ export type DeleteParamsToSign = {
 
 export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied'
 
-/* ----------------- */
-// USER FEATURES
-/* -------- */
-
-export type UserFeatureDB = z.infer<typeof UserFeatureBase>
-export type UserFeatureDBNew = z.infer<typeof UserFeatureInsert>
-export type UserFeatureDBPartial = z.infer<typeof UserFeatureUpdate>
-
-export type UserFeature = z.infer<typeof UserFeatureAPI>
-export type UserFeatureListItem = z.infer<typeof UserFeatureListProfileAPI>
-export type UserFeatureNew = z.infer<typeof UserFeatureInsertAPI>
-export type UserFeaturePartial = z.infer<typeof UserFeatureUpdateAPI>
-export type UserFeatureWithHierarchy = UserFeature & {
-  feature: FeatureFromCollection
-  hierarchy: ResourceContext
-}
-// Extended on the client side to include hierarchy information
 export type FeatureExtended = z.infer<typeof FeatureClientExt>
 
 /* ----------------- */

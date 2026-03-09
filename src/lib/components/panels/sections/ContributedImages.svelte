@@ -20,13 +20,15 @@ import { getURLfromImage } from '$lib/client/services/image'
 import { navigateToContributedImage } from '$lib/navigation'
 // TYPES
 import type {
-  UserProfile,
   Id,
   Project,
   ResourceContext,
-  UserPreferences,
   ImageContextEnvelope,
 } from '$lib/types'
+import type {
+  UserPreferences,
+  UserProfile,
+} from '$lib/db/zod/schema/user.types'
 import { untrack } from 'svelte'
 
 // MAGICAL CONSTANTS

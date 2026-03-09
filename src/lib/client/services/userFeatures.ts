@@ -1,21 +1,19 @@
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 // API
 import {
   addUserFeatureToList,
   removeUserFeatureFromList,
 } from '$lib/api/server/user.remote'
 // TYPES
-import type {
-  Feature,
-  FeatureFromCollection,
-  Id,
-  UserFeatureListItem as UserFeature,
-  UserFeatureWithHierarchy,
-} from '$lib/types'
+import type { Feature, FeatureFromCollection, Id } from '$lib/types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type {
+  UserFeatureListItem as UserFeature,
+  UserFeatureWithHierarchy,
+} from '$lib/db/zod/schema/user.types'
 
 type SearchableFeatureResource = Pick<Feature | FeatureFromCollection, 'i18n'>
 type SearchableHierarchyResource = Pick<Organisation | Project | Layer, 'i18n'>
@@ -27,7 +25,7 @@ export const filterUserFeaturesByHierarchy = (
   if (!searchTerm) return features
 
   const searchLower = searchTerm.toLowerCase()
-  const locale = getLocale()
+  const locale = getLocaleKey()
 
   return features.filter(item => {
     const { feature, hierarchy } = item

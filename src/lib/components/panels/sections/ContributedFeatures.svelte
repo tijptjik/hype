@@ -18,7 +18,11 @@ import ScrollableText from '$lib/components/common/ScrollableText.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
 import { MapPin, ChevronDown } from '@steeze-ui/heroicons'
 // TYPES
-import type { FeatureFromCollection, UserProfile, UserPreferences } from '$lib/types'
+import type { FeatureFromCollection } from '$lib/types'
+import type {
+  UserPreferences,
+  UserProfile,
+} from '$lib/db/zod/schema/user.types'
 // PROPS
 let { userData }: { userData?: UserProfile } = $props()
 
