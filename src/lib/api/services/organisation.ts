@@ -1,6 +1,5 @@
 // DRIZZLE
 import { asc, eq, inArray, type SQL } from 'drizzle-orm'
-import { error } from '@sveltejs/kit'
 // LIB
 import {
   applyQueryFilters,
@@ -9,17 +8,8 @@ import {
   toTriStateBoolean,
 } from '$lib/api'
 import { toBooleanOrUndefined } from '$lib/api/services'
-// AUTH
-import {
-  assertUserLoggedIn,
-  assertAdminRequest,
-  assertSuperAdmin,
-  runAssertions,
-  assertOrganisationOwnerOrSuperAdmin,
-  assertIsCoreInclusiveModifiedBySuperAdmin,
-} from '$lib/auth/asserts'
 // DB
-import { isFieldUnique, transformI18nSafely } from '$lib/db'
+import { transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
@@ -33,11 +23,10 @@ import {
 // SCHEMA
 import { organisation, organisationProperty } from '$lib/db/schema/index'
 // ENUMS
-import { FirstClassResource, ImageContextResource } from '$lib/enums'
+import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type {
   CapabilityDefinitions,
-  Database,
   EntityResponse,
   Id,
   ListResponse,
@@ -45,15 +34,12 @@ import type {
   OrganisationEntityByProfile,
   OrganisationListByProfile,
   OrganisationProfile,
-  OrganisationPartial,
   Organisation,
   OrganisationDB,
-  OrganisationNew,
   QueryParams,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
-import type { SuperValidated } from 'sveltekit-superforms'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -75,15 +61,7 @@ import type { SuperValidated } from 'sveltekit-superforms'
 // - buildVisibilityAndOwnershipConditions
 // - toQueryConditions
 //
-// ASSERT :: AUTHZ
-// - assertPermissionsToCreateOrganisation
-// - assertPermissionsToUpdateOrganisation
-//
-// ASSERT :: VALIDATION
-// - assertCodeUnique
-//
 // CHANGE DETECTION
-// - isAccessLostUponSuccess
 // - hasOrganisationCapabilitiesChanged
 
 /********************
@@ -437,100 +415,8 @@ export const toQueryConditions = (
 }
 
 /********************
- *  ASSERT :: AUTHZ
- ************/
-/**
- * Asserts that organisation create flow is allowed for the caller.
- * Enforces logged-in admin request and super-admin capability.
- */
-const assertPermissionsToCreateOrganisation = (user: SessionUser, request: Request) => {
-  // Run all access control assertions
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
-    () => assertSuperAdmin(user),
-  )
-
-  if (assertionError) return assertionError
-}
-
-/**
- * Asserts that organisation update flow is allowed for the caller.
- * Allows code changes but enforces ownership/super-admin and guarded core flags.
- */
-const assertPermissionsToUpdateOrganisation = (
-  user: SessionUser,
-  request: Request,
-  formData: Record<string, unknown> & { id?: string },
-  userRoles: UserRoleDisco[],
-) => {
-  const organisationId = formData.id
-  if (typeof organisationId !== 'string' || organisationId.length === 0) {
-    return error(400, 'Organisation id is required')
-  }
-
-  // Run all access control assertions
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
-    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, organisationId),
-    () =>
-      assertIsCoreInclusiveModifiedBySuperAdmin(user, formData as OrganisationPartial),
-  )
-
-  if (assertionError) return assertionError
-}
-
-/********************
- *  ASSERT :: VALIDATION
- ************/
-/**
- * Validates organisation code uniqueness and writes form errors on conflict.
- * Keeps field error propagation local to the form contract used by callers.
- */
-const assertCodeUnique = async (
-  db: Database,
-  form: SuperValidated<OrganisationNew> | SuperValidated<Organisation>,
-  formData: OrganisationNew | Organisation,
-) => {
-  // ASSERT : Code is unique
-  const codeUnique = await isFieldUnique<Organisation>(
-    db,
-    formData as Organisation,
-    FirstClassResource.organisation,
-    'code',
-  )
-
-  if (!codeUnique) {
-    form.valid = false
-    form.errors.code = ['Code already exists']
-  }
-  return form
-}
-
-/********************
  *  CHANGE DETECTION
  ************/
-/**
- * Checks whether the acting user loses organisation-role membership after update.
- * Super admins are exempt because access is not tied to organisation role rows.
- */
-const isAccessLostUponSuccess = (
-  user: SessionUser,
-  formData: { id?: string; userRoles: UserRoleDisco[] },
-  userRoles?: UserRoleDisco[],
-) => {
-  const userRolesToCheck = userRoles || formData.userRoles
-  return (
-    !(userRolesToCheck as UserRoleDisco[]).some(
-      role =>
-        role.type === 'organisation' &&
-        role.organisationId === (formData as { id?: string }).id &&
-        role.userId === user.id,
-    ) && !user.superAdmin
-  )
-}
-
 /**
  * Determines whether organisation capabilities changed in a submitted update.
  * @param params Submitted/current capability values and field presence.
