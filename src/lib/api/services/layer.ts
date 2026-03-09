@@ -1,18 +1,12 @@
 // DRIZZLE
 import type { SQL } from 'drizzle-orm'
+// API
 import { applyQueryFilters } from '$lib/api'
 import { toBooleanOrUndefined } from '$lib/api/services'
 import { buildLayerVisibilityAndOwnershipConditions } from '$lib/api/services/authz/layer'
-// AUTH
-import {
-  assertAdminRequest,
-  assertParamIdentifierEqualsFormIdentifier,
-  assertProjectMaintainerOrSuperAdmin,
-  assertUserLoggedIn,
-  runAssertions,
-} from '$lib/auth/asserts'
 // DB
 import { transformI18nSafely } from '$lib/db'
+import { layer } from '$lib/db/schema'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
@@ -23,21 +17,17 @@ import {
 } from '$lib/db/zod'
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
-import { layer } from '$lib/db/schema'
 // TYPES
 import type {
-  Layer,
-  LayerDB,
-  LayerDBNew,
-  LayerDBRaw,
-  LayerEntityByProfile,
-  LayerI18nDB,
-  LayerListByProfile,
-  LayerPropertyDBRaw,
-  LayerProfile,
   Database,
   EntityResponse,
   Id,
+  Layer,
+  LayerDB,
+  LayerDBRaw,
+  LayerEntityByProfile,
+  LayerListByProfile,
+  LayerProfile,
   ListResponse,
   Prisms,
   QueryParams,
@@ -45,11 +35,47 @@ import type {
   UserRoleDisco,
 } from '$lib/types'
 
-export const layerCollectionWithRelations = {
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// DB RELATIONS
+// - layerCollectionWithRelations
+// - layerEntityWithRelations
+// - getLayerWithRelations
+//
+// PROFILE SHAPING
+// - toLayerProfile
+// - normalizeLayerPropertiesForProfile
+// - toProfileResponseShape
+// - toEntityResponseShape
+// - toListResponseShape
+//
+// NORMALIZATION
+// - toComparableLayerProperties
+// - toLayerPrisms
+//
+// QUERY CONTEXT
+// - toLookupConditions
+// - toRequestedListState
+// - toQueryConditions
+
+/********************
+ *  DB RELATIONS
+ ************/
+/**
+ * Lightweight relation graph for non-admin layer reads.
+ * Keeps list/detail payloads small while preserving the fields the UI expects.
+ */
+const layerCollectionWithRelations = {
   i18n: true,
   properties: true,
 }
 
+/**
+ * Full relation graph for admin or write-oriented layer reads.
+ * Includes nested property definitions and publisher attribution for admin workflows.
+ */
 export const layerEntityWithRelations = {
   i18n: true,
   properties: {
@@ -71,11 +97,49 @@ export const layerEntityWithRelations = {
   },
 }
 
+/**
+ * Returns relation hydration settings for the selected layer profile.
+ * Fetches only the relation graph required by the requested response and admin visibility state.
+ *
+ * @param profile - Requested response profile.
+ * @param isAdminUser - Whether publisher fields may be exposed in non-admin detail/card views.
+ * @returns Relation shape suitable for Drizzle `with` clauses.
+ */
+export const getLayerWithRelations = (
+  profile: LayerProfile,
+  isAdminUser: boolean,
+): Record<string, boolean | object> => {
+  if (profile === 'admin') return layerEntityWithRelations
+
+  if (profile === 'detail' || profile === 'card') {
+    return {
+      i18n: true,
+      properties: true,
+      ...(isAdminUser
+        ? {
+            publisher: {
+              columns: userColumnsWithPrivacyProtected,
+            },
+          }
+        : {}),
+    }
+  }
+
+  return layerCollectionWithRelations
+}
+
+/********************
+ *  PROFILE SHAPING
+ ************/
 const layerProfiles = ['list', 'card', 'detail', 'admin'] as const
 
 /**
  * Normalizes arbitrary profile input into a supported layer profile.
- * Used to prevent invalid profile selectors from leaking into query/response logic.
+ * Prevents invalid profile selectors from leaking into query and response branches.
+ *
+ * @param value - Raw caller-supplied profile value.
+ * @param fallback - Profile returned when `value` is missing or invalid.
+ * @returns Safe layer profile.
  */
 export const toLayerProfile = (value: unknown, fallback: LayerProfile): LayerProfile =>
   typeof value === 'string' && (layerProfiles as readonly string[]).includes(value)
@@ -83,63 +147,71 @@ export const toLayerProfile = (value: unknown, fallback: LayerProfile): LayerPro
     : fallback
 
 /**
- * Projects layer property assignments into a comparable, order-stable array.
- * Used by remote commands to detect semantic changes independent of payload order/noise.
+ * Normalizes nested layer property relation payloads for response schemas.
+ * Converts nested i18n arrays into the locale-map shape expected by layer API responses.
+ *
+ * @param properties - Raw nested layer property relation payload.
+ * @returns Layer properties with transformed i18n and value payloads.
  */
-export const toComparableLayerProperties = (
-  properties: unknown,
-): Array<{
-  propertyId: string
-  isVisible: boolean
-  isUserContributable: boolean
-}> => {
+const normalizeLayerPropertiesForProfile = (
+  properties: LayerDBRaw['properties'] | null | undefined,
+): LayerDBRaw['properties'] => {
   if (!Array.isArray(properties)) return []
-  return properties
-    .filter(
-      (
-        property,
-      ): property is {
-        propertyId: string
-        isVisible?: boolean
-        isUserContributable?: boolean
-      } =>
-        Boolean(property) &&
-        typeof property === 'object' &&
-        typeof (property as { propertyId?: unknown }).propertyId === 'string',
-    )
-    .map(property => ({
-      propertyId: property.propertyId,
-      isVisible: Boolean(property.isVisible),
-      isUserContributable: Boolean(property.isUserContributable),
-    }))
-    .sort((left, right) => left.propertyId.localeCompare(right.propertyId))
+
+  return properties.map(propertyRow => {
+    const propertyDef =
+      propertyRow && typeof propertyRow === 'object' ? propertyRow.property : null
+
+    if (!propertyDef || typeof propertyDef !== 'object') return propertyRow
+
+    const normalizedValues = Array.isArray(propertyDef.values)
+      ? propertyDef.values.map(value => ({
+          ...value,
+          i18n: transformI18nSafely(value?.i18n as never),
+        }))
+      : propertyDef.values
+
+    return {
+      ...propertyRow,
+      property: {
+        ...propertyDef,
+        i18n: transformI18nSafely(propertyDef.i18n as never),
+        values: normalizedValues,
+      },
+    }
+  }) as LayerDBRaw['properties']
 }
 
 /**
- * Shapes a layer row into an admin response payload.
+ * Shapes a hydrated layer row into a profile-specific API payload.
+ * Keeps schema branching centralized so entity and list responses share one path.
  *
- * @param row - Base layer row.
- * @param i18n - Optional layer i18n rows.
- * @param properties - Optional layer property rows.
- * @returns Parsed admin layer payload.
+ * @param row - Hydrated layer row.
+ * @param profile - Target response profile.
+ * @returns Parsed profile-specific layer payload.
  */
-export const toResponseShape = async (
+const toProfileResponseShape = async (
   row: LayerDBRaw,
-  i18n: LayerI18nDB[] = [],
-  properties: LayerPropertyDBRaw[] = [],
-) => {
+  profile: LayerProfile,
+): Promise<Layer> => {
   const data = {
     ...row,
-    i18n: transformI18nSafely(i18n.length > 0 ? i18n : row.i18n, {}),
-    properties: normalizeLayerPropertiesForProfile(
-      properties.length > 0 ? (properties as never) : row.properties,
-    ),
+    i18n: transformI18nSafely(row.i18n),
+    properties: normalizeLayerPropertiesForProfile(row.properties),
+    image: row.image
+      ? toImageEnvelope(row.image as never, 'card', ImageContextResource.layer, row.id)
+      : null,
   }
-  return LayerAdminProfileAPI.parse(data)
+
+  if (profile === 'list') return LayerListProfileAPI.parse(data) as Layer
+  if (profile === 'card') return LayerCardProfileAPI.parse(data) as Layer
+  if (profile === 'detail') return LayerDetailProfileAPI.parse(data) as Layer
+  return LayerAdminProfileAPI.parse(data) as Layer
 }
 
 /**
  * Shapes a single layer entity into an API entity response envelope.
+ * Returns `data: null` on misses while preserving duration metadata.
  *
  * @param row - Layer row or `null`.
  * @param profile - Output response profile.
@@ -150,6 +222,7 @@ export const toEntityResponseShape = async <P extends LayerProfile = 'detail'>(
   profile: P = 'detail' as P,
 ): Promise<EntityResponse<LayerEntityByProfile<P>>> => {
   const startedAt = Date.now()
+
   if (!row) {
     return { data: null as LayerEntityByProfile<P>, durationMs: Date.now() - startedAt }
   }
@@ -163,8 +236,9 @@ export const toEntityResponseShape = async <P extends LayerProfile = 'detail'>(
 
 /**
  * Shapes a paginated layer result into an API list response envelope.
+ * Ensures every row is normalized through the same profile-specific response path.
  *
- * @param result - Paginated layer rows from DB service.
+ * @param result - Paginated layer rows from the DB layer.
  * @param profile - Output response profile.
  * @returns List response envelope with typed layer payloads.
  */
@@ -203,92 +277,68 @@ export const toListResponseShape = async <P extends LayerProfile = 'list'>(
   }
 }
 
+/********************
+ *  NORMALIZATION
+ ************/
 /**
- * Normalizes nested layer property relation payloads for response schemas.
- * Used to ensure property/value i18n blocks are in transformed locale-map format.
+ * Projects layer property assignments into a comparable, order-stable array.
+ * Used by remote commands to detect semantic property changes independent of payload order.
+ *
+ * @param properties - Unknown submitted or persisted property-assignment payload.
+ * @returns Comparable property tuples sorted by `propertyId`.
  */
-const normalizeLayerPropertiesForProfile = (
-  properties: LayerDBRaw['properties'] | null | undefined,
-): LayerDBRaw['properties'] => {
+export const toComparableLayerProperties = (
+  properties: unknown,
+): Array<{
+  propertyId: string
+  isVisible: boolean
+  isUserContributable: boolean
+}> => {
   if (!Array.isArray(properties)) return []
 
-  return properties.map(propertyRow => {
-    const propertyDef =
-      propertyRow && typeof propertyRow === 'object' ? propertyRow.property : null
-
-    if (!propertyDef || typeof propertyDef !== 'object') return propertyRow
-
-    const normalizedValues = Array.isArray(propertyDef.values)
-      ? propertyDef.values.map(value => ({
-          ...value,
-          i18n: transformI18nSafely(value?.i18n as never),
-        }))
-      : propertyDef.values
-
-    return {
-      ...propertyRow,
-      property: {
-        ...propertyDef,
-        i18n: transformI18nSafely(propertyDef.i18n as never),
-        values: normalizedValues,
-      },
-    }
-  }) as LayerDBRaw['properties']
+  return properties
+    .filter(
+      (
+        property,
+      ): property is {
+        propertyId: string
+        isVisible?: boolean
+        isUserContributable?: boolean
+      } =>
+        Boolean(property) &&
+        typeof property === 'object' &&
+        typeof (property as { propertyId?: unknown }).propertyId === 'string',
+    )
+    .map(property => ({
+      propertyId: property.propertyId,
+      isVisible: Boolean(property.isVisible),
+      isUserContributable: Boolean(property.isUserContributable),
+    }))
+    .sort((left, right) => left.propertyId.localeCompare(right.propertyId))
 }
 
 /**
- * Shapes a hydrated layer row to a profile-specific API payload.
- * Used by entity/list shapers to keep profile branching in one place.
+ * Normalizes optional layer prism payload into a complete prism object.
+ * Remote handlers use this to avoid branching on partially-defined prism arrays.
+ *
+ * @param prisms - Optional raw prism payload.
+ * @returns Prism object with concrete arrays for every hierarchy level.
  */
-const toProfileResponseShape = async (
-  row: LayerDBRaw,
-  profile: LayerProfile,
-): Promise<Layer> => {
-  const data = {
-    ...row,
-    i18n: transformI18nSafely(row.i18n),
-    properties: normalizeLayerPropertiesForProfile(row.properties),
-    image: row.image
-      ? toImageEnvelope(row.image as never, 'card', ImageContextResource.layer, row.id)
-      : null,
-  }
+export const toLayerPrisms = (prisms?: Prisms): Prisms => ({
+  organisation: Array.isArray(prisms?.organisation) ? prisms.organisation : [],
+  project: Array.isArray(prisms?.project) ? prisms.project : [],
+  layer: Array.isArray(prisms?.layer) ? prisms.layer : [],
+})
 
-  if (profile === 'list') return LayerListProfileAPI.parse(data) as Layer
-  if (profile === 'card') return LayerCardProfileAPI.parse(data) as Layer
-  if (profile === 'detail') return LayerDetailProfileAPI.parse(data) as Layer
-  return LayerAdminProfileAPI.parse(data) as Layer
-}
-
-/**
- * Returns relation hydration settings for the selected layer profile.
- * Used to fetch only the relation graph required by each response shape.
- */
-export const getLayerWithRelations = (
-  profile: LayerProfile,
-  isAdminUser: boolean,
-): Record<string, boolean | object> => {
-  if (profile === 'admin') return layerEntityWithRelations
-
-  if (profile === 'detail' || profile === 'card') {
-    return {
-      i18n: true,
-      properties: true,
-      ...(isAdminUser
-        ? {
-            publisher: {
-              columns: userColumnsWithPrivacyProtected,
-            },
-          }
-        : {}),
-    }
-  }
-
-  return layerCollectionWithRelations
-}
-
+/********************
+ *  QUERY CONTEXT
+ ************/
 /**
  * Resolves entity lookup conditions from route reference params.
- * Used by read/update flows that fetch layers by id.
+ * Layer reads are id-scoped, so this helper always emits an `id` lookup.
+ *
+ * @param params - Route reference params.
+ * @returns Partial layer lookup object suitable for query param validation.
  */
 export const toLookupConditions = (params: {
   ref: string
@@ -297,7 +347,10 @@ export const toLookupConditions = (params: {
 
 /**
  * Resolves default list visibility flags for layer queries.
- * Used to enforce safe defaults when callers omit explicit filters.
+ * Public callers default to published and non-archived records unless they ask otherwise.
+ *
+ * @param params - Partial layer filter state.
+ * @returns Normalized requested visibility flags.
  */
 export const toRequestedListState = (params: Partial<LayerDB>) => ({
   isPublished: toBooleanOrUndefined(params.isPublished) ?? true,
@@ -305,18 +358,17 @@ export const toRequestedListState = (params: Partial<LayerDB>) => ({
 })
 
 /**
- * Normalizes optional layer prism payload into a complete prism object.
- * Used by remote handlers so query composition always receives concrete arrays.
- */
-export const toLayerPrisms = (prisms?: Prisms): Prisms => ({
-  organisation: Array.isArray(prisms?.organisation) ? prisms.organisation : [],
-  project: Array.isArray(prisms?.project) ? prisms.project : [],
-  layer: Array.isArray(prisms?.layer) ? prisms.layer : [],
-})
-
-/**
- * Produces final layer query conditions with policy + filter composition.
- * Used by remote list handlers to keep filtering and authz behavior centralized.
+ * Produces final layer query conditions with policy-derived visibility scoping and generic filters.
+ * Remote handlers rely on this after authorization has already been evaluated at the policy layer.
+ *
+ * @param db - Database handle.
+ * @param user - Current session user.
+ * @param isAdminRequest - Whether the request originated from an admin context.
+ * @param params - Validated query params.
+ * @param userRoles - Resolved session role rows.
+ * @param prisms - Optional prism filters.
+ * @param resourceHubId - Optional hub scope for the queried resource.
+ * @returns Query context containing SQL conditions, filter payload, and excluded columns.
  */
 export const toQueryConditions = (
   db: Database,
@@ -346,45 +398,4 @@ export const toQueryConditions = (
   }
 
   return context
-}
-
-// Legacy assertions still used by REST handlers.
-/**
- * Asserts access requirements for layer creation in legacy handlers.
- * Used to preserve existing REST behavior while remote-form migration is in progress.
- */
-export const assertPermissionsToCreateLayer = (
-  user: SessionUser,
-  request: Request,
-  formData: LayerDBNew,
-  userRoles: UserRoleDisco[],
-) => {
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user as never),
-    () => assertAdminRequest(request),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, formData.projectId),
-  )
-
-  if (assertionError) return assertionError
-}
-
-/**
- * Asserts access requirements for layer updates in legacy handlers.
- * Used to keep identifier + role checks consistent across update paths.
- */
-export const assertPermissionsToUpdateLayer = (
-  user: SessionUser,
-  request: Request,
-  formData: LayerDB,
-  userRoles: UserRoleDisco[],
-  refId: Id,
-) => {
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user as never),
-    () => assertAdminRequest(request),
-    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, formData.projectId),
-  )
-
-  if (assertionError) return assertionError
 }
