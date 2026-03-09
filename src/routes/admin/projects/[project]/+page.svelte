@@ -725,23 +725,27 @@ function resolveProjectPropertySourceTag(property: Property): {
         }
 
   if (property.scope === 'project') {
-    return { label: 'project', tone: 'project', ...typeTag }
+    return { label: m.deft_mealy_ant_vent().toLowerCase(), tone: 'project', ...typeTag }
   }
 
   if (property.scope === 'organisation') {
-    return { label: 'org', tone: 'org', ...typeTag }
+    return { label: m.any_small_midge_aim().toLowerCase(), tone: 'org', ...typeTag }
   }
 
   if (property.scope === 'hub') {
     if (property.hubId) {
       const hubCode = adminCtx.appCtx.cache.hub.get(property.hubId)?.code ?? null
       if (hubCode && hubCode !== 'core')
-        return { label: 'hub', tone: 'hub', ...typeTag }
+        return {
+          label: m.hub__title().replace(/s$/iu, '').toLowerCase(),
+          tone: 'hub',
+          ...typeTag,
+        }
     }
     return { label: 'global', tone: 'global', ...typeTag }
   }
 
-  return { label: 'project', tone: 'project', ...typeTag }
+  return { label: m.deft_mealy_ant_vent().toLowerCase(), tone: 'project', ...typeTag }
 }
 
 // ═══════════════════════
