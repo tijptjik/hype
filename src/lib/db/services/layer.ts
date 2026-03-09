@@ -30,11 +30,11 @@ import type {
   LayerI18nDB,
   LayerI18nNew,
   LayerI18nPartial,
+  LocaleKey,
   LayerMetadata,
   LayerPropertyDBRaw,
   LayerPropertyNew,
   ListResponse,
-  Locale,
   QueryParams,
   Property,
 } from '$lib/types'
@@ -95,7 +95,7 @@ export const createLayer = async (db: Database, data: LayerDBNew): Promise<Layer
  */
 export const createI18n = async (
   db: Database,
-  i18n: Record<Locale, LayerI18nNew>,
+  i18n: Record<LocaleKey, LayerI18nNew>,
   layerId: string,
 ): Promise<LayerI18nDB[]> => {
   return await insertManyRelated(
@@ -505,7 +505,7 @@ export const updateLayerArchivedStateById = async (
  */
 export const updateI18n = async (
   db: Database,
-  i18n: Record<Locale, LayerI18nPartial>,
+  i18n: Record<LocaleKey, LayerI18nPartial>,
   layerId: string,
 ): Promise<LayerI18nDB[]> => {
   return await replaceManyRelated(

@@ -44,7 +44,7 @@ import type {
   Id,
   ProjectRoleNew,
   Database,
-  Locale,
+  LocaleKey,
   ProjectDBPartial,
   ProjectDBRaw,
   ProjectRoleDB,
@@ -129,7 +129,7 @@ export const createProject = async (
  */
 export const createI18n = async (
   db: Database,
-  i18n: Record<Locale, ProjectI18nNew>,
+  i18n: Record<LocaleKey, ProjectI18nNew>,
   projectId: string,
 ): Promise<ProjectI18nDB[]> => {
   const records = toRelatedRecords(i18n, 'projectId', projectId, 'locale')
@@ -714,7 +714,7 @@ export const updateProjectArchivedStateById = async (
  */
 export const updateI18n = async (
   db: Database,
-  i18n: Record<Locale, ProjectI18nPartial>,
+  i18n: Record<LocaleKey, ProjectI18nPartial>,
   projectId: string,
 ): Promise<ProjectI18nDB[]> => {
   const records = toRelatedRecords(i18n, 'projectId', projectId, 'locale')

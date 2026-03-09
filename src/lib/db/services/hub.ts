@@ -23,7 +23,7 @@ import type {
   HubDBRaw,
   HubDB,
   HubDBNew,
-  Locale,
+  LocaleKey,
   HubOptsExtended,
   HubI18nNew,
   HubI18nDB,
@@ -115,7 +115,7 @@ export const createHub = async (db: Database, data: HubDBNew): Promise<HubDB> =>
  */
 export const createI18n = async (
   db: Database,
-  i18n: Record<Locale, HubI18nNew>,
+  i18n: Record<LocaleKey, HubI18nNew>,
   hubId: string,
 ): Promise<HubI18nDB[]> => {
   const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
@@ -529,7 +529,7 @@ export const updateHubArchivedStateById = async (
  */
 export const updateI18n = async (
   db: Database,
-  i18n: Record<Locale, HubI18nPartial>,
+  i18n: Record<LocaleKey, HubI18nPartial>,
   hubId: string,
 ): Promise<HubI18nDB[]> => {
   const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')

@@ -19,7 +19,7 @@ import type {
   Id,
   Database,
   OrganisationDBNew,
-  Locale,
+  LocaleKey,
   QueryParams,
   OrganisationI18nNew,
   OrganisationI18nPartial,
@@ -108,7 +108,7 @@ export const createOrganisation = async (
  */
 export const createI18n = async (
   db: Database,
-  i18n: Record<Locale, OrganisationI18nNew>,
+  i18n: Record<LocaleKey, OrganisationI18nNew>,
   organisationId: string,
 ): Promise<OrganisationI18nDB[]> => {
   const relatedRecords = toRelatedRecords(
@@ -619,7 +619,7 @@ export const updateOrganisationArchivedStateById = async (
  */
 export const updateI18n = async (
   db: Database,
-  i18n: Record<Locale, OrganisationI18nPartial>,
+  i18n: Record<LocaleKey, OrganisationI18nPartial>,
   organisationId: string,
 ): Promise<OrganisationI18nDB[]> => {
   const relatedRecords = toRelatedRecords(
