@@ -1,13 +1,38 @@
-import type { LocaleKey } from '$lib/types'
+import type { ParentSectionProjectItem } from '$lib/bits'
+import { getI18n, m, normalizeI18nLocaleRecord, toFormLocaleRecord } from '$lib/i18n'
+import {
+  resolveLayerActionPermissions,
+  resolveLayerProjectSelectionScope,
+  toLayerAuthActor,
+} from '$lib/api/services/authz'
+import type { LayerProjectSelectionScope } from '$lib/api/services/authz/layer'
+import { updateFormData } from '$lib/client/services/form'
+import type {
+  LayerEditorPermissions,
+  LayerFormLocale,
+  LayerFormPayload,
+  LayerFormPropertyRow,
+  LayerI18nPatch,
+  LayerI18nRecord,
+  LayerParentProjectFormData,
+  LayerPropertyRow,
+  ResolvedLayerProperty,
+} from '$lib/client/services/layer.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 import type {
   Layer,
   LayerBooleanField,
   LayerFormInput,
-  LayerFormLocaleInput,
+  LayerGetState,
+  LayerPropertyPartialExtra,
   LayerSubmitData,
   LayerSubmitUpdatesParams,
 } from '$lib/db/zod/schema/layer.types'
-import { toFormLocaleRecord } from '$lib/i18n'
+import type { FormDataUpdaterForm, Locale } from '$lib/types'
+import Blend from 'virtual:icons/lucide/blend'
+import TypeIcon from 'virtual:icons/lucide/type'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -17,23 +42,31 @@ import { toFormLocaleRecord } from '$lib/i18n'
 //    - normalizeLayerFormLocale
 //    - toLayerFormInput
 //
-// 2. BOOLEAN TOGGLE OVERRIDES
+// 2. PARENT PROJECT STATE
+//    - getCurrentLayerFormData
+//    - toSelectedParentProject
+//    - toHiddenParentProjectInputAttrs
+//    - replaceLayerParentProject
+//    - toLayerParentProjectSearchQueries
+//
+// 3. PERMISSIONS + FIELD PRESENTATION
+//    - resolveLayerEditorPermissions
+//    - toLayerPropertyRows
+//    - mergeProjectPropertiesIntoLayerForm
+//
+// 4. BOOLEAN TOGGLE OVERRIDES
 //    - overrideLayerEntityBoolean
 //    - overrideLayerListItemBoolean
 //
-// 3. SUBMIT PAYLOAD NORMALIZATION
+// 5. SUBMIT PAYLOAD NORMALIZATION
 //    - toComparableLayerProperties
 //    - toComparableLayerI18n
 //    - mergeLayerFromSubmit
 //
-// 4. SUBMIT OVERRIDES AND UPDATE TARGETS
+// 6. SUBMIT OVERRIDES AND UPDATE TARGETS
 //    - overrideLayerEntityFromSubmit
 //    - overrideLayerListItemFromSubmit
 //    - getLayerSubmitUpdates
-
-type LayerFormLocale = LayerFormLocaleInput
-type LayerI18nRecord = Partial<Record<LocaleKey, unknown>>
-type LayerI18nPatch = Partial<Record<LocaleKey, Partial<LayerFormLocale>>>
 
 // ═══════════════════════
 // 1. FORM NORMALIZATION
@@ -122,7 +155,417 @@ export function toLayerFormInput(data?: Layer | null): LayerFormInput {
 }
 
 // ═══════════════════════
-// 2. BOOLEAN TOGGLE OVERRIDES
+// 2. PARENT PROJECT STATE
+// ═══════════════════════
+
+/**
+ * Reads the current layer form payload regardless of whether the updater exposes
+ * nested `data` fields or a flattened intermediate shape.
+ * Used by layer editor helpers so page code does not need to repeat form-shape
+ * fallbacks while reading parent project state.
+ */
+export function getCurrentLayerFormData(
+  form: FormDataUpdaterForm<LayerFormPayload>,
+): LayerParentProjectFormData {
+  const formValue = form.fields.value() as {
+    data?: LayerFormPayload
+    projectId?: string
+    organisationId?: string
+    i18n?: Record<string, unknown>
+  }
+  const nested = formValue.data
+  if (nested && typeof nested === 'object') return nested
+
+  return {
+    projectId: formValue.projectId,
+    organisationId: formValue.organisationId,
+    i18n: formValue.i18n,
+  }
+}
+
+/**
+ * Resolves the active parent project for the editor from selection state, live
+ * form data, persisted entity data, and cached project records.
+ * Used by the page to keep parent-project presentation stable while editing.
+ */
+export function toSelectedParentProject(params: {
+  form: FormDataUpdaterForm<LayerFormPayload>
+  layer: LayerGetState
+  selectedParentProjectById: Record<string, ParentSectionProjectItem>
+  projectCache: Map<string, Project>
+}): ParentSectionProjectItem | null {
+  const formData = getCurrentLayerFormData(params.form)
+  const projectId = (formData.projectId ?? params.layer?.data?.projectId ?? null) as
+    | string
+    | null
+  if (!projectId) return null
+
+  const selected = params.selectedParentProjectById[projectId]
+  if (selected) return selected
+
+  const cachedProject = params.projectCache.get(projectId)
+  if (!cachedProject) return null
+
+  return {
+    id: cachedProject.id,
+    organisationId: cachedProject.organisationId,
+    code: cachedProject.code,
+    i18n: cachedProject.i18n,
+    image: (cachedProject.image ?? null) as ParentSectionProjectItem['image'],
+  }
+}
+
+/**
+ * Produces the hidden parent-project input attrs from the best available project id.
+ * Used to keep the parent project identifier mounted in the DOM even when selection
+ * state is coming from cache or committed entity data.
+ */
+export function toHiddenParentProjectInputAttrs(params: {
+  form: FormDataUpdaterForm<LayerFormPayload>
+  selectedParentProject: ParentSectionProjectItem | null
+  layer: LayerGetState
+  committedLayer: LayerGetState
+  toHiddenInput: (projectId: string) => Record<string, unknown> | null | undefined
+}): Record<string, unknown> | null {
+  const formData = getCurrentLayerFormData(params.form)
+  const selectedProjectId = params.selectedParentProject?.id
+  const layerProjectId = params.layer?.data?.projectId
+  const committedProjectId = params.committedLayer?.data?.projectId
+  const projectId = (
+    selectedProjectId ??
+    formData.projectId ??
+    layerProjectId ??
+    committedProjectId ??
+    ''
+  ).trim()
+  if (!projectId) return null
+  return params.toHiddenInput(projectId) ?? null
+}
+
+/**
+ * Applies a chosen parent project to the layer form and returns the next
+ * selection map keyed by project id.
+ * Used by the page to centralize parent replacement behavior and keep the form
+ * updater logic out of the route file.
+ */
+export function replaceLayerParentProject(params: {
+  form: FormDataUpdaterForm<LayerFormPayload>
+  project: ParentSectionProjectItem
+}): Record<string, ParentSectionProjectItem> {
+  updateFormData(params.form, data => {
+    data.projectId = params.project.id
+    data.organisationId = params.project.organisationId
+    return data
+  })
+
+  return {
+    [params.project.id]: params.project,
+  }
+}
+
+/**
+ * Builds the project search query plan for the layer parent-project picker.
+ * Used to keep scope-based project search branching out of the page while still
+ * letting the route orchestrate the actual remote calls.
+ */
+export function toLayerParentProjectSearchQueries<
+  TBase extends Record<string, unknown>,
+>(params: {
+  scope: LayerProjectSelectionScope
+  baseParams: TBase
+}): Array<TBase & { conditions: Record<string, unknown> }> {
+  if (!params.scope.canCreate) return []
+
+  if (params.scope.allowAll) {
+    return [
+      {
+        ...params.baseParams,
+        conditions: { isArchived: null, isPublished: null },
+      },
+    ]
+  }
+
+  const queries: Array<TBase & { conditions: Record<string, unknown> }> = []
+
+  if (params.scope.allowedProjectIds.length > 0) {
+    queries.push({
+      ...params.baseParams,
+      conditions: {
+        id: params.scope.allowedProjectIds,
+        isArchived: null,
+        isPublished: null,
+      },
+    })
+  }
+
+  if (params.scope.allowedOrganisationIds.length > 0) {
+    queries.push({
+      ...params.baseParams,
+      conditions: {
+        organisationId: params.scope.allowedOrganisationIds,
+        isArchived: null,
+        isPublished: null,
+      },
+    })
+  }
+
+  if (params.scope.allowedHubIds.length > 0) {
+    queries.push({
+      ...params.baseParams,
+      conditions: {
+        hubId: params.scope.allowedHubIds,
+        isArchived: null,
+        isPublished: null,
+      },
+    })
+  }
+
+  return queries
+}
+
+// ═══════════════════════
+// 3. PERMISSIONS + FIELD PRESENTATION
+// ═══════════════════════
+
+/**
+ * Resolves the current layer editor permission flags from actor state, prism
+ * fallback state, cached project/organisation records, and persisted layer data.
+ * Used by layer editor routes so UI permission decisions stay in one place.
+ */
+export function resolveLayerEditorPermissions(params: {
+  currentUser: unknown
+  layer: LayerGetState
+  form: FormDataUpdaterForm<LayerFormPayload>
+  prismProjectId?: string | null
+  prismOrganisationId?: string | null
+  resourceHubId?: string | null
+  projectCache: Map<string, Project>
+  organisationCache: Map<string, { hubId?: string | null }>
+}): LayerEditorPermissions {
+  const actor = toLayerAuthActor((params.currentUser ?? {}) as Record<string, unknown>)
+  const layerCreateScope = resolveLayerProjectSelectionScope({
+    actor,
+    resourceHubId: params.resourceHubId ?? null,
+  })
+  const layerData = params.layer?.data
+  const formData = getCurrentLayerFormData(params.form)
+  const projectId = (layerData?.projectId ??
+    formData.projectId ??
+    params.prismProjectId ??
+    null) as string | null
+  const projectData = projectId ? params.projectCache.get(projectId) : undefined
+  const organisationId = (layerData?.organisationId ??
+    formData.organisationId ??
+    projectData?.organisationId ??
+    params.prismOrganisationId ??
+    null) as string | null
+  const organisationData = organisationId
+    ? params.organisationCache.get(organisationId)
+    : undefined
+  const resolvedHubId = organisationData?.hubId ?? null
+  const resolvedResource =
+    layerData ??
+    (projectId && organisationId
+      ? {
+          id: '',
+          organisationId,
+          projectId,
+          hubId: resolvedHubId,
+        }
+      : null)
+
+  if (!resolvedResource) {
+    return {
+      canEditI18n: layerCreateScope.canCreate,
+      canEditFields: layerCreateScope.canCreate,
+      canPublish: false,
+      canArchive: false,
+    }
+  }
+
+  return resolveLayerActionPermissions({
+    actor,
+    resource: {
+      id: resolvedResource.id,
+      organisationId: resolvedResource.organisationId,
+      projectId: resolvedResource.projectId,
+      hubId: resolvedHubId,
+    },
+  })
+}
+
+/**
+ * Shapes current layer property assignments into card-ready view models.
+ * Used by the editor page so property lookup, i18n fallback, scope labeling,
+ * icon selection, and sort order live in one reusable helper.
+ */
+export function toLayerPropertyRows(params: {
+  form: FormDataUpdaterForm<LayerFormPayload>
+  layer: LayerGetState
+  propertyCache: Map<string, Property>
+  hubCodeById: (hubId: string) => string | null
+  userPreferences: UserPreferences
+}): LayerPropertyRow[] {
+  const formProperties = (params.form.fields.value().data?.properties ??
+    []) as Array<LayerPropertyPartialExtra>
+  const rows: LayerPropertyRow[] = []
+
+  for (const [index, property] of formProperties.entries()) {
+    if (!property?.propertyId) continue
+    const persistedProperty = (params.layer?.data?.properties ?? []).find(
+      candidate => candidate.propertyId === property.propertyId,
+    )
+    const cachedProperty = params.propertyCache.get(property.propertyId)
+    const persistedResolvedProperty = persistedProperty?.property as
+      | ResolvedLayerProperty
+      | undefined
+    const resolvedProperty: ResolvedLayerProperty | undefined =
+      persistedResolvedProperty ?? cachedProperty
+
+    if (!resolvedProperty) continue
+
+    const normalizedI18n = resolvedProperty.i18n
+      ? normalizeI18nLocaleRecord(
+          resolvedProperty.i18n as Record<string, Record<string, unknown>>,
+        )
+      : undefined
+
+    const name = normalizedI18n
+      ? getI18n(
+          {
+            i18n: normalizedI18n as Record<Locale, Record<string, unknown>>,
+          },
+          'label',
+          params.userPreferences,
+          resolvedProperty.key,
+        )
+      : resolvedProperty.key
+
+    const scopeValue =
+      resolvedProperty.scope === 'organisation' ||
+      resolvedProperty.scope === 'hub' ||
+      resolvedProperty.scope === 'project'
+        ? resolvedProperty.scope
+        : 'project'
+    const scopeLabel: 'global' | 'hub' | 'org' | 'project' =
+      scopeValue === 'organisation'
+        ? 'org'
+        : scopeValue === 'project'
+          ? 'project'
+          : (() => {
+              if (resolvedProperty.hubId) {
+                const hubCode = params.hubCodeById(resolvedProperty.hubId)
+                if (hubCode && hubCode !== 'core') return 'hub'
+              }
+              return 'global'
+            })()
+    const scopeTone: 'global' | 'hub' | 'org' | 'project' =
+      scopeLabel === 'org'
+        ? 'org'
+        : scopeLabel === 'hub'
+          ? 'hub'
+          : scopeLabel === 'global'
+            ? 'global'
+            : 'project'
+
+    rows.push({
+      index,
+      propertyId: property.propertyId,
+      isVisible: Boolean(property.isVisible),
+      isUserContributable: Boolean(property.isUserContributable),
+      type: resolvedProperty.type,
+      name,
+      rank:
+        typeof cachedProperty?.rank === 'number' && Number.isFinite(cachedProperty.rank)
+          ? cachedProperty.rank
+          : typeof persistedResolvedProperty?.rank === 'number' &&
+              Number.isFinite(persistedResolvedProperty.rank)
+            ? persistedResolvedProperty.rank
+            : Number.POSITIVE_INFINITY,
+      scopeLabel,
+      scopeTone,
+      typeIconComponent: resolvedProperty.type === 'classifier' ? Blend : TypeIcon,
+      typeIconTitle:
+        resolvedProperty.type === 'classifier'
+          ? m.admin__forms_common_categorical_field()
+          : m.admin__forms_common_free_form_field(),
+    })
+  }
+
+  return rows.sort((left, right) => {
+    if (left.isVisible !== right.isVisible) return left.isVisible ? -1 : 1
+
+    if (left.isVisible && right.isVisible) {
+      if (left.rank !== right.rank) return left.rank - right.rank
+      return left.name.localeCompare(right.name, undefined, {
+        sensitivity: 'base',
+      })
+    }
+
+    const specificityRank = (scope: 'global' | 'hub' | 'org' | 'project'): number =>
+      scope === 'project' ? 0 : scope === 'org' ? 1 : scope === 'hub' ? 2 : 3
+
+    const leftSpecificity = specificityRank(left.scopeLabel)
+    const rightSpecificity = specificityRank(right.scopeLabel)
+    if (leftSpecificity !== rightSpecificity) return leftSpecificity - rightSpecificity
+
+    return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+  })
+}
+
+/**
+ * Replaces the layer form property rows with the effective project property set,
+ * preserving any user toggles already present for matching property ids.
+ * Used by the layer editor when the parent project changes or when reset needs
+ * to restore inherited project properties into the form state.
+ */
+export function mergeProjectPropertiesIntoLayerForm(params: {
+  form: FormDataUpdaterForm<LayerFormPayload>
+  projectProperties: Property[]
+}): void {
+  const effectiveLayerProperties = params.projectProperties.filter(property => {
+    if (!property?.id || typeof property.id !== 'string') return false
+    if (property.scope === 'project') return true
+    return typeof (property as Property & { isEnabled?: boolean }).isEnabled ===
+      'boolean'
+      ? Boolean((property as Property & { isEnabled?: boolean }).isEnabled)
+      : Boolean(property.isDefaultEnabled)
+  })
+
+  updateFormData(params.form, data => {
+    const existingRows: LayerFormPropertyRow[] = Array.isArray(data.properties)
+      ? data.properties
+      : []
+    const existingById = new Map<string, LayerFormPropertyRow>(
+      existingRows
+        .filter(
+          (
+            row,
+          ): row is LayerFormPropertyRow & {
+            propertyId: string
+          } => typeof row?.propertyId === 'string' && row.propertyId.length > 0,
+        )
+        .map(row => [row.propertyId, row] as const),
+    )
+
+    data.properties = effectiveLayerProperties
+      .filter(property => typeof property?.id === 'string' && property.id.length > 0)
+      .map(property => {
+        const existing = existingById.get(property.id)
+        const defaultEnabled = Boolean(property.isDefaultEnabled)
+        return {
+          propertyId: property.id,
+          isVisible: existing?.isVisible ?? defaultEnabled,
+          isUserContributable: existing?.isUserContributable ?? defaultEnabled,
+        }
+      })
+
+    return data
+  })
+}
+
+// ═══════════════════════
+// 4. BOOLEAN TOGGLE OVERRIDES
 // ═══════════════════════
 
 /**
@@ -156,7 +599,7 @@ export function overrideLayerListItemBoolean(
 }
 
 // ═══════════════════════
-// 3. SUBMIT PAYLOAD NORMALIZATION
+// 5. SUBMIT PAYLOAD NORMALIZATION
 // ═══════════════════════
 
 /**
@@ -321,7 +764,7 @@ const mergeLayerFromSubmit = (
 }
 
 // ═══════════════════════
-// 4. SUBMIT OVERRIDES AND UPDATE TARGETS
+// 6. SUBMIT OVERRIDES AND UPDATE TARGETS
 // ═══════════════════════
 
 /**
