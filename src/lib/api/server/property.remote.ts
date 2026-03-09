@@ -27,6 +27,21 @@ import { z } from 'zod'
 // TYPES
 import type { Prisms, PropertyDB, QueryParams } from '$lib/types'
 
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// GET
+// - getProperties
+// - getProperty
+// - getProjectProperties
+//
+// FORM
+// - none
+//
+// COMMAND
+// - none
+
 /* ----------------- */
 // REMOTE FUNCTION REFACTOR
 /* -------- */

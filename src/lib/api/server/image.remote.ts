@@ -19,6 +19,8 @@ import {
   toImageProfile,
   createCloudinarySignature,
   deleteCloudinaryImage,
+  toResponseShape,
+  toResponseShapeProjectOrOrganisation,
   updateImageForContext,
 } from '$lib/api/services/image'
 // DB SERVICES
@@ -31,8 +33,6 @@ import {
   getImagesByIds,
   toImageEntityResponseShape,
   toImageListResponseShape,
-  toResponseShape,
-  toResponseShapeProjectOrOrganisation,
 } from '$lib/db/services/image'
 import { updateOrganisationById } from '$lib/db/services/organisation'
 import { updateProjectById } from '$lib/db/services/project'
@@ -66,11 +66,10 @@ import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 // TYPES
 import type {
   CreateImageParams,
+  DeleteParamsToSign,
   Id,
   Image,
   ImageNew,
-  ImageByIdResponse,
-  ImageCollectionResponse,
   ImageDBFlat,
   ImageContextType,
   ImageProfile,
@@ -79,9 +78,30 @@ import type {
   ImagesForIdsParamsByProfile,
   EntityResponse,
   ImageContextEnvelope,
+  ParamsToSign,
   QueryParams,
   SignData,
 } from '$lib/types'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// GET
+// - getImagesForContext
+// - getImagesForIds
+// - getImageById
+//
+// FORM
+// - none
+//
+// COMMAND
+// - createImage
+// - updateImage
+// - setImageIntent
+// - setImagePublished
+// - deleteImage
+// - getCloudinarySignature
 
 const probeContextState = async (
   db: any,
@@ -184,7 +204,7 @@ const toRoleDebug = (roles: Array<{ type?: string; role?: string }>) =>
  */
 export const getImagesForContext = guardedQuery(
   ImagesByContextSchema,
-  async (params, ctx): Promise<ImageCollectionResponse> => {
+  async (params, ctx) => {
     const { db, user, userRoles, isAdminRequest } = ctx
     const profile = toImageProfile(params.meta?.profile, 'list')
     const context = await probeContextState(
@@ -309,60 +329,57 @@ export const getImagesForIdsByProfile = getImagesForIds as typeof getImagesForId
 /**
  * Returns a single image by ID.
  */
-export const getImageById = guardedQuery(
-  ImageByIdSchema,
-  async (params, ctx): Promise<ImageByIdResponse> => {
-    const { db, user, userRoles, isAdminRequest } = ctx
-    const profile = toImageProfile(params.meta?.profile, 'detail')
-    const { conditions } = getImageEntityQueryContext(db, user, isAdminRequest, {})
-    conditions.push(eq(image.id, params.id))
-    const data = (await loadImageById(db, conditions)) as ImageDBFlat | undefined
-    if (!data) {
-      return toImageEntityResponseShape(
-        null,
-        {
-          ctxType: ImageContextResource.feature,
-          ctxId: params.id as Id,
-        },
-        profile,
-      )
-    }
-
-    const resolvedCtxType = (
-      data.featureId ? ImageContextResource.feature : ImageContextResource.user
-    ) as ImageContextType
-    const resolvedCtxId =
-      (data.featureId as Id | undefined) ??
-      (data.contributorId as Id | undefined) ??
-      (params.id as Id)
-
-    const context = await probeContextState(db, resolvedCtxType, resolvedCtxId)
-    const readDecision = authorizeImageRead(
-      {
-        userId: user.id,
-        userRoles,
-        isAuthenticated: true,
-        isAnonymous: user.isAnonymous,
-      },
-      {
-        ctxType: resolvedCtxType as ImageContextType,
-        ctxId: resolvedCtxId,
-        resourceHubId: context.resourceHubId,
-      },
-      context.requestedState,
-      { isAdminRequest },
-    )
-    if (!readDecision.allowed) {
-      throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
-    }
-
+export const getImageById = guardedQuery(ImageByIdSchema, async (params, ctx) => {
+  const { db, user, userRoles, isAdminRequest } = ctx
+  const profile = toImageProfile(params.meta?.profile, 'detail')
+  const { conditions } = getImageEntityQueryContext(db, user, isAdminRequest, {})
+  conditions.push(eq(image.id, params.id))
+  const data = (await loadImageById(db, conditions)) as ImageDBFlat | undefined
+  if (!data) {
     return toImageEntityResponseShape(
-      data,
-      { ctxType: resolvedCtxType, ctxId: resolvedCtxId },
+      null,
+      {
+        ctxType: ImageContextResource.feature,
+        ctxId: params.id as Id,
+      },
       profile,
     )
-  },
-)
+  }
+
+  const resolvedCtxType = (
+    data.featureId ? ImageContextResource.feature : ImageContextResource.user
+  ) as ImageContextType
+  const resolvedCtxId =
+    (data.featureId as Id | undefined) ??
+    (data.contributorId as Id | undefined) ??
+    (params.id as Id)
+
+  const context = await probeContextState(db, resolvedCtxType, resolvedCtxId)
+  const readDecision = authorizeImageRead(
+    {
+      userId: user.id,
+      userRoles,
+      isAuthenticated: true,
+      isAnonymous: user.isAnonymous,
+    },
+    {
+      ctxType: resolvedCtxType as ImageContextType,
+      ctxId: resolvedCtxId,
+      resourceHubId: context.resourceHubId,
+    },
+    context.requestedState,
+    { isAdminRequest },
+  )
+  if (!readDecision.allowed) {
+    throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+
+  return toImageEntityResponseShape(
+    data as unknown as Image,
+    { ctxType: resolvedCtxType, ctxId: resolvedCtxId },
+    profile,
+  )
+})
 
 export const getImageByIdByProfile = getImageById as typeof getImageById &
   (<P extends ImageProfile = 'detail'>(
@@ -408,6 +425,9 @@ export const createImage = guardedCommand(async (input, ctx) => {
         ...validatedData.featureImage,
         imageId: createdImage.id,
         featureId: validatedData.ctxId,
+        localIsPublished: validatedData.featureImage.localIsPublished ?? null,
+        publishedAt: validatedData.featureImage.publishedAt ?? null,
+        publisherId: validatedData.featureImage.publisherId ?? null,
       },
       createdImage.id,
     )
@@ -524,7 +544,7 @@ export const setImageIntent = guardedCommand(
       userRoles,
       event,
       id: params.id,
-      ctxType: params.ctxType,
+      ctxType: params.ctxType as ImageContextType,
       ctxId: params.ctxId,
       data: {
         id: params.id,
@@ -561,7 +581,7 @@ export const setImagePublished = guardedCommand(
       userRoles,
       event,
       id: params.id,
-      ctxType: params.ctxType,
+      ctxType: params.ctxType as ImageContextType,
       ctxId: params.ctxId,
       data: {
         id: params.id,
@@ -622,6 +642,9 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
 export const getCloudinarySignature = guardedCommand(
   CloudinarySignatureSchema,
   async (params, ctx): Promise<SignData> => {
-    return createCloudinarySignature(params.paramsToSign, ctx.event.platform)
+    return createCloudinarySignature(
+      params.paramsToSign as ParamsToSign | DeleteParamsToSign,
+      ctx.event.platform,
+    )
   },
 )

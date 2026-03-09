@@ -52,12 +52,12 @@ import {
 } from '$lib/api/services/authz'
 // DB
 import {
-  cascadeProjectOrganisationToDescendants,
+  cascadeOrganisationToDescendants,
   createI18n,
-  createProjectUserRoles,
+  createUserRoles,
   createProject,
   getProject as loadProject,
-  listProjectRoleAssignments,
+  listUserRoleAssignments,
   listProjects,
   mergeOrganisationCapabilities,
   probeOrganisationHubForProject,
@@ -65,22 +65,19 @@ import {
   probeProjectQuery,
   probeProjectForUpdate,
   resolveProjectCommandProbe,
-  syncProjectUserRoles,
-  toPersistedProjectUserRoles,
+  syncUserRoles,
+  toUserRoles,
   updateI18n,
   updateProjectArchivedStateById,
   updateProjectByIdWithConcurrency,
   updateProjectPublishedStateById,
 } from '$lib/db/services/project'
 import {
-  createPropertiesWithRelated,
   listResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject,
   syncProjectInheritedProperties,
-  updatePropertiesWithRelated,
+  upsertProjectProperties,
 } from '$lib/db/services/property'
-// I18N
-import { toLocaleRecordFromOrganisationFormI18n } from '$lib/i18n'
 // SCHEMA
 import {
   GetQueryParamsSchema,
@@ -99,12 +96,23 @@ import type {
   Prisms,
   ProjectAuthorizationField,
   ProjectDB,
-  ProjectI18nNew,
-  ProjectI18nPartial,
-  Property,
-  PropertyNew,
   QueryParams,
 } from '$lib/types'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// GET
+// - getProjects
+// - getProject
+//
+// FORM
+// - projectForm
+//
+// COMMAND
+// - publishProject
+// - archiveProject
 
 /**
  * Returns a role-aware project collection for guarded remote callers.
@@ -402,14 +410,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       isArchived: false,
     })
 
-    await createI18n(
+    await createI18n(db, data.i18n, created.id)
+    await createUserRoles(
       db,
-      toLocaleRecordFromOrganisationFormI18n<ProjectI18nNew>(data.i18n),
-      created.id,
-    )
-    await createProjectUserRoles(
-      db,
-      toPersistedProjectUserRoles(submittedRolesWithCapabilities, created.id),
+      toUserRoles(submittedRolesWithCapabilities, created.id),
       created.id,
       created.organisationId,
     )
@@ -420,11 +424,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         created.id,
       )
       if (submittedPropertiesWithProjectId.length > 0) {
-        await createPropertiesWithRelated(
-          db,
-          submittedPropertiesWithProjectId as PropertyNew[],
-          created.id,
-        )
+        await upsertProjectProperties(db, submittedPropertiesWithProjectId, created.id)
       }
       await syncProjectInheritedProperties(db, {
         projectId: created.id,
@@ -482,7 +482,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Read current role assignments so membership/capability changes can be authorized separately.
   const existingRoleRows = hasSubmittedUserRoles
-    ? await listProjectRoleAssignments(db, current.id)
+    ? await listUserRoleAssignments(db, current.id)
     : []
   // Detect membership changes (add/remove/swap users or roles) for manage-roles auth checks.
   const roleMembershipChanged = hasSubmittedUserRoles
@@ -661,7 +661,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   )
 
   if (organisationChanged) {
-    await cascadeProjectOrganisationToDescendants(db, {
+    await cascadeOrganisationToDescendants(db, {
       projectId: current.id as Id,
       organisationId: data.organisationId as Id,
     })
@@ -672,18 +672,14 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   /* -------- */
 
   // Persist related i18n,role assignments, and properties
-  await updateI18n(
-    db,
-    toLocaleRecordFromOrganisationFormI18n<ProjectI18nPartial>(data.i18n),
-    current.id,
-  )
+  await updateI18n(db, data.i18n, current.id)
   if (
     hasSubmittedUserRoles &&
     (roleMembershipChanged || roleCapabilityAssignmentsChanged)
   ) {
-    await syncProjectUserRoles(
+    await syncUserRoles(
       db,
-      toPersistedProjectUserRoles(submittedRolesWithCapabilities, current.id),
+      toUserRoles(submittedRolesWithCapabilities, current.id),
       current.id as Id,
       data.organisationId as Id,
     )
@@ -714,11 +710,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       ...submittedPropertiesWithProjectId,
       ...preservedLocalProperties,
     ]
-    await updatePropertiesWithRelated(
-      db,
-      localPropertiesToPersist as Property[],
-      current.id,
-    )
+    await upsertProjectProperties(db, localPropertiesToPersist, current.id)
     await syncProjectInheritedProperties(db, {
       projectId: current.id,
       properties: mergeProjectInheritedPropertySyncItems(

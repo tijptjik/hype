@@ -1,8 +1,6 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
-// I18N
-import { toLocaleRecordFromOrganisationFormI18n } from '$lib/i18n'
 // UTILS
 import { nanoid } from 'nanoid'
 // AUTHORIZATION
@@ -44,7 +42,7 @@ import {
   createI18n,
   createOrganisation,
   createUserRoles,
-  listOrganisationRoleAssignments,
+  listUserRoleAssignments,
   listOrganisations,
   probeExistingOrganisation,
   probeOrganisationForUpdate,
@@ -55,8 +53,8 @@ import {
   updateOrganisationByIdWithConcurrency,
   updateOrganisationPublishedStateById,
   updateOrganisationArchivedStateById,
-  syncOrganisationUserRoles,
-  toPersistedOrganisationUserRoles,
+  syncUserRoles,
+  toUserRoles,
 } from '$lib/db/services/organisation'
 import { syncOrganisationProperties } from '$lib/db/services/property'
 import { cascadeOrganisationCapabilitiesToProjects } from '$lib/db/services/project'
@@ -85,6 +83,21 @@ import type {
   OrganisationProfile,
   RelationShape,
 } from '$lib/types'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// GET
+// - getOrganisations
+// - getOrganisation
+//
+// FORM
+// - organisationForm
+//
+// COMMAND
+// - publishOrganisation
+// - archiveOrganisation
 
 /* ----------------- */
 // REMOTE QUERIES
@@ -361,16 +374,8 @@ export const organisationForm = guardedForm(
         ...(data.capabilities !== undefined ? { capabilities: data.capabilities } : {}),
       })
 
-      await createI18n(
-        db,
-        toLocaleRecordFromOrganisationFormI18n(data.i18n),
-        created.id,
-      )
-      await createUserRoles(
-        db,
-        toPersistedOrganisationUserRoles(data.userRoles, created.id),
-        created.id,
-      )
+      await createI18n(db, data.i18n, created.id)
+      await createUserRoles(db, toUserRoles(data.userRoles, created.id), created.id)
       if (normalizedSubmittedProperties.length > 0) {
         await syncOrganisationProperties(db, {
           organisationId: created.id,
@@ -413,7 +418,7 @@ export const organisationForm = guardedForm(
     }
 
     // Apply role-management authorization only when role membership changed.
-    const existingRoleRows = await listOrganisationRoleAssignments(db, current.id)
+    const existingRoleRows = await listUserRoleAssignments(db, current.id)
     if (
       hasRoleMembershipChanged(
         submittedRoles,
@@ -471,12 +476,8 @@ export const organisationForm = guardedForm(
     )
 
     // Persist related i18n and role assignments.
-    await updateI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), current.id)
-    await syncOrganisationUserRoles(
-      db,
-      toPersistedOrganisationUserRoles(data.userRoles, current.id),
-      current.id,
-    )
+    await updateI18n(db, data.i18n, current.id)
+    await syncUserRoles(db, toUserRoles(data.userRoles, current.id), current.id)
     if (capabilitiesChanged) {
       await cascadeOrganisationCapabilitiesToProjects(db, {
         organisationId: current.id as Id,

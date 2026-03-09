@@ -18,6 +18,20 @@ import type {
   SetupRequestEvent,
 } from '$lib/types'
 
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// GET
+// - guardedQuery
+// - guardedBatchByIdQuery
+//
+// FORM
+// - guardedForm
+//
+// COMMAND
+// - guardedCommand
+
 /**
  * Extract explicit admin intent from a single remote payload item.
  *

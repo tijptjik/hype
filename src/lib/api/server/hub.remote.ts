@@ -9,8 +9,6 @@ import {
   toCreatedResponseShape,
   validateUniqueNonReservedCode,
 } from '$lib/api/services'
-// I18N
-import { toLocaleRecordFromOrganisationFormI18n } from '$lib/i18n'
 // UTILS
 import { nanoid } from 'nanoid'
 import {
@@ -45,7 +43,7 @@ import {
 import {
   createHub,
   createI18n,
-  createHubUserRoles,
+  createUserRoles,
   probeExistingHub,
   probeHubForUpdate,
   resolveHubCommandProbe,
@@ -54,14 +52,14 @@ import {
   updateHubByIdWithConcurrency,
   probeHubQuery,
   updateI18n,
-  syncHubUserRoles,
-  listHubRoleAssignments,
-  listHubOrganisationLookups,
+  syncUserRoles,
+  listUserRoles,
+  listOrganisations,
   listHubs,
   getHub as loadHub,
-  syncHubOrganisations,
+  syncOrganisations,
 } from '$lib/db/services/hub'
-import { syncHubGlobalProperties } from '$lib/db/services/property'
+import { syncHubProperties } from '$lib/db/services/property'
 // API UTILS
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // SCHEMA
@@ -86,6 +84,22 @@ import type {
   Id,
   ListResponse,
 } from '$lib/types'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// GET
+// - getHubs
+// - getHub
+// - getOrganisationLookupsForHub
+//
+// FORM
+// - hubForm
+//
+// COMMAND
+// - publishHub
+// - archiveHub
 
 /* ----------------- */
 // REMOTE QUERIES
@@ -227,7 +241,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
       ? (input as { data?: unknown }).data
       : undefined
   const hasSubmittedPropertiesField =
-    Boolean(rawData) &&
+    rawData !== null &&
     typeof rawData === 'object' &&
     Object.hasOwn(rawData, 'properties')
 
@@ -308,12 +322,12 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
       isArchived: false,
     })
 
-    await createI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), created.id)
-    await createHubUserRoles(db, submittedRoles, created.id)
-    await syncHubOrganisations(db, created.id, submittedOrganisations)
-    await syncHubGlobalProperties(db, {
+    await createI18n(db, data.i18n, created.id)
+    await createUserRoles(db, submittedRoles, created.id)
+    await syncOrganisations(db, created.id, submittedOrganisations)
+    await syncHubProperties(db, {
       hubId: created.id,
-      properties: normalizedSubmittedProperties,
+      properties: normalizedSubmittedProperties as Array<Record<string, unknown>>,
     })
 
     return toCreatedResponseShape(created)
@@ -338,7 +352,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
   }
 
-  const existingRoleRows = await listHubRoleAssignments(db, current.id)
+  const existingRoleRows = await listUserRoles(db, current.id)
 
   // Apply role-management authorization only when role membership changed.
   if (
@@ -402,13 +416,13 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   )
 
   // Persist related i18n, roles, and organisation assignments.
-  await updateI18n(db, toLocaleRecordFromOrganisationFormI18n(data.i18n), current.id)
-  await syncHubUserRoles(db, submittedRoles, current.id)
-  await syncHubOrganisations(db, current.id, submittedOrganisations)
+  await updateI18n(db, data.i18n, current.id)
+  await syncUserRoles(db, submittedRoles, current.id)
+  await syncOrganisations(db, current.id, submittedOrganisations)
   if (hasSubmittedPropertiesField) {
-    await syncHubGlobalProperties(db, {
+    await syncHubProperties(db, {
       hubId: current.id,
-      properties: normalizedSubmittedProperties,
+      properties: normalizedSubmittedProperties as Array<Record<string, unknown>>,
     })
   }
 
@@ -529,7 +543,7 @@ export const getOrganisationLookupsForHub = guardedQuery(
     }
 
     // Load assignment flags for selected organisations.
-    const result = await listHubOrganisationLookups(db, organisationIds)
+    const result = await listOrganisations(db, organisationIds)
 
     // Return lookup payload used by hub form reconciliation.
     return { data: result }
