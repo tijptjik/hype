@@ -1,17 +1,12 @@
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client'
 import type { AdminCtx } from './admin.svelte'
+import type { Feature, Layer, LayerNew, Ref, ResourceType } from '$lib/types'
+import type { Hub, HubNew } from '$lib/db/zod/schema/hub.types'
 import type {
-  Feature,
-  Hub,
-  HubNew,
-  Layer,
-  LayerNew,
   Organisation,
   OrganisationNew,
-  Ref,
-  ResourceType,
-} from '$lib/types'
+} from '$lib/db/zod/schema/organisation.types'
 import type { Project, ProjectNew } from '$lib/db/zod/schema/project.types'
 
 const DEPRECATED_FORM_CONTEXT_MESSAGE =
@@ -25,7 +20,7 @@ const failDeprecatedFormContext = (): never => {
  * @deprecated Legacy superforms context. Do not use for new code.
  * Kept only so imports remain resolvable during migration.
  */
-class DeprecatedForm<T extends Record<string, unknown>> {
+class DeprecatedForm<_T extends Record<string, unknown>> {
   constructor(..._args: unknown[]) {
     failDeprecatedFormContext()
   }

@@ -13,7 +13,8 @@ import { FirstClassResource } from '$lib/enums'
 // ICONS
 import HubIcon from 'virtual:icons/lucide/building-2'
 // TYPES
-import type { KeyMap, Hub } from '$lib/types'
+import type { KeyMap } from '$lib/types'
+import type { Hub } from '$lib/db/zod/schema/hub.types'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {

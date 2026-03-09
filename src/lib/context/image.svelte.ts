@@ -31,12 +31,12 @@ import type {
   UploadStatus,
   ImageEditCtx,
   Id,
-  HubDB,
   ImageUploadCtx,
   ImageCtxConstructorOptions,
   ImageContextConfig,
   Feature,
 } from '$lib/types'
+import type { HubDB } from '$lib/db/zod/schema/hub.types'
 import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 import { addParamToUrl } from '$lib/navigation'

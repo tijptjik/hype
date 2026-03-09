@@ -22,8 +22,6 @@ import {
 // TYPES
 import type {
   ListResponse,
-  Organisation,
-  Project,
   Layer,
   Feature,
   Id,
@@ -31,7 +29,6 @@ import type {
   Task,
   Code,
   Resource,
-  Hub,
   FilteredResources,
   Property,
   ViewFilters,
@@ -44,6 +41,9 @@ import type {
   NavigableResource,
   FilterState,
 } from '../types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Hub } from '$lib/db/zod/schema/hub.types'
 
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM

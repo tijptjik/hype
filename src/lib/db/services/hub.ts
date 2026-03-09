@@ -18,21 +18,24 @@ import { toRelatedRecords } from '..'
 import { insertManyRelated, replaceManyRelated } from '../crud'
 import { updateOrganisationById } from './organisation'
 // TYPES
+import type { InferInsertModel } from 'drizzle-orm'
 import type {
   Database,
-  HubDBRaw,
-  HubDB,
-  HubDBNew,
   LocaleKey,
   HubOptsExtended,
-  HubI18nNew,
-  HubI18nDB,
-  HubI18nPartial,
   HubProbe,
   HubUpdateProbe,
   HubCommandProbe,
   Id,
 } from '$lib/types'
+import type {
+  HubDB,
+  HubDBNew,
+  HubDBRaw,
+  HubI18nDB,
+  HubI18nNew,
+  HubI18nPartial,
+} from '$lib/db/zod/schema/hub.types'
 import { hubEntityWithRelations } from '$lib/api/services/hub'
 
 // ═══════════════════════
@@ -149,6 +152,17 @@ const toUserRoles = (
     role: userRole.role,
   }))
 
+/**
+ * Narrows hydrated Drizzle hub rows to the current raw hub contract.
+ * Keeps relation-graph inference drift contained at the DB boundary.
+ */
+const toHubDbRaw = (row: unknown): HubDBRaw => row as HubDBRaw
+
+/**
+ * Narrows hydrated Drizzle hub row collections to the current raw hub contract.
+ */
+const toHubDbRawList = (rows: unknown[]): HubDBRaw[] => rows as HubDBRaw[]
+
 // ═══════════════════════
 // 2.1 CRUD :: READ
 // ═══════════════════════
@@ -162,10 +176,12 @@ export const listHubs = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
 ): Promise<HubDBRaw[]> =>
-  await db.query.hub.findMany({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
-  })
+  toHubDbRawList(
+    await db.query.hub.findMany({
+      with: withRelations,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+    }),
+  )
 
 /**
  * Loads a single hub using provided conditions and relation graph.
@@ -178,11 +194,13 @@ export const getHub = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-): Promise<HubDBRaw | undefined> =>
-  await db.query.hub.findFirst({
+): Promise<HubDBRaw | undefined> => {
+  const row = await db.query.hub.findFirst({
     with: withRelations,
     where: and(...conditions),
   })
+  return row ? toHubDbRaw(row) : undefined
+}
 
 /**
  * getHubByCode operation.
@@ -533,7 +551,13 @@ export const updateI18n = async (
   hubId: string,
 ): Promise<HubI18nDB[]> => {
   const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
-  return await replaceManyRelated(db, hubI18n, records, hubI18n.hubId, hubId)
+  return await replaceManyRelated(
+    db,
+    hubI18n,
+    records as InferInsertModel<typeof hubI18n>[],
+    hubI18n.hubId,
+    hubId,
+  )
 }
 
 // ═══════════════════════

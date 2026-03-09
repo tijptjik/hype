@@ -73,17 +73,15 @@ import {
   RemoveHubSchema,
 } from '$lib/db/zod'
 // TYPES
+import type { EntityResponse, Id, ListResponse } from '$lib/types'
 import type {
-  EntityResponse,
   HubDB,
   HubEntityByProfile,
   HubGetParamsByProfile,
   HubListByProfile,
   HubListParamsByProfile,
   HubProfile as HubProfileType,
-  Id,
-  ListResponse,
-} from '$lib/types'
+} from '$lib/db/zod/schema/hub.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

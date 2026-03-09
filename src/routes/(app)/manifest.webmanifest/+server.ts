@@ -8,12 +8,14 @@ import { hub } from '$lib/db/schema'
 
 // I18N
 import { getDatabaseWithoutAuth } from '$lib/api'
-import type { HubI18nDB, HubOpts, Locale } from '$lib/types'
+import { toLocaleKey } from '$lib/i18n'
+import type { HubOpts, Locale } from '$lib/types'
+import type { HubI18nDB } from '$lib/db/zod/schema/hub.types'
 
 const getBaseManifest = async (code: string) => {
   try {
     return await import(`../../../lib/manifests/${code}.json`)
-  } catch (e) {
+  } catch {
     return null
   }
 }
@@ -57,14 +59,14 @@ export const GET: RequestHandler = async ({ url, request, platform }) => {
 
   const locale = getLocaleFromHeaders(request) as Locale
   let i18nData: Partial<HubI18nDB>
-  let baseManifest: any
+  let baseManifest: Record<string, unknown> | null
   let domain: string | null
 
   if (hubOpts.isCore) {
     baseManifest = await getBaseManifest(hubOpts.code)
     if (!baseManifest) return error(404, `Manifest for hub "${hubOpts.code}" not found`)
-    i18nData = hubOpts.i18n![locale]!
-    domain = hubOpts.domain!
+    i18nData = hubOpts.i18n?.[toLocaleKey(locale)] ?? {}
+    domain = hubOpts.domain ?? null
   } else {
     const { db } = await getDatabaseWithoutAuth(platform)
     const hubDb = await db.query.hub.findFirst({
@@ -72,7 +74,7 @@ export const GET: RequestHandler = async ({ url, request, platform }) => {
       where: eq(hub.code, hubOpts.code),
     })
     if (!hubDb) return error(404, 'Hub not found')
-    baseManifest = await getBaseManifest(hubDb.code!)
+    baseManifest = await getBaseManifest(hubDb.code)
     if (!baseManifest) return error(404, `Manifest for hub "${hubDb.code}" not found`)
     i18nData =
       hubDb.i18n?.find(i => i.locale === locale) ||
@@ -89,9 +91,7 @@ export const GET: RequestHandler = async ({ url, request, platform }) => {
     start_url: domain ? `https://${domain}` : '/',
   }
 
-  // Create a clean manifest object without the default property
   const cleanManifest = { ...manifest }
-  delete cleanManifest.default
 
   const headers = {
     'Content-Type': 'application/manifest+json',

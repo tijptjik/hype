@@ -16,18 +16,15 @@ import {
 import { ImageContextResource } from '$lib/enums'
 // TYPES
 import { asc, sql, type SQL } from 'drizzle-orm'
+import type { EntityResponse, HubOptsExtended, Id, ListResponse } from '$lib/types'
 import type {
-  EntityResponse,
   Hub,
   HubDB,
   HubDBRaw,
   HubEntityByProfile,
   HubListByProfile,
-  HubOptsExtended,
   HubProfile as HubProfileType,
-  Id,
-  ListResponse,
-} from '$lib/types'
+} from '$lib/db/zod/schema/hub.types'
 
 type UnknownRecord = Record<string, unknown>
 type ToImageArg = Parameters<typeof toImageEnvelope>[0]

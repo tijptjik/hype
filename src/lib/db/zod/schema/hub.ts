@@ -3,7 +3,7 @@ import { m } from '$lib/i18n'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
-import { createSelectSchema } from 'drizzle-zod'
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import {
   hub,
@@ -15,8 +15,12 @@ import {
 // ZOD SCHEMAS
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
-import { ImageContextEnvelopeAPI } from './image'
-import { ProjectPropertyFormData, PropertyAdminProfileAPI } from './property'
+import { ImageBase, ImageContextEnvelopeAPI } from './image'
+import {
+  ProjectPropertyFormData,
+  PropertyAdminProfileAPI,
+  PropertyRecordRaw,
+} from './property'
 import { UserBasic } from './user'
 
 // ═══════════════════════
@@ -25,9 +29,16 @@ import { UserBasic } from './user'
 //
 // 1. DB / RELATIONAL PRIMITIVES
 //    - HubBase
+//    - HubInsert
+//    - HubUpdate
 //    - HubI18nBase
+//    - HubI18nInsert
+//    - HubI18nUpdate
 //    - HubRoleBase
 //    - HubRoleWithUser
+//    - HubRoleInsert
+//    - HubRoleUpdate
+//    - HubRaw
 //    - HubOrganisationWithI18n
 //
 // 2. REMOTE FORM SCHEMAS
@@ -58,7 +69,21 @@ import { UserBasic } from './user'
 
 export const HubBase = createSelectSchema(hub)
 
+export const HubInsert = createInsertSchema(hub)
+
+export const HubUpdate = createUpdateSchema(hub)
+
 export const HubI18nBase = createSelectSchema(hubI18n)
+
+export const HubI18nInsert = createInsertSchema(hubI18n).omit({
+  hubId: true,
+  locale: true,
+})
+
+export const HubI18nUpdate = createUpdateSchema(hubI18n).omit({
+  hubId: true,
+  locale: true,
+})
 
 export const HubRoleBase = createSelectSchema(hubRole)
 
@@ -66,10 +91,36 @@ export const HubRoleWithUser = HubRoleBase.extend({
   user: UserBasic,
 })
 
+export const HubRoleInsert = createInsertSchema(hubRole).omit({
+  hubId: true,
+})
+
+export const HubRoleUpdate = createUpdateSchema(hubRole)
+
 const HubOrganisationBase = createSelectSchema(organisation)
 export const HubOrganisationWithI18n = HubOrganisationBase.extend({
   i18n: getLocales(createSelectSchema(organisationI18n)),
   image: ImageContextEnvelopeAPI.nullish(),
+})
+
+const HubOrganisationRaw = HubOrganisationBase.extend({
+  i18n: z.array(createSelectSchema(organisationI18n)),
+  image: ImageBase.nullish(),
+})
+
+export const HubRaw = HubBase.extend({
+  i18n: z.array(HubI18nBase),
+  image: ImageBase.nullish(),
+  userRoles: z.array(HubRoleWithUser).nullish(),
+  organisations: z.array(HubOrganisationRaw).nullish(),
+  properties: z.array(PropertyRecordRaw).nullish(),
+  propertyAssignments: z
+    .array(
+      z.object({
+        property: PropertyRecordRaw.nullish(),
+      }),
+    )
+    .nullish(),
 })
 
 // ═══════════════════════

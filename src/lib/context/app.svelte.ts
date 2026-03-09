@@ -68,7 +68,6 @@ import type {
   FilterState,
   FilteredResources,
   FilterTriState,
-  Hub,
   Id,
   Image,
   Layer,
@@ -76,8 +75,6 @@ import type {
   Locale,
   NavigableResource,
   NewFeatureTask,
-  Organisation,
-  Project,
   Property,
   Resource,
   ResourceContext,
@@ -96,6 +93,9 @@ import type {
   RemoteListFn,
   RemoteGetFn,
 } from '$lib/types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Hub } from '$lib/db/zod/schema/hub.types'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { PlaceCtx } from './place.svelte'

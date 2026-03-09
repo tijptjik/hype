@@ -2,13 +2,16 @@
 import { toLocaleCode, toLocaleKey } from '$lib/i18n'
 // TYPES
 import type {
-  Hub,
-  HubBooleanField,
-  HubFormInput,
   HubOrganisationFieldNameResolverForm,
   HubOrganisationHiddenInputAttrs,
   Locale,
 } from '$lib/types'
+import type {
+  Hub,
+  HubBooleanField,
+  HubFormInput,
+  HubIdentityPatch,
+} from '$lib/db/zod/schema/hub.types'
 import { toFormLocaleRecord } from '$lib/i18n'
 
 function normalizeHubFormLocale(
@@ -37,7 +40,7 @@ function cloneHubProperties(
           i18n: toFormLocaleRecord(value.i18n) as typeof value.i18n,
         }))
       : property.values,
-  }))
+  })) as HubFormInput['data']['properties']
 }
 
 export function toHubFormInput(data?: Hub | null): HubFormInput {
@@ -143,12 +146,7 @@ export function overrideHubListItemBoolean(
 export function toHubIdentityPatch(
   formData: HubFormInput,
   locale: Locale,
-): {
-  code: string
-  locale: Locale
-  name: string
-  nameShort: string
-} {
+): HubIdentityPatch {
   const formLocale = toLocaleKey(locale)
   const entityLocale = toLocaleCode(formLocale)
   const localeData = formData.data?.i18n?.[formLocale]
