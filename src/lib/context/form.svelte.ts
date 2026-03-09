@@ -1,8 +1,9 @@
 // TYPES
 import type { SuperValidated } from 'sveltekit-superforms/client'
 import type { AdminCtx } from './admin.svelte'
-import type { Feature, Layer, LayerNew, Ref, ResourceType } from '$lib/types'
+import type { Feature, Ref, ResourceType } from '$lib/types'
 import type { Hub, HubNew } from '$lib/db/zod/schema/hub.types'
+import type { Layer, LayerNew } from '$lib/db/zod/schema/layer.types'
 import type {
   Organisation,
   OrganisationNew,

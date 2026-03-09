@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm'
 import { userLayer, layer } from '$lib/db/schema/index'
 // TYPES
-import type { UserLayer, Layer, UserRoleDisco, SessionUser, Id } from '$lib/types'
+import type { UserLayer, UserRoleDisco, SessionUser, Id } from '$lib/types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 
 /**
  * Fetches and constructs user layers from the database.

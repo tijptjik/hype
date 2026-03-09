@@ -1,12 +1,12 @@
+import type { LocaleKey } from '$lib/types'
 import type {
   Layer,
   LayerBooleanField,
   LayerFormInput,
   LayerFormLocaleInput,
-  LocaleKey,
   LayerSubmitData,
   LayerSubmitUpdatesParams,
-} from '$lib/types'
+} from '$lib/db/zod/schema/layer.types'
 import { toFormLocaleRecord } from '$lib/i18n'
 
 // ═══════════════════════

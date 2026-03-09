@@ -10,12 +10,12 @@ import type {
   Feature,
   FeatureFromCollection,
   Id,
-  Layer,
-  Organisation,
-  Project,
   UserFeatureListItem as UserFeature,
   UserFeatureWithHierarchy,
 } from '$lib/types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 
 type SearchableFeatureResource = Pick<Feature | FeatureFromCollection, 'i18n'>
 type SearchableHierarchyResource = Pick<Organisation | Project | Layer, 'i18n'>

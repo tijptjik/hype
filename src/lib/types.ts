@@ -66,27 +66,6 @@ import type {
   ImageAdminProfileAPI,
   ImageUpdate,
   ImageUpdateAPI,
-  LayerAdminProfileAPI,
-  LayerCardProfileAPI,
-  LayerDetailProfileAPI,
-  LayerEntityFormData,
-  LayerFormData,
-  LayerI18nRecord,
-  LayerI18nRecordCreate,
-  LayerI18nRecordUpdate,
-  LayerListProfileAPI,
-  LayerPreflightFormData,
-  LayerProfile as LayerProfileSchema,
-  LayerPropertyAdminProfileAPI,
-  LayerPropertyListProfileAPI,
-  LayerPropertyRecord,
-  LayerPropertyRecordCreate,
-  LayerPropertyRecordUpdate,
-  LayerRecord,
-  LayerRecordCreate,
-  LayerRecordUpdate,
-  PublishLayerSchema,
-  RemoveLayerSchema,
   ListQueryParamsSchema,
   GetQueryParamsSchema,
   PropertyAdminProfileAPI,
@@ -143,7 +122,6 @@ import type {
   UserSearchQueryParamsSchema,
   UserSelfProfileAPI,
 } from './db/zod'
-import type { LayerRaw } from './db/zod/schema/deprecated/layer'
 import type {
   Hub,
   HubDB,
@@ -156,6 +134,17 @@ import type {
   HubProfile,
   HubRole,
 } from './db/zod/schema/hub.types'
+import type {
+  Layer,
+  LayerDB,
+  LayerEntityByProfile,
+  LayerGetParamsByProfile,
+  LayerI18nDB,
+  LayerListByProfile,
+  LayerListParamsByProfile,
+  LayerNew,
+  LayerProfile,
+} from './db/zod/schema/layer.types'
 import type {
   Organisation,
   OrganisationDB,
@@ -1756,143 +1745,6 @@ export type OrganisationActionPermissions = {
   canEdit: boolean
   canPublish: boolean
 }
-
-/* ----------------- */
-// LAYERS :: REMOTE
-/* -------- */
-
-export type LayerListParams = z.infer<typeof ListQueryParamsSchema>
-export type LayerGetParams = z.infer<typeof GetQueryParamsSchema>
-export type LayerProfile = z.infer<typeof LayerProfileSchema>
-export type LayerListProfile = z.infer<typeof LayerListProfileAPI>
-export type LayerCardProfile = z.infer<typeof LayerCardProfileAPI>
-export type LayerDetailProfile = z.infer<typeof LayerDetailProfileAPI>
-export type LayerAdminProfile = z.infer<typeof LayerAdminProfileAPI>
-
-export type LayerEntityByProfile<P extends LayerProfile> = P extends 'list'
-  ? LayerListProfile
-  : P extends 'card'
-    ? LayerCardProfile
-    : P extends 'detail'
-      ? LayerDetailProfile
-      : LayerAdminProfile
-
-export type LayerListByProfile<P extends LayerProfile> = P extends 'list'
-  ? LayerListProfile
-  : P extends 'card'
-    ? LayerCardProfile
-    : P extends 'detail'
-      ? LayerDetailProfile
-      : LayerAdminProfile
-
-export type LayerGetParamsByProfile<P extends LayerProfile> = Omit<
-  LayerGetParams,
-  'meta'
-> & {
-  meta?: {
-    isAdminRequest?: boolean
-    profile?: P
-  }
-}
-
-export type LayerListParamsByProfile<P extends LayerProfile> = Omit<
-  LayerListParams,
-  'meta'
-> & {
-  meta?: {
-    isAdminRequest?: boolean
-    profile?: P
-  }
-}
-
-export type LayerFormInput = z.input<typeof LayerFormData>
-export type LayerFormLocaleInput = FormLocaleInput<LayerFormInput>
-export type LayerSubmitData = Partial<LayerFormInput['data']>
-export type LayerBooleanField = 'isPublished' | 'isArchived'
-export type LayerSubmitUpdatesParams<TEntityResult, TListResult> = {
-  layerId?: string | null
-  entityQuery: TEntityResult
-  listQuery: TListResult
-}
-export type LayerGetResponse = EntityResponse<LayerAdminProfile>
-export type LayerGetState = LayerGetResponse | null
-export type LayerPublishInput = z.input<typeof PublishLayerSchema>
-export type LayerArchiveInput = z.input<typeof RemoveLayerSchema>
-export type LayerPreflightInput = z.input<typeof LayerPreflightFormData>
-export type LayerProbe = {
-  id: string
-  organisationId: string
-  projectId: string
-  hubId: string | null
-  isPublished: boolean
-  isArchived: boolean
-}
-export type LayerUpdateProbe = {
-  id: string
-  code: string
-  organisationId: string
-  projectId: string
-  hubId: string | null
-  metadata: LayerMetadata | null
-  modifiedAt: string
-}
-export type LayerCommandProbe = {
-  id: string
-  organisationId: string
-  projectId: string
-  hubId: string | null
-}
-
-/* ----------------- */
-// LAYERS
-/* -------- */
-
-/* ----------------- */
-// LAYERS :: DB
-/* -------- */
-
-// Layer with all its own fields.
-export type LayerDB = z.infer<typeof LayerRecord>
-// Layer without relations, for use in inserting a new layer
-export type LayerDBNew = z.infer<typeof LayerRecordCreate>
-// Layer without relations, for use in partially updating a layer
-export type LayerDBPartial = z.infer<typeof LayerRecordUpdate>
-// Layer, with relations in DB form - used as an intermediate type for DB operations
-export type LayerDBRaw = z.infer<typeof LayerRaw>
-
-/* ----------------- */
-// LAYERS :: API
-/* -------- */
-
-// Layer with all fields, including translations and properties
-export type Layer = z.infer<typeof LayerAdminProfileAPI>
-// Like Layer, but without the layerId in translations and properties
-export type LayerNew = z.infer<typeof LayerEntityFormData>
-// Like Layer, but with all fields optional
-export type LayerPartial = Partial<LayerNew>
-
-/* ----------------- */
-// LAYERS :: RELATIONAL
-/* -------- */
-
-// layerI18n, but with the layerId - for use in DB seeding & selects
-export type LayerI18nDB = z.infer<typeof LayerI18nRecord>
-// layerI18n, but without layerId - for use in API insertions
-export type LayerI18nNew = z.infer<typeof LayerI18nRecordCreate>
-// Same as LayerI18nNew, but all fields are optional
-export type LayerI18nPartial = z.infer<typeof LayerI18nRecordUpdate>
-
-// layerProperty, but with the layerId - for use in DB seeding & selects
-export type LayerPropertyDB = z.infer<typeof LayerPropertyRecord>
-// layerProperty, with admin profile enrichment
-export type LayerPropertyDBRaw = z.infer<typeof LayerPropertyAdminProfileAPI>
-// layerProperty, but without layerId - for use in API insertions
-export type LayerPropertyNew = z.infer<typeof LayerPropertyRecordCreate>
-// Same as LayerPropertyNew, but all fields are optional
-export type LayerPropertyPartial = z.infer<typeof LayerPropertyRecordUpdate>
-export type LayerPropertyListProfile = z.infer<typeof LayerPropertyListProfileAPI>
-export type LayerPropertyAdminProfile = z.infer<typeof LayerPropertyAdminProfileAPI>
-export type LayerPropertyPartialExtra = LayerPropertyAdminProfile
 
 export type LayerMetadata = {}
 

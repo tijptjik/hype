@@ -35,9 +35,7 @@ import type {
   Feature,
   Image,
   Id,
-  Layer,
   Prisms,
-  Project,
   Property,
   Resource,
   ResourceNew,
@@ -46,13 +44,14 @@ import type {
   QueryParams,
   PaginationParams,
   DbTable,
-  LayerPropertyPartialExtra,
   ParamsToSign,
   DeleteParamsToSign,
   SignData,
   Session,
   SessionUser,
 } from '$lib/types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Layer, LayerPropertyPartialExtra } from '$lib/db/zod/schema/layer.types'
 import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'
 
 export const getSessionOrError = async (

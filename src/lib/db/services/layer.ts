@@ -23,6 +23,13 @@ import type {
   Database,
   HubOptsExtended,
   Id,
+  LocaleKey,
+  LayerMetadata,
+  ListResponse,
+  QueryParams,
+  Property,
+} from '$lib/types'
+import type {
   LayerCommandProbe,
   LayerDB,
   LayerDBNew,
@@ -30,14 +37,9 @@ import type {
   LayerI18nDB,
   LayerI18nNew,
   LayerI18nPartial,
-  LocaleKey,
-  LayerMetadata,
   LayerPropertyDBRaw,
   LayerPropertyNew,
-  ListResponse,
-  QueryParams,
-  Property,
-} from '$lib/types'
+} from '$lib/db/zod/schema/layer.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

@@ -7,7 +7,6 @@ import { buildLayerVisibilityAndOwnershipConditions } from '$lib/api/services/au
 // DB
 import { transformI18nSafely } from '$lib/db'
 import { layer } from '$lib/db/schema'
-import { toImageEnvelope } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
   LayerAdminProfileAPI,
@@ -16,24 +15,25 @@ import {
   LayerListProfileAPI,
 } from '$lib/db/zod'
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type {
   Database,
   EntityResponse,
   Id,
-  Layer,
-  LayerDB,
-  LayerDBRaw,
-  LayerEntityByProfile,
-  LayerListByProfile,
-  LayerProfile,
   ListResponse,
   Prisms,
   QueryParams,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
+import type {
+  Layer,
+  LayerDB,
+  LayerDBRaw,
+  LayerEntityByProfile,
+  LayerListByProfile,
+  LayerProfile,
+} from '$lib/db/zod/schema/layer.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -198,9 +198,6 @@ const toProfileResponseShape = async (
     ...row,
     i18n: transformI18nSafely(row.i18n),
     properties: normalizeLayerPropertiesForProfile(row.properties),
-    image: row.image
-      ? toImageEnvelope(row.image as never, 'card', ImageContextResource.layer, row.id)
-      : null,
   }
 
   if (profile === 'list') return LayerListProfileAPI.parse(data) as Layer
@@ -224,7 +221,10 @@ export const toEntityResponseShape = async <P extends LayerProfile = 'detail'>(
   const startedAt = Date.now()
 
   if (!row) {
-    return { data: null as LayerEntityByProfile<P>, durationMs: Date.now() - startedAt }
+    return {
+      data: null as unknown as LayerEntityByProfile<P>,
+      durationMs: Date.now() - startedAt,
+    }
   }
 
   const data = await toProfileResponseShape(row, profile)

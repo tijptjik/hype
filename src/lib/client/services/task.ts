@@ -3,13 +3,13 @@ import type {
   NewFeatureTask,
   UserContributedFeature,
   Feature,
-  Layer,
-  Project,
-  Organisation,
   Id,
   UploadedPhoto,
   ImageUpload,
 } from '$lib/types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 
 // ═══════════════════════
 // TASK CREATION CLIENT SERVICES

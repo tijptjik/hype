@@ -60,9 +60,8 @@ import {
   PublishLayerSchema,
   RemoveLayerSchema,
 } from '$lib/db/zod'
+import type { EntityResponse, Id, ListResponse, RelationShape } from '$lib/types'
 import type {
-  EntityResponse,
-  Id,
   LayerCommandProbe,
   LayerDB,
   LayerEntityByProfile,
@@ -70,9 +69,7 @@ import type {
   LayerListByProfile,
   LayerListParamsByProfile,
   LayerProfile,
-  ListResponse,
-  RelationShape,
-} from '$lib/types'
+} from '$lib/db/zod/schema/layer.types'
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 
 // ═══════════════════════
@@ -115,7 +112,7 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
     params.conditions as Partial<LayerDB> | undefined,
   )
   const requestedListState = toRequestedListState(queryParams as Partial<LayerDB>)
-  const normalizedPrisms = toLayerPrisms(params.prisms)
+  const normalizedPrisms = toLayerPrisms(params.prisms as never)
 
   const listDecision = authorizeLayerListForContext({
     user,

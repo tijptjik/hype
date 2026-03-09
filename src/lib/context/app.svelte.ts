@@ -70,7 +70,6 @@ import type {
   FilterTriState,
   Id,
   Image,
-  Layer,
   LayoutMode,
   Locale,
   NavigableResource,
@@ -95,6 +94,7 @@ import type {
 } from '$lib/types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Hub } from '$lib/db/zod/schema/hub.types'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'

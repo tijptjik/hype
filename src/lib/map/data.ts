@@ -7,12 +7,8 @@ import { filterPlaces } from '$lib/client/services/geospatial'
 import { OmniCollection } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type {
-  FeatureExtended,
-  FeatureFromCollection,
-  Layer,
-  SearchResult,
-} from '$lib/types'
+import type { FeatureExtended, FeatureFromCollection, SearchResult } from '$lib/types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 
 // Async version that uses getHierarchy for guaranteed data with cache-miss handling
 export async function getWishlistedFeaturesAsync(

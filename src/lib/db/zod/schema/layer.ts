@@ -32,6 +32,7 @@ import type { LayerMetadata } from '$lib/types'
 //    - UserLayerRecord
 //    - UserLayerRecordCreate
 //    - UserLayerRecordUpdate
+//    - LayerRaw
 //
 // 2. REMOTE FORM SCHEMAS
 //    - LayerI18nFormData
@@ -234,4 +235,11 @@ export const LayerDetailProfileAPI = LayerCardProfileAPI.extend({
 
 export const LayerAdminProfileAPI = LayerDetailProfileAPI.extend({
   properties: z.array(LayerPropertyAdminProfileAPI).default([]),
+})
+
+export const LayerRaw = LayerRecord.extend({
+  i18n: z.array(LayerI18nRecord),
+  properties: z.array(LayerPropertyAdminProfileAPI).nullish(),
+  publisher: UserBasic.nullish(),
+  image: z.unknown().nullish(),
 })

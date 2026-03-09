@@ -16,7 +16,8 @@ import { m } from '$lib/i18n'
 // ICONS
 import LayerIcon from 'virtual:icons/lucide/layers'
 // TYPES
-import type { KeyMap, Layer } from '$lib/types'
+import type { KeyMap } from '$lib/types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
