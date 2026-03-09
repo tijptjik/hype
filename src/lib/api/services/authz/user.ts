@@ -10,6 +10,12 @@ type UserSearchActor = {
   userRoles: UserRoleDisco[]
 }
 
+type UserUpdateActor = {
+  isAuthenticated?: boolean
+  userId?: string | null
+  superAdmin?: boolean | null
+}
+
 /**
  * Search-users endpoint access policy.
  *
@@ -40,6 +46,22 @@ export const canOverrideUserSearchArchivedFilter = (
 ): boolean => {
   if (actor.superAdmin) return true
   return actor.userRoles.some(role => role.type === 'hub' && role.role === 'admin')
+}
+
+/**
+ * User self-profile update policy.
+ *
+ * Allowed:
+ * - the authenticated user updating their own record
+ * - super admins updating any user record
+ */
+export const canUpdateUserProfile = (
+  actor: UserUpdateActor,
+  targetUserId: string,
+): boolean => {
+  if (!hasAuthenticatedSession(actor)) return false
+  if (actor.superAdmin) return true
+  return actor.userId === targetUserId
 }
 
 export const hasAuthenticatedSession = (actor: AuthenticatedSessionActor): boolean => {

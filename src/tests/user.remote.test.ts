@@ -18,14 +18,10 @@ const {
   mockToAuthMessage: vi.fn((code: string) => code),
 }))
 
-vi.mock(
-  '$app/server',
-  () => ({
-    getRequestEvent: mockGetRequestEvent,
-    query: (_schema: unknown, handler: unknown) => handler,
-  }),
-  { virtual: true },
-)
+vi.mock('$app/server', () => ({
+  getRequestEvent: mockGetRequestEvent,
+  query: (_schema: unknown, handler: unknown) => handler,
+}))
 
 vi.mock('@sveltejs/kit', () => ({
   error: (status: number, message: string) => {
@@ -72,10 +68,21 @@ vi.mock('$lib/api/services/authz', () => ({
     if (params.superAdmin) return true
     return params.userRoles.some(role => role.type === 'hub' && role.role === 'admin')
   },
+  canUpdateUserProfile: (
+    params: {
+      isAuthenticated?: boolean
+      userId?: string | null
+      superAdmin?: boolean | null
+    },
+    targetUserId: string,
+  ) => {
+    if (!params.isAuthenticated) return false
+    if (params.superAdmin) return true
+    return params.userId === targetUserId
+  },
 }))
 
 vi.mock('$lib/api/services/user', () => ({
-  assertPermissionsToUpdateUser: vi.fn(),
   getUserQueryContext: vi.fn(() => ({ conditions: [] })),
   isPrivilegedArchivedSearchRequested: (state: { isArchived: boolean | null }) =>
     state.isArchived === true || state.isArchived === null,
@@ -264,11 +271,11 @@ describe('user.remote', () => {
 
     const result = await remote.getUserForAttribution({
       id: 'u-1',
-      meta: { profile: 'admin' as const },
+      meta: { profile: 'card' as const },
     })
 
     expect(result).toEqual({ id: 'u-1', attribution: 'A' })
-    expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'admin')
+    expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'card')
   })
 
   it('getUserForAttribution defaults profile to card when context is admin', async () => {

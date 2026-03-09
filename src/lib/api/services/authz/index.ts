@@ -157,7 +157,11 @@ export {
   resolveLayerProjectSelectionScope,
 } from './layer'
 export { authorizeImageList, authorizeImageRead } from './image'
-export { canSearchUsers, canOverrideUserSearchArchivedFilter } from './user'
+export {
+  canSearchUsers,
+  canOverrideUserSearchArchivedFilter,
+  canUpdateUserProfile,
+} from './user'
 
 const RESOURCE_CODE_SEGMENTS = [
   ...Object.values(FirstClassResource),

@@ -1,5 +1,4 @@
 // SVELTE
-import { getRequestEvent, query } from '$app/server'
 import { error } from '@sveltejs/kit'
 // ZOD
 import {
@@ -15,36 +14,31 @@ import {
   UserSearchQueryParamsSchema,
 } from '$lib/db/zod'
 // DRIZZLE
-import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 // API
-import { getPrisms, setupRequestHandler } from '$lib/api'
+import { getPrisms } from '$lib/api'
 import {
   guardedBatchByIdQuery,
   guardedCommand,
   guardedQuery,
 } from '$lib/api/server/remote'
 import {
-  assertPermissionsToUpdateUser,
-  getUserQueryContext,
   isPrivilegedArchivedSearchRequested,
-  toEntityRoleExistsCondition,
   toEntityResponseShape,
-  toParentChainCondition,
-  toRequestedSearchState,
+  toUserReadQueryPlan,
   toUserFeatureListResponseShape,
   toUserProfileResponseShape,
-  toUserSearchPagingAndSorting,
+  toUserSearchQueryPlan,
   userEntityWithRelations,
 } from '$lib/api/services/user'
 import {
   canOverrideUserSearchArchivedFilter,
   canSearchUsers,
+  canUpdateUserProfile,
   toAuthMessage,
 } from '$lib/api/services/authz'
 // DB
-import { applyPrismConstraints } from '$lib/db'
-import { feature, featureImage, user, user as userTable } from '$lib/db/schema/index'
-import { getFeatureHubFilter } from '$lib/db/services/hub'
+import { user } from '$lib/db/schema/index'
 import {
   getUser as loadUser,
   getUserFeaturesByUserId,
@@ -52,22 +46,15 @@ import {
   getUsersForHydration,
   removeUserFeatureListState,
   searchUsersByConditions,
-  toSearchCondition,
   updateUser,
   updateUserLayers,
   upsertUserFeatureState,
 } from '$lib/db/services/user'
-import { HierarchicalResource } from '$lib/enums'
 // UTILS
 import { normalizeUsername, validateUsername } from '$lib/utils/username'
 // TYPES
 import type { Id } from '$lib/types'
-import type {
-  UserHydrationResult,
-  UserParentChainRoleFilter,
-  UserRaw,
-  UserRoleFilter,
-} from '$lib/db/zod/schema/user.types'
+import type { UserHydrationResult, UserRaw } from '$lib/db/zod/schema/user.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -105,117 +92,64 @@ const resolveTargetUserId = (
 }
 
 /**
- * Resolves effective response profile for `getUser`.
- * Falls back to `self` for current-user lookups, otherwise `detail`.
+ * Returns a role-filtered admin user search result for guarded remote callers.
+ *
+ * @param params - Search params validated by `UserSearchQueryParamsSchema`.
+ * @param params.q - Optional free-text user search query.
+ * @param params.conditions - Optional list-state filters, including archived visibility.
+ * @param params.roleOnEntity - Optional direct role filter scoped to one entity.
+ * @param params.roleUpParentChain - Optional inherited role filter resolved up the parent chain.
+ * @param params.pagination - Optional paging controls (`limit`, `offset`).
+ * @param params.sorting - Optional sort config for admin search results.
+ * @param params.meta - Optional request metadata.
+ * @param params.meta.isAdminRequest - Explicit admin-origin hint used by guarded context resolution.
+ * @returns A promise resolving to paged admin-list user results plus total-count metadata.
+ * @remarks
+ * Uses guarded query context so request-scoped auth/session state is resolved once and
+ * `meta.isAdminRequest` semantics stay aligned with the rest of the remote layer.
+ * Archived-user search is additionally protected behind a privileged policy gate.
  */
-const resolveUserProfile = (
-  params: {
-    ref: string
-    refKey?: 'id' | 'username'
-    meta?: { profile?: string } | undefined
-  },
-  sessionUser: { id: string; username?: string | null },
-):
-  | 'attribution'
-  | 'adminList'
-  | 'card'
-  | 'leaderboard'
-  | 'detail'
-  | 'self'
-  | 'admin' => {
-  if (params.meta?.profile) {
-    return params.meta.profile as
-      | 'attribution'
-      | 'adminList'
-      | 'card'
-      | 'leaderboard'
-      | 'detail'
-      | 'self'
-      | 'admin'
-  }
+export const searchUsers = guardedQuery(
+  UserSearchQueryParamsSchema,
+  async (params, ctx) => {
+    const { db, user, userRoles } = ctx
 
-  const isSelf =
-    (params.refKey === 'username' && params.ref === sessionUser.username) ||
-    params.ref === sessionUser.id
+    // Apply role-based authorization.
+    if (!canSearchUsers({ superAdmin: user.superAdmin, userRoles })) {
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    }
 
-  return isSelf ? 'self' : 'detail'
-}
+    const queryPlan = await toUserSearchQueryPlan(db, params)
 
-export const searchUsers = query(UserSearchQueryParamsSchema, async params => {
-  // Resolve request-scoped dependencies.
-  const event = getRequestEvent()
-  const { db, user, userRoles } = await setupRequestHandler(event)
+    // Guard privileged archived filter usage.
+    if (
+      isPrivilegedArchivedSearchRequested(queryPlan.requestedState) &&
+      !canOverrideUserSearchArchivedFilter({
+        superAdmin: user.superAdmin,
+        userRoles,
+      })
+    ) {
+      throw error(403, toAuthMessage('FIELD_FORBIDDEN'))
+    }
 
-  // Apply role-based authorization.
-  if (!canSearchUsers({ superAdmin: user.superAdmin, userRoles })) {
-    throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
-  }
-
-  // Resolve requested visibility state from query params.
-  const requestedState = toRequestedSearchState({
-    isArchived: params.conditions?.isArchived,
-  })
-
-  // Guard privileged archived filter usage.
-  if (
-    isPrivilegedArchivedSearchRequested(requestedState) &&
-    !canOverrideUserSearchArchivedFilter({
-      superAdmin: user.superAdmin,
-      userRoles,
+    // Load paged records from DB.
+    const result = await searchUsersByConditions(db, {
+      conditions: queryPlan.conditions,
+      limit: queryPlan.limit,
+      offset: queryPlan.offset,
+      sortBy: queryPlan.sortBy,
+      sortOrder: queryPlan.sortOrder,
     })
-  ) {
-    throw error(403, toAuthMessage('FIELD_FORBIDDEN'))
-  }
 
-  // Resolve base SQL conditions.
-  const conditions: SQL<unknown>[] = []
-  if (requestedState.isArchived !== null) {
-    conditions.push(eq(userTable.isArchived, requestedState.isArchived))
-  }
-
-  // Resolve text-search conditions.
-  const q = params.q?.trim()
-  if (q) {
-    conditions.push(toSearchCondition(q))
-  }
-
-  // Resolve direct role-scope filter when provided.
-  if (params.roleOnEntity) {
-    conditions.push(
-      toEntityRoleExistsCondition(db, params.roleOnEntity as UserRoleFilter),
-    )
-  }
-
-  // Resolve parent-chain role-scope filter when provided.
-  if (params.roleUpParentChain) {
-    conditions.push(
-      await toParentChainCondition(
-        db,
-        params.roleUpParentChain as UserParentChainRoleFilter,
-      ),
-    )
-  }
-
-  // Resolve pagination and sorting params.
-  const { limit, offset, sortBy, sortOrder } = toUserSearchPagingAndSorting(params)
-
-  // Load paged records from DB.
-  const result = await searchUsersByConditions(db, {
-    conditions,
-    limit,
-    offset,
-    sortBy,
-    sortOrder,
-  })
-
-  // Return loaded records and list metadata.
-  return {
-    data: result.data.map(row => UserAdminListProfileAPI.parse(row)),
-    limit,
-    offset,
-    totalCount: result.totalCount,
-  }
-})
+    // Return loaded records and list metadata.
+    return {
+      data: result.data.map(row => UserAdminListProfileAPI.parse(row)),
+      limit: queryPlan.limit,
+      offset: queryPlan.offset,
+      totalCount: result.totalCount,
+    }
+  },
+)
 
 /**
  * USERS - LOOKUP
@@ -247,143 +181,59 @@ export const getUserForAttribution = guardedBatchByIdQuery<
   }
 })
 
+/**
+ * Returns a role-aware user record for guarded remote callers.
+ *
+ * @param params - Lookup params validated by `GetUserParamsSchema`.
+ * @param params.ref - User identifier or username value.
+ * @param params.refKey - Optional lookup column (`id` or `username`).
+ * @param params.meta - Optional request metadata.
+ * @param params.meta.isAdminRequest - Explicit admin-origin hint used by guarded context resolution.
+ * @param params.meta.profile - Optional response profile override.
+ * @returns A promise resolving to `{ data }`, where `data` is the matched user or `null`.
+ * @remarks
+ * Builds the read scope from the guarded session context, current hub, and active prisms
+ * before loading the richer user relation graph required for contribution summaries.
+ */
 export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => {
   const { db, user: sessionUser, userRoles, event } = ctx
   if (!sessionUser) {
     throw error(401, 'AUTH_REQUIRED')
   }
 
-  const prisms = getPrisms(event.url)
-  const { conditions } = getUserQueryContext(
+  const queryPlan = toUserReadQueryPlan(db, {
+    lookup: params,
     sessionUser,
-    event.request,
-    {},
     userRoles,
-    false,
-  )
+    request: event.request,
+    prisms: getPrisms(event.url),
+    hubOpts: event.locals.hub,
+    isAdminRequest: ctx.isAdminRequest,
+  })
 
-  const userCondition =
-    params.refKey === 'username'
-      ? eq(user.username, params.ref)
-      : or(eq(user.id, params.ref), eq(user.username, params.ref))
-  if (userCondition) {
-    conditions.push(userCondition)
-  }
-
-  const featureConstraints: SQL<unknown>[] = []
-  if (
-    prisms &&
-    (prisms.organisation.length > 0 ||
-      prisms.project.length > 0 ||
-      prisms.layer.length > 0)
-  ) {
-    featureConstraints.push(
-      ...applyPrismConstraints(db, HierarchicalResource.feature, prisms),
-    )
-  }
-
-  const hubOpts = event.locals.hub || { isCore: true }
-  const shouldApplyHubFilter = !sessionUser.superAdmin || !ctx.isAdminRequest
-
-  if (shouldApplyHubFilter) {
-    const isCore = 'isCore' in hubOpts ? hubOpts.isCore : true
-
-    const scopedOrganisationsRaw = (hubOpts as { organisations?: unknown })
-      .organisations
-    const scopedOrganisations = Array.isArray(scopedOrganisationsRaw)
-      ? scopedOrganisationsRaw.filter(
-          (
-            org,
-          ): org is {
-            id: string
-            isHubExclusive?: boolean
-          } =>
-            Boolean(org) &&
-            typeof org === 'object' &&
-            typeof (org as { id?: unknown }).id === 'string',
-        )
-      : []
-
-    if (scopedOrganisations.length > 0) {
-      const organisationIds = isCore
-        ? scopedOrganisations.filter(org => !org.isHubExclusive).map(org => org.id)
-        : scopedOrganisations.map(org => org.id)
-      if (organisationIds.length > 0) {
-        featureConstraints.push(inArray(feature.organisationId, organisationIds))
-      }
-    } else {
-      const featureHubFilter = getFeatureHubFilter(db, {
-        ...hubOpts,
-        isCore,
-        isAdminRequest: ctx.isAdminRequest,
-        isSuperAdmin: Boolean(sessionUser.superAdmin && ctx.isAdminRequest),
-        ...('code' in hubOpts && hubOpts.code ? { code: hubOpts.code } : {}),
-        ...('domain' in hubOpts && hubOpts.domain ? { domain: hubOpts.domain } : {}),
-      })
-      if (featureHubFilter) featureConstraints.push(featureHubFilter)
-    }
-  }
-
-  const userRelationsWithPrisms = {
-    ...userEntityWithRelations,
-    contributedFeatures: {
-      columns: {
-        id: true,
-        isPublished: true,
-        projectId: true,
-      },
-      where:
-        featureConstraints.length > 0
-          ? inArray(
-              feature.id,
-              db
-                .select({ id: feature.id })
-                .from(feature)
-                .where(and(...featureConstraints)),
-            )
-          : undefined,
-    },
-    contributedImages: {
-      columns: {
-        id: true,
-      },
-      with: {
-        featureImage: {
-          columns: {
-            isPublished: true,
-            featureId: true,
-          },
-          with: {
-            feature: {
-              columns: {
-                projectId: true,
-              },
-            },
-          },
-          where:
-            featureConstraints.length > 0
-              ? inArray(
-                  featureImage.featureId,
-                  db
-                    .select({ id: feature.id })
-                    .from(feature)
-                    .where(and(...featureConstraints)),
-                )
-              : undefined,
-        },
-      },
-    },
-  }
-
-  const result = (await loadUser(db, userRelationsWithPrisms, conditions)) as UserRaw
+  const result = (await loadUser(
+    db,
+    queryPlan.withRelations,
+    queryPlan.conditions,
+  )) as UserRaw
   if (!result) return { data: null }
 
-  const profile = resolveUserProfile(params, sessionUser)
   return {
-    data: toUserProfileResponseShape(result, profile),
+    data: toUserProfileResponseShape(result, queryPlan.profile),
   }
 })
 
+/**
+ * Updates a user's editable profile fields for self-service or super-admin callers.
+ *
+ * @param params - Command payload validated by `UpdateUserParamsSchema`.
+ * @param params.id - User id to update.
+ * @param params.data - Partial user fields to persist.
+ * @returns A promise resolving to the refreshed `self` profile payload.
+ * @remarks
+ * Reloads the persisted user after mutation so the response reflects current relation shaping
+ * and normalized username rules rather than echoing the submitted payload directly.
+ */
 export const updateUserProfile = guardedCommand(
   UpdateUserParamsSchema,
   async (params, ctx) => {
@@ -397,13 +247,17 @@ export const updateUserProfile = guardedCommand(
       throw error(404, 'USER_NOT_FOUND')
     }
 
-    const assertionError = assertPermissionsToUpdateUser(
-      sessionUser,
-      existing,
-      params.id as Id,
-    )
-    if (assertionError) {
-      throw assertionError
+    if (
+      !canUpdateUserProfile(
+        {
+          isAuthenticated: true,
+          userId: sessionUser.id,
+          superAdmin: sessionUser.superAdmin,
+        },
+        params.id,
+      )
+    ) {
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
     }
 
     const newData = { ...params.data }
@@ -431,6 +285,15 @@ export const updateUserProfile = guardedCommand(
   },
 )
 
+/**
+ * Returns the saved default layer-visibility rows for the resolved target user.
+ *
+ * @param params - Query params validated by `GetUserLayersParamsSchema`.
+ * @param params.userId - Optional target user id; omitted means current session user.
+ * @returns A promise resolving to `{ data }`, where `data` contains the user's layer defaults.
+ * @remarks
+ * Non-super-admin callers are restricted to their own user id via `resolveTargetUserId`.
+ */
 export const getUserLayers = guardedQuery(
   GetUserLayersParamsSchema,
   async (params, ctx) => {
@@ -445,6 +308,17 @@ export const getUserLayers = guardedQuery(
   },
 )
 
+/**
+ * Replaces the saved default layer-visibility rows for the resolved target user.
+ *
+ * @param params - Command payload validated by `SetUserLayerDefaultsSchema`.
+ * @param params.userId - Optional target user id; omitted means current session user.
+ * @param params.layers - Desired layer visibility defaults to persist.
+ * @returns A promise resolving to `{ data }`, where `data` contains the updated layer defaults.
+ * @remarks
+ * The payload is normalized to the resolved target user id before persistence so callers
+ * cannot spoof ownership of layer preference rows.
+ */
 export const setUserLayerDefaults = guardedCommand(
   SetUserLayerDefaultsSchema,
   async (params, ctx) => {
@@ -465,6 +339,19 @@ export const setUserLayerDefaults = guardedCommand(
   },
 )
 
+/**
+ * Returns paged saved user-feature list rows for the resolved target user.
+ *
+ * @param params - Query params validated by `GetUserFeaturesParamsSchema`.
+ * @param params.userId - Optional target user id; omitted means current session user.
+ * @param params.conditions - Optional list-state filters passed to the DB service.
+ * @param params.pagination - Optional paging controls (`limit`, `offset`).
+ * @param params.sorting - Optional sort config for feature list rows.
+ * @returns A promise resolving to a paged feature-list response envelope.
+ * @remarks
+ * The response preserves list metadata (`totalCount`, `hasMore`, `nextOffset`, sorting)
+ * so admin and self-service list UIs can consume this remote directly.
+ */
 export const getUserFeatures = guardedQuery(
   GetUserFeaturesParamsSchema,
   async (params, ctx) => {
@@ -499,6 +386,19 @@ export const getUserFeatures = guardedQuery(
   },
 )
 
+/**
+ * Adds or updates a user's wishlist/visited state for a feature.
+ *
+ * @param params - Command payload validated by `AddUserFeatureToListSchema`.
+ * @param params.userId - Optional target user id; omitted means current session user.
+ * @param params.featureId - Feature id to update list state for.
+ * @param params.list - Target list kind (`wishlist` or `visited`).
+ * @param params.visitedAt - Optional explicit visited timestamp for visited-list writes.
+ * @returns A promise resolving to `{ data }`, where `data` is the normalized updated row.
+ * @remarks
+ * Uses the same upsert path for both wishlist and visited state so the user-feature row stays
+ * canonical regardless of which list action was triggered first.
+ */
 export const addUserFeatureToList = guardedCommand(
   AddUserFeatureToListSchema,
   async (params, ctx) => {
@@ -525,6 +425,18 @@ export const addUserFeatureToList = guardedCommand(
   },
 )
 
+/**
+ * Removes one saved user-feature list state from the resolved target user.
+ *
+ * @param params - Command payload validated by `RemoveUserFeatureFromListSchema`.
+ * @param params.userId - Optional target user id; omitted means current session user.
+ * @param params.featureId - Feature id to update list state for.
+ * @param params.list - Target list kind (`wishlist` or `visited`) to clear.
+ * @returns A promise resolving to `{ data }`, where `data` is the remaining normalized row or `null`.
+ * @remarks
+ * Returns `null` when clearing the requested list leaves no remaining saved state for that
+ * feature/user pair, which keeps the client cache aligned with deletion semantics.
+ */
 export const removeUserFeatureFromList = guardedCommand(
   RemoveUserFeatureFromListSchema,
   async (params, ctx) => {
