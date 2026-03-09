@@ -58,6 +58,7 @@ import type {
   HubCardProfileAPI,
   HubListProfileAPI,
   HubFormData,
+  HubEntityFormData,
   HubPreflightFormData,
   HubProfile as HubProfileSchema,
   HubI18nBase,
@@ -68,12 +69,10 @@ import type {
   HubRoleWithUser,
   HubRoleUpdate,
   HubInsert,
-  HubInsertAPI,
   PublishHubSchema,
   RemoveHubSchema,
   HubRaw,
   HubUpdate,
-  HubUpdateAPI,
   ImageAPI,
   ImageBase,
   ImageBaseRaw,
@@ -90,49 +89,43 @@ import type {
   ImageAdminProfileAPI,
   ImageUpdate,
   ImageUpdateAPI,
-  LayerAPI,
-  LayerBase,
-  LayerI18nBase,
-  LayerI18nInsert,
-  LayerI18nUpdate,
-  LayerInsert,
-  LayerInsertAPI,
-  LayerPropertyBase,
-  LayerPropertyInsert,
-  LayerPropertyRaw,
-  LayerPropertyUpdate,
-  LayerPropertyUpdateExtra,
-  LayerRaw,
-  LayerUpdate,
-  LayerUpdateAPI,
-  OrganisationAPI,
+  LayerAdminProfileAPI,
+  LayerCardProfileAPI,
+  LayerDetailProfileAPI,
+  LayerEntityFormData,
+  LayerFormData,
+  LayerI18nRecord,
+  LayerI18nRecordCreate,
+  LayerI18nRecordUpdate,
+  LayerListProfileAPI,
+  LayerPreflightFormData,
+  LayerProfile as LayerProfileSchema,
+  LayerPropertyAdminProfileAPI,
+  LayerPropertyListProfileAPI,
+  LayerPropertyRecord,
+  LayerPropertyRecordCreate,
+  LayerPropertyRecordUpdate,
+  LayerRecord,
+  LayerRecordCreate,
+  LayerRecordUpdate,
+  PublishLayerSchema,
+  RemoveLayerSchema,
   OrganisationBase,
-  OrganisationCollectionAPI,
-  OrganisationCollectionSuperAdminAPI,
   OrganisationI18nBase,
   OrganisationI18nInsert,
   OrganisationI18nUpdate,
   OrganisationInsert,
-  OrganisationInsertAPI,
   OrganisationFormData,
+  OrganisationEntityFormData,
   OrganisationProfile as OrganisationProfileSchema,
   OrganisationListProfileAPI,
   OrganisationCardProfileAPI,
   OrganisationDetailProfileAPI,
+  OrganisationAdminProfileAPI,
   ListQueryParamsSchema,
   GetQueryParamsSchema,
-  OrganisationInsertSuperAdminAPI,
-  OrganisationRaw,
-  OrganisationRoleAPI,
   OrganisationRoleBase,
-  OrganisationRoleInsert,
-  OrganisationRoleUpdate,
-  OrganisationRoleUpdateExtra,
-  OrganisationRoleWithUser,
-  OrganisationSuperAdminAPI,
   OrganisationUpdate,
-  OrganisationUpdateAPI,
-  OrganisationUpdateSuperAdminAPI,
   ProjectAdminProfileAPI,
   ProjectBase,
   ProjectProfile as ProjectProfileSchema,
@@ -140,43 +133,37 @@ import type {
   ProjectCardProfileAPI,
   ProjectDetailProfileAPI,
   ProjectFormData,
+  ProjectEntityFormData,
   ProjectPreflightFormData,
   ProjectI18nBase,
   ProjectI18nInsert,
   ProjectI18nUpdate,
   ProjectInsert,
-  ProjectInsertAPI,
   PublishProjectSchema,
-  ProjectRaw,
   RemoveProjectSchema,
   ProjectRoleAPI,
   ProjectRoleBase,
   ProjectRoleInsert,
   ProjectRoleUpdate,
-  ProjectRoleUpdateExtra,
-  ProjectRoleWithUser,
   ProjectUpdate,
-  ProjectUpdateAPI,
-  PropertyAPI,
-  PropertyBase,
-  PropertyBaseRaw,
-  PropertyI18nBase,
-  PropertyI18nInsert,
-  PropertyI18nUpdate,
-  PropertyInsert,
-  PropertyInsertAPI,
-  PropertyUpdate,
-  PropertyUpdateAPI,
-  PropertyValueAPI,
-  PropertyValueBase,
-  PropertyValueI18nBase,
-  PropertyValueI18nInsert,
-  PropertyValueI18nUpdate,
-  PropertyValueInsert,
-  PropertyValueInsertAPI,
-  PropertyValueRaw,
-  PropertyValueUpdate,
-  PropertyValueUpdateAPI,
+  PropertyAdminProfileAPI,
+  PropertyDetailProfileAPI,
+  PropertyI18nRecord,
+  PropertyI18nRecordCreate,
+  PropertyI18nRecordUpdate,
+  PropertyRecord,
+  PropertyRecordCreate,
+  PropertyRecordRaw,
+  PropertyRecordUpdate,
+  PropertyValueAdminProfileAPI,
+  PropertyValueDetailProfileAPI,
+  PropertyValueI18nRecord,
+  PropertyValueI18nRecordCreate,
+  PropertyValueI18nRecordUpdate,
+  PropertyValueRawRecord,
+  PropertyValueRecord,
+  PropertyValueRecordCreate,
+  PropertyValueRecordUpdate,
   TaskAPI,
   TaskBase,
   TaskBaseRaw,
@@ -185,29 +172,52 @@ import type {
   TaskInsertAPI,
   TaskUpdate,
   TaskUpdateAPI,
-  UserAPI,
+  UserAdminListProfileAPI,
+  UserAdminProfileAPI,
+  UserAttributionProfileAPI,
   UserBase,
   UserBaseRaw,
-  UserCollectionAPI,
-  UserCurrentAPI,
+  UserCardProfileAPI,
+  UserDetailProfileAPI,
   UserFeatureAPI,
   UserFeatureBase,
   UserFeatureInsert,
   UserFeatureInsertAPI,
+  UserFeatureListProfileAPI,
   UserFeatureUpdate,
   UserFeatureUpdateAPI,
-  UserLayerAPI,
-  UserLayerBase,
-  UserLayerInsert,
-  UserLayerUpdate,
-  UserLayerUpdateAPI,
+  UserHydrationAttributionProfileAPI,
+  UserHydrationCardProfileAPI,
+  UserLayerDetailProfileAPI,
+  UserLayerRecord,
+  UserLayerRecordCreate,
+  UserLayerRecordUpdate,
+  SetUserLayerDefaultsItemSchema,
+  UserLeaderboardProfileAPI,
+  UserProfile as UserProfileSchema,
   UserUpdate,
   UserUpdateAPI,
-  UserProfileAPI,
   UserSearchQueryParamsSchema,
-  UserHydrationPrivacyProfileAPI,
-  UserHydrationAdminProfileAPI,
+  UserSelfProfileAPI,
 } from './db/zod'
+import type { LayerRaw } from './db/zod/schema/deprecated/layer'
+import type {
+  OrganisationAPI,
+  OrganisationCollectionAPI,
+  OrganisationCollectionSuperAdminAPI,
+  OrganisationInsertSuperAdminAPI,
+  OrganisationRaw,
+  OrganisationRoleAPI,
+  OrganisationRoleUpdateExtra,
+  OrganisationRoleWithUser,
+  OrganisationSuperAdminAPI,
+  OrganisationUpdateSuperAdminAPI,
+} from './db/zod/schema/deprecated/organisation'
+import type {
+  ProjectRaw,
+  ProjectRoleUpdateExtra,
+  ProjectRoleWithUser,
+} from './db/zod/schema/deprecated/project'
 // TYPES
 import type { Component, Snippet } from 'svelte'
 import type { Page, RemoteFormIssue } from '@sveltejs/kit'
@@ -318,6 +328,7 @@ export type GuardedContextResolver = (payload?: unknown) => Promise<GuardedBaseC
 
 export type HubProbe = {
   id: string
+  code: string
   isPublished: boolean
   isArchived: boolean
 }
@@ -343,6 +354,7 @@ export type OrganisationUpdateProbe = {
   id: string
   code: string
   hubId: string | null
+  capabilities?: CapabilityDefinitions | null
   modifiedAt: string
 }
 
@@ -444,6 +456,7 @@ export type HeaderFacetItem = {
   ref: FacetType
   label: string
   icon: Component | null
+  hasIssues?: boolean
 }
 
 export type HeaderMetaState = {
@@ -1390,27 +1403,55 @@ export type UserDB = z.infer<typeof UserBase>
 export type UserDBPartial = z.infer<typeof UserUpdate>
 export type UserRaw = z.infer<typeof UserBaseRaw>
 
-export type UserLayerDB = z.infer<typeof UserLayerBase>
-export type UserLayerDBPartial = z.infer<typeof UserLayerUpdate>
+export type UserLayerDB = z.infer<typeof UserLayerRecord>
+export type UserLayerDBPartial = z.infer<typeof UserLayerRecordUpdate>
 
 /* ----------------- */
 // USERS :: API
 /* -------- */
 
-export type User = z.infer<typeof UserAPI>
-export type CurrentUser = z.infer<typeof UserCurrentAPI>
-export type UserProfile = z.infer<typeof UserProfileAPI>
-export type UserCollection = z.infer<typeof UserCollectionAPI>
+export type User = z.infer<typeof UserAdminProfileAPI>
+export type CurrentUser = z.infer<typeof UserSelfProfileAPI> & {
+  userLayers: UserLayer[]
+  userFeatures?: UserFeature[]
+  roles?: UserRoleDisco[]
+  superAdmin?: boolean | null
+}
+export type UserProfile = z.infer<typeof UserDetailProfileAPI>
+export type UserCollection = z.infer<typeof UserAdminListProfileAPI>
 export type UserPartial = z.infer<typeof UserUpdateAPI>
+export type UserAttributionProfile = z.infer<typeof UserAttributionProfileAPI>
+export type UserAdminListProfile = z.infer<typeof UserAdminListProfileAPI>
+export type UserCardProfile = z.infer<typeof UserCardProfileAPI>
+export type UserLeaderboardProfile = z.infer<typeof UserLeaderboardProfileAPI>
+export type UserDetailProfile = z.infer<typeof UserDetailProfileAPI>
+export type UserSelfProfile = z.infer<typeof UserSelfProfileAPI>
+export type UserAdminProfile = z.infer<typeof UserAdminProfileAPI>
+export type UserProfileKey = z.infer<typeof UserProfileSchema>
+export type UserEntityByProfile<P extends UserProfileKey> = P extends 'attribution'
+  ? UserAttributionProfile
+  : P extends 'adminList'
+    ? UserAdminListProfile
+    : P extends 'card'
+      ? UserCardProfile
+      : P extends 'leaderboard'
+        ? UserLeaderboardProfile
+        : P extends 'self'
+          ? UserSelfProfile
+          : P extends 'admin'
+            ? UserAdminProfile
+            : UserDetailProfile
 
-export type UserLayer = z.infer<typeof UserLayerAPI>
-export type UserLayerNew = z.infer<typeof UserLayerInsert>
-export type UserLayerPartial = z.infer<typeof UserLayerUpdateAPI>
-export type UserHydrationProfile = 'privacy' | 'admin'
-export type UserHydrationPrivacyProfile = z.infer<typeof UserHydrationPrivacyProfileAPI>
-export type UserHydrationAdminProfile = z.infer<typeof UserHydrationAdminProfileAPI>
+export type UserLayer = z.infer<typeof UserLayerDetailProfileAPI>
+export type UserLayerNew = z.infer<typeof UserLayerRecordCreate>
+export type UserLayerPartial = z.infer<typeof SetUserLayerDefaultsItemSchema>
+export type UserHydrationProfile = 'attribution' | 'card'
+export type UserHydrationPrivacyProfile = z.infer<
+  typeof UserHydrationAttributionProfileAPI
+>
+export type UserHydrationAdminProfile = z.infer<typeof UserHydrationCardProfileAPI>
 export type UserHydrationEntityByProfile<P extends UserHydrationProfile> =
-  P extends 'admin' ? UserHydrationAdminProfile : UserHydrationPrivacyProfile
+  P extends 'card' ? UserHydrationAdminProfile : UserHydrationPrivacyProfile
 export type UserHydrationResult =
   | UserHydrationPrivacyProfile
   | UserHydrationAdminProfile
@@ -1495,17 +1536,14 @@ export type Organisation = z.infer<typeof OrganisationAPI>
 // Collection-safe organisation shape for regular users
 export type OrganisationCollection = z.infer<typeof OrganisationCollectionAPI>
 // Like Organisation, but without the organisationId in userRoles and translations
-export type OrganisationNew = z.infer<typeof OrganisationInsertAPI>
-// Service-layer create payload with required non-null i18n translations
+export type OrganisationNew = z.infer<typeof OrganisationEntityFormData>
 export type OrganisationNewWithI18n = Omit<OrganisationNew, 'i18n'> & {
   i18n: Record<Locale, OrganisationI18nNew>
 }
-// Service-layer update payload with required non-null i18n translations
 export type OrganisationWithI18n = Omit<Organisation, 'i18n'> & {
   i18n: Record<Locale, OrganisationI18nPartial>
 }
-// Like Organisation, but with all fields optional
-export type OrganisationPartial = z.infer<typeof OrganisationUpdateAPI>
+export type OrganisationPartial = Partial<OrganisationNew>
 
 /* ----------------- */
 // ORGANISATIONS :: SUPER ADMIN API
@@ -1529,6 +1567,7 @@ export type OrganisationProfile = z.infer<typeof OrganisationProfileSchema>
 export type OrganisationListProfile = z.infer<typeof OrganisationListProfileAPI>
 export type OrganisationCardProfile = z.infer<typeof OrganisationCardProfileAPI>
 export type OrganisationDetailProfile = z.infer<typeof OrganisationDetailProfileAPI>
+export type OrganisationAdminProfile = z.infer<typeof OrganisationAdminProfileAPI>
 export type OrganisationEntityByProfile<P extends OrganisationProfile> =
   P extends 'list'
     ? OrganisationListProfile
@@ -1536,14 +1575,14 @@ export type OrganisationEntityByProfile<P extends OrganisationProfile> =
       ? OrganisationCardProfile
       : P extends 'detail'
         ? OrganisationDetailProfile
-        : Organisation | OrganisationSuperAdmin
+        : OrganisationAdminProfile
 export type OrganisationListByProfile<P extends OrganisationProfile> = P extends 'list'
   ? OrganisationListProfile
   : P extends 'card'
     ? OrganisationCardProfile
     : P extends 'detail'
       ? OrganisationDetailProfile
-      : OrganisationCollection | OrganisationCollectionSuperAdmin
+      : OrganisationAdminProfile
 export type OrganisationGetParamsByProfile<P extends OrganisationProfile> = Omit<
   OrganisationGetParams,
   'meta'
@@ -1574,6 +1613,7 @@ export type I18nFormInputShape = {
 }
 export type FormLocaleKey<TForm extends I18nFormInputShape> =
   keyof TForm['data']['i18n']
+export type LocaleKey = 'en' | 'zhHans' | 'zhHant'
 export type FormLocaleInput<TForm extends I18nFormInputShape> =
   TForm['data']['i18n'][FormLocaleKey<TForm>]
 export type FormLocaleSource<TForm extends I18nFormInputShape> =
@@ -1582,7 +1622,6 @@ export type FormLocaleSource<TForm extends I18nFormInputShape> =
   | undefined
 
 export type OrganisationFormInput = z.input<typeof OrganisationFormData>
-export type OrganisationFormLocaleKey = FormLocaleKey<OrganisationFormInput>
 export type OrganisationFormLocaleInput = FormLocaleInput<OrganisationFormInput>
 export type OrganisationFormLocaleSource = FormLocaleSource<OrganisationFormInput>
 export type OrganisationBooleanField = 'isPublished' | 'isArchived'
@@ -1608,7 +1647,7 @@ export type OrganisationSubmitUpdatesParams<
   listQuery: QueryWithOverride<TListCurrent, TListResult>
 }
 export type OrganisationGetResponse = EntityResponse<
-  Organisation | OrganisationSuperAdmin
+  OrganisationEntityByProfile<'admin'>
 >
 export type OrganisationGetState = OrganisationGetResponse | null
 
@@ -1658,9 +1697,9 @@ export type ProjectDBPartial = z.infer<typeof ProjectUpdate>
 // Project with all fields, including userRoles & translations, and User
 export type Project = z.infer<typeof ProjectAdminProfileAPI>
 // Like Project, but without the projectId in userRoles and translations
-export type ProjectNew = z.infer<typeof ProjectInsertAPI>
+export type ProjectNew = z.infer<typeof ProjectEntityFormData>
 // Like Project, but with all fields optional
-export type ProjectPartial = z.infer<typeof ProjectUpdateAPI>
+export type ProjectPartial = Partial<ProjectNew>
 export type ProjectListParams = z.infer<typeof ListQueryParamsSchema>
 export type ProjectGetParams = z.infer<typeof GetQueryParamsSchema>
 export type ProjectProfile = z.infer<typeof ProjectProfileSchema>
@@ -1837,6 +1876,38 @@ export type RangeFilterValue = {
   rangeMax: number
 }
 
+export type SubmittedPropertyScopeCandidate = {
+  id?: unknown
+  scope?: unknown
+}
+
+export type ProjectInheritedPropertySyncCandidate = SubmittedPropertyScopeCandidate & {
+  isEnabled?: unknown
+  isDefaultEnabled?: unknown
+}
+
+export type ProjectInheritedPropertySyncItem = {
+  id: string
+  scope: string
+  isEnabled?: boolean
+  isDefaultEnabled?: boolean
+}
+
+export type ProjectLocalPropertyCandidate = {
+  id?: unknown
+  projectId?: unknown
+  hubId?: unknown
+  scope?: unknown
+  isEnabled?: unknown
+}
+
+export type PersistedProjectLocalPropertyCandidate = {
+  id: string
+  scope?: unknown
+  projectId?: unknown
+  hubId?: unknown
+}
+
 /* ----------------- */
 // PROJECTS : FIELDS : INTERMEDIATE VALUE
 /* -------- */
@@ -1923,6 +1994,7 @@ export const organisationAuthorizationFields = [
   'url',
   'i18n',
   'userRoles',
+  'properties',
   'hubId',
   'isCoreInclusive',
   'isHubExclusive',
@@ -2028,6 +2100,7 @@ export type HubAuthorizeParams = {
   action: HubAuthorizationAction
   resourceId?: string
   resourceHubId?: string | null
+  resourceHubCode?: string | null
   fields?: HubAuthorizationField[]
   requestedState?: {
     isPublished?: boolean
@@ -2047,6 +2120,92 @@ export type OrganisationActionPermissions = {
 }
 
 /* ----------------- */
+// LAYERS :: REMOTE
+/* -------- */
+
+export type LayerListParams = z.infer<typeof ListQueryParamsSchema>
+export type LayerGetParams = z.infer<typeof GetQueryParamsSchema>
+export type LayerProfile = z.infer<typeof LayerProfileSchema>
+export type LayerListProfile = z.infer<typeof LayerListProfileAPI>
+export type LayerCardProfile = z.infer<typeof LayerCardProfileAPI>
+export type LayerDetailProfile = z.infer<typeof LayerDetailProfileAPI>
+export type LayerAdminProfile = z.infer<typeof LayerAdminProfileAPI>
+
+export type LayerEntityByProfile<P extends LayerProfile> = P extends 'list'
+  ? LayerListProfile
+  : P extends 'card'
+    ? LayerCardProfile
+    : P extends 'detail'
+      ? LayerDetailProfile
+      : LayerAdminProfile
+
+export type LayerListByProfile<P extends LayerProfile> = P extends 'list'
+  ? LayerListProfile
+  : P extends 'card'
+    ? LayerCardProfile
+    : P extends 'detail'
+      ? LayerDetailProfile
+      : LayerAdminProfile
+
+export type LayerGetParamsByProfile<P extends LayerProfile> = Omit<
+  LayerGetParams,
+  'meta'
+> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
+
+export type LayerListParamsByProfile<P extends LayerProfile> = Omit<
+  LayerListParams,
+  'meta'
+> & {
+  meta?: {
+    isAdminRequest?: boolean
+    profile?: P
+  }
+}
+
+export type LayerFormInput = z.input<typeof LayerFormData>
+export type LayerFormLocaleInput = FormLocaleInput<LayerFormInput>
+export type LayerSubmitData = Partial<LayerFormInput['data']>
+export type LayerBooleanField = 'isPublished' | 'isArchived'
+export type LayerSubmitUpdatesParams<TEntityResult, TListResult> = {
+  layerId?: string | null
+  entityQuery: TEntityResult
+  listQuery: TListResult
+}
+export type LayerGetResponse = EntityResponse<LayerAdminProfile>
+export type LayerGetState = LayerGetResponse | null
+export type LayerPublishInput = z.input<typeof PublishLayerSchema>
+export type LayerArchiveInput = z.input<typeof RemoveLayerSchema>
+export type LayerPreflightInput = z.input<typeof LayerPreflightFormData>
+export type LayerProbe = {
+  id: string
+  organisationId: string
+  projectId: string
+  hubId: string | null
+  isPublished: boolean
+  isArchived: boolean
+}
+export type LayerUpdateProbe = {
+  id: string
+  code: string
+  organisationId: string
+  projectId: string
+  hubId: string | null
+  metadata: LayerMetadata | null
+  modifiedAt: string
+}
+export type LayerCommandProbe = {
+  id: string
+  organisationId: string
+  projectId: string
+  hubId: string | null
+}
+
+/* ----------------- */
 // LAYERS
 /* -------- */
 
@@ -2055,11 +2214,11 @@ export type OrganisationActionPermissions = {
 /* -------- */
 
 // Layer with all its own fields.
-export type LayerDB = z.infer<typeof LayerBase>
+export type LayerDB = z.infer<typeof LayerRecord>
 // Layer without relations, for use in inserting a new layer
-export type LayerDBNew = z.infer<typeof LayerInsert>
+export type LayerDBNew = z.infer<typeof LayerRecordCreate>
 // Layer without relations, for use in partially updating a layer
-export type LayerDBPartial = z.infer<typeof LayerUpdate>
+export type LayerDBPartial = z.infer<typeof LayerRecordUpdate>
 // Layer, with relations in DB form - used as an intermediate type for DB operations
 export type LayerDBRaw = z.infer<typeof LayerRaw>
 
@@ -2068,32 +2227,34 @@ export type LayerDBRaw = z.infer<typeof LayerRaw>
 /* -------- */
 
 // Layer with all fields, including translations and properties
-export type Layer = z.infer<typeof LayerAPI>
+export type Layer = z.infer<typeof LayerAdminProfileAPI>
 // Like Layer, but without the layerId in translations and properties
-export type LayerNew = z.infer<typeof LayerInsertAPI>
+export type LayerNew = z.infer<typeof LayerEntityFormData>
 // Like Layer, but with all fields optional
-export type LayerPartial = z.infer<typeof LayerUpdateAPI>
+export type LayerPartial = Partial<LayerNew>
 
 /* ----------------- */
 // LAYERS :: RELATIONAL
 /* -------- */
 
 // layerI18n, but with the layerId - for use in DB seeding & selects
-export type LayerI18nDB = z.infer<typeof LayerI18nBase>
+export type LayerI18nDB = z.infer<typeof LayerI18nRecord>
 // layerI18n, but without layerId - for use in API insertions
-export type LayerI18nNew = z.infer<typeof LayerI18nInsert>
+export type LayerI18nNew = z.infer<typeof LayerI18nRecordCreate>
 // Same as LayerI18nNew, but all fields are optional
-export type LayerI18nPartial = z.infer<typeof LayerI18nUpdate>
+export type LayerI18nPartial = z.infer<typeof LayerI18nRecordUpdate>
 
 // layerProperty, but with the layerId - for use in DB seeding & selects
-export type LayerPropertyDB = z.infer<typeof LayerPropertyBase>
-// layerProperty, but with relations in DB form - used as an intermediate type for DB operations
-export type LayerPropertyDBRaw = z.infer<typeof LayerPropertyRaw>
+export type LayerPropertyDB = z.infer<typeof LayerPropertyRecord>
+// layerProperty, with admin profile enrichment
+export type LayerPropertyDBRaw = z.infer<typeof LayerPropertyAdminProfileAPI>
 // layerProperty, but without layerId - for use in API insertions
-export type LayerPropertyNew = z.infer<typeof LayerPropertyInsert>
+export type LayerPropertyNew = z.infer<typeof LayerPropertyRecordCreate>
 // Same as LayerPropertyNew, but all fields are optional
-export type LayerPropertyPartial = z.infer<typeof LayerPropertyUpdate>
-export type LayerPropertyPartialExtra = z.infer<typeof LayerPropertyUpdateExtra>
+export type LayerPropertyPartial = z.infer<typeof LayerPropertyRecordUpdate>
+export type LayerPropertyListProfile = z.infer<typeof LayerPropertyListProfileAPI>
+export type LayerPropertyAdminProfile = z.infer<typeof LayerPropertyAdminProfileAPI>
+export type LayerPropertyPartialExtra = LayerPropertyAdminProfile
 
 export type LayerMetadata = {}
 
@@ -2321,24 +2482,23 @@ export type TaskCreation = NewFeatureTask | ReportedMissingTask | NewPhotoTask
 /* -------- */
 
 // Property with all its own fields.
-export type PropertyDB = z.infer<typeof PropertyBase>
+export type PropertyDB = z.infer<typeof PropertyRecord>
 // Property without relations, for use in inserting a new property
-export type PropertyDBNew = z.infer<typeof PropertyInsert>
+export type PropertyDBNew = z.infer<typeof PropertyRecordCreate>
 // Property without relations, for use in partially updating a property
-export type PropertyDBPartial = z.infer<typeof PropertyUpdate>
+export type PropertyDBPartial = z.infer<typeof PropertyRecordUpdate>
 // Property, with relations in DB form - used as an intermediate type for DB operations
-export type PropertyDBRaw = z.infer<typeof PropertyBaseRaw>
+export type PropertyDBRaw = z.infer<typeof PropertyRecordRaw>
 
 /* ----------------- */
 // PROPERTIES :: API
 /* -------- */
 
 // Property with all fields, including translations and values
-export type Property = z.infer<typeof PropertyAPI>
-// Like Property, but without the propertyId in translations and values
-export type PropertyNew = z.infer<typeof PropertyInsertAPI>
-// Like Property, but with all fields optional
-export type PropertyPartial = z.infer<typeof PropertyUpdateAPI>
+export type Property = z.infer<typeof PropertyDetailProfileAPI>
+export type PropertyAdminProfile = z.infer<typeof PropertyAdminProfileAPI>
+export type PropertyNew = PropertyAdminProfile
+export type PropertyPartial = Partial<PropertyAdminProfile>
 // Minimal project property form payload used by client-side form mutators
 export type PropertyFormData = {
   id?: Id
@@ -2359,6 +2519,7 @@ export type FormFieldCardBodyProps = {
   propertyIndex: number
   sectionRank: number
   propertyFields?: unknown
+  allIssues?: FormIssueLike[]
   locales: Locale[]
   classifierComponents: readonly string[]
   specifierComponents: readonly string[]
@@ -2366,7 +2527,7 @@ export type FormFieldCardBodyProps = {
   isEditing?: boolean
   onUpdateBase: (
     propertyId: Id,
-    key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable',
+    key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable' | 'isDefaultEnabled',
     value: string | number | null | boolean,
   ) => void
   onUpdateI18n: (
@@ -2379,6 +2540,7 @@ export type FormFieldCardBodyProps = {
   onRemoveValue: (propertyId: Id, valueId: Id) => void
   onMoveValue: (propertyId: Id, valueId: Id, targetIndex: number) => void
   removeMode?: boolean
+  onUpdateValue: (propertyId: Id, valueId: Id, key: 'value', value: string) => void
   onUpdateValueI18n: (
     propertyId: Id,
     valueId: Id,
@@ -2392,6 +2554,7 @@ export type FormFieldCardBodyProps = {
     targetLocale: Locale,
   ) => Promise<boolean | void>
   onResetLocale: (propertyId: Id, targetLocale: Locale) => void | Promise<void>
+  onLayoutMutationStart?: () => void
 }
 
 /* ----------------- */
@@ -2399,33 +2562,32 @@ export type FormFieldCardBodyProps = {
 /* -------- */
 
 // propertyI18n, but with the propertyId - for use in DB seeding & selects
-export type PropertyI18nDB = z.infer<typeof PropertyI18nBase>
+export type PropertyI18nDB = z.infer<typeof PropertyI18nRecord>
 // propertyI18n, but without propertyId - for use in API insertions
-export type PropertyI18nNew = z.infer<typeof PropertyI18nInsert>
+export type PropertyI18nNew = z.infer<typeof PropertyI18nRecordCreate>
 // Same as PropertyI18nNew, but all fields are optional
-export type PropertyI18nPartial = z.infer<typeof PropertyI18nUpdate>
+export type PropertyI18nPartial = z.infer<typeof PropertyI18nRecordUpdate>
 
 // propertyValue, but with the propertyId - for use in DB seeding & selects
-export type PropertyValueDB = z.infer<typeof PropertyValueBase>
-export type PropertyValueDBRaw = z.infer<typeof PropertyValueRaw>
+export type PropertyValueDB = z.infer<typeof PropertyValueRecord>
+export type PropertyValueDBRaw = z.infer<typeof PropertyValueRawRecord>
 
 // propertyValue, but without propertyId - for use in API insertions
-export type PropertyValueNewDB = z.infer<typeof PropertyValueInsert>
+export type PropertyValueNewDB = z.infer<typeof PropertyValueRecordCreate>
 // Same as PropertyValueNew, but all fields are optional
-export type PropertyValuePartialDB = z.infer<typeof PropertyValueUpdate>
+export type PropertyValuePartialDB = z.infer<typeof PropertyValueRecordUpdate>
 
-export type PropertyValueI18nDB = z.infer<typeof PropertyValueI18nBase>
+export type PropertyValueI18nDB = z.infer<typeof PropertyValueI18nRecord>
 // propertyValueI18n, but without propertyValueId - for use in API insertions
-export type PropertyValueI18nNew = z.infer<typeof PropertyValueI18nInsert>
+export type PropertyValueI18nNew = z.infer<typeof PropertyValueI18nRecordCreate>
 // Same as PropertyValueI18nNew, but all fields are optional
-export type PropertyValueI18nPartial = z.infer<typeof PropertyValueI18nUpdate>
+export type PropertyValueI18nPartial = z.infer<typeof PropertyValueI18nRecordUpdate>
 
 // PropertyValue, but with i18n, for use in API
-export type PropertyValue = z.infer<typeof PropertyValueAPI>
-// Like PropertyValue, but without the propertyValueId in translations
-export type PropertyValueNew = z.infer<typeof PropertyValueInsertAPI>
-// Like PropertyValue, but with all fields optional
-export type PropertyValuePartial = z.infer<typeof PropertyValueUpdateAPI>
+export type PropertyValue = z.infer<typeof PropertyValueDetailProfileAPI>
+export type PropertyValueAdminProfile = z.infer<typeof PropertyValueAdminProfileAPI>
+export type PropertyValueNew = PropertyValueAdminProfile
+export type PropertyValuePartial = Partial<PropertyValueAdminProfile>
 
 /* ----------------- */
 // IMAGES
@@ -2706,6 +2868,7 @@ export type UserFeatureDBNew = z.infer<typeof UserFeatureInsert>
 export type UserFeatureDBPartial = z.infer<typeof UserFeatureUpdate>
 
 export type UserFeature = z.infer<typeof UserFeatureAPI>
+export type UserFeatureListItem = z.infer<typeof UserFeatureListProfileAPI>
 export type UserFeatureNew = z.infer<typeof UserFeatureInsertAPI>
 export type UserFeaturePartial = z.infer<typeof UserFeatureUpdateAPI>
 export type UserFeatureWithHierarchy = UserFeature & {
@@ -3043,6 +3206,14 @@ type HubRemoteGetFn = <P extends HubProfile = HubProfile>(
   params: HubGetParamsByProfile<P>,
 ) => Promise<EntityResponse<HubEntityByProfile<P>>>
 
+type LayerRemoteListFn = <P extends LayerProfile = LayerProfile>(
+  params: LayerListParamsByProfile<P>,
+) => Promise<ListResponse<LayerListByProfile<P>>>
+
+type LayerRemoteGetFn = <P extends LayerProfile = LayerProfile>(
+  params: LayerGetParamsByProfile<P>,
+) => Promise<EntityResponse<LayerEntityByProfile<P>>>
+
 export type RemoteMapEntry<
   ListParams = unknown,
   ListResult = unknown,
@@ -3063,7 +3234,10 @@ type RemoteMapEntryByResource = {
     get?: HubRemoteGetFn
   }
   [FirstClassResource.project]: RemoteMapEntry
-  [FirstClassResource.layer]: RemoteMapEntry
+  [FirstClassResource.layer]: {
+    list?: LayerRemoteListFn
+    get?: LayerRemoteGetFn
+  }
   [FirstClassResource.feature]: RemoteMapEntry
   [FirstClassResource.task]: RemoteMapEntry
   [FirstClassResource.property]: RemoteMapEntry
@@ -3281,8 +3455,8 @@ export type HubDBPartial = z.infer<typeof HubUpdate>
 
 export type Hub = z.infer<typeof HubAPI>
 export type HubCollection = z.infer<typeof HubCollectionAPI>
-export type HubNew = z.infer<typeof HubInsertAPI>
-export type HubPartial = z.infer<typeof HubUpdateAPI>
+export type HubNew = z.infer<typeof HubEntityFormData>
+export type HubPartial = Partial<HubNew>
 export type HubListParams = z.infer<typeof ListQueryParamsSchema>
 export type HubGetParams = z.infer<typeof GetQueryParamsSchema>
 export type HubProfile = z.infer<typeof HubProfileSchema>
@@ -3353,6 +3527,9 @@ export interface HubOpts {
 }
 
 export interface HubOptsExtended extends Hub {
+  id?: string
+  code?: string
+  domain?: string | null
   i18n: Record<Locale, Partial<HubI18nDB>>
   isSuperAdmin: boolean
   isAdminRequest: boolean
@@ -3428,6 +3605,10 @@ export type PartialExcept<T, K extends keyof T> = Pick<T, K> & Partial<Omit<T, K
 /* -------- */
 
 // Type guard to narrow the type
+/**
+ * Narrows a resource union to organisation/project resources.
+ * Used when logic depends on code-based references shared by these resource types.
+ */
 export function isOrganisationOrProject(
   resource: Resource,
 ): resource is Organisation | Project {
@@ -3435,6 +3616,10 @@ export function isOrganisationOrProject(
 }
 
 // Type guards for resource types
+/**
+ * Type guard for organisation resources.
+ * Used to safely access organisation-only fields in generic resource handlers.
+ */
 export function isOrganisation(resource: Resource): resource is Organisation {
   return (
     !('organisationId' in resource) &&
@@ -3445,6 +3630,10 @@ export function isOrganisation(resource: Resource): resource is Organisation {
   )
 }
 
+/**
+ * Type guard for project resources.
+ * Used to safely branch into project-specific processing paths.
+ */
 export function isProject(resource: Resource): resource is Project {
   return (
     'organisationId' in resource &&
@@ -3453,18 +3642,34 @@ export function isProject(resource: Resource): resource is Project {
   )
 }
 
+/**
+ * Type guard for layer resources.
+ * Used when consuming hierarchical resources with layer-specific fields.
+ */
 export function isLayer(resource: Resource): resource is Layer {
   return 'projectId' in resource && !('layerId' in resource)
 }
 
+/**
+ * Type guard for feature resources.
+ * Used to narrow union types before feature-specific operations.
+ */
 export function isFeature(resource: Resource): resource is Feature {
   return 'layerId' in resource && !('featureId' in resource)
 }
 
+/**
+ * Type guard for hub resources.
+ * Used by generic resource utilities that branch by first-class type.
+ */
 export function isHub(resource: Resource): resource is Hub {
   return 'organisation' in resource && 'domain' in resource
 }
 
+/**
+ * Type guard for task resources.
+ * Used to isolate task-specific behavior in mixed resource pipelines.
+ */
 export function isTask(resource: Resource): resource is Task {
   const fields = ['organisationId', 'projectId', 'layerId', 'featureId']
   return fields.every(field => field in resource)

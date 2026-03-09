@@ -26,6 +26,10 @@ export type AuthzActorBase = {
   isSuperAdmin?: boolean
 }
 
+/**
+ * Projects an actor into the shared authorization policy shape.
+ * Used to keep policy handlers decoupled from caller-specific user objects.
+ */
 export const toActorPolicyBase = (actor: AuthzActorBase): AuthzActorBase => ({
   userId: actor.userId,
   userRoles: actor.userRoles,
@@ -34,6 +38,10 @@ export const toActorPolicyBase = (actor: AuthzActorBase): AuthzActorBase => ({
   isSuperAdmin: actor.isSuperAdmin,
 })
 
+/**
+ * Builds a stable signature for role membership comparisons.
+ * Used to cheaply detect role-set changes across submissions.
+ */
 export const toUserRoleSignature = (
   userRoles: Array<{ userId: string; role: string }>,
 ): string =>
@@ -42,6 +50,10 @@ export const toUserRoleSignature = (
     .sort((a, b) => a.localeCompare(b))
     .join('|')
 
+/**
+ * Resolves whether deny-path authorization logs should be emitted.
+ * Used to toggle noisy diagnostics via env flags in runtime and build contexts.
+ */
 export const shouldLogAuthzDeny = (): boolean => {
   const fromProcess =
     typeof process !== 'undefined' ? process.env?.AUTHZ_LOG_DENY : undefined
@@ -194,9 +206,17 @@ export const RESERVED_CODES = new Set(
   ].map(value => value.toLowerCase()),
 )
 
+/**
+ * Checks if a candidate code is blocked by platform/system reserved words.
+ * Used to enforce namespace constraints before persistence.
+ */
 export const isReservedCode = (value: string): boolean =>
   RESERVED_CODES.has(value.trim().toLowerCase())
 
+/**
+ * Maps issue codes to localized, user-facing detail messages.
+ * Used to keep API authorization/validation responses consistent.
+ */
 export const toIssueDetailMessage = (code: string): string => {
   if (code === 'UNAUTHENTICATED') return m.admin__authz_unauthenticated()
   if (code === 'HUB_SCOPE_FORBIDDEN') return m.admin__authz_hub_scope_forbidden()
@@ -212,10 +232,18 @@ export const toIssueDetailMessage = (code: string): string => {
   return m.forms__invalid()
 }
 
+/**
+ * Formats a structured form issue string from an issue code.
+ * Used for superform error payloads that expect `"CODE: message"` format.
+ */
 export const toFormIssueMessage = (code: string): string => {
   return `${code}: ${toIssueDetailMessage(code)}`
 }
 
+/**
+ * Resolves user-facing authorization messages by issue code.
+ * Used by remote commands to emit consistent 403 error text.
+ */
 export const toAuthMessage = (code: string): string => {
   if (
     code === 'UNAUTHENTICATED' ||
@@ -230,12 +258,6 @@ export const toAuthMessage = (code: string): string => {
   return `${code}: ${m.missing_permissions()}`
 }
 
-const policyMap = {
-  hub: hubPolicyMap,
-  organisation: organisationPolicyMap,
-  project: projectPolicyMap,
-} as const
-
 /**
  * Central authorization entry point.
  * Resource types without policy maps intentionally return NOT_IMPLEMENTED.
@@ -243,7 +265,7 @@ const policyMap = {
 function authorize(params: AuthorizeParams): AuthorizationDecision {
   if (params.resourceType === 'organisation') {
     const handler =
-      policyMap.organisation[params.action as OrganisationAuthorizationAction]
+      organisationPolicyMap[params.action as OrganisationAuthorizationAction]
     if (!handler) {
       throw new Error(
         `NOT_IMPLEMENTED: authorize(${params.resourceType}/${params.action})`,
@@ -253,7 +275,7 @@ function authorize(params: AuthorizeParams): AuthorizationDecision {
   }
 
   if (params.resourceType === 'project') {
-    const handler = policyMap.project[params.action as ProjectAuthorizationAction]
+    const handler = projectPolicyMap[params.action as ProjectAuthorizationAction]
     if (!handler) {
       throw new Error(
         `NOT_IMPLEMENTED: authorize(${params.resourceType}/${params.action})`,
@@ -263,7 +285,7 @@ function authorize(params: AuthorizeParams): AuthorizationDecision {
   }
 
   if (params.resourceType === 'hub') {
-    const handler = policyMap.hub[params.action as HubAuthorizationAction]
+    const handler = hubPolicyMap[params.action as HubAuthorizationAction]
     if (!handler) {
       throw new Error(
         `NOT_IMPLEMENTED: authorize(${params.resourceType}/${params.action})`,

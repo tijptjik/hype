@@ -143,7 +143,7 @@ export const LayerEntityFormData = z.object({
     .string({ message: m.field_is_required({ field: 'Project' }) })
     .min(1, { message: m.field_is_required({ field: 'Project' }) }),
   i18n: LayerI18nByLocaleFormData,
-  properties: z.array(LayerPropertyFormData).default([]),
+  properties: z.array(LayerPropertyFormData).optional(),
   isDefaultVisible: FormBoolean.default(false),
   metadata: z.custom<LayerMetadata>().optional().default({}),
 })
