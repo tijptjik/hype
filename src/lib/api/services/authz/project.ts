@@ -371,8 +371,8 @@ export const normalizeProjectI18nForFormInput = (
 
   return {
     en: normalizeLocale(source.en),
-    zhHans: normalizeLocale(source['zh-hans']),
-    zhHant: normalizeLocale(source['zh-hant']),
+    zhHans: normalizeLocale(source.zhHans),
+    zhHant: normalizeLocale(source.zhHant),
   }
 }
 
