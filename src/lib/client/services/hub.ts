@@ -9,6 +9,7 @@ import type {
   HubOrganisationHiddenInputAttrs,
   Locale,
 } from '$lib/types'
+import { toFormLocaleRecord } from '$lib/i18n'
 
 function normalizeHubFormLocale(
   locale: Partial<HubFormInput['data']['i18n']['en']> | null | undefined,
@@ -21,6 +22,22 @@ function normalizeHubFormLocale(
     nameShortGen: locale?.nameShortGen ?? false,
     descriptionGen: locale?.descriptionGen ?? false,
   }
+}
+
+function cloneHubProperties(
+  properties: Hub['properties'] | null | undefined,
+): HubFormInput['data']['properties'] {
+  if (!properties) return []
+  return properties.map(property => ({
+    ...property,
+    i18n: toFormLocaleRecord(property.i18n) as typeof property.i18n,
+    values: Array.isArray(property.values)
+      ? property.values.map(value => ({
+          ...value,
+          i18n: toFormLocaleRecord(value.i18n) as typeof value.i18n,
+        }))
+      : property.values,
+  }))
 }
 
 export function toHubFormInput(data?: Hub | null): HubFormInput {
@@ -37,6 +54,7 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
         },
         userRoles: [],
         organisations: [],
+        properties: [],
       },
     }
   }
@@ -65,6 +83,7 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
         isCoreInclusive: Boolean(organisation.isCoreInclusive),
         isHubExclusive: Boolean(organisation.isHubExclusive),
       })),
+      properties: cloneHubProperties(data.properties),
     },
   }
 }
