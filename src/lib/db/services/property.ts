@@ -35,6 +35,7 @@ import type {
   Property,
   PropertyDB,
   PropertyNew,
+  ProjectPropertyForm,
   PropertyI18nDB,
   PropertyI18nNew,
   PropertyValue,
@@ -622,7 +623,7 @@ export const updatePropertyValueI18n = async (
  */
 export const upsertProjectProperties = async (
   db: Database,
-  properties: (PropertyNew | Property)[], // Can be a mix of new and existing properties
+  properties: Array<ProjectPropertyForm | Property>, // Can be a mix of submitted form rows and persisted properties
   projectId: string,
 ): Promise<Property[]> => {
   const existingProperties = await db.query.property.findMany({
@@ -659,16 +660,18 @@ export const upsertProjectProperties = async (
       i18n: _i18nData,
       values: _valuesData,
       ...basePropData
-    } = propData as PropertyNew
+    } = propData as ProjectPropertyForm
     const parsedBase = PropertyRecordCreate.parse({
       ...basePropData,
       projectId,
       hubId: null,
       scope: 'project',
-      type: inferPropertyTypeFromComponent((basePropData as PropertyNew).component),
+      type: inferPropertyTypeFromComponent(
+        (basePropData as ProjectPropertyForm).component,
+      ),
       isDefaultEnabled:
-        typeof (propData as PropertyNew).isDefaultEnabled === 'boolean'
-          ? (propData as PropertyNew).isDefaultEnabled
+        typeof (propData as ProjectPropertyForm).isDefaultEnabled === 'boolean'
+          ? (propData as ProjectPropertyForm).isDefaultEnabled
           : false,
     })
     parsedCreateBasePayloads.push(parsedBase)
@@ -681,7 +684,7 @@ export const upsertProjectProperties = async (
       i18n: i18nData,
       values: valuesData,
       ..._basePropData
-    } = propData as PropertyNew
+    } = propData as ProjectPropertyForm
     const parsedBase = parsedCreateBasePayloads[index]
     if (!parsedBase) {
       throw new Error('FAILED_TO_RESOLVE_PARSED_PROPERTY_CREATE_PAYLOAD')
@@ -691,10 +694,10 @@ export const upsertProjectProperties = async (
       projectId,
       hubId: null,
       scope: 'project',
-      type: inferPropertyTypeFromComponent((propData as PropertyNew).component),
+      type: inferPropertyTypeFromComponent((propData as ProjectPropertyForm).component),
       isDefaultEnabled:
-        typeof (propData as PropertyNew).isDefaultEnabled === 'boolean'
-          ? (propData as PropertyNew).isDefaultEnabled
+        typeof (propData as ProjectPropertyForm).isDefaultEnabled === 'boolean'
+          ? (propData as ProjectPropertyForm).isDefaultEnabled
           : false,
     } as InferInsertModel<typeof property>)
 

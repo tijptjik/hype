@@ -218,6 +218,7 @@ import type {
   ProjectRoleUpdateExtra,
   ProjectRoleWithUser,
 } from './db/zod/schema/deprecated/project'
+import type { ProjectPropertyFormData as ProjectPropertyFormDataSchema } from './db/zod/schema/property'
 // TYPES
 import type { Component, Snippet } from 'svelte'
 import type { Page, RemoteFormIssue } from '@sveltejs/kit'
@@ -2499,6 +2500,7 @@ export type Property = z.infer<typeof PropertyDetailProfileAPI>
 export type PropertyAdminProfile = z.infer<typeof PropertyAdminProfileAPI>
 export type PropertyNew = PropertyAdminProfile
 export type PropertyPartial = Partial<PropertyAdminProfile>
+export type ProjectPropertyForm = z.infer<typeof ProjectPropertyFormDataSchema>
 // Minimal project property form payload used by client-side form mutators
 export type PropertyFormData = {
   id?: Id
