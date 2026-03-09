@@ -5,7 +5,7 @@ import { getImageCtx } from '$lib/context/image.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
 import { Trash } from '@steeze-ui/heroicons'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 // PROPS
 let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()

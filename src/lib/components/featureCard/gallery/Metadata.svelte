@@ -7,7 +7,7 @@
 import Attribution from '$lib/components/featureCard/gallery/Attribution.svelte'
 import { intentDisplay } from '$lib/client/services/image'
 // TYPES
-import type { ImageCtxEnvelope, Intent } from '$lib/types'
+import type { ImageCtxEnvelope, Intent } from '$lib/db/zod/schema/image.types'
 
 // PROPS
 let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()

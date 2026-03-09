@@ -6,7 +6,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 const imageCtx = getImageCtx()
 

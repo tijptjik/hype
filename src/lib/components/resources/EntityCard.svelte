@@ -19,11 +19,11 @@ import ScrollableText from '$lib/components/common/ScrollableText.svelte'
 import type { Snippet } from 'svelte'
 import type {
   Resource,
-  ImageContextEnvelope,
   Task,
   KeyMap,
   EntityWithOptionalImage,
 } from '$lib/types'
+import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 
 type Props = {
   entity: EntityWithOptionalImage

@@ -11,7 +11,8 @@ import Viewer from '../common/Viewer.svelte'
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Feature, Organisation, Project, ImageCtxEnvelope } from '$lib/types'
+import type { Feature, Organisation, Project } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 

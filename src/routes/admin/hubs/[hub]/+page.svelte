@@ -109,15 +109,15 @@ import {
 // TYPES
 import type {
   Id,
-  ImageCtxEnvelope,
   Locale,
-  Property,
   User,
   UserRoleDisco,
   UserRoleFieldNameResolverForm,
   HubOrganisationFieldNameResolverForm,
   FormDataUpdaterForm,
 } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { HubGetState, HubRoleUser } from '$lib/db/zod/schema/hub.types'
 
 // § Context

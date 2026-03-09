@@ -33,19 +33,21 @@ import type {
   Database,
   Id,
   QueryParams,
-  Image,
-  ImageNew,
-  ImageDBFlat,
   HubOpts,
   HubOptsExtended,
   SessionUser,
-  ImageContextType,
   ParamsToSign,
   DeleteParamsToSign,
-  SignData,
-  ImageProfile,
-  ImageContextEnvelope,
 } from '$lib/types'
+import type {
+  Image,
+  ImageContextEnvelope,
+  ImageContextType,
+  ImageDBFlat,
+  ImageNew,
+  ImageProfile,
+  SignData,
+} from '$lib/db/zod/schema/image.types'
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import { error, type RequestEvent } from '@sveltejs/kit'
 import { applyResourceContextConstraints } from '$lib/db/services/image'

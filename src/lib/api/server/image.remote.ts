@@ -65,23 +65,25 @@ import {
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 // TYPES
 import type {
-  CreateImageParams,
   DeleteParamsToSign,
   Id,
-  Image,
-  ImageNew,
-  ImageDBFlat,
-  ImageContextType,
-  ImageProfile,
-  ImageByIdParamsByProfile,
-  ImagesForContextParamsByProfile,
-  ImagesForIdsParamsByProfile,
   EntityResponse,
-  ImageContextEnvelope,
   ParamsToSign,
   QueryParams,
-  SignData,
 } from '$lib/types'
+import type {
+  CreateImageParams,
+  Image,
+  ImageByIdParamsByProfile,
+  ImageContextEnvelope,
+  ImageContextType,
+  ImageDBFlat,
+  ImageNew,
+  ImageProfile,
+  ImagesForContextParamsByProfile,
+  ImagesForIdsParamsByProfile,
+  SignData,
+} from '$lib/db/zod/schema/image.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

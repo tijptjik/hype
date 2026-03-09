@@ -12,7 +12,8 @@ import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
 // TYPES
 import type { SelectItem } from '$lib/bits/core/select/select.types'
-import type { FormFieldCardBodyProps, FormIssueLike, Locale } from '$lib/types'
+import type { FormIssueLike, Locale } from '$lib/types'
+import type { FormFieldCardBodyProps } from '$lib/db/zod/schema/property.types'
 import type { DragDropState } from '@thisux/sveltednd'
 
 let {

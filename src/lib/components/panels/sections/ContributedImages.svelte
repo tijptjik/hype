@@ -23,8 +23,8 @@ import type {
   Id,
   Project,
   ResourceContext,
-  ImageContextEnvelope,
 } from '$lib/types'
+import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type {
   UserPreferences,
   UserProfile,

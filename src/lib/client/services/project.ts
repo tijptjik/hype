@@ -8,7 +8,8 @@ import {
   normalizeProjectRoleCapabilities,
 } from '$lib/capabilities'
 // TYPES
-import type { CapabilityKey, Locale, Property, User } from '$lib/types'
+import type { CapabilityKey, Locale, User } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'
 import type {
   Project,

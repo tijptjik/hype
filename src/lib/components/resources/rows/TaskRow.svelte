@@ -17,7 +17,8 @@ import { navigateOnAdmin } from '$lib/navigation'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Task, ImageCtxEnvelope } from '$lib/types'
+import type { Task } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 
 let {

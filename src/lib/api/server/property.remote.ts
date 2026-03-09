@@ -25,7 +25,8 @@ import { ListQueryParamsSchema, ProjectPropertiesQuery } from '$lib/db/zod'
 // ZOD
 import { z } from 'zod'
 // TYPES
-import type { Prisms, PropertyDB, QueryParams } from '$lib/types'
+import type { Prisms, QueryParams } from '$lib/types'
+import type { PropertyDB } from '$lib/db/zod/schema/property.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

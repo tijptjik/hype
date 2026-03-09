@@ -14,7 +14,8 @@ import { m } from '$lib/i18n'
 // ICONS
 import TaskIcon from 'virtual:icons/lucide/inbox'
 // TYPES
-import type { Task, ImageCtxEnvelope, Project, Id } from '$lib/types'
+import type { Task, Project, Id } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 // CONTEXT
 const adminCtx = getAdminCtx()

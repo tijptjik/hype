@@ -15,7 +15,8 @@ import SubmitButton from '$lib/components/featureCard/actions/SubmitButton.svelt
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
 // TYPES
-import type { ImageUpload, NewFeatureTask } from '$lib/types'
+import type { NewFeatureTask } from '$lib/types'
+import type { ImageUpload } from '$lib/db/zod/schema/image.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

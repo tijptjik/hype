@@ -16,8 +16,8 @@ import { FirstClassResource } from '$lib/enums'
 import type {
   Resource,
   EntityWithOptionalImage,
-  ImageContextEnvelope,
 } from '$lib/types'
+import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Snippet } from 'svelte'
 
 let {

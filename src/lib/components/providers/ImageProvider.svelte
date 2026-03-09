@@ -6,7 +6,8 @@ import { getImageById } from '$lib/api/server/image.remote'
 // CONTEXT
 import { ImageCtx, setImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { ImageProviderProps, ImageCtxEnvelope } from '$lib/types'
+import type { ImageProviderProps } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 // ═══════════════════════
 // REACTIVE STATE

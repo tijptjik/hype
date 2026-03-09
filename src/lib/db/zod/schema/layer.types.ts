@@ -1,9 +1,9 @@
 import type { z } from 'zod'
 import type { EntityResponse, FormLocaleInput, LayerMetadata } from '$lib/types'
 import type {
-  GetQueryParamsSchema,
-  ListQueryParamsSchema,
-} from '$lib/db/zod/schema/api'
+  GetQueryParams,
+  ListQueryParams,
+} from '$lib/db/zod/schema/api.types'
 import type {
   LayerAdminProfileAPI,
   LayerCardProfileAPI,
@@ -31,8 +31,8 @@ import type {
   UserLayerRecordCreate,
 } from '$lib/db/zod/schema/layer'
 
-export type LayerListParams = z.infer<typeof ListQueryParamsSchema>
-export type LayerGetParams = z.infer<typeof GetQueryParamsSchema>
+export type LayerListParams = ListQueryParams
+export type LayerGetParams = GetQueryParams
 export type LayerProfile = z.infer<typeof LayerProfileSchema>
 export type LayerListProfile = z.infer<typeof LayerListProfileAPI>
 export type LayerCardProfile = z.infer<typeof LayerCardProfileAPI>

@@ -15,7 +15,8 @@ import Trash2 from 'virtual:icons/lucide/trash-2'
 import { Button, DestructiveDialog } from '$lib/bits/core'
 import Switch from '$lib/bits/custom/switch/Switch.svelte'
 // TYPES
-import type { Id, Property } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Component } from 'svelte'
 
 let {

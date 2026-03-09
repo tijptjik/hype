@@ -4,7 +4,7 @@ import { getI18n } from '$lib/i18n'
 // COMPONENTS
 import Toggle from '$lib/components/forms/elements/Toggle.svelte'
 // TYPES
-import type { Property } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 
 type Props = {
   property: Property

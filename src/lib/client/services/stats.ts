@@ -5,12 +5,12 @@ import { FirstClassResource, supportedLocales } from '$lib/enums'
 // TYPES
 import type {
   Feature,
-  Property,
   FeatureI18nDB,
   FeatureProperty,
   FeatureFromCollection,
   UserContributedFeature,
 } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 
 // ═══════════════════════

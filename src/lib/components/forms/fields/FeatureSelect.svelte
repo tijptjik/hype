@@ -4,7 +4,7 @@ import { getI18n } from '$lib/i18n'
 // SERVICES
 import { getLocalisedPropertyValues } from '$lib/client/services/property'
 // TYPES
-import type { Property } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 
 type Props = {

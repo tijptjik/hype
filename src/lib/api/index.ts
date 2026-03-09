@@ -33,10 +33,8 @@ import type { AnyColumn, SQL, Table } from 'drizzle-orm'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import type {
   Feature,
-  Image,
   Id,
   Prisms,
-  Property,
   Resource,
   ResourceNew,
   ResourceType,
@@ -46,10 +44,11 @@ import type {
   DbTable,
   ParamsToSign,
   DeleteParamsToSign,
-  SignData,
   Session,
   SessionUser,
 } from '$lib/types'
+import type { Image, SignData } from '$lib/db/zod/schema/image.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer, LayerPropertyPartialExtra } from '$lib/db/zod/schema/layer.types'
 import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'

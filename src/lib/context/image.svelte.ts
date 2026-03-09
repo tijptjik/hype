@@ -23,19 +23,21 @@ import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import type {
-  Image,
-  ImageCtxEnvelope,
-  Intent,
-  ImageUpload,
-  LoadStatus,
-  UploadStatus,
-  ImageEditCtx,
   Id,
-  ImageUploadCtx,
   ImageCtxConstructorOptions,
   ImageContextConfig,
   Feature,
 } from '$lib/types'
+import type { UploadStatus } from '$lib/types'
+import type {
+  Image,
+  ImageCtxEnvelope,
+  ImageEditCtx,
+  ImageUpload,
+  ImageUploadCtx,
+  Intent,
+  LoadStatus,
+} from '$lib/db/zod/schema/image.types'
 import type { HubDB } from '$lib/db/zod/schema/hub.types'
 import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectDB } from '$lib/db/zod/schema/project.types'

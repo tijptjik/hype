@@ -20,10 +20,12 @@ import { ImageContextResource } from '$lib/enums'
 // TYPES
 import type {
   ImageNew,
+  ParamsToSign,
+} from '$lib/types'
+import type {
   Image,
   ImageContextEnvelope,
   ImageCtxEnvelope,
-  ParamsToSign,
   ImageUploadCtx,
   Intent,
   ImageEditCtx,
@@ -33,7 +35,7 @@ import type {
   Metadata,
   LngLat,
   SignData,
-} from '$lib/types'
+} from '$lib/db/zod/schema/image.types'
 // CONTEXT
 import type { ImageCtx } from '$lib/context/image.svelte'
 import { hashicon } from '@emeraldpay/hashicon'

@@ -1,7 +1,7 @@
 <script lang="ts">
 import Uploading from './overlays/Uploading.svelte'
 import UploadError from './overlays/UploadError.svelte'
-import type { ImageUpload } from '$lib/types'
+import type { ImageUpload } from '$lib/db/zod/schema/image.types'
 
 type Props = {
   fileObject: ImageUpload

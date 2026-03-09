@@ -9,7 +9,7 @@ import UploadThumbnail from '$lib/components/images/gallery/ThumbnailWhileUpload
 import ScrollArrow from '$lib/components/images/gallery/ScrollArrow.svelte'
 import Dropzone from '$lib/components/images/gallery/Dropzone.svelte'
 // TYPES
-import type { ImageUpload } from '$lib/types'
+import type { ImageUpload } from '$lib/db/zod/schema/image.types'
 
 // SERVICES
 const imageCtx = getImageCtx()

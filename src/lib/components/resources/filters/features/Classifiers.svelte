@@ -9,7 +9,7 @@ import { sortProperties } from '$lib/client/services/property'
 // COMPONENTS
 import FilterToggle from '../FilterToggle.svelte'
 // TYPES
-import type { Property } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 
 const adminCtx = getAdminCtx()
 

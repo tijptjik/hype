@@ -3,7 +3,7 @@
 import { m } from '$lib/i18n'
 import { getI18n } from '$lib/i18n'
 // TYPES
-import type { Property } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 
 type Props = {
   property: Property

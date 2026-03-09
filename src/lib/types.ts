@@ -1,15 +1,6 @@
 // ZOD SCHEMAS
 import type { z } from 'zod'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-// COMPONENTS
-import type CustomField from '$lib/components/forms/fields/Property.svelte'
-import type InputField from '$lib/components/forms/fields/Input.svelte'
-import type TextareaField from '$lib/components/forms/fields/Textarea.svelte'
-import type SelectField from '$lib/components/forms/fields/Select.svelte'
-import type RangeField from '$lib/components/forms/fields/Range.svelte'
-import type UsersField from '$lib/components/forms/fields/Users.svelte'
-import type ToggleField from '$lib/components/forms/fields/Toggle.svelte'
-import type DisplayField from '$lib/components/forms/fields/Display.svelte'
 // ENUMS
 import {
   type ImageContextResource,
@@ -155,19 +146,19 @@ import type {
   SuperValidated,
   ValidationErrors,
 } from 'sveltekit-superforms'
-import type {
-  LayerForm as LayerFormType,
-  OrganisationForm as OrganisationFormType,
-  ProjectForm as ProjectFormType,
-  FeatureForm as FeatureFormType,
-  HubForm as HubFormType,
-} from './context/form.svelte'
 import type { enhance } from '$app/forms'
 import type { Marker } from 'maplibre-gl'
 import type { Writable } from 'svelte/store'
 import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { Geometry } from 'geojson'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
+
+type FieldComponentCtor = abstract new (...args: never[]) => unknown
+type LayerFormType = unknown
+type OrganisationFormType = unknown
+type ProjectFormType = unknown
+type FeatureFormType = unknown
+type HubFormType = unknown
 import type { SQLiteTable, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core'
 import type {
   SessionSession as BetterAuthSessionSession,
@@ -1380,15 +1371,7 @@ export const classifierComponentTypes = ['SelectField', 'RangeField'] as const
 export const specifierComponentTypes = ['InputField', 'TextareaField'] as const
 export const displayComponentTypes = ['InputField'] as const
 export type FieldComponentType = (typeof fieldComponentTypes)[number]
-export type FieldComponent =
-  | typeof InputField
-  | typeof SelectField
-  | typeof RangeField
-  | typeof TextareaField
-  | typeof UsersField
-  | typeof CustomField
-  | typeof ToggleField
-  | typeof DisplayField
+export type FieldComponent = FieldComponentCtor
 
 export type RangeFilterValue = {
   globalMin: number

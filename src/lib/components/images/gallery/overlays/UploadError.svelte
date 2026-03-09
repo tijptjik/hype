@@ -10,7 +10,7 @@ import Icon from '$lib/components/common/Icon.svelte'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { ImageUpload } from '$lib/types'
+import type { ImageUpload } from '$lib/db/zod/schema/image.types'
 
 type Props = {
   fileObject: ImageUpload

@@ -11,7 +11,7 @@ import Picture from '$lib/components/common/Picture.svelte'
 import Loading from '$lib/components/images/gallery/overlays/Loading.svelte'
 // TYPES
 import { type Snippet } from 'svelte'
-import type { Image, ImageCtxEnvelope } from '$lib/types'
+import type { Image, ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 type DisplayImage = {
   id: string

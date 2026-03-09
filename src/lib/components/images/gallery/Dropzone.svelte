@@ -8,7 +8,7 @@ import Icon from '$lib/components/common/Icon.svelte'
 import { Photo } from '@steeze-ui/heroicons'
 import Dropzone from 'svelte-file-dropzone'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 type Props = {
   updateScrollArrows: () => void

@@ -12,7 +12,7 @@ import Deletion from '$lib/components/images/gallery/overlays/Delete.svelte'
 import Confirmation from '$lib/components/images/gallery/overlays/Confirmation.svelte'
 import Deleting from '$lib/components/images/gallery/overlays/Deleting.svelte'
 // TYPES
-import type { ImageCtxEnvelope, Intent } from '$lib/types'
+import type { ImageCtxEnvelope, Intent } from '$lib/db/zod/schema/image.types'
 
 // SERVICES
 const imageCtx = getImageCtx()

@@ -2,7 +2,10 @@
 import ResourceThumbnail from './ResourceThumbnail.svelte'
 import ResourceTitle from './ResourceTitle.svelte'
 import ResourceDescription from './ResourceDescription.svelte'
-import type { ImageContextEnvelope, ImageCtxEnvelope } from '$lib/types'
+import type {
+  ImageContextEnvelope,
+  ImageCtxEnvelope,
+} from '$lib/db/zod/schema/image.types'
 
 let {
   image,

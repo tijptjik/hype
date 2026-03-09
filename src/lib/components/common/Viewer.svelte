@@ -17,7 +17,7 @@ import IconAnchor from '$lib/components/common/IconAnchor.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
 import type { Snippet } from 'svelte'
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 type Props = {
   LeftActions?: Snippet

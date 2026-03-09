@@ -1,6 +1,9 @@
 <script lang="ts">
 import { getURLfromImage } from '$lib/client/services/image'
-import type { ImageContextEnvelope, ImageCtxEnvelope } from '$lib/types'
+import type {
+  ImageContextEnvelope,
+  ImageCtxEnvelope,
+} from '$lib/db/zod/schema/image.types'
 
 let {
   image = null,

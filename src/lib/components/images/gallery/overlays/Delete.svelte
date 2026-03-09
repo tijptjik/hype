@@ -2,7 +2,7 @@
 import { fade } from 'svelte/transition'
 import Icon from '$lib/components/common/Icon.svelte'
 import { Trash } from '@steeze-ui/heroicons'
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 

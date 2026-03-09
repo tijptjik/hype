@@ -7,10 +7,12 @@ import type {
   Locale,
   LocaleKey,
   Neighbourhood,
-  PropertyValueI18nDB,
-  WritableI18nRecord,
 } from '$lib/types'
 import type { Resource } from '$lib/types'
+import type {
+  PropertyValueI18nDB,
+  WritableI18nRecord,
+} from '$lib/db/zod/schema/property.types'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 import { supportedLocales } from './enums'
 

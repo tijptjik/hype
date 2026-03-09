@@ -1,4 +1,5 @@
-import type { Property, Id, Locale } from '$lib/types'
+import type { Id, Locale } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Snippet } from 'svelte'
 import type { DragDropOptions } from '@thisux/sveltednd'
 import type { Component } from 'svelte'

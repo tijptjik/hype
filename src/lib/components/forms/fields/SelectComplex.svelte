@@ -6,7 +6,8 @@ import { getValues, updateFeaturePropertyValue } from '$lib/index'
 // COMPONENTS
 import Select from '$lib/components/forms/elements/Select.svelte'
 // TYPES
-import type { FieldPropsExtended, PropertyValue } from '$lib/types'
+import type { FieldPropsExtended } from '$lib/types'
+import type { PropertyValue } from '$lib/db/zod/schema/property.types'
 
 // STATE : PROPS
 let {

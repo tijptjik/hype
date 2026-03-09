@@ -14,7 +14,8 @@ import { getLocale } from '$lib/i18n'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Feature, ImageCtxEnvelope } from '$lib/types'
+import type { Feature } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 
 type Props = {

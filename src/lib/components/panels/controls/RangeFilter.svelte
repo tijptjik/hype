@@ -13,7 +13,8 @@ import {
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type { Id, Property } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 let appCtx = getAppCtx()
 
 type Props = {

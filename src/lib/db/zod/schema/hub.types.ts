@@ -6,9 +6,9 @@ import type {
   Locale,
 } from '$lib/types'
 import type {
-  GetQueryParamsSchema,
-  ListQueryParamsSchema,
-} from '$lib/db/zod/schema/api'
+  GetQueryParams,
+  ListQueryParams,
+} from '$lib/db/zod/schema/api.types'
 import type {
   HubAdminProfileAPI,
   HubBase,
@@ -41,8 +41,8 @@ export type Hub = z.infer<typeof HubAdminProfileAPI>
 export type HubNew = z.infer<typeof HubEntityFormData>
 export type HubPartial = Partial<HubNew>
 
-export type HubListParams = z.infer<typeof ListQueryParamsSchema>
-export type HubGetParams = z.infer<typeof GetQueryParamsSchema>
+export type HubListParams = ListQueryParams
+export type HubGetParams = GetQueryParams
 export type HubProfile = z.infer<typeof HubProfileSchema>
 export type HubListProfile = z.infer<typeof HubListProfileAPI>
 export type HubCardProfile = z.infer<typeof HubCardProfileAPI>

@@ -15,7 +15,7 @@ import Icon from '$lib/components/common/Icon.svelte'
 import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons'
 // TYPES
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 // CONTEXT
 const imageCtx = getImageCtx()

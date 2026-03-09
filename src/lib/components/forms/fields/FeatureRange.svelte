@@ -1,6 +1,6 @@
 <script lang="ts">
 // TYPES
-import type { Property } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 
 type Props = {
   property: Property

@@ -11,7 +11,8 @@ import { getUserForAttribution } from '$lib/api/server/user.remote'
 import Icon from '$lib/components/common/Icon.svelte'
 import { Camera, MapPin } from '@steeze-ui/heroicons'
 // TYPES
-import type { Feature, ImageCtxEnvelope } from '$lib/types'
+import type { Feature } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { IconSource } from '@steeze-ui/heroicons'
 
 // CONTEXT

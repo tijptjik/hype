@@ -19,9 +19,11 @@ import XIcon from 'virtual:icons/lucide/x'
 // TYPES
 import type {
   ImageCtxConstructorOptions,
+} from '$lib/types'
+import type {
   ImageCtxEnvelope,
   ImageEditCtx,
-} from '$lib/types'
+} from '$lib/db/zod/schema/image.types'
 
 let {
   page,

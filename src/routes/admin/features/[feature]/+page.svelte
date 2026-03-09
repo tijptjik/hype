@@ -41,8 +41,8 @@ import type {
   FormFieldArrayDefinition,
   FormFieldNested,
   FormFieldConfig,
-  Image,
 } from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 
 // CONTEXT
 const adminCtx = getAdminCtx()

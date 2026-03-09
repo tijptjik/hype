@@ -11,7 +11,8 @@ import SelectedFilters from '$lib/components/panels/elements/SelectedFilters.sve
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type { Id, Property, PanelProps } from '$lib/types'
+import type { Id, PanelProps } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

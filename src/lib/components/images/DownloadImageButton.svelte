@@ -4,7 +4,7 @@ import { CloudArrowDown } from '@steeze-ui/heroicons'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 type Props = {
   image: ImageCtxEnvelope

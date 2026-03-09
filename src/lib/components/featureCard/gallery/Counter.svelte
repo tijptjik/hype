@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 let {
   images,

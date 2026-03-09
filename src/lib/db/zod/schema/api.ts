@@ -1,7 +1,7 @@
 // ZOD
 import { z } from 'zod'
 
-const RequestMetaSchema = z
+export const RequestMetaSchema = z
   .object({
     isAdminRequest: z.boolean().optional(),
     profile: z.enum(['list', 'card', 'detail', 'admin']).optional(),

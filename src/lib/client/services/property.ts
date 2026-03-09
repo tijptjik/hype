@@ -12,9 +12,7 @@ import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type {
-  Property,
   FeatureProperty,
-  PropertyValue,
   UserContributedFeatureProperty,
   Feature,
   Locale,
@@ -22,15 +20,19 @@ import type {
   Id,
   RangeFilterValue,
   FeaturePropertyI18nDB,
-  PropertyValueI18nDB,
   FeatureFromCollection,
   FormDataUpdaterForm,
-  PropertyFormData,
-  PropertyDiscriminator,
-  PropertyNew,
-  WritableI18nRecord,
-  PropertyTranslationOrigin,
 } from '$lib/types'
+import type {
+  Property,
+  PropertyDiscriminator,
+  PropertyFormData,
+  PropertyNew,
+  PropertyTranslationOrigin,
+  PropertyValue,
+  PropertyValueI18nDB,
+  WritableI18nRecord,
+} from '$lib/db/zod/schema/property.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

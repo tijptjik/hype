@@ -33,7 +33,8 @@ import {
   ImageContextResourceExtended,
 } from '$lib/enums'
 // TYPES
-import type { Image, Task, PageProps, Id } from '$lib/types'
+import type { Task, PageProps, Id } from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 
 let pageProps: PageProps<Task> = $props()
 let task: Task = $derived(pageProps.data.task)

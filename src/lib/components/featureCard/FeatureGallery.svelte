@@ -10,7 +10,7 @@ import SelectPhotoSource from '$lib/components/featureCard/gallery/SelectPhotoSo
 import SuccesfulSubmission from '$lib/components/featureCard/gallery/SuccesfulSubmission.svelte'
 import Carousel from './gallery/Carousel.svelte'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 // CONTEXT
 const imageCtx = getImageCtx()

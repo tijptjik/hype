@@ -12,7 +12,7 @@ import AddFromFiles from './AddFromFiles.svelte'
 import Remove from '$lib/components/featureCard/gallery/Remove.svelte'
 
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 // STATE
 let hasCameraAccess = $state(false)

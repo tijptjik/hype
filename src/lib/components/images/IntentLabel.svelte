@@ -8,7 +8,8 @@ import { getImageCtx } from '$lib/context/image.svelte'
 import { adminIntentOrder } from '$lib/api/services/image'
 import { intentDisplay } from '$lib/client/services/image'
 // TYPES
-import type { Intent, Id } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { Intent } from '$lib/db/zod/schema/image.types'
 
 // SERVICES
 const imageCtx = getImageCtx()

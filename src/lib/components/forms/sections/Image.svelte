@@ -13,7 +13,8 @@ import Uploading from '$lib/components/images/gallery/overlays/Uploading.svelte'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { SectionProps, Image } from '$lib/types'
+import type { SectionProps } from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 
 let sectionProps: SectionProps & { image: Image | null } = $props()
 

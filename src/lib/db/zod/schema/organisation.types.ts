@@ -8,9 +8,9 @@ import type {
   QueryWithOverride,
 } from '$lib/types'
 import type {
-  GetQueryParamsSchema,
-  ListQueryParamsSchema,
-} from '$lib/db/zod/schema/api'
+  GetQueryParams,
+  ListQueryParams,
+} from '$lib/db/zod/schema/api.types'
 import type {
   OrganisationAdminProfileAPI,
   OrganisationBase,
@@ -52,8 +52,8 @@ export type OrganisationWithI18n = Omit<Organisation, 'i18n'> & {
 }
 export type OrganisationPartial = Partial<OrganisationNew>
 
-export type OrganisationListParams = z.infer<typeof ListQueryParamsSchema>
-export type OrganisationGetParams = z.infer<typeof GetQueryParamsSchema>
+export type OrganisationListParams = ListQueryParams
+export type OrganisationGetParams = GetQueryParams
 export type OrganisationProfile = z.infer<typeof OrganisationProfileSchema>
 export type OrganisationListProfile = z.infer<typeof OrganisationListProfileAPI>
 export type OrganisationCardProfile = z.infer<typeof OrganisationCardProfileAPI>

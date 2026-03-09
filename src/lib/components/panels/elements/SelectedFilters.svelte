@@ -2,7 +2,8 @@
 // SERVICES
 import { displaySelectedFilters } from '$lib/client/services/property'
 // TYPES
-import type { Id, Property } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 
 type Props = {

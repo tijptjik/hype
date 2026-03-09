@@ -3,7 +3,7 @@ import { intentDisplay } from '$lib/client/services/image'
 import { setImageIntent } from '$lib/api/server/image.remote'
 import { ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Intent } from '$lib/types'
+import type { Intent } from '$lib/db/zod/schema/image.types'
 
 let {
   intent,

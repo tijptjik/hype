@@ -37,7 +37,8 @@ import { setCardCtx, getCardCtx } from '$lib/context/card.svelte'
 // ENUMS
 import { FeatureCardMode, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Feature, Image } from '$lib/types'
+import type { Feature } from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 
 // PARAMS
 let featureId: string = $state(page.params.id)

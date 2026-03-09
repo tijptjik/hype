@@ -129,13 +129,13 @@ import type {
   CapabilityDefinitions,
   CapabilityKey,
   FormDataUpdaterForm,
-  ImageCtxEnvelope,
   Locale,
   ResourceContext,
   UserRoleFieldNameResolverForm,
   User,
   Id,
 } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type {
   OrganisationGetState,
   ProjectBooleanField,

@@ -112,16 +112,16 @@ import {
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // TYPES
 import type {
-  ImageCtxEnvelope,
   Locale,
   User,
   UserRoleFieldNameResolverForm,
   FormDataUpdaterForm,
-  Property,
   Id,
   CapabilityDefinitions,
   CapabilityKey,
 } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
 import type {
   OrganisationBooleanField,
   OrganisationDB,

@@ -8,9 +8,9 @@ import type {
   ResourceSubmitMode,
 } from '$lib/types'
 import type {
-  GetQueryParamsSchema,
-  ListQueryParamsSchema,
-} from '$lib/db/zod/schema/api'
+  GetQueryParams,
+  ListQueryParams,
+} from '$lib/db/zod/schema/api.types'
 import type {
   ProjectAdminProfileAPI,
   ProjectAdminRow,
@@ -47,8 +47,8 @@ export type ProjectDBPartial = z.infer<typeof ProjectUpdate>
 export type Project = z.infer<typeof ProjectAdminProfileAPI>
 export type ProjectNew = z.infer<typeof ProjectEntityFormData>
 export type ProjectPartial = Partial<ProjectNew>
-export type ProjectListParams = z.infer<typeof ListQueryParamsSchema>
-export type ProjectGetParams = z.infer<typeof GetQueryParamsSchema>
+export type ProjectListParams = ListQueryParams
+export type ProjectGetParams = GetQueryParams
 export type ProjectProfile = z.infer<typeof ProjectProfileSchema>
 export type ProjectListProfile = z.infer<typeof ProjectListProfileAPI>
 export type ProjectCardProfile = z.infer<typeof ProjectCardProfileAPI>

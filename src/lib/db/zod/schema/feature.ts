@@ -29,7 +29,8 @@ import { UserBasic } from './user'
 // ENUMS
 import { supportedLocales } from '$lib/enums'
 // TYPES
-import type { AddressMeta, AddressProperties, ImageCtxEnvelope } from '$lib/types'
+import type { AddressMeta, AddressProperties } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════

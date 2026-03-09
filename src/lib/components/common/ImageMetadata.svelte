@@ -10,7 +10,10 @@ import {
 } from '@steeze-ui/heroicons'
 import { formatDate } from '$lib'
 // TYPES
-import type { Image, ImageUploadCtx as Refs } from '$lib/types'
+import type {
+  Image,
+  ImageUploadCtx as Refs,
+} from '$lib/db/zod/schema/image.types'
 import type { IconSource } from '@steeze-ui/svelte-icon'
 
 let { image }: { image: Image } = $props()
