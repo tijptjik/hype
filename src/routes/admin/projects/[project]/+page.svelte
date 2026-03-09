@@ -44,6 +44,7 @@ import {
   resolveDefaultProjectOrganisationIdForCreate,
   seedOwnerRolesForNewProject as resolveOwnerRoleSeedForNewProject,
   toComparableProjectUserRolesForSubmit,
+  toDenseProperties,
   toProjectCapabilitiesAndRolesForToggle,
   toStableSignature,
   toUserRolesForCapabilityToggle,
@@ -130,7 +131,6 @@ import type {
   FormDataUpdaterForm,
   ImageCtxEnvelope,
   Locale,
-  Property,
   ResourceContext,
   UserRoleFieldNameResolverForm,
   User,
@@ -625,19 +625,6 @@ const facetIssueSummary = $derived.by(() =>
 const resolvedFacetTabsWithIssues = $derived.by(() =>
   withFacetIssueIndicators(resolvedFacetTabs, facetIssueSummary.facetsWithIssues),
 )
-
-function toDenseProperties(
-  properties: ProjectFormInput['data']['properties'] | undefined,
-): Property[] {
-  if (!Array.isArray(properties)) return []
-  return properties.filter(
-    property =>
-      Boolean(property) &&
-      typeof property === 'object' &&
-      typeof (property as { id?: unknown }).id === 'string' &&
-      ((property as { id: string }).id ?? '').length > 0,
-  ) as Property[]
-}
 
 $effect(() => {
   const properties = formCtx.form.fields.value().data?.properties as

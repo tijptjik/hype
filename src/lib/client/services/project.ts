@@ -8,7 +8,7 @@ import {
   normalizeProjectRoleCapabilities,
 } from '$lib/capabilities'
 // TYPES
-import type { CapabilityKey, Locale, User } from '$lib/types'
+import type { CapabilityKey, Locale, Property, User } from '$lib/types'
 import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'
 import type {
   Project,
@@ -25,6 +25,7 @@ import type {
 // ═══════════════════════
 //
 // 1. BASE FORM SHAPING
+//    - toDenseProperties
 //    - toProjectFormInput
 //    - toProjectIdentityPatch
 //
@@ -64,6 +65,23 @@ function normalizeProjectFormLocale(
 
 type ProjectFormDefaults = {
   organisationId?: string
+}
+
+/**
+ * Filters project form properties down to persisted property rows with concrete ids.
+ * Used when callers need a dense property collection without draft/empty placeholders.
+ */
+export function toDenseProperties(
+  properties: ProjectFormInput['data']['properties'] | undefined,
+): Property[] {
+  if (!Array.isArray(properties)) return []
+  return properties.filter(
+    property =>
+      Boolean(property) &&
+      typeof property === 'object' &&
+      typeof (property as { id?: unknown }).id === 'string' &&
+      ((property as { id: string }).id ?? '').length > 0,
+  ) as Property[]
 }
 
 function cloneProjectProperties(
