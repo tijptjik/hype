@@ -1,4 +1,5 @@
 import { customAlphabet } from 'nanoid'
+import { tick } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
 import { ensureLocaleEntryForWrite } from '$lib/i18n'
@@ -21,6 +22,7 @@ import type {
   Id,
   RangeFilterValue,
   FeaturePropertyI18nDB,
+  PropertyValueI18nDB,
   FeatureFromCollection,
   FormDataUpdaterForm,
   PropertyFormData,
@@ -381,6 +383,18 @@ const propertyNanoId = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$',
   12,
 )
+const propertyKeyFirstCharNanoId = customAlphabet(
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$',
+  1,
+)
+const propertyKeyTailNanoId = customAlphabet(
+  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$',
+  11,
+)
+
+function createPropertyKey(): string {
+  return `${propertyKeyFirstCharNanoId()}${propertyKeyTailNanoId()}`
+}
 
 function rerankPropertiesByType(
   properties: Property[],
@@ -396,7 +410,14 @@ function rerankPropertiesByType(
 }
 
 function getMutableProperties(data: PropertyFormData): Property[] {
-  return (data.properties || []) as Property[]
+  if (!Array.isArray(data.properties)) return []
+  return data.properties.filter(
+    (property): property is Property =>
+      Boolean(property) &&
+      typeof property === 'object' &&
+      typeof (property as { id?: unknown }).id === 'string' &&
+      ((property as { id: string }).id ?? '').length > 0,
+  )
 }
 
 function mutatePropertyFormData(
@@ -481,6 +502,27 @@ function toEmptyPropertyValueI18n(valueId: Id): PropertyValue['i18n'] {
       valueGen: false,
     },
   }
+}
+
+function getFirstAvailablePropertyValueText(
+  value: NonNullable<Property['values']>[number],
+): string {
+  if (typeof value.value === 'string' && value.value.trim().length > 0) {
+    return value.value
+  }
+
+  const candidates = ['en', 'zhHans', 'zhHant'] as const
+  for (const localeKey of candidates) {
+    const candidate = (value.i18n as WritableI18nRecord | undefined)?.[localeKey]
+    if (typeof candidate?.value === 'string' && candidate.value.trim().length > 0) {
+      return candidate.value
+    }
+  }
+
+  const fallback = Object.values(
+    (value.i18n as WritableI18nRecord | undefined) ?? {},
+  ).find(entry => typeof entry?.value === 'string' && entry.value.trim().length > 0)
+  return fallback?.value ?? ''
 }
 
 function reorderRankedItems<T extends { id: Id; rank: number }>(
@@ -621,7 +663,15 @@ export function getPropertiesByType(
 export function getCurrentProjectProperties(
   form: FormDataUpdaterForm<{ properties?: Property[] }>,
 ): Property[] {
-  return (form.fields.value().data?.properties ?? []).map(property => property)
+  const raw = form.fields.value().data?.properties
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (property): property is Property =>
+      Boolean(property) &&
+      typeof property === 'object' &&
+      typeof (property as { id?: unknown }).id === 'string' &&
+      ((property as { id: string }).id ?? '').length > 0,
+  )
 }
 
 export function getProjectPropertyFieldsForIndex(
@@ -670,7 +720,9 @@ export function getPropertyIssuesForTypeFromFormIssues(params: {
       if (index == null) {
         return params.properties.some(property => property.type === params.type)
       }
-      return false
+
+      const property = params.properties[index]
+      return Boolean(property && property.type === params.type)
     })
     .map(issue => issue.message)
     .filter(Boolean)
@@ -739,6 +791,8 @@ export async function scrollWithMovedProperty(
 
   move()
   await afterMove()
+  await tick()
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
   const movedElement = document.getElementById(`property-wrapper-${propertyId}`)
   if (!movedElement) return
@@ -765,18 +819,33 @@ export function addProjectPropertyForType(
   projectId: string,
   classifierComponents: readonly string[],
   specifierComponents: readonly string[],
+  options?: {
+    projectId?: string | null
+    organisationId?: string | null
+    hubId?: string | null
+    scope?: 'project' | 'organisation' | 'hub'
+    isDefaultEnabled?: boolean
+  },
 ): void {
   const id = propertyNanoId(12)
   const component =
     fieldDiscriminator === 'classifier'
       ? classifierComponents[0]
       : specifierComponents[0]
+  const scope = options?.scope ?? 'project'
+  const resolvedProjectId =
+    options && 'projectId' in options ? (options.projectId ?? null) : projectId || null
 
-  const newProperty: PropertyNew & { id: Id } = {
+  const newProperty: PropertyNew & { id: Id; isEnabled?: boolean } = {
     id,
-    projectId,
+    projectId: resolvedProjectId,
+    organisationId: options?.organisationId ?? null,
+    hubId: options?.hubId ?? null,
+    scope,
+    isDefaultEnabled: options?.isDefaultEnabled ?? false,
+    isEnabled: true,
     type: fieldDiscriminator,
-    key: id,
+    key: createPropertyKey(),
     rank: 0,
     component,
     isTranslatable: fieldDiscriminator === 'classifier',
@@ -788,7 +857,9 @@ export function addProjectPropertyForType(
 
   mutatePropertyFormData(form, currentProperties => {
     currentProperties.unshift(newProperty as Property)
-    rerankPropertiesByType(currentProperties, fieldDiscriminator)
+    currentProperties.forEach((property, index) => {
+      property.rank = index
+    })
   })
 }
 
@@ -805,6 +876,23 @@ export function removeProjectPropertyForType(
       currentProperties.splice(propertyIndex, 1)
       rerankPropertiesByType(currentProperties, fieldDiscriminator)
     }
+  })
+}
+
+export function removeProjectProperty(
+  form: FormDataUpdaterForm<PropertyFormData>,
+  propertyId: Id,
+): void {
+  mutatePropertyFormData(form, currentProperties => {
+    const propertyIndex = currentProperties.findIndex(
+      property => property.id === propertyId,
+    )
+    if (propertyIndex < 0) return
+    currentProperties.splice(propertyIndex, 1)
+    const ordered = [...currentProperties].sort((a, b) => a.rank - b.rank)
+    ordered.forEach((property, index) => {
+      property.rank = index
+    })
   })
 }
 
@@ -833,14 +921,145 @@ export function changeProjectPropertyRank(
   })
 }
 
+export function changeProjectPropertyRankUnified(
+  form: FormDataUpdaterForm<PropertyFormData>,
+  propertyIdToMove: Id,
+  direction: 'up' | 'down',
+): void {
+  mutatePropertyFormData(form, allProperties => {
+    const ordered = [...allProperties].sort((a, b) => a.rank - b.rank)
+    const currentIndex = ordered.findIndex(property => property.id === propertyIdToMove)
+    if (currentIndex < 0) return
+    const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    const reordered = reorderRankedItems(ordered, propertyIdToMove, nextIndex)
+    if (!reordered) return
+
+    const rankById = new Map(reordered.map(property => [property.id, property.rank]))
+    for (const property of allProperties) {
+      if (!rankById.has(property.id)) continue
+      property.rank = rankById.get(property.id) as number
+    }
+  })
+}
+
 export function updateProjectPropertyBase(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
-  key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable',
+  key:
+    | 'key'
+    | 'component'
+    | 'min'
+    | 'max'
+    | 'isTranslatable'
+    | 'isDefaultEnabled'
+    | 'isEnabled',
   value: string | number | null | boolean,
 ): void {
-  mutatePropertyById(form, propertyId, target => {
+  mutatePropertyFormData(form, allProperties => {
+    const target = allProperties.find(property => property.id === propertyId)
+    if (!target) return
+
+    const isPropertyEnabled = (property: Property): boolean => {
+      if (property.scope === 'project') return true
+      return typeof (property as Property & { isEnabled?: boolean }).isEnabled ===
+        'boolean'
+        ? Boolean((property as Property & { isEnabled?: boolean }).isEnabled)
+        : Boolean(property.isDefaultEnabled)
+    }
+
+    const wasEnabledBeforeChange = isPropertyEnabled(target)
+
     ;(target as Record<string, unknown>)[key] = value
+
+    // When an inherited property is explicitly added to a project, place it at the
+    // end of the currently enabled window so rank controls stay bounded to active items.
+    if (
+      key === 'isEnabled' &&
+      value === true &&
+      target.scope !== 'project' &&
+      !wasEnabledBeforeChange
+    ) {
+      const orderedWithoutTarget = allProperties
+        .filter(property => property.id !== target.id)
+        .sort((left, right) => (left.rank ?? 0) - (right.rank ?? 0))
+      const firstDisabledInheritedIndex = orderedWithoutTarget.findIndex(
+        property => property.scope !== 'project' && !isPropertyEnabled(property),
+      )
+      target.rank =
+        firstDisabledInheritedIndex >= 0
+          ? firstDisabledInheritedIndex
+          : orderedWithoutTarget.length
+    }
+
+    if (key === 'component' && typeof value === 'string') {
+      const inferredType =
+        value === 'SelectField' || value === 'RangeField' || value === 'ToggleField'
+          ? ('classifier' as const)
+          : ('specifier' as const)
+      target.type = inferredType
+      if (value === 'RangeField') {
+        target.isTranslatable = false
+      }
+      if (inferredType === 'specifier') {
+        target.values = []
+      } else if (!Array.isArray(target.values)) {
+        target.values = []
+      }
+    }
+    if (
+      key === 'isTranslatable' &&
+      value === false &&
+      target.type === 'classifier' &&
+      Array.isArray(target.values)
+    ) {
+      target.values = target.values.map(currentValue => ({
+        ...currentValue,
+        value: getFirstAvailablePropertyValueText(currentValue),
+      }))
+    }
+
+    if (key === 'isEnabled') {
+      const getInheritedTailSpecificity = (property: Property): number => {
+        if (property.scope === 'organisation') return 0
+        if (property.scope === 'hub' && property.hubId) return 1
+        if (property.scope === 'hub') return 2
+        return 3
+      }
+      const getPropertyDisplayName = (property: Property): string =>
+        (
+          (property.i18n as WritableI18nRecord | undefined)?.en?.label ??
+          property.key ??
+          ''
+        )
+          .toString()
+          .toLowerCase()
+
+      const normalized = [...allProperties].sort((left, right) => {
+        const leftDisabledInherited =
+          left.scope !== 'project' && !isPropertyEnabled(left)
+        const rightDisabledInherited =
+          right.scope !== 'project' && !isPropertyEnabled(right)
+
+        if (leftDisabledInherited !== rightDisabledInherited) {
+          return leftDisabledInherited ? 1 : -1
+        }
+
+        if (leftDisabledInherited && rightDisabledInherited) {
+          const specificityDiff =
+            getInheritedTailSpecificity(left) - getInheritedTailSpecificity(right)
+          if (specificityDiff !== 0) return specificityDiff
+          return getPropertyDisplayName(left).localeCompare(
+            getPropertyDisplayName(right),
+          )
+        }
+
+        return (left.rank ?? 0) - (right.rank ?? 0)
+      })
+
+      normalized.forEach((property, index) => {
+        property.rank = index
+      })
+    }
   })
 }
 
@@ -876,9 +1095,22 @@ export function addProjectPropertyValue(
       id: valueId,
       propertyId,
       rank: values.length,
-      i18n: toEmptyPropertyValueI18n(valueId),
+      value: '',
+      i18n: target.isTranslatable ? toEmptyPropertyValueI18n(valueId) : undefined,
     })
     target.values = values
+  })
+}
+
+export function updateProjectPropertyValue(
+  form: FormDataUpdaterForm<PropertyFormData>,
+  propertyId: Id,
+  valueId: Id,
+  key: 'value',
+  value: string,
+): void {
+  mutatePropertyValueById(form, propertyId, valueId, targetValue => {
+    targetValue[key] = value
   })
 }
 
@@ -1000,12 +1232,13 @@ export function propertyValuesToLocalisedOptions(
   return new Map(
     propertyValues.map(pv => [
       pv.id,
-      getI18n<PropertyValueI18nDB>(
-        { i18n: (pv.i18n as Record<Locale, PropertyValueI18nDB>) ?? null },
-        'value',
-        appCtx.getUserPreferences(),
-        m.jumpy_misty_panther_scold(),
-      ),
+      pv.value ??
+        getI18n<PropertyValueI18nDB>(
+          { i18n: (pv.i18n as Record<Locale, PropertyValueI18nDB>) ?? null },
+          'value',
+          appCtx.getUserPreferences(),
+          m.jumpy_misty_panther_scold(),
+        ),
     ]),
   )
 }
