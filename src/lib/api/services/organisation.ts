@@ -168,16 +168,18 @@ const toProfileResponseShape = async (
   _isCollection: boolean,
   _isSuperAdmin: boolean,
 ): Promise<Organisation | Record<string, unknown>> => {
+  type RawI18nBlock = Array<Record<string, unknown>> | Record<string, unknown> | null
+
   const orgWithProperties = organisation as OrganisationDBRaw & {
     propertyAssignments?: Array<{
       property?: {
-        i18n?: unknown
-        values?: Array<{ i18n?: unknown }>
+        i18n?: RawI18nBlock
+        values?: Array<{ i18n?: RawI18nBlock }>
       } | null
     }>
     properties?: Array<{
-      i18n?: unknown
-      values?: Array<{ i18n?: unknown }>
+      i18n?: RawI18nBlock
+      values?: Array<{ i18n?: RawI18nBlock }>
     }>
   }
 
@@ -189,8 +191,8 @@ const toProfileResponseShape = async (
       ? assignmentProperties
       : (orgWithProperties.properties ?? [])
   ) as Array<{
-    i18n?: unknown
-    values?: Array<{ i18n?: unknown }>
+    i18n?: RawI18nBlock
+    values?: Array<{ i18n?: RawI18nBlock }>
   }>
 
   const data = {
@@ -199,10 +201,10 @@ const toProfileResponseShape = async (
     userRoles: organisation.userRoles,
     properties: rawProperties.map(property => ({
       ...property,
-      i18n: transformI18nSafely(property.i18n as unknown),
+      i18n: transformI18nSafely(property.i18n),
       values: (property.values ?? []).map(value => ({
         ...value,
-        i18n: transformI18nSafely(value.i18n as unknown),
+        i18n: transformI18nSafely(value.i18n),
       })),
     })),
     image: organisation.image

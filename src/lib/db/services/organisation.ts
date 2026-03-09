@@ -144,7 +144,7 @@ export const createUserRoles = async (
   return await insertManyRelated(
     db,
     organisationRole,
-    userRoles,
+    userRoles as InferInsertModel<typeof organisationRole>[],
     'organisationId',
     organisationId,
   )
@@ -170,6 +170,20 @@ export const toUserRoles = (
 // ═══════════════════════
 // 2.1 CRUD :: READ
 // ═══════════════════════
+
+/**
+ * Narrows hydrated Drizzle organisation rows to the current raw organisation contract.
+ * Keeps generic relation inference mismatches contained at the DB boundary.
+ */
+const toOrganisationDbRaw = (row: unknown): OrganisationDBRaw =>
+  row as OrganisationDBRaw
+
+/**
+ * Narrows hydrated Drizzle organisation row collections to the current raw contract.
+ * Used for `findMany` results where relation inference is wider than our API shapers need.
+ */
+const toOrganisationDbRawList = (rows: unknown[]): OrganisationDBRaw[] =>
+  rows as OrganisationDBRaw[]
 
 /**
  * listOrganisations operation.
@@ -288,7 +302,7 @@ export const listOrganisations = async (
   const durationMs = Date.now() - startedAt
 
   return {
-    data,
+    data: toOrganisationDbRawList(data),
     limit: pagination?.limit,
     offset,
     totalCount,
@@ -318,10 +332,11 @@ export const getOrganisation = async (
     conditions.push(hubFilter)
   }
 
-  return await db.query.organisation.findFirst({
+  const row = await db.query.organisation.findFirst({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined,
   })
+  return row ? toOrganisationDbRaw(row) : undefined
 }
 
 // ═══════════════════════
@@ -659,7 +674,7 @@ export const syncUserRoles = async (
   return await replaceManyRelated(
     db,
     organisationRole,
-    userRoles,
+    userRoles as InferInsertModel<typeof organisationRole>[],
     organisationRole.organisationId,
     organisationId,
   )

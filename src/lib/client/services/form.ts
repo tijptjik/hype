@@ -948,8 +948,14 @@ export function guardUserRolesDesync({
       email: '',
       image: null,
       attribution: '',
-      locale: null,
-      preferences: null,
+      locale: 'en',
+      preferences: {
+        fallbackLocales: ['en'],
+        allowMachineTranslation: false,
+        preferFallbackInCurrentLocale: false,
+        isTranslateButtonVisible: true,
+        admin: {},
+      },
       experimental: null,
       isAnonymous: false,
       contributedFeatures: {},
@@ -958,8 +964,8 @@ export function guardUserRolesDesync({
       newPhotoCount: 0,
       newFeatureCount: 0,
       roles: [],
-      createdAt: '',
-      modifiedAt: '',
+      createdAt: new Date(0),
+      modifiedAt: new Date(0),
     }
     const resolvedUser = selectedUser ?? fallbackUser
 

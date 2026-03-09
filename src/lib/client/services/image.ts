@@ -609,6 +609,7 @@ export async function updateImagePresentationMode(options: {
         : 'contain')
 
   const currentMode = currentImage.presentationMode ?? 'contain'
+  if (!nextMode) return false
   if (nextMode === currentMode) return false
 
   let ctx = options.ctx
