@@ -2,8 +2,19 @@
 import type { FormFieldsSectionItemProps } from '../formFieldsSection.types'
 import FormFieldCard from './FormFieldCard.svelte'
 
-let { property, index, totalItems, issueItemIds, card }: FormFieldsSectionItemProps =
-  $props()
+let {
+  property,
+  index,
+  totalItems,
+  moveWindowSize = totalItems,
+  isMoveLocked = false,
+  keepExpandedOnIntro = false,
+  issueItemIds,
+  card,
+  collapsedAll = false,
+  collapseAllVersion = 0,
+  onCardCollapseToggle,
+}: FormFieldsSectionItemProps = $props()
 
 const hasIssue = $derived(Boolean(issueItemIds?.includes(property.id)))
 const itemClass = $derived(
@@ -15,9 +26,15 @@ const resolvedCardContext = $derived.by(() => {
   if (!card) return null
   const propertyIndex = card.getPropertyIndex(property.id, index)
   if (propertyIndex < 0) return null
+  const presentation = card.resolveCardPresentation?.(property) ?? 'full'
+  const sourceTag = card.resolveSourceTag?.(property) ?? null
+  const titleHref = card.resolveTitleHref?.(property) ?? null
   return {
     propertyIndex,
     propertyFields: card.getPropertyFields?.(property.id, propertyIndex),
+    presentation,
+    titleHref,
+    sourceTag,
   }
 })
 </script>
@@ -28,13 +45,19 @@ const resolvedCardContext = $derived.by(() => {
       {property}
       propertyIndex={resolvedCardContext.propertyIndex}
       sectionRank={index}
+      {moveWindowSize}
+      {isMoveLocked}
       propertyFields={resolvedCardContext.propertyFields}
+      presentation={resolvedCardContext.presentation}
+      titleHref={resolvedCardContext.titleHref}
+      sourceTag={resolvedCardContext.sourceTag}
       {totalItems}
       removeMode={card.removeMode}
       locales={card.locales}
       classifierComponents={card.classifierComponents}
       specifierComponents={card.specifierComponents}
       isRequiredInPreflight={card.isRequiredInPreflight}
+      allIssues={card.allIssues}
       isEditing={card.isEditing}
       onIncreaseRank={card.onIncreaseRank}
       onDecreaseRank={card.onDecreaseRank}
@@ -44,9 +67,14 @@ const resolvedCardContext = $derived.by(() => {
       onAddValue={card.onAddValue}
       onRemoveValue={card.onRemoveValue}
       onMoveValue={card.onMoveValue}
+      onUpdateValue={card.onUpdateValue}
       onUpdateValueI18n={card.onUpdateValueI18n}
       onTranslateLocale={card.onTranslateLocale}
       onResetLocale={card.onResetLocale}
+      {collapsedAll}
+      {collapseAllVersion}
+      {keepExpandedOnIntro}
+      onCollapseToggle={onCardCollapseToggle}
     />
   {/if}
 </div>

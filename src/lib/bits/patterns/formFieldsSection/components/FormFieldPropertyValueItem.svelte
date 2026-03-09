@@ -8,6 +8,8 @@ import type { FormFieldPropertyValueItemProps } from '../formFieldsSection.types
 let {
   isEditing = false,
   optionRemoveMode = false,
+  isPlaceholder = false,
+  hasIssues = false,
   valueId,
   propertyId,
   onRemove,
@@ -18,7 +20,8 @@ let {
 </script>
 
 <div
-  class={`bits-project-field-card__value-item ${!isEditing ? 'bits-project-field-card__value-item--readonly' : ''}`}
+  class={`bits-project-field-card__value-item ${!isEditing ? 'bits-project-field-card__value-item--readonly' : ''} ${isPlaceholder ? 'bits-project-field-card__value-item--placeholder' : ''} ${hasIssues ? 'bits-project-field-card__value-item--issue' : ''}`}
+  aria-invalid={hasIssues}
   use:draggable={draggableConfig}
   use:droppable={droppableConfig}
 >

@@ -18,7 +18,6 @@ import type { DragDropState } from '@thisux/sveltednd'
 let {
   property,
   propertyIndex,
-  sectionRank,
   propertyFields,
   allIssues = [],
   locales,
@@ -36,14 +35,15 @@ let {
   onUpdateValueI18n,
   onTranslateLocale,
   onResetLocale,
+  onLayoutMutationStart,
 }: FormFieldCardBodyProps = $props()
 
 let optionRemoveMode = $state(false)
 
 const componentOptions = $derived<SelectItem[]>(
-  (property.type === 'classifier' ? classifierComponents : specifierComponents).map(
-    component => ({ value: component, label: component }),
-  ),
+  Array.from(
+    new Set([...classifierComponents, 'ToggleField', ...specifierComponents]),
+  ).map(component => ({ value: component, label: component })),
 )
 const canShowRange = $derived(property.component === 'RangeField')
 const canShowValues = $derived(
@@ -354,6 +354,7 @@ function bindValueEditable(
 }
 
 function toggleOptionRemoveMode(): void {
+  onLayoutMutationStart?.()
   optionRemoveMode = !optionRemoveMode
 }
 
@@ -386,7 +387,10 @@ $effect(() => {
   {isEditing}
   onTranslate={(sourceLocale, targetLocale) =>
     onTranslateLocale(property.id, sourceLocale, targetLocale)}
-  onResetLocale={targetLocale => onResetLocale(property.id, targetLocale)}
+  onResetLocale={targetLocale => {
+    onLayoutMutationStart?.()
+    return onResetLocale(property.id, targetLocale)
+  }}
 >
   {#snippet children(locale)}
     {@const showCoreFields = isPrimary(locale)}
@@ -395,11 +399,6 @@ $effect(() => {
     {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
     {@const labelGenName = getFieldName(['i18n', formLocale, 'labelGen'])}
     {@const placeholderGenName = getFieldName(['i18n', formLocale, 'placeholderGen'])}
-    {@const rankInputAttrs = getFieldAttrsWithValue(
-      ['rank'],
-      'number',
-      String(sectionRank),
-    )}
 
     <div class="bits-project-field-card__i18n-content">
       {#if labelGenName}
@@ -453,10 +452,6 @@ $effect(() => {
           name={`data.properties[${propertyIndex}].isTranslatable`}
           value={property.isTranslatable ? 'true' : 'false'}
         >
-
-        {#if rankInputAttrs}
-          <input {...rankInputAttrs} type="hidden">
-        {/if}
 
         <TextInput
           label={m.admin__forms_property_name_api()}
@@ -519,7 +514,13 @@ $effect(() => {
           issues={componentIssues}
           {isEditing}
           name={componentAttrs.name}
-          onValueChange={value => onUpdateBase(property.id, 'component', value)}
+          onValueChange={value => {
+            onLayoutMutationStart?.()
+            onUpdateBase(property.id, 'component', value)
+            if (value === 'RangeField' && property.isTranslatable) {
+              onUpdateBase(property.id, 'isTranslatable', false)
+            }
+          }}
         />
       {:else}
         <Skeleton />
@@ -555,7 +556,10 @@ $effect(() => {
         <FormFieldPropertyValueWrapper
           {isEditing}
           {optionRemoveMode}
-          onAdd={() => onAddValue(property.id)}
+          onAdd={() => {
+            onLayoutMutationStart?.()
+            onAddValue(property.id)
+          }}
           onToggleRemoveMode={toggleOptionRemoveMode}
         >
           {#snippet rows()}
@@ -581,7 +585,10 @@ $effect(() => {
                 hasIssues={Boolean(getValueIssues(value.id, locale)?.length)}
                 valueId={value.id}
                 propertyId={property.id}
-                onRemove={(propertyId, valueId) => onRemoveValue(propertyId, valueId)}
+                onRemove={(propertyId, valueId) => {
+                  onLayoutMutationStart?.()
+                  onRemoveValue(propertyId, valueId)
+                }}
                 draggableConfig={getValueDraggableConfig(valueIndex, value.id)}
                 droppableConfig={getValueDroppableConfig(valueIndex)}
               >

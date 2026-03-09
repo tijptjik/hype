@@ -1,6 +1,7 @@
 import type { Property, Id, Locale } from '$lib/types'
 import type { Snippet } from 'svelte'
 import type { DragDropOptions } from '@thisux/sveltednd'
+import type { Component } from 'svelte'
 
 export interface FormFieldsSectionActionHandlers {
   add: (event: Event) => void | Promise<void>
@@ -20,7 +21,14 @@ export interface FormFieldsSectionProps {
   canEdit?: boolean
   removeMode?: boolean
   onRemoveModeChange?: (value: boolean) => void
+  layoutMutationVersion?: number
   card?: FormFieldsSectionCardConfig
+  onVisibilityToggle?: (nextVisible: boolean, event: MouseEvent) => void
+  isVisibilityOn?: boolean
+  visibilityOnLabel?: string
+  visibilityOffLabel?: string
+  isItemVisible?: (property: Property) => boolean
+  forceFlipDisabled?: boolean
   class?: string
 }
 
@@ -39,14 +47,27 @@ export interface FormFieldsSectionWrapperProps {
   canEdit?: boolean
   onAdd?: (event: Event) => void | Promise<void>
   card?: FormFieldsSectionCardConfig
+  collapsedAll?: boolean
+  collapseAllVersion?: number
+  flipDisabled?: boolean
+  introItemId?: Id | null
+  onIntroEnd?: (propertyId: Id) => void
+  onCardCollapseToggle?: () => void
+  isItemVisible?: (property: Property) => boolean
 }
 
 export interface FormFieldsSectionItemProps {
   property: Property
   index: number
   totalItems: number
+  moveWindowSize?: number
+  isMoveLocked?: boolean
+  keepExpandedOnIntro?: boolean
   issueItemIds?: Id[]
   card?: FormFieldsSectionCardConfig
+  collapsedAll?: boolean
+  collapseAllVersion?: number
+  onCardCollapseToggle?: () => void
 }
 
 export interface FormFieldsSectionCardConfig extends FormFieldCardCallbacks {
@@ -54,14 +75,26 @@ export interface FormFieldsSectionCardConfig extends FormFieldCardCallbacks {
   classifierComponents: readonly string[]
   specifierComponents: readonly string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean
+  allIssues?: Array<{ message: string; path?: Array<string | number> }>
   isEditing?: boolean
   removeMode: boolean
   getPropertyIndex: (propertyId: Id, sectionIndex: number) => number
   getPropertyFields?: (propertyId: Id, propertyIndex: number) => unknown
+  resolveCardPresentation?: (property: Property) => 'full' | 'header'
+  resolveTitleHref?: (property: Property) => string | null
+  getMoveWindowSize?: (items: Property[]) => number
+  isMoveLocked?: (property: Property) => boolean
+  resolveSourceTag?: (property: Property) => {
+    label?: string
+    title?: string
+    tone: 'global' | 'hub' | 'org' | 'project'
+    iconComponent?: Component
+  } | null
 }
 
 type ValueI18nField = 'value'
 type PropertyI18nField = 'label' | 'placeholder' | 'labelGen' | 'placeholderGen'
+type PropertyValueField = 'value'
 
 export interface FormFieldCardCallbacks {
   onIncreaseRank: (event: Event, propertyId: Id) => void | Promise<void>
@@ -69,7 +102,14 @@ export interface FormFieldCardCallbacks {
   onRemove: (event: Event, propertyId: Id) => void | Promise<void>
   onUpdateBase: (
     propertyId: Id,
-    key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable',
+    key:
+      | 'key'
+      | 'component'
+      | 'min'
+      | 'max'
+      | 'isTranslatable'
+      | 'isDefaultEnabled'
+      | 'isEnabled',
     value: string | number | null | boolean,
   ) => void
   onUpdateI18n: (
@@ -88,6 +128,12 @@ export interface FormFieldCardCallbacks {
     key: ValueI18nField,
     value: string,
   ) => void
+  onUpdateValue: (
+    propertyId: Id,
+    valueId: Id,
+    key: PropertyValueField,
+    value: string,
+  ) => void
   onTranslateLocale: (
     propertyId: Id,
     sourceLocale: Locale,
@@ -101,7 +147,10 @@ export interface FormFieldCardProps extends FormFieldCardCallbacks {
   property: Property
   propertyIndex: number
   sectionRank: number
+  moveWindowSize?: number
+  isMoveLocked?: boolean
   propertyFields?: unknown
+  allIssues?: Array<{ message: string; path?: Array<string | number> }>
   totalItems: number
   removeMode: boolean
   locales: Locale[]
@@ -109,11 +158,25 @@ export interface FormFieldCardProps extends FormFieldCardCallbacks {
   specifierComponents: readonly string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   isEditing?: boolean
+  presentation?: 'full' | 'header'
+  titleHref?: string | null
+  sourceTag?: {
+    label?: string
+    title?: string
+    tone: 'global' | 'hub' | 'org' | 'project'
+    iconComponent?: Component
+  } | null
+  collapsedAll?: boolean
+  collapseAllVersion?: number
+  keepExpandedOnIntro?: boolean
+  onCollapseToggle?: () => void
 }
 
 export interface FormFieldPropertyValueItemProps {
   isEditing?: boolean
   optionRemoveMode?: boolean
+  isPlaceholder?: boolean
+  hasIssues?: boolean
   valueId: string
   propertyId: string
   onRemove: (propertyId: string, valueId: string) => void

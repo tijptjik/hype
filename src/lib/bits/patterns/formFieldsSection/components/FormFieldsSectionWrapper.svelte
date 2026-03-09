@@ -2,6 +2,7 @@
 // SVELTE
 import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
+import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
@@ -19,7 +20,20 @@ let {
   canEdit = isEditing,
   onAdd,
   card,
+  collapsedAll = false,
+  collapseAllVersion = 0,
+  flipDisabled = false,
+  introItemId = null,
+  onIntroEnd,
+  onCardCollapseToggle,
+  isItemVisible,
 }: FormFieldsSectionWrapperProps = $props()
+
+const moveWindowSize = $derived(
+  card?.getMoveWindowSize
+    ? Math.max(0, Math.min(items.length, card.getMoveWindowSize(items)))
+    : items.length,
+)
 </script>
 
 {#if items.length === 0}
@@ -43,11 +57,33 @@ let {
 {:else}
   <div class="bits-project-fields__list">
     {#each items as property, index (property.id)}
+      {@const itemVisible = isItemVisible ? isItemVisible(property) : true}
       <div
-        animate:flip={{ duration: 240, easing: cubicInOut }}
+        class={itemVisible ? '' : 'hidden'}
+        animate:flip={{ duration: flipDisabled ? 0 : 220, easing: cubicInOut }}
+        in:slide={{
+          axis: 'y',
+          duration: introItemId === property.id ? 180 : 0,
+        }}
+        onintroend={() => {
+          if (introItemId !== property.id) return
+          onIntroEnd?.(property.id)
+        }}
         id={`property-wrapper-${property.id}`}
       >
-        <Item {property} {index} totalItems={items.length} {issueItemIds} {card} />
+        <Item
+          {property}
+          {index}
+          totalItems={items.length}
+          {moveWindowSize}
+          isMoveLocked={card?.isMoveLocked?.(property) ?? false}
+          keepExpandedOnIntro={introItemId === property.id}
+          {issueItemIds}
+          {card}
+          {collapsedAll}
+          {collapseAllVersion}
+          {onCardCollapseToggle}
+        />
       </div>
     {/each}
   </div>
