@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 // I18N
+import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
 import { UserGroup } from '@steeze-ui/heroicons'
@@ -45,15 +46,29 @@ $effect(() => {
   searchTerm = ''
 })
 
-const filteredOrganisations = $derived(
-  appCtx.getFilteredResource(FirstClassResource.organisation),
-)
+function filterOrganisations(organisations: Organisation[], term: string) {
+  if (!term) return organisations
+
+  const searchLower = term.toLowerCase()
+  return organisations.filter(organisation => {
+    return (
+      getI18n(organisation, 'name', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower) ||
+      getI18n(organisation, 'description', appCtx.getUserPreferences())
+        .toLowerCase()
+        .includes(searchLower)
+    )
+  })
+}
+
+const filteredOrganisations = $derived(filterOrganisations(organisations, searchTerm))
 let isDefaultOpen = $derived(
   typeof window !== 'undefined' ? document.body.clientHeight > 1000 : false,
 )
 
 let handleReset = () => {
-  if (selectedOrganisations.length == 0) {
+  if (selectedOrganisations.length === 0) {
     appCtx.closePanel(panelProps.panelType)
   } else {
     appCtx.resetOrganisations()
