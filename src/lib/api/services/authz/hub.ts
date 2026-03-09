@@ -44,6 +44,8 @@ import type {
 //    - isCoreHubAdmin
 //    - getScopedHubAdminIds
 //    - isRelevantHubAdmin
+//    - resolveRoleHubId
+//    - hasProjectPropertyEditorAccessToHub
 //
 // 4. INPUT NORMALIZERS
 //    - toHubListConditions
@@ -188,6 +190,70 @@ export const isRelevantHubAdmin = (
   return getScopedHubAdminIds(roles).has(resourceHubId)
 }
 
+const resolveRoleHubId = (role: UserRoleDisco): string | null => {
+  if (role.type === 'hub') {
+    return typeof role.hubId === 'string' ? role.hubId : null
+  }
+
+  if (role.type === 'organisation') {
+    const directHubId = (role as { hubId?: unknown }).hubId
+    if (typeof directHubId === 'string') return directHubId
+
+    const relationHubId = (role as { organisation?: { hubId?: unknown } }).organisation
+      ?.hubId
+    return typeof relationHubId === 'string' ? relationHubId : null
+  }
+
+  if (role.type === 'project') {
+    const directHubId = (role as { hubId?: unknown }).hubId
+    if (typeof directHubId === 'string') return directHubId
+
+    const projectHubId = (role as { project?: { hubId?: unknown } }).project?.hubId
+    if (typeof projectHubId === 'string') return projectHubId
+
+    const projectOrganisationHubId = (
+      role as {
+        project?: { organisation?: { hubId?: unknown } }
+      }
+    ).project?.organisation?.hubId
+    return typeof projectOrganisationHubId === 'string'
+      ? projectOrganisationHubId
+      : null
+  }
+
+  return null
+}
+
+const hasProjectPropertyEditorAccessToHub = (
+  roles: UserRoleDisco[],
+  params: { resourceHubId?: string | null; resourceHubCode?: string | null },
+): boolean => {
+  // Core hub can be read by any actor who can edit project properties in any scope.
+  if (params.resourceHubCode === CORE_HUB_CODE) {
+    return roles.some(role => {
+      if (role.type === 'organisation') return role.role === 'owner'
+      if (role.type === 'project')
+        return role.role === 'owner' || role.role === 'maintainer'
+      return false
+    })
+  }
+
+  if (!params.resourceHubId) return false
+
+  return roles.some(role => {
+    if (role.type === 'organisation' && role.role !== 'owner') return false
+    if (
+      role.type === 'project' &&
+      role.role !== 'owner' &&
+      role.role !== 'maintainer'
+    ) {
+      return false
+    }
+    if (role.type === 'hub') return false
+    return resolveRoleHubId(role) === params.resourceHubId
+  })
+}
+
 /* ----------------- */
 // INPUT NORMALIZERS
 /* -------- */
@@ -311,9 +377,20 @@ const readHubPolicy: HubPolicyHandler = params => {
     return logHubReject('read', params, 'UNAUTHENTICATED')
   }
 
-  return isRelevantHubAdmin(params.userRoles, params.resourceHubId)
-    ? { allowed: true }
-    : logHubReject('read', params, 'INSUFFICIENT_ROLE')
+  if (isRelevantHubAdmin(params.userRoles, params.resourceHubId)) {
+    return { allowed: true }
+  }
+
+  if (
+    hasProjectPropertyEditorAccessToHub(params.userRoles, {
+      resourceHubId: params.resourceHubId,
+      resourceHubCode: params.resourceHubCode,
+    })
+  ) {
+    return { allowed: true }
+  }
+
+  return logHubReject('read', params, 'INSUFFICIENT_ROLE')
 }
 
 const createHubPolicy: HubPolicyHandler = params => {
@@ -372,21 +449,25 @@ export const authorizeHubList = (
 
 export const authorizeHubRead = (
   actor: HubAuthActor,
-  target: Required<Pick<HubAuthTarget, 'resourceHubId'>>,
+  target: Required<Pick<HubAuthTarget, 'resourceHubId'>> & {
+    resourceHubCode?: string | null
+  },
 ): AuthorizationDecision =>
   readHubPolicy({
     ...toHubPolicyBase(actor),
     action: 'readHub',
     resourceHubId: target.resourceHubId,
+    resourceHubCode: target.resourceHubCode,
   })
 
 export const authorizeHubReadForProbe = (params: {
   user: { id: string; isAnonymous?: boolean }
   userRoles: UserRoleDisco[]
-  probe: { id: string }
+  probe: { id: string; code: string }
 }): AuthorizationDecision =>
   authorizeHubRead(toHubSubmissionActor(params.user, params.userRoles), {
     resourceHubId: params.probe.id,
+    resourceHubCode: params.probe.code,
   })
 
 /* ----------------- */
