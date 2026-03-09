@@ -2,7 +2,12 @@
 import { asc, eq, inArray, type SQL } from 'drizzle-orm'
 import { error } from '@sveltejs/kit'
 // LIB
-import { applyQueryFilters, removeExcludedColumns, toStableSignature } from '$lib/api'
+import {
+  applyQueryFilters,
+  removeExcludedColumns,
+  toStableSignature,
+  toTriStateBoolean,
+} from '$lib/api'
 import { toBooleanOrUndefined } from '$lib/api/services'
 // AUTH
 import {
@@ -14,17 +19,21 @@ import {
   assertIsCoreInclusiveModifiedBySuperAdmin,
 } from '$lib/auth/asserts'
 // DB
-import { isFieldUnique } from '$lib/db'
-import {
-  toEntityResponseShape as toOrganisationEntityResponseShapeFromDb,
-  toListResponseShape as toOrganisationListResponseShapeFromDb,
-} from '$lib/db/services/organisation'
+import { isFieldUnique, transformI18nSafely } from '$lib/db'
+import { applyTriStateBooleanCondition } from '$lib/db/query'
+import { toImageEnvelope } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
+import {
+  OrganisationAdminProfileAPI,
+  OrganisationCardProfileAPI,
+  OrganisationDetailProfileAPI,
+  OrganisationListProfileAPI,
+} from '$lib/db/zod'
 // SCHEMA
 import { organisation, organisationProperty } from '$lib/db/schema/index'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
 import type {
   CapabilityDefinitions,
@@ -46,10 +55,45 @@ import type {
 } from '$lib/types'
 import type { SuperValidated } from 'sveltekit-superforms'
 
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// DB RELATIONS
+// - organisationWithRelations
+// - getOrganisationWithRelations
+//
+// PROFILE SHAPING
+// - toOrganisationProfile
+// - toProfileResponseShape
+// - toEntityResponseShape
+// - toListResponseShape
+//
+// QUERY CONTEXT
+// - toLookupConditions
+// - toRequestedListState
+// - buildVisibilityAndOwnershipConditions
+// - toQueryConditions
+//
+// ASSERT :: AUTHZ
+// - assertPermissionsToCreateOrganisation
+// - assertPermissionsToUpdateOrganisation
+//
+// ASSERT :: VALIDATION
+// - assertCodeUnique
+//
+// CHANGE DETECTION
+// - isAccessLostUponSuccess
+// - hasOrganisationCapabilitiesChanged
+
 /********************
- *  COMMON
+ *  DB RELATIONS
  ************/
-export const organisationWithRelations = {
+/**
+ * Baseline relation graph for lightweight organisation reads.
+ * Keeps common list/detail queries cheap while preserving core UI fields.
+ */
+const organisationWithRelations = {
   i18n: true,
   userRoles: {
     with: {
@@ -64,24 +108,17 @@ export const organisationWithRelations = {
   },
 }
 
+/**
+ * Resolves the organisation relation graph for the requested profile.
+ * Adds deep property relations for admin profile and hub relation for super admins.
+ */
 export const getOrganisationWithRelations = (
   profile: OrganisationProfile,
   isSuperAdmin: boolean,
 ) => {
   if (profile === 'admin') {
     return {
-      i18n: true,
-      userRoles: {
-        with: {
-          user: {
-            columns: userColumnsWithPrivacyProtected,
-          },
-        },
-      },
-      image: true,
-      publisher: {
-        columns: userColumnsWithPrivacyProtected,
-      },
+      ...organisationWithRelations,
       properties: {
         with: {
           i18n: true,
@@ -123,8 +160,15 @@ export const getOrganisationWithRelations = (
   }
 }
 
+/********************
+ *  PROFILE SHAPING
+ ************/
 const organisationProfiles = ['list', 'card', 'detail', 'admin'] as const
 
+/**
+ * Normalizes unknown profile input to a supported organisation profile value.
+ * Falls back to the provided default when value is invalid or absent.
+ */
 export const toOrganisationProfile = (
   value: unknown,
   fallback: OrganisationProfile,
@@ -135,35 +179,146 @@ export const toOrganisationProfile = (
     : fallback
 
 /**
+ * Shapes a raw organisation row into a profile-safe API payload.
+ * Normalizes i18n blocks and nested property/value structures for stable consumers.
+ */
+const toProfileResponseShape = async (
+  organisation: OrganisationDBRaw,
+  profile: OrganisationProfile,
+  _isCollection: boolean,
+  _isSuperAdmin: boolean,
+): Promise<Organisation | Record<string, unknown>> => {
+  const orgWithProperties = organisation as OrganisationDBRaw & {
+    propertyAssignments?: Array<{
+      property?: {
+        i18n?: unknown
+        values?: Array<{ i18n?: unknown }>
+      } | null
+    }>
+    properties?: Array<{
+      i18n?: unknown
+      values?: Array<{ i18n?: unknown }>
+    }>
+  }
+
+  const assignmentProperties = (orgWithProperties.propertyAssignments ?? [])
+    .map(assignment => assignment?.property)
+    .filter((item: unknown): item is Record<string, unknown> => Boolean(item))
+  const rawProperties = (
+    assignmentProperties.length > 0
+      ? assignmentProperties
+      : (orgWithProperties.properties ?? [])
+  ) as Array<{
+    i18n?: unknown
+    values?: Array<{ i18n?: unknown }>
+  }>
+
+  const data = {
+    ...organisation,
+    i18n: transformI18nSafely(organisation.i18n),
+    userRoles: organisation.userRoles,
+    properties: rawProperties.map(property => ({
+      ...property,
+      i18n: transformI18nSafely(property.i18n as unknown),
+      values: (property.values ?? []).map(value => ({
+        ...value,
+        i18n: transformI18nSafely(value.i18n as unknown),
+      })),
+    })),
+    image: organisation.image
+      ? toImageEnvelope(
+          organisation.image,
+          profile,
+          ImageContextResource.organisation,
+          organisation.id,
+        )
+      : null,
+  }
+
+  if (profile === 'list') return OrganisationListProfileAPI.parse(data)
+  if (profile === 'card') return OrganisationCardProfileAPI.parse(data)
+  if (profile === 'detail') return OrganisationDetailProfileAPI.parse(data)
+  return OrganisationAdminProfileAPI.parse(data) as unknown as Organisation
+}
+
+/**
  * Shapes a single organisation entity into an API entity response envelope.
- *
- * @param organisation - Organisation row or `null`.
- * @param user - Optional session user for super-admin shaping behavior.
- * @param profile - Output response profile.
- * @returns Entity response envelope with typed organisation payload.
+ * Returns `data: null` on misses while preserving duration metadata.
  */
 export const toEntityResponseShape = async <P extends OrganisationProfile = 'detail'>(
   organisation: OrganisationDBRaw | null,
   user?: SessionUser,
   profile: P = 'detail' as P,
-): Promise<EntityResponse<OrganisationEntityByProfile<P>>> =>
-  toOrganisationEntityResponseShapeFromDb(organisation, user, profile)
+): Promise<EntityResponse<OrganisationEntityByProfile<P>>> => {
+  const startedAt = Date.now()
+
+  if (!organisation) {
+    return { data: null, durationMs: Date.now() - startedAt }
+  }
+
+  const data = await toProfileResponseShape(
+    organisation,
+    profile,
+    false,
+    user?.superAdmin || false,
+  )
+  return {
+    data: data as OrganisationEntityByProfile<P>,
+    durationMs: Date.now() - startedAt,
+  }
+}
 
 /**
  * Shapes a paginated organisation result into an API list response envelope.
- *
- * @param result - Paginated organisation rows from DB service.
- * @param user - Optional session user for profile shaping behavior.
- * @param profile - Output response profile.
- * @returns List response envelope with typed organisation payloads.
+ * Preserves original pagination/sorting metadata and only transforms row payloads.
  */
 export const toListResponseShape = async <P extends OrganisationProfile = 'list'>(
   result: ListResponse<OrganisationDBRaw>,
   user: SessionUser | undefined,
   profile: P = 'list' as P,
-): Promise<ListResponse<OrganisationListByProfile<P>>> =>
-  toOrganisationListResponseShapeFromDb(result, user, profile)
+): Promise<ListResponse<OrganisationListByProfile<P>>> => {
+  const {
+    data: organisations,
+    limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
+  } = result
 
+  const data = await Promise.all(
+    organisations.map(organisation =>
+      toProfileResponseShape(organisation, profile, true, user?.superAdmin || false),
+    ),
+  )
+
+  return {
+    data: data as Array<OrganisationListByProfile<P>>,
+    limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
+  }
+}
+
+/********************
+ *  QUERY CONTEXT
+ ************/
+/**
+ * Builds lookup conditions from route reference params.
+ * Supports both `id` and `code` ref modes for shared get/update flows.
+ */
 export const toLookupConditions = (params: {
   ref: string
   refKey?: 'id' | 'code'
@@ -172,32 +327,16 @@ export const toLookupConditions = (params: {
     ? ({ code: params.ref } as Partial<OrganisationDB>)
     : ({ id: params.ref as Id } as Partial<OrganisationDB>)
 
+/**
+ * Resolves requested visibility state with safe defaults.
+ * Defaults align with public list behavior (`published=true`, `archived=false`).
+ */
 export const toRequestedListState = (conditions: Partial<OrganisationDB>) => ({
   isPublished: toBooleanOrUndefined(conditions.isPublished) ?? true,
   isArchived: toBooleanOrUndefined(conditions.isArchived) ?? false,
 })
 
 const VISIBILITY_COLUMNS = ['isArchived', 'isPublished'] as const
-
-const toTriStateBoolean = (value: unknown): boolean | null | undefined => {
-  if (value === undefined) return undefined
-  if (value === null) return null
-  if (value === true || value === false) return value
-  if (value === 'true') return true
-  if (value === 'false') return false
-  if (value === 1) return true
-  if (value === 0) return false
-  return undefined
-}
-
-const applyTriStateBooleanCondition = (
-  conditions: SQL<unknown>[],
-  column: typeof organisation.isPublished | typeof organisation.isArchived,
-  value: boolean | null | undefined,
-) => {
-  if (value === true) conditions.push(eq(column, true))
-  if (value === false) conditions.push(eq(column, false))
-}
 
 /**
  * Builds visibility and ownership constraints for organisation list queries.
@@ -216,7 +355,7 @@ const applyTriStateBooleanCondition = (
  * Legacy dot-key and raw filter handling is delegated to `applyQueryFilters`;
  * visibility keys are applied centrally here.
  */
-export const buildVisibilityAndOwnershipConditions = (
+const buildVisibilityAndOwnershipConditions = (
   user: SessionUser,
   isAdminRequest: boolean,
   params: QueryParams,
@@ -265,11 +404,8 @@ export const buildVisibilityAndOwnershipConditions = (
 }
 
 /**
- * Get the query context for the organisation resource - filters the query based on the user's roles, and the query parameters.
- * @param user - The user object
- * @param isAdminRequest - Whether the request is from admin context
- * @param params - The query parameters
- * @param userRoles - The user roles
+ * Builds final organisation query conditions for list/get operations.
+ * Combines role-aware visibility constraints with generic request filter application.
  */
 export const toQueryConditions = (
   user: SessionUser,
@@ -300,18 +436,14 @@ export const toQueryConditions = (
   return contextRespectingVisibilityAndOwnership
 }
 
+/********************
+ *  ASSERT :: AUTHZ
+ ************/
 /**
- * Run assertions to check if the user has permissions to create an organisation
- * @param session - The session object
- * @param request - The request object
- * @param formData - The form data
- * @param userRoles - The user roles
- * @returns Object containing validation and access control context
+ * Asserts that organisation create flow is allowed for the caller.
+ * Enforces logged-in admin request and super-admin capability.
  */
-export const assertPermissionsToCreateOrganisation = (
-  user: SessionUser,
-  request: Request,
-) => {
+const assertPermissionsToCreateOrganisation = (user: SessionUser, request: Request) => {
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user),
@@ -323,16 +455,10 @@ export const assertPermissionsToCreateOrganisation = (
 }
 
 /**
- * Get the context for updating an organisation
- * @param session - The session object
- * @param request - The request object
- * @param formData - The form data
- * @param userRoles - The user roles
- * @returns Object containing validation and access control context
- * @remarks We don't need to assert code in params equals code in form,
- * as we want to allow the users to change the code of the organisation.
+ * Asserts that organisation update flow is allowed for the caller.
+ * Allows code changes but enforces ownership/super-admin and guarded core flags.
  */
-export const assertPermissionsToUpdateOrganisation = (
+const assertPermissionsToUpdateOrganisation = (
   user: SessionUser,
   request: Request,
   formData: Record<string, unknown> & { id?: string },
@@ -355,7 +481,14 @@ export const assertPermissionsToUpdateOrganisation = (
   if (assertionError) return assertionError
 }
 
-export const assertCodeUnique = async (
+/********************
+ *  ASSERT :: VALIDATION
+ ************/
+/**
+ * Validates organisation code uniqueness and writes form errors on conflict.
+ * Keeps field error propagation local to the form contract used by callers.
+ */
+const assertCodeUnique = async (
   db: Database,
   form: SuperValidated<OrganisationNew> | SuperValidated<Organisation>,
   formData: OrganisationNew | Organisation,
@@ -375,14 +508,14 @@ export const assertCodeUnique = async (
   return form
 }
 
+/********************
+ *  CHANGE DETECTION
+ ************/
 /**
- * Check if the current user will lose access upon success, superAdmins are exempt.
- * @param formData - The form data
- * @param userRoles - The user roles
- * @param user - The user
- * @returns True if the current user will lose access upon success, false otherwise
+ * Checks whether the acting user loses organisation-role membership after update.
+ * Super admins are exempt because access is not tied to organisation role rows.
  */
-export const isAccessLostUponSuccess = (
+const isAccessLostUponSuccess = (
   user: SessionUser,
   formData: { id?: string; userRoles: UserRoleDisco[] },
   userRoles?: UserRoleDisco[],
