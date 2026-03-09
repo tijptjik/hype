@@ -19,6 +19,7 @@ import {
   guardRefDesync,
   isFormLevelIssue,
   prepareSubmitPayloadMeta,
+  resolveFacetIssueSummary,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
   resetLocaleFields,
@@ -26,6 +27,7 @@ import {
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
+  withFacetIssueIndicators,
 } from '$lib/client/services/form'
 import {
   getCapabilityKeysFromDefinitions,
@@ -50,18 +52,16 @@ import {
 } from '$lib/client/services/project'
 import {
   addProjectPropertyForType,
-  changeProjectPropertyRank,
+  changeProjectPropertyRankUnified,
   getCurrentProjectProperties,
   getPropertyFormIssues,
-  getPropertyIssueItemIdsForTypeFromFormIssues,
-  getPropertyIssuesForTypeFromFormIssues,
   getProjectPropertyFieldsForIndex,
-  getPropertiesByType,
-  removeProjectPropertyForType,
+  removeProjectProperty,
   resetProjectPropertyLocale,
   scrollWithMovedProperty,
   stopEvent,
   translateProjectPropertyLocale,
+  updateProjectPropertyValue,
   updateProjectPropertyBase,
   updateProjectPropertyI18n,
   updateProjectPropertyValueI18n,
@@ -118,7 +118,9 @@ import {
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
+import Blend from 'virtual:icons/lucide/blend'
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
+import Type from 'virtual:icons/lucide/type'
 // ENUMS
 import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
 // TYPES
@@ -128,23 +130,24 @@ import type {
   FormDataUpdaterForm,
   ImageCtxEnvelope,
   Locale,
-  OrganisationGetState,
-  ProjectBooleanField,
-  ProjectCurrentFormDraft,
-  ProjectRoleCapabilities,
-  PropertyDiscriminator,
-  ProjectSubmitBaselineRelations,
-  ProjectSubmitDraft,
-  ProjectOwnerRoleSeedOrganisation,
-  ProjectGetResponse,
-  ProjectFormInput,
   Property,
-  ProjectRoleUser,
   ResourceContext,
   UserRoleFieldNameResolverForm,
   User,
   Id,
 } from '$lib/types'
+import type {
+  OrganisationGetState,
+  ProjectBooleanField,
+  ProjectCurrentFormDraft,
+  ProjectFormInput,
+  ProjectGetResponse,
+  ProjectOwnerRoleSeedOrganisation,
+  ProjectRoleCapabilities,
+  ProjectRoleUser,
+  ProjectSubmitBaselineRelations,
+  ProjectSubmitDraft,
+} from '$lib/db/zod/schema/project.types'
 
 // § Context
 
@@ -188,7 +191,10 @@ let contentsElement: HTMLFormElement | undefined = $state()
 
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
+let lastLoggedIssueSignature = $state('')
 let suppressFormLevelIssues = $state(false)
+let fieldsLayoutMutationVersion = $state(0)
+let isProjectFieldResetInProgress = $state(false)
 let selectedUsersById = $state<Record<string, User>>({})
 let selectedParentOrganisationById = $state<
   Record<string, ParentSectionOrganisationItem>
@@ -197,6 +203,7 @@ let autoSeededOwnerOrganisationIds = $state<Set<string>>(new Set())
 let ownerRoleSeedAttempt = $state(0)
 let hasAutoEnteredEditForNew = $state(false)
 let hierarchy = $state<ResourceContext | null>(null)
+let fieldRemoveMode = $state(false)
 
 // § State - Data
 
@@ -243,12 +250,6 @@ const translatableI18nFieldsBySection: Record<
   descriptor: ['name', 'nameShort', 'description'],
   credit: ['license', 'attribution'],
 }
-// Per-section "remove mode" state used by classifier/specifier cards.
-let sectionRemoveModes = $state<Record<PropertyDiscriminator, boolean>>({
-  classifier: false,
-  specifier: false,
-})
-
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
   form: projectForm as never,
@@ -258,6 +259,16 @@ const configuredProjectForm = configureForm(() => ({
       defaultMode: isNewProjectRef ? 'create' : 'update',
       resolveUpdateId: () => project?.data?.id ?? committedProject?.data?.id ?? '',
     })
+    if (isNewProjectRef) {
+      submittedPayload.meta.mode = 'create'
+      delete submittedPayload.meta.id
+      delete (submittedPayload.meta as { updatedAt?: unknown }).updatedAt
+    }
+    // Guard against sparse form-array payloads (e.g. `data.properties.0 = undefined`)
+    // so preflight always receives a dense object array.
+    submittedPayload.data.properties = toDenseProperties(
+      submittedPayload.data.properties,
+    )
 
     // Last committed server state used as baseline for changed-only relation submission.
     const baselineFormInput = toProjectFormInput(committedProject?.data, {
@@ -306,8 +317,11 @@ const configuredProjectForm = configureForm(() => ({
       baselineValue:
         (baselineFormInput.data as ProjectSubmitBaselineRelations).properties ?? [],
       toEffective: ({ submittedValue, currentValue }) => {
+        const liveProperties = untrack(() => [...projectFieldsInSection])
+        // Always prefer the live form snapshot for properties so header-only cards
+        // (for inherited scopes) still contribute full rank updates.
         const raw =
-          submittedValue ??
+          liveProperties ??
           currentValue ??
           (baselineFormInput.data as ProjectSubmitBaselineRelations).properties ??
           []
@@ -375,91 +389,80 @@ const projectPropertyFormAdapter = $derived(
 // 2. PROPERTY FORM ACTIONS + MUTATORS
 // ═══════════════════════
 
-// Factory for section-scoped property actions (classifier/specifier).
-function createPropertyActions(
-  type: PropertyDiscriminator,
-  getCount: () => number,
-  clearRemoveMode: () => void,
-) {
-  return {
-    add: (event: Event): void => {
-      stopEvent(event)
-      if (!headerCtrl.state.isEditing && canSubmitProject) {
-        headerCtrl.setEditing(true)
-      }
-      addProjectPropertyForType(
+const fieldActions = {
+  add: (event: Event): void => {
+    stopEvent(event)
+    if (!headerCtrl.state.isEditing && canSubmitProject) {
+      headerCtrl.setEditing(true)
+    }
+    addProjectPropertyForType(
+      projectPropertyFormAdapter,
+      'classifier',
+      project?.data?.id ?? '',
+      classifierComponentTypes,
+      specifierComponentTypes,
+    )
+    revalidateAfterProgrammaticChange()
+  },
+  remove: (event: Event, propertyId: Id): void => {
+    stopEvent(event)
+    const target = getCurrentProjectProperties(projectPropertyFormAdapter).find(
+      property => property.id === propertyId,
+    )
+    if (target && target.scope !== 'project') {
+      updateProjectPropertyBase(
         projectPropertyFormAdapter,
-        type,
-        project?.data?.id ?? '',
-        classifierComponentTypes,
-        specifierComponentTypes,
-      )
-      revalidateAfterProgrammaticChange()
-    },
-    remove: (event: Event, propertyId: Id): void => {
-      stopEvent(event)
-      removeProjectPropertyForType(projectPropertyFormAdapter, type, propertyId)
-      if (getCount() <= 1) clearRemoveMode()
-      revalidateAfterProgrammaticChange()
-    },
-    increaseRank: async (event: Event, propertyId: Id): Promise<void> => {
-      stopEvent(event)
-      await scrollWithMovedProperty(
         propertyId,
-        () => {
-          changeProjectPropertyRank(projectPropertyFormAdapter, type, propertyId, 'up')
-        },
-        async () => {
-          await tick()
-          await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
-        },
+        'isEnabled',
+        false,
       )
-      revalidateAfterProgrammaticChange()
-    },
-    decreaseRank: async (event: Event, propertyId: Id): Promise<void> => {
-      stopEvent(event)
-      await scrollWithMovedProperty(
-        propertyId,
-        () => {
-          changeProjectPropertyRank(
-            projectPropertyFormAdapter,
-            type,
-            propertyId,
-            'down',
-          )
-        },
-        async () => {
-          await tick()
-          await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
-        },
-      )
-      revalidateAfterProgrammaticChange()
-    },
-  }
+    } else {
+      removeProjectProperty(projectPropertyFormAdapter, propertyId)
+      if (projectFieldsInSection.length <= 1) fieldRemoveMode = false
+    }
+    revalidateAfterProgrammaticChange()
+  },
+  increaseRank: async (event: Event, propertyId: Id): Promise<void> => {
+    stopEvent(event)
+    await scrollWithMovedProperty(
+      propertyId,
+      () => {
+        changeProjectPropertyRankUnified(projectPropertyFormAdapter, propertyId, 'up')
+      },
+      async () => {
+        await tick()
+        await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
+      },
+    )
+    revalidateAfterProgrammaticChange()
+  },
+  decreaseRank: async (event: Event, propertyId: Id): Promise<void> => {
+    stopEvent(event)
+    await scrollWithMovedProperty(
+      propertyId,
+      () => {
+        changeProjectPropertyRankUnified(projectPropertyFormAdapter, propertyId, 'down')
+      },
+      async () => {
+        await tick()
+        await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
+      },
+    )
+    revalidateAfterProgrammaticChange()
+  },
 }
-
-// Action set for classifier properties.
-const classifierActions = createPropertyActions(
-  'classifier',
-  () => classifierPropsInSection.length,
-  () => {
-    sectionRemoveModes.classifier = false
-  },
-)
-
-// Action set for specifier properties.
-const specifierActions = createPropertyActions(
-  'specifier',
-  () => specifierPropsInSection.length,
-  () => {
-    sectionRemoveModes.specifier = false
-  },
-)
 
 // Update base property fields (`key`, `component`, numeric bounds, translatability).
 const updatePropertyBase = (
   propertyId: Id,
-  key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable',
+  key:
+    | 'key'
+    | 'component'
+    | 'min'
+    | 'max'
+    | 'isTranslatable'
+    | 'isDefaultEnabled'
+    | 'isEnabled',
   value: string | number | null | boolean,
 ): void => {
   updateProjectPropertyBase(projectPropertyFormAdapter, propertyId, key, value)
@@ -519,21 +522,79 @@ const updatePropertyValueI18n = (
   revalidateAfterProgrammaticChange()
 }
 
-// Sorted classifier properties shown in the classifier section.
-const classifierPropsInSection = $derived(
-  getPropertiesByType(
-    getCurrentProjectProperties(projectPropertyFormAdapter),
-    'classifier',
-  ),
-)
+const updatePropertyValue = (
+  propertyId: Id,
+  valueId: Id,
+  key: 'value',
+  value: string,
+): void => {
+  updateProjectPropertyValue(
+    projectPropertyFormAdapter,
+    propertyId,
+    valueId,
+    key,
+    value,
+  )
+  revalidateAfterProgrammaticChange()
+}
 
-// Sorted specifier properties shown in the specifier section.
-const specifierPropsInSection = $derived(
-  getPropertiesByType(
-    getCurrentProjectProperties(projectPropertyFormAdapter),
-    'specifier',
-  ),
-)
+const isPropertyEnabled = (property: Property): boolean =>
+  property.scope === 'project'
+    ? true
+    : typeof (property as Property & { isEnabled?: boolean }).isEnabled === 'boolean'
+      ? Boolean((property as Property & { isEnabled?: boolean }).isEnabled)
+      : Boolean(property.isDefaultEnabled)
+
+const getInheritedTailSpecificity = (property: Property): number => {
+  if (property.scope === 'organisation') return 0
+  if (property.scope === 'hub' && property.hubId) return 1
+  if (property.scope === 'hub') return 2
+  return 3
+}
+
+const getPropertyDisplayName = (property: Property): string =>
+  (property.i18n?.en?.label ?? property.key ?? '').toString().toLowerCase()
+
+const projectFieldsInSection = $derived.by(() => {
+  const rows = [...getCurrentProjectProperties(projectPropertyFormAdapter)]
+
+  const sorted = rows.sort((left, right) => {
+    const leftDisabledInherited = left.scope !== 'project' && !isPropertyEnabled(left)
+    const rightDisabledInherited =
+      right.scope !== 'project' && !isPropertyEnabled(right)
+    if (leftDisabledInherited !== rightDisabledInherited) {
+      return leftDisabledInherited ? 1 : -1
+    }
+
+    if (leftDisabledInherited && rightDisabledInherited) {
+      const specificityDiff =
+        getInheritedTailSpecificity(left) - getInheritedTailSpecificity(right)
+      if (specificityDiff !== 0) return specificityDiff
+      return getPropertyDisplayName(left).localeCompare(getPropertyDisplayName(right))
+    }
+
+    return (left.rank ?? 0) - (right.rank ?? 0)
+  })
+
+  return sorted.map((property, rank) => ({
+    ...property,
+    rank,
+  }))
+})
+
+let showDisabledFields = $state(false)
+
+const isPropertyVisible = (property: Property): boolean =>
+  showDisabledFields || isPropertyEnabled(property)
+
+const enabledProjectFieldWindowSize = $derived.by(() => {
+  const firstDisabledInheritedIndex = projectFieldsInSection.findIndex(
+    property => property.scope !== 'project' && !isPropertyEnabled(property),
+  )
+  return firstDisabledInheritedIndex >= 0
+    ? firstDisabledInheritedIndex
+    : projectFieldsInSection.length
+})
 
 // ═══════════════════════
 // 3. PROPERTY ISSUE DERIVATION
@@ -553,82 +614,148 @@ const formLevelIssues = $derived.by((): string[] => {
   return Array.from(new Set(messages))
 })
 
+const facetIssueSummary = $derived.by(() =>
+  resolveFacetIssueSummary({
+    issues: visibleAllIssues,
+    facets: resolvedFacetTabs,
+    formEl: contentsElement,
+  }),
+)
+
+const resolvedFacetTabsWithIssues = $derived.by(() =>
+  withFacetIssueIndicators(resolvedFacetTabs, facetIssueSummary.facetsWithIssues),
+)
+
+function toDenseProperties(
+  properties: ProjectFormInput['data']['properties'] | undefined,
+): Property[] {
+  if (!Array.isArray(properties)) return []
+  return properties.filter(
+    property =>
+      Boolean(property) &&
+      typeof property === 'object' &&
+      typeof (property as { id?: unknown }).id === 'string' &&
+      ((property as { id: string }).id ?? '').length > 0,
+  ) as Property[]
+}
+
+$effect(() => {
+  const properties = formCtx.form.fields.value().data?.properties as
+    | ProjectFormInput['data']['properties']
+    | undefined
+  if (!Array.isArray(properties)) return
+  const dense = toDenseProperties(properties)
+  if (dense.length === properties.length) return
+
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.properties = dense
+    return data
+  })
+})
+
+$effect(() => {
+  if (!formCtx.wasSubmitAttempted) return
+  if (visibleAllIssues.length === 0) return
+
+  const signature = toStableSignature(visibleAllIssues)
+  if (signature === lastLoggedIssueSignature) return
+  lastLoggedIssueSignature = signature
+})
+
 // Property-scoped issue rows parsed from the full issue list.
 const propertyFormIssues = $derived.by(
   (): Array<{ message: string; path?: Array<string | number> }> =>
     getPropertyFormIssues(visibleAllIssues),
 )
 
-// Resolved issue messages for one property discriminator section.
-function getPropertyIssuesForType(type: PropertyDiscriminator): string[] {
-  return getPropertyIssuesForTypeFromFormIssues({
-    issues: propertyFormIssues,
-    properties: getCurrentProjectProperties(projectPropertyFormAdapter),
-    type,
-  })
+const fieldSectionIssues = $derived.by(() => {
+  const messages = propertyFormIssues
+    .map(issue => issue.message)
+    .filter(Boolean)
+    .map(message => String(message))
+  return Array.from(new Set(messages))
+})
+
+const fieldSectionIssueItemIds = $derived.by(() => {
+  const properties = getCurrentProjectProperties(projectPropertyFormAdapter)
+  const ids = propertyFormIssues
+    .map(issue => {
+      const path = issue.path
+      if (!Array.isArray(path)) return null
+      const index = path[2]
+      if (typeof index !== 'number') return null
+      const property = properties[index]
+      return property?.id ?? null
+    })
+    .filter((id): id is Id => Boolean(id))
+  return Array.from(new Set(ids))
+})
+
+function resolveProjectPropertyCardPresentation(property: Property): 'full' | 'header' {
+  return property.scope === 'project' ? 'full' : 'header'
 }
 
-// Resolved property IDs that currently have issues in one section.
-function getPropertyIssueItemIdsForType(type: PropertyDiscriminator): Id[] {
-  return getPropertyIssueItemIdsForTypeFromFormIssues({
-    issues: propertyFormIssues,
-    properties: getCurrentProjectProperties(projectPropertyFormAdapter),
-    type,
-  })
+function resolveProjectPropertyTitleHref(property: Property): string | null {
+  if (!canSubmitProject) return null
+
+  if (property.scope === 'organisation' && property.organisationId) {
+    const organisationCode =
+      adminCtx.appCtx.cache.organisation.get(property.organisationId)?.code ??
+      property.organisationId
+    return `/admin/organisations/${organisationCode}#fields`
+  }
+
+  if (property.scope === 'hub') {
+    const hubCodeFromProperty = (
+      property as Property & { hub?: { code?: string | null } }
+    ).hub?.code
+    const hubCode = property.hubId
+      ? (hubCodeFromProperty ??
+        adminCtx.appCtx.cache.hub.get(property.hubId)?.code ??
+        'core')
+      : 'core'
+    return `/admin/hubs/${hubCode}#fields`
+  }
+
+  return null
 }
 
-// Classifier issue chips shown in section header.
-const classifierPropertyIssues = $derived.by(() =>
-  getPropertyIssuesForType('classifier'),
-)
+function resolveProjectPropertySourceTag(property: Property): {
+  label: string
+  tone: 'global' | 'hub' | 'org' | 'project'
+  title?: string
+  iconComponent?: typeof Blend
+} {
+  const typeTag =
+    property.type === 'classifier'
+      ? {
+          title: m.admin__forms_common_categorical_field(),
+          iconComponent: Blend,
+        }
+      : {
+          title: m.admin__forms_common_free_form_field(),
+          iconComponent: Type,
+        }
 
-// Specifier issue chips shown in section header.
-const specifierPropertyIssues = $derived.by(() => getPropertyIssuesForType('specifier'))
+  if (property.scope === 'project') {
+    return { label: 'project', tone: 'project', ...typeTag }
+  }
 
-// Classifier property IDs with issue highlighting.
-const classifierIssueItemIds = $derived.by(() =>
-  getPropertyIssueItemIdsForType('classifier'),
-)
+  if (property.scope === 'organisation') {
+    return { label: 'org', tone: 'org', ...typeTag }
+  }
 
-// Specifier property IDs with issue highlighting.
-const specifierIssueItemIds = $derived.by(() =>
-  getPropertyIssueItemIdsForType('specifier'),
-)
+  if (property.scope === 'hub') {
+    if (property.hubId) {
+      const hubCode = adminCtx.appCtx.cache.hub.get(property.hubId)?.code ?? null
+      if (hubCode && hubCode !== 'core')
+        return { label: 'hub', tone: 'hub', ...typeTag }
+    }
+    return { label: 'global', tone: 'global', ...typeTag }
+  }
 
-// Unified config model for rendering classifier/specifier field sections.
-const fieldSections = $derived.by(
-  (): Array<{
-    type: PropertyDiscriminator
-    title: string
-    description: string
-    items: Property[]
-    issues: string[]
-    actions: typeof classifierActions
-    issueItemIds: Id[]
-    removeMode: boolean
-  }> => [
-    {
-      type: 'classifier',
-      title: m.admin__forms_common_classifiers(),
-      description: m.admin__forms_common_classifiers_subtitle(),
-      items: classifierPropsInSection,
-      issues: classifierPropertyIssues,
-      actions: classifierActions,
-      issueItemIds: classifierIssueItemIds,
-      removeMode: sectionRemoveModes.classifier,
-    },
-    {
-      type: 'specifier',
-      title: m.admin__forms_common_specifiers(),
-      description: m.admin__forms_common_specifiers_subtitle(),
-      items: specifierPropsInSection,
-      issues: specifierPropertyIssues,
-      actions: specifierActions,
-      issueItemIds: specifierIssueItemIds,
-      removeMode: sectionRemoveModes.specifier,
-    },
-  ],
-)
+  return { label: 'project', tone: 'project', ...typeTag }
+}
 
 // ═══════════════════════
 // 4. USER ROLE FORM STATE + PROJECTIONS
@@ -1249,22 +1376,104 @@ async function onDeleteToggle(): Promise<void> {
   })
 }
 
-function onReset(): void {
+async function onReset(): Promise<void> {
+  fieldRemoveMode = false
+  isProjectFieldResetInProgress = true
+  fieldsLayoutMutationVersion += 1
   suppressFormLevelIssues = true
   formCtx.clearSubmitAttemptState()
   if (committedProject?.data) {
     project = committedProject
     formCtx.form.fields.set(toProjectFormInput(committedProject.data))
-    return
+  } else {
+    autoSeededOwnerOrganisationIds = new Set()
+    ownerRoleSeedAttempt += 1
+    formCtx.reset()
   }
-  autoSeededOwnerOrganisationIds = new Set()
-  ownerRoleSeedAttempt += 1
-  formCtx.reset()
+
+  await tick()
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+  isProjectFieldResetInProgress = false
+}
+
+function normalizePropertyInputIndices(formEl: HTMLFormElement): void {
+  const controls = Array.from(
+    formEl.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      '[name^="data.properties["]',
+    ),
+  )
+  if (controls.length === 0) return
+
+  const pattern = /^data\.properties\[(\d+)\](.*)$/u
+  const submittedIndices = Array.from(new FormData(formEl).keys())
+    .map(name => {
+      const match = name.match(pattern)
+      return match ? Number(match[1]) : null
+    })
+    .filter((index): index is number => typeof index === 'number')
+  if (submittedIndices.length === 0) return
+
+  const uniqueSortedIndices = Array.from(new Set(submittedIndices)).sort(
+    (a, b) => a - b,
+  )
+  const remapByIndex = new Map<number, number>(
+    uniqueSortedIndices.map((index, denseIndex) => [index, denseIndex]),
+  )
+  const isAlreadyDense = uniqueSortedIndices.every(
+    (index, denseIndex) => index === denseIndex,
+  )
+  if (isAlreadyDense) return
+
+  for (const control of controls) {
+    const match = control.name.match(pattern)
+    if (!match) continue
+    const currentIndex = Number(match[1])
+    const nextIndex = remapByIndex.get(currentIndex)
+    if (typeof nextIndex !== 'number') continue
+    const suffix = match[2] ?? ''
+    control.name = `data.properties[${nextIndex}]${suffix}`
+  }
 }
 
 function onSubmit(): void {
   suppressFormLevelIssues = false
   if (!isCurrentRefLoaded) return
+
+  if (isNewProjectRef) {
+    formCtx.requestSubmit({ meta: { mode: 'create' } })
+    return
+  }
+
+  if (contentsElement) {
+    normalizePropertyInputIndices(contentsElement)
+  }
+
+  if (contentsElement) {
+    const formData = new FormData(contentsElement)
+    const propertyEntries = Array.from(formData.entries()).filter(([key]) =>
+      key.startsWith('data.properties['),
+    )
+    const indexRegex = /^data\.properties\[(\d+)\]/u
+    const indices = new Set<number>()
+    for (const [key] of propertyEntries) {
+      const match = key.match(indexRegex)
+      if (!match) continue
+      indices.add(Number(match[1]))
+    }
+    const sortedIndices = Array.from(indices).sort((a, b) => a - b)
+    const first = sortedIndices[0] ?? 0
+    const last = sortedIndices[sortedIndices.length - 1] ?? -1
+    const missingIndices: number[] = []
+    for (let index = first; index <= last; index += 1) {
+      if (!indices.has(index)) missingIndices.push(index)
+    }
+  }
+
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.properties = toDenseProperties(data.properties)
+    return data
+  })
   const baseMeta = committedProject?.data
     ? (toProjectFormInput(committedProject.data).meta ?? {})
     : (toProjectFormInput(null, { organisationId: parentOrganisationId }).meta ?? {})
@@ -1312,11 +1521,22 @@ $effect(() => {
     project?.data?.i18n?.[getLocaleKey()]?.name ??
     project?.data?.code ??
     m.deft_mealy_ant_vent()
-  const facetKey = Array.from(resolvedFacetTabs.keys()).join('|')
+  const facetKey = Array.from(resolvedFacetTabsWithIssues.entries())
+    .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
+    .join('|')
   const headerKey = `${ref}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, ProjectIcon, new Map(resolvedFacetTabs))
+  headerCtrl.setHeaderForEntity(title, ProjectIcon, resolvedFacetTabsWithIssues)
+})
+
+$effect(() => {
+  if (!formCtx.wasSubmitAttempted) return
+  if (visibleAllIssues.length === 0) return
+  const targetFacet = facetIssueSummary.firstFacetWithIssues
+  if (!targetFacet) return
+  if (activeFacet === targetFacet) return
+  adminCtx.setFacet(targetFacet, projectRef, FirstClassResource.project)
 })
 
 // Archived entities are read-only until restored.
@@ -1503,7 +1723,11 @@ $effect(() => {
     isReady={Boolean(formCtx.form?.fields && (project?.data || isNewProjectRef))}
     class="space-y-4"
   >
-    <Main.Section isVisible={isCoreFacet} transition="fade">
+    <Main.Section
+      isVisible={isCoreFacet}
+      transition="fade"
+      attrs={{ 'data-facet-id': 'core' }}
+    >
       <FormI18nSection
         title={m.admin__forms_common_descriptors()}
         {locales}
@@ -1551,8 +1775,8 @@ $effect(() => {
         {/snippet}
       </FormI18nSection>
 
-      <GridSpacer>
-        {#snippet left()}
+      <GridSpacer leftCols={1} rightCols={2}>
+        {#snippet right()}
           <FormUserRolesSection
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
@@ -1576,13 +1800,7 @@ $effect(() => {
           />
         {/snippet}
 
-        {#snippet right()}
-          <FormSpecifiersFields
-            form={formCtx.form}
-            fields={['code']}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
+        {#snippet left()}
           {#if canSetParentOrganisation}
             <FormParentOrganisationSection
               title="Parent Organisation"
@@ -1597,12 +1815,19 @@ $effect(() => {
               onReplaceParent={onReplaceParentOrganisation}
             />
           {/if}
+          <FormSpecifiersFields
+            form={formCtx.form}
+            fields={['code']}
+            {isEditing}
+            {isRequiredInPreflight}
+          />
         {/snippet}
       </GridSpacer>
     </Main.Section>
     <Main.Section
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
       transition="fade"
+      attrs={{ 'data-facet-id': 'capabilities' }}
     >
       <ProjectCapabilities
         {capabilityIssues}
@@ -1619,48 +1844,68 @@ $effect(() => {
       isVisible={isFieldsFacet}
       transition="fade"
       class="bits-theme flex gap-4 min-h-0 flex-col"
+      attrs={{ 'data-facet-id': 'fields' }}
     >
-      {#each fieldSections as section (section.type)}
-        <FormFieldsSection
-          items={section.items}
-          title={section.title}
-          description={section.description}
-          issues={section.issues}
-          actions={section.actions}
-          issueItemIds={section.issueItemIds}
-          canEdit={canSubmitProject && isCurrentRefLoaded}
-          {isEditing}
-          removeMode={section.removeMode}
-          onRemoveModeChange={value => {
-            sectionRemoveModes[section.type] = value
+      <FormFieldsSection
+        items={projectFieldsInSection}
+        title={m.admin__forms_common_fields()}
+        description={m.admin__forms_common_fields_subtitle()}
+        issues={fieldSectionIssues}
+        actions={fieldActions}
+        issueItemIds={fieldSectionIssueItemIds}
+        layoutMutationVersion={fieldsLayoutMutationVersion}
+        forceFlipDisabled={isProjectFieldResetInProgress}
+        canEdit={canSubmitProject && isCurrentRefLoaded}
+        {isEditing}
+        removeMode={fieldRemoveMode}
+        isVisibilityOn={showDisabledFields}
+        visibilityOnLabel={m.admin__forms_common_hide_unused()}
+        visibilityOffLabel={m.admin__forms_common_show_unused()}
+        onVisibilityToggle={nextVisible => {
+          fieldsLayoutMutationVersion += 1
+          showDisabledFields = nextVisible
+        }}
+        isItemVisible={property => isPropertyVisible(property)}
+        onRemoveModeChange={value => {
+          fieldRemoveMode = value
+        }}
+        card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              getCurrentProjectProperties(projectPropertyFormAdapter).findIndex(
+                candidate => candidate.id === propertyId,
+              ),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveCardPresentation: resolveProjectPropertyCardPresentation,
+            resolveTitleHref: resolveProjectPropertyTitleHref,
+            getMoveWindowSize: () => enabledProjectFieldWindowSize,
+            isMoveLocked: property =>
+              property.scope !== 'project' && !isPropertyEnabled(property),
+            resolveSourceTag: resolveProjectPropertySourceTag,
           }}
-          card={{
-              removeMode: section.removeMode,
-              locales,
-              isEditing,
-              isRequiredInPreflight,
-              classifierComponents: classifierComponentTypes,
-              specifierComponents: specifierComponentTypes,
-              onIncreaseRank: section.actions.increaseRank,
-              onDecreaseRank: section.actions.decreaseRank,
-              onRemove: section.actions.remove,
-              onUpdateBase: updatePropertyBase,
-              onUpdateI18n: updatePropertyI18n,
-              onAddValue: addPropertyValue,
-              onRemoveValue: removePropertyValue,
-              onMoveValue: movePropertyValue,
-              onUpdateValueI18n: updatePropertyValueI18n,
-              onTranslateLocale: onTranslatePropertyLocale,
-              onResetLocale: onResetPropertyLocale,
-              getPropertyIndex: (propertyId, _sectionIndex) =>
-                getCurrentProjectProperties(projectPropertyFormAdapter).findIndex(
-                  candidate => candidate.id === propertyId,
-                ),
-              getPropertyFields: (_propertyId, propertyIndex) =>
-                getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-            }}
-        />
-      {/each}
+      />
     </Main.Section>
 
     <div class="hidden" aria-hidden="true">
@@ -1676,6 +1921,7 @@ $effect(() => {
     isVisible={isImagesFacet}
     transition="fade"
     class="flex min-h-0 flex-col"
+    attrs={{ 'data-facet-id': 'images' }}
   >
     <EntityImage
       {page}
