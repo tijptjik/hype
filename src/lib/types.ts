@@ -182,17 +182,14 @@ import type {
 } from './db/zod'
 import type { LayerRaw } from './db/zod/schema/deprecated/layer'
 import type {
-  OrganisationAPI,
-  OrganisationCollectionAPI,
-  OrganisationCollectionSuperAdminAPI,
-  OrganisationInsertSuperAdminAPI,
-  OrganisationRaw,
-  OrganisationRoleAPI,
-  OrganisationRoleUpdateExtra,
-  OrganisationRoleWithUser,
-  OrganisationSuperAdminAPI,
-  OrganisationUpdateSuperAdminAPI,
-} from './db/zod/schema/deprecated/organisation'
+  Organisation,
+  OrganisationDB,
+  OrganisationGetState,
+  OrganisationI18nDB,
+  OrganisationNew,
+  OrganisationRole,
+  OrganisationRoleUser,
+} from './db/zod/schema/organisation.types'
 import type {
   Project,
   ProjectDB,

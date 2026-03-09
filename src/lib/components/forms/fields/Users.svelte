@@ -6,12 +6,8 @@ import { flip } from 'svelte/animate'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
-import type {
-  UserFieldProps,
-  OrganisationForm,
-  OrganisationRole,
-  ProjectForm,
-} from '$lib/types'
+import type { UserFieldProps, OrganisationForm, ProjectForm } from '$lib/types'
+import type { OrganisationRole } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectRole } from '$lib/db/zod/schema/project.types'
 
 // STATE : PROPS

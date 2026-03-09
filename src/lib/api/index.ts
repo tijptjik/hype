@@ -47,13 +47,13 @@ import type {
   PaginationParams,
   DbTable,
   LayerPropertyPartialExtra,
-  OrganisationRoleUser,
   ParamsToSign,
   DeleteParamsToSign,
   SignData,
   Session,
   SessionUser,
 } from '$lib/types'
+import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'
 
 export const getSessionOrError = async (
   locals: App.Locals,

@@ -14,6 +14,7 @@ import {
   getCloudinarySignature as getCloudinarySignatureRemote,
   updateImage as updateImageRemote,
 } from '$lib/api/server/image.remote'
+import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
 // TYPES
@@ -32,7 +33,6 @@ import type {
   Metadata,
   LngLat,
   SignData,
-  OrganisationGetState,
 } from '$lib/types'
 // CONTEXT
 import type { ImageCtx } from '$lib/context/image.svelte'

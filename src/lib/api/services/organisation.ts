@@ -30,16 +30,18 @@ import type {
   EntityResponse,
   Id,
   ListResponse,
-  OrganisationDBRaw,
-  OrganisationEntityByProfile,
-  OrganisationListByProfile,
-  OrganisationProfile,
-  Organisation,
   OrganisationDB,
   QueryParams,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
+import type {
+  Organisation,
+  OrganisationDBRaw,
+  OrganisationEntityByProfile,
+  OrganisationListByProfile,
+  OrganisationProfile,
+} from '$lib/db/zod/schema/organisation.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

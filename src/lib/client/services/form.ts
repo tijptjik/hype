@@ -29,8 +29,6 @@ import type {
   Locale,
   FacetType,
   FormBooleanValue,
-  OrganisationGetState,
-  OrganisationRoleUser,
   ResolveChangedRelationParams,
   ChangedRelationResolution,
   ApplyChangedRelationFieldParams,
@@ -38,6 +36,10 @@ import type {
   ResourceSubmitMode,
   User,
 } from '$lib/types'
+import type {
+  OrganisationGetState,
+  OrganisationRoleUser,
+} from '$lib/db/zod/schema/organisation.types'
 
 const toSubmittedCode = (data: unknown): string => {
   const code = (data as { data?: { code?: unknown } })?.data?.code

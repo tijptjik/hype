@@ -75,14 +75,16 @@ import type {
   EntityResponse,
   Id,
   ListResponse,
+  RelationShape,
+} from '$lib/types'
+import type {
   OrganisationDB,
   OrganisationEntityByProfile,
   OrganisationGetParamsByProfile,
   OrganisationListByProfile,
   OrganisationListParamsByProfile,
   OrganisationProfile,
-  RelationShape,
-} from '$lib/types'
+} from '$lib/db/zod/schema/organisation.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

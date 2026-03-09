@@ -15,25 +15,27 @@ import { getOrganisationHubFilter } from './hub'
 // TYPES
 import type { AnyColumn, InferInsertModel, SQL } from 'drizzle-orm'
 import type {
-  OrganisationDB,
   Id,
   Database,
-  OrganisationDBNew,
   LocaleKey,
   QueryParams,
-  OrganisationI18nNew,
-  OrganisationI18nPartial,
-  OrganisationRoleNew,
-  OrganisationDBPartial,
-  OrganisationDBRaw,
-  OrganisationI18nDB,
-  OrganisationRoleDB,
   HubOptsExtended,
   ListResponse,
   OrganisationProbe,
   OrganisationUpdateProbe,
   OrganisationCommandProbe,
 } from '$lib/types'
+import type {
+  OrganisationDB,
+  OrganisationDBNew,
+  OrganisationDBPartial,
+  OrganisationDBRaw,
+  OrganisationI18nDB,
+  OrganisationI18nNew,
+  OrganisationI18nPartial,
+  OrganisationRoleDB,
+  OrganisationRoleNew,
+} from '$lib/db/zod/schema/organisation.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

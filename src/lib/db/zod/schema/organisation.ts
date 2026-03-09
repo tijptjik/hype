@@ -9,7 +9,7 @@ import type { ProjectRoleCapabilities } from './project.types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
-import { createSelectSchema } from 'drizzle-zod'
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import { organisation, organisationI18n, organisationRole } from '$lib/db/schema/index'
 // ZOD SCHEMAS
@@ -30,8 +30,18 @@ import { UserBasic } from './user'
 //
 // 2. DB / RELATIONAL PRIMITIVES
 //    - OrganisationBase
+//    - OrganisationInsert
+//    - OrganisationUpdate
 //    - OrganisationI18nBase
+//    - OrganisationI18nInsert
+//    - OrganisationI18nUpdate
 //    - OrganisationRoleBase
+//    - OrganisationRoleWithUser
+//    - OrganisationRoleInsert
+//    - OrganisationRoleUpdate
+//    - OrganisationRoleUpdateExtra
+//    - OrganisationRoleAPI
+//    - OrganisationRaw
 //
 // 3. REMOTE FORM SCHEMAS
 //    - OrganisationI18nFormData
@@ -110,9 +120,60 @@ export const OrganisationBase = createSelectSchema(organisation).extend({
   capabilities: CapabilityBase,
 })
 
+export const OrganisationInsert = createInsertSchema(organisation).extend({
+  capabilities: CapabilityBase,
+})
+
+export const OrganisationUpdate = createUpdateSchema(organisation).extend({
+  capabilities: CapabilityBase.optional(),
+})
+
 export const OrganisationI18nBase = createSelectSchema(organisationI18n)
 
+export const OrganisationI18nInsert = createInsertSchema(organisationI18n).omit({
+  organisationId: true,
+  locale: true,
+})
+
+export const OrganisationI18nUpdate = createUpdateSchema(organisationI18n).omit({
+  organisationId: true,
+  locale: true,
+})
+
 export const OrganisationRoleBase = createSelectSchema(organisationRole)
+
+export const OrganisationRoleWithUser = OrganisationRoleBase.extend({
+  user: UserBasic.nullish(),
+})
+
+export const OrganisationRoleInsert = createInsertSchema(organisationRole).omit({
+  organisationId: true,
+})
+
+export const OrganisationRoleUpdate = createUpdateSchema(organisationRole)
+
+export const OrganisationRoleUpdateExtra = OrganisationRoleUpdate.extend({
+  user: UserBasic,
+})
+
+export const OrganisationRoleAPI = OrganisationRoleBase.extend({
+  user: UserBasic.nullish(),
+})
+
+export const OrganisationRaw = OrganisationBase.extend({
+  i18n: z.array(OrganisationI18nBase),
+  userRoles: z.array(OrganisationRoleWithUser).nullish(),
+  image: z.unknown().nullish(),
+  publisher: UserBasic.nullish(),
+  properties: z.array(PropertyAdminProfileAPI).nullish(),
+  propertyAssignments: z
+    .array(
+      z.object({
+        property: PropertyAdminProfileAPI.nullish(),
+      }),
+    )
+    .nullish(),
+})
 
 // ═══════════════════════
 // 3. REMOTE FORM SCHEMAS

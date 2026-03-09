@@ -28,11 +28,8 @@ import { setCardCtx } from '$lib/context/card.svelte'
 // ENUMS
 import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '$lib/enums'
 // TYPES
-import type {
-  NewFeatureWithLocationAndParents,
-  OrganisationDB,
-  Feature,
-} from '$lib/types'
+import type { NewFeatureWithLocationAndParents, Feature } from '$lib/types'
+import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 
 // CONTEXT

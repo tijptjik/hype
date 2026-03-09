@@ -7,7 +7,8 @@ import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import * as FormUserRolesSectionPrimitive from './components'
 import { UserCard } from '$lib/bits/patterns/userCard'
 import type { FormUserRolesSectionProps } from './formUserRolesSection.types'
-import type { OrganisationRoleUser, User } from '$lib/types'
+import type { User } from '$lib/types'
+import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'
 
 let {
   title,
