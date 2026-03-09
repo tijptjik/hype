@@ -3,18 +3,48 @@ import type { OrganisationRoleType } from '$lib/enums'
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '$lib/capabilities'
 // I18N
 import { toLocaleCode, toLocaleKey } from '$lib/i18n'
+import { toFormLocaleRecord } from '$lib/i18n'
 // TYPES
+import type { CapabilityDefinition, CapabilityDefinitions, Locale } from '$lib/types'
 import type {
-  CapabilityDefinition,
-  CapabilityDefinitions,
-  Locale,
   OrganisationBooleanField,
-  Organisation,
   OrganisationFormInput,
   OrganisationFormLocaleSource,
   OrganisationIdentityPatch,
   OrganisationSubmitUpdatesParams,
-} from '$lib/types'
+} from '$lib/db/zod/schema/organisation.types'
+
+type OrganisationPropertySource = NonNullable<
+  OrganisationFormInput['data']['properties']
+>[number]
+type OrganisationFormSource = {
+  id?: string
+  modifiedAt?: string
+  code?: string
+  url?: string | null
+  capabilities?: CapabilityDefinitions | null
+  i18n?: Partial<
+    Record<'en' | 'zhHans' | 'zhHant', OrganisationFormLocaleSource>
+  > | null
+  userRoles?: Array<{ userId?: string; role?: string }>
+  properties?: OrganisationPropertySource[] | null
+}
+
+function cloneOrganisationProperties(
+  properties: OrganisationPropertySource[] | null | undefined,
+): OrganisationFormInput['data']['properties'] {
+  if (!properties) return []
+  return properties.map((property: OrganisationPropertySource) => ({
+    ...property,
+    i18n: toFormLocaleRecord(property.i18n) as typeof property.i18n,
+    values: Array.isArray(property.values)
+      ? property.values.map(value => ({
+          ...value,
+          i18n: toFormLocaleRecord(value.i18n) as typeof value.i18n,
+        }))
+      : property.values,
+  }))
+}
 
 function normalizeOrganisationFormLocale(
   locale: OrganisationFormLocaleSource,
@@ -51,7 +81,7 @@ function normalizeOrganisationCapabilities(
 }
 
 export function toOrganisationFormInput(
-  data?: Organisation | null,
+  data?: OrganisationFormSource | null,
 ): OrganisationFormInput {
   if (!data) {
     return {
@@ -66,6 +96,7 @@ export function toOrganisationFormInput(
           zhHant: normalizeOrganisationFormLocale(undefined),
         },
         userRoles: [],
+        properties: [],
       },
     }
   }
@@ -78,7 +109,7 @@ export function toOrganisationFormInput(
       isAdminRequest: true,
     },
     data: {
-      code: data.code,
+      code: data.code ?? '',
       url: data.url ?? '',
       capabilities: normalizeOrganisationCapabilities(data.capabilities),
       i18n: {
@@ -87,9 +118,10 @@ export function toOrganisationFormInput(
         zhHant: normalizeOrganisationFormLocale(data.i18n?.zhHant),
       },
       userRoles: (data.userRoles ?? []).map(userRole => ({
-        userId: userRole.userId,
+        userId: userRole.userId ?? '',
         role: userRole.role as OrganisationRoleType,
       })),
+      properties: cloneOrganisationProperties(data.properties),
     },
   }
 }
