@@ -1,13 +1,36 @@
 @layer components {
+  .bits-theme.bits-main__section[data-facet-id="fields"] {
+    container-type: inline-size;
+    container-name: bits-layer-fields-section;
+  }
+
   .bits-theme .bits-form__layer-card-wrapper {
+    --bits-layer-card-grid-gap: calc(var(--spacing) * 2);
+    --bits-layer-card-columns: 1;
     display: grid;
-    gap: calc(var(--spacing) * 2);
-    grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+    gap: var(--bits-layer-card-grid-gap);
+    grid-template-columns: repeat(var(--bits-layer-card-columns), minmax(0, 1fr));
     justify-items: stretch;
   }
 
+  @container bits-layer-fields-section (min-width: 78rem) {
+    .bits-theme .bits-form__layer-card-wrapper {
+      --bits-layer-card-columns: 2;
+    }
+  }
+
+  @container bits-layer-fields-section (min-width: 128rem) {
+    .bits-theme .bits-form__layer-card-wrapper {
+      --bits-layer-card-columns: 3;
+    }
+  }
+
   .bits-theme .bits-form__layer-card-root {
-    @apply bg-grain relative flex min-h-18 flex-row items-center gap-3 overflow-hidden rounded-xl border-2 border-primary bg-glass-300 px-4 py-3 shadow-lg;
+    @apply bg-grain relative flex min-h-18 flex-row items-stretch gap-3 overflow-hidden rounded-xl border-2 border-primary bg-glass-300 px-4 py-3 shadow-lg;
+    width: 100%;
+  }
+
+  .bits-theme .bits-form__layer-card-item {
     width: 100%;
   }
 
@@ -19,19 +42,99 @@
     @apply truncate text-base font-medium;
   }
 
-  .bits-theme .bits-form__layer-card-body-code {
-    @apply truncate font-mono text-xs uppercase tracking-wide text-primary;
+  .bits-theme .bits-form__layer-card-meta {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap {
+    @apply inline-flex items-center justify-center;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--global {
+    color: color-mix(in oklab, #fff2bf 92%, transparent);
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--hub {
+    color: color-mix(in oklab, #ffe8c8 92%, transparent);
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--org {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-primary) 10%);
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--project {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-accent) 10%);
+  }
+
+  .bits-theme .bits-form__layer-card-scope {
+    @apply inline-flex w-fit items-center rounded-md border px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-wide;
+  }
+
+  .bits-theme .bits-form__layer-card-scope--global {
+    color: color-mix(in oklab, #fff2bf 92%, transparent);
+    border-color: color-mix(in oklab, #f5d34b 68%, transparent);
+    background: color-mix(in oklab, #8a6510 44%, transparent 30%);
+  }
+
+  .bits-theme .bits-form__layer-card-scope--hub {
+    color: color-mix(in oklab, #ffe8c8 92%, transparent);
+    border-color: color-mix(in oklab, #ff9d3d 68%, transparent);
+    background: color-mix(in oklab, #8d4a12 44%, transparent 30%);
+  }
+
+  .bits-theme .bits-form__layer-card-scope--org {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-primary) 10%);
+    border-color: color-mix(in oklab, var(--color-primary) 66%, transparent);
+    background: color-mix(
+      in oklab,
+      color-mix(in oklab, var(--color-primary) 46%, black 54%) 70%,
+      transparent
+    );
+  }
+
+  .bits-theme .bits-form__layer-card-scope--project {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-accent) 10%);
+    border-color: color-mix(in oklab, var(--color-accent) 66%, transparent);
+    background: color-mix(
+      in oklab,
+      color-mix(in oklab, var(--color-accent) 46%, black 54%) 70%,
+      transparent
+    );
+  }
+
+  .bits-theme .bits-form__layer-card-actions-rail {
+    @apply inline-flex shrink-0 self-stretch items-center rounded-r-xl bg-base-100 pl-5 pr-3;
+    margin-block: calc(var(--spacing) * -3);
+    margin-right: calc(var(--spacing) * -4);
+    border-left: 1px solid color-mix(in oklab, var(--color-foreground) 14%, transparent);
   }
 
   .bits-theme .bits-form__layer-card-actions {
-    @apply flex shrink-0 items-center gap-3;
+    @apply flex items-center gap-4;
+  }
+
+  .bits-theme .bits-form__layer-card-action-btn {
+    @apply h-8 w-8 shrink-0;
   }
 
   .bits-theme .bits-form__layer-card-flag {
-    @apply flex items-center gap-1.5;
+    @apply flex items-center gap-2.5;
   }
 
   .bits-theme .bits-form__layer-card-flag-label {
     @apply text-xs font-medium uppercase tracking-wide text-base-content/70;
+  }
+
+  .bits-theme .bits-form__layer-card-flag-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    color: color-mix(in oklab, var(--color-foreground) 72%, transparent);
   }
 }
