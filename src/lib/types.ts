@@ -110,22 +110,8 @@ import type {
   LayerRecordUpdate,
   PublishLayerSchema,
   RemoveLayerSchema,
-  OrganisationBase,
-  OrganisationI18nBase,
-  OrganisationI18nInsert,
-  OrganisationI18nUpdate,
-  OrganisationInsert,
-  OrganisationFormData,
-  OrganisationEntityFormData,
-  OrganisationProfile as OrganisationProfileSchema,
-  OrganisationListProfileAPI,
-  OrganisationCardProfileAPI,
-  OrganisationDetailProfileAPI,
-  OrganisationAdminProfileAPI,
   ListQueryParamsSchema,
   GetQueryParamsSchema,
-  OrganisationRoleBase,
-  OrganisationUpdate,
   PropertyAdminProfileAPI,
   PropertyDetailProfileAPI,
   PropertyI18nRecord,
@@ -185,8 +171,13 @@ import type {
   Organisation,
   OrganisationDB,
   OrganisationGetState,
+  OrganisationEntityByProfile,
+  OrganisationGetParamsByProfile,
   OrganisationI18nDB,
+  OrganisationListByProfile,
+  OrganisationListParamsByProfile,
   OrganisationNew,
+  OrganisationProfile,
   OrganisationRole,
   OrganisationRoleUser,
 } from './db/zod/schema/organisation.types'
@@ -1487,101 +1478,6 @@ export type ExperimentalFeatureConfig = {
   code: keyof UserExperimental
 }
 
-/* ----------------- */
-// ORGANISATIONS
-/* -------- */
-
-/* ----------------- */
-// ORGANISATIONS :: DB
-/* -------- */
-
-// Organisation with all its own fields.
-export type OrganisationDB = Omit<z.infer<typeof OrganisationBase>, 'isCoreInclusive'>
-export type OrganisationDBSuperAdmin = z.infer<typeof OrganisationBase>
-// Organisation without relations, for use in inserting a new organisation
-export type OrganisationDBNew = z.infer<typeof OrganisationInsert>
-// Organisation without relations, for use in partiall updating a organisation
-export type OrganisationDBPartial = z.infer<typeof OrganisationUpdate>
-
-/* ----------------- */
-// ORGANISATIONS :: API
-/* -------- */
-
-// Organisation with all fields, including userRoles & translations, and User
-export type Organisation = z.infer<typeof OrganisationAPI>
-// Collection-safe organisation shape for regular users
-export type OrganisationCollection = z.infer<typeof OrganisationCollectionAPI>
-// Like Organisation, but without the organisationId in userRoles and translations
-export type OrganisationNew = z.infer<typeof OrganisationEntityFormData>
-export type OrganisationNewWithI18n = Omit<OrganisationNew, 'i18n'> & {
-  i18n: Record<Locale, OrganisationI18nNew>
-}
-export type OrganisationWithI18n = Omit<Organisation, 'i18n'> & {
-  i18n: Record<Locale, OrganisationI18nPartial>
-}
-export type OrganisationPartial = Partial<OrganisationNew>
-
-/* ----------------- */
-// ORGANISATIONS :: SUPER ADMIN API
-/* -------- */
-
-// Organisation with all fields, including userRoles & translations, and User
-export type OrganisationSuperAdmin = z.infer<typeof OrganisationSuperAdminAPI>
-// Collection-safe organisation shape for super admins
-export type OrganisationCollectionSuperAdmin = z.infer<
-  typeof OrganisationCollectionSuperAdminAPI
->
-// Like Organisation, but without the organisationId in userRoles and translations
-export type OrganisationSuperAdminNew = z.infer<typeof OrganisationInsertSuperAdminAPI>
-// Like Organisation, but with all fields optional
-export type OrganisationSuperAdminPartial = z.infer<
-  typeof OrganisationUpdateSuperAdminAPI
->
-export type OrganisationListParams = z.infer<typeof ListQueryParamsSchema>
-export type OrganisationGetParams = z.infer<typeof GetQueryParamsSchema>
-export type OrganisationProfile = z.infer<typeof OrganisationProfileSchema>
-export type OrganisationListProfile = z.infer<typeof OrganisationListProfileAPI>
-export type OrganisationCardProfile = z.infer<typeof OrganisationCardProfileAPI>
-export type OrganisationDetailProfile = z.infer<typeof OrganisationDetailProfileAPI>
-export type OrganisationAdminProfile = z.infer<typeof OrganisationAdminProfileAPI>
-export type OrganisationEntityByProfile<P extends OrganisationProfile> =
-  P extends 'list'
-    ? OrganisationListProfile
-    : P extends 'card'
-      ? OrganisationCardProfile
-      : P extends 'detail'
-        ? OrganisationDetailProfile
-        : OrganisationAdminProfile
-export type OrganisationListByProfile<P extends OrganisationProfile> = P extends 'list'
-  ? OrganisationListProfile
-  : P extends 'card'
-    ? OrganisationCardProfile
-    : P extends 'detail'
-      ? OrganisationDetailProfile
-      : OrganisationAdminProfile
-export type OrganisationGetParamsByProfile<P extends OrganisationProfile> = Omit<
-  OrganisationGetParams,
-  'meta'
-> & {
-  meta?: {
-    isAdminRequest?: boolean
-    profile?: P
-  }
-}
-export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omit<
-  OrganisationListParams,
-  'meta'
-> & {
-  meta?: {
-    isAdminRequest?: boolean
-    profile?: P
-  }
-}
-
-/* ----------------- */
-// ORGANISATIONS :: REMOTE FORMS
-/* -------- */
-
 export type I18nFormInputShape = {
   data: {
     i18n: Record<string, unknown>
@@ -1597,35 +1493,9 @@ export type FormLocaleSource<TForm extends I18nFormInputShape> =
   | null
   | undefined
 
-export type OrganisationFormInput = z.input<typeof OrganisationFormData>
-export type OrganisationFormLocaleInput = FormLocaleInput<OrganisationFormInput>
-export type OrganisationFormLocaleSource = FormLocaleSource<OrganisationFormInput>
-export type OrganisationBooleanField = 'isPublished' | 'isArchived'
-export type OrganisationIdentityPatch = {
-  code: string
-  locale: Locale
-  name: string
-  nameShort: string
-}
 export type QueryWithOverride<TCurrent = unknown, TResult = unknown> = {
   withOverride(update: (current: TCurrent) => TCurrent): TResult
 }
-export type OrganisationSubmitUpdatesParams<
-  TEntityCurrent,
-  TListCurrent,
-  TEntityResult,
-  TListResult,
-> = {
-  data: OrganisationFormInput
-  locale: Locale
-  organisationId?: string | null
-  entityQuery: QueryWithOverride<TEntityCurrent, TEntityResult>
-  listQuery: QueryWithOverride<TListCurrent, TListResult>
-}
-export type OrganisationGetResponse = EntityResponse<
-  OrganisationEntityByProfile<'admin'>
->
-export type OrganisationGetState = OrganisationGetResponse | null
 
 export type ResourceSubmitMode = 'create' | 'replace' | 'update'
 export type ResourceSubmitMetaDraft = {
@@ -1660,30 +1530,6 @@ export type ApplyChangedRelationFieldParams<
   data: TData
   key: TKey
 } & ResolveChangedRelationParams<TEffective>
-
-/* ----------------- */
-// ORGANISATIONS :: RELATIONAL
-/* -------- */
-
-// organisationI18n, but with the organisationId - for use in DB seeding & selects
-export type OrganisationI18nDB = z.infer<typeof OrganisationI18nBase>
-// organisationI18n, but without organisationId - for use in API insertions
-export type OrganisationI18nNew = z.infer<typeof OrganisationI18nInsert>
-// Same as OrganisationI18nNew, but all fields are optional
-export type OrganisationI18nPartial = z.infer<typeof OrganisationI18nUpdate>
-
-export type OrganisationRole = z.infer<typeof OrganisationRoleAPI>
-export type OrganisationRoleUser = z.infer<typeof OrganisationRoleWithUser>
-
-// organisationRole, but with the organisationId - for use in DB seeding & selects
-export type OrganisationRoleDB = z.infer<typeof OrganisationRoleBase>
-// organisationRole, but without organisationId - for use in API insertions
-export type OrganisationRoleNew = z.infer<typeof OrganisationRoleInsert>
-// Same as OrganisationRoleNew, but all fields are optional
-export type OrganisationRolePartial = z.infer<typeof OrganisationRoleUpdate>
-export type OrganisationRolePartialExtra = z.infer<typeof OrganisationRoleUpdateExtra>
-
-export type OrganisationDBRaw = z.infer<typeof OrganisationRaw>
 export type FieldDiscriminator = `${FieldDiscriminatorEnum}`
 
 export const fieldComponentTypes = [

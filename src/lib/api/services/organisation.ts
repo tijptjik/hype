@@ -30,13 +30,13 @@ import type {
   EntityResponse,
   Id,
   ListResponse,
-  OrganisationDB,
   QueryParams,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
 import type {
   Organisation,
+  OrganisationDB,
   OrganisationDBRaw,
   OrganisationEntityByProfile,
   OrganisationListByProfile,

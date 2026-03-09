@@ -16,7 +16,12 @@ import { organisation, organisationI18n, organisationRole } from '$lib/db/schema
 import { FormBoolean } from '../form'
 import { FormI18nRoot, getLocales } from '../constraints'
 import { ImageContextEnvelopeAPI } from './image'
-import { ProjectPropertyFormData, PropertyAdminProfileAPI } from './property'
+import { ImageBase } from './image'
+import {
+  ProjectPropertyFormData,
+  PropertyAdminProfileAPI,
+  PropertyRecordRaw,
+} from './property'
 import { UserBasic } from './user'
 
 // ═══════════════════════
@@ -163,13 +168,13 @@ export const OrganisationRoleAPI = OrganisationRoleBase.extend({
 export const OrganisationRaw = OrganisationBase.extend({
   i18n: z.array(OrganisationI18nBase),
   userRoles: z.array(OrganisationRoleWithUser).nullish(),
-  image: z.unknown().nullish(),
+  image: ImageBase.nullish(),
   publisher: UserBasic.nullish(),
-  properties: z.array(PropertyAdminProfileAPI).nullish(),
+  properties: z.array(PropertyRecordRaw).nullish(),
   propertyAssignments: z
     .array(
       z.object({
-        property: PropertyAdminProfileAPI.nullish(),
+        property: PropertyRecordRaw.nullish(),
       }),
     )
     .nullish(),
