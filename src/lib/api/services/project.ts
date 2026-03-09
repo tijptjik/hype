@@ -2,75 +2,108 @@
 import { eq, inArray, or, type SQL } from 'drizzle-orm'
 // CAPABILITIES
 import {
-  getCapabilityKeysFromDefinitions,
   isProjectCapabilityKey,
-  normalizeProjectCapabilities,
+  type normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
 } from '$lib/capabilities'
 // API
 import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
-// AUTH
-import {
-  assertUserLoggedIn,
-  assertAdminRequest,
-  runAssertions,
-  assertOrganisationOwnerOrSuperAdmin,
-  assertProjectMaintainerOrSuperAdmin,
-} from '$lib/auth/asserts'
-// DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { isSuperAdmin } from '$lib/client/services/auth'
-// SCHEMA
-import { project, property as propertyTable } from '$lib/db/schema/index'
-// DB
-import { applyPrismConstraints, isFieldUnique } from '$lib/db'
-import {
-  toEntityResponseShape as toProjectEntityResponseShapeFromDb,
-  toListResponseShape as toProjectListResponseShapeFromDb,
-  toResponseShape as toProjectResponseShapeFromDb,
-} from '$lib/db/services/project'
-import { FirstClassResource, HierarchicalResource, ProjectRoleType } from '$lib/enums'
 import {
   inferPropertyDiscriminatorFromComponent,
   toBooleanOrUndefined,
 } from '$lib/api/services'
+// DB
+import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
+import { applyTriStateBooleanCondition } from '$lib/db/query'
+import { toImageEnvelope } from '$lib/db/services/image'
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import {
+  ProjectAdminProfileAPI,
+  ProjectCardProfileAPI,
+  ProjectDetailProfileAPI,
+  ProjectListProfileAPI,
+} from '$lib/db/zod/schema/project'
+import { isSuperAdmin } from '$lib/client/services/auth'
+// SCHEMA
+import { project, property as propertyTable } from '$lib/db/schema/index'
+// ENUMS
+import { HierarchicalResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
 // TYPES
 import type {
-  CapabilityDefinitions,
-  UserRoleDisco,
-  SubmittedPropertyScopeCandidate,
-  ProjectInheritedPropertySyncItem,
-  ProjectLocalPropertyCandidate,
+  Database,
+  EntityResponse,
+  Id,
+  Image,
+  ListResponse,
   PersistedProjectLocalPropertyCandidate,
-  ProjectNew,
   Prisms,
+  ProjectRoleCapabilities,
   ProjectDB,
   ProjectDBRaw,
-  ProjectProfile,
-  ProjectI18nNew,
-  ProjectRoleNew,
-  Database,
-  Id,
-  ListResponse,
   ProjectEntityByProfile,
+  ProjectInheritedPropertySyncItem,
   ProjectListByProfile,
-  PropertyDBRaw,
+  ProjectLocalPropertyCandidate,
+  ProjectProfile,
   QueryParams,
-  Project,
   SessionUser,
-  EntityResponse,
+  SubmittedPropertyScopeCandidate,
+  UserRoleDisco,
 } from '$lib/types'
-import type { SuperValidated } from 'sveltekit-superforms'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// DB RELATIONS
+// - projectCollectionWithRelations
+// - projectEntityWithRelations
+// - getProjectWithRelations
+//
+// PROFILE SHAPING
+// - toProjectProfile
+// - toProfileResponseShape
+// - toEntityResponseShape
+// - toListResponseShape
+//
+// NORMALIZATION
+// - normalizeSubmittedPropertyRanks
+// - resolveSubmittedPropertyScope
+// - splitSubmittedPropertiesByScope
+// - resolveCanonicalScopeByPropertyId
+// - toSubmittedLocalPropertiesWithProjectId
+// - toSubmittedPropertyIdSet
+// - toPersistedLocalPropertiesForProject
+// - toPreservedLocalPropertiesForProject
+// - mergeProjectInheritedPropertySyncItems
+// - sanitizeSubmittedRoleCapabilities
+//
+// QUERY CONTEXT
+// - toLookupConditions
+// - toRequestedListState
+// - toProjectRoleIds
+// - toOrganisationRoleIds
+// - toProjectPrisms
+// - buildVisibilityAndOwnershipConditions
+// - toQueryConditions
 
 /********************
- *  COMMON
+ *  DB RELATIONS
  ************/
-export const projectCollectionWithRelations = {
+/**
+ * Lightweight relation graph for list/card/detail project reads.
+ * Keeps common fetches small while preserving the fields needed for UI rendering.
+ */
+const projectCollectionWithRelations = {
   i18n: true,
   image: true,
 }
 
-export const projectEntityWithRelations = {
+/**
+ * Full relation graph for admin-oriented project reads.
+ * Includes role assignments and local properties required by mutation flows.
+ */
+const projectEntityWithRelations = {
   i18n: true,
   userRoles: {
     with: {
@@ -93,7 +126,16 @@ export const projectEntityWithRelations = {
   publisher: true,
 }
 
-export const getProjectWithRelations = (profile: ProjectProfile) => {
+/**
+ * Resolves the relation graph required for the requested project profile.
+ * Uses a lightweight graph for public/detail reads and the full graph for admin flows.
+ *
+ * @param profile - Requested response profile.
+ * @returns Drizzle relation shape for the project query.
+ */
+export const getProjectWithRelations = (
+  profile: ProjectProfile,
+): Record<string, boolean | object> => {
   if (profile === 'admin') {
     return projectEntityWithRelations
   }
@@ -107,8 +149,29 @@ export const getProjectWithRelations = (profile: ProjectProfile) => {
   }
 }
 
+/********************
+ *  PROFILE SHAPING
+ ************/
 const projectProfiles = ['list', 'card', 'detail', 'admin'] as const
 
+type ProjectResponseRow = Omit<
+  ProjectDBRaw,
+  'capabilities' | 'i18n' | 'properties' | 'userRoles'
+> & {
+  capabilities?: ProjectDBRaw['capabilities'] | ProjectDB['capabilities']
+  i18n?: ProjectDBRaw['i18n']
+  properties?: ProjectDBRaw['properties']
+  userRoles?: ProjectDBRaw['userRoles']
+}
+
+/**
+ * Normalizes arbitrary profile input into a supported project profile.
+ * Prevents invalid profile selectors from leaking into relation and schema branches.
+ *
+ * @param value - Raw caller-supplied profile value.
+ * @param fallback - Profile returned when `value` is missing or invalid.
+ * @returns Safe project profile.
+ */
 export const toProjectProfile = (
   value: unknown,
   fallback: ProjectProfile,
@@ -118,51 +181,171 @@ export const toProjectProfile = (
     : fallback
 
 /**
- * Shapes a project row into a profile-specific wire response payload.
+ * Shapes a hydrated project row into a profile-specific API payload.
+ * Keeps i18n, property, image, and role normalization centralized for all project responses.
  *
- * @param project - Base project row.
- * @param i18n - Optional project i18n rows.
- * @param userRoles - Optional project role rows.
- * @param properties - Optional project property rows.
- * @param profile - Output response profile.
- * @returns Parsed project response payload.
+ * @param row - Hydrated project row.
+ * @param i18n - Optional project i18n rows overriding relation payload.
+ * @param userRoles - Optional project role rows overriding relation payload.
+ * @param properties - Optional project property rows overriding relation payload.
+ * @param profile - Target response profile.
+ * @returns Parsed project payload for the requested profile.
  */
-export const toResponseShape = async (
-  project: ProjectDBRaw,
-  i18n: ProjectI18nNew[] = [],
-  userRoles: ProjectRoleNew[] = [],
-  properties: PropertyDBRaw[] = [],
+const toProfileResponseShape = async (
+  row: ProjectResponseRow,
+  i18n: NonNullable<ProjectResponseRow['i18n']> = [],
+  userRoles: NonNullable<ProjectResponseRow['userRoles']> = [],
+  properties: NonNullable<ProjectResponseRow['properties']> = [],
   profile: ProjectProfile = 'detail',
-) => toProjectResponseShapeFromDb(project, i18n, userRoles, properties, profile)
+): Promise<ProjectEntityByProfile<ProjectProfile>> => {
+  const imageProfile = profile === 'admin' ? 'admin' : profile
+  const normalizedUserRoles = (userRoles ?? []).map(userRole => ({
+    ...userRole,
+    capabilities: userRole.capabilities ?? {},
+  }))
+
+  const data = {
+    ...row,
+    i18n: transformI18nSafely(i18n ?? []),
+    userRoles: normalizedUserRoles,
+    properties: (properties ?? []).map(property => ({
+      ...property,
+      i18n: transformI18nSafely(property.i18n as never),
+      values:
+        property.values?.map(value => ({
+          ...value,
+          i18n: transformI18nSafely(value.i18n as never),
+        })) || [],
+    })),
+    image: row.image
+      ? toImageEnvelope(
+          row.image as Image,
+          imageProfile,
+          ImageContextResource.project,
+          row.id,
+        )
+      : null,
+  }
+
+  if (profile === 'admin') {
+    return ProjectAdminProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
+  }
+  if (profile === 'detail') {
+    return ProjectDetailProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
+  }
+  if (profile === 'card') {
+    return ProjectCardProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
+  }
+  return ProjectListProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
+}
 
 /**
  * Shapes a single project entity into an API entity response envelope.
+ * Returns `data: null` on misses while preserving duration metadata.
  *
- * @param project - Project row or `null`.
+ * @param row - Project row or `null`.
  * @param profile - Output response profile.
  * @returns Entity response envelope with typed project payload.
  */
 export const toEntityResponseShape = async <P extends ProjectProfile = 'detail'>(
-  project: ProjectDBRaw | null,
+  row: ProjectResponseRow | null,
   profile: P = 'detail' as P,
-): Promise<EntityResponse<ProjectEntityByProfile<P>>> =>
-  toProjectEntityResponseShapeFromDb(project, profile)
+): Promise<EntityResponse<ProjectEntityByProfile<P>>> => {
+  const startedAt = Date.now()
+
+  if (!row) {
+    return { data: null, durationMs: Date.now() - startedAt }
+  }
+
+  const data = await toProfileResponseShape(
+    row,
+    row.i18n ?? [],
+    row.userRoles ?? [],
+    row.properties ?? [],
+    profile,
+  )
+
+  return {
+    data: data as ProjectEntityByProfile<P>,
+    durationMs: Date.now() - startedAt,
+  }
+}
 
 /**
  * Shapes a paginated project result into an API list response envelope.
+ * Every row is normalized through the same profile path used by entity reads.
  *
- * @param result - Paginated project rows from DB service.
- * @param user - Optional session user.
+ * @param result - Paginated project rows from the DB layer.
+ * @param _user - Unused session user kept for service signature compatibility.
  * @param profile - Output response profile.
  * @returns List response envelope with typed project payloads.
  */
 export const toListResponseShape = async <P extends ProjectProfile = 'list'>(
   result: ListResponse<ProjectDBRaw>,
-  user: SessionUser | undefined,
+  _user: SessionUser | undefined,
   profile: P = 'list' as P,
-): Promise<ListResponse<ProjectListByProfile<P>>> =>
-  toProjectListResponseShapeFromDb(result, user, profile)
+): Promise<ListResponse<ProjectListByProfile<P>>> => {
+  const {
+    data: rows,
+    limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
+  } = result
 
+  const data = await Promise.all(
+    rows.map(async row => {
+      try {
+        return await toProfileResponseShape(
+          row,
+          row.i18n ?? [],
+          row.userRoles ?? [],
+          row.properties ?? [],
+          profile,
+        )
+      } catch (err) {
+        console.error('[project.toListResponseShape] failed to shape project', {
+          projectId: row.id,
+          projectCode: row.code,
+          profile,
+          error: err,
+        })
+        throw err
+      }
+    }),
+  )
+
+  return {
+    data: data as Array<ProjectListByProfile<P>>,
+    limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters,
+    q,
+    durationMs,
+  }
+}
+
+/********************
+ *  NORMALIZATION
+ ************/
+/**
+ * Produces a stable rank ordering for submitted properties and nested values.
+ * This lets mutation handlers persist user-submitted arrays deterministically.
+ *
+ * @param properties - Submitted property-like records to normalize.
+ * @returns Cloned property array with inferred `type` values and contiguous ranks.
+ */
 export const normalizeSubmittedPropertyRanks = <
   T extends {
     type?: unknown
@@ -174,6 +357,7 @@ export const normalizeSubmittedPropertyRanks = <
   properties: T[],
 ): T[] => {
   const normalized = properties.map(property => ({ ...property }))
+
   const asRank = (value: unknown): number => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
     if (typeof value === 'string' && value.trim() && !Number.isNaN(Number(value))) {
@@ -189,11 +373,11 @@ export const normalizeSubmittedPropertyRanks = <
 
   normalized
     .map((property, index) => ({ property, index }))
-    .sort((a, b) => {
-      const aRank = asRank(a.property.rank)
-      const bRank = asRank(b.property.rank)
-      if (aRank !== bRank) return aRank - bRank
-      return a.index - b.index
+    .sort((left, right) => {
+      const leftRank = asRank(left.property.rank)
+      const rightRank = asRank(right.property.rank)
+      if (leftRank !== rightRank) return leftRank - rightRank
+      return left.index - right.index
     })
     .forEach(({ property }, rank) => {
       property.rank = rank
@@ -201,16 +385,17 @@ export const normalizeSubmittedPropertyRanks = <
 
   for (const property of normalized) {
     if (!Array.isArray(property.values)) continue
+
     const values = property.values as Array<
       { rank?: unknown } & Record<string, unknown>
     >
     property.values = values
       .map((value, index) => ({ value: { ...value }, index }))
-      .sort((a, b) => {
-        const aRank = asRank(a.value.rank)
-        const bRank = asRank(b.value.rank)
-        if (aRank !== bRank) return aRank - bRank
-        return a.index - b.index
+      .sort((left, right) => {
+        const leftRank = asRank(left.value.rank)
+        const rightRank = asRank(right.value.rank)
+        if (leftRank !== rightRank) return leftRank - rightRank
+        return left.index - right.index
       })
       .map(({ value }, rank) => ({
         ...value,
@@ -222,10 +407,12 @@ export const normalizeSubmittedPropertyRanks = <
 }
 
 /**
- * Resolves submitted property scope using canonical DB scope when available.
- * @param property Submitted property candidate.
- * @param canonicalScopeByPropertyId Canonical scope lookup keyed by property id.
- * @returns Resolved scope string or `undefined` when no scope is available.
+ * Resolves the effective scope for a submitted property candidate.
+ * Persisted scope wins for existing property ids so clients cannot silently move inherited fields.
+ *
+ * @param property - Submitted property candidate.
+ * @param canonicalScopeByPropertyId - Canonical scope lookup keyed by property id.
+ * @returns Effective scope or `undefined` when none is available.
  */
 const resolveSubmittedPropertyScope = (
   property: SubmittedPropertyScopeCandidate,
@@ -235,15 +422,18 @@ const resolveSubmittedPropertyScope = (
     typeof property?.id === 'string'
       ? canonicalScopeByPropertyId.get(property.id)
       : undefined
+
   return (
     canonicalScope ?? (typeof property.scope === 'string' ? property.scope : undefined)
   )
 }
 
 /**
- * Splits submitted properties into local (`project`) and inherited scopes.
- * @param properties Submitted properties.
- * @param canonicalScopeByPropertyId Canonical scope lookup keyed by property id.
+ * Splits submitted properties into project-local and inherited groups.
+ * This keeps later persistence and sync steps explicit about ownership boundaries.
+ *
+ * @param properties - Submitted properties.
+ * @param canonicalScopeByPropertyId - Canonical scope lookup keyed by property id.
  * @returns Grouped submitted properties by local and inherited scope.
  */
 export const splitSubmittedPropertiesByScope = <
@@ -262,6 +452,7 @@ export const splitSubmittedPropertiesByScope = <
       local.push(property)
       continue
     }
+
     inherited.push(property)
   }
 
@@ -269,10 +460,12 @@ export const splitSubmittedPropertiesByScope = <
 }
 
 /**
- * Resolves canonical property scopes for submitted properties from persisted rows.
- * @param db Database handle.
- * @param properties Submitted properties that may include ids.
- * @returns Map of property id to canonical scope.
+ * Resolves canonical property scopes for submitted property ids from persisted rows.
+ * Existing records are checked against the DB so scope-sensitive updates stay authoritative.
+ *
+ * @param db - Database handle.
+ * @param properties - Submitted properties that may include ids.
+ * @returns Map from property id to canonical scope.
  */
 export const resolveCanonicalScopeByPropertyId = async <
   T extends SubmittedPropertyScopeCandidate,
@@ -302,9 +495,11 @@ export const resolveCanonicalScopeByPropertyId = async <
 }
 
 /**
- * Normalizes submitted local properties into project-scoped persisted candidates.
- * @param properties Submitted local properties.
- * @param projectId Target project id.
+ * Normalizes submitted local properties into persisted project-local candidates.
+ * Enforces the parent linkage expected by downstream project-property persistence helpers.
+ *
+ * @param properties - Submitted local properties.
+ * @param projectId - Target project id.
  * @returns Local properties with enforced project linkage and scope defaults.
  */
 export const toSubmittedLocalPropertiesWithProjectId = <
@@ -323,7 +518,9 @@ export const toSubmittedLocalPropertiesWithProjectId = <
 
 /**
  * Collects a set of valid property ids from submitted property-like records.
- * @param properties Property-like records.
+ * Used to preserve existing local properties that were not resubmitted in an update payload.
+ *
+ * @param properties - Property-like records.
  * @returns Set of non-empty string ids.
  */
 export const toSubmittedPropertyIdSet = <T extends { id?: unknown }>(
@@ -336,12 +533,14 @@ export const toSubmittedPropertyIdSet = <T extends { id?: unknown }>(
   )
 
 /**
- * Normalizes existing persisted project-local properties for re-persisting.
- * @param properties Existing local properties.
- * @param projectId Target project id.
+ * Normalizes persisted project-local properties for re-persisting alongside submitted rows.
+ * Keeps preserved locals aligned with the same shape produced for newly submitted local props.
+ *
+ * @param properties - Existing local properties.
+ * @param projectId - Target project id.
  * @returns Local properties with enforced project linkage and project scope.
  */
-export const toPersistedLocalPropertiesForProject = <
+const toPersistedLocalPropertiesForProject = <
   T extends PersistedProjectLocalPropertyCandidate,
 >(
   properties: T[],
@@ -355,9 +554,10 @@ export const toPersistedLocalPropertiesForProject = <
   }))
 
 /**
- * Returns project-local properties that should be preserved when no local
- * properties are newly submitted.
- * @param params Existing local properties and submitted local ids.
+ * Returns existing local properties that should be preserved during an update.
+ * This prevents inherited-property syncs from deleting unrelated local project rows.
+ *
+ * @param params - Existing local properties and submitted local ids.
  * @returns Preserved local properties normalized for persistence.
  */
 export const toPreservedLocalPropertiesForProject = <
@@ -368,6 +568,7 @@ export const toPreservedLocalPropertiesForProject = <
   projectId: Id
 }): Array<T & { projectId: Id; hubId: null; scope: 'project' }> => {
   if (params.existingLocalProperties.length === 0) return []
+
   return toPersistedLocalPropertiesForProject(
     params.existingLocalProperties.filter(
       property => !params.submittedLocalPropertyIds.has(property.id),
@@ -377,8 +578,9 @@ export const toPreservedLocalPropertiesForProject = <
 }
 
 /**
- * Flattens local and inherited property groups into sync payload items.
- * @param groups Property groups to merge.
+ * Flattens local and inherited property groups into the sync payload shape used by project updates.
+ *
+ * @param groups - Property groups to merge.
  * @returns Flat list compatible with inherited-property sync payloads.
  */
 export const mergeProjectInheritedPropertySyncItems = (
@@ -386,24 +588,14 @@ export const mergeProjectInheritedPropertySyncItems = (
 ): ProjectInheritedPropertySyncItem[] =>
   groups.flat() as unknown as ProjectInheritedPropertySyncItem[]
 
-export const mergeProjectCapabilitiesForOrganisation = (
-  projectCapabilities: unknown,
-  organisationCapabilityDefinitions: CapabilityDefinitions | null | undefined,
-) => {
-  const merged = normalizeProjectCapabilities(projectCapabilities)
-  const availableKeys = new Set(
-    getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions),
-  )
-
-  for (const key of Object.keys(merged)) {
-    if (!isProjectCapabilityKey(key)) continue
-    if (availableKeys.has(key)) continue
-    merged[key] = false
-  }
-
-  return merged
-}
-
+/**
+ * Normalizes submitted project-role capability maps against the effective project capability set.
+ * Prevents role payloads from granting permissions that the project itself does not expose.
+ *
+ * @param submittedRoles - Submitted project user-role rows.
+ * @param projectCapabilities - Effective project capabilities after normalization.
+ * @returns Submitted roles with invalid capability flags stripped or disabled.
+ */
 export const sanitizeSubmittedRoleCapabilities = (
   submittedRoles: Array<{
     userId: string
@@ -411,21 +603,28 @@ export const sanitizeSubmittedRoleCapabilities = (
     capabilities?: unknown
   }>,
   projectCapabilities: ReturnType<typeof normalizeProjectCapabilities>,
-) => {
+): Array<{
+  userId: string
+  role: string
+  capabilities: ProjectRoleCapabilities
+}> => {
   return submittedRoles.map(role => {
     const nextCapabilities = normalizeProjectRoleCapabilities(role.capabilities)
+
     for (const key of Object.keys(nextCapabilities)) {
       if (!isProjectCapabilityKey(key)) continue
       if (!projectCapabilities[key]) {
         nextCapabilities[key] = false
       }
     }
+
     if (role.role === ProjectRoleType.user) {
       for (const key of Object.keys(nextCapabilities)) {
         if (!isProjectCapabilityKey(key)) continue
         nextCapabilities[key] = false
       }
     }
+
     return {
       ...role,
       capabilities: nextCapabilities,
@@ -433,6 +632,16 @@ export const sanitizeSubmittedRoleCapabilities = (
   })
 }
 
+/********************
+ *  QUERY CONTEXT
+ ************/
+/**
+ * Builds lookup conditions for project reads and updates.
+ * Supports both id- and code-based references so shared handlers can target either route style.
+ *
+ * @param params - Route reference params.
+ * @returns Partial project lookup object suitable for query param validation.
+ */
 export const toLookupConditions = (params: {
   ref: string
   refKey?: 'id' | 'code'
@@ -441,6 +650,13 @@ export const toLookupConditions = (params: {
     ? ({ code: params.ref } as Partial<ProjectDB>)
     : ({ id: params.ref as Id } as Partial<ProjectDB>)
 
+/**
+ * Resolves default visibility state for project list requests.
+ * Public callers default to published and non-archived records unless they ask otherwise.
+ *
+ * @param params - Partial project filter state.
+ * @returns Normalized requested visibility flags.
+ */
 export const toRequestedListState = (params: Partial<ProjectDB>) => ({
   isPublished: typeof params.isPublished === 'boolean' ? params.isPublished : true,
   isArchived: typeof params.isArchived === 'boolean' ? params.isArchived : false,
@@ -448,16 +664,38 @@ export const toRequestedListState = (params: Partial<ProjectDB>) => ({
 
 const VISIBILITY_COLUMNS = ['isArchived', 'isPublished'] as const
 
+/**
+ * Extracts project ids from discovered user roles.
+ * Used to scope project reads for non-super-admin actors.
+ *
+ * @param userRoles - Resolved session role rows.
+ * @returns Project ids the actor is directly assigned to.
+ */
 const toProjectRoleIds = (userRoles: UserRoleDisco[]): Id[] =>
   userRoles.filter(role => role.type === 'project').map(role => role.projectId as Id)
 
+/**
+ * Extracts organisation ids from discovered user roles.
+ * Organisation membership can grant scoped visibility into child projects.
+ *
+ * @param userRoles - Resolved session role rows.
+ * @returns Organisation ids the actor belongs to.
+ */
 const toOrganisationRoleIds = (userRoles: UserRoleDisco[]): Id[] =>
   userRoles
     .filter(role => role.type === 'organisation')
     .map(role => role.organisationId as Id)
 
+/**
+ * Narrows prism input to the hierarchy levels project queries actually honor.
+ * Project list queries apply organisation prisms here and intentionally discard deeper levels.
+ *
+ * @param prisms - Optional raw prism payload.
+ * @returns Normalized project prism object or `undefined`.
+ */
 const toProjectPrisms = (prisms?: Prisms): Prisms | undefined => {
   if (!prisms) return undefined
+
   return {
     organisation: Array.isArray(prisms.organisation) ? prisms.organisation : [],
     project: [],
@@ -465,16 +703,19 @@ const toProjectPrisms = (prisms?: Prisms): Prisms | undefined => {
   }
 }
 
-const applyTriStateBooleanCondition = (
-  conditions: SQL<unknown>[],
-  column: typeof project.isPublished | typeof project.isArchived,
-  value: boolean | null | undefined,
-) => {
-  if (value === true) conditions.push(eq(column, true))
-  if (value === false) conditions.push(eq(column, false))
-}
-
-export const buildVisibilityAndOwnershipConditions = (
+/**
+ * Builds the project visibility and ownership SQL constraints for a query.
+ * This is the query-composition counterpart to the higher-level auth policies used by remote handlers.
+ *
+ * @param db - Database handle used for prism constraint expansion.
+ * @param user - Current session user.
+ * @param isAdminRequest - Whether the request originated from an admin context.
+ * @param params - Validated query params.
+ * @param userRoles - Resolved session role rows.
+ * @param prisms - Optional prism filters.
+ * @returns Query context containing SQL conditions and filtered request params.
+ */
+const buildVisibilityAndOwnershipConditions = (
   db: Database,
   user: SessionUser,
   isAdminRequest: boolean,
@@ -491,7 +732,7 @@ export const buildVisibilityAndOwnershipConditions = (
   const filteredParams = removeExcludedColumns(params, excludeColumns)
 
   const projectPrisms = toProjectPrisms(prisms)
-  if (projectPrisms && db) {
+  if (projectPrisms) {
     conditions.push(
       ...applyPrismConstraints(db, HierarchicalResource.project, projectPrisms),
     )
@@ -509,10 +750,13 @@ export const buildVisibilityAndOwnershipConditions = (
       conditions.push(eq(project.id, '__none__' as Id))
       return { filtersToApply: filteredParams, conditions, excludeColumns }
     }
+
     const ownershipScopes: SQL<unknown>[] = []
     if (projectIds.length > 0) ownershipScopes.push(inArray(project.id, projectIds))
-    if (organisationIds.length > 0)
+    if (organisationIds.length > 0) {
       ownershipScopes.push(inArray(project.organisationId, organisationIds))
+    }
+
     const ownershipCondition =
       ownershipScopes.length === 1 ? ownershipScopes[0] : or(...ownershipScopes)
     if (ownershipCondition) conditions.push(ownershipCondition)
@@ -537,10 +781,13 @@ export const buildVisibilityAndOwnershipConditions = (
       conditions.push(eq(project.id, '__none__' as Id))
       return { filtersToApply: filteredParams, conditions, excludeColumns }
     }
+
     const membershipScopes: SQL<unknown>[] = []
     if (projectIds.length > 0) membershipScopes.push(inArray(project.id, projectIds))
-    if (organisationIds.length > 0)
+    if (organisationIds.length > 0) {
       membershipScopes.push(inArray(project.organisationId, organisationIds))
+    }
+
     const membershipCondition =
       membershipScopes.length === 1 ? membershipScopes[0] : or(...membershipScopes)
     if (membershipCondition) conditions.push(membershipCondition)
@@ -550,13 +797,16 @@ export const buildVisibilityAndOwnershipConditions = (
 }
 
 /**
- * Get the query context for the project resource - filters the query based on the user's roles, prisms, and the query parameters.
- * @param db - The Drizzle instance
- * @param user - The user object
- * @param request - The request object
- * @param params - The query parameters
- * @param userRoles - The user roles
- * @param prisms - The prism filters
+ * Produces final project query conditions after visibility scoping and generic filter composition.
+ * Remote callers use this as the single entry point for list/get query construction.
+ *
+ * @param db - Database handle.
+ * @param user - Current session user.
+ * @param isAdminRequest - Whether the request originated from an admin context.
+ * @param params - Validated query params.
+ * @param userRoles - Resolved session role rows.
+ * @param prisms - Optional prism filters.
+ * @returns Query context containing SQL conditions, filter payload, and excluded columns.
  */
 export const toQueryConditions = (
   db: Database,
@@ -565,7 +815,11 @@ export const toQueryConditions = (
   params: QueryParams,
   userRoles: UserRoleDisco[],
   prisms?: Prisms,
-) => {
+): {
+  filtersToApply: QueryParams
+  conditions: SQL<unknown>[]
+  excludeColumns: string[]
+} => {
   const contextRespectingVisibilityAndOwnership = buildVisibilityAndOwnershipConditions(
     db,
     user,
@@ -584,100 +838,4 @@ export const toQueryConditions = (
   }
 
   return contextRespectingVisibilityAndOwnership
-}
-
-/**
- * Run assertions to check if the user has permissions to create a project
- * @param session - The session object
- * @param request - The request object
- * @param formData - The form data
- * @param userRoles - The user roles
- * @returns Object containing validation and access control context
- */
-export const assertPermissionsToCreateProject = (
-  user: SessionUser,
-  request: Request,
-  formData: ProjectNew,
-  userRoles: UserRoleDisco[],
-) => {
-  const organisationId = formData.organisationId as Id
-  // Run all access control assertions
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
-    () => assertOrganisationOwnerOrSuperAdmin(user, userRoles, organisationId), // Only allow org owners to create projects
-  )
-
-  if (assertionError) return assertionError
-}
-
-/**
- * Get the context for updating a project
- * @param session - The session object
- * @param request - The request object
- * @param formData - The form data
- * @param userRoles - The user roles
- * @param refId - The code from the URL parameter
- * @returns Object containing validation and access control context
- * @remarks We don't need to assert code in params equals code in form,
- * as we want to allow the users to change the code of the project.
- */
-export const assertPermissionsToUpdateProject = (
-  user: SessionUser,
-  request: Request,
-  formData: ProjectDB,
-  userRoles: UserRoleDisco[],
-) => {
-  const projectId = formData.id as Id
-  // Run all access control assertions
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId), // Only allow project maintainers to update projects
-  )
-
-  if (assertionError) return assertionError
-}
-
-export const assertCodeUnique = async (
-  db: Database,
-  form: SuperValidated<ProjectNew> | SuperValidated<Project>,
-  formData: ProjectNew | Project,
-) => {
-  // ASSERT : Code is unique
-  const codeUnique = await isFieldUnique<Project>(
-    db,
-    formData as Project,
-    FirstClassResource.project,
-    'code',
-  )
-
-  if (!codeUnique) {
-    form.valid = false
-    form.errors.code = ['Code already exists']
-  }
-  return form
-}
-
-/**
- * Check if the current user will lose access upon success, superAdmins are exempt.
- * @param formData - The form data
- * @param userRoles - The user roles
- * @param user - The user
- * @returns True if the current user will lose access upon success, false otherwise
- */
-export const isAccessLostUponSuccess = (
-  user: SessionUser,
-  formData: { id?: string; userRoles: UserRoleDisco[] },
-  userRoles?: UserRoleDisco[],
-) => {
-  const userRolesToCheck = userRoles || formData.userRoles
-  return (
-    !userRolesToCheck.some(
-      role =>
-        role.type === 'project' &&
-        role.projectId === formData.id &&
-        role.userId === user.id,
-    ) && !user.superAdmin
-  )
 }
