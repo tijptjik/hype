@@ -165,16 +165,26 @@ export class AppCtx {
   private projectCodeToId = new Map<Code, Id>()
   private hubCodeToId = new Map<Code, Id>()
 
-  private defaultViewSorting = (): Record<FirstClassResource, ResourceSortState> => ({
-    organisation: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-    project: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-    layer: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-    feature: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-    task: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-    hub: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-    property: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-    user: { sortBy: 'modifiedAt', sortOrder: 'desc' },
-  })
+  private defaultSortState: ResourceSortState = {
+    sortBy: 'modifiedAt',
+    sortOrder: 'desc',
+  }
+
+  private sortableResources: FirstClassResource[] = [
+    FirstClassResource.organisation,
+    FirstClassResource.project,
+    FirstClassResource.layer,
+    FirstClassResource.feature,
+    FirstClassResource.task,
+    FirstClassResource.hub,
+    FirstClassResource.property,
+    FirstClassResource.user,
+  ]
+
+  private defaultViewSorting = (): Record<FirstClassResource, ResourceSortState> =>
+    Object.fromEntries(
+      this.sortableResources.map(resource => [resource, { ...this.defaultSortState }]),
+    ) as Record<FirstClassResource, ResourceSortState>
 
   state: AppContextState = $state({
     // Markers -- Which features are shown on the map
