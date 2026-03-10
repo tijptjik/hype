@@ -1,6 +1,8 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
+// I18N
+import { getLocale } from '$lib/i18n'
 import {
   getDuplicateValues,
   hasRoleMembershipChanged,
@@ -149,21 +151,22 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
   }
 
   // Load records from DB.
-  const rows = await listHubs(
+  const result = await listHubs(
     db,
     hubCollectionWithRelations,
     toHubListConditions(userRoles, requestedListState),
+    params.pagination,
+    params.sorting,
+    {
+      q: params.q,
+      locale: getLocale(),
+    },
   )
 
   // Return loaded records with desired profile.
   return toListResponseShape({
-    data: rows,
+    ...result,
     profile,
-    limit: params.pagination?.limit,
-    offset: params.pagination?.offset,
-    totalCount: rows.length,
-    hasMore: false,
-    nextOffset: null,
   })
 })
 

@@ -1,6 +1,8 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
+// I18N
+import { getLocale } from '$lib/i18n'
 // UTILS
 import { nanoid } from 'nanoid'
 // AUTHORIZATION
@@ -170,6 +172,7 @@ const getOrganisationsQuery = guardedQuery(
       {
         q: params.q,
         filtersToApply,
+        locale: getLocale(),
       },
     )
 
