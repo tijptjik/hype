@@ -1,4 +1,5 @@
 <script lang="ts">
+import { SimpleTooltip } from '$lib/bits/core'
 import { m } from '$lib/i18n'
 import Bot from 'virtual:icons/lucide/bot'
 import Smile from 'virtual:icons/lucide/smile'
@@ -23,18 +24,22 @@ function handleClick(event: MouseEvent): void {
 }
 </script>
 
-<button
-  type="button"
-  class={`bits-form__gen-ai ${className}`}
-  {disabled}
-  aria-disabled={disabled}
-  aria-label={tooltip}
-  title={tooltip}
-  onclick={handleClick}
->
-  {#if isGenAI}
-    <Bot class="bits-form__gen-ai-icon" aria-hidden="true" />
-  {:else}
-    <Smile class="bits-form__gen-ai-icon" aria-hidden="true" />
-  {/if}
-</button>
+<SimpleTooltip disabled={!tooltip}>
+  {#snippet trigger()}
+    <button
+      type="button"
+      class={`bits-form__gen-ai ${className}`}
+      {disabled}
+      aria-disabled={disabled}
+      aria-label={tooltip}
+      onclick={handleClick}
+    >
+      {#if isGenAI}
+        <Bot class="bits-form__gen-ai-icon" aria-hidden="true" />
+      {:else}
+        <Smile class="bits-form__gen-ai-icon" aria-hidden="true" />
+      {/if}
+    </button>
+  {/snippet}
+  {tooltip}
+</SimpleTooltip>

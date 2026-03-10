@@ -1,6 +1,6 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
-import { Button } from '$lib/bits/core'
+import { Button, SimpleTooltip } from '$lib/bits/core'
 import { Switch } from '$lib/bits/custom'
 import { m } from '$lib/i18n'
 import Inbox from 'virtual:icons/lucide/inbox'
@@ -22,9 +22,14 @@ let {
 <div class={`bits-form__layer-card-actions-rail ${className}`}>
   <div class="bits-form__layer-card-actions">
     <div class="bits-form__layer-card-flag">
-      <span title="User Contributable" aria-label="User Contributable">
-        <Inbox class="bits-form__layer-card-flag-icon" aria-hidden="true" />
-      </span>
+      <SimpleTooltip>
+        {#snippet trigger()}
+          <span aria-label="User Contributable">
+            <Inbox class="bits-form__layer-card-flag-icon" aria-hidden="true" />
+          </span>
+        {/snippet}
+        User Contributable
+      </SimpleTooltip>
       <Switch
         checked={isUserContributable}
         disabled={!isEditing || isContributableDisabled}

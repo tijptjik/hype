@@ -1,4 +1,5 @@
 <script lang="ts">
+import { SimpleTooltip } from '$lib/bits/core'
 import type { LayerPropertyCardBodyProps } from '../layerPropertyCard.types'
 
 let {
@@ -17,13 +18,17 @@ const IconComponent = $derived(iconComponent)
   <span class="bits-form__layer-card-body-name">{name || '-'}</span>
   <div class="bits-form__layer-card-meta">
     {#if IconComponent}
-      <span
-        class={`bits-form__layer-card-type-icon-wrap bits-form__layer-card-type-icon-wrap--${scopeTone}`}
-        title={iconTitle ?? undefined}
-        aria-label={iconTitle ?? undefined}
-      >
-        <IconComponent class="bits-form__layer-card-type-icon" />
-      </span>
+      <SimpleTooltip disabled={!iconTitle}>
+        {#snippet trigger()}
+          <span
+            class={`bits-form__layer-card-type-icon-wrap bits-form__layer-card-type-icon-wrap--${scopeTone}`}
+            aria-label={iconTitle ?? undefined}
+          >
+            <IconComponent class="bits-form__layer-card-type-icon" />
+          </span>
+        {/snippet}
+        {iconTitle ?? ''}
+      </SimpleTooltip>
     {/if}
     {#if scopeLabel}
       <span

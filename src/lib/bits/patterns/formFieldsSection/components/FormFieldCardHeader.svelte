@@ -12,7 +12,7 @@ import Languages from 'virtual:icons/lucide/languages'
 import Plus from 'virtual:icons/lucide/plus'
 import Trash2 from 'virtual:icons/lucide/trash-2'
 // COMPONENTS
-import { Button, DestructiveDialog } from '$lib/bits/core'
+import { Button, DestructiveDialog, SimpleTooltip } from '$lib/bits/core'
 import Switch from '$lib/bits/custom/switch/Switch.svelte'
 // TYPES
 import type { Id } from '$lib/types'
@@ -145,22 +145,24 @@ function handleAddToProject(event: Event): void {
   <div class="bits-project-field-card__header-left-rail">
     {#if sourceTag}
       {#if sourceTag.iconComponent}
-        <span
-          class={sourceTagIconClass}
-          title={sourceTag.title}
-          aria-label={sourceTag.title}
-        >
-          <sourceTag.iconComponent class="bits-project-field-card__source-icon" />
-        </span>
+        <SimpleTooltip disabled={!sourceTag.title}>
+          {#snippet trigger()}
+            <span class={sourceTagIconClass} aria-label={sourceTag.title}>
+              <sourceTag.iconComponent class="bits-project-field-card__source-icon" />
+            </span>
+          {/snippet}
+          {sourceTag.title}
+        </SimpleTooltip>
       {/if}
       {#if sourceTag.label}
-        <span
-          class={sourceTagLabelClass}
-          title={sourceTag.title}
-          aria-label={sourceTag.title}
-        >
-          {sourceTag.label}
-        </span>
+        <SimpleTooltip disabled={!sourceTag.title}>
+          {#snippet trigger()}
+            <span class={sourceTagLabelClass} aria-label={sourceTag.title}>
+              {sourceTag.label}
+            </span>
+          {/snippet}
+          {sourceTag.title}
+        </SimpleTooltip>
       {/if}
     {/if}
   </div>
@@ -205,9 +207,17 @@ function handleAddToProject(event: Event): void {
         aria-label={m.admin__forms_property_translatable()}
         transition:fade={{ duration: 180 }}
       >
-        <span title={translatableHint} aria-label={translatableHint}>
-          <Languages class="bits-project-field-card__toggle-icon" aria-hidden="true" />
-        </span>
+        <SimpleTooltip disabled={!translatableHint}>
+          {#snippet trigger()}
+            <span aria-label={translatableHint}>
+              <Languages
+                class="bits-project-field-card__toggle-icon"
+                aria-hidden="true"
+              />
+            </span>
+          {/snippet}
+          {translatableHint}
+        </SimpleTooltip>
         <Switch
           checked={Boolean(property.isTranslatable)}
           disabled={!isEditing}
@@ -224,9 +234,17 @@ function handleAddToProject(event: Event): void {
         aria-label={m.default_enabled()}
         transition:fade={{ duration: 180 }}
       >
-        <span title={defaultEnabledHint} aria-label={defaultEnabledHint}>
-          <CopyCheck class="bits-project-field-card__toggle-icon" aria-hidden="true" />
-        </span>
+        <SimpleTooltip disabled={!defaultEnabledHint}>
+          {#snippet trigger()}
+            <span aria-label={defaultEnabledHint}>
+              <CopyCheck
+                class="bits-project-field-card__toggle-icon"
+                aria-hidden="true"
+              />
+            </span>
+          {/snippet}
+          {defaultEnabledHint}
+        </SimpleTooltip>
         <Switch
           checked={Boolean(property.isDefaultEnabled)}
           disabled={!isEditing}
