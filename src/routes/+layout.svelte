@@ -26,7 +26,8 @@ import '$lib/styles/scrollbar.css'
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { LayoutData, LayoutProps } from './$types'
-import type { HubOptsExtended, SessionUser } from '$lib/types'
+import type { SessionUser } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import { MOBILE_MAX_WIDTH } from '$lib'
 
 // PROPS

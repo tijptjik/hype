@@ -2,7 +2,7 @@ import { browser } from '$app/environment'
 import { getLocaleKey } from '$lib/i18n'
 import { QueryClient } from '@tanstack/svelte-query'
 // TYPES
-import type { HubOpts } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 
 export const ssr = false
 export const prerender = false
@@ -10,7 +10,7 @@ export const prerender = false
 export const trailingSlash = 'never'
 
 export async function load({ data }) {
-  const hub = data.hub as HubOpts
+  const hub = data.hub as HubOptsExtended
   const locale = getLocaleKey()
   const localizedHubI18n = hub.i18n?.[locale]
   const fallbackHubI18n = hub.i18n?.en ?? Object.values(hub.i18n ?? {})[0]

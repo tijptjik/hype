@@ -9,8 +9,9 @@ import { hub } from '$lib/db/schema'
 // I18N
 import { getDatabaseWithoutAuth } from '$lib/api'
 import { toLocaleKey } from '$lib/i18n'
-import type { HubOpts, Locale } from '$lib/types'
+import type { Locale } from '$lib/types'
 import type { HubI18nDB } from '$lib/db/zod/schema/hub.types'
+import type { HubOpts } from '$lib/db/zod/schema/hub.types'
 
 const getBaseManifest = async (code: string) => {
   try {
