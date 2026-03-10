@@ -4,13 +4,13 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
 import {
+  createSortable,
+  createSortables,
   createToggleFilter,
   createTranslationFilter,
 } from '$lib/client/services/filters'
-// COMPONENTS
-import EntityCard from '$lib/components/resources/EntityCard.svelte'
 // BITS PATTERNS
-import { ResourceIndex } from '$lib/bits'
+import { EntityCard, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -22,7 +22,7 @@ import {
 } from '$lib/api/services/authz'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import ListFilterIcon from 'virtual:icons/lucide/list-filter'
+import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
 import BookOpenIcon from 'virtual:icons/lucide/book-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ImageIcon from 'virtual:icons/lucide/image'
@@ -63,7 +63,7 @@ const filters = {
     {
       key: 'status',
       title: m.filters__status(),
-      icon: ListFilterIcon,
+      icon: StatusIcon,
       filters: [
         createToggleFilter('isPublished', {
           label: m.published(),
@@ -131,6 +131,15 @@ const filters = {
   ],
 } satisfies ResourceFilterBarConfig
 
+const sortables = createSortables([
+  createSortable('modifiedAt', m.sort__updated()),
+  createSortable('createdAt', m.sort__age()),
+  createSortable('name', m.field_name()),
+  createSortable('nameShort', m.field_short_name()),
+  createSortable('description', m.filters__content()),
+  createSortable('code', m.field_code()),
+])
+
 // CONTEXT
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
@@ -164,7 +173,7 @@ let entities: Organisation[] = $derived(
 )
 </script>
 
-<ResourceIndex {entities} {filters}>
+<ResourceIndex {entities} {filters} {sortables}>
   {#snippet card(entity: Organisation)}
     <EntityCard {entity} {keyMap} />
   {/snippet}

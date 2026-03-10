@@ -5,23 +5,24 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
 import {
   createPropertyFilterSection,
+  createSortable,
+  createSortables,
   createToggleFilter,
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // COMPONENTS
 import CompletionFooter from '$lib/components/layout/CompletionFooter.svelte'
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
-import FeatureRow from '$lib/components/resources/rows/FeatureRow.svelte'
 import FeatureCard from '$lib/components/resources/cards/FeatureIndexCard.svelte'
 // BITS PATTERNS
-import { ResourceIndex } from '$lib/bits'
+import { FeatureRow, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
 import FeatureIcon from 'virtual:icons/lucide/map-pin'
-import ListFilterIcon from 'virtual:icons/lucide/list-filter'
+import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
 import BookOpenIcon from 'virtual:icons/lucide/book-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ImageIcon from 'virtual:icons/lucide/image'
@@ -38,7 +39,7 @@ const filters = {
     {
       key: 'status',
       title: m.filters__status(),
-      icon: ListFilterIcon,
+      icon: StatusIcon,
       filters: [
         createToggleFilter('isPendingReview', {
           label: m.plain_broad_shell_dart(),
@@ -159,6 +160,14 @@ const filters = {
   ],
 } satisfies ResourceFilterBarConfig
 
+const sortables = createSortables([
+  createSortable('modifiedAt', m.sort__updated()),
+  createSortable('createdAt', m.sort__age()),
+  createSortable('title', m.feature__title()),
+  createSortable('description', m.filters__content()),
+  createSortable('displayAddress', m.feature__address()),
+])
+
 // CONTEXT
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
@@ -276,7 +285,7 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<ResourceIndex {entities} {filters} bind:listContainer>
+<ResourceIndex {entities} {filters} {sortables} bind:listContainer>
   {#snippet card(entity: Feature)}
     <FeatureCard {entity} />
   {/snippet}

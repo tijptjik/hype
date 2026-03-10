@@ -4,9 +4,9 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
 import { createToggleFilter } from '$lib/client/services/filters'
+// BITS PATTERNS
+import { GroupedResourceIndex, TaskRow } from '$lib/bits'
 // COMPONENTS
-import GroupedResourceIndex from '$lib/components/resources/GroupedResourceIndex.svelte'
-import TaskRow from '$lib/components/resources/rows/TaskRow.svelte'
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
@@ -14,7 +14,7 @@ import { FirstClassResource } from '$lib/enums'
 import { m } from '$lib/i18n'
 // ICONS
 import TaskIcon from 'virtual:icons/lucide/inbox'
-import ListFilterIcon from 'virtual:icons/lucide/list-filter'
+import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
 // TYPES
 import type { Id, ResourceFilterBarConfig, Task } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
@@ -22,12 +22,11 @@ import type { Project } from '$lib/db/zod/schema/project.types'
 
 const filters = {
   resource: FirstClassResource.task,
-  enableSort: false,
   sections: [
     {
       key: 'status',
       title: m.filters__status(),
-      icon: ListFilterIcon,
+      icon: StatusIcon,
       filters: [
         createToggleFilter('isReviewed', {
           label: m.plain_broad_shell_dart(),
