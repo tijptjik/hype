@@ -3,9 +3,7 @@ import { z } from 'zod'
 // DRIZZLE
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { image, featureImage } from '$lib/db/schema/index'
-// ZOD SCHEMAS
-import { FeatureBase } from './feature'
+import { image, feature, featureImage } from '$lib/db/schema/index'
 import {
   ImageCDN,
   ImageContextResource,
@@ -185,7 +183,7 @@ export const ImageContextEnvelopeAPI = z.object({
 // ═══════════════════════
 
 export const FeatureImageAPI = FeatureImageBase.extend({
-  feature: z.lazy(() => FeatureBase),
+  feature: z.lazy(() => createSelectSchema(feature)),
   image: ImageBase,
 })
 
@@ -235,7 +233,7 @@ export const ImageUpdateAPI = ImageUpdate.extend({
 })
 
 export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
-  feature: z.lazy(() => FeatureBase),
+  feature: z.lazy(() => createSelectSchema(feature)),
   image: ImageBase,
 })
 
