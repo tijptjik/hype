@@ -4,11 +4,9 @@ import type {
   FormLocaleInput,
   FormLocaleSource,
   Locale,
+  LocaleKey,
 } from '$lib/types'
-import type {
-  GetQueryParams,
-  ListQueryParams,
-} from '$lib/db/zod/schema/api.types'
+import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
   HubAdminProfileAPI,
   HubBase,
@@ -107,3 +105,22 @@ export type HubIdentityPatch = {
 }
 export type HubGetResponse = EntityResponse<HubEntityByProfile<'admin'>>
 export type HubGetState = HubGetResponse | null
+
+export interface HubOpts {
+  code?: string
+  domain?: string | null
+  isCore: boolean
+  i18n: Record<LocaleKey, Partial<HubI18nDB>>
+  isSuperAdmin?: boolean
+  id?: string
+}
+
+export interface HubOptsExtended extends Partial<Hub> {
+  id?: string
+  code?: string
+  domain?: string | null
+  i18n: Record<LocaleKey, Partial<HubI18nDB>>
+  isSuperAdmin: boolean
+  isAdminRequest: boolean
+  isCore: boolean
+}
