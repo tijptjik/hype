@@ -2,9 +2,10 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+// SERVICES
+import { createToggleFilter } from '$lib/client/services/filters'
 // COMPONENTS
 import GroupedResourceIndex from '$lib/components/resources/GroupedResourceIndex.svelte'
-import FilterControlBar from '$lib/components/resources/filters/tasks/Root.svelte'
 import TaskRow from '$lib/components/resources/rows/TaskRow.svelte'
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 // ENUMS
@@ -13,9 +14,31 @@ import { FirstClassResource } from '$lib/enums'
 import { m } from '$lib/i18n'
 // ICONS
 import TaskIcon from 'virtual:icons/lucide/inbox'
+import ListFilterIcon from 'virtual:icons/lucide/list-filter'
 // TYPES
-import type { Task, Project, Id } from '$lib/types'
+import type { Id, ResourceFilterBarConfig, Task } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+
+const filters = {
+  resource: FirstClassResource.task,
+  enableSort: false,
+  sections: [
+    {
+      key: 'status',
+      title: m.filters__status(),
+      icon: ListFilterIcon,
+      filters: [
+        createToggleFilter('isReviewed', {
+          label: m.plain_broad_shell_dart(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+          refreshResource: FirstClassResource.task,
+        }),
+      ],
+    },
+  ],
+} satisfies ResourceFilterBarConfig
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -73,7 +96,7 @@ function navigateToNextTask() {
     const nextTask = entities[i]
     if (nextTask?.images?.[0]) {
       selectedTask = nextTask
-      selectedImage = nextTask.images?.[0] as ImageCtxEnvelope
+      selectedImage = nextTask.images?.[0] as unknown as ImageCtxEnvelope
       selectedTaskIndex = i
       updateRowFocus(i)
       return
@@ -89,7 +112,7 @@ function navigateToPreviousTask() {
     const prevTask = entities[i]
     if (prevTask?.images?.[0]) {
       selectedTask = prevTask
-      selectedImage = prevTask.images?.[0] as ImageCtxEnvelope
+      selectedImage = prevTask.images?.[0] as unknown as ImageCtxEnvelope
       selectedTaskIndex = i
       updateRowFocus(i)
       return
@@ -168,10 +191,7 @@ function updateRowFocus(index: number) {
 <div
   class="h-full overflow-y-auto overscroll-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed pb-6"
 >
-  <GroupedResourceIndex {groupedEntities} bind:listContainer>
-    {#snippet controlBar()}
-      <FilterControlBar count={entities.length} />
-    {/snippet}
+  <GroupedResourceIndex {groupedEntities} {filters} bind:listContainer>
     {#snippet row(entity, index)}
       <TaskRow
         {entity}
@@ -189,7 +209,7 @@ function updateRowFocus(index: number) {
   <FullScreenViewer
     appCtx={adminCtx.appCtx}
     {adminCtx}
-    image={selectedImage as ImageDBBasic}
+    image={selectedImage}
     feature={selectedTask.feature}
     canNavigatePrevious={canNavigatePrevious()}
     canNavigateNext={canNavigateNext()}
