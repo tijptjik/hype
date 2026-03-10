@@ -32,7 +32,16 @@ import { getCloudinarySignature } from '$lib/api/server/image.remote'
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
 // TYPES
-import type { TaskNew, TaskDB, TaskDBPartial, TaskCreation, Id, Database, HubOpts, TaskDBRaw } from '$lib/types'
+import type {
+  TaskNew,
+  TaskDB,
+  TaskDBPartial,
+  TaskCreation,
+  Id,
+  Database,
+  TaskDBRaw,
+} from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
 // API SERVICES
 import { createUserContributedFeature } from '$lib/api/services/feature'
@@ -77,7 +86,7 @@ export const listTasks = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts,
+  opts: HubOptsExtended,
 ): Promise<TaskDBRaw[]> => {
   // Apply hub filtering - always needed as some resources are hub-exclusive
   const hubFilter = getTaskHubFilter(db, opts)
@@ -103,7 +112,7 @@ export const getTask = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-  opts: HubOpts,
+  opts: HubOptsExtended,
 ): Promise<TaskDBRaw | undefined> => {
   // Apply hub filtering - always needed as some resources are hub-exclusive
   const hubFilter = getTaskHubFilter(db, opts)
