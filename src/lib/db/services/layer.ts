@@ -1,33 +1,29 @@
 // DRIZZLE
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  inArray,
-  or,
-  sql,
-  type AnyColumn,
-  type SQL,
-} from 'drizzle-orm'
+import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import { layer, layerI18n, layerProperty, organisation, project } from '../schema'
 // SERVICES
 import { getLayerHubFilter } from './hub'
 // DB
-import { toRelatedRecords } from '..'
+import {
+  firstOrNull,
+  resolveRequiredProbe,
+  toOrderByWithLocalizedFields,
+  toRelatedRecords,
+} from '..'
 import { insert, insertManyRelated, replaceManyRelated } from '../crud'
 // TYPES
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 import type {
   Database,
-  HubOptsExtended,
   Id,
   LocaleKey,
+  Locale,
   LayerMetadata,
   ListResponse,
   QueryParams,
 } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {
   LayerCommandProbe,
@@ -166,6 +162,7 @@ export const listLayers = async (
     searchColumns?: string[]
     ignoreHubFilter?: boolean
     filtersToApply?: QueryParams
+    locale?: Locale
   },
 ): Promise<ListResponse<LayerDBRaw>> => {
   const startedAt = Date.now()
@@ -228,13 +225,23 @@ export const listLayers = async (
 
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
-  const sortColumn = layer[sortBy as keyof typeof layer]
-  if (!sortColumn) {
-    throw new Error(`Invalid sort column: ${sortBy}`)
-  }
-
-  const orderBy =
-    sortOrder === 'desc' ? desc(sortColumn as AnyColumn) : asc(sortColumn as AnyColumn)
+  const orderBy = toOrderByWithLocalizedFields({
+    db,
+    locale: query?.locale,
+    sortBy,
+    sortOrder,
+    fallbackColumn: layer.modifiedAt,
+    baseTable: layer,
+    localizedSortColumns: {
+      name: layerI18n.name,
+      nameShort: layerI18n.nameShort,
+      description: layerI18n.description,
+    },
+    i18nTable: layerI18n,
+    parentIdColumn: layer.id,
+    foreignKeyColumn: layerI18n.layerId,
+    localeColumn: layerI18n.locale,
+  })
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   const data = await db.query.layer.findMany({
@@ -309,22 +316,22 @@ export const probeLayerQuery = async (
   isPublished: boolean
   isArchived: boolean
 } | null> => {
-  const [probe] = await db
-    .select({
-      id: layer.id,
-      organisationId: layer.organisationId,
-      projectId: layer.projectId,
-      hubId: organisation.hubId,
-      isPublished: layer.isPublished,
-      isArchived: layer.isArchived,
-    })
-    .from(layer)
-    .innerJoin(project, eq(layer.projectId, project.id))
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(eq(layer.id, params.ref))
-    .limit(1)
-
-  return probe ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: layer.id,
+        organisationId: layer.organisationId,
+        projectId: layer.projectId,
+        hubId: organisation.hubId,
+        isPublished: layer.isPublished,
+        isArchived: layer.isArchived,
+      })
+      .from(layer)
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(layer.id, params.ref))
+      .limit(1),
+  )
 }
 
 /**
@@ -342,22 +349,22 @@ export const probeLayerForUpdate = async (
   hubId: string | null
   modifiedAt: string
 } | null> => {
-  const [current] = await db
-    .select({
-      id: layer.id,
-      organisationId: layer.organisationId,
-      projectId: layer.projectId,
-      metadata: layer.metadata,
-      hubId: organisation.hubId,
-      modifiedAt: layer.modifiedAt,
-    })
-    .from(layer)
-    .innerJoin(project, eq(layer.projectId, project.id))
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(eq(layer.id, layerId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: layer.id,
+        organisationId: layer.organisationId,
+        projectId: layer.projectId,
+        metadata: layer.metadata,
+        hubId: organisation.hubId,
+        modifiedAt: layer.modifiedAt,
+      })
+      .from(layer)
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(layer.id, layerId))
+      .limit(1),
+  )
 }
 
 /**
@@ -368,20 +375,20 @@ const probeLayerForCommand = async (
   db: Database,
   layerId: Id,
 ): Promise<LayerCommandProbe | null> => {
-  const [current] = await db
-    .select({
-      id: layer.id,
-      organisationId: layer.organisationId,
-      projectId: layer.projectId,
-      hubId: organisation.hubId,
-    })
-    .from(layer)
-    .innerJoin(project, eq(layer.projectId, project.id))
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(eq(layer.id, layerId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: layer.id,
+        organisationId: layer.organisationId,
+        projectId: layer.projectId,
+        hubId: organisation.hubId,
+      })
+      .from(layer)
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(layer.id, layerId))
+      .limit(1),
+  )
 }
 
 /**
@@ -394,8 +401,7 @@ export const resolveLayerCommandProbe = async (
   onNotFound: () => never,
 ): Promise<LayerCommandProbe> => {
   const probed = await probeLayerForCommand(db, layerId)
-  if (!probed) return onNotFound()
-  return probed
+  return resolveRequiredProbe(probed, onNotFound)
 }
 
 // ═══════════════════════

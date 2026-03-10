@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, like, sql, or, asc, desc } from 'drizzle-orm'
+import { and, eq, like, sql, or } from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
@@ -9,22 +9,28 @@ import {
   project,
 } from '../schema'
 // SERVICES
-import { toRelatedRecords } from '..'
+import {
+  firstOrNull,
+  resolveRequiredProbe,
+  toOrderByWithLocalizedFields,
+  toRelatedRecords,
+} from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { getOrganisationHubFilter } from './hub'
 // TYPES
-import type { AnyColumn, InferInsertModel, SQL } from 'drizzle-orm'
+import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type {
   Id,
   Database,
+  Locale,
   LocaleKey,
   QueryParams,
-  HubOptsExtended,
   ListResponse,
   OrganisationProbe,
   OrganisationUpdateProbe,
   OrganisationCommandProbe,
 } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type {
   OrganisationDB,
   OrganisationDBNew,
@@ -201,6 +207,7 @@ export const listOrganisations = async (
     searchColumns?: string[]
     ignoreHubFilter?: boolean
     filtersToApply?: QueryParams
+    locale?: Locale
   },
 ): Promise<ListResponse<OrganisationDBRaw>> => {
   const startedAt = Date.now()
@@ -278,12 +285,23 @@ export const listOrganisations = async (
 
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
-  const sortColumn = organisation[sortBy as keyof typeof organisation]
-  if (!sortColumn) {
-    throw new Error(`Invalid sort column: ${sortBy}`)
-  }
-  const orderBy =
-    sortOrder === 'desc' ? desc(sortColumn as AnyColumn) : asc(sortColumn as AnyColumn)
+  const orderBy = toOrderByWithLocalizedFields({
+    db,
+    locale: query?.locale,
+    sortBy,
+    sortOrder,
+    fallbackColumn: organisation.modifiedAt,
+    baseTable: organisation,
+    localizedSortColumns: {
+      name: organisationI18n.name,
+      nameShort: organisationI18n.nameShort,
+      description: organisationI18n.description,
+    },
+    i18nTable: organisationI18n,
+    parentIdColumn: organisation.id,
+    foreignKeyColumn: organisationI18n.organisationId,
+    localeColumn: organisationI18n.locale,
+  })
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
   const data = await db.query.organisation.findMany({
@@ -353,22 +371,22 @@ export const probeOrganisationQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
 ): Promise<OrganisationProbe | null> => {
-  const [probe] = await db
-    .select({
-      id: organisation.id,
-      hubId: organisation.hubId,
-      isPublished: organisation.isPublished,
-      isArchived: organisation.isArchived,
-    })
-    .from(organisation)
-    .where(
-      params.refKey === 'code'
-        ? eq(organisation.code, params.ref)
-        : eq(organisation.id, params.ref as Id),
-    )
-    .limit(1)
-
-  return probe ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: organisation.id,
+        hubId: organisation.hubId,
+        isPublished: organisation.isPublished,
+        isArchived: organisation.isArchived,
+      })
+      .from(organisation)
+      .where(
+        params.refKey === 'code'
+          ? eq(organisation.code, params.ref)
+          : eq(organisation.id, params.ref as Id),
+      )
+      .limit(1),
+  )
 }
 
 /**
@@ -379,13 +397,13 @@ export const probeExistingOrganisation = async (
   db: Database,
   code: string,
 ): Promise<{ id: string } | null> => {
-  const [existing] = await db
-    .select({ id: organisation.id })
-    .from(organisation)
-    .where(eq(organisation.code, code))
-    .limit(1)
-
-  return existing ?? null
+  return firstOrNull(
+    await db
+      .select({ id: organisation.id })
+      .from(organisation)
+      .where(eq(organisation.code, code))
+      .limit(1),
+  )
 }
 
 /**
@@ -398,19 +416,19 @@ export const probeOrganisationForUpdate = async (
   db: Database,
   organisationId: Id,
 ): Promise<OrganisationUpdateProbe | null> => {
-  const [current] = await db
-    .select({
-      id: organisation.id,
-      code: organisation.code,
-      hubId: organisation.hubId,
-      capabilities: organisation.capabilities,
-      modifiedAt: organisation.modifiedAt,
-    })
-    .from(organisation)
-    .where(eq(organisation.id, organisationId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: organisation.id,
+        code: organisation.code,
+        hubId: organisation.hubId,
+        capabilities: organisation.capabilities,
+        modifiedAt: organisation.modifiedAt,
+      })
+      .from(organisation)
+      .where(eq(organisation.id, organisationId))
+      .limit(1),
+  )
 }
 
 /**
@@ -421,16 +439,16 @@ export const probeOrganisationForCommand = async (
   db: Database,
   organisationId: Id,
 ): Promise<OrganisationCommandProbe | null> => {
-  const [current] = await db
-    .select({
-      id: organisation.id,
-      hubId: organisation.hubId,
-    })
-    .from(organisation)
-    .where(eq(organisation.id, organisationId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: organisation.id,
+        hubId: organisation.hubId,
+      })
+      .from(organisation)
+      .where(eq(organisation.id, organisationId))
+      .limit(1),
+  )
 }
 
 /**
@@ -446,8 +464,7 @@ export const resolveOrganisationCommandProbe = async (
   onNotFound: () => never,
 ): Promise<OrganisationCommandProbe> => {
   const probed = await probeOrganisationForCommand(db, organisationId)
-  if (!probed) return onNotFound()
-  return probed
+  return resolveRequiredProbe(probed, onNotFound)
 }
 
 // ═══════════════════════

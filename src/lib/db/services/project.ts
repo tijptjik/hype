@@ -1,15 +1,5 @@
 // DRIZZLE
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  like,
-  or,
-  sql,
-  type AnyColumn,
-  type SQL,
-} from 'drizzle-orm'
+import { and, eq, like, or, sql, type SQL } from 'drizzle-orm'
 // CAPABILITIES
 import {
   getCapabilityKeysFromDefinitions,
@@ -29,7 +19,12 @@ import {
   task,
 } from '../schema'
 // DB
-import { toRelatedRecords } from '..'
+import {
+  firstOrNull,
+  resolveRequiredProbe,
+  toOrderByWithLocalizedFields,
+  toRelatedRecords,
+} from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 // ZOD
 import { getProjectHubFilter } from './hub'
@@ -39,10 +34,11 @@ import type {
   Id,
   Database,
   LocaleKey,
-  HubOptsExtended,
+  Locale,
   ListResponse,
   QueryParams,
 } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type {
   ProjectAdminDBRaw,
   ProjectDB,
@@ -249,6 +245,7 @@ export async function listProjects<
     searchColumns?: string[]
     ignoreHubFilter?: boolean
     filtersToApply?: QueryParams
+    locale?: Locale
   },
 ): Promise<ListResponse<TRow>> {
   const startedAt = Date.now()
@@ -318,12 +315,25 @@ export async function listProjects<
 
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
-  const sortColumn = project[sortBy as keyof typeof project]
-  if (!sortColumn) {
-    throw new Error(`Invalid sort column: ${sortBy}`)
-  }
-  const orderBy =
-    sortOrder === 'desc' ? desc(sortColumn as AnyColumn) : asc(sortColumn as AnyColumn)
+  const orderBy = toOrderByWithLocalizedFields({
+    db,
+    locale: query?.locale,
+    sortBy,
+    sortOrder,
+    fallbackColumn: project.modifiedAt,
+    baseTable: project,
+    localizedSortColumns: {
+      name: projectI18n.name,
+      nameShort: projectI18n.nameShort,
+      description: projectI18n.description,
+      license: projectI18n.license,
+      attribution: projectI18n.attribution,
+    },
+    i18nTable: projectI18n,
+    parentIdColumn: project.id,
+    foreignKeyColumn: projectI18n.projectId,
+    localeColumn: projectI18n.locale,
+  })
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
   const baseQuery = {
     where: whereClause,
@@ -407,24 +417,24 @@ export const probeProjectQuery = async (
   isPublished: boolean
   isArchived: boolean
 } | null> => {
-  const [probe] = await db
-    .select({
-      id: project.id,
-      organisationId: project.organisationId,
-      hubId: organisation.hubId,
-      isPublished: project.isPublished,
-      isArchived: project.isArchived,
-    })
-    .from(project)
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(
-      params.refKey === 'code'
-        ? eq(project.code, params.ref)
-        : eq(project.id, params.ref),
-    )
-    .limit(1)
-
-  return probe ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: project.id,
+        organisationId: project.organisationId,
+        hubId: organisation.hubId,
+        isPublished: project.isPublished,
+        isArchived: project.isArchived,
+      })
+      .from(project)
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(
+        params.refKey === 'code'
+          ? eq(project.code, params.ref)
+          : eq(project.id, params.ref),
+      )
+      .limit(1),
+  )
 }
 
 /**
@@ -435,13 +445,13 @@ export const probeExistingProject = async (
   db: Database,
   code: string,
 ): Promise<{ id: string } | null> => {
-  const [existing] = await db
-    .select({ id: project.id })
-    .from(project)
-    .where(eq(project.code, code))
-    .limit(1)
-
-  return existing ?? null
+  return firstOrNull(
+    await db
+      .select({ id: project.id })
+      .from(project)
+      .where(eq(project.code, code))
+      .limit(1),
+  )
 }
 
 /**
@@ -461,21 +471,21 @@ export const probeProjectForUpdate = async (
   hubId: string | null
   modifiedAt: string
 } | null> => {
-  const [current] = await db
-    .select({
-      id: project.id,
-      code: project.code,
-      organisationId: project.organisationId,
-      capabilities: project.capabilities,
-      hubId: organisation.hubId,
-      modifiedAt: project.modifiedAt,
-    })
-    .from(project)
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(eq(project.id, projectId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: project.id,
+        code: project.code,
+        organisationId: project.organisationId,
+        capabilities: project.capabilities,
+        hubId: organisation.hubId,
+        modifiedAt: project.modifiedAt,
+      })
+      .from(project)
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(project.id, projectId))
+      .limit(1),
+  )
 }
 
 /**
@@ -486,18 +496,18 @@ const probeProjectForCommand = async (
   db: Database,
   projectId: Id,
 ): Promise<{ id: string; organisationId: string; hubId: string | null } | null> => {
-  const [current] = await db
-    .select({
-      id: project.id,
-      organisationId: project.organisationId,
-      hubId: organisation.hubId,
-    })
-    .from(project)
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(eq(project.id, projectId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: project.id,
+        organisationId: project.organisationId,
+        hubId: organisation.hubId,
+      })
+      .from(project)
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(project.id, projectId))
+      .limit(1),
+  )
 }
 
 /**
@@ -513,8 +523,7 @@ export const resolveProjectCommandProbe = async (
   onNotFound: () => never,
 ): Promise<{ id: string; organisationId: string; hubId: string | null }> => {
   const probed = await probeProjectForCommand(db, projectId)
-  if (!probed) return onNotFound()
-  return probed
+  return resolveRequiredProbe(probed, onNotFound)
 }
 
 /**
@@ -525,16 +534,16 @@ export const probeOrganisationHubForProject = async (
   db: Database,
   organisationId: Id,
 ): Promise<{ organisationId: string; hubId: string | null } | null> => {
-  const [row] = await db
-    .select({
-      organisationId: organisation.id,
-      hubId: organisation.hubId,
-    })
-    .from(organisation)
-    .where(eq(organisation.id, organisationId))
-    .limit(1)
-
-  return row ?? null
+  return firstOrNull(
+    await db
+      .select({
+        organisationId: organisation.id,
+        hubId: organisation.hubId,
+      })
+      .from(organisation)
+      .where(eq(organisation.id, organisationId))
+      .limit(1),
+  )
 }
 
 // ═══════════════════════
