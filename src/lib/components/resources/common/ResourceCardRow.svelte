@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Resource">
-// COMPONENTS
-import EntityCard from '$lib/components/resources/EntityCard.svelte'
+// BITS
+import { EntityCard } from '$lib/bits'
 // TYPES
 import type { Resource, EntityWithOptionalImage } from '$lib/types'
 import type { Snippet } from 'svelte'

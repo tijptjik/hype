@@ -1,15 +1,17 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n'
-// COMPONENTS
-import StatusStats from '$lib/components/features/stats/StatusStats.svelte'
-import TranslationStats from '$lib/components/features/stats/TranslationStats.svelte'
-import ContentStats from '$lib/components/features/stats/ContentStats.svelte'
-import ImageStats from '$lib/components/features/stats/ImageStats.svelte'
-import CategoryStats from '$lib/components/features/stats/CategoryStats.svelte'
-import SpecifierStats from '$lib/components/features/stats/SpecifierStats.svelte'
+// BITS CUSTOM
+import {
+  CategoryStats,
+  ContentStats,
+  ImageStats,
+  SpecifierStats,
+  StatusStats,
+  TranslationStats,
+} from '$lib/bits/custom'
 // TYPES
-import type { AppCtx } from '$lib/context/admin.svelte'
+import type { AppCtx } from '$lib/context/app.svelte'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 let {
