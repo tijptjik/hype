@@ -33,12 +33,11 @@ import type {
   Database,
   Id,
   QueryParams,
-  HubOpts,
-  HubOptsExtended,
   SessionUser,
   ParamsToSign,
   DeleteParamsToSign,
 } from '$lib/types'
+import type { HubOpts, HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type {
   Image,
   ImageContextEnvelope,
@@ -51,7 +50,7 @@ import type {
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import { error, type RequestEvent } from '@sveltejs/kit'
 import { applyResourceContextConstraints } from '$lib/db/services/image'
-import { getProjectIdForFeatureId } from '$lib/db/services/feature'
+import { getProjectForFeatureId } from '$lib/db/services/project'
 import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
 import { getUserById } from '$lib/db/services/user'
 
@@ -334,9 +333,9 @@ export const assertPermissionsToCreateImage = async (
 
   switch (ctxType) {
     case ImageContextResource.feature: {
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOptsExtended)
+      const projectId = (await getProjectForFeatureId(db, ctxId as Id))?.id
       contextAssertion = () =>
-        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
+        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId ?? '')
       break
     }
     case ImageContextResource.project:
@@ -383,9 +382,9 @@ export const assertPermissionsToUpdateImage = async (
 
   switch (ctxType) {
     case ImageContextResource.feature: {
-      const projectId = await getProjectIdForFeatureId(db, ctxId as Id, hubOptsExtended)
+      const projectId = (await getProjectForFeatureId(db, ctxId as Id))?.id
       contextAssertion = () =>
-        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
+        assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId ?? '')
       break
     }
     case ImageContextResource.project:
