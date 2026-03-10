@@ -175,6 +175,7 @@ import type { Component, Snippet } from 'svelte'
 import type { Page, RemoteFormIssue } from '@sveltejs/kit'
 import type { RequestEvent } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
+import type { IconSource } from '@steeze-ui/svelte-icon'
 import type {
   FormPath,
   InputConstraints,
@@ -677,6 +678,76 @@ export type HubTranslationFilterKey =
   | 'isDescriptionTranslated'
 export type HubAuthorshipFilterKey = 'hasName' | 'hasContextualName' | 'hasDescription'
 export type HubImageFilterKey = 'hasImage'
+
+export type ViewFilterResource = keyof ViewFilters
+export type PropertyFilterType = 'classifier' | 'specifier'
+export type ResourceFilterToggleKey<T extends ViewFilterResource> = Extract<
+  Exclude<keyof ViewFilters[T], 'translationLocales' | 'properties'>,
+  string
+>
+export type ResourceTranslationFilterKey<T extends ViewFilterResource> = Extract<
+  ResourceFilterToggleKey<T>,
+  `${string}Translated`
+>
+
+export type ResourceFilterConfigBase = {
+  label: string
+  invertBoolean?: boolean
+  trueLabel?: string
+  falseLabel?: string
+  superAdminOnly?: boolean
+  transformOffset?: number
+  refreshResource?: FirstClassResource
+}
+
+export type ResourceToggleFilterConfig<T extends ViewFilterResource> =
+  ResourceFilterConfigBase & {
+    type: 'toggle'
+    key: ResourceFilterToggleKey<T>
+  }
+
+export type ResourceTranslationFilterConfig<T extends ViewFilterResource> =
+  ResourceFilterConfigBase & {
+    type: 'translation'
+    key: ResourceTranslationFilterKey<T>
+  }
+
+export type ResourceFilterSectionConfig<T extends ViewFilterResource> = {
+  key: string
+  title: string
+  icon: IconSource | Component
+  filters: Array<ResourceToggleFilterConfig<T> | ResourceTranslationFilterConfig<T>>
+}
+
+export type ResourcePropertyFilterSectionConfig = {
+  key: string
+  title: string
+  icon: IconSource | Component
+  type: 'property'
+  propertyType: PropertyFilterType
+  falseLabel?: string
+  trueLabel?: string
+  transformOffset?: number
+  superAdminOnly?: boolean
+  refreshResource?: FirstClassResource
+}
+
+export type ResourceFilterEntryConfig = ResourceFilterConfigBase & {
+  type: 'toggle' | 'translation'
+  key: string
+}
+
+export type ResourceFilterSection =
+  | (Omit<ResourceFilterSectionConfig<ViewFilterResource>, 'filters'> & {
+      filters: ResourceFilterEntryConfig[]
+    })
+  | ResourcePropertyFilterSectionConfig
+
+export type ResourceFilterBarConfig = {
+  resource: ViewFilterResource
+  sections: ResourceFilterSection[]
+  enableSort?: boolean
+}
 
 /* ----------------- */
 // FILTERS :: APP
