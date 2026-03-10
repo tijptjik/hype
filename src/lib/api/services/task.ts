@@ -36,10 +36,10 @@ import type {
   TaskCollection,
   Task,
   TaskDBRaw,
-  HubOpts,
   SessionUser,
   Locale,
 } from '$lib/types'
+import type { HubOpts } from '$lib/db/zod/schema/hub.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

@@ -16,13 +16,14 @@ import {
 import { ImageContextResource } from '$lib/enums'
 // TYPES
 import { asc, sql, type SQL } from 'drizzle-orm'
-import type { EntityResponse, HubOptsExtended, Id, ListResponse } from '$lib/types'
+import type { EntityResponse, Id, ListResponse } from '$lib/types'
 import type {
   Hub,
   HubDB,
   HubDBRaw,
   HubEntityByProfile,
   HubListByProfile,
+  HubOptsExtended,
   HubProfile as HubProfileType,
 } from '$lib/db/zod/schema/hub.types'
 

@@ -390,7 +390,7 @@ export type SidebarState = 'closed' | 'narrow' | 'open'
 // ADMIN CONTROLS
 /* -------- */
 export type LayoutMode = 'table' | 'list' | 'card'
-export type ControlMode = 'filter' | 'hidden'
+export type ControlMode = 'filter' | 'sort' | 'hidden'
 export type HeaderControlsMode = 'auto' | 'view' | 'form' | 'none'
 
 export interface HeaderVisibilityOverrides {
@@ -710,6 +710,11 @@ export type FilterState = {
   property: ResourceFilterState
 }
 export type AdminFilterStates = Record<FirstClassResource, FilterState>
+export type ResourceSortState = {
+  sortBy: string
+  sortOrder: 'asc' | 'desc'
+}
+export type ViewSortingState = Record<FirstClassResource, ResourceSortState>
 
 export type ActiveCollection = {
   id: string
@@ -2063,6 +2068,7 @@ export type AppContextState = {
   }
   // TIER 3: VIEW FILTERS - Only affect current route/view
   viewFilters: ViewFilters
+  viewSorting: ViewSortingState
 }
 
 export type RemoteListFn<Params, Result> = (
@@ -2325,25 +2331,6 @@ export type NeighbourhoodResource = {
 }
 
 export type ALSSuggestedAddressItem = NonNullable<ALSResult['SuggestedAddress']>[number]
-
-export interface HubOpts {
-  code?: string
-  domain?: string | null
-  isCore: boolean
-  i18n: Record<LocaleKey, Partial<HubI18nDB>>
-  isSuperAdmin?: boolean
-  id?: string
-}
-
-export interface HubOptsExtended extends Partial<Hub> {
-  id?: string
-  code?: string
-  domain?: string | null
-  i18n: Record<LocaleKey, Partial<HubI18nDB>>
-  isSuperAdmin: boolean
-  isAdminRequest: boolean
-  isCore: boolean
-}
 
 /* ----------------- */
 // USER :: PROFILES

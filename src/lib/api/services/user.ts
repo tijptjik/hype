@@ -47,12 +47,12 @@ import {
 // TYPES
 import type {
   Database,
-  HubOptsExtended,
   Prisms,
   QueryParams,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type {
   UserDB,
   UserEntityByProfile,

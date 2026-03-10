@@ -11,16 +11,13 @@ import * as schema from '$lib/db/schema/index'
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
 // TYPES
-import type { HubOptsExtended, LocaleKey, Session, SessionUser } from '$lib/types'
+import type { LocaleKey, Session, SessionUser } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import { isAdminRequest } from '$lib/api'
 
 type HubShapeResult = { data: unknown }
 type HubServiceModule = typeof import('$lib/api/services/hub')
-type HubEntityShaper = (
-  row: unknown,
-  profile: 'list',
-) => HubShapeResult | Promise<HubShapeResult>
 
 const EMPTY_HUB_I18N: Record<LocaleKey, Record<string, never>> = {
   en: {},
@@ -70,7 +67,6 @@ const handle_cors = (async ({ event, resolve }) => {
 const handle_hub: Handle = async ({ event, resolve }) => {
   const hubServices: HubServiceModule = await import('$lib/api/services/hub')
   const { getHubFromDomain } = hubServices
-  const toHubShape: HubEntityShaper = hubServices.toEntityResponseShape
 
   // Get host from headers
   const host = event.request.headers.get('host')
@@ -105,7 +101,10 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       where: eq(schema.hub.code, hubOpts.code),
     })
     if (hubDb) {
-      const hub = await toHubShape(hubDb, 'list')
+      const hub = (await hubServices.toEntityResponseShape(
+        hubDb,
+        'list',
+      )) as HubShapeResult
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else if (db && event.locals && hubOpts.domain) {
@@ -117,7 +116,10 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       where: eq(schema.hub.domain, hubOpts.domain),
     })
     if (hubDb) {
-      const hub = await toHubShape(hubDb, 'list')
+      const hub = (await hubServices.toEntityResponseShape(
+        hubDb,
+        'list',
+      )) as HubShapeResult
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else {

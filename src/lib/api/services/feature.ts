@@ -39,7 +39,6 @@ import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatia
 import type {
   Database,
   EntityResponse,
-  HubOptsExtended,
   ListResponse,
   Locale,
   LocaleKey,
@@ -48,6 +47,7 @@ import type {
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { ImageDB } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type {

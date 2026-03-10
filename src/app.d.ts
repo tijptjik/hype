@@ -3,7 +3,7 @@ import type { ParaglideLocals } from '@inlang/paraglide-sveltekit'
 import type { Auth, SessionSession, SessionUser } from '$lib/auth'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { MiniflareD1Database } from 'miniflare'
-import type { HubOptsExtended } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import 'unplugin-icons/types/svelte'
 import type {
   LngLatLike,
