@@ -1,6 +1,8 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
+// I18N
+import { getLocale } from '$lib/i18n'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // API
@@ -14,6 +16,7 @@ import {
   validateUniqueNonReservedCode,
 } from '$lib/api/services'
 import {
+  getProjectWithRelations,
   mergeProjectInheritedPropertySyncItems,
   normalizeSubmittedPropertyRanks,
   resolveCanonicalScopeByPropertyId,
@@ -91,7 +94,7 @@ import { nanoid } from 'nanoid'
 import { project } from '$lib/db/schema'
 // TYPES
 import type { Id, Prisms, ProjectAuthorizationField, QueryParams } from '$lib/types'
-import type { ProjectDB } from '$lib/db/zod/schema/project.types'
+import type { ProjectAdminDBRaw, ProjectDB } from '$lib/db/zod/schema/project.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -162,7 +165,7 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   // Load records from DB.
   const result = await listProjects(
     db,
-    profile,
+    getProjectWithRelations(profile) as never,
     conditions,
     {
       ...event.locals.hub,
@@ -174,6 +177,7 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     {
       q: params.q,
       filtersToApply: filtersToApply as QueryParams,
+      locale: getLocale(),
     },
   )
 
@@ -243,11 +247,16 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   )
 
   // Load record from DB.
-  const result = await loadProject(db, profile, conditions, {
-    ...event.locals.hub,
-    isSuperAdmin: user.superAdmin || false,
-    isAdminRequest,
-  })
+  const result = await loadProject(
+    db,
+    getProjectWithRelations(profile) as never,
+    conditions,
+    {
+      ...event.locals.hub,
+      isSuperAdmin: user.superAdmin || false,
+      isAdminRequest,
+    },
+  )
 
   const normalizedResult = result
     ? {
@@ -457,11 +466,16 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Load the full persisted entity so field-level auth can compare against real DB state.
   const currentWithRelations = requireValue(
-    await loadProject(db, 'admin', [eq(project.id, current.id)], {
-      ...ctx.event.locals.hub,
-      isSuperAdmin: user.superAdmin || false,
-      isAdminRequest: ctx.isAdminRequest,
-    }),
+    await loadProject<ProjectAdminDBRaw>(
+      db,
+      getProjectWithRelations('admin') as never,
+      [eq(project.id, current.id)],
+      {
+        ...ctx.event.locals.hub,
+        isSuperAdmin: user.superAdmin || false,
+        isAdminRequest: ctx.isAdminRequest,
+      },
+    ),
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
   const currentEntity = requireValue(
