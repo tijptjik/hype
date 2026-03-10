@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, exists, inArray, isNull, or, type SQL } from 'drizzle-orm'
+import { and, eq, exists, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   organisation,
@@ -14,15 +14,21 @@ import {
   image,
 } from '$lib/db/schema/index'
 // DB
-import { toRelatedRecords } from '..'
+import {
+  firstOrNull,
+  resolveRequiredProbe,
+  toOrderByWithLocalizedFields,
+  toRelatedRecords,
+} from '..'
 import { insertManyRelated, replaceManyRelated } from '../crud'
 import { updateOrganisationById } from './organisation'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
 import type {
   Database,
+  ListResponse,
+  Locale,
   LocaleKey,
-  HubOptsExtended,
   HubProbe,
   HubUpdateProbe,
   HubCommandProbe,
@@ -35,6 +41,7 @@ import type {
   HubI18nDB,
   HubI18nNew,
   HubI18nPartial,
+  HubOptsExtended,
 } from '$lib/db/zod/schema/hub.types'
 import { hubEntityWithRelations } from '$lib/api/services/hub'
 
@@ -175,13 +182,124 @@ export const listHubs = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
-): Promise<HubDBRaw[]> =>
-  toHubDbRawList(
-    await db.query.hub.findMany({
-      with: withRelations,
-      where: conditions.length > 0 ? and(...conditions) : undefined,
-    }),
-  )
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    filtersToApply?: Record<string, unknown>
+    locale?: Locale
+  },
+): Promise<ListResponse<HubDBRaw>> => {
+  const startedAt = Date.now()
+
+  if (query?.q) {
+    const search = query.q.toLowerCase()
+    const searchColumns = query.searchColumns || [
+      'code',
+      'domain',
+      'name',
+      'description',
+    ]
+    const searchConditions: SQL<unknown>[] = []
+
+    const baseColumns = searchColumns.filter(column =>
+      ['code', 'domain'].includes(column),
+    )
+    for (const column of baseColumns) {
+      const hubColumn = hub[column as keyof typeof hub]
+      if (hubColumn) {
+        searchConditions.push(like(sql`lower(${hubColumn})`, `%${search}%`))
+      }
+    }
+
+    const i18nColumns = searchColumns.filter(column =>
+      ['name', 'nameShort', 'description'].includes(column),
+    )
+    if (i18nColumns.length > 0) {
+      const i18nSearchConditions: SQL<unknown>[] = []
+      for (const column of i18nColumns) {
+        if (column === 'name') {
+          i18nSearchConditions.push(sql`lower("hubI18n"."name") like ${`%${search}%`}`)
+        } else if (column === 'nameShort') {
+          i18nSearchConditions.push(
+            sql`lower("hubI18n"."nameShort") like ${`%${search}%`}`,
+          )
+        } else if (column === 'description') {
+          i18nSearchConditions.push(
+            sql`("hubI18n"."description" IS NOT NULL AND lower("hubI18n"."description") like ${`%${search}%`})`,
+          )
+        }
+      }
+
+      const combinedI18nSearchCondition = or(...i18nSearchConditions)
+      if (combinedI18nSearchCondition) {
+        searchConditions.push(
+          exists(
+            db
+              .select({ hubId: hubI18n.hubId })
+              .from(hubI18n)
+              .where(and(eq(hubI18n.hubId, hub.id), combinedI18nSearchCondition)),
+          ),
+        )
+      }
+    }
+
+    const combinedSearchCondition = or(...searchConditions)
+    if (combinedSearchCondition) {
+      conditions.push(combinedSearchCondition)
+    }
+  }
+
+  const sortBy = sorting?.sortBy || 'modifiedAt'
+  const sortOrder = sorting?.sortOrder || 'desc'
+  const orderBy = toOrderByWithLocalizedFields({
+    db,
+    locale: query?.locale,
+    sortBy,
+    sortOrder,
+    fallbackColumn: hub.modifiedAt,
+    baseTable: hub,
+    localizedSortColumns: {
+      name: hubI18n.name,
+      nameShort: hubI18n.nameShort,
+      description: hubI18n.description,
+    },
+    i18nTable: hubI18n,
+    parentIdColumn: hub.id,
+    foreignKeyColumn: hubI18n.hubId,
+    localeColumn: hubI18n.locale,
+  })
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  const data = await db.query.hub.findMany({
+    with: withRelations,
+    where: whereClause,
+    limit: pagination?.limit,
+    offset: pagination?.offset,
+    orderBy,
+  })
+  const countQuery = db.select({ count: sql<number>`count(*)` }).from(hub)
+  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
+  const totalCount = Number(totalRows[0]?.count || 0)
+  const offset = pagination?.offset ?? 0
+  const hasMore = offset + data.length < totalCount
+  const nextOffset = hasMore ? offset + data.length : null
+
+  return {
+    data: toHubDbRawList(data),
+    limit: pagination?.limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters: query?.filtersToApply,
+    q: query?.q,
+    durationMs: Date.now() - startedAt,
+  }
+}
 
 /**
  * Loads a single hub using provided conditions and relation graph.
@@ -330,18 +448,20 @@ export const probeHubQuery = async (
   db: Database,
   params: { ref: string; refKey?: 'id' | 'code' },
 ): Promise<HubProbe | null> => {
-  const [probe] = await db
-    .select({
-      id: hub.id,
-      code: hub.code,
-      isPublished: hub.isPublished,
-      isArchived: hub.isArchived,
-    })
-    .from(hub)
-    .where(params.refKey === 'code' ? eq(hub.code, params.ref) : eq(hub.id, params.ref))
-    .limit(1)
-
-  return probe ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: hub.id,
+        code: hub.code,
+        isPublished: hub.isPublished,
+        isArchived: hub.isArchived,
+      })
+      .from(hub)
+      .where(
+        params.refKey === 'code' ? eq(hub.code, params.ref) : eq(hub.id, params.ref),
+      )
+      .limit(1),
+  )
 }
 
 /**
@@ -352,13 +472,9 @@ export const probeExistingHub = async (
   db: Database,
   code: string,
 ): Promise<{ id: string } | null> => {
-  const [existing] = await db
-    .select({ id: hub.id })
-    .from(hub)
-    .where(eq(hub.code, code))
-    .limit(1)
-
-  return existing ?? null
+  return firstOrNull(
+    await db.select({ id: hub.id }).from(hub).where(eq(hub.code, code)).limit(1),
+  )
 }
 
 /**
@@ -369,17 +485,17 @@ export const probeHubForUpdate = async (
   db: Database,
   hubId: Id,
 ): Promise<HubUpdateProbe | null> => {
-  const [current] = await db
-    .select({
-      id: hub.id,
-      code: hub.code,
-      modifiedAt: hub.modifiedAt,
-    })
-    .from(hub)
-    .where(eq(hub.id, hubId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db
+      .select({
+        id: hub.id,
+        code: hub.code,
+        modifiedAt: hub.modifiedAt,
+      })
+      .from(hub)
+      .where(eq(hub.id, hubId))
+      .limit(1),
+  )
 }
 
 /**
@@ -390,15 +506,9 @@ export const probeHubForCommand = async (
   db: Database,
   hubId: Id,
 ): Promise<HubCommandProbe | null> => {
-  const [current] = await db
-    .select({
-      id: hub.id,
-    })
-    .from(hub)
-    .where(eq(hub.id, hubId))
-    .limit(1)
-
-  return current ?? null
+  return firstOrNull(
+    await db.select({ id: hub.id }).from(hub).where(eq(hub.id, hubId)).limit(1),
+  )
 }
 
 /**
@@ -411,8 +521,7 @@ export const resolveHubCommandProbe = async (
   onNotFound: () => never,
 ): Promise<HubCommandProbe> => {
   const probed = await probeHubForCommand(db, hubId)
-  if (!probed) return onNotFound()
-  return probed
+  return resolveRequiredProbe(probed, onNotFound)
 }
 
 // ═══════════════════════
