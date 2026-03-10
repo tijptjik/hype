@@ -712,6 +712,24 @@ export const toRelatedRecords = <
   })
 }
 
+/**
+ * Returns the first row from a probe-style query result or `null` when empty.
+ * @param rows - Query result rows.
+ * @returns The first row or `null`.
+ */
+export const firstOrNull = <T>(rows: T[]): T | null => rows[0] ?? null
+
+/**
+ * Resolves a required probe value or delegates to a caller-provided missing branch.
+ * @param probe - Probe result to validate.
+ * @param onNotFound - Callback invoked when the probe is empty.
+ * @returns The probe value or the callback result.
+ */
+export const resolveRequiredProbe = <T, TMissing>(
+  probe: T | null | undefined,
+  onNotFound: () => TMissing,
+): T | TMissing => probe ?? onNotFound()
+
 // ═══════════════════════
 // 10. VALIDATION :: TABLES
 // ═══════════════════════
