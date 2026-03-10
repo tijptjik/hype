@@ -2,22 +2,162 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+// SERVICES
+import {
+  createPropertyFilterSection,
+  createToggleFilter,
+  createTranslationFilter,
+} from '$lib/client/services/filters'
 // COMPONENTS
 import CompletionFooter from '$lib/components/layout/CompletionFooter.svelte'
-import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte'
-import FilterControlBar from '$lib/components/resources/filters/features/Root.svelte'
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 import FeatureRow from '$lib/components/resources/rows/FeatureRow.svelte'
 import FeatureCard from '$lib/components/resources/cards/FeatureIndexCard.svelte'
+// BITS PATTERNS
+import { ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
 import FeatureIcon from 'virtual:icons/lucide/map-pin'
+import ListFilterIcon from 'virtual:icons/lucide/list-filter'
+import BookOpenIcon from 'virtual:icons/lucide/book-open'
+import LanguagesIcon from 'virtual:icons/lucide/languages'
+import ImageIcon from 'virtual:icons/lucide/image'
+import TagsIcon from 'virtual:icons/lucide/tags'
+import PenLineIcon from 'virtual:icons/lucide/pen-line'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { ResourceFilterBarConfig } from '$lib/types'
+
+const filters = {
+  resource: FirstClassResource.feature,
+  sections: [
+    {
+      key: 'status',
+      title: m.filters__status(),
+      icon: ListFilterIcon,
+      filters: [
+        createToggleFilter('isPendingReview', {
+          label: m.plain_broad_shell_dart(),
+          invertBoolean: true,
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isPublished', {
+          label: m.published(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isVisitable', {
+          label: m.dry_aware_squirrel_cheer(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isIntangible', {
+          label: m.teary_fit_maggot_heart(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isArchived', {
+          label: m.bad_swift_cheetah_surge(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+          superAdminOnly: true,
+        }),
+      ],
+    },
+    {
+      key: 'authorship',
+      title: m.filters__content(),
+      icon: BookOpenIcon,
+      filters: [
+        createToggleFilter('hasTitle', {
+          label: m.feature__title(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+          transformOffset: 8,
+        }),
+        createToggleFilter('hasDescription', {
+          label: m.feature__description(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+          transformOffset: 8,
+        }),
+        createToggleFilter('hasDisplayAddress', {
+          label: m.feature__address(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+          transformOffset: 8,
+        }),
+      ],
+    },
+    {
+      key: 'translation',
+      title: m.filters__translation(),
+      icon: LanguagesIcon,
+      filters: [
+        createTranslationFilter('isTitleTranslated', {
+          label: m.feature__title(),
+        }),
+        createTranslationFilter('isDescriptionTranslated', {
+          label: m.feature__description(),
+        }),
+        createTranslationFilter('isAddressTranslated', {
+          label: m.feature__address(),
+        }),
+        createTranslationFilter('isSpecifierTranslated', {
+          label: m.spicy_ideal_butterfly_revive(),
+          superAdminOnly: true,
+        }),
+      ],
+    },
+    {
+      key: 'image',
+      title: m.filters__image(),
+      icon: ImageIcon,
+      filters: [
+        createToggleFilter('hasImage', {
+          label: m.feature__images(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.awful_ok_polecat_rise(),
+          transformOffset: 8,
+        }),
+        createToggleFilter('isOneImagePublished', {
+          label: m.published(),
+          falseLabel: m.royal_civil_goldfish_fetch(),
+          trueLabel: m.awful_ok_polecat_rise(),
+          transformOffset: 8,
+        }),
+        createToggleFilter('isAllImagePublished', {
+          label: m.published(),
+          falseLabel: m.filters__not_all(),
+          trueLabel: m.filters__all(),
+          transformOffset: 8,
+        }),
+      ],
+    },
+    createPropertyFilterSection({
+      key: 'classifier',
+      title: m.sunny_day_lemur_conquer_short(),
+      icon: TagsIcon,
+      type: 'property',
+      propertyType: 'classifier',
+    }),
+    createPropertyFilterSection({
+      key: 'specifier',
+      title: m.admin__forms_common_specifiers_short(),
+      icon: PenLineIcon,
+      type: 'property',
+      propertyType: 'specifier',
+      falseLabel: m.filters__no(),
+      trueLabel: m.filters__has(),
+      transformOffset: -10,
+    }),
+  ],
+} satisfies ResourceFilterBarConfig
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -136,10 +276,7 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<ResourceIndex {entities} bind:listContainer>
-  {#snippet controlBar()}
-    <FilterControlBar count={entities.length} />
-  {/snippet}
+<ResourceIndex {entities} {filters} bind:listContainer>
   {#snippet card(entity: Feature)}
     <FeatureCard {entity} />
   {/snippet}

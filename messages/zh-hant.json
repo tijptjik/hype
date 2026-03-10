@@ -305,6 +305,8 @@
   "field_label": "標籤",
   "field_value": "值",
   "field_property": "屬性",
+  "sort__sort": "排序",
+  "sort__sort_by": "排序方式",
   "sort__age": "時長",
   "sort__updated": "更新",
   "gaudy_heavy_puma_adore": "創建成功",

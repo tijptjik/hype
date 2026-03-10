@@ -10,9 +10,10 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // COMPONENTS
-import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte'
 import EntityCard from '$lib/components/resources/EntityCard.svelte'
 import Image from '$lib/components/common/Image.svelte'
+// BITS PATTERNS
+import { ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
