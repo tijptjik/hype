@@ -93,6 +93,7 @@ export {
   authorizeHubCreateForSubmission,
   authorizeHubUpdateForSubmission,
   isCoreHubAdmin,
+  isRelevantHubAdmin,
   getScopedHubAdminIds,
   toHubListConditions,
   authorizeHubReadForProbe,
@@ -141,6 +142,17 @@ export {
   ensureProjectCommandAllowed,
   projectPolicyMap,
 } from './project'
+export {
+  toFeatureAuthActor,
+  toFeatureSubmittedFields,
+  authorizeFeatureListForContext,
+  authorizeFeatureReadForProbe,
+  authorizeFeatureCreateForSubmission,
+  authorizeFeatureUpdateForSubmission,
+  authorizeFeaturePublishForSubmission,
+  authorizeFeatureDeleteForSubmission,
+  ensureFeatureCommandAllowed,
+} from './feature'
 export {
   toLayerAuthActor,
   resolveLayerListReadPolicy,
