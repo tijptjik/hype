@@ -23,7 +23,7 @@ let controlMode = $derived(
 </script>
 
 <!-- Control Bar (slides down when controlMode is active) -->
-{#if controlMode === 'filter'}
+{#if controlMode === 'filter' || controlMode === 'sort'}
   <div transition:slide>
     {#if controlBar}
       {@render controlBar()}

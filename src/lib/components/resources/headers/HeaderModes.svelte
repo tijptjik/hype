@@ -6,6 +6,7 @@ import ControlModes from '$lib/components/resources/controls/ResourceIndexContro
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { NavigableResource } from '$lib/types'
+import type { ControlMode } from '$lib/types'
 
 // STATE : CONTEXT
 const appCtx = getAppCtx()
@@ -23,10 +24,16 @@ let layoutMode = $derived(
 let controlMode = $derived(
   resourceType ? appCtx.state.ui.controlMode[resourceType] : null,
 )
+let controlModes = $derived(
+  (resourceType === 'task' ? ['filter'] : ['filter', 'sort']) as Exclude<
+    ControlMode,
+    'hidden'
+  >[],
+)
 </script>
 
 {#if showControlModes}
-  <ControlModes bind:controlMode defaultMode="filter" />
+  <ControlModes bind:controlMode defaultMode="filter" modes={controlModes} />
 {/if}
 {#if showLayoutModes}
   <LayoutModes bind:layoutMode defaultMode="card" />

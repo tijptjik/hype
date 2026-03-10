@@ -5,37 +5,47 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
 // ICONS
 import { Funnel } from '@steeze-ui/heroicons'
+import ArrowUpDown from 'virtual:icons/lucide/arrow-up-down'
 // TYPES
 import type { ControlMode } from '$lib/types'
 
+type VisibleControlMode = Exclude<ControlMode, 'hidden'>
+
 let {
-  controlMode = $bindable(),
+  controlMode = $bindable<ControlMode | null>(null),
   defaultMode = null,
-  modes = ['filter'],
+  modes = ['filter', 'sort'],
 }: {
-  controlMode: ControlMode
-  defaultMode?: ControlMode
-  modes?: Exclude<ControlMode, null>[]
+  controlMode: ControlMode | null
+  defaultMode?: ControlMode | null
+  modes?: VisibleControlMode[]
 } = $props()
 
 const adminCtx = getAdminCtx()
 
-// Initialize mode if not set
-if (!controlMode) {
-  controlMode = defaultMode
-}
+$effect(() => {
+  if (controlMode === null && defaultMode !== null) {
+    controlMode = defaultMode
+  }
+})
 
-const modeConfig = {
+const modeConfig: Record<VisibleControlMode, { icon: unknown; label: string }> = {
   filter: {
     icon: Funnel,
     label: 'Filters',
   },
+  sort: {
+    icon: ArrowUpDown,
+    label: 'Sorting',
+  },
 }
 
-function toggleMode(modeKey: ControlMode) {
+function toggleMode(modeKey: VisibleControlMode): void {
   if (controlMode === modeKey) {
     controlMode = null
-    adminCtx.resetViewFilters()
+    if (modeKey === 'filter') {
+      adminCtx.resetViewFilters()
+    }
   } else {
     controlMode = modeKey
   }
