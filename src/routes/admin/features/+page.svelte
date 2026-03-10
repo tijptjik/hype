@@ -11,11 +11,10 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // COMPONENTS
-import CompletionFooter from '$lib/components/layout/CompletionFooter.svelte'
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 import FeatureCard from '$lib/components/resources/cards/FeatureIndexCard.svelte'
 // BITS PATTERNS
-import { FeatureRow, ResourceIndex } from '$lib/bits'
+import { CompletionFooter, FeatureRow, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
