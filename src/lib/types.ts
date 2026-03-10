@@ -175,7 +175,6 @@ import type { Component, Snippet } from 'svelte'
 import type { Page, RemoteFormIssue } from '@sveltejs/kit'
 import type { RequestEvent } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 import type {
   FormPath,
   InputConstraints,
@@ -715,14 +714,14 @@ export type ResourceTranslationFilterConfig<T extends ViewFilterResource> =
 export type ResourceFilterSectionConfig<T extends ViewFilterResource> = {
   key: string
   title: string
-  icon: IconSource | Component
+  icon: Component
   filters: Array<ResourceToggleFilterConfig<T> | ResourceTranslationFilterConfig<T>>
 }
 
 export type ResourcePropertyFilterSectionConfig = {
   key: string
   title: string
-  icon: IconSource | Component
+  icon: Component
   type: 'property'
   propertyType: PropertyFilterType
   falseLabel?: string
@@ -746,7 +745,15 @@ export type ResourceFilterSection =
 export type ResourceFilterBarConfig = {
   resource: ViewFilterResource
   sections: ResourceFilterSection[]
-  enableSort?: boolean
+}
+
+export type ResourceSortItemConfig = {
+  value: string
+  label: string
+}
+
+export type ResourceSortConfig = {
+  items: ResourceSortItemConfig[]
 }
 
 /* ----------------- */
