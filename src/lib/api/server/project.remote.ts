@@ -156,6 +156,7 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     queryParams,
     userRoles,
     (params.prisms as Prisms | undefined) ?? getPrisms(event.url),
+    event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
   )
 
   // Load records from DB.
@@ -237,6 +238,8 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     isAdminRequest,
     queryParams,
     userRoles,
+    undefined,
+    event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
   )
 
   // Load record from DB.
