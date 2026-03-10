@@ -2,10 +2,14 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+// SERVICES
+import {
+  createToggleFilter,
+  createTranslationFilter,
+} from '$lib/client/services/filters'
 // COMPONENTS
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte'
 import EntityCard from '$lib/components/resources/EntityCard.svelte'
-import FilterControlBar from '$lib/components/resources/filters/organisations/Root.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -17,8 +21,13 @@ import {
 } from '$lib/api/services/authz'
 // ICONS
 import OrganisationIcon from 'virtual:icons/lucide/users-round'
+import ListFilterIcon from 'virtual:icons/lucide/list-filter'
+import BookOpenIcon from 'virtual:icons/lucide/book-open'
+import LanguagesIcon from 'virtual:icons/lucide/languages'
+import ImageIcon from 'virtual:icons/lucide/image'
 // TYPES
-import type { KeyMap, Organisation } from '$lib/types'
+import type { KeyMap, ResourceFilterBarConfig } from '$lib/types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 
 // CONFIG :: KEY MAP
 const RESOURCE = FirstClassResource.organisation
@@ -46,6 +55,80 @@ const keyMap: KeyMap = {
     },
   ],
 }
+
+const filters = {
+  resource: FirstClassResource.organisation,
+  sections: [
+    {
+      key: 'status',
+      title: m.filters__status(),
+      icon: ListFilterIcon,
+      filters: [
+        createToggleFilter('isPublished', {
+          label: m.published(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isArchived', {
+          label: m.bad_swift_cheetah_surge(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+          superAdminOnly: true,
+        }),
+      ],
+    },
+    {
+      key: 'authorship',
+      title: m.filters__content(),
+      icon: BookOpenIcon,
+      filters: [
+        createToggleFilter('hasName', {
+          label: m.admin__forms_common_name_full(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+        createToggleFilter('hasContextualName', {
+          label: m.admin__forms_common_name_short(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+        createToggleFilter('hasDescription', {
+          label: m.feature__description(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+      ],
+    },
+    {
+      key: 'translation',
+      title: m.filters__translation(),
+      icon: LanguagesIcon,
+      filters: [
+        createTranslationFilter('isNameTranslated', {
+          label: m.admin__forms_common_name_full(),
+        }),
+        createTranslationFilter('isContextualNameTranslated', {
+          label: m.admin__forms_common_name_short(),
+        }),
+        createTranslationFilter('isDescriptionTranslated', {
+          label: m.feature__description(),
+        }),
+      ],
+    },
+    {
+      key: 'image',
+      title: m.filters__image(),
+      icon: ImageIcon,
+      filters: [
+        createToggleFilter('hasImage', {
+          label: m.filters__image(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+      ],
+    },
+  ],
+} satisfies ResourceFilterBarConfig
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -80,11 +163,8 @@ let entities: Organisation[] = $derived(
 )
 </script>
 
-<ResourceIndex {entities}>
-  {#snippet controlBar()}
-    <FilterControlBar count={entities.length} />
-  {/snippet}
+<ResourceIndex {entities} {filters}>
   {#snippet card(entity: Organisation)}
-    <EntityCard {entity} {keyMap} />
+    <EntityCard entity={entity as any} {keyMap} />
   {/snippet}
 </ResourceIndex>
