@@ -31,8 +31,8 @@ import { isOrganisation, isProject, isLayer, isFeature } from '$lib/types'
 import type { SuperValidated } from 'sveltekit-superforms'
 import type { AnyColumn, SQL, Table } from 'drizzle-orm'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 import type {
-  Feature,
   Id,
   Prisms,
   Resource,

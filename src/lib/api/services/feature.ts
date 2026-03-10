@@ -1,65 +1,127 @@
 // DRIZZLE
-import { eq, inArray, type SQL, sql } from 'drizzle-orm'
-// LIB
-import { isAdminRequest } from '../index'
+import { eq, inArray, sql, type SQL } from 'drizzle-orm'
 // API
 import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
-// AUTH
-import {
-  assertUserLoggedIn,
-  assertAdminRequest,
-  runAssertions,
-  assertProjectMaintainerOrSuperAdmin,
-  assertParamIdentifierEqualsFormIdentifier,
-} from '$lib/auth/asserts'
-// DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
-// SCHEMA
-import { feature, layer } from '$lib/db/schema/index'
+import { toBooleanOrUndefined } from '$lib/api/services'
+import { isRelevantHubAdmin } from '$lib/api/services/authz'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
-import { HierarchicalResource } from '$lib/enums'
-import { getProjectIdForFeature } from '$lib/db/services/feature'
-// FEATURE DB SERVICES
-import { createFeatureWithRelated } from '$lib/db/services/feature'
-import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
-// ZOD
-import { FeatureInsertAPI } from '$lib/db/zod/schema/feature'
+import { applyTriStateBooleanCondition } from '$lib/db/query'
+import { toImageEnvelope } from '$lib/db/services/image'
+import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import {
+  createFeature,
+  createI18n,
+  createProperties,
+  mergeFeatureProperties,
+} from '$lib/db/services/feature'
+import { probeLayerForUpdate } from '$lib/db/services/layer'
+// I18N
+import { toLocaleKey } from '$lib/i18n'
+// SCHEMA
+import { feature, layer } from '$lib/db/schema/index'
+import {
+  FeatureAdminProfileAPI,
+  FeatureCardProfileAPI,
+  FeatureDetailProfileAPI,
+  FeatureEntityFormData,
+  FeatureListProfileAPI,
+} from '$lib/db/zod/schema/feature'
 // ENUMS
-import { supportedLocales } from '$lib/enums'
+import {
+  HierarchicalResource,
+  ImageContextResource,
+  supportedLocales,
+} from '$lib/enums'
+// CLIENT
+import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
 import type {
-  UserRoleDisco,
-  Prisms,
-  FeatureDBNew,
   Database,
-  Id,
-  SessionUser,
-  FeatureNew,
-  QueryParams,
-  UserContributedFeature,
+  EntityResponse,
+  HubOptsExtended,
+  ListResponse,
   Locale,
+  LocaleKey,
+  Prisms,
+  QueryParams,
+  SessionUser,
+  UserRoleDisco,
 } from '$lib/types'
+import type { ImageDB } from '$lib/db/zod/schema/image.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type {
+  Feature,
+  FeatureAdminDBRaw,
+  FeatureDB,
+  FeatureNew,
+  FeatureEntityByProfile,
+  FeatureListByProfile,
+  FeatureProfile,
+  FeatureProperty,
+  FeatureQueryRowByProfile,
+  UserContributedFeature,
+} from '$lib/db/zod/schema/feature.types'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// DB RELATIONS
+// - featureListRelations
+// - featureDetailRelations
+// - featureAdminRelations
+// - getFeatureWithRelations
+//
+// PROFILE SHAPING
+// - toFeatureImageEnvelope
+// - toPropertyShape
+// - toFormShape
+// - toResponseShape
+// - buildCollectionResponseShape
+// - buildResponseShape
+// - toFeatureProfile
+// - toEntityResponseShape
+// - toListResponseShape
+//
+// NORMALIZATION
+// - toComparableFeatureProperties
+//
+// QUERY CONTEXT
+// - toLookupConditions
+// - toRequestedListState
+// - toFeaturePrisms
+// - toQueryConditions
+// - withExpandedNeighbourhoods
+//
+// FEATURE CREATION WITH ENRICHMENT
+// - createUserContributedFeature
+
 /********************
- *  COMMON
+ *  DB RELATIONS
  ************/
-export const featureCollectionWithRelations = {
+
+const featureListRelations = {
   i18n: true,
   properties: {
     with: {
       i18n: true,
+      property: {
+        with: {
+          i18n: true,
+          values: {
+            with: {
+              i18n: true,
+            },
+          },
+        },
+      },
+      propertyValue: {
+        with: {
+          i18n: true,
+        },
+      },
     },
-  },
-}
-
-export const featureEntityWithRelations = {
-  ...featureCollectionWithRelations,
-  contributor: {
-    columns: userColumnsWithPrivacyProtected,
-  },
-  publisher: {
-    columns: userColumnsWithPrivacyProtected,
   },
   images: {
     with: {
@@ -72,202 +134,564 @@ export const featureEntityWithRelations = {
   },
 }
 
+const featureDetailRelations = {
+  ...featureListRelations,
+  contributor: {
+    columns: userColumnsWithPrivacyProtected,
+  },
+  publisher: {
+    columns: userColumnsWithPrivacyProtected,
+  },
+}
+
+const featureAdminRelations = featureDetailRelations
+
+type FeatureRelationsByProfile<P extends FeatureProfile> = P extends 'admin'
+  ? typeof featureAdminRelations
+  : P extends 'card' | 'detail'
+    ? typeof featureDetailRelations
+    : typeof featureListRelations
+
+export const getFeatureWithRelations = <P extends FeatureProfile>(
+  profile: P,
+): FeatureRelationsByProfile<P> => {
+  if (profile === 'admin') {
+    return featureAdminRelations as FeatureRelationsByProfile<P>
+  }
+  if (profile === 'card' || profile === 'detail') {
+    return featureDetailRelations as FeatureRelationsByProfile<P>
+  }
+  return featureListRelations as FeatureRelationsByProfile<P>
+}
+
+/********************
+ *  PROFILE SHAPING
+ ************/
+
+const featureProfiles = ['list', 'card', 'detail', 'admin'] as const
+
+type FeatureImageRelation = {
+  featureId?: string
+  intent?: string | null
+  isPublished?: boolean | null
+  image?: ImageDB | null
+}
+
+type FeatureResponseRow = FeatureAdminDBRaw & {
+  imageCount?: number
+  imagePublishedCount?: number
+}
+
+const toFeatureImageEnvelope = (
+  images: FeatureImageRelation[] | null | undefined,
+  featureId: string,
+  profile: 'list' | 'detail' | 'admin',
+  options: { filterUnpublished?: boolean; includeAll?: boolean } = {},
+) => {
+  const imageRows = Array.isArray(images) ? images : []
+  const visibleRows = options.filterUnpublished
+    ? imageRows.filter(imageRow => imageRow.isPublished)
+    : imageRows
+
+  const canonical =
+    visibleRows.find(imageRow => imageRow.intent === 'canonical' && imageRow.image) ??
+    visibleRows.find(imageRow => imageRow.image)
+
+  const image = canonical?.image
+  const selected = image
+    ? toImageEnvelope(
+        image,
+        profile === 'admin' ? 'admin' : profile,
+        ImageContextResource.feature,
+        featureId,
+      )
+    : null
+
+  if (!options.includeAll) return selected
+
+  return {
+    image: selected,
+    images: visibleRows
+      .filter((imageRow): imageRow is FeatureImageRelation & { image: ImageDB } =>
+        Boolean(imageRow.image),
+      )
+      .map(imageRow =>
+        toImageEnvelope(
+          imageRow.image,
+          profile === 'admin' ? 'admin' : 'detail',
+          ImageContextResource.feature,
+          featureId,
+        ),
+      ),
+    imageCount: imageRows.length,
+    imagePublishedCount: imageRows.filter(imageRow => imageRow.isPublished).length,
+  }
+}
+
+const toPropertyShape = (properties: FeatureResponseRow['properties']) =>
+  (properties ?? []).map(property => ({
+    ...property,
+    i18n: transformI18nSafely(property.i18n as never),
+    property: property.property
+      ? {
+          ...property.property,
+          i18n: transformI18nSafely(property.property.i18n as never),
+          values:
+            property.property.values?.map(value => ({
+              ...value,
+              i18n: transformI18nSafely(value.i18n as never),
+            })) ?? [],
+        }
+      : undefined,
+    propertyValue: property.propertyValue
+      ? {
+          ...property.propertyValue,
+          i18n: transformI18nSafely(property.propertyValue.i18n as never),
+        }
+      : null,
+  }))
+
+const toFormShape = (row: FeatureAdminDBRaw): FeatureNew => {
+  const i18n = transformI18nSafely(row.i18n as never) as Record<string, unknown>
+
+  return {
+    organisationId: row.organisationId,
+    projectId: row.projectId,
+    layerId: row.layerId,
+    contributorId: row.contributorId ?? null,
+    geometry: row.geometry,
+    addressMeta: row.addressMeta ?? {},
+    isIntangible: row.isIntangible,
+    isVisitable: row.isVisitable,
+    isPendingReview: row.isPendingReview,
+    i18n: {
+      en: (i18n.en ?? {}) as FeatureNew['i18n']['en'],
+      zhHans: (i18n['zh-hans'] ?? {}) as FeatureNew['i18n']['zhHans'],
+      zhHant: (i18n['zh-hant'] ?? {}) as FeatureNew['i18n']['zhHant'],
+    },
+    properties: (row.properties ?? []).map(property => ({
+      propertyId: property.propertyId,
+      value: property.value ?? null,
+      propertyValueId: property.propertyValueId ?? null,
+      i18n: transformI18nSafely(property.i18n as never) as FeatureProperty['i18n'],
+      property: property.property
+        ? {
+            ...property.property,
+            i18n: transformI18nSafely(property.property.i18n as never),
+            values:
+              property.property.values?.map(value => ({
+                ...value,
+                i18n: transformI18nSafely(value.i18n as never),
+              })) ?? [],
+          }
+        : undefined,
+      propertyValue: property.propertyValue
+        ? {
+            ...property.propertyValue,
+            i18n: transformI18nSafely(property.propertyValue.i18n as never),
+          }
+        : null,
+    })) as FeatureNew['properties'],
+  } as FeatureNew
+}
+
+/**
+ * Normalizes arbitrary profile input into a supported feature profile.
+ */
+export const toFeatureProfile = (
+  value: unknown,
+  fallback: FeatureProfile,
+): FeatureProfile =>
+  typeof value === 'string' && (featureProfiles as readonly string[]).includes(value)
+    ? (value as FeatureProfile)
+    : fallback
+
+const toProfileResponseShape = async (
+  row: FeatureResponseRow,
+  profile: FeatureProfile,
+): Promise<FeatureEntityByProfile<FeatureProfile>> => {
+  const imageProfile =
+    profile === 'admin' ? 'admin' : profile === 'list' ? 'list' : 'detail'
+  const imageState = toFeatureImageEnvelope(
+    row.images as FeatureImageRelation[],
+    row.id,
+    imageProfile,
+    {
+      includeAll: profile !== 'list' && profile !== 'card',
+      filterUnpublished: false,
+    },
+  )
+
+  const base = {
+    ...row,
+    i18n: transformI18nSafely(row.i18n as never),
+    properties: toPropertyShape(row.properties),
+    image:
+      profile === 'list' || profile === 'card'
+        ? imageState
+        : (imageState as { image: unknown }).image,
+  }
+
+  if (profile === 'list') {
+    const listData = {
+      ...base,
+      image: imageState,
+      imageCount: row.imageCount ?? row.images?.length ?? 0,
+      imagePublishedCount:
+        row.imagePublishedCount ??
+        (row.images as Array<{ isPublished?: boolean }> | undefined)?.filter(
+          imageRow => imageRow.isPublished,
+        ).length ??
+        0,
+    }
+    return FeatureListProfileAPI.parse(
+      listData,
+    ) as FeatureEntityByProfile<FeatureProfile>
+  }
+
+  if (profile === 'card') {
+    return FeatureCardProfileAPI.parse({
+      ...base,
+      image: imageState,
+    }) as FeatureEntityByProfile<FeatureProfile>
+  }
+
+  if (profile === 'detail') {
+    const detailImageState = toFeatureImageEnvelope(
+      row.images as FeatureImageRelation[],
+      row.id,
+      'detail',
+      { includeAll: true, filterUnpublished: false },
+    ) as { image: unknown; images: unknown[] }
+    return FeatureDetailProfileAPI.parse({
+      ...base,
+      image: detailImageState.image,
+      images: detailImageState.images,
+    }) as FeatureEntityByProfile<FeatureProfile>
+  }
+
+  const adminImageState = toFeatureImageEnvelope(
+    row.images as FeatureImageRelation[],
+    row.id,
+    'admin',
+    { includeAll: true, filterUnpublished: false },
+  ) as { image: unknown; images: unknown[] }
+
+  return FeatureAdminProfileAPI.parse({
+    ...base,
+    image: adminImageState.image,
+    images: adminImageState.images,
+  }) as FeatureEntityByProfile<FeatureProfile>
+}
+
+const toResponseShape = async <P extends FeatureProfile>(
+  row: FeatureQueryRowByProfile<P>,
+  profile: P,
+): Promise<FeatureEntityByProfile<P>> =>
+  (await toProfileResponseShape(
+    row as FeatureResponseRow,
+    profile,
+  )) as FeatureEntityByProfile<P>
+
+/**
+ * Shapes a single feature entity into an API response envelope.
+ */
+export const toEntityResponseShape = async <P extends FeatureProfile = 'detail'>(
+  row: FeatureQueryRowByProfile<P> | null,
+  profile: P = 'detail' as P,
+): Promise<EntityResponse<FeatureEntityByProfile<P>>> => {
+  const startedAt = Date.now()
+  if (!row) {
+    return { data: null, durationMs: Date.now() - startedAt }
+  }
+
+  return {
+    data: (await toProfileResponseShape(
+      row as FeatureResponseRow,
+      profile,
+    )) as FeatureEntityByProfile<P>,
+    durationMs: Date.now() - startedAt,
+  }
+}
+
+/**
+ * Shapes a paginated feature result into an API list envelope.
+ */
+export const toListResponseShape = async <P extends FeatureProfile = 'list'>(
+  result: ListResponse<FeatureQueryRowByProfile<P>>,
+  profile: P = 'list' as P,
+): Promise<ListResponse<FeatureListByProfile<P>>> => {
+  const data = await Promise.all(result.data.map(row => toResponseShape(row, profile)))
+
+  return {
+    ...result,
+    data: data as FeatureListByProfile<P>[],
+  }
+}
+
+const buildCollectionResponseShape = async <P extends FeatureProfile = 'list'>(
+  db: Database,
+  rows: FeatureQueryRowByProfile<P>[],
+  profile: P,
+  hubOpts: HubOptsExtended,
+): Promise<FeatureListByProfile<P>[]> => {
+  if (rows.length === 0) return []
+
+  const { getLayerMap } = await import('$lib/db/services/layer')
+  const layerIds = [...new Set(rows.map(row => row.layerId))]
+  const layerMap = await getLayerMap(db, layerIds, hubOpts)
+
+  const mergedRows = rows.map(row => {
+    const layerData = layerMap.get(row.layerId)
+    if (!layerData || profile === 'list') return row
+    return mergeFeatureProperties(row as Feature, layerData as Layer) as typeof row
+  })
+
+  return (await Promise.all(
+    mergedRows.map(row => toResponseShape(row, profile)),
+  )) as FeatureListByProfile<P>[]
+}
+
+const buildResponseShape = async <P extends FeatureProfile = 'detail'>(
+  db: Database,
+  row: FeatureQueryRowByProfile<P>,
+  profile: P,
+  hubOpts: HubOptsExtended,
+): Promise<FeatureEntityByProfile<P>> => {
+  if (profile === 'list') {
+    return (await toResponseShape(row, profile)) as FeatureEntityByProfile<P>
+  }
+
+  const { getLayer } = await import('$lib/db/services/layer')
+  const layerData = await getLayer(db, {}, [eq(layer.id, row.layerId)], hubOpts)
+
+  const mergedRow = layerData
+    ? (mergeFeatureProperties(
+        row as Feature,
+        layerData as Layer,
+      ) as FeatureQueryRowByProfile<P>)
+    : row
+
+  return await toResponseShape(mergedRow, profile)
+}
+
+/********************
+ *  NORMALIZATION
+ ************/
+
+/**
+ * Produces a stable property signature for update comparisons.
+ */
+export const toComparableFeatureProperties = (
+  properties: Array<{
+    propertyId?: string | null
+    value?: string | null
+    propertyValueId?: string | null
+    i18n?: Record<string, { value?: string | null }>
+  }>,
+): Array<{
+  propertyId: string
+  value: string | null
+  propertyValueId: string | null
+  i18n: Record<string, string | null>
+}> =>
+  properties
+    .filter(
+      (property): property is NonNullable<typeof property> & { propertyId: string } =>
+        typeof property?.propertyId === 'string' && property.propertyId.length > 0,
+    )
+    .map(property => ({
+      propertyId: property.propertyId,
+      value: property.value ?? null,
+      propertyValueId: property.propertyValueId ?? null,
+      i18n: Object.fromEntries(
+        Object.entries(property.i18n ?? {}).map(([localeKey, localeValue]) => [
+          localeKey,
+          localeValue?.value ?? null,
+        ]),
+      ),
+    }))
+    .sort((a, b) => a.propertyId.localeCompare(b.propertyId))
+
 /********************
  *  QUERY CONTEXT
  ************/
 
 /**
- * Get the query context for the feature resource.
- * Filters the query based on user roles, prisms, and query parameters.
- * @param db - The Drizzle instance
- * @param user - The user object
- * @param request - The request object
- * @param params - The query parameters
- * @param userRoles - The user roles
- * @param prisms - The prism filters
+ * Builds id-based lookup conditions for feature reads.
  */
-export const getFeatureQueryContext = (
+export const toLookupConditions = (params: {
+  ref?: string
+  refKey?: string | null
+}): Partial<FeatureDB> => {
+  if (params.refKey === 'id' || !params.refKey) {
+    return {
+      id: params.ref,
+    } as Partial<FeatureDB>
+  }
+  return {
+    id: params.ref,
+  } as Partial<FeatureDB>
+}
+
+/**
+ * Normalizes requested feature visibility flags from query conditions.
+ */
+export const toRequestedListState = (
+  params: Partial<FeatureDB>,
+): { isPublished?: boolean; isArchived?: boolean } => ({
+  isPublished: toBooleanOrUndefined(params.isPublished) ?? true,
+  isArchived: toBooleanOrUndefined(params.isArchived) ?? false,
+})
+
+/**
+ * Normalizes prism input for feature queries.
+ */
+export const toFeaturePrisms = (prisms?: Prisms): Prisms | undefined => {
+  if (!prisms) return undefined
+  return {
+    organisation: Array.isArray(prisms.organisation) ? prisms.organisation : [],
+    project: Array.isArray(prisms.project) ? prisms.project : [],
+    layer: Array.isArray(prisms.layer) ? prisms.layer : [],
+  }
+}
+
+/**
+ * Resolves role-aware feature query conditions.
+ */
+export const toQueryConditions = (
   db: Database,
   user: SessionUser,
-  request: Request,
-  params: QueryParams,
+  isAdminRequest: boolean,
+  params: Partial<FeatureDB>,
   userRoles: UserRoleDisco[],
   prisms?: Prisms,
-) => {
-  // SETUP : By default, only show non-archived features,
-  // and disable isArchived and isPublished filters from the query.
-  let conditions: SQL<unknown>[] = []
-  const excludeColumns = ['isArchived', 'isPublished']
+  resourceHubId?: string | null,
+): {
+  conditions: SQL<unknown>[]
+  filtersToApply: QueryParams
+} => {
+  const filtersToApply: QueryParams = { ...(params as QueryParams) }
+  const conditions: SQL<unknown>[] = []
+  const normalizedPrisms = toFeaturePrisms(prisms)
+  const maintainerProjectIds = Array.from(
+    new Set(
+      userRoles
+        .filter(
+          (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
+            role.type === 'project' &&
+            (role.role === 'owner' || role.role === 'maintainer') &&
+            typeof role.projectId === 'string' &&
+            role.projectId.length > 0,
+        )
+        .map(role => role.projectId),
+    ),
+  )
+  const translatorProjectIds = Array.from(
+    new Set(
+      userRoles
+        .filter(
+          (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
+            role.type === 'project' &&
+            (role.role === 'owner' ||
+              role.role === 'maintainer' ||
+              role.role === 'translator') &&
+            typeof role.projectId === 'string' &&
+            role.projectId.length > 0,
+        )
+        .map(role => role.projectId),
+    ),
+  )
+  const isHubAdmin = isRelevantHubAdmin(userRoles, resourceHubId)
 
-  // Hide archived features unless user is SuperAdmin making an admin request
-  if (!(isSuperAdmin(user) && isAdminRequest(request))) {
+  if (normalizedPrisms) {
+    conditions.push(
+      ...applyPrismConstraints(db, HierarchicalResource.feature, normalizedPrisms),
+    )
+  }
+
+  const isSuperAdmin = Boolean(user.superAdmin)
+  const isScopedAdmin = isSuperAdmin || isHubAdmin || translatorProjectIds.length > 0
+
+  if (!isAdminRequest) {
+    removeExcludedColumns(filtersToApply, ['isPublished', 'isArchived'])
+    conditions.push(eq(feature.isPublished, true))
+    conditions.push(eq(feature.isArchived, false))
+  } else if (!isScopedAdmin) {
+    conditions.push(eq(feature.isPublished, true))
     conditions.push(eq(feature.isArchived, false))
   }
 
-  // FILTER : Apply prism conditions for organisation, project, and layer filtering
-  if (prisms && db) {
-    conditions.push(...applyPrismConstraints(db, HierarchicalResource.feature, prisms))
-  }
+  const { isPublished, isArchived, ...otherFilters } = filtersToApply
+  const requestedIsPublished = toBooleanOrUndefined(isPublished)
+  const requestedIsArchived = toBooleanOrUndefined(isArchived)
 
-  // PUBLIC : List all features which are isPublished, and not isArchived,
-  if (!isAdminRequest(request)) {
-    params = removeExcludedColumns(params, excludeColumns)
-    conditions.push(eq(feature.isPublished, true))
+  if (!isSuperAdmin && !isHubAdmin && isAdminRequest) {
+    const allowedProjectIds = requestedIsArchived
+      ? maintainerProjectIds
+      : translatorProjectIds
 
-    // ADMIN : List all features, where the user has a role in the feature's layer's project
-  } else if (!isSuperAdmin(user)) {
-    params = removeExcludedColumns(params, ['isArchived']) // Keep isPublished filterable for admins
-    const projectIds = getProjectIdforRoles(userRoles)
-    if (projectIds.length > 0) {
-      const layerIdsWithProjectAccess = db
+    if (allowedProjectIds.length === 0) {
+      conditions.push(sql`false`)
+    } else {
+      const allowedLayerIds = db
         .select({ id: layer.id })
         .from(layer)
-        .where(inArray(layer.projectId, projectIds as Id[]))
-      conditions.push(inArray(feature.layerId, layerIdsWithProjectAccess))
-    } else {
-      conditions.push(sql`false`)
-    }
-  } else {
-    // For SuperAdmin, if no prisms are applied, conditions must be empty.
-    if (!(prisms && db)) {
-      conditions = [] // List all layers without the default isArchived filter
+        .where(inArray(layer.projectId, allowedProjectIds))
+      conditions.push(inArray(feature.layerId, allowedLayerIds))
     }
   }
 
-  if (Object.keys(params).length > 0) {
-    // For superAdmins, remove isArchived and isPublished from params so they can see all content
-    if (isSuperAdmin(user)) {
-      const { isArchived, isPublished, ...filteredParams } = params
-      applyQueryFilters(feature, filteredParams, conditions)
-    } else {
-      applyQueryFilters(feature, params, conditions)
-    }
-  }
+  applyTriStateBooleanCondition(
+    conditions,
+    feature.isPublished,
+    isAdminRequest ? requestedIsPublished : true,
+  )
+  applyTriStateBooleanCondition(
+    conditions,
+    feature.isArchived,
+    isAdminRequest ? requestedIsArchived : false,
+  )
+  applyQueryFilters(feature, otherFilters, conditions)
 
-  return { params, conditions, excludeColumns }
+  return {
+    conditions,
+    filtersToApply,
+  }
 }
 
-/********************
- *  QUERY UTILITIES
- ************/
-
-// TODO Remove this once neighbourhoods and places are properly implemented as
-// first-class entities.
-
+// TODO Remove this once neighbourhoods become first-class entities.
 /**
- * Expands neighbourhoods to include all sub-districts.
- * @param queryParams - The query parameters
- * @returns The query parameters with expanded neighbourhoods
+ * Expands neighbourhood filter values to include known subdivisions.
  */
-export function withExpandedNeighbourhoods(queryParams: QueryParams) {
+export function withExpandedNeighbourhoods(queryParams: QueryParams): QueryParams {
   const params = { ...queryParams }
   const neighbourhoodKey = 'addressProperties.neighbourhood'
 
-  if (neighbourhoodKey in params) {
-    // Convert single value to array if necessary
-    const neighbourhoods = Array.isArray(params[neighbourhoodKey])
-      ? (params[neighbourhoodKey] as string[])
-      : [params[neighbourhoodKey] as string]
+  if (!(neighbourhoodKey in params)) return params
 
-    // Create a Set to avoid duplicates
-    const expandedNeighbourhoods = new Set<string>()
+  const neighbourhoods = Array.isArray(params[neighbourhoodKey])
+    ? (params[neighbourhoodKey] as string[])
+    : [params[neighbourhoodKey] as string]
 
-    // Get the sub-neighbourhoods map from context
-    const neighbourhoodSubdivisionMap = buildNeighbourhoodSubdivisionMap()
+  const expanded = new Set<string>()
+  const subdivisionMap = buildNeighbourhoodSubdivisionMap()
 
-    // For each provided neighbourhood
-    neighbourhoods.forEach(hood => {
-      // Always add the original neighbourhood
-      expandedNeighbourhoods.add(hood)
+  neighbourhoods.forEach(neighbourhood => {
+    expanded.add(neighbourhood)
+    subdivisionMap.get(neighbourhood)?.forEach(value => expanded.add(value))
+  })
 
-      // If it's a main district, also add all its sub-districts
-      if (neighbourhoodSubdivisionMap.has(hood)) {
-        neighbourhoodSubdivisionMap
-          .get(hood)!
-          .forEach(n => expandedNeighbourhoods.add(n))
-      }
-    })
-
-    // Update the params with expanded array
-    params[neighbourhoodKey] = Array.from(expandedNeighbourhoods)
-  }
+  params[neighbourhoodKey] = Array.from(expanded)
   return params
 }
 
 /********************
- *  ASSERTIONS
+ *  FEATURE CREATION WITH ENRICHMENT
  ************/
 
 /**
- * Asserts permissions to create a feature.
- * @param db - The Drizzle instance
- * @param user - The user object
- * @param request - The request object
- * @param formData - The form data
- * @param userRoles - The user roles
- * @returns An error object if the permissions are not met, otherwise undefined
- */
-export const assertPermissionsToCreateFeature = async (
-  db: Database,
-  user: SessionUser,
-  request: Request,
-  locals: App.Locals,
-  formData: FeatureDBNew,
-  userRoles: UserRoleDisco[],
-) => {
-  const projectId = await getProjectIdForFeature(db, formData, locals.hub)
-
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user as any),
-    () => assertAdminRequest(request),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!),
-  )
-
-  if (assertionError) return assertionError
-}
-
-/**
- * Asserts permissions to update a feature.
- * @param db - The Drizzle instance
- * @param session - The session object
- * @param request - The request object
- * @param locals - The app locals
- * @param formData - The form data
- * @param userRoles - The user roles
- * @param refId - The id from the URL parameter
- * @returns An error object if the permissions are not met, otherwise undefined
- */
-export const assertPermissionsToUpdateFeature = async (
-  db: Database,
-  user: SessionUser,
-  request: Request,
-  locals: App.Locals,
-  formData: FeatureNew,
-  userRoles: UserRoleDisco[],
-  refId: Id,
-) => {
-  const projectId = await getProjectIdForFeature(db, formData, locals.hub)
-
-  const assertionError = runAssertions(
-    () => assertUserLoggedIn(user as any),
-    () => assertAdminRequest(request),
-    () => assertParamIdentifierEqualsFormIdentifier(formData, refId, 'id'),
-    () => assertProjectMaintainerOrSuperAdmin(user, userRoles, projectId!),
-  )
-
-  if (assertionError) return assertionError
-}
-
-// ═══════════════════════
-// FEATURE CREATION WITH ENRICHMENT
-// ═══════════════════════
-
-/**
- * Creates a feature from user-contributed data with enrichment and translation
- * @param db - The database instance
- * @param newFeature - The user-contributed feature data
- * @param subscriptionKey - Azure translation API key
- * @returns The newly created feature with related data
+ * Creates a user-contributed feature with translated fallback locales.
  */
 export const createUserContributedFeature = async (
   db: Database,
@@ -275,12 +699,15 @@ export const createUserContributedFeature = async (
   region: string,
   subscriptionKey: string,
 ) => {
-  // Step 1: Get the source locale (first locale with content)
+  const layerScope = await probeLayerForUpdate(db, newFeature.layerId as string)
+  if (!layerScope) {
+    throw new Error('Layer not found')
+  }
+
   const providedLocales = Object.keys(newFeature.i18n).filter(locale => {
     const textObj = newFeature.i18n[locale as Locale]
     if (!textObj) return false
 
-    // Check if there are any non-null values for keys other than "locale"
     return Object.entries(textObj).some(
       ([key, value]) => key !== 'locale' && value !== null && value !== undefined,
     )
@@ -297,172 +724,149 @@ export const createUserContributedFeature = async (
     throw new Error('Source locale must have a title')
   }
 
-  // Step 2: Create enriched i18n textObject with all locales
-  const enrichedI18n: Partial<Record<Locale, any>> = {}
+  const enrichedI18n: Partial<Record<LocaleKey, unknown>> = {}
 
   for (const locale of supportedLocales) {
-    const textObj = newFeature.i18n[locale]
+    const localeKey = toLocaleKey(locale)
     const isSourceLocale = locale === sourceLocale
 
     if (isSourceLocale) {
-      // For source locale, preserve original values and set Gen flags to false
-      enrichedI18n[locale as Locale] = {
-        locale: locale,
+      enrichedI18n[localeKey] = {
         title: sourceTextObj.title,
         description: sourceTextObj.description || null,
         displayAddress: sourceTextObj.displayAddress || null,
-        titleGen: false, // Original content, not generated
+        titleGen: false,
         descriptionGen: false,
         displayAddressGen: false,
         addressProperties: {},
       }
-    } else {
-      // For target locales, determine what needs translation
-      const needsTitle = Boolean(sourceTextObj.title)
-      const needsDescription = Boolean(sourceTextObj.description)
-      const needsDisplayAddress = Boolean(sourceTextObj.displayAddress)
+      continue
+    }
 
-      // Collect fields that need translation (only non-empty source values)
-      const fieldsToTranslate: string[] = []
-      if (needsTitle) fieldsToTranslate.push(sourceTextObj.title)
-      if (needsDescription) fieldsToTranslate.push(sourceTextObj.description!)
-      if (needsDisplayAddress) fieldsToTranslate.push(sourceTextObj.displayAddress!)
+    const fieldsToTranslate = [
+      sourceTextObj.title,
+      sourceTextObj.description,
+      sourceTextObj.displayAddress,
+    ].filter((value): value is string => typeof value === 'string' && value.length > 0)
 
-      let translatedValues: string[] = []
-
-      // Only call translation API if we have fields to translate and API key
-      if (fieldsToTranslate.length > 0 && subscriptionKey) {
-        // TRANSLATION
-        const { translateText } = await import('$lib/api/external/translation')
-        try {
-          translatedValues = await translateText(
-            fieldsToTranslate,
-            sourceLocale,
-            locale,
-            region,
-            subscriptionKey,
-          )
-        } catch (error) {
-          console.error(`Translation failed for ${sourceLocale} -> ${locale}:`, error)
-          // translatedValues remains empty array, will fall back to source content
-        }
+    let translatedValues: string[] = []
+    if (fieldsToTranslate.length > 0 && subscriptionKey) {
+      const { translateText } = await import('$lib/api/external/translation')
+      try {
+        translatedValues = await translateText(
+          fieldsToTranslate,
+          sourceLocale,
+          locale,
+          region,
+          subscriptionKey,
+        )
+      } catch (translationError) {
+        console.error(
+          `Translation failed for ${sourceLocale} -> ${locale}:`,
+          translationError,
+        )
       }
+    }
 
-      // Build the enriched object with proper field-level tracking
-      let translationIndex = 0
+    let translationIndex = 0
+    const translatedTitle =
+      sourceTextObj.title && translationIndex < translatedValues.length
+        ? translatedValues[translationIndex++]
+        : null
+    const translatedDescription =
+      sourceTextObj.description && translationIndex < translatedValues.length
+        ? translatedValues[translationIndex++]
+        : null
+    const translatedDisplayAddress =
+      sourceTextObj.displayAddress && translationIndex < translatedValues.length
+        ? translatedValues[translationIndex++]
+        : null
 
-      // Extract translated values in order
-      const translatedTitle =
-        needsTitle && translationIndex < translatedValues.length
-          ? translatedValues[translationIndex++]
-          : null
-      const translatedDescription =
-        needsDescription && translationIndex < translatedValues.length
-          ? translatedValues[translationIndex++]
-          : null
-      const translatedDisplayAddress =
-        needsDisplayAddress && translationIndex < translatedValues.length
-          ? translatedValues[translationIndex++]
-          : null
-
-      enrichedI18n[locale as Locale] = {
-        locale: locale,
-        title: translatedTitle || sourceTextObj.title,
-        description: translatedDescription || sourceTextObj.description || null,
-        displayAddress:
-          translatedDisplayAddress || sourceTextObj.displayAddress || null,
-        titleGen: Boolean(translatedTitle), // True if translation was provided
-        descriptionGen: Boolean(translatedDescription), // True if translation was provided
-        displayAddressGen: Boolean(translatedDisplayAddress), // True if translation was provided
-        addressProperties: {},
-      }
+    enrichedI18n[localeKey] = {
+      title: translatedTitle || sourceTextObj.title,
+      description: translatedDescription || sourceTextObj.description || null,
+      displayAddress: translatedDisplayAddress || sourceTextObj.displayAddress || null,
+      titleGen: Boolean(translatedTitle),
+      descriptionGen: Boolean(translatedDescription),
+      displayAddressGen: Boolean(translatedDisplayAddress),
+      addressProperties: {},
     }
   }
 
-  // Step 3: Process translatable properties
   const enrichedProperties = await Promise.all(
-    (newFeature.properties || []).map(async prop => {
-      // If property has i18n content, enrich it like we do for feature-level fields
-      if (prop.i18n) {
-        const propProvidedLocales = Object.keys(prop.i18n) as Locale[]
-        if (propProvidedLocales.length === 0) {
-          return prop // No i18n content, return as-is
+    (newFeature.properties || []).map(async property => {
+      if (!property.i18n) return property
+
+      const propertyLocales = Object.keys(property.i18n) as Locale[]
+      if (propertyLocales.length === 0) return property
+      const propertySourceLocale = propertyLocales[0]
+      const propertySourceTextObj = property.i18n[propertySourceLocale]
+      if (!propertySourceTextObj?.value) return property
+
+      const enrichedPropertyI18n: Partial<
+        Record<LocaleKey, { value: string; valueGen: boolean }>
+      > = {}
+
+      for (const locale of supportedLocales) {
+        const localeKey = toLocaleKey(locale)
+        if (locale === propertySourceLocale) {
+          enrichedPropertyI18n[localeKey] = {
+            value: propertySourceTextObj.value,
+            valueGen: false,
+          }
+          continue
         }
 
-        const propSourceLocale = propProvidedLocales[0]
-        const propSourceTextObj = prop.i18n[propSourceLocale]
-
-        if (!propSourceTextObj?.value) {
-          return prop // No source value, return as-is
-        }
-
-        // Create enriched property i18n
-        const enrichedPropertyI18n: Partial<Record<Locale, any>> = {}
-
-        for (const locale of supportedLocales) {
-          const propTextObj = prop.i18n[locale]
-          const isSourceLocale = locale === propSourceLocale
-
-          if (isSourceLocale) {
-            // For source locale, preserve original value and set Gen flag to false
-            enrichedPropertyI18n[locale] = {
-              locale: locale,
-              value: propSourceTextObj.value,
-              valueGen: false, // Original content, not generated
-            }
-          } else {
-            // For target locales, determine if translation is needed
-            const needsValue = Boolean(propSourceTextObj.value)
-
-            let translatedValue: string | null = null
-
-            // Only translate if needed and API key available
-            if (needsValue && subscriptionKey) {
-              try {
-                const { translateText } = await import('$lib/api/external/translation')
-                const translatedValues = await translateText(
-                  [propSourceTextObj.value],
-                  propSourceLocale,
+        let translatedValue: string | null = null
+        if (subscriptionKey) {
+          try {
+            const { translateText } = await import('$lib/api/external/translation')
+            translatedValue =
+              (
+                await translateText(
+                  [propertySourceTextObj.value],
+                  propertySourceLocale,
                   locale,
                   region,
                   subscriptionKey,
                 )
-                translatedValue = translatedValues[0] || null
-              } catch (error) {
-                // Translation failed, translatedValue remains null
-              }
-            }
-
-            enrichedPropertyI18n[locale] = {
-              locale: locale,
-              value: translatedValue || propSourceTextObj.value,
-              valueGen: Boolean(translatedValue), // True if translation was provided
-            }
-          }
+              )[0] ?? null
+          } catch {}
         }
 
-        return {
-          ...prop,
-          i18n: transformI18nSafely(enrichedPropertyI18n),
+        enrichedPropertyI18n[localeKey] = {
+          value: translatedValue || propertySourceTextObj.value,
+          valueGen: Boolean(translatedValue),
         }
       }
 
-      return prop // Non-translatable property, return as-is
+      return {
+        ...property,
+        i18n: enrichedPropertyI18n,
+      }
     }),
   )
 
-  // Step 4: Create the enriched feature object
-  const enrichedFeature = {
+  const validatedFeature = FeatureEntityFormData.parse({
     ...newFeature,
-    isPendingReview: true, // User-contributed features should be marked for review
-    i18n: transformI18nSafely(enrichedI18n as Record<Locale, any>),
+    organisationId: layerScope.organisationId,
+    projectId: layerScope.projectId,
+    isPendingReview: true,
+    i18n: enrichedI18n as FeatureNew['i18n'],
     properties: enrichedProperties,
-  }
+  })
 
-  // Step 5: Use Zod to parse and apply all defaults
-  const validatedFeature = FeatureInsertAPI.parse(enrichedFeature)
+  const created = await createFeature(db, {
+    ...validatedFeature,
+    organisationId: layerScope.organisationId,
+    projectId: layerScope.projectId,
+    addressMeta: validatedFeature.addressMeta ?? {},
+    isPublished: false,
+    isArchived: false,
+  })
 
-  // Step 6: Create the feature with all related data
-  const result = await createFeatureWithRelated(db, validatedFeature)
-  return result
+  await createI18n(db, validatedFeature.i18n, created.id)
+  await createProperties(db, created.id, validatedFeature.properties ?? [])
+
+  return created
 }
