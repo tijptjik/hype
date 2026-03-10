@@ -11,8 +11,8 @@ import ScrollableText from '$lib/components/common/ScrollableText.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()

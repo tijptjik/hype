@@ -16,31 +16,9 @@ import {
 } from './enums'
 // ZOD SCHEMAS
 import type {
-  FeatureAPI,
-  FeatureBase,
-  FeatureClientExt,
-  FeatureCollectionAPI,
-  FeatureI18nBase,
-  FeatureI18nInsert,
-  FeatureI18nUpdate,
   FeatureImageBase,
   FeatureImageInsert,
   FeatureImageUpdate,
-  FeatureInsert,
-  FeatureInsertAPI,
-  FeaturePropertyAPI,
-  FeaturePropertyBase,
-  FeaturePropertyI18nBase,
-  FeaturePropertyI18nInsert,
-  FeaturePropertyI18nUpdate,
-  FeaturePropertyInsert,
-  FeaturePropertyInsertAPI,
-  FeaturePropertyToMerge,
-  FeaturePropertyUpdate,
-  FeaturePropertyUpdateAPI,
-  FeatureRaw,
-  FeatureUpdate,
-  FeatureUpdateAPI,
   TaskAPI,
   TaskBase,
   TaskBaseRaw,
@@ -148,6 +126,20 @@ import type {
   CloudinarySignatureParams,
   CreateImageParams,
 } from './db/zod/schema/image.types'
+import type {
+  Feature,
+  FeatureDB,
+  FeatureDBNew,
+  FeatureDBPartial,
+  FeatureFromCollection,
+  FeatureI18nDB,
+  FeatureNew,
+  FeatureProperty,
+  FeaturePropertyI18nDB,
+  NewFeatureWithLocationAndParents,
+  UserContributedFeature,
+  UserContributedFeatureProperty,
+} from './db/zod/schema/feature.types'
 import type {
   FormFieldCardBodyProps,
   ProjectPropertyForm,
@@ -1641,61 +1633,6 @@ export type LayerMetadata = {}
 // FEATURES :: DB
 /* -------- */
 
-// Feature with all its own fields.
-export type FeatureDB = z.infer<typeof FeatureBase>
-// Feature without relations, for use in inserting a new feature
-export type FeatureDBNew = z.infer<typeof FeatureInsert>
-// Feature without relations, for use in partially updating a feature
-export type FeatureDBPartial = z.infer<typeof FeatureUpdate>
-// Feature, with relations in DB form - used as an intermediate type for DB operations
-export type FeatureDBRaw = z.infer<typeof FeatureRaw>
-
-/* ----------------- */
-// FEATURES :: API
-/* -------- */
-
-// Feature with all fields, including translations and properties
-export type FeatureFromCollection = z.infer<typeof FeatureCollectionAPI>
-export type Feature = z.infer<typeof FeatureAPI>
-// Like Feature, but without the featureId in translations and properties
-export type FeatureNew = z.infer<typeof FeatureInsertAPI>
-// Like Feature, but with all fields optional
-export type FeaturePartial = z.infer<typeof FeatureUpdateAPI>
-
-/* ----------------- */
-// FEATURES :: RELATIONAL
-/* -------- */
-
-// featureI18n, but with the featureId - for use in DB seeding & selects
-export type FeatureI18nDB = z.infer<typeof FeatureI18nBase>
-// featureI18n, but without featureId - for use in API insertions
-export type FeatureI18nNew = z.infer<typeof FeatureI18nInsert>
-// Same as FeatureI18nNew, but all fields are optional
-export type FeatureI18nPartial = z.infer<typeof FeatureI18nUpdate>
-
-// featureProperty, but with the featureId - for use in DB seeding & selects
-export type FeaturePropertyDB = z.infer<typeof FeaturePropertyBase>
-// featureProperty, but without featureId - for use in API insertions
-export type FeaturePropertyNew = z.infer<typeof FeaturePropertyInsert>
-// Same as FeaturePropertyNew, but all fields are optional
-export type FeaturePropertyPartial = z.infer<typeof FeaturePropertyUpdate>
-// featureProperty, but without featurePropertyId - for use in API insertions
-export type FeaturePropertyMerge = z.infer<typeof FeaturePropertyToMerge>
-
-// featureProperty, but with feature, i18n, and propertyValue - for use in API
-export type FeatureProperty = z.infer<typeof FeaturePropertyAPI>
-// featureProperty, but without featurePropertyId - for use in API insertions
-export type NewFeatureProperty = z.infer<typeof FeaturePropertyInsertAPI>
-// Same as NewFeatureProperty, but all fields are optional
-export type PartialFeatureProperty = z.infer<typeof FeaturePropertyUpdateAPI>
-
-// featurePropertyI18n, but with the featurePropertyId - for use in DB seeding & selects
-export type FeaturePropertyI18nDB = z.infer<typeof FeaturePropertyI18nBase>
-// featurePropertyI18n, but without featurePropertyId - for use in API insertions
-export type FeaturePropertyI18nNew = z.infer<typeof FeaturePropertyI18nInsert>
-// Same as FeaturePropertyI18nNew, but all fields are optional
-export type FeaturePropertyI18nPartial = z.infer<typeof FeaturePropertyI18nUpdate>
-
 /* ----------------- */
 // FEATURES : ADDRESS
 /* -------- */
@@ -1778,47 +1715,6 @@ export type AddressPropertiesExtended = AddressProperties & AddressMeta
 // FEATURES : USER CONTRIBUTED
 /* -------- */
 
-export type NewFeatureWithLocationAndParents = PartialExcept<
-  NewFeatureTask & {
-    feature: PartialExcept<
-      UserContributedFeature,
-      'layerId' | 'geometry' | 'properties'
-    > & {
-      geometry: Geometry
-      properties: UserContributedFeatureProperty[]
-    }
-  },
-  'organisationId' | 'projectId' | 'layerId'
->
-
-export type UserContributedFeatureProperty = {
-  property: Property
-  propertyId: Id
-  propertyValueId?: Id // Categorical
-  value?: string // Universal specifier OR range value
-  i18n?: Partial<Record<Locale, { locale: Locale; value: string; valueGen: boolean }>> // I18n Specifier
-}
-
-export type UserContributedFeature = {
-  organisationId: Id
-  projectId: Id
-  layerId: Id
-  geometry: Geometry
-  i18n: Partial<
-    Record<
-      Locale,
-      {
-        title?: string
-        description?: string
-        displayAddress: string
-        displayAddressGen: boolean
-      }
-    >
-  >
-  properties: UserContributedFeatureProperty[]
-  contributorId?: Id
-}
-
 // Base task creation data
 type BaseTaskData = {
   layerId: Id
@@ -1863,8 +1759,6 @@ export type DeleteParamsToSign = {
 }
 
 export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied'
-
-export type FeatureExtended = z.infer<typeof FeatureClientExt>
 
 /* ----------------- */
 // TASKS
@@ -2589,9 +2483,6 @@ export function isTask(resource: Resource): resource is Task {
   const fields = ['organisationId', 'projectId', 'layerId', 'featureId']
   return fields.every(field => field in resource)
 }
-
-// FEATURE TYPES
-export type { FeatureClientExt, FeatureI18nFieldKeys } from './db/zod/schema/feature'
 
 /* ----------------- */
 // VIRUAL LIST

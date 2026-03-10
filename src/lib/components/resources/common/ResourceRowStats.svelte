@@ -9,8 +9,8 @@ import ImageStats from '$lib/components/features/stats/ImageStats.svelte'
 import CategoryStats from '$lib/components/features/stats/CategoryStats.svelte'
 import SpecifierStats from '$lib/components/features/stats/SpecifierStats.svelte'
 // TYPES
-import type { Feature } from '$lib/types'
 import type { AppCtx } from '$lib/context/admin.svelte'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 let {
   feature,

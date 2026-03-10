@@ -18,9 +18,9 @@ import { Camera } from '@steeze-ui/heroicons'
 // UTILS
 import { PANEL_WIDTH } from '$lib/index'
 // TYPES
-import type { Feature } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 type Props = {
   feature: Feature

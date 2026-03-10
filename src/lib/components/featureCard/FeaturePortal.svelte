@@ -8,8 +8,11 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // CONFIG
 import { MOBILE_MAX_WIDTH, NEW_REF } from '$lib/index'
 // Types
-import type { Feature, NewFeatureWithLocationAndParents } from '$lib/types'
 import type { Point } from 'geojson'
+import type {
+  Feature,
+  NewFeatureWithLocationAndParents,
+} from '$lib/db/zod/schema/feature.types'
 
 // STATE : PROPS
 let { feature }: { feature: Feature | NewFeatureWithLocationAndParents } = $props()

@@ -5,8 +5,8 @@ import { Map as MapIcon } from '@steeze-ui/heroicons'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types'
 import type { Point } from 'geojson'
+import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 
 // PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props()

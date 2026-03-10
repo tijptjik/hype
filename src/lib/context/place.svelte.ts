@@ -4,7 +4,8 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 // SERVICES
 import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
-import type { Id, PlaceState, FeatureFromCollection, Ref } from '$lib/types'
+import type { Id, PlaceState, Ref } from '$lib/types'
+import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 /**
  * PlaceCtx - Manages neighbourhood and place-related state and operations

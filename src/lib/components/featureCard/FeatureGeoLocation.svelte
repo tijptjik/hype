@@ -11,8 +11,8 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { getCardCtx } from '$lib/context/card.svelte'
 // ENUMS
 import { NewFeatureMode } from '$lib/enums'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature } from '$lib/types'
 
 // HTML ELEMENTS
 let addressInput: HTMLInputElement = $state()!

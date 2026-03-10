@@ -30,7 +30,7 @@ import {
 import { Panel } from '$lib/enums'
 // TYPES
 import type { PointLike, LngLatLike, Point } from 'maplibre-gl'
-import type { FeatureFromCollection } from '$lib/types'
+import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 // ELEMENTS
 let mapContainer: HTMLDivElement

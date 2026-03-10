@@ -18,7 +18,6 @@ import type {
   Field,
   TranslationStates,
   Resource,
-  Feature,
   ParsedReverseGeocodeResult,
   FeatureForm,
   FieldProps,
@@ -26,6 +25,7 @@ import type {
   FormField,
 } from '$lib/types'
 import type { Geometry, Point } from 'geojson'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props()

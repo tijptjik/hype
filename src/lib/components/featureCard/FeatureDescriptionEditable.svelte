@@ -10,8 +10,8 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
+import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types'
 
 // STATE : PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props()

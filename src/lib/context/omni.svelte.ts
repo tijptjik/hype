@@ -19,18 +19,11 @@ import {
   PageState,
 } from '$lib/enums'
 // TYPES
-import type {
-  SearchResult,
-  Id,
-  ActiveCollection,
-  OmniState,
-  FeatureFromCollection,
-  Locale,
-  Feature,
-} from '$lib/types'
+import type { SearchResult, Id, ActiveCollection, OmniState, Locale } from '$lib/types'
 import type { AppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { CardCtx } from './card.svelte'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 // CONSTANTS
 const MAX_RESULTS = 9

@@ -1,13 +1,7 @@
 // I18N
 import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'
-import type {
-  FeatureProperty,
-  FeaturePropertyI18nDB,
-  Locale,
-  LocaleKey,
-  Neighbourhood,
-} from '$lib/types'
+import type { Locale, LocaleKey, Neighbourhood } from '$lib/types'
 import type { Resource } from '$lib/types'
 import type {
   PropertyValueI18nDB,
@@ -15,6 +9,10 @@ import type {
 } from '$lib/db/zod/schema/property.types'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 import { supportedLocales } from './enums'
+import type {
+  FeatureProperty,
+  FeaturePropertyI18nDB,
+} from '$lib/db/zod/schema/feature.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

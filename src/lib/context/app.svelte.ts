@@ -62,9 +62,6 @@ import type {
   ControlMode,
   DeepPartial,
   FacetType,
-  Feature,
-  FeatureFromCollection,
-  FeatureI18nFieldKeys,
   FilterState,
   FilteredResources,
   FilterTriState,
@@ -102,6 +99,8 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { PlaceCtx } from './place.svelte'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
 
 export class AppCtx {
   // Tanstack Query Client instance

@@ -10,9 +10,9 @@ import { m } from '$lib/i18n'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
 import { XMark } from '@steeze-ui/heroicons'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 // TYPES
-import type { Feature, FeatureFromCollection } from '$lib/types'
 
 type OmniCollectionProps = {
   mode: 'results' | 'navigation'

@@ -17,13 +17,9 @@ import Dropzone from 'svelte-file-dropzone'
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type {
-  Feature,
-  Layer,
-  Project,
-  Organisation,
-} from '$lib/types'
+import type { Layer, Project, Organisation } from '$lib/types'
 import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 type BatchUploadResult = {
   file: File

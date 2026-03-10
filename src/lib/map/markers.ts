@@ -1,7 +1,7 @@
-import type { FeatureFromCollection } from '$lib/types'
 import type { AppCtx } from '$lib/context/app.svelte'
 // STYLES
 import '$lib/styles/map.css'
+import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 // Function to create SVG marker element with fade-in animation
 export function createMarkerElement(): HTMLDivElement {

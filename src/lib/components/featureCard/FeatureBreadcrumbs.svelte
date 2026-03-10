@@ -20,8 +20,8 @@ import { getCardCtx } from '$lib/context/card.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'
 // ENUMS
 import { FeatureCardMode, NewFeatureMode } from '$lib/enums'
+import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()

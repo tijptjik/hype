@@ -21,7 +21,8 @@ import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures
 // NAVIGATION
 import { navigateToVisited } from '$lib/navigation'
 // TYPES
-import type { Organisation, Project, Layer, Feature } from '$lib/types'
+import type { Organisation, Project, Layer } from '$lib/types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

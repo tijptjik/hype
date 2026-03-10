@@ -11,8 +11,8 @@ import { FirstClassResource } from '$lib/enums'
 import { m } from '$lib/i18n'
 // TYPES
 import { getUrlForResource, navigateOnAdmin } from '$lib/navigation'
-import type { Feature } from '$lib/types'
 import type { Image } from '$lib/db/zod/schema/image.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 let SectionProps = $props()
 

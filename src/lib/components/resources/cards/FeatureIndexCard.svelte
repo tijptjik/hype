@@ -4,7 +4,8 @@ import { m } from '$lib/i18n'
 // COMPONENTS
 import EntityCard from '$lib/components/resources/EntityCard.svelte'
 // TYPES
-import type { KeyMap, Feature } from '$lib/types'
+import type { KeyMap } from '$lib/types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 let { entity }: { entity: Feature } = $props()
 

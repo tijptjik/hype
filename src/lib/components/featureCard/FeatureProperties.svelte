@@ -6,8 +6,8 @@ import { m } from '$lib/i18n'
 import { getFeatureCardDisplayProperties } from '$lib/client/services/property'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 // Types
-import type { Feature } from '$lib/types'
 
 // STATE : PROPS
 let { feature }: { feature: Feature } = $props()

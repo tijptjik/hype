@@ -33,16 +33,9 @@ import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type {
-  Feature,
-  FormPageProps,
-  FormField,
-  FormFieldArray,
-  FormFieldArrayDefinition,
-  FormFieldNested,
-  FormFieldConfig,
-} from '$lib/types'
+import type { FormPageProps, FormField, FormFieldArray, FormFieldArrayDefinition, FormFieldNested, FormFieldConfig } from '$lib/types'
 import type { Image } from '$lib/db/zod/schema/image.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // CONTEXT
 const adminCtx = getAdminCtx()

@@ -8,8 +8,8 @@ import { getCachedFeatureBoolean } from '$lib/client/services/stats'
 // ICONS
 import { CircleStack } from '@steeze-ui/heroicons'
 // TYPES
-import type { Feature } from '$lib/types'
 import type { AppCtx } from '$lib/context/app.svelte'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 let {
   feature,

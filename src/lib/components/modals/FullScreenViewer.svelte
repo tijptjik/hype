@@ -11,10 +11,11 @@ import Viewer from '../common/Viewer.svelte'
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Feature, Organisation, Project } from '$lib/types'
+import type { Organisation, Project } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // CONTEXT
 let omniCtx = getOmniCtx()

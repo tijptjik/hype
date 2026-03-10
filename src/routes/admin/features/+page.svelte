@@ -16,8 +16,8 @@ import { m } from '$lib/i18n'
 // ICONS
 import FeatureIcon from 'virtual:icons/lucide/map-pin'
 // TYPES
-import type { Feature } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // CONTEXT
 const adminCtx = getAdminCtx()

@@ -9,8 +9,8 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
 import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
 import Toggle from '$lib/components/featureCard/elements/DescriptionToggleButton.svelte'
+import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types'
 
 // STATE : PROPS
 let {

@@ -23,7 +23,6 @@ import {
 // TYPES
 import type {
   ListResponse,
-  Feature,
   Id,
   FacetType,
   Task,
@@ -33,10 +32,10 @@ import type {
   ViewFilters,
   Locale,
   FilterTriState,
-  FeatureFromCollection,
   NavigableResource,
   FilterState,
 } from '../types'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'

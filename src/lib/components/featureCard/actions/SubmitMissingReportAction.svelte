@@ -12,8 +12,8 @@ import { submitMissingReport as submitMissingReportAPI } from '$lib/client/servi
 import SubmitButton from '$lib/components/featureCard/actions/SubmitButton.svelte'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature } from '$lib/types'
 
 // PROPS
 let { feature }: { feature: Feature } = $props()

@@ -24,11 +24,10 @@ import type {
   Id,
   NavigableResource,
   Locale,
-  FeatureFromCollection,
-  Feature,
 } from '$lib/types'
 import type { Image } from '$lib/db/zod/schema/image.types'
 import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 // ═══════════════════════
 // 1. CORE NAVIGATION

@@ -14,7 +14,12 @@ import {
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getCardCtx } from '$lib/context/card.svelte'
 // Types
-import type { Id, Feature, UserContributedFeature, FeatureProperty } from '$lib/types'
+import type { Id } from '$lib/types'
+import type {
+  Feature,
+  FeatureProperty,
+  UserContributedFeature,
+} from '$lib/db/zod/schema/feature.types'
 
 // HTML ELEMENTS
 let titleInput: HTMLInputElement = $state()!

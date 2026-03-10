@@ -22,12 +22,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
-import type {
-  Id,
-  ImageCtxConstructorOptions,
-  ImageContextConfig,
-  Feature,
-} from '$lib/types'
+import type { Id, ImageCtxConstructorOptions, ImageContextConfig } from '$lib/types'
 import type {
   Image,
   ImageCtxEnvelope,
@@ -42,6 +37,7 @@ import type { HubDB } from '$lib/db/zod/schema/hub.types'
 import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 import { addParamToUrl } from '$lib/navigation'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // ═══════════════════════
 // TYPES :: ImageCtx

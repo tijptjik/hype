@@ -13,8 +13,8 @@ import { enGB, zhCN, zhHK } from 'date-fns/locale'
 import { getAppCtx } from '$lib/context/app.svelte'
 // SERVICES
 import { toggleVisitedStatus } from '$lib/client/services/userFeatures'
+import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types'
 
 // PROPS
 let { feature }: { feature: Feature | UserContributedFeature } = $props()
