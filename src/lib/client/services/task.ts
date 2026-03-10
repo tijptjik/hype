@@ -1,14 +1,11 @@
 // TYPES
-import type {
-  NewFeatureTask,
-  UserContributedFeature,
-  Feature,
-  Id,
-} from '$lib/types'
+import type { NewFeatureTask, UserContributedFeature, Feature, Id } from '$lib/types'
 import type { ImageUpload, UploadedPhoto } from '$lib/db/zod/schema/image.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
+// API
+import { updateFeatureState } from '$lib/api/server/feature.remote'
 
 // ═══════════════════════
 // TASK CREATION CLIENT SERVICES
@@ -230,16 +227,21 @@ export const updateFeatureFromTask = async (
   featureId: Id,
   updateData: Record<string, unknown>,
 ): Promise<Response> => {
-  const response = await fetch(`/api/features/${featureId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updateData),
+  const result = await updateFeatureState({
+    id: featureId,
+    data: updateData as {
+      isPublished?: boolean
+      isArchived?: boolean
+      isIntangible?: boolean
+      isVisitable?: boolean
+      isPendingReview?: boolean
+    },
+    meta: {
+      isAdminRequest: true,
+    },
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to update feature: ${errorText}`)
-  }
-
-  return response
+  return new Response(JSON.stringify(result), {
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
