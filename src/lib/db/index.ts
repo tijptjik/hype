@@ -1,6 +1,19 @@
 // ORM
 import { drizzle } from 'drizzle-orm/d1'
-import { and, sql, inArray, eq, or, not, exists, type Table } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  inArray,
+  not,
+  or,
+  sql,
+  type AnyColumn,
+  type SQL,
+  type Table,
+} from 'drizzle-orm'
 // SCHEMA
 import * as schema from './schema'
 // ENUMS
@@ -52,11 +65,14 @@ import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 // 7. TRANSFORMATIONS :: RECORDS
 //    - toRelatedRecords
 //
-// 8. VALIDATION :: FIELDS
+// 8. ORDERING
+//    - toOrderByWithLocalizedFields
+//
+// 9. VALIDATION :: FIELDS
 //    - isFieldUnique
 //    - isFieldChanged
 //
-// 9. VALIDATION :: TABLES
+// 10. VALIDATION :: TABLES
 //     - validateTableColumns
 //
 
@@ -505,7 +521,76 @@ export const toLocaleMap = <T extends LocaleBundle>(
 }
 
 // ═══════════════════════
-// 8. VALIDATION :: FIELDS
+// 8. ORDERING
+// ═══════════════════════
+
+type LocalizedOrderByParams = {
+  db: Database
+  locale?: Locale
+  sortBy?: string | null
+  sortOrder?: 'asc' | 'desc' | null
+  fallbackSortBy?: string
+  fallbackColumn: AnyColumn
+  baseTable: Table
+  localizedSortColumns: Partial<Record<string, AnyColumn>>
+  i18nTable: SQLiteTableWithColumns<any>
+  parentIdColumn: AnyColumn
+  foreignKeyColumn: AnyColumn
+  localeColumn: AnyColumn
+}
+
+/**
+ * Builds a deterministic order-by clause with optional locale-aware i18n sorting.
+ * Uses a correlated subquery for the requested locale and falls back to base-column sorting.
+ */
+export const toOrderByWithLocalizedFields = ({
+  db,
+  locale,
+  sortBy,
+  sortOrder,
+  fallbackSortBy = 'modifiedAt',
+  fallbackColumn,
+  baseTable,
+  localizedSortColumns,
+  i18nTable,
+  parentIdColumn,
+  foreignKeyColumn,
+  localeColumn,
+}: LocalizedOrderByParams): SQL<unknown>[] => {
+  const resolvedSortBy = sortBy || fallbackSortBy
+  const resolvedSortOrder = sortOrder || 'desc'
+  const localizedSortColumn = localizedSortColumns[resolvedSortBy]
+
+  if (localizedSortColumn && locale) {
+    const localizedValueQuery = db
+      .select({ value: sql<string>`${localizedSortColumn}` })
+      .from(i18nTable)
+      .where(and(eq(foreignKeyColumn, parentIdColumn), eq(localeColumn, locale)))
+      .limit(1)
+
+    const localizedValue = sql<string>`coalesce((${localizedValueQuery}), '')`
+
+    return [
+      resolvedSortOrder === 'desc' ? desc(localizedValue) : asc(localizedValue),
+      desc(fallbackColumn),
+    ]
+  }
+
+  const sortColumn = baseTable[resolvedSortBy as keyof typeof baseTable]
+  if (!sortColumn) {
+    throw new Error(`Invalid sort column: ${resolvedSortBy}`)
+  }
+
+  return [
+    resolvedSortOrder === 'desc'
+      ? desc(sortColumn as AnyColumn)
+      : asc(sortColumn as AnyColumn),
+    desc(fallbackColumn),
+  ]
+}
+
+// ═══════════════════════
+// 9. VALIDATION :: FIELDS
 // ═══════════════════════
 
 export const isFieldUnique = async <T extends Resource>(
@@ -618,15 +703,17 @@ export const toRelatedRecords = <
 
     return {
       ...(rawValue as T),
-      ...(normalizedLocale ? ({ locale: normalizedLocale } as Partial<T>) : {}),
+      ...(normalizedLocale
+        ? ({ locale: normalizedLocale } as unknown as Partial<T>)
+        : {}),
       [keyName]: key,
       [foreignKeyName]: foreignKeyValue,
-    }
+    } as T & Record<K, KeyValue> & Record<F, string>
   })
 }
 
 // ═══════════════════════
-// 9. VALIDATION :: TABLES
+// 10. VALIDATION :: TABLES
 // ═══════════════════════
 
 // Helper function to validate column names against a table
