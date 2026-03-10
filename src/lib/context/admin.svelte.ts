@@ -4,6 +4,7 @@ import { getLocale } from '$lib/i18n'
 import { fetchOrThrow } from '$lib/index'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
+import { getFeatures } from '$lib/api/server/feature.remote'
 // SERVICES
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
@@ -518,8 +519,14 @@ export class AdminCtx {
   }
 
   featuresQueryFn = async () => {
-    const url = this.buildApiUrl(FirstClassResource.feature)
-    return fetchOrThrow<Feature[]>(url)
+    const result = await getFeatures({
+      conditions: this.appCtx.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      prisms: this.appCtx.state.prisms,
+      meta: { isAdminRequest: true, profile: 'card' },
+    })
+    return result.data
   }
 
   tasksQueryFn = async () => {

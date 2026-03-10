@@ -18,6 +18,7 @@ import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.
 import { getHub, getHubs } from '$lib/api/server/hub.remote'
 import { getProject, getProjects } from '$lib/api/server/project.remote'
 import { getLayer, getLayers } from '$lib/api/server/layer.remote'
+import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
 import { getProperties, getProperty } from '$lib/api/server/property.remote'
 import { getUser, getUserFeatures } from '$lib/api/server/user.remote'
 // SERVICES
@@ -564,6 +565,10 @@ export class AppCtx {
       list: getLayers,
       get: getLayer,
     }
+    this.remoteMap[FirstClassResource.feature] = {
+      list: getFeatures as unknown as RemoteListFn<unknown, unknown>,
+      get: getFeature as unknown as RemoteGetFn<unknown, unknown>,
+    }
     this.remoteMap[FirstClassResource.hub] = {
       list: getHubs,
       get: getHub,
@@ -799,8 +804,19 @@ export class AppCtx {
   }
 
   featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
-    const url = this.buildApiUrl(FirstClassResource.feature)
-    return fetchOrThrow<FeatureFromCollection[]>(url)
+    const remoteList = this.remoteMap[FirstClassResource.feature].list
+    if (!remoteList) {
+      throw new Error('Feature remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+      meta: { profile: 'list' },
+    })) as ListResponse<FeatureFromCollection>
+    return result.data
   }
 
   propertiesQueryFn = async (): Promise<Property[]> => {
