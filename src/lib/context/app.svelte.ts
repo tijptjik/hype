@@ -77,17 +77,17 @@ import type {
   Task,
   ListResponse,
   Ref,
-  HubOptsExtended,
   RemoteMap,
   RemoteListFn,
   RemoteGetFn,
+  ResourceSortState,
 } from '$lib/types'
 import type { Image } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type { Hub, HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type {
   CurrentUser,
   UserExperimental,
@@ -164,6 +164,17 @@ export class AppCtx {
   private organisationCodeToId = new Map<Code, Id>()
   private projectCodeToId = new Map<Code, Id>()
   private hubCodeToId = new Map<Code, Id>()
+
+  private defaultViewSorting = (): Record<FirstClassResource, ResourceSortState> => ({
+    organisation: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+    project: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+    layer: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+    feature: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+    task: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+    hub: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+    property: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+    user: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+  })
 
   state: AppContextState = $state({
     // Markers -- Which features are shown on the map
@@ -487,6 +498,7 @@ export class AppCtx {
         },
       },
     },
+    viewSorting: this.defaultViewSorting(),
   })
 
   // New Feature -- The new feature to be created
@@ -500,17 +512,26 @@ export class AppCtx {
   // QUERY KEYS
   // ═══════════════════════
 
-  organisationsQueryKey = () => [FirstClassResource.organisation, this.isAdmin()]
+  organisationsQueryKey = () => [
+    FirstClassResource.organisation,
+    this.isAdmin(),
+    this.state.viewSorting.organisation.sortBy,
+    this.state.viewSorting.organisation.sortOrder,
+  ]
   projectsQueryKey = () => [
     FirstClassResource.project,
     this.state.prisms.organisation,
     this.isAdmin(),
+    this.state.viewSorting.project.sortBy,
+    this.state.viewSorting.project.sortOrder,
   ]
   layersQueryKey = () => [
     FirstClassResource.layer,
     this.state.prisms.organisation,
     this.state.prisms.project,
     this.isAdmin(),
+    this.state.viewSorting.layer.sortBy,
+    this.state.viewSorting.layer.sortOrder,
   ]
   featuresQueryKey = () => [
     FirstClassResource.feature,
@@ -518,6 +539,8 @@ export class AppCtx {
     this.state.prisms.project,
     this.state.prisms.layer,
     this.isAdmin(),
+    this.state.viewSorting.feature.sortBy,
+    this.state.viewSorting.feature.sortOrder,
   ]
   propertiesQueryKey = () => [
     'property',
@@ -767,6 +790,7 @@ export class AppCtx {
         isPublished: true,
       },
       prisms: this.state.prisms,
+      sorting: this.state.viewSorting.organisation,
     })) as ListResponse<Organisation>
     return result.data
   }
@@ -781,6 +805,7 @@ export class AppCtx {
         isPublished: true,
       },
       prisms: this.state.prisms,
+      sorting: this.state.viewSorting.project,
       meta: { profile: 'card' },
     })) as ListResponse<Project>
     return result.data
@@ -797,6 +822,7 @@ export class AppCtx {
         isPublished: true,
       },
       prisms: this.state.prisms,
+      sorting: this.state.viewSorting.layer,
       meta: { profile: 'card' },
     })) as ListResponse<Layer>
     return result.data
@@ -813,6 +839,7 @@ export class AppCtx {
         isPublished: true,
       },
       prisms: this.state.prisms,
+      sorting: this.state.viewSorting.feature,
       meta: { profile: 'list' },
     })) as ListResponse<FeatureFromCollection>
     return result.data
@@ -1862,10 +1889,10 @@ export class AppCtx {
     }
   }
 
-  setControlMode = (mode: ControlMode) => {
+  setControlMode = (mode: ControlMode | null) => {
     const resourceType = this.getActiveResourceType()
     if (resourceType) {
-      this.state.ui.controlMode[resourceType] = mode
+      this.state.ui.controlMode[resourceType] = mode ?? 'hidden'
     }
   }
 

@@ -34,6 +34,7 @@ import type {
   FilterTriState,
   NavigableResource,
   FilterState,
+  ResourceSortState,
 } from '../types'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
@@ -414,7 +415,11 @@ export class AdminCtx {
   }
 
   get hubsQueryKey() {
-    return ['hub']
+    return [
+      'hub',
+      this.appCtx.state.viewSorting.hub.sortBy,
+      this.appCtx.state.viewSorting.hub.sortOrder,
+    ]
   }
 
   // ═══════════════════════
@@ -482,6 +487,7 @@ export class AdminCtx {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: this.appCtx.state.prisms,
+      sorting: this.appCtx.state.viewSorting.organisation,
       meta: { isAdminRequest: true, profile: 'card' },
     })) as ListResponse<Organisation>
     return result.data
@@ -497,6 +503,7 @@ export class AdminCtx {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: this.appCtx.state.prisms,
+      sorting: this.appCtx.state.viewSorting.project,
       meta: { isAdminRequest: true, profile: 'card' },
     })) as ListResponse<Project>
     return result.data
@@ -512,6 +519,7 @@ export class AdminCtx {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: this.appCtx.state.prisms,
+      sorting: this.appCtx.state.viewSorting.layer,
       meta: { isAdminRequest: true, profile: 'card' },
     })
     return result.data
@@ -523,6 +531,7 @@ export class AdminCtx {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: this.appCtx.state.prisms,
+      sorting: this.appCtx.state.viewSorting.feature,
       meta: { isAdminRequest: true, profile: 'card' },
     })
     return result.data
@@ -554,6 +563,7 @@ export class AdminCtx {
         conditions: this.appCtx.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
+        sorting: this.appCtx.state.viewSorting.hub,
         meta: { isAdminRequest: true, profile: 'card' },
       })) as ListResponse<Hub>
       return result.data
@@ -1941,6 +1951,37 @@ export class AdminCtx {
 
   resetViewFilters = () => {
     this.appCtx.state.viewFilters = structuredClone(viewFilters)
+  }
+
+  setViewSorting = async (
+    resource: FirstClassResource,
+    next: Partial<ResourceSortState>,
+  ): Promise<void> => {
+    const current = this.appCtx.state.viewSorting[resource]
+    this.appCtx.state.viewSorting[resource] = {
+      ...current,
+      ...next,
+    }
+
+    if (resource === FirstClassResource.organisation) {
+      await this.appCtx.refreshOrganisations(false)
+      return
+    }
+    if (resource === FirstClassResource.project) {
+      await this.appCtx.refreshProjects(false)
+      return
+    }
+    if (resource === FirstClassResource.layer) {
+      await this.appCtx.refreshLayers(false)
+      return
+    }
+    if (resource === FirstClassResource.feature) {
+      await this.appCtx.refreshFeatures(false)
+      return
+    }
+    if (resource === FirstClassResource.hub) {
+      await this.appCtx.refreshHubs(false)
+    }
   }
 
   // ═══════════════════════
