@@ -41,7 +41,7 @@ const overallStats = $derived(
       >{filterSections[key as keyof typeof filterSections].title}</span
     >
     <progress
-      class="progress progress-primary min-w-[8rem] flex-1"
+      class="progress progress-primary min-w-32 flex-1"
       value={percentage}
       max="100"
     ></progress>
