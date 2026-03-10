@@ -1,0 +1,74 @@
+@layer components {
+  .bits-theme .bits-resource-sort {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    position: relative;
+  }
+
+  .bits-theme .bits-resource-sort__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+  }
+
+  .bits-theme .bits-btn.bits-resource-sort__trigger {
+    background-color: transparent;
+    border-color: var(--color-base-300);
+    box-shadow: none;
+  }
+
+  .bits-theme
+    .bits-btn.bits-resource-sort__trigger:hover:not(:disabled):not(
+      [aria-disabled="true"]
+    ) {
+    background-color: color-mix(in oklab, var(--color-base-300) 12%, transparent);
+    border-color: var(--color-base-300);
+  }
+
+  .bits-theme .bits-form__select-trigger.bits-resource-sort__select {
+    justify-content: center;
+    padding-inline: 0.5rem;
+    min-width: 100px;
+    width: auto;
+    background-color: transparent;
+    border-radius: 0.75rem;
+    border-color: color-mix(in oklab, var(--color-base-300) 70%, white 30%);
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-resource-sort__select-trigger {
+    min-width: 100px;
+    width: auto;
+  }
+
+  .bits-resource-sort__select-content {
+    min-width: 100px;
+    border-color: black;
+  }
+
+  .bits-theme
+    .bits-form__select-trigger.bits-resource-sort__select
+    .bits-form__select-label {
+    text-align: center;
+    padding-left: 0;
+    width: 100%;
+  }
+
+  .bits-theme
+    .bits-form__select-trigger.bits-resource-sort__select
+    .bits-form__select-trigger-icon {
+    display: none;
+  }
+
+  .bits-theme .bits-form__select-trigger.bits-resource-sort__select:hover {
+    background-color: color-mix(in oklab, var(--color-base-300) 10%, transparent);
+    border-color: color-mix(in oklab, var(--color-base-300) 55%, white 45%);
+  }
+
+  .bits-theme .bits-form__select-trigger.bits-resource-sort__select:focus-visible {
+    background-color: color-mix(in oklab, var(--color-base-300) 8%, transparent);
+    border-color: color-mix(in oklab, var(--color-base-300) 55%, white 45%);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-base-300) 16%, transparent);
+  }
+}

@@ -1,0 +1,87 @@
+@layer components {
+  .bits-theme.bits-completion-footer {
+    display: flex;
+    align-items: center;
+    justify-content: stretch;
+    container-type: inline-size;
+    container-name: bits-completion-footer;
+    gap: 1.5rem;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    height: 37px;
+    padding-inline: 1.5rem;
+    text-transform: uppercase;
+    color: var(--color-base-content);
+    background-color: var(--color-base-300);
+    border-top: 1px solid var(--color-base-100);
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .bits-theme .bits-completion-footer__stat {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .bits-theme .bits-completion-footer__icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+
+  .bits-theme .bits-completion-footer__label {
+    display: inline-block;
+    overflow: hidden;
+    max-width: 8rem;
+    opacity: 1;
+    transform: translateX(0);
+    transform-origin: left center;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      max-width 0.22s ease,
+      opacity 0.18s ease,
+      transform 0.22s ease,
+      margin 0.22s ease;
+  }
+
+  .bits-theme .bits-completion-footer__progress {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 3rem;
+    height: 0.5rem;
+    background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  }
+
+  .bits-completion-footer__progress-indicator,
+  .bits-theme .bits-completion-footer__progress-indicator {
+    display: block;
+    height: 100%;
+    background-color: var(--color-primary);
+  }
+
+  .bits-theme .bits-completion-footer__value {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  @container bits-completion-footer (max-width: 75rem) {
+    .bits-theme .bits-completion-footer__label {
+      max-width: 0;
+      opacity: 0;
+      transform: translateX(-0.35rem);
+      margin-right: -0.5rem;
+    }
+  }
+}
