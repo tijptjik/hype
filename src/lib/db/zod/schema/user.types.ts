@@ -1,18 +1,11 @@
 import type { z } from 'zod'
+import type { EntityResponse, Locale, ResourceContext, UserRoleDisco } from '$lib/types'
 import type {
-  EntityResponse,
-  FeatureFromCollection,
-  Locale,
-  ResourceContext,
-  UserRoleDisco,
-} from '$lib/types'
-import type {
-  UserFeatureAPI,
   UserFeatureBase,
   UserFeatureInsert,
-  UserFeatureInsertAPI,
   UserFeatureUpdate,
 } from '$lib/db/zod/schema/feature'
+import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type {
   UserAdminListProfileAPI,
   UserAdminProfileAPI,
@@ -151,9 +144,9 @@ export type ExperimentalFeatureConfig = {
 export type UserFeatureDB = z.infer<typeof UserFeatureBase>
 export type UserFeatureDBNew = z.infer<typeof UserFeatureInsert>
 export type UserFeatureDBPartial = z.infer<typeof UserFeatureUpdate>
-export type UserFeature = z.infer<typeof UserFeatureAPI>
+export type UserFeature = z.infer<typeof UserFeatureBase>
 export type UserFeatureListItem = z.infer<typeof UserFeatureListProfileAPI>
-export type UserFeatureNew = z.infer<typeof UserFeatureInsertAPI>
+export type UserFeatureNew = z.infer<typeof UserFeatureInsert>
 export type UserFeaturePartial = z.infer<typeof UserFeatureUpdateAPI>
 export type UserFeatureWithHierarchy = UserFeature & {
   feature: FeatureFromCollection

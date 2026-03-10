@@ -7,7 +7,12 @@ import { task, taskImage } from '$lib/db/schema/index'
 // ZOD SCHEMAS
 import { UserBasic } from './user'
 import { ImageBase } from './image'
-import { FeatureAPI, FeatureBase, FeatureI18nBase, FeaturePropertyAPI } from './feature'
+import {
+  FeatureAdminProfileAPI,
+  FeatureBase,
+  FeatureI18nBase,
+  FeaturePropertyAPI,
+} from './feature'
 import { ProjectBase, ProjectI18nBase } from './project'
 import { OrganisationBase, OrganisationI18nBase } from './organisation'
 import {
@@ -182,10 +187,10 @@ export const TaskInsertAPI = z.discriminatedUnion('type', [
     images: z.array(TaskImageInsert).optional(),
     contributor: UserBasic.optional(),
   }),
-  // Other task types need a featureId and can have complete FeatureAPI
+  // Other task types need a featureId and can have complete feature admin payloads
   TaskInsert.extend({
     type: z.enum(['reportedMissing', 'newPhoto']),
-    feature: FeatureAPI.optional(),
+    feature: FeatureAdminProfileAPI.optional(),
     organisation: OrganisationBase.optional(),
     project: ProjectBase.optional(),
     images: z.array(TaskImageInsert).optional(),
@@ -196,7 +201,7 @@ export const TaskInsertAPI = z.discriminatedUnion('type', [
 export const TaskUpdateAPI = TaskUpdate.extend({
   organisation: OrganisationBase.optional(),
   project: ProjectBase.optional(),
-  feature: FeatureAPI.optional(),
+  feature: FeatureAdminProfileAPI.optional(),
   images: z.array(TaskImageUpdate).optional(),
   contributor: UserBasic.optional(),
   reviewer: UserBasic.optional(),

@@ -6,7 +6,8 @@ import {
   removeUserFeatureFromList,
 } from '$lib/api/server/user.remote'
 // TYPES
-import type { Feature, FeatureFromCollection, Id } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'

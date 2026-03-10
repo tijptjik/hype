@@ -3,15 +3,9 @@ import { SvelteMap } from 'svelte/reactivity'
 // ENUMS
 import { FirstClassResource, supportedLocales } from '$lib/enums'
 // TYPES
-import type {
-  Feature,
-  FeatureI18nDB,
-  FeatureProperty,
-  FeatureFromCollection,
-  UserContributedFeature,
-} from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { AppCtx } from '$lib/context/app.svelte'
+import type { Feature, FeatureFromCollection, FeatureI18nDB, FeatureProperty, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 
 // ═══════════════════════
 // STATISTICS CACHE METHODS

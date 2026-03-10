@@ -11,18 +11,14 @@ import { updateFormData } from '$lib/client/services/form'
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
+import type { Locale, LocaleExtended, Id, RangeFilterValue, FormDataUpdaterForm } from '$lib/types'
 import type {
-  FeatureProperty,
-  UserContributedFeatureProperty,
   Feature,
-  Locale,
-  LocaleExtended,
-  Id,
-  RangeFilterValue,
-  FeaturePropertyI18nDB,
   FeatureFromCollection,
-  FormDataUpdaterForm,
-} from '$lib/types'
+  FeatureProperty,
+  FeaturePropertyI18nDB,
+  UserContributedFeatureProperty,
+} from '$lib/db/zod/schema/feature.types'
 import type {
   Property,
   PropertyDiscriminator,

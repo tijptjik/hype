@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, inArray, or, type SQL } from 'drizzle-orm'
+import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
 // CAPABILITIES
 import {
   isProjectCapabilityKey,
@@ -12,6 +12,7 @@ import {
   inferPropertyDiscriminatorFromComponent,
   toBooleanOrUndefined,
 } from '$lib/api/services'
+import { isRelevantHubAdmin } from '$lib/api/services/authz'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
@@ -86,8 +87,8 @@ import type {
 // QUERY CONTEXT
 // - toLookupConditions
 // - toRequestedListState
-// - toProjectRoleIds
-// - toOrganisationRoleIds
+// - toScopedProjectIds
+// - toScopedOrganisationIds
 // - toProjectPrisms
 // - buildVisibilityAndOwnershipConditions
 // - toQueryConditions
@@ -676,26 +677,56 @@ export const toRequestedListState = (params: Partial<ProjectDB>) => ({
 const VISIBILITY_COLUMNS = ['isArchived', 'isPublished'] as const
 
 /**
- * Extracts project ids from discovered user roles.
- * Used to scope project reads for non-super-admin actors.
+ * Extracts project ids from discovered roles using a role predicate.
+ * Keeps query-time scope decisions aligned with authz policy tiers.
  *
  * @param userRoles - Resolved session role rows.
- * @returns Project ids the actor is directly assigned to.
+ * @param predicate - Role predicate for inclusion.
+ * @returns Unique project ids the actor is directly assigned to.
  */
-const toProjectRoleIds = (userRoles: UserRoleDisco[]): Id[] =>
-  userRoles.filter(role => role.type === 'project').map(role => role.projectId as Id)
+const toScopedProjectIds = (
+  userRoles: UserRoleDisco[],
+  predicate: (role: Extract<UserRoleDisco, { type: 'project' }>) => boolean,
+): Id[] =>
+  Array.from(
+    new Set(
+      userRoles
+        .filter(
+          (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
+            role.type === 'project' &&
+            typeof role.projectId === 'string' &&
+            role.projectId.length > 0 &&
+            predicate(role),
+        )
+        .map(role => role.projectId as Id),
+    ),
+  )
 
 /**
- * Extracts organisation ids from discovered user roles.
+ * Extracts organisation ids from discovered roles using a role predicate.
  * Organisation membership can grant scoped visibility into child projects.
  *
  * @param userRoles - Resolved session role rows.
- * @returns Organisation ids the actor belongs to.
+ * @param predicate - Role predicate for inclusion.
+ * @returns Unique organisation ids the actor belongs to.
  */
-const toOrganisationRoleIds = (userRoles: UserRoleDisco[]): Id[] =>
-  userRoles
-    .filter(role => role.type === 'organisation')
-    .map(role => role.organisationId as Id)
+const toScopedOrganisationIds = (
+  userRoles: UserRoleDisco[],
+  predicate: (role: Extract<UserRoleDisco, { type: 'organisation' }>) => boolean,
+): Id[] =>
+  Array.from(
+    new Set(
+      userRoles
+        .filter(
+          (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
+            role.type === 'organisation' &&
+            typeof role.organisationId === 'string' &&
+            role.organisationId.length > 0 &&
+            predicate(role),
+        )
+        .map(role => role.organisationId as Id),
+    ),
+  )
 
 /**
  * Narrows prism input to the hierarchy levels project queries actually honor.
@@ -724,6 +755,7 @@ const toProjectPrisms = (prisms?: Prisms): Prisms | undefined => {
  * @param params - Validated query params.
  * @param userRoles - Resolved session role rows.
  * @param prisms - Optional prism filters.
+ * @param resourceHubId - Active hub scope used for scoped hub-admin elevation.
  * @returns Query context containing SQL conditions and filtered request params.
  */
 const buildVisibilityAndOwnershipConditions = (
@@ -733,6 +765,7 @@ const buildVisibilityAndOwnershipConditions = (
   params: QueryParams,
   userRoles: UserRoleDisco[],
   prisms?: Prisms,
+  resourceHubId?: string | null,
 ): {
   filtersToApply: QueryParams
   conditions: SQL<unknown>[]
@@ -753,28 +786,90 @@ const buildVisibilityAndOwnershipConditions = (
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 
-  const projectIds = toProjectRoleIds(userRoles)
-  const organisationIds = toOrganisationRoleIds(userRoles)
+  const isHubAdmin = isRelevantHubAdmin(userRoles, resourceHubId)
+  if (isHubAdmin) {
+    return { filtersToApply: filteredParams, conditions, excludeColumns }
+  }
 
-  if (isAdminRequest) {
-    if (projectIds.length === 0 && organisationIds.length === 0) {
-      conditions.push(eq(project.id, '__none__' as Id))
-      return { filtersToApply: filteredParams, conditions, excludeColumns }
+  const ownerProjectIds = toScopedProjectIds(
+    userRoles,
+    role => role.role === ProjectRoleType.owner,
+  )
+  const nonUserProjectIds = toScopedProjectIds(
+    userRoles,
+    role => role.role !== ProjectRoleType.user,
+  )
+  const organisationIds = toScopedOrganisationIds(userRoles, () => true)
+
+  const combineScopeCondition = (
+    projectIds: Id[],
+    organisationIds: Id[],
+  ): SQL<unknown> | undefined => {
+    const scopeConditions: SQL<unknown>[] = []
+
+    if (projectIds.length > 0) {
+      scopeConditions.push(inArray(project.id, projectIds))
     }
-
-    const ownershipScopes: SQL<unknown>[] = []
-    if (projectIds.length > 0) ownershipScopes.push(inArray(project.id, projectIds))
     if (organisationIds.length > 0) {
-      ownershipScopes.push(inArray(project.organisationId, organisationIds))
+      scopeConditions.push(inArray(project.organisationId, organisationIds))
     }
 
-    const ownershipCondition =
-      ownershipScopes.length === 1 ? ownershipScopes[0] : or(...ownershipScopes)
-    if (ownershipCondition) conditions.push(ownershipCondition)
+    if (scopeConditions.length === 0) return undefined
+    return scopeConditions.length === 1 ? scopeConditions[0] : or(...scopeConditions)
   }
 
   const isPublished = toBooleanOrUndefined(params.isPublished)
   const isArchived = toBooleanOrUndefined(params.isArchived)
+
+  const ownerScopeCondition = combineScopeCondition(ownerProjectIds, organisationIds)
+  const nonUserMembershipScopeCondition = combineScopeCondition(
+    nonUserProjectIds,
+    organisationIds,
+  )
+
+  const toScopedAccessCondition = (
+    requestedIsPublished: boolean | undefined,
+    requestedIsArchived: boolean | undefined,
+  ): SQL<unknown> | undefined => {
+    if (requestedIsArchived === true) {
+      if (!ownerScopeCondition) return undefined
+      return and(ownerScopeCondition, eq(project.isArchived, true))
+    }
+
+    if (requestedIsPublished === false) {
+      if (!nonUserMembershipScopeCondition) return undefined
+
+      const parts: SQL<unknown>[] = [
+        nonUserMembershipScopeCondition,
+        eq(project.isPublished, false),
+      ]
+
+      if (requestedIsArchived === false) {
+        parts.push(eq(project.isArchived, false))
+      }
+
+      return parts.length === 1 ? parts[0] : and(...parts)
+    }
+
+    const publishedBranch = and(
+      eq(project.isPublished, true),
+      eq(project.isArchived, false),
+    )
+    if (requestedIsArchived === false || requestedIsArchived === undefined) {
+      return publishedBranch
+    }
+
+    return undefined
+  }
+
+  const scopedAccessCondition = toScopedAccessCondition(isPublished, isArchived)
+
+  if (!scopedAccessCondition) {
+    conditions.push(eq(project.id, '__none__' as Id))
+    return { filtersToApply: filteredParams, conditions, excludeColumns }
+  }
+
+  conditions.push(scopedAccessCondition)
 
   applyTriStateBooleanCondition(
     conditions,
@@ -786,23 +881,6 @@ const buildVisibilityAndOwnershipConditions = (
     project.isArchived,
     isArchived ?? (isAdminRequest ? undefined : false),
   )
-
-  if (!isAdminRequest && isPublished === false) {
-    if (projectIds.length === 0 && organisationIds.length === 0) {
-      conditions.push(eq(project.id, '__none__' as Id))
-      return { filtersToApply: filteredParams, conditions, excludeColumns }
-    }
-
-    const membershipScopes: SQL<unknown>[] = []
-    if (projectIds.length > 0) membershipScopes.push(inArray(project.id, projectIds))
-    if (organisationIds.length > 0) {
-      membershipScopes.push(inArray(project.organisationId, organisationIds))
-    }
-
-    const membershipCondition =
-      membershipScopes.length === 1 ? membershipScopes[0] : or(...membershipScopes)
-    if (membershipCondition) conditions.push(membershipCondition)
-  }
 
   return { filtersToApply: filteredParams, conditions, excludeColumns }
 }
@@ -817,6 +895,7 @@ const buildVisibilityAndOwnershipConditions = (
  * @param params - Validated query params.
  * @param userRoles - Resolved session role rows.
  * @param prisms - Optional prism filters.
+ * @param resourceHubId - Active hub scope used for scoped hub-admin elevation.
  * @returns Query context containing SQL conditions, filter payload, and excluded columns.
  */
 export const toQueryConditions = (
@@ -826,6 +905,7 @@ export const toQueryConditions = (
   params: QueryParams,
   userRoles: UserRoleDisco[],
   prisms?: Prisms,
+  resourceHubId?: string | null,
 ): {
   filtersToApply: QueryParams
   conditions: SQL<unknown>[]
@@ -838,6 +918,7 @@ export const toQueryConditions = (
     params,
     userRoles,
     prisms,
+    resourceHubId,
   )
 
   if (Object.keys(contextRespectingVisibilityAndOwnership.filtersToApply).length > 0) {
