@@ -2,10 +2,14 @@
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+// SERVICES
+import {
+  createToggleFilter,
+  createTranslationFilter,
+} from '$lib/client/services/filters'
 // COMPONENTS
 import ResourceIndex from '$lib/components/resources/ResourceIndex.svelte'
 import EntityCard from '$lib/components/resources/EntityCard.svelte'
-import FilterControlBar from '$lib/components/resources/filters/projects/Root.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -14,8 +18,13 @@ import { m } from '$lib/i18n'
 import { canCreateAnyProject, toProjectAuthActor } from '$lib/api/services/authz'
 // ICONS
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
+import ListFilterIcon from 'virtual:icons/lucide/list-filter'
+import BookOpenIcon from 'virtual:icons/lucide/book-open'
+import LanguagesIcon from 'virtual:icons/lucide/languages'
+import ImageIcon from 'virtual:icons/lucide/image'
 // TYPES
-import type { KeyMap, Project } from '$lib/types'
+import type { KeyMap, ResourceFilterBarConfig } from '$lib/types'
+import type { Project } from '$lib/db/zod/schema/project.types'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -42,6 +51,96 @@ const keyMap: KeyMap = {
     },
   ],
 }
+
+const filters = {
+  resource: FirstClassResource.project,
+  sections: [
+    {
+      key: 'status',
+      title: m.filters__status(),
+      icon: ListFilterIcon,
+      filters: [
+        createToggleFilter('isPublished', {
+          label: m.published(),
+          falseLabel: m.filters__is(),
+          trueLabel: m.filters__not(),
+        }),
+        createToggleFilter('isArchived', {
+          label: m.bad_swift_cheetah_surge(),
+          falseLabel: m.filters__is(),
+          trueLabel: m.filters__not(),
+          superAdminOnly: true,
+        }),
+      ],
+    },
+    {
+      key: 'authorship',
+      title: m.filters__content(),
+      icon: BookOpenIcon,
+      filters: [
+        createToggleFilter('hasName', {
+          label: m.admin__forms_common_name_full(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+        createToggleFilter('hasContextualName', {
+          label: m.admin__forms_common_name_short(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+        createToggleFilter('hasDescription', {
+          label: m.feature__description(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+        createToggleFilter('hasAttribution', {
+          label: m.profile__attribution(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+        createToggleFilter('hasLicense', {
+          label: m.admin__forms_projects_license(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+      ],
+    },
+    {
+      key: 'translation',
+      title: m.filters__translation(),
+      icon: LanguagesIcon,
+      filters: [
+        createTranslationFilter('isNameTranslated', {
+          label: m.admin__forms_common_name_full(),
+        }),
+        createTranslationFilter('isContextualNameTranslated', {
+          label: m.admin__forms_common_name_short(),
+        }),
+        createTranslationFilter('isDescriptionTranslated', {
+          label: m.feature__description(),
+        }),
+        createTranslationFilter('isAttributionTranslated', {
+          label: m.profile__attribution(),
+        }),
+        createTranslationFilter('isLicenseTranslated', {
+          label: m.admin__forms_projects_license(),
+        }),
+      ],
+    },
+    {
+      key: 'image',
+      title: m.filters__image(),
+      icon: ImageIcon,
+      filters: [
+        createToggleFilter('hasImage', {
+          label: m.filters__image(),
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__has(),
+        }),
+      ],
+    },
+  ],
+} satisfies ResourceFilterBarConfig
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -71,10 +170,7 @@ let entities: Project[] = $derived(
 )
 </script>
 
-<ResourceIndex {entities}>
-  {#snippet controlBar()}
-    <FilterControlBar count={entities.length} />
-  {/snippet}
+<ResourceIndex {entities} {filters}>
   {#snippet card(entity: Project)}
     <EntityCard {entity} {keyMap} />
   {/snippet}

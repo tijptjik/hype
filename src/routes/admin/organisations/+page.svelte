@@ -165,6 +165,6 @@ let entities: Organisation[] = $derived(
 
 <ResourceIndex {entities} {filters}>
   {#snippet card(entity: Organisation)}
-    <EntityCard entity={entity as any} {keyMap} />
+    <EntityCard {entity} {keyMap} />
   {/snippet}
 </ResourceIndex>

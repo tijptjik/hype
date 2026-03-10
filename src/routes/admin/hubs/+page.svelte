@@ -107,6 +107,6 @@ let entities: Hub[] = $derived(
 
 <ResourceIndex {entities} {filters}>
   {#snippet card(entity: Hub)}
-    <EntityCard entity={entity as any} {keyMap} />
+    <EntityCard {entity} {keyMap} />
   {/snippet}
 </ResourceIndex>

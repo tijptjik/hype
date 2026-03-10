@@ -130,7 +130,7 @@ let entities: Layer[] = $derived(
 
 <ResourceIndex {entities} {filters}>
   {#snippet card(entity: Layer)}
-    <EntityCard entity={entity as any} {keyMap}>
+    <EntityCard {entity} {keyMap}>
       {#snippet header()}
         <Image
           src="https://placehold.co/600x400/3c1535/CB37C1?font=source-sans-pro&text={entity
