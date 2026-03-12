@@ -26,6 +26,7 @@ let {
   isDeleted = false,
   isPublished = false,
   canEdit = true,
+  disableEdit = false,
   canPublish = true,
   showDeleteAction = true,
   showPublishAction = true,
@@ -129,7 +130,7 @@ function handlePrimaryAction(): void {
         style="ghost"
         icon={saveIcon}
         {hideLabel}
-        disabled={!isTainted || isInFlight || hasIssues}
+        disabled={disableEdit || !isTainted || isInFlight || hasIssues}
         onClick={() => onSave?.()}
       />
     {/if}
@@ -142,7 +143,7 @@ function handlePrimaryAction(): void {
         icon={primaryIcon}
         class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
         {hideLabel}
-        disabled={isInFlight}
+        disabled={disableEdit || isInFlight}
         onClick={handlePrimaryAction}
       />
     {/if}
@@ -155,7 +156,7 @@ function handlePrimaryAction(): void {
         icon={primaryIcon}
         class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
         {hideLabel}
-        disabled={isInFlight}
+        disabled={disableEdit || isInFlight}
         onClick={handlePrimaryAction}
       />
     {/if}

@@ -4,11 +4,18 @@ import type { HeaderCrumb } from '$lib/bits/custom/header'
 
 export type HeaderLayoutMode = 'card' | 'table' | 'list'
 
+export interface HeaderTitleMenuItemConfig {
+  label: string
+  onSelect?: () => void
+  icon?: Component | null
+  class?: string
+  iconClass?: string
+}
+
 export interface HeaderTitleMenuActionConfig {
   visible?: boolean
-  label?: string
-  icon?: Component
-  onSelect?: () => void
+  ariaLabel?: string
+  items?: HeaderTitleMenuItemConfig[]
 }
 
 export interface HeaderTitleConfig {
@@ -67,6 +74,7 @@ export interface HeaderFormActionsConfig {
   isDeleted?: boolean
   isPublished?: boolean
   canEdit?: boolean
+  disableEdit?: boolean
   canPublish?: boolean
   showDeleteAction?: boolean
   showPublishAction?: boolean
