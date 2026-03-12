@@ -439,7 +439,7 @@ export function configureForm<Input = RemoteFormInput>(
   const result = $derived(form.result)
   const issues = $derived(form.fields.issues())
   const allIssues = $derived(form.fields.allIssues())
-  const initialErrors = $derived(initialErrorsProp ?? !!dataId)
+  const initialErrors = $derived(initialErrorsProp ?? false)
   let lastIssues = $state.raw<RemoteFormIssue[] | undefined>()
 
   use({
