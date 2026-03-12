@@ -1,7 +1,7 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
-import { SectionHeader, Search } from '$lib/bits/custom'
+import { SectionHeader, Search, TransitionStack } from '$lib/bits/custom'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 import { OrganisationRoleType } from '$lib/enums'
 import { resolveAvatarImageSrc } from '$lib/utils/avatar'
@@ -10,6 +10,14 @@ import { UserCard } from '$lib/bits/patterns/cards/userCard'
 import type { FormUserRolesSectionProps } from './formUserRolesSection.types'
 import type { User } from '$lib/types'
 import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'
+
+type UserRoleCardViewModel = {
+  userId: string
+  role: OrganisationRoleType
+  name: string | null
+  attribution: string | null
+  image: string | null
+}
 
 let {
   title,
@@ -38,6 +46,7 @@ let isRemoving = $state(false)
 let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 let stableRoles = $state<OrganisationRoleUser[]>([])
+let displayRoleCards = $state<UserRoleCardViewModel[]>([])
 
 const sortedRoles = $derived(
   [...userRoles].sort((a, b) => (a.user.name ?? '').localeCompare(b.user.name ?? '')),
@@ -53,6 +62,32 @@ function toImageSrc(value: unknown): string | null {
   return null
 }
 
+function toUserRoleCardViewModel(
+  userRole: OrganisationRoleUser,
+): UserRoleCardViewModel {
+  return {
+    userId: userRole.userId,
+    role: userRole.role as OrganisationRoleType,
+    name: userRole.user.name ?? null,
+    attribution: userRole.user.attribution ?? null,
+    image: toImageSrc(userRole.user.image),
+  }
+}
+
+function isDisplayReadyUserRole(userRole: OrganisationRoleUser): boolean {
+  const name = userRole.user.name
+  if (typeof name !== 'string') return false
+
+  const trimmedName = name.trim()
+  if (trimmedName.length === 0) return false
+  if (trimmedName === userRole.userId) return false
+  if ('id' in userRole.user && typeof userRole.user.id === 'string') {
+    if (trimmedName === userRole.user.id) return false
+  }
+
+  return true
+}
+
 const rootClass = $derived(
   ['bits-form__section min-h-60 basis-2/3 rounded-2xl p-0', className]
     .filter(Boolean)
@@ -60,6 +95,16 @@ const rootClass = $derived(
 )
 const showModeUi = $derived(isEditing && !isSubmitting)
 const renderedRoles = $derived(isSubmitting ? stableRoles : sortedRoles)
+const renderedRoleCards = $derived(renderedRoles.map(toUserRoleCardViewModel))
+const areRenderedRolesDisplayReady = $derived(
+  renderedRoles.every(isDisplayReadyUserRole),
+)
+const displayRoleCardsKey = $derived(
+  displayRoleCards.map(userRole => `${userRole.userId}:${userRole.role}`).join('|'),
+)
+const transitionPersistenceKey = $derived(
+  `form-user-roles:${typeof title === 'string' ? title : 'default'}`,
+)
 
 function toggleAdding(): void {
   isAdding = !isAdding
@@ -127,6 +172,11 @@ $effect(() => {
 })
 
 $effect(() => {
+  if (!areRenderedRolesDisplayReady) return
+  displayRoleCards = renderedRoleCards
+})
+
+$effect(() => {
   if (hasAutoOpenedAdding) return
   if (!startInAddingMode) return
   if (!showModeUi) return
@@ -178,29 +228,50 @@ $effect(() => {
     </div>
   {/if}
 
-  <UserCard.Wrapper class="bits-form__user-card-wrapper--spacious" isAnimated>
-    {#each renderedRoles as userRole (userRole.userId)}
-      <UserCard.Root class="bits-form__user-card-root--full">
-        <UserCard.Avatar
-          name={userRole.user.name}
-          image={toImageSrc(userRole.user.image)}
-        />
-        <UserCard.Body
-          name={userRole.user.name}
-          attribution={userRole.user.attribution}
-        />
-        <UserCard.Actions
-          selectedRole={userRole.role as OrganisationRoleType}
-          roleOptions={availableRoles}
-          roleFieldName={roleFieldNameByUserId[userRole.userId]}
-          {isRemoving}
-          isEditing={isEditing && !isSubmitting}
-          onRoleChange={role => onRoleChange(userRole.userId, role)}
-          onRemove={() => onRemoveUser(userRole.userId)}
-        />
-      </UserCard.Root>
-    {/each}
-  </UserCard.Wrapper>
+  <TransitionStack
+    valueKey={displayRoleCardsKey}
+    value={displayRoleCards}
+    isReady={true}
+    persistenceKey={transitionPersistenceKey}
+    duration={160}
+  >
+    {#snippet children(userRoles)}
+      <UserCard.Wrapper class="bits-form__user-card-wrapper--spacious">
+        {#each userRoles as userRole (userRole.userId)}
+          <UserCard.Root class="bits-form__user-card-root--full">
+            <UserCard.Avatar name={userRole.name} image={userRole.image} />
+            <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
+            <UserCard.Actions
+              selectedRole={userRole.role}
+              roleOptions={availableRoles}
+              roleFieldName={roleFieldNameByUserId[userRole.userId]}
+              {isRemoving}
+              isEditing={isEditing && !isSubmitting}
+              onRoleChange={role => onRoleChange(userRole.userId, role)}
+              onRemove={() => onRemoveUser(userRole.userId)}
+            />
+          </UserCard.Root>
+        {/each}
+      </UserCard.Wrapper>
+    {/snippet}
+
+    {#snippet previous(userRoles)}
+      <UserCard.Wrapper class="bits-form__user-card-wrapper--spacious">
+        {#each userRoles as userRole (userRole.userId)}
+          <UserCard.Root class="bits-form__user-card-root--full">
+            <UserCard.Avatar name={userRole.name} image={userRole.image} />
+            <UserCard.Body name={userRole.name} attribution={userRole.attribution} />
+            <UserCard.Actions
+              selectedRole={userRole.role}
+              roleOptions={availableRoles}
+              {isRemoving}
+              isEditing={false}
+            />
+          </UserCard.Root>
+        {/each}
+      </UserCard.Wrapper>
+    {/snippet}
+  </TransitionStack>
 
   <div class="hidden" aria-hidden="true">
     {#each hiddenUserIdInputAttrs as inputAttrs, index (index)}
