@@ -87,6 +87,20 @@ This document defines the UI layering model for Bits components and how logic sh
 - For pattern components, expose a local namespace via `components/index.ts` and import it as `import * as ComponentPrimitive from './components'`.
 - This keeps composition explicit, aligns with Bits-style API shape, and avoids flat import sprawl in composites.
 
+## Folding Regions
+
+- Use `+++ <Region Name>` to start a fold region and `---` to end it.
+- Match fold regions to the file's TOC or top-level logical sections.
+- Leave one blank line before and after each region boundary line.
+  - Preferred layout:
+    - `// +++ Derived Header State`
+    - blank line
+    - section contents
+    - blank line
+    - `// ---`
+    - `// +++ Next Header State`
+- This keeps region markers visually distinct and easy to scan in the editor.
+
 ## File Naming Convention
 
 - Directories: use `camelCase` for component folders in `src/lib/bits/**` (for example `formI18nSection`, `inputField`, `labelPrimitive`).
