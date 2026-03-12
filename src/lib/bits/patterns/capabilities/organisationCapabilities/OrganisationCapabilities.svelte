@@ -21,6 +21,7 @@ let {
   currentFormLocale,
   locales,
   isEditing,
+  resetVersion = 0,
   capabilityLabelsByKey,
   formCapabilityFields,
   shouldSubmitEmptyCapabilities = false,
@@ -33,7 +34,30 @@ let {
 }: OrganisationCapabilitiesProps = $props()
 
 let isRemoveMode = $state(false)
+let lastResetVersion = resetVersion
 const emptyCapabilitiesJson = '{}'
+const hasCapabilities = $derived(selectedCapabilityKeys.length > 0)
+const showInitialAddLayout = $derived(isEditing && !hasCapabilities)
+
+const sectionClass = $derived(
+  [
+    'bits-form__section',
+    'bits-form__hub-orgs',
+    'bits-form__capabilities-section',
+    showInitialAddLayout ? 'bits-form__capabilities-section--initial' : '',
+  ]
+    .filter(Boolean)
+    .join(' '),
+)
+
+const headerClass = $derived(
+  [
+    'bits-form__capabilities-header',
+    showInitialAddLayout ? 'bits-form__capabilities-header--initial' : '',
+  ]
+    .filter(Boolean)
+    .join(' '),
+)
 
 function onToggleRemoveMode(): void {
   isRemoveMode = !isRemoveMode
@@ -43,14 +67,18 @@ $effect(() => {
   if (isEditing) return
   isRemoveMode = false
 })
+
+$effect(() => {
+  if (resetVersion === lastResetVersion) return
+  lastResetVersion = resetVersion
+  isRemoveMode = false
+})
 </script>
 
-{#if selectedCapabilityKeys.length === 0 && !isEditing}
+{#if !hasCapabilities && !isEditing}
   <OrganisationCapabilitiesEmpty {onEnterEditMode} />
 {:else}
-  <section
-    class="bits-form__section bits-form__hub-orgs bits-form__capabilities-section"
-  >
+  <section class={sectionClass}>
     {#if shouldSubmitEmptyCapabilities}
       <input type="hidden" name="data.capabilities" value={emptyCapabilitiesJson}>
     {/if}
@@ -58,19 +86,10 @@ $effect(() => {
     <SectionHeader
       title={m.resources__capabilities()}
       description={m.admin__forms_capabilities_add_subtitle()}
-      class="bits-form__capabilities-header"
+      class={headerClass}
     >
-      {#snippet center()}
-        <OrganisationCapabilitiesSearch
-          {isEditing}
-          {capabilitySearchOptions}
-          {selectedCapabilityIds}
-          {currentFormLocale}
-          {onAddCapability}
-        />
-      {/snippet}
       {#snippet right()}
-        {#if isEditing}
+        {#if isEditing && hasCapabilities}
           <Button
             text={isRemoveMode
               ? m.moving_each_orangutan_care()
@@ -86,20 +105,33 @@ $effect(() => {
       {/snippet}
     </SectionHeader>
 
+    <div class="bits-form__capabilities-search-row">
+      <OrganisationCapabilitiesSearch
+        {isEditing}
+        {capabilitySearchOptions}
+        {selectedCapabilityIds}
+        {currentFormLocale}
+        focusOnMount={showInitialAddLayout}
+        {onAddCapability}
+      />
+    </div>
+
     {#if capabilityIssues.length > 0}
       <SectionHeaderPrimitive.Issues issues={capabilityIssues} />
     {/if}
 
-    <OrganisationCapabilitiesList
-      {selectedCapabilityKeys}
-      {isEditing}
-      {isRemoveMode}
-      {getCapabilityDisplayLabel}
-      {onRemoveCapability}
-    />
+    {#if hasCapabilities}
+      <OrganisationCapabilitiesList
+        {selectedCapabilityKeys}
+        {isEditing}
+        {isRemoveMode}
+        {getCapabilityDisplayLabel}
+        {onRemoveCapability}
+      />
+    {/if}
   </section>
 
-  {#if selectedCapabilityKeys.length > 0}
+  {#if hasCapabilities}
     <FormI18nSection
       title={m.admin__forms_capabilities_localization_title()}
       subtitle={m.admin__forms_capabilities_labels_subtitle()}

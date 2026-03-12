@@ -27,6 +27,7 @@ export interface OrganisationCapabilitiesProps {
   currentFormLocale: keyof CapabilityI18nRoot
   locales: Locale[]
   isEditing: boolean
+  resetVersion?: number
   capabilityLabelsByKey: Partial<Record<CapabilityKey, CapabilityI18nRoot>>
   formCapabilityFields: CapabilityFormFields
   shouldSubmitEmptyCapabilities?: boolean
@@ -43,6 +44,7 @@ export interface OrganisationCapabilitiesSearchProps {
   capabilitySearchOptions: CapabilitySearchOption[]
   selectedCapabilityIds: string[]
   currentFormLocale: keyof CapabilityI18nRoot
+  focusOnMount?: boolean
   onAddCapability: (option: CapabilitySearchOption) => void
 }
 

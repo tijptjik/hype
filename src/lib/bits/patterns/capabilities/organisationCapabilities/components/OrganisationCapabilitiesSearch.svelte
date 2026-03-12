@@ -8,6 +8,7 @@ let {
   capabilitySearchOptions,
   selectedCapabilityIds,
   currentFormLocale,
+  focusOnMount = false,
   onAddCapability,
 }: OrganisationCapabilitiesSearchProps = $props()
 </script>
@@ -17,6 +18,7 @@ let {
     <LocalSearch
       options={capabilitySearchOptions}
       placeholder="Search capabilities..."
+      {focusOnMount}
       maxResults={5}
       excludeIds={selectedCapabilityIds}
       getItemId={item => item.id}
