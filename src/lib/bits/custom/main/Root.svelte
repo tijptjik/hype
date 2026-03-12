@@ -5,4 +5,4 @@ let { children, class: className = '' }: MainRootProps = $props()
 const rootClass = $derived(['bits-main relative', className].filter(Boolean).join(' '))
 </script>
 
-<main class={rootClass}>{@render children?.()}</main>
+<main class={rootClass} data-responsive-main="true">{@render children?.()}</main>

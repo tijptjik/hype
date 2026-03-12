@@ -13,6 +13,7 @@ const sectionClass = $derived(
   [
     'bits-theme bits-main__section',
     transition === 'fade' ? 'bits-main__section--fade' : '',
+    transition === 'fade' && isVisible ? 'bits-main__section--active' : '',
     transition === 'fade' && !isVisible ? 'bits-main__section--faded' : '',
     transition !== 'fade' && !isVisible ? 'bits-main__section--hidden' : '',
     className,
