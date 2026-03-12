@@ -101,6 +101,40 @@ This document defines the UI layering model for Bits components and how logic sh
     - `// +++ Next Header State`
 - This keeps region markers visually distinct and easy to scan in the editor.
 
+## TOC Comment Convention
+
+- For large service/module files, start with a dedicated TOC fold region using this exact heading block:
+```ts
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+```
+- After the heading block, list numbered section labels in file order using `// <N>. <SECTION NAME>`.
+- Under each section label, list function entries as `// - <functionName>`.
+- Include both exported and file-local helpers when they are part of the section's navigable surface.
+- Keep TOC section order aligned with the actual region order in the file.
+- Close the TOC region with `// ---`.
+- Preferred example:
+```ts
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. CODE REF NAVIGATION
+// - toSubmittedCode
+// - shouldRedirectToSubmittedCode
+// - navigateToSubmittedCode
+// - createCodeRefResourceResult
+//
+// 2. RESOURCE EDITOR FACTORIES
+// - createResourceFormConfig
+// - createResourceEditorPage
+// ---
+```
+
 ## File Naming Convention
 
 - Directories: use `camelCase` for component folders in `src/lib/bits/**` (for example `formI18nSection`, `inputField`, `labelPrimitive`).
