@@ -3,6 +3,7 @@
     @apply bg-grain relative flex h-16 min-h-16 max-h-16 flex-row items-center overflow-hidden rounded-xl border-3 border-primary bg-glass-300 pr-3 shadow-xl;
     width: 100%;
     max-width: 24rem;
+    background-clip: padding-box;
   }
 
   .bits-theme .bits-form__user-card-root.bits-form__user-card-root--full {
@@ -59,6 +60,10 @@
 
   .bits-theme .bits-form__user-card-avatar {
     @apply h-16 w-16 shrink-0 overflow-hidden bg-glass-100;
+    margin-block: calc(var(--spacing) * -0.75);
+    margin-left: calc(var(--spacing) * -0.75);
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
   }
 
   .bits-theme .bits-form__user-card-avatar-image {
@@ -85,14 +90,73 @@
     @apply flex shrink-0 items-center gap-2 py-2 pl-2;
   }
 
+  .bits-theme .bits-form__user-card-actions-slot {
+    display: inline-grid;
+    grid-template-columns: max-content;
+    align-items: center;
+    justify-items: center;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-form__user-card-actions-slot--remove {
+    grid-template-columns: 4rem;
+  }
+
+  .bits-theme .bits-form__user-card-actions-slot-content {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: max-content;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease,
+      visibility 0s linear 0.16s;
+  }
+
+  .bits-theme
+    .bits-form__user-card-actions-slot--select
+    .bits-form__user-card-actions-slot-content--select,
+  .bits-theme
+    .bits-form__user-card-actions-slot--remove
+    .bits-form__user-card-actions-slot-content--remove {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  .bits-theme
+    .bits-form__user-card-actions-slot--select
+    .bits-form__user-card-actions-slot-content--remove,
+  .bits-theme
+    .bits-form__user-card-actions-slot--remove
+    .bits-form__user-card-actions-slot-content--select {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(0.2rem);
+    pointer-events: none;
+  }
+
   .bits-theme .bits-form__user-card-actions-select.bits-form__select-trigger {
     @apply gap-2 pr-4;
+    width: max-content;
+    min-width: max-content;
+    justify-content: center;
   }
+
   .bits-theme .bits-form__user-card-actions-select .bits-form__select-display {
     @apply gap-2 pr-8;
+    width: max-content;
+    min-width: max-content;
+    justify-content: center;
   }
 
   .bits-theme .bits-form__user-card-actions-remove-button {
     @apply min-w-0 px-3;
+    width: 3rem;
+    justify-content: center;
   }
 }
