@@ -159,6 +159,7 @@ export const UserAdminListProfileAPI = UserBase.pick({
   username: true,
   email: true,
   image: true,
+  attribution: true,
 } as const)
 
 export const UserCardProfileAPI = UserBase.pick({

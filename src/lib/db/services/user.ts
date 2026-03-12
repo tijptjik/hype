@@ -152,6 +152,7 @@ export const searchUsersByConditions = async (
     username: string | null
     email: string | null
     image: unknown
+    attribution: string | null
   }>
   totalCount: number
 }> => {
@@ -172,6 +173,7 @@ export const searchUsersByConditions = async (
       username: user.username,
       email: user.email,
       image: user.image,
+      attribution: user.attribution,
     })
     .from(user)
     .where(and(...params.conditions))

@@ -369,6 +369,7 @@ const toProfileData = (
     username: user.username,
     email: user.email,
     image: user.image,
+    attribution: user.attribution,
   }
   const card = {
     id: user.id,
