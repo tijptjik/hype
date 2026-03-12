@@ -3,13 +3,21 @@ import { Checkbox, SelectField, TextArea, TextInput } from '$lib/bits/custom'
 import { Switch } from '$lib/bits/custom'
 import type { FormFeatureFieldProps } from './formFeatureField.types'
 
-let { property, localeKey, value = '', checked = false, options = [], onChange }: FormFeatureFieldProps =
-  $props()
+let {
+  property,
+  localeKey,
+  value = '',
+  checked = false,
+  options = [],
+  onChange,
+}: FormFeatureFieldProps = $props()
 
-const propertyI18n = $derived((property.i18n?.[localeKey] ?? property.i18n?.en) as {
-  label?: string
-  placeholder?: string
-})
+const propertyI18n = $derived(
+  (property.i18n?.[localeKey] ?? property.i18n?.en) as {
+    label?: string
+    placeholder?: string
+  },
+)
 const title = $derived(propertyI18n?.label ?? property.key)
 const placeholder = $derived(propertyI18n?.placeholder ?? '')
 </script>
@@ -27,7 +35,7 @@ const placeholder = $derived(propertyI18n?.placeholder ?? '')
       label=""
       items={options.map(option => ({ value: option.value, label: option.label }))}
       value={value ?? ''}
-      placeholder={placeholder}
+      {placeholder}
       onValueChange={nextValue => onChange(nextValue)}
     />
   {:else if property.component === 'RangeField'}
@@ -45,14 +53,14 @@ const placeholder = $derived(propertyI18n?.placeholder ?? '')
       </div>
     </div>
   {:else if property.component === 'CheckboxField' || property.component === 'Toggle'}
-    <Switch checked={checked} onCheckedChange={nextValue => onChange(nextValue ?? false)} />
+    <Switch {checked} onCheckedChange={nextValue => onChange(nextValue ?? false)} />
   {:else if property.component === 'TextareaField'}
     <TextArea
       id={`feature-field-${property.id}`}
       name={`feature-field-${property.id}`}
       label=""
       value={value ?? ''}
-      placeholder={placeholder}
+      {placeholder}
       onValueChange={nextValue => onChange(nextValue)}
     />
   {:else}
@@ -61,7 +69,7 @@ const placeholder = $derived(propertyI18n?.placeholder ?? '')
       name={`feature-field-${property.id}`}
       label=""
       value={value ?? ''}
-      placeholder={placeholder}
+      {placeholder}
       onValueChange={nextValue => onChange(nextValue)}
     />
   {/if}

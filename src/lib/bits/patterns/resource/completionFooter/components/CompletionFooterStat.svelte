@@ -4,12 +4,7 @@ import { SimpleMeter, SimpleTooltip } from '$lib/bits'
 // TYPES
 import type { CompletionFooterStatProps } from '../completionFooter.types'
 
-let {
-  icon,
-  title,
-  tooltip,
-  percentage,
-}: CompletionFooterStatProps = $props()
+let { icon, title, tooltip, percentage }: CompletionFooterStatProps = $props()
 </script>
 
 <SimpleTooltip disabled={!tooltip} triggerClass="bits-tooltip__trigger--block">

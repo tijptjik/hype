@@ -32,13 +32,21 @@ const sectionMeta: Record<
   CompletionFooterSectionKey,
   Omit<CompletionFooterSection, 'percentage'>
 > = {
-  content: { icon: BookOpenIcon, title: m.filters__content(), tooltip: m.green_born_skate_jolt() },
+  content: {
+    icon: BookOpenIcon,
+    title: m.filters__content(),
+    tooltip: m.green_born_skate_jolt(),
+  },
   translation: {
     icon: LanguagesIcon,
     title: m.filters__translation(),
     tooltip: m.nice_zippy_millipede_bend(),
   },
-  image: { icon: ImageIcon, title: m.filters__image(), tooltip: m.fancy_mealy_flea_dream() },
+  image: {
+    icon: ImageIcon,
+    title: m.filters__image(),
+    tooltip: m.fancy_mealy_flea_dream(),
+  },
   category: {
     icon: TagsIcon,
     title: m.sunny_day_lemur_conquer_short(),
