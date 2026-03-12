@@ -54,31 +54,31 @@
   }
 
   .bits-theme .bits-project-fields__empty {
+    @apply flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center;
     min-height: 16rem;
-    border-radius: 0.75rem;
-    border: 1px dashed color-mix(in oklab, var(--color-foreground) 28%, transparent);
-    background: color-mix(in oklab, var(--color-background-alt) 40%, transparent);
+  }
+
+  .bits-theme .bits-project-fields__loading-shell {
+    min-height: 16rem;
+  }
+
+  .bits-theme .bits-project-fields__loading {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
     gap: 0.75rem;
-    padding: 1rem;
-    text-align: center;
+    width: 100%;
   }
 
   .bits-theme .bits-project-fields__empty-title {
-    margin: 0;
-    font-size: 1.9rem;
-    font-weight: 600;
-    color: color-mix(in oklab, var(--color-foreground) 84%, transparent);
-    opacity: 0.5;
+    @apply text-2xl font-mono font-semibold;
+  }
+
+  .bits-theme .bits-project-fields__empty-description {
+    @apply max-w-2xl;
   }
 
   .bits-theme .bits-project-fields__empty-add-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
+    @apply mt-1;
   }
 
   .bits-theme .bits-project-fields__item {
@@ -96,6 +96,10 @@
     flex-direction: column;
     gap: 0;
     opacity: 1;
+  }
+
+  .bits-theme .bits-project-field-card--skeleton {
+    pointer-events: none;
   }
 
   .bits-theme .bits-project-field-card--inherited-disabled {
@@ -136,6 +140,118 @@
     border-radius: 0.75rem;
     border: 1px solid
       color-mix(in oklab, var(--color-foreground, #fff) 14%, transparent);
+  }
+
+  .bits-theme .bits-project-field-card__header--skeleton {
+    overflow: hidden;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-rail,
+  .bits-theme .bits-project-field-card__skeleton-title-wrap,
+  .bits-theme .bits-project-field-card__skeleton-actions {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-rail {
+    left: 16px;
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-title-wrap {
+    left: 50%;
+    transform: translate(-50%, -50%);
+    flex-direction: column;
+    gap: 0.4rem;
+    width: min(18rem, calc(100% - 10rem));
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-actions {
+    right: 16px;
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-dot,
+  .bits-theme .bits-project-field-card__skeleton-pill,
+  .bits-theme .bits-project-field-card__skeleton-title,
+  .bits-theme .bits-project-field-card__skeleton-subtitle,
+  .bits-theme .bits-project-field-card__skeleton-action,
+  .bits-theme .bits-project-field-card__skeleton-line {
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-foreground, #fff) 10%, transparent) 0%,
+      color-mix(in oklab, var(--color-foreground, #fff) 18%, transparent) 50%,
+      color-mix(in oklab, var(--color-foreground, #fff) 10%, transparent) 100%
+    );
+    background-size: 200% 100%;
+    animation: bits-project-field-skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-dot {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-pill {
+    width: 3.75rem;
+    height: 0.9rem;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-title {
+    width: 8.5rem;
+    max-width: 100%;
+    height: 0.95rem;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-subtitle {
+    width: 5.5rem;
+    max-width: 70%;
+    height: 0.75rem;
+    opacity: 0.82;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-action {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .bits-theme .bits-project-field-card__body--skeleton {
+    padding: 1rem;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-line {
+    width: 100%;
+    height: 2.6rem;
+    border-radius: 0.75rem;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-line--wide {
+    grid-column: 1 / -1;
+  }
+
+  .bits-theme .bits-project-field-card__skeleton-line--short {
+    width: 72%;
+  }
+
+  @keyframes bits-project-field-skeleton-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   .bits-theme .bits-project-field-card__header-left-rail {
