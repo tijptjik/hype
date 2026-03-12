@@ -31,7 +31,9 @@ let openingTimeout: ReturnType<typeof setTimeout> | null = null
 let lastReportedOpenState = $state(isOpen)
 
 let sorting = $derived(adminCtx.appCtx.state.viewSorting[resource])
-let sortDirectionIcon = $derived(sorting.sortOrder === 'desc' ? ArrowDownIcon : ArrowUpIcon)
+let sortDirectionIcon = $derived(
+  sorting.sortOrder === 'desc' ? ArrowDownIcon : ArrowUpIcon,
+)
 let sortDirectionLabel = $derived(sorting.sortOrder === 'desc' ? 'desc' : 'asc')
 
 const OPEN_REVEAL_DURATION_MS = 320
