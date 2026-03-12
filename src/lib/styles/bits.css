@@ -4,18 +4,27 @@
 */
 @import "./bits-btn.css";
 @import "./bits-checkbox.css";
+@import "./bits-completion-footer.css";
 @import "./bits-dialog.css";
+@import "./bits-entity-card.css";
 @import "./bits-entity-image.css";
+@import "./bits-feature-stats.css";
 @import "./bits-feature-editor.css";
 @import "./bits-form.css";
 @import "./bits-header.css";
 @import "./bits-main.css";
+@import "./bits-meter.css";
 @import "./bits-organisation-capabilities.css";
 @import "./bits-project-capabilities.css";
+@import "./bits-resource-filter-bar.css";
+@import "./bits-resource-rows.css";
+@import "./bits-resource-sort-control.css";
 @import "./bits-pattern-header.css";
 @import "./bits-search.css";
 @import "./bits-separator.css";
 @import "./bits-switch.css";
+@import "./bits-tooltip.css";
+@import "./bits-transition.css";
 @import "./bits-user-capability-matrix.css";
 
 @layer theme {

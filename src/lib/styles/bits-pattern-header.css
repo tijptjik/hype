@@ -2,6 +2,7 @@
   .bits-theme .bits-pattern-header {
     user-select: none;
     -webkit-user-select: none;
+    position: relative;
   }
 
   .bits-theme .bits-pattern-header__left {
@@ -10,6 +11,17 @@
 
   .bits-theme .bits-pattern-header__title-group {
     @apply flex min-w-0 items-center gap-2;
+    flex: 0 0 auto;
+  }
+
+  .bits-theme .bits-pattern-header__title-group > .bits-header {
+    flex: 0 0 auto;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-slot {
+    @apply shrink-0;
+    width: 2rem;
+    height: 2rem;
   }
 
   .bits-theme .bits-pattern-header__title-menu-trigger {
@@ -20,6 +32,11 @@
       background-color 0.15s ease,
       color 0.15s ease,
       border-color 0.15s ease;
+  }
+
+  .bits-theme .bits-pattern-header__title-menu-trigger--placeholder {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .bits-theme .bits-pattern-header__title-menu-trigger:hover {
@@ -72,7 +89,51 @@
   }
 
   .bits-theme .bits-pattern-header__right {
-    @apply ml-4 flex items-center gap-3;
+    @apply ml-4 flex items-center gap-0;
+  }
+
+  .bits-theme .bits-pattern-header__avatar-shell {
+    width: 0;
+    height: 2.5rem;
+    flex: 0 0 auto;
+    overflow: clip;
+  }
+
+  .bits-theme .bits-pattern-header__avatar-shell--visible {
+    width: 2.5rem;
+    transition: width 260ms ease 350ms;
+  }
+
+  .bits-theme .bits-pattern-header__avatar-shell--hidden {
+    width: 0;
+    transition: width 260ms ease 20ms;
+  }
+
+  .bits-theme .bits-pattern-header__avatar-button {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full p-0.5 text-xl transition-colors duration-300 hover:bg-primary/20;
+  }
+
+  .bits-theme .bits-pattern-header__measure-layer {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .bits-theme .bits-pattern-header__measure-group {
+    width: max-content;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    flex: none;
+  }
+
+  .bits-theme .bits-pattern-header__measure-layer .bits-crossfade-value__item--previous,
+  .bits-theme
+    .bits-pattern-header__measure-layer
+    .bits-transition-stack__layer--previous {
+    display: none;
   }
 
   .bits-theme .bits-pattern-header__search {
@@ -111,7 +172,9 @@
   }
 
   .bits-theme .bits-pattern-header__facets {
-    @apply flex h-10 items-stretch gap-2 bg-base-300 rounded-xl;
+    @apply flex h-10 items-stretch gap-0 bg-base-300 rounded-xl;
+    transition: width 180ms ease;
+    overflow: clip;
   }
 
   .bits-theme .bits-pattern-header__facet-item {
@@ -120,6 +183,26 @@
 
   .bits-theme .bits-pattern-header__facet-btn {
     @apply h-full;
+    padding-inline: 1rem;
+  }
+
+  .bits-theme
+    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--active:not(
+      .bits-pattern-header__facet-btn--issue
+    ) {
+    --btn-hover-bg: color-mix(in oklab, var(--color-primary) 8%, transparent);
+    --btn-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+    --btn-active-fg: var(--color-white);
+  }
+
+  .bits-theme
+    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-btn--color-neutral:not(
+      .bits-pattern-header__facet-btn--active
+    ):not(.bits-pattern-header__facet-btn--issue) {
+    --btn-hover-bg: color-mix(in oklab, var(--color-primary) 18%, transparent);
+    --btn-hover-fg: color-mix(in oklab, var(--color-primary) 92%, white 8%);
+    --btn-active-bg: color-mix(in oklab, var(--color-primary) 24%, transparent);
+    --btn-active-fg: var(--color-primary);
   }
 
   .bits-theme .bits-pattern-header__facet-btn--issue {
@@ -159,12 +242,40 @@
     @apply flex items-center gap-0;
   }
 
-  .bits-theme .bits-pattern-header__form-actions {
+  .bits-theme .bits-pattern-header__right-slot {
+    display: grid;
+    align-items: center;
+    justify-items: end;
+    margin-right: 1rem;
+  }
+
+  .bits-theme .bits-pattern-header__right-slot-item {
+    @apply flex items-center gap-0;
+    grid-area: 1 / 1;
+    width: max-content;
+    max-width: 100%;
+    justify-self: end;
+  }
+
+  .bits-theme .bits-pattern-header__right-cluster {
     @apply flex items-center gap-0;
   }
 
-  .bits-theme .bits-pattern-header__form-action-primary {
-    width: 128px;
+  .bits-theme .bits-pattern-header__form-actions {
+    @apply flex items-center gap-0 ml-4;
+  }
+
+  .bits-theme .bits-pattern-header__form-actions .bits-btn {
+    --btn-padding-x: 0.875rem;
+  }
+
+  .bits-theme .bits-pattern-header__form-action-main {
+    width: 130px;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-pattern-header__form-action-publish {
+    width: 140px;
     justify-content: center;
   }
 
@@ -177,22 +288,21 @@
     @apply whitespace-nowrap;
   }
 
-  .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn,
-  .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-btn__label,
-  .bits-theme .bits-pattern-header.bits-pattern-header--measuring .bits-header__title,
-  .bits-theme
-    .bits-pattern-header.bits-pattern-header--measuring
-    .bits-header__subtitle,
-  .bits-theme
-    .bits-pattern-header.bits-pattern-header--measuring
-    .bits-header__breadcrumbs {
+  .bits-theme .bits-pattern-header__measure-layer .bits-btn,
+  .bits-theme .bits-pattern-header__measure-layer .bits-btn__label,
+  .bits-theme .bits-pattern-header__measure-layer .bits-header__title,
+  .bits-theme .bits-pattern-header__measure-layer .bits-header__subtitle,
+  .bits-theme .bits-pattern-header__measure-layer .bits-header__breadcrumbs,
+  .bits-theme .bits-pattern-header__measure-layer .bits-crossfade-value__item,
+  .bits-theme .bits-pattern-header__measure-layer .bits-transition-stack__layer {
     transition: none;
     animation: none;
   }
 
   .bits-theme
-    .bits-pattern-header.bits-pattern-header--mask-button-labels
-    .bits-btn__label {
-    visibility: hidden;
+    .bits-pattern-header.bits-pattern-header--hide-measured-controls
+    .bits-pattern-header__title-menu-slot {
+    opacity: 0;
+    pointer-events: none;
   }
 }
