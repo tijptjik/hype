@@ -5,33 +5,31 @@ import type { HeaderRootProps } from './headerPrimitives.types'
 let {
   class: className = '',
   measurementKey = '',
+  rightRevealKey = '',
   left,
   right,
   ...restProps
 }: HeaderRootProps = $props()
 
 let rootEl: HTMLElement | null = null
-let resizeObserver: ResizeObserver | null = null
 let frameId: number | null = null
 let debounceId: ReturnType<typeof setTimeout> | null = null
-let suppressTransitions = $state(false)
-let maskButtonLabels = $state(true)
-let hasResolvedOnce = false
-let lastResolvedWidth = $state(0)
-let lastResolvedKey = $state('')
+let hideMeasuredControls = $state(true)
+let hasResolvedOnce = $state(false)
+let lastResolvedWidth = 0
+let lastResolvedKey = ''
+let lastRightRevealKey = ''
+let settledRightRevealKey = $state('')
 
-const RESOLVE_DEBOUNCE_MS = 100
-const ANIMATION_SETTLE_MS = 420
+const RESOLVE_DEBOUNCE_MS = 40
+const RIGHT_CLUSTER_BUFFER_PX = 40
 
-let showDescription = $state(true)
-let showTitle = $state(true)
-let showButtonText = $state(true)
+let showButtonText = $state(false)
 
 const rootClass = $derived(
   [
     'bits-pattern-header',
-    suppressTransitions ? 'bits-pattern-header--measuring' : '',
-    maskButtonLabels ? 'bits-pattern-header--mask-button-labels' : '',
+    hideMeasuredControls ? 'bits-pattern-header--hide-measured-controls' : '',
     className,
   ]
     .filter(Boolean)
@@ -39,117 +37,72 @@ const rootClass = $derived(
 )
 
 const renderState = $derived({
-  showDescription,
-  showTitle,
-  showButtonText,
+  showDescription: true,
+  showTitle: true,
+  showButtonText:
+    hasResolvedOnce && rightRevealKey === settledRightRevealKey
+      ? showButtonText
+      : false,
 })
 
-function hasOverlap(a: Element | null, b: Element | null): boolean {
-  if (!a || !b) return false
-  const aRect = a.getBoundingClientRect()
-  const bRect = b.getBoundingClientRect()
+const measurementState = {
+  showDescription: true,
+  showTitle: true,
+  showButtonText: true,
+} as const
 
-  return aRect.right + 8 > bRect.left
+function measureGroupWidth(group: HTMLElement): number {
+  const children = Array.from(group.children).filter(
+    (child): child is HTMLElement => child instanceof HTMLElement,
+  )
+  if (children.length === 0) {
+    return Math.ceil(group.getBoundingClientRect().width)
+  }
+
+  let total = 0
+
+  for (const child of children) {
+    const rect = child.getBoundingClientRect()
+    const styles = getComputedStyle(child)
+    const marginLeft = Number.parseFloat(styles.marginLeft || '0') || 0
+    const marginRight = Number.parseFloat(styles.marginRight || '0') || 0
+    total += rect.width + marginLeft + marginRight
+  }
+
+  return Math.ceil(total)
 }
 
-function overflowsRight(container: Element | null, target: Element | null): boolean {
-  if (!container || !target) return false
-  const containerRect = container.getBoundingClientRect()
-  const targetRect = target.getBoundingClientRect()
-
-  return targetRect.right > containerRect.right - 8
-}
-
-function hasContentOverlap(
-  leftGroup: Element | null,
-  rightGroup: Element | null,
-): boolean {
-  if (!leftGroup || !rightGroup) return false
-  const leftRect = leftGroup.getBoundingClientRect()
-  const rightRect = rightGroup.getBoundingClientRect()
-  const leftContentRight = leftRect.left + leftGroup.scrollWidth
-
-  return leftContentRight + 8 > rightRect.left
-}
-
-async function resolveOverflow(allowProbe = true): Promise<void> {
+async function resolveOverflow(): Promise<void> {
   if (!rootEl) return
 
-  const leftGroup = rootEl.querySelector('[data-header-left-group]')
-  const rightGroup = rootEl.querySelector('[data-header-right-group]')
+  const leftGroup = rootEl.querySelector(
+    '[data-header-left-group-measure]',
+  ) as HTMLElement | null
+  const rightGroup = rootEl.querySelector(
+    '[data-header-right-group-measure]',
+  ) as HTMLElement | null
   if (!leftGroup || !rightGroup) return
-  const isRightConstrained = (): boolean =>
-    hasOverlap(leftGroup, rightGroup) ||
-    hasContentOverlap(leftGroup, rightGroup) ||
-    overflowsRight(rootEl, rightGroup)
+  hideMeasuredControls = true
+  await tick()
 
-  // Keep title/description always visible and only collapse button labels on overflow.
-  const hadHiddenLeftContent = !showDescription || !showTitle
-  showDescription = true
-  showTitle = true
-  if (hadHiddenLeftContent) {
-    await tick()
-  }
+  const leftWidth = measureGroupWidth(leftGroup)
+  const rightWidth = measureGroupWidth(rightGroup)
+  const rootStyles = getComputedStyle(rootEl)
+  const paddingLeft = Number.parseFloat(rootStyles.paddingLeft || '0') || 0
+  const paddingRight = Number.parseFloat(rootStyles.paddingRight || '0') || 0
+  const availableWidth = Math.ceil(rootEl.clientWidth - paddingLeft - paddingRight)
+  showButtonText = leftWidth + rightWidth + RIGHT_CLUSTER_BUFFER_PX <= availableWidth
 
-  if (showButtonText && isRightConstrained()) {
-    showButtonText = false
-    await tick()
-  }
-
-  const probeAndCommit = async (
-    current: boolean,
-    setVisible: (next: boolean) => void,
-    canFit: () => boolean,
-  ): Promise<boolean> => {
-    if (current) return current
-
-    const previousMaskState = maskButtonLabels
-    suppressTransitions = true
-    maskButtonLabels = true
-    setVisible(true)
-    await tick()
-    const fits = canFit()
-    setVisible(false)
-    await tick()
-    suppressTransitions = false
-    maskButtonLabels = previousMaskState
-    await tick()
-
-    if (fits) {
-      setVisible(true)
-      await tick()
-      return true
-    }
-
-    return false
-  }
-
-  if (allowProbe) {
-    showButtonText = await probeAndCommit(
-      showButtonText,
-      next => {
-        showButtonText = next
-      },
-      () => !isRightConstrained(),
-    )
-  }
-
-  if (!hasResolvedOnce) {
-    hasResolvedOnce = true
-    maskButtonLabels = false
-  }
+  if (!hasResolvedOnce) hasResolvedOnce = true
+  settledRightRevealKey = rightRevealKey
+  hideMeasuredControls = false
 }
 
-let pendingAllowProbe = false
-
-function scheduleOverflowResolution(allowProbe = true): void {
+function scheduleOverflowResolution(options: { immediate?: boolean } = {}): void {
   if (typeof window === 'undefined') return
 
   if (debounceId !== null) {
     clearTimeout(debounceId)
-    pendingAllowProbe = pendingAllowProbe || allowProbe
-  } else {
-    pendingAllowProbe = allowProbe
   }
 
   debounceId = setTimeout(
@@ -162,21 +115,21 @@ function scheduleOverflowResolution(allowProbe = true): void {
 
       frameId = requestAnimationFrame(() => {
         frameId = null
-        const nextAllowProbe = pendingAllowProbe
-        pendingAllowProbe = false
-        void resolveOverflow(nextAllowProbe)
+        void resolveOverflow()
       })
     },
-    hasResolvedOnce ? RESOLVE_DEBOUNCE_MS + ANIMATION_SETTLE_MS : 0,
+    options.immediate ? 0 : hasResolvedOnce ? RESOLVE_DEBOUNCE_MS : 0,
   )
 }
 
 $effect(() => {
   const key = measurementKey
+  const revealKey = rightRevealKey
   const width = rootEl ? Math.round(rootEl.getBoundingClientRect().width) : 0
   const previousWidth = lastResolvedWidth
   const widthChanged = width !== lastResolvedWidth
   const keyChanged = key !== lastResolvedKey
+  const revealKeyChanged = revealKey !== lastRightRevealKey
 
   if (widthChanged) {
     lastResolvedWidth = width
@@ -184,27 +137,29 @@ $effect(() => {
   if (keyChanged) {
     lastResolvedKey = key
   }
+  if (revealKeyChanged) {
+    lastRightRevealKey = revealKey
+  }
 
-  if (!widthChanged && !keyChanged && hasResolvedOnce) return
-  const widthGrew = width > previousWidth
-  // Prevent jitter: when labels are already hidden, a key-only change should not
-  // force a temporary re-show probe. Re-probe only when width actually changes.
-  const allowProbe = showButtonText || widthChanged || widthGrew
-  scheduleOverflowResolution(allowProbe)
+  if (!widthChanged && !keyChanged && !revealKeyChanged && hasResolvedOnce) return
+  if (revealKeyChanged) {
+    scheduleOverflowResolution()
+    return
+  }
+  scheduleOverflowResolution({ immediate: widthChanged && width > previousWidth })
 })
 
 onMount(() => {
   if (!rootEl) return
 
-  resizeObserver = new ResizeObserver(() => {
+  const resizeObserver = new ResizeObserver(() => {
     scheduleOverflowResolution()
   })
   resizeObserver.observe(rootEl)
   scheduleOverflowResolution()
 
   return () => {
-    resizeObserver?.disconnect()
-    resizeObserver = null
+    resizeObserver.disconnect()
     if (debounceId !== null) {
       clearTimeout(debounceId)
       debounceId = null
@@ -224,5 +179,21 @@ onMount(() => {
 
   <div class="bits-pattern-header__right" data-header-right-group>
     {@render right?.(renderState)}
+  </div>
+
+  <div class="bits-pattern-header__measure-layer" aria-hidden="true">
+    <div
+      class="bits-pattern-header__left bits-pattern-header__measure-group"
+      data-header-left-group-measure
+    >
+      {@render left?.(measurementState)}
+    </div>
+
+    <div
+      class="bits-pattern-header__right bits-pattern-header__measure-group"
+      data-header-right-group-measure
+    >
+      {@render right?.(measurementState)}
+    </div>
   </div>
 </header>

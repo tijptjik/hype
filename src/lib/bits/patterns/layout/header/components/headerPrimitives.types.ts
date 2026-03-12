@@ -52,6 +52,7 @@ export interface HeaderRootRenderState {
 export interface HeaderRootProps extends HTMLAttributes<HTMLElement> {
   class?: string
   measurementKey?: string
+  rightRevealKey?: string
   left?: Snippet<[HeaderRootRenderState]>
   right?: Snippet<[HeaderRootRenderState]>
 }
