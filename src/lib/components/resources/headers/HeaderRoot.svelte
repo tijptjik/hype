@@ -42,7 +42,7 @@ class:to-fuchsia-800={!isIndex} -->
 
 {#if resourceType}
   <header
-    class="navbar sticky left-0 top-0 z-20 flex h-[72px] w-full shrink-0 justify-between bg-black px-6 py-4 caret-transparent shadow-lg transition-all duration-300"
+    class="navbar sticky left-0 top-0 z-20 flex h-18 w-full shrink-0 justify-between bg-black px-6 py-4 caret-transparent shadow-lg transition-all duration-300"
   >
     <div class="flex-1" class:@container={!isIndex}>
       <div class="flex items-center space-x-4">

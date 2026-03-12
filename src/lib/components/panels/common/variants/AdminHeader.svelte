@@ -20,9 +20,7 @@ let {
 const appCtx = getAppCtx()
 </script>
 
-<div
-  class="flex h-[72px] flex-shrink-0 flex-row items-center justify-between bg-black p-4"
->
+<div class="flex h-18 shrink-0 flex-row items-center justify-between bg-black p-4">
   {#if !isNarrow}
     <h1 class="text-lg font-semibold uppercase text-white">{title}</h1>
     <div class="flex gap-2">

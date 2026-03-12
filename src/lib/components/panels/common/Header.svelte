@@ -18,7 +18,7 @@ const appCtx = getAppCtx()
 </script>
 
 <header
-  class="sticky top-0 z-30 flex h-16 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black px-6 py-2 caret-transparent focus:outline-none"
+  class="sticky top-0 z-30 flex h-[75px] select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black pl-4 pr-6 py-2 caret-transparent focus:outline-none"
 >
   <div class="flex flex-row items-center gap-2">
     <h2 class="text-lg font-semibold uppercase tracking-widest text-primary">
