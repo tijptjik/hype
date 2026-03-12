@@ -1,5 +1,4 @@
 <script lang="ts">
-import { fly } from 'svelte/transition'
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
 // ICONS
@@ -55,36 +54,26 @@ const layoutText = $derived(
 
 <div class="bits-pattern-header__view-actions">
   {#if showControlsToggle}
-    <div
-      in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-      out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-    >
-      <Button
-        text="Filters"
-        class="px-4"
-        color="neutral"
-        style="ghost"
-        icon={controlsIcon}
-        {hideLabel}
-        onClick={() => onControlsToggle?.(!controlMode)}
-      />
-    </div>
+    <Button
+      text="Filters"
+      class="px-4"
+      color="neutral"
+      style="ghost"
+      icon={controlsIcon}
+      {hideLabel}
+      onClick={() => onControlsToggle?.(!controlMode)}
+    />
   {/if}
 
   {#if showLayoutToggle && layoutModes.length > 1}
-    <div
-      in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-      out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-    >
-      <Button
-        text={layoutText}
-        class="px-4"
-        color="neutral"
-        style="ghost"
-        icon={nextLayoutMode === 'card' ? cardIcon : nextLayoutMode === 'table' ? tableIcon : listIcon}
-        {hideLabel}
-        onClick={() => onLayoutToggle?.(nextLayoutMode)}
-      />
-    </div>
+    <Button
+      text={layoutText}
+      class="px-4"
+      color="neutral"
+      style="ghost"
+      icon={nextLayoutMode === 'card' ? cardIcon : nextLayoutMode === 'table' ? tableIcon : listIcon}
+      {hideLabel}
+      onClick={() => onLayoutToggle?.(nextLayoutMode)}
+    />
   {/if}
 </div>
