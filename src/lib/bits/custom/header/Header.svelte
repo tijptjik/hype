@@ -52,7 +52,7 @@ const resolvedStyle = $derived(style ?? undefined)
     />
   {/if}
 
-  {#if text && !hideTitle}
+  {#if !hideTitle}
     <HeaderPrimitive.Title
       class="bits-header__title"
       data-header-title-text=""
