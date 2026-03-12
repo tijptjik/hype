@@ -112,10 +112,21 @@ This document defines the UI layering model for Bits components and how logic sh
 //
 ```
 - After the heading block, list numbered section labels in file order using `// <N>. <SECTION NAME>`.
+- Numbering may start at `0` when a leading utility/mutation section should sort ahead of the main flow.
 - Under each section label, list function entries as `// - <functionName>`.
 - Include both exported and file-local helpers when they are part of the section's navigable surface.
 - Keep TOC section order aligned with the actual region order in the file.
 - Close the TOC region with `// ---`.
+- Each implementation section should start with this exact wrapper shape:
+```ts
+// ---
+/********************
+ *  2. RESOURCE EDITOR FACTORIES
+ ************/
+// +++ Resource Editor Factories
+```
+- The numbered banner text should match the TOC section label exactly.
+- The fold-region label should be the same section name in Title Case.
 - Preferred example:
 ```ts
 // +++ Table Of Contents
@@ -123,7 +134,12 @@ This document defines the UI layering model for Bits components and how logic sh
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// 1. CODE REF NAVIGATION
+// 0. MUTATION
+// - revalidateAfterSubmitAttempt
+// - handleResourceBooleanStateToggle
+// - updateFormData
+//
+// 1. NAVIGATION
 // - toSubmittedCode
 // - shouldRedirectToSubmittedCode
 // - navigateToSubmittedCode
@@ -133,6 +149,11 @@ This document defines the UI layering model for Bits components and how logic sh
 // - createResourceFormConfig
 // - createResourceEditorPage
 // ---
+
+/********************
+ *  2. RESOURCE EDITOR FACTORIES
+ ************/
+// +++ Resource Editor Factories
 ```
 
 ## File Naming Convention
