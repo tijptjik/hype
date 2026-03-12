@@ -6,7 +6,7 @@ import * as HeaderPrimitive from './components'
 import type { HeaderProps, HeaderLayoutMode } from './header.types'
 
 const DEFAULT_CLASS =
-  'bits-theme bg-black px-6 py-4 navbar sticky left-0 top-0 z-20 flex h-[72px] w-full shrink-0 justify-between caret-transparent shadow-lg transition-all duration-300'
+  'bits-theme bg-black py-4 pl-6 navbar sticky left-0 top-0 z-20 flex h-18 w-full shrink-0 justify-between caret-transparent shadow-lg transition-all duration-300'
 
 let {
   query = $bindable(''),
@@ -21,8 +21,6 @@ let {
   ...restProps
 }: HeaderProps = $props()
 
-const rootClass = $derived([DEFAULT_CLASS, className].filter(Boolean).join(' '))
-
 const facetItems = $derived(facets.items ?? [])
 const layoutMode = $derived((viewActions.layoutMode ?? 'card') as HeaderLayoutMode)
 const controlMode = $derived(viewActions.controlMode ?? false)
@@ -32,6 +30,18 @@ const showAvatar = $derived(avatar.visible ?? true)
 const showFacets = $derived(facetItems.length > 0)
 const showViewActions = $derived(viewActions.visible ?? false)
 const showFormActions = $derived(formActions.visible ?? false)
+
+const rootClass = $derived(
+  [DEFAULT_CLASS, showAvatar ? 'pr-6' : 'pr-0', className].filter(Boolean).join(' '),
+)
+const rightRevealKey = $derived(
+  JSON.stringify({
+    showFilter,
+    showViewActions,
+    showFacets,
+    showFormActions,
+  }),
+)
 
 const measurementKey = $derived(
   JSON.stringify({
@@ -54,7 +64,12 @@ const measurementKey = $derived(
 )
 </script>
 
-<HeaderPrimitive.Root class={rootClass} {measurementKey} {...restProps}>
+<HeaderPrimitive.Root
+  class={rootClass}
+  {measurementKey}
+  {rightRevealKey}
+  {...restProps}
+>
   {#snippet left({ showDescription, showTitle, showButtonText })}
     <HeaderPrimitive.Title
       text={title.text}
@@ -75,72 +90,76 @@ const measurementKey = $derived(
   {/snippet}
 
   {#snippet right({ showButtonText })}
-    <HeaderPrimitive.Search
-      bind:query
-      isFilterable={showFilter}
-      placeholder={filter.placeholder}
-      onFilter={filter.onFilter}
-    />
+    <div class="bits-pattern-header__right-slot">
+      {#if showFilter || showViewActions}
+        <div
+          class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+          in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
+          out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+        >
+          <HeaderPrimitive.Search
+            bind:query
+            isFilterable={showFilter}
+            placeholder={filter.placeholder}
+            onFilter={filter.onFilter}
+          />
 
-    {#if showFacets}
-      <div
-        in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-      >
-        <HeaderPrimitive.Facets
-          items={facetItems}
-          active={facets.active}
-          hideLabel={!showButtonText}
-          onFacetChange={facets.onFacetChange}
-        />
-      </div>
-    {/if}
+          {#if showViewActions}
+            <HeaderPrimitive.ViewActions
+              showLayoutToggle={viewActions.showLayoutToggle ?? true}
+              showControlsToggle={viewActions.showControlsToggle ?? true}
+              layoutModes={viewActions.layoutModes ?? ['card', 'list']}
+              {layoutMode}
+              {controlMode}
+              hideLabel={!showButtonText}
+              onLayoutToggle={viewActions.onLayoutToggle}
+              onControlsToggle={viewActions.onControlsToggle}
+            />
+          {/if}
+        </div>
+      {/if}
 
-    {#if showViewActions}
-      <div
-        in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-      >
-        <HeaderPrimitive.ViewActions
-          showLayoutToggle={viewActions.showLayoutToggle ?? true}
-          showControlsToggle={viewActions.showControlsToggle ?? true}
-          layoutModes={viewActions.layoutModes ?? ['card', 'list']}
-          {layoutMode}
-          {controlMode}
-          hideLabel={true}
-          onLayoutToggle={viewActions.onLayoutToggle}
-          onControlsToggle={viewActions.onControlsToggle}
-        />
-      </div>
-    {/if}
+      {#if showFacets || showFormActions}
+        <div
+          class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+          in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
+          out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+        >
+          {#if showFacets}
+            <HeaderPrimitive.Facets
+              items={facetItems}
+              active={facets.active}
+              hideLabel={!showButtonText}
+              onFacetChange={facets.onFacetChange}
+            />
+          {/if}
 
-    {#if showFormActions}
-      <div
-        in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-        out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-      >
-        <HeaderPrimitive.FormActions
-          isTainted={formActions.isTainted}
-          isSubmitting={formActions.isSubmitting}
-          hasIssues={formActions.hasIssues}
-          isPublishing={formActions.isPublishing}
-          isDeleting={formActions.isDeleting}
-          isEditing={formActions.isEditing}
-          isDeleted={formActions.isDeleted}
-          isPublished={formActions.isPublished}
-          canEdit={formActions.canEdit}
-          canPublish={formActions.canPublish}
-          showDeleteAction={formActions.showDeleteAction}
-          showPublishAction={formActions.showPublishAction}
-          hideLabel={!showButtonText}
-          onEditingToggle={formActions.onEditingToggle}
-          onReset={formActions.onReset}
-          onSave={formActions.onSave}
-          onDeleteToggle={formActions.onDeleteToggle}
-          onPublishToggle={formActions.onPublishToggle}
-        />
-      </div>
-    {/if}
+          {#if showFormActions}
+            <HeaderPrimitive.FormActions
+              isTainted={formActions.isTainted}
+              isSubmitting={formActions.isSubmitting}
+              hasIssues={formActions.hasIssues}
+              isPublishing={formActions.isPublishing}
+              isDeleting={formActions.isDeleting}
+              isEditing={formActions.isEditing}
+              isDeleted={formActions.isDeleted}
+              isPublished={formActions.isPublished}
+              canEdit={formActions.canEdit}
+              disableEdit={formActions.disableEdit}
+              canPublish={formActions.canPublish}
+              showDeleteAction={formActions.showDeleteAction}
+              showPublishAction={formActions.showPublishAction}
+              hideLabel={!showButtonText}
+              onEditingToggle={formActions.onEditingToggle}
+              onReset={formActions.onReset}
+              onSave={formActions.onSave}
+              onDeleteToggle={formActions.onDeleteToggle}
+              onPublishToggle={formActions.onPublishToggle}
+            />
+          {/if}
+        </div>
+      {/if}
+    </div>
 
     <HeaderPrimitive.Avatar
       visible={showAvatar}
