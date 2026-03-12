@@ -22,8 +22,8 @@
       border-color 0.15s ease,
       color 0.15s ease,
       transform 0.2s ease,
-      gap 0.2s ease,
-      padding-inline 0.2s ease;
+      gap 0.26s ease,
+      padding-inline 0.26s ease;
     --btn-bg: var(--btn-color);
     --btn-fg: var(--btn-color-content);
     --btn-border: color-mix(in oklab, var(--btn-color) 86%, black);
@@ -91,10 +91,10 @@
     margin-inline: 0;
     transform: translateX(0);
     transition:
-      max-width 0.2s ease,
-      opacity 0.15s ease,
-      margin-inline 0.2s ease,
-      transform 0.2s ease;
+      max-width 0.26s ease,
+      opacity 0.26s ease,
+      margin-inline 0.26s ease,
+      transform 0.26s ease;
     color: inherit;
   }
 

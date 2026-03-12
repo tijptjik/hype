@@ -49,15 +49,15 @@
   }
 
   .bits-theme .bits-form__section-header {
-    @apply relative flex min-h-16 h-16 flex-wrap items-start justify-between pt-2 pb-4;
+    @apply grid items-center relative min-h-20 h-20 flex-wrap justify-between pt-0 pb-0;
     min-width: 0;
     overflow: visible;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: calc(var(--spacing) * 2);
   }
 
   .bits-theme .bits-form__section-header--with-center {
-    @apply grid items-center pt-0 pb-0;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    column-gap: calc(var(--spacing) * 2);
   }
 
   .bits-theme .bits-form__section-header-left {
