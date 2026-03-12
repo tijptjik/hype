@@ -22,7 +22,8 @@ function getInitial(value?: string | null): string {
       src={image}
       alt={name || 'Avatar'}
       class={imageClass}
-      loading="lazy"
+      loading="eager"
+      decoding="async"
       onerror={() => {
         imageFailed = true
       }}
