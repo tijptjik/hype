@@ -42,6 +42,7 @@ let {
   collapseAllVersion = 0,
   keepExpandedOnIntro = false,
   onCollapseToggle,
+  onCollapseChange,
 }: FormFieldCardProps = $props()
 
 const resolvedMoveWindowSize = $derived(
@@ -50,18 +51,24 @@ const resolvedMoveWindowSize = $derived(
 
 let collapsed = $state(false)
 
+const setCollapsed = (nextCollapsed: boolean): void => {
+  if (collapsed === nextCollapsed) return
+  collapsed = nextCollapsed
+  onCollapseChange?.(nextCollapsed)
+}
+
 $effect(() => {
   void collapseAllVersion
   if (keepExpandedOnIntro) {
-    collapsed = false
+    setCollapsed(false)
     return
   }
-  collapsed = collapsedAll
+  setCollapsed(collapsedAll)
 })
 
 const toggleCollapsed = (): void => {
   onCollapseToggle?.()
-  collapsed = !collapsed
+  setCollapsed(!collapsed)
 }
 
 const isInheritedEnabled = $derived(

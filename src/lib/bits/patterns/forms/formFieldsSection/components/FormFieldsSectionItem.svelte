@@ -14,6 +14,7 @@ let {
   collapsedAll = false,
   collapseAllVersion = 0,
   onCardCollapseToggle,
+  onCollapseChange,
 }: FormFieldsSectionItemProps = $props()
 
 const hasIssue = $derived(Boolean(issueItemIds?.includes(property.id)))
@@ -75,6 +76,13 @@ const resolvedCardContext = $derived.by(() => {
       {collapseAllVersion}
       {keepExpandedOnIntro}
       onCollapseToggle={onCardCollapseToggle}
+      onCollapseChange={collapsed => {
+        onCollapseChange?.(
+          property.id,
+          collapsed,
+          resolvedCardContext.presentation,
+        )
+      }}
     />
   {/if}
 </div>

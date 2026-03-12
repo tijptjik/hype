@@ -11,8 +11,16 @@ export interface FormFieldsSectionActionHandlers {
   decreaseRank: (event: Event, propertyId: Id) => void | Promise<void>
 }
 
+export interface FormFieldsSectionLoadingItem {
+  id: Id
+  presentation: 'full' | 'header'
+  isCollapsed: boolean
+}
+
 export interface FormFieldsSectionProps {
   items: Property[]
+  isLoading?: boolean
+  loadingItems?: FormFieldsSectionLoadingItem[]
   title?: string
   description?: string
   issues?: string[]
@@ -20,6 +28,7 @@ export interface FormFieldsSectionProps {
   issueItemIds?: Id[]
   isEditing?: boolean
   canEdit?: boolean
+  disableEmptyAdd?: boolean
   removeMode?: boolean
   onRemoveModeChange?: (value: boolean) => void
   layoutMutationVersion?: number
@@ -43,9 +52,12 @@ export interface FormFieldsSectionActionsProps {
 
 export interface FormFieldsSectionWrapperProps {
   items: Property[]
+  isLoading?: boolean
+  loadingItems?: FormFieldsSectionLoadingItem[]
   issueItemIds?: Id[]
   isEditing?: boolean
   canEdit?: boolean
+  disableEmptyAdd?: boolean
   onAdd?: (event: Event) => void | Promise<void>
   card?: FormFieldsSectionCardConfig
   collapsedAll?: boolean
@@ -54,6 +66,11 @@ export interface FormFieldsSectionWrapperProps {
   introItemId?: Id | null
   onIntroEnd?: (propertyId: Id) => void
   onCardCollapseToggle?: () => void
+  onCollapseChange?: (
+    propertyId: Id,
+    collapsed: boolean,
+    presentation: 'full' | 'header',
+  ) => void
   isItemVisible?: (property: Property) => boolean
 }
 
@@ -69,6 +86,11 @@ export interface FormFieldsSectionItemProps {
   collapsedAll?: boolean
   collapseAllVersion?: number
   onCardCollapseToggle?: () => void
+  onCollapseChange?: (
+    propertyId: Id,
+    collapsed: boolean,
+    presentation: 'full' | 'header',
+  ) => void
 }
 
 export interface FormFieldsSectionCardConfig extends FormFieldCardCallbacks {
@@ -171,6 +193,7 @@ export interface FormFieldCardProps extends FormFieldCardCallbacks {
   collapseAllVersion?: number
   keepExpandedOnIntro?: boolean
   onCollapseToggle?: () => void
+  onCollapseChange?: (collapsed: boolean) => void
 }
 
 export interface FormFieldPropertyValueItemProps {
