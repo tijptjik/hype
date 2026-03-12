@@ -84,6 +84,14 @@
     white-space: nowrap;
   }
 
+  .bits-theme .bits-header__title-crossfade,
+  .bits-theme .bits-header__title-crossfade-item {
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
   .bits-theme .bits-header--with-icon .bits-header__title {
     grid-column: 2;
   }

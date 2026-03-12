@@ -1,18 +1,28 @@
 @layer components {
   .bits-main {
-    @apply h-full overflow-y-auto p-6;
+    @apply h-full overflow-y-auto px-6 pb-6;
   }
 
   .bits-main__section {
-    @apply block absolute inset-6;
+    @apply block absolute inset-6 top-0;
   }
 
   .bits-main__section--fade {
-    transition: opacity 180ms ease;
+    opacity: 1;
+    transition-property: opacity;
+    transition-duration: 0.15s;
+    transition-timing-function: ease;
+    transition-delay: 0s;
+    will-change: opacity;
+  }
+
+  .bits-main__section--active {
+    z-index: 2;
   }
 
   .bits-main__section--faded {
     opacity: 0;
+    z-index: 1;
     pointer-events: none;
   }
 
