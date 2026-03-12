@@ -36,6 +36,39 @@ type ExtendedMapLibre = MapLibre & {
   _precache: (o: MaplibreOptions) => void
 }
 
+const toPlainMaplibreOptions = (value: unknown): unknown => {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(item => toPlainMaplibreOptions(item))
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+
+  if (typeof value === 'object') {
+    const plainObject: Record<string, unknown> = {}
+    for (const [key, nestedValue] of Object.entries(value)) {
+      plainObject[key] = toPlainMaplibreOptions(nestedValue)
+    }
+    return plainObject
+  }
+
+  return undefined
+}
+
+const normalizeMaplibreOptions = (options: MaplibreOptions = {}): MaplibreOptions =>
+  (toPlainMaplibreOptions(options) as MaplibreOptions | undefined) ?? {}
+
 export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => {
   const _lib = maplibregl || (globalThis as any).maplibregl
   // run only in the main thread
@@ -50,14 +83,15 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       lnglat: LngLatLike,
       options: MaplibreOptions = {},
     ) {
+      const safeOptions = normalizeMaplibreOptions(options)
       const o = Object.assign(
         {},
-        options,
+        safeOptions,
         { type: 'pan', center: lnglat },
-        (this as any)._context(options),
+        (this as any)._context(safeOptions),
       )
       ;(this as any)._precache(o)
-      if (options.run) return this.panTo(lnglat, options)
+      if (safeOptions.run) return this.panTo(lnglat, safeOptions)
     }
     _lib.Map.prototype.cachedPanTo = cachedpanto
 
@@ -66,14 +100,15 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       zoom: number,
       options: MaplibreOptions = {},
     ) {
+      const safeOptions = normalizeMaplibreOptions(options)
       const o = Object.assign(
         {},
-        options,
+        safeOptions,
         { type: 'zoom', zoom },
-        this._context(options),
+        this._context(safeOptions),
       )
       this._precache(o)
-      if (options.run) return this.zoomTo(zoom, options)
+      if (safeOptions.run) return this.zoomTo(zoom, safeOptions)
     }
     _lib.Map.prototype.cachedZoomTo = cachedzoomto
 
@@ -81,9 +116,15 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       this: typeof _lib.Map,
       options: MaplibreOptions = {},
     ) {
-      const o = Object.assign({}, options, { type: 'jump' }, this._context(options))
+      const safeOptions = normalizeMaplibreOptions(options)
+      const o = Object.assign(
+        {},
+        safeOptions,
+        { type: 'jump' },
+        this._context(safeOptions),
+      )
       this._precache(o)
-      if (options.run) return this.jumpTo(options)
+      if (safeOptions.run) return this.jumpTo(safeOptions)
     }
     _lib.Map.prototype.cachedJumpTo = cachedjumpto
 
@@ -91,9 +132,15 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       this: typeof _lib.Map,
       options: MaplibreOptions = {},
     ) {
-      const o = Object.assign({}, options, { type: 'ease' }, this._context(options))
+      const safeOptions = normalizeMaplibreOptions(options)
+      const o = Object.assign(
+        {},
+        safeOptions,
+        { type: 'ease' },
+        this._context(safeOptions),
+      )
       this._precache(o)
-      if (options.run) return this.easeTo(options)
+      if (safeOptions.run) return this.easeTo(safeOptions)
     }
     _lib.Map.prototype.cachedEaseTo = cachedeaseto
 
@@ -101,11 +148,17 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       this: typeof _lib.Map,
       options: MaplibreOptions = {},
     ) {
-      options.type = 'fly'
-      options.debug = false
-      const o = Object.assign({}, options, { type: 'fly' }, this._context(options))
+      const safeOptions = normalizeMaplibreOptions(options)
+      safeOptions.type = 'fly'
+      safeOptions.debug = false
+      const o = Object.assign(
+        {},
+        safeOptions,
+        { type: 'fly' },
+        this._context(safeOptions),
+      )
       this._precache(o)
-      if (options.run) return this.flyTo(options)
+      if (safeOptions.run) return this.flyTo(safeOptions)
     }
     _lib.Map.prototype.cachedFlyTo = cachedflyto
 
@@ -114,24 +167,25 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
       bounds: [[number, number], [number, number]],
       options: MaplibreOptions = {},
     ) {
-      options.type = 'fitBounds'
-      options.bounds = bounds
-      options.debug = false
+      const safeOptions = normalizeMaplibreOptions(options)
+      safeOptions.type = 'fitBounds'
+      safeOptions.bounds = bounds
+      safeOptions.debug = false
       const o = Object.assign(
         {},
-        options,
+        safeOptions,
         { type: 'fitBounds' },
-        this._context(options),
+        this._context(safeOptions),
       )
       this._precache(o)
-      if (options.run) return this.fitBounds(bounds, options)
+      if (safeOptions.run) return this.fitBounds(bounds, safeOptions)
     }
     _lib.Map.prototype.cachedFitBounds = cachedfitbounds
 
     /*
-    
+
         Logic
-    
+
     */
 
     const _get_sources_from_style = function (this: typeof _lib.Map): string[] | null {
