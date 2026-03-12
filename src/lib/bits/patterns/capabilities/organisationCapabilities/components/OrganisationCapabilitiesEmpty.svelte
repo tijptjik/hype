@@ -4,7 +4,13 @@ import { m } from '$lib/i18n'
 // BITS COMPONENTS
 import { Button } from '$lib/bits'
 
-let { onEnterEditMode }: { onEnterEditMode: () => void } = $props()
+let {
+  onEnterEditMode,
+  disabled = false,
+}: {
+  onEnterEditMode: () => void
+  disabled?: boolean
+} = $props()
 </script>
 
 <section class="bits-theme bits-form__section bits-form__capabilities-empty">
@@ -18,6 +24,7 @@ let { onEnterEditMode }: { onEnterEditMode: () => void } = $props()
     text={m.admin__forms_capabilities_add()}
     color="primary"
     class="bits-form__capabilities-empty-cta"
+    {disabled}
     onClick={onEnterEditMode}
   />
 </section>

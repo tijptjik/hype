@@ -27,6 +27,7 @@ export interface OrganisationCapabilitiesProps {
   currentFormLocale: keyof CapabilityI18nRoot
   locales: Locale[]
   isEditing: boolean
+  isArchived?: boolean
   resetVersion?: number
   capabilityLabelsByKey: Partial<Record<CapabilityKey, CapabilityI18nRoot>>
   formCapabilityFields: CapabilityFormFields

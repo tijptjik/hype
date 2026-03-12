@@ -21,6 +21,7 @@ let {
   currentFormLocale,
   locales,
   isEditing,
+  isArchived = false,
   resetVersion = 0,
   capabilityLabelsByKey,
   formCapabilityFields,
@@ -76,7 +77,7 @@ $effect(() => {
 </script>
 
 {#if !hasCapabilities && !isEditing}
-  <OrganisationCapabilitiesEmpty {onEnterEditMode} />
+  <OrganisationCapabilitiesEmpty {onEnterEditMode} disabled={isArchived} />
 {:else}
   <section class={sectionClass}>
     {#if shouldSubmitEmptyCapabilities}
