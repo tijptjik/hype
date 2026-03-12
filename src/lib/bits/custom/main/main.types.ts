@@ -20,3 +20,17 @@ export interface MainFormProps {
   formEl?: HTMLFormElement
   isReady?: boolean
 }
+
+export interface MainFixedSectionProps {
+  children?: Snippet
+  class?: string
+  mode?: 'default' | 'collapsed' | 'fullscreen'
+}
+
+export interface MainDualSectionProps {
+  class?: string
+  isContentVisible?: boolean
+  isContentFull?: boolean
+  fixed?: Snippet
+  content?: Snippet
+}
