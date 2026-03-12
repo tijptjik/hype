@@ -7,7 +7,7 @@ import { fly } from 'svelte/transition'
 import type { HeaderAvatarProps } from './headerPrimitives.types'
 
 let {
-  visible = true,
+  isVisible = true,
   name = null,
   src = null,
   alt = '',
@@ -22,14 +22,14 @@ const transitionX = $derived(transitionDirection === 'left' ? -64 : 64)
 <div
   class={[
     'bits-pattern-header__avatar-shell',
-    visible
+    isVisible
       ? 'bits-pattern-header__avatar-shell--visible'
       : 'bits-pattern-header__avatar-shell--hidden',
   ]
     .filter(Boolean)
     .join(' ')}
 >
-  {#if visible}
+  {#if isVisible}
     <button
       in:fly={{ x: transitionX, duration: 260, opacity: 1, delay: 350 }}
       out:fly={{ x: transitionX, duration: 260, opacity: 1, delay: 20 }}

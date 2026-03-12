@@ -1,8 +1,36 @@
 import type { Component } from 'svelte'
 import type { HTMLAttributes } from 'svelte/elements'
-import type { HeaderCrumb } from '$lib/bits/custom/header'
+import type { ButtonColor, ButtonStyle } from '$lib/bits/core'
 
 export type HeaderLayoutMode = 'card' | 'table' | 'list'
+
+export interface HeaderCrumb {
+  name: string
+  href?: string
+}
+
+export interface HeaderButtonActionConfig {
+  text: string
+  onClick?: () => void
+  icon?: Component | null
+  iconClass?: string
+  class?: string
+  disabled?: boolean
+  color?: ButtonColor
+  style?: ButtonStyle
+}
+
+export interface HeaderStatusActionConfig {
+  text: string
+  icon?: Component | null
+  iconClass?: string
+  class?: string
+  ariaLive?: 'off' | 'polite' | 'assertive'
+}
+
+export type HeaderActionConfig =
+  | ({ kind: 'button' } & HeaderButtonActionConfig)
+  | ({ kind: 'status' } & HeaderStatusActionConfig)
 
 export interface HeaderTitleMenuItemConfig {
   label: string
@@ -13,7 +41,7 @@ export interface HeaderTitleMenuItemConfig {
 }
 
 export interface HeaderTitleMenuActionConfig {
-  visible?: boolean
+  isVisible?: boolean
   ariaLabel?: string
   items?: HeaderTitleMenuItemConfig[]
 }
@@ -37,6 +65,7 @@ export interface HeaderFilterConfig {
   isFilterable?: boolean
   placeholder?: string
   onFilter?: (query: string) => void
+  onAdvanceFromSearch?: () => void
 }
 
 export interface HeaderFacetItem {
@@ -53,40 +82,22 @@ export interface HeaderFacetsConfig {
 }
 
 export interface HeaderViewActionsConfig {
-  visible?: boolean
-  showLayoutToggle?: boolean
-  showControlsToggle?: boolean
-  layoutModes?: HeaderLayoutMode[]
-  layoutMode?: HeaderLayoutMode
-  controlMode?: boolean
-  onLayoutToggle?: (next: HeaderLayoutMode) => void
-  onControlsToggle?: (next: boolean) => void
+  isVisible?: boolean
+  isControlMode?: boolean
+  controlsAction?: HeaderButtonActionConfig
+  layoutAction?: HeaderButtonActionConfig
 }
 
 export interface HeaderFormActionsConfig {
-  visible?: boolean
-  isEditing?: boolean
-  isTainted?: boolean
-  isSubmitting?: boolean
-  hasIssues?: boolean
-  isPublishing?: boolean
-  isDeleting?: boolean
-  isDeleted?: boolean
-  isPublished?: boolean
-  canEdit?: boolean
-  disableEdit?: boolean
-  canPublish?: boolean
-  showDeleteAction?: boolean
-  showPublishAction?: boolean
-  onEditingToggle?: (next: boolean) => void
-  onReset?: () => void
-  onSave?: () => void
-  onDeleteToggle?: () => void
-  onPublishToggle?: () => void
+  isVisible?: boolean
+  primaryAction?: HeaderButtonActionConfig | null
+  saveAction?: HeaderButtonActionConfig | null
+  deleteAction?: HeaderButtonActionConfig | null
+  publishAction?: HeaderActionConfig | null
 }
 
 export interface HeaderAvatarConfig {
-  visible?: boolean
+  isVisible?: boolean
   name?: string | null
   src?: string | null
   alt?: string

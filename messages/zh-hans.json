@@ -141,6 +141,7 @@
   "admin__forms_property_maximum": "最大值",
   "admin__forms_property_options": "选项",
   "admin__forms_project_fields_empty_title": "暂无字段",
+  "admin__forms_project_fields_empty_description": "字段可让你为此组织定义结构化输入和元数据。",
   "admin__forms_property_untitled": "未命名字段",
   "admin__forms_property_translatable": "可翻译",
   "admin__forms_property_support_localisation": "支持本地化",

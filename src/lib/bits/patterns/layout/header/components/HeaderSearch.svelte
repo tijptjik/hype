@@ -9,20 +9,13 @@ let {
   query = $bindable(''),
   placeholder = 'Filter...',
   onFilter,
+  onAdvanceFromSearch,
 }: HeaderSearchProps = $props()
 
 function handleInput(event: Event): void {
   const target = event.currentTarget as HTMLInputElement
   query = target.value
   onFilter?.(query)
-}
-
-function focusFirstResourceItem(): void {
-  const firstItem = document.querySelector(
-    '[data-entity-index="0"][tabindex], svelte-virtual-list-row [tabindex="0"], svelte-virtual-list-row [tabindex]',
-  ) as HTMLElement | null
-
-  firstItem?.focus()
 }
 
 function handleKeydown(event: KeyboardEvent): void {
@@ -43,14 +36,8 @@ function handleKeydown(event: KeyboardEvent): void {
     return
   }
 
-  const firstItem = document.querySelector(
-    '[data-entity-index="0"][tabindex], svelte-virtual-list-row [tabindex="0"], svelte-virtual-list-row [tabindex]',
-  ) as HTMLElement | null
-
-  if (!firstItem) return
-
   event.preventDefault()
-  focusFirstResourceItem()
+  onAdvanceFromSearch?.()
 }
 </script>
 
@@ -60,7 +47,7 @@ function handleKeydown(event: KeyboardEvent): void {
       type="text"
       class="bits-pattern-header__search-input focus-override"
       value={query}
-      placeholder=""
+      {placeholder}
       oninput={handleInput}
       onkeydown={handleKeydown}
     >

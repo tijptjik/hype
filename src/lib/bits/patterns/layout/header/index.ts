@@ -1,5 +1,8 @@
 export { default as Header } from './Header.svelte'
 export type {
+  HeaderActionConfig,
+  HeaderButtonActionConfig,
+  HeaderCrumb,
   HeaderProps,
   HeaderTitleConfig,
   HeaderNewConfig,

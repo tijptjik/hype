@@ -3,7 +3,7 @@ import { fly } from 'svelte/transition'
 // COMPONENTS
 import * as HeaderPrimitive from './components'
 // TYPES
-import type { HeaderProps, HeaderLayoutMode } from './header.types'
+import type { HeaderProps } from './header.types'
 
 const DEFAULT_CLASS =
   'bits-theme bg-black py-4 pl-6 navbar sticky left-0 top-0 z-20 flex h-18 w-full shrink-0 justify-between caret-transparent shadow-lg transition-all duration-300'
@@ -22,55 +22,20 @@ let {
 }: HeaderProps = $props()
 
 const facetItems = $derived(facets.items ?? [])
-const layoutMode = $derived((viewActions.layoutMode ?? 'card') as HeaderLayoutMode)
-const controlMode = $derived(viewActions.controlMode ?? false)
 const showFilter = $derived(filter.isFilterable ?? false)
 const showNew = $derived(newAction.isCreatable ?? false)
-const showAvatar = $derived(avatar.visible ?? true)
+const showAvatar = $derived(avatar.isVisible ?? true)
 const showFacets = $derived(facetItems.length > 0)
-const showViewActions = $derived(viewActions.visible ?? false)
-const showFormActions = $derived(formActions.visible ?? false)
+const showViewActions = $derived(viewActions.isVisible ?? false)
+const showFormActions = $derived(formActions.isVisible ?? false)
 
 const rootClass = $derived(
   [DEFAULT_CLASS, showAvatar ? 'pr-6' : 'pr-0', className].filter(Boolean).join(' '),
 )
-const rightRevealKey = $derived(
-  JSON.stringify({
-    showFilter,
-    showViewActions,
-    showFacets,
-    showFormActions,
-  }),
-)
-
-const measurementKey = $derived(
-  JSON.stringify({
-    title: title.text ?? '',
-    description: title.description ?? '',
-    crumbs: title.crumbs?.map(crumb => `${crumb.name}:${crumb.href}`) ?? [],
-    facets: facetItems.map(
-      facet => `${facet.ref}:${facet.label}:${facet.hasIssues ? '1' : '0'}`,
-    ),
-    controlMode,
-    isCreatable: showNew,
-    isFilterable: showFilter,
-    showFacets,
-    showViewActions,
-    showFormActions,
-    showAvatar,
-    editing: formActions.isEditing ?? false,
-    deleted: formActions.isDeleted ?? false,
-  }),
-)
 </script>
 
-<HeaderPrimitive.Root
-  class={rootClass}
-  {measurementKey}
-  {rightRevealKey}
-  {...restProps}
->
-  {#snippet left({ showDescription, showTitle, showButtonText })}
+<HeaderPrimitive.Root class={rootClass} {...restProps}>
+  {#snippet left({ showButtonText })}
     <HeaderPrimitive.Title
       text={title.text}
       description={title.description}
@@ -78,8 +43,6 @@ const measurementKey = $derived(
       href={title.href}
       crumbs={title.crumbs}
       menuAction={title.menuAction}
-      hideDescription={!showDescription}
-      hideTitle={!showTitle}
     />
     <HeaderPrimitive.New
       isCreatable={showNew}
@@ -102,18 +65,14 @@ const measurementKey = $derived(
             isFilterable={showFilter}
             placeholder={filter.placeholder}
             onFilter={filter.onFilter}
+            onAdvanceFromSearch={filter.onAdvanceFromSearch}
           />
 
           {#if showViewActions}
             <HeaderPrimitive.ViewActions
-              showLayoutToggle={viewActions.showLayoutToggle ?? true}
-              showControlsToggle={viewActions.showControlsToggle ?? true}
-              layoutModes={viewActions.layoutModes ?? ['card', 'list']}
-              {layoutMode}
-              {controlMode}
+              controlsAction={viewActions.controlsAction}
+              layoutAction={viewActions.layoutAction}
               hideLabel={!showButtonText}
-              onLayoutToggle={viewActions.onLayoutToggle}
-              onControlsToggle={viewActions.onControlsToggle}
             />
           {/if}
         </div>
@@ -136,25 +95,11 @@ const measurementKey = $derived(
 
           {#if showFormActions}
             <HeaderPrimitive.FormActions
-              isTainted={formActions.isTainted}
-              isSubmitting={formActions.isSubmitting}
-              hasIssues={formActions.hasIssues}
-              isPublishing={formActions.isPublishing}
-              isDeleting={formActions.isDeleting}
-              isEditing={formActions.isEditing}
-              isDeleted={formActions.isDeleted}
-              isPublished={formActions.isPublished}
-              canEdit={formActions.canEdit}
-              disableEdit={formActions.disableEdit}
-              canPublish={formActions.canPublish}
-              showDeleteAction={formActions.showDeleteAction}
-              showPublishAction={formActions.showPublishAction}
+              primaryAction={formActions.primaryAction}
+              saveAction={formActions.saveAction}
+              deleteAction={formActions.deleteAction}
+              publishAction={formActions.publishAction}
               hideLabel={!showButtonText}
-              onEditingToggle={formActions.onEditingToggle}
-              onReset={formActions.onReset}
-              onSave={formActions.onSave}
-              onDeleteToggle={formActions.onDeleteToggle}
-              onPublishToggle={formActions.onPublishToggle}
             />
           {/if}
         </div>
@@ -162,7 +107,7 @@ const measurementKey = $derived(
     </div>
 
     <HeaderPrimitive.Avatar
-      visible={showAvatar}
+      isVisible={showAvatar}
       name={avatar.name}
       src={avatar.src}
       alt={avatar.alt}

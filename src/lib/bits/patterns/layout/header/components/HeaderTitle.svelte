@@ -21,6 +21,9 @@ let {
 }: HeaderTitleProps = $props()
 
 const menuItems = $derived(menuAction?.items ?? [])
+const resolvedCrumbs = $derived(
+  crumbs.map(crumb => ({ name: crumb.name, href: crumb.href })),
+)
 </script>
 
 <div class="bits-pattern-header__title-group">
@@ -28,14 +31,14 @@ const menuItems = $derived(menuAction?.items ?? [])
     size="md"
     {icon}
     {href}
-    {crumbs}
+    crumbs={resolvedCrumbs}
     {text}
     {description}
     {hideTitle}
     {hideDescription}
   />
 
-  {#if menuAction?.visible}
+  {#if menuAction?.isVisible}
     <div
       class="bits-pattern-header__title-menu-slot"
       in:slide={{ axis: "x", duration: 260 }}

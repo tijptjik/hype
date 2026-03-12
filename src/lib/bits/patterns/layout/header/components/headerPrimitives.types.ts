@@ -1,11 +1,12 @@
-import type { HTMLAttributes } from 'svelte/elements'
-import type { Snippet } from 'svelte'
+import type {
+  AdaptiveToolbarProps,
+  AdaptiveToolbarRenderState,
+} from '$lib/bits/patterns/layout/adaptiveToolbar'
 import type {
   HeaderAvatarConfig,
   HeaderFacetsConfig,
   HeaderFilterConfig,
   HeaderFormActionsConfig,
-  HeaderLayoutMode,
   HeaderNewConfig,
   HeaderTitleConfig,
   HeaderViewActionsConfig,
@@ -14,14 +15,13 @@ import type {
 export interface HeaderAvatarProps extends HeaderAvatarConfig {}
 
 export interface HeaderFormActionsProps
-  extends Omit<HeaderFormActionsConfig, 'visible'> {
+  extends Omit<HeaderFormActionsConfig, 'isVisible'> {
   hideLabel?: boolean
 }
 
 export interface HeaderViewActionsProps
-  extends Omit<HeaderViewActionsConfig, 'visible'> {
+  extends Omit<HeaderViewActionsConfig, 'isVisible'> {
   hideLabel?: boolean
-  layoutModes?: HeaderLayoutMode[]
 }
 
 export interface HeaderFacetsProps extends HeaderFacetsConfig {
@@ -43,16 +43,6 @@ export interface HeaderTitleProps extends HeaderTitleConfig {
   hideDescription?: boolean
 }
 
-export interface HeaderRootRenderState {
-  showDescription: boolean
-  showTitle: boolean
-  showButtonText: boolean
-}
+export interface HeaderRootRenderState extends AdaptiveToolbarRenderState {}
 
-export interface HeaderRootProps extends HTMLAttributes<HTMLElement> {
-  class?: string
-  measurementKey?: string
-  rightRevealKey?: string
-  left?: Snippet<[HeaderRootRenderState]>
-  right?: Snippet<[HeaderRootRenderState]>
-}
+export interface HeaderRootProps extends AdaptiveToolbarProps {}
