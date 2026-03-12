@@ -1152,6 +1152,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
+            removeSelfResourceLabel={m.resource__hub_singular()}
             issues={userRoleSectionIssues}
             userRoles={hubUserRoles as any}
             {roleFieldNameByUserId}

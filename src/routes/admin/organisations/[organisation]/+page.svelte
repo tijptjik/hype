@@ -1132,6 +1132,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
+            removeSelfResourceLabel={m.resource__organisation_singular()}
             issues={userRoleSectionIssues}
             isSubmitting={formCtx.submitting}
             isSubmitRequested={formCtx.isSubmitRequested}

@@ -1886,6 +1886,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
+            removeSelfResourceLabel={m.resource__project_singular()}
             issues={userRoleSectionIssues}
             userRoles={projectUserRoles as any}
             {hiddenUserIdInputAttrs}
