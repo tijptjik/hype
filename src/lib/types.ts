@@ -426,6 +426,7 @@ export type HeaderFormActionsState = {
   isDeleted: boolean
   isPublished: boolean
   canEdit: boolean
+  disableEdit: boolean
   canPublish: boolean
   showDeleteAction: boolean
   showPublishAction: boolean
@@ -1046,10 +1047,23 @@ export type HeaderFormActionStatus = Pick<
   | 'isPublished'
   | 'isDeleted'
   | 'canEdit'
+  | 'disableEdit'
   | 'canPublish'
   | 'showDeleteAction'
   | 'showPublishAction'
 >
+
+export type HeaderTransitionSnapshot = Pick<
+  HeaderFormActionsState,
+  | 'canEdit'
+  | 'canPublish'
+  | 'showDeleteAction'
+  | 'showPublishAction'
+  | 'isPublished'
+  | 'isDeleted'
+> & {
+  facets: HeaderFacetItem[]
+}
 
 export type OrganisationToggleField = 'isPublished' | 'isArchived'
 
@@ -1062,6 +1076,22 @@ export type SyncHeaderFormActionStatusParams = {
   headerCtrl: HeaderFormActionsController
   status: HeaderFormActionStatus
   lastSignature: string
+}
+
+export type ResolveOptimisticHeaderStatusParams = {
+  isSettled: boolean
+  isImageFacetActive?: boolean
+  isNewRef?: boolean
+  dirty: boolean
+  isSubmitting: boolean
+  hasIssues: boolean
+  isPublished: boolean
+  isDeleted: boolean
+  canEdit: boolean
+  canPublish: boolean
+  showDeleteAction: boolean
+  showPublishAction: boolean
+  snapshot: HeaderTransitionSnapshot
 }
 
 export type ResourceFormSubmissionResultParams = {
@@ -1704,6 +1734,7 @@ export type OrganisationActionPermissions = {
   canCreate: boolean
   canEdit: boolean
   canPublish: boolean
+  canDelete: boolean
 }
 
 export type LayerMetadata = {}

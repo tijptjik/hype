@@ -1,4 +1,5 @@
 import { toast } from 'svelte-sonner'
+import { untrack } from 'svelte'
 import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
 import type { Component } from 'svelte'
@@ -34,6 +35,10 @@ import type {
   ApplyChangedRelationFieldParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
+  HeaderCtrlState,
+  HeaderTransitionSnapshot,
+  HeaderFacetItem,
+  ResolveOptimisticHeaderStatusParams,
 } from '$lib/types'
 import type { User } from '$lib/db/zod/schema/user.types'
 import type {
@@ -41,82 +46,172 @@ import type {
   OrganisationRoleUser,
 } from '$lib/db/zod/schema/organisation.types'
 
+// +++ TOC
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// CODE REF NAVIGATION
+// 0. MUTATION
+// - revalidateAfterSubmitAttempt
+// - handleResourceBooleanStateToggle
+// - updateFormData
+//
+// 1. NAVIGATION
 // - toSubmittedCode
 // - shouldRedirectToSubmittedCode
 // - navigateToSubmittedCode
 // - createCodeRefResourceResult
 //
-// RESOURCE EDITOR FACTORIES
+// 2. RESOURCE EDITOR FACTORIES
 // - createResourceFormConfig
 // - createResourceEditorPage
 //
-// SUBMIT PAYLOAD NORMALIZATION
+// 3. SUBMIT PAYLOAD NORMALIZATION
 // - prepareSubmitPayloadMeta
 // - resolveChangedRelation
 // - applyChangedRelationField
 // - guardRefDesync
 //
-// SUBMISSION RESULT HANDLERS
+// 4. SUBMISSION RESULT HANDLERS
 // - handleSubmissionResult
 // - handleResourceFormSubmissionResult
 //
-// HEADER STATE
+// 5. HEADER FORM ACTIONS
 // - wireHeaderFormActionHandlers
 // - toHeaderFormActionStatusSignature
 // - syncHeaderFormActionStatus
-// - getNameForToast
 //
-// ISSUE MESSAGES
+// 6. OPTIMISTIC HEADER UPDATE
+// - captureHeaderTransitionSnapshot
+// - resolveOptimisticHeaderFacets
+// - resolveOptimisticHeaderStatus
+//
+// 7. ISSUE MESSAGES
 // - toIssueMessage
 // - toUniqueIssueMessages
 // - isFormLevelIssue
 // - toFormLevelIssueMessages
+// - toIssueChipParts
 //
-// FACET ISSUE MAPPING
+// 8. ISSUE FACETS
 // - toIssuePathSegments
 // - toIssueFieldNameCandidates
 // - collectFacetFieldNames
 // - toFacetFromIssuePath
 // - resolveFacetIssueSummary
 // - withFacetIssueIndicators
-//
-// FACET ISSUE + ACTION HELPERS
 // - resolveFacetTabsWithIssues
-// - toIssueChipParts
-// - getRoleFieldNameByUserId
-// - revalidateAfterSubmitAttempt
-// - handleResourceBooleanStateToggle
-// - getUserRoleHiddenInputAttrs
 //
-// I18N + GEN-AI HELPERS
+// 9. I18N HELPERS
 // - getGenAiState
 // - toggleGenAiField
+// - toGenField
 // - translateLocaleIntoEmptyFields
 // - resetLocaleFields
 //
-// FORM DATA + ROLE DISPLAY
-// - updateFormData
+// 10. USER ROLES
+// - getRoleFieldNameByUserId
 // - resolveDisplayUserRoles
 // - guardUserRolesDesync
-// - toggleEntityDataBoolean
-//
-// USER ROLE EDITING
+// - getUserRoleHiddenInputAttrs
 // - addUserRoleSelection
 // - removeUserRoleSelection
 // - updateUserRoleSelection
-
+// ---
 /********************
- *  CODE REF NAVIGATION
+ *  0. MUTATION
  ************/
+// +++ Mutation
+/**
+ * Triggers form validation only after the user has already attempted a submit.
+ * Used by programmatic form changes so editors avoid noisy validation before first submit.
+ *
+ * @param params Submit-attempt flag and validation callback.
+ * @returns `true` when validation was triggered.
+ */
+export function revalidateAfterSubmitAttempt(params: {
+  wasSubmitAttempted: boolean
+  validate: () => Promise<unknown>
+}): boolean {
+  if (!params.wasSubmitAttempted) return false
+  void params.validate()
+  return true
+}
+
+/**
+ * Executes the common editor boolean-toggle flow: set busy, mutate, apply
+ * optimistic overrides, refresh source state, and show success/error feedback.
+ * Used by resource pages to keep publish/archive handlers orchestration-only.
+ *
+ * @param params Current entity state, mutation hooks, and optimistic handlers.
+ */
+export async function handleResourceBooleanStateToggle<TState>(params: {
+  current: { id: string; [key: string]: unknown } | null | undefined
+  field: string
+  successWhenTrue: string
+  successWhenFalse: string
+  setBusy: (value: boolean) => void
+  mutate: (payload: { id: string; state: boolean }) => Promise<unknown>
+  applyOptimistic: (nextState: boolean) => void
+  refresh: () => Promise<TState>
+  commit: (next: TState) => void
+  onError?: () => void
+}): Promise<void> {
+  const current = params.current
+  if (!current) return
+
+  const nextState = !current[params.field]
+  try {
+    params.setBusy(true)
+    await params.mutate({ id: current.id, state: nextState })
+    params.applyOptimistic(nextState)
+    params.commit(await params.refresh())
+    toast.success(nextState ? params.successWhenTrue : params.successWhenFalse)
+  } catch {
+    params.onError?.()
+  } finally {
+    params.setBusy(false)
+  }
+}
+
+/**
+ * Applies an updater to cloned form `data` while preserving the outer form state shape.
+ * Used by client-side editor helpers so nested data updates stay immutable and predictable.
+ *
+ * @param form Mutable form state.
+ * @param updater Mutation callback applied to a cloned `data` object.
+ */
+export function updateFormData<T>(
+  form: FormDataUpdaterForm<T>,
+  updater: (data: T) => T,
+): void {
+  const current = form.fields.value()
+  if (!current.data) return
+  let clonedData: T
+  try {
+    clonedData = structuredClone(current.data)
+  } catch {
+    // Svelte proxy-backed objects may fail structuredClone.
+    clonedData = JSON.parse(JSON.stringify(current.data)) as T
+  }
+  form.fields.set({
+    ...current,
+    data: updater(clonedData),
+  })
+}
+
+// ---
+/********************
+ *  1. NAVIGATION
+ ************/
+// +++ Navigation
 /**
  * Extracts a submitted `data.code` value from a resource form payload.
  * Used by redirect helpers so code-based admin editors can detect ref changes
  * without depending on resource-specific form shapes.
+ *
+ * @param data Submitted payload or result data.
+ * @returns The trimmed submitted code, or an empty string when unavailable.
  */
 const toSubmittedCode = (data: unknown): string => {
   const code = (data as { data?: { code?: unknown } })?.data?.code
@@ -126,6 +221,9 @@ const toSubmittedCode = (data: unknown): string => {
 /**
  * Determines whether a successful submit should redirect to a newly submitted code ref.
  * Used by code-based admin editors so renaming a resource code updates the route.
+ *
+ * @param params Redirect decision inputs.
+ * @returns `true` when the submitted code differs from the current route ref.
  */
 const shouldRedirectToSubmittedCode = ({
   adminCtx,
@@ -151,6 +249,8 @@ const shouldRedirectToSubmittedCode = ({
 /**
  * Navigates an admin editor to the submitted code-based resource ref.
  * Kept local so form helpers do not eagerly pull in the navigation graph.
+ *
+ * @param params Navigation inputs for the submitted resource.
  */
 const navigateToSubmittedCode = ({
   adminCtx,
@@ -176,6 +276,9 @@ const navigateToSubmittedCode = ({
 /**
  * Builds standard code-ref success and redirect handlers for resource forms.
  * Used by admin editors that key their routes by resource code instead of id.
+ *
+ * @param params Shared admin and header context for a code-ref editor.
+ * @returns Standard post-submit handlers for success and redirect behavior.
  */
 export function createCodeRefResourceResult({
   adminCtx,
@@ -200,12 +303,17 @@ export function createCodeRefResourceResult({
   }
 }
 
+// ---
 /********************
- *  RESOURCE EDITOR FACTORIES
+ *  2. RESOURCE EDITOR FACTORIES
  ************/
+// +++ Resource Editor Factories
 /**
  * Produces the shared `configureForm(...)` config shape for resource editors.
  * Used to centralize form wiring, submit update hooks, and post-submit refresh behavior.
+ *
+ * @param params Shared form configuration inputs for one editor.
+ * @returns The normalized `configureForm(...)` config object.
  */
 export function createResourceFormConfig<Input>({
   formEl,
@@ -282,6 +390,9 @@ export function createResourceFormConfig<Input>({
 /**
  * Creates shared page-controller helpers for resource editor routes.
  * Used to synchronize route loading, header state, and shared header actions.
+ *
+ * @param params Shared header metadata for a resource editor page.
+ * @returns Route, header, and action synchronization helpers.
  */
 export function createResourceEditorPage({
   headerCtrl,
@@ -350,12 +461,18 @@ export function createResourceEditorPage({
   }
 }
 
+// ---
 /********************
- *  SUBMIT PAYLOAD NORMALIZATION
+ *  3. SUBMIT PAYLOAD NORMALIZATION
  ************/
+// +++ Submit Payload Normalization
 /**
  * Ensure submit payload includes `meta` and `data`, infer/normalize `meta.mode`,
  * and populate `meta.id` for update submissions when omitted.
+ *
+ * @param payload Mutable submit draft from the editor.
+ * @param params Mode defaults and id-resolution helpers.
+ * @returns The same payload with normalized `meta` and `data`.
  */
 export function prepareSubmitPayloadMeta<TData extends Record<string, unknown>>(
   payload: ResourceSubmitDraft<TData>,
@@ -398,6 +515,9 @@ export function prepareSubmitPayloadMeta<TData extends Record<string, unknown>>(
 
 /**
  * Resolve relation field effective value and whether it changed versus baseline.
+ *
+ * @param params Relation comparison inputs.
+ * @returns The effective relation value and whether it materially changed.
  */
 export function resolveChangedRelation<TEffective>({
   submittedValue,
@@ -421,6 +541,9 @@ export function resolveChangedRelation<TEffective>({
 
 /**
  * Keep relation keys in submit payload only when they materially changed.
+ *
+ * @param params Target payload field plus relation comparison inputs.
+ * @returns The effective relation resolution that was applied.
  */
 export function applyChangedRelationField<
   TData extends Record<string, unknown>,
@@ -447,6 +570,11 @@ export function applyChangedRelationField<
 /**
  * Verifies that both live and committed entity state still match the active route ref.
  * Used by code-based editors to block submit/toggle actions while route/entity state drifts.
+ *
+ * @param organisationState Current live entity state.
+ * @param committedOrganisationState Last committed entity state.
+ * @param ref Active route ref.
+ * @returns `true` when both entity snapshots still align with the route.
  */
 export function guardRefDesync(
   organisationState: OrganisationGetState,
@@ -463,12 +591,16 @@ export function guardRefDesync(
   )
 }
 
+// ---
 /********************
- *  SUBMISSION RESULT HANDLERS
+ *  4. SUBMISSION RESULT HANDLERS
  ************/
+// +++ Submission Result Handlers
 /**
  * Runs the canonical success/error/invalid/fallback submission-result branching.
  * Used by callers that need custom side effects without re-implementing result precedence.
+ *
+ * @param params Submission outcome and branch handlers.
  */
 async function handleSubmissionResult({
   success,
@@ -500,6 +632,8 @@ async function handleSubmissionResult({
 /**
  * Handles a resource form submission result with standard toast and refresh behavior.
  * Used by shared form factories so editor pages get consistent success/error UX.
+ *
+ * @param params Submission outcome, toast content, and refresh hooks.
  */
 export async function handleResourceFormSubmissionResult({
   success,
@@ -513,10 +647,12 @@ export async function handleResourceFormSubmissionResult({
   fallbackErrorMessage = m.long_crazy_peacock_care(),
   successPrefix = m.tidy_game_jellyfish_pop(),
 }: ResourceFormSubmissionResultParams): Promise<void> {
+  // Normalize unknown result payloads once so downstream parsing stays defensive.
   const asTrimmedString = (value: unknown): string =>
     typeof value === 'string' ? value.trim() : ''
   const asRecord = (value: unknown): Record<string, unknown> | undefined =>
     value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined
+  // Split machine-style `CODE: detail` errors into toast title and description parts.
   const toIssueParts = (message: string): { code: string; detail: string } => {
     const [rawCode, ...rest] = message.split(':')
     const code = (rawCode ?? '').trim()
@@ -535,6 +671,7 @@ export async function handleResourceFormSubmissionResult({
 
   const submittedRoot = asRecord(submittedValues)
   const submittedData = asRecord(submittedRoot?.data)
+  // Prefer the active locale name first so success toasts match the current editor context.
   const getSubmittedNameAtLocale = (localeKey: string, field: string): string => {
     const i18nByLocale = asRecord(submittedData?.i18n)
     const localeValues = asRecord(i18nByLocale?.[localeKey])
@@ -574,12 +711,16 @@ export async function handleResourceFormSubmissionResult({
   })
 }
 
+// ---
 /********************
- *  HEADER STATE
+ *  5. HEADER FORM ACTIONS
  ************/
+// +++ Header Form Actions
 /**
  * Pushes the current page's form action handlers into the shared header controller.
  * Used by resource page helpers to keep header action wiring centralized.
+ *
+ * @param params Header controller and the current action handlers.
  */
 function wireHeaderFormActionHandlers({
   headerCtrl,
@@ -591,14 +732,20 @@ function wireHeaderFormActionHandlers({
 /**
  * Serializes header form-action state into a stable signature string.
  * Used to suppress redundant header controller updates during reactive churn.
+ *
+ * @param status Current header action status.
+ * @returns A stable signature suitable for change detection.
  */
 function toHeaderFormActionStatusSignature(status: HeaderFormActionStatus): string {
-  return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}|${status.canEdit}|${status.canPublish}|${status.showDeleteAction}|${status.showPublishAction}`
+  return `${status.dirty}|${status.isSubmitting}|${status.hasIssues}|${status.isPublished}|${status.isDeleted}|${status.canEdit}|${status.disableEdit}|${status.canPublish}|${status.showDeleteAction}|${status.showPublishAction}`
 }
 
 /**
  * Updates header action status only when the effective state actually changed.
  * Used by editor pages to avoid unnecessary header controller writes.
+ *
+ * @param params Header controller, next status, and last known signature.
+ * @returns The current signature after syncing.
  */
 export function syncHeaderFormActionStatus({
   headerCtrl,
@@ -611,48 +758,116 @@ export function syncHeaderFormActionStatus({
   return signature
 }
 
+// ---
+/********************
+ *  6. OPTIMISTIC HEADER UPDATE
+ ************/
+// +++ Optimistic Header Update
 /**
- * Resolves the best available display name for toast messages from entity data.
- * Used by publish/archive flows so success messages stay readable across resources.
+ * Capture the currently displayed header affordances so routes can preserve them
+ * during optimistic entity-to-entity navigation.
+ *
+ * @param headerCtrl Header controller state source.
+ * @returns A snapshot of the currently rendered header state.
  */
-export function getNameForToast(
-  entity: { data?: Record<string, unknown> | null } | null | undefined,
-  key: string = 'shortName',
-): string {
-  const asTrimmedString = (value: unknown): string => {
-    if (typeof value !== 'string') return ''
-    return value.trim()
+export function captureHeaderTransitionSnapshot(headerCtrl: {
+  state: Pick<HeaderCtrlState, 'formActions' | 'meta'>
+}): HeaderTransitionSnapshot {
+  const current = untrack(() => headerCtrl.state.formActions)
+  const facets = [...untrack(() => headerCtrl.state.meta.facets)]
+
+  return {
+    canEdit: Boolean(current?.canEdit ?? true),
+    canPublish: Boolean(current?.canPublish ?? true),
+    showDeleteAction: Boolean(current?.showDeleteAction ?? true),
+    showPublishAction: Boolean(current?.showPublishAction ?? true),
+    isPublished: Boolean(current?.isPublished ?? false),
+    isDeleted: Boolean(current?.isDeleted ?? false),
+    facets,
   }
-
-  const data =
-    entity && typeof entity === 'object'
-      ? ((entity as { data?: Record<string, unknown> | null }).data ?? undefined)
-      : undefined
-  if (!data) return ''
-
-  const locale = getLocale()
-  const i18n =
-    data && typeof data === 'object'
-      ? ((data as Record<string, unknown>).i18n as
-          | Record<string, Record<string, unknown>>
-          | undefined)
-      : undefined
-
-  const byLocale = asTrimmedString(i18n?.[locale]?.[key])
-  if (byLocale) return byLocale
-
-  const byRoot = asTrimmedString((data as Record<string, unknown>)[key])
-  if (byRoot) return byRoot
-
-  return asTrimmedString((data as Record<string, unknown>).code)
 }
 
+/**
+ * Resolve which facet tabs should be displayed while a destination entity is
+ * still settling.
+ *
+ * @param isSettled Whether the destination entity has finished loading.
+ * @param resolvedFacets The resolved facet set for the current route.
+ * @param snapshot The previous header transition snapshot.
+ * @returns The facets that should be rendered during the current transition.
+ */
+export function resolveOptimisticHeaderFacets(
+  isSettled: boolean,
+  resolvedFacets:
+    | Map<
+        FacetType,
+        string | { label: string; icon?: Component | null; hasIssues?: boolean }
+      >
+    | HeaderFacetItem[],
+  snapshot: HeaderTransitionSnapshot,
+):
+  | Map<
+      FacetType,
+      string | { label: string; icon?: Component | null; hasIssues?: boolean }
+    >
+  | HeaderFacetItem[] {
+  if (isSettled) return resolvedFacets
+  if (snapshot.facets.length === 0) return resolvedFacets
+  return snapshot.facets
+}
+
+/**
+ * Resolve header form-action visibility/status while preserving the previous
+ * page's affordances until the destination entity is truly settled.
+ *
+ * @param params Current page state and previous header snapshot.
+ * @returns The action status that should be pushed into the shared header.
+ */
+export function resolveOptimisticHeaderStatus({
+  isSettled,
+  isImageFacetActive = false,
+  isNewRef = false,
+  dirty,
+  isSubmitting,
+  hasIssues,
+  isPublished,
+  isDeleted,
+  canEdit,
+  canPublish,
+  showDeleteAction,
+  showPublishAction,
+  snapshot,
+}: ResolveOptimisticHeaderStatusParams): HeaderFormActionStatus {
+  return {
+    // Image mode is intentionally non-form-driven, so form-specific signals are muted.
+    dirty: isImageFacetActive ? false : dirty,
+    isSubmitting: isImageFacetActive ? false : isSubmitting,
+    hasIssues: isImageFacetActive ? false : hasIssues,
+    isPublished: isSettled ? isPublished : snapshot.isPublished,
+    isDeleted: isSettled ? isDeleted : snapshot.isDeleted,
+    canEdit: isSettled ? canEdit : snapshot.canEdit,
+    disableEdit: isImageFacetActive,
+    canPublish: isSettled ? (isNewRef ? false : canPublish) : snapshot.canPublish,
+    showDeleteAction: isSettled ? showDeleteAction : snapshot.showDeleteAction,
+    showPublishAction: isSettled
+      ? isNewRef
+        ? false
+        : showPublishAction
+      : snapshot.showPublishAction,
+  }
+}
+
+// ---
 /********************
- *  ISSUE MESSAGES
+ *  7. ISSUE MESSAGES
  ************/
+// +++ Issue Messages
 /**
  * Extracts a string message from an arbitrary validation issue payload.
  * Used by issue helpers so routes and components can work against unknown issue shapes.
+ *
+ * @param issue Unknown validation issue payload.
+ * @returns The string message when present, otherwise `null`.
  */
 export function toIssueMessage(issue: unknown): string | null {
   if (!issue || typeof issue !== 'object' || !('message' in issue)) return null
@@ -664,6 +879,9 @@ export function toIssueMessage(issue: unknown): string | null {
  * Normalizes an arbitrary issue array into a stable, deduplicated list of messages.
  * Used by editor pages to derive compact issue summaries without repeating
  * message extraction logic.
+ *
+ * @param issues Unknown issue list.
+ * @returns A deduplicated list of string messages.
  */
 export function toUniqueIssueMessages(issues: unknown[] | undefined | null): string[] {
   if (!Array.isArray(issues)) return []
@@ -678,6 +896,9 @@ export function toUniqueIssueMessages(issues: unknown[] | undefined | null): str
  * Classifies whether an issue should be surfaced at the form level.
  * Used by editor pages to keep section headers focused on true root-level blocking issues.
  * Field-scoped and relation-scoped validation should render on their own sections instead.
+ *
+ * @param issue Unknown validation issue payload.
+ * @returns `true` when the issue is not scoped to a nested field path.
  */
 export function isFormLevelIssue(issue: unknown): boolean {
   if (!issue || typeof issue !== 'object' || !('path' in issue)) return true
@@ -688,6 +909,9 @@ export function isFormLevelIssue(issue: unknown): boolean {
 /**
  * Filters visible issues down to form-level messages and deduplicates them.
  * Used by editor shells so route files can derive top-level form issues with one call.
+ *
+ * @param issues Unknown issue list.
+ * @returns Deduplicated top-level issue messages.
  */
 export function toFormLevelIssueMessages(
   issues: unknown[] | undefined | null,
@@ -696,12 +920,32 @@ export function toFormLevelIssueMessages(
   return toUniqueIssueMessages(issues.filter(isFormLevelIssue))
 }
 
+/**
+ * Splits a toast/issue string into code/detail parts for chip presentation.
+ * Used by section issue chips so error codes and descriptions can render separately.
+ *
+ * @param message Issue message in `CODE: detail` format.
+ * @returns Parsed code/detail parts with safe fallbacks.
+ */
+export function toIssueChipParts(message: string): { code: string; detail: string } {
+  const parts = message.split(':')
+  if (parts.length < 2) return { code: 'INVALID', detail: message }
+  const code = parts[0]?.trim() || 'INVALID'
+  const detail = parts.slice(1).join(':').trim() || message
+  return { code, detail }
+}
+
+// ---
 /********************
- *  FACET ISSUE MAPPING
+ *  8. ISSUE FACETS
  ************/
+// +++ Issue Facets
 /**
  * Converts an issue path into normalized string segments.
  * Used by facet issue mapping helpers to compare issue locations against form controls.
+ *
+ * @param issue Unknown validation issue payload.
+ * @returns The issue path as string segments.
  */
 const toIssuePathSegments = (issue: unknown): string[] => {
   if (!issue || typeof issue !== 'object' || !('path' in issue)) return []
@@ -713,12 +957,16 @@ const toIssuePathSegments = (issue: unknown): string[] => {
 /**
  * Produces candidate field-name representations for an issue path.
  * Used to match issue paths against DOM control names in facet sections.
+ *
+ * @param issue Unknown validation issue payload.
+ * @returns Possible field-name encodings for the same path.
  */
 const toIssueFieldNameCandidates = (issue: unknown): string[] => {
   const segments = toIssuePathSegments(issue)
   if (segments.length === 0) return []
 
   const dot = segments.join('.')
+  // Mirror browser form-name syntax so array paths can match DOM control names.
   const bracket = segments.reduce((acc, segment, index) => {
     if (index === 0) return segment
     return /^\d+$/u.test(segment) ? `${acc}[${segment}]` : `${acc}.${segment}`
@@ -730,6 +978,10 @@ const toIssueFieldNameCandidates = (issue: unknown): string[] => {
 /**
  * Collects all control names mounted within each facet section of a form.
  * Used to map validation issues back to the facet that owns the affected fields.
+ *
+ * @param formEl Editor form element.
+ * @param supportedFacets Facets currently rendered by the editor.
+ * @returns A map of facet ids to field-name sets.
  */
 const collectFacetFieldNames = (
   formEl: HTMLFormElement,
@@ -759,6 +1011,11 @@ const collectFacetFieldNames = (
 /**
  * Resolves the owning facet for a single validation issue.
  * Used by facet issue summaries so hidden facets can still be highlighted or activated.
+ *
+ * @param issue Unknown validation issue payload.
+ * @param supportedFacets Facets currently rendered by the editor.
+ * @param facetFieldNames Field names collected from each facet section.
+ * @returns The facet that should own the issue.
  */
 const toFacetFromIssuePath = (
   issue: unknown,
@@ -771,6 +1028,7 @@ const toFacetFromIssuePath = (
     segments[0] === 'data' &&
     segments[1] === 'properties'
   ) {
+    // Property paths do not map cleanly to DOM names, so force them onto the fields facet.
     return 'fields'
   }
 
@@ -798,6 +1056,9 @@ const toFacetFromIssuePath = (
 /**
  * Summarizes which facets contain validation issues and which one should be focused first.
  * Used by editor pages to drive facet badges and submit-time facet switching.
+ *
+ * @param params Issues, supported facets, and the optional form element.
+ * @returns The first facet with issues plus the full issue-bearing facet set.
  */
 function resolveFacetIssueSummary(params: {
   issues: unknown[] | null | undefined
@@ -828,6 +1089,10 @@ function resolveFacetIssueSummary(params: {
 /**
  * Applies `hasIssues` flags to a facet-tab map.
  * Used by editor headers so facet tabs can render issue styling consistently.
+ *
+ * @param facets Base facet-tab map.
+ * @param facetsWithIssues Facets that currently contain validation issues.
+ * @returns A facet-tab map with `hasIssues` decorations applied.
  */
 function withFacetIssueIndicators(
   facets: Map<FacetType, { label: string; icon?: Component | null }>,
@@ -844,12 +1109,12 @@ function withFacetIssueIndicators(
   )
 }
 
-/********************
- *  FACET ISSUE + ACTION HELPERS
- ************/
 /**
  * Resolves both facet issue summary and facet-tab issue indicators in one step.
  * Used by editor pages to keep header-tab issue wiring orchestration-only.
+ *
+ * @param params Issues, facets, and the optional form element.
+ * @returns The issue summary plus issue-decorated facet tabs.
  */
 export function resolveFacetTabsWithIssues(params: {
   issues: unknown[] | null | undefined
@@ -874,104 +1139,20 @@ export function resolveFacetTabsWithIssues(params: {
   }
 }
 
-/**
- * Splits a toast/issue string into code/detail parts for chip presentation.
- * Used by section issue chips so error codes and descriptions can render separately.
- */
-export function toIssueChipParts(message: string): { code: string; detail: string } {
-  const parts = message.split(':')
-  if (parts.length < 2) return { code: 'INVALID', detail: message }
-  const code = parts[0]?.trim() || 'INVALID'
-  const detail = parts.slice(1).join(':').trim() || message
-  return { code, detail }
-}
-
-/**
- * Resolves the current role-field input name for each selected user id.
- * Used by role editors that need hidden inputs aligned with dynamic user-role rows.
- */
-export function getRoleFieldNameByUserId(
-  form: UserRoleFieldNameResolverForm,
-): Record<string, string> {
-  const userRoles = form.fields.value().data?.userRoles ?? []
-  const roleFields = form.fields.data?.userRoles ?? []
-
-  return Object.fromEntries(
-    userRoles.map((userRole, index) => [
-      userRole.userId,
-      roleFields[index]?.role?.as('select').name ?? '',
-    ]),
-  )
-}
-
-/**
- * Triggers form validation only after the user has already attempted a submit.
- * Used by programmatic form changes so editors avoid noisy validation before first submit.
- */
-export function revalidateAfterSubmitAttempt(params: {
-  wasSubmitAttempted: boolean
-  validate: () => Promise<unknown>
-}): boolean {
-  if (!params.wasSubmitAttempted) return false
-  void params.validate()
-  return true
-}
-
-/**
- * Executes the common editor boolean-toggle flow: set busy, mutate, apply
- * optimistic overrides, refresh source state, and show success/error feedback.
- * Used by resource pages to keep publish/archive handlers orchestration-only.
- */
-export async function handleResourceBooleanStateToggle<TState>(params: {
-  current: { id: string; [key: string]: unknown } | null | undefined
-  field: string
-  successWhenTrue: string
-  successWhenFalse: string
-  setBusy: (value: boolean) => void
-  mutate: (payload: { id: string; state: boolean }) => Promise<unknown>
-  applyOptimistic: (nextState: boolean) => void
-  refresh: () => Promise<TState>
-  commit: (next: TState) => void
-  onError?: () => void
-}): Promise<void> {
-  const current = params.current
-  if (!current) return
-
-  const nextState = !current[params.field]
-  try {
-    params.setBusy(true)
-    await params.mutate({ id: current.id, state: nextState })
-    params.applyOptimistic(nextState)
-    params.commit(await params.refresh())
-    toast.success(nextState ? params.successWhenTrue : params.successWhenFalse)
-  } catch {
-    params.onError?.()
-  } finally {
-    params.setBusy(false)
-  }
-}
-
-/**
- * Produces hidden user-id input attrs for the current user-role rows.
- * Used by editors that render custom user-role UIs outside the direct form field tree.
- */
-export function getUserRoleHiddenInputAttrs(
-  form: UserRoleFieldNameResolverForm,
-  userRoles: Array<{ userId: string }>,
-): UserRoleHiddenInputAttrs[] {
-  const roleFields = form.fields.data?.userRoles ?? []
-  return userRoles
-    .map((userRole, index) => roleFields[index]?.userId?.as('hidden', userRole.userId))
-    .filter((attrs): attrs is UserRoleHiddenInputAttrs => Boolean(attrs))
-}
-
+// ---
 /********************
- *  I18N + GEN-AI HELPERS
+ *  9. I18N HELPERS
  ************/
+// +++ I18n Helpers
 
 /**
  * Resolves the current generator-toggle state for one i18n field and locale.
  * Used by i18n field components to render generator affordances consistently.
+ *
+ * @param form Gen-AI aware form state.
+ * @param locale The locale being inspected.
+ * @param field The translatable field to resolve.
+ * @returns Whether the field is currently marked as generated.
  */
 export function getGenAiState(
   form: GenAiStateResolverForm,
@@ -991,6 +1172,10 @@ export function getGenAiState(
 /**
  * Toggles the generator-state boolean for one i18n field and locale.
  * Used by descriptor/credit fields to keep generator flags in sync with UI toggles.
+ *
+ * @param form Mutable form state.
+ * @param locale The locale being updated.
+ * @param field The translatable field whose generator flag should flip.
  */
 export function toggleGenAiField<
   T extends {
@@ -1021,22 +1206,31 @@ export function toggleGenAiField<
   })
 }
 
-/* ----------------- */
-// I18N HELPERS
-/* -------- */
-
+/**
+ * Default set of translatable fields for machine-translation helpers.
+ * Kept centralized so editors can opt into the common subset by default.
+ */
 const DEFAULT_TRANSLATABLE_FIELDS: I18nTranslatableField[] = [
   'name',
   'nameShort',
   'description',
 ]
 
+/**
+ * Maps a translatable field name to its corresponding `...Gen` flag.
+ *
+ * @param field Translatable field name.
+ * @returns The associated generator flag key.
+ */
 const toGenField = (field: I18nTranslatableField): `${I18nTranslatableField}Gen` =>
   `${field}Gen`
 
 /**
  * Machine-translates empty fields from a source locale into a target locale.
  * Used by editor pages to seed untranslated locale content without overwriting manual text.
+ *
+ * @param params Translation source, target, fields, and form state.
+ * @returns `true` when at least one field was translated and applied.
  */
 export async function translateLocaleIntoEmptyFields<
   TFormData extends {
@@ -1074,6 +1268,7 @@ export async function translateLocaleIntoEmptyFields<
   const targetLocaleData = currentFormData.i18n?.[targetFormLocale]
   if (!targetLocaleData) return false
 
+  // Only send blank targets so machine translation never overwrites user-authored content.
   const fieldsToTranslate = fields.filter(field => {
     const currentValue = targetLocaleData[field]
     return !(typeof currentValue === 'string' && currentValue.trim().length > 0)
@@ -1112,6 +1307,7 @@ export async function translateLocaleIntoEmptyFields<
     const targetLocaleData = data.i18n?.[targetFormLocale]
     if (!targetLocaleData) return data
 
+    // Mark translated fields as generated so later UI can distinguish seeded content.
     for (const field of fieldsToTranslate) {
       const currentValue = targetLocaleData[field]
       if (typeof currentValue === 'string' && currentValue.trim().length > 0) continue
@@ -1130,6 +1326,8 @@ export async function translateLocaleIntoEmptyFields<
 /**
  * Clears the selected locale fields and their generator flags.
  * Used by locale reset actions to restore a clean untranslated state.
+ *
+ * @param params Reset target locale, field list, and form state.
  */
 export function resetLocaleFields<
   TFormData extends {
@@ -1167,35 +1365,38 @@ export function resetLocaleFields<
   })
 }
 
+// ---
 /********************
- *  FORM DATA + ROLE DISPLAY
+ *  10. USER ROLES
  ************/
+// +++ User Roles
 /**
- * Applies an updater to cloned form `data` while preserving the outer form state shape.
- * Used by client-side editor helpers so nested data updates stay immutable and predictable.
+ * Resolves the current role-field input name for each selected user id.
+ * Used by role editors that need hidden inputs aligned with dynamic user-role rows.
+ *
+ * @param form Role-field resolver form state.
+ * @returns A map of user id to current role-field input name.
  */
-export function updateFormData<T>(
-  form: FormDataUpdaterForm<T>,
-  updater: (data: T) => T,
-): void {
-  const current = form.fields.value()
-  if (!current.data) return
-  let clonedData: T
-  try {
-    clonedData = structuredClone(current.data)
-  } catch {
-    // Svelte proxy-backed objects may fail structuredClone.
-    clonedData = JSON.parse(JSON.stringify(current.data)) as T
-  }
-  form.fields.set({
-    ...current,
-    data: updater(clonedData),
-  })
+export function getRoleFieldNameByUserId(
+  form: UserRoleFieldNameResolverForm,
+): Record<string, string> {
+  const userRoles = form.fields.value().data?.userRoles ?? []
+  const roleFields = form.fields.data?.userRoles ?? []
+
+  return Object.fromEntries(
+    userRoles.map((userRole, index) => [
+      userRole.userId,
+      roleFields[index]?.role?.as('select').name ?? '',
+    ]),
+  )
 }
 
 /**
  * Overlays current form role values onto persisted role rows by user id.
  * Used by role UIs so display rows reflect in-progress edits without losing base metadata.
+ *
+ * @param params Persisted roles plus current in-form role values.
+ * @returns Base role rows with current role selections overlaid.
  */
 export function resolveDisplayUserRoles<
   TUserRole extends { userId: string; role: string },
@@ -1213,6 +1414,9 @@ export function resolveDisplayUserRoles<
 /**
  * Reconciles persisted organisation role rows with current form role selections.
  * Used when selected users or unsaved role edits drift from the original entity payload.
+ *
+ * @param params Persisted roles, in-form roles, and optional selected-user metadata.
+ * @returns Role rows normalized to the current form selection set.
  */
 export function guardUserRolesDesync({
   baseRoles,
@@ -1241,6 +1445,7 @@ export function guardUserRolesDesync({
     }
 
     const selectedUser = usersById?.[formUserRole.userId]
+    // Synthesize a minimal user shell so optimistic rows remain renderable before a refetch.
     const fallbackUser: User = {
       id: formUserRole.userId,
       name: formUserRole.userId,
@@ -1285,33 +1490,30 @@ export function guardUserRolesDesync({
   })
 }
 
-/* ----------------- */
-// ENTITY HELPERS
-/* -------- */
-
 /**
- * Returns a copy of an entity state object with one boolean field toggled in `data`.
- * Used by lightweight client helpers that need local boolean state overrides.
+ * Produces hidden user-id input attrs for the current user-role rows.
+ * Used by editors that render custom user-role UIs outside the direct form field tree.
+ *
+ * @param form Role-field resolver form state.
+ * @param userRoles Current user-role rows.
+ * @returns Hidden-input attrs for each row with a bound `userId` field.
  */
-export function toggleEntityDataBoolean<
-  TEntity extends { data?: Record<string, unknown> | null } | null,
->(entity: TEntity, key: string, nextChecked: boolean | null): TEntity {
-  if (!entity?.data) return entity
-  return {
-    ...entity,
-    data: {
-      ...entity.data,
-      [key]: Boolean(nextChecked),
-    },
-  } as TEntity
+export function getUserRoleHiddenInputAttrs(
+  form: UserRoleFieldNameResolverForm,
+  userRoles: Array<{ userId: string }>,
+): UserRoleHiddenInputAttrs[] {
+  const roleFields = form.fields.data?.userRoles ?? []
+  return userRoles
+    .map((userRole, index) => roleFields[index]?.userId?.as('hidden', userRole.userId))
+    .filter((attrs): attrs is UserRoleHiddenInputAttrs => Boolean(attrs))
 }
 
-/********************
- *  USER ROLE EDITING
- ************/
 /**
  * Adds a selected user role to both form state and optimistic entity state.
  * Used by resource editors with managed user-role assignment UIs.
+ *
+ * @param params Form state, optimistic entity state, and the selected user.
+ * @returns The next optimistic entity state.
  */
 export function addUserRoleSelection<
   TEntity extends { data?: Record<string, unknown> | null } | null,
@@ -1361,6 +1563,9 @@ export function addUserRoleSelection<
 /**
  * Removes a selected user role from both form state and optimistic entity state.
  * Used by resource editors with removable user-role assignment rows.
+ *
+ * @param params Form state, optimistic entity state, and the removed user id.
+ * @returns The next optimistic entity state.
  */
 export function removeUserRoleSelection<
   TEntity extends { data?: Record<string, unknown> | null } | null,
@@ -1392,6 +1597,9 @@ export function removeUserRoleSelection<
 /**
  * Updates one selected user role in both form state and optimistic entity state.
  * Used by resource editors when a role dropdown changes for an existing row.
+ *
+ * @param params Form state, optimistic entity state, target user id, and next role.
+ * @returns The next optimistic entity state.
  */
 export function updateUserRoleSelection<
   TEntity extends { data?: Record<string, unknown> | null } | null,
@@ -1420,3 +1628,4 @@ export function updateUserRoleSelection<
     },
   } as TEntity
 }
+// ---
