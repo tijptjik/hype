@@ -122,31 +122,6 @@ function handlePrimaryAction(): void {
       disabled={isInFlight}
       onClick={() => onDeleteToggle?.()}
     />
-  {:else if isEditing}
-    {#if canEdit}
-      <Button
-        text={m.forms__save()}
-        color="success"
-        style="ghost"
-        icon={saveIcon}
-        {hideLabel}
-        disabled={disableEdit || !isTainted || isInFlight || hasIssues}
-        onClick={() => onSave?.()}
-      />
-    {/if}
-
-    {#if canEdit}
-      <Button
-        text={primaryLabel}
-        color="neutral"
-        style="ghost"
-        icon={primaryIcon}
-        class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
-        {hideLabel}
-        disabled={disableEdit || isInFlight}
-        onClick={handlePrimaryAction}
-      />
-    {/if}
   {:else}
     {#if canEdit}
       <Button
@@ -154,7 +129,7 @@ function handlePrimaryAction(): void {
         color="neutral"
         style="ghost"
         icon={primaryIcon}
-        class={hideLabel ? '' : 'bits-pattern-header__form-action-primary'}
+        class={hideLabel ? '' : 'bits-pattern-header__form-action-main'}
         {hideLabel}
         disabled={disableEdit || isInFlight}
         onClick={handlePrimaryAction}
@@ -162,19 +137,39 @@ function handlePrimaryAction(): void {
     {/if}
   {/if}
 
-  {#if !isDeleted && showPublishAction}
+  {#if isEditing && canEdit}
+    <Button
+      text={m.forms__save()}
+      color="success"
+      style="ghost"
+      icon={saveIcon}
+      class={hideLabel ? '' : 'bits-pattern-header__form-action-publish'}
+      {hideLabel}
+      disabled={disableEdit || !isTainted || isInFlight || hasIssues}
+      onClick={() => onSave?.()}
+    />
+  {:else if !isDeleted && showPublishAction}
     {#if canPublish}
       <Button
         text={publishLabel}
         color={isPublished ? 'warning' : 'success'}
         style="ghost"
         icon={publishIcon}
+        class={hideLabel ? '' : 'bits-pattern-header__form-action-publish'}
         {hideLabel}
         disabled={isPublishBlocked}
         onClick={() => onPublishToggle?.()}
       />
     {:else}
-      <div class="bits-pattern-header__publish-status" aria-live="polite">
+      <div
+        class={[
+          'bits-pattern-header__publish-status',
+          hideLabel ? '' : 'bits-pattern-header__form-action-publish',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        aria-live="polite"
+      >
         {@render publishStatusIcon()}
         {#if !hideLabel}
           <span class="bits-pattern-header__publish-status-label"
