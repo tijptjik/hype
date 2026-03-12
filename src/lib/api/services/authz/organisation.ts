@@ -625,7 +625,7 @@ export const resolveOrganisationActionPermissions = (
         ).allowed
 
   if (!target?.resourceId || target.resourceHubId === undefined) {
-    return { canCreate, canEdit: false, canPublish: false }
+    return { canCreate, canEdit: false, canPublish: false, canDelete: false }
   }
 
   return {
@@ -639,6 +639,10 @@ export const resolveOrganisationActionPermissions = (
       fields,
     ).allowed,
     canPublish: authorizeOrganisationPublish(actor, {
+      resourceId: target.resourceId,
+      resourceHubId: target.resourceHubId,
+    }).allowed,
+    canDelete: authorizeOrganisationDelete(actor, {
       resourceId: target.resourceId,
       resourceHubId: target.resourceHubId,
     }).allowed,
