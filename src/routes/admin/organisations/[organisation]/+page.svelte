@@ -16,7 +16,6 @@ import {
   createResourceEditorPage,
   createResourceFormConfig,
   getUserRoleHiddenInputAttrs,
-  getNameForToast,
   getRoleFieldNameByUserId,
   guardRefDesync,
   guardUserRolesDesync,
@@ -32,6 +31,7 @@ import {
   updateFormData,
   updateUserRoleSelection,
 } from '$lib/client/services/form'
+import { getNameForToast } from '$lib/client/services/resource'
 import {
   getOrganisationSubmitUpdates,
   overrideOrganisationEntityBoolean,
@@ -713,9 +713,13 @@ const canSubmitOrganisation = $derived(
   isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,
 )
 const canEditImagePresentationMode = $derived(
-  canSubmitOrganisation && isCurrentRefLoaded,
+  canSubmitOrganisation &&
+    isCurrentRefLoaded &&
+    !optimisticOrganisationData?.isArchived,
 )
-const canEditImageDropzone = $derived(canEditOrganisation && isCurrentRefLoaded)
+const canEditImageDropzone = $derived(
+  canEditOrganisation && isCurrentRefLoaded && !optimisticOrganisationData?.isArchived,
+)
 const isFormReady = $derived(
   Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef)),
 )
@@ -1132,6 +1136,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
+            transitionEntityKey={organisation?.data?.id ?? organisationRef}
             removeSelfResourceLabel={m.resource__organisation_singular()}
             issues={userRoleSectionIssues}
             isSubmitting={formCtx.submitting}
@@ -1168,6 +1173,7 @@ $effect(() => {
         {currentFormLocale}
         {locales}
         {isEditing}
+        isArchived={Boolean(optimisticOrganisationData?.isArchived)}
         resetVersion={capabilityResetVersion}
         {capabilityLabelsByKey}
         formCapabilityFields={formCtx.form.fields.data.capabilities as CapabilityFormFields}
@@ -1195,6 +1201,7 @@ $effect(() => {
         issueItemIds={fieldSectionIssueItemIds}
         layoutMutationVersion={fieldsLayoutMutationVersion}
         canEdit={canSubmitOrganisation || !isCurrentRefSettled}
+        disableEmptyAdd={Boolean(optimisticOrganisationData?.isArchived)}
         {isEditing}
         removeMode={fieldRemoveMode}
         onRemoveModeChange={value => {

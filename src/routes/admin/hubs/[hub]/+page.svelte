@@ -674,8 +674,12 @@ const canEditHub = $derived(hubPermissions.canEdit)
 const canPublishHub = $derived(hubPermissions.canPublish)
 const canDeleteHub = $derived(hubPermissions.canDelete)
 const canSubmitHub = $derived(isNewHubRef ? canCreateHub : canEditHub)
-const canEditImagePresentationMode = $derived(canSubmitHub && isCurrentRefLoaded)
-const canEditImageDropzone = $derived(canEditHub && isCurrentRefLoaded)
+const canEditImagePresentationMode = $derived(
+  canSubmitHub && isCurrentRefLoaded && !hub?.data?.isArchived,
+)
+const canEditImageDropzone = $derived(
+  canEditHub && isCurrentRefLoaded && !hub?.data?.isArchived,
+)
 const canSetCoreInclusive = $derived(canSubmitHub)
 const allowedOrganisationIds = $derived.by(() => {
   if (adminCtx.appCtx.isSuperAdmin()) return null
@@ -1152,6 +1156,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
+            transitionEntityKey={hub?.data?.id ?? hubRef}
             removeSelfResourceLabel={m.resource__hub_singular()}
             issues={userRoleSectionIssues}
             userRoles={hubUserRoles as any}

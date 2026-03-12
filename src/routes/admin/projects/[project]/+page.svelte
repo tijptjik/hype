@@ -16,7 +16,6 @@ import {
   captureHeaderTransitionSnapshot,
   createResourceEditorPage,
   createResourceFormConfig,
-  getNameForToast,
   guardRefDesync,
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
@@ -31,6 +30,7 @@ import {
   updateFormData,
   updateUserRoleSelection,
 } from '$lib/client/services/form'
+import { getNameForToast } from '$lib/client/services/resource'
 import {
   getCapabilityKeysFromDefinitions,
   getCapabilityLabel,
@@ -1116,8 +1116,12 @@ const canDeleteProject = $derived.by(() => {
     resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
   }).allowed
 })
-const canEditImagePresentationMode = $derived(canSubmitProject && isCurrentRefLoaded)
-const canEditImageDropzone = $derived(canEditProject && isCurrentRefLoaded)
+const canEditImagePresentationMode = $derived(
+  canSubmitProject && isCurrentRefLoaded && !optimisticProjectData?.isArchived,
+)
+const canEditImageDropzone = $derived(
+  canEditProject && isCurrentRefLoaded && !optimisticProjectData?.isArchived,
+)
 const canSetParentOrganisation = $derived.by(() => {
   const projectData = optimisticProjectData
   return canSetProjectParentOrganisation({
@@ -1886,6 +1890,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
+            transitionEntityKey={activeProjectData?.id ?? projectRef}
             removeSelfResourceLabel={m.resource__project_singular()}
             issues={userRoleSectionIssues}
             userRoles={projectUserRoles as any}
