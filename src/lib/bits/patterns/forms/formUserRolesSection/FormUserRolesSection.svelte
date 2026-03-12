@@ -8,8 +8,8 @@ import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import * as FormUserRolesSectionPrimitive from './components'
 import { UserCard } from '$lib/bits/patterns/cards/userCard'
 import type { FormUserRolesSectionProps } from './formUserRolesSection.types'
-import type { User } from '$lib/types'
 import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'
+import type { User } from '$lib/db/zod/schema/user.types'
 
 type UserRoleCardViewModel = {
   userId: string
@@ -22,6 +22,8 @@ type UserRoleCardViewModel = {
 let {
   title,
   subtitle,
+  transitionEntityKey = null,
+  removeSelfResourceLabel,
   issues = [],
   userRoles,
   hiddenUserIdInputAttrs = [],
@@ -47,9 +49,14 @@ let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 let stableRoles = $state<OrganisationRoleUser[]>([])
 let displayRoleCards = $state<UserRoleCardViewModel[]>([])
+let searchMountEl = $state<HTMLDivElement | null>(null)
+
+function getUserName(userRole: OrganisationRoleUser): string {
+  return userRole.user?.name ?? ''
+}
 
 const sortedRoles = $derived(
-  [...userRoles].sort((a, b) => (a.user.name ?? '').localeCompare(b.user.name ?? '')),
+  [...userRoles].sort((a, b) => getUserName(a).localeCompare(getUserName(b))),
 )
 const userIdSet = $derived(new Set(userRoles.map(userRole => userRole.userId)))
 
@@ -68,20 +75,20 @@ function toUserRoleCardViewModel(
   return {
     userId: userRole.userId,
     role: userRole.role as OrganisationRoleType,
-    name: userRole.user.name ?? null,
-    attribution: userRole.user.attribution ?? null,
-    image: toImageSrc(userRole.user.image),
+    name: userRole.user?.name ?? null,
+    attribution: userRole.user?.attribution ?? null,
+    image: toImageSrc(userRole.user?.image),
   }
 }
 
 function isDisplayReadyUserRole(userRole: OrganisationRoleUser): boolean {
-  const name = userRole.user.name
+  const name = userRole.user?.name
   if (typeof name !== 'string') return false
 
   const trimmedName = name.trim()
   if (trimmedName.length === 0) return false
   if (trimmedName === userRole.userId) return false
-  if ('id' in userRole.user && typeof userRole.user.id === 'string') {
+  if (typeof userRole.user?.id === 'string') {
     if (trimmedName === userRole.user.id) return false
   }
 
@@ -99,8 +106,8 @@ const renderedRoleCards = $derived(renderedRoles.map(toUserRoleCardViewModel))
 const areRenderedRolesDisplayReady = $derived(
   renderedRoles.every(isDisplayReadyUserRole),
 )
-const displayRoleCardsKey = $derived(
-  displayRoleCards.map(userRole => `${userRole.userId}:${userRole.role}`).join('|'),
+const resolvedTransitionKey = $derived(
+  transitionEntityKey ?? `static:${typeof title === 'string' ? title : 'default'}`,
 )
 const transitionPersistenceKey = $derived(
   `form-user-roles:${typeof title === 'string' ? title : 'default'}`,
@@ -117,6 +124,11 @@ function toggleRemoving(): void {
 function handleAddUser(user: User): void {
   if (userIdSet.has(user.id)) return
   onAddUser(user)
+}
+
+function focusSearchInput(): void {
+  const input = searchMountEl?.querySelector<HTMLInputElement>('input[type="text"]')
+  input?.focus()
 }
 
 $effect(() => {
@@ -204,10 +216,14 @@ $effect(() => {
   </SectionHeader>
 
   {#if isAdding && showModeUi}
-    <div transition:slide={{ duration: showModeUi ? 200 : 0 }}>
+    <div
+      bind:this={searchMountEl}
+      transition:slide={{ axis: 'y', duration: 200 }}
+      onintroend={focusSearchInput}
+    >
       <Search
         placeholder="Search users…"
-        focusOnMount={true}
+        focusOnMount={false}
         {userQueryParams}
         excludeIds={Array.from(userIdSet)}
         getItemId={(user: User) => user.id}
@@ -223,13 +239,15 @@ $effect(() => {
   {/if}
 
   {#if isRemoving && showModeUi}
-    <div transition:slide={{ duration: showModeUi ? 200 : 0 }}>
-      <FormUserRolesSectionPrimitive.WarningBar />
+    <div transition:slide={{ axis: 'y', duration: 200 }}>
+      <FormUserRolesSectionPrimitive.WarningBar
+        resourceLabel={removeSelfResourceLabel ?? m.resource__organisation_singular()}
+      />
     </div>
   {/if}
 
   <TransitionStack
-    valueKey={displayRoleCardsKey}
+    valueKey={resolvedTransitionKey}
     value={displayRoleCards}
     isReady={true}
     persistenceKey={transitionPersistenceKey}
