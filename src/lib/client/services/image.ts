@@ -15,6 +15,8 @@ import {
   updateImage as updateImageRemote,
 } from '$lib/api/server/image.remote'
 import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
+import type { ProjectGetState } from '$lib/db/zod/schema/project.types'
+import type { HubGetState } from '$lib/db/zod/schema/hub.types'
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
 // TYPES
@@ -642,13 +644,53 @@ export async function updateImagePresentationMode(options: {
  * Mutates an organisation response state in place to update image presentation mode.
  * Returns `true` when an image exists and was updated.
  */
+export function setEntityImagePresentationMode<
+  TState extends {
+    data?: {
+      image?: {
+        image?: {
+          presentationMode?: 'cover' | 'contain'
+        } | null
+      } | null
+    } | null
+  } | null,
+>(state: TState, mode: 'cover' | 'contain'): boolean {
+  if (!state?.data?.image?.image) return false
+  state.data.image.image.presentationMode = mode
+  return true
+}
+
+/**
+ * Mutates an organisation response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
 export function setOrganisationImagePresentationMode(
   state: OrganisationGetState,
   mode: 'cover' | 'contain',
 ): boolean {
-  if (!state?.data?.image) return false
-  state.data.image.image.presentationMode = mode
-  return true
+  return setEntityImagePresentationMode(state, mode)
+}
+
+/**
+ * Mutates a project response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
+export function setProjectImagePresentationMode(
+  state: ProjectGetState,
+  mode: 'cover' | 'contain',
+): boolean {
+  return setEntityImagePresentationMode(state, mode)
+}
+
+/**
+ * Mutates a hub response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
+export function setHubImagePresentationMode(
+  state: HubGetState,
+  mode: 'cover' | 'contain',
+): boolean {
+  return setEntityImagePresentationMode(state, mode)
 }
 
 /**
