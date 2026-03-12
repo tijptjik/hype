@@ -7,9 +7,9 @@ import Sidebar from '$lib/components/panels/Admin.svelte'
 import AutoHide from '$lib/components/common/AutoHide.svelte'
 import MinWidthProtector from '$lib/components/layout/MinWidth.svelte'
 import Settings from '$lib/components/panels/Settings.svelte'
-import Header from '$lib/bits/patterns/header/Header.svelte'
+import Header from '$lib/bits/patterns/layout/header/Header.svelte'
 // ADAPTERS
-import { useHeaderAdapter } from '$lib/bits/patterns/header/HeaderAdapter.svelte'
+import { useAdminHeaderModel } from '$lib/adapters/header'
 // CONTEXT
 import { setAdminCtx } from '$lib/context/admin.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
@@ -38,7 +38,7 @@ const appCtx = getAppCtx()
 // CONTEXT :: ADMIN
 const adminCtx = setAdminCtx(queryClient, appCtx)
 setHeaderCtrl()
-const useAdapter = useHeaderAdapter(appCtx, adminCtx)
+const headerModel = useAdminHeaderModel(appCtx, adminCtx)
 
 // Initialize AdminCtx if AppCtx is ready
 $effect(() => {
@@ -91,9 +91,9 @@ afterNavigate(() => {
     <div class="flex h-full w-full overflow-hidden drag-none">
       <AutoHide> <Sidebar /> </AutoHide>
       <main
-        class="flex h-full flex-1 flex-col overflow-hidden bg-gradient-to-bl from-rose-500 to-fuchsia-800 bg-fixed"
+        class="flex h-full flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed"
       >
-        <Header {...useAdapter.getHeaderProps()} />
+        <Header {...headerModel.getHeaderProps()} />
         {@render children()}
       </main>
       <Settings />

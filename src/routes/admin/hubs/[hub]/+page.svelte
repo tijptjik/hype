@@ -11,6 +11,7 @@ import { toast } from 'svelte-sonner'
 import {
   addUserRoleSelection,
   applyChangedRelationField,
+  captureHeaderTransitionSnapshot,
   createResourceEditorPage,
   createResourceFormConfig,
   guardRefDesync,
@@ -20,6 +21,8 @@ import {
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
+  resolveOptimisticHeaderFacets,
+  resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
@@ -57,6 +60,7 @@ import {
   updateProjectPropertyI18n,
   updateProjectPropertyValueI18n,
 } from '$lib/client/services/property'
+import { setHubImagePresentationMode } from '$lib/client/services/image'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -114,6 +118,7 @@ import type {
   UserRoleFieldNameResolverForm,
   HubOrganisationFieldNameResolverForm,
   FormDataUpdaterForm,
+  HeaderTransitionSnapshot,
 } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
@@ -158,11 +163,20 @@ let contentsElement: HTMLFormElement | undefined = $state()
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
-let lastLoggedIssueSignature = $state('')
 let fieldsLayoutMutationVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
 let selectedOrganisationsById = $state<Record<string, any>>({})
 let hasAutoEnteredEditForNew = $state(false)
+let settledHubRef = $state<string | null>(null)
+let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
+  canEdit: true,
+  canPublish: true,
+  showDeleteAction: true,
+  showPublishAction: true,
+  isPublished: false,
+  isDeleted: false,
+  facets: [],
+})
 
 // § State - Data
 
@@ -172,6 +186,11 @@ let committedHub: HubGetState = $state(null)
 const commitHubState = (value: HubGetState): void => {
   committedHub = value
   hub = value
+}
+
+const commitSettledHubState = (value: HubGetState): void => {
+  commitHubState(value)
+  settledHubRef = value?.data?.code ?? null
 }
 
 // § Derived State - Flags
@@ -186,6 +205,7 @@ const isCurrentRefLoaded = $derived.by(() => {
   if (isNewHubRef) return true
   return guardRefDesync(hub as any, committedHub as any, hubRef)
 })
+const isCurrentRefSettled = $derived(isNewHubRef || settledHubRef === hubRef)
 
 // § Form
 
@@ -255,7 +275,7 @@ const configuredHubForm = configureForm<any>(() => ({
     refreshResource: async ({ data, shouldRedirect }) => {
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshHub(shouldRedirect ? submittedCode : undefined)
-      commitHubState(refreshed)
+      commitSettledHubState(refreshed)
       if (refreshed?.data) {
         formCtx.form.fields.set(toHubFormInput(refreshed.data))
       }
@@ -300,16 +320,6 @@ const facetIssueState = $derived.by(() =>
 )
 const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
 const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
-
-$effect(() => {
-  if (!formCtx.wasSubmitAttempted) return
-  const issues = formCtx.allIssues ?? []
-  if (issues.length === 0) return
-  const signature = toStableSignature(issues)
-  if (signature === lastLoggedIssueSignature) return
-  lastLoggedIssueSignature = signature
-  console.log('[admin.hubs.form][issues]', issues)
-})
 
 // GLOBAL PROPERTIES
 
@@ -887,7 +897,7 @@ async function handleHubStateToggle({
       }).withOverride(overrideHubListItemBoolean(hubData.id, field, nextState)),
     )
 
-    commitHubState(await refreshHub())
+    commitSettledHubState(await refreshHub())
     toast.success(`${nextState ? successWhenTrue : successWhenFalse} ${hubData.code}`)
   } catch {
     toast.error(m.long_crazy_peacock_care())
@@ -946,54 +956,71 @@ function onSubmit(): void {
 
 function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
   if (!canEditImagePresentationMode) return
-  if (hub?.data?.image) {
-    hub.data.image.image.presentationMode = nextMode
-  }
-  if (committedHub?.data?.image) {
-    committedHub.data.image.image.presentationMode = nextMode
-  }
+  setHubImagePresentationMode(hub, nextMode)
+  setHubImagePresentationMode(committedHub, nextMode)
 }
 
 // § Effects
 
 $effect(() => {
-  const ref = hubRef
+  hubRef
+  optimisticHeaderState = captureHeaderTransitionSnapshot(headerCtrl)
+})
+
+$effect(() => {
+  const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
   return resourceEditorPage.syncRouteAndLoad({
-    ref,
+    ref: hubRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
+      settledHubRef = null
     },
     setFacetForRef: nextRef => {
       untrack(() => {
+        const currentFacet = adminCtx.activeFacet
         const nextFacet =
-          adminCtx.activeFacet === 'images'
-            ? 'images'
-            : adminCtx.activeFacet === 'fields'
-              ? 'fields'
-              : 'core'
+          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+            ? currentFacet
+            : 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.hub)
       })
     },
     load: refreshHub,
-    commit: commitHubState,
+    commit: commitSettledHubState,
   })
 })
 
 $effect(() => {
-  const ref = hubRef
   const title =
     (isNewHubRef ? `${NEW_TITLE} ${m.hub__title()}` : undefined) ??
     hub?.data?.i18n?.[getLocale()]?.name ??
     hub?.data?.code ??
     m.hub__title()
-  const facetKey = Array.from(resolvedFacetTabsWithIssues.entries())
-    .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
-    .join('|')
-  const headerKey = `${ref}:${title}:${facetKey}`
+  const displayFacets = resolveOptimisticHeaderFacets(
+    isCurrentRefSettled,
+    resolvedFacetTabsWithIssues,
+    optimisticHeaderState,
+  )
+  const facetKey = Array.isArray(displayFacets)
+    ? displayFacets
+        .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
+        .join('|')
+    : Array.from(displayFacets.entries())
+        .map(
+          ([facet, config]) =>
+            `${facet}:${typeof config === 'string' ? '0' : config.hasIssues ? '1' : '0'}`,
+        )
+        .join('|')
+  const headerKey = `${hubRef}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, HubIcon, resolvedFacetTabsWithIssues)
+  if (Array.isArray(displayFacets)) {
+    headerCtrl.setHeaderForEntity(title, HubIcon, new Map())
+    headerCtrl.setFacets(displayFacets)
+    return
+  }
+  headerCtrl.setHeaderForEntity(title, HubIcon, displayFacets)
 })
 
 $effect(() => {
@@ -1030,6 +1057,7 @@ $effect(() => {
 })
 
 $effect(() => {
+  if (!isCurrentRefSettled && !isNewHubRef) return
   if (canSubmitHub) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
@@ -1046,33 +1074,40 @@ $effect(() => {
 
 $effect(() => {
   const isImageFacetActive = isImagesFacet
-  const dirty = isDirty
-  const isSubmitting = formCtx.submitting
-  const hasIssues = visibleAllIssues.length > 0
-  const isPublished = Boolean(hub?.data?.isPublished)
-  const isDeleted = Boolean(hub?.data?.isArchived)
+  const status = resolveOptimisticHeaderStatus({
+    isSettled: isCurrentRefSettled,
+    isImageFacetActive,
+    isNewRef: isNewHubRef,
+    dirty: isDirty,
+    isSubmitting: formCtx.submitting,
+    hasIssues: visibleAllIssues.length > 0,
+    isPublished: Boolean(hub?.data?.isPublished),
+    isDeleted: Boolean(hub?.data?.isArchived),
+    canEdit: canSubmitHub,
+    canPublish: canPublishHub,
+    showDeleteAction: !isNewHubRef && canDeleteHub,
+    showPublishAction: !isNewHubRef,
+    snapshot: optimisticHeaderState,
+  })
+  const inertActionOverrides =
+    isCurrentRefSettled && !isImageFacetActive
+      ? {}
+      : {
+          onEditingToggle: () => {},
+          onReset: () => {},
+          onSave: () => {},
+          onDeleteToggle: () => {},
+          onPublishToggle: () => {},
+        }
 
   lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
     headerCtrl,
     status: {
-      dirty: isImageFacetActive ? false : dirty,
-      isSubmitting: isImageFacetActive ? false : isSubmitting,
-      hasIssues: isImageFacetActive ? false : hasIssues,
-      isPublished,
-      isDeleted,
-      canEdit: isImageFacetActive ? false : canSubmitHub && isCurrentRefLoaded,
-      canPublish: !isNewHubRef && canPublishHub && isCurrentRefLoaded,
-      showDeleteAction: isImageFacetActive ? false : !isNewHubRef && canDeleteHub,
-      showPublishAction: !isNewHubRef,
+      ...status,
+      ...inertActionOverrides,
     },
     lastSignature: lastFormActionsSignature,
   })
-})
-
-$effect(() => {
-  return () => {
-    resourceEditorPage.clearHeaderActions()
-  }
 })
 </script>
 

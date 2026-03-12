@@ -12,6 +12,7 @@ import { toast } from 'svelte-sonner'
 // SERVICES
 import {
   addUserRoleSelection,
+  captureHeaderTransitionSnapshot,
   createResourceEditorPage,
   createResourceFormConfig,
   getUserRoleHiddenInputAttrs,
@@ -22,6 +23,8 @@ import {
   revalidateAfterSubmitAttempt,
   resetLocaleFields,
   removeUserRoleSelection,
+  resolveOptimisticHeaderFacets,
+  resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   toFormLevelIssueMessages,
   toIssueMessage,
@@ -118,6 +121,7 @@ import type {
   Id,
   CapabilityDefinitions,
   CapabilityKey,
+  HeaderTransitionSnapshot,
 } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
@@ -152,6 +156,17 @@ const currentFormLocale = $derived(toLocaleKey(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
+const cachedOrganisationForRef = $derived(
+  adminCtx.appCtx.getResourceByRefSync(
+    FirstClassResource.organisation,
+    organisationRef,
+  ) as OrganisationDB | undefined,
+)
+const cachedOrganisationState = $derived(
+  cachedOrganisationForRef
+    ? ({ data: cachedOrganisationForRef } as OrganisationGetState)
+    : null,
+)
 
 // § State - Elements
 
@@ -163,8 +178,19 @@ let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let fieldsLayoutMutationVersion = $state(0)
+let capabilityResetVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
 let hasAutoEnteredEditForNew = $state(false)
+let settledOrganisationRef = $state<string | null>(null)
+let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
+  canEdit: true,
+  canPublish: true,
+  showDeleteAction: true,
+  showPublishAction: true,
+  isPublished: false,
+  isDeleted: false,
+  facets: [],
+})
 
 // § State - Data
 
@@ -174,6 +200,11 @@ let committedOrganisation: OrganisationGetState = $state(null)
 const commitOrganisationState = (value: OrganisationGetState): void => {
   committedOrganisation = value
   organisation = value
+}
+
+const commitSettledOrganisationState = (value: OrganisationGetState): void => {
+  commitOrganisationState(value)
+  settledOrganisationRef = value?.data?.code ?? null
 }
 
 // § Derived State - Flags
@@ -191,6 +222,12 @@ const isCurrentRefLoaded = $derived.by(() => {
   if (isNewOrganisationRef) return true
   return guardRefDesync(organisation, committedOrganisation, organisationRef)
 })
+const isCurrentRefSettled = $derived(
+  isNewOrganisationRef || settledOrganisationRef === organisationRef,
+)
+const optimisticOrganisationData = $derived.by(() =>
+  isCurrentRefLoaded ? organisation?.data : cachedOrganisationForRef,
+)
 
 // § Form
 
@@ -240,10 +277,7 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
       const refreshed = await refreshOrganisation(
         shouldRedirect ? submittedCode : undefined,
       )
-      commitOrganisationState(refreshed)
-      if (refreshed?.data) {
-        formCtx.form.fields.set(toOrganisationFormInput(refreshed.data as any))
-      }
+      commitSettledOrganisationState(refreshed)
     },
   }),
 }))
@@ -643,7 +677,7 @@ const currentUser = $derived(adminCtx.appCtx.getUser())
 const currentHub = $derived(adminCtx.appCtx.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
 const organisationPermissions = $derived.by(() => {
-  const organisationData = organisation?.data
+  const organisationData = optimisticOrganisationData
   const newEntityHubId = currentHub?.isCore
     ? null
     : ((currentHub as { id?: string } | null | undefined)?.id ?? null)
@@ -663,6 +697,7 @@ const organisationPermissions = $derived.by(() => {
 const canCreateOrganisation = $derived(organisationPermissions.canCreate)
 const canEditOrganisation = $derived(organisationPermissions.canEdit)
 const canPublishOrganisation = $derived(organisationPermissions.canPublish)
+const canDeleteOrganisation = $derived(organisationPermissions.canDelete)
 const resolvedFacetTabs = $derived.by(() => {
   if (isNewOrganisationRef) {
     return getAdminFacetTabsForResource(FirstClassResource.organisation, {
@@ -681,6 +716,9 @@ const canEditImagePresentationMode = $derived(
   canSubmitOrganisation && isCurrentRefLoaded,
 )
 const canEditImageDropzone = $derived(canEditOrganisation && isCurrentRefLoaded)
+const isFormReady = $derived(
+  Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef)),
+)
 
 // § Handlers
 
@@ -806,7 +844,7 @@ async function handleOrganisationStateToggle({
         // TODO Invalidate cache
       ),
     )
-    commitOrganisationState(await refreshOrganisation())
+    commitSettledOrganisationState(await refreshOrganisation())
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(organisation, 'nameShort')}`,
     )
@@ -842,6 +880,7 @@ async function onDeleteToggle(): Promise<void> {
 function onReset(): void {
   fieldRemoveMode = false
   fieldsLayoutMutationVersion += 1
+  capabilityResetVersion += 1
   suppressFormLevelIssues = true
   formCtx.clearSubmitAttemptState()
   if (committedOrganisation?.data) {
@@ -875,43 +914,74 @@ function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
 
 // § Effects
 
+// Seed the next route with cached entity data when available.
+$effect(() => {
+  organisationRef
+  const cachedCode = cachedOrganisationState?.data?.code
+  if (!cachedCode) return
+  if (organisation?.data?.code === cachedCode) return
+  commitOrganisationState(cachedOrganisationState)
+})
+
+// Preserve the previous page's form affordances while the next ref resolves auth.
+$effect(() => {
+  organisationRef
+  optimisticHeaderState = captureHeaderTransitionSnapshot(headerCtrl)
+})
+
 // Keep facet + entity data in sync with the current route ref.
 $effect(() => {
-  const ref = organisationRef
+  const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
   return resourceEditorPage.syncRouteAndLoad({
-    ref,
+    ref: organisationRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
+      settledOrganisationRef = null
     },
     setFacetForRef: nextRef => {
       untrack(() => {
         const currentFacet = adminCtx.activeFacet
         const nextFacet =
-          currentFacet && resolvedFacetTabs.has(currentFacet) ? currentFacet : 'core'
+          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+            ? currentFacet
+            : 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.organisation)
       })
     },
     load: refreshOrganisation,
-    commit: commitOrganisationState,
+    commit: commitSettledOrganisationState,
   })
 })
 
 // Keep entity header metadata (title/icon/facets) aligned with loaded organisation data.
 $effect(() => {
-  const ref = organisationRef
   const title =
     (isNewOrganisationRef ? `${NEW_TITLE} ${m.any_small_midge_aim()}` : undefined) ??
-    organisation?.data?.i18n?.[getLocaleKey()]?.name ??
-    organisation?.data?.code ??
+    optimisticOrganisationData?.i18n?.[getLocaleKey()]?.name ??
+    optimisticOrganisationData?.code ??
     m.any_small_midge_aim()
-  const facetKey = Array.from(resolvedFacetTabsWithIssues.entries())
-    .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
-    .join('|')
-  const headerKey = `${ref}:${title}:${facetKey}`
+  const displayFacets = resolveOptimisticHeaderFacets(
+    isCurrentRefSettled,
+    resolvedFacetTabsWithIssues,
+    optimisticHeaderState,
+  )
+  const facetKey = Array.isArray(displayFacets)
+    ? displayFacets
+        .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
+        .join('|')
+    : Array.from(displayFacets.entries())
+        .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
+        .join('|')
+  const headerKey = `${organisationRef}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, OrganisationIcon, resolvedFacetTabsWithIssues)
+  if (Array.isArray(displayFacets)) {
+    headerCtrl.setHeaderForEntity(title, OrganisationIcon, new Map())
+    headerCtrl.setFacets(displayFacets)
+    return
+  }
+  headerCtrl.setHeaderForEntity(title, OrganisationIcon, displayFacets)
 })
 
 $effect(() => {
@@ -925,7 +995,7 @@ $effect(() => {
 
 // Archived entities are read-only until restored.
 $effect(() => {
-  if (!organisation?.data?.isArchived) return
+  if (!optimisticOrganisationData?.isArchived) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
 })
@@ -952,6 +1022,7 @@ $effect(() => {
 
 // Keep unauthorized users out of edit mode if the header state gets toggled externally.
 $effect(() => {
+  if (!isCurrentRefSettled && !isNewOrganisationRef) return
   if (canSubmitOrganisation) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
@@ -983,33 +1054,39 @@ $effect(() => {
 // Push reactive form/resource status state into shared header controls.
 $effect(() => {
   const isImageFacetActive = isImagesFacet
-  const dirty = isDirty
-  const isSubmitting = formCtx.submitting
-  const hasIssues = visibleAllIssues.length > 0
-  const isPublished = Boolean(organisation?.data?.isPublished)
-  const isDeleted = Boolean(organisation?.data?.isArchived)
+  const status = resolveOptimisticHeaderStatus({
+    isSettled: isCurrentRefSettled,
+    isImageFacetActive,
+    isNewRef: isNewOrganisationRef,
+    dirty: isDirty,
+    isSubmitting: formCtx.submitting,
+    hasIssues: visibleAllIssues.length > 0,
+    isPublished: Boolean(optimisticOrganisationData?.isPublished),
+    isDeleted: Boolean(optimisticOrganisationData?.isArchived),
+    canEdit: canSubmitOrganisation,
+    canPublish: canPublishOrganisation,
+    showDeleteAction: !isNewOrganisationRef && canDeleteOrganisation,
+    showPublishAction: !isNewOrganisationRef,
+    snapshot: optimisticHeaderState,
+  })
+  const inertActionOverrides =
+    isCurrentRefSettled && !isImageFacetActive
+      ? {}
+      : {
+          onEditingToggle: () => {},
+          onReset: () => {},
+          onSave: () => {},
+          onDeleteToggle: () => {},
+          onPublishToggle: () => {},
+        }
   lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
     headerCtrl,
     status: {
-      dirty: isImageFacetActive ? false : dirty,
-      isSubmitting: isImageFacetActive ? false : isSubmitting,
-      hasIssues: isImageFacetActive ? false : hasIssues,
-      isPublished,
-      isDeleted,
-      canEdit: isImageFacetActive ? false : canSubmitOrganisation && isCurrentRefLoaded,
-      canPublish: !isNewOrganisationRef && canPublishOrganisation && isCurrentRefLoaded,
-      showDeleteAction: isImageFacetActive ? false : !isNewOrganisationRef,
-      showPublishAction: !isNewOrganisationRef,
+      ...status,
+      ...inertActionOverrides,
     },
     lastSignature: lastFormActionsSignature,
   })
-})
-
-// Clear route-provided header form actions on unmount.
-$effect(() => {
-  return () => {
-    resourceEditorPage.clearHeaderActions()
-  }
 })
 </script>
 
@@ -1017,7 +1094,7 @@ $effect(() => {
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
-    isReady={Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef))}
+    isReady={isFormReady}
     class="space-y-4"
   >
     <Main.Section
@@ -1090,6 +1167,7 @@ $effect(() => {
         {currentFormLocale}
         {locales}
         {isEditing}
+        resetVersion={capabilityResetVersion}
         {capabilityLabelsByKey}
         formCapabilityFields={formCtx.form.fields.data.capabilities as CapabilityFormFields}
         {shouldSubmitEmptyCapabilities}
@@ -1104,7 +1182,7 @@ $effect(() => {
     <Main.Section
       isVisible={isFieldsFacet}
       transition="fade"
-      class="bits-theme flex gap-4 min-h-0 flex-col"
+      class="bits-theme min-h-0 pb-4"
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormFieldsSection
@@ -1115,7 +1193,7 @@ $effect(() => {
         actions={fieldActions}
         issueItemIds={fieldSectionIssueItemIds}
         layoutMutationVersion={fieldsLayoutMutationVersion}
-        canEdit={canSubmitOrganisation && isCurrentRefLoaded}
+        canEdit={canSubmitOrganisation || !isCurrentRefSettled}
         {isEditing}
         removeMode={fieldRemoveMode}
         onRemoveModeChange={value => {

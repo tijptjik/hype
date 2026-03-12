@@ -10,10 +10,13 @@ import { getLocale, getLocaleKey, getLocaleOrder, m, toLocaleKey } from '$lib/i1
 import { toast } from 'svelte-sonner'
 // SERVICES
 import {
+  captureHeaderTransitionSnapshot,
   createResourceEditorPage,
   createResourceFormConfig,
   handleResourceBooleanStateToggle,
   revalidateAfterSubmitAttempt,
+  resolveOptimisticHeaderFacets,
+  resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   resetLocaleFields,
   toFormLevelIssueMessages,
@@ -81,7 +84,7 @@ import LayerIcon from 'virtual:icons/lucide/layers'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Locale, FormDataUpdaterForm } from '$lib/types'
+import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {
   LayerGetState,
@@ -205,10 +208,19 @@ let contentsElement: HTMLFormElement | undefined = $state()
 
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
-let lastSubmitDebugSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let hasAutoEnteredEditForNew = $state(false)
 let lastMergedProjectId = $state<string | null>(null)
+let settledLayerRef = $state<string | null>(null)
+let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
+  canEdit: true,
+  canPublish: true,
+  showDeleteAction: true,
+  showPublishAction: true,
+  isPublished: false,
+  isDeleted: false,
+  facets: [],
+})
 
 /********************
  *  RESOURCE STATE
@@ -219,6 +231,11 @@ let committedLayer: LayerGetState = $state(null)
 const commitLayerState = (value: LayerGetState): void => {
   committedLayer = value
   layer = value
+}
+
+const commitSettledLayerState = (value: LayerGetState): void => {
+  commitLayerState(value)
+  settledLayerRef = value?.data?.id ?? null
 }
 
 const isCoreFacet = $derived(activeFacet === 'core')
@@ -237,6 +254,7 @@ const isCurrentRefLoaded = $derived.by(() => {
     committedId === layerRef
   )
 })
+const isCurrentRefSettled = $derived(isNewLayerRef || settledLayerRef === layerRef)
 
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
 type LayerEditorFormInput = ReturnType<typeof toLayerFormInput>
@@ -317,7 +335,7 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
         const createdId = (result as { data?: { id?: unknown } } | null)?.data?.id
         if (typeof createdId === 'string' && createdId.trim().length > 0) {
           const refreshed = await refreshLayer(createdId)
-          commitLayerState(refreshed)
+          commitSettledLayerState(refreshed)
           if (refreshed?.data) {
             formCtx.form.fields.set(toLayerFormInput(refreshed.data))
           }
@@ -332,7 +350,7 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
       }
 
       const refreshed = await refreshLayer()
-      commitLayerState(refreshed)
+      commitSettledLayerState(refreshed)
       if (refreshed?.data) {
         formCtx.form.fields.set(toLayerFormInput(refreshed.data))
       }
@@ -774,22 +792,32 @@ function onSubmit(): void {
 
 // Route sync
 $effect(() => {
-  const ref = layerRef
+  layerRef
+  optimisticHeaderState = captureHeaderTransitionSnapshot(headerCtrl)
+})
+
+$effect(() => {
+  const resolvedFacetTabsSnapshot = untrack(() => headerFacetTabsWithIssues)
   return resourceEditorPage.syncRouteAndLoad({
-    ref,
+    ref: layerRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
       lastMergedProjectId = null
+      settledLayerRef = null
     },
     setFacetForRef: nextRef => {
       untrack(() => {
-        const nextFacet = adminCtx.activeFacet === 'fields' ? 'fields' : 'core'
+        const currentFacet = adminCtx.activeFacet
+        const nextFacet =
+          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+            ? currentFacet
+            : 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.layer)
       })
     },
     load: refreshLayer,
-    commit: commitLayerState,
+    commit: commitSettledLayerState,
   })
 })
 
@@ -814,47 +842,40 @@ $effect(() => {
 
 // Header sync
 $effect(() => {
-  const ref = layerRef
   const title =
     (isNewLayerRef ? `${NEW_TITLE} ${m.maps__layers()}` : undefined) ??
     layer?.data?.i18n?.[getLocaleKey()]?.name ??
     m.maps__layers()
-
-  const facetKey = Array.from(headerFacetTabsWithIssues.entries())
-    .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
-    .join('|')
-  const headerKey = `${ref}:${title}:${facetKey}`
+  const displayFacets = resolveOptimisticHeaderFacets(
+    isCurrentRefSettled,
+    headerFacetTabsWithIssues,
+    optimisticHeaderState,
+  )
+  const facetKey = Array.isArray(displayFacets)
+    ? displayFacets
+        .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
+        .join('|')
+    : Array.from(displayFacets.entries())
+        .map(
+          ([facet, config]) =>
+            `${facet}:${typeof config === 'string' ? '0' : config.hasIssues ? '1' : '0'}`,
+        )
+        .join('|')
+  const headerKey = `${layerRef}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, LayerIcon, headerFacetTabsWithIssues)
+  if (Array.isArray(displayFacets)) {
+    headerCtrl.setHeaderForEntity(title, LayerIcon, new Map())
+    headerCtrl.setFacets(displayFacets)
+    return
+  }
+  headerCtrl.setHeaderForEntity(title, LayerIcon, displayFacets)
 })
 
 // Submit issue routing
 $effect(() => {
   if (!formCtx.wasSubmitAttempted) return
   if (visibleAllIssues.length === 0) return
-
-  const issueRows = visibleAllIssues.map((issue: unknown) => {
-    const record = (issue ?? {}) as { path?: unknown; message?: unknown }
-    const path = Array.isArray(record.path)
-      ? record.path.join('.')
-      : String(record.path ?? '')
-    const message = String(record.message ?? '')
-    return { path, message }
-  })
-  const debugSignature = JSON.stringify({
-    activeFacet,
-    issues: issueRows,
-  })
-  if (debugSignature !== lastSubmitDebugSignature) {
-    lastSubmitDebugSignature = debugSignature
-    console.error('[admin.layers.form][issues] submit-blocking details')
-    console.error('activeFacet', activeFacet)
-    console.error('firstFacetWithIssues', facetIssueSummary.firstFacetWithIssues)
-    console.error('facetsWithIssues', Array.from(facetIssueSummary.facetsWithIssues))
-    console.error('rawIssues', visibleAllIssues)
-    console.table(issueRows)
-  }
 
   const targetFacet = facetIssueSummary.firstFacetWithIssues
   if (!targetFacet) return
@@ -883,6 +904,7 @@ $effect(() => {
 })
 
 $effect(() => {
+  if (!isCurrentRefSettled && !isNewLayerRef) return
   if (canSubmitLayer) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
@@ -899,33 +921,39 @@ $effect(() => {
 })
 
 $effect(() => {
-  const dirty = isDirty
-  const isSubmitting = formCtx.submitting
-  const hasIssues = visibleAllIssues.length > 0
-  const isPublished = Boolean(layer?.data?.isPublished)
-  const isDeleted = Boolean(layer?.data?.isArchived)
+  const status = resolveOptimisticHeaderStatus({
+    isSettled: isCurrentRefSettled,
+    isImageFacetActive: false,
+    isNewRef: isNewLayerRef,
+    dirty: isDirty,
+    isSubmitting: formCtx.submitting,
+    hasIssues: visibleAllIssues.length > 0,
+    isPublished: Boolean(layer?.data?.isPublished),
+    isDeleted: Boolean(layer?.data?.isArchived),
+    canEdit: canSubmitLayer,
+    canPublish: canPublishLayer,
+    showDeleteAction: !isNewLayerRef && canDeleteLayer,
+    showPublishAction: !isNewLayerRef,
+    snapshot: optimisticHeaderState,
+  })
+  const inertActionOverrides = isCurrentRefSettled
+    ? {}
+    : {
+        onEditingToggle: () => {},
+        onReset: () => {},
+        onSave: () => {},
+        onDeleteToggle: () => {},
+        onPublishToggle: () => {},
+      }
 
   lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
     headerCtrl,
     status: {
-      dirty,
-      isSubmitting,
-      hasIssues,
-      isPublished,
-      isDeleted,
-      canEdit: canSubmitLayer && isCurrentRefLoaded,
-      canPublish: !isNewLayerRef && canPublishLayer && isCurrentRefLoaded,
-      showDeleteAction: !isNewLayerRef && canDeleteLayer,
-      showPublishAction: !isNewLayerRef,
+      ...status,
+      ...inertActionOverrides,
     },
     lastSignature: lastFormActionsSignature,
   })
-})
-
-$effect(() => {
-  return () => {
-    resourceEditorPage.clearHeaderActions()
-  }
 })
 </script>
 

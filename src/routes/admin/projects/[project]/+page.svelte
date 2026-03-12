@@ -13,6 +13,7 @@ import { toast } from 'svelte-sonner'
 import {
   addUserRoleSelection,
   applyChangedRelationField,
+  captureHeaderTransitionSnapshot,
   createResourceEditorPage,
   createResourceFormConfig,
   getNameForToast,
@@ -20,6 +21,8 @@ import {
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
+  resolveOptimisticHeaderFacets,
+  resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   resetLocaleFields,
   toFormLevelIssueMessages,
@@ -69,6 +72,7 @@ import {
   removeProjectPropertyValue,
   reorderProjectPropertyValue,
 } from '$lib/client/services/property'
+import { setProjectImagePresentationMode } from '$lib/client/services/image'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -128,6 +132,7 @@ import type {
   CapabilityDefinitions,
   CapabilityKey,
   FormDataUpdaterForm,
+  HeaderTransitionSnapshot,
   Locale,
   ResourceContext,
   UserRoleFieldNameResolverForm,
@@ -181,6 +186,14 @@ const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
 const parentOrganisationId = $derived(page.url.searchParams.get('parentId') ?? '')
+const cachedProjectForRef = $derived(
+  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.project, projectRef) as
+    | ProjectGetResponse['data']
+    | undefined,
+)
+const cachedProjectState = $derived(
+  cachedProjectForRef ? ({ data: cachedProjectForRef } as ProjectGetState) : null,
+)
 
 // § State - Elements
 
@@ -190,7 +203,6 @@ let contentsElement: HTMLFormElement | undefined = $state()
 
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
-let lastLoggedIssueSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let fieldsLayoutMutationVersion = $state(0)
 let isProjectFieldResetInProgress = $state(false)
@@ -203,16 +215,37 @@ let ownerRoleSeedAttempt = $state(0)
 let hasAutoEnteredEditForNew = $state(false)
 let hierarchy = $state<ResourceContext | null>(null)
 let fieldRemoveMode = $state(false)
+let settledProjectRef = $state<string | null>(null)
+let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
+  canEdit: true,
+  canPublish: true,
+  showDeleteAction: true,
+  showPublishAction: true,
+  isPublished: false,
+  isDeleted: false,
+  facets: [],
+})
+let showDisabledFields = $state(false)
 
 // § State - Data
 
 type ProjectGetState = ProjectGetResponse | null
-let project = $state<ProjectGetState>(null)
-let committedProject = $state<ProjectGetState>(null)
+let project = $state.raw<ProjectGetState>(null)
+let committedProject = $state.raw<ProjectGetState>(null)
 
 const commitProjectState = (value: ProjectGetState): void => {
   committedProject = value
   project = value
+}
+
+const commitSettledProjectState = (value: ProjectGetState): void => {
+  commitProjectState(value)
+  settledProjectRef = value?.data?.code ?? null
+}
+
+function isProjectStateForRef(state: ProjectGetState, ref: string): boolean {
+  if (!state?.data || ref === NEW_REF) return false
+  return state.data.code === ref
 }
 
 // § Derived State - Flags
@@ -223,14 +256,33 @@ const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewProjectRef = $derived(projectRef === NEW_REF)
+const activeProject = $derived.by(() =>
+  isProjectStateForRef(project, projectRef) ? project : null,
+)
+const activeCommittedProject = $derived.by(() =>
+  isProjectStateForRef(committedProject, projectRef) ? committedProject : null,
+)
+const activeProjectData = $derived(activeProject?.data ?? null)
+const activeCommittedProjectData = $derived(activeCommittedProject?.data ?? null)
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewProjectRef) return true
   return guardRefDesync(
-    project as unknown as OrganisationGetState,
-    committedProject as unknown as OrganisationGetState,
+    activeProject as unknown as OrganisationGetState,
+    activeCommittedProject as unknown as OrganisationGetState,
     projectRef,
   )
+})
+const isCurrentRefSettled = $derived(
+  isNewProjectRef || settledProjectRef === projectRef,
+)
+const optimisticProjectData = $derived.by(() =>
+  isCurrentRefLoaded ? activeProjectData : cachedProjectForRef,
+)
+const optimisticProjectHierarchy = $derived.by(() => {
+  const projectData = optimisticProjectData
+  if (!projectData) return null
+  return adminCtx.appCtx.getHierarchySync(projectData)
 })
 
 // § Form
@@ -252,11 +304,13 @@ const translatableI18nFieldsBySection: Record<
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
   form: projectForm as never,
+  initialErrors: false,
   onsubmit: (({ data }: { data: ProjectSubmitDraft }) => {
     // Normalize submit envelope (`meta` + `data`) and enforce mode/id invariants.
     const submittedPayload = prepareSubmitPayloadMeta(data as ProjectSubmitDraft, {
       defaultMode: isNewProjectRef ? 'create' : 'update',
-      resolveUpdateId: () => project?.data?.id ?? committedProject?.data?.id ?? '',
+      resolveUpdateId: () =>
+        activeProjectData?.id ?? activeCommittedProjectData?.id ?? '',
     })
     if (isNewProjectRef) {
       submittedPayload.meta.mode = 'create'
@@ -270,7 +324,7 @@ const configuredProjectForm = configureForm(() => ({
     )
 
     // Last committed server state used as baseline for changed-only relation submission.
-    const baselineFormInput = toProjectFormInput(committedProject?.data, {
+    const baselineFormInput = toProjectFormInput(activeCommittedProjectData, {
       organisationId: parentOrganisationId,
     })
 
@@ -315,8 +369,8 @@ const configuredProjectForm = configureForm(() => ({
       currentValue: currentFormSnapshot.data?.properties,
       baselineValue:
         (baselineFormInput.data as ProjectSubmitBaselineRelations).properties ?? [],
-      toEffective: ({ submittedValue, currentValue }) => {
-        const liveProperties = untrack(() => [...projectFieldsInSection])
+      toEffective: ({ currentValue }) => {
+        const liveProperties = untrack(() => [...currentProjectProperties])
         // Always prefer the live form snapshot for properties so header-only cards
         // (for inherited scopes) still contribute full rank updates.
         const raw =
@@ -339,12 +393,12 @@ const configuredProjectForm = configureForm(() => ({
     formEl: contentsElement,
     key: projectRef,
     schema: ProjectPreflightFormData as never,
-    data: toProjectFormInput(committedProject?.data, {
+    data: toProjectFormInput(activeCommittedProjectData, {
       organisationId: parentOrganisationId,
     }),
     submitUpdates: async () =>
       getProjectSubmitUpdates({
-        projectId: project?.data?.id,
+        projectId: activeProjectData?.id,
         entityQuery: getProject({
           ref: projectRef,
           refKey: 'code',
@@ -359,15 +413,12 @@ const configuredProjectForm = configureForm(() => ({
     adminCtx,
     headerCtrl,
     resourceType: FirstClassResource.project,
-    getEntity: () => project,
+    getEntity: () => activeProject,
     refreshResource: async ({ data, shouldRedirect }) => {
       // Reload committed entity after successful submit (or non-redirect save).
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshProject(shouldRedirect ? submittedCode : undefined)
-      commitProjectState(refreshed)
-      if (refreshed?.data) {
-        formCtx.form.fields.set(toProjectFormInput(refreshed.data))
-      }
+      commitSettledProjectState(refreshed)
     },
   }),
 }))
@@ -383,6 +434,9 @@ const isDirty = $derived(Boolean(formCtx.dirty))
 const projectPropertyFormAdapter = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{ id?: Id; properties?: Property[] }>,
 )
+const currentProjectProperties = $derived(
+  getCurrentProjectProperties(projectPropertyFormAdapter),
+)
 
 // ═══════════════════════
 // 2. PROPERTY FORM ACTIONS + MUTATORS
@@ -397,7 +451,7 @@ const fieldActions = {
     addProjectPropertyForType(
       projectPropertyFormAdapter,
       'classifier',
-      project?.data?.id ?? '',
+      activeProjectData?.id ?? '',
       classifierComponentTypes,
       specifierComponentTypes,
     )
@@ -405,9 +459,7 @@ const fieldActions = {
   },
   remove: (event: Event, propertyId: Id): void => {
     stopEvent(event)
-    const target = getCurrentProjectProperties(projectPropertyFormAdapter).find(
-      property => property.id === propertyId,
-    )
+    const target = currentProjectProperties.find(property => property.id === propertyId)
     if (target && target.scope !== 'project') {
       updateProjectPropertyBase(
         projectPropertyFormAdapter,
@@ -555,7 +607,8 @@ const getPropertyDisplayName = (property: Property): string =>
   (property.i18n?.en?.label ?? property.key ?? '').toString().toLowerCase()
 
 const projectFieldsInSection = $derived.by(() => {
-  const rows = [...getCurrentProjectProperties(projectPropertyFormAdapter)]
+  if (!isFieldsFacet) return []
+  const rows = [...currentProjectProperties]
 
   const sorted = rows.sort((left, right) => {
     const leftDisabledInherited = left.scope !== 'project' && !isPropertyEnabled(left)
@@ -581,18 +634,24 @@ const projectFieldsInSection = $derived.by(() => {
   }))
 })
 
-let showDisabledFields = $state(false)
-
 const isPropertyVisible = (property: Property): boolean =>
   showDisabledFields || isPropertyEnabled(property)
 
 const enabledProjectFieldWindowSize = $derived.by(() => {
+  if (!isFieldsFacet) return 0
   const firstDisabledInheritedIndex = projectFieldsInSection.findIndex(
     property => property.scope !== 'project' && !isPropertyEnabled(property),
   )
   return firstDisabledInheritedIndex >= 0
     ? firstDisabledInheritedIndex
     : projectFieldsInSection.length
+})
+
+const isProjectFieldsLoading = $derived.by(() => {
+  if (!isFieldsFacet) return false
+  if (isNewProjectRef) return false
+  if (projectFieldsInSection.length > 0) return false
+  return !isCurrentRefSettled
 })
 
 // ═══════════════════════
@@ -657,15 +716,6 @@ $effect(() => {
   })
 })
 
-$effect(() => {
-  if (!formCtx.wasSubmitAttempted) return
-  if (visibleAllIssues.length === 0) return
-
-  const signature = toStableSignature(visibleAllIssues)
-  if (signature === lastLoggedIssueSignature) return
-  lastLoggedIssueSignature = signature
-})
-
 // Property-scoped issue rows parsed from the full issue list.
 const propertyFormIssues = $derived.by(
   (): Array<{ message: string; path?: Array<string | number> }> =>
@@ -673,6 +723,7 @@ const propertyFormIssues = $derived.by(
 )
 
 const fieldSectionIssues = $derived.by(() => {
+  if (!isFieldsFacet) return []
   const messages = propertyFormIssues
     .map(issue => issue.message)
     .filter(Boolean)
@@ -681,7 +732,8 @@ const fieldSectionIssues = $derived.by(() => {
 })
 
 const fieldSectionIssueItemIds = $derived.by(() => {
-  const properties = getCurrentProjectProperties(projectPropertyFormAdapter)
+  if (!isFieldsFacet) return []
+  const properties = currentProjectProperties
   const ids = propertyFormIssues
     .map(issue => {
       const path = issue.path
@@ -854,7 +906,8 @@ const roleFieldNameByUserId = $derived.by(() => {
 
 // Display-ready project role rows merged from persisted roles + current form edits.
 const projectUserRoles = $derived.by(() => {
-  const baseRoles = (project?.data?.userRoles ?? []) as ProjectRoleUser[]
+  const baseRoles = (activeProjectData?.userRoles ?? []) as ProjectRoleUser[]
+  const baseProjectId = activeProjectData?.id ?? ''
   const roleByUserId = new Map(formUserRoleValues.map(role => [role.userId, role]))
 
   return formUserRoleValues.flatMap(formUserRole => {
@@ -877,7 +930,7 @@ const projectUserRoles = $derived.by(() => {
 
     return [
       {
-        projectId: project?.data?.id ?? '',
+        projectId: baseProjectId,
         userId: formUserRole.userId,
         role: formUserRole.role,
         capabilities: normalizeProjectRoleCapabilities(formUserRole.capabilities),
@@ -953,14 +1006,16 @@ const projectCapabilityLabelByKey = $derived.by(
 )
 
 const capabilityMatrixRows = $derived.by(() =>
-  projectUserRoles
-    .filter(userRole => userRole.role !== ProjectRoleType.user)
-    .map(userRole => ({
-      userId: userRole.userId,
-      name: userRole.user?.name ?? userRole.userId,
-      role: String(userRole.role),
-      capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
-    })),
+  !isCapabilitiesFacet
+    ? []
+    : projectUserRoles
+        .filter(userRole => userRole.role !== ProjectRoleType.user)
+        .map(userRole => ({
+          userId: userRole.userId,
+          name: userRole.user?.name ?? userRole.userId,
+          role: String(userRole.role),
+          capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
+        })),
 )
 
 $effect(() => {
@@ -997,10 +1052,10 @@ $effect(() => {
 // IMAGE
 
 const activeProjectImage = $derived(
-  (project?.data?.image ?? null) as ImageCtxEnvelope | null,
+  (activeProjectData?.image ?? null) as ImageCtxEnvelope | null,
 )
 const imageProviderProps = $derived.by(() => {
-  const projectData = project?.data
+  const projectData = activeProjectData
   const isValid = isCurrentRefLoaded && Boolean(projectData?.id)
 
   return {
@@ -1030,41 +1085,41 @@ const canCreateProject = $derived.by(() =>
   canCreateAnyProject(authActor, { resourceHubId: createContextHubId }),
 )
 const canEditProject = $derived.by(() => {
-  const projectData = project?.data
+  const projectData = optimisticProjectData
   if (!projectData) return false
   return authorizeProjectUpdate(
     authActor,
     {
       resourceId: projectData.id,
       organisationId: projectData.organisationId,
-      resourceHubId: hierarchy?.organisation?.hubId ?? null,
+      resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
     },
     ['code'],
   ).allowed
 })
 const canSubmitProject = $derived(isNewProjectRef ? canCreateProject : canEditProject)
 const canPublishProject = $derived.by(() => {
-  const projectData = project?.data
+  const projectData = optimisticProjectData
   if (!projectData) return false
   return authorizeProjectPublish(authActor, {
     resourceId: projectData.id,
     organisationId: projectData.organisationId,
-    resourceHubId: hierarchy?.organisation?.hubId ?? null,
+    resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
   }).allowed
 })
 const canDeleteProject = $derived.by(() => {
-  const projectData = project?.data
+  const projectData = optimisticProjectData
   if (!projectData) return false
   return authorizeProjectDelete(authActor, {
     resourceId: projectData.id,
     organisationId: projectData.organisationId,
-    resourceHubId: hierarchy?.organisation?.hubId ?? null,
+    resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
   }).allowed
 })
 const canEditImagePresentationMode = $derived(canSubmitProject && isCurrentRefLoaded)
 const canEditImageDropzone = $derived(canEditProject && isCurrentRefLoaded)
 const canSetParentOrganisation = $derived.by(() => {
-  const projectData = project?.data
+  const projectData = optimisticProjectData
   return canSetProjectParentOrganisation({
     actor: authActor,
     isCreateMode: isNewProjectRef,
@@ -1073,7 +1128,7 @@ const canSetParentOrganisation = $derived.by(() => {
       ? {
           resourceId: projectData.id,
           organisationId: projectData.organisationId,
-          resourceHubId: hierarchy?.organisation?.hubId ?? null,
+          resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
         }
       : null,
   })
@@ -1307,11 +1362,12 @@ async function onSearchParentOrganisations(
 
 async function refreshProject(ref: string = projectRef): Promise<ProjectGetState> {
   if (ref === NEW_REF) return null
-  return (await getProject({
+  const result = (await getProject({
     ref,
     refKey: 'code',
     meta: { isAdminRequest: true, profile: 'admin' },
   }).catch(() => null)) as ProjectGetState
+  return result
 }
 
 async function handleProjectStateToggle({
@@ -1351,7 +1407,7 @@ async function handleProjectStateToggle({
       }).withOverride(overrideProjectListItemBoolean(projectData.id, field, nextState)),
     )
 
-    commitProjectState(await refreshProject())
+    commitSettledProjectState(await refreshProject())
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(project, 'nameShort')}`,
     )
@@ -1390,9 +1446,9 @@ async function onReset(): Promise<void> {
   fieldsLayoutMutationVersion += 1
   suppressFormLevelIssues = true
   formCtx.clearSubmitAttemptState()
-  if (committedProject?.data) {
-    project = committedProject
-    formCtx.form.fields.set(toProjectFormInput(committedProject.data))
+  if (activeCommittedProjectData && activeCommittedProject) {
+    project = activeCommittedProject
+    formCtx.form.fields.set(toProjectFormInput(activeCommittedProjectData))
   } else {
     autoSeededOwnerOrganisationIds = new Set()
     ownerRoleSeedAttempt += 1
@@ -1482,60 +1538,97 @@ function onSubmit(): void {
     data.properties = toDenseProperties(data.properties)
     return data
   })
-  const baseMeta = committedProject?.data
-    ? (toProjectFormInput(committedProject.data).meta ?? {})
+  const baseMeta = activeCommittedProjectData
+    ? (toProjectFormInput(activeCommittedProjectData).meta ?? {})
     : (toProjectFormInput(null, { organisationId: parentOrganisationId }).meta ?? {})
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
 
 function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
   if (!canEditImagePresentationMode) return
-  if (project?.data?.image) {
-    project.data.image.image.presentationMode = nextMode
-  }
-  if (committedProject?.data?.image) {
-    committedProject.data.image.image.presentationMode = nextMode
-  }
+  setProjectImagePresentationMode(project, nextMode)
+  setProjectImagePresentationMode(committedProject, nextMode)
 }
 
 // § Effects
 
 $effect(() => {
-  const ref = projectRef
+  const cachedCode = cachedProjectState?.data?.code
+  if (!cachedCode) return
+  if (activeProjectData?.code === cachedCode) return
+  commitProjectState(cachedProjectState)
+})
+
+$effect(() => {
+  projectRef
+  optimisticHeaderState = captureHeaderTransitionSnapshot(headerCtrl)
+})
+
+$effect(() => {
+  const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
   return resourceEditorPage.syncRouteAndLoad({
-    ref,
+    ref: projectRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
+      settledProjectRef = null
+      fieldRemoveMode = false
+      showDisabledFields = false
+      selectedUsersById = {}
+      selectedParentOrganisationById = {}
+      autoSeededOwnerOrganisationIds = new Set()
+      ownerRoleSeedAttempt = 0
+      hasAutoEnteredEditForNew = false
+      isProjectFieldResetInProgress = false
+      project = null
+      hierarchy = null
     },
     setFacetForRef: nextRef => {
       untrack(() => {
         const currentFacet = adminCtx.activeFacet
         const nextFacet =
-          currentFacet && resolvedFacetTabs.has(currentFacet) ? currentFacet : 'core'
+          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+            ? currentFacet
+            : 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.project)
       })
     },
     load: refreshProject,
-    commit: commitProjectState,
+    commit: commitSettledProjectState,
   })
 })
 
 // Keep entity header metadata (title/icon/facets) aligned with loaded organisation data.
 $effect(() => {
-  const ref = projectRef
   const title =
     (isNewProjectRef ? `${NEW_TITLE} ${m.deft_mealy_ant_vent()}` : undefined) ??
-    project?.data?.i18n?.[getLocaleKey()]?.name ??
-    project?.data?.code ??
+    optimisticProjectData?.i18n?.[getLocaleKey()]?.name ??
+    optimisticProjectData?.code ??
     m.deft_mealy_ant_vent()
-  const facetKey = Array.from(resolvedFacetTabsWithIssues.entries())
-    .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
-    .join('|')
-  const headerKey = `${ref}:${title}:${facetKey}`
+  const displayFacets = resolveOptimisticHeaderFacets(
+    isCurrentRefSettled,
+    resolvedFacetTabsWithIssues,
+    optimisticHeaderState,
+  )
+  const facetKey = Array.isArray(displayFacets)
+    ? displayFacets
+        .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
+        .join('|')
+    : Array.from(displayFacets.entries())
+        .map(
+          ([facet, config]) =>
+            `${facet}:${typeof config === 'string' ? '0' : config.hasIssues ? '1' : '0'}`,
+        )
+        .join('|')
+  const headerKey = `${projectRef}:${title}:${facetKey}`
   if (headerKey === lastHeaderKey) return
   lastHeaderKey = headerKey
-  headerCtrl.setHeaderForEntity(title, ProjectIcon, resolvedFacetTabsWithIssues)
+  if (Array.isArray(displayFacets)) {
+    headerCtrl.setHeaderForEntity(title, ProjectIcon, new Map())
+    headerCtrl.setFacets(displayFacets)
+    return
+  }
+  headerCtrl.setHeaderForEntity(title, ProjectIcon, displayFacets)
 })
 
 $effect(() => {
@@ -1549,7 +1642,7 @@ $effect(() => {
 
 // Archived entities are read-only until restored.
 $effect(() => {
-  const currentProject = project?.data
+  const currentProject = activeProjectData
   if (!currentProject?.id) {
     hierarchy = null
     return
@@ -1568,7 +1661,7 @@ $effect(() => {
 
 // Archived entities are read-only until restored.
 $effect(() => {
-  if (!project?.data?.isArchived) return
+  if (!optimisticProjectData?.isArchived) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
 })
@@ -1595,6 +1688,7 @@ $effect(() => {
 
 // Keep unauthorized users out of edit mode if the header state gets toggled externally.
 $effect(() => {
+  if (!isCurrentRefLoaded && !isNewProjectRef) return
   if (canSubmitProject) return
   if (!headerCtrl.state.isEditing) return
   headerCtrl.setEditing(false)
@@ -1691,36 +1785,40 @@ $effect(() => {
 // Wire stable header action handlers once.
 $effect(() => {
   const isImageFacetActive = isImagesFacet
-  const dirty = isDirty
-  const isSubmitting = formCtx.submitting
-  const hasIssues = visibleAllIssues.length > 0
-  const isPublished = Boolean(project?.data?.isPublished)
-  const isDeleted = Boolean(project?.data?.isArchived)
+  const status = resolveOptimisticHeaderStatus({
+    isSettled: isCurrentRefSettled,
+    isImageFacetActive,
+    isNewRef: isNewProjectRef,
+    dirty: isDirty,
+    isSubmitting: formCtx.submitting,
+    hasIssues: visibleAllIssues.length > 0,
+    isPublished: Boolean(optimisticProjectData?.isPublished),
+    isDeleted: Boolean(optimisticProjectData?.isArchived),
+    canEdit: canSubmitProject,
+    canPublish: canPublishProject,
+    showDeleteAction: !isNewProjectRef && canDeleteProject,
+    showPublishAction: !isNewProjectRef,
+    snapshot: optimisticHeaderState,
+  })
+  const inertActionOverrides =
+    isCurrentRefSettled && !isImageFacetActive
+      ? {}
+      : {
+          onEditingToggle: () => {},
+          onReset: () => {},
+          onSave: () => {},
+          onDeleteToggle: () => {},
+          onPublishToggle: () => {},
+        }
 
   lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
     headerCtrl,
     status: {
-      dirty: isImageFacetActive ? false : dirty,
-      isSubmitting: isImageFacetActive ? false : isSubmitting,
-      hasIssues: isImageFacetActive ? false : hasIssues,
-      isPublished,
-      isDeleted,
-      canEdit: isImageFacetActive ? false : canSubmitProject && isCurrentRefLoaded,
-      canPublish: !isNewProjectRef && canPublishProject && isCurrentRefLoaded,
-      showDeleteAction: isImageFacetActive
-        ? false
-        : !isNewProjectRef && canDeleteProject,
-      showPublishAction: !isNewProjectRef,
+      ...status,
+      ...inertActionOverrides,
     },
     lastSignature: lastFormActionsSignature,
   })
-})
-
-// Clear route-provided header form actions on unmount.
-$effect(() => {
-  return () => {
-    resourceEditorPage.clearHeaderActions()
-  }
 })
 </script>
 
@@ -1728,7 +1826,7 @@ $effect(() => {
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
-    isReady={Boolean(formCtx.form?.fields && (project?.data || isNewProjectRef))}
+    isReady={Boolean(formCtx.form?.fields)}
     class="space-y-4"
   >
     <Main.Section
@@ -1839,16 +1937,18 @@ $effect(() => {
       transition="fade"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
-      <ProjectCapabilities
-        {capabilityIssues}
-        availableCapabilityKeys={availableProjectCapabilityKeys}
-        enabledCapabilityKeys={enabledProjectCapabilityKeys}
-        capabilityLabelByKey={projectCapabilityLabelByKey}
-        matrixRows={capabilityMatrixRows}
-        {isEditing}
-        onToggleCapability={onToggleProjectCapability}
-        onToggleCell={onToggleUserCapability}
-      />
+      {#if isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
+        <ProjectCapabilities
+          {capabilityIssues}
+          availableCapabilityKeys={availableProjectCapabilityKeys}
+          enabledCapabilityKeys={enabledProjectCapabilityKeys}
+          capabilityLabelByKey={projectCapabilityLabelByKey}
+          matrixRows={capabilityMatrixRows}
+          {isEditing}
+          onToggleCapability={onToggleProjectCapability}
+          onToggleCell={onToggleUserCapability}
+        />
+      {/if}
     </Main.Section>
     <Main.Section
       isVisible={isFieldsFacet}
@@ -1856,66 +1956,67 @@ $effect(() => {
       class="bits-theme flex gap-4 min-h-0 flex-col"
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFieldsSection
-        items={projectFieldsInSection}
-        title={m.admin__forms_common_fields()}
-        description={m.admin__forms_common_fields_subtitle()}
-        issues={fieldSectionIssues}
-        actions={fieldActions}
-        issueItemIds={fieldSectionIssueItemIds}
-        layoutMutationVersion={fieldsLayoutMutationVersion}
-        forceFlipDisabled={isProjectFieldResetInProgress}
-        canEdit={canSubmitProject && isCurrentRefLoaded}
-        {isEditing}
-        removeMode={fieldRemoveMode}
-        isVisibilityOn={showDisabledFields}
-        visibilityOnLabel={m.admin__forms_common_hide_unused()}
-        visibilityOffLabel={m.admin__forms_common_show_unused()}
-        onVisibilityToggle={nextVisible => {
-          fieldsLayoutMutationVersion += 1
-          showDisabledFields = nextVisible
-        }}
-        isItemVisible={property => isPropertyVisible(property)}
-        onRemoveModeChange={value => {
-          fieldRemoveMode = value
-        }}
-        card={{
-            removeMode: fieldRemoveMode,
-            locales,
-            isEditing,
-            isRequiredInPreflight,
-            allIssues: visibleAllIssues as Array<{
-              message: string
-              path?: Array<string | number>
-            }>,
-            classifierComponents: classifierComponentTypes,
-            specifierComponents: specifierComponentTypes,
-            onIncreaseRank: fieldActions.increaseRank,
-            onDecreaseRank: fieldActions.decreaseRank,
-            onRemove: fieldActions.remove,
-            onUpdateBase: updatePropertyBase,
-            onUpdateI18n: updatePropertyI18n,
-            onAddValue: addPropertyValue,
-            onRemoveValue: removePropertyValue,
-            onMoveValue: movePropertyValue,
-            onUpdateValue: updatePropertyValue,
-            onUpdateValueI18n: updatePropertyValueI18n,
-            onTranslateLocale: onTranslatePropertyLocale,
-            onResetLocale: onResetPropertyLocale,
-            getPropertyIndex: (propertyId, _sectionIndex) =>
-              getCurrentProjectProperties(projectPropertyFormAdapter).findIndex(
-                candidate => candidate.id === propertyId,
-              ),
-            getPropertyFields: (_propertyId, propertyIndex) =>
-              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-            resolveCardPresentation: resolveProjectPropertyCardPresentation,
-            resolveTitleHref: resolveProjectPropertyTitleHref,
-            getMoveWindowSize: () => enabledProjectFieldWindowSize,
-            isMoveLocked: property =>
-              property.scope !== 'project' && !isPropertyEnabled(property),
-            resolveSourceTag: resolveProjectPropertySourceTag,
+      {#if isFieldsFacet}
+        <FormFieldsSection
+          items={projectFieldsInSection}
+          isLoading={isProjectFieldsLoading}
+          title={m.admin__forms_common_fields()}
+          description={m.admin__forms_common_fields_subtitle()}
+          issues={fieldSectionIssues}
+          actions={fieldActions}
+          issueItemIds={fieldSectionIssueItemIds}
+          layoutMutationVersion={fieldsLayoutMutationVersion}
+          forceFlipDisabled={isProjectFieldResetInProgress}
+          canEdit={canSubmitProject && isCurrentRefLoaded}
+          {isEditing}
+          removeMode={fieldRemoveMode}
+          isVisibilityOn={showDisabledFields}
+          visibilityOnLabel={m.admin__forms_common_hide_unused()}
+          visibilityOffLabel={m.admin__forms_common_show_unused()}
+          onVisibilityToggle={nextVisible => {
+            fieldsLayoutMutationVersion += 1
+            showDisabledFields = nextVisible
           }}
-      />
+          isItemVisible={property => isPropertyVisible(property)}
+          onRemoveModeChange={value => {
+            fieldRemoveMode = value
+          }}
+          card={{
+              removeMode: fieldRemoveMode,
+              locales,
+              isEditing,
+              isRequiredInPreflight,
+              allIssues: visibleAllIssues as Array<{
+                message: string
+                path?: Array<string | number>
+              }>,
+              classifierComponents: classifierComponentTypes,
+              specifierComponents: specifierComponentTypes,
+              onIncreaseRank: fieldActions.increaseRank,
+              onDecreaseRank: fieldActions.decreaseRank,
+              onRemove: fieldActions.remove,
+              onUpdateBase: updatePropertyBase,
+              onUpdateI18n: updatePropertyI18n,
+              onAddValue: addPropertyValue,
+              onRemoveValue: removePropertyValue,
+              onMoveValue: movePropertyValue,
+              onUpdateValue: updatePropertyValue,
+              onUpdateValueI18n: updatePropertyValueI18n,
+              onTranslateLocale: onTranslatePropertyLocale,
+              onResetLocale: onResetPropertyLocale,
+              getPropertyIndex: (propertyId, _sectionIndex) =>
+                currentProjectProperties.findIndex(candidate => candidate.id === propertyId),
+              getPropertyFields: (_propertyId, propertyIndex) =>
+                getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+              resolveCardPresentation: resolveProjectPropertyCardPresentation,
+              resolveTitleHref: resolveProjectPropertyTitleHref,
+              getMoveWindowSize: () => enabledProjectFieldWindowSize,
+              isMoveLocked: property =>
+                property.scope !== 'project' && !isPropertyEnabled(property),
+              resolveSourceTag: resolveProjectPropertySourceTag,
+            }}
+        />
+      {/if}
     </Main.Section>
 
     <div class="hidden" aria-hidden="true">
@@ -1933,20 +2034,22 @@ $effect(() => {
     class="flex min-h-0 flex-col"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    <EntityImage
-      {page}
-      entityId={project?.data?.id}
-      {imageProviderProps}
-      currentImage={activeProjectImage}
-      ctx={project?.data?.id
-        ? {
-            ctxType: ImageContextResource.project,
-            ctxId: project.data.id,
-          }
-        : undefined}
-      canEditPresentationMode={canEditImagePresentationMode}
-      canEditDropzone={canEditImageDropzone}
-      {onPresentationModeCommitted}
-    />
+    {#if isImagesFacet}
+      <EntityImage
+        {page}
+        entityId={activeProjectData?.id}
+        {imageProviderProps}
+        currentImage={activeProjectImage}
+        ctx={activeProjectData?.id
+          ? {
+              ctxType: ImageContextResource.project,
+              ctxId: activeProjectData.id,
+            }
+          : undefined}
+        canEditPresentationMode={canEditImagePresentationMode}
+        canEditDropzone={canEditImageDropzone}
+        {onPresentationModeCommitted}
+      />
+    {/if}
   </Main.Section>
 </Main.Root>
