@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { fade, scale } from 'svelte/transition'
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
 // TYPES
@@ -20,11 +22,16 @@ let {
         {@const color = facet.hasIssues ? 'error' : isActive ? 'primary' : 'neutral'}
         {@const facetButtonClass = [
           'bits-pattern-header__facet-btn',
+          isActive ? 'bits-pattern-header__facet-btn--active' : '',
           facet.hasIssues ? 'bits-pattern-header__facet-btn--issue' : '',
         ]
           .filter(Boolean)
           .join(' ')}
-        <li class="bits-pattern-header__facet-item">
+        <li
+          class="bits-pattern-header__facet-item"
+          in:scale={{ duration: 120, start: 0.92 }}
+          out:fade={{ duration: 120 }}
+        >
           <Button
             text={facet.label}
             {color}
