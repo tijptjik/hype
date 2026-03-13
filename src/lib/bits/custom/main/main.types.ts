@@ -34,3 +34,22 @@ export interface MainDualSectionProps {
   fixed?: Snippet
   content?: Snippet
 }
+
+export interface MainVisualSectionProps {
+  class?: string
+  isCollapsed?: boolean
+  expandedHeight?: number
+  collapsedHeight?: number
+  imageAspectRatio?: number | null
+  leftControls?: Snippet
+  centerControls?: Snippet
+  rightControls?: Snippet
+  map?: Snippet
+  image?: Snippet
+  onToggleCollapsed?: (next: boolean) => void
+}
+
+export interface MainVisualSectionPaneProps {
+  children?: Snippet
+  class?: string
+}

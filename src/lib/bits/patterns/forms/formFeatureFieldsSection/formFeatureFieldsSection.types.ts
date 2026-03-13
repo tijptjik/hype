@@ -9,9 +9,10 @@ export type FeatureFieldSectionItem = {
 }
 
 export type FormFeatureFieldsSectionProps = {
-  title: string
+  title?: string
   subtitle?: string
   localeKey: 'en' | 'zhHans' | 'zhHant'
   items: FeatureFieldSectionItem[]
+  columns?: 1 | 2 | 3
   class?: string
 }

@@ -1,0 +1,612 @@
+@layer components {
+  .bits-main.bits-feature-editor {
+    padding-top: 0;
+    padding-inline: 0;
+    padding-bottom: 1.5rem;
+  }
+
+  .bits-feature-editor__form > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  .bits-feature-editor__content-pad {
+    padding-inline: 1.5rem;
+  }
+
+  .bits-feature-editor__content-section {
+    padding-bottom: 3rem;
+  }
+
+  .bits-feature-editor__descriptor-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    pointer-events: auto;
+  }
+
+  .bits-feature-editor__descriptor-heading--with-subtitle {
+    padding-block: 1.5rem 0.75rem;
+  }
+
+  .bits-feature-editor__descriptor-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--color-foreground);
+  }
+
+  .bits-feature-editor__descriptor-subtitle {
+    font-size: 0.9375rem;
+    line-height: 1.25;
+    text-align: center;
+    color: color-mix(in oklab, var(--color-foreground) 68%, transparent);
+  }
+
+  .bits-main__section.bits-feature-editor__section {
+    --bits-feature-editor-visual-offset: 0px;
+    inset: 0 0 1.5rem;
+    top: var(--bits-feature-editor-visual-offset);
+    transition: top 180ms ease;
+  }
+
+  .bits-main__section.bits-feature-editor__section--with-visual.bits-feature-editor__section--visual-expanded {
+    --bits-feature-editor-visual-offset: 520px;
+  }
+
+  .bits-main__section.bits-feature-editor__section--with-visual.bits-feature-editor__section--visual-collapsed {
+    --bits-feature-editor-visual-offset: 64px;
+  }
+
+  .bits-feature-editor__visual {
+    margin-bottom: 0;
+    border-top: 0;
+    border-inline: 0;
+    border-radius: 0;
+    background: black;
+    overflow: visible;
+  }
+
+  .bits-feature-visual {
+    position: relative;
+    min-height: var(--bits-feature-visual-expanded-height, 520px);
+    height: var(--bits-feature-visual-expanded-height, 520px);
+    border-radius: 0;
+    overflow: visible;
+    background: black;
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+    transition: height 180ms ease;
+  }
+
+  .bits-feature-visual--collapsed {
+    min-height: var(--bits-feature-visual-collapsed-height, 64px);
+    height: var(--bits-feature-visual-collapsed-height, 64px);
+  }
+
+  .bits-feature-visual__body {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    height: 100%;
+    transition:
+      transform 180ms ease,
+      gap 220ms ease;
+  }
+
+  .bits-feature-visual__pane {
+    position: relative;
+    min-height: 0;
+  }
+
+  .bits-feature-visual__map {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .bits-feature-visual__image {
+    position: relative;
+    display: flex;
+    flex: 0 0 50%;
+    width: 50%;
+    max-width: 50%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .bits-feature-editor__visual--image-loaded .bits-feature-visual__image {
+    flex-basis: min(
+      50%,
+      calc(
+        (var(--bits-feature-visual-expanded-height, 520px) - 0rem) *
+        var(--bits-feature-visual-image-ratio, 1)
+      )
+    );
+    width: min(
+      50%,
+      calc(
+        (var(--bits-feature-visual-expanded-height, 520px) - 0rem) *
+        var(--bits-feature-visual-image-ratio, 1)
+      )
+    );
+    max-width: min(
+      50%,
+      calc(
+        (var(--bits-feature-visual-expanded-height, 520px) - 0rem) *
+        var(--bits-feature-visual-image-ratio, 1)
+      )
+    );
+  }
+
+  .bits-feature-visual__pane--map,
+  .bits-feature-visual__pane--image {
+    width: 100%;
+    height: 100%;
+  }
+
+  .bits-feature-visual__map-surface {
+    width: 100%;
+    height: 100%;
+  }
+
+  .bits-feature-visual__image-surface {
+    width: 100%;
+    height: 100%;
+  }
+
+  .bits-feature-visual--collapsed .bits-feature-visual__map,
+  .bits-feature-visual--collapsed .bits-feature-visual__image {
+    padding-top: 0;
+    /*padding-bottom: 0.75rem;*/
+  }
+
+  .bits-feature-visual__controls {
+    position: absolute;
+    z-index: 12;
+  }
+
+  .bits-feature-visual__controls--left {
+    left: 32px;
+    bottom: -24px;
+  }
+
+  .bits-feature-visual__controls--center {
+    left: 50%;
+    bottom: -24px;
+    transform: translateX(-50%);
+  }
+
+  .bits-feature-visual__controls--right {
+    right: 32px;
+    bottom: -24px;
+    /*transform: translateX(50%);*/
+  }
+
+  .bits-feature-visual__control-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-height: 2.75rem;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+    border-radius: 999px;
+    background: color-mix(in oklab, black 84%, var(--color-glass-result) 16%);
+    backdrop-filter: blur(14px);
+  }
+
+  .bits-feature-visual__icon-button,
+  .bits-feature-visual :global(.bits-dialog__trigger button) {
+    display: inline-flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: var(--color-base-content);
+    transition:
+      background-color 180ms ease,
+      opacity 180ms ease;
+  }
+
+  .bits-feature-visual__icon-button--collapse {
+    width: auto;
+    min-width: 2.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.875rem;
+  }
+
+  .bits-feature-visual__icon-button--collapse-tight {
+    margin-left: -0.25rem;
+  }
+
+  .bits-feature-visual__icon-button:hover,
+  .bits-feature-visual :global(.bits-dialog__trigger button:hover) {
+    background: color-mix(in oklab, var(--color-glass-result) 96%, black);
+  }
+
+  .bits-feature-visual__icon-button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .bits-feature-visual--collapsed .bits-feature-visual__body {
+    height: 100%;
+    overflow: hidden;
+    transform: none;
+  }
+
+  .bits-feature-visual--collapsed .bits-feature-visual__map,
+  .bits-feature-visual--collapsed .bits-feature-visual__image {
+    overflow: hidden;
+  }
+
+  .bits-feature-visual--collapsed .bits-feature-visual__map-surface,
+  .bits-feature-visual--collapsed .bits-feature-visual__image-surface {
+    position: relative;
+    top: calc(
+      (
+        var(--bits-feature-visual-collapsed-height, 64px) -
+        var(--bits-feature-visual-expanded-height, 520px)
+      ) /
+      2
+    );
+    height: var(--bits-feature-visual-expanded-height, 520px);
+  }
+
+  .bits-feature-visual__toggle-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .bits-feature-visual__control-icon {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: color-mix(in oklab, var(--color-base-content) 82%, transparent);
+  }
+
+  .bits-feature-visual__control-icon svg,
+  .bits-feature-visual__icon-button svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .bits-feature-visual__switch {
+    transform: none;
+  }
+
+  .bits-main__dual {
+    display: flex;
+    min-height: 0;
+    gap: 1.5rem;
+    height: 100%;
+  }
+
+  .bits-main__fixed-section {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    min-height: calc(100vh - 10rem);
+    transition:
+      flex-basis 200ms ease,
+      max-width 200ms ease,
+      opacity 200ms ease;
+  }
+
+  .bits-main__fixed-section--collapsed {
+    flex: 0 0 4%;
+    max-width: 4rem;
+    overflow: visible;
+  }
+
+  .bits-main__fixed-section--default {
+    flex: 0 0 33%;
+    max-width: 33%;
+  }
+
+  .bits-main__fixed-section--fullscreen {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .bits-main__dual-scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    transition:
+      flex-basis 200ms ease,
+      opacity 200ms ease;
+  }
+
+  .bits-main__dual-scroll--hidden {
+    flex-basis: 0%;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  .bits-main__dual-scroll--full {
+    flex-basis: 100%;
+  }
+
+  .bits-feature-map {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 28rem;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--color-base-300) 92%, black);
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
+
+  .bits-feature-map__canvas {
+    width: 100%;
+    height: 100%;
+    transition: opacity 200ms ease;
+  }
+
+  .bits-feature-map__overlay {
+    position: absolute;
+    inset: 1rem 1rem auto auto;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 10;
+  }
+
+  .bits-feature-map__loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in oklab, var(--color-base-300) 88%, black);
+    z-index: 5;
+  }
+
+  .bits-feature-map__attribution {
+    position: absolute;
+    inset: auto 1rem 1rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    z-index: 10;
+  }
+
+  .bits-feature-attribution {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    height: 2.75rem;
+    padding: 0 1rem 0 3.25rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, black 82%, var(--color-glass-result) 18%);
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .bits-feature-attribution__avatar {
+    width: auto;
+    height: 3rem;
+    aspect-ratio: 1 / 1;
+    border-radius: 999px;
+    object-fit: cover;
+    position: absolute;
+    left: -1px;
+    background: color-mix(in oklab, var(--color-base-content) 16%, transparent);
+    flex: 0 0 auto;
+  }
+
+  .bits-feature-attribution__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .bits-feature-attribution__title {
+    font-weight: 600;
+    line-height: 1.1;
+    font-size: 0.9375rem;
+  }
+
+  .bits-feature-attribution__subtitle {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  }
+
+  .bits-feature-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .bits-feature-fields__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .bits-feature-fields__grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bits-feature-fields__grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bits-feature-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--color-glass-base) 70%, transparent);
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
+
+  .bits-feature-field__label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .bits-feature-field__title {
+    font-weight: 600;
+  }
+
+  .bits-feature-field__subtitle {
+    font-size: 0.75rem;
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  }
+
+  .bits-feature-field__range {
+    width: 100%;
+  }
+
+  .bits-feature-field__range-values {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+  }
+
+  .bits-feature-visual-media {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+    background: transparent;
+    border: 0;
+  }
+
+  .bits-feature-visual-media__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: right center;
+  }
+
+  .bits-feature-visual-media__empty {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 18rem;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+  }
+
+  .bits-feature-visual-media__empty svg {
+    width: 2rem;
+    height: 2rem;
+    margin: 0 auto 0.75rem;
+  }
+
+  .bits-feature-visual .bits-feature-canonical-image__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 0;
+  }
+
+  .bits-feature-visual .bits-feature-map {
+    border-radius: 0;
+    border: 0;
+  }
+
+  .bits-feature-visual .bits-feature-canonical-image__empty {
+    border-radius: 0;
+  }
+
+  .bits-feature-canonical-image__empty,
+  .bits-feature-facet-placeholder {
+    display: flex;
+    min-height: 18rem;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
+    background:
+      radial-gradient(circle at top left, rgb(240 77 127 / 16%), transparent 40%),
+      color-mix(in oklab, var(--color-glass-base) 72%, transparent);
+  }
+
+  .bits-feature-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    line-height: 1.65;
+  }
+
+  .bits-feature-info__heading {
+    font-weight: 700;
+  }
+
+  @media (max-width: 1200px) {
+    .bits-feature-fields__grid--3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .bits-feature-visual {
+      min-height: auto;
+      height: auto;
+    }
+
+    .bits-feature-visual__body {
+      flex-direction: column;
+    }
+
+    .bits-feature-visual__map,
+    .bits-feature-visual__image {
+      min-width: 100%;
+      max-width: 100%;
+      padding: 0.75rem;
+    }
+
+    .bits-feature-visual__image {
+      padding-top: 0;
+    }
+
+    .bits-feature-visual--collapsed {
+      min-height: var(--bits-feature-visual-collapsed-height, 64px);
+      height: var(--bits-feature-visual-collapsed-height, 64px);
+    }
+
+    .bits-feature-visual--collapsed .bits-feature-visual__image {
+      padding-top: 0.5rem;
+    }
+
+    .bits-feature-fields__grid--2,
+    .bits-feature-fields__grid--3 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
