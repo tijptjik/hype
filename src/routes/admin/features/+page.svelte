@@ -284,7 +284,13 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<ResourceIndex {entities} {filters} {sortables} bind:listContainer>
+<ResourceIndex
+  resource={FirstClassResource.feature}
+  {entities}
+  {filters}
+  {sortables}
+  bind:listContainer
+>
   {#snippet card(entity: Feature)}
     <FeatureCard {entity} />
   {/snippet}

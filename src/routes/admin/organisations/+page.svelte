@@ -173,7 +173,12 @@ let entities: Organisation[] = $derived(
 )
 </script>
 
-<ResourceIndex {entities} {filters} {sortables}>
+<ResourceIndex
+  resource={FirstClassResource.organisation}
+  {entities}
+  {filters}
+  {sortables}
+>
   {#snippet card(entity: Organisation)}
     <EntityCard {entity} {keyMap} />
   {/snippet}

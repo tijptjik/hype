@@ -12,10 +12,11 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
-import type { Resource, EntityWithOptionalImage } from '$lib/types'
+import type { Resource, EntityWithOptionalImage, NavigableResource } from '$lib/types'
 import type { Snippet } from 'svelte'
 
 let {
+  resource,
   entities,
   card,
   row,
@@ -23,6 +24,7 @@ let {
   isInitialised = true,
   applyBottomOverflow = true,
 }: {
+  resource: NavigableResource
   entities: T[]
   card?: Snippet<[T, number]>
   row?: Snippet<[T, number]>
@@ -45,11 +47,7 @@ let lastKnownPanelOpenState = $state(
 )
 let isTransitioning = $state(false)
 
-let layoutMode = $derived(
-  adminCtx.activeResourceType
-    ? adminCtx.appCtx.state.ui.layoutMode[adminCtx.activeResourceType]
-    : null,
-)
+let layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
 
 // GRID CONFIGURATION
 let itemWidth = 340 // Approximate width of EntityCard + margins

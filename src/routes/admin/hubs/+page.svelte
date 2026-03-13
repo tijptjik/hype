@@ -116,7 +116,7 @@ let entities: Hub[] = $derived(
 )
 </script>
 
-<ResourceIndex {entities} {filters} {sortables}>
+<ResourceIndex resource={FirstClassResource.hub} {entities} {filters} {sortables}>
   {#snippet card(entity: Hub)}
     <EntityCard {entity} {keyMap} />
   {/snippet}

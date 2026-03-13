@@ -190,7 +190,12 @@ function updateRowFocus(index: number) {
 <div
   class="h-full overflow-y-auto overscroll-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed pb-6"
 >
-  <GroupedResourceIndex {groupedEntities} {filters} bind:listContainer>
+  <GroupedResourceIndex
+    resource={FirstClassResource.task}
+    {groupedEntities}
+    {filters}
+    bind:listContainer
+  >
     {#snippet row(entity, index)}
       <TaskRow
         {entity}
