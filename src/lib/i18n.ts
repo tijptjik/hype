@@ -14,6 +14,8 @@ import type {
   FeaturePropertyI18nDB,
 } from '$lib/db/zod/schema/feature.types'
 
+export const supportedLocaleKeys: LocaleKey[] = ['en', 'zhHans', 'zhHant']
+
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════

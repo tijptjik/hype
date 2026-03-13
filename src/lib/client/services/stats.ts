@@ -1,11 +1,20 @@
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // ENUMS
-import { FirstClassResource, supportedLocales } from '$lib/enums'
+import { FirstClassResource } from '$lib/enums'
+// I18N
+import { supportedLocaleKeys } from '$lib/i18n'
 // TYPES
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { AppCtx } from '$lib/context/app.svelte'
-import type { Feature, FeatureFromCollection, FeatureI18nDB, FeatureProperty, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+import type {
+  Feature,
+  FeatureFromCollection,
+  FeatureI18nDB,
+  FeatureProperty,
+  UserContributedFeature,
+} from '$lib/db/zod/schema/feature.types'
+import type { LocaleKey } from '$lib/types'
 
 // ═══════════════════════
 // STATISTICS CACHE METHODS
@@ -157,8 +166,8 @@ export function getCachedFeatureTranslationTriState(
   appCtx: AppCtx,
   feature: FeatureFromCollection,
   statistic: string,
-  locale: string,
-  calculator: (feature: FeatureFromCollection, locale: string) => boolean | null,
+  locale: LocaleKey,
+  calculator: (feature: FeatureFromCollection, locale: LocaleKey) => boolean | null,
 ): boolean | null {
   const localeStatistic = `${statistic}.${locale}`
   const cached = getStatistic(
@@ -179,7 +188,7 @@ export function setCachedFeatureTranslationTriState(
   appCtx: AppCtx,
   feature: FeatureFromCollection,
   statistic: string,
-  locale: string,
+  locale: LocaleKey,
   value: boolean | null,
 ): void {
   const localeStatistic = `${statistic}.${locale}`
@@ -281,7 +290,7 @@ export function primeFeatureStatsCache(
 
   // Cache completion statistics for all sections using proper key mappings
   // Cache translation status per-locale using tri-state logic
-  supportedLocales.forEach(locale => {
+  supportedLocaleKeys.forEach(locale => {
     const translationCompletion = calculateTranslationCompletionTriState(
       appCtx,
       feature,
@@ -398,7 +407,7 @@ export function calculateContentCompletion(
 export function calculateTranslationCompletion(
   appCtx: AppCtx,
   feature: FeatureFromCollection,
-  locale?: string,
+  locale?: LocaleKey,
 ): Record<string, boolean> {
   const i18nEntries = feature?.i18n ?? {}
 
@@ -455,7 +464,7 @@ export function calculateTranslationCompletion(
 export function calculateTranslationCompletionTriState(
   appCtx: AppCtx,
   feature: FeatureFromCollection,
-  locale: string,
+  locale: LocaleKey,
 ): Record<string, boolean | null> {
   const i18nEntries = feature?.i18n ?? {}
 
@@ -659,14 +668,14 @@ export function calculateOverallStats(
   )
 
   // Get active locales from admin context if available
-  let activeLocales = supportedLocales // Default to all locales
+  let activeLocales = supportedLocaleKeys // Default to all locales
 
   if (adminCtx?.appCtx?.state?.viewFilters?.feature?.translationLocales) {
     const translationLocales =
       adminCtx.appCtx.state.viewFilters.feature.translationLocales
-    activeLocales = supportedLocales.filter(locale => translationLocales[locale])
+    activeLocales = supportedLocaleKeys.filter(locale => translationLocales[locale])
     if (activeLocales.length === 0) {
-      activeLocales = supportedLocales // Fallback if no locales selected
+      activeLocales = supportedLocaleKeys // Fallback if no locales selected
     }
   }
 

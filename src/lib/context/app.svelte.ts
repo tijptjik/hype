@@ -324,23 +324,23 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false, // Default: English not selected
-          'zh-hant': true,
-          'zh-hans': true,
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
       },
       project: {
@@ -361,33 +361,33 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false,
-          'zh-hant': true,
-          'zh-hans': true,
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isAttributionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isLicenseTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
       },
       layer: {
@@ -403,23 +403,23 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false,
-          'zh-hant': true,
-          'zh-hans': true,
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
       },
       feature: {
@@ -443,28 +443,28 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false, // Default: English not selected
-          'zh-hant': true,
-          'zh-hans': true,
+          zhHant: true,
+          zhHans: true,
         },
         isTitleTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isSpecifierTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isAddressTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         // Property related
         properties: {} as Record<Id, FilterTriState>,
@@ -488,23 +488,23 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false,
-          'zh-hant': false,
-          'zh-hans': false,
+          zhHant: false,
+          zhHans: false,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null,
+          zhHant: null,
+          zhHans: null,
         },
       },
     },

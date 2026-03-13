@@ -448,7 +448,7 @@ export type HeaderCtrlState = {
 // VIEW FILTERS (TIER 3)
 /* -------- */
 export type FilterTriState = boolean | null
-export type LocalisedFilterTriState = Record<Locale, FilterTriState>
+export type LocalisedFilterTriState = Record<LocaleKey, FilterTriState>
 
 export type FeatureViewFilters = {
   // Status related
@@ -469,7 +469,7 @@ export type FeatureViewFilters = {
   hasDisplayAddress: FilterTriState
 
   // Translation related (per locale)
-  translationLocales: Record<Locale, boolean> // Which locales to consider for translation filters
+  translationLocales: Record<LocaleKey, boolean> // Which locales to consider for translation filters
   isTitleTranslated: LocalisedFilterTriState
   isDescriptionTranslated: LocalisedFilterTriState
   isAddressTranslated: LocalisedFilterTriState
@@ -493,7 +493,7 @@ export type OrganisationViewFilters = {
   hasDescription: FilterTriState
 
   // Translation related (per locale)
-  translationLocales: Record<Locale, boolean>
+  translationLocales: Record<LocaleKey, boolean>
   isNameTranslated: LocalisedFilterTriState
   isContextualNameTranslated: LocalisedFilterTriState
   isDescriptionTranslated: LocalisedFilterTriState
@@ -515,7 +515,7 @@ export type ProjectViewFilters = {
   hasLicense: FilterTriState
 
   // Translation related (per locale)
-  translationLocales: Record<Locale, boolean>
+  translationLocales: Record<LocaleKey, boolean>
   isNameTranslated: LocalisedFilterTriState
   isContextualNameTranslated: LocalisedFilterTriState
   isDescriptionTranslated: LocalisedFilterTriState
@@ -534,7 +534,7 @@ export type LayerViewFilters = {
   hasDescription: FilterTriState
 
   // Translation related (per locale)
-  translationLocales: Record<Locale, boolean>
+  translationLocales: Record<LocaleKey, boolean>
   isNameTranslated: LocalisedFilterTriState
   isContextualNameTranslated: LocalisedFilterTriState
   isDescriptionTranslated: LocalisedFilterTriState
@@ -558,7 +558,7 @@ export type HubViewFilters = {
   hasDescription: FilterTriState
 
   // Translation related (per locale)
-  translationLocales: Record<Locale, boolean>
+  translationLocales: Record<LocaleKey, boolean>
   isNameTranslated: LocalisedFilterTriState
   isContextualNameTranslated: LocalisedFilterTriState
   isDescriptionTranslated: LocalisedFilterTriState

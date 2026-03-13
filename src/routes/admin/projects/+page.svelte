@@ -182,12 +182,7 @@ let entities: Project[] = $derived(
 )
 </script>
 
-<ResourceIndex
-  resource={FirstClassResource.project}
-  {entities}
-  {filters}
-  {sortables}
->
+<ResourceIndex resource={FirstClassResource.project} {entities} {filters} {sortables}>
   {#snippet card(entity: Project)}
     <EntityCard {entity} {keyMap} />
   {/snippet}

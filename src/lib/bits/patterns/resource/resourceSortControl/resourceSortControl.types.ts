@@ -1,8 +1,7 @@
-import type { FirstClassResource } from '$lib/enums'
-import type { ResourceSortConfig } from '$lib/types'
+import type { NavigableResource, ResourceSortConfig } from '$lib/types'
 
 export type ResourceSortControlProps = {
-  resource: FirstClassResource
+  resource: NavigableResource
   sortables: ResourceSortConfig
   onOpenChange?: (isOpen: boolean) => void | Promise<void>
   isOpen?: boolean

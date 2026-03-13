@@ -1,5 +1,5 @@
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 // LIB
 import { fetchOrThrow } from '$lib/index'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
@@ -30,7 +30,7 @@ import type {
   Resource,
   FilteredResources,
   ViewFilters,
-  Locale,
+  LocaleKey,
   FilterTriState,
   NavigableResource,
   FilterState,
@@ -80,23 +80,23 @@ const viewFilters: ViewFilters = {
     // Translation related
     translationLocales: {
       en: false, // Default: English not selected
-      'zh-hant': true,
-      'zh-hans': true,
+      zhHant: true,
+      zhHans: true,
     },
     isNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isContextualNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isDescriptionTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
   },
   project: {
@@ -117,33 +117,33 @@ const viewFilters: ViewFilters = {
     // Translation related
     translationLocales: {
       en: false,
-      'zh-hant': true,
-      'zh-hans': true,
+      zhHant: true,
+      zhHans: true,
     },
     isNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isContextualNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isDescriptionTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isAttributionTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isLicenseTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
   },
   layer: {
@@ -159,23 +159,23 @@ const viewFilters: ViewFilters = {
     // Translation related
     translationLocales: {
       en: false,
-      'zh-hant': true,
-      'zh-hans': true,
+      zhHant: true,
+      zhHans: true,
     },
     isNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isContextualNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isDescriptionTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
   },
   feature: {
@@ -199,28 +199,28 @@ const viewFilters: ViewFilters = {
     // Translation related
     translationLocales: {
       en: false, // Default: English not selected
-      'zh-hant': true,
-      'zh-hans': true,
+      zhHant: true,
+      zhHans: true,
     },
     isTitleTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isDescriptionTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isSpecifierTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isAddressTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     // Property related
     properties: {} as Record<Id, FilterTriState>,
@@ -244,23 +244,23 @@ const viewFilters: ViewFilters = {
     // Translation related
     translationLocales: {
       en: false,
-      'zh-hant': false,
-      'zh-hans': false,
+      zhHant: false,
+      zhHans: false,
     },
     isNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isContextualNameTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
     isDescriptionTranslated: {
       en: null,
-      'zh-hant': null,
-      'zh-hans': null,
+      zhHant: null,
+      zhHans: null,
     },
   },
 }
@@ -681,10 +681,10 @@ export class AdminCtx {
     if (!filters) return features
 
     // Determine active locales from filter state
-    const activeLocales = new Set<Locale>()
+    const activeLocales = new Set<LocaleKey>()
     for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
       if (isActive) {
-        activeLocales.add(locale as Locale)
+        activeLocales.add(locale as LocaleKey)
       }
     }
 
@@ -756,7 +756,7 @@ export class AdminCtx {
       return true
     }
 
-    const allLocales = Object.keys(feature.i18n) as Locale[]
+    const allLocales = Object.keys(feature.i18n) as LocaleKey[]
 
     if (filters.hasTitle !== null) {
       const hasTitle = allLocales.some(
@@ -807,7 +807,7 @@ export class AdminCtx {
   private filterByTranslation = (
     feature: Feature,
     filters: ViewFilters['feature'],
-    activeLocales: Set<Locale>,
+    activeLocales: Set<LocaleKey>,
   ): boolean => {
     const translationChecks: {
       filterKey: 'isTitleTranslated' | 'isDescriptionTranslated' | 'isAddressTranslated'
@@ -1036,10 +1036,10 @@ export class AdminCtx {
     if (!filters) return organisations
 
     // Determine active locales from filter state
-    const activeLocales = new Set<Locale>()
+    const activeLocales = new Set<LocaleKey>()
     for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
       if (isActive) {
-        activeLocales.add(locale as Locale)
+        activeLocales.add(locale as LocaleKey)
       }
     }
 
@@ -1081,7 +1081,7 @@ export class AdminCtx {
       return true
     }
 
-    const allLocales = Object.keys(organisation.i18n) as Locale[]
+    const allLocales = Object.keys(organisation.i18n) as LocaleKey[]
 
     if (filters.hasName !== null) {
       const hasName = allLocales.some(
@@ -1119,7 +1119,7 @@ export class AdminCtx {
   private filterOrganisationByTranslation = (
     organisation: Organisation,
     filters: ViewFilters['organisation'],
-    activeLocales: Set<Locale>,
+    activeLocales: Set<LocaleKey>,
   ): boolean => {
     const translationChecks: {
       filterKey:
@@ -1217,10 +1217,10 @@ export class AdminCtx {
     if (!filters) return projects
 
     // Determine active locales from filter state
-    const activeLocales = new Set<Locale>()
+    const activeLocales = new Set<LocaleKey>()
     for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
       if (isActive) {
-        activeLocales.add(locale as Locale)
+        activeLocales.add(locale as LocaleKey)
       }
     }
 
@@ -1261,7 +1261,7 @@ export class AdminCtx {
       return true
     }
 
-    const allLocales = Object.keys(project.i18n) as Locale[]
+    const allLocales = Object.keys(project.i18n) as LocaleKey[]
 
     if (filters.hasName !== null) {
       const hasName = allLocales.some(
@@ -1319,7 +1319,7 @@ export class AdminCtx {
   private filterProjectByTranslation = (
     project: Project,
     filters: ViewFilters['project'],
-    activeLocales: Set<Locale>,
+    activeLocales: Set<LocaleKey>,
   ): boolean => {
     const translationChecks: {
       filterKey:
@@ -1434,10 +1434,10 @@ export class AdminCtx {
     if (!filters) return layers
 
     // Determine active locales from filter state
-    const activeLocales = new Set<Locale>()
+    const activeLocales = new Set<LocaleKey>()
     for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
       if (isActive) {
-        activeLocales.add(locale as Locale)
+        activeLocales.add(locale as LocaleKey)
       }
     }
 
@@ -1474,7 +1474,7 @@ export class AdminCtx {
       return true
     }
 
-    const allLocales = Object.keys(layer.i18n) as Locale[]
+    const allLocales = Object.keys(layer.i18n) as LocaleKey[]
 
     if (filters.hasName !== null) {
       const hasName = allLocales.some(
@@ -1512,7 +1512,7 @@ export class AdminCtx {
   private filterLayerByTranslation = (
     layer: Layer,
     filters: ViewFilters['layer'],
-    activeLocales: Set<Locale>,
+    activeLocales: Set<LocaleKey>,
   ): boolean => {
     const translationChecks: {
       filterKey:
@@ -1622,10 +1622,10 @@ export class AdminCtx {
     if (!filters) return hubs
 
     // Determine active locales from filter state
-    const activeLocales = new Set<Locale>()
+    const activeLocales = new Set<LocaleKey>()
     for (const [locale, isActive] of Object.entries(filters.translationLocales)) {
       if (isActive) {
-        activeLocales.add(locale as Locale)
+        activeLocales.add(locale as LocaleKey)
       }
     }
 
@@ -1645,7 +1645,7 @@ export class AdminCtx {
   }
 
   private filterHubByAuthorship = (hub: Hub, filters: ViewFilters['hub']): boolean => {
-    const allLocales = Object.keys(hub.i18n || {}) as Locale[]
+    const allLocales = Object.keys(hub.i18n || {}) as LocaleKey[]
 
     if (filters.hasName !== null) {
       const hasName = allLocales.some(
@@ -1683,7 +1683,7 @@ export class AdminCtx {
   private filterHubByTranslation = (
     hub: Hub,
     filters: ViewFilters['hub'],
-    activeLocales: Set<Locale>,
+    activeLocales: Set<LocaleKey>,
   ): boolean => {
     const translationChecks: {
       filterKey:
@@ -1907,7 +1907,7 @@ export class AdminCtx {
           entity.code?.toLowerCase().includes(query.toLowerCase()) ||
           entity.domain?.toLowerCase().includes(query.toLowerCase()) ||
           entity.organisations?.some(org =>
-            org.i18n?.[getLocale()]?.name?.toLowerCase().includes(query.toLowerCase()),
+            org.i18n?.[getLocaleKey()]?.name?.toLowerCase().includes(query.toLowerCase()),
           ),
       )
     }

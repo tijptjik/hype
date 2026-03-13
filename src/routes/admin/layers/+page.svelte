@@ -137,12 +137,7 @@ let entities: Layer[] = $derived(
 )
 </script>
 
-<ResourceIndex
-  resource={FirstClassResource.layer}
-  {entities}
-  {filters}
-  {sortables}
->
+<ResourceIndex resource={FirstClassResource.layer} {entities} {filters} {sortables}>
   {#snippet card(entity: Layer)}
     <EntityCard {entity} {keyMap}>
       {#snippet header()}
