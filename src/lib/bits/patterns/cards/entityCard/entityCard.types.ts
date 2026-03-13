@@ -36,9 +36,14 @@ export type EntityCardBodyProps = {
   actions?: Snippet
 }
 
+export type EntityCardFooterBreadcrumb = {
+  kind: 'organisation' | 'project' | 'layer'
+  label: string
+}
+
 export type EntityCardFooterProps = {
   publicationState?: boolean | null
-  publicationLabel?: string
-  hubCodes?: string
-  visitableLabel?: string
+  shortLabel?: string
+  breadcrumbs?: EntityCardFooterBreadcrumb[]
+  cardWidth?: number
 }

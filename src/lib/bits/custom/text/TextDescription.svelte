@@ -8,7 +8,7 @@ let { text, onClick }: TextDescriptionProps = $props()
 <TextAction
   {text}
   {onClick}
-  separator="⚲"
+  separator="•"
   padding={24}
   class={`${onClick ? 'cursor-pointer ' : ''}text-sm text-base-content/60 hover:text-primary`.trim()}
 />

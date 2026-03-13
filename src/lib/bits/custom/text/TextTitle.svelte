@@ -8,7 +8,7 @@ let { text, onClick }: TextTitleProps = $props()
 <TextAction
   {text}
   {onClick}
-  separator="⸱"
+  separator="•"
   padding={32}
   class="cursor-pointer font-medium text-base-content"
 />

@@ -1,20 +1,24 @@
 <script lang="ts" generics="T extends Exclude<Resource, Task>">
 // SVELTE
+import { getContext } from 'svelte'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getI18n, getLocaleKey } from '$lib/i18n'
 // BITS
 import * as EntityCardPrimitive from './components'
+import { ENTITY_CARD_WIDTH_CONTEXT } from './entityCard.context'
 // SERVICES
 import { getHashiconUrl, getURLfromImage } from '$lib/client/services/image'
 import { getUrlForResource } from '$lib/navigation'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
+// ENUMS
+import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { Resource, Task } from '$lib/types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
-import type { EntityCardProps } from './entityCard.types'
+import type { EntityCardFooterBreadcrumb, EntityCardProps } from './entityCard.types'
 // UTILS
 import {
   getEntityCardPropertyValue,
@@ -33,8 +37,10 @@ let {
 }: EntityCardProps<T> = $props()
 
 const adminCtx = getAdminCtx()
+const cardLayout = getContext<{ width: number } | undefined>(ENTITY_CARD_WIDTH_CONTEXT)
 
 let localeKey = $derived(getLocaleKey())
+const cardWidth = $derived(cardLayout?.width ?? 0)
 
 const cardImageEnvelope = $derived.by(() => {
   const raw = getNestedValue(entity, keyMap.image)
@@ -57,12 +63,6 @@ const imageLayout = $derived.by(() => {
 const title = $derived(
   String(getEntityCardPropertyValue(entity, keyMap, localeKey, keyMap.title) ?? ''),
 )
-const subtitle = $derived.by(() => {
-  if (!keyMap.subtitle) return ''
-  return String(
-    getEntityCardPropertyValue(entity, keyMap, localeKey, keyMap.subtitle) ?? '',
-  )
-})
 const description = $derived(
   toDescriptionFallback(
     getEntityCardPropertyValue(entity, keyMap, localeKey, keyMap.description ?? ''),
@@ -73,26 +73,76 @@ const publicationState = $derived.by(() =>
     ? Boolean(entity.isPublished)
     : null,
 )
-const publicationLabel = $derived.by(() => {
-  if (publicationState === null) return ''
-  return publicationState ? m.published() : m.weak_super_guppy_nail()
+const resourceType = $derived(adminCtx.activeResourceType)
+const shortLabel = $derived.by(() => {
+  const appCtx = adminCtx.appCtx
+  const preferences = appCtx.getUserPreferences()
+
+  switch (resourceType) {
+    case FirstClassResource.hub:
+      return (
+        ('code' in entity && typeof entity.code === 'string' && entity.code) ||
+        getI18n(entity, 'nameShort', preferences, '', false) ||
+        title
+      )
+    case FirstClassResource.organisation:
+      return (
+        appCtx.getContextualOrganisationName(entity as never, false, false) ||
+        ('code' in entity && typeof entity.code === 'string' && entity.code) ||
+        title
+      )
+    case FirstClassResource.project:
+      return (
+        appCtx.getContextualProjectName(entity as never, false, false) ||
+        ('code' in entity && typeof entity.code === 'string' && entity.code) ||
+        title
+      )
+    case FirstClassResource.layer:
+      return (
+        appCtx.getContextualLayerName(entity as never, false, false) ||
+        ('id' in entity && typeof entity.id === 'string' && entity.id) ||
+        title
+      )
+    case FirstClassResource.feature:
+      return ''
+    default:
+      return title
+  }
 })
-const hubCodes = $derived.by(() => {
-  if (!('domain' in entity) || !entity.organisations) {
-    return ''
+const breadcrumbs = $derived.by((): EntityCardFooterBreadcrumb[] => {
+  if (!resourceType) return []
+
+  const appCtx = adminCtx.appCtx
+  const hierarchy = appCtx.getHierarchySync(entity as never)
+  const items: EntityCardFooterBreadcrumb[] = []
+
+  if (resourceType !== FirstClassResource.layer && hierarchy.layer) {
+    const layerLabel =
+      appCtx.getContextualLayerName(hierarchy.layer, false, false) ?? hierarchy.layer.id
+    if (layerLabel) {
+      items.push({ kind: 'layer', label: layerLabel })
+    }
   }
 
-  return entity.organisations
-    .map(organisation => organisation.code)
-    .filter(Boolean)
-    .join(', ')
-})
-const visitableLabel = $derived.by(() => {
-  if (!('isVisitable' in entity) || entity.isVisitable === undefined) {
-    return ''
+  if (resourceType !== FirstClassResource.project && hierarchy.project) {
+    const projectLabel =
+      appCtx.getContextualProjectName(hierarchy.project, false, false) ??
+      hierarchy.project.code
+    if (projectLabel) {
+      items.push({ kind: 'project', label: projectLabel })
+    }
   }
 
-  return entity.isVisitable ? 'Visitable' : 'Not Visitable'
+  if (resourceType !== FirstClassResource.organisation && hierarchy.organisation) {
+    const organisationLabel =
+      appCtx.getContextualOrganisationName(hierarchy.organisation, false, false) ??
+      hierarchy.organisation.code
+    if (organisationLabel) {
+      items.push({ kind: 'organisation', label: organisationLabel })
+    }
+  }
+
+  return items
 })
 const href = $derived(
   adminCtx.activeResourceType
@@ -161,7 +211,7 @@ function handleHeaderImageClick(event: MouseEvent): void {
       {/if}
     </div>
   {:else}
-    <EntityCardPrimitive.Body {subtitle} {title} {description} {actions} />
+    <EntityCardPrimitive.Body {title} {description} {actions} />
   {/if}
 
   {#if footer}
@@ -169,9 +219,9 @@ function handleHeaderImageClick(event: MouseEvent): void {
   {:else}
     <EntityCardPrimitive.Footer
       {publicationState}
-      {publicationLabel}
-      {hubCodes}
-      {visitableLabel}
+      {shortLabel}
+      {breadcrumbs}
+      {cardWidth}
     />
   {/if}
 </EntityCardPrimitive.Root>

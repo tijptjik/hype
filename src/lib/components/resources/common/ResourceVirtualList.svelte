@@ -52,6 +52,8 @@ let layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
 // GRID CONFIGURATION
 let itemWidth = 340 // Approximate width of EntityCard + margins
 let itemHeight = $derived(layoutMode === 'table' || layoutMode === 'list' ? 88 : 396) // Approximate row/card heights
+const GRID_HORIZONTAL_PADDING_PX = 16
+const GRID_COLUMN_GAP_PX = 16
 
 // Smart column count calculation - debounce only during panel transitions
 $effect(() => {
@@ -81,6 +83,13 @@ $effect(() => {
 })
 
 let columnCount = $derived(stableColumnCount)
+let cardWidth = $derived.by(() => {
+  if (layoutMode !== 'card') return 0
+
+  const usableWidth = Math.max(0, gridWidth - GRID_HORIZONTAL_PADDING_PX)
+  const totalGapWidth = Math.max(0, columnCount - 1) * GRID_COLUMN_GAP_PX
+  return Math.max(0, (usableWidth - totalGapWidth) / Math.max(1, columnCount))
+})
 
 // Function to calculate grid data
 const calculateGridData = () => {
@@ -116,6 +125,7 @@ onDestroy(() => {
       entities={item.entities}
       startingIndex={item.startingIndex}
       {columnCount}
+      {cardWidth}
       {card}
     />
   {:else if layoutMode === 'table' || layoutMode === 'list'}
