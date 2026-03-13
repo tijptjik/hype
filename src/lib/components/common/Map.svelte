@@ -17,6 +17,7 @@ import type { Marker, LngLatLike } from 'maplibre-gl'
 import type { Id, AddressMeta } from '$lib/types'
 type MapProps = {
   coordinates: number[]
+  initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
   draggable?: boolean
   toggleFullscreen?: (isFullscreen: boolean) => void
@@ -43,6 +44,8 @@ let mapContainer: HTMLDivElement
 let map = $derived(appCtx.map)
 let feature = $state()
 let isMapLoaded = $state(false)
+let hasSyncedViewport = $state(false)
+let lastCoordinateKey = $state('')
 
 // STATE : DERIVED
 let markedAddressLngLat: [number, number] | null = $state(null)
@@ -63,7 +66,7 @@ onMount(async () => {
   appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
     style: SpectralStyle,
-    center: mapProps.coordinates,
+    center: mapProps.initialCenter ?? mapProps.coordinates,
     zoom: 20,
     hash: false,
     attributionControl: false,
@@ -92,14 +95,30 @@ onMount(async () => {
 // EFFECTS :: ON UPDATE
 $effect(() => {
   if (map && mapProps.coordinates && feature) {
+    const coordinateKey = mapProps.coordinates.join(',')
     appCtx.zoomToMarkerOnly = true
+    if (!hasSyncedViewport) {
+      hasSyncedViewport = true
+      lastCoordinateKey = coordinateKey
+      // Keep the initial viewport on the user's location when provided.
+      if (mapProps.initialCenter) {
+        // @ts-expect-error
+        feature.setLngLat(mapProps.coordinates)
+        return
+      }
+    }
+    if (lastCoordinateKey === coordinateKey) {
+      // @ts-expect-error
+      feature.setLngLat(mapProps.coordinates)
+      return
+    }
+    lastCoordinateKey = coordinateKey
     if (mapProps.coordinates && addressLngLat && !appCtx.zoomToMarkerOnly) {
       // @ts-expect-error
       appCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat])
     } else {
-      // @ts-expect-error
       map.cachedFlyTo({
-        center: mapProps.coordinates,
+        center: mapProps.coordinates as [number, number],
         zoom: 20,
         run: true,
       })
