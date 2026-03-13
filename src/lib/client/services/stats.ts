@@ -3,7 +3,9 @@ import { SvelteMap } from 'svelte/reactivity'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
-import { supportedLocaleKeys } from '$lib/i18n'
+import { m, supportedLocaleKeys } from '$lib/i18n'
+// SERVICES
+import { sortProperties } from '$lib/client/services/property'
 // TYPES
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { AppCtx } from '$lib/context/app.svelte'
@@ -11,21 +13,97 @@ import type {
   Feature,
   FeatureFromCollection,
   FeatureI18nDB,
-  FeatureProperty,
   UserContributedFeature,
 } from '$lib/db/zod/schema/feature.types'
-import type { LocaleKey } from '$lib/types'
+import type { Id, LocaleKey } from '$lib/types'
 
+type StatisticType = 'boolean' | 'count' | 'mean' | 'sum'
+type StatisticValue = boolean | number | null
+type StatisticRecord = {
+  value: StatisticValue
+  type: StatisticType
+}
+type AdminStatsCtx = {
+  appCtx?: {
+    state?: {
+      viewFilters?: {
+        feature?: {
+          translationLocales?: Record<LocaleKey, boolean>
+        }
+      }
+    }
+  }
+}
+type FeatureWithImageStats =
+  | FeatureFromCollection
+  | (Feature & {
+      imageCount?: number
+      imagePublishedCount?: number
+    })
+
+// +++ Table Of Contents
 // ═══════════════════════
-// STATISTICS CACHE METHODS
+// TABLE OF CONTENTS
 // ═══════════════════════
+//
+// 0. CACHE PRIMITIVES
+// - getStatistic
+// - setStatistic
+//
+// 1. FEATURE CACHE ACCESSORS
+// - getCachedFeatureBoolean
+// - setCachedFeatureBoolean
+// - getCachedFeatureTriState
+// - setCachedFeatureTriState
+// - getCachedFeatureTranslationBoolean
+// - setCachedFeatureTranslationBoolean
+// - getCachedFeatureTranslationTriState
+// - setCachedFeatureTranslationTriState
+// - getCachedFeaturePropertyBoolean
+// - setCachedFeaturePropertyBoolean
+// - getCachedFeatureSpecifierTranslation
+//
+// 2. COMPLETION CALCULATORS
+// - calculateContentCompletion
+// - calculateTranslationCompletion
+// - calculateTranslationCompletionTriState
+// - calculateImageCompletion
+// - calculateSpecifierTranslation
+//
+// 3. CACHE PRIMING
+// - primeFeatureStatsCache
+//
+// 4. STATUS MAP BUILDERS
+// - calculateStatusStatuses
+// - calculateContentStatuses
+// - calculateImageStatuses
+// - clearCachedFeatureTranslationStats
+// - getTranslationTooltip
+// - calculateTranslationStatuses
+//
+// 5. PROPERTY-SCOPED HELPERS
+// - getAvailableFeatureStatProperties
+// - calculateClassifierPresence
+// - calculateCategoricalStatuses
+// - calculateFreeformStatuses
+// - calculateSpecifierPresence
+//
+// 6. AGGREGATE STATISTICS
+// - calculateOverallStats
+// ---
+
+// ---
+/********************
+ *  0. CACHE PRIMITIVES
+ ************/
+// +++ Cache Primitives
 
 export function getStatistic(
   appCtx: AppCtx,
   resourceType: FirstClassResource,
   id: string,
   statistic: string,
-): { value: any; type: string } | undefined {
+): StatisticRecord | undefined {
   return appCtx.cache.stats.get(resourceType)?.get(id)?.get(statistic)
 }
 
@@ -34,8 +112,8 @@ export function setStatistic(
   resourceType: FirstClassResource,
   id: string,
   statistic: string,
-  value: any,
-  type: 'boolean' | 'count' | 'mean' | 'sum',
+  value: StatisticValue,
+  type: StatisticType,
 ): void {
   let resourceStats = appCtx.cache.stats.get(resourceType)
 
@@ -53,6 +131,12 @@ export function setStatistic(
   entityStats.set(statistic, { value, type })
 }
 
+// ---
+/********************
+ *  1. FEATURE CACHE ACCESSORS
+ ************/
+// +++ Feature Cache Accessors
+
 // Helper method to get cached boolean statistics for features (read-only)
 export function getCachedFeatureBoolean(
   appCtx: AppCtx,
@@ -62,9 +146,17 @@ export function getCachedFeatureBoolean(
     feature: FeatureFromCollection | Feature | UserContributedFeature,
   ) => boolean,
 ): boolean {
-  const cached = getStatistic(appCtx, FirstClassResource.feature, feature.id, statistic)
-  if (cached && cached.type === 'boolean') {
-    return cached.value
+  const featureId = 'id' in feature ? feature.id : undefined
+  if (featureId) {
+    const cached = getStatistic(
+      appCtx,
+      FirstClassResource.feature,
+      featureId,
+      statistic,
+    )
+    if (cached && cached.type === 'boolean') {
+      return cached.value
+    }
   }
 
   // Pure calculation without side effects
@@ -91,9 +183,9 @@ export function setCachedFeatureBoolean(
 // Helper methods for tri-state caching (boolean | null)
 export function getCachedFeatureTriState(
   appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  feature: FeatureFromCollection | Feature,
   statistic: string,
-  calculator: (feature: FeatureFromCollection) => boolean | null,
+  calculator: (feature: FeatureFromCollection | Feature) => boolean | null,
 ): boolean | null {
   const cached = getStatistic(appCtx, FirstClassResource.feature, feature.id, statistic)
   if (cached && cached.type === 'boolean') {
@@ -265,6 +357,207 @@ export function getCachedFeatureSpecifierTranslation(
   return calculator(feature)
 }
 
+// ---
+/********************
+ *  2. COMPLETION CALCULATORS
+ ************/
+// +++ Completion Calculators
+
+export function calculateContentCompletion(
+  _appCtx: AppCtx,
+  feature: FeatureFromCollection,
+): { title: boolean; description: boolean } {
+  return {
+    title: (Object.values(feature?.i18n ?? {}) as FeatureI18nDB[]).some(
+      (t: FeatureI18nDB) => !t.titleGen && t.title && t.title.length > 0,
+    ),
+    description: (Object.values(feature?.i18n ?? {}) as FeatureI18nDB[]).some(
+      (t: FeatureI18nDB) =>
+        !t.descriptionGen && t.description && t.description.length > 0,
+    ),
+  }
+}
+
+export function calculateTranslationCompletion(
+  _appCtx: AppCtx,
+  feature: FeatureFromCollection,
+  locale?: LocaleKey,
+): Record<string, boolean> {
+  const i18nEntries = feature?.i18n ?? {}
+
+  // If locale is specified, return per-locale status
+  if (locale) {
+    const entry = i18nEntries[locale]
+    if (!entry) {
+      return {
+        title: false,
+        description: false,
+        displayAddress: false,
+      }
+    }
+
+    return {
+      title: !entry.titleGen && !!entry.title && entry.title.length > 0,
+      description:
+        !entry.descriptionGen && !!entry.description && entry.description.length > 0,
+      displayAddress:
+        !entry.displayAddressGen &&
+        !!entry.displayAddress &&
+        entry.displayAddress.length > 0,
+    }
+  }
+
+  // For backward compatibility, return global status (ALL locales must have translations)
+  const allEntries = Object.values(i18nEntries) as FeatureI18nDB[]
+  if (allEntries.length === 0) {
+    return {
+      title: false,
+      description: false,
+      displayAddress: false,
+    }
+  }
+
+  return {
+    title: allEntries.every(t => !t.titleGen && t.title && t.title.length > 0),
+    description: allEntries.every(
+      t =>
+        (!t.descriptionGen && t.description && t.description.length > 0) ||
+        !t.description ||
+        t.description.length === 0,
+    ),
+    displayAddress: allEntries.every(
+      t =>
+        (!t.displayAddressGen && t.displayAddress && t.displayAddress.length > 0) ||
+        !t.displayAddress ||
+        t.displayAddress.length === 0,
+    ),
+  }
+}
+
+// New tri-state translation completion function
+export function calculateTranslationCompletionTriState(
+  _appCtx: AppCtx,
+  feature: FeatureFromCollection,
+  locale: LocaleKey,
+): Record<string, boolean | null> {
+  const i18nEntries = feature?.i18n ?? {}
+
+  // Helper function to check tri-state for each field
+  const checkField = (
+    fieldKey: 'title' | 'description' | 'displayAddress',
+    genKey: 'titleGen' | 'descriptionGen' | 'displayAddressGen',
+  ): boolean | null => {
+    // First check if this specific locale has content
+    const entry = i18nEntries[locale]
+    if (!entry) {
+      // No i18n entry for this locale - check if ANY locale has manual content
+      return checkIfAnyLocaleHasManualContent(fieldKey, genKey)
+    }
+
+    const fieldValue = entry[fieldKey]
+    if (!fieldValue || fieldValue.length === 0) {
+      // No content in this locale - check if ANY locale has manual content
+      return checkIfAnyLocaleHasManualContent(fieldKey, genKey)
+    }
+
+    const isGenerated = entry[genKey] ?? false // Default to false if missing
+
+    // Has content in this locale - check if it's translated (not generated)
+    return !isGenerated
+  }
+
+  // Helper function to check if ANY locale has manual (non-generated) content for this field
+  const checkIfAnyLocaleHasManualContent = (
+    fieldKey: 'title' | 'description' | 'displayAddress',
+    genKey: 'titleGen' | 'descriptionGen' | 'displayAddressGen',
+  ): boolean | null => {
+    const allEntries = Object.values(i18nEntries)
+
+    // Check if ANY locale has manual content for this field
+    const hasManualContent = allEntries.some(entry => {
+      const fieldValue = entry[fieldKey]
+      const isGenerated = entry[genKey] ?? false
+      return fieldValue && fieldValue.length > 0 && !isGenerated
+    })
+
+    if (hasManualContent) {
+      // Some locale has manual content, but not this specific locale
+      return false // This locale is not translated
+    } else {
+      // No locale has manual content - return null (no manual translation available)
+      return null
+    }
+  }
+
+  return {
+    title: checkField('title', 'titleGen'),
+    description: checkField('description', 'descriptionGen'),
+    displayAddress: checkField('displayAddress', 'displayAddressGen'),
+  }
+}
+
+export function calculateImageCompletion(feature: FeatureWithImageStats): {
+  hasImage: boolean
+  isOneImagePublished: boolean | null
+  isAllImagePublished: boolean | null
+} {
+  // Check if feature has the new count fields (from collection API)
+  const imageCount = feature.imageCount ?? 0
+  const imagePublishedCount = feature.imagePublishedCount ?? 0
+
+  return {
+    hasImage: imageCount > 0,
+    // Tri-state logic: true = has images AND at least one published, false = has images BUT none published, null = no images
+    isOneImagePublished: imageCount === 0 ? null : imagePublishedCount > 0,
+    // Tri-state logic: true = has images AND all published, false = has images BUT not all published, null = no images
+    isAllImagePublished: imageCount === 0 ? null : imagePublishedCount === imageCount,
+  }
+}
+
+export function calculateSpecifierTranslation(
+  feature: Feature | FeatureFromCollection,
+): boolean | null {
+  // Get all feature properties
+  const properties = feature.properties || []
+
+  // Find properties that have i18n objects
+  const propertiesWithI18n = properties.filter(
+    fp => fp.i18n && Object.keys(fp.i18n).length > 0,
+  )
+
+  // If no properties have i18n objects, no source available to translate
+  if (propertiesWithI18n.length === 0) {
+    return null
+  }
+
+  // Check if ALL i18n entries across ALL properties have no source content
+  const allEmpty = propertiesWithI18n.every(fp => {
+    const i18nEntries = Object.values(fp.i18n || {})
+    // Check if ALL i18n entries are empty (undefined, null, or empty string)
+    return i18nEntries.every(
+      i18nEntry => !i18nEntry.value || i18nEntry.value.trim() === '',
+    )
+  })
+
+  // If all content is empty across all locales, no source available
+  if (allEmpty) {
+    return null
+  }
+
+  // Check if EVERY property with i18n has valueGen = false for ALL i18n entries
+  return propertiesWithI18n.every(fp => {
+    const i18nEntries = Object.values(fp.i18n || {})
+    // Every i18n entry must have valueGen = false (not auto-generated)
+    return i18nEntries.every(i18nEntry => i18nEntry.valueGen === false)
+  })
+}
+
+// ---
+/********************
+ *  3. CACHE PRIMING
+ ************/
+// +++ Cache Priming
+
 // Pre-populate stats cache for a feature (called during feature refresh)
 export function primeFeatureStatsCache(
   appCtx: AppCtx,
@@ -272,7 +565,7 @@ export function primeFeatureStatsCache(
 ): void {
   // Clear existing cache for this feature to ensure fresh calculation with correct image logic
   const resourceStats = appCtx.cache.stats.get(FirstClassResource.feature)
-  if (resourceStats && resourceStats.has(feature.id)) {
+  if (resourceStats?.has(feature.id)) {
     resourceStats.delete(feature.id)
   }
 
@@ -385,198 +678,226 @@ export function primeFeatureStatsCache(
   })
 }
 
-// ═══════════════════════
-// COMPLETION STATISTICS
-// ═══════════════════════
+// ---
+/********************
+ *  4. STATUS MAP BUILDERS
+ ************/
+// +++ Status Map Builders
 
-export function calculateContentCompletion(
+export function calculateStatusStatuses(
   appCtx: AppCtx,
-  feature: FeatureFromCollection,
-): { title: boolean; description: boolean } {
-  return {
-    title: (Object.values(feature?.i18n ?? {}) as FeatureI18nDB[]).some(
-      (t: FeatureI18nDB) => !t.titleGen && t.title && t.title.length > 0,
-    ),
-    description: (Object.values(feature?.i18n ?? {}) as FeatureI18nDB[]).some(
-      (t: FeatureI18nDB) =>
-        !t.descriptionGen && t.description && t.description.length > 0,
-    ),
-  }
-}
-
-export function calculateTranslationCompletion(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
-  locale?: LocaleKey,
+  feature: FeatureFromCollection | Feature | UserContributedFeature,
 ): Record<string, boolean> {
-  const i18nEntries = feature?.i18n ?? {}
-
-  // If locale is specified, return per-locale status
-  if (locale) {
-    const entry = i18nEntries[locale]
-    if (!entry) {
-      return {
-        title: false,
-        description: false,
-        displayAddress: false,
-      }
-    }
-
-    return {
-      title: !entry.titleGen && !!entry.title && entry.title.length > 0,
-      description:
-        !entry.descriptionGen && !!entry.description && entry.description.length > 0,
-      displayAddress:
-        !entry.displayAddressGen &&
-        !!entry.displayAddress &&
-        entry.displayAddress.length > 0,
-    }
-  }
-
-  // For backward compatibility, return global status (ALL locales must have translations)
-  const allEntries = Object.values(i18nEntries) as FeatureI18nDB[]
-  if (allEntries.length === 0) {
-    return {
-      title: false,
-      description: false,
-      displayAddress: false,
-    }
-  }
-
-  return {
-    title: allEntries.every(t => !t.titleGen && t.title && t.title.length > 0),
-    description: allEntries.every(
-      t =>
-        (!t.descriptionGen && t.description && t.description.length > 0) ||
-        !t.description ||
-        t.description.length === 0,
-    ),
-    displayAddress: allEntries.every(
-      t =>
-        (!t.displayAddressGen && t.displayAddress && t.displayAddress.length > 0) ||
-        !t.displayAddress ||
-        t.displayAddress.length === 0,
-    ),
-  }
-}
-
-// New tri-state translation completion function
-export function calculateTranslationCompletionTriState(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
-  locale: LocaleKey,
-): Record<string, boolean | null> {
-  const i18nEntries = feature?.i18n ?? {}
-
-  // Helper function to check tri-state for each field
-  const checkField = (
-    fieldKey: 'title' | 'description' | 'displayAddress',
-    genKey: 'titleGen' | 'descriptionGen' | 'displayAddressGen',
-  ): boolean | null => {
-    // First check if this specific locale has content
-    const entry = i18nEntries[locale]
-    if (!entry) {
-      // No i18n entry for this locale - check if ANY locale has manual content
-      return checkIfAnyLocaleHasManualContent(fieldKey, genKey)
-    }
-
-    const fieldValue = entry[fieldKey]
-    if (!fieldValue || fieldValue.length === 0) {
-      // No content in this locale - check if ANY locale has manual content
-      return checkIfAnyLocaleHasManualContent(fieldKey, genKey)
-    }
-
-    const isGenerated = entry[genKey] ?? false // Default to false if missing
-
-    // Has content in this locale - check if it's translated (not generated)
-    return !isGenerated
-  }
-
-  // Helper function to check if ANY locale has manual (non-generated) content for this field
-  const checkIfAnyLocaleHasManualContent = (
-    fieldKey: 'title' | 'description' | 'displayAddress',
-    genKey: 'titleGen' | 'descriptionGen' | 'displayAddressGen',
-  ): boolean | null => {
-    const allEntries = Object.values(i18nEntries)
-
-    // Check if ANY locale has manual content for this field
-    const hasManualContent = allEntries.some((entry: any) => {
-      const fieldValue = entry[fieldKey]
-      const isGenerated = entry[genKey] ?? false
-      return fieldValue && fieldValue.length > 0 && !isGenerated
-    })
-
-    if (hasManualContent) {
-      // Some locale has manual content, but not this specific locale
-      return false // This locale is not translated
-    } else {
-      // No locale has manual content - return null (no manual translation available)
-      return null
-    }
-  }
-
-  return {
-    title: checkField('title', 'titleGen'),
-    description: checkField('description', 'descriptionGen'),
-    displayAddress: checkField('displayAddress', 'displayAddressGen'),
-  }
-}
-
-export function calculateImageCompletion(feature: FeatureFromCollection): {
-  hasImage: boolean
-  isOneImagePublished: boolean | null
-  isAllImagePublished: boolean | null
-} {
-  // Check if feature has the new count fields (from collection API)
-  const imageCount = (feature as any).imageCount as number
-  const imagePublishedCount = (feature as any).imagePublishedCount as number
-
-  return {
-    hasImage: imageCount > 0,
-    // Tri-state logic: true = has images AND at least one published, false = has images BUT none published, null = no images
-    isOneImagePublished: imageCount === 0 ? null : imagePublishedCount > 0,
-    // Tri-state logic: true = has images AND all published, false = has images BUT not all published, null = no images
-    isAllImagePublished: imageCount === 0 ? null : imagePublishedCount === imageCount,
-  }
-}
-
-export function calculateSpecifierTranslation(
-  feature: Feature | FeatureFromCollection,
-): boolean | null {
-  // Get all feature properties
-  const properties = feature.properties || []
-
-  // Find properties that have i18n objects
-  const propertiesWithI18n = properties.filter(
-    fp => fp.i18n && Object.keys(fp.i18n).length > 0,
+  const isPendingReview = getCachedFeatureBoolean(
+    appCtx,
+    feature,
+    'isPendingReview',
+    value => Boolean((value as FeatureFromCollection | Feature).isPendingReview),
+  )
+  const isPublished = getCachedFeatureBoolean(appCtx, feature, 'isPublished', value =>
+    Boolean((value as FeatureFromCollection | Feature).isPublished),
+  )
+  const isVisitable = getCachedFeatureBoolean(appCtx, feature, 'isVisitable', value =>
+    Boolean((value as FeatureFromCollection | Feature).isVisitable),
+  )
+  const isIntangible = getCachedFeatureBoolean(appCtx, feature, 'isIntangible', value =>
+    Boolean((value as FeatureFromCollection | Feature).isIntangible),
   )
 
-  // If no properties have i18n objects, no source available to translate
-  if (propertiesWithI18n.length === 0) {
-    return null
-  }
+  const result: Record<string, boolean> = {}
+  const statusItems = [
+    { key: m.plain_broad_shell_dart(), value: !isPendingReview },
+    { key: m.published(), value: isPublished },
+    { key: m.dry_aware_squirrel_cheer(), value: isVisitable },
+    { key: m.teary_fit_maggot_socket(), value: !isIntangible },
+  ]
 
-  // Check if ALL i18n entries across ALL properties have no source content
-  const allEmpty = propertiesWithI18n.every(fp => {
-    const i18nEntries = Object.values(fp.i18n || {})
-    // Check if ALL i18n entries are empty (undefined, null, or empty string)
-    return i18nEntries.every(
-      i18nEntry => !i18nEntry.value || i18nEntry.value.trim() === '',
-    )
+  statusItems.forEach(({ key, value }) => {
+    result[value ? key : `${m.filters__not()} ${key}`] = value
   })
 
-  // If all content is empty across all locales, no source available
-  if (allEmpty) {
-    return null
-  }
+  return result
+}
 
-  // Check if EVERY property with i18n has valueGen = false for ALL i18n entries
-  return propertiesWithI18n.every(fp => {
-    const i18nEntries = Object.values(fp.i18n || {})
-    // Every i18n entry must have valueGen = false (not auto-generated)
-    return i18nEntries.every(i18nEntry => i18nEntry.valueGen === false)
+export function calculateContentStatuses(
+  appCtx: AppCtx,
+  feature: FeatureFromCollection | Feature | UserContributedFeature,
+): Record<string, boolean> {
+  const result: Record<string, boolean> = {}
+
+  const contentItems = [
+    {
+      key: m.feature__title(),
+      value: getCachedFeatureBoolean(appCtx, feature, 'hasTitle', current =>
+        (
+          Object.values(
+            (current as FeatureFromCollection | Feature).i18n ?? {},
+          ) as Array<Record<string, unknown>>
+        ).some(
+          translation =>
+            !translation.titleGen &&
+            typeof translation.title === 'string' &&
+            translation.title.length > 0,
+        ),
+      ),
+    },
+    {
+      key: m.feature__description(),
+      value: getCachedFeatureBoolean(appCtx, feature, 'hasDescription', current =>
+        (
+          Object.values(
+            (current as FeatureFromCollection | Feature).i18n ?? {},
+          ) as Array<Record<string, unknown>>
+        ).some(
+          translation =>
+            !translation.descriptionGen &&
+            typeof translation.description === 'string' &&
+            translation.description.length > 0,
+        ),
+      ),
+    },
+    {
+      key: m.feature__address(),
+      value: getCachedFeatureBoolean(appCtx, feature, 'hasDisplayAddress', current =>
+        (
+          Object.values(
+            (current as FeatureFromCollection | Feature).i18n ?? {},
+          ) as Array<Record<string, unknown>>
+        ).some(
+          translation =>
+            !translation.displayAddressGen &&
+            typeof translation.displayAddress === 'string' &&
+            translation.displayAddress.length > 0,
+        ),
+      ),
+    },
+  ]
+
+  contentItems.forEach(({ key, value }) => {
+    result[value ? `${m.filters__has()} ${key}` : `${m.filters__no()} ${key}`] = value
+  })
+
+  return result
+}
+
+export function calculateImageStatuses(
+  appCtx: AppCtx,
+  feature: Feature,
+): Record<string, boolean | null> {
+  return {
+    [`${m.filters__has()} ${m.organisation__images()}`]: getCachedFeatureBoolean(
+      appCtx,
+      feature,
+      'hasImage',
+      current =>
+        calculateImageCompletion(current as FeatureFromCollection | Feature).hasImage,
+    ),
+    [`${m.number__1()} ${m.published()}`]: getCachedFeatureTriState(
+      appCtx,
+      feature,
+      'isOneImagePublished',
+      current => calculateImageCompletion(current).isOneImagePublished,
+    ),
+    [`${m.filters__all()} ${m.published()}`]: getCachedFeatureTriState(
+      appCtx,
+      feature,
+      'isAllImagePublished',
+      current => calculateImageCompletion(current).isAllImagePublished,
+    ),
+  }
+}
+
+export function clearCachedFeatureTranslationStats(
+  appCtx: AppCtx,
+  featureId: string,
+): void {
+  const featureStats = appCtx.cache.stats.get(FirstClassResource.feature)
+  if (!featureStats?.has(featureId)) return
+
+  const stats = featureStats.get(featureId)
+  if (!stats) return
+
+  const keysToDelete: string[] = []
+  for (const key of stats.keys()) {
+    if (key.includes('Translated.')) keysToDelete.push(key)
+  }
+  keysToDelete.forEach(key => {
+    stats.delete(key)
   })
 }
+
+function getTranslationTooltip(fieldName: string, status: boolean | null): string {
+  if (status === true) return `${fieldName} ${m.tooltip__translated()}`
+  if (status === false)
+    return `${fieldName} ${m.filters__not()} ${m.tooltip__translated()}`
+  return `${fieldName} ${m.filters__not()} ${m.awful_even_coyote_wish()}`
+}
+
+export function calculateTranslationStatuses(
+  appCtx: AppCtx,
+  feature: Feature,
+  activeTranslationLocales: LocaleKey[],
+  isSuperAdmin: boolean,
+): Record<string, boolean | null> {
+  const calculateMultiLocaleStatus = (
+    fieldKey: 'title' | 'description' | 'displayAddress',
+  ): boolean | null => {
+    if (activeTranslationLocales.length === 0) return null
+
+    const i18nEntries = feature.i18n ?? {}
+    const genKey =
+      fieldKey === 'title'
+        ? 'titleGen'
+        : fieldKey === 'description'
+          ? 'descriptionGen'
+          : 'displayAddressGen'
+
+    const hasAnyManualContent = Object.values(i18nEntries).some(entry => {
+      const fieldValue = entry[fieldKey]
+      const isGenerated = entry[genKey] ?? false
+      return Boolean(fieldValue && fieldValue.length > 0 && !isGenerated)
+    })
+
+    if (!hasAnyManualContent) return null
+
+    return activeTranslationLocales.every(localeKey => {
+      const entry = i18nEntries[localeKey]
+      if (!entry) return false
+      const fieldValue = entry[fieldKey]
+      const isGenerated = entry[genKey] ?? false
+      return Boolean(fieldValue && fieldValue.length > 0 && !isGenerated)
+    })
+  }
+
+  const titleStatus = calculateMultiLocaleStatus('title')
+  const descriptionStatus = calculateMultiLocaleStatus('description')
+  const addressStatus = calculateMultiLocaleStatus('displayAddress')
+
+  const result: Record<string, boolean | null> = {
+    [getTranslationTooltip(m.feature__title(), titleStatus)]: titleStatus,
+    [getTranslationTooltip(m.feature__description(), descriptionStatus)]:
+      descriptionStatus,
+    [getTranslationTooltip(m.feature__address(), addressStatus)]: addressStatus,
+  }
+
+  if (isSuperAdmin) {
+    const propertyStatus = getCachedFeatureSpecifierTranslation(
+      appCtx,
+      feature,
+      current => calculateSpecifierTranslation(current),
+    )
+    result[getTranslationTooltip(m.spicy_ideal_butterfly_revive(), propertyStatus)] =
+      propertyStatus
+  }
+
+  return result
+}
+
+// ---
+/********************
+ *  5. PROPERTY-SCOPED HELPERS
+ ************/
+// +++ Property-Scoped Helpers
 
 // Property presence calculators that match filter logic exactly
 export function calculateClassifierPresence(
@@ -606,6 +927,122 @@ export function calculateClassifierPresence(
   }
 }
 
+function getAvailableFeatureStatProperties(
+  appCtx: AppCtx,
+  layerId: Id,
+  type: Property['type'],
+): Property[] {
+  if (!layerId) return []
+
+  const layer = appCtx.cache.layer.get(layerId)
+  if (!layer?.properties) return []
+
+  return sortProperties(
+    layer.properties
+      .filter(layerProperty => {
+        if (!layerProperty.propertyId) return false
+        const property = appCtx.cache.property.get(layerProperty.propertyId)
+        return (
+          property &&
+          property.type === type &&
+          layerProperty.isVisible === true &&
+          property.key !== 'grade'
+        )
+      })
+      .map(layerProperty => {
+        if (!layerProperty.propertyId) return { property: undefined }
+        return {
+          property: appCtx.cache.property.get(layerProperty.propertyId),
+        }
+      })
+      .filter((item): item is { property: Property } => item.property !== undefined),
+  ).map(item => item.property)
+}
+
+export function calculateCategoricalStatuses(
+  feature: Feature,
+  appCtx: AppCtx,
+  localeKey: LocaleKey,
+): Record<string, boolean> {
+  const result: Record<string, boolean> = {}
+  const classifierProperties = getAvailableFeatureStatProperties(
+    appCtx,
+    feature.layerId,
+    'classifier',
+  )
+
+  classifierProperties.forEach(property => {
+    const featureProperty = feature.properties?.find(
+      item => item.propertyId === property.id,
+    )
+    const propertyLabel = property.i18n?.[localeKey]?.label ?? property.key
+
+    if (property.component === 'RangeField') {
+      if (featureProperty?.value && featureProperty.value !== '') {
+        result[`${propertyLabel} : ${featureProperty.value}`] = true
+      } else {
+        result[propertyLabel] = false
+      }
+      return
+    }
+
+    if (featureProperty?.propertyValueId) {
+      const selectedValue = property.values?.find(
+        value => value.id === featureProperty.propertyValueId,
+      )
+      if (selectedValue) {
+        const valueLabel = selectedValue.i18n?.[localeKey]?.value ?? 'Unknown'
+        result[`${propertyLabel} : ${valueLabel}`] = true
+        return
+      }
+    }
+
+    result[propertyLabel] = false
+  })
+
+  return result
+}
+
+export function calculateFreeformStatuses(
+  feature: Feature,
+  appCtx: AppCtx,
+  localeKey: LocaleKey,
+): Record<string, boolean> {
+  const result: Record<string, boolean> = {}
+  const specifierProperties = getAvailableFeatureStatProperties(
+    appCtx,
+    feature.layerId,
+    'specifier',
+  )
+
+  specifierProperties.forEach(property => {
+    const featureProperty = feature.properties?.find(
+      item => item.propertyId === property.id,
+    )
+    const propertyLabel = property.i18n?.[localeKey]?.label ?? property.key
+
+    let actualValue = ''
+    let hasValue = false
+
+    if (featureProperty?.value && featureProperty.value.length > 0) {
+      actualValue = featureProperty.value
+      hasValue = true
+    } else if (featureProperty?.i18n) {
+      const localeValue = featureProperty.i18n[localeKey]?.value
+      if (localeValue && localeValue.length > 0) {
+        actualValue = localeValue
+        hasValue = true
+      }
+    }
+
+    result[
+      hasValue && actualValue ? `${propertyLabel} : ${actualValue}` : propertyLabel
+    ] = hasValue
+  })
+
+  return result
+}
+
 export function calculateSpecifierPresence(
   feature: FeatureFromCollection,
   propertyId: string,
@@ -626,14 +1063,16 @@ export function calculateSpecifierPresence(
   return !!featureProp.value && featureProp.value.length > 0
 }
 
-// ═══════════════════════
-// AGGREGATE STATISTICS
-// ═══════════════════════
+// ---
+/********************
+ *  6. AGGREGATE STATISTICS
+ ************/
+// +++ Aggregate Statistics
 
 export function calculateOverallStats(
   appCtx: AppCtx,
   entities: FeatureFromCollection[],
-  adminCtx?: any, // Optional admin context for translation locale filtering
+  adminCtx?: AdminStatsCtx, // Optional admin context for translation locale filtering
 ): {
   content: number
   translation: number
@@ -695,7 +1134,6 @@ export function calculateOverallStats(
       (contentCompletion.title ? 1 : 0) + (contentCompletion.description ? 1 : 0)
 
     // Translation - TRI-STATE LOGIC: exclude null values from both numerator and denominator
-    const i18n = feature?.i18n ?? {}
     let featureTranslationCompleted = 0
     let featureTranslationTotal = 0
 

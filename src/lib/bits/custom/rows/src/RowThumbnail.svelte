@@ -1,23 +1,12 @@
 <script lang="ts">
 import { getURLfromImage } from '$lib/client/services/image'
-import type {
-  ImageContextEnvelope,
-  ImageCtxEnvelope,
-} from '$lib/db/zod/schema/image.types'
+import type { RowThumbnailProps } from '../row.types'
 
-let {
-  image = null,
-  alt = 'Resource image',
-  onClick,
-}: {
-  image?: ImageContextEnvelope | ImageCtxEnvelope | null
-  alt?: string
-  onClick?: (image: ImageContextEnvelope | ImageCtxEnvelope) => void
-} = $props()
+let { image = null, alt = 'Resource image', onClick }: RowThumbnailProps = $props()
 
-function handleClick(e: Event) {
-  e.preventDefault()
-  e.stopPropagation()
+function handleClick(event: Event): void {
+  event.preventDefault()
+  event.stopPropagation()
   if (image && onClick) onClick(image)
 }
 </script>
@@ -31,10 +20,10 @@ function handleClick(e: Event) {
   {#if image}
     <img
       src={getURLfromImage({
-        image: image,
-        transformation: 'c_fill,w_100,h_100,q_auto'
+        image: image as never,
+        transformation: 'c_fill,w_100,h_100,q_auto',
       })}
-      {alt}
+      alt
       class="h-full w-full rounded-md object-cover text-transparent"
     >
   {:else}

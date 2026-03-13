@@ -24,7 +24,7 @@ let {
 >
   {#each entities as entity, columnIndex (entity.id)}
     {#if entity}
-      <div class="transition-all duration-200 hover:scale-[1.01]">
+      <div class="transition-all duration-200">
         {#if card}
           {@render card(entity, startingIndex + columnIndex)}
         {:else}
