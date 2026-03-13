@@ -59,7 +59,6 @@ import type {
   AppContextState,
   Cache,
   Code,
-  ControlMode,
   DeepPartial,
   FacetType,
   FilterState,
@@ -281,20 +280,20 @@ export class AppCtx {
         showAddButton: false,
         showSearch: false,
         showLayoutModes: false,
-        showControlModes: false,
+        showControlBarToggle: false,
         showFormActions: false,
       },
     },
     // UI state for each resource type
     ui: {
-      controlMode: {
-        organisation: 'hidden',
-        project: 'hidden',
-        layer: 'hidden',
-        feature: 'filter',
-        task: 'filter',
-        hub: 'hidden',
-        user: 'hidden',
+      isControlBarVisible: {
+        organisation: false,
+        project: false,
+        layer: false,
+        feature: true,
+        task: true,
+        hub: false,
+        user: false,
       },
       layoutMode: {
         organisation: 'card',
@@ -1899,10 +1898,10 @@ export class AppCtx {
     }
   }
 
-  setControlMode = (mode: ControlMode | null) => {
+  setControlBarVisible = (isVisible: boolean) => {
     const resourceType = this.getActiveResourceType()
     if (resourceType) {
-      this.state.ui.controlMode[resourceType] = mode ?? 'hidden'
+      this.state.ui.isControlBarVisible[resourceType] = isVisible
     }
   }
 
