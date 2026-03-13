@@ -597,6 +597,9 @@
     }
   ],
   "hub__title": "樞紐網站",
+  "admin__header_layout_card": "卡片",
+  "admin__header_layout_table": "表格",
+  "admin__header_layout_list": "列表",
   "mapbar__show_card": "顯示詳細資料",
   "new_feature__select_map_desc": "這項目該新增至哪張地圖？",
   "new_feature__reset_address": "重設地址",

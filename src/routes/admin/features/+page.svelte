@@ -14,7 +14,7 @@ import {
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 import FeatureCard from '$lib/components/resources/cards/FeatureIndexCard.svelte'
 // BITS PATTERNS
-import { CompletionFooter, FeatureRow, ResourceIndex } from '$lib/bits'
+import { CompletionFooter, FeatureRow, ResourceFilterBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -172,9 +172,6 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.feature)
 
-// HEADER SETUP
-headerCtrl.setHeaderForIndex(m.omni__title_features(), FeatureIcon)
-
 // STATE
 let listContainer: HTMLElement | null = $state(null)
 
@@ -185,6 +182,17 @@ let selectedFeatureIndex = $state<number>(-1)
 let entities: Feature[] = $derived(
   adminCtx.getViewFilteredResource<Feature>(FirstClassResource.feature),
 )
+
+$effect(() => {
+  headerCtrl.setHeaderForIndex(m.omni__title_features(), FeatureIcon)
+  headerCtrl.setControlBar(ResourceFilterBar, {
+    resource: FirstClassResource.feature,
+    count: entities.length,
+    filters,
+    sortables,
+  })
+  headerCtrl.setFooter(CompletionFooter, { entities })
+})
 // Derived states for navigation capability
 let canNavigatePrevious = $derived(() => {
   if (selectedFeatureIndex <= 0) return false
@@ -287,8 +295,6 @@ function updateRowFocus(index: number) {
 <ResourceIndex
   resource={FirstClassResource.feature}
   {entities}
-  {filters}
-  {sortables}
   bind:listContainer
 >
   {#snippet card(entity: Feature)}
@@ -304,7 +310,6 @@ function updateRowFocus(index: number) {
     />
   {/snippet}
 </ResourceIndex>
-<CompletionFooter {entities} />
 
 <!-- MODAL -->
 {#if selectedImage && selectedFeature}

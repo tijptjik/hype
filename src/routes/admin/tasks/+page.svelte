@@ -5,7 +5,7 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
 import { createToggleFilter } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { GroupedResourceIndex, TaskRow } from '$lib/bits'
+import { GroupedResourceIndex, ResourceFilterBar, TaskRow } from '$lib/bits'
 // COMPONENTS
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 // ENUMS
@@ -43,9 +43,6 @@ const filters = {
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.task)
-
-// HEADER SETUP
-headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon)
 
 // ELEMENTS
 let listContainer: HTMLElement | null = $state(null)
@@ -87,6 +84,16 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
     })
     .filter(({ group }) => group != null), // Filter out undefined projects during navigation
 )
+
+$effect(() => {
+  headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon)
+  headerCtrl.setControlBar(ResourceFilterBar, {
+    resource: FirstClassResource.task,
+    count: entities.length,
+    filters,
+  })
+  headerCtrl.clearFooter()
+})
 
 function navigateToNextTask() {
   if (selectedTaskIndex < 0) return
@@ -193,7 +200,6 @@ function updateRowFocus(index: number) {
   <GroupedResourceIndex
     resource={FirstClassResource.task}
     {groupedEntities}
-    {filters}
     bind:listContainer
   >
     {#snippet row(entity, index)}

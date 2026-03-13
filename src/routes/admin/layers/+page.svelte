@@ -13,7 +13,7 @@ import {
 } from '$lib/client/services/filters'
 import Image from '$lib/components/common/Image.svelte'
 // BITS PATTERNS
-import { EntityCard, ResourceIndex } from '$lib/bits'
+import { EntityCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -128,16 +128,24 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.layer)
 
-// HEADER SETUP
-headerCtrl.setHeaderForIndex(m.maps__layers(), LayerIcon)
-
 // STATE
 let entities: Layer[] = $derived(
   adminCtx.getViewFilteredResource<Layer>(FirstClassResource.layer),
 )
+
+$effect(() => {
+  headerCtrl.setHeaderForIndex(m.maps__layers(), LayerIcon)
+  headerCtrl.setControlBar(ResourceFilterBar, {
+    resource: FirstClassResource.layer,
+    count: entities.length,
+    filters,
+    sortables,
+  })
+  headerCtrl.clearFooter()
+})
 </script>
 
-<ResourceIndex resource={FirstClassResource.layer} {entities} {filters} {sortables}>
+<ResourceIndex resource={FirstClassResource.layer} {entities}>
   {#snippet card(entity: Layer)}
     <EntityCard {entity} {keyMap}>
       {#snippet header()}

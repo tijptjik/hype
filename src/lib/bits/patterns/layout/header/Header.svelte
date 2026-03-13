@@ -8,6 +8,9 @@ import type { HeaderProps } from './header.types'
 const DEFAULT_CLASS =
   'bits-theme bg-black py-4 pl-6 navbar sticky left-0 top-0 z-20 flex h-18 w-full shrink-0 justify-between caret-transparent shadow-lg transition-all duration-300'
 
+const controlBarComponentIds = new WeakMap<object, number>()
+let nextControlBarComponentId = 0
+
 let {
   query = $bindable(''),
   title = {},
@@ -17,6 +20,8 @@ let {
   viewActions = {},
   formActions = {},
   avatar = {},
+  controlBar = null,
+  footer = null,
   class: className = '',
   ...restProps
 }: HeaderProps = $props()
@@ -29,9 +34,27 @@ const showFacets = $derived(facetItems.length > 0)
 const showViewActions = $derived(viewActions.isVisible ?? false)
 const showFormActions = $derived(formActions.isVisible ?? false)
 
+function getControlBarTransitionKey(controlBar: HeaderProps['controlBar']): string | null {
+  if (!controlBar?.component) return null
+
+  let componentId = controlBarComponentIds.get(controlBar.component as object)
+
+  if (componentId == null) {
+    nextControlBarComponentId += 1
+    componentId = nextControlBarComponentId
+    controlBarComponentIds.set(controlBar.component as object, componentId)
+  }
+
+  const resourceKey =
+    typeof controlBar.props?.resource === 'string' ? controlBar.props.resource : null
+
+  return resourceKey ? `${componentId}:${resourceKey}` : `${componentId}`
+}
+
 const rootClass = $derived(
   [DEFAULT_CLASS, showAvatar ? 'pr-6' : 'pr-0', className].filter(Boolean).join(' '),
 )
+const controlBarTransitionKey = $derived(getControlBarTransitionKey(controlBar))
 </script>
 
 <HeaderPrimitive.Root class={rootClass} {...restProps}>
@@ -117,3 +140,16 @@ const rootClass = $derived(
     />
   {/snippet}
 </HeaderPrimitive.Root>
+
+{#if controlBar?.component}
+  {#key controlBarTransitionKey}
+    {@const ControlBar = controlBar.component}
+    <div
+      class="bits-theme bits-pattern-header__control-bar"
+      in:fly={{ y: -12, duration: 180, opacity: 0.15 }}
+      out:fly={{ y: -12, duration: 160, opacity: 0.15 }}
+    >
+      <ControlBar {...(controlBar.props ?? {})} />
+    </div>
+  {/key}
+{/if}

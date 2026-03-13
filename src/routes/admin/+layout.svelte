@@ -19,6 +19,7 @@ import { FirstClassResource, ResourcePath } from '$lib/enums'
 // TYPES
 import type { LayoutProps, LayoutData } from './$types'
 import type { QueryClient } from '@tanstack/svelte-query'
+import type { NavigableResource } from '$lib/types'
 
 type AdminRootProps = LayoutProps & {
   children: () => unknown
@@ -29,16 +30,16 @@ type AdminRootProps = LayoutProps & {
 
 // PROPS
 let { children, data }: AdminRootProps = $props()
-const { queryClient } = data
 
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx()
 
 // CONTEXT :: ADMIN
-const adminCtx = setAdminCtx(queryClient, appCtx)
+const adminCtx = setAdminCtx(data.queryClient, appCtx)
 setHeaderCtrl()
 const headerModel = useAdminHeaderModel(appCtx, adminCtx)
+const headerProps = $derived(headerModel.getHeaderProps())
 
 // Initialize AdminCtx if AppCtx is ready
 $effect(() => {
@@ -79,7 +80,7 @@ afterNavigate(() => {
     )?.[0] as FirstClassResource
 
     if (resourceType) {
-      adminCtx.setResourceRef(false, resourceType)
+      adminCtx.setResourceRef(false, resourceType as NavigableResource)
     }
   }
 })
@@ -93,8 +94,12 @@ afterNavigate(() => {
       <main
         class="flex h-full flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed"
       >
-        <Header {...headerModel.getHeaderProps()} />
+        <Header {...headerProps} />
         {@render children()}
+        {#if headerProps.footer?.component}
+          {@const Footer = headerProps.footer.component}
+          <Footer {...(headerProps.footer.props ?? {})} />
+        {/if}
       </main>
       <Settings />
     </div>

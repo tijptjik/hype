@@ -10,7 +10,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { EntityCard, ResourceIndex } from '$lib/bits'
+import { EntityCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -174,6 +174,13 @@ $effect(() => {
   headerCtrl.setHeaderForIndex(m.maps__projects(), ProjectIcon, {
     showNew: canCreateProject,
   })
+  headerCtrl.setControlBar(ResourceFilterBar, {
+    resource: FirstClassResource.project,
+    count: entities.length,
+    filters,
+    sortables,
+  })
+  headerCtrl.clearFooter()
 })
 
 // STATE
@@ -182,7 +189,7 @@ let entities: Project[] = $derived(
 )
 </script>
 
-<ResourceIndex resource={FirstClassResource.project} {entities} {filters} {sortables}>
+<ResourceIndex resource={FirstClassResource.project} {entities}>
   {#snippet card(entity: Project)}
     <EntityCard {entity} {keyMap} />
   {/snippet}

@@ -6,10 +6,27 @@
     position: relative;
   }
 
+  .bits-theme .bits-resource-sort__controls-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 0fr);
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      grid-template-columns 0.26s ease,
+      opacity 0.18s ease;
+  }
+
+  .bits-theme .bits-resource-sort__controls-wrap--open {
+    grid-template-columns: minmax(0, 1fr);
+    opacity: 1;
+  }
+
   .bits-theme .bits-resource-sort__controls {
     display: flex;
     align-items: center;
     gap: 0.125rem;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .bits-theme .bits-btn.bits-resource-sort__trigger {

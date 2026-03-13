@@ -12,7 +12,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { EntityCard, ResourceIndex } from '$lib/bits'
+import { EntityCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
@@ -105,18 +105,26 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.hub)
 
-// HEADER SETUP
-headerCtrl.setHeaderForIndex(m.hub__title(), HubIcon)
-
 // STATE
 let entities: Hub[] = $derived(
   adminCtx.isInitialised
     ? adminCtx.getViewFilteredResource<Hub>(FirstClassResource.hub)
     : [],
 )
+
+$effect(() => {
+  headerCtrl.setHeaderForIndex(m.hub__title(), HubIcon)
+  headerCtrl.setControlBar(ResourceFilterBar, {
+    resource: FirstClassResource.hub,
+    count: entities.length,
+    filters,
+    sortables,
+  })
+  headerCtrl.clearFooter()
+})
 </script>
 
-<ResourceIndex resource={FirstClassResource.hub} {entities} {filters} {sortables}>
+<ResourceIndex resource={FirstClassResource.hub} {entities}>
   {#snippet card(entity: Hub)}
     <EntityCard {entity} {keyMap} />
   {/snippet}

@@ -8,6 +8,7 @@ import type {
   HeaderFormActionsState,
   HeaderVisibilityOverrides,
 } from '$lib/types'
+import type { HeaderLayoutRegionConfig } from '$lib/bits/patterns/layout/header/header.types'
 
 const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   dirty: false,
@@ -19,6 +20,7 @@ const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   isPublishing: false,
   isPublished: false,
   canEdit: true,
+  disableEdit: false,
   canPublish: true,
   showDeleteAction: true,
   showPublishAction: true,
@@ -77,6 +79,10 @@ export class HeaderCtrl {
       facets: [],
     },
     formActions: null,
+    layout: {
+      controlBar: null,
+      footer: null,
+    },
   })
 
   /**
@@ -154,6 +160,8 @@ export class HeaderCtrl {
     this.applyIndexMeta(title, icon)
     this.showControls('none')
     this.setVisibility(getIndexVisibility(visibilityOverrides))
+    this.clearControlBar()
+    this.clearFooter()
   }
 
   /**
@@ -174,6 +182,8 @@ export class HeaderCtrl {
     this.applyEntityMeta(title, icon, facets)
     this.showControls('form')
     this.setVisibility(getEntityVisibility())
+    this.clearControlBar()
+    this.clearFooter()
   }
 
   /**
@@ -239,6 +249,48 @@ export class HeaderCtrl {
   }
 
   /**
+   * Register a layout-owned control bar shown directly beneath the header.
+   * @param component - Control bar component constructor.
+   * @param props - Props passed to the control bar component.
+   * @returns void
+   */
+  setControlBar(
+    component: HeaderLayoutRegionConfig['component'],
+    props: HeaderLayoutRegionConfig['props'] = {},
+  ): void {
+    this.state.layout.controlBar = component ? { component, props } : null
+  }
+
+  /**
+   * Clear the layout-owned control bar region.
+   * @returns void
+   */
+  clearControlBar(): void {
+    this.state.layout.controlBar = null
+  }
+
+  /**
+   * Register a layout-owned footer region.
+   * @param component - Footer component constructor.
+   * @param props - Props passed to the footer component.
+   * @returns void
+   */
+  setFooter(
+    component: HeaderLayoutRegionConfig['component'],
+    props: HeaderLayoutRegionConfig['props'] = {},
+  ): void {
+    this.state.layout.footer = component ? { component, props } : null
+  }
+
+  /**
+   * Clear the layout-owned footer region.
+   * @returns void
+   */
+  clearFooter(): void {
+    this.state.layout.footer = null
+  }
+
+  /**
    * Fully reset header controls, visibility, and metadata.
    * @returns void
    */
@@ -247,6 +299,8 @@ export class HeaderCtrl {
     this.state.isEditing = false
     this.state.visibility = {}
     this.state.formActions = null
+    this.clearControlBar()
+    this.clearFooter()
     this.clearMeta()
   }
 

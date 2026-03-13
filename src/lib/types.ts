@@ -191,6 +191,7 @@ import type { Writable } from 'svelte/store'
 import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { Geometry } from 'geojson'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import type { HeaderLayoutRegionConfig } from './bits/patterns/layout/header/header.types'
 
 type FieldComponentCtor = abstract new (...args: never[]) => unknown
 type LayerFormType = unknown
@@ -442,6 +443,10 @@ export type HeaderCtrlState = {
   visibility: HeaderVisibilityOverrides
   meta: HeaderMetaState
   formActions: HeaderFormActionsState | null
+  layout: {
+    controlBar: HeaderLayoutRegionConfig | null
+    footer: HeaderLayoutRegionConfig | null
+  }
 }
 
 /* ----------------- */

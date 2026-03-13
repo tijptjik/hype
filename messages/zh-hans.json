@@ -597,6 +597,9 @@
     }
   ],
   "hub__title": "枢纽网站",
+  "admin__header_layout_card": "卡片",
+  "admin__header_layout_table": "表格",
+  "admin__header_layout_list": "列表",
   "mapbar__show_card": "显示详细信息",
   "new_feature__select_map_desc": "这项目该添加到哪张地图？",
   "new_feature__reset_address": "重置地址",

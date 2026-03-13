@@ -1907,7 +1907,9 @@ export class AdminCtx {
           entity.code?.toLowerCase().includes(query.toLowerCase()) ||
           entity.domain?.toLowerCase().includes(query.toLowerCase()) ||
           entity.organisations?.some(org =>
-            org.i18n?.[getLocaleKey()]?.name?.toLowerCase().includes(query.toLowerCase()),
+            org.i18n?.[getLocaleKey()]?.name
+              ?.toLowerCase()
+              .includes(query.toLowerCase()),
           ),
       )
     }

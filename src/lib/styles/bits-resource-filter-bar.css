@@ -49,6 +49,29 @@
     @apply opacity-0;
   }
 
+  .rfb-active-strip {
+    @apply flex h-16 flex-row items-center justify-center gap-4;
+  }
+
+  .rfb-carousel__track {
+    @apply flex min-w-0 flex-row items-center justify-center gap-4 overflow-hidden;
+  }
+
+  .rfb-carousel__nav.bits-btn {
+    @apply h-9 w-9 min-w-9 rounded-full p-0;
+    border-color: transparent;
+    background-color: color-mix(in oklab, var(--color-base-300) 12%, transparent);
+  }
+
+  .rfb-carousel__nav.bits-btn:hover:not(:disabled):not([aria-disabled="true"]) {
+    background-color: color-mix(in oklab, var(--color-base-300) 20%, transparent);
+  }
+
+  .rfb-carousel__nav.bits-btn:disabled,
+  .rfb-carousel__nav.bits-btn[aria-disabled="true"] {
+    opacity: 0.35;
+  }
+
   .rfb-section-button {
     @apply relative inline-flex h-10 items-center gap-2 rounded-md border border-transparent bg-transparent px-2.5 text-sm text-base-content/70 shadow-none outline-none transition-colors duration-300;
   }

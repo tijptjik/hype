@@ -106,6 +106,11 @@ export interface HeaderAvatarConfig {
   transitionDirection?: 'left' | 'right'
 }
 
+export interface HeaderLayoutRegionConfig {
+  component?: Component<Record<string, unknown>> | null
+  props?: Record<string, unknown>
+}
+
 export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   query?: string
   title?: HeaderTitleConfig
@@ -115,4 +120,6 @@ export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> 
   viewActions?: HeaderViewActionsConfig
   formActions?: HeaderFormActionsConfig
   avatar?: HeaderAvatarConfig
+  controlBar?: HeaderLayoutRegionConfig | null
+  footer?: HeaderLayoutRegionConfig | null
 }

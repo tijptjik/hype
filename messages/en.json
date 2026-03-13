@@ -597,6 +597,9 @@
     }
   ],
   "hub__title": "Hubs",
+  "admin__header_layout_card": "Card",
+  "admin__header_layout_table": "Table",
+  "admin__header_layout_list": "List",
   "mapbar__show_card": "Show Details",
   "new_feature__select_map_desc": "Which map should this be added to?",
   "new_feature__reset_address": "Reset Address",
