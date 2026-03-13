@@ -138,6 +138,49 @@ export function useAdminHeaderModel(
     }
   }
 
+  // Resolve the compact cached label used in breadcrumb trails.
+  function getCachedCrumbLabel(
+    resourceType: FirstClassResource,
+    resource: unknown,
+  ): string {
+    switch (resourceType) {
+      case FirstClassResource.organisation:
+        return (
+          appCtx.getContextualOrganisationName(resource as never, false, false) ||
+          getCachedEntityLabel(resourceType, resource)
+        )
+      case FirstClassResource.project:
+        return (
+          appCtx.getContextualProjectName(resource as never, false, false) ||
+          getCachedEntityLabel(resourceType, resource)
+        )
+      case FirstClassResource.layer:
+        return (
+          appCtx.getContextualLayerName(resource as never, false, false) ||
+          getCachedEntityLabel(resourceType, resource)
+        )
+      case FirstClassResource.hub: {
+        const localeKey = getLocaleKey()
+        const i18n = (
+          resource as { i18n?: Record<string, Record<string, string | null>> }
+        )?.i18n
+        const localized = i18n?.[localeKey]
+        const english = i18n?.en
+        return (
+          localized?.nameShort?.trim() ||
+          english?.nameShort?.trim() ||
+          getCachedEntityLabel(resourceType, resource)
+        )
+      }
+      case FirstClassResource.feature:
+        return getCachedEntityLabel(resourceType, resource)
+      case FirstClassResource.task:
+        return `#${((resource as { id?: string }).id ?? '').trim()}`
+      default:
+        return ((resource as { id?: string }).id ?? '').trim()
+    }
+  }
+
   // Resolve the current header title synchronously from cache when explicit page title is absent.
   function getCachedHeaderTitle(): string {
     const resourceType = adminCtx.activeResourceType
@@ -175,81 +218,52 @@ export function useAdminHeaderModel(
         : undefined
     }
 
+    const pushCrumb = (
+      list: HeaderCrumb[],
+      type: FirstClassResource,
+      resourceValue: unknown,
+    ): void => {
+      if (!resourceValue) return
+      const ref =
+        type === FirstClassResource.layer
+          ? ((resourceValue as { id?: string }).id ?? '').trim()
+          : ((resourceValue as { code?: string }).code ?? '').trim()
+      const name = getCachedCrumbLabel(type, resourceValue)
+      if (!name) return
+      list.push({ name, href: toHref(type, ref) })
+    }
+
     const crumbs: HeaderCrumb[] = []
 
     if (resourceType === FirstClassResource.hub) {
-      const hubRef = ((resource as { code?: string }).code ?? '').trim()
-      const hubName = getCachedEntityLabel(FirstClassResource.hub, resource)
-      return hubName
-        ? [{ name: hubName, href: toHref(FirstClassResource.hub, hubRef) }]
-        : []
-    }
-
-    if (resourceType === FirstClassResource.organisation) {
-      const hub = hubFromOrganisation(resource)
-      const hubRef = ((hub as { code?: string })?.code ?? '').trim()
-      const hubName = hub ? getCachedEntityLabel(FirstClassResource.hub, hub) : ''
-      return hubName
-        ? [{ name: hubName, href: toHref(FirstClassResource.hub, hubRef) }]
-        : []
-    }
-
-    if (resourceType === FirstClassResource.project) {
-      const project = resource as { organisationId?: string | null }
-      const organisation =
-        project.organisationId != null
-          ? appCtx.getResourceByIdSync(
-              FirstClassResource.organisation,
-              project.organisationId,
-            )
-          : undefined
-      const hub = organisation ? hubFromOrganisation(organisation) : undefined
-      const hubRef = ((hub as { code?: string })?.code ?? '').trim()
-      const organisationRef = ((organisation as { code?: string })?.code ?? '').trim()
-      const hubName = hub ? getCachedEntityLabel(FirstClassResource.hub, hub) : ''
-      const organisationName = organisation
-        ? getCachedEntityLabel(FirstClassResource.organisation, organisation)
-        : ''
-      if (hubName)
-        crumbs.push({ name: hubName, href: toHref(FirstClassResource.hub, hubRef) })
-      if (organisationName) {
-        crumbs.push({
-          name: organisationName,
-          href: toHref(FirstClassResource.organisation, organisationRef),
-        })
-      }
+      pushCrumb(crumbs, FirstClassResource.hub, resource)
       return crumbs
     }
 
-    if (resourceType === FirstClassResource.layer) {
+    if (
+      resourceType === FirstClassResource.organisation ||
+      resourceType === FirstClassResource.project ||
+      resourceType === FirstClassResource.layer ||
+      resourceType === FirstClassResource.feature
+    ) {
       const hierarchy = appCtx.getHierarchySync(resource as never)
       const organisation = hierarchy.organisation
-      const project = hierarchy.project
       const hub = organisation ? hubFromOrganisation(organisation) : undefined
-      const hubRef = ((hub as { code?: string })?.code ?? '').trim()
-      const organisationRef = ((organisation as { code?: string })?.code ?? '').trim()
-      const projectRef = ((project as { code?: string })?.code ?? '').trim()
-      const hubName = hub ? getCachedEntityLabel(FirstClassResource.hub, hub) : ''
-      const organisationName = organisation
-        ? getCachedEntityLabel(FirstClassResource.organisation, organisation)
-        : ''
-      const projectName = project
-        ? getCachedEntityLabel(FirstClassResource.project, project)
-        : ''
-      if (hubName)
-        crumbs.push({ name: hubName, href: toHref(FirstClassResource.hub, hubRef) })
-      if (organisationName) {
-        crumbs.push({
-          name: organisationName,
-          href: toHref(FirstClassResource.organisation, organisationRef),
-        })
+
+      pushCrumb(crumbs, FirstClassResource.hub, hub)
+      if (resourceType !== FirstClassResource.organisation) {
+        pushCrumb(crumbs, FirstClassResource.organisation, organisation)
       }
-      if (projectName) {
-        crumbs.push({
-          name: projectName,
-          href: toHref(FirstClassResource.project, projectRef),
-        })
+      if (
+        resourceType === FirstClassResource.layer ||
+        resourceType === FirstClassResource.feature
+      ) {
+        pushCrumb(crumbs, FirstClassResource.project, hierarchy.project)
       }
+      if (resourceType === FirstClassResource.feature) {
+        pushCrumb(crumbs, FirstClassResource.layer, hierarchy.layer)
+      }
+
       return crumbs
     }
 
