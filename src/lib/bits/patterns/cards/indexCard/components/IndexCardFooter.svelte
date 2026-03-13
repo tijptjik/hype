@@ -5,42 +5,50 @@ import type { IndexCardFooterProps } from '../indexCard.types'
 
 let { status = null, breadcrumbs = [], cardWidth = 0 }: IndexCardFooterProps = $props()
 
-let statusMeasureContainer: HTMLSpanElement | null = $state(null)
 let breadcrumbMeasureContainer: HTMLDivElement | null = $state(null)
+let breadcrumbSlotWidth = $state(0)
 let visibleBreadcrumbCount = $state(breadcrumbs.length)
-let measuredStatusWidth = $state(0)
 let measuredBreadcrumbGap = $state(0)
 let measuredBreadcrumbWidths = $state<number[]>([])
-
-const FOOTER_HORIZONTAL_PADDING_PX = 48
-const FOOTER_CLUSTER_GAP_PX = 12
+let lastMeasuredBreadcrumbKey = ''
+let measureRequestId = 0
 
 function getBreadcrumbGap(element: HTMLElement): number {
   const styles = window.getComputedStyle(element)
   return Number.parseFloat(styles.columnGap || styles.gap || '0') || 0
 }
 
-function updateVisibleBreadcrumbs(): void {
-  visibleBreadcrumbCount = breadcrumbs.length
+function getBreadcrumbMeasureKey(): string {
+  return breadcrumbs
+    .map(breadcrumb =>
+      [
+        breadcrumb.label,
+        breadcrumb.icon ? 'icon' : 'no-icon',
+        breadcrumb.iconClass ?? '',
+      ].join('|'),
+    )
+    .join('||')
+}
 
-  if (measuredBreadcrumbWidths.length <= 1) {
+function updateVisibleBreadcrumbs(): void {
+  if (breadcrumbs.length === 0) {
+    visibleBreadcrumbCount = 0
     return
   }
 
-  const footerContentWidth = Math.max(0, cardWidth - FOOTER_HORIZONTAL_PADDING_PX)
-  const availableWidth = Math.max(
-    0,
-    footerContentWidth -
-      measuredStatusWidth -
-      (measuredStatusWidth > 0 && breadcrumbs.length > 0 ? FOOTER_CLUSTER_GAP_PX : 0),
-  )
+  if (breadcrumbs.length === 1 || measuredBreadcrumbWidths.length <= 1) {
+    visibleBreadcrumbCount = breadcrumbs.length
+    return
+  }
+
+  const availableWidth = Math.max(0, breadcrumbSlotWidth || cardWidth)
 
   if (!availableWidth) {
     visibleBreadcrumbCount = 1
     return
   }
 
-  let visibleCount = measuredBreadcrumbWidths.length
+  let visibleCount = Math.min(breadcrumbs.length, measuredBreadcrumbWidths.length)
 
   while (visibleCount > 1) {
     const width = measuredBreadcrumbWidths
@@ -56,22 +64,34 @@ function updateVisibleBreadcrumbs(): void {
 }
 
 $effect(() => {
-  breadcrumbs
-  status
+  const breadcrumbKey = getBreadcrumbMeasureKey()
+
+  if (!breadcrumbKey) {
+    lastMeasuredBreadcrumbKey = ''
+    measuredBreadcrumbGap = 0
+    measuredBreadcrumbWidths = []
+    visibleBreadcrumbCount = 0
+    return
+  }
+
+  if (breadcrumbKey === lastMeasuredBreadcrumbKey) return
+
+  const requestId = measureRequestId + 1
+  measureRequestId = requestId
+
   void (async () => {
     await tick()
 
-    measuredStatusWidth = statusMeasureContainer?.getBoundingClientRect().width ?? 0
-    measuredBreadcrumbGap = breadcrumbMeasureContainer
-      ? getBreadcrumbGap(breadcrumbMeasureContainer)
-      : 0
-    measuredBreadcrumbWidths = breadcrumbMeasureContainer
-      ? Array.from(
-          breadcrumbMeasureContainer.querySelectorAll<HTMLElement>(
-            '.bits-index-card__crumb',
-          ),
-        ).map(element => element.getBoundingClientRect().width)
-      : []
+    if (requestId !== measureRequestId) return
+    if (!breadcrumbMeasureContainer) return
+
+    measuredBreadcrumbGap = getBreadcrumbGap(breadcrumbMeasureContainer)
+    measuredBreadcrumbWidths = Array.from(
+      breadcrumbMeasureContainer.querySelectorAll<HTMLElement>(
+        '.bits-index-card__crumb',
+      ),
+    ).map(element => element.getBoundingClientRect().width)
+    lastMeasuredBreadcrumbKey = breadcrumbKey
 
     updateVisibleBreadcrumbs()
   })()
@@ -79,9 +99,10 @@ $effect(() => {
 
 $effect(() => {
   cardWidth
-  measuredStatusWidth
+  breadcrumbSlotWidth
   measuredBreadcrumbGap
   measuredBreadcrumbWidths
+  breadcrumbs.length
   updateVisibleBreadcrumbs()
 })
 </script>
@@ -118,7 +139,10 @@ $effect(() => {
   </div>
 
   <div class="bits-index-card__footer-right">
-    <div class="bits-index-card__breadcrumbs-slot">
+    <div
+      bind:clientWidth={breadcrumbSlotWidth}
+      class="bits-index-card__breadcrumbs-slot"
+    >
       <div class="bits-index-card__breadcrumbs bits-index-card__meta">
         {#each breadcrumbs.slice(0, visibleBreadcrumbCount) as breadcrumb, index (index)}
           <SimpleTooltip disabled={!breadcrumb.tooltip}>
@@ -142,20 +166,6 @@ $effect(() => {
           </SimpleTooltip>
         {/each}
       </div>
-
-      <span
-        bind:this={statusMeasureContainer}
-        class="bits-index-card__status bits-index-card__status-shell bits-index-card__status--measure"
-        aria-hidden="true"
-      >
-        {#if status?.icon}
-          {@const StatusIcon = status.icon}
-          <span class="bits-index-card__status-icon"> <StatusIcon /> </span>
-        {/if}
-        {#if status?.label}
-          <span class="bits-index-card__status-label">{status.label}</span>
-        {/if}
-      </span>
 
       <div
         bind:this={breadcrumbMeasureContainer}
