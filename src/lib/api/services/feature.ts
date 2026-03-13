@@ -9,12 +9,7 @@ import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import {
-  createFeature,
-  createI18n,
-  createProperties,
-  mergeFeatureProperties,
-} from '$lib/db/services/feature'
+import { createFeature, createI18n, createProperties } from '$lib/db/services/feature'
 import { probeLayerForUpdate } from '$lib/db/services/layer'
 // I18N
 import { toLocaleKey } from '$lib/i18n'
@@ -47,18 +42,14 @@ import type {
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { ImageDB } from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type {
-  Feature,
   FeatureAdminDBRaw,
   FeatureDB,
   FeatureNew,
   FeatureEntityByProfile,
   FeatureListByProfile,
   FeatureProfile,
-  FeatureProperty,
   FeatureQueryRowByProfile,
   UserContributedFeature,
 } from '$lib/db/zod/schema/feature.types'
@@ -76,10 +67,7 @@ import type {
 // PROFILE SHAPING
 // - toFeatureImageEnvelope
 // - toPropertyShape
-// - toFormShape
 // - toResponseShape
-// - buildCollectionResponseShape
-// - buildResponseShape
 // - toFeatureProfile
 // - toEntityResponseShape
 // - toListResponseShape
@@ -251,50 +239,6 @@ const toPropertyShape = (properties: FeatureResponseRow['properties']) =>
       : null,
   }))
 
-const toFormShape = (row: FeatureAdminDBRaw): FeatureNew => {
-  const i18n = transformI18nSafely(row.i18n as never) as Record<string, unknown>
-
-  return {
-    organisationId: row.organisationId,
-    projectId: row.projectId,
-    layerId: row.layerId,
-    contributorId: row.contributorId ?? null,
-    geometry: row.geometry,
-    addressMeta: row.addressMeta ?? {},
-    isIntangible: row.isIntangible,
-    isVisitable: row.isVisitable,
-    isPendingReview: row.isPendingReview,
-    i18n: {
-      en: (i18n.en ?? {}) as FeatureNew['i18n']['en'],
-      zhHans: (i18n['zh-hans'] ?? {}) as FeatureNew['i18n']['zhHans'],
-      zhHant: (i18n['zh-hant'] ?? {}) as FeatureNew['i18n']['zhHant'],
-    },
-    properties: (row.properties ?? []).map(property => ({
-      propertyId: property.propertyId,
-      value: property.value ?? null,
-      propertyValueId: property.propertyValueId ?? null,
-      i18n: transformI18nSafely(property.i18n as never) as FeatureProperty['i18n'],
-      property: property.property
-        ? {
-            ...property.property,
-            i18n: transformI18nSafely(property.property.i18n as never),
-            values:
-              property.property.values?.map(value => ({
-                ...value,
-                i18n: transformI18nSafely(value.i18n as never),
-              })) ?? [],
-          }
-        : undefined,
-      propertyValue: property.propertyValue
-        ? {
-            ...property.propertyValue,
-            i18n: transformI18nSafely(property.propertyValue.i18n as never),
-          }
-        : null,
-    })) as FeatureNew['properties'],
-  } as FeatureNew
-}
-
 /**
  * Normalizes arbitrary profile input into a supported feature profile.
  */
@@ -353,6 +297,13 @@ const toProfileResponseShape = async (
     return FeatureCardProfileAPI.parse({
       ...base,
       image: imageState,
+      imageCount: row.imageCount ?? row.images?.length ?? 0,
+      imagePublishedCount:
+        row.imagePublishedCount ??
+        (row.images as Array<{ isPublished?: boolean }> | undefined)?.filter(
+          imageRow => imageRow.isPublished,
+        ).length ??
+        0,
     }) as FeatureEntityByProfile<FeatureProfile>
   }
 
@@ -367,6 +318,13 @@ const toProfileResponseShape = async (
       ...base,
       image: detailImageState.image,
       images: detailImageState.images,
+      imageCount: row.imageCount ?? row.images?.length ?? 0,
+      imagePublishedCount:
+        row.imagePublishedCount ??
+        (row.images as Array<{ isPublished?: boolean }> | undefined)?.filter(
+          imageRow => imageRow.isPublished,
+        ).length ??
+        0,
     }) as FeatureEntityByProfile<FeatureProfile>
   }
 
@@ -427,52 +385,6 @@ export const toListResponseShape = async <P extends FeatureProfile = 'list'>(
     ...result,
     data: data as FeatureListByProfile<P>[],
   }
-}
-
-const buildCollectionResponseShape = async <P extends FeatureProfile = 'list'>(
-  db: Database,
-  rows: FeatureQueryRowByProfile<P>[],
-  profile: P,
-  hubOpts: HubOptsExtended,
-): Promise<FeatureListByProfile<P>[]> => {
-  if (rows.length === 0) return []
-
-  const { getLayerMap } = await import('$lib/db/services/layer')
-  const layerIds = [...new Set(rows.map(row => row.layerId))]
-  const layerMap = await getLayerMap(db, layerIds, hubOpts)
-
-  const mergedRows = rows.map(row => {
-    const layerData = layerMap.get(row.layerId)
-    if (!layerData || profile === 'list') return row
-    return mergeFeatureProperties(row as Feature, layerData as Layer) as typeof row
-  })
-
-  return (await Promise.all(
-    mergedRows.map(row => toResponseShape(row, profile)),
-  )) as FeatureListByProfile<P>[]
-}
-
-const buildResponseShape = async <P extends FeatureProfile = 'detail'>(
-  db: Database,
-  row: FeatureQueryRowByProfile<P>,
-  profile: P,
-  hubOpts: HubOptsExtended,
-): Promise<FeatureEntityByProfile<P>> => {
-  if (profile === 'list') {
-    return (await toResponseShape(row, profile)) as FeatureEntityByProfile<P>
-  }
-
-  const { getLayer } = await import('$lib/db/services/layer')
-  const layerData = await getLayer(db, {}, [eq(layer.id, row.layerId)], hubOpts)
-
-  const mergedRow = layerData
-    ? (mergeFeatureProperties(
-        row as Feature,
-        layerData as Layer,
-      ) as FeatureQueryRowByProfile<P>)
-    : row
-
-  return await toResponseShape(mergedRow, profile)
 }
 
 /********************
@@ -679,7 +591,9 @@ export function withExpandedNeighbourhoods(queryParams: QueryParams): QueryParam
 
   neighbourhoods.forEach(neighbourhood => {
     expanded.add(neighbourhood)
-    subdivisionMap.get(neighbourhood)?.forEach(value => expanded.add(value))
+    subdivisionMap.get(neighbourhood)?.forEach(value => {
+      expanded.add(value)
+    })
   })
 
   params[neighbourhoodKey] = Array.from(expanded)
