@@ -223,6 +223,7 @@ vi.mock('$lib/db/zod', () => ({
 }))
 
 vi.mock('$lib/i18n', () => ({
+  getLocale: vi.fn(() => 'en'),
   m: new Proxy(
     {},
     {

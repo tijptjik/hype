@@ -26,6 +26,7 @@ describe('resolveOrganisationActionPermissions', () => {
       canCreate: false,
       canEdit: false,
       canPublish: false,
+      canDelete: false,
     })
 
     expect(
@@ -37,6 +38,7 @@ describe('resolveOrganisationActionPermissions', () => {
       canCreate: false,
       canEdit: false,
       canPublish: false,
+      canDelete: false,
     })
   })
 
@@ -56,6 +58,7 @@ describe('resolveOrganisationActionPermissions', () => {
       canCreate: true,
       canEdit: true,
       canPublish: true,
+      canDelete: true,
     })
   })
 })
