@@ -1,6 +1,4 @@
 <script lang="ts">
-// ANIMATION
-import { fly } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // BITS
@@ -115,12 +113,11 @@ $effect(() => {
     onClick={toggleMenu}
   />
 
-  {#if isOpen}
-    <div
-      class="bits-resource-sort__controls"
-      in:fly={{ x: 24, duration: 220 }}
-      out:fly={{ x: -24, duration: 160 }}
-    >
+  <div
+    class={`bits-resource-sort__controls-wrap ${isOpen ? 'bits-resource-sort__controls-wrap--open' : ''}`.trim()}
+    aria-hidden={!isOpen}
+  >
+    <div class="bits-resource-sort__controls">
       <Select
         value={sorting.sortBy}
         items={sortables.items}
@@ -146,5 +143,5 @@ $effect(() => {
         onClick={handleSortOrderToggle}
       />
     </div>
-  {/if}
+  </div>
 </div>
