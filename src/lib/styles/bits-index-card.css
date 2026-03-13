@@ -206,14 +206,6 @@
     white-space: nowrap;
   }
 
-  .bits-theme .bits-index-card__status--measure {
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: max-content;
-    visibility: hidden;
-    pointer-events: none;
-  }
-
   .bits-theme .bits-index-card__status--published {
     color: color-mix(in oklab, var(--color-success) 84%, white 8%);
   }

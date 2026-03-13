@@ -1,4 +1,16 @@
 @layer components {
+  .bits-theme .bits-pattern-header-stack {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    display: flex;
+    width: 100%;
+    flex-shrink: 0;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+  }
+
   .bits-theme .bits-pattern-header {
     user-select: none;
     -webkit-user-select: none;
@@ -306,9 +318,26 @@
     pointer-events: none;
   }
 
+  .bits-theme .bits-pattern-header__control-bar-shell {
+    position: relative;
+    z-index: 19;
+    flex: 0 0 auto;
+    max-height: 0;
+    overflow: clip;
+    transition-property: max-height;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .bits-theme .bits-pattern-header__control-bar-shell--expanded {
+    max-height: var(--bits-pattern-header-control-bar-height, 4rem);
+  }
+
   .bits-theme .bits-pattern-header__control-bar {
     position: relative;
     z-index: 19;
     flex: 0 0 auto;
+    transition-property: transform, opacity;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
   }
 }

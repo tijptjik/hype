@@ -391,7 +391,6 @@ export type SidebarState = 'closed' | 'narrow' | 'open'
 // ADMIN CONTROLS
 /* -------- */
 export type LayoutMode = 'table' | 'list' | 'card'
-export type ControlMode = 'filter' | 'sort' | 'hidden'
 export type HeaderControlsMode = 'auto' | 'view' | 'form' | 'none'
 
 export interface HeaderVisibilityOverrides {
@@ -402,7 +401,7 @@ export interface HeaderVisibilityOverrides {
   showFormActions?: boolean
   showAvatar?: boolean
   showLayoutToggle?: boolean
-  showControlsToggle?: boolean
+  showControlBarToggle?: boolean
 }
 
 export type HeaderFacetItem = {
@@ -748,7 +747,7 @@ export type ResourceFilterSection =
     })
   | ResourcePropertyFilterSectionConfig
 
-export type ResourceFilterBarConfig = {
+export type ResourceControlBarConfig = {
   resource: ViewFilterResource
   sections: ResourceFilterSection[]
 }
@@ -2171,13 +2170,13 @@ export type AppContextState = {
       showAddButton: boolean
       showSearch: boolean
       showLayoutModes: boolean
-      showControlModes: boolean
+      showControlBarToggle: boolean
       showFormActions: boolean
     }
   }
   // UI state for each resource type
   ui: {
-    controlMode: Record<NavigableResource, ControlMode>
+    isControlBarVisible: Record<NavigableResource, boolean>
     layoutMode: Record<NavigableResource, LayoutMode>
   }
   // TIER 3: VIEW FILTERS - Only affect current route/view
