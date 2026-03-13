@@ -122,7 +122,7 @@ import type {
 } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
-import type { HubGetState, HubRoleUser } from '$lib/db/zod/schema/hub.types'
+import type { Hub, HubGetState, HubRoleUser } from '$lib/db/zod/schema/hub.types'
 
 // § Context
 
@@ -152,6 +152,14 @@ const hubRef = $derived(page.params.hub as string)
 const locales = $derived(getLocaleOrder(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
+)
+const cachedHubForRef = $derived(
+  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.hub, hubRef) as
+    | Hub
+    | undefined,
+)
+const cachedHubState = $derived(
+  cachedHubForRef ? ({ data: cachedHubForRef } as HubGetState) : null,
 )
 
 // § State - Elements
@@ -965,6 +973,14 @@ function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
 }
 
 // § Effects
+
+$effect(() => {
+  hubRef
+  const cachedCode = cachedHubState?.data?.code
+  if (!cachedCode) return
+  if (hub?.data?.code === cachedCode) return
+  commitHubState(cachedHubState)
+})
 
 $effect(() => {
   hubRef
