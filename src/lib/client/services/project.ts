@@ -7,6 +7,11 @@ import {
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
 } from '$lib/capabilities'
+// SERVICES
+import {
+  overrideResourceEntityBoolean,
+  overrideResourceListItemBoolean,
+} from '$lib/client/services/resource'
 // TYPES
 import type { CapabilityKey, Locale } from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
@@ -284,10 +289,7 @@ export function overrideProjectEntityBoolean(
   field: ProjectBooleanField,
   value: boolean,
 ) {
-  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
-    ...current,
-    data: current.data ? { ...current.data, [field]: value } : current.data,
-  })
+  return overrideResourceEntityBoolean(field, value)
 }
 
 export function overrideProjectListItemBoolean(
@@ -295,14 +297,7 @@ export function overrideProjectListItemBoolean(
   field: ProjectBooleanField,
   value: boolean,
 ) {
-  return <T extends { data?: Array<Record<string, unknown>> | null }>(
-    current: T,
-  ): T => ({
-    ...current,
-    data: (current.data ?? []).map(item =>
-      item.id === projectId ? { ...item, [field]: value } : item,
-    ),
-  })
+  return overrideResourceListItemBoolean(projectId, field, value)
 }
 
 export function toProjectIdentityPatch(

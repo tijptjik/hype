@@ -1,5 +1,11 @@
 // I18N
 import { toLocaleCode, toLocaleKey } from '$lib/i18n'
+import { toFormLocaleRecord } from '$lib/i18n'
+// SERVICES
+import {
+  overrideResourceEntityBoolean,
+  overrideResourceListItemBoolean,
+} from '$lib/client/services/resource'
 // TYPES
 import type {
   HubOrganisationFieldNameResolverForm,
@@ -12,7 +18,6 @@ import type {
   HubFormInput,
   HubIdentityPatch,
 } from '$lib/db/zod/schema/hub.types'
-import { toFormLocaleRecord } from '$lib/i18n'
 
 function normalizeHubFormLocale(
   locale: Partial<HubFormInput['data']['i18n']['en']> | null | undefined,
@@ -92,10 +97,7 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
 }
 
 export function overrideHubEntityBoolean(field: HubBooleanField, value: boolean) {
-  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
-    ...current,
-    data: current.data ? { ...current.data, [field]: value } : current.data,
-  })
+  return overrideResourceEntityBoolean(field, value)
 }
 
 export function getHubOrganisationHiddenInputAttrs(
@@ -133,14 +135,7 @@ export function overrideHubListItemBoolean(
   field: HubBooleanField,
   value: boolean,
 ) {
-  return <T extends { data?: Array<Record<string, unknown>> | null }>(
-    current: T,
-  ): T => ({
-    ...current,
-    data: (current.data ?? []).map(item =>
-      item.id === hubId ? { ...item, [field]: value } : item,
-    ),
-  })
+  return overrideResourceListItemBoolean(hubId, field, value)
 }
 
 export function toHubIdentityPatch(

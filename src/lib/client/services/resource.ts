@@ -1,4 +1,4 @@
-import { getLocale } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 
 // INTERACTIONS
 export function focusFirstChildOfResourceIndex(
@@ -35,6 +35,48 @@ export function focusFirstChildOfResourceIndex(
 }
 
 /**
+ * Builds an optimistic updater for a boolean field on a resource entity payload.
+ * Used by resource services to keep a single entity cache entry in sync after fast toggles.
+ *
+ * @param field Boolean field to override in `data`.
+ * @param value Boolean value to assign.
+ * @returns A cache updater that patches the entity payload.
+ */
+export function overrideResourceEntityBoolean<K extends string>(
+  field: K,
+  value: boolean,
+) {
+  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
+    ...current,
+    data: current.data ? { ...current.data, [field]: value } : current.data,
+  })
+}
+
+/**
+ * Builds an optimistic updater for a boolean field on a specific resource list item.
+ * Used by resource services to keep list caches in sync after fast toggle mutations.
+ *
+ * @param resourceId Id of the list item to patch.
+ * @param field Boolean field to override.
+ * @param value Boolean value to assign.
+ * @returns A cache updater that patches the matching list item.
+ */
+export function overrideResourceListItemBoolean<K extends string>(
+  resourceId: string,
+  field: K,
+  value: boolean,
+) {
+  return <T extends { data?: Array<Record<string, unknown>> | null }>(
+    current: T,
+  ): T => ({
+    ...current,
+    data: (current.data ?? []).map(item =>
+      item.id === resourceId ? { ...item, [field]: value } : item,
+    ),
+  })
+}
+
+/**
  * Resolves the best available display name for toast messages from entity data.
  * Used by publish/archive flows so success messages stay readable across resources.
  *
@@ -57,7 +99,7 @@ export function getNameForToast(
       : undefined
   if (!data) return ''
 
-  const locale = getLocale()
+  const localeKey = getLocaleKey()
   const i18n =
     data && typeof data === 'object'
       ? ((data as Record<string, unknown>).i18n as
@@ -65,7 +107,7 @@ export function getNameForToast(
           | undefined)
       : undefined
 
-  const byLocale = asTrimmedString(i18n?.[locale]?.[key])
+  const byLocale = asTrimmedString(i18n?.[localeKey]?.[key])
   if (byLocale) return byLocale
 
   const byRoot = asTrimmedString((data as Record<string, unknown>)[key])

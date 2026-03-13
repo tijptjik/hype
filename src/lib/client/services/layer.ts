@@ -7,6 +7,10 @@ import {
 } from '$lib/api/services/authz'
 import type { LayerProjectSelectionScope } from '$lib/api/services/authz/layer'
 import { updateFormData } from '$lib/client/services/form'
+import {
+  overrideResourceEntityBoolean,
+  overrideResourceListItemBoolean,
+} from '$lib/client/services/resource'
 import type {
   LayerEditorPermissions,
   LayerFormLocale,
@@ -573,10 +577,7 @@ export function mergeProjectPropertiesIntoLayerForm(params: {
  * Used after publish/archive mutations to keep entity cache in sync immediately.
  */
 export function overrideLayerEntityBoolean(field: LayerBooleanField, value: boolean) {
-  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
-    ...current,
-    data: current.data ? { ...current.data, [field]: value } : current.data,
-  })
+  return overrideResourceEntityBoolean(field, value)
 }
 
 /**
@@ -588,14 +589,7 @@ export function overrideLayerListItemBoolean(
   field: LayerBooleanField,
   value: boolean,
 ) {
-  return <T extends { data?: Array<Record<string, unknown>> | null }>(
-    current: T,
-  ): T => ({
-    ...current,
-    data: (current.data ?? []).map(item =>
-      item.id === layerId ? { ...item, [field]: value } : item,
-    ),
-  })
+  return overrideResourceListItemBoolean(layerId, field, value)
 }
 
 // ═══════════════════════

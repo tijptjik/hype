@@ -4,6 +4,11 @@ import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '$lib/capabilitie
 // I18N
 import { toLocaleCode, toLocaleKey } from '$lib/i18n'
 import { toFormLocaleRecord } from '$lib/i18n'
+// SERVICES
+import {
+  overrideResourceEntityBoolean,
+  overrideResourceListItemBoolean,
+} from '$lib/client/services/resource'
 // TYPES
 import type { CapabilityDefinition, CapabilityDefinitions, Locale } from '$lib/types'
 import type {
@@ -116,10 +121,7 @@ export function overrideOrganisationEntityBoolean(
   field: OrganisationBooleanField,
   value: boolean,
 ) {
-  return <T extends { data: Record<string, unknown> | null }>(current: T): T => ({
-    ...current,
-    data: current.data ? { ...current.data, [field]: value } : current.data,
-  })
+  return overrideResourceEntityBoolean(field, value)
 }
 
 export function overrideOrganisationListItemBoolean(
@@ -127,14 +129,7 @@ export function overrideOrganisationListItemBoolean(
   field: OrganisationBooleanField,
   value: boolean,
 ) {
-  return <T extends { data?: Array<Record<string, unknown>> | null }>(
-    current: T,
-  ): T => ({
-    ...current,
-    data: (current.data ?? []).map(item =>
-      item.id === organisationId ? { ...item, [field]: value } : item,
-    ),
-  })
+  return overrideResourceListItemBoolean(organisationId, field, value)
 }
 
 export function toOrganisationIdentityPatch(
