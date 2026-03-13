@@ -7,7 +7,7 @@ import type { HeaderViewActionsProps } from './headerPrimitives.types'
 let {
   controlsAction = undefined,
   layoutAction = undefined,
-  hideLabel = false,
+  hideLabel = true,
 }: HeaderViewActionsProps = $props()
 </script>
 

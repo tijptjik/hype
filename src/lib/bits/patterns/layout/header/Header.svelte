@@ -72,7 +72,7 @@ const rootClass = $derived(
             <HeaderPrimitive.ViewActions
               controlsAction={viewActions.controlsAction}
               layoutAction={viewActions.layoutAction}
-              hideLabel={!showButtonText}
+              hideLabel={true}
             />
           {/if}
         </div>
