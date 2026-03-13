@@ -1,10 +1,13 @@
 <script lang="ts">
 import { onMount, tick } from 'svelte'
-import { checkScrollNeed, resetAnimation } from '$lib/client/services/text'
+import { checkScrollNeed } from '$lib/client/services/text'
+
+const CHARS_PER_SECOND = 12
+const START_PAUSE_MS = 2500
 
 let {
   text,
-  separator = '~',
+  separator = '•',
   padding = 20,
   containerClass = '',
   textClass = '',
@@ -12,30 +15,96 @@ let {
 
 let container: HTMLDivElement | null = $state(null)
 let contentSpan: HTMLSpanElement | null = $state(null)
+let wrapper: HTMLDivElement | null = $state(null)
 let needsScroll = $state(false)
+let scrollAnimation: Animation | null = $state(null)
+let isMounted = false
+let animationRunId = 0
 
-function performCheck() {
+function stopAnimation(): void {
+  scrollAnimation?.cancel()
+  scrollAnimation = null
+  if (wrapper) {
+    wrapper.style.transform = 'translateX(0)'
+  }
+}
+
+function getVisibleCharacterCount(): number {
+  const textContent = contentSpan?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+  return Math.max(1, textContent.length)
+}
+
+function updateScrollState(): void {
   if (container && contentSpan) {
     needsScroll = checkScrollNeed(container, contentSpan)
   }
 }
 
+async function restartAnimation(): Promise<void> {
+  const runId = ++animationRunId
+  await tick()
+
+  if (!isMounted || runId !== animationRunId) return
+
+  updateScrollState()
+  stopAnimation()
+
+  if (!needsScroll || !contentSpan || !wrapper) return
+
+  await tick()
+
+  if (!isMounted || runId !== animationRunId || !contentSpan || !wrapper) return
+
+  const distance = contentSpan.getBoundingClientRect().width + padding
+  const motionDurationMs = (getVisibleCharacterCount() / CHARS_PER_SECOND) * 1000
+  const totalDurationMs = motionDurationMs + START_PAUSE_MS
+  const pauseOffset = START_PAUSE_MS / totalDurationMs
+
+  scrollAnimation = wrapper.animate(
+    [
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(0)', offset: pauseOffset },
+      { transform: `translateX(-${distance}px)` },
+    ],
+    {
+      duration: totalDurationMs,
+      easing: 'linear',
+      iterations: Number.POSITIVE_INFINITY,
+    },
+  )
+}
+
+function handlePointerEnter(): void {
+  scrollAnimation?.pause()
+}
+
+function handlePointerLeave(): void {
+  scrollAnimation?.play()
+}
+
 // Effect for text changes
 $effect(() => {
   text // depend on text
-  async function update() {
-    await tick()
-    performCheck()
-    resetAnimation(container) // Always reset on text change
-  }
-  update()
+  void restartAnimation()
 })
 
 // Lifecycle for resize handling
 onMount(() => {
-  const handleResize = () => performCheck()
+  isMounted = true
+
+  const handleResize = () => {
+    void restartAnimation()
+  }
+
+  void restartAnimation()
   window.addEventListener('resize', handleResize)
-  return () => window.removeEventListener('resize', handleResize)
+
+  return () => {
+    isMounted = false
+    animationRunId += 1
+    stopAnimation()
+    window.removeEventListener('resize', handleResize)
+  }
 })
 </script>
 
@@ -44,12 +113,10 @@ onMount(() => {
   class:overflow-hidden={needsScroll}
   bind:this={container}
   style="--scroll-padding: {padding}px; --scroll-padding-half: {padding / 2}px;"
+  onmouseenter={handlePointerEnter}
+  onmouseleave={handlePointerLeave}
 >
-  <div
-    class="scroll-wrapper"
-    class:animate={needsScroll}
-    class:needs-scroll={needsScroll}
-  >
+  <div bind:this={wrapper} class="scroll-wrapper" class:needs-scroll={needsScroll}>
     <span class="scroll-primary {textClass}" bind:this={contentSpan}>
       {@html text}
     </span>
@@ -85,15 +152,6 @@ onMount(() => {
   width: fit-content;
 }
 
-.scroll-wrapper.animate {
-  animation: scroll-single-title 13s linear infinite;
-  animation-delay: 3s; /* 3 second pause at start */
-}
-
-.scroll-wrapper.animate:hover {
-  animation-play-state: paused;
-}
-
 .scroll-primary {
   display: inline-block;
 }
@@ -106,18 +164,6 @@ onMount(() => {
 
 .scroll-secondary {
   display: inline-block;
-}
-
-@keyframes scroll-single-title {
-  0% {
-    transform: translateX(0);
-  }
-  77% {
-    transform: translateX(calc(-50% - var(--scroll-padding-half)));
-  }
-  100% {
-    transform: translateX(calc(-50% - var(--scroll-padding-half)));
-  }
 }
 
 .scroll-wrapper {
