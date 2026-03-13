@@ -29,6 +29,9 @@ const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   isDeleted: false,
 }
 
+const HEADER_CTRL_DEBUG =
+  typeof window !== 'undefined' && window.location.search.includes('debugHeaderCtrl=1')
+
 /**
  * Build the default visibility profile for index/list routes.
  * @param overrides - Optional visibility overrides merged onto defaults.
@@ -85,12 +88,19 @@ export class HeaderCtrl {
     },
   })
 
+  constructor() {
+    if (HEADER_CTRL_DEBUG) {
+      $inspect('HeaderCtrl state', this.state)
+    }
+  }
+
   /**
    * Set which control cluster should be shown.
    * @param mode - Header controls mode.
    * @returns void
    */
   private showControls(mode: HeaderControlsMode): void {
+    if (untrack(() => this.state.controlsMode) === mode) return
     this.state.controlsMode = mode
   }
 
@@ -100,6 +110,7 @@ export class HeaderCtrl {
    * @returns void
    */
   setEditing(isEditing: boolean): void {
+    if (untrack(() => this.state.isEditing) === isEditing) return
     this.state.isEditing = isEditing
   }
 
@@ -109,6 +120,7 @@ export class HeaderCtrl {
    * @returns void
    */
   private setVisibility(overrides: HeaderVisibilityOverrides): void {
+    if (untrack(() => shallowEqualRecord(this.state.visibility, overrides))) return
     this.state.visibility = { ...overrides }
   }
 
@@ -245,6 +257,7 @@ export class HeaderCtrl {
    * @returns void
    */
   clearFormActions(): void {
+    if (untrack(() => this.state.formActions == null)) return
     this.state.formActions = null
   }
 
@@ -257,8 +270,12 @@ export class HeaderCtrl {
   setControlBar(
     component: HeaderLayoutRegionConfig['component'],
     props: HeaderLayoutRegionConfig['props'] = {},
+    options: Pick<HeaderLayoutRegionConfig, 'height' | 'isVisible'> = {},
   ): void {
-    this.state.layout.controlBar = component ? { component, props } : null
+    const next = component ? { component, props, ...options } : null
+    if (untrack(() => isSameLayoutRegionConfig(this.state.layout.controlBar, next)))
+      return
+    this.state.layout.controlBar = next
   }
 
   /**
@@ -266,6 +283,7 @@ export class HeaderCtrl {
    * @returns void
    */
   clearControlBar(): void {
+    if (untrack(() => this.state.layout.controlBar == null)) return
     this.state.layout.controlBar = null
   }
 
@@ -279,7 +297,9 @@ export class HeaderCtrl {
     component: HeaderLayoutRegionConfig['component'],
     props: HeaderLayoutRegionConfig['props'] = {},
   ): void {
-    this.state.layout.footer = component ? { component, props } : null
+    const next = component ? { component, props } : null
+    if (untrack(() => isSameLayoutRegionConfig(this.state.layout.footer, next))) return
+    this.state.layout.footer = next
   }
 
   /**
@@ -287,6 +307,7 @@ export class HeaderCtrl {
    * @returns void
    */
   clearFooter(): void {
+    if (untrack(() => this.state.layout.footer == null)) return
     this.state.layout.footer = null
   }
 
@@ -311,6 +332,15 @@ export class HeaderCtrl {
    * @returns void
    */
   private applyIndexMeta(title: string, icon: Component): void {
+    if (
+      untrack(
+        () =>
+          this.state.meta.title === title &&
+          this.state.meta.icon === icon &&
+          this.state.meta.facets.length === 0,
+      )
+    )
+      return
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.facets = []
@@ -331,9 +361,20 @@ export class HeaderCtrl {
       string | { label: string; icon?: Component | null; hasIssues?: boolean }
     >,
   ): void {
+    const nextFacets = this.normalizeFacetItems(facets)
+    if (
+      untrack(
+        () =>
+          this.state.meta.title === title &&
+          this.state.meta.icon === icon &&
+          isSameFacetItems(this.state.meta.facets, nextFacets),
+      )
+    )
+      return
+
     this.state.meta.title = title
     this.state.meta.icon = icon
-    this.setFacets(facets)
+    this.state.meta.facets = nextFacets
   }
 
   /**
@@ -380,6 +421,47 @@ export class HeaderCtrl {
       ...patch,
     })
   }
+}
+
+function shallowEqualRecord(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+): boolean {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+
+  if (leftKeys.length !== rightKeys.length) return false
+
+  return leftKeys.every(key => left[key] === right[key])
+}
+
+function isSameFacetItems(left: HeaderFacetItem[], right: HeaderFacetItem[]): boolean {
+  if (left.length !== right.length) return false
+
+  return left.every((item, index) => {
+    const next = right[index]
+    return (
+      item?.ref === next?.ref &&
+      item?.label === next?.label &&
+      item?.icon === next?.icon &&
+      item?.hasIssues === next?.hasIssues
+    )
+  })
+}
+
+function isSameLayoutRegionConfig(
+  left: HeaderLayoutRegionConfig | null,
+  right: HeaderLayoutRegionConfig | null,
+): boolean {
+  if (left === right) return true
+  if (!left || !right) return false
+
+  return (
+    left.component === right.component &&
+    left.isVisible === right.isVisible &&
+    left.height === right.height &&
+    shallowEqualRecord(left.props ?? {}, right.props ?? {})
+  )
 }
 
 export const HEADER_CTRL_KEY = Symbol('headerCtrl')
