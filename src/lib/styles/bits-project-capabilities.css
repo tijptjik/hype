@@ -3,6 +3,14 @@
     @apply flex flex-col gap-4;
     container-type: inline-size;
     container-name: bits-project-capabilities-section;
+    transition:
+      opacity 0.18s ease,
+      filter 0.18s ease;
+  }
+
+  .bits-theme .bits-project-capabilities--transitioning {
+    opacity: 0.52;
+    filter: saturate(0.8);
   }
 
   .bits-theme .bits-project-capabilities__header {

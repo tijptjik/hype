@@ -2037,6 +2037,7 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
       <ProjectCapabilities
+        class={!isCurrentRefSettled ? 'bits-project-capabilities--transitioning' : ''}
         {capabilityIssues}
         availableCapabilityKeys={availableProjectCapabilityKeys}
         enabledCapabilityKeys={stableEnabledProjectCapabilityKeys}

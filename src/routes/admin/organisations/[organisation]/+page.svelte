@@ -935,7 +935,6 @@ $effect(() => {
 
 // Keep facet + entity data in sync with the current route ref.
 $effect(() => {
-  const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
   return resourceEditorPage.syncRouteAndLoad({
     ref: organisationRef,
     resetFormActionsSignature: () => {
@@ -946,10 +945,7 @@ $effect(() => {
     setFacetForRef: nextRef => {
       untrack(() => {
         const currentFacet = adminCtx.activeFacet
-        const nextFacet =
-          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
-            ? currentFacet
-            : 'core'
+        const nextFacet = currentFacet || 'core'
         adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.organisation)
       })
     },
@@ -1034,6 +1030,7 @@ $effect(() => {
 
 // Capabilities facet is only available to users who can edit organisations.
 $effect(() => {
+  if (!isCurrentRefSettled) return
   if (activeFacet !== 'capabilities') return
   if (canEditOrganisation) return
   adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
@@ -1041,6 +1038,7 @@ $effect(() => {
 
 // Guard unsupported facet states (for permission-constrained views).
 $effect(() => {
+  if (!isCurrentRefSettled) return
   if (resolvedFacetTabs.has(activeFacet)) return
   adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
 })

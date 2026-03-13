@@ -5,6 +5,7 @@ export interface ProjectCapabilitiesProps {
   title?: string
   subtitle?: string
   capabilityIssues?: string[]
+  class?: string
   availableCapabilityKeys: CapabilityKey[]
   enabledCapabilityKeys: CapabilityKey[]
   capabilityLabelByKey: Partial<Record<CapabilityKey, string>>

@@ -9,6 +9,7 @@ let {
   title = m.resources__capabilities(),
   subtitle = m.admin__forms_project_capabilities_subtitle(),
   capabilityIssues = [],
+  class: className = '',
   availableCapabilityKeys,
   enabledCapabilityKeys,
   capabilityLabelByKey,
@@ -19,9 +20,15 @@ let {
   onToggleCapability,
   onToggleCell,
 }: ProjectCapabilitiesProps = $props()
+
+const rootClass = $derived(
+  ['bits-form__section', 'bits-project-capabilities', className]
+    .filter(Boolean)
+    .join(' '),
+)
 </script>
 
-<section class="bits-form__section bits-project-capabilities">
+<section class={rootClass}>
   <SectionHeader
     {title}
     description={subtitle}
