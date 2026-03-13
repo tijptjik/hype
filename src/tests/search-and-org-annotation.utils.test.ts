@@ -6,7 +6,7 @@ import {
 import {
   isOrganisationSearchResultDisabled,
   toOrganisationSearchDiscriminator,
-} from '$lib/bits/patterns/formOrganisationsSection/formOrganisationsSection.utils'
+} from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.utils'
 
 describe('search utils', () => {
   it('uses the resultMap disabled selector when deciding selectability', () => {
