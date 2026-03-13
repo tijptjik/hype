@@ -91,6 +91,9 @@ $effect(() => {
     resource: FirstClassResource.task,
     count: entities.length,
     filters,
+  }, {
+    isVisible: adminCtx.appCtx.state.ui.controlMode[FirstClassResource.task] !== 'hidden',
+    transitionKey: FirstClassResource.task,
   })
   headerCtrl.clearFooter()
 })

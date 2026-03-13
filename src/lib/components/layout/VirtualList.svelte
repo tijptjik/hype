@@ -106,9 +106,13 @@ const totalContentHeight = $derived(() => {
 // 4. EFFECTS
 // ═══════════════════════
 
-// STATE :: INVALIDATION :: HEIGHT MAP
+// STATE :: INVALIDATION :: HEIGHT MAP / VIEWPORT
 $effect(() => {
-  // whenever `items` changes, invalidate the current heightmap
+  // Recalculate visible rows when data or viewport height changes.
+  items
+  viewportHeight
+  itemHeight
+
   if (isMounted) {
     refresh(items, viewportHeight, itemHeight)
   }

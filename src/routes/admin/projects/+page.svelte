@@ -179,6 +179,9 @@ $effect(() => {
     count: entities.length,
     filters,
     sortables,
+  }, {
+    isVisible: adminCtx.appCtx.state.ui.controlMode[FirstClassResource.project] !== 'hidden',
+    transitionKey: FirstClassResource.project,
   })
   headerCtrl.clearFooter()
 })
