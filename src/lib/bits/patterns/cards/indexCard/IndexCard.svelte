@@ -1,7 +1,5 @@
 <script lang="ts">
-import { getContext } from 'svelte'
 import * as IndexCardPrimitive from './components'
-import { INDEX_CARD_WIDTH_CONTEXT } from './indexCard.context'
 import type { IndexCardProps } from './indexCard.types'
 
 let {
@@ -10,6 +8,7 @@ let {
   imageSrc,
   imageAlt,
   imageLayout = 'cover',
+  cardWidth = 0,
   footerStatus = null,
   breadcrumbs = [],
   onNavigate,
@@ -19,9 +18,6 @@ let {
   footer,
   onImageClick,
 }: IndexCardProps = $props()
-
-const cardLayout = getContext<{ width: number } | undefined>(INDEX_CARD_WIDTH_CONTEXT)
-const cardWidth = $derived(cardLayout?.width ?? 0)
 
 function handleNavigate(event: MouseEvent | KeyboardEvent): void {
   onNavigate?.(event)

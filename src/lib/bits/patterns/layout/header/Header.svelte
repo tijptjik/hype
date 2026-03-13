@@ -1,15 +1,14 @@
 <script lang="ts">
 import { fly } from 'svelte/transition'
+import { tick } from 'svelte'
 // COMPONENTS
 import * as HeaderPrimitive from './components'
 // TYPES
 import type { HeaderProps } from './header.types'
 
 const DEFAULT_CLASS =
-  'bits-theme bg-black py-4 pl-6 navbar sticky left-0 top-0 z-20 flex h-18 w-full shrink-0 justify-between caret-transparent shadow-lg transition-all duration-300'
-
-const controlBarComponentIds = new WeakMap<object, number>()
-let nextControlBarComponentId = 0
+  'bits-theme bg-black py-4 pl-6 navbar flex h-18 w-full justify-between caret-transparent transition-all duration-300'
+const CONTROL_BAR_TRANSITION_MS = 180
 
 let {
   query = $bindable(''),
@@ -33,123 +32,155 @@ const showAvatar = $derived(avatar.isVisible ?? true)
 const showFacets = $derived(facetItems.length > 0)
 const showViewActions = $derived(viewActions.isVisible ?? false)
 const showFormActions = $derived(formActions.isVisible ?? false)
+const showControlBar = $derived(
+  Boolean(controlBar?.component) && (controlBar?.isVisible ?? true),
+)
 
-function getControlBarTransitionKey(controlBar: HeaderProps['controlBar']): string | null {
-  if (!controlBar?.component) return null
+let renderedControlBar = $state<HeaderProps['controlBar'] | null>(controlBar)
+let isControlBarExpanded = $state(false)
+let wasControlBarVisible = $state(false)
+const controlBarHeight = $derived(
+  renderedControlBar?.height ?? controlBar?.height ?? '4rem',
+)
+const wrapperClass = $derived(
+  ['bits-theme bits-pattern-header-stack', className].filter(Boolean).join(' '),
+)
 
-  let componentId = controlBarComponentIds.get(controlBar.component as object)
+function handleControlBarTransitionEnd(event: TransitionEvent): void {
+  if (
+    event.target !== event.currentTarget ||
+    event.propertyName !== 'max-height' ||
+    showControlBar
+  )
+    return
 
-  if (componentId == null) {
-    nextControlBarComponentId += 1
-    componentId = nextControlBarComponentId
-    controlBarComponentIds.set(controlBar.component as object, componentId)
-  }
-
-  const resourceKey =
-    typeof controlBar.props?.resource === 'string' ? controlBar.props.resource : null
-
-  return resourceKey ? `${componentId}:${resourceKey}` : `${componentId}`
+  renderedControlBar = null
 }
 
+$effect(() => {
+  if (showControlBar && !wasControlBarVisible) {
+    renderedControlBar = controlBar
+    isControlBarExpanded = false
+    void tick().then(() => {
+      if (showControlBar && renderedControlBar === controlBar) {
+        isControlBarExpanded = true
+      }
+    })
+  } else {
+    if (controlBar?.component) {
+      renderedControlBar = controlBar
+    }
+    isControlBarExpanded = showControlBar
+  }
+
+  wasControlBarVisible = showControlBar
+
+  if (!controlBar?.component) {
+    isControlBarExpanded = false
+  }
+})
+
 const rootClass = $derived(
-  [DEFAULT_CLASS, showAvatar ? 'pr-6' : 'pr-0', className].filter(Boolean).join(' '),
+  [DEFAULT_CLASS, showAvatar ? 'pr-6' : 'pr-0'].filter(Boolean).join(' '),
 )
-const controlBarTransitionKey = $derived(getControlBarTransitionKey(controlBar))
 </script>
 
-<HeaderPrimitive.Root class={rootClass} {...restProps}>
-  {#snippet left({ showButtonText })}
-    <HeaderPrimitive.Title
-      text={title.text}
-      description={title.description}
-      icon={title.icon}
-      href={title.href}
-      crumbs={title.crumbs}
-      menuAction={title.menuAction}
-    />
-    <HeaderPrimitive.New
-      isCreatable={showNew}
-      label={newAction.label}
-      hideLabel={!showButtonText}
-      onCreate={newAction.onCreate}
-    />
-  {/snippet}
+<HeaderPrimitive.Wrapper class={wrapperClass} {...restProps}>
+  <HeaderPrimitive.Root class={rootClass}>
+    {#snippet left({ showButtonText })}
+      <HeaderPrimitive.Title
+        text={title.text}
+        description={title.description}
+        icon={title.icon}
+        href={title.href}
+        crumbs={title.crumbs}
+        menuAction={title.menuAction}
+      />
+      <HeaderPrimitive.New
+        isCreatable={showNew}
+        label={newAction.label}
+        hideLabel={!showButtonText}
+        onCreate={newAction.onCreate}
+      />
+    {/snippet}
 
-  {#snippet right({ showButtonText })}
-    <div class="bits-pattern-header__right-slot">
-      {#if showFilter || showViewActions}
-        <div
-          class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
-          in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-          out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-        >
-          <HeaderPrimitive.Search
-            bind:query
-            isFilterable={showFilter}
-            placeholder={filter.placeholder}
-            onFilter={filter.onFilter}
-            onAdvanceFromSearch={filter.onAdvanceFromSearch}
-          />
-
-          {#if showViewActions}
-            <HeaderPrimitive.ViewActions
-              controlsAction={viewActions.controlsAction}
-              layoutAction={viewActions.layoutAction}
-              hideLabel={true}
+    {#snippet right({ showButtonText })}
+      <div class="bits-pattern-header__right-slot">
+        {#if showFilter || showViewActions}
+          <div
+            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+            in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
+            out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+          >
+            <HeaderPrimitive.Search
+              bind:query
+              isFilterable={showFilter}
+              placeholder={filter.placeholder}
+              onFilter={filter.onFilter}
+              onAdvanceFromSearch={filter.onAdvanceFromSearch}
             />
-          {/if}
-        </div>
-      {/if}
 
-      {#if showFacets || showFormActions}
-        <div
-          class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
-          in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-          out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-        >
-          {#if showFacets}
-            <HeaderPrimitive.Facets
-              items={facetItems}
-              active={facets.active}
-              hideLabel={!showButtonText}
-              onFacetChange={facets.onFacetChange}
-            />
-          {/if}
+            {#if showViewActions}
+              <HeaderPrimitive.ViewActions
+                controlsAction={viewActions.controlsAction}
+                layoutAction={viewActions.layoutAction}
+                hideLabel={true}
+              />
+            {/if}
+          </div>
+        {/if}
 
-          {#if showFormActions}
-            <HeaderPrimitive.FormActions
-              primaryAction={formActions.primaryAction}
-              saveAction={formActions.saveAction}
-              deleteAction={formActions.deleteAction}
-              publishAction={formActions.publishAction}
-              hideLabel={!showButtonText}
-            />
-          {/if}
-        </div>
-      {/if}
-    </div>
+        {#if showFacets || showFormActions}
+          <div
+            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+            in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
+            out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+          >
+            {#if showFacets}
+              <HeaderPrimitive.Facets
+                items={facetItems}
+                active={facets.active}
+                hideLabel={!showButtonText}
+                onFacetChange={facets.onFacetChange}
+              />
+            {/if}
 
-    <HeaderPrimitive.Avatar
-      isVisible={showAvatar}
-      name={avatar.name}
-      src={avatar.src}
-      alt={avatar.alt}
-      fallback={avatar.fallback}
-      transitionDirection={avatar.transitionDirection}
-      onClick={avatar.onClick}
-    />
-  {/snippet}
-</HeaderPrimitive.Root>
+            {#if showFormActions}
+              <HeaderPrimitive.FormActions
+                primaryAction={formActions.primaryAction}
+                saveAction={formActions.saveAction}
+                deleteAction={formActions.deleteAction}
+                publishAction={formActions.publishAction}
+                hideLabel={!showButtonText}
+              />
+            {/if}
+          </div>
+        {/if}
+      </div>
 
-{#if controlBar?.component}
-  {#key controlBarTransitionKey}
-    {@const ControlBar = controlBar.component}
-    <div
-      class="bits-theme bits-pattern-header__control-bar"
-      in:fly={{ y: -12, duration: 180, opacity: 0.15 }}
-      out:fly={{ y: -12, duration: 160, opacity: 0.15 }}
+      <HeaderPrimitive.Avatar
+        isVisible={showAvatar}
+        name={avatar.name}
+        src={avatar.src}
+        alt={avatar.alt}
+        fallback={avatar.fallback}
+        transitionDirection={avatar.transitionDirection}
+        onClick={avatar.onClick}
+      />
+    {/snippet}
+  </HeaderPrimitive.Root>
+
+  {#if renderedControlBar?.component}
+    {@const ControlBar = renderedControlBar.component}
+    <HeaderPrimitive.BarRoot
+      height={controlBarHeight}
+      isExpanded={isControlBarExpanded}
+      transitionDurationMs={CONTROL_BAR_TRANSITION_MS}
+      ontransitionend={handleControlBarTransitionEnd}
     >
-      <ControlBar {...(controlBar.props ?? {})} />
-    </div>
-  {/key}
-{/if}
+      {#snippet children()}
+        <ControlBar {...(renderedControlBar.props ?? {})} />
+      {/snippet}
+    </HeaderPrimitive.BarRoot>
+  {/if}
+</HeaderPrimitive.Wrapper>

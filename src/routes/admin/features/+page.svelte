@@ -12,12 +12,12 @@ import {
 } from '$lib/client/services/filters'
 // COMPONENTS
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
-import FeatureCard from '$lib/components/resources/cards/FeatureIndexCard.svelte'
 // BITS PATTERNS
 import {
   CompletionFooter,
+  FeatureIndexCard,
   FeatureRow,
-  ResourceFilterBar,
+  ResourceControlBar,
   ResourceIndex,
 } from '$lib/bits'
 // ENUMS
@@ -35,7 +35,7 @@ import PenLineIcon from 'virtual:icons/lucide/pen-line'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ResourceFilterBarConfig } from '$lib/types'
+import type { ResourceControlBarConfig } from '$lib/types'
 
 const filters = {
   resource: FirstClassResource.feature,
@@ -162,7 +162,7 @@ const filters = {
       transformOffset: -10,
     }),
   ],
-} satisfies ResourceFilterBarConfig
+} satisfies ResourceControlBarConfig
 
 const sortables = createSortables([
   createSortable('modifiedAt', m.sort__updated()),
@@ -190,12 +190,19 @@ let entities: Feature[] = $derived(
 
 $effect(() => {
   headerCtrl.setHeaderForIndex(m.omni__title_features(), FeatureIcon)
-  headerCtrl.setControlBar(ResourceFilterBar, {
-    resource: FirstClassResource.feature,
-    count: entities.length,
-    filters,
-    sortables,
-  })
+  headerCtrl.setControlBar(
+    ResourceControlBar,
+    {
+      resource: FirstClassResource.feature,
+      count: entities.length,
+      filters,
+      sortables,
+    },
+    {
+      isVisible:
+        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.feature],
+    },
+  )
   headerCtrl.setFooter(CompletionFooter, { entities })
 })
 // Derived states for navigation capability

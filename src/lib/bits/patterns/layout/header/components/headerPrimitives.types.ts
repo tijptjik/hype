@@ -1,3 +1,5 @@
+import type { Snippet } from 'svelte'
+import type { HTMLAttributes } from 'svelte/elements'
 import type {
   AdaptiveToolbarProps,
   AdaptiveToolbarRenderState,
@@ -46,3 +48,14 @@ export interface HeaderTitleProps extends HeaderTitleConfig {
 export interface HeaderRootRenderState extends AdaptiveToolbarRenderState {}
 
 export interface HeaderRootProps extends AdaptiveToolbarProps {}
+
+export interface HeaderWrapperProps extends HTMLAttributes<HTMLDivElement> {
+  children?: Snippet
+}
+
+export interface HeaderBarRootProps extends HTMLAttributes<HTMLDivElement> {
+  children?: Snippet
+  isExpanded?: boolean
+  height?: string
+  transitionDurationMs?: number
+}

@@ -1,5 +1,5 @@
 export * from './completionFooter'
-export * from './resourceFilterBar'
+export * from './resourceControlBar'
 export * from './resourceIndex'
 export * from './resourceSortControl'
 export * from './rows'

@@ -20,6 +20,7 @@ export type IndexCardProps = {
   imageSrc: string
   imageAlt: string
   imageLayout?: 'cover' | 'contain'
+  cardWidth?: number
   footerStatus?: IndexCardFooterStatus | null
   breadcrumbs?: IndexCardFooterBreadcrumb[]
   onNavigate?: (event: MouseEvent | KeyboardEvent) => void

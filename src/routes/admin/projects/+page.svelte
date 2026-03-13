@@ -12,7 +12,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { IndexCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
+import { IndexCard, ResourceControlBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -26,7 +26,7 @@ import BookOpenIcon from 'virtual:icons/lucide/book-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ImageIcon from 'virtual:icons/lucide/image'
 // TYPES
-import type { KeyMap, ResourceFilterBarConfig } from '$lib/types'
+import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 
 // CONFIG :: KEY MAP
@@ -143,7 +143,7 @@ const filters = {
       ],
     },
   ],
-} satisfies ResourceFilterBarConfig
+} satisfies ResourceControlBarConfig
 
 const sortables = createSortables([
   createSortable('modifiedAt', m.sort__updated()),
@@ -176,15 +176,19 @@ $effect(() => {
   headerCtrl.setHeaderForIndex(m.maps__projects(), ProjectIcon, {
     showNew: canCreateProject,
   })
-  headerCtrl.setControlBar(ResourceFilterBar, {
-    resource: FirstClassResource.project,
-    count: entities.length,
-    filters,
-    sortables,
-  }, {
-    isVisible: adminCtx.appCtx.state.ui.controlMode[FirstClassResource.project] !== 'hidden',
-    transitionKey: FirstClassResource.project,
-  })
+  headerCtrl.setControlBar(
+    ResourceControlBar,
+    {
+      resource: FirstClassResource.project,
+      count: entities.length,
+      filters,
+      sortables,
+    },
+    {
+      isVisible:
+        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.project],
+    },
+  )
   headerCtrl.clearFooter()
 })
 

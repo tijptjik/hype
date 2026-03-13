@@ -13,7 +13,7 @@ import type {
   FeatureTranslationFilterKey,
   FeatureViewFilters,
   PropertyFilterType,
-  ResourceFilterBarConfig,
+  ResourceControlBarConfig,
   ResourceFilterConfigBase,
   ResourceFilterEntryConfig,
   ResourcePropertyFilterSectionConfig,
@@ -25,7 +25,7 @@ import type {
   LocaleKey,
   Id,
 } from '$lib/types'
-import type { ResourceFilterBarLocaleToggleItem } from '$lib/bits/patterns/resource/resourceFilterBar/components'
+import type { ResourceControlBarLocaleToggleItem } from '$lib/bits/patterns/resource/resourceControlBar/components'
 import type { Property } from '$lib/db/zod/schema/property.types'
 
 // +++ Table Of Contents
@@ -208,7 +208,7 @@ export function getResourceActiveLocales<T extends ViewFilterResource>(
 export function getResourceLocaleToggleItems<T extends ViewFilterResource>(
   adminCtx: AdminCtx,
   resource: T,
-): ResourceFilterBarLocaleToggleItem[] {
+): ResourceControlBarLocaleToggleItem[] {
   const translationLocales = getNormalizedResourceTranslationLocales(adminCtx, resource)
   if (!translationLocales) {
     return []
@@ -576,7 +576,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
  */
 export function getFilterRenderItems(
   adminCtx: AdminCtx,
-  filtersConfig: ResourceFilterBarConfig,
+  filtersConfig: ResourceControlBarConfig,
   section: ResourceFilterSection,
   isSuperAdmin: boolean,
 ): FilterRenderItem[] {
@@ -656,7 +656,7 @@ export function getFilterRenderItems(
  */
 export function getFilterSectionCount(
   adminCtx: AdminCtx,
-  filtersConfig: ResourceFilterBarConfig,
+  filtersConfig: ResourceControlBarConfig,
   section: ResourceFilterSection,
   isSuperAdmin: boolean,
 ): number {

@@ -5,7 +5,7 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
 import { createToggleFilter } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { GroupedResourceIndex, ResourceFilterBar, TaskRow } from '$lib/bits'
+import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '$lib/bits'
 // COMPONENTS
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 // ENUMS
@@ -16,7 +16,7 @@ import { m } from '$lib/i18n'
 import TaskIcon from 'virtual:icons/lucide/inbox'
 import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
 // TYPES
-import type { Id, ResourceFilterBarConfig, Task } from '$lib/types'
+import type { Id, ResourceControlBarConfig, Task } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 
@@ -37,7 +37,7 @@ const filters = {
       ],
     },
   ],
-} satisfies ResourceFilterBarConfig
+} satisfies ResourceControlBarConfig
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -87,14 +87,17 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
 
 $effect(() => {
   headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon)
-  headerCtrl.setControlBar(ResourceFilterBar, {
-    resource: FirstClassResource.task,
-    count: entities.length,
-    filters,
-  }, {
-    isVisible: adminCtx.appCtx.state.ui.controlMode[FirstClassResource.task] !== 'hidden',
-    transitionKey: FirstClassResource.task,
-  })
+  headerCtrl.setControlBar(
+    ResourceControlBar,
+    {
+      resource: FirstClassResource.task,
+      count: entities.length,
+      filters,
+    },
+    {
+      isVisible: adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.task],
+    },
+  )
   headerCtrl.clearFooter()
 })
 

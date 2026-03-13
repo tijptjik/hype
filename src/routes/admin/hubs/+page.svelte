@@ -14,7 +14,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { IndexCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
+import { IndexCard, ResourceControlBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
@@ -23,7 +23,7 @@ import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
 import BookOpenIcon from 'virtual:icons/lucide/book-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 // TYPES
-import type { KeyMap, ResourceFilterBarConfig } from '$lib/types'
+import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Hub } from '$lib/db/zod/schema/hub.types'
 
 // CONFIG :: KEY MAP
@@ -90,7 +90,7 @@ const filters = {
       ],
     },
   ],
-} satisfies ResourceFilterBarConfig
+} satisfies ResourceControlBarConfig
 
 const sortables = createSortables([
   createSortable('modifiedAt', m.sort__updated()),
@@ -116,12 +116,18 @@ let entities: Hub[] = $derived(
 
 $effect(() => {
   headerCtrl.setHeaderForIndex(m.hub__title(), HubIcon)
-  headerCtrl.setControlBar(ResourceFilterBar, {
-    resource: FirstClassResource.hub,
-    count: entities.length,
-    filters,
-    sortables,
-  })
+  headerCtrl.setControlBar(
+    ResourceControlBar,
+    {
+      resource: FirstClassResource.hub,
+      count: entities.length,
+      filters,
+      sortables,
+    },
+    {
+      isVisible: adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.hub],
+    },
+  )
   headerCtrl.clearFooter()
 })
 </script>

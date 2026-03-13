@@ -50,7 +50,7 @@ let isTransitioning = $state(false)
 let layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
 
 // GRID CONFIGURATION
-let itemWidth = 340 // Approximate width of EntityCard + margins
+let itemWidth = 340 // Approximate width of IndexCard + margins
 let itemHeight = $derived(layoutMode === 'table' || layoutMode === 'list' ? 88 : 396) // Approximate row/card heights
 const GRID_HORIZONTAL_PADDING_PX = 16
 const GRID_COLUMN_GAP_PX = 16

@@ -83,7 +83,6 @@ export interface HeaderFacetsConfig {
 
 export interface HeaderViewActionsConfig {
   isVisible?: boolean
-  isControlMode?: boolean
   controlsAction?: HeaderButtonActionConfig
   layoutAction?: HeaderButtonActionConfig
 }
@@ -107,8 +106,10 @@ export interface HeaderAvatarConfig {
 }
 
 export interface HeaderLayoutRegionConfig {
-  component?: Component<Record<string, unknown>> | null
+  component?: Component<any> | null
   props?: Record<string, unknown>
+  isVisible?: boolean
+  height?: string
 }
 
 export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {

@@ -1,8 +1,8 @@
 <script lang="ts" generics="T extends Resource">
-import { setContext } from 'svelte'
 // BITS
-import { EntityCard } from '$lib/bits'
-import { ENTITY_CARD_WIDTH_CONTEXT } from '$lib/bits/patterns/cards/entityCard/entityCard.context'
+import { IndexCard } from '$lib/bits'
+// SERVICES
+import { getHashiconUrl } from '$lib/client/services/image'
 // TYPES
 import type { Resource, EntityWithOptionalImage } from '$lib/types'
 import type { Snippet } from 'svelte'
@@ -20,14 +20,6 @@ let {
   cardWidth: number
   card?: Snippet<[T, number]>
 } = $props()
-
-const cardLayout = $state({ width: cardWidth })
-
-$effect(() => {
-  cardLayout.width = cardWidth
-})
-
-setContext(ENTITY_CARD_WIDTH_CONTEXT, cardLayout)
 </script>
 
 <div
@@ -40,9 +32,12 @@ setContext(ENTITY_CARD_WIDTH_CONTEXT, cardLayout)
         {#if card}
           {@render card(entity, startingIndex + columnIndex)}
         {:else}
-          <EntityCard
-            entity={entity as EntityWithOptionalImage}
-            keyMap={{ id: 'id', title: 'id', image: '' }}
+          <IndexCard
+            title={entity.id}
+            description=""
+            imageSrc={getHashiconUrl(entity.id)}
+            imageAlt={entity.id}
+            {cardWidth}
           />
         {/if}
       </div>

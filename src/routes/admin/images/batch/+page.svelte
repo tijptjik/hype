@@ -41,7 +41,7 @@ headerCtrl.setHeaderForStandAlone(m.admin__batch_image_upload(), ImageUp, {
   showFilter: false,
   showViewActions: false,
   showLayoutToggle: false,
-  showControlsToggle: false,
+  showControlBarToggle: false,
 })
 
 // STATE

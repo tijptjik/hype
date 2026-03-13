@@ -12,7 +12,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { IndexCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
+import { IndexCard, ResourceControlBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -29,7 +29,7 @@ import BookOpenIcon from 'virtual:icons/lucide/book-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ImageIcon from 'virtual:icons/lucide/image'
 // TYPES
-import type { KeyMap, ResourceFilterBarConfig } from '$lib/types'
+import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 
 // CONFIG :: KEY MAP
@@ -131,7 +131,7 @@ const filters = {
       ],
     },
   ],
-} satisfies ResourceFilterBarConfig
+} satisfies ResourceControlBarConfig
 
 const sortables = createSortables([
   createSortable('modifiedAt', m.sort__updated()),
@@ -168,12 +168,19 @@ $effect(() => {
   headerCtrl.setHeaderForIndex(m.maps__organisations(), OrganisationIcon, {
     showNew: canCreateOrganisation,
   })
-  headerCtrl.setControlBar(ResourceFilterBar, {
-    resource: FirstClassResource.organisation,
-    count: entities.length,
-    filters,
-    sortables,
-  })
+  headerCtrl.setControlBar(
+    ResourceControlBar,
+    {
+      resource: FirstClassResource.organisation,
+      count: entities.length,
+      filters,
+      sortables,
+    },
+    {
+      isVisible:
+        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.organisation],
+    },
+  )
   headerCtrl.clearFooter()
 })
 // STATE
