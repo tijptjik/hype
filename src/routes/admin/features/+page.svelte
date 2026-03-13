@@ -14,7 +14,12 @@ import {
 import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 import FeatureCard from '$lib/components/resources/cards/FeatureIndexCard.svelte'
 // BITS PATTERNS
-import { CompletionFooter, FeatureRow, ResourceFilterBar, ResourceIndex } from '$lib/bits'
+import {
+  CompletionFooter,
+  FeatureRow,
+  ResourceFilterBar,
+  ResourceIndex,
+} from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -261,13 +266,17 @@ function navigateToPreviousFeature() {
   }
 }
 
+interface VirtualListViewportElement extends Element {
+  scrollToIndex?: (index: number, alignToTop?: boolean, smoothScroll?: boolean) => void
+}
+
 function updateRowFocus(index: number) {
   // Use the virtual list's scrollToIndex method
   const virtualList = listContainer?.querySelector(
     'svelte-virtual-list-viewport',
-  ) as any
+  ) as VirtualListViewportElement | null
 
-  if (virtualList && virtualList.scrollToIndex) {
+  if (virtualList?.scrollToIndex) {
     // Scroll to the index using the virtual list's built-in method
     virtualList.scrollToIndex(index, true, false)
 
@@ -292,13 +301,9 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<ResourceIndex
-  resource={FirstClassResource.feature}
-  {entities}
-  bind:listContainer
->
+<ResourceIndex resource={FirstClassResource.feature} {entities} bind:listContainer>
   {#snippet card(entity: Feature)}
-    <FeatureCard {entity} />
+    <FeatureIndexCard {entity} />
   {/snippet}
   {#snippet row(entity, index)}
     <FeatureRow

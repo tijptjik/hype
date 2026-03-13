@@ -1,7 +1,9 @@
 <script lang="ts">
+import { page } from '$app/state'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
 // SERVICES
 import {
   createSortable,
@@ -10,7 +12,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { EntityCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
+import { IndexCard, ResourceFilterBar, ResourceIndex } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -182,6 +184,13 @@ let entities: Organisation[] = $derived(
 
 <ResourceIndex resource={FirstClassResource.organisation} {entities}>
   {#snippet card(entity: Organisation)}
-    <EntityCard {entity} {keyMap} />
+    <IndexCard
+      {...createAdminIndexCardModel({
+        adminCtx,
+        entity,
+        keyMap,
+        search: page.url.search,
+      })}
+    />
   {/snippet}
 </ResourceIndex>
