@@ -87,6 +87,7 @@ import { FirstClassResource } from '$lib/enums'
 import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {
+  Layer,
   LayerGetState,
   LayerPropertyPartialExtra,
   LayerSubmitData,
@@ -203,6 +204,14 @@ const locales = $derived(getLocaleOrder(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
+const cachedLayerForRef = $derived(
+  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.layer, layerRef) as
+    | Layer
+    | undefined,
+)
+const cachedLayerState = $derived(
+  cachedLayerForRef ? ({ data: cachedLayerForRef } as LayerGetState) : null,
+)
 
 let contentsElement: HTMLFormElement | undefined = $state()
 
@@ -211,6 +220,7 @@ let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let hasAutoEnteredEditForNew = $state(false)
 let lastMergedProjectId = $state<string | null>(null)
+let prefetchedProjectPropertiesByProjectId = $state<Record<string, Property[]>>({})
 let settledLayerRef = $state<string | null>(null)
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
@@ -236,6 +246,53 @@ const commitLayerState = (value: LayerGetState): void => {
 const commitSettledLayerState = (value: LayerGetState): void => {
   commitLayerState(value)
   settledLayerRef = value?.data?.id ?? null
+}
+
+async function loadProjectProperties(projectId: string): Promise<Property[]> {
+  if (!projectId.trim()) return []
+
+  const propertyState = (await getProjectProperties({
+    projectId,
+    meta: { isAdminRequest: true },
+  })) as { data?: Property[] | null }
+
+  return Array.isArray(propertyState?.data) ? propertyState.data : []
+}
+
+function cacheProjectProperties(projectProperties: Property[]): void {
+  for (const projectProperty of projectProperties) {
+    if (!projectProperty?.id) continue
+    adminCtx.appCtx.cache.property.set(projectProperty.id, projectProperty)
+  }
+}
+
+function rememberProjectProperties(
+  projectId: string,
+  projectProperties: Property[],
+): void {
+  prefetchedProjectPropertiesByProjectId = {
+    ...prefetchedProjectPropertiesByProjectId,
+    [projectId]: projectProperties,
+  }
+  cacheProjectProperties(projectProperties)
+}
+
+function resolveKnownProjectIdForLayerRef(ref: string): string {
+  if (ref === layerRef) {
+    return (
+      cachedLayerState?.data?.projectId ??
+      committedLayer?.data?.projectId ??
+      layer?.data?.projectId ??
+      ''
+    ).trim()
+  }
+
+  const cachedLayer = adminCtx.appCtx.getResourceByRefSync(
+    FirstClassResource.layer,
+    ref,
+  ) as Layer | undefined
+
+  return (cachedLayer?.projectId ?? '').trim()
 }
 
 const isCoreFacet = $derived(activeFacet === 'core')
@@ -563,30 +620,20 @@ async function syncProjectPropertiesIntoLayerForm(
 
   isLayerPropertyMergeInProgress = true
   try {
-    let propertyState: { data?: Property[] | null }
     try {
-      propertyState = (await getProjectProperties({
-        projectId,
-        meta: { isAdminRequest: true },
-      })) as { data?: Property[] | null }
+      const projectProperties =
+        prefetchedProjectPropertiesByProjectId[projectId] ??
+        (await loadProjectProperties(projectId))
+      rememberProjectProperties(projectId, projectProperties)
+
+      applyProjectPropertiesToLayerForm({
+        form: formDataUpdater,
+        projectProperties,
+      })
     } catch {
       toast.error(m.long_crazy_peacock_care())
       return
     }
-
-    const projectProperties = Array.isArray(propertyState?.data)
-      ? propertyState.data
-      : []
-
-    for (const projectProperty of projectProperties) {
-      if (!projectProperty?.id) continue
-      adminCtx.appCtx.cache.property.set(projectProperty.id, projectProperty)
-    }
-
-    applyProjectPropertiesToLayerForm({
-      form: formDataUpdater,
-      projectProperties,
-    })
 
     if (options.rebaseline && committedLayer?.data) {
       const currentValue = formCtx.form.fields.value() as {
@@ -606,8 +653,6 @@ async function syncProjectPropertiesIntoLayerForm(
       })
     }
 
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
     revalidateAfterProgrammaticChange()
   } finally {
     isLayerPropertyMergeInProgress = false
@@ -681,11 +726,32 @@ async function refreshLayer(refOverride?: string): Promise<LayerGetState> {
     }
   }
 
-  return (await getLayer({
+  const knownProjectId = resolveKnownProjectIdForLayerRef(ref)
+  const layerQuery = getLayer({
     ref,
     refKey: 'id',
     meta: { isAdminRequest: true, profile: 'admin' },
-  })) as LayerGetState
+  })
+  const projectPropertiesPromise = knownProjectId
+    ? loadProjectProperties(knownProjectId).catch(() => null)
+    : Promise.resolve(null)
+
+  const nextLayer = (await layerQuery) as LayerGetState
+  const nextProjectId = (nextLayer?.data?.projectId ?? '').trim()
+
+  let projectProperties = await projectPropertiesPromise
+  if (nextProjectId && nextProjectId !== knownProjectId) {
+    projectProperties = await loadProjectProperties(nextProjectId).catch(() => null)
+  }
+
+  if (
+    Array.isArray(projectProperties) &&
+    nextProjectId === (nextLayer?.data?.projectId ?? '')
+  ) {
+    rememberProjectProperties(nextProjectId, projectProperties)
+  }
+
+  return nextLayer
 }
 
 async function handleLayerStateToggle({
@@ -793,6 +859,14 @@ function onSubmit(): void {
 // Route sync
 $effect(() => {
   layerRef
+  const cachedId = cachedLayerState?.data?.id
+  if (!cachedId) return
+  if (layer?.data?.id === cachedId) return
+  commitLayerState(cachedLayerState)
+})
+
+$effect(() => {
+  layerRef
   optimisticHeaderState = captureHeaderTransitionSnapshot(headerCtrl)
 })
 
@@ -804,6 +878,7 @@ $effect(() => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
       lastMergedProjectId = null
+      prefetchedProjectPropertiesByProjectId = {}
       settledLayerRef = null
     },
     setFacetForRef: nextRef => {
