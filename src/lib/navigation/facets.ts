@@ -68,7 +68,12 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.images,
   ],
   layer: [ADMIN_FACETS.core, ADMIN_FACETS.fields],
-  feature: [ADMIN_FACETS.core, ADMIN_FACETS.address, ADMIN_FACETS.images],
+  feature: [
+    ADMIN_FACETS.core,
+    ADMIN_FACETS.fields,
+    ADMIN_FACETS.address,
+    ADMIN_FACETS.images,
+  ],
   task: [ADMIN_FACETS.core],
 }
 
