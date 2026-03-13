@@ -43,6 +43,7 @@ export interface HeaderNewProps extends Omit<HeaderNewConfig, 'isCreatable'> {
 export interface HeaderTitleProps extends HeaderTitleConfig {
   hideTitle?: boolean
   hideDescription?: boolean
+  isMeasuring?: boolean
 }
 
 export interface HeaderRootRenderState extends AdaptiveToolbarRenderState {}

@@ -87,7 +87,7 @@ const rootClass = $derived(
 
 <HeaderPrimitive.Wrapper class={wrapperClass} {...restProps}>
   <HeaderPrimitive.Root class={rootClass}>
-    {#snippet left({ showButtonText })}
+    {#snippet left({ showButtonText, isMeasuring })}
       <HeaderPrimitive.Title
         text={title.text}
         description={title.description}
@@ -95,6 +95,7 @@ const rootClass = $derived(
         href={title.href}
         crumbs={title.crumbs}
         menuAction={title.menuAction}
+        {isMeasuring}
       />
       <HeaderPrimitive.New
         isCreatable={showNew}

@@ -27,15 +27,19 @@ const rootClass = $derived(
 
 const renderState = $derived({
   showButtonText: hasResolvedOnce ? showButtonText : false,
+  isMeasuring: false,
 })
 
 const measurementState = {
   showButtonText: true,
+  isMeasuring: true,
 } as const
 
 const overflowAttach = createAdaptiveToolbarOverflowAttach({
   onMeasureStart: () => {
-    hideMeasuredControls = true
+    if (!hasResolvedOnce) {
+      hideMeasuredControls = true
+    }
   },
   onMeasureEnd: ({ showButtonText: nextShowButtonText }) => {
     showButtonText = nextShowButtonText

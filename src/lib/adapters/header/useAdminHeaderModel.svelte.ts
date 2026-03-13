@@ -675,6 +675,20 @@ export function useAdminHeaderModel(
     }
   })
 
+  const titleMenuAction = $derived.by(() => ({
+    isVisible: showDeleteMenuAction,
+    ariaLabel: deleteMenuLabel,
+    items: titleMenuItems,
+  }))
+
+  const titleConfig = $derived.by(() => ({
+    text: resolvedHeaderTitle,
+    icon: (headerIcon ?? undefined) as Component | undefined,
+    href: headerHref,
+    crumbs: syncCrumbs,
+    menuAction: titleMenuAction,
+  }))
+
   // ---
   /********************
    *  7. PUBLIC CONTRACT
@@ -684,17 +698,7 @@ export function useAdminHeaderModel(
   // Materialize the final prop object expected by the stateless header pattern.
   const headerProps = $derived<HeaderProps>({
     query,
-    title: {
-      text: resolvedHeaderTitle,
-      icon: (headerIcon ?? undefined) as Component | undefined,
-      href: headerHref,
-      crumbs: syncCrumbs,
-      menuAction: {
-        isVisible: showDeleteMenuAction,
-        ariaLabel: deleteMenuLabel,
-        items: titleMenuItems,
-      },
-    },
+    title: titleConfig,
     newAction: {
       isCreatable: resolvedVisibility.showNew,
       onCreate: handleCreate,

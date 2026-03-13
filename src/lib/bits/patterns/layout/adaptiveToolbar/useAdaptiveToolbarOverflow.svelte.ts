@@ -99,7 +99,6 @@ export function createAdaptiveToolbarOverflowAttach(
       childList: true,
       subtree: true,
       characterData: true,
-      attributes: true,
     })
 
     scheduleOverflowResolution({ immediate: true })

@@ -18,6 +18,7 @@ let {
   menuAction = undefined,
   hideTitle = false,
   hideDescription = false,
+  isMeasuring = false,
 }: HeaderTitleProps = $props()
 
 const menuItems = $derived(menuAction?.items ?? [])
@@ -44,18 +45,27 @@ const resolvedCrumbs = $derived(
       in:slide={{ axis: "x", duration: 260 }}
       out:slide={{ axis: "x", duration: 260 }}
     >
-      <Dropdown
-        ariaLabel={menuAction.ariaLabel ?? text ?? 'Header menu'}
-        triggerClass="bits-pattern-header__title-menu-trigger"
-        triggerIcon={ChevronDown}
-        triggerIconClass="bits-pattern-header__title-menu-trigger-icon"
-        contentClass="bits-pattern-header__title-menu-content"
-        contentSide="bottom"
-        contentSideOffset={8}
-        contentAlign="center"
-        itemClass="bits-pattern-header__title-menu-item"
-        items={menuItems}
-      />
+      {#if isMeasuring}
+        <div
+          class="bits-pattern-header__title-menu-trigger bits-pattern-header__title-menu-trigger--placeholder"
+          aria-hidden="true"
+        >
+          <ChevronDown class="bits-pattern-header__title-menu-trigger-icon" />
+        </div>
+      {:else}
+        <Dropdown
+          ariaLabel={menuAction.ariaLabel ?? text ?? 'Header menu'}
+          triggerClass="bits-pattern-header__title-menu-trigger"
+          triggerIcon={ChevronDown}
+          triggerIconClass="bits-pattern-header__title-menu-trigger-icon"
+          contentClass="bits-pattern-header__title-menu-content"
+          contentSide="bottom"
+          contentSideOffset={8}
+          contentAlign="center"
+          itemClass="bits-pattern-header__title-menu-item"
+          items={menuItems}
+        />
+      {/if}
     </div>
   {/if}
 </div>
