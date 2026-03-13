@@ -35,8 +35,9 @@ let {
 const rootClass = $derived(['bits-project-fields', className].filter(Boolean).join(' '))
 const hasIssues = $derived(issues.length > 0)
 const hasItems = $derived(items.length > 0)
-const showEmptyState = $derived(!hasItems && !isLoading)
-const showHeaderActions = $derived(hasItems && !isLoading)
+const hasOptimisticItems = $derived(hasItems || loadingItems.length > 0)
+const showEmptyState = $derived(!hasOptimisticItems && !isLoading)
+const showHeaderActions = $derived(hasOptimisticItems && !isLoading)
 
 let isCollapsedAll = $state(false)
 let collapseAllVersion = $state(0)
@@ -122,7 +123,12 @@ $effect(() => {
     loadingItems = providedLoadingItems
     return
   }
-  if (items.length === 0) return
+  if (items.length === 0) {
+    if (!isLoading && loadingItems.length > 0) {
+      loadingItems = []
+    }
+    return
+  }
   const previousLoadingItems = untrack(() => loadingItems)
   const nextLoadingItems = items.map(item => {
     const existing = previousLoadingItems.find(
@@ -180,7 +186,7 @@ $effect(() => {
     <SectionHeader
       {title}
       description={description ?? ''}
-      onCollapsableToggle={hasItems ? onCollapsableToggle : undefined}
+      onCollapsableToggle={hasOptimisticItems ? onCollapsableToggle : undefined}
       isCollapsableCollapsed={isCollapsedAll}
       {onVisibilityToggle}
       {isVisibilityOn}

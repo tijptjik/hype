@@ -13,7 +13,7 @@ import {
   overrideResourceListItemBoolean,
 } from '$lib/client/services/resource'
 // TYPES
-import type { CapabilityKey, Locale } from '$lib/types'
+import type { CapabilityDefinitions, CapabilityKey, Locale } from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { User } from '$lib/db/zod/schema/user.types'
 import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'
@@ -47,6 +47,8 @@ import type {
 //    - seedOwnerRolesForNewProject
 //
 // 4. PROJECT CAPABILITY HELPERS
+//    - resolveProjectCapabilitySourceOrganisationId
+//    - resolveProjectCapabilityDefinitionState
 //    - normalizeProjectCapabilitiesForSubmit
 //    - toComparableProjectUserRolesForSubmit
 //    - toUserRolesWithRoleChange
@@ -346,6 +348,83 @@ export function resolveDefaultProjectOrganisationIdForCreate(params: {
   const uniqueOrganisationIds = Array.from(new Set(params.scope.organisationIds))
   if (uniqueOrganisationIds.length !== 1) return null
   return uniqueOrganisationIds[0] ?? null
+}
+
+export function resolveProjectCapabilitySourceOrganisationId(params: {
+  formOrganisationId?: string | null
+  optimisticOrganisationId?: string | null
+  committedOrganisationId?: string | null
+  hierarchyOrganisationId?: string | null
+}): string {
+  return (
+    params.formOrganisationId ||
+    params.optimisticOrganisationId ||
+    params.committedOrganisationId ||
+    params.hierarchyOrganisationId ||
+    ''
+  )
+}
+
+export function resolveProjectCapabilityDefinitionState(params: {
+  organisationId: string
+  isNewProjectRef: boolean
+  hierarchyOrganisation?:
+    | {
+        id?: string | null
+        capabilities?: CapabilityDefinitions
+      }
+    | null
+    | undefined
+  selectedOrganisation?:
+    | {
+        capabilities?: CapabilityDefinitions
+      }
+    | null
+    | undefined
+}): {
+  definitions: CapabilityDefinitions
+  isResolved: boolean
+} {
+  if (!params.organisationId) {
+    return {
+      definitions: {} as CapabilityDefinitions,
+      isResolved: params.isNewProjectRef,
+    }
+  }
+
+  const hierarchyOrganisation = params.hierarchyOrganisation
+  if (hierarchyOrganisation?.id === params.organisationId) {
+    if (Object.hasOwn(hierarchyOrganisation, 'capabilities')) {
+      return {
+        definitions:
+          hierarchyOrganisation.capabilities &&
+          typeof hierarchyOrganisation.capabilities === 'object'
+            ? hierarchyOrganisation.capabilities
+            : ({} as CapabilityDefinitions),
+        isResolved: true,
+      }
+    }
+  }
+
+  const selectedOrganisation = params.selectedOrganisation
+  if (
+    selectedOrganisation != null &&
+    Object.hasOwn(selectedOrganisation, 'capabilities')
+  ) {
+    return {
+      definitions:
+        selectedOrganisation.capabilities &&
+        typeof selectedOrganisation.capabilities === 'object'
+          ? selectedOrganisation.capabilities
+          : ({} as CapabilityDefinitions),
+      isResolved: true,
+    }
+  }
+
+  return {
+    definitions: {} as CapabilityDefinitions,
+    isResolved: false,
+  }
 }
 
 export function normalizeProjectCapabilitiesForSubmit(params: {

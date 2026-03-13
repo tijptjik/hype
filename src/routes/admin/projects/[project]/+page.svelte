@@ -43,6 +43,8 @@ import {
   normalizePropertiesForSubmit,
   overrideProjectEntityBoolean,
   overrideProjectListItemBoolean,
+  resolveProjectCapabilityDefinitionState,
+  resolveProjectCapabilitySourceOrganisationId,
   resolveDefaultProjectOrganisationIdForCreate,
   seedOwnerRolesForNewProject as resolveOwnerRoleSeedForNewProject,
   toComparableProjectUserRolesForSubmit,
@@ -104,6 +106,7 @@ import {
   Main,
 } from '$lib/bits'
 import type { ParentSectionOrganisationItem } from '$lib/bits'
+import type { UserCapabilityMatrixRow } from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
@@ -167,7 +170,7 @@ const resolvedFacetTabs = $derived.by(() => {
         coreOnly: true,
       })
     : new Map(facetTabs)
-  if (!hasAnyProjectCapabilitiesConfigured) tabs.delete('capabilities')
+  if (shouldHideCapabilitiesFacet) tabs.delete('capabilities')
   return tabs
 })
 
@@ -225,6 +228,16 @@ let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   isDeleted: false,
   facets: [],
 })
+let lastSettledProjectResourceHubId = $state<string | null | undefined>(undefined)
+let stableCapabilityFacetVisibilityKey = $state('')
+let stableProjectCapabilityDefinitions = $state<CapabilityDefinitions>(
+  {} as CapabilityDefinitions,
+)
+let stableEnabledProjectCapabilityKeys = $state<CapabilityKey[]>([])
+let stableProjectCapabilityLabelByKey = $state<Partial<Record<CapabilityKey, string>>>(
+  {},
+)
+let stableCapabilityMatrixRows = $state<UserCapabilityMatrixRow[]>([])
 let showDisabledFields = $state(false)
 
 // § State - Data
@@ -283,6 +296,17 @@ const optimisticProjectHierarchy = $derived.by(() => {
   const projectData = optimisticProjectData
   if (!projectData) return null
   return adminCtx.appCtx.getHierarchySync(projectData)
+})
+const effectiveProjectResourceHubId = $derived.by(() => {
+  const liveHubId = hierarchy?.organisation?.hubId
+  if (typeof liveHubId === 'string' || liveHubId === null) return liveHubId
+
+  const optimisticHubId = optimisticProjectHierarchy?.organisation?.hubId
+  if (typeof optimisticHubId === 'string' || optimisticHubId === null) {
+    return optimisticHubId
+  }
+
+  return lastSettledProjectResourceHubId ?? null
 })
 
 // § Form
@@ -962,26 +986,49 @@ const capabilityIssues = $derived.by((): string[] => {
   return Array.from(new Set(messages))
 })
 
-const organisationCapabilityDefinitions = $derived.by(() => {
-  const fromHierarchy = (
-    hierarchy?.organisation as { capabilities?: CapabilityDefinitions } | undefined
-  )?.capabilities
-  if (fromHierarchy && typeof fromHierarchy === 'object') return fromHierarchy
+const capabilitySourceOrganisationId = $derived.by(() =>
+  resolveProjectCapabilitySourceOrganisationId({
+    formOrganisationId: String(formCtx.form.fields.data.organisationId.value() ?? ''),
+    optimisticOrganisationId: optimisticProjectData?.organisationId,
+    committedOrganisationId: activeCommittedProjectData?.organisationId,
+    hierarchyOrganisationId: hierarchy?.organisation?.id,
+  }),
+)
 
-  const selected = selectedParentOrganisationById[parentOrganisationIdValue] as
-    | { capabilities?: CapabilityDefinitions }
-    | undefined
-  const fromSelected = selected?.capabilities
-  if (fromSelected && typeof fromSelected === 'object') return fromSelected
-
-  return {} as CapabilityDefinitions
-})
+const projectCapabilityDefinitionState = $derived.by(() =>
+  resolveProjectCapabilityDefinitionState({
+    organisationId: capabilitySourceOrganisationId,
+    isNewProjectRef,
+    hierarchyOrganisation: hierarchy?.organisation,
+    selectedOrganisation: selectedParentOrganisationById[
+      capabilitySourceOrganisationId
+    ] as
+      | ({ capabilities?: CapabilityDefinitions } & ParentSectionOrganisationItem)
+      | undefined,
+  }),
+)
+const organisationCapabilityDefinitions = $derived(
+  projectCapabilityDefinitionState.definitions,
+)
+const isProjectCapabilitySourceResolved = $derived(
+  projectCapabilityDefinitionState.isResolved,
+)
 
 const availableProjectCapabilityKeys = $derived(
-  getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions),
+  getCapabilityKeysFromDefinitions(stableProjectCapabilityDefinitions),
 )
 const hasAnyProjectCapabilitiesConfigured = $derived(
   availableProjectCapabilityKeys.length > 0,
+)
+const shouldHideCapabilitiesFacet = $derived(
+  isProjectCapabilitySourceResolved && !hasAnyProjectCapabilitiesConfigured,
+)
+const isHeaderTransitionSettled = $derived.by(
+  () =>
+    isCurrentRefSettled &&
+    !formCtx.submitting &&
+    !headerCtrl.state.formActions?.isPublishing &&
+    !headerCtrl.state.formActions?.isDeleting,
 )
 
 const formProjectCapabilities = $derived(
@@ -997,13 +1044,44 @@ const projectCapabilityLabelByKey = $derived.by(
     Object.fromEntries(
       availableProjectCapabilityKeys.map(key => {
         const label =
-          organisationCapabilityDefinitions[key]?.i18n?.[currentFormLocale] ||
-          organisationCapabilityDefinitions[key]?.i18n?.en ||
+          stableProjectCapabilityDefinitions[key]?.i18n?.[currentFormLocale] ||
+          stableProjectCapabilityDefinitions[key]?.i18n?.en ||
           getCapabilityLabel(key, currentFormLocale)
         return [key, label]
       }),
     ) as Partial<Record<CapabilityKey, string>>,
 )
+
+$effect(() => {
+  const nextVisibilityKey = `${projectRef}:${capabilitySourceOrganisationId}`
+  const hasLiveCapabilities =
+    getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions).length > 0
+  const isSameCapabilitySource =
+    stableCapabilityFacetVisibilityKey === nextVisibilityKey
+  const shouldCommitLiveDefinitions =
+    !isSameCapabilitySource ||
+    hasLiveCapabilities ||
+    (isHeaderTransitionSettled && isProjectCapabilitySourceResolved)
+
+  if (!shouldCommitLiveDefinitions) return
+  stableCapabilityFacetVisibilityKey = nextVisibilityKey
+  stableProjectCapabilityDefinitions = organisationCapabilityDefinitions
+})
+
+$effect(() => {
+  if (!isHeaderTransitionSettled) return
+  if (!isProjectCapabilitySourceResolved) return
+  if (activeFacet !== 'capabilities') return
+  if (hasAnyProjectCapabilitiesConfigured) return
+  adminCtx.setFacet('core', projectRef, FirstClassResource.project)
+})
+
+$effect(() => {
+  const liveHubId = hierarchy?.organisation?.hubId
+  if (!isHeaderTransitionSettled) return
+  if (liveHubId === undefined) return
+  lastSettledProjectResourceHubId = liveHubId
+})
 
 const capabilityMatrixRows = $derived.by(() =>
   !isCapabilitiesFacet
@@ -1017,6 +1095,21 @@ const capabilityMatrixRows = $derived.by(() =>
           capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
         })),
 )
+
+$effect(() => {
+  const nextVisibilityKey = `${projectRef}:${capabilitySourceOrganisationId}`
+  const hasLiveCapabilities =
+    getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions).length > 0
+  const shouldCommitLiveRenderState =
+    stableCapabilityFacetVisibilityKey !== nextVisibilityKey ||
+    hasLiveCapabilities ||
+    (isHeaderTransitionSettled && isProjectCapabilitySourceResolved)
+
+  if (!shouldCommitLiveRenderState) return
+  stableEnabledProjectCapabilityKeys = [...enabledProjectCapabilityKeys]
+  stableProjectCapabilityLabelByKey = { ...projectCapabilityLabelByKey }
+  stableCapabilityMatrixRows = [...capabilityMatrixRows]
+})
 
 $effect(() => {
   const organisationId = parentOrganisationIdValue
@@ -1092,7 +1185,7 @@ const canEditProject = $derived.by(() => {
     {
       resourceId: projectData.id,
       organisationId: projectData.organisationId,
-      resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
+      resourceHubId: effectiveProjectResourceHubId,
     },
     ['code'],
   ).allowed
@@ -1104,7 +1197,7 @@ const canPublishProject = $derived.by(() => {
   return authorizeProjectPublish(authActor, {
     resourceId: projectData.id,
     organisationId: projectData.organisationId,
-    resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
+    resourceHubId: effectiveProjectResourceHubId,
   }).allowed
 })
 const canDeleteProject = $derived.by(() => {
@@ -1113,7 +1206,7 @@ const canDeleteProject = $derived.by(() => {
   return authorizeProjectDelete(authActor, {
     resourceId: projectData.id,
     organisationId: projectData.organisationId,
-    resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
+    resourceHubId: effectiveProjectResourceHubId,
   }).allowed
 })
 const canEditImagePresentationMode = $derived(
@@ -1132,7 +1225,7 @@ const canSetParentOrganisation = $derived.by(() => {
       ? {
           resourceId: projectData.id,
           organisationId: projectData.organisationId,
-          resourceHubId: optimisticProjectHierarchy?.organisation?.hubId ?? null,
+          resourceHubId: effectiveProjectResourceHubId,
         }
       : null,
   })
@@ -1610,7 +1703,7 @@ $effect(() => {
     optimisticProjectData?.code ??
     m.deft_mealy_ant_vent()
   const displayFacets = resolveOptimisticHeaderFacets(
-    isCurrentRefSettled,
+    isHeaderTransitionSettled,
     resolvedFacetTabsWithIssues,
     optimisticHeaderState,
   )
@@ -1790,7 +1883,7 @@ $effect(() => {
 $effect(() => {
   const isImageFacetActive = isImagesFacet
   const status = resolveOptimisticHeaderStatus({
-    isSettled: isCurrentRefSettled,
+    isSettled: isHeaderTransitionSettled,
     isImageFacetActive,
     isNewRef: isNewProjectRef,
     dirty: isDirty,
@@ -1805,7 +1898,7 @@ $effect(() => {
     snapshot: optimisticHeaderState,
   })
   const inertActionOverrides =
-    isCurrentRefSettled && !isImageFacetActive
+    isHeaderTransitionSettled && !isImageFacetActive
       ? {}
       : {
           onEditingToggle: () => {},
@@ -1943,18 +2036,16 @@ $effect(() => {
       transition="fade"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
-      {#if isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
-        <ProjectCapabilities
-          {capabilityIssues}
-          availableCapabilityKeys={availableProjectCapabilityKeys}
-          enabledCapabilityKeys={enabledProjectCapabilityKeys}
-          capabilityLabelByKey={projectCapabilityLabelByKey}
-          matrixRows={capabilityMatrixRows}
-          {isEditing}
-          onToggleCapability={onToggleProjectCapability}
-          onToggleCell={onToggleUserCapability}
-        />
-      {/if}
+      <ProjectCapabilities
+        {capabilityIssues}
+        availableCapabilityKeys={availableProjectCapabilityKeys}
+        enabledCapabilityKeys={stableEnabledProjectCapabilityKeys}
+        capabilityLabelByKey={stableProjectCapabilityLabelByKey}
+        matrixRows={stableCapabilityMatrixRows}
+        {isEditing}
+        onToggleCapability={onToggleProjectCapability}
+        onToggleCell={onToggleUserCapability}
+      />
     </Main.Section>
     <Main.Section
       isVisible={isFieldsFacet}
@@ -1962,67 +2053,63 @@ $effect(() => {
       class="bits-theme flex gap-4 min-h-0 flex-col"
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      {#if isFieldsFacet}
-        <FormFieldsSection
-          items={projectFieldsInSection}
-          isLoading={isProjectFieldsLoading}
-          title={m.admin__forms_common_fields()}
-          description={m.admin__forms_common_fields_subtitle()}
-          issues={fieldSectionIssues}
-          actions={fieldActions}
-          issueItemIds={fieldSectionIssueItemIds}
-          layoutMutationVersion={fieldsLayoutMutationVersion}
-          forceFlipDisabled={isProjectFieldResetInProgress}
-          canEdit={canSubmitProject && isCurrentRefLoaded}
-          {isEditing}
-          removeMode={fieldRemoveMode}
-          isVisibilityOn={showDisabledFields}
-          visibilityOnLabel={m.admin__forms_common_hide_unused()}
-          visibilityOffLabel={m.admin__forms_common_show_unused()}
-          onVisibilityToggle={nextVisible => {
-            fieldsLayoutMutationVersion += 1
-            showDisabledFields = nextVisible
+      <FormFieldsSection
+        items={projectFieldsInSection}
+        isLoading={isProjectFieldsLoading}
+        title={m.admin__forms_common_fields()}
+        description={m.admin__forms_common_fields_subtitle()}
+        issues={fieldSectionIssues}
+        actions={fieldActions}
+        issueItemIds={fieldSectionIssueItemIds}
+        layoutMutationVersion={fieldsLayoutMutationVersion}
+        forceFlipDisabled={isProjectFieldResetInProgress}
+        canEdit={canSubmitProject && isCurrentRefLoaded}
+        {isEditing}
+        removeMode={fieldRemoveMode}
+        isVisibilityOn={showDisabledFields}
+        onVisibilityToggle={nextVisible => {
+          fieldsLayoutMutationVersion += 1
+          showDisabledFields = nextVisible
+        }}
+        isItemVisible={property => isPropertyVisible(property)}
+        onRemoveModeChange={value => {
+          fieldRemoveMode = value
+        }}
+        card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              currentProjectProperties.findIndex(candidate => candidate.id === propertyId),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveCardPresentation: resolveProjectPropertyCardPresentation,
+            resolveTitleHref: resolveProjectPropertyTitleHref,
+            getMoveWindowSize: () => enabledProjectFieldWindowSize,
+            isMoveLocked: property =>
+              property.scope !== 'project' && !isPropertyEnabled(property),
+            resolveSourceTag: resolveProjectPropertySourceTag,
           }}
-          isItemVisible={property => isPropertyVisible(property)}
-          onRemoveModeChange={value => {
-            fieldRemoveMode = value
-          }}
-          card={{
-              removeMode: fieldRemoveMode,
-              locales,
-              isEditing,
-              isRequiredInPreflight,
-              allIssues: visibleAllIssues as Array<{
-                message: string
-                path?: Array<string | number>
-              }>,
-              classifierComponents: classifierComponentTypes,
-              specifierComponents: specifierComponentTypes,
-              onIncreaseRank: fieldActions.increaseRank,
-              onDecreaseRank: fieldActions.decreaseRank,
-              onRemove: fieldActions.remove,
-              onUpdateBase: updatePropertyBase,
-              onUpdateI18n: updatePropertyI18n,
-              onAddValue: addPropertyValue,
-              onRemoveValue: removePropertyValue,
-              onMoveValue: movePropertyValue,
-              onUpdateValue: updatePropertyValue,
-              onUpdateValueI18n: updatePropertyValueI18n,
-              onTranslateLocale: onTranslatePropertyLocale,
-              onResetLocale: onResetPropertyLocale,
-              getPropertyIndex: (propertyId, _sectionIndex) =>
-                currentProjectProperties.findIndex(candidate => candidate.id === propertyId),
-              getPropertyFields: (_propertyId, propertyIndex) =>
-                getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-              resolveCardPresentation: resolveProjectPropertyCardPresentation,
-              resolveTitleHref: resolveProjectPropertyTitleHref,
-              getMoveWindowSize: () => enabledProjectFieldWindowSize,
-              isMoveLocked: property =>
-                property.scope !== 'project' && !isPropertyEnabled(property),
-              resolveSourceTag: resolveProjectPropertySourceTag,
-            }}
-        />
-      {/if}
+      />
     </Main.Section>
 
     <div class="hidden" aria-hidden="true">
@@ -2040,22 +2127,20 @@ $effect(() => {
     class="flex min-h-0 flex-col"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    {#if isImagesFacet}
-      <EntityImage
-        {page}
-        entityId={activeProjectData?.id}
-        {imageProviderProps}
-        currentImage={activeProjectImage}
-        ctx={activeProjectData?.id
-          ? {
-              ctxType: ImageContextResource.project,
-              ctxId: activeProjectData.id,
-            }
-          : undefined}
-        canEditPresentationMode={canEditImagePresentationMode}
-        canEditDropzone={canEditImageDropzone}
-        {onPresentationModeCommitted}
-      />
-    {/if}
+    <EntityImage
+      {page}
+      entityId={activeProjectData?.id}
+      {imageProviderProps}
+      currentImage={activeProjectImage}
+      ctx={activeProjectData?.id
+        ? {
+            ctxType: ImageContextResource.project,
+            ctxId: activeProjectData.id,
+          }
+        : undefined}
+      canEditPresentationMode={canEditImagePresentationMode}
+      canEditDropzone={canEditImageDropzone}
+      {onPresentationModeCommitted}
+    />
   </Main.Section>
 </Main.Root>

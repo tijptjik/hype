@@ -110,6 +110,11 @@
     transform: translateX(-0.125rem);
   }
 
+  .bits-theme .bits-btn--label-hidden-static,
+  .bits-theme .bits-btn--label-hidden-static .bits-btn__label {
+    transition: none;
+  }
+
   /* Size variants */
   .bits-theme .bits-btn--size-xs {
     --btn-size: calc(var(--btn-base-size) * 0.5);

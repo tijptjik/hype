@@ -7,6 +7,7 @@ let {
   text,
   disabled = false,
   hideLabel = false,
+  hideLabelInstantly = false,
   attrs = {},
   icon,
   iconComponent: IconComponent,
@@ -27,6 +28,7 @@ const classes = $derived(
   [
     'bits-btn',
     shouldHideLabel ? 'bits-btn--label-hidden' : '',
+    shouldHideLabel && hideLabelInstantly ? 'bits-btn--label-hidden-static' : '',
     `bits-btn--color-${color}`,
     `bits-btn--style-${style}`,
     `bits-btn--size-${size}`,

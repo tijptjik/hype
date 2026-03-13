@@ -104,6 +104,8 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
         size="sm"
         style="ghost"
         color="light"
+        hideLabel={true}
+        hideLabelInstantly={true}
         iconComponent={visibilityToggleIcon}
         class="bits-form__section-header-action-btn"
         onClick={handleVisibilityToggle}
@@ -116,6 +118,8 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
         size="sm"
         style="ghost"
         color="light"
+        hideLabel={true}
+        hideLabelInstantly={true}
         iconComponent={collapsableToggleIcon}
         class="bits-form__section-header-action-btn"
         onClick={handleCollapsableToggle}
