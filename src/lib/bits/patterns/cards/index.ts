@@ -1,4 +1,3 @@
-export * from './canonicalImage'
 export * from './entityImage'
 export * from './featureIndexCard'
 export * from './indexCard'
