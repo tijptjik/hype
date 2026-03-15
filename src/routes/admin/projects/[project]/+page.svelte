@@ -6,7 +6,7 @@ import { tick, untrack } from 'svelte'
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -183,7 +183,7 @@ const resourceEditorPage = createResourceEditorPage({
 // § Config - Derived
 
 const projectRef = $derived(page.params.project as string)
-const locales = $derived(getLocaleOrder(getLocale()))
+const locales = $derived(getLocaleOrder(getLocaleKey()))
 const currentFormLocale = $derived(toLocaleKey(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
@@ -1944,11 +1944,10 @@ $effect(() => {
         {/snippet}
 
         {#snippet children(locale)}
-          {@const formLocale = toLocaleKey(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[formLocale]}
-            {formLocale}
+            fields={formCtx.form.fields.data.i18n[locale]}
+            formLocale={locale}
             {locale}
             {isEditing}
             {isRequiredInPreflight}
@@ -1966,11 +1965,10 @@ $effect(() => {
         {isEditing}
       >
         {#snippet children(locale)}
-          {@const formLocale = toLocaleKey(locale)}
           <FormCreditFields
             form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[formLocale] as never}
-            {formLocale}
+            fields={formCtx.form.fields.data.i18n[locale] as never}
+            formLocale={locale}
             {locale}
             {isEditing}
             {isRequiredInPreflight}

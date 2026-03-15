@@ -85,16 +85,17 @@ export function setLocale(locale: Locale) {
 
 /**
  * Get canonical locale order for rendering and fallback checks.
- * @param locale - The preferred locale.
- * @returns Ordered locales with preferred locale first.
+ * @param localeKey - The preferred form locale key.
+ * @returns Ordered form locale keys with preferred locale first.
  */
-export function getLocaleOrder(locale: Locale): Locale[] {
-  if (locale === 'en') return ['en', 'zh-hant', 'zh-hans']
-  if (locale === 'zh-hant') return ['zh-hant', 'zh-hans', 'en']
-  return ['zh-hans', 'zh-hant', 'en']
+export function getLocaleOrder(localeKey: LocaleKey): LocaleKey[] {
+  if (localeKey === 'en') return ['en', 'zhHant', 'zhHans']
+  if (localeKey === 'zhHant') return ['zhHant', 'zhHans', 'en']
+  return ['zhHans', 'zhHant', 'en']
 }
 
-export function toLocaleKey(locale: Locale): LocaleKey {
+export function toLocaleKey(locale: Locale | LocaleKey): LocaleKey {
+  if (locale === 'en' || locale === 'zhHans' || locale === 'zhHant') return locale
   if (locale === 'zh-hans') return 'zhHans'
   if (locale === 'zh-hant') return 'zhHant'
   return 'en'

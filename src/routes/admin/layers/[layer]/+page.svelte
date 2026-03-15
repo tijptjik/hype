@@ -5,7 +5,7 @@ import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { untrack } from 'svelte'
 // I18N
-import { getLocale, getLocaleKey, getLocaleOrder, m, toLocaleCode } from '$lib/i18n'
+import { getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -1060,7 +1060,7 @@ $effect(() => {
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}
               formLocale={locale}
-              locale={toLocaleCode(locale)}
+              {locale}
               isEditing={isEditing && canEditLayerCore}
               {isRequiredInPreflight}
             />

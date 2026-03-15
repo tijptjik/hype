@@ -911,7 +911,7 @@ export type FacetType = (typeof Facets)[number]
 /* -------- */
 
 export type Locale = `${SupportedLocales}`
-export type LocaleExtended = Locale | 'core'
+export type LocaleExtended = LocaleKey | 'core'
 
 export type TranslatedValue = {
   value: string
@@ -1207,6 +1207,7 @@ export type HubOrganisationFieldNameResolverForm = {
 export type HubOrganisationHiddenInputAttrs = Record<string, unknown>
 
 export type GenAiField =
+  | 'title'
   | 'name'
   | 'nameShort'
   | 'description'
@@ -1227,6 +1228,7 @@ export type GenAiStateResolverForm = {
         i18n?: Record<
           string,
           {
+            titleGen?: FormBooleanValue
             nameGen?: FormBooleanValue
             nameShortGen?: FormBooleanValue
             descriptionGen?: FormBooleanValue

@@ -4,7 +4,7 @@ import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder, toLocaleCode } from '$lib/i18n'
+import { getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -1158,7 +1158,7 @@ $effect(() => {
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[locale]}
             formLocale={locale}
-            locale={toLocaleCode(locale)}
+            {locale}
             {isEditing}
             {isRequiredInPreflight}
           />
