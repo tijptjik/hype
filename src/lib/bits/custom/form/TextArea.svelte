@@ -59,10 +59,13 @@ const displayClass = $derived(
 
 const displayValue = $derived(value?.trim() || placeholder || ' ')
 const isGenAiDisabled = $derived(!isEditing || disabled)
+const showGenAiToggle = $derived(
+  locale !== 'core' && (typeof onToggleGenAI === 'function' || isGenAI),
+)
 
 function handleValueChange(nextValue: string): void {
   onValueChange?.(nextValue)
-  if (isTranslated && isGenAI) onToggleGenAI?.()
+  if (showGenAiToggle && isGenAI) onToggleGenAI?.()
 }
 </script>
 
@@ -94,7 +97,7 @@ function handleValueChange(nextValue: string): void {
       <div class={displayClass}>{displayValue}</div>
     {/if}
 
-    {#if isTranslated && (locale !== 'core' || isGenAI)}
+    {#if showGenAiToggle}
       <div class="bits-form__gen-ai-wrap">
         <InputPrimitive.GenAI
           {isGenAI}
