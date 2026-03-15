@@ -10,7 +10,6 @@ import type {
   FieldDiscriminator,
   Locale,
   LocaleExtended,
-  Field,
 } from '$lib/types'
 
 // STATE : PROPS
@@ -29,14 +28,7 @@ let { form, constraints, errors } = fieldProps.form
 
 // EFFECT : SYNC WITH FORM
 let fieldValues = $derived(
-  getValues(
-    $form as any,
-    field,
-    locale as LocaleExtended,
-    fieldRoot,
-    fieldIndex,
-    fieldKey,
-  ),
+  getValues($form, field, locale as LocaleExtended, fieldRoot, fieldIndex, fieldKey),
 )!
 
 // STATE : LOCAL

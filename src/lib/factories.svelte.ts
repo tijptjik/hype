@@ -328,6 +328,7 @@ export function configureForm<Input = RemoteFormInput>(
       const hasPreflightIssues = preflightIssues.length > 0
       if (hasPreflightIssues) {
         await focusInvalid(preflightIssues)
+        onissues?.({ issues: preflightIssues })
         const outcome: SubmitOutcome = { success: false, issues: preflightIssues }
         isSubmitRequested = false
         await dispatchResult(outcome, typedData)

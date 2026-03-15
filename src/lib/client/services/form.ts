@@ -1156,12 +1156,13 @@ export function resolveFacetTabsWithIssues(params: {
  */
 export function getGenAiState(
   form: GenAiStateResolverForm,
-  locale: Locale,
+  locale: Locale | LocaleKey,
   field: GenAiField,
 ): boolean {
   const formLocale = toLocaleKey(locale)
   const localeData = form.fields.value().data?.i18n?.[formLocale]
   if (!localeData) return false
+  if (field === 'title') return Boolean(localeData.titleGen)
   if (field === 'name') return Boolean(localeData.nameGen)
   if (field === 'nameShort') return Boolean(localeData.nameShortGen)
   if (field === 'description') return Boolean(localeData.descriptionGen)
@@ -1182,6 +1183,7 @@ export function toggleGenAiField<
     i18n?: Record<
       string,
       {
+        titleGen?: FormBooleanValue
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
@@ -1190,11 +1192,12 @@ export function toggleGenAiField<
       }
     >
   },
->(form: FormDataUpdaterForm<T>, locale: Locale, field: GenAiField): void {
+>(form: FormDataUpdaterForm<T>, locale: Locale | LocaleKey, field: GenAiField): void {
   updateFormData(form, data => {
     const formLocaleKey = toLocaleKey(locale)
     if (!data.i18n?.[formLocaleKey]) return data
     const fieldName = `${field}Gen` as
+      | 'titleGen'
       | 'nameGen'
       | 'nameShortGen'
       | 'descriptionGen'

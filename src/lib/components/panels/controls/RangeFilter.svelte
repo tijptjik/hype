@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons'
 import Icon from '$lib/components/common/Icon.svelte'
 import RangeSlider from 'svelte-range-slider-pips'
 // I18N
-import { m } from '$lib/i18n'
 import { getI18n } from '$lib/i18n'
 // SERVICES
 import {
