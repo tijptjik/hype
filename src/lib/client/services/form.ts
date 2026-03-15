@@ -10,6 +10,7 @@ import type { RemoteQuery, RemoteQueryOverride } from '@sveltejs/kit'
 import type {
   AddUserRoleSelectionParams,
   FormHeaderController,
+  FormTrimmedTextControlBlurParams,
   GenAiField,
   GenAiStateResolverForm,
   HeaderFormActionStatus,
@@ -55,6 +56,7 @@ import type {
 // - revalidateAfterSubmitAttempt
 // - handleResourceBooleanStateToggle
 // - updateFormData
+// - handleTrimmedTextControlBlur
 //
 // 1. NAVIGATION
 // - toSubmittedCode
@@ -198,6 +200,32 @@ export function updateFormData<T>(
     ...current,
     data: updater(clonedData),
   })
+}
+
+function isTrimCapableTextControl(
+  value: EventTarget | null,
+): value is HTMLInputElement | HTMLTextAreaElement {
+  return value instanceof HTMLInputElement || value instanceof HTMLTextAreaElement
+}
+
+export function handleTrimmedTextControlBlur({
+  event,
+  value,
+  setValue,
+  onValueChange,
+  afterSync,
+}: FormTrimmedTextControlBlurParams): void {
+  const trimmedValue = value.trim()
+  if (trimmedValue === value) return
+
+  setValue(trimmedValue)
+
+  if (isTrimCapableTextControl(event.currentTarget)) {
+    event.currentTarget.value = trimmedValue
+  }
+
+  afterSync?.()
+  onValueChange?.(trimmedValue)
 }
 
 // ---
