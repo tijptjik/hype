@@ -1,5 +1,7 @@
 import { customAlphabet } from 'nanoid'
 import { tick } from 'svelte'
+// REMOTE
+import { translateText as translateTextRemote } from '$lib/api/server/translation.remote'
 // I18N
 import { m } from '$lib/i18n'
 import { ensureLocaleEntryForWrite } from '$lib/i18n'
@@ -11,7 +13,13 @@ import { updateFormData } from '$lib/client/services/form'
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type { Locale, LocaleExtended, Id, RangeFilterValue, FormDataUpdaterForm } from '$lib/types'
+import type {
+  Locale,
+  LocaleExtended,
+  Id,
+  RangeFilterValue,
+  FormDataUpdaterForm,
+} from '$lib/types'
 import type {
   Feature,
   FeatureFromCollection,
@@ -594,20 +602,16 @@ async function requestPropertyTranslations(
   targetLocale: Locale,
   texts: string[],
 ): Promise<string[] | null> {
-  const response = await fetch('/api/translation', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  try {
+    const translatedTexts = await translateTextRemote({
       source: sourceLocale,
       target: targetLocale,
       texts,
-    }),
-  })
-
-  if (!response.ok) return null
-  const translatedTexts = (await response.json()) as string[]
-  if (!Array.isArray(translatedTexts)) return null
-  return translatedTexts
+    })
+    return Array.isArray(translatedTexts) ? translatedTexts : null
+  } catch {
+    return null
+  }
 }
 
 function applyPropertyTranslations(
