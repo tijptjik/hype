@@ -4,6 +4,8 @@ import { Button } from '$lib/bits'
 
 const BUTTON_COLORS = [
   'neutral',
+  'light',
+  'dark',
   'primary',
   'secondary',
   'accent',
