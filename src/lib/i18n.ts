@@ -1,6 +1,8 @@
 // I18N
 import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'
+// REMOTE
+import { translateText as translateTextRemote } from '$lib/api/server/translation.remote'
 import type { Locale, LocaleKey, Neighbourhood } from '$lib/types'
 import type { Resource } from '$lib/types'
 import type {
@@ -338,17 +340,11 @@ export async function translateText(
   targetLang: Locale,
   texts: string[],
 ): Promise<string[]> {
-  const response = await fetch('/api/translation', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      source: sourceLang,
-      target: targetLang,
-      texts,
-    }),
+  return translateTextRemote({
+    source: sourceLang,
+    target: targetLang,
+    texts,
   })
-  const data = await response.json()
-  return data
 }
 
 type TranslateI18nFieldsParams = {
