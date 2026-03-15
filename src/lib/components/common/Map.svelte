@@ -83,7 +83,7 @@ onMount(async () => {
   feature = new appCtx.maplibre.Marker({
     color: '#F04D7F',
     clickTolerance: 24,
-    draggable: mapProps.draggable || true,
+    draggable: mapProps.draggable ?? true,
   })
     .setLngLat(mapProps.coordinates)
     .addTo(appCtx.map)
@@ -95,6 +95,7 @@ onMount(async () => {
 // EFFECTS :: ON UPDATE
 $effect(() => {
   if (map && mapProps.coordinates && feature) {
+    feature.setDraggable(mapProps.draggable ?? true)
     const coordinateKey = mapProps.coordinates.join(',')
     appCtx.zoomToMarkerOnly = true
     if (!hasSyncedViewport) {
