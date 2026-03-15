@@ -1,5 +1,7 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit'
+// REMOTE
+import { getCloudinarySignature } from '$lib/api/server/image.remote'
 // DRIZZLE
 import { eq, inArray } from 'drizzle-orm'
 // SUPERFORMS
@@ -1008,20 +1010,13 @@ export const getPaginationOpts = (url: URL): PaginationParams => {
 }
 
 export const getSignedRequest = async (
-  eventFetch: typeof fetch,
+  _eventFetch: typeof fetch,
   paramsToSign: ParamsToSign | DeleteParamsToSign,
 ) => {
-  const signResponse = await eventFetch('/api/cloudinary', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paramsToSign }),
+  const signData = await getCloudinarySignature({
+    paramsToSign,
+    meta: { isAdminRequest: true },
   })
-
-  if (!signResponse.ok) {
-    const errorText = await signResponse.text()
-    return error(500, `Failed to get Cloudinary signature. ${errorText}`)
-  }
-  const signData = await signResponse.json()
   if (
     !signData.apikey ||
     !signData.timestamp ||

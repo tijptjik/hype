@@ -11,6 +11,7 @@ import {
   getNormalisedCountry,
   districtCodeToName,
 } from '$lib/utils/geocoding'
+import { translateText } from '$lib/api/external/translation'
 // DATA
 import neighbourhoods from '$lib/map/neighbourhoods.json'
 // TYPES
@@ -406,16 +407,13 @@ export async function processForwardGeocodeResult(
   if ('ChiPremisesAddress' in pa) {
     try {
       const propsToTranslate = Object.values(addressPropsZhHant).filter(Boolean)
-      const response = await fetch('/api/translation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source: 'zh-hant',
-          target: 'zh-hans',
-          texts: [displayAddressZhHant, ...propsToTranslate],
-        }),
-      })
-      const [translatedDisplayAddress, ...translatedProps] = await response.json()
+      const [translatedDisplayAddress, ...translatedProps] = await translateText(
+        [displayAddressZhHant, ...propsToTranslate],
+        'zh-hant',
+        'zh-hans',
+        platform.env.PUBLIC_AZURE_TRANSLATION_REGION,
+        platform.env.AZURE_TRANSLATION_KEY,
+      )
       displayAddressZhHans = translatedDisplayAddress
 
       // Map translated properties back to their keys
