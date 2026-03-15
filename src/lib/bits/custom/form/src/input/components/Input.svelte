@@ -1,4 +1,5 @@
 <script lang="ts">
+import { handleTrimmedTextControlBlur } from '$lib/client/services/form'
 import { m } from '$lib/i18n'
 import type { FormInputPrimitiveProps } from './types'
 
@@ -54,6 +55,22 @@ function handleKeydown(event: KeyboardEvent): void {
     forwardedHandler(event)
   }
 }
+
+function handleBlur(event: FocusEvent): void {
+  const forwardedHandler = attrs?.onblur
+  if (typeof forwardedHandler === 'function') {
+    forwardedHandler(event)
+  }
+
+  handleTrimmedTextControlBlur({
+    event,
+    value,
+    setValue: nextValue => {
+      value = nextValue
+    },
+    onValueChange,
+  })
+}
 </script>
 
 <input
@@ -68,5 +85,6 @@ function handleKeydown(event: KeyboardEvent): void {
   placeholder={resolvedPlaceholder}
   class={inputClass}
   oninput={handleInput}
+  onblur={handleBlur}
   onkeydown={handleKeydown}
 >

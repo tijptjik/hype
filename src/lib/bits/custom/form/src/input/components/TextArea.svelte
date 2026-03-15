@@ -1,4 +1,5 @@
 <script lang="ts">
+import { handleTrimmedTextControlBlur } from '$lib/client/services/form'
 import { m } from '$lib/i18n'
 import type { FormTextAreaPrimitiveProps } from './types'
 
@@ -52,6 +53,23 @@ function handleKeydown(event: KeyboardEvent): void {
   }
 }
 
+function handleBlur(event: FocusEvent): void {
+  const forwardedHandler = attrs?.onblur
+  if (typeof forwardedHandler === 'function') {
+    forwardedHandler(event)
+  }
+
+  handleTrimmedTextControlBlur({
+    event,
+    value,
+    setValue: nextValue => {
+      value = nextValue
+    },
+    onValueChange,
+    afterSync: adjustHeight,
+  })
+}
+
 function adjustHeight(): void {
   if (!textareaElement) return
 
@@ -84,5 +102,6 @@ $effect(() => {
   placeholder={resolvedPlaceholder}
   class={textareaClass}
   oninput={handleInput}
+  onblur={handleBlur}
   onkeydown={handleKeydown}
 ></textarea>
