@@ -17,7 +17,7 @@ let {
   selectedCapabilityKeys,
   capabilitySearchOptions,
   selectedCapabilityIds,
-  currentFormLocale,
+  currentLocaleKey,
   locales,
   isEditing,
   isArchived = false,
@@ -34,7 +34,7 @@ let {
 }: OrganisationCapabilitiesProps = $props()
 
 let isRemoveMode = $state(false)
-let lastResetVersion = resetVersion
+let lastResetVersion = $derived(resetVersion)
 const emptyCapabilitiesJson = '{}'
 const hasCapabilities = $derived(selectedCapabilityKeys.length > 0)
 const showInitialAddLayout = $derived(isEditing && !hasCapabilities)
@@ -110,7 +110,7 @@ $effect(() => {
         {isEditing}
         {capabilitySearchOptions}
         {selectedCapabilityIds}
-        {currentFormLocale}
+        {currentLocaleKey}
         focusOnMount={showInitialAddLayout}
         {onAddCapability}
       />

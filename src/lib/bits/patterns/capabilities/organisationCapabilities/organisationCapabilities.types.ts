@@ -1,4 +1,4 @@
-import type { CapabilityI18nRoot, CapabilityKey, Locale } from '$lib/types'
+import type { CapabilityI18nRoot, CapabilityKey, LocaleKey } from '$lib/types'
 
 export type CapabilitySearchOption = {
   id: CapabilityKey
@@ -15,7 +15,7 @@ export type CapabilityFormFields = Partial<
   Record<
     CapabilityKey,
     {
-      i18n?: Partial<Record<keyof CapabilityI18nRoot, CapabilityLabelField>>
+      i18n?: Partial<Record<LocaleKey, CapabilityLabelField>>
     }
   >
 >
@@ -24,8 +24,8 @@ export interface OrganisationCapabilitiesProps {
   selectedCapabilityKeys: CapabilityKey[]
   capabilitySearchOptions: CapabilitySearchOption[]
   selectedCapabilityIds: string[]
-  currentFormLocale: keyof CapabilityI18nRoot
-  locales: Locale[]
+  currentLocaleKey: LocaleKey
+  locales: LocaleKey[]
   isEditing: boolean
   isArchived?: boolean
   resetVersion?: number
@@ -44,7 +44,7 @@ export interface OrganisationCapabilitiesSearchProps {
   isEditing: boolean
   capabilitySearchOptions: CapabilitySearchOption[]
   selectedCapabilityIds: string[]
-  currentFormLocale: keyof CapabilityI18nRoot
+  currentLocaleKey: LocaleKey
   focusOnMount?: boolean
   onAddCapability: (option: CapabilitySearchOption) => void
 }
