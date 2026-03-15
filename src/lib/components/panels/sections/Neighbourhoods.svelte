@@ -1,5 +1,4 @@
 <script lang="ts">
-import I18n from './../../forms/sections/I18n.svelte'
 // I18N
 import { m } from '$lib/i18n'
 // SERVICES

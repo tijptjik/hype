@@ -4,6 +4,8 @@ import { fade } from 'svelte/transition'
 import { m } from '$lib/i18n'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
+// BITS
+import { UserAttributionCard } from '$lib/bits'
 // COMPONENTS
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
@@ -11,7 +13,6 @@ import { Camera, Photo, InformationCircle } from '@steeze-ui/heroicons'
 import Dropzone from 'svelte-file-dropzone'
 import Metadata from '$lib/components/common/ImageMetadata.svelte'
 import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte'
-import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte'
 import IconAnchor from '$lib/components/common/IconAnchor.svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'

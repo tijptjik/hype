@@ -8,10 +8,11 @@ import { addParamToUrl, removeParamFromUrl } from '$lib/navigation'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
+// BITS
+import { UserAttributionCard } from '$lib/bits'
 // COMPONENTS
 import Viewer from '../common/Viewer.svelte'
 import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
-import UserAttributionCard from '$lib/components/user/UserAttributionCard.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
 import { Camera } from '@steeze-ui/heroicons'
