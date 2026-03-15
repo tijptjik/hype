@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Switch } from '$lib/bits/custom'
-import { OrganisationCard } from '$lib/bits/patterns/cards/organisationCard'
+import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
 import ShieldCheckIcon from 'virtual:icons/lucide/shield-check'
 import type { CapabilityKey } from '$lib/types'
 
@@ -23,11 +23,11 @@ const enabledSet = $derived(new Set(enabledCapabilityKeys))
 
 <div class="bits-project-capabilities__list">
   {#each availableCapabilityKeys as capabilityKey (capabilityKey)}
-    <OrganisationCard.Root class="bits-project-capabilities__card-root">
+    <ResourceCard.Root class="bits-project-capabilities__card-root">
       <div class="bits-project-capabilities__card-icon-wrap">
         <ShieldCheckIcon class="bits-project-capabilities__card-icon" />
       </div>
-      <OrganisationCard.Body
+      <ResourceCard.Body
         code={capabilityKey}
         name={capabilityLabelByKey[capabilityKey] ?? capabilityKey}
       />
@@ -38,6 +38,6 @@ const enabledSet = $derived(new Set(enabledCapabilityKeys))
           onCheckedChange={value => onToggleCapability(capabilityKey, value === true)}
         />
       </div>
-    </OrganisationCard.Root>
+    </ResourceCard.Root>
   {/each}
 </div>

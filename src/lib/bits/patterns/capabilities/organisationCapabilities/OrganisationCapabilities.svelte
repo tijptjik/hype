@@ -6,7 +6,6 @@ import {
   FormI18nCapabilities,
   FormI18nSection,
 } from '$lib/bits/patterns/forms/formI18nSection'
-import { toLocaleKey } from '$lib/i18n'
 import type { OrganisationCapabilitiesProps } from './organisationCapabilities.types'
 import OrganisationCapabilitiesEmpty from './components/OrganisationCapabilitiesEmpty.svelte'
 import OrganisationCapabilitiesSearch from './components/OrganisationCapabilitiesSearch.svelte'
@@ -43,7 +42,7 @@ const showInitialAddLayout = $derived(isEditing && !hasCapabilities)
 const sectionClass = $derived(
   [
     'bits-form__section',
-    'bits-form__hub-orgs',
+    'bits-form__parent-resource',
     'bits-form__capabilities-section',
     showInitialAddLayout ? 'bits-form__capabilities-section--initial' : '',
   ]
@@ -140,12 +139,10 @@ $effect(() => {
       {isEditing}
     >
       {#snippet children(locale)}
-        {@const formLocale = toLocaleKey(locale)}
         <FormI18nCapabilities
           fields={formCapabilityFields}
           capabilityKeys={selectedCapabilityKeys}
           capabilityLabels={capabilityLabelsByKey}
-          {formLocale}
           {locale}
           {isEditing}
           {isRequiredInPreflight}
