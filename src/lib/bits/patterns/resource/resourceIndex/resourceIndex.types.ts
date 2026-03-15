@@ -1,13 +1,6 @@
 import type { Snippet } from 'svelte'
 import type { NavigableResource, Resource } from '$lib/types'
-
-export type ResourceIndexProps<T extends Resource> = {
-  resource: NavigableResource
-  entities: T[]
-  card?: Snippet<[T, number]>
-  row?: Snippet<[T, number]>
-  listContainer?: HTMLElement | null
-}
+export type { ResourceIndexProps } from '$lib/bits/custom/index/resourceIndex.types'
 
 export type GroupedResourceIndexGroup<
   T extends Resource,

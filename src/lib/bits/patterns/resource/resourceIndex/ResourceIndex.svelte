@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Resource">
-// COMPONENTS
-import ResourceVirtualList from '$lib/components/resources/common/ResourceVirtualList.svelte'
+// BITS
+import ResourceIndex from '$lib/bits/custom/index/ResourceIndex.svelte'
 // TYPES
 import type { Resource } from '$lib/types'
 import type { ResourceIndexProps } from './resourceIndex.types'
@@ -14,4 +14,4 @@ let {
 }: ResourceIndexProps<T> = $props()
 </script>
 
-<ResourceVirtualList {resource} {entities} {card} {row} bind:listContainer />
+<ResourceIndex {resource} {entities} {card} {row} bind:listContainer />
