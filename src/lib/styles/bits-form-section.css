@@ -81,7 +81,7 @@
   }
 
   .bits-theme .bits-form__section-header-center {
-    @apply min-w-0;
+    @apply min-w-0 items-center;
     width: auto;
     pointer-events: none;
   }
