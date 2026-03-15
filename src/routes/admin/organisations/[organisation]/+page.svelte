@@ -6,7 +6,7 @@ import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { getLocale, getLocaleKey, getLocaleOrder, toLocaleCode } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -151,7 +151,7 @@ const resourceEditorPage = createResourceEditorPage({
 // § Config - Derived
 
 const organisationRef = $derived(page.params.organisation as string)
-const locales = $derived(getLocaleOrder(getLocale()))
+const locales = $derived(getLocaleOrder(getLocaleKey()))
 const currentFormLocale = $derived(toLocaleKey(getLocale()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
@@ -1116,12 +1116,11 @@ $effect(() => {
         {/snippet}
 
         {#snippet children(locale)}
-          {@const formLocale = toLocaleKey(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[formLocale]}
-            {formLocale}
-            {locale}
+            fields={formCtx.form.fields.data.i18n[locale]}
+            formLocale={locale}
+            locale={toLocaleCode(locale)}
             {isEditing}
             {isRequiredInPreflight}
           />
