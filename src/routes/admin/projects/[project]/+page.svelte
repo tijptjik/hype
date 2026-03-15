@@ -6,7 +6,7 @@ import { tick, untrack } from 'svelte'
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
+import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
