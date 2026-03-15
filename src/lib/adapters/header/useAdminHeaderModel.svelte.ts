@@ -5,6 +5,7 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // LIB
 import { navigateOnAdmin } from '$lib/navigation'
 import { authorizeHubList, toHubAuthActor } from '$lib/api/services/authz/hub'
+import { preserveWindowScrollAfterMutation } from '$lib/client/services/form'
 // I18N
 import { getLocaleKey, m } from '$lib/i18n'
 // ICONS
@@ -503,7 +504,9 @@ export function useAdminHeaderModel(
       navigateOnAdmin(adminCtx, adminCtx.activeResourceType)
       return
     }
-    headerCtrl.setEditing(next)
+    void preserveWindowScrollAfterMutation(() => {
+      headerCtrl.setEditing(next)
+    })
   }
 
   // Delegate save submission to the current form action contract.

@@ -1,5 +1,5 @@
 import { toast } from 'svelte-sonner'
-import { untrack } from 'svelte'
+import { tick, untrack } from 'svelte'
 import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
 import type { Component } from 'svelte'
@@ -57,6 +57,7 @@ import type {
 // - handleResourceBooleanStateToggle
 // - updateFormData
 // - handleTrimmedTextControlBlur
+// - preserveWindowScrollAfterMutation
 //
 // 1. NAVIGATION
 // - toSubmittedCode
@@ -226,6 +227,27 @@ export function handleTrimmedTextControlBlur({
 
   afterSync?.()
   onValueChange?.(trimmedValue)
+}
+
+export async function preserveWindowScrollAfterMutation(
+  mutate: () => void | Promise<void>,
+): Promise<void> {
+  if (typeof window === 'undefined') {
+    await mutate()
+    return
+  }
+
+  const scrollX = window.scrollX
+  const scrollY = window.scrollY
+
+  await mutate()
+  await tick()
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+
+  if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+    window.scrollTo(scrollX, scrollY)
+  }
 }
 
 // ---
