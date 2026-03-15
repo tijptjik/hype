@@ -5,7 +5,6 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // LIB
 import { navigateOnAdmin } from '$lib/navigation'
 import { authorizeHubList, toHubAuthActor } from '$lib/api/services/authz/hub'
-import { preserveWindowScrollAfterMutation } from '$lib/client/services/form'
 // I18N
 import { getLocaleKey, m } from '$lib/i18n'
 // ICONS
@@ -411,10 +410,11 @@ export function useAdminHeaderModel(
   // +++ Effects
 
   // Reset transient edit mode when the active admin resource changes.
+  // New-resource routes are create flows and should remain interactive by default.
   $effect(() => {
     adminCtx.activeResourceType
     adminCtx.activeResourceRef
-    headerCtrl.setEditing(false)
+    headerCtrl.setEditing(adminCtx.activeResourceRef === NEW_REF)
   })
 
   // ---
@@ -435,6 +435,10 @@ export function useAdminHeaderModel(
     const resourceType = appCtx.headerResourceType
     if (!resourceType || !isFilterResource(resourceType)) return
     appCtx.state.filters[resourceType].text = nextFilterText
+  }
+
+  function handleFilterFocusChange(isFocused: boolean): void {
+    appCtx.setSearchFocused(isFocused)
   }
 
   // Focus the first visible resource row from the header search field.
@@ -504,9 +508,7 @@ export function useAdminHeaderModel(
       navigateOnAdmin(adminCtx, adminCtx.activeResourceType)
       return
     }
-    void preserveWindowScrollAfterMutation(() => {
-      headerCtrl.setEditing(next)
-    })
+    headerCtrl.setEditing(next)
   }
 
   // Delegate save submission to the current form action contract.
@@ -723,7 +725,9 @@ export function useAdminHeaderModel(
     filter: {
       isFilterable: resolvedVisibility.showFilter,
       placeholder: 'Filter resources',
+      debounceMs: 150,
       onFilter: handleFilterChange,
+      onFocusChange: handleFilterFocusChange,
       onAdvanceFromSearch: handleAdvanceFromSearch,
     },
     facets: {

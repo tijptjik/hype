@@ -153,8 +153,19 @@
   }
 
   .bits-theme .bits-pattern-header__search-icon {
-    @apply pointer-events-none absolute right-4 h-5 w-5;
+    @apply absolute right-4 h-5 w-5;
     color: color-mix(in oklab, var(--color-base-content) 65%, black);
+  }
+
+  .bits-theme .bits-pattern-header__search-clear {
+    @apply absolute right-0 inline-flex h-full w-12 items-center justify-center rounded-full border-0 bg-transparent p-0;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .bits-theme .bits-pattern-header__search-clear:focus-visible {
+    outline: 2px solid var(--color-neutral-content);
+    outline-offset: 2px;
   }
 
   .bits-theme .bits-pattern-header__search-input {
