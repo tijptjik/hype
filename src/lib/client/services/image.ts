@@ -69,6 +69,7 @@ import { hashicon } from '@emeraldpay/hashicon'
 // 7. UTILS
 //    - sortImages
 //    - getHashiconUrl
+//    - getImageSrcOrHashicon
 //    - updateImagePresentationMode
 //    - setOrganisationImagePresentationMode
 //
@@ -290,6 +291,19 @@ export function getImageSrc(
   } catch {
     return null
   }
+}
+
+export function getImageSrcOrHashicon(
+  input: unknown,
+  fallbackId: string,
+  options: { transformation?: string; hashiconSize?: number } = {},
+): string | null {
+  const imageSrc = getImageSrc(input, {
+    transformation: options.transformation,
+  })
+  if (imageSrc) return imageSrc
+  if (!fallbackId) return null
+  return getHashiconUrl(fallbackId, options.hashiconSize)
 }
 
 /**
@@ -568,11 +582,11 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
 }
 
 // Generate hashicon URL for fallback
-export function getHashiconUrl(id: string) {
+export function getHashiconUrl(id: string, size: number = 256): string {
   const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 256
-  hashicon(id, { size: 256, createCanvas: () => canvas })
+  canvas.width = size
+  canvas.height = size
+  hashicon(id, { size, createCanvas: () => canvas })
   return canvas.toDataURL()
 }
 
