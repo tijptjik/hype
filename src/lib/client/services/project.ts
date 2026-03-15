@@ -311,10 +311,10 @@ export function toProjectIdentityPatch(
   name: string
   nameShort: string
 } {
-  const formLocale =
+  const localeKey =
     locale === 'zh-hans' ? 'zhHans' : locale === 'zh-hant' ? 'zhHant' : 'en'
-  const entityLocale = toLocaleCode(formLocale)
-  const localeData = formData.data?.i18n?.[formLocale]
+  const entityLocale = toLocaleCode(localeKey)
+  const localeData = formData.data?.i18n?.[localeKey]
 
   return {
     code: formData.data?.code ?? '',

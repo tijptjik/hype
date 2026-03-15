@@ -172,13 +172,13 @@ export function ensureLocaleEntryForWrite(
   locale: Locale,
 ): Record<string, unknown> | null {
   if (!i18n) return null
-  const formLocale = toLocaleKey(locale)
-  if (!i18n[formLocale]) {
-    i18n[formLocale] = {
-      locale: toLocaleCode(formLocale),
+  const localeKey = toLocaleKey(locale)
+  if (!i18n[localeKey]) {
+    i18n[localeKey] = {
+      locale: toLocaleCode(localeKey),
     }
   }
-  return i18n[formLocale] as Record<string, unknown>
+  return i18n[localeKey] as Record<string, unknown>
 }
 
 /**

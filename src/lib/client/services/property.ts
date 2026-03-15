@@ -554,13 +554,13 @@ function collectMissingPropertyTranslations(
   const texts: string[] = []
   const origins: PropertyTranslationOrigin[] = []
 
-  const sourceFormLocale = toLocaleKey(sourceLocale)
-  const targetFormLocale = toLocaleKey(targetLocale)
+  const sourceLocaleKey = toLocaleKey(sourceLocale)
+  const targetLocaleKey = toLocaleKey(targetLocale)
   const sourcePropertyI18n = (property.i18n as WritableI18nRecord | undefined)?.[
-    sourceFormLocale
+    sourceLocaleKey
   ] as { label?: string; placeholder?: string } | undefined
   const targetPropertyI18n = (property.i18n as WritableI18nRecord | undefined)?.[
-    targetFormLocale
+    targetLocaleKey
   ] as { label?: string; placeholder?: string } | undefined
   if (!sourcePropertyI18n || !targetPropertyI18n) return null
 

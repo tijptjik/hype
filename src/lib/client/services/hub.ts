@@ -142,9 +142,9 @@ export function toHubIdentityPatch(
   formData: HubFormInput,
   locale: Locale,
 ): HubIdentityPatch {
-  const formLocale = toLocaleKey(locale)
-  const entityLocale = toLocaleCode(formLocale)
-  const localeData = formData.data?.i18n?.[formLocale]
+  const localeKey = toLocaleKey(locale)
+  const entityLocale = toLocaleCode(localeKey)
+  const localeData = formData.data?.i18n?.[localeKey]
 
   return {
     code: formData.data?.code ?? '',

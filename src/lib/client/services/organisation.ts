@@ -136,13 +136,12 @@ export function toOrganisationIdentityPatch(
   formData: OrganisationFormInput,
   locale: Locale,
 ): OrganisationIdentityPatch {
-  const formLocale = toLocaleKey(locale)
-  const entityLocale = toLocaleCode(formLocale)
-  const localeData = formData.data?.i18n?.[formLocale]
+  const localeKey = toLocaleKey(locale)
+  const localeData = formData.data?.i18n?.[localeKey]
 
   return {
     code: formData.data?.code ?? '',
-    locale: entityLocale,
+    locale,
     name: localeData?.name ?? '',
     nameShort: localeData?.nameShort ?? '',
   }

@@ -1,5 +1,5 @@
 import { toast } from 'svelte-sonner'
-import { tick, untrack } from 'svelte'
+import { untrack } from 'svelte'
 import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
 import type { Component } from 'svelte'
@@ -57,7 +57,6 @@ import type {
 // - handleResourceBooleanStateToggle
 // - updateFormData
 // - handleTrimmedTextControlBlur
-// - preserveWindowScrollAfterMutation
 //
 // 1. NAVIGATION
 // - toSubmittedCode
@@ -227,27 +226,6 @@ export function handleTrimmedTextControlBlur({
 
   afterSync?.()
   onValueChange?.(trimmedValue)
-}
-
-export async function preserveWindowScrollAfterMutation(
-  mutate: () => void | Promise<void>,
-): Promise<void> {
-  if (typeof window === 'undefined') {
-    await mutate()
-    return
-  }
-
-  const scrollX = window.scrollX
-  const scrollY = window.scrollY
-
-  await mutate()
-  await tick()
-  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-
-  if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
-    window.scrollTo(scrollX, scrollY)
-  }
 }
 
 // ---
@@ -1209,8 +1187,8 @@ export function getGenAiState(
   locale: Locale | LocaleKey,
   field: GenAiField,
 ): boolean {
-  const formLocale = toLocaleKey(locale)
-  const localeData = form.fields.value().data?.i18n?.[formLocale]
+  const localeKey = toLocaleKey(locale)
+  const localeData = form.fields.value().data?.i18n?.[localeKey]
   if (!localeData) return false
   if (field === 'title') return Boolean(localeData.titleGen)
   if (field === 'name') return Boolean(localeData.nameGen)
@@ -1244,8 +1222,8 @@ export function toggleGenAiField<
   },
 >(form: FormDataUpdaterForm<T>, locale: Locale | LocaleKey, field: GenAiField): void {
   updateFormData(form, data => {
-    const formLocaleKey = toLocaleKey(locale)
-    if (!data.i18n?.[formLocaleKey]) return data
+    const localeKey = toLocaleKey(locale)
+    if (!data.i18n?.[localeKey]) return data
     const fieldName = `${field}Gen` as
       | 'titleGen'
       | 'nameGen'
@@ -1253,8 +1231,8 @@ export function toggleGenAiField<
       | 'descriptionGen'
       | 'licenseGen'
       | 'attributionGen'
-    const nextValue = !data.i18n[formLocaleKey][fieldName]
-    data.i18n[formLocaleKey][fieldName] = nextValue
+    const nextValue = !data.i18n[localeKey][fieldName]
+    data.i18n[localeKey][fieldName] = nextValue
     return data
   })
 }
@@ -1317,8 +1295,8 @@ export async function translateLocaleIntoEmptyFields<
     'zh-hans': 'zhHans',
     'zh-hant': 'zhHant',
   }
-  const targetFormLocale = toLocaleKey(targetLocale)
-  const targetLocaleData = currentFormData.i18n?.[targetFormLocale]
+  const targetLocaleKey = toLocaleKey(targetLocale)
+  const targetLocaleData = currentFormData.i18n?.[targetLocaleKey]
   if (!targetLocaleData) return false
 
   // Only send blank targets so machine translation never overwrites user-authored content.
@@ -1357,7 +1335,7 @@ export async function translateLocaleIntoEmptyFields<
   })
 
   updateFormData(form, data => {
-    const targetLocaleData = data.i18n?.[targetFormLocale]
+    const targetLocaleData = data.i18n?.[targetLocaleKey]
     if (!targetLocaleData) return data
 
     // Mark translated fields as generated so later UI can distinguish seeded content.
@@ -1406,8 +1384,8 @@ export function resetLocaleFields<
   fields = DEFAULT_TRANSLATABLE_FIELDS,
 }: ResetLocaleFieldsParams<TFormData>): void {
   updateFormData(form, data => {
-    const targetFormLocale = toLocaleKey(targetLocale)
-    const targetLocaleData = data.i18n?.[targetFormLocale]
+    const targetLocaleKey = toLocaleKey(targetLocale)
+    const targetLocaleData = data.i18n?.[targetLocaleKey]
     if (!targetLocaleData) return data
 
     for (const field of fields) {
