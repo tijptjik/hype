@@ -2,7 +2,7 @@
 import { Button } from '$lib/bits/core'
 import { Switch } from '$lib/bits/custom'
 import Trash2Icon from 'virtual:icons/lucide/trash-2'
-import type { OrganisationCardActionsProps } from '../organisationCard.types'
+import type { ResourceCardActionsProps } from '../resourceCard.types'
 
 let {
   isRemoving = false,
@@ -15,14 +15,14 @@ let {
   onToggleCoreInclusive,
   onRemove,
   class: className = '',
-}: OrganisationCardActionsProps = $props()
+}: ResourceCardActionsProps = $props()
 
 const isDisabled = $derived(!isEditing || isSubmitting)
 </script>
 
 <div class={className}>
   {#if isRemoving}
-    <div class="bits-form__hub-orgs-item-remove">
+    <div class="bits-form__parent-resource-item-remove">
       <Button
         text="Remove"
         style="ghost"
@@ -31,13 +31,13 @@ const isDisabled = $derived(!isEditing || isSubmitting)
         iconComponent={Trash2Icon}
         onClick={() => onRemove()}
         disabled={isDisabled}
-        class="bits-form__hub-orgs-remove-btn"
+        class="bits-form__parent-resource-remove-btn"
       />
     </div>
   {:else}
-    <div class="bits-form__hub-orgs-item-flags">
-      <label class="bits-form__hub-orgs-flag">
-        <span class="bits-form__hub-orgs-flag-label">Hub Only</span>
+    <div class="bits-form__parent-resource-item-flags">
+      <label class="bits-form__parent-resource-flag">
+        <span class="bits-form__parent-resource-flag-label">Hub Only</span>
         <Switch
           checked={isHubExclusive}
           disabled={isDisabled}
@@ -47,8 +47,8 @@ const isDisabled = $derived(!isEditing || isSubmitting)
       </label>
 
       {#if canSetCoreInclusive}
-        <label class="bits-form__hub-orgs-flag">
-          <span class="bits-form__hub-orgs-flag-label">Core</span>
+        <label class="bits-form__parent-resource-flag">
+          <span class="bits-form__parent-resource-flag-label">Core</span>
           <Switch
             checked={isCoreInclusive}
             disabled={isDisabled}

@@ -1,13 +1,13 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
 import { Card } from '$lib/bits/custom'
-import type { OrganisationCardRootProps } from '../organisationCard.types'
+import type { ResourceCardRootProps } from '../resourceCard.types'
 
-type Props = OrganisationCardRootProps & { children?: Snippet }
+type Props = ResourceCardRootProps & { children?: Snippet }
 
 let { class: className = '', children }: Props = $props()
 </script>
 
-<Card.Root class={`bits-form__hub-orgs-item ${className}`}>
+<Card.Root class={`bits-form__parent-resource-item ${className}`}>
   {@render children?.()}
 </Card.Root>

@@ -201,7 +201,6 @@ const handle_auth_redirect: Handle = async ({ event, resolve }) => {
   // Skip redirect for API routes, static assets, home page, and empty paths
   if (
     pathname.startsWith('/api/') ||
-    pathname.startsWith('/proxy/') ||
     pathname.startsWith('/static/') ||
     pathname === '/' ||
     pathname === '' ||

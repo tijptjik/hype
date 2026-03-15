@@ -1,20 +1,20 @@
-export interface OrganisationCardRootProps {
+export interface ResourceCardRootProps {
   class?: string
 }
 
-export interface OrganisationCardMediaProps {
+export interface ResourceCardMediaProps {
   image?: string | null
   alt?: string | null
   class?: string
 }
 
-export interface OrganisationCardBodyProps {
+export interface ResourceCardBodyProps {
   code?: string | null
   name?: string | null
   class?: string
 }
 
-export interface OrganisationCardActionsProps {
+export interface ResourceCardActionsProps {
   isRemoving?: boolean
   isEditing?: boolean
   isSubmitting?: boolean
