@@ -12,6 +12,7 @@ let {
   disabled = false,
   isLoading = false,
   onChange,
+  onFocus,
   onInputKeydown,
   onClear,
   class: className = '',
@@ -19,6 +20,7 @@ let {
 
 let inputEl = $state<HTMLInputElement | null>(null)
 let hasFocusedOnMount = $state(false)
+const showLoadingIndicator = $derived(isLoading && query.trim().length > 0)
 
 function handleInput(event: Event): void {
   const value = (event.currentTarget as HTMLInputElement).value
@@ -34,6 +36,10 @@ function clear(): void {
 
 function handleKeydown(event: KeyboardEvent): void {
   onInputKeydown?.(event)
+}
+
+function handleFocus(): void {
+  onFocus?.()
 }
 
 $effect(() => {
@@ -56,6 +62,7 @@ $effect(() => {
     class="bits-search-bar__input"
     autocomplete="off"
     oninput={handleInput}
+    onfocus={handleFocus}
     onkeydown={handleKeydown}
   >
   <div class="bits-search-bar__icons">
@@ -67,7 +74,7 @@ $effect(() => {
         tabindex="-1"
         aria-label="Clear search"
       >
-        {#if isLoading}
+        {#if showLoadingIndicator}
           <LoaderCircleIcon
             class="bits-search-bar__icon bits-search-bar__icon--loading"
           />
@@ -76,7 +83,7 @@ $effect(() => {
         {/if}
       </button>
     {:else}
-      {#if isLoading}
+      {#if showLoadingIndicator}
         <LoaderCircleIcon
           class="bits-search-bar__icon bits-search-bar__icon--loading bits-search-bar__icon--muted"
         />
