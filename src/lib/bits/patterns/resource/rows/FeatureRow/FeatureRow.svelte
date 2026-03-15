@@ -1,37 +1,83 @@
 <script lang="ts">
-// I18N
-import { getI18n, getLocaleKey, m } from '$lib/i18n'
 // BITS
 import { Row } from '$lib/bits/custom'
-import * as FeatureRowPrimitive from './components'
+import * as VirtualListPrimitive from '$lib/bits/custom/index/src'
+import StatsPips from '$lib/bits/custom/featureStats/components/StatsPips.svelte'
+import ResourceStatusBadge from '$lib/components/resources/common/ResourceStatusBadge.svelte'
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
+// ICONS
+import DatabaseIcon from 'virtual:icons/lucide/database'
+import BookOpenIcon from 'virtual:icons/lucide/book-open'
+import LanguagesIcon from 'virtual:icons/lucide/languages'
+import ImageIcon from 'virtual:icons/lucide/image'
+import TagsIcon from 'virtual:icons/lucide/tags'
+import PenIcon from 'virtual:icons/lucide/pen'
+// I18N
+import { m } from '$lib/i18n'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { FeatureRowStatMap } from '$lib/types'
 import type { FeatureRowProps } from './featureRow.types'
 
 let {
   adminCtx,
   entity,
+  model,
   index,
   onImageClick,
   isSelected = false,
 }: FeatureRowProps = $props()
+const statSections = $derived([
+  {
+    key: 'status',
+    title: m.filters__status(),
+    icon: DatabaseIcon,
+    statuses: model.stats.status,
+    className: 'bits-resource-row-stats__status',
+  },
+  {
+    key: 'content',
+    title: m.filters__content(),
+    icon: BookOpenIcon,
+    statuses: model.stats.content,
+    className: 'bits-resource-row-stats__content',
+  },
+  {
+    key: 'translation',
+    title: m.filters__translation(),
+    icon: LanguagesIcon,
+    statuses: model.stats.translation,
+    className: 'bits-resource-row-stats__translation',
+  },
+  {
+    key: 'image',
+    title: m.organisation__images(),
+    icon: ImageIcon,
+    statuses: model.stats.image,
+    className: 'bits-resource-row-stats__image',
+  },
+  {
+    key: 'category',
+    title: m.filters__categories(),
+    icon: TagsIcon,
+    statuses: model.stats.category,
+    className: 'bits-resource-row-stats__category',
+  },
+  {
+    key: 'specifier',
+    title: m.admin__forms_common_specifiers_short(),
+    icon: PenIcon,
+    statuses: model.stats.freeform,
+    className: 'bits-resource-row-stats__specifier',
+  },
+])
 
-let appCtx = $derived(adminCtx.appCtx)
-const localeKey = $derived(getLocaleKey())
-const graphemeProperty = $derived(
-  appCtx.cache.property.values().find(property => property.key === 'graphemes'),
-)
-const grapheme = $derived(
-  entity.properties.find(property => property.propertyId === graphemeProperty?.id)
-    ?.i18n?.[localeKey]?.value ||
-    entity.properties.find(property => property.propertyId === graphemeProperty?.id)
-      ?.value ||
-    '',
-)
+function toPlaceholderStatuses(statuses: FeatureRowStatMap): string[] {
+  return Object.keys(statuses)
+}
 
 function handleRowKeyDown(event: KeyboardEvent): void {
   if (isSelected) return
@@ -72,21 +118,61 @@ function handleDescriptionClick(): void {
   onclick={handleTitleClick}
   onkeydown={handleRowKeyDown}
   image={entity.image}
-  alt={(entity.image as { altText?: string } | null)?.altText ?? 'Feature image'}
+  alt={model.imageAlt}
   onImageClick={entity.image ? (handleImageClick as (image: unknown) => void) : undefined}
-  title={getI18n(
-    entity as any,
-    'title',
-    appCtx.getUserPreferences(),
-    m.deft_dry_chipmunk_blink(),
-  )}
+  title={model.title || m.deft_dry_chipmunk_blink()}
   onTitleClick={handleTitleClick}
-  description={entity.i18n?.[localeKey]?.displayAddress || 'No address'}
+  description={model.description}
   onDescriptionClick={handleDescriptionClick}
 >
-  <FeatureRowPrimitive.StatsSection feature={entity} {appCtx} {grapheme} />
-  <FeatureRowPrimitive.StatusSection
-    isPublished={entity.isPublished}
-    isPendingReview={entity.isPendingReview}
-  />
+  <div class="bits-resource-row__stats">
+    <VirtualListPrimitive.Secondary>
+      {#snippet children()}
+        <div class="bits-resource-row-stats">
+          {#each statSections as section (section.key)}
+            <div class={section.className}>
+              <StatsPips
+                title={section.title}
+                icon={section.icon}
+                statuses={section.statuses}
+                showTitle={false}
+              />
+            </div>
+          {/each}
+        </div>
+      {/snippet}
+      {#snippet fallback()}
+        <div
+          class="bits-resource-row-stats bits-resource-row-stats--placeholder"
+          aria-hidden="true"
+        >
+          {#each statSections as section (section.key)}
+            {@const PlaceholderIcon = section.icon}
+            <div
+              class={`${section.className} bits-resource-row-stats__placeholder-column`}
+            >
+              <div class="bits-theme bits-feature-stat bits-feature-stat--placeholder">
+                <span class="bits-feature-stat__title">
+                  <PlaceholderIcon class="bits-feature-stat__icon-svg" />
+                </span>
+                <div class="bits-feature-stat__pips">
+                  {#each toPlaceholderStatuses(section.statuses) as pipKey (pipKey)}
+                    <span
+                      class="bits-feature-stat__pip bits-feature-stat__pip--pending"
+                    ></span>
+                  {/each}
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/snippet}
+    </VirtualListPrimitive.Secondary>
+  </div>
+  <div class="bits-resource-row__status">
+    <ResourceStatusBadge
+      isPublished={model.isPublished}
+      isPendingReview={model.isPendingReview}
+    />
+  </div>
 </Row>
