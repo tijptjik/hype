@@ -1,30 +1,18 @@
 // COMPONENTS
-import type { Component } from 'svelte'
-import InputField from '$lib/components/forms/fields/Input.svelte'
-import SelectField from '$lib/components/forms/fields/Select.svelte'
-import RangeField from '$lib/components/forms/fields/Range.svelte'
-import TextareaField from '$lib/components/forms/fields/Textarea.svelte'
-import UsersField from '$lib/components/forms/fields/Users.svelte'
-import CustomField from '$lib/components/forms/fields/Property.svelte'
-import ToggleField from '$lib/components/forms/fields/Toggle.svelte'
-import DisplayField from '$lib/components/forms/fields/Display.svelte'
 // TYPES
 import type { Writable } from 'svelte/store'
 import type {
   Field,
+  FieldDiscriminator,
   Locale,
   LocaleExtended,
   Resource,
   FormFieldDefinition,
-  FieldDiscriminator,
-  FieldComponentType,
   Form,
   FeatureForm,
+  Task,
 } from './types'
-import type { Task } from 'maplibre-gl'
 import { getLocale } from './i18n'
-
-type RenderableFieldComponentType = Exclude<FieldComponentType, 'ListField'>
 
 /**
  * Convenience functions to prevent event handlers from being called multiple times
@@ -59,25 +47,6 @@ export function toTitleCase(str: string) {
     /\w\S*/g,
     text => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase(),
   )
-}
-
-const fieldComponentByType: Record<RenderableFieldComponentType, Component> = {
-  InputField,
-  SelectField,
-  RangeField,
-  TextareaField,
-  UsersField,
-  CustomField,
-  ToggleField,
-  DisplayField,
-}
-// @deprecated
-export const getFieldComponent = (
-  componentType?: FieldComponentType,
-): Component | undefined => {
-  if (!componentType) return undefined
-  if (componentType === 'ListField') return undefined
-  return fieldComponentByType[componentType]
 }
 
 export function loadScript(src: string) {
