@@ -1059,7 +1059,6 @@ $effect(() => {
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}
-              formLocale={locale}
               {locale}
               isEditing={isEditing && canEditLayerCore}
               {isRequiredInPreflight}

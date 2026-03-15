@@ -152,7 +152,7 @@ const resourceEditorPage = createResourceEditorPage({
 
 const organisationRef = $derived(page.params.organisation as string)
 const locales = $derived(getLocaleOrder(getLocaleKey()))
-const currentFormLocale = $derived(toLocaleKey(getLocale()))
+const currentLocaleKey = $derived(getLocaleKey())
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
@@ -642,8 +642,8 @@ function onRemoveCapability(capabilityKey: CapabilityKey): void {
 function getCapabilityDisplayLabel(capabilityKey: CapabilityKey): string {
   const labels = formCapabilityDefinitions[capabilityKey]?.i18n
   return (
-    labels?.[currentFormLocale]?.trim() ||
-    getCapabilityLabel(capabilityKey, currentFormLocale)
+    labels?.[currentLocaleKey]?.trim() ||
+    getCapabilityLabel(capabilityKey, currentLocaleKey)
   )
 }
 
@@ -1119,7 +1119,6 @@ $effect(() => {
           <FormI18nDescriptorFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[locale]}
-            formLocale={locale}
             {locale}
             {isEditing}
             {isRequiredInPreflight}
@@ -1167,7 +1166,7 @@ $effect(() => {
         {selectedCapabilityKeys}
         {capabilitySearchOptions}
         {selectedCapabilityIds}
-        {currentFormLocale}
+        {currentLocaleKey}
         {locales}
         {isEditing}
         isArchived={Boolean(optimisticOrganisationData?.isArchived)}

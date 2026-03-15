@@ -184,7 +184,7 @@ const resourceEditorPage = createResourceEditorPage({
 
 const projectRef = $derived(page.params.project as string)
 const locales = $derived(getLocaleOrder(getLocaleKey()))
-const currentFormLocale = $derived(toLocaleKey(getLocale()))
+const currentLocaleKey = $derived(getLocaleKey())
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
@@ -1044,9 +1044,9 @@ const projectCapabilityLabelByKey = $derived.by(
     Object.fromEntries(
       availableProjectCapabilityKeys.map(key => {
         const label =
-          stableProjectCapabilityDefinitions[key]?.i18n?.[currentFormLocale] ||
+          stableProjectCapabilityDefinitions[key]?.i18n?.[currentLocaleKey] ||
           stableProjectCapabilityDefinitions[key]?.i18n?.en ||
-          getCapabilityLabel(key, currentFormLocale)
+          getCapabilityLabel(key, currentLocaleKey)
         return [key, label]
       }),
     ) as Partial<Record<CapabilityKey, string>>,
@@ -1947,7 +1947,6 @@ $effect(() => {
           <FormI18nDescriptorFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[locale]}
-            formLocale={locale}
             {locale}
             {isEditing}
             {isRequiredInPreflight}
@@ -1968,7 +1967,6 @@ $effect(() => {
           <FormCreditFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[locale] as never}
-            formLocale={locale}
             {locale}
             {isEditing}
             {isRequiredInPreflight}

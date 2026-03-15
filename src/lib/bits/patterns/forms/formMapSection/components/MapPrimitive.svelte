@@ -6,6 +6,7 @@ type Props = {
   coordinates: number[]
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
+  draggable?: boolean
   onCoordinateChange?: (coordinates: number[]) => void
   onToggleFullscreen?: (isFullscreen: boolean) => void
   onToggleCollapsed?: (isCollapsed: boolean) => void
@@ -15,6 +16,7 @@ let {
   coordinates,
   initialCenter = null,
   addressMeta,
+  draggable = false,
   onCoordinateChange,
   onToggleFullscreen,
   onToggleCollapsed,
@@ -26,7 +28,7 @@ let {
     {coordinates}
     {initialCenter}
     {addressMeta}
-    draggable={true}
+    {draggable}
     dragEndCallback={onCoordinateChange}
     toggleFullscreen={onToggleFullscreen}
     toggleCollapsed={onToggleCollapsed}
