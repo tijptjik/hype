@@ -12,7 +12,7 @@ import { formatDistanceToNow } from '$lib'
 // NAVIGATION
 import { navigateToContributedFeature } from '$lib/navigation'
 // COMPONENTS
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
+import { Scrollbar } from '$lib/bits/custom/scrollbar'
 import ScrollableText from '$lib/components/common/ScrollableText.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'

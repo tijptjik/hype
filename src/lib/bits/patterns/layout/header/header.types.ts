@@ -73,6 +73,7 @@ export interface HeaderFacetItem {
   label: string
   icon?: Component | null
   hasIssues?: boolean
+  disabled?: boolean
 }
 
 export interface HeaderFacetsConfig {

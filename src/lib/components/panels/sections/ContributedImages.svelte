@@ -11,7 +11,7 @@ import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import { ChevronDown } from '@steeze-ui/heroicons'
-import Scrollbar from '$lib/components/common/scrollbars/Scrollbar.svelte'
+import { Scrollbar } from '$lib/bits/custom/scrollbar'
 // REMOTE
 import { getImagesForIds } from '$lib/api/server/image.remote'
 // SERVICES
@@ -19,16 +19,10 @@ import { getURLfromImage } from '$lib/client/services/image'
 // NAVIGATION
 import { navigateToContributedImage } from '$lib/navigation'
 // TYPES
-import type {
-  Id,
-  Project,
-  ResourceContext,
-} from '$lib/types'
+import type { Id, ResourceContext } from '$lib/types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
-import type {
-  UserPreferences,
-  UserProfile,
-} from '$lib/db/zod/schema/user.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { UserPreferences, UserProfile } from '$lib/db/zod/schema/user.types'
 import { untrack } from 'svelte'
 
 // MAGICAL CONSTANTS

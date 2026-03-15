@@ -39,6 +39,7 @@ let {
             class={facetButtonClass}
             iconComponent={facet.icon}
             {hideLabel}
+            disabled={facet.disabled === true}
             onClick={() => onFacetChange?.(facet.ref)}
           />
         </li>
