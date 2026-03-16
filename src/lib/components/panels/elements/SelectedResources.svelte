@@ -105,17 +105,22 @@ let resourcesToDisplay = $derived([
       class="relative {props.isNarrow ? 'h-12 w-12 shrink-0' : 'min-w-0 max-w-full self-start'}"
     >
       {#if !props.isNarrow}
-        <span
-          class="badge badge-outline inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 whitespace-normal wrap-break-words px-3 py-0 text-left leading-tight {colorClass}"
+        <button
+          type="button"
+          class="inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 rounded-full border border-current/20 bg-transparent px-3 py-1.5 text-left leading-tight {colorClass}"
           transition:fade={{ duration: 300 }}
           onclick={(e) => {
             e.stopPropagation();
             handleToggle(id);
           }}
         >
-          <span class="min-w-0 justify-self-start leading-tight">{name}</span>
+          <span
+            class="min-w-0 justify-self-start whitespace-normal break-words leading-tight"
+          >
+            {name}
+          </span>
           <Icon src={XMark} class="h-3 w-3 shrink-0 self-center" />
-        </span>
+        </button>
       {/if}
       {#if props.isNarrow}
         <ResourceButton
