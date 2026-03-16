@@ -2,15 +2,7 @@ import type { Point } from 'geojson'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
 import { NewFeatureMode, OmniMode } from '$lib/enums'
-import {
-  overrideResourceEntityBoolean,
-  overrideResourceListItemBoolean,
-} from '$lib/client/services/resource'
-import type {
-  Feature,
-  FeatureBooleanField,
-  FeatureFormInput,
-} from '$lib/db/zod/schema/feature.types'
+import type { Feature, FeatureFormInput } from '$lib/db/zod/schema/feature.types'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -23,10 +15,6 @@ import type {
 // 1. FORM SHAPING
 // - toEmptyFeatureFormInput
 // - toFeatureFormInput
-//
-// 2. BOOLEAN TOGGLE OVERRIDES
-// - overrideFeatureEntityBoolean
-// - overrideFeatureListItemBoolean
 // ---
 
 const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
@@ -223,38 +211,4 @@ export function toFeatureFormInput(
         })) ?? [],
     },
   }
-}
-
-// ---
-/********************
- *  2. BOOLEAN TOGGLE OVERRIDES
- ************/
-// +++ Boolean Toggle Overrides
-
-/**
- * Builds an optimistic updater for a single boolean field on a feature entity payload.
- * @param field Boolean field to override.
- * @param value Boolean value to assign.
- * @returns A cache updater for a single feature entity payload.
- */
-export function overrideFeatureEntityBoolean(
-  field: FeatureBooleanField,
-  value: boolean,
-) {
-  return overrideResourceEntityBoolean(field, value)
-}
-
-/**
- * Builds an optimistic updater for a boolean field on a specific feature list item.
- * @param featureId Feature id of the list item to patch.
- * @param field Boolean field to override.
- * @param value Boolean value to assign.
- * @returns A cache updater for feature list payloads.
- */
-export function overrideFeatureListItemBoolean(
-  featureId: string,
-  field: FeatureBooleanField,
-  value: boolean,
-) {
-  return overrideResourceListItemBoolean(featureId, field, value)
 }
