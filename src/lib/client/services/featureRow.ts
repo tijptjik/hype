@@ -34,6 +34,12 @@ function toFeatureRowModelSignature({
   activeTranslationLocales,
   isSuperAdmin,
 }: Omit<BuildFeatureRowModelParams, 'appCtx' | 'userPreferences'>): string {
+  const localizedTitle = feature.i18n?.[localeKey]?.title ?? ''
+  const localizedDescription = feature.i18n?.[localeKey]?.description ?? ''
+  const localizedDisplayAddress = feature.i18n?.[localeKey]?.displayAddress ?? ''
+  const localizedDisplayAddressGen = feature.i18n?.[localeKey]?.displayAddressGen
+    ? '1'
+    : '0'
   const propertySignature = feature.properties
     .map(property => {
       const localizedValue = property.i18n?.[localeKey]?.value ?? ''
@@ -60,6 +66,10 @@ function toFeatureRowModelSignature({
     feature.isPendingReview ? '1' : '0',
     feature.isVisitable ? '1' : '0',
     feature.isIntangible ? '1' : '0',
+    localizedTitle,
+    localizedDescription,
+    localizedDisplayAddress,
+    localizedDisplayAddressGen,
     imageSignature,
     propertySignature,
   ].join('::')
@@ -91,7 +101,7 @@ export function getCachedFeatureRowModel(
   const model: FeatureRowModel = {
     id: feature.id,
     title:
-      getI18n(feature as never, 'title', userPreferences, feature.id)?.trim() ||
+      getI18n(feature as never, 'title', userPreferences, feature.id, true)?.trim() ||
       feature.id,
     description:
       getI18n(
@@ -99,6 +109,7 @@ export function getCachedFeatureRowModel(
         'displayAddress',
         userPreferences,
         'No address',
+        true,
       )?.trim() || 'No address',
     imageAlt:
       (feature.image as { altText?: string } | null)?.altText ?? 'Feature image',
