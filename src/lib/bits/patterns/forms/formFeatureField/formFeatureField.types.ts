@@ -6,5 +6,6 @@ export type FormFeatureFieldProps = {
   value?: string | null
   checked?: boolean
   options?: Array<{ value: string; label: string }>
+  isEditing?: boolean
   onChange: (value: string | boolean) => void
 }

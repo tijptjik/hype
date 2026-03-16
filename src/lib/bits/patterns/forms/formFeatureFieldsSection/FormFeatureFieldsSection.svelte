@@ -9,6 +9,7 @@ let {
   localeKey,
   items,
   columns = 1,
+  isEditing = true,
   class: className = '',
 }: FormFeatureFieldsSectionProps = $props()
 
@@ -36,6 +37,7 @@ const gridClass = $derived(
         value={item.value}
         checked={item.checked}
         options={item.options}
+        isEditing={item.isEditing ?? isEditing}
         onChange={item.onChange}
       />
     {/each}

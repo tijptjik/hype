@@ -5,6 +5,7 @@ export type FeatureFieldSectionItem = {
   value?: string | null
   checked?: boolean
   options?: Array<{ value: string; label: string }>
+  isEditing?: boolean
   onChange: (value: string | boolean) => void
 }
 
@@ -14,5 +15,6 @@ export type FormFeatureFieldsSectionProps = {
   localeKey: 'en' | 'zhHans' | 'zhHant'
   items: FeatureFieldSectionItem[]
   columns?: 1 | 2 | 3
+  isEditing?: boolean
   class?: string
 }

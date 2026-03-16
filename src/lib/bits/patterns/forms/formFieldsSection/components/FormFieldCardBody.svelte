@@ -3,7 +3,7 @@
 import { tick } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
-import { m, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleCode, toLocaleKey } from '$lib/i18n'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
 // COMPONENTS
@@ -105,8 +105,8 @@ function getLocaleEntry<T extends Record<string, unknown>>(
   locale: Locale,
 ): T | undefined {
   if (!i18n) return undefined
-  const formLocale = toLocaleKey(locale)
-  return (i18n[locale] ?? i18n[formLocale]) as T | undefined
+  const localeKey = toLocaleKey(locale)
+  return (i18n[locale] ?? i18n[localeKey]) as T | undefined
 }
 
 function getValueDisplayText(valueId: string, locale: Locale): string {
@@ -342,8 +342,8 @@ function getPropertyGenState(
   locale: Locale,
   key: 'labelGen' | 'placeholderGen',
 ): boolean {
-  const formLocale = toLocaleKey(locale)
-  const attrs = getFieldAttrs(['i18n', formLocale, key], 'text') as {
+  const localeKey = toLocaleKey(locale)
+  const attrs = getFieldAttrs(['i18n', localeKey, key], 'text') as {
     value?: unknown
   }
   if (typeof attrs.value === 'string') return attrs.value === 'true'
@@ -366,8 +366,8 @@ function getValueIssues(valueId: string, locale: Locale): FormIssueLike[] | unde
       ? getFieldIssues(['values', valueIndex, 'value'])
       : undefined
   }
-  const formLocale = toLocaleKey(locale)
-  return getFieldIssues(['values', valueIndex, 'i18n', formLocale, 'value'])
+  const localeKey = toLocaleKey(locale)
+  return getFieldIssues(['values', valueIndex, 'i18n', localeKey, 'value'])
 }
 
 function isFieldRequired(pathSuffix: Array<string | number>): boolean {
@@ -651,12 +651,12 @@ $effect(() => {
   }}
 >
   {#snippet children(locale)}
-    {@const showCoreFields = isPrimary(locale)}
-    {@const formLocale = toLocaleKey(locale)}
-    {@const labelGenValue = getPropertyGenState(locale, 'labelGen')}
-    {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
-    {@const labelGenName = getFieldName(['i18n', formLocale, 'labelGen'])}
-    {@const placeholderGenName = getFieldName(['i18n', formLocale, 'placeholderGen'])}
+    {@const localeCode = toLocaleCode(locale)}
+    {@const showCoreFields = isPrimary(localeCode)}
+    {@const labelGenValue = getPropertyGenState(localeCode, 'labelGen')}
+    {@const placeholderGenValue = getPropertyGenState(localeCode, 'placeholderGen')}
+    {@const labelGenName = getFieldName(['i18n', locale, 'labelGen'])}
+    {@const placeholderGenName = getFieldName(['i18n', locale, 'placeholderGen'])}
 
     <div class="bits-project-field-card__i18n-content">
       {#if labelGenName}
@@ -725,22 +725,22 @@ $effect(() => {
 
       <TextInput
         label={m.admin__forms_property_name_ui()}
-        required={isFieldRequired(['i18n', formLocale, 'label'])}
+        required={isFieldRequired(['i18n', locale, 'label'])}
         {locale}
         isTranslated={true}
         isGenAI={labelGenValue}
         onToggleGenAI={() =>
           onUpdateI18n(property.id, locale, 'labelGen', !labelGenValue)}
-        value={(getFieldAttrs(['i18n', formLocale, 'label'], 'text') as { value?: string })
+        value={(getFieldAttrs(['i18n', locale, 'label'], 'text') as { value?: string })
             .value ??
           (getLocaleEntry(
             property.i18n as Record<string, { label?: string }> | null | undefined,
             locale,
           )?.label ?? '')}
-        issues={getFieldIssues(['i18n', formLocale, 'label'])}
+        issues={getFieldIssues(['i18n', locale, 'label'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
-          getFieldAttrs(['i18n', formLocale, 'label'], 'text'),
+          getFieldAttrs(['i18n', locale, 'label'], 'text'),
           locale,
           'label',
         )}
@@ -748,23 +748,23 @@ $effect(() => {
 
       <TextInput
         label={m.admin__forms_property_input_placeholder()}
-        required={isFieldRequired(['i18n', formLocale, 'placeholder'])}
+        required={isFieldRequired(['i18n', locale, 'placeholder'])}
         {locale}
         isTranslated={true}
         isGenAI={placeholderGenValue}
         onToggleGenAI={() =>
           onUpdateI18n(property.id, locale, 'placeholderGen', !placeholderGenValue)}
-        value={(getFieldAttrs(['i18n', formLocale, 'placeholder'], 'text') as {
+        value={(getFieldAttrs(['i18n', locale, 'placeholder'], 'text') as {
             value?: string
           }).value ??
           (getLocaleEntry(
             property.i18n as Record<string, { placeholder?: string }> | null | undefined,
             locale,
           )?.placeholder ?? '')}
-        issues={getFieldIssues(['i18n', formLocale, 'placeholder'])}
+        issues={getFieldIssues(['i18n', locale, 'placeholder'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
-          getFieldAttrs(['i18n', formLocale, 'placeholder'], 'text'),
+          getFieldAttrs(['i18n', locale, 'placeholder'], 'text'),
           locale,
           'placeholder',
         )}
@@ -876,7 +876,7 @@ $effect(() => {
                   {#if valuesAreTranslatable}
                     <input
                       type="hidden"
-                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].i18n.${formLocale}.value`}
+                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].i18n.${locale}.value`}
                       value={getValueDisplayText(value.id, locale)}
                     >
                   {:else if showCoreFields}

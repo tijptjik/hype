@@ -1,6 +1,9 @@
 <script lang="ts">
-import { Checkbox, SelectField, TextArea, TextInput } from '$lib/bits/custom'
-import { Switch } from '$lib/bits/custom'
+import FeatureFieldInput from './components/FeatureFieldInput.svelte'
+import FeatureFieldRange from './components/FeatureFieldRange.svelte'
+import FeatureFieldSelect from './components/FeatureFieldSelect.svelte'
+import FeatureFieldTextArea from './components/FeatureFieldTextArea.svelte'
+import FeatureFieldToggle from './components/FeatureFieldToggle.svelte'
 import type { FormFeatureFieldProps } from './formFeatureField.types'
 
 let {
@@ -9,6 +12,7 @@ let {
   value = '',
   checked = false,
   options = [],
+  isEditing = true,
   onChange,
 }: FormFeatureFieldProps = $props()
 
@@ -20,57 +24,112 @@ const propertyI18n = $derived(
 )
 const title = $derived(propertyI18n?.label ?? property.key)
 const placeholder = $derived(propertyI18n?.placeholder ?? '')
+const isRangeField = $derived(property.component === 'RangeField')
+const isToggleField = $derived(
+  property.component === 'CheckboxField' || property.component === 'Toggle',
+)
+const isTextareaField = $derived(property.component === 'TextareaField')
+const hasValue = $derived(
+  isToggleField
+    ? checked
+    : typeof value === 'string'
+      ? value.trim().length > 0
+      : value != null,
+)
+const fieldClass = $derived(
+  [
+    'bits-feature-field',
+    isRangeField ? 'bits-feature-field--range' : '',
+    isToggleField ? 'bits-feature-field--toggle' : '',
+    isTextareaField ? 'bits-feature-field--textarea' : '',
+    !isEditing ? 'bits-feature-field--readonly' : '',
+  ]
+    .filter(Boolean)
+    .join(' '),
+)
 </script>
 
-<article class="bits-feature-field">
-  <div class="bits-feature-field__label">
-    <span class="bits-feature-field__title">{title}</span>
-    <span class="bits-feature-field__subtitle">{property.key}</span>
-  </div>
+<article class={fieldClass}>
+  <div class="bits-feature-field__content">
+    <div class="bits-feature-field__label">
+      <span class="bits-feature-field__title">{title}</span>
+      <span class="bits-feature-field__subtitle">{property.key}</span>
+    </div>
 
-  {#if property.component === 'SelectField'}
-    <SelectField
-      id={`feature-field-${property.id}`}
-      name={`feature-field-${property.id}`}
-      label=""
-      items={options.map(option => ({ value: option.value, label: option.label }))}
-      value={value ?? ''}
-      {placeholder}
-      onValueChange={nextValue => onChange(nextValue)}
-    />
-  {:else if property.component === 'RangeField'}
-    <div class="bits-feature-field__range">
-      <input
-        type="range"
+    {#if property.component === 'SelectField'}
+      <div
+        class={[
+          'bits-feature-field__control',
+          'bits-feature-field__control--select',
+          isEditing ? 'bits-feature-field__control--placeholder-marker' : '',
+          hasValue ? 'bits-feature-field__control--has-value' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <FeatureFieldSelect
+          id={`feature-field-${property.id}`}
+          value={value ?? ''}
+          {placeholder}
+          {options}
+          {isEditing}
+          onChange={nextValue => onChange(nextValue)}
+        />
+      </div>
+    {:else if property.component === 'RangeField'}
+      <FeatureFieldRange
+        value={value == null ? null : String(value)}
         min={property.min ?? 0}
         max={property.max ?? 100}
-        value={value ?? property.min ?? 0}
-        oninput={event => onChange((event.currentTarget as HTMLInputElement).value)}
-      >
-      <div class="bits-feature-field__range-values">
-        <span>{property.min ?? 0}</span>
-        <span>{property.max ?? 100}</span>
+        {isEditing}
+        onChange={nextValue => onChange(nextValue)}
+      />
+    {:else if property.component === 'CheckboxField' || property.component === 'Toggle'}
+      <div class="bits-feature-field__control bits-feature-field__control--toggle">
+        <FeatureFieldToggle
+          {checked}
+          {isEditing}
+          onChange={nextValue => onChange(nextValue)}
+        />
       </div>
-    </div>
-  {:else if property.component === 'CheckboxField' || property.component === 'Toggle'}
-    <Switch {checked} onCheckedChange={nextValue => onChange(nextValue ?? false)} />
-  {:else if property.component === 'TextareaField'}
-    <TextArea
-      id={`feature-field-${property.id}`}
-      name={`feature-field-${property.id}`}
-      label=""
-      value={value ?? ''}
-      {placeholder}
-      onValueChange={nextValue => onChange(nextValue)}
-    />
-  {:else}
-    <TextInput
-      id={`feature-field-${property.id}`}
-      name={`feature-field-${property.id}`}
-      label=""
-      value={value ?? ''}
-      {placeholder}
-      onValueChange={nextValue => onChange(nextValue)}
-    />
-  {/if}
+    {:else if property.component === 'TextareaField'}
+      <div
+        class={[
+          'bits-feature-field__control',
+          'bits-feature-field__control--textarea',
+          isEditing ? 'bits-feature-field__control--placeholder-marker' : '',
+          hasValue ? 'bits-feature-field__control--has-value' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <FeatureFieldTextArea
+          id={`feature-field-${property.id}`}
+          value={value ?? ''}
+          {placeholder}
+          {isEditing}
+          onChange={nextValue => onChange(nextValue)}
+        />
+      </div>
+    {:else}
+      <div
+        class={[
+          'bits-feature-field__control',
+          'bits-feature-field__control--input',
+          isEditing ? 'bits-feature-field__control--placeholder-marker' : '',
+          hasValue ? 'bits-feature-field__control--has-value' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <FeatureFieldInput
+          id={`feature-field-${property.id}`}
+          value={value ?? ''}
+          {placeholder}
+          {isEditing}
+          onChange={nextValue => onChange(nextValue)}
+        />
+      </div>
+    {/if}
+  </div>
 </article>
