@@ -18,14 +18,7 @@ import { getHoverColor } from '$lib/utils/colours'
 // ENUMS
 import type { FirstClassResource } from '$lib/enums'
 // TYPES
-import type {
-  Resource,
-  PanelProps,
-  Organisation,
-  Neighbourhood,
-  Project,
-  Layer,
-} from '$lib/types'
+import type { Resource, PanelProps, Neighbourhood } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
@@ -54,15 +47,28 @@ let bgHoverClass = $derived(getHoverColor(selectedClass.replace('bg-', 'text-'))
 let dotBaseClass = $derived(isSelected ? selectedClass : 'bg-base-content/30')
 
 let name = $derived(
-  getI18n(
-    resource as Organisation | Project | Layer | Neighbourhood,
-    'name',
-    appCtx.getUserPreferences(),
-  ),
+  getI18n(resource as Resource | Neighbourhood, 'name', appCtx.getUserPreferences()),
 )
 let isCurrentActive = $derived(
   panelProps.active?.resourceId === resource.id &&
     panelProps.active?.resourceType === resourceType,
+)
+let dotHoverClass = $derived(isSelected ? bgHoverClass : 'bg-base-content/50')
+let dotClasses = $derived(
+  [
+    'h-2',
+    'w-2',
+    'shrink-0',
+    'rounded-full',
+    dotBaseClass,
+    dotHoverClass,
+    panelProps.isNarrow && !isSelected ? 'outline-2 outline-offset-2' : '',
+    isCurrentActive
+      ? `outline-white group-hover:scale-[160%] group-hover:outline-1 group-hover:outline-offset-0 ${bgHoverClass}`
+      : 'outline-base-content/30',
+  ]
+    .filter(Boolean)
+    .join(' '),
 )
 
 // ELEMENTS
@@ -134,17 +140,7 @@ function hideTooltip() {
     {:else}
       <div
         onclick={panelProps.isNarrow ? onNavigate : onToggle}
-        class="h-2 w-2 shrink-0 rounded-full {dotBaseClass} group-hover:{isSelected
-          ? bgHoverClass
-          : 'bg-base-content/50'} group-focus-visible:{isSelected
-          ? bgHoverClass
-          : 'bg-base-content/50'} {panelProps.isNarrow && !isSelected
-          ? 'outline-2 outline-offset-2'
-          : ''} {isCurrentActive
-          ? 'outline-white group-hover:scale-[160%] group-hover:outline-1 group-hover:outline-offset-0'
-          : 'outline-base-content/30'} {isCurrentActive
-          ? 'group-hover:' + bgHoverClass
-          : ''}"
+        class={dotClasses}
       ></div>
     {/if}
     {#if !panelProps.isNarrow}

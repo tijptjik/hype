@@ -1,11 +1,12 @@
 <script lang="ts" generics="T extends Resource, G extends Record<string, unknown>">
 // SVELTE
+import { untrack } from 'svelte'
 import { slide } from 'svelte/transition'
 // COMPONENTS
-import GroupHeader from '$lib/components/resources/common/GroupHeader.svelte'
-import ResourceEmptyState from '$lib/components/resources/common/ResourceEmptyState.svelte'
+import GroupHeader from './components/GroupHeader.svelte'
+import ResourceEmptyState from './components/ResourceEmptyState.svelte'
 // BITS
-import BitsResourceIndex from '$lib/bits/custom/index/ResourceIndex.svelte'
+import ResourceIndex from './ResourceIndex.svelte'
 // TYPES
 import type { Resource } from '$lib/types'
 import type { GroupedResourceIndexProps } from './resourceIndex.types'
@@ -18,17 +19,29 @@ let {
   listContainer = $bindable(),
 }: GroupedResourceIndexProps<T, G> = $props()
 
-// STATE - Track collapsed state for each group
-let collapsedGroups = $state<Record<string, boolean>>({})
+function createCollapsedGroups(
+  groups: GroupedResourceIndexProps<T, G>['groupedEntities'],
+  currentGroups: Record<string, boolean> = {},
+): Record<string, boolean> {
+  const nextGroups: Record<string, boolean> = {}
 
-// Initialize collapsed state for all groups
-$effect(() => {
-  groupedEntities.forEach(({ group }) => {
+  groups.forEach(({ group }) => {
     const groupId = getGroupId(group)
-    if (!(groupId in collapsedGroups)) {
-      collapsedGroups[groupId] = false
-    }
+    nextGroups[groupId] = currentGroups[groupId] ?? false
   })
+
+  return nextGroups
+}
+
+// STATE - Track collapsed state for each group
+let collapsedGroups = $state(createCollapsedGroups(groupedEntities))
+
+// Keep group state aligned when the grouped dataset changes.
+$effect(() => {
+  collapsedGroups = createCollapsedGroups(
+    groupedEntities,
+    untrack(() => collapsedGroups),
+  )
 })
 
 const groupedRows = $derived(
@@ -74,7 +87,7 @@ function getGroupId(group: Record<string, unknown>): string {
 
         {#if !groupedRow.isCollapsed}
           <div transition:slide={{ duration: 300 }}>
-            <BitsResourceIndex
+            <ResourceIndex
               {resource}
               entities={groupedRow.entities}
               {card}
