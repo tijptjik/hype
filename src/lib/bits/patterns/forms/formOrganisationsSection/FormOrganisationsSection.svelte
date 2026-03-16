@@ -6,6 +6,7 @@ import * as FormOrganisationsSectionPrimitive from './components'
 import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
 import {
   isOrganisationSearchResultDisabled,
+  toOrganisationSearchDisabledMeta,
   toOrganisationSearchDiscriminator,
 } from './formOrganisationsSection.utils'
 import type {
@@ -193,6 +194,8 @@ $effect(() => {
             toOrganisationSearchDiscriminator(organisation),
           disabled: (organisation: any) =>
             isOrganisationSearchResultDisabled(organisation),
+          disabledMeta: (organisation: any) =>
+            toOrganisationSearchDisabledMeta(organisation),
         }}
       />
     </div>
