@@ -180,6 +180,7 @@
   "admin__forms_layer_parent_project_subtitle": "This layer belongs to",
   "admin__forms_feature_collections_title": "Collections",
   "admin__forms_feature_collections_subtitle": "The map layer this feature belongs to",
+  "admin__forms_organisations_another_hub": "Another Hub",
   "admin__forms_common_clear_all": "Clear All",
   "admin__forms_common_set": "Set {label}",
   "admin__forms_feature_addressing_title": "Addressing",

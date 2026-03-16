@@ -180,6 +180,7 @@
   "admin__forms_layer_parent_project_subtitle": "此图层属于",
   "admin__forms_feature_collections_title": "集合",
   "admin__forms_feature_collections_subtitle": "此内容所属的地图图层",
+  "admin__forms_organisations_another_hub": "其他 Hub",
   "admin__forms_common_clear_all": "全部清除",
   "admin__forms_common_set": "设置{label}",
   "admin__forms_feature_addressing_title": "输入地址资料",

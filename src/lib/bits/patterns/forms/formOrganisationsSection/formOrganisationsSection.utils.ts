@@ -1,4 +1,5 @@
 import type { SearchResultDisabledMeta } from '$lib/bits/custom/search'
+import { m } from '$lib/i18n'
 
 export function toOrganisationSearchDiscriminator(organisation: {
   code?: string | null
@@ -17,7 +18,7 @@ export function toOrganisationSearchDisabledMeta(organisation: {
 }): SearchResultDisabledMeta | null {
   if (!organisation.isAssignedToOtherHub) return null
   return {
-    label: 'Another Hub',
+    label: m.admin__forms_organisations_another_hub(),
     value: organisation.assignedHubCode ?? null,
   }
 }
