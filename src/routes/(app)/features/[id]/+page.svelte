@@ -1,8 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // COMPONENTS
 import FeatureCard from '$lib/components/featureCard/Root.svelte'
 import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte'
@@ -37,11 +39,11 @@ import { setCardCtx, getCardCtx } from '$lib/context/card.svelte'
 // ENUMS
 import { FeatureCardMode, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Image } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // PARAMS
-let featureId: string = $state(page.params.id)
+let featureId = $state(page.params.id ?? '')
 
 // CONTEXT
 const appCtx = getAppCtx()
@@ -191,22 +193,33 @@ const imageProviderProps = $derived({
   // Only provide valid props when feature and featureId match
   // This prevents intermediate mismatched state during navigation
   isValid: feature?.id === featureId,
-  image: feature?.id === featureId ? (feature.image as Image | null) : undefined,
-  images: feature?.id === featureId ? (feature.images as Image[]) : undefined,
+  image:
+    feature?.id === featureId
+      ? ((feature.image as ImageCtxEnvelope | null) ?? null)
+      : undefined,
+  images:
+    feature?.id === featureId
+      ? ((feature.images as ImageCtxEnvelope[] | null) ?? null)
+      : undefined,
   context:
     feature?.id === featureId && feature
       ? {
           ctxType: ImageContextResource.feature,
           ctxId: featureId,
-          ...appCtx.getHierarchySync(feature),
+          organisation: appCtx.getHierarchySync(feature).organisation as never,
+          project: appCtx.getHierarchySync(feature).project as never,
         }
       : undefined, // Don't provide mismatched context during transitions
 })
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => imageProviderProps,
+)
 </script>
 
 {#if appCtx}
   {#if feature}
-    <ImageProvider {page} {...imageProviderProps}>
+    <ImageProvider model={imageProviderModel}>
       <FeatureCard>
         <Container bind:viewport>
           <FeatureGallery />

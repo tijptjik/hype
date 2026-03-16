@@ -6,18 +6,19 @@ import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 import { handlePanelParams } from '$lib/navigation'
 // AUTH
+import { authorizeHubList, toHubAuthActor } from '$lib/api/services/authz'
 import { useSession } from '$lib/auth/client'
+// I18N
+import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { setOmniCtx } from '$lib/context/omni.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // SERVICES
+import { initAddNewFeature } from '$lib/client/services/feature'
 import { startCircularFlight } from '$lib/client/services/geospatial'
-// COMPONENTS
-import Menu from '$lib/components/layout/Menu.svelte'
 import LibreMap from '$lib/components/common/StandaloneMap.svelte'
-import Mapbar from '$lib/components/mapbar/Root.svelte'
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte'
 import Filters from '$lib/components/panels/Filters.svelte'
 import Prisms from '$lib/components/panels/Prisms.svelte'
@@ -28,13 +29,21 @@ import Profile from '$lib/components/panels/Profile.svelte'
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte'
 import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte'
 import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte'
+// BITS
+import { AppMenu, Button, Icon, OverlayBar } from '$lib/bits'
+import FunnelIcon from 'virtual:icons/lucide/filter'
+import InformationCircleIcon from 'virtual:icons/lucide/info'
+import MapIcon from 'virtual:icons/lucide/map'
+import MonitorIcon from 'virtual:icons/lucide/monitor'
+import PlusCircleIcon from 'virtual:icons/lucide/circle-plus'
+import SettingsIcon from 'virtual:icons/lucide/settings'
+import StarIcon from 'virtual:icons/lucide/star'
+import SwatchIcon from 'virtual:icons/lucide/swatch-book'
 // ENUMS
 import { PageState } from '$lib/enums'
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types'
 import type { QueryClient } from '@tanstack/svelte-query'
-// STYLES
-import '$lib/styles/scrollbar.css'
 
 type AppRootProps = LayoutProps & {
   children: any
@@ -79,6 +88,53 @@ beforeNavigate(({ from, to }) => {
 
 // CIRCULAR FLIGHT ANIMATION STATE
 let stopCircularFlight: (() => void) | null = $state(null)
+let showAdminMenu = $derived.by(
+  () =>
+    Boolean($session?.data?.user?.superAdmin) ||
+    authorizeHubList(toHubAuthActor($session?.data?.user), {
+      resourceHubId: hub?.id,
+    }).allowed,
+)
+let menuItems = $derived(
+  hub.isCore
+    ? [
+        { value: Panel.prisms, icon: MapIcon, label: m.maps__title() },
+        { value: Panel.filters, icon: FunnelIcon, label: m.menu_filters() },
+        { value: Panel.stars, icon: StarIcon, label: m.menu_stars() },
+        { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
+      ]
+    : [
+        { value: Panel.hub, icon: InformationCircleIcon, label: m.menu_about() },
+        { value: Panel.filters, icon: FunnelIcon, label: m.menu_filters() },
+        { value: Panel.stars, icon: StarIcon, label: m.menu_stars() },
+        { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
+      ],
+)
+let trailingMenuItems = $derived(
+  showAdminMenu
+    ? [
+        {
+          value: Panel.admin,
+          icon: MonitorIcon,
+          label: m.menu_admin(),
+          tone: 'secondary' as const,
+        },
+      ]
+    : [],
+)
+const isAddButtonVisible = $derived(
+  !omniCtx.state.isTrayOpen &&
+    !appCtx.isTransitioning &&
+    !appCtx.getActiveFeature() &&
+    !omniCtx.isNewFeatureMode &&
+    appCtx.isMobile,
+)
+const isCardToggleVisible = $derived(
+  !omniCtx.isCardOpen &&
+    !appCtx.isTransitioning &&
+    appCtx.getActiveFeature() &&
+    !omniCtx.isNewFeatureMode,
+)
 
 // PROFILE PANEL SCROLL POSITION
 let profilePanelContainer: HTMLDivElement | undefined = $state()
@@ -182,6 +238,34 @@ $effect(() => {
     }
   }
 })
+
+async function handleAddFeature(event: Event): Promise<void> {
+  event.preventDefault()
+  event.stopPropagation()
+  await initAddNewFeature(appCtx, omniCtx, event)
+}
+
+function handleOpenCard(event: Event): void {
+  event.preventDefault()
+  event.stopPropagation()
+  omniCtx.openCard()
+}
+
+function handleMenuSelect(item: { value: Panel }): void {
+  if (item.value === Panel.admin) {
+    const currentPath = page.url.pathname
+
+    if (currentPath.startsWith('/features/')) {
+      goto(`/admin${currentPath}`)
+      return
+    }
+
+    goto('/admin/tasks')
+    return
+  }
+
+  appCtx.togglePanel(item.value)
+}
 </script>
 
 <div class="flex h-dvh flex-col justify-around overflow-hidden">
@@ -201,7 +285,56 @@ $effect(() => {
         <Omnibar />
         <LibreMap />
         {@render children()}
-        <Mapbar />
+        {#snippet addFeatureIcon()}
+          <Icon
+            src={PlusCircleIcon}
+            size="3xl"
+            strokeWidth={1.5}
+            class="transition-transform duration-300 group-hover:rotate-90"
+          />
+        {/snippet}
+
+        {#snippet openCardIcon()}
+          <Icon src={SwatchIcon} size="lg" strokeWidth={2} />
+        {/snippet}
+
+        <OverlayBar>
+          {#snippet left()}
+            {#if isAddButtonVisible}
+              <Button
+                text={m.whole_house_cougar_hurl()}
+                icon={addFeatureIcon}
+                modifier="circle"
+                style="ghost"
+                size="xl"
+                transition="fade"
+                duration={300}
+                delay={150}
+                outDuration={100}
+                class="group z-30 shadow-lg"
+                attrs={{ title: m.whole_house_cougar_hurl() }}
+                onClick={handleAddFeature}
+              />
+            {/if}
+          {/snippet}
+
+          {#snippet center()}
+            {#if isCardToggleVisible}
+              <Button
+                text={m.mapbar__show_card()}
+                icon={openCardIcon}
+                color="dark"
+                transition="fade"
+                duration={150}
+                delay={150}
+                outDuration={100}
+                class="z-30 hover:text-primary"
+                attrs={{ title: m.mapbar__show_card() }}
+                onClick={handleOpenCard}
+              />
+            {/if}
+          {/snippet}
+        </OverlayBar>
         {#if omniCtx.isNewFeatureMode}
           <LayerSelectionModal />
           <GeoLocationModal />
@@ -209,7 +342,11 @@ $effect(() => {
         {/if}
       </div>
     </main>
-    <Menu {hub} />
+    <AppMenu
+      items={menuItems}
+      trailingItems={trailingMenuItems}
+      onSelect={handleMenuSelect}
+    />
   {:else if !$session.isPending && !$session.data}
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}

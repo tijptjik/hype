@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -9,7 +11,7 @@ import { m } from '$lib/i18n'
 // ICONS
 import TaskIcon from 'virtual:icons/lucide/inbox'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // COMPONENTS :: COMMON
 import Gallery from '$lib/components/images/gallery/Gallery.svelte'
 import Viewer from '$lib/components/common/Viewer.svelte'
@@ -34,7 +36,7 @@ import {
 } from '$lib/enums'
 // TYPES
 import type { Task, PageProps, Id } from '$lib/types'
-import type { Image } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 let pageProps: PageProps<Task> = $props()
 let task: Task = $derived(pageProps.data.task)
@@ -66,10 +68,12 @@ const imageProviderProps = $derived({
   // This prevents intermediate mismatched state during navigation
   isValid: task?.id === taskId,
   image:
-    task?.id === taskId ? (pageProps.data.task.images?.[0]?.image as Image) : undefined,
+    task?.id === taskId
+      ? ((pageProps.data.task.images?.[0] as ImageCtxEnvelope | undefined) ?? undefined)
+      : undefined,
   images:
     task?.id === taskId
-      ? (pageProps.data.task.images?.map(taskImage => taskImage.image) as Image[])
+      ? ((pageProps.data.task.images as ImageCtxEnvelope[] | undefined) ?? undefined)
       : undefined,
   highlightedIds: task?.images?.map(taskImage => taskImage.imageId as Id) || [],
   ...(task ? adminCtx.appCtx.getHierarchySync(task) : {}),
@@ -83,10 +87,14 @@ const imageProviderProps = $derived({
         }
       : undefined,
 })
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => imageProviderProps,
+)
 </script>
 
 <!-- LAYOUT -->
-<ImageProvider {page} {...imageProviderProps}>
+<ImageProvider model={imageProviderModel}>
   <div
     class="h-full overflow-hidden bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6"
   >
