@@ -86,7 +86,9 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
 )
 
 $effect(() => {
-  headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon)
+  headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon, {
+    showNew: false,
+  })
   headerCtrl.setControlBar(
     ResourceControlBar,
     {
