@@ -98,6 +98,16 @@
     color: inherit;
   }
 
+  .bits-theme .bits-btn__transition-shell {
+    display: inline-flex;
+    max-width: 100%;
+  }
+
+  .bits-theme .bits-btn__transition-shell--block {
+    display: block;
+    width: 100%;
+  }
+
   .bits-theme .bits-btn--label-hidden {
     gap: 0;
     padding-inline: calc(var(--btn-size) * 0.25);

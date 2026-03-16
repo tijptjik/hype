@@ -17,6 +17,7 @@ export type ButtonStyle = 'none' | 'outline' | 'dash' | 'soft' | 'ghost' | 'link
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 export type ButtonModifier = 'wide' | 'block' | 'square' | 'circle'
+export type ButtonTransition = 'none' | 'fade'
 
 export interface ButtonProps {
   text: string
@@ -32,6 +33,11 @@ export interface ButtonProps {
   style?: ButtonStyle
   size?: ButtonSize
   modifier?: ButtonModifier
+  transition?: ButtonTransition
+  duration?: number
+  delay?: number
+  outDuration?: number
+  outDelay?: number
   class?: string
   type?: 'button' | 'submit' | 'reset'
 }

@@ -5,4 +5,5 @@ export type {
   ButtonProps,
   ButtonSize,
   ButtonStyle,
+  ButtonTransition,
 } from './button.types'
