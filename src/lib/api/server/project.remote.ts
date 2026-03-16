@@ -54,7 +54,6 @@ import {
 } from '$lib/api/services/authz'
 // DB
 import {
-  hasProjectLayersCondition,
   cascadeOrganisationToDescendants,
   createI18n,
   createUserRoles,
@@ -75,6 +74,7 @@ import {
   updateProjectByIdWithConcurrency,
   updateProjectPublishedStateById,
 } from '$lib/db/services/project'
+import { hasProjectLayersCondition } from '$lib/db/services/layer'
 import {
   listResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject,

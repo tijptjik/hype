@@ -43,7 +43,6 @@ import {
 import {
   createI18n,
   createOrganisation,
-  hasOrganisationLayersCondition,
   createUserRoles,
   listUserRoleAssignments,
   listOrganisations,
@@ -59,6 +58,7 @@ import {
   syncUserRoles,
   toUserRoles,
 } from '$lib/db/services/organisation'
+import { hasOrganisationLayersCondition } from '$lib/db/services/layer'
 import { syncOrganisationProperties } from '$lib/db/services/property'
 import { cascadeOrganisationCapabilitiesToProjects } from '$lib/db/services/project'
 // UTILS
