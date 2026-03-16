@@ -13,10 +13,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type {
-  Resource,
-  EntityWithOptionalImage,
-} from '$lib/types'
+import type { Resource, EntityWithOptionalImage } from '$lib/types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Snippet } from 'svelte'
 

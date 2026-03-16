@@ -6,7 +6,8 @@ import { slide } from 'svelte/transition'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 // ICONS
-import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 
 let { isOpen = false } = $props<{
   isOpen?: boolean

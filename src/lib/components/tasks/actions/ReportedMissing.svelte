@@ -1,10 +1,14 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // i18n
 import { m } from '$lib/i18n'
 // COMPONENTS
-import { Trash, EyeSlash, XCircle, CubeTransparent } from '@steeze-ui/heroicons'
+import Trash from 'virtual:icons/lucide/trash-2'
+import EyeSlash from 'virtual:icons/lucide/eye-off'
+import XCircle from 'virtual:icons/lucide/circle-x'
+import CubeTransparent from 'virtual:icons/lucide/ghost'
 import Info from '$lib/components/forms/extra/Info.svelte'
 import ReportedMissingContent from '$lib/components/tasks/info/ReportedMissing.svelte'
 import Actions from '$lib/components/tasks/common/Actions.svelte'
@@ -14,7 +18,6 @@ import { updateTaskReview, updateFeatureFromTask } from '$lib/client/services/ta
 import { goToNextTask } from '$lib/navigation'
 // TYPES
 import type { Task } from '$lib/types'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 
 // STATE :: PROPS
 let { task }: { task: Task } = $props()
@@ -23,7 +26,7 @@ let { task }: { task: Task } = $props()
 let rejectActions = [
   {
     label: m.quiet_late_worm_startle(),
-    icon: XCircle as IconSource,
+    icon: XCircle as Component,
     action: 'reject',
     onHoverClass: 'text-rose-300',
   },
@@ -32,19 +35,19 @@ let rejectActions = [
 let acceptActions = [
   {
     label: m.awful_this_dingo_glow(),
-    icon: CubeTransparent as IconSource,
+    icon: CubeTransparent as Component,
     action: 'setIntangible',
     onHoverClass: 'text-rose-300',
   },
   {
     label: m.forms__unpublish(),
-    icon: EyeSlash as IconSource,
+    icon: EyeSlash as Component,
     action: 'setUnpublished',
     onHoverClass: 'text-rose-300',
   },
   {
     label: m.whole_deft_penguin_enchant(),
-    icon: Trash as IconSource,
+    icon: Trash as Component,
     action: 'setArchived',
     onHoverClass: 'text-rose-300',
   },

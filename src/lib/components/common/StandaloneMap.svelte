@@ -9,7 +9,7 @@ import { cubicInOut } from 'svelte/easing'
 // LIB
 import { updateMarkers } from '$lib/map/markers'
 // ICONS
-import { Square3Stack3d } from '@steeze-ui/heroicons'
+import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'

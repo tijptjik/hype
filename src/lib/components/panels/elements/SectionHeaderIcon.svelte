@@ -1,6 +1,6 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 import Icon from '$lib/components/common/Icon.svelte'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 
 let {
   icon,
@@ -9,7 +9,7 @@ let {
   isNarrow,
   href,
 }: {
-  icon: string | IconSource
+  icon: string | Component
   iconColorClass: string
   onNavigate?: (e: MouseEvent) => void
   isNarrow: boolean

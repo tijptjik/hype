@@ -1,11 +1,10 @@
 <script lang="ts">
 import Icon from '$lib/components/common/Icon.svelte'
 import type { Component } from 'svelte'
-import type { IconSource } from '@steeze-ui/heroicons'
 
 type Props = {
   position?: 'left' | 'right'
-  icon: IconSource
+  icon: Component
   class?: string
   children?: any
 }

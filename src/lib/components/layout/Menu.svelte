@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // SVELTE
 import { page } from '$app/state'
 import { cubicInOut } from 'svelte/easing'
@@ -11,18 +12,15 @@ import { ADMIN_PATH, DUAL_PANEL_MIN_WIDTH } from '$lib/index'
 import { goto } from '$app/navigation'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import {
-  Map as MapIcon,
-  Funnel,
-  Star,
-  Cog6Tooth,
-  ComputerDesktop,
-  InformationCircle,
-} from '@steeze-ui/heroicons'
+import MapIcon from 'virtual:icons/lucide/map'
+import Funnel from 'virtual:icons/lucide/filter'
+import Star from 'virtual:icons/lucide/star'
+import Cog6Tooth from 'virtual:icons/lucide/settings'
+import ComputerDesktop from 'virtual:icons/lucide/monitor'
+import InformationCircle from 'virtual:icons/lucide/info'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
-import type { IconSource } from '@steeze-ui/svelte-icon'
 import type { UserRoleDisco } from '$lib/types'
 import { useSession } from '$lib/auth/client'
 
@@ -85,7 +83,7 @@ let innerHeight = $state(window.innerHeight)
 let hasViewportHeightIncreased = $derived(innerHeight > initialInnerHeight)
 </script>
 
-{#snippet menuButton(icon: IconSource, label: string, panel: Panel)}
+{#snippet menuButton(icon: Component, label: string, panel: Panel)}
   <button
     class="flex min-h-12 flex-col items-center justify-center gap-1 p-1"
     class:text-secondary={panel === 'admin'}

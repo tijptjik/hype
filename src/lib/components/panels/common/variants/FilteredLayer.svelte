@@ -2,7 +2,8 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // ICONS
-import { MinusCircle, PlusCircle } from '@steeze-ui/heroicons'
+import MinusCircle from 'virtual:icons/lucide/circle-minus'
+import PlusCircle from 'virtual:icons/lucide/circle-plus'
 import Icon from '$lib/components/common/Icon.svelte'
 // I18N
 import { getI18n } from '$lib/i18n'

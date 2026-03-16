@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import { ExclamationCircle } from '@steeze-ui/heroicons'
+import ExclamationCircle from 'virtual:icons/lucide/circle-alert'
 // TRANSITIONS
 import { fade } from 'svelte/transition'
 // COMPONENTS

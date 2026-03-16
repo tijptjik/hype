@@ -16,7 +16,8 @@ import { Scrollbar } from '$lib/bits/custom/scrollbar'
 import ScrollableText from '$lib/components/common/ScrollableText.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { MapPin, ChevronDown } from '@steeze-ui/heroicons'
+import MapPin from 'virtual:icons/lucide/map-pin'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { UserPreferences, UserProfile } from '$lib/db/zod/schema/user.types'

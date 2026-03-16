@@ -10,7 +10,11 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 import { calculateOverallStats } from '$lib/client/services/stats'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Photo, Language, Tag, Pencil, BookOpen } from '@steeze-ui/heroicons'
+import Photo from 'virtual:icons/lucide/image'
+import Language from 'virtual:icons/lucide/languages'
+import Tag from 'virtual:icons/lucide/tag'
+import Pencil from 'virtual:icons/lucide/pencil'
+import BookOpen from 'virtual:icons/lucide/book-open'
 
 // CONTEXT
 const adminCtx = getAdminCtx()

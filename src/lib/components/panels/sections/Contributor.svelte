@@ -7,7 +7,8 @@ import { m } from '$lib/i18n'
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Trophy, CheckCircle } from '@steeze-ui/heroicons'
+import Trophy from 'virtual:icons/lucide/trophy'
+import CheckCircle from 'virtual:icons/lucide/circle-check'
 import Section from '$lib/components/panels/common/Section.svelte'
 // TYPES
 import type { PanelProps } from '$lib/types'

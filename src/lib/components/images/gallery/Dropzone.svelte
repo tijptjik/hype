@@ -5,7 +5,7 @@ import { m } from '$lib/i18n'
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Photo } from '@steeze-ui/heroicons'
+import Photo from 'virtual:icons/lucide/image'
 import Dropzone from 'svelte-file-dropzone'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'

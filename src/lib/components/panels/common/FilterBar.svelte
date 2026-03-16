@@ -1,6 +1,7 @@
 <script lang="ts">
 import Icon from '$lib/components/common/Icon.svelte'
-import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons'
+import MagnifyingGlass from 'virtual:icons/lucide/search'
+import XMark from 'virtual:icons/lucide/x'
 import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
 let {

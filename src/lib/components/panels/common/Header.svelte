@@ -1,7 +1,7 @@
 <script lang="ts">
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { XCircle } from '@steeze-ui/heroicons'
+import XCircle from 'virtual:icons/lucide/circle-x'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS

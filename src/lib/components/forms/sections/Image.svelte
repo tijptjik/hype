@@ -7,7 +7,7 @@ import { m } from '$lib/i18n'
 import Header from '$lib/components/forms/extra/Header.svelte'
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
-import { Photo } from '@steeze-ui/heroicons'
+import Photo from 'virtual:icons/lucide/image'
 import Dropzone from 'svelte-file-dropzone'
 import Uploading from '$lib/components/images/gallery/overlays/Uploading.svelte'
 // CONTEXT

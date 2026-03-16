@@ -7,7 +7,8 @@ import { m } from '$lib/i18n'
 import { getCardCtx } from '$lib/context/card.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Heart, InformationCircle } from '@steeze-ui/heroicons'
+import Heart from 'virtual:icons/lucide/heart'
+import InformationCircle from 'virtual:icons/lucide/info'
 
 // PROPS
 let { viewport }: { viewport: HTMLElement } = $props()

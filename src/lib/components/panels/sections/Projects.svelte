@@ -3,7 +3,7 @@
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
-import { Squares2x2 } from '@steeze-ui/heroicons'
+import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'

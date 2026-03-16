@@ -31,10 +31,7 @@ import { PropertyRecordCreate, PropertyRecordUpdate } from '../zod'
 import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
-import type {
-  Locale,
-  Database,
-} from '$lib/types'
+import type { Locale, Database } from '$lib/types'
 import type {
   Property,
   PropertyDB,

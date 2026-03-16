@@ -1,11 +1,11 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // COMPONENTS
 import SectionHeader from '../elements/SectionHeader.svelte'
 import SectionContent from '../elements/SectionContent.svelte'
 // SERVICES
 import { navigateOnAdmin } from '$lib/navigation'
 // TYPES
-import type { IconSource } from '@steeze-ui/heroicons'
 import type { PanelProps } from '$lib/types'
 import type { FirstClassResource } from '$lib/enums'
 
@@ -24,7 +24,7 @@ let {
 }: {
   resourceType?: FirstClassResource
   title: string
-  icon: string | IconSource
+  icon: string | Component
   iconVerticalPaddingClass?: string
   iconColorClass?: string
   description?: string

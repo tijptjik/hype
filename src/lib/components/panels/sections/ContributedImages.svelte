@@ -10,7 +10,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { ChevronDown } from '@steeze-ui/heroicons'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import { Scrollbar } from '$lib/bits/custom/scrollbar'
 // REMOTE
 import { getImagesForIds } from '$lib/api/server/image.remote'

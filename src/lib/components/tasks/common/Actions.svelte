@@ -1,33 +1,31 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import {
-  ChevronDown,
-  ChevronUp,
-  ExclamationCircle,
-  CheckCircle,
-  XCircle,
-} from '@steeze-ui/heroicons'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import ExclamationCircle from 'virtual:icons/lucide/circle-alert'
+import CheckCircle from 'virtual:icons/lucide/circle-check'
+import XCircle from 'virtual:icons/lucide/circle-x'
 // TYPES
 import type { Task } from '$lib/types'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 
 // PROPS
 let { task, rejectActions, acceptActions, onAction } = $props<{
   task: Task
   rejectActions: Array<{
     label: string
-    icon: IconSource
+    icon: Component
     action: string
     onHoverClass: string
   }>
   acceptActions: Array<{
     label: string
-    icon: IconSource
+    icon: Component
     action: string
     onHoverClass: string
   }>

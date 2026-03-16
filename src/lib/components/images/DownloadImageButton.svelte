@@ -1,6 +1,6 @@
 <script lang="ts">
 import Icon from '$lib/components/common/Icon.svelte'
-import { CloudArrowDown } from '@steeze-ui/heroicons'
+import CloudArrowDown from 'virtual:icons/lucide/cloud-download'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 // TYPES

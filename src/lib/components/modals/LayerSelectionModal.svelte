@@ -10,14 +10,12 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import {
-  XMark,
-  UserGroup,
-  Squares2x2,
-  Square3Stack3d,
-  ChevronDown,
-  MapPin,
-} from '@steeze-ui/heroicons'
+import XMark from 'virtual:icons/lucide/x'
+import UserGroup from 'virtual:icons/lucide/users'
+import Squares2x2 from 'virtual:icons/lucide/layout-grid'
+import Square3Stack3d from 'virtual:icons/lucide/layers-3'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import MapPin from 'virtual:icons/lucide/map-pin'
 // ENUMS
 import { NewFeatureMode } from '$lib/enums'
 // TYPES

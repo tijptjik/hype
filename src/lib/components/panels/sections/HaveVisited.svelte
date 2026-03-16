@@ -12,7 +12,7 @@ import { getOmniCtx } from '$lib/context/omni.svelte'
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
-import { Squares2x2 } from '@steeze-ui/heroicons'
+import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 // UTILS
 import { formatDistanceToNow } from 'date-fns'
 import { enGB, zhCN, zhHK } from 'date-fns/locale'

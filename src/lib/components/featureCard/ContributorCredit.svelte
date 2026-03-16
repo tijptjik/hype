@@ -9,7 +9,8 @@ import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { PencilSquare, Check } from '@steeze-ui/heroicons'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/lucide/check'
 
 // CONTEXT
 const cardCtx = getCardCtx()

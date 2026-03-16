@@ -1,7 +1,7 @@
 <script lang="ts">
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Star } from '@steeze-ui/heroicons'
+import Star from 'virtual:icons/lucide/star'
 import { toast } from 'svelte-sonner'
 // I18N
 import { m } from '$lib/i18n'

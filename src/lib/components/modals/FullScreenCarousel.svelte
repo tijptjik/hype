@@ -15,7 +15,7 @@ import Viewer from '../common/Viewer.svelte'
 import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Camera } from '@steeze-ui/heroicons'
+import Camera from 'virtual:icons/lucide/camera'
 // UTILS
 import { PANEL_WIDTH } from '$lib/index'
 // TYPES

@@ -4,7 +4,8 @@ import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import { PlusCircle, Swatch } from '@steeze-ui/heroicons'
+import PlusCircle from 'virtual:icons/lucide/circle-plus'
+import Swatch from 'virtual:icons/lucide/swatch-book'
 import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'

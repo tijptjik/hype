@@ -7,7 +7,8 @@ import SpectralStyle from '$lib/map/styles/style-protomaps.json'
 import { addAddressMarker } from '$lib/map/markers'
 import { getCoordinates } from '$lib/client/services/geospatial'
 // ICONS
-import { ArrowsPointingIn, ArrowsPointingOut } from '@steeze-ui/heroicons'
+import ArrowsPointingIn from 'virtual:icons/lucide/shrink'
+import ArrowsPointingOut from 'virtual:icons/lucide/expand'
 import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'

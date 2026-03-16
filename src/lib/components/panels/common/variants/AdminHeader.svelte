@@ -1,7 +1,8 @@
 <script lang="ts">
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Bolt, Bars3 as Menu } from '@steeze-ui/heroicons'
+import Bolt from 'virtual:icons/lucide/zap'
+import Menu from 'virtual:icons/lucide/menu'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES

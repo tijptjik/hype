@@ -1,25 +1,20 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import {
-  Camera,
-  Square2Stack,
-  Document,
-  AtSymbol,
-  Calendar,
-} from '@steeze-ui/heroicons'
+import Camera from 'virtual:icons/lucide/camera'
+import Square2Stack from 'virtual:icons/lucide/copy'
+import Document from 'virtual:icons/lucide/file-text'
+import AtSymbol from 'virtual:icons/lucide/at-sign'
+import Calendar from 'virtual:icons/lucide/calendar'
 import { formatDate } from '$lib'
 // TYPES
-import type {
-  Image,
-  ImageUploadCtx as Refs,
-} from '$lib/db/zod/schema/image.types'
-import type { IconSource } from '@steeze-ui/svelte-icon'
+import type { Image, ImageUploadCtx as Refs } from '$lib/db/zod/schema/image.types'
 
 let { image }: { image: Image } = $props()
 </script>
 
-{#snippet MetadataRow(icon: IconSource, label: string, value: string)}
+{#snippet MetadataRow(icon: Component, label: string, value: string)}
   <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/80">
     <Icon src={icon} class="h-4 w-4 flex-grow-0" />
     <p class="font-medium">{label}:</p>

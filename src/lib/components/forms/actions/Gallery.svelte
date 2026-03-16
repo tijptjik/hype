@@ -8,7 +8,9 @@ import { m } from '$lib/i18n'
 import { getImageCtx } from '$lib/context/image.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Photo, XMark, Trash } from '@steeze-ui/heroicons'
+import Photo from 'virtual:icons/lucide/image'
+import XMark from 'virtual:icons/lucide/x'
+import Trash from 'virtual:icons/lucide/trash-2'
 
 // SERVICES
 const imageCtx = getImageCtx()

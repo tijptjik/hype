@@ -1,10 +1,12 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
-import { XCircle, CheckCircle } from '@steeze-ui/heroicons'
+import XCircle from 'virtual:icons/lucide/circle-x'
+import CheckCircle from 'virtual:icons/lucide/circle-check'
 import Info from '$lib/components/forms/extra/Info.svelte'
 import NewFeatureContent from '$lib/components/tasks/info/NewFeature.svelte'
 import Actions from '$lib/components/tasks/common/Actions.svelte'
@@ -15,7 +17,6 @@ import { goToNextTask, navigateOnAdmin } from '$lib/navigation'
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { Task } from '$lib/types'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 
 let { task }: { task: Task } = $props()
 
@@ -23,7 +24,7 @@ let { task }: { task: Task } = $props()
 let rejectActions = [
   {
     label: m.quiet_late_worm_startle(),
-    icon: XCircle as IconSource,
+    icon: XCircle as Component,
     action: 'reject',
     onHoverClass: 'text-rose-300',
   },
@@ -32,7 +33,7 @@ let rejectActions = [
 let acceptActions = [
   {
     label: m.quiet_late_worm_startle_accept(),
-    icon: CheckCircle as IconSource,
+    icon: CheckCircle as Component,
     action: 'accept',
     onHoverClass: 'text-success',
   },

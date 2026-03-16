@@ -1,8 +1,11 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // COMPONENTS
-import { XCircle, CheckCircle, CheckBadge } from '@steeze-ui/heroicons'
+import XCircle from 'virtual:icons/lucide/circle-x'
+import CheckCircle from 'virtual:icons/lucide/circle-check'
+import CheckBadge from 'virtual:icons/lucide/badge-check'
 import Info from '$lib/components/forms/extra/Info.svelte'
 import NewPhotoContent from '$lib/components/tasks/info/NewPhoto.svelte'
 import Actions from '$lib/components/tasks/common/Actions.svelte'
@@ -12,7 +15,6 @@ import { updateTaskReview } from '$lib/client/services/task'
 import { goToNextTask } from '$lib/navigation'
 // TYPES
 import type { Task } from '$lib/types'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 // I18N
 import { m } from '$lib/i18n'
 
@@ -22,7 +24,7 @@ let { task }: { task: Task } = $props()
 let rejectActions = [
   {
     label: m.quiet_late_worm_startle(),
-    icon: XCircle as IconSource,
+    icon: XCircle as Component,
     action: 'reject',
     onHoverClass: 'text-rose-300',
   },
@@ -31,13 +33,13 @@ let rejectActions = [
 let acceptActions = [
   {
     label: m.each_funny_cow_radiate(),
-    icon: CheckCircle as IconSource,
+    icon: CheckCircle as Component,
     action: 'acceptAll',
     onHoverClass: 'text-success',
   },
   {
     label: m.shy_sunny_hare_revive(),
-    icon: CheckBadge as IconSource,
+    icon: CheckBadge as Component,
     action: 'acceptSome',
     onHoverClass: 'text-success',
   },

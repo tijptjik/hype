@@ -8,7 +8,7 @@ import { getCardCtx } from '$lib/context/card.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { ExclamationTriangle } from '@steeze-ui/heroicons'
+import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
 
 // CONTEXT
 const cardCtx = getCardCtx()

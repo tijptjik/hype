@@ -5,9 +5,7 @@ import Section from '$lib/components/panels/common/Section.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type {
-  PanelProps,
-} from '$lib/types'
+import type { PanelProps } from '$lib/types'
 import type {
   ExperimentalFeatureConfig,
   UserExperimental,

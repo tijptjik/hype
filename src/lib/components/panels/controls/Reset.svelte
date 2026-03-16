@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import { XMark } from '@steeze-ui/heroicons'
+import XMark from 'virtual:icons/lucide/x'
 import Icon from '$lib/components/common/Icon.svelte'
 
 // CONTEXT

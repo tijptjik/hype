@@ -3,7 +3,8 @@
 import { m } from '$lib/i18n'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { MagnifyingGlass, GlobeAsiaAustralia } from '@steeze-ui/heroicons'
+import MagnifyingGlass from 'virtual:icons/lucide/search'
+import GlobeAsiaAustralia from 'virtual:icons/lucide/globe-2'
 // TYPES
 import type { FeatureForm } from '$lib/types'
 import type { Point } from 'geojson'

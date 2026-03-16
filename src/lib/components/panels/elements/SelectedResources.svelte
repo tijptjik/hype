@@ -3,7 +3,7 @@
 import { fade } from 'svelte/transition'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { XMark } from '@steeze-ui/heroicons'
+import XMark from 'virtual:icons/lucide/x'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'

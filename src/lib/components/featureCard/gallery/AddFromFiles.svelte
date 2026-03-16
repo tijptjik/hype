@@ -3,7 +3,7 @@
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { FolderOpen } from '@steeze-ui/heroicons'
+import FolderOpen from 'virtual:icons/lucide/folder-open'
 
 // CONTEXT
 const imageCtx = getImageCtx()

@@ -3,7 +3,8 @@
 import { fade } from 'svelte/transition'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Check, PencilSquare } from '@steeze-ui/heroicons'
+import Check from 'virtual:icons/lucide/check'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'

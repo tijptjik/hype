@@ -3,7 +3,9 @@
 import { navigateOnAdmin } from '$lib/navigation'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { CheckCircle, PencilSquare, XCircle } from '@steeze-ui/heroicons'
+import CheckCircle from 'virtual:icons/lucide/circle-check'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
+import XCircle from 'virtual:icons/lucide/circle-x'
 import Title from '$lib/components/tasks/common/Title.svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'

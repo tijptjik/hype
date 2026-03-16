@@ -7,10 +7,7 @@ import type {
   ResourceSubmitDraft,
   ResourceSubmitMode,
 } from '$lib/types'
-import type {
-  GetQueryParams,
-  ListQueryParams,
-} from '$lib/db/zod/schema/api.types'
+import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
   ProjectAdminProfileAPI,
   ProjectAdminRow,

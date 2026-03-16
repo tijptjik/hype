@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
 // UTILS
@@ -9,10 +10,10 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { getUserForAttribution } from '$lib/api/server/user.remote'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Camera, MapPin } from '@steeze-ui/heroicons'
+import Camera from 'virtual:icons/lucide/camera'
+import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { IconSource } from '@steeze-ui/heroicons'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // CONTEXT
@@ -65,7 +66,7 @@ $effect(() => {
 </script>
 
 {#snippet metadataItem(
-  icon: IconSource,
+  icon: Component,
   contributorName: string | null,
   contributedAt: string | null,
   row: number

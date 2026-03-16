@@ -5,7 +5,7 @@ import { getI18n } from '$lib/i18n'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // ICONS
-import { ChevronRight } from '@steeze-ui/heroicons'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 import Icon from '$lib/components/common/Icon.svelte'
 
 let {

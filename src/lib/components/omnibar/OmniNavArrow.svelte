@@ -1,7 +1,8 @@
 <script lang="ts">
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { ChevronLeft, ChevronRight } from '@steeze-ui/heroicons'
+import ChevronLeft from 'virtual:icons/lucide/chevron-left'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // CONTEXT
 import { getOmniCtx } from '$lib/context/omni.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'

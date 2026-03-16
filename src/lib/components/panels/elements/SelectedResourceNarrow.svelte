@@ -5,7 +5,7 @@ import { tick } from 'svelte'
 import Portal from 'svelte-portal'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { XMark } from '@steeze-ui/heroicons'
+import XMark from 'virtual:icons/lucide/x'
 // UTILS
 import { getBgColor, getHoverColor, getHoverTextColor } from '$lib/utils/colours'
 // SVELTE

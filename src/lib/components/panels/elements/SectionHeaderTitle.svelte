@@ -1,7 +1,8 @@
 <script lang="ts">
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // TYPES
 import type { PanelProps } from '$lib/types'
 

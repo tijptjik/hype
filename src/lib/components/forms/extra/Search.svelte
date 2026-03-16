@@ -5,7 +5,9 @@ import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
 import { getLocale } from '$lib/i18n'
 // ICONS
-import { MagnifyingGlass, XMark, ChevronRight } from '@steeze-ui/heroicons'
+import MagnifyingGlass from 'virtual:icons/lucide/search'
+import XMark from 'virtual:icons/lucide/x'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT

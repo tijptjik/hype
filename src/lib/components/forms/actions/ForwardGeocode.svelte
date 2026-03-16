@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
 // CONTEXT
@@ -12,11 +13,12 @@ import {
 import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocoding'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Language, MagnifyingGlass, MapPin } from '@steeze-ui/heroicons'
+import Language from 'virtual:icons/lucide/languages'
+import MagnifyingGlass from 'virtual:icons/lucide/search'
+import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
 import type { Point } from 'geojson'
 import type { FeatureForm } from '$lib/context/form.svelte'
-import type { IconSource } from '@steeze-ui/heroicons'
 import type { Locale } from '$lib/types'
 
 // CONTEXT
@@ -133,7 +135,7 @@ let handleGeocodeToLocate = (e: Event) => {
   isGeocoding: boolean,
   onclick: (e: Event) => void,
   isLoading: boolean,
-  icon: IconSource,
+  icon: Component,
   label: string
 )}
   <button

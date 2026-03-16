@@ -6,7 +6,8 @@ import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // ICONS
-import { UserPlus, XMark } from '@steeze-ui/heroicons'
+import UserPlus from 'virtual:icons/lucide/user-plus'
+import XMark from 'virtual:icons/lucide/x'
 // TYPES
 
 // STATE : CONTEXT :: RESOURCE

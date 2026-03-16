@@ -6,7 +6,8 @@ import Portal from 'svelte-portal'
 // I18N
 import { getI18n } from '$lib/i18n'
 // ICONS
-import { Funnel, XMark } from '@steeze-ui/heroicons'
+import Funnel from 'virtual:icons/lucide/filter'
+import XMark from 'virtual:icons/lucide/x'
 import Icon from '$lib/components/common/Icon.svelte'
 // COMPONENTS
 import ResourceHierarchyPath from '../common/ResourceHierarchyPath.svelte'

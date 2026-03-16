@@ -5,7 +5,7 @@ import { m } from '$lib/i18n'
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { UserCircle } from '@steeze-ui/heroicons'
+import UserCircle from 'virtual:icons/lucide/circle-user'
 // ENUMS
 import { Panel, FirstClassResource } from '$lib/enums'
 

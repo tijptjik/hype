@@ -5,13 +5,11 @@ import { fade } from 'svelte/transition'
 import { m } from '$lib/i18n'
 // Icons
 import Icon from '$lib/components/common/Icon.svelte'
-import {
-  Squares2x2,
-  EllipsisVertical,
-  PencilSquare,
-  ExclamationCircle,
-  Camera,
-} from '@steeze-ui/heroicons'
+import Squares2x2 from 'virtual:icons/lucide/layout-grid'
+import EllipsisVertical from 'virtual:icons/lucide/ellipsis-vertical'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
+import ExclamationCircle from 'virtual:icons/lucide/circle-alert'
+import Camera from 'virtual:icons/lucide/camera'
 // Svelte
 import { clickOutside } from '$lib/actions'
 // CONTEXT

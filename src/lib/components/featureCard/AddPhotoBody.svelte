@@ -9,7 +9,10 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { updateUserProfile } from '$lib/api/server/user.remote'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { PencilSquare, InformationCircle, Check, Heart } from '@steeze-ui/heroicons'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
+import InformationCircle from 'virtual:icons/lucide/info'
+import Check from 'virtual:icons/lucide/check'
+import Heart from 'virtual:icons/lucide/heart'
 
 // PROPS
 let { viewport }: { viewport: HTMLElement } = $props()

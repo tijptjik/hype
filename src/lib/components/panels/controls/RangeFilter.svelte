@@ -1,5 +1,6 @@
 <script lang="ts">
-import { ChevronDown, ChevronUp } from '@steeze-ui/heroicons'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronUp from 'virtual:icons/lucide/chevron-up'
 import Icon from '$lib/components/common/Icon.svelte'
 import RangeSlider from 'svelte-range-slider-pips'
 // I18N

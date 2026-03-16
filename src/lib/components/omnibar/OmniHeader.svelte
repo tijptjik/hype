@@ -4,11 +4,9 @@ import { m } from '$lib/i18n'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 // ICONS
-import {
-  Map as MapIcon,
-  BuildingLibrary as Building,
-  MapPin,
-} from '@steeze-ui/heroicons'
+import MapIcon from 'virtual:icons/lucide/map'
+import Building from 'virtual:icons/lucide/landmark'
+import MapPin from 'virtual:icons/lucide/map-pin'
 // ENUMS
 import { OmniCollection } from '$lib/enums'
 

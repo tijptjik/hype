@@ -1,6 +1,8 @@
 <script lang="ts">
 // ICONS
-import { UserGroup, Plus, XMark } from '@steeze-ui/heroicons'
+import UserGroup from 'virtual:icons/lucide/users'
+import Plus from 'virtual:icons/lucide/plus'
+import XMark from 'virtual:icons/lucide/x'
 import Icon from '$lib/components/common/Icon.svelte'
 // I18N
 import { m } from '$lib/i18n'

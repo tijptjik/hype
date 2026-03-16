@@ -11,7 +11,9 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { XMark, PencilSquare, Check } from '@steeze-ui/heroicons'
+import XMark from 'virtual:icons/lucide/x'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/lucide/check'
 // SERVICES
 import { reverseGeocode } from '$lib/api/external/geocoding'
 // ENUMS

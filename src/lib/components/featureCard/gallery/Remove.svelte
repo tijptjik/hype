@@ -3,7 +3,7 @@
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Trash } from '@steeze-ui/heroicons'
+import Trash from 'virtual:icons/lucide/trash-2'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 

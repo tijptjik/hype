@@ -12,13 +12,11 @@ import Icon from '$lib/components/common/Icon.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
-import {
-  InboxArrowDown,
-  Map as MapIcon,
-  CloudArrowUp,
-  BuildingLibrary,
-  MapPin,
-} from '@steeze-ui/heroicons'
+import InboxArrowDown from 'virtual:icons/lucide/mailbox'
+import MapIcon from 'virtual:icons/lucide/map'
+import CloudArrowUp from 'virtual:icons/lucide/cloud-upload'
+import BuildingLibrary from 'virtual:icons/lucide/landmark'
+import MapPin from 'virtual:icons/lucide/map-pin'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES

@@ -1,7 +1,10 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
 import Icon from '$lib/components/common/Icon.svelte'
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from '@steeze-ui/heroicons'
+import ChevronLeft from 'virtual:icons/lucide/chevron-left'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
+import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
 
 type Props = {
   direction: 'left' | 'right' | 'up' | 'down'

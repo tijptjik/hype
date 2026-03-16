@@ -3,12 +3,7 @@ import { isAdminRequest } from '$lib/api'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES
-import type {
-  Code,
-  Id,
-  SessionUser,
-  UserRoleDisco,
-} from '$lib/types'
+import type { Code, Id, SessionUser, UserRoleDisco } from '$lib/types'
 import type { OrganisationPartial } from '$lib/db/zod/schema/organisation.types'
 import { error } from '@sveltejs/kit'
 

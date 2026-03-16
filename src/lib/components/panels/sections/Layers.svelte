@@ -4,7 +4,7 @@ import { browser } from '$app/environment'
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
-import { Square3Stack3d } from '@steeze-ui/heroicons'
+import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'

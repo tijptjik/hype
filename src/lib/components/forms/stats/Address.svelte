@@ -3,8 +3,8 @@
 import { m } from '$lib/i18n'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { MapPin } from '@steeze-ui/heroicons'
-import { GlobeAsiaAustralia } from '@steeze-ui/heroicons'
+import MapPin from 'virtual:icons/lucide/map-pin'
+import GlobeAsiaAustralia from 'virtual:icons/lucide/globe-2'
 
 // TRANSITIONS
 import { fade } from 'svelte/transition'

@@ -3,7 +3,7 @@
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Camera } from '@steeze-ui/heroicons'
+import Camera from 'virtual:icons/lucide/camera'
 
 // CONTEXT
 const imageCtx = getImageCtx()

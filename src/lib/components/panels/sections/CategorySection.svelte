@@ -1,10 +1,11 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // TRANSITIONS
 import { slide } from 'svelte/transition'
-import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 import Icon from '$lib/components/common/Icon.svelte'
 import type { Snippet } from 'svelte'
-import type { IconSource } from '@steeze-ui/svelte-icon'
 
 const toggle = () => {
   isOpen = !isOpen
@@ -13,7 +14,7 @@ const toggle = () => {
 type Props = {
   children: Snippet
   title: string
-  icon: string | IconSource
+  icon: string | Component
   iconVerticalPaddingClass: string
   iconColorClass: string
   collapsedContent: Snippet<[string, any]>

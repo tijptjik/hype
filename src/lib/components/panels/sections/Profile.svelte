@@ -11,7 +11,10 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { validateUsernameIssues } from '$lib/client/services/user'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { PencilSquare, Check, ArrowPath, XMark } from '@steeze-ui/heroicons'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/lucide/check'
+import ArrowPath from 'virtual:icons/lucide/refresh-cw'
+import XMark from 'virtual:icons/lucide/x'
 // ENUMS
 import { Panel } from '$lib/enums'
 

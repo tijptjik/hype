@@ -1,9 +1,11 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Check, PencilSquare } from '@steeze-ui/heroicons'
+import Check from 'virtual:icons/lucide/check'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
 // I18N
 import { getI18n, getLocale } from '$lib/i18n'
 // SERVICES

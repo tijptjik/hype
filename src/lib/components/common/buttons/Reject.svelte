@@ -4,7 +4,7 @@ import { m } from '$lib/i18n'
 
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { XCircle } from '@steeze-ui/heroicons'
+import XCircle from 'virtual:icons/lucide/circle-x'
 
 let { onclick } = $props()
 </script>

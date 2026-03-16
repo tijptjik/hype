@@ -4,7 +4,8 @@ import { onMount } from 'svelte'
 import Portal from 'svelte-portal'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
-import { XMark, InformationCircle } from '@steeze-ui/heroicons'
+import XMark from 'virtual:icons/lucide/x'
+import InformationCircle from 'virtual:icons/lucide/info'
 
 // TYPES
 import type { Snippet } from 'svelte'

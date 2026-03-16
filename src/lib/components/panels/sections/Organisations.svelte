@@ -8,7 +8,7 @@
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
-import { UserGroup } from '@steeze-ui/heroicons'
+import UserGroup from 'virtual:icons/lucide/users'
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'

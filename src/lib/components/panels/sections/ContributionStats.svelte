@@ -12,12 +12,10 @@ appCtx.state.panels.profile.ctx!.observePrisms = !isSingleOrg
 
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import {
-  Camera,
-  MapPin,
-  CubeTransparent,
-  ExclamationTriangle,
-} from '@steeze-ui/heroicons'
+import Camera from 'virtual:icons/lucide/camera'
+import MapPin from 'virtual:icons/lucide/map-pin'
+import CubeTransparent from 'virtual:icons/lucide/ghost'
+import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
 import type { UserProfile } from '$lib/db/zod/schema/user.types'
 
 // PROPS

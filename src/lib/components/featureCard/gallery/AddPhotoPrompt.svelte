@@ -8,7 +8,7 @@ import { getImageCtx } from '$lib/context/image.svelte'
 import { checkCameraAvailability } from '$lib/client/services/image'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
-import { Camera } from '@steeze-ui/heroicons'
+import Camera from 'virtual:icons/lucide/camera'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
 
