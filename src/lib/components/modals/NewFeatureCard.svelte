@@ -7,7 +7,7 @@ import { NEW_REF } from '$lib'
 // ADAPTERS
 import { useImageProviderModel } from '$lib/adapters/image'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // Components
 import FeatureCard from '$lib/components/featureCard/Root.svelte'
 import NewFeatureInfoBar from '$lib/components/featureCard/NewFeatureInfoBar.svelte'

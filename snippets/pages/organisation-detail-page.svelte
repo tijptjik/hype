@@ -17,7 +17,7 @@ import { getOrganisation } from '$lib/api/server/organisation.remote'
 // ICONS
 import { Users as OrganisationIcon } from '@steeze-ui/heroicons'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 import { page } from '$app/state'
 // COMPONENTS
 import I18nSection from '$lib/components/forms/sections/I18n.svelte'

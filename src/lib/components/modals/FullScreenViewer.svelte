@@ -8,7 +8,7 @@ import { getOmniCtx } from '$lib/context/omni.svelte'
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation'
 // COMPONENTS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 import Viewer from '../common/Viewer.svelte'
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums'

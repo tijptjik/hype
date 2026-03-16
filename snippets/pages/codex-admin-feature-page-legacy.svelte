@@ -16,7 +16,7 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // ICONS
 import FeatureIcon from 'virtual:icons/lucide/map-pin'
 // PROVIDERS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // COMPONENTS
 import I18nSection from '$lib/components/forms/sections/I18n.svelte'
 import FeatureActions from '$lib/components/forms/actions/Feature.svelte'
