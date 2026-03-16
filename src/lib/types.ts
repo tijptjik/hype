@@ -2068,8 +2068,8 @@ export type ListFieldProps = FieldPropsExtended & {
 
 export type ImageProviderProps = {
   children: any
-  page: Page
-} & ImageCtxConstructorOptions
+  model: ImageProviderModel
+}
 
 export interface ImageContextConfig {
   ctxType?: ImageContextResource
@@ -2089,6 +2089,28 @@ export interface ImageCtxConstructorOptions {
   images?: ImageCtxEnvelope[] | null
   highlightedIds?: Id[]
   isFullScreen?: boolean
+}
+
+export interface ImageProviderSyncTarget {
+  state: {
+    activeImage: ImageCtxEnvelope | null
+    images: Map<Id, ImageCtxEnvelope>
+  }
+  setContext: (options: {
+    context?: ImageContextConfig | null
+    image?: ImageCtxEnvelope | null | undefined
+    images?: ImageCtxEnvelope[] | null
+    highlightedIds?: Id[]
+  }) => Promise<void>
+  refreshImages: (targetImageId?: string) => Promise<void>
+  target: (imageId: Id) => ImageCtxEnvelope | undefined
+  setTargetImageId: (imageId: Id | null) => void
+  setMode: (mode: 'fullscreen' | 'normal') => void
+}
+
+export interface ImageProviderModel {
+  getInitialOptions: () => ImageCtxConstructorOptions
+  sync: (imageCtx: ImageProviderSyncTarget) => void
 }
 
 // ELEMENTS
