@@ -9,7 +9,12 @@ import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
 import { toImageEnvelope } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { createFeature, createI18n, createProperties } from '$lib/db/services/feature'
+import {
+  createFeature,
+  createI18n,
+  createProperties,
+  mergeFeatureProperties,
+} from '$lib/db/services/feature'
 import { probeLayerForUpdate } from '$lib/db/services/layer'
 // I18N
 import { toLocaleKey } from '$lib/i18n'
@@ -43,6 +48,7 @@ import type {
   UserRoleDisco,
 } from '$lib/types'
 import type { ImageDB } from '$lib/db/zod/schema/image.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type {
   FeatureAdminDBRaw,
   FeatureDB,
@@ -124,6 +130,24 @@ const featureListRelations = {
 
 const featureDetailRelations = {
   ...featureListRelations,
+  layer: {
+    with: {
+      properties: {
+        with: {
+          property: {
+            with: {
+              i18n: true,
+              values: {
+                with: {
+                  i18n: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
   contributor: {
     columns: userColumnsWithPrivacyProtected,
   },
@@ -168,6 +192,7 @@ type FeatureImageRelation = {
 type FeatureResponseRow = FeatureAdminDBRaw & {
   imageCount?: number
   imagePublishedCount?: number
+  layer?: Layer | null
 }
 
 const toFeatureImageEnvelope = (
@@ -219,7 +244,19 @@ const toFeatureImageEnvelope = (
 const toPropertyShape = (properties: FeatureResponseRow['properties']) =>
   (properties ?? []).map(property => ({
     ...property,
-    i18n: transformI18nSafely(property.i18n as never),
+    i18n: (() => {
+      if (!property.property?.isTranslatable) return null
+      const transformed = transformI18nSafely(property.i18n as never)
+      if (!transformed) return null
+      const hasValue = Object.values(transformed).some(entry => {
+        const value =
+          entry && typeof entry === 'object' && 'value' in entry
+            ? (entry as { value?: unknown }).value
+            : undefined
+        return typeof value === 'string' && value.trim().length > 0
+      })
+      return hasValue ? transformed : null
+    })(),
     property: property.property
       ? {
           ...property.property,
@@ -238,6 +275,22 @@ const toPropertyShape = (properties: FeatureResponseRow['properties']) =>
         }
       : null,
   }))
+
+export const normalizeFeaturePropertiesForLayer = (
+  featureId: string,
+  properties: FeatureResponseRow['properties'],
+  layerData: Layer | null | undefined,
+): NonNullable<FeatureResponseRow['properties']> => {
+  if (!layerData) return [...(properties ?? [])]
+
+  return mergeFeatureProperties(
+    {
+      id: featureId,
+      properties: [...(properties ?? [])],
+    },
+    layerData,
+  ).properties as NonNullable<FeatureResponseRow['properties']>
+}
 
 /**
  * Normalizes arbitrary profile input into a supported feature profile.
@@ -294,8 +347,14 @@ const toProfileResponseShape = async (
   }
 
   if (profile === 'card') {
+    const normalizedProperties = normalizeFeaturePropertiesForLayer(
+      row.id,
+      row.properties,
+      row.layer,
+    )
     return FeatureCardProfileAPI.parse({
       ...base,
+      properties: toPropertyShape(normalizedProperties),
       image: imageState,
       imageCount: row.imageCount ?? row.images?.length ?? 0,
       imagePublishedCount:
@@ -308,6 +367,11 @@ const toProfileResponseShape = async (
   }
 
   if (profile === 'detail') {
+    const normalizedProperties = normalizeFeaturePropertiesForLayer(
+      row.id,
+      row.properties,
+      row.layer,
+    )
     const detailImageState = toFeatureImageEnvelope(
       row.images as FeatureImageRelation[],
       row.id,
@@ -316,6 +380,7 @@ const toProfileResponseShape = async (
     ) as { image: unknown; images: unknown[] }
     return FeatureDetailProfileAPI.parse({
       ...base,
+      properties: toPropertyShape(normalizedProperties),
       image: detailImageState.image,
       images: detailImageState.images,
       imageCount: row.imageCount ?? row.images?.length ?? 0,
@@ -328,6 +393,11 @@ const toProfileResponseShape = async (
     }) as FeatureEntityByProfile<FeatureProfile>
   }
 
+  const normalizedProperties = normalizeFeaturePropertiesForLayer(
+    row.id,
+    row.properties,
+    row.layer,
+  )
   const adminImageState = toFeatureImageEnvelope(
     row.images as FeatureImageRelation[],
     row.id,
@@ -337,6 +407,7 @@ const toProfileResponseShape = async (
 
   return FeatureAdminProfileAPI.parse({
     ...base,
+    properties: toPropertyShape(normalizedProperties),
     image: adminImageState.image,
     images: adminImageState.images,
   }) as FeatureEntityByProfile<FeatureProfile>
