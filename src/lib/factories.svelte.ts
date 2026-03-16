@@ -91,8 +91,8 @@ const syncMetaWriteTokenFromResult = <TFormValue extends Record<string, unknown>
   } as TFormValue)
 }
 
-// Insert meta hidden inputs into the form
-// This is necessary because the form data is not available in the `onsubmit` hook.
+// Insert meta hidden inputs into the form.
+// Remote form submission reads DOM controls, so programmatic meta changes must be mirrored.
 const syncMetaHiddenInputs = (
   formEl: HTMLFormElement | undefined,
   meta: unknown,
@@ -118,6 +118,19 @@ const syncMetaHiddenInputs = (
     input.setAttribute(META_HIDDEN_ATTR, 'true')
     formEl.appendChild(input)
   }
+}
+
+const logValidationIssues = (
+  stage: 'preflight' | 'submit',
+  issues: RemoteFormIssue[],
+): void => {
+  if (issues.length === 0) return
+  console.error(`[remote-form] ${stage} validation issues`, {
+    issues: issues.map(issue => ({
+      path: issue.path,
+      message: issue.message,
+    })),
+  })
 }
 
 export function use<T>(
@@ -327,6 +340,7 @@ export function configureForm<Input = RemoteFormInput>(
       const preflightIssues = await validate()
       const hasPreflightIssues = preflightIssues.length > 0
       if (hasPreflightIssues) {
+        logValidationIssues('preflight', preflightIssues)
         await focusInvalid(preflightIssues)
         onissues?.({ issues: preflightIssues })
         const outcome: SubmitOutcome = { success: false, issues: preflightIssues }
@@ -355,6 +369,7 @@ export function configureForm<Input = RemoteFormInput>(
         const submitIssues = form.fields.allIssues() ?? []
         const hasIssues = submitIssues.length > 0
         const success = !hasIssues
+        if (!success) logValidationIssues('submit', submitIssues)
         if (success) {
           syncMetaWriteTokenFromResult(
             form as unknown as {
@@ -444,14 +459,19 @@ export function configureForm<Input = RemoteFormInput>(
   let lastIssues = $state.raw<RemoteFormIssue[] | undefined>()
 
   use({
-    track: () => ({ form, data, initialErrors }),
+    // Track the upstream form identity and source data, but avoid subscribing this
+    // hydration effect to the form field store it mutates below.
+    track: () => ({ key, data, initialErrors }),
     mount: async current => {
       if (current.initialErrors) await validate().then(focusInvalid)
     },
     effect: current => {
+      const currentForm = untrack(() => form)
       const nextData = $state.snapshot(current.data) as FormData
       const didSourceDataChange = !deepEqual(initial, nextData)
-      const currentValue = $state.snapshot(current.form.fields.value()) as FormData
+      const currentValue = untrack(
+        () => $state.snapshot(currentForm.fields.value()) as FormData,
+      )
       const shouldSyncByValueDiff = !deepEqual(currentValue, nextData)
       const shouldHydrateUninitializedFields =
         shouldSyncByValueDiff &&
@@ -465,7 +485,9 @@ export function configureForm<Input = RemoteFormInput>(
       // committed entity values on reactive reruns.
       if (didSourceDataChange || shouldHydrateUninitializedFields) {
         if (shouldPreservePostSubmitLocalEdits) return
-        current.form.fields.set(nextData)
+        untrack(() => {
+          currentForm.fields.set(nextData)
+        })
         initial = nextData
         touched = false
         clearSubmitAttemptState()
@@ -576,6 +598,16 @@ export function configureForm<Input = RemoteFormInput>(
       formEl?.requestSubmit()
     },
     clearSubmitAttemptState,
-    reset: () => form.fields.set(initial),
+    reset: (nextValue?: FormData) => {
+      const resolved = (nextValue ?? initial) as FormData
+      initial = $state.snapshot(resolved) as FormData
+      touched = false
+      submitted = false
+      dirty = false
+      lastIssues = undefined
+      clearSubmitAttemptState()
+      form.fields.set(resolved)
+      syncMetaHiddenInputs(formEl, (resolved as { meta?: unknown } | null)?.meta)
+    },
   })
 }
