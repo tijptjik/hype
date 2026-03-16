@@ -8,7 +8,7 @@ import { getFeatures } from '$lib/api/server/feature.remote'
 // SERVICES
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
-import { getContext, setContext } from 'svelte'
+import { getContext, setContext, untrack } from 'svelte'
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { AppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -376,18 +376,18 @@ export class AdminCtx {
 
   setResourceType(resource: NavigableResource | false): void {
     // TODO Remove from AdminCtx
-    this.appCtx.state.nav.resourceType = resource
     this.appCtx.setActiveResourceType(resource)
   }
 
   setResourceRef(ref: Id | Code | false, resource?: NavigableResource): void {
     // TODO Remove from AdminCtx
     // If the new entity is a different resource type to the current entity, update the state
-    if (resource) {
-      this.setResourceType(resource)
-    }
-    this.appCtx.state.nav.resourceRef = ref
-    this.appCtx.setActiveResourceRef(ref)
+    const sameRef = untrack(() => this.appCtx.state.nav.resourceRef) === ref
+    const sameResource =
+      resource === undefined ||
+      untrack(() => this.appCtx.state.nav.resourceType) === resource
+    if (sameRef && sameResource) return
+    this.appCtx.setActiveResourceRef(ref as Id | false, resource)
   }
 
   setFacet(
@@ -396,9 +396,14 @@ export class AdminCtx {
     resource?: NavigableResource,
   ): void {
     // TODO Remove from AdminCtx
-    if (ref !== undefined) this.setResourceRef(ref)
-    if (resource) this.setResourceType(resource)
-    this.appCtx.setActiveFacet(facet)
+    const sameFacet = untrack(() => this.appCtx.state.nav.facet) === facet
+    const sameRef =
+      ref === undefined || untrack(() => this.appCtx.state.nav.resourceRef) === ref
+    const sameResource =
+      resource === undefined ||
+      untrack(() => this.appCtx.state.nav.resourceType) === resource
+    if (sameFacet && sameRef && sameResource) return
+    this.appCtx.setActiveFacet(facet, ref as Id | false | undefined, resource)
   }
 
   // ═══════════════════════
@@ -490,6 +495,7 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.organisation,
       meta: { isAdminRequest: true, profile: 'card' },
     })) as ListResponse<Organisation>
+    this.appCtx.setListQueryMeta(this.appCtx.organisationsQueryKey(), result)
     return result.data
   }
 
@@ -506,6 +512,7 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.project,
       meta: { isAdminRequest: true, profile: 'card' },
     })) as ListResponse<Project>
+    this.appCtx.setListQueryMeta(this.appCtx.projectsQueryKey(), result)
     return result.data
   }
 
@@ -522,6 +529,7 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.layer,
       meta: { isAdminRequest: true, profile: 'card' },
     })
+    this.appCtx.setListQueryMeta(this.appCtx.layersQueryKey(), result)
     return result.data
   }
 
@@ -534,6 +542,7 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.feature,
       meta: { isAdminRequest: true, profile: 'card' },
     })
+    this.appCtx.setListQueryMeta(this.appCtx.featuresQueryKey(), result)
     return result.data
   }
 
@@ -566,6 +575,7 @@ export class AdminCtx {
         sorting: this.appCtx.state.viewSorting.hub,
         meta: { isAdminRequest: true, profile: 'card' },
       })) as ListResponse<Hub>
+      this.appCtx.setListQueryMeta(this.hubsQueryKey, result)
       return result.data
     } catch (err) {
       const status =
@@ -782,8 +792,7 @@ export class AdminCtx {
       const hasDisplayAddress = allLocales.some(
         locale =>
           feature.i18n?.[locale]?.displayAddress &&
-          feature.i18n[locale]!.displayAddress!.length > 1 &&
-          !feature.i18n[locale]!.displayAddressGen,
+          feature.i18n[locale]!.displayAddress!.length > 1,
       )
       if (hasDisplayAddress !== filters.hasDisplayAddress) return false
     }
@@ -1960,9 +1969,54 @@ export class AdminCtx {
     next: Partial<ResourceSortState>,
   ): Promise<void> => {
     const current = this.appCtx.state.viewSorting[resource]
-    this.appCtx.state.viewSorting[resource] = {
+    const queryEntry = this.appCtx.queryMap.get(resource)
+    const currentQueryKey = queryEntry?.queryKey() ?? []
+    const currentQueryMeta = this.appCtx.getListQueryMeta(currentQueryKey)
+    const nextSorting = {
       ...current,
       ...next,
+    }
+
+    if (
+      current.sortBy === nextSorting.sortBy &&
+      current.sortOrder === nextSorting.sortOrder
+    ) {
+      return
+    }
+
+    this.appCtx.state.viewSorting[resource] = nextSorting
+
+    if (
+      queryEntry &&
+      currentQueryMeta?.hasMore === false &&
+      resource !== FirstClassResource.task &&
+      resource !== FirstClassResource.property &&
+      resource !== FirstClassResource.user
+    ) {
+      const nextQueryKey = queryEntry.queryKey()
+      const currentEntities = this.appCtx.state.resources[resource] as Resource[]
+      const sortedEntities = this.appCtx.sortLoadedResources(
+        resource,
+        currentEntities,
+        nextSorting,
+      )
+
+      this.appCtx.setSortedResourceState(resource, sortedEntities)
+      this.queryClient.setQueryData(nextQueryKey, sortedEntities)
+      this.appCtx.setListQueryMeta(nextQueryKey, {
+        data: sortedEntities,
+        totalCount: currentQueryMeta.totalCount ?? sortedEntities.length,
+        limit: currentQueryMeta.limit,
+        offset: currentQueryMeta.offset,
+        hasMore: false,
+        nextOffset: null,
+        sortBy: nextSorting.sortBy,
+        sortOrder: nextSorting.sortOrder,
+        appliedFilters: currentQueryMeta.appliedFilters,
+        q: currentQueryMeta.q,
+        durationMs: currentQueryMeta.durationMs,
+      })
+      return
     }
 
     if (resource === FirstClassResource.organisation) {
