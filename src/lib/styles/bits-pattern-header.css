@@ -196,6 +196,11 @@
 
   .bits-theme .bits-pattern-header__facets {
     @apply flex h-10 items-stretch gap-0 bg-base-300 rounded-xl;
+    /*border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);*/
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 8%, transparent),
+      inset 0 -1px 0 color-mix(in oklab, black 82%, transparent),
+      inset 0 2px 8px color-mix(in oklab, black 64%, transparent);
     transition: width 180ms ease;
     overflow: clip;
   }
