@@ -1,3 +1,4 @@
+export * from './components'
 export * from './completionFooter'
 export * from './resourceControlBar'
 export * from './resourceIndex'
