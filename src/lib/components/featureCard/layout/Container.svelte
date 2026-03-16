@@ -4,8 +4,8 @@ import { useSwipe } from 'svelte-gestures'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
-// COMPONENTS
-import Scrollbar from '$lib/components/layout/Svrollbar.svelte'
+// BITS
+import { Scrollbar } from '$lib/bits'
 // TYPES
 import type { SwipeCustomEvent } from 'svelte-gestures'
 

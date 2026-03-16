@@ -13,7 +13,7 @@ import { formatDistanceToNow } from '$lib'
 import { navigateToContributedFeature } from '$lib/navigation'
 // COMPONENTS
 import { Scrollbar } from '$lib/bits/custom/scrollbar'
-import ScrollableText from '$lib/components/common/ScrollableText.svelte'
+import { ScrollableText } from '$lib/bits'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
 import MapPin from 'virtual:icons/lucide/map-pin'

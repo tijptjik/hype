@@ -4,6 +4,8 @@ import { onMount } from 'svelte'
 import { page } from '$app/state'
 // CONSTANTS
 import { NEW_REF } from '$lib'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // PROVIDERS
 import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
 // Components
@@ -72,20 +74,24 @@ $effect(() => {
     handleCloseModal()
   }
 })
+
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => ({
+    isAdminMode: false,
+    context: {
+      ctxType: ImageContextResource.feature,
+      ctxId: NEW_REF,
+      organisation: organisation as Omit<OrganisationDB, 'isCoreInclusive'>,
+      project: project as Omit<ProjectDB, 'isCoreInclusive'>,
+    },
+  }),
+)
 </script>
 
 {#if appCtx.newFeatureMode === NewFeatureMode.card && newFeature && feature}
   <FeatureCard>
-    <ImageProvider
-      {page}
-      isAdminMode={false}
-      context={{
-        ctxType: ImageContextResource.feature,
-        ctxId: NEW_REF,
-        organisation: organisation as Omit<OrganisationDB, 'isCoreInclusive'>,
-        project: project as Omit<ProjectDB, 'isCoreInclusive'>
-      }}
-    >
+    <ImageProvider model={imageProviderModel}>
       <Container bind:viewport>
         <FeatureGallery />
         <NewFeatureInfoBar {viewport} />

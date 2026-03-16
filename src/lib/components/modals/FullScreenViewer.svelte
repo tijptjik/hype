@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // CONTEXT
 import { getOmniCtx } from '$lib/context/omni.svelte'
 // NAVIGATION
@@ -11,11 +13,12 @@ import Viewer from '../common/Viewer.svelte'
 // ENUMS
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Organisation, Project } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
 
 // CONTEXT
 let omniCtx = getOmniCtx()
@@ -53,6 +56,19 @@ let organisation = $derived<Organisation | undefined>(
 
 let project = $derived<Project | undefined>(
   feature ? appCtx.cache.project.get(feature.projectId) : undefined,
+)
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => ({
+    isAdminMode: adminCtx !== undefined,
+    context: {
+      ctxType: FirstClassResource.feature as unknown as ImageContextResource,
+      ctxId: feature.id,
+      organisation: organisation as never,
+      project: project as never,
+    },
+    image,
+  }),
 )
 
 function handleKeydown(event: KeyboardEvent) {
@@ -101,17 +117,7 @@ function closeModal() {
   <div class="h-screen w-screen" onclick={(e) => e.stopPropagation()}>
     <div class="h-full w-full" onclick={closeModal}>
       {#if feature}
-        <ImageProvider
-          {page}
-          isAdminMode={adminCtx !== undefined}
-          context={{
-            ctxType: FirstClassResource.feature as unknown as ImageContextResource,
-            ctxId: feature.id,
-            organisation,
-            project
-          }}
-          {image}
-        >
+        <ImageProvider model={imageProviderModel}>
           <Viewer isDropzone={false} hideActions={true} />
         </ImageProvider>
       {/if}

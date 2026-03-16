@@ -5,17 +5,15 @@ import { m } from '$lib/i18n'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 // BITS
-import { UserAttributionCard } from '$lib/bits'
+import { Icon, IconAnchor, UserAttributionCard } from '$lib/bits'
 // COMPONENTS
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
-import Icon from '$lib/components/common/Icon.svelte'
 import Camera from 'virtual:icons/lucide/camera'
 import Photo from 'virtual:icons/lucide/image'
 import InformationCircle from 'virtual:icons/lucide/info'
 import Dropzone from 'svelte-file-dropzone'
 import Metadata from '$lib/components/common/ImageMetadata.svelte'
 import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte'
-import IconAnchor from '$lib/components/common/IconAnchor.svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
@@ -125,7 +123,7 @@ $effect(() => {
 {#snippet EmptyContent()}
   {#if isDropzone}
     <div class="flex h-full flex-col items-center justify-center">
-      <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
+      <Icon src={Photo} size="xl" class="mx-auto mt-4" />
       <span class="mx-auto pb-6 text-sm">{m.born_plain_bulldog_stop()}</span>
     </div>
   {:else}
@@ -148,7 +146,7 @@ $effect(() => {
 
 {#snippet ErrorContent()}
   <div class="flex h-full flex-col items-center justify-center gap-2 text-error">
-    <Icon src={Photo} class="mx-auto mt-4 h-8 w-8" />
+    <Icon src={Photo} size="xl" tone="error" class="mx-auto mt-4" />
     <span class="mx-auto pb-6 text-sm">{m.stale_quick_fireant_enchant()}</span>
   </div>
 {/snippet}

@@ -8,7 +8,7 @@ import Icon from '$lib/components/common/Icon.svelte'
 import XCircle from 'virtual:icons/lucide/circle-x'
 import QueueList from 'virtual:icons/lucide/panel-top-bottom-dashed'
 // COMPONENTS
-import ScrollableText from '$lib/components/common/ScrollableText.svelte'
+import { ScrollableText } from '$lib/bits'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
