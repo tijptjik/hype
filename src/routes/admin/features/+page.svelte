@@ -1,8 +1,14 @@
 <script lang="ts">
+// SVELTE
+import { onMount, untrack } from 'svelte'
+import { debounce } from '@sillvva/utils'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+// REMOTE
+import { getFeatures } from '$lib/api/server/feature.remote'
 // SERVICES
+import { getCachedFeatureRowModel } from '$lib/client/services/featureRow'
 import {
   createPropertyFilterSection,
   createSortable,
@@ -23,7 +29,7 @@ import {
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
-import { m } from '$lib/i18n'
+import { getLocaleKey, m } from '$lib/i18n'
 // ICONS
 import FeatureIcon from 'virtual:icons/lucide/map-pin'
 import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
@@ -35,7 +41,14 @@ import PenLineIcon from 'virtual:icons/lucide/pen-line'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ResourceControlBarConfig } from '$lib/types'
+import type {
+  FeatureRowModel,
+  FeatureTextSearchWorkerRequest,
+  FeatureTextSearchWorkerResponse,
+  ResourceControlBarConfig,
+  Resource,
+  LocaleKey,
+} from '$lib/types'
 
 const filters = {
   resource: FirstClassResource.feature,
@@ -176,17 +189,347 @@ const sortables = createSortables([
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.feature)
+const isSearchFocused = $derived(
+  adminCtx.appCtx.state.ui.isSearchFocused[FirstClassResource.feature],
+)
+const featureLayoutMode = $derived(
+  adminCtx.appCtx.state.ui.layoutMode[FirstClassResource.feature],
+)
+const activeSearchResultCap = $derived(featureLayoutMode === 'card' ? 12 : 20)
 
 // STATE
 let listContainer: HTMLElement | null = $state(null)
+let featureTextSearchWorker = $state.raw<Worker | null>(null)
+let workerIndexVersion = $state(0)
+let latestWorkerRequestId = $state(0)
+let workerFilteredIds = $state.raw<string[] | null>(null)
+let latestRemoteRequestId = $state(0)
+let remoteQuery = $state('')
+let remoteMatchedEntities = $state.raw<Feature[] | null>(null)
+let remoteHasMore = $state<boolean | null>(null)
+let remoteSortSignature = $state('')
+let debouncedRemoteQuery = $state('')
+let optimisticEntities = $state.raw<Feature[]>([])
+let entities = $state.raw<Feature[]>([])
+let footerEntities = $state.raw<Feature[]>([])
+const textQuery = $derived(adminCtx.appCtx.state.filters.feature.text ?? '')
+const normalizedTextQuery = $derived(textQuery.trim())
+const sortSignature = $derived.by(() => {
+  const sorting = adminCtx.appCtx.state.viewSorting.feature
+  return `${sorting.sortBy}:${sorting.sortOrder}`
+})
+const displayEntities = $derived(
+  isSearchFocused && normalizedTextQuery !== ''
+    ? entities.slice(0, activeSearchResultCap)
+    : entities,
+)
 
 let selectedImage = $state<ImageCtxEnvelope | null>(null)
 let selectedFeature = $state<Feature | null>(null)
 let selectedFeatureIndex = $state<number>(-1)
 
-let entities: Feature[] = $derived(
-  adminCtx.getViewFilteredResource<Feature>(FirstClassResource.feature),
+const localeKey = $derived(getLocaleKey())
+const activeTranslationLocales = $derived.by(() => {
+  const locales: LocaleKey[] = []
+  const translationLocales =
+    adminCtx.appCtx.state.viewFilters.feature.translationLocales
+
+  for (const [locale, isActive] of Object.entries(translationLocales)) {
+    if (isActive) locales.push(locale as LocaleKey)
+  }
+
+  return locales
+})
+const isSuperAdmin = $derived(
+  Boolean(
+    adminCtx.appCtx.user &&
+      'superAdmin' in adminCtx.appCtx.user &&
+      adminCtx.appCtx.user.superAdmin,
+  ),
 )
+const baseEntities = $derived(
+  adminCtx.applyFeatureViewFilters(
+    adminCtx.appCtx.getFilteredResource<Feature>(FirstClassResource.feature, {
+      text: false,
+      state: true,
+    }),
+  ) as Feature[],
+)
+const baseEntitiesById = $derived.by(
+  () => new Map(baseEntities.map(feature => [feature.id, feature])),
+)
+const rowModelsById = $derived.by(() => {
+  const userPreferences = adminCtx.appCtx.getUserPreferences()
+  const entries = displayEntities.map(
+    feature =>
+      [
+        feature.id,
+        getCachedFeatureRowModel({
+          appCtx: adminCtx.appCtx,
+          feature,
+          localeKey,
+          activeTranslationLocales,
+          isSuperAdmin,
+          userPreferences,
+        }),
+      ] as const,
+  )
+
+  return new Map<string, FeatureRowModel>(entries)
+})
+
+function buildFeatureSearchIndex(feature: Feature) {
+  const textObject = feature.i18n?.[localeKey] ?? feature.i18n?.en
+  return {
+    id: feature.id,
+    title: textObject?.title ?? '',
+    description: textObject?.description ?? '',
+    displayAddress: textObject?.displayAddress ?? '',
+    contributor: feature.contributor?.name ?? '',
+  }
+}
+
+function getFeatureTitle(feature: Feature): string {
+  const textObject = feature.i18n?.[localeKey] ?? feature.i18n?.en
+  return textObject?.title?.trim() || feature.id
+}
+
+function getFeatureDescription(feature: Feature): string {
+  const textObject = feature.i18n?.[localeKey] ?? feature.i18n?.en
+  return textObject?.displayAddress?.trim() || textObject?.description?.trim() || ''
+}
+
+function toFallbackFeatureRowModel(feature: Feature): FeatureRowModel {
+  return {
+    id: feature.id,
+    title: getFeatureTitle(feature),
+    description: getFeatureDescription(feature),
+    imageAlt:
+      (feature.image as { altText?: string } | null)?.altText ?? 'Feature image',
+    isPublished: feature.isPublished,
+    isPendingReview: feature.isPendingReview,
+    stats: {
+      status: {},
+      content: {},
+      translation: {},
+      image: {},
+      category: {},
+      freeform: {},
+    },
+  }
+}
+
+function handleFeatureTextSearchWorkerMessage(
+  event: MessageEvent<FeatureTextSearchWorkerResponse>,
+): void {
+  const message = event.data
+
+  if (message.type !== 'result') return
+  if (message.indexVersion !== workerIndexVersion) return
+  if (message.requestId !== latestWorkerRequestId) return
+
+  workerFilteredIds = message.ids
+}
+
+function toUniqueFeatures(features: Feature[]): Feature[] {
+  const seen = new Set<string>()
+  const result: Feature[] = []
+
+  for (const feature of features) {
+    if (seen.has(feature.id)) continue
+    seen.add(feature.id)
+    result.push(feature)
+  }
+
+  return result
+}
+
+onMount(() => {
+  const worker = new Worker(
+    new URL('../../../lib/workers/featureTextSearchWorker.ts', import.meta.url),
+    {
+      type: 'module',
+    },
+  )
+
+  worker.onmessage = handleFeatureTextSearchWorkerMessage
+  featureTextSearchWorker = worker
+
+  return () => {
+    worker.terminate()
+    featureTextSearchWorker = null
+  }
+})
+
+const scheduleRemoteQuery = debounce((nextQuery: string) => {
+  debouncedRemoteQuery = nextQuery
+}, 350)
+
+function runScheduledRemoteQuery(nextQuery: string): void {
+  if (typeof scheduleRemoteQuery === 'function') {
+    scheduleRemoteQuery(nextQuery)
+    return
+  }
+
+  const debounced = scheduleRemoteQuery as { call?: (value: string) => void }
+  debounced.call?.(nextQuery)
+}
+
+$effect(() => {
+  if (!featureTextSearchWorker) return
+
+  const items = baseEntities.map(buildFeatureSearchIndex)
+  const nextIndexVersion = untrack(() => workerIndexVersion) + 1
+
+  workerIndexVersion = nextIndexVersion
+  workerFilteredIds = null
+  featureTextSearchWorker.postMessage({
+    type: 'set-index',
+    indexVersion: nextIndexVersion,
+    items,
+  } satisfies FeatureTextSearchWorkerRequest)
+})
+
+$effect(() => {
+  if (normalizedTextQuery === '') {
+    optimisticEntities = baseEntities
+    return
+  }
+
+  if (!featureTextSearchWorker) {
+    optimisticEntities = baseEntities.filter(feature =>
+      adminCtx.appCtx.textFilter(
+        FirstClassResource.feature,
+        feature,
+        normalizedTextQuery,
+      ),
+    )
+    return
+  }
+
+  if (workerFilteredIds == null) return
+
+  optimisticEntities = workerFilteredIds
+    .map(id => baseEntitiesById.get(id))
+    .filter((feature): feature is Feature => Boolean(feature))
+})
+
+$effect(() => {
+  if (!featureTextSearchWorker) return
+  if (workerIndexVersion === 0) return
+
+  const nextRequestId = untrack(() => latestWorkerRequestId) + 1
+
+  latestWorkerRequestId = nextRequestId
+  featureTextSearchWorker.postMessage({
+    type: 'filter',
+    indexVersion: workerIndexVersion,
+    requestId: nextRequestId,
+    query: textQuery,
+  } satisfies FeatureTextSearchWorkerRequest)
+})
+
+$effect(() => {
+  const nextQuery = normalizedTextQuery
+
+  runScheduledRemoteQuery(nextQuery)
+})
+
+$effect(() => {
+  const nextQuery = debouncedRemoteQuery.trim()
+
+  if (nextQuery === '') {
+    latestRemoteRequestId = untrack(() => latestRemoteRequestId) + 1
+    remoteQuery = ''
+    remoteMatchedEntities = null
+    remoteHasMore = null
+    remoteSortSignature = ''
+    return
+  }
+
+  if (
+    remoteMatchedEntities != null &&
+    remoteQuery !== '' &&
+    nextQuery.startsWith(remoteQuery) &&
+    remoteHasMore === false &&
+    remoteSortSignature === sortSignature
+  ) {
+    return
+  }
+
+  const nextRequestId = untrack(() => latestRemoteRequestId) + 1
+
+  latestRemoteRequestId = nextRequestId
+
+  void getFeatures({
+    conditions: adminCtx.appCtx.isSuperAdmin()
+      ? { isArchived: null, isPublished: null }
+      : { isArchived: false, isPublished: null },
+    prisms: adminCtx.appCtx.state.prisms,
+    sorting: adminCtx.appCtx.state.viewSorting.feature,
+    q: nextQuery,
+    meta: { isAdminRequest: true, profile: 'card' },
+  })
+    .then(result => {
+      if (latestRemoteRequestId !== nextRequestId) return
+
+      remoteQuery = nextQuery
+      remoteSortSignature = sortSignature
+      remoteMatchedEntities = toUniqueFeatures(result.data as Feature[])
+      remoteHasMore = result.hasMore ?? result.totalCount > result.data.length
+    })
+    .catch(() => {
+      if (latestRemoteRequestId !== nextRequestId) return
+      remoteQuery = ''
+      remoteMatchedEntities = null
+      remoteHasMore = null
+      remoteSortSignature = ''
+    })
+})
+
+$effect(() => {
+  if (normalizedTextQuery === '') {
+    entities = baseEntities
+    return
+  }
+
+  if (
+    remoteMatchedEntities != null &&
+    remoteQuery !== '' &&
+    normalizedTextQuery.startsWith(remoteQuery) &&
+    remoteHasMore === false &&
+    remoteSortSignature === sortSignature
+  ) {
+    entities = adminCtx.applyFeatureViewFilters(
+      remoteMatchedEntities.filter(feature =>
+        adminCtx.appCtx.textFilter(
+          FirstClassResource.feature,
+          feature,
+          normalizedTextQuery,
+        ),
+      ) as Resource[],
+    ) as Feature[]
+    return
+  }
+
+  if (
+    remoteQuery === normalizedTextQuery &&
+    remoteMatchedEntities != null &&
+    remoteSortSignature === sortSignature
+  ) {
+    entities = adminCtx.applyFeatureViewFilters(
+      remoteMatchedEntities as Resource[],
+    ) as Feature[]
+    return
+  }
+
+  entities = optimisticEntities
+})
+
+$effect(() => {
+  if (isSearchFocused && normalizedTextQuery !== '') return
+  footerEntities = entities
+})
 
 $effect(() => {
   headerCtrl.setHeaderForIndex(m.omni__title_features(), FeatureIcon)
@@ -203,7 +546,7 @@ $effect(() => {
         adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.feature],
     },
   )
-  headerCtrl.setFooter(CompletionFooter, { entities })
+  headerCtrl.setFooter(CompletionFooter, { entities: footerEntities })
 })
 // Derived states for navigation capability
 let canNavigatePrevious = $derived(() => {
@@ -308,13 +651,19 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<ResourceIndex resource={FirstClassResource.feature} {entities} bind:listContainer>
+<ResourceIndex
+  resource={FirstClassResource.feature}
+  entities={displayEntities}
+  bind:listContainer
+>
   {#snippet card(entity: Feature)}
     <FeatureIndexCard {entity} />
   {/snippet}
   {#snippet row(entity, index)}
+    {@const rowModel = rowModelsById.get(entity.id)}
     <FeatureRow
       {entity}
+      model={rowModel ?? toFallbackFeatureRowModel(entity)}
       {index}
       {adminCtx}
       onImageClick={openModal}
