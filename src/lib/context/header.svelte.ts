@@ -137,7 +137,9 @@ export class HeaderCtrl {
         >
       | HeaderFacetItem[],
   ): void {
-    this.state.meta.facets = this.normalizeFacetItems(facets)
+    const nextFacets = this.normalizeFacetItems(facets)
+    if (untrack(() => isSameFacetItems(this.state.meta.facets, nextFacets))) return
+    this.state.meta.facets = nextFacets
   }
 
   /**
@@ -215,11 +217,13 @@ export class HeaderCtrl {
    */
   setFormActions(formActions: Partial<HeaderFormActionsState>): void {
     const current = untrack(() => this.state.formActions ?? DEFAULT_HEADER_FORM_ACTIONS)
-    this.state.formActions = {
+    const next = {
       ...DEFAULT_HEADER_FORM_ACTIONS,
       ...current,
       ...formActions,
     }
+    if (shallowEqualRecord(current, next)) return
+    this.state.formActions = next
   }
 
   /** Read publish in-flight state from header form actions. */
@@ -398,6 +402,7 @@ export class HeaderCtrl {
               ref,
               label: value,
               icon: null,
+              disabled: false,
             }
           }
           return {
@@ -405,6 +410,7 @@ export class HeaderCtrl {
             label: value.label,
             icon: value.icon ?? null,
             hasIssues: value.hasIssues === true,
+            disabled: value.disabled === true,
           }
         })
   }
@@ -432,7 +438,38 @@ function shallowEqualRecord(
 
   if (leftKeys.length !== rightKeys.length) return false
 
-  return leftKeys.every(key => left[key] === right[key])
+  return leftKeys.every(key => isComparableValueEqual(left[key], right[key]))
+}
+
+function isComparableValueEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true
+
+  if (!isComparableObject(left) || !isComparableObject(right)) return false
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false
+    if (left.length !== right.length) return false
+
+    return left.every((value, index) => isComparableValueEqual(value, right[index]))
+  }
+
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+
+  if (leftKeys.length !== rightKeys.length) return false
+
+  return leftKeys.every(key =>
+    isComparableValueEqual(
+      (left as Record<string, unknown>)[key],
+      (right as Record<string, unknown>)[key],
+    ),
+  )
+}
+
+function isComparableObject(
+  value: unknown,
+): value is Record<string, unknown> | unknown[] {
+  return typeof value === 'object' && value !== null
 }
 
 function isSameFacetItems(left: HeaderFacetItem[], right: HeaderFacetItem[]): boolean {
@@ -444,7 +481,8 @@ function isSameFacetItems(left: HeaderFacetItem[], right: HeaderFacetItem[]): bo
       item?.ref === next?.ref &&
       item?.label === next?.label &&
       item?.icon === next?.icon &&
-      item?.hasIssues === next?.hasIssues
+      item?.hasIssues === next?.hasIssues &&
+      item?.disabled === next?.disabled
     )
   })
 }
