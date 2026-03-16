@@ -1,0 +1,69 @@
+@layer components {
+  :root {
+    --svrollbar-thumb-background: var(--color-base-100);
+    --svrollbar-thumb-opacity: 0.7;
+  }
+
+  .v-thumb {
+    min-height: 40px;
+  }
+}
+
+@layer base {
+  * {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
+  *::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  body.svrollbar-scrolling {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-user-drag: none !important;
+    -moz-user-drag: none !important;
+    user-drag: none !important;
+    pointer-events: none !important;
+  }
+
+  body.svrollbar-scrolling [data-svrollbar],
+  body.svrollbar-scrolling [data-svrollbar] * {
+    pointer-events: auto !important;
+  }
+
+  body.svrollbar-scrolling *,
+  body.svrollbar-scrolling img,
+  body.svrollbar-scrolling svg,
+  body.svrollbar-scrolling canvas,
+  body.svrollbar-scrolling video,
+  body.svrollbar-scrolling .completion-footer,
+  body.svrollbar-scrolling footer,
+  body.svrollbar-scrolling header,
+  body.svrollbar-scrolling nav,
+  body.svrollbar-scrolling [class*="footer"],
+  body.svrollbar-scrolling [class*="header"],
+  body.svrollbar-scrolling [class*="panel"],
+  body.svrollbar-scrolling [class*="container"],
+  body.svrollbar-scrolling footer[class*="completion"],
+  body.svrollbar-scrolling [data-testid*="completion"],
+  body.svrollbar-scrolling .bg-base-300 {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-user-drag: none !important;
+    -moz-user-drag: none !important;
+    user-drag: none !important;
+  }
+
+  body.svrollbar-scrolling img,
+  body.svrollbar-scrolling svg,
+  body.svrollbar-scrolling canvas,
+  body.svrollbar-scrolling video {
+    pointer-events: none !important;
+  }
+}

@@ -1,11 +1,10 @@
 <script lang="ts">
-// SVROLLBAR
-import Svrollbar from '$lib/components/layout/Svrollbar.svelte'
 // BROWSER
 import { BROWSER } from 'esm-env'
 // TYPES
 import type { ScrollbarProps } from './scrollbar.types'
 // BITS
+import { Svrollbar } from './components'
 import { VirtualScrollbar } from './src'
 
 let {
