@@ -80,11 +80,11 @@
   }
 
   .bits-theme .bits-min-width-guard__content {
-    @apply h-full w-full;
+    @apply flex h-full min-h-0 w-full min-w-0 flex-1;
   }
 
   .bits-theme .bits-min-width-guard__content--hidden {
-    @apply opacity-0;
+    @apply pointer-events-none invisible absolute inset-0 opacity-0;
   }
 
   .bits-theme .bits-min-width-guard {
@@ -137,5 +137,72 @@
 
   .bits-theme .bits-panel-root__content {
     @apply h-full;
+  }
+
+  .bits-theme .bits-admin-menu {
+    @apply flex w-full shrink-0 caret-transparent;
+  }
+
+  .bits-theme .bits-admin-menu--narrow {
+    @apply justify-center px-2 pb-3 pt-4;
+  }
+
+  .bits-theme .bits-admin-menu--wide {
+    @apply justify-center px-4 py-3;
+  }
+
+  .bits-theme .bits-admin-menu__list {
+    @apply flex items-center;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__list {
+    @apply flex-col gap-3;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__list {
+    @apply flex-row-reverse gap-2;
+  }
+
+  .bits-theme .bits-admin-menu__item {
+    @apply relative flex shrink-0 items-center justify-center;
+  }
+
+  .bits-theme .bits-admin-menu__button.bits-btn {
+    @apply size-12 border-0;
+    --btn-bg: transparent;
+    --btn-border: transparent;
+    --btn-hover-bg: color-mix(in oklab, var(--color-base-300) 42%, transparent);
+    --btn-active-bg: color-mix(in oklab, var(--color-base-300) 58%, transparent);
+    --btn-fg: color-mix(in oklab, var(--color-base-content) 88%, transparent);
+    --btn-hover-fg: var(--color-base-content);
+    --btn-active-fg: var(--color-base-content);
+    box-shadow: none;
+  }
+
+  .bits-theme
+    .bits-admin-menu__item[data-active="true"]
+    .bits-admin-menu__button.bits-btn {
+    --btn-hover-bg: transparent;
+    --btn-active-bg: transparent;
+    --btn-fg: var(--bits-admin-menu-active-color, var(--color-primary));
+    --btn-hover-fg: var(--bits-admin-menu-active-color, var(--color-primary));
+    --btn-active-fg: color-mix(
+      in oklab,
+      var(--bits-admin-menu-active-color, var(--color-primary)) 82%,
+      white
+    );
+  }
+
+  .bits-theme .bits-admin-menu__badge {
+    @apply pointer-events-none absolute right-0 top-0 inline-flex size-5 items-center justify-center rounded-full border border-base-100 bg-primary text-[0.7rem] font-semibold leading-none text-primary-content;
+    transform: translate(20%, -12%);
+  }
+
+  .bits-theme .bits-admin-menu__badge--accent {
+    @apply bg-accent text-accent-content;
+  }
+
+  .bits-theme .bits-admin-menu__badge--overflow {
+    @apply pb-px text-[0.85rem];
   }
 }

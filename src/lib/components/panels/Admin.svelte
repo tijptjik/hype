@@ -5,26 +5,21 @@ import { m } from '$lib/i18n'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // BITS
-import { PanelRoot as Panel } from '$lib/bits'
+import { AdminMenu, PanelRoot as Panel } from '$lib/bits'
 import AdminHeader from '$lib/components/panels/common/variants/AdminHeader.svelte'
 import Organisations from '$lib/components/panels/sections/Organisations.svelte'
 import Projects from '$lib/components/panels/sections/Projects.svelte'
 import Layers from '$lib/components/panels/sections/Layers.svelte'
 import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte'
-import AdminFooter from '$lib/components/panels/common/variants/AdminFooter.svelte'
 // SERVICES
 import { getSupportedFacetForResource, navigateOnAdminById } from '$lib/navigation'
 // ENUMS
 import { Panel as PanelEnum, FirstClassResource } from '$lib/enums'
 // TYPES
-import type {
-  Id,
-  Organisation,
-  Project,
-  Layer,
-  ResourceContext,
-  PanelProps,
-} from '$lib/types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Id, ResourceContext, PanelProps } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
@@ -179,7 +174,7 @@ let panelProps: PanelProps = $derived({
         </div>
       </div>
       <div class="flex w-full flex-shrink-0 flex-col items-end">
-        <AdminFooter {...panelProps} />
+        <AdminMenu isNarrow={panelProps.isNarrow} />
       </div>
     </div>
   </div>

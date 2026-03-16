@@ -57,6 +57,7 @@ export {
 
 export {
   AdaptiveToolbar,
+  AdminMenu,
   AppMenu,
   AutoHide,
   CompletionFooter,
@@ -113,3 +114,5 @@ export {
   UserCapabilityMatrix,
   UserCard,
 } from './patterns'
+
+export type { HeaderProps } from './patterns/layout/header'
