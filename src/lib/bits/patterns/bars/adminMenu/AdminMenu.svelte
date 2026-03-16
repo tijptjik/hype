@@ -45,7 +45,6 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       icon: MapPin,
       onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.feature),
       notificationCount: featureCount,
-      tone: 'primary',
     },
     {
       href: `${ADMIN_PATH}/tasks`,
@@ -53,7 +52,6 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       icon: InboxArrowDown,
       onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.task),
       notificationCount,
-      tone: 'secondary',
     },
   ]
 
@@ -63,14 +61,12 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
         href: `${ADMIN_PATH}/images/batch`,
         label: 'Uploads',
         icon: CloudArrowUp,
-        tone: 'accent',
       },
       {
         href: `${ADMIN_PATH}/hubs`,
         label: 'Hubs',
         icon: BuildingLibrary,
         onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.hub),
-        tone: 'accent',
       },
     )
   }
@@ -82,7 +78,6 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
         : '/',
     label: 'Map',
     icon: MapIcon,
-    tone: 'primary',
   })
 
   return items
@@ -103,30 +98,6 @@ function isActive(href: string): boolean {
 
   return page.url.pathname.startsWith(href)
 }
-
-function getButtonColor(item: AdminMenuItem): 'neutral' | 'secondary' | 'accent' {
-  if (item.tone === 'secondary') {
-    return 'secondary'
-  }
-
-  if (item.tone === 'accent') {
-    return 'accent'
-  }
-
-  return 'neutral'
-}
-
-function getActiveColor(item: AdminMenuItem): string {
-  if (item.tone === 'secondary') {
-    return 'var(--color-secondary)'
-  }
-
-  if (item.tone === 'accent') {
-    return 'var(--color-accent)'
-  }
-
-  return 'var(--color-primary)'
-}
 </script>
 
 <nav class={classes} aria-label="Admin menu">
@@ -138,16 +109,16 @@ function getActiveColor(item: AdminMenuItem): string {
       <div
         class="bits-admin-menu__item"
         data-active={active ? 'true' : undefined}
-        style={`--bits-admin-menu-active-color: ${getActiveColor(item)};`}
+        style={`--bits-admin-menu-active-color: var(--color-primary);`}
       >
         <Button
           text={item.label}
           iconComponent={item.icon}
           href={item.href}
           onClick={item.onClick ?? undefined}
-          color={getButtonColor(item)}
+          color="neutral"
           style="ghost"
-          size="md"
+          size="lg"
           modifier="circle"
           hideLabel={true}
           hideLabelInstantly={true}
