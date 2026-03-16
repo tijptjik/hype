@@ -130,6 +130,7 @@ $effect(() => {
             title={resultMap.title(item)}
             descriminator={resultMap.descriminator?.(item)}
             disabled={isSearchResultDisabled(item, resultMap)}
+            disabledMeta={resultMap.disabledMeta?.(item)}
             onSelect={() => selectItem(item)}
           />
         {/each}

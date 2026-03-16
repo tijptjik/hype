@@ -57,11 +57,23 @@
   /* Search Results */
   /* --------- */
   .bits-theme .bits-search-result-item {
-    @apply flex w-full items-center gap-3 rounded-md bg-[#242424] px-3 py-3 text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none focus-visible:bg-base-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-base-300;
+    @apply relative flex w-full items-center gap-3 overflow-hidden rounded-md bg-[#242424] px-3 py-3 text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none focus-visible:bg-base-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-base-300;
   }
 
   .bits-theme .bits-search-result-item:disabled {
-    @apply cursor-not-allowed opacity-60 hover:bg-[#242424] focus:bg-[#242424] focus-visible:bg-[#242424] focus-visible:ring-0;
+    @apply cursor-not-allowed hover:bg-[#242424] focus:bg-[#242424] focus-visible:bg-[#242424] focus-visible:ring-0;
+  }
+
+  .bits-theme .bits-search-result-item__content {
+    @apply flex min-w-0 flex-1 items-center gap-3;
+  }
+
+  .bits-theme
+    .bits-search-result-item[data-disabled="true"]
+    .bits-search-result-item__content {
+    filter: blur(2px);
+    opacity: 0.42;
+    transform: scale(0.995);
   }
 
   .bits-theme .bits-search-result-item__image {
@@ -106,5 +118,20 @@
 
   .bits-theme .bits-search-result-item__discriminator {
     @apply max-w-40 shrink-0 truncate text-right text-xs text-neutral-content/80 pr-4;
+  }
+
+  .bits-theme .bits-search-result-item__disabled-callout {
+    @apply pointer-events-none absolute inset-y-0 right-3 flex flex-col items-end justify-center;
+    gap: 0.1rem;
+  }
+
+  .bits-theme .bits-search-result-item__disabled-label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.16em];
+    color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
+  }
+
+  .bits-theme .bits-search-result-item__disabled-value {
+    @apply text-xs font-semibold uppercase;
+    color: color-mix(in oklab, var(--color-base-content) 92%, white 8%);
   }
 }

@@ -6,6 +6,7 @@ export interface SearchResultMap<T> {
   title: (item: T) => string
   descriminator?: (item: T) => string | null | undefined
   disabled?: (item: T) => boolean
+  disabledMeta?: (item: T) => SearchResultDisabledMeta | null | undefined
 }
 
 export interface SearchProps<T> {
@@ -62,6 +63,12 @@ export interface SearchResultItemProps {
   title: string
   descriminator?: string | null
   disabled?: boolean
+  disabledMeta?: SearchResultDisabledMeta | null
   onSelect?: () => void
   class?: string
+}
+
+export interface SearchResultDisabledMeta {
+  label: string
+  value?: string | null
 }

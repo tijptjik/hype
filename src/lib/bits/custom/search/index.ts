@@ -4,6 +4,7 @@ export type {
   SearchProps,
   LocalSearchProps,
   SearchResultMap,
+  SearchResultDisabledMeta,
   SearchBarProps,
   SearchResultItemProps,
   SearchResultWrapperProps,

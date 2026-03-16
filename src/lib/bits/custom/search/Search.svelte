@@ -1,14 +1,19 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick, untrack } from 'svelte'
+// I18N
 import { m } from '$lib/i18n'
+// TYPES
 import type { SearchProps } from './search.types'
+// UTILS
 import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.utils'
+// COMPONENTS
 import * as SearchPrimitive from './src/components'
+// API
 import { searchUsers as searchUsersRemote } from '$lib/api/server/user.remote'
 
 let {
   placeholder = 'Search',
-  minChars = 2,
+  minChars = 1,
   focusOnMount = false,
   prefetchOnMount = false,
   prefetchKey = null,
@@ -29,22 +34,35 @@ let results = $state<T[]>([])
 let isLoading = $state(false)
 let requestId = $state(0)
 let rootEl = $state<HTMLDivElement | null>(null)
-let isFocusWithin = $state(false)
+let isOpen = $state(false)
+let emptyQueryResults = $state<T[]>(initialResults)
 let lastPrefetchKey = $state<unknown>(Symbol('search-prefetch-init'))
 let lastVisibility = $state<boolean | null>(null)
-let focusOutTimer: ReturnType<typeof setTimeout> | null = null
-const areResultsVisible = $derived(isFocusWithin && results.length > 0)
-const shouldShowEmptyState = $derived(
-  isFocusWithin && !isLoading && results.length === 0,
-)
+let openEpoch = $state(0)
+const areResultsVisible = $derived(isOpen && results.length > 0)
+const shouldShowEmptyState = $derived(isOpen && !isLoading && results.length === 0)
+
+function openResults(): void {
+  isOpen = true
+  openEpoch = Date.now()
+}
 
 async function handleQuery(
   nextQuery: string,
   options: { force?: boolean } = {},
 ): Promise<void> {
+  openResults()
   query = nextQuery
+  const trimmedQuery = nextQuery.trim()
 
-  if (!options.force && nextQuery.trim().length < minChars) {
+  if (trimmedQuery.length === 0 && !options.force) {
+    requestId += 1
+    isLoading = false
+    results = emptyQueryResults
+    return
+  }
+
+  if (!options.force && trimmedQuery.length < minChars) {
     results = []
     return
   }
@@ -53,15 +71,15 @@ async function handleQuery(
   isLoading = true
   try {
     const response = onInput
-      ? await onInput(nextQuery.trim())
+      ? await onInput(trimmedQuery)
       : ((
           await searchUsersRemote(
             userQueryParams
               ? {
                   ...userQueryParams,
-                  q: nextQuery.trim(),
+                  q: trimmedQuery,
                 }
-              : { q: nextQuery.trim() },
+              : { q: trimmedQuery },
           )
         ).data as T[])
     if (currentRequestId !== requestId) return
@@ -72,7 +90,11 @@ async function handleQuery(
         return typeof candidate === 'string' ? candidate : ''
       })
     const excluded = new Set(excludeIds)
-    results = response.filter(item => !excluded.has(toId(item)))
+    const nextResults = response.filter(item => !excluded.has(toId(item)))
+    if (trimmedQuery.length === 0) {
+      emptyQueryResults = nextResults
+    }
+    results = nextResults
   } catch {
     if (currentRequestId !== requestId) return
     results = []
@@ -82,8 +104,9 @@ async function handleQuery(
 }
 
 function handleClear(): void {
+  openResults()
   query = ''
-  results = []
+  results = emptyQueryResults
 }
 
 function handleInputKeydown(event: KeyboardEvent): void {
@@ -103,25 +126,17 @@ function handleInputKeydown(event: KeyboardEvent): void {
 }
 
 function handleFocus(): void {
+  openResults()
   if (query.trim().length > 0) return
+  if (emptyQueryResults.length > 0) {
+    results = emptyQueryResults
+    return
+  }
   void handleQuery('', { force: true })
 }
 
 function handleRootFocusIn(): void {
-  if (focusOutTimer) {
-    clearTimeout(focusOutTimer)
-    focusOutTimer = null
-  }
-  isFocusWithin = true
-}
-
-function handleRootFocusOut(event: FocusEvent): void {
-  const nextTarget = event.relatedTarget
-  if (nextTarget instanceof Node && rootEl?.contains(nextTarget)) return
-  focusOutTimer = setTimeout(() => {
-    isFocusWithin = false
-    focusOutTimer = null
-  }, 0)
+  openResults()
 }
 
 function selectItem(item: T): void {
@@ -146,7 +161,9 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (query.trim().length > 0) return
+  initialResults
+  emptyQueryResults = initialResults
+  if (untrack(() => query.trim().length > 0)) return
   results = initialResults
 })
 
@@ -155,13 +172,31 @@ $effect(() => {
   lastVisibility = areResultsVisible
   onResultsVisibilityChange?.(areResultsVisible)
 })
+
+$effect(() => {
+  if (!isOpen) return
+
+  const handleDocumentClick = (event: MouseEvent): void => {
+    const root = rootEl
+    if (!root) return
+    if (Date.now() - openEpoch < 16) return
+
+    const target = event.target
+    if (target instanceof Node && root.contains(target)) return
+    isOpen = false
+  }
+
+  document.addEventListener('click', handleDocumentClick, true)
+  return () => {
+    document.removeEventListener('click', handleDocumentClick, true)
+  }
+})
 </script>
 
 <div
   bind:this={rootEl}
   class={`bits-search ${className}`}
   onfocusin={handleRootFocusIn}
-  onfocusout={handleRootFocusOut}
 >
   <SearchPrimitive.SearchBar
     bind:query
@@ -183,6 +218,7 @@ $effect(() => {
             title={resultMap.title(item)}
             descriminator={resultMap.descriminator?.(item)}
             disabled={isSearchResultDisabled(item, resultMap)}
+            disabledMeta={resultMap.disabledMeta?.(item)}
             onSelect={() => selectItem(item)}
           />
         {/each}
