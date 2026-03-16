@@ -18,13 +18,13 @@ let projectName = hierarchy.project
 </script>
 
 {#if organisationName || projectName}
-  <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
+  <p class="flex items-start space-x-0.5 font-mono text-xs uppercase tracking-widest">
     {#if organisationName}
-      <span class="text-primary">{organisationName}</span>
+      <span class="min-w-0 text-primary">{organisationName}</span>
     {/if}
     {#if projectName}
-      <span class="px-0">›</span>
-      <span class="text-accent">{projectName}</span>
+      <span class="shrink-0 px-0">›</span>
+      <span class="min-w-0 text-accent">{projectName}</span>
     {/if}
   </p>
 {/if}

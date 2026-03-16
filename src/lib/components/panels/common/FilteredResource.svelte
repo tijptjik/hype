@@ -133,7 +133,7 @@ function hideTooltip() {
     {:else}
       <div
         onclick={panelProps.isNarrow ? onNavigate : onToggle}
-        class="h-2 w-2 rounded-full {dotBaseClass} group-hover:{isSelected
+        class="h-2 w-2 shrink-0 rounded-full {dotBaseClass} group-hover:{isSelected
           ? bgHoverClass
           : 'bg-base-content/50'} group-focus-visible:{isSelected
           ? bgHoverClass
@@ -147,10 +147,10 @@ function hideTooltip() {
       ></div>
     {/if}
     {#if !panelProps.isNarrow}
-      <div class="flex flex-col items-start gap-0">
+      <div class="flex min-w-0 overflow-visible flex-col items-start gap-0">
         <ResourceHierarchyPath {hierarchy} />
         <p
-          class="whitespace-nowrap font-light {isCurrentActive
+          class="min-w-0 whitespace-normal break-words font-light leading-tight {isCurrentActive
             ? selectedClass.replace('bg-', 'text-')
             : ''}"
         >
