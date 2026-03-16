@@ -3,7 +3,7 @@ import { slide } from 'svelte/transition'
 import { Search, SectionHeader } from '$lib/bits/custom'
 import { getURLfromImage } from '$lib/client/services/image'
 import * as FormOrganisationsSectionPrimitive from './components'
-import { OrganisationCard } from '$lib/bits/patterns/cards/organisationCard'
+import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
 import {
   isOrganisationSearchResultDisabled,
   toOrganisationSearchDiscriminator,
@@ -154,8 +154,12 @@ $effect(() => {
 })
 </script>
 
-<section class={`bits-form__section bits-form__hub-orgs ${className}`}>
-  <SectionHeader {title} description={subtitle} class="bits-form__hub-orgs-header">
+<section class={`bits-form__section bits-form__parent-resource ${className}`}>
+  <SectionHeader
+    {title}
+    description={subtitle}
+    class="bits-form__parent-resource-header"
+  >
     {#snippet right()}
       <FormOrganisationsSectionPrimitive.Actions
         {isAdding}
@@ -172,7 +176,7 @@ $effect(() => {
   {#if isAdding && showModeUi}
     <div
       transition:slide={{ duration: showModeUi ? 200 : 0 }}
-      class="bits-form__hub-orgs-search"
+      class="bits-form__parent-resource-search"
     >
       <Search
         placeholder="Search organisations..."
@@ -200,19 +204,19 @@ $effect(() => {
     </div>
   {/if}
 
-  <div class="bits-form__hub-orgs-list">
+  <div class="bits-form__parent-resource-list">
     {#each sortedOrganisations as organisation (organisation.id)}
       {@const selection = toSelection(organisation.id)}
-      <OrganisationCard.Root>
-        <OrganisationCard.Media
+      <ResourceCard.Root>
+        <ResourceCard.Media
           image={toImageSrc(organisation)}
           alt={organisation.i18n?.en?.name || organisation.code}
         />
-        <OrganisationCard.Body
+        <ResourceCard.Body
           code={organisation.code}
           name={organisation.i18n?.en?.name || organisation.code}
         />
-        <OrganisationCard.Actions
+        <ResourceCard.Actions
           {isRemoving}
           {isEditing}
           {isSubmitting}
@@ -223,7 +227,7 @@ $effect(() => {
           onToggleCoreInclusive={value => handleCoreInclusiveToggle(organisation.id, value)}
           onRemove={() => onRemoveOrganisation(organisation.id)}
         />
-      </OrganisationCard.Root>
+      </ResourceCard.Root>
     {/each}
   </div>
 
