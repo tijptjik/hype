@@ -635,10 +635,7 @@ export function primeFeatureStatsCache(
   // Calculate hasDisplayAddress separately (same logic as hasTitle/hasDescription)
   const hasDisplayAddress = (
     Object.values(feature?.i18n ?? {}) as FeatureI18nDB[]
-  ).some(
-    (t: FeatureI18nDB) =>
-      !t.displayAddressGen && t.displayAddress && t.displayAddress.length > 0,
-  )
+  ).some((t: FeatureI18nDB) => t.displayAddress && t.displayAddress.length > 0)
   setCachedFeatureBoolean(appCtx, feature, 'hasDisplayAddress', hasDisplayAddress)
 
   const imageCompletion = calculateImageCompletion(feature)
@@ -657,20 +654,22 @@ export function primeFeatureStatsCache(
   )
 
   // Cache property presence by propertyId (not index)
-  const allProperties = appCtx.cache.property
-
-  // Cache classifier (category) presence
-  const classifiers = Array.from(allProperties.values()).filter(
-    p => p.type === 'classifier',
+  // Cache classifier (category) presence only for properties available on this feature's layer.
+  const classifiers = getAvailableFeatureStatProperties(
+    appCtx,
+    feature.layerId,
+    'classifier',
   )
   classifiers.forEach(property => {
     const isPresent = calculateClassifierPresence(feature, property.id, appCtx)
     setCachedFeaturePropertyBoolean(appCtx, feature, property.id, isPresent)
   })
 
-  // Cache specifier presence
-  const specifiers = Array.from(allProperties.values()).filter(
-    p => p.type === 'specifier',
+  // Cache specifier presence only for properties available on this feature's layer.
+  const specifiers = getAvailableFeatureStatProperties(
+    appCtx,
+    feature.layerId,
+    'specifier',
   )
   specifiers.forEach(property => {
     const isPresent = calculateSpecifierPresence(feature, property.id)
@@ -765,7 +764,6 @@ export function calculateContentStatuses(
           ) as Array<Record<string, unknown>>
         ).some(
           translation =>
-            !translation.displayAddressGen &&
             typeof translation.displayAddress === 'string' &&
             translation.displayAddress.length > 0,
         ),
@@ -1097,14 +1095,8 @@ export function calculateOverallStats(
   let imageScore = 0
   let categoryScore = 0
   let freeformScore = 0
-
-  const allProperties = appCtx.cache.property
-  const classifiers = Array.from(allProperties.values()).filter(
-    p => p.type === 'classifier',
-  )
-  const specifiers = Array.from(allProperties.values()).filter(
-    p => p.type === 'specifier',
-  )
+  const availableClassifiersByLayer = new Map<Id, Property[]>()
+  const availableSpecifiersByLayer = new Map<Id, Property[]>()
 
   // Get active locales from admin context if available
   let activeLocales = supportedLocaleKeys // Default to all locales
@@ -1170,26 +1162,48 @@ export function calculateOverallStats(
       imageScore += 1
     }
 
-    // Categories - count how many classifier properties have values
-    if (classifiers.length > 0) {
+    // Categories - score against only the classifier properties available on this feature's layer.
+    let availableClassifiers = availableClassifiersByLayer.get(feature.layerId)
+    if (!availableClassifiers) {
+      availableClassifiers = getAvailableFeatureStatProperties(
+        appCtx,
+        feature.layerId,
+        'classifier',
+      )
+      availableClassifiersByLayer.set(feature.layerId, availableClassifiers)
+    }
+    if (availableClassifiers.length === 0) {
+      categoryScore += 1
+    } else {
       let filledClassifiers = 0
-      for (const classifier of classifiers) {
+      for (const classifier of availableClassifiers) {
         if (calculateClassifierPresence(feature, classifier.id, appCtx)) {
           filledClassifiers += 1
         }
       }
-      categoryScore += filledClassifiers / classifiers.length
+      categoryScore += filledClassifiers / availableClassifiers.length
     }
 
-    // Freeform - count how many specifier properties have values
-    if (specifiers.length > 0) {
+    // Freeform - score against only the specifier properties available on this feature's layer.
+    let availableSpecifiers = availableSpecifiersByLayer.get(feature.layerId)
+    if (!availableSpecifiers) {
+      availableSpecifiers = getAvailableFeatureStatProperties(
+        appCtx,
+        feature.layerId,
+        'specifier',
+      )
+      availableSpecifiersByLayer.set(feature.layerId, availableSpecifiers)
+    }
+    if (availableSpecifiers.length === 0) {
+      freeformScore += 1
+    } else {
       let filledSpecifiers = 0
-      for (const specifier of specifiers) {
+      for (const specifier of availableSpecifiers) {
         if (calculateSpecifierPresence(feature, specifier.id)) {
           filledSpecifiers += 1
         }
       }
-      freeformScore += filledSpecifiers / specifiers.length
+      freeformScore += filledSpecifiers / availableSpecifiers.length
     }
   }
 
