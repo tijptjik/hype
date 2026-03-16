@@ -29,6 +29,45 @@ export const getUrlForResourceIndex = (resource: FirstClassResource) => {
   return `${ADMIN_PATH}/${getResourcePathPart(resource)}`
 }
 
+export const getAdminIndexResourceType = (
+  pathname: string,
+): NavigableResource | false => {
+  const resourceType = Object.entries(ResourcePath).find(
+    ([_, path]) => pathname === `/admin/${path}` || pathname === `/admin/${path}/`,
+  )?.[0]
+
+  return resourceType && isNavigable(resourceType)
+    ? (resourceType as NavigableResource)
+    : false
+}
+
+export const resetAdminIndexResourceRef = (
+  adminCtx: AdminCtx,
+  pathname: string,
+): void => {
+  const resourceType = getAdminIndexResourceType(pathname)
+
+  if (!resourceType || adminCtx.activeResourceRef === false) {
+    return
+  }
+
+  adminCtx.setResourceRef(false, resourceType)
+}
+
+export const shouldClearAdminFeatureCacheOnNavigate = (
+  fromRouteId?: string | null,
+  toRouteId?: string | null,
+): boolean => {
+  if (!fromRouteId || !toRouteId) {
+    return false
+  }
+
+  const fromIsAdmin = fromRouteId.startsWith('/admin')
+  const toIsAdmin = toRouteId.startsWith('/admin')
+
+  return fromIsAdmin !== toIsAdmin
+}
+
 export const getResourceRef = (
   adminCtx: AdminCtx,
   resource: FirstClassResource,

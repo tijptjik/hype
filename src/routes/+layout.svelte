@@ -5,17 +5,16 @@ import { onMount } from 'svelte'
 // STORES
 import { page } from '$app/state'
 // QUERY
-import { QueryClientProvider } from '@tanstack/svelte-query'
-import { SvelteQueryDevtools } from '@tanstack/svelte-query-devtools'
+import type { QueryClient } from '@tanstack/svelte-query'
 // AUTH
 import { useSession } from '$lib/auth/client'
 // I18N
-import { getLocale, setLocale } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
 // BITS
-import { Toaster } from '$lib/bits'
+import { App } from '$lib/bits'
 // LIB
 import { loadScript } from '$lib'
 // MAPLIBRE
@@ -23,7 +22,6 @@ import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
 // STYLES
 import '$lib/styles/app.css'
 // TYPES
-import type { QueryClient } from '@tanstack/svelte-query'
 import type { LayoutData, LayoutProps } from './$types'
 import type { SessionUser } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -119,7 +117,6 @@ watch(
       // User logout
       appCtx.setUser(null)
     }
-    // Ignore cases where session refreshed but user didn't change
   },
 )
 
@@ -143,60 +140,14 @@ watch(
 )
 </script>
 
-<svelte:window bind:innerWidth={windowWidth} />
-
-<svelte:head>
-  <title>{title}</title>
-  <meta property="og:site_name" content={site_name}>
-  <meta property="og:type" content="article">
-  <meta name="description" content={site_description}>
-  <meta property="og:description" content={site_description}>
-  <meta name="twitter:description" content={site_description}>
-  <meta property="og:title" content={title}>
-  <meta property="og:image" content={socialImage.image}>
-  <meta property="og:image:width" content={socialImage.width}>
-  <meta property="og:image:height" content={socialImage.height}>
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content={title}>
-  <meta name="twitter:image" content={socialImage.image}>
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Geologica:wght,CRSV@100..900,0&family=IBM+Plex+Mono:wght@400;700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Tilt+Neon&display=swap"
-    rel="stylesheet"
-  >
-  {#if getLocale() === 'zh-hant'}
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@100..900&display=swap"
-      rel="stylesheet"
-    >
-  {:else if getLocale() === 'zh-hans'}
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap"
-      rel="stylesheet"
-    >
-  {/if}
-</svelte:head>
-
-<QueryClientProvider client={queryClient}>
-  <div
-    class="flex h-lvh w-dvw flex-row overscroll-contain bg-black"
-    class:font-hant={getLocale() === 'zh-hant'}
-    class:font-hans={getLocale() === 'zh-hans'}
-  >
-    <Toaster />
-    <svelte:boundary>
-      <!-- @ts-expect-error SVELTE ASYNC -->
-      {#snippet pending()}
-        <div
-          class="absolute inset-0 flex items-center justify-center overscroll-contain rounded-lg bg-base-300"
-        >
-          <div class="loading loading-ring loading-lg text-primary"></div>
-        </div>
-      {/snippet}
-      {@render children()}
-    </svelte:boundary>
-  </div>
-  <!-- TODO Prevent this from ever running in PRODUCTION (but it's OK on Preview) -->
-</QueryClientProvider>
+<App
+  bind:windowWidth
+  {queryClient}
+  localeKey={getLocaleKey()}
+  {title}
+  siteName={site_name}
+  siteDescription={site_description}
+  {socialImage}
+>
+  {@render children()}
+</App>

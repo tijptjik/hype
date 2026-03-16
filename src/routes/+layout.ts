@@ -11,8 +11,8 @@ export const trailingSlash = 'never'
 
 export async function load({ data }) {
   const hub = data.hub as HubOptsExtended
-  const locale = getLocaleKey()
-  const localizedHubI18n = hub.i18n?.[locale]
+  const localeKey = getLocaleKey()
+  const localizedHubI18n = hub.i18n?.[localeKey]
   const fallbackHubI18n = hub.i18n?.en ?? Object.values(hub.i18n ?? {})[0]
 
   /**

@@ -56,8 +56,10 @@ export {
 } from './custom'
 
 export {
+  AdminShell,
   AdaptiveToolbar,
   AdminMenu,
+  App,
   AppMenu,
   AutoHide,
   CompletionFooter,

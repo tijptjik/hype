@@ -18,6 +18,7 @@ export type {
   HeaderSubtitleProps as HeaderPrimitiveSubtitleProps,
 } from './header/src/headerPrimitive.types.js'
 export * from './icon'
+export * from './loading'
 export * as Index from './index/index'
 export * as Main from './main'
 export * from './rows'

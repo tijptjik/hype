@@ -1,4 +1,16 @@
 @layer components {
+  .bits-theme .bits-app-shell {
+    @apply flex h-lvh min-h-0 w-dvw min-w-0 flex-row overflow-hidden overscroll-contain bg-black;
+  }
+
+  .bits-theme .bits-app-shell--font-hant {
+    font-family: var(--font-hant);
+  }
+
+  .bits-theme .bits-app-shell--font-hans {
+    font-family: var(--font-hans);
+  }
+
   .bits-theme .bits-overlay-bar {
     @apply pointer-events-none absolute inset-x-0 bottom-0 z-40 px-3 pb-[80px] pt-4 caret-transparent;
   }
@@ -79,16 +91,27 @@
     }
   }
 
+  .bits-theme .bits-min-width-guard__root {
+    @apply relative flex min-h-0 min-w-0 flex-1;
+    width: 100dvw;
+    height: 100dvh;
+  }
+
   .bits-theme .bits-min-width-guard__content {
-    @apply flex h-full min-h-0 w-full min-w-0 flex-1;
+    @apply flex min-h-0 min-w-0 flex-1;
+    width: 100dvw;
+    height: 100dvh;
   }
 
   .bits-theme .bits-min-width-guard__content--hidden {
-    @apply pointer-events-none invisible absolute inset-0 opacity-0;
+    @apply pointer-events-none opacity-0;
   }
 
   .bits-theme .bits-min-width-guard {
-    @apply fixed inset-0 z-[100] flex items-center justify-center bg-base-100 p-4 caret-transparent;
+    @apply absolute z-[100] flex items-center justify-center bg-base-100 p-4 caret-transparent;
+    inset: 0;
+    width: 100dvw;
+    height: 100dvh;
   }
 
   .bits-theme .bits-min-width-guard__card {
@@ -204,5 +227,15 @@
 
   .bits-theme .bits-admin-menu__badge--overflow {
     @apply pb-px text-[0.85rem];
+  }
+
+  .bits-theme .bits-admin-shell {
+    @apply flex h-full min-h-0 w-full min-w-0 overflow-hidden;
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+
+  .bits-theme .bits-admin-shell__main {
+    @apply flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
   }
 }
