@@ -33,7 +33,6 @@ export async function load({ data }) {
 
   return {
     queryClient,
-    PUBLIC_SVELTE_QUERY_DEVTOOLS: data.PUBLIC_SVELTE_QUERY_DEVTOOLS,
     hub,
     title: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',
     site_name: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',

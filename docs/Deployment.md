@@ -78,18 +78,14 @@ Stored in `wrangler.toml` and accessible in both server and client contexts:
 ```toml
 [vars]
 PUBLIC_CLOUDINARY_CLOUD_NAME="dg6vtsga1"
-PUBLIC_SVELTE_QUERY_DEVTOOLS=false
 
 [env.preview.vars]
-PUBLIC_SVELTE_QUERY_DEVTOOLS=true
 
 [env.production.vars]
-PUBLIC_SVELTE_QUERY_DEVTOOLS=false
 ```
 
 **Available Public Variables:**
 
-- `PUBLIC_SVELTE_QUERY_DEVTOOLS` - Enable/disable query devtools
 - `PUBLIC_DRIZZLE_LOGGER` - Enable/disable database logging
 - `PUBLIC_HUB_CODE` - Hub override for development
 - `PUBLIC_CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name

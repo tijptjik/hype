@@ -51,7 +51,6 @@ migrations_dir = "migrations"
 ENVIRONMENT = "local"
 
 PUBLIC_DRIZZLE_LOGGER = false
-PUBLIC_SVELTE_QUERY_DEVTOOLS = false
 
 PUBLIC_HUB_CODE = "core"
 
@@ -73,7 +72,6 @@ name = "hype-prod"
 ENVIRONMENT = "production"
 
 PUBLIC_DRIZZLE_LOGGER = false
-PUBLIC_SVELTE_QUERY_DEVTOOLS = false
 
 PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
 PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
@@ -111,7 +109,6 @@ name = "hype-preview"
 ENVIRONMENT = "preview"
 
 PUBLIC_DRIZZLE_LOGGER = false
-PUBLIC_SVELTE_QUERY_DEVTOOLS = false
 
 PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
 PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"

@@ -80,7 +80,6 @@ declare global {
         AZURE_TRANSLATION_KEY: string
         PUBLIC_AZURE_TRANSLATION_REGION: string
         // PUBLIC VARS
-        PUBLIC_SVELTE_QUERY_DEVTOOLS: string
         PUBLIC_DRIZZLE_LOGGER: string
         PUBLIC_HUB_CODE: string
         PUBLIC_GIPHY_KEY: string

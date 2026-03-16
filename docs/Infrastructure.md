@@ -125,7 +125,6 @@ Public environment variables are configured in `wrangler.toml` and read at runti
 ```toml
 [vars]
 PUBLIC_DRIZZLE_LOGGER=false
-PUBLIC_SVELTE_QUERY_DEVTOOLS=false
 # ... other public vars
 ```
 
