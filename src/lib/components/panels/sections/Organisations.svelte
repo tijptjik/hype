@@ -94,7 +94,7 @@ let handleReset = () => {
   icon={UserGroup}
   iconVerticalPaddingClass="pt-2"
   iconColorClass="text-primary"
-  collapsedContent={appCtx.isAdmin() ? SelectedOrganisations : undefined}
+  collapsedContent={SelectedOrganisations}
   defaultOpen={isDefaultOpen}
   {...panelProps}
 >

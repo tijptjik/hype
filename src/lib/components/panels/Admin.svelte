@@ -55,8 +55,8 @@ let panelProps: PanelProps = $derived({
   <div class="flex h-full min-h-0 flex-col">
     <AdminHeader title={m.menu_admin()} {...panelProps} />
     <div class="flex-grow-1 flex min-h-0 flex-col">
-      <div class="flex-grow-1 flex min-h-0 flex-col overflow-hidden overscroll-none">
-        <div class="flex-grow-1 flex min-h-0 flex-col">
+      <div class="admin-sections">
+        <div class="admin-sections__section admin-sections__section--bounded">
           <Organisations {...panelProps}>
             {#snippet filteredItem(
               organisation: Organisation,
@@ -94,7 +94,7 @@ let panelProps: PanelProps = $derived({
             {/snippet}
           </Organisations>
         </div>
-        <div class="flex-grow-1 flex min-h-0 flex-col">
+        <div class="admin-sections__section admin-sections__section--bounded">
           <Projects {...panelProps}>
             {#snippet filteredItem(
               project: Project,
@@ -135,7 +135,7 @@ let panelProps: PanelProps = $derived({
             {/snippet}
           </Projects>
         </div>
-        <div class="flex-grow-4 flex min-h-0 flex-col">
+        <div class="admin-sections__section admin-sections__section--layers">
           <Layers {...panelProps}>
             {#snippet filteredItem(
               layer: Layer,
@@ -184,3 +184,34 @@ let panelProps: PanelProps = $derived({
     </div>
   </div>
 </Panel>
+
+<style>
+.admin-sections {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.admin-sections__section {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-sections__section--bounded {
+  max-height: 33.333%;
+  flex: 0 0 auto;
+}
+
+.admin-sections__section--layers {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.admin-sections__section > :global(section) {
+  height: 100%;
+  min-height: 0;
+}
+</style>

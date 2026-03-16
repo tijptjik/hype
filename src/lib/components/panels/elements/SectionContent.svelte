@@ -18,7 +18,7 @@ let {
 
 {#if isOpen && children}
   <div
-    class="flex min-h-0 grow flex-col bg-black caret-white"
+    class="flex min-h-0 grow flex-col overflow-hidden bg-black caret-white"
     transition:slide={{ duration: 200 }}
   >
     {@render children()}
