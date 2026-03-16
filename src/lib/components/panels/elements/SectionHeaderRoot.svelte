@@ -1,11 +1,8 @@
 <script lang="ts">
-// ENUMS
-import type { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { Snippet } from 'svelte'
 
 let {
-  resourceType,
   iconVerticalPaddingClass,
   focusVisibleClass,
   onNavigate,
@@ -15,7 +12,6 @@ let {
   children,
   href,
 }: {
-  resourceType: FirstClassResource
   iconVerticalPaddingClass: string
   focusVisibleClass: string
   onNavigate: (e: MouseEvent) => void

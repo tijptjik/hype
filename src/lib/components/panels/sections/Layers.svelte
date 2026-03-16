@@ -89,7 +89,7 @@ let handleReset = () => {
   {resourceType}
   title={m.maps__layers()}
   icon={Square3Stack3d}
-  iconVerticalPaddingClass="pt-2"
+  iconVerticalPaddingClass="py-2"
   iconColorClass="text-secondary"
   collapsedContent={SelectedLayers}
   defaultOpen={isDefaultOpen}

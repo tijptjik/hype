@@ -55,7 +55,6 @@ let href = $derived(
 </script>
 
 <SectionHeaderRoot
-  {resourceType}
   {iconVerticalPaddingClass}
   {focusVisibleClass}
   {onNavigate}

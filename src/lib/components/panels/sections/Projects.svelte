@@ -89,7 +89,7 @@ let handleReset = () => {
   {resourceType}
   title={m.maps__projects()}
   icon={Squares2x2}
-  iconVerticalPaddingClass="pt-2"
+  iconVerticalPaddingClass="py-2"
   iconColorClass="text-accent"
   collapsedContent={SelectedProjects}
   defaultOpen={isDefaultOpen}

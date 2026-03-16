@@ -70,7 +70,6 @@ const onNavigate = (e: MouseEvent) => {
     : ''}"
 >
   <SectionHeader
-    {resourceType}
     {title}
     {icon}
     {iconVerticalPaddingClass}

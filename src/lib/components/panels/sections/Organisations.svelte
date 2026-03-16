@@ -92,7 +92,7 @@ let handleReset = () => {
   {resourceType}
   title={m.maps__organisations()}
   icon={UserGroup}
-  iconVerticalPaddingClass="pt-2"
+  iconVerticalPaddingClass="py-2"
   iconColorClass="text-primary"
   collapsedContent={SelectedOrganisations}
   defaultOpen={isDefaultOpen}

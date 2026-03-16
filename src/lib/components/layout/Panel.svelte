@@ -43,7 +43,7 @@ let shouldShowOverlay = $derived(
 {#if shouldShowInline}
   <div
     id="{position}-panel"
-    class="flex h-full flex-shrink-0 select-none flex-col bg-black caret-transparent shadow-xl transition-all duration-500"
+    class="flex h-full shrink-0 select-none flex-col bg-black caret-transparent shadow-xl transition-all duration-500"
     style:width={isNarrow ? '80px' : isAdmin ? '380px' : `420px`}
     class:overflow-y-hidden={!scrollable}
     class:overflow-y-auto={scrollable}

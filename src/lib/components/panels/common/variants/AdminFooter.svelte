@@ -115,18 +115,18 @@ const isActive = (href: string) => {
 
 <!-- SECONDARY SIDEBAR -->
 <footer
-  class="flex min-h-0 w-full flex-shrink-0 {panelProps.isNarrow
-    ? 'flex-col items-center pb-2'
-    : 'flex-row-reverse items-center justify-center gap-3'}"
+  class="flex min-h-0 w-full shrink-0 {panelProps.isNarrow
+    ? 'flex-col items-center pb-3 gap-3 pt-4'
+    : 'flex-row-reverse items-center justify-center gap-2 h-16'}"
 >
   <!-- ADMIN CONTROLS arranged vertically -->
   {#each adminControlItems as item}
-    <div class="flex-shrink-0 flex-col items-center justify-center">
+    <div class="shrink-0 flex-col items-center justify-center">
       <a
         draggable="false"
         onclick={item.handleClick}
         href={item.href}
-        class="group btn btn-circle btn-ghost relative h-[68px] select-none bg-inherit {isActive(
+        class="group btn btn-circle btn-ghost relative select-none bg-inherit {isActive(
           item.href
         )
           ? item.color.text
@@ -134,15 +134,15 @@ const isActive = (href: string) => {
       >
         {#if item.notificationCount > 0}
           <div
-            class="badge badge-primary badge-sm absolute right-0.5 top-[8px] size-5 {item.notificationCount >
+            class="badge badge-primary badge-sm absolute -right-px -top-0.5 size-5 {item.notificationCount >
             99
-              ? 'text-[1.2em]'
-              : 'text-xs'}"
+              ? 'text-[1.2em] pb-0.5'
+              : 'text-xs pb-px'}"
           >
             {item.notificationCount > 99 ? '∞' : item.notificationCount}
           </div>
         {/if}
-        <Icon class="h-8 w-8" src={item.iconSrc} />
+        <item.iconSrc width={28} height={28} />
       </a>
     </div>
   {/each}
