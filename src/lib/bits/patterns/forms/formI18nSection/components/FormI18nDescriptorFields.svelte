@@ -2,7 +2,7 @@
 import { m } from '$lib/i18n'
 import { getGenAiState, toggleGenAiField } from '$lib/client/services/form'
 import { TextArea, TextInput } from '$lib/bits/custom/form'
-import type { GenAiField, Locale } from '$lib/types'
+import type { GenAiField, LocaleKey } from '$lib/types'
 
 type DescriptorFieldConfig = {
   key: GenAiField
@@ -10,7 +10,7 @@ type DescriptorFieldConfig = {
   kind: 'input' | 'textarea'
 }
 
-const fieldConfigs: DescriptorFieldConfig[] = [
+const defaultFieldConfigs: DescriptorFieldConfig[] = [
   { key: 'name', label: m.admin__forms_common_name_full(), kind: 'input' },
   { key: 'nameShort', label: m.admin__forms_common_name_short(), kind: 'input' },
   { key: 'description', label: m.feature__description(), kind: 'textarea' },
@@ -19,17 +19,17 @@ const fieldConfigs: DescriptorFieldConfig[] = [
 let {
   form,
   fields,
-  formLocale,
   locale,
   isEditing = false,
   isRequiredInPreflight,
+  fieldConfigs = defaultFieldConfigs,
 }: {
   form: any
   fields: any
-  formLocale: string
-  locale: Locale
+  locale: LocaleKey
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
+  fieldConfigs?: DescriptorFieldConfig[]
 } = $props()
 </script>
 
@@ -39,7 +39,7 @@ let {
   {@const attrs = field.as(config.kind === 'textarea' ? 'textarea' : 'text')}
   {@const genValue = getGenAiState(form, locale, config.key)}
   {@const genAttrs = genField?.as('hidden', genValue ? 'true' : 'false')}
-  {@const required = isRequiredInPreflight(['data', 'i18n', formLocale, config.key])}
+  {@const required = isRequiredInPreflight(['data', 'i18n', locale, config.key])}
   {@const issues = field.issues()}
 
   {#if genAttrs}

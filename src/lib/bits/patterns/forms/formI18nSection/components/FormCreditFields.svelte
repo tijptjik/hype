@@ -2,7 +2,7 @@
 import { m } from '$lib/i18n'
 import { getGenAiState, toggleGenAiField } from '$lib/client/services/form'
 import { TextInput } from '$lib/bits/custom/form'
-import type { Locale } from '$lib/types'
+import type { LocaleKey } from '$lib/types'
 import type { FormIssueValue } from '$lib/bits/custom/form/src/label/types'
 
 type BooleanField = {
@@ -25,15 +25,13 @@ type CreditLocaleFields = {
 let {
   form,
   fields,
-  formLocale,
   locale,
   isEditing = false,
   isRequiredInPreflight,
 }: {
   form: any
   fields: CreditLocaleFields
-  formLocale: string
-  locale: Locale
+  locale: LocaleKey
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
 } = $props()
@@ -41,7 +39,7 @@ let {
 const licenseField = $derived(fields.license)
 const licenseAttrs = $derived(licenseField.as('text'))
 const licenseRequired = $derived(
-  isRequiredInPreflight(['data', 'i18n', formLocale, 'license']),
+  isRequiredInPreflight(['data', 'i18n', locale, 'license']),
 )
 const licenseIssues = $derived(licenseField.issues())
 const licenseGenValue = $derived(getGenAiState(form, locale, 'license'))
@@ -52,7 +50,7 @@ const licenseGenAttrs = $derived(
 const attributionField = $derived(fields.attribution)
 const attributionAttrs = $derived(attributionField.as('text'))
 const attributionRequired = $derived(
-  isRequiredInPreflight(['data', 'i18n', formLocale, 'attribution']),
+  isRequiredInPreflight(['data', 'i18n', locale, 'attribution']),
 )
 const attributionIssues = $derived(attributionField.issues())
 const attributionGenValue = $derived(getGenAiState(form, locale, 'attribution'))

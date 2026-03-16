@@ -1,13 +1,12 @@
 <script lang="ts">
-import { getLocale, getLocaleOrder } from '$lib/i18n'
-import type { Locale } from '$lib/types'
+import { getLocaleKey, getLocaleOrder } from '$lib/i18n'
 import type { FormI18nSectionProps } from './formI18nSection.types'
 import * as FormI18nSectionPrimitive from './components'
 
 let {
   title,
   subtitle,
-  preferredLocale = getLocale(),
+  preferredLocale = getLocaleKey(),
   locales,
   class: className = '',
   gridClass = '',
@@ -55,7 +54,7 @@ const resolvedGridClass = $derived(
   <div class={resolvedGridClass}>
     {#each orderedLocales as locale (locale)}
       <FormI18nSectionPrimitive.FormSection
-        locale={locale as Locale}
+        {locale}
         {cardClass}
         {localeCodeClass}
         {onTranslate}

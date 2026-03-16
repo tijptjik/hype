@@ -1,7 +1,7 @@
 <script lang="ts">
 import { TextInput } from '$lib/bits/custom/form'
 import type { CapabilityI18nRoot, CapabilityKey } from '$lib/types'
-import type { Locale } from '$lib/types'
+import type { LocaleKey } from '$lib/types'
 
 type CapabilityLabelField = {
   as: (type: 'text') => Record<string, unknown>
@@ -21,7 +21,6 @@ let {
   fields,
   capabilityKeys = [],
   capabilityLabels = {},
-  formLocale,
   locale,
   isEditing = false,
   isRequiredInPreflight,
@@ -29,15 +28,14 @@ let {
   fields: CapabilityFormFields
   capabilityKeys: CapabilityKey[]
   capabilityLabels?: Partial<Record<CapabilityKey, CapabilityI18nRoot>>
-  formLocale: keyof CapabilityI18nRoot
-  locale: Locale
+  locale: LocaleKey
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
 } = $props()
 </script>
 
 {#each capabilityKeys as capabilityKey (capabilityKey)}
-  {@const field = fields?.[capabilityKey]?.i18n?.[formLocale]}
+  {@const field = fields?.[capabilityKey]?.i18n?.[locale]}
   {#if field}
     {@const attrs = field.as('text')}
     {@const required = isRequiredInPreflight([
@@ -45,12 +43,12 @@ let {
       'capabilities',
       capabilityKey,
       'i18n',
-      formLocale,
+      locale,
     ])}
     {@const issues = field.issues()}
     <TextInput
       label={capabilityKey}
-      placeholder={capabilityLabels[capabilityKey]?.[formLocale] ?? ''}
+      placeholder={capabilityLabels[capabilityKey]?.[locale] ?? ''}
       {locale}
       isTranslated={true}
       {required}

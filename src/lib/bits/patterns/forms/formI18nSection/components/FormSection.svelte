@@ -1,6 +1,7 @@
 <script lang="ts">
+import { toLocaleCode } from '$lib/i18n'
 import FormI18nTranslationBar from './FormI18nTranslationBar.svelte'
-import type { Locale } from '$lib/types'
+import type { LocaleKey } from '$lib/types'
 import type { Snippet } from 'svelte'
 import type { FormSectionProps } from '../formI18nSection.types'
 
@@ -79,7 +80,7 @@ $effect(() => {
 >
   <div class={contentClass}>
     {#if hasLocale}
-      {@render (children as Snippet<[Locale]>)?.(locale as Locale)}
+      {@render (children as Snippet<[LocaleKey]>)?.(locale as LocaleKey)}
     {:else}
       {@render (children as Snippet)?.()}
     {/if}
@@ -87,7 +88,7 @@ $effect(() => {
   {#if footer}
     <div class={footerClass}>
       {#if hasLocale}
-        {@render (footer as Snippet<[Locale]>)?.(locale as Locale)}
+        {@render (footer as Snippet<[LocaleKey]>)?.(locale as LocaleKey)}
       {:else}
         {@render (footer as Snippet)?.()}
       {/if}
@@ -95,7 +96,7 @@ $effect(() => {
   {/if}
   {#if showsTranslationBar}
     <FormI18nTranslationBar
-      targetLocale={locale as Locale}
+      targetLocale={toLocaleCode(locale)}
       {localeCodeClass}
       {onTranslate}
       {onResetLocale}

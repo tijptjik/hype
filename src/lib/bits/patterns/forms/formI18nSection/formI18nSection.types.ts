@@ -1,4 +1,4 @@
-import type { Locale } from '$lib/types'
+import type { Locale, LocaleKey } from '$lib/types'
 import type {
   SectionHeaderAction,
   SectionHeaderFlag,
@@ -9,8 +9,8 @@ import type { Snippet } from 'svelte'
 export interface FormI18nSectionProps {
   title?: string
   subtitle?: string
-  preferredLocale?: Locale
-  locales?: Locale[]
+  preferredLocale?: LocaleKey
+  locales?: LocaleKey[]
   class?: string
   gridClass?: string
   cardClass?: string
@@ -30,8 +30,8 @@ export interface FormI18nSectionProps {
   left?: Snippet
   center?: Snippet
   right?: Snippet
-  children?: Snippet<[Locale]>
-  footer?: Snippet<[Locale]>
+  children?: Snippet<[LocaleKey]>
+  footer?: Snippet<[LocaleKey]>
 }
 
 export interface FormI18nHeaderProps {
@@ -47,7 +47,7 @@ export interface FormI18nHeaderProps {
 }
 
 export interface FormSectionProps {
-  locale?: Locale
+  locale?: LocaleKey
   cardClass?: string
   contentClass?: string
   footerClass?: string
@@ -61,6 +61,6 @@ export interface FormSectionProps {
   sectionKey?: string
   isEditing?: boolean
   showTranslationBar?: boolean
-  children?: Snippet | Snippet<[Locale]>
-  footer?: Snippet | Snippet<[Locale]>
+  children?: Snippet | Snippet<[LocaleKey]>
+  footer?: Snippet | Snippet<[LocaleKey]>
 }
