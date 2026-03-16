@@ -64,7 +64,9 @@ export interface HeaderNewConfig {
 export interface HeaderFilterConfig {
   isFilterable?: boolean
   placeholder?: string
+  debounceMs?: number
   onFilter?: (query: string) => void
+  onFocusChange?: (isFocused: boolean) => void
   onAdvanceFromSearch?: () => void
 }
 
