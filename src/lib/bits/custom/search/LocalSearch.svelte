@@ -150,6 +150,7 @@ $effect(() => {
             descriminator={resultMap.descriminator?.(item)}
             disabled={isSearchResultDisabled(item, resultMap)}
             disabledMeta={resultMap.disabledMeta?.(item)}
+            staggerIndex={index}
             onSelect={() => selectItem(item)}
           />
         {/each}

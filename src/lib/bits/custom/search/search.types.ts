@@ -64,6 +64,7 @@ export interface SearchResultItemProps {
   descriminator?: string | null
   disabled?: boolean
   disabledMeta?: SearchResultDisabledMeta | null
+  staggerIndex?: number
   onSelect?: () => void
   class?: string
 }

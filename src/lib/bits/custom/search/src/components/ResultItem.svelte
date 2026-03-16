@@ -7,6 +7,7 @@ let {
   descriminator = null,
   disabled = false,
   disabledMeta = null,
+  staggerIndex = 0,
   onSelect,
   class: className = '',
 }: SearchResultItemProps = $props()
@@ -27,9 +28,11 @@ $effect(() => {
 <button
   type="button"
   data-search-result-item="true"
+  data-staggered-entrance="true"
   class={`bits-search-result-item ${className}`}
   data-disabled={disabled}
   aria-disabled={disabled}
+  style={`--bits-search-result-delay: ${Math.min(staggerIndex, 5) * 32}ms;`}
   {disabled}
   onclick={() => onSelect?.()}
 >
