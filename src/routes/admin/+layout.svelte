@@ -2,12 +2,14 @@
 // SVELTE
 import { afterNavigate, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
+// I18N
+import { m } from '$lib/i18n'
 // COMPONENTS
 import Sidebar from '$lib/components/panels/Admin.svelte'
-import AutoHide from '$lib/components/common/AutoHide.svelte'
-import MinWidthProtector from '$lib/components/layout/MinWidth.svelte'
 import Settings from '$lib/components/panels/Settings.svelte'
-import Header from '$lib/bits/patterns/layout/header/Header.svelte'
+// BITS
+import { AutoHide, Header, MinWidthGuard } from '$lib/bits'
+import type { HeaderProps } from '$lib/bits'
 // ADAPTERS
 import { useAdminHeaderModel } from '$lib/adapters/header'
 // CONTEXT
@@ -15,7 +17,8 @@ import { setAdminCtx } from '$lib/context/admin.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { setHeaderCtrl } from '$lib/context/header.svelte'
 // ENUMS
-import { FirstClassResource, ResourcePath } from '$lib/enums'
+import { FirstClassResource, Panel, ResourcePath } from '$lib/enums'
+import MonitorIcon from 'virtual:icons/lucide/monitor'
 // TYPES
 import type { LayoutProps, LayoutData } from './$types'
 import type { QueryClient } from '@tanstack/svelte-query'
@@ -40,6 +43,14 @@ const adminCtx = setAdminCtx(data.queryClient, appCtx)
 setHeaderCtrl()
 const headerModel = useAdminHeaderModel(appCtx, adminCtx)
 const headerProps = $derived(headerModel.getHeaderProps())
+const resolvedHeaderProps = $derived({
+  ...headerProps,
+  id: headerProps.id ?? undefined,
+})
+const adminPreferences = $derived(appCtx.getUserPreferences().admin)
+const isPrimaryPanelAutoHide = $derived(
+  appCtx.isAdmin() && (adminPreferences?.isPrimaryPanelAutoHide ?? false),
+)
 
 // Initialize AdminCtx if AppCtx is ready
 $effect(() => {
@@ -87,14 +98,27 @@ afterNavigate(() => {
 </script>
 
 <!-- LAYOUT -->
-<MinWidthProtector>
+<MinWidthGuard
+  minWidth={1024}
+  title={m.admin__desktop_only_window_too_small()}
+  description={m.admin__desktop_only_window_too_small_explainer()}
+  widthLabel={m.admin__desktop_only_current_width()}
+  icon={MonitorIcon}
+>
   {#if adminCtx.isInitialised && appCtx.isInitialised}
     <div class="flex h-full w-full overflow-hidden drag-none">
-      <AutoHide> <Sidebar /> </AutoHide>
+      <AutoHide
+        enabled={isPrimaryPanelAutoHide}
+        isOpen={appCtx.isPanelOpen(Panel.admin)}
+        onOpenVisual={() => appCtx.openPanelVisually(Panel.admin)}
+        onCloseVisual={() => appCtx.closePanelVisually(Panel.admin)}
+      >
+        <Sidebar />
+      </AutoHide>
       <main
         class="flex h-full flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed"
       >
-        <Header {...headerProps} />
+        <Header {...(resolvedHeaderProps as HeaderProps)} />
         {@render children()}
         {#if headerProps.footer?.component}
           {@const Footer = headerProps.footer.component}
@@ -108,4 +132,4 @@ afterNavigate(() => {
       <div class="loading loading-ring loading-lg"></div>
     </div>
   {/if}
-</MinWidthProtector>
+</MinWidthGuard>

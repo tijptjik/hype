@@ -14,15 +14,14 @@ import { getLocale, setLocale } from '$lib/i18n'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
-// COMPONENTS
-import Toaster from '$lib/components/common/Toaster.svelte'
+// BITS
+import { Toaster } from '$lib/bits'
 // LIB
 import { loadScript } from '$lib'
 // MAPLIBRE
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
 // STYLES
 import '$lib/styles/app.css'
-import '$lib/styles/scrollbar.css'
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { LayoutData, LayoutProps } from './$types'
@@ -70,7 +69,6 @@ onMount(async () => {
     // and the max worker size in the free tier is 1 MB
     await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js')
     const maplibre = monkeyPatchMapLibre()
-    // @ts-expect-error - Adding maplibre to global scope
     globalThis.maplibregl = maplibre
 
     // Store maplibre in the app context so components can access it
