@@ -1,0 +1,129 @@
+@layer components {
+  .bits-theme .bits-overlay-bar {
+    @apply pointer-events-none absolute inset-x-0 bottom-0 z-40 px-3 pb-[80px] pt-4 caret-transparent;
+  }
+
+  .bits-theme .bits-overlay-bar__grid {
+    @apply grid grid-cols-3 items-center;
+  }
+
+  .bits-theme .bits-overlay-bar__section {
+    @apply flex items-center gap-2;
+  }
+
+  .bits-theme .bits-overlay-bar__section--center {
+    @apply justify-center;
+  }
+
+  .bits-theme .bits-overlay-bar__section--right {
+    @apply justify-end;
+  }
+
+  .bits-theme .bits-overlay-bar :global(button),
+  .bits-theme .bits-overlay-bar :global(a) {
+    pointer-events: auto;
+  }
+
+  .bits-theme .bits-layout-autohide {
+    @apply h-full;
+  }
+
+  .bits-theme .bits-app-menu {
+    @apply fixed inset-x-0 bottom-0 z-[100] min-h-[68px] w-full border-t-3 border-base-300 bg-black px-4 py-2 caret-transparent md:px-0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bits-theme .bits-app-menu__inner {
+    @apply relative flex w-full items-center justify-between;
+  }
+
+  .bits-theme .bits-app-menu__items {
+    @apply mx-auto flex max-w-[45rem] grow items-center justify-around;
+  }
+
+  .bits-theme .bits-app-menu__trailing {
+    @apply absolute right-0 hidden items-center gap-2 px-4 lg:flex;
+  }
+
+  .bits-theme .bits-app-menu__button {
+    @apply flex min-h-12 flex-col items-center justify-center gap-1 p-1;
+  }
+
+  .bits-theme .bits-app-menu__button--secondary {
+    @apply text-secondary;
+  }
+
+  .bits-theme .bits-app-menu__label {
+    @apply text-xs uppercase tracking-wider text-base-content/70 transition-opacity duration-300;
+  }
+
+  .bits-theme .bits-app-menu__label--hidden {
+    @apply opacity-0;
+  }
+
+  @supports (-moz-appearance: none) {
+    .bits-theme .bits-app-menu__label--hidden {
+      display: none;
+    }
+  }
+
+  .bits-theme .bits-min-width-guard__content {
+    @apply h-full w-full;
+  }
+
+  .bits-theme .bits-min-width-guard__content--hidden {
+    @apply opacity-0;
+  }
+
+  .bits-theme .bits-min-width-guard {
+    @apply fixed inset-0 z-[100] flex items-center justify-center bg-base-100 p-4 caret-transparent;
+  }
+
+  .bits-theme .bits-min-width-guard__card {
+    @apply w-full max-w-md rounded-box border border-base-300 bg-base-200 p-6 text-center shadow-xl;
+  }
+
+  .bits-theme .bits-min-width-guard__icon {
+    @apply mb-4 flex justify-center;
+  }
+
+  .bits-theme .bits-min-width-guard__title {
+    @apply text-2xl font-bold;
+  }
+
+  .bits-theme .bits-min-width-guard__description {
+    @apply mt-3 text-base-content/80;
+  }
+
+  .bits-theme .bits-min-width-guard__width {
+    @apply mt-2 text-sm text-base-content/60;
+  }
+
+  .bits-theme .bits-min-width-guard__progress {
+    @apply progress progress-warning mt-4 w-full;
+  }
+
+  .bits-theme .bits-panel-root {
+    @apply flex h-full select-none flex-col bg-black caret-transparent shadow-xl;
+  }
+
+  .bits-theme .bits-panel-root--inline {
+    @apply shrink-0 transition-all duration-500;
+  }
+
+  .bits-theme .bits-panel-root--overlay {
+    @apply absolute top-0 z-50 h-full w-full md:w-[420px];
+  }
+
+  .bits-theme .bits-panel-root--overlay.bits-panel-root--left {
+    @apply md:left-0;
+  }
+
+  .bits-theme .bits-panel-root--overlay.bits-panel-root--right {
+    @apply md:right-0;
+  }
+
+  .bits-theme .bits-panel-root__content {
+    @apply h-full;
+  }
+}
