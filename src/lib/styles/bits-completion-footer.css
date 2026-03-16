@@ -16,6 +16,10 @@
     background-color: var(--color-base-300);
     border-top: 1px solid var(--color-base-100);
     box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
   }
 
   .bits-theme .bits-completion-footer__stat {
