@@ -49,7 +49,6 @@ let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 let stableRoles = $state<OrganisationRoleUser[]>([])
 let displayRoleCards = $state<UserRoleCardViewModel[]>([])
-let searchMountEl = $state<HTMLDivElement | null>(null)
 
 function getUserName(userRole: OrganisationRoleUser): string {
   return userRole.user?.name ?? ''
@@ -124,11 +123,6 @@ function toggleRemoving(): void {
 function handleAddUser(user: User): void {
   if (userIdSet.has(user.id)) return
   onAddUser(user)
-}
-
-function focusSearchInput(): void {
-  const input = searchMountEl?.querySelector<HTMLInputElement>('input[type="text"]')
-  input?.focus()
 }
 
 $effect(() => {
@@ -216,14 +210,11 @@ $effect(() => {
   </SectionHeader>
 
   {#if isAdding && showModeUi}
-    <div
-      bind:this={searchMountEl}
-      transition:slide={{ axis: 'y', duration: 200 }}
-      onintroend={focusSearchInput}
-    >
+    <div>
       <Search
         placeholder="Search users…"
-        focusOnMount={false}
+        focusOnMount={true}
+        mountTransitionDuration={80}
         {userQueryParams}
         excludeIds={Array.from(userIdSet)}
         getItemId={(user: User) => user.id}

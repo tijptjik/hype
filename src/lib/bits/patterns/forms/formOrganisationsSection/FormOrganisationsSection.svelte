@@ -1,8 +1,8 @@
 <script lang="ts">
-import { flip } from 'svelte/animate'
 import { slide } from 'svelte/transition'
 import { Search, SectionHeader } from '$lib/bits/custom'
 import { getURLfromImage } from '$lib/client/services/image'
+import { m } from '$lib/i18n'
 import * as FormOrganisationsSectionPrimitive from './components'
 import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
 import {
@@ -176,13 +176,11 @@ $effect(() => {
   </SectionHeader>
 
   {#if isAdding && showModeUi}
-    <div
-      transition:slide={{ duration: showModeUi ? 120 : 0 }}
-      class="bits-form__parent-resource-search"
-    >
+    <div class="bits-form__parent-resource-search">
       <Search
-        placeholder="Search organisations..."
+        placeholder={m.forms__search_organisations_placeholder()}
         focusOnMount={true}
+        mountTransitionDuration={showModeUi ? 80 : 0}
         onInput={onSearchOrganisations as any}
         excludeIds={Array.from(organisationIds)}
         getItemId={(organisation: any) => organisation.id}
@@ -211,31 +209,28 @@ $effect(() => {
   <div class="bits-form__parent-resource-list">
     {#each sortedOrganisations as organisation (organisation.id)}
       {@const selection = toSelection(organisation.id)}
-      <div animate:flip={{ duration: 220, easing: t => t * (2 - t) }}>
-        <ResourceCard.Root>
-          <ResourceCard.Media
-            image={toImageSrc(organisation)}
-            alt={organisation.i18n?.en?.name || organisation.code}
-          />
-          <ResourceCard.Body
-            code={organisation.code}
-            name={organisation.i18n?.en?.name || organisation.code}
-          />
-          <ResourceCard.Actions
-            {isRemoving}
-            {isEditing}
-            {isSubmitting}
-            {canSetCoreInclusive}
-            isHubExclusive={selection.isHubExclusive}
-            isCoreInclusive={selection.isCoreInclusive}
-            onToggleHubExclusive={value =>
-              handleHubExclusiveToggle(organisation.id, value)}
-            onToggleCoreInclusive={value =>
-              handleCoreInclusiveToggle(organisation.id, value)}
-            onRemove={() => onRemoveOrganisation(organisation.id)}
-          />
-        </ResourceCard.Root>
-      </div>
+      <ResourceCard.Root>
+        <ResourceCard.Media
+          image={toImageSrc(organisation)}
+          alt={organisation.i18n?.en?.name || organisation.code}
+        />
+        <ResourceCard.Body
+          code={organisation.code}
+          name={organisation.i18n?.en?.name || organisation.code}
+        />
+        <ResourceCard.Actions
+          {isRemoving}
+          {isEditing}
+          {isSubmitting}
+          {canSetCoreInclusive}
+          isHubExclusive={selection.isHubExclusive}
+          isCoreInclusive={selection.isCoreInclusive}
+          onToggleHubExclusive={value => handleHubExclusiveToggle(organisation.id, value)}
+          onToggleCoreInclusive={value =>
+            handleCoreInclusiveToggle(organisation.id, value)}
+          onRemove={() => onRemoveOrganisation(organisation.id)}
+        />
+      </ResourceCard.Root>
     {/each}
   </div>
 

@@ -1,5 +1,6 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick } from 'svelte'
+import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
 import type { LocalSearchProps } from './search.types'
 import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.utils'
@@ -9,6 +10,7 @@ let {
   options,
   placeholder = m.forms__search_placeholder(),
   focusOnMount = false,
+  mountTransitionDuration = 0,
   maxResults = 5,
   excludeIds = [],
   getItemId,
@@ -70,6 +72,12 @@ function handleFocusIn(): void {
   openResults(query)
 }
 
+function handleIntroEnd(): void {
+  if (!focusOnMount || mountTransitionDuration <= 0) return
+  const input = rootEl?.querySelector<HTMLInputElement>('input[type="text"]')
+  input?.focus()
+}
+
 function handleFocusOut(event: FocusEvent): void {
   const nextTarget = event.relatedTarget
   if (nextTarget instanceof Node && rootEl?.contains(nextTarget)) return
@@ -126,14 +134,16 @@ $effect(() => {
 
 <div
   bind:this={rootEl}
+  transition:slide={{ axis: 'y', duration: mountTransitionDuration }}
   class={`bits-search ${className}`}
   onfocusin={handleFocusIn}
   onfocusout={handleFocusOut}
+  onintroend={handleIntroEnd}
 >
   <SearchPrimitive.SearchBar
     bind:query
     {placeholder}
-    {focusOnMount}
+    focusOnMount={focusOnMount && mountTransitionDuration <= 0}
     isLoading={false}
     onChange={handleQuery}
     onInputKeydown={handleInputKeydown}

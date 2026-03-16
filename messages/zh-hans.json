@@ -33,6 +33,7 @@
   "forms__invalid": "无效",
   "forms__pending": "有待处理项",
   "forms__search_placeholder": "搜索",
+  "forms__search_organisations_placeholder": "搜索组织...",
   "forms__search_capabilities_placeholder": "搜索能力...",
   "forms__publish": "发布",
   "forms__edit": "编辑",

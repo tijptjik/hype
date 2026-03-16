@@ -1,5 +1,6 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick, untrack } from 'svelte'
+import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES
@@ -15,6 +16,7 @@ let {
   placeholder = 'Search',
   minChars = 1,
   focusOnMount = false,
+  mountTransitionDuration = 0,
   prefetchOnMount = false,
   prefetchKey = null,
   initialResults = [],
@@ -152,6 +154,12 @@ function handleRootFocusIn(event: FocusEvent): void {
   openResults()
 }
 
+function handleIntroEnd(): void {
+  if (!focusOnMount || mountTransitionDuration <= 0) return
+  const input = rootEl?.querySelector<HTMLInputElement>('input[type="text"]')
+  input?.focus()
+}
+
 function selectItem(item: T): void {
   if (isSearchResultDisabled(item, resultMap)) return
   const itemId = toItemId(item)
@@ -222,13 +230,15 @@ $effect(() => {
 
 <div
   bind:this={rootEl}
+  transition:slide={{ axis: 'y', duration: mountTransitionDuration }}
   class={`bits-search ${className}`}
   onfocusin={handleRootFocusIn}
+  onintroend={handleIntroEnd}
 >
   <SearchPrimitive.SearchBar
     bind:query
     {placeholder}
-    {focusOnMount}
+    focusOnMount={focusOnMount && mountTransitionDuration <= 0}
     {isLoading}
     onChange={handleQuery}
     onFocus={handleFocus}

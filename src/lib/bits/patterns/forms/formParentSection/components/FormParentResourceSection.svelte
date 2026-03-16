@@ -2,8 +2,6 @@
   lang="ts"
   generics="TItem extends import('../formParentSection.types').ParentSectionItemBase"
 >
-import { slide } from 'svelte/transition'
-
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
 import { Search, SectionHeader } from '$lib/bits/custom'
@@ -230,13 +228,11 @@ $effect(() => {
 
   {#if isSearchActive}
     {#key searchResetKey}
-      <div
-        transition:slide={{ duration: showModeUi ? 200 : 0 }}
-        class="bits-form__parent-resource-search"
-      >
+      <div class="bits-form__parent-resource-search">
         <Search
           placeholder={m.forms__search_placeholder()}
           focusOnMount={shouldFocusSearchOnOpen}
+          mountTransitionDuration={showModeUi ? 80 : 0}
           prefetchOnMount={true}
           prefetchKey={searchScopeKey}
           onInput={onSearch as any}

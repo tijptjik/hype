@@ -33,6 +33,7 @@
   "forms__invalid": "無效",
   "forms__pending": "有待處理項目",
   "forms__search_placeholder": "搜尋",
+  "forms__search_organisations_placeholder": "搜尋組織...",
   "forms__search_capabilities_placeholder": "搜尋能力...",
   "forms__publish": "發布",
   "forms__edit": "編輯",

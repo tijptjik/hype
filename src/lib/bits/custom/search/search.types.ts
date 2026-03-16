@@ -13,6 +13,7 @@ export interface SearchProps<T> {
   placeholder?: string
   minChars?: number
   focusOnMount?: boolean
+  mountTransitionDuration?: number
   prefetchOnMount?: boolean
   prefetchKey?: string | number | null
   initialResults?: T[]
@@ -31,6 +32,7 @@ export interface LocalSearchProps<T> {
   options: T[]
   placeholder?: string
   focusOnMount?: boolean
+  mountTransitionDuration?: number
   maxResults?: number
   excludeIds?: string[]
   getItemId?: (item: T) => string

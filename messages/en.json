@@ -33,6 +33,7 @@
   "forms__invalid": "Invalid",
   "forms__pending": "Action Required",
   "forms__search_placeholder": "Search",
+  "forms__search_organisations_placeholder": "Search organisations...",
   "forms__search_capabilities_placeholder": "Search capabilities...",
   "forms__publish": "Publish",
   "forms__edit": "Edit",
