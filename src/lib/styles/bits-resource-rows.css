@@ -331,18 +331,23 @@
   }
 
   .bits-task-row__meta-label {
+    margin: 0;
     font-size: 0.75rem;
     line-height: 1rem;
+    text-align: center;
     text-transform: uppercase;
+    white-space: nowrap;
     color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
   }
 
   .bits-task-row__meta-value {
+    margin: 0;
     width: 100px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 0.875rem;
+    text-align: center;
     color: var(--color-base-content);
   }
 
@@ -353,7 +358,7 @@
   @container bits-resource-row (min-width: 62rem) {
     .bits-task-row__meta-value,
     .bits-task-row__meta-value--wide {
-      width: 160px;
+      width: 180px;
     }
   }
 
