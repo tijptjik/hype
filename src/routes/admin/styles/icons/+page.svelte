@@ -2,9 +2,6 @@
 // BITS COMPONENTS
 import { Button } from '$lib/bits'
 
-// COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
-
 // DATA
 import { ICON_USAGES, ICON_USAGE_EXPORT, TOTAL_IMPORT_SITES } from './icon-usage'
 
@@ -92,7 +89,19 @@ async function copyMapping(): Promise<void> {
           <div
             class="flex h-28 items-center justify-center rounded-xl border border-dashed border-success/30 bg-base-100 text-success"
           >
-            <Icon src={icon.component} class="h-16 w-16" size="64px" />
+            <svg
+              class="h-16 w-16"
+              viewBox={`0 0 ${icon.width} ${icon.height}`}
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              aria-label={icon.name}
+              role="img"
+            >
+              {@html icon.svgBody}
+            </svg>
           </div>
 
           <div class="space-y-2 rounded-xl border border-base-300 bg-base-100 p-3">
