@@ -35,7 +35,7 @@ import {
 } from '$lib/client/services/property'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
 // CONTEXT
-import { getContext, setContext } from 'svelte'
+import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // MARKERS
@@ -129,6 +129,8 @@ export class AppCtx {
       queryFn: () => Promise<any>
     }
   >()
+
+  listQueryMeta = new Map<string, Omit<ListResponse<unknown>, 'data'>>()
 
   // Remote function map for list/get queries (parallel to queryMap).
   remoteMap: RemoteMap = {
@@ -292,6 +294,15 @@ export class AppCtx {
         layer: false,
         feature: true,
         task: true,
+        hub: false,
+        user: false,
+      },
+      isSearchFocused: {
+        organisation: false,
+        project: false,
+        layer: false,
+        feature: false,
+        task: false,
         hub: false,
         user: false,
       },
@@ -801,6 +812,7 @@ export class AppCtx {
       prisms: this.state.prisms,
       sorting: this.state.viewSorting.organisation,
     })) as ListResponse<Organisation>
+    this.setListQueryMeta(this.organisationsQueryKey(), result)
     return result.data
   }
   projectsQueryFn = async (): Promise<Project[]> => {
@@ -817,6 +829,7 @@ export class AppCtx {
       sorting: this.state.viewSorting.project,
       meta: { profile: 'card' },
     })) as ListResponse<Project>
+    this.setListQueryMeta(this.projectsQueryKey(), result)
     return result.data
   }
 
@@ -834,6 +847,7 @@ export class AppCtx {
       sorting: this.state.viewSorting.layer,
       meta: { profile: 'card' },
     })) as ListResponse<Layer>
+    this.setListQueryMeta(this.layersQueryKey(), result)
     return result.data
   }
 
@@ -851,6 +865,7 @@ export class AppCtx {
       sorting: this.state.viewSorting.feature,
       meta: { profile: 'list' },
     })) as ListResponse<FeatureFromCollection>
+    this.setListQueryMeta(this.featuresQueryKey(), result)
     return result.data
   }
 
@@ -966,6 +981,184 @@ export class AppCtx {
       }
     } catch (error) {
       console.error(`Failed to refresh resource ${resource}:${resourceId}`, error)
+    }
+  }
+
+  /**
+   * Converts a query key into a stable map key for storing list response metadata.
+   *
+   * @param queryKey - TanStack query key for a resource list.
+   * @returns Serialized key suitable for `listQueryMeta`.
+   * @remarks Metadata is tracked separately from cached list data so UI logic can read
+   * pagination and sort state without duplicating full query responses in app state.
+   */
+  private toQueryMetaKey(queryKey: unknown[]): string {
+    return JSON.stringify(queryKey)
+  }
+
+  /**
+   * Stores list response metadata for a query while excluding the entity array payload.
+   *
+   * @param queryKey - TanStack query key for the fetched list.
+   * @param response - Full list response returned by the remote API.
+   * @returns Nothing.
+   * @remarks The data array stays in TanStack Query and resource state; only the metadata is
+   * retained here for pagination-aware admin and collection interactions.
+   */
+  setListQueryMeta<T>(queryKey: unknown[], response: ListResponse<T>): void {
+    const { data: _data, ...meta } = response
+    this.listQueryMeta.set(this.toQueryMetaKey(queryKey), meta)
+  }
+
+  /**
+   * Returns cached list metadata for a previously fetched query key.
+   *
+   * @param queryKey - TanStack query key for the list.
+   * @returns The stored response metadata, or `null` when nothing has been cached yet.
+   */
+  getListQueryMeta(queryKey: unknown[]): Omit<ListResponse<unknown>, 'data'> | null {
+    return this.listQueryMeta.get(this.toQueryMetaKey(queryKey)) ?? null
+  }
+
+  /**
+   * Resolves the comparable value used to sort a resource in memory.
+   *
+   * @param resource - Resource type being sorted.
+   * @param entity - Resource instance to read from.
+   * @param sortBy - Active sort field.
+   * @param userPreferences - I18n preferences used when sorting translated fields.
+   * @returns Normalized string or numeric value suitable for comparison.
+   * @remarks Translated text fields are resolved using the current user locale preferences so
+   * client-side sorting matches the strings users actually see in the UI.
+   */
+  private getResourceSortValue(
+    resource: FirstClassResource,
+    entity: Resource,
+    sortBy: string,
+    userPreferences = this.getUserPreferences(),
+  ): string | number {
+    if (sortBy === 'createdAt' || sortBy === 'modifiedAt') {
+      const rawValue = (entity as Record<string, unknown>)[sortBy]
+      // Convert timestamps once so in-memory sorting behaves like a numeric date sort.
+      return typeof rawValue === 'string' ? Date.parse(rawValue) || 0 : 0
+    }
+
+    if (resource === FirstClassResource.feature) {
+      const feature = entity as FeatureFromCollection
+      const translatedValue =
+        sortBy === 'title' || sortBy === 'description' || sortBy === 'displayAddress'
+          ? getI18n(feature, sortBy, userPreferences, '') || ''
+          : null
+
+      if (typeof translatedValue === 'string') {
+        return translatedValue.toLocaleLowerCase()
+      }
+    }
+
+    if (sortBy === 'name' || sortBy === 'nameShort' || sortBy === 'description') {
+      const translatedValue = getI18n(entity as never, sortBy, userPreferences, '')
+
+      if (typeof translatedValue === 'string') {
+        return translatedValue.toLocaleLowerCase()
+      }
+    }
+
+    const rawValue = (entity as Record<string, unknown>)[sortBy]
+
+    if (typeof rawValue === 'string') {
+      return rawValue.toLocaleLowerCase()
+    }
+
+    if (typeof rawValue === 'number') {
+      return rawValue
+    }
+
+    return ''
+  }
+
+  /**
+   * Sorts an already-loaded resource collection without issuing another server request.
+   *
+   * @param resource - Resource type being sorted.
+   * @param entities - Loaded entities to sort.
+   * @param sorting - Requested sort state.
+   * @returns A new array ordered according to the requested sort.
+   * @remarks The sort falls back to `id` as a stable tiebreaker so repeated renders produce
+   * deterministic ordering when primary sort values are equal.
+   */
+  sortLoadedResources<T extends Resource>(
+    resource: FirstClassResource,
+    entities: T[],
+    sorting: ResourceSortState,
+  ): T[] {
+    const direction = sorting.sortOrder === 'asc' ? 1 : -1
+    const userPreferences = this.getUserPreferences()
+    const sortableEntities = entities.map(entity => ({
+      entity,
+      sortValue: this.getResourceSortValue(
+        resource,
+        entity,
+        sorting.sortBy,
+        userPreferences,
+      ),
+    }))
+
+    sortableEntities.sort((left, right) => {
+      const leftValue = left.sortValue
+      const rightValue = right.sortValue
+
+      if (leftValue < rightValue) return -1 * direction
+      if (leftValue > rightValue) return 1 * direction
+
+      // Use a stable secondary key to avoid order flicker when values are identical.
+      return left.entity.id.localeCompare(right.entity.id)
+    })
+
+    return sortableEntities.map(item => item.entity)
+  }
+
+  /**
+   * Writes a sorted entity list back into the resource state for the matching resource type.
+   *
+   * @param resource - Resource type whose state should be updated.
+   * @param entities - Sorted entity array to persist into app state.
+   * @returns Nothing.
+   * @remarks Feature updates also rebuild dependent caches so map and neighbourhood views stay
+   * aligned with the reordered feature collection.
+   */
+  setSortedResourceState<T extends Resource>(
+    resource: FirstClassResource,
+    entities: T[],
+  ): void {
+    if (resource === FirstClassResource.organisation) {
+      this.state.resources.organisation = entities as Organisation[]
+      return
+    }
+
+    if (resource === FirstClassResource.project) {
+      this.state.resources.project = entities as Project[]
+      return
+    }
+
+    if (resource === FirstClassResource.layer) {
+      this.state.resources.layer = entities as Layer[]
+      return
+    }
+
+    if (resource === FirstClassResource.feature) {
+      const features = entities as FeatureFromCollection[]
+      this.state.resources.feature = features
+      // Rebuild derived feature lookups after replacing the entire feature list.
+      this.rebuildFeaturesMap()
+      // Keep neighbourhood-specific derived state in sync with the sorted feature collection.
+      this.placeCtx.setNeighbourhoodFeatures(
+        this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
+      )
+      return
+    }
+
+    if (resource === FirstClassResource.hub) {
+      this.state.resources.hub = entities as Hub[]
     }
   }
 
@@ -1905,6 +2098,19 @@ export class AppCtx {
     }
   }
 
+  /**
+   * Stores whether the search UI is focused for the current active resource view.
+   *
+   * @param isFocused - Focus state to persist.
+   * @returns Nothing.
+   */
+  setSearchFocused = (isFocused: boolean) => {
+    const resourceType = this.getActiveResourceType()
+    if (resourceType) {
+      this.state.ui.isSearchFocused[resourceType] = isFocused
+    }
+  }
+
   // ================================================
   // HIERARCHY METHODS
   // ================================================
@@ -2566,28 +2772,55 @@ export class AppCtx {
 
   // Active Navigation State Methods
 
+  /**
+   * Sets the active navigable resource type.
+   *
+   * @param resourceType - Resource type to activate, or `false` to clear it.
+   * @returns Nothing.
+   */
   setActiveResourceType = (resourceType: NavigableResource | false): void => {
+    // Avoid redundant writes so reactive consumers do not re-run on no-op navigation changes.
+    if (untrack(() => this.state.nav.resourceType) === resourceType) return
     this.state.nav.resourceType = resourceType
   }
 
+  /**
+   * Sets the active resource reference and optionally updates the active resource type.
+   *
+   * @param resourceRef - Active resource identifier, or `false` to clear it.
+   * @param resourceType - Optional resource type to activate alongside the ref.
+   * @returns Nothing.
+   */
   setActiveResourceRef = (
     resourceRef: Id | false,
     resourceType?: NavigableResource | false,
   ): void => {
-    if (resourceType) {
+    if (resourceType !== undefined) {
       this.setActiveResourceType(resourceType)
     }
+    // Skip no-op ref updates to prevent extra navigation-driven effects.
+    if (untrack(() => this.state.nav.resourceRef) === resourceRef) return
     this.state.nav.resourceRef = resourceRef
   }
 
+  /**
+   * Sets the active facet and optionally updates the active resource ref and type first.
+   *
+   * @param facet - Facet to activate, or `false` to clear it.
+   * @param resourceRef - Optional resource ref to set before the facet.
+   * @param resourceType - Optional resource type to set before the facet.
+   * @returns Nothing.
+   */
   setActiveFacet = (
     facet: FacetType | false,
     resourceRef?: Id | false,
     resourceType?: NavigableResource | false,
   ): void => {
-    if (resourceRef) {
+    if (resourceRef !== undefined) {
       this.setActiveResourceRef(resourceRef, resourceType)
     }
+    // Keep facet writes idempotent for callers that repeatedly sync URL and state.
+    if (untrack(() => this.state.nav.facet) === facet) return
     this.state.nav.facet = facet
   }
 

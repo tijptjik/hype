@@ -374,11 +374,26 @@ export class AdminCtx {
   // ACTIVE RESOURCE :: SETTERS
   // ═══════════════════════
 
+  /**
+   * Proxies active resource type updates through `AppCtx`.
+   *
+   * @param resource - Resource type to activate, or `false` to clear it.
+   * @returns Nothing.
+   */
   setResourceType(resource: NavigableResource | false): void {
     // TODO Remove from AdminCtx
     this.appCtx.setActiveResourceType(resource)
   }
 
+  /**
+   * Proxies active resource ref updates through `AppCtx` while skipping no-op writes.
+   *
+   * @param ref - Resource ref to activate, or `false` to clear it.
+   * @param resource - Optional resource type to activate alongside the ref.
+   * @returns Nothing.
+   * @remarks This keeps admin navigation idempotent when URL sync or repeated selections
+   * attempt to write the same resource state multiple times.
+   */
   setResourceRef(ref: Id | Code | false, resource?: NavigableResource): void {
     // TODO Remove from AdminCtx
     // If the new entity is a different resource type to the current entity, update the state
@@ -386,10 +401,19 @@ export class AdminCtx {
     const sameResource =
       resource === undefined ||
       untrack(() => this.appCtx.state.nav.resourceType) === resource
+    // Avoid redundant navigation writes so admin panel effects do not re-run on no-op updates.
     if (sameRef && sameResource) return
     this.appCtx.setActiveResourceRef(ref as Id | false, resource)
   }
 
+  /**
+   * Proxies facet changes through `AppCtx` while optionally updating ref and resource first.
+   *
+   * @param facet - Facet to activate, or `false` to clear it.
+   * @param ref - Optional resource ref to set before updating the facet.
+   * @param resource - Optional resource type to set before updating the facet.
+   * @returns Nothing.
+   */
   setFacet(
     facet: FacetType | false,
     ref?: Id | Code | false,
@@ -402,6 +426,7 @@ export class AdminCtx {
     const sameResource =
       resource === undefined ||
       untrack(() => this.appCtx.state.nav.resourceType) === resource
+    // Keep facet updates idempotent because route sync may call this repeatedly with same values.
     if (sameFacet && sameRef && sameResource) return
     this.appCtx.setActiveFacet(facet, ref as Id | false | undefined, resource)
   }
@@ -486,6 +511,11 @@ export class AdminCtx {
   // ADMIN QUERY :: FUNCTIONS
   // ═══════════════════════
 
+  /**
+   * Fetches organisations for the admin view and stores list metadata for later UI decisions.
+   *
+   * @returns Organisation cards for the current admin prism and sort state.
+   */
   organisationsQueryFn = async () => {
     const result = (await getOrganisations({
       conditions: this.appCtx.isSuperAdmin()
@@ -495,10 +525,16 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.organisation,
       meta: { isAdminRequest: true, profile: 'card' },
     })) as ListResponse<Organisation>
+    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.organisationsQueryKey(), result)
     return result.data
   }
 
+  /**
+   * Fetches projects for the admin view and stores list metadata for later UI decisions.
+   *
+   * @returns Project cards for the current admin prism and sort state.
+   */
   projectsQueryFn = async () => {
     const remoteList = this.appCtx.remoteMap[FirstClassResource.project].list
     if (!remoteList) {
@@ -512,10 +548,16 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.project,
       meta: { isAdminRequest: true, profile: 'card' },
     })) as ListResponse<Project>
+    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.projectsQueryKey(), result)
     return result.data
   }
 
+  /**
+   * Fetches layers for the admin view and stores list metadata for later UI decisions.
+   *
+   * @returns Layer cards for the current admin prism and sort state.
+   */
   layersQueryFn = async () => {
     const remoteList = this.appCtx.remoteMap[FirstClassResource.layer].list
     if (!remoteList) {
@@ -529,10 +571,16 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.layer,
       meta: { isAdminRequest: true, profile: 'card' },
     })
+    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.layersQueryKey(), result)
     return result.data
   }
 
+  /**
+   * Fetches features for the admin view and stores list metadata for later UI decisions.
+   *
+   * @returns Feature cards for the current admin prism and sort state.
+   */
   featuresQueryFn = async () => {
     const result = await getFeatures({
       conditions: this.appCtx.isSuperAdmin()
@@ -542,6 +590,7 @@ export class AdminCtx {
       sorting: this.appCtx.state.viewSorting.feature,
       meta: { isAdminRequest: true, profile: 'card' },
     })
+    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.featuresQueryKey(), result)
     return result.data
   }
@@ -565,6 +614,11 @@ export class AdminCtx {
     return result.data
   }
 
+  /**
+   * Fetches hubs for the admin view and stores list metadata for later UI decisions.
+   *
+   * @returns Hub cards for the current admin sort state, or an empty list for non-admin users.
+   */
   hubsQueryFn = async () => {
     if (!this.appCtx.isAdmin()) return []
     try {
@@ -575,6 +629,7 @@ export class AdminCtx {
         sorting: this.appCtx.state.viewSorting.hub,
         meta: { isAdminRequest: true, profile: 'card' },
       })) as ListResponse<Hub>
+      // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
       this.appCtx.setListQueryMeta(this.hubsQueryKey, result)
       return result.data
     } catch (err) {
@@ -794,6 +849,7 @@ export class AdminCtx {
           feature.i18n?.[locale]?.displayAddress &&
           feature.i18n[locale]!.displayAddress!.length > 1,
       )
+      // Count any non-empty display address, including generated content, for this admin filter.
       if (hasDisplayAddress !== filters.hasDisplayAddress) return false
     }
 
@@ -1964,6 +2020,15 @@ export class AdminCtx {
     this.appCtx.state.viewFilters = structuredClone(viewFilters)
   }
 
+  /**
+   * Updates admin view sorting and reuses loaded results when the full list is already present.
+   *
+   * @param resource - Resource type whose sort state is changing.
+   * @param next - Partial sort state update.
+   * @returns Nothing.
+   * @remarks When the current query metadata says there are no more pages, the method sorts the
+   * loaded entities in memory and updates both app state and query cache instead of refetching.
+   */
   setViewSorting = async (
     resource: FirstClassResource,
     next: Partial<ResourceSortState>,
@@ -1995,6 +2060,7 @@ export class AdminCtx {
     ) {
       const nextQueryKey = queryEntry.queryKey()
       const currentEntities = this.appCtx.state.resources[resource] as Resource[]
+      // Re-sort locally when the full collection is already loaded to avoid an unnecessary request.
       const sortedEntities = this.appCtx.sortLoadedResources(
         resource,
         currentEntities,
@@ -2003,6 +2069,7 @@ export class AdminCtx {
 
       this.appCtx.setSortedResourceState(resource, sortedEntities)
       this.queryClient.setQueryData(nextQueryKey, sortedEntities)
+      // Keep cached metadata aligned with the new in-memory sort result.
       this.appCtx.setListQueryMeta(nextQueryKey, {
         data: sortedEntities,
         totalCount: currentQueryMeta.totalCount ?? sortedEntities.length,
