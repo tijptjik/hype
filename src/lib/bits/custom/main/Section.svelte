@@ -25,10 +25,10 @@ const sectionClass = $derived(
 
 {#if transition === 'fade'}
   <section {...attrs} class={sectionClass} aria-hidden={!isVisible} inert={!isVisible}>
-    {@render children?.()}
+    <div>{@render children?.()}</div>
   </section>
 {:else}
   <section {...attrs} class={sectionClass} hidden={!isVisible} aria-hidden={!isVisible}>
-    {@render children?.()}
+    <div>{@render children?.()}</div>
   </section>
 {/if}

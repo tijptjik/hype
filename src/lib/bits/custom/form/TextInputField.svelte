@@ -47,23 +47,18 @@ const controlWrapClass = $derived(
     .join(' '),
 )
 
-const displayClass = $derived(
-  [
-    'bits-form__control bits-form__control--input bits-form__control--display',
-    value === '' ? 'bits-form__control--placeholder' : 'bits-form__control--filled',
-    isTranslated && locale !== 'core' ? 'bits-form__control--translated' : '',
-  ]
-    .filter(Boolean)
-    .join(' '),
+const resolvedInputAttrs = $derived(
+  isEditing ? inputAttrs : { ...inputAttrs, tabindex: -1 },
 )
-
-const displayValue = $derived(value?.trim() || placeholder || ' ')
+const resolvedDisabled = $derived(isEditing ? disabled : false)
+const resolvedReadonly = $derived(isEditing ? readonly : true)
 const isGenAiDisabled = $derived(!isEditing || disabled)
 const showGenAiToggle = $derived(
   locale !== 'core' && (typeof onToggleGenAI === 'function' || isGenAI),
 )
 
 function handleValueChange(nextValue: string): void {
+  if (!isEditing) return
   onValueChange?.(nextValue)
   if (showGenAiToggle && isGenAI) onToggleGenAI?.()
 }
@@ -79,24 +74,20 @@ function handleValueChange(nextValue: string): void {
   />
 
   <div class={controlWrapClass}>
-    {#if isEditing}
-      <InputPrimitive.Input
-        attrs={inputAttrs}
-        {id}
-        {name}
-        class={inputClass}
-        type={inputType}
-        bind:value
-        {placeholder}
-        {locale}
-        {isTranslated}
-        {disabled}
-        {readonly}
-        onValueChange={handleValueChange}
-      />
-    {:else}
-      <div class={displayClass}>{displayValue}</div>
-    {/if}
+    <InputPrimitive.Input
+      attrs={resolvedInputAttrs}
+      {id}
+      {name}
+      class={inputClass}
+      type={inputType}
+      bind:value
+      {placeholder}
+      {locale}
+      {isTranslated}
+      disabled={resolvedDisabled}
+      readonly={resolvedReadonly}
+      onValueChange={handleValueChange}
+    />
 
     {#if showGenAiToggle}
       <div class="bits-form__gen-ai-wrap">

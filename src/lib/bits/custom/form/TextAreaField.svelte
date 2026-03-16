@@ -46,19 +46,22 @@ const controlWrapClass = $derived(
     .join(' '),
 )
 
-const displayValue = $derived(value ?? '')
-const displayPlaceholder = $derived(placeholder || ' ')
+const resolvedTextareaAttrs = $derived(
+  isEditing ? textareaAttrs : { ...textareaAttrs, tabindex: -1 },
+)
+const resolvedPlaceholder = $derived(isEditing ? placeholder : placeholder || ' ')
+const resolvedDisabled = $derived(isEditing ? disabled : false)
+const resolvedReadonly = $derived(isEditing ? readonly : true)
 const isGenAiDisabled = $derived(!isEditing || disabled)
 const showGenAiToggle = $derived(
   locale !== 'core' && (typeof onToggleGenAI === 'function' || isGenAI),
 )
 
 function handleValueChange(nextValue: string): void {
+  if (!isEditing) return
   onValueChange?.(nextValue)
   if (showGenAiToggle && isGenAI) onToggleGenAI?.()
 }
-
-const readonlyTextareaAttrs = $derived({ ...textareaAttrs, tabindex: -1 })
 </script>
 
 <label class={wrapperClass} for={id}>
@@ -71,34 +74,19 @@ const readonlyTextareaAttrs = $derived({ ...textareaAttrs, tabindex: -1 })
   />
 
   <div class={controlWrapClass}>
-    {#if isEditing}
-      <InputPrimitive.TextArea
-        attrs={textareaAttrs}
-        {id}
-        {name}
-        bind:value
-        {placeholder}
-        {locale}
-        {isTranslated}
-        {disabled}
-        {readonly}
-        {rows}
-        onValueChange={handleValueChange}
-      />
-    {:else}
-      <InputPrimitive.TextArea
-        attrs={readonlyTextareaAttrs}
-        {id}
-        {name}
-        value={displayValue}
-        placeholder={displayPlaceholder}
-        {locale}
-        {isTranslated}
-        disabled={false}
-        readonly={true}
-        {rows}
-      />
-    {/if}
+    <InputPrimitive.TextArea
+      attrs={resolvedTextareaAttrs}
+      {id}
+      {name}
+      bind:value
+      placeholder={resolvedPlaceholder}
+      {locale}
+      {isTranslated}
+      disabled={resolvedDisabled}
+      readonly={resolvedReadonly}
+      {rows}
+      onValueChange={handleValueChange}
+    />
 
     {#if showGenAiToggle}
       <div class="bits-form__gen-ai-wrap">
