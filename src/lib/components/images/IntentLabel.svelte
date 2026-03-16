@@ -61,6 +61,7 @@ if (container) {
 >
   <div class="relative">
     <button
+      type="button"
       class="rounded-lg px-3 py-[6px] text-sm font-medium backdrop-blur-sm transition-all duration-200
           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
           {intent === 'canonical'
@@ -86,12 +87,13 @@ if (container) {
       >
         {#each adminIntentOrder.filter((option) => option !== intent) as option, idx}
           <button
+            type="button"
             class="w-full px-2 py-[5px] text-center text-sm hover:bg-primary focus:bg-primary
                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
                   {option === intent ? 'bg-glass-result' : ''}
                   {option === 'canonical' &&
             images.some(
-              (img) => img.id !== imageId && (img as any).intent === 'canonical'
+              img => img.image.id !== imageId && (img as any).intent === 'canonical'
             )
               ? 'text-primary hover:text-white'
               : ''}"

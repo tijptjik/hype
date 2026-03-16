@@ -24,6 +24,7 @@ let { image }: Props = $props()
   <p class="text-sm">{m.equal_petty_goose_pull()}</p>
   <div class="flex gap-2">
     <button
+      type="button"
       class="btn btn-sm border-none bg-glass-rejected hover:border-none hover:bg-glass-rejected/80"
       onclick={(e) => {
         imageCtx.handleConfirmDelete(e, image);
@@ -32,6 +33,7 @@ let { image }: Props = $props()
       {m.whole_deft_penguin_enchant()}
     </button>
     <button
+      type="button"
       class="btn btn-ghost btn-sm border-none hover:border-none"
       onclick={(e) => {
         imageCtx.handleCancelDelete(e, image);

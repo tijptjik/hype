@@ -27,6 +27,7 @@ const imageCtx = getImageCtx()
 >
   <Icon src={ExclamationCircle} class="h-8 w-8 text-error" />
   <button
+    type="button"
     class="btn btn-error btn-sm mt-2"
     onclick={() => imageCtx.retryUpload(fileObject)}
   >

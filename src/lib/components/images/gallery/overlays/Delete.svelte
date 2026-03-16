@@ -20,6 +20,7 @@ const imageCtx = getImageCtx()
   transition:fade={{ duration: 200 }}
 >
   <button
+    type="button"
     aria-label="Delete image"
     class="btn btn-circle bg-glass-rejected hover:bg-glass-rejected/80"
     onclick={(e) => {

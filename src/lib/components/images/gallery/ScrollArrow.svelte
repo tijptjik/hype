@@ -54,6 +54,7 @@ const icon = $derived(
 </script>
 
 <button
+  type="button"
   class="arrow z-40 h-10 w-10 transform rounded-full bg-glass-result p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-glass-result/80 hover:shadow-xl {style
     ? ''
     : 'absolute ' + positionClasses()}"

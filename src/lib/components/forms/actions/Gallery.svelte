@@ -45,6 +45,7 @@ $effect(() => {
 <div class="flex flex-row items-center justify-between">
   {#if !removeMode}
     <button
+      type="button"
       class="btn-rounded btn btn-ghost ml-auto h-12 flex-nowrap whitespace-nowrap text-nowrap font-bold"
       onclick={(e) => actions?.add(e)}
       data-testid="addImageButton"
@@ -55,6 +56,7 @@ $effect(() => {
   {/if}
   {#if imageCtx.getImages().length > 0}
     <button
+      type="button"
       class="btn-rounded btn btn-ghost ml-auto h-12 flex-nowrap overflow-hidden whitespace-nowrap text-nowrap font-bold"
       onclick={(e) => actions?.remove(e)}
       transition:slide={{ axis: 'x', duration: 500, easing: cubicInOut }}
