@@ -11,7 +11,6 @@ import { setupRequestHandler } from '$lib/api'
 import type {
   GuardedBaseContext,
   GuardedCommandContext,
-  GuardedContextResolver,
   GuardedFormContext,
   GuardedIssue,
   GuardedQueryContext,
@@ -114,18 +113,16 @@ export function guardedQuery(
     | ((output: unknown, ctx: GuardedQueryContext) => Promise<unknown>)
     | undefined,
 ) {
-  const resolveCtx: GuardedContextResolver = resolveGuardedContext
-
   if (typeof maybeFn === 'function' && typeof schemaOrFn !== 'function') {
     return query(schemaOrFn, async output => {
-      const ctx = await resolveCtx(output)
+      const ctx = await resolveGuardedContext(output)
       return maybeFn(output, ctx)
     })
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return query(async () => {
-      const ctx = await resolveCtx()
+      const ctx = await resolveGuardedContext()
       return schemaOrFn(ctx)
     })
   }
@@ -146,9 +143,8 @@ export function guardedBatchQuery<Schema extends StandardSchemaV1, Output>(
     (output: StandardSchemaV1.InferOutput<Schema>) => Output | Promise<Output>
   >,
 ) {
-  const resolveCtx: GuardedContextResolver = resolveGuardedContext
   return query.batch(schema, async outputs => {
-    const ctx = await resolveCtx(outputs)
+    const ctx = await resolveGuardedContext(outputs)
     return fn(outputs, ctx)
   })
 }
@@ -225,15 +221,13 @@ export function guardedForm(
     | ((input: unknown, ctx: GuardedFormContext) => Promise<unknown>)
     | undefined,
 ) {
-  const resolveCtx: GuardedContextResolver = resolveGuardedContext
-
   if (
     typeof maybeFn === 'function' &&
     typeof schemaOrFn !== 'function' &&
     schemaOrFn !== 'unchecked'
   ) {
     return form(schemaOrFn, async (output, issue) => {
-      const ctx = await resolveCtx(output)
+      const ctx = await resolveGuardedContext(output)
       return maybeFn(output, {
         ...ctx,
         invalid,
@@ -244,7 +238,7 @@ export function guardedForm(
 
   if (schemaOrFn === 'unchecked' && typeof maybeFn === 'function') {
     return form('unchecked', async (input: unknown, issue) => {
-      const ctx = await resolveCtx(input)
+      const ctx = await resolveGuardedContext(input)
       return maybeFn(input, {
         ...ctx,
         invalid,
@@ -255,7 +249,7 @@ export function guardedForm(
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return form('unchecked', async (_input: unknown, issue) => {
-      const ctx = await resolveCtx()
+      const ctx = await resolveGuardedContext()
       return schemaOrFn({
         ...ctx,
         invalid,
@@ -289,18 +283,16 @@ export function guardedCommand(
     | ((input: unknown, ctx: GuardedCommandContext) => Promise<unknown>),
   maybeFn?: (output: unknown, ctx: GuardedCommandContext) => Promise<unknown>,
 ) {
-  const resolveCtx: GuardedContextResolver = resolveGuardedContext
-
   if (typeof maybeFn === 'function' && typeof schemaOrFn !== 'function') {
     return command(schemaOrFn, async output => {
-      const ctx = await resolveCtx(output)
+      const ctx = await resolveGuardedContext(output)
       return maybeFn(output, ctx)
     })
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return command('unchecked', async (input: unknown) => {
-      const ctx = await resolveCtx(input)
+      const ctx = await resolveGuardedContext(input)
       return schemaOrFn(input, ctx)
     })
   }

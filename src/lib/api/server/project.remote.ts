@@ -54,6 +54,7 @@ import {
 } from '$lib/api/services/authz'
 // DB
 import {
+  hasProjectLayersCondition,
   cascadeOrganisationToDescendants,
   createI18n,
   createUserRoles,
@@ -186,6 +187,64 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
 })
 
 export const getProjects = getProjectsQuery
+
+const getProjectsWhichHaveLayersQuery = guardedQuery(
+  ListQueryParamsSchema,
+  async (params, ctx) => {
+    const { db, user, userRoles, event } = ctx
+    const profile = toProjectProfile(params.meta?.profile, 'list')
+
+    const queryParams = validateQueryParams<ProjectDB>(
+      project,
+      params.conditions as Partial<ProjectDB> | undefined,
+    )
+    const requestedListState = toRequestedListState(queryParams as Partial<ProjectDB>)
+
+    const listDecision = authorizeProjectListForContext({
+      user,
+      userRoles,
+      hub: event.locals.hub,
+      requestedListState,
+    })
+    if (!listDecision.allowed) {
+      throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
+    }
+
+    const { conditions, filtersToApply } = toQueryConditions(
+      db,
+      user,
+      ctx.isAdminRequest,
+      queryParams,
+      userRoles,
+      (params.prisms as Prisms | undefined) ?? getPrisms(event.url),
+      event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
+    )
+
+    conditions.push(hasProjectLayersCondition())
+
+    const result = await listProjects(
+      db,
+      getProjectWithRelations(profile) as never,
+      conditions,
+      {
+        ...event.locals.hub,
+        isSuperAdmin: user.superAdmin || false,
+        isAdminRequest: ctx.isAdminRequest,
+      },
+      params.pagination,
+      params.sorting,
+      {
+        q: params.q,
+        filtersToApply: filtersToApply as QueryParams,
+        locale: getLocale(),
+      },
+    )
+
+    return toListResponseShape(result, user, profile)
+  },
+)
+
+export const getProjectsWhichHaveLayers = getProjectsWhichHaveLayersQuery
 
 /**
  * Returns a role-aware project record for guarded remote callers.

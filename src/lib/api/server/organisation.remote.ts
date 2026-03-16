@@ -43,6 +43,7 @@ import {
 import {
   createI18n,
   createOrganisation,
+  hasOrganisationLayersCondition,
   createUserRoles,
   listUserRoleAssignments,
   listOrganisations,
@@ -185,6 +186,63 @@ export const getOrganisations = getOrganisationsQuery as typeof getOrganisations
   (<P extends OrganisationProfile = 'list'>(
     params: OrganisationListParamsByProfile<P>,
   ) => Promise<ListResponse<OrganisationListByProfile<P>>>)
+
+const getOrganisationsWhichHaveLayersQuery = guardedQuery(
+  ListQueryParamsSchema,
+  async (params, ctx) => {
+    const { db, user, userRoles, isAdminRequest, event } = ctx
+    const profile = toOrganisationProfile(params.meta?.profile, 'list')
+
+    const queryParams = validateQueryParams<OrganisationDB>(
+      organisation,
+      params.conditions as Partial<OrganisationDB> | undefined,
+    )
+    const requestedListState = toRequestedListState(
+      queryParams as Partial<OrganisationDB>,
+    )
+
+    const listDecision = authorizeOrganisationListForContext({
+      user,
+      userRoles,
+      hub: event.locals.hub,
+      requestedListState,
+    })
+    if (!listDecision.allowed) {
+      throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
+    }
+
+    const { conditions, filtersToApply } = toQueryConditions(
+      user,
+      isAdminRequest,
+      queryParams,
+      userRoles,
+    )
+
+    conditions.push(hasOrganisationLayersCondition())
+
+    const result = await listOrganisations(
+      db,
+      getOrganisationWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
+      conditions,
+      event.locals.hub,
+      params.pagination,
+      params.sorting,
+      {
+        q: params.q,
+        filtersToApply,
+        locale: getLocale(),
+      },
+    )
+
+    return toListResponseShape(result, user, profile)
+  },
+)
+
+export const getOrganisationsWhichHaveLayers =
+  getOrganisationsWhichHaveLayersQuery as typeof getOrganisationsWhichHaveLayersQuery &
+    (<P extends OrganisationProfile = 'list'>(
+      params: OrganisationListParamsByProfile<P>,
+    ) => Promise<ListResponse<OrganisationListByProfile<P>>>)
 
 /**
  * Returns a role-aware organisation record for guarded remote callers.

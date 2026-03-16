@@ -58,6 +58,8 @@ import type {
 //
 // 2.3 CRUD :: READ (LOOKUPS)
 //    - getLayerMap
+//    - hasProjectLayersCondition
+//    - hasOrganisationLayersCondition
 //
 // 3.1 CRUD :: UPDATE (CONCURRENCY/STATE)
 //    - updateLayerByIdWithConcurrency
@@ -429,6 +431,22 @@ export const getLayerMap = async (
 
   return layersMap
 }
+
+/**
+ * Builds a predicate that matches projects with at least one layer.
+ */
+export const hasProjectLayersCondition = (): SQL<unknown> => sql`EXISTS (
+  SELECT 1 FROM "layer"
+  WHERE "layer"."projectId" = ${project.id}
+)`
+
+/**
+ * Builds a predicate that matches organisations with at least one layer.
+ */
+export const hasOrganisationLayersCondition = (): SQL<unknown> => sql`EXISTS (
+  SELECT 1 FROM "layer"
+  WHERE "layer"."organisationId" = ${organisation.id}
+)`
 
 // ═══════════════════════
 // 3.1 CRUD :: UPDATE (CONCURRENCY/STATE)
