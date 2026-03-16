@@ -76,6 +76,10 @@
   .bits-theme .bits-header__title {
     grid-column: 1;
     grid-row: 1;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: var(--header-text-size);
     line-height: var(--header-line-height);
     color: var(--color-base-content);

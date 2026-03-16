@@ -23,11 +23,12 @@
 
   .bits-theme .bits-pattern-header__title-group {
     @apply flex min-w-0 items-center gap-2;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
   }
 
   .bits-theme .bits-pattern-header__title-group > .bits-header {
-    flex: 0 0 auto;
+    min-width: 0;
+    flex: 0 1 auto;
   }
 
   .bits-theme .bits-pattern-header__title-menu-slot {
