@@ -22,6 +22,8 @@ let query = $state('')
 let results = $state<T[]>([])
 let isOpen = $state(false)
 let rootEl = $state<HTMLDivElement | null>(null)
+let localExcludedIds = $state<string[]>([])
+let previousExcludeIds = excludeIds
 
 function toItemId(item: T): string {
   if (getItemId) return getItemId(item)
@@ -34,9 +36,13 @@ function toSearchText(item: T): string {
   return `${resultMap.title(item)} ${resultMap.descriminator?.(item) ?? ''}`
 }
 
+function getExcludedIds(): Set<string> {
+  return new Set([...excludeIds, ...localExcludedIds])
+}
+
 function resolveResults(nextQuery: string): T[] {
   const needle = nextQuery.trim().toLowerCase()
-  const excludedIds = new Set(excludeIds)
+  const excludedIds = getExcludedIds()
   const filtered = options.filter(item => {
     if (excludedIds.has(toItemId(item))) return false
     if (needle.length === 0) return true
@@ -88,20 +94,33 @@ function handleInputKeydown(event: KeyboardEvent): void {
 
 function selectItem(item: T): void {
   if (isSearchResultDisabled(item, resultMap)) return
+  const itemId = toItemId(item)
+  if (itemId) {
+    localExcludedIds = [...localExcludedIds, itemId]
+  }
   onSelect(item)
   query = ''
-  results = resolveResults('')
-  isOpen = true
+  results = []
+  isOpen = false
 
   void tick().then(() => {
     const input = rootEl?.querySelector<HTMLInputElement>('input[type="text"]')
-    input?.focus()
+    input?.blur()
   })
 }
 
 $effect(() => {
   if (!isOpen) return
   results = resolveResults(query)
+})
+
+$effect(() => {
+  const removedExcludeIds = previousExcludeIds.filter(id => !excludeIds.includes(id))
+  if (removedExcludeIds.length > 0) {
+    const removedExcludeIdSet = new Set(removedExcludeIds)
+    localExcludedIds = localExcludedIds.filter(id => !removedExcludeIdSet.has(id))
+  }
+  previousExcludeIds = [...excludeIds]
 })
 </script>
 

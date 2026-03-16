@@ -30,17 +30,36 @@ let {
 }: SearchProps<T> = $props()
 
 let query = $state('')
-let results = $state<T[]>([])
+let rawResults = $state<T[]>([])
 let isLoading = $state(false)
 let requestId = $state(0)
 let rootEl = $state<HTMLDivElement | null>(null)
 let isOpen = $state(false)
-let emptyQueryResults = $state<T[]>(initialResults)
+let cachedEmptyQueryResults = $state<T[]>(initialResults)
 let lastPrefetchKey = $state<unknown>(Symbol('search-prefetch-init'))
 let lastVisibility = $state<boolean | null>(null)
 let openEpoch = $state(0)
+let localExcludedIds = $state<string[]>([])
+let previousExcludeIds = excludeIds
+const emptyQueryResults = $derived(filterExcludedItems(cachedEmptyQueryResults))
+const results = $derived(filterExcludedItems(rawResults))
 const areResultsVisible = $derived(isOpen && results.length > 0)
 const shouldShowEmptyState = $derived(isOpen && !isLoading && results.length === 0)
+
+function toItemId(item: T): string {
+  if (getItemId) return getItemId(item)
+  const candidate = (item as { id?: unknown }).id
+  return typeof candidate === 'string' ? candidate : ''
+}
+
+function getExcludedIds(): Set<string> {
+  return new Set([...excludeIds, ...localExcludedIds])
+}
+
+function filterExcludedItems(items: T[]): T[] {
+  const excludedIds = getExcludedIds()
+  return items.filter(item => !excludedIds.has(toItemId(item)))
+}
 
 function openResults(): void {
   isOpen = true
@@ -58,12 +77,12 @@ async function handleQuery(
   if (trimmedQuery.length === 0 && !options.force) {
     requestId += 1
     isLoading = false
-    results = emptyQueryResults
+    rawResults = cachedEmptyQueryResults
     return
   }
 
   if (!options.force && trimmedQuery.length < minChars) {
-    results = []
+    rawResults = []
     return
   }
 
@@ -83,21 +102,13 @@ async function handleQuery(
           )
         ).data as T[])
     if (currentRequestId !== requestId) return
-    const toId =
-      getItemId ??
-      ((item: T) => {
-        const candidate = (item as { id?: unknown }).id
-        return typeof candidate === 'string' ? candidate : ''
-      })
-    const excluded = new Set(excludeIds)
-    const nextResults = response.filter(item => !excluded.has(toId(item)))
     if (trimmedQuery.length === 0) {
-      emptyQueryResults = nextResults
+      cachedEmptyQueryResults = response
     }
-    results = nextResults
+    rawResults = response
   } catch {
     if (currentRequestId !== requestId) return
-    results = []
+    rawResults = []
   } finally {
     if (currentRequestId === requestId) isLoading = false
   }
@@ -106,7 +117,7 @@ async function handleQuery(
 function handleClear(): void {
   openResults()
   query = ''
-  results = emptyQueryResults
+  rawResults = cachedEmptyQueryResults
 }
 
 function handleInputKeydown(event: KeyboardEvent): void {
@@ -129,7 +140,7 @@ function handleFocus(): void {
   openResults()
   if (query.trim().length > 0) return
   if (emptyQueryResults.length > 0) {
-    results = emptyQueryResults
+    rawResults = cachedEmptyQueryResults
     return
   }
   void handleQuery('', { force: true })
@@ -141,13 +152,18 @@ function handleRootFocusIn(): void {
 
 function selectItem(item: T): void {
   if (isSearchResultDisabled(item, resultMap)) return
+  const itemId = toItemId(item)
+  if (itemId) {
+    localExcludedIds = [...localExcludedIds, itemId]
+  }
   onSelect(item)
   query = ''
-  results = []
+  rawResults = []
+  isOpen = false
 
   void tick().then(() => {
     const input = rootEl?.querySelector<HTMLInputElement>('input[type="text"]')
-    input?.focus()
+    input?.blur()
   })
 }
 
@@ -162,9 +178,18 @@ $effect(() => {
 
 $effect(() => {
   initialResults
-  emptyQueryResults = initialResults
+  cachedEmptyQueryResults = initialResults
   if (untrack(() => query.trim().length > 0)) return
-  results = initialResults
+  rawResults = initialResults
+})
+
+$effect(() => {
+  const removedExcludeIds = previousExcludeIds.filter(id => !excludeIds.includes(id))
+  if (removedExcludeIds.length > 0) {
+    const removedExcludeIdSet = new Set(removedExcludeIds)
+    localExcludedIds = localExcludedIds.filter(id => !removedExcludeIdSet.has(id))
+  }
+  previousExcludeIds = [...excludeIds]
 })
 
 $effect(() => {
