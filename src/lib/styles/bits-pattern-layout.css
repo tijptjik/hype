@@ -45,24 +45,36 @@
     @apply absolute right-0 hidden items-center gap-2 px-4 lg:flex;
   }
 
-  .bits-theme .bits-app-menu__button {
-    @apply flex min-h-12 flex-col items-center justify-center gap-1 p-1;
+  .bits-theme .bits-app-menu__button.bits-btn {
+    @apply min-h-12 flex-col justify-center gap-1 border-0 p-1;
+    --btn-bg: transparent;
+    --btn-border: transparent;
+    --btn-hover-bg: transparent;
+    --btn-active-bg: transparent;
+    --btn-fg: var(--color-base-content);
+    --btn-hover-fg: var(--color-primary);
+    --btn-active-fg: color-mix(in oklab, var(--color-primary) 84%, white);
+    box-shadow: none;
   }
 
-  .bits-theme .bits-app-menu__button--secondary {
-    @apply text-secondary;
+  .bits-theme .bits-app-menu__button.bits-btn--color-secondary {
+    --btn-fg: var(--color-secondary);
+    --btn-hover-fg: var(--color-secondary);
+    --btn-active-fg: color-mix(in oklab, var(--color-secondary) 84%, white);
   }
 
-  .bits-theme .bits-app-menu__label {
+  .bits-theme .bits-app-menu__button .bits-btn__label {
     @apply text-xs uppercase tracking-wider text-base-content/70 transition-opacity duration-300;
+    max-width: none;
   }
 
-  .bits-theme .bits-app-menu__label--hidden {
+  .bits-theme .bits-app-menu__button.bits-btn--label-hidden .bits-btn__label {
     @apply opacity-0;
+    transform: translateY(-0.125rem);
   }
 
   @supports (-moz-appearance: none) {
-    .bits-theme .bits-app-menu__label--hidden {
+    .bits-theme .bits-app-menu__button.bits-btn--label-hidden .bits-btn__label {
       display: none;
     }
   }

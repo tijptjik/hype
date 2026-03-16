@@ -1,6 +1,6 @@
 @layer components {
   .bits-theme .bits-toast {
-    @apply group relative flex min-h-16 w-[22rem] items-start gap-3 rounded-box border border-2 border-base-50 bg-base-100 p-5 text-base-content shadow-xl;
+    @apply relative flex min-h-16 w-[22rem] items-start gap-3 rounded-box border border-2 border-base-50 bg-base-100 p-5 text-base-content shadow-xl;
   }
 
   .bits-theme .bits-toast__title {
