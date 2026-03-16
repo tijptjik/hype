@@ -95,24 +95,26 @@ let resourcesToDisplay = $derived([
 <div
   class="flex {props.isNarrow
     ? 'flex-col items-center justify-center gap-1 px-2'
-    : 'mb-0 flex-wrap gap-2 px-8 pt-2'}"
+    : 'mb-0 flex-wrap items-start gap-x-0 gap-y-2 overflow-visible px-8 pt-2 pb-4'}"
 >
   {#each resourcesToDisplay as id (id)}
     {@const isCurrentActive = id === props.active?.resourceId}
     {@const resource = props.resources.find((r) => r.id === id)}
-    {@const name = getI18n(resource!.i18n, 'name', appCtx.getUserPreferences())}
-    <div class="relative {props.isNarrow ? 'h-12 w-12 flex-shrink-0' : ''}">
+    {@const name = getI18n(resource!.i18n, 'nameShort', appCtx.getUserPreferences())}
+    <div
+      class="relative {props.isNarrow ? 'h-12 w-12 shrink-0' : 'min-w-0 max-w-full self-start'}"
+    >
       {#if !props.isNarrow}
         <span
-          class="badge badge-outline flex cursor-pointer items-center whitespace-nowrap px-3 py-3 {colorClass}"
+          class="badge badge-outline inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 whitespace-normal wrap-break-words px-3 py-0 text-left leading-tight {colorClass}"
           transition:fade={{ duration: 300 }}
           onclick={(e) => {
             e.stopPropagation();
             handleToggle(id);
           }}
         >
-          {name}
-          <Icon src={XMark} class="ml-1 h-3 w-3" />
+          <span class="min-w-0 justify-self-start leading-tight">{name}</span>
+          <Icon src={XMark} class="h-3 w-3 shrink-0 self-center" />
         </span>
       {/if}
       {#if props.isNarrow}
