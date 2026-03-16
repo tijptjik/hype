@@ -65,7 +65,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",
     "@changesets/cli": "^2.30.0",
-    "@cloudflare/vite-plugin": "^1.28.0",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@commitlint/cz-commitlint": "^20.5.0",
@@ -92,7 +91,7 @@
     "vite-node": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.25.0",
     "vitest": "^4.1.0",
-    "wrangler": "^4.73.0"
+    "wrangler": "^4.74.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -106,6 +105,7 @@
     "workerd"
   ],
   "dependencies": {
+    "@cloudflare/vite-plugin": "1.29.0",
     "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "^2.15.0",
     "@mapbox/tilebelt": "^2.0.3",
