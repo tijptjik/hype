@@ -1,5 +1,7 @@
+export * from './bars'
 export * from './resource'
 export * from './cards'
 export * from './forms'
 export * from './capabilities'
 export * from './layout'
+export * from './panels'

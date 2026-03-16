@@ -1,6 +1,7 @@
 <script lang="ts">
 // BITS
-import { SimpleMeter, SimpleTooltip } from '$lib/bits'
+import SimpleMeter from '$lib/bits/core/meter/SimpleMeter.svelte'
+import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
 // TYPES
 import type { CompletionFooterStatProps } from '../completionFooter.types'
 

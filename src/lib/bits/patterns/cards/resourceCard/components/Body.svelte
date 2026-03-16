@@ -1,5 +1,5 @@
 <script lang="ts">
-import ScrollableText from '$lib/components/common/ScrollableText.svelte'
+import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 import type { ResourceCardBodyProps } from '../resourceCard.types'
 
 let {

@@ -1,6 +1,6 @@
 <script lang="ts">
-// COMPONENTS
-import ScrollableText from '$lib/components/common/ScrollableText.svelte'
+// BITS
+import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 // TYPES
 import type { IndexCardBodyProps } from '../indexCard.types'
 

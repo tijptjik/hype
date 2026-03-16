@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n'
 // BITS COMPONENTS
-import { Button } from '$lib/bits'
+import Button from '$lib/bits/core/button/Button.svelte'
 
 let {
   onEnterEditMode,

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SimpleTooltip } from '$lib/bits'
+import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
 import type { FeatureStatPipsProps } from '../featureStats.types'
 
 let { title, icon, statuses, showTitle = true }: FeatureStatPipsProps = $props()

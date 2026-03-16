@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Header as BitsHeader } from '$lib/bits/custom'
+import BitsHeader from '$lib/bits/custom/header/Header.svelte'
 import { Dropdown } from '$lib/bits/core'
 // SVELTE
 import { slide } from 'svelte/transition'

@@ -1,3 +1,5 @@
 export * from './adaptiveToolbar'
+export * from './autoHide'
 export * from './gridSpacer'
 export * from './header'
+export * from './minWidthGuard'

@@ -4,13 +4,15 @@ import type { Page } from '@sveltejs/kit'
 import { toast } from 'svelte-sonner'
 // I18N
 import { m } from '$lib/i18n'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // CLIENT SERVICES
 import { updateImagePresentationMode } from '$lib/client/services/image'
 // BITS COMPONENTS
 import { Switch } from '$lib/bits/custom/switch'
 import { SectionHeader } from '$lib/bits/custom/form'
 // COMPONENTS
-import ImageProvider from '$lib/components/providers/ImageProvider.svelte'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 import Viewer from '$lib/components/common/Viewer.svelte'
 // ICONS
 import LoaderCircleIcon from 'virtual:icons/lucide/loader-circle'
@@ -51,6 +53,10 @@ const effectiveImage = $derived(
 const hasActiveImage = $derived(Boolean(effectiveImage?.image?.id))
 const isCoverPresentationMode = $derived(
   effectiveImage?.image?.presentationMode === 'cover',
+)
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => imageProviderProps,
 )
 
 function clearPresentationModeFeedbackTimer(): void {
@@ -119,7 +125,7 @@ $effect(() => {
   {#if entityId}
     <div class="bits-entity-image__provider-wrap">
       {#key entityId}
-        <ImageProvider {page} {...imageProviderProps}>
+        <ImageProvider model={imageProviderModel}>
           <div class="bits-entity-image__frame">
             <SectionHeader
               title={m.admin__forms_organisation_image_title()}
