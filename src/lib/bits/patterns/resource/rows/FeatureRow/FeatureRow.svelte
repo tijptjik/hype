@@ -3,7 +3,7 @@
 import { Row } from '$lib/bits/custom'
 import * as VirtualListPrimitive from '$lib/bits/custom/index/src'
 import StatsPips from '$lib/bits/custom/featureStats/components/StatsPips.svelte'
-import ResourceStatusBadge from '$lib/components/resources/common/ResourceStatusBadge.svelte'
+import * as FeatureRowPrimitive from './components'
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation'
 // ENUMS
@@ -169,10 +169,8 @@ function handleDescriptionClick(): void {
       {/snippet}
     </VirtualListPrimitive.Secondary>
   </div>
-  <div class="bits-resource-row__status">
-    <ResourceStatusBadge
-      isPublished={model.isPublished}
-      isPendingReview={model.isPendingReview}
-    />
-  </div>
+  <FeatureRowPrimitive.StatusSection
+    isPublished={model.isPublished}
+    isPendingReview={model.isPendingReview}
+  />
 </Row>

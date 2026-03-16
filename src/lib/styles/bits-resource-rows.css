@@ -116,6 +116,46 @@
     flex-shrink: 0;
   }
 
+  .bits-theme .bits-resource-status-badge__trigger {
+    display: inline-flex;
+  }
+
+  .bits-theme .bits-resource-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 6.25rem;
+    padding: 1rem 0.75rem;
+    border-radius: var(--radius-box);
+    border: 0;
+    background: var(--glass-neutral);
+    font-size: 0.75rem;
+    line-height: 1;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .bits-theme .bits-resource-status-badge--neutral {
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  }
+
+  .bits-theme .bits-resource-status-badge--warning {
+    color: #f97316;
+  }
+
+  .bits-theme .bits-resource-status-badge--success {
+    color: var(--color-ok);
+  }
+
+  .bits-theme .bits-resource-status-badge--error {
+    color: var(--color-error);
+  }
+
+  .bits-theme .bits-resource-status-badge__tooltip {
+    max-width: 18rem;
+    text-wrap: pretty;
+  }
+
   .bits-resource-row-stats {
     pointer-events: none;
     display: flex;

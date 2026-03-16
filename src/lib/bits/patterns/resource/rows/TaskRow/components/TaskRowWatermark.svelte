@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SimpleTooltip } from '$lib/bits'
+import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
 import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
 
 let {

@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import { SimpleTooltip } from '$lib/bits'
+import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
 // I18N
 import { m } from '$lib/i18n'
 // UTILS

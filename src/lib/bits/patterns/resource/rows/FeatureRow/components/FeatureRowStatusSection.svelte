@@ -1,5 +1,5 @@
 <script lang="ts">
-import ResourceStatusBadge from '$lib/components/resources/common/ResourceStatusBadge.svelte'
+import ResourceFeatureStatusBadge from '../../../components/ResourceFeatureStatusBadge.svelte'
 
 let {
   isPublished,
@@ -11,5 +11,5 @@ let {
 </script>
 
 <div class="bits-resource-row__status">
-  <ResourceStatusBadge {isPublished} {isPendingReview} />
+  <ResourceFeatureStatusBadge {isPublished} {isPendingReview} />
 </div>
