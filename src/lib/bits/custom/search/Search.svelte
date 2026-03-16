@@ -1,5 +1,6 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
-import { tick } from 'svelte'
+import { tick, untrack } from 'svelte'
+import { m } from '$lib/i18n'
 import type { SearchProps } from './search.types'
 import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.utils'
 import * as SearchPrimitive from './src/components'
@@ -9,11 +10,16 @@ let {
   placeholder = 'Search',
   minChars = 2,
   focusOnMount = false,
+  prefetchOnMount = false,
+  prefetchKey = null,
+  initialResults = [],
+  noResultsText = m.omni__no_results(),
   onInput,
   userQueryParams,
   excludeIds = [],
   getItemId,
   onSelect,
+  onResultsVisibilityChange,
   resultMap,
   class: className = '',
 }: SearchProps<T> = $props()
@@ -23,11 +29,22 @@ let results = $state<T[]>([])
 let isLoading = $state(false)
 let requestId = $state(0)
 let rootEl = $state<HTMLDivElement | null>(null)
+let isFocusWithin = $state(false)
+let lastPrefetchKey = $state<unknown>(Symbol('search-prefetch-init'))
+let lastVisibility = $state<boolean | null>(null)
+let focusOutTimer: ReturnType<typeof setTimeout> | null = null
+const areResultsVisible = $derived(isFocusWithin && results.length > 0)
+const shouldShowEmptyState = $derived(
+  isFocusWithin && !isLoading && results.length === 0,
+)
 
-async function handleQuery(nextQuery: string): Promise<void> {
+async function handleQuery(
+  nextQuery: string,
+  options: { force?: boolean } = {},
+): Promise<void> {
   query = nextQuery
 
-  if (nextQuery.trim().length < minChars) {
+  if (!options.force && nextQuery.trim().length < minChars) {
     results = []
     return
   }
@@ -85,6 +102,28 @@ function handleInputKeydown(event: KeyboardEvent): void {
   firstResult?.focus()
 }
 
+function handleFocus(): void {
+  if (query.trim().length > 0) return
+  void handleQuery('', { force: true })
+}
+
+function handleRootFocusIn(): void {
+  if (focusOutTimer) {
+    clearTimeout(focusOutTimer)
+    focusOutTimer = null
+  }
+  isFocusWithin = true
+}
+
+function handleRootFocusOut(event: FocusEvent): void {
+  const nextTarget = event.relatedTarget
+  if (nextTarget instanceof Node && rootEl?.contains(nextTarget)) return
+  focusOutTimer = setTimeout(() => {
+    isFocusWithin = false
+    focusOutTimer = null
+  }, 0)
+}
+
 function selectItem(item: T): void {
   if (isSearchResultDisabled(item, resultMap)) return
   onSelect(item)
@@ -96,20 +135,46 @@ function selectItem(item: T): void {
     input?.focus()
   })
 }
+
+$effect(() => {
+  if (!prefetchOnMount) return
+  if (lastPrefetchKey === prefetchKey) return
+  lastPrefetchKey = prefetchKey
+  untrack(() => {
+    void handleQuery('', { force: true })
+  })
+})
+
+$effect(() => {
+  if (query.trim().length > 0) return
+  results = initialResults
+})
+
+$effect(() => {
+  if (lastVisibility === areResultsVisible) return
+  lastVisibility = areResultsVisible
+  onResultsVisibilityChange?.(areResultsVisible)
+})
 </script>
 
-<div bind:this={rootEl} class={`bits-search ${className}`}>
+<div
+  bind:this={rootEl}
+  class={`bits-search ${className}`}
+  onfocusin={handleRootFocusIn}
+  onfocusout={handleRootFocusOut}
+>
   <SearchPrimitive.SearchBar
     bind:query
     {placeholder}
     {focusOnMount}
     {isLoading}
     onChange={handleQuery}
+    onFocus={handleFocus}
     onInputKeydown={handleInputKeydown}
     onClear={handleClear}
   />
 
-  {#if results.length > 0}
+  {#if areResultsVisible}
     <SearchPrimitive.ResultWrapper class="bits-search__results">
       <div class="bits-search__results-list">
         {#each results as item, index (index)}
@@ -121,6 +186,12 @@ function selectItem(item: T): void {
             onSelect={() => selectItem(item)}
           />
         {/each}
+      </div>
+    </SearchPrimitive.ResultWrapper>
+  {:else if shouldShowEmptyState}
+    <SearchPrimitive.ResultWrapper class="bits-search__results">
+      <div class="bits-search__results-list">
+        <div class="bits-search__empty" aria-live="polite">{noResultsText}</div>
       </div>
     </SearchPrimitive.ResultWrapper>
   {/if}

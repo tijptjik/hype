@@ -12,11 +12,16 @@ export interface SearchProps<T> {
   placeholder?: string
   minChars?: number
   focusOnMount?: boolean
+  prefetchOnMount?: boolean
+  prefetchKey?: string | number | null
+  initialResults?: T[]
+  noResultsText?: string
   onInput?: (query: string) => Promise<T[]>
   userQueryParams?: UserSearchQueryOptions
   excludeIds?: string[]
   getItemId?: (item: T) => string
   onSelect: (item: T) => void
+  onResultsVisibilityChange?: (isVisible: boolean) => void
   resultMap: SearchResultMap<T>
   class?: string
 }
@@ -41,6 +46,7 @@ export interface SearchBarProps {
   disabled?: boolean
   isLoading?: boolean
   onChange?: (value: string) => void
+  onFocus?: () => void
   onInputKeydown?: (event: KeyboardEvent) => void
   onClear?: () => void
   class?: string
