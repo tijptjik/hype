@@ -1,9 +1,10 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n'
+// BITS
+import { PanelRoot as Panel } from '$lib/bits'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
-import Panel from '$lib/components/layout/Panel.svelte'
 import Profile from '$lib/components/panels/sections/Profile.svelte'
 import ContributionStats from '$lib/components/panels/sections/ContributionStats.svelte'
 import ContributedFeatures from '$lib/components/panels/sections/ContributedFeatures.svelte'

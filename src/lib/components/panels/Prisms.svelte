@@ -10,8 +10,9 @@ import { m } from '$lib/i18n'
 import { getAppCtx } from '$lib/context/app.svelte'
 // NAVIGATION
 import { navigate } from '$lib/navigation'
+// BITS
+import { PanelRoot as Panel } from '$lib/bits'
 // COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte'
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Maps.svelte'
 import Organisations from '$lib/components/panels/sections/Organisations.svelte'

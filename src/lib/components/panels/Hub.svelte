@@ -8,8 +8,8 @@
 import { getI18n, m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
-// COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte'
+// BITS
+import { PanelRoot as Panel } from '$lib/bits'
 import Header from '$lib/components/panels/common/Header.svelte'
 // TYPES
 import type { PanelProps, Hub } from '$lib/types'

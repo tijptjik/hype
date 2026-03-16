@@ -4,8 +4,8 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
-// COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte'
+// BITS
+import { PanelRoot as Panel } from '$lib/bits'
 import AdminHeader from '$lib/components/panels/common/variants/AdminHeader.svelte'
 import Organisations from '$lib/components/panels/sections/Organisations.svelte'
 import Projects from '$lib/components/panels/sections/Projects.svelte'
