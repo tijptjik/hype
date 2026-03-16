@@ -44,6 +44,7 @@ import type {
   FeatureProperty,
   NewFeatureProperty,
 } from '$lib/db/zod/schema/feature.types'
+import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -700,6 +701,15 @@ export const updateProperties = async (
 
   if (propertyIdsToDelete.length > 0) {
     await db
+      .delete(featurePropertyI18n)
+      .where(
+        and(
+          eq(featurePropertyI18n.featureId, featureId),
+          inArray(featurePropertyI18n.propertyId, propertyIdsToDelete),
+        ),
+      )
+
+    await db
       .delete(featureProperty)
       .where(
         and(
@@ -741,6 +751,15 @@ export const updateProperties = async (
           { value?: string | null; valueGen?: boolean | null }
         >,
       )
+    } else {
+      await db
+        .delete(featurePropertyI18n)
+        .where(
+          and(
+            eq(featurePropertyI18n.featureId, featureId),
+            eq(featurePropertyI18n.propertyId, propertyRow.propertyId),
+          ),
+        )
     }
   }
 
