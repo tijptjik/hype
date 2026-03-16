@@ -24,5 +24,7 @@ let {
     {@render children()}
   </div>
 {:else if collapsedContent}
-  <div class="flex min-h-0 shrink-0 grow flex-col">{@render collapsedContent()}</div>
+  <div class="flex shrink-0 flex-col overflow-visible">
+    {@render collapsedContent()}
+  </div>
 {/if}

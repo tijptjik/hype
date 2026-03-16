@@ -81,7 +81,7 @@ let panelProps: PanelProps = $derived({
   />
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col overflow-y-auto overscroll-none">
-    <div class="flex-grow-1 flex min-h-0 flex-col">
+    <div class="flex shrink-0 flex-col">
       <Organisations {...panelProps}>
         {#snippet filteredItem(resource: Organisation, selectedOrganisations: Id[])}
           <FilteredResource
@@ -99,7 +99,7 @@ let panelProps: PanelProps = $derived({
         {/snippet}
       </Organisations>
     </div>
-    <div class="flex-grow-1 flex min-h-0 flex-col">
+    <div class="flex shrink-0 flex-col">
       <Projects {...panelProps}>
         {#snippet filteredItem(
           resource: Project,
@@ -124,7 +124,7 @@ let panelProps: PanelProps = $derived({
         {/snippet}
       </Projects>
     </div>
-    <div class="flex-grow-4 flex min-h-0 flex-col">
+    <div class="flex min-h-0 flex-1 flex-col">
       <Layers {...panelProps}>
         {#snippet filteredItem(
           layer: Layer,

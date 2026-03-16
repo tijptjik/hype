@@ -95,7 +95,7 @@ let resourcesToDisplay = $derived([
 <div
   class="flex {props.isNarrow
     ? 'flex-col items-center justify-center gap-1 px-2'
-    : 'mb-0 flex-wrap items-start gap-x-0 gap-y-2 overflow-visible px-8 pt-2 pb-4'}"
+    : 'mb-0 max-h-[33vh] flex-wrap content-start items-start gap-x-0 gap-y-2 overflow-y-auto overscroll-contain px-8 pt-2 pb-4'}"
 >
   {#each resourcesToDisplay as id (id)}
     {@const isCurrentActive = id === props.active?.resourceId}
