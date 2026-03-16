@@ -88,12 +88,9 @@
     background-color: var(--color-glass-100);
   }
 
-  .bits-theme .bits-form__control-wrap--textarea.bits-form__control-wrap--editing {
-    max-height: 516px;
-  }
-
-  .bits-form__control.bits-form__control--textarea.bits-form__control--display.bits-form__control--textarea-readonly {
-    padding-bottom: 16px;
+  .bits-theme .bits-form__control-wrap--textarea {
+    display: flex;
+    align-items: stretch;
   }
 
   .bits-theme .bits-form__control-wrap:focus-within {
@@ -127,8 +124,12 @@
   }
 
   .bits-theme .bits-form__control--textarea {
-    @apply resize-none px-2 py-3.5 min-h-32 max-h-128;
-    overflow: hidden;
+    @apply min-h-32 max-h-128 resize-none px-2 py-3.5;
+    box-sizing: border-box;
+    display: block;
+    field-sizing: content;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   /*.bits-theme textarea.bits-form__control--textarea {*/
@@ -173,13 +174,10 @@
     line-height: 1.2rem;
   }
 
-  .bits-theme
-    .bits-form__control.bits-form__control--textarea.bits-form__control--display {
+  .bits-theme .bits-form__control.bits-form__control--textarea {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     word-break: break-word;
-    overflow-x: hidden;
-    overflow-y: scroll;
   }
 
   /* ----------------- */

@@ -1,6 +1,7 @@
 @layer components {
   .bits-main {
     @apply h-full overflow-y-auto px-6 pb-6;
+    overflow-anchor: none;
   }
 
   .bits-main__section {
