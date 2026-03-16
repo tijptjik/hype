@@ -1,0 +1,27 @@
+@layer components {
+  .bits-theme .bits-scrollable-text {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+    padding-inline: calc(var(--bits-scrollable-text-padding, 24px) / 2);
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      black 12px,
+      black calc(100% - 12px),
+      transparent 100%
+    );
+  }
+
+  .bits-theme .bits-scrollable-text::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bits-theme .bits-scrollable-text__content {
+    display: inline-block;
+    min-width: max-content;
+  }
+}

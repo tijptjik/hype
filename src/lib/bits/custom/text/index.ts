@@ -1,3 +1,4 @@
+export { default as ScrollableText } from './ScrollableText.svelte'
 export { default as TextTitle } from './TextTitle.svelte'
 export { default as TextDescription } from './TextDescription.svelte'
 

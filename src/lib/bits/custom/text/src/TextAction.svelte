@@ -1,5 +1,5 @@
 <script lang="ts">
-import ScrollableText from '$lib/components/common/ScrollableText.svelte'
+import ScrollableText from '../ScrollableText.svelte'
 import type { TextActionProps } from '../text.types'
 
 let {
