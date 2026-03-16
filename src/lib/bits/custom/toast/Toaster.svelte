@@ -7,7 +7,7 @@ import { Toaster as SonnerToaster } from 'svelte-sonner'
   toastOptions={{
     unstyled: true,
     classes: {
-      toast: 'bits-theme bits-toast',
+      toast: 'group bits-theme bits-toast',
       title: 'bits-toast__title',
       description: 'bits-toast__description',
       icon: 'bits-toast__icon',
