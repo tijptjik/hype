@@ -1,7 +1,7 @@
 <script lang="ts">
 import * as InputPrimitive from './src/input/components'
 import Label from './src/label/Label.svelte'
-import type { TextAreaProps } from './textArea.types'
+import type { TextAreaProps } from './textAreaField.types'
 
 let {
   id,
@@ -46,18 +46,8 @@ const controlWrapClass = $derived(
     .join(' '),
 )
 
-const displayClass = $derived(
-  [
-    'bits-form__control bits-form__control--textarea bits-form__control--display',
-    'bits-form__control--textarea-readonly',
-    value === '' ? 'bits-form__control--placeholder' : 'bits-form__control--filled',
-    isTranslated && locale !== 'core' ? 'bits-form__control--translated' : '',
-  ]
-    .filter(Boolean)
-    .join(' '),
-)
-
-const displayValue = $derived(value?.trim() || placeholder || ' ')
+const displayValue = $derived(value ?? '')
+const displayPlaceholder = $derived(placeholder || ' ')
 const isGenAiDisabled = $derived(!isEditing || disabled)
 const showGenAiToggle = $derived(
   locale !== 'core' && (typeof onToggleGenAI === 'function' || isGenAI),
@@ -67,6 +57,8 @@ function handleValueChange(nextValue: string): void {
   onValueChange?.(nextValue)
   if (showGenAiToggle && isGenAI) onToggleGenAI?.()
 }
+
+const readonlyTextareaAttrs = $derived({ ...textareaAttrs, tabindex: -1 })
 </script>
 
 <label class={wrapperClass} for={id}>
@@ -94,7 +86,18 @@ function handleValueChange(nextValue: string): void {
         onValueChange={handleValueChange}
       />
     {:else}
-      <div class={displayClass}>{displayValue}</div>
+      <InputPrimitive.TextArea
+        attrs={readonlyTextareaAttrs}
+        {id}
+        {name}
+        value={displayValue}
+        placeholder={displayPlaceholder}
+        {locale}
+        {isTranslated}
+        disabled={false}
+        readonly={true}
+        {rows}
+      />
     {/if}
 
     {#if showGenAiToggle}

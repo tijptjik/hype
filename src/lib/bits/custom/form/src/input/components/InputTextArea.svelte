@@ -17,7 +17,6 @@ let {
   attrs = {},
   onValueChange,
 }: FormTextAreaPrimitiveProps = $props()
-let textareaElement: HTMLTextAreaElement | null = $state(null)
 const resolvedPlaceholder = $derived(placeholder ?? m.suave_livid_wombat_zoom())
 const resolvedId = $derived((id ?? (attrs?.id as string | undefined)) || undefined)
 const resolvedName = $derived(
@@ -42,7 +41,6 @@ function handleInput(event: Event): void {
   }
   const target = event.currentTarget as HTMLTextAreaElement
   value = target.value
-  adjustHeight()
   onValueChange?.(value)
 }
 
@@ -66,31 +64,11 @@ function handleBlur(event: FocusEvent): void {
       value = nextValue
     },
     onValueChange,
-    afterSync: adjustHeight,
   })
 }
-
-function adjustHeight(): void {
-  if (!textareaElement) return
-
-  textareaElement.style.height = 'auto'
-
-  const maxHeight = 512
-  const nextHeight = Math.min(textareaElement.scrollHeight, maxHeight)
-
-  textareaElement.style.height = `${nextHeight}px`
-  textareaElement.style.overflowY =
-    textareaElement.scrollHeight > maxHeight ? 'auto' : 'hidden'
-}
-
-$effect(() => {
-  value
-  adjustHeight()
-})
 </script>
 
 <textarea
-  bind:this={textareaElement}
   {...attrs}
   id={resolvedId}
   {disabled}

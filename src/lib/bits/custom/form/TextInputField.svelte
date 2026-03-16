@@ -1,7 +1,7 @@
 <script lang="ts">
 import * as InputPrimitive from './src/input/components'
 import Label from './src/label/Label.svelte'
-import type { TextInputProps } from './textInput.types'
+import type { TextInputProps } from './textInputField.types'
 
 let {
   id,
