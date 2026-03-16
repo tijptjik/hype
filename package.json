@@ -63,7 +63,7 @@
     "webdriverio": "^9.3.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.6",
+    "@biomejs/biome": "^2.4.7",
     "@changesets/cli": "^2.30.0",
     "@cloudflare/vite-plugin": "^1.28.0",
     "@commitlint/cli": "^20.5.0",
@@ -86,10 +86,10 @@
     "drizzle-kit": "^0.31.9",
     "husky": "^9.1.7",
     "inquirer": "^13.3.2",
-    "jsdom": "^28.1.0",
+    "jsdom": "^29.0.0",
     "svelte-check": "^4.4.5",
     "tsx": "^4.21.0",
-    "vite-node": "^5.3.0",
+    "vite-node": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.25.0",
     "vitest": "^4.1.0",
     "wrangler": "^4.73.0"
@@ -113,7 +113,7 @@
     "@sillvva/utils": "^0.8.2",
     "@sveltejs/adapter-cloudflare": "^7.2.8",
     "@sveltejs/kit": "^2.55.0",
-    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/svelte-query": "^5.90.2",
@@ -142,7 +142,7 @@
     "svelte-file-dropzone": "^2.0.9",
     "svelte-gestures": "^5.2.2",
     "svelte-portal": "^2.2.1",
-    "svelte-range-slider-pips": "4.1.0",
+    "svelte-range-slider-pips": "^4.1.1",
     "svelte-sonner": "^1.1.0",
     "sveltekit-superforms": "^2.30.0",
     "svrollbar": "https://github.com/tijptjik/svrollbar",
@@ -150,7 +150,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
     "unique-names-generator": "^4.7.1",
-    "vite": "^7.3.1",
+    "vite": "^8.0.0",
     "zod": "4.3.6"
   },
   "config": {
