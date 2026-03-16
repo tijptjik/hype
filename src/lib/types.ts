@@ -409,6 +409,7 @@ export type HeaderFacetItem = {
   label: string
   icon: Component | null
   hasIssues?: boolean
+  disabled?: boolean
 }
 
 export type HeaderMetaState = {
@@ -798,6 +799,53 @@ export type ResourceSortState = {
   sortOrder: 'asc' | 'desc'
 }
 export type ViewSortingState = Record<FirstClassResource, ResourceSortState>
+
+export type FeatureTextSearchIndexItem = {
+  id: string
+  title?: string | null
+  description?: string | null
+  displayAddress?: string | null
+  contributor?: string | null
+}
+
+export type FeatureTextSearchWorkerRequest =
+  | {
+      type: 'set-index'
+      indexVersion: number
+      items: FeatureTextSearchIndexItem[]
+    }
+  | {
+      type: 'filter'
+      indexVersion: number
+      requestId: number
+      query: string
+    }
+
+export type FeatureTextSearchWorkerResponse = {
+  type: 'result'
+  indexVersion: number
+  requestId: number
+  ids: string[]
+}
+
+export type FeatureRowStatMap = Record<string, boolean | null>
+
+export type FeatureRowModel = {
+  id: string
+  title: string
+  description: string
+  imageAlt: string
+  isPublished: boolean
+  isPendingReview: boolean
+  stats: {
+    status: FeatureRowStatMap
+    content: FeatureRowStatMap
+    translation: FeatureRowStatMap
+    image: FeatureRowStatMap
+    category: FeatureRowStatMap
+    freeform: FeatureRowStatMap
+  }
+}
 
 export type ActiveCollection = {
   id: string
@@ -1248,6 +1296,14 @@ export type FormDataUpdaterForm<T> = {
     }
     set: (value: any) => void
   }
+}
+
+export type FormTrimmedTextControlBlurParams = {
+  event: FocusEvent
+  value: string
+  setValue: (value: string) => void
+  onValueChange?: (value: string) => void
+  afterSync?: () => void
 }
 
 export type AddUserRoleSelectionParams<
@@ -2180,6 +2236,7 @@ export type AppContextState = {
   ui: {
     isControlBarVisible: Record<NavigableResource, boolean>
     layoutMode: Record<NavigableResource, LayoutMode>
+    isSearchFocused: Record<NavigableResource, boolean>
   }
   // TIER 3: VIEW FILTERS - Only affect current route/view
   viewFilters: ViewFilters
