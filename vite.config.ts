@@ -10,7 +10,6 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
-import type { Plugin } from 'vite'
 
 // Load env file based on `mode` in the current working directory.
 // Set the third parameter to '' to load all env regardless of the
@@ -35,7 +34,7 @@ import type { Plugin } from 'vite'
 //   }
 // };
 
-const localCloudflare = async (): Promise<Plugin[]> => {
+const localCloudflare = async (): Promise<[]> => {
   // Only load Cloudflare plugin in dev mode, skip in CI/build/test environments
   const isDev = process.env.NODE_ENV === 'dev' || process.env.DEV
   const isCI = process.env.CI === 'true'
@@ -80,18 +79,8 @@ export default defineConfig({
     tailwindcss(),
     localCloudflare(),
   ],
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'esnext',
-      sourcemap: true,
-    },
-  },
   build: {
-    target: 'es2020',
-    // Preserve cache between CI runs
-    rollupOptions: {
-      cache: true,
-    },
+    target: 'baseline-widely-available',
   },
   // Enable build caching for CI environments
   cacheDir: '.svelte-kit/vite',
