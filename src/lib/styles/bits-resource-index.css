@@ -1,0 +1,121 @@
+@layer components {
+  .bits-theme .bits-resource-index__card-row {
+    display: grid;
+    grid-template-columns: repeat(
+        var(--bits-resource-index-columns, 1),
+        minmax(0, 1fr)
+      );
+    gap: 1rem;
+    width: 100%;
+    padding-inline: 0.5rem;
+  }
+
+  .bits-theme .bits-resource-index__card-cell {
+    min-width: 0;
+    width: min(100%, var(--bits-resource-index-card-width, 100%));
+  }
+
+  .bits-theme .bits-resource-index__fallback-card,
+  .bits-theme .bits-resource-index__fallback-row,
+  .bits-theme .bits-resource-index__status,
+  .bits-theme .bits-resource-group-header {
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+    background: color-mix(in oklab, var(--color-base-100) 88%, transparent);
+    color: var(--color-base-content);
+    box-shadow: var(--shadow-mini);
+  }
+
+  .bits-theme .bits-resource-index__fallback-card {
+    border-radius: 1rem;
+    min-height: 12rem;
+    padding: 1rem;
+    display: flex;
+    align-items: end;
+  }
+
+  .bits-theme .bits-resource-index__fallback-row {
+    border-radius: 1rem;
+    min-height: 5.5rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .bits-theme .bits-resource-index__fallback-title,
+  .bits-theme .bits-resource-index__status-title,
+  .bits-theme .bits-resource-group-header__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .bits-theme .bits-resource-index__status {
+    border-radius: 1rem;
+    min-height: 9rem;
+    padding: 1.5rem;
+    display: grid;
+    place-items: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .bits-theme .bits-resource-index__spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    border: 2px solid color-mix(in oklab, var(--color-base-content) 18%, transparent);
+    border-top-color: var(--color-primary);
+    animation: bits-resource-index-spin 0.75s linear infinite;
+  }
+
+  .bits-theme .bits-resource-group-header {
+    width: 100%;
+    min-height: 3.5rem;
+    border-radius: 1rem;
+    padding: 0.875rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .bits-theme .bits-resource-group-header:hover {
+    background: color-mix(in oklab, var(--color-base-100) 94%, transparent);
+  }
+
+  .bits-theme .bits-resource-group-header__content {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .bits-theme .bits-resource-group-header__count {
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .bits-theme .bits-resource-group-header__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+  }
+
+  .bits-theme .bits-resource-group-header__icon--collapsed {
+    transform: rotate(-90deg);
+  }
+
+  @keyframes bits-resource-index-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

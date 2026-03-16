@@ -1,16 +1,16 @@
 <script lang="ts" generics="T extends Resource">
 import type { Snippet } from 'svelte'
 // COMPONENTS
-import ResourceCardRow from '$lib/components/resources/common/ResourceCardRow.svelte'
-import ResourceEmptyState from '$lib/components/resources/common/ResourceEmptyState.svelte'
-import ResourceLoadingState from '$lib/components/resources/common/ResourceLoadingState.svelte'
-import ResourceTableRow from '$lib/components/resources/common/ResourceTableRow.svelte'
+import ResourceCardRow from './src/ResourceCardRow.svelte'
+import ResourceEmptyState from './src/ResourceEmptyState.svelte'
+import ResourceLoadingState from './src/ResourceLoadingState.svelte'
+import ResourceTableRow from './src/ResourceTableRow.svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
-import type { EntityWithOptionalImage, Resource } from '$lib/types'
+import type { Resource } from '$lib/types'
 import type {
   ResourceIndexGridRow,
   ResourceIndexItem,
@@ -136,9 +136,9 @@ $effect(() => {
     />
   {:else if layoutMode === 'table' || layoutMode === 'list'}
     <ResourceTableRow
-      entity={item as EntityWithOptionalImage}
+      entity={item as T}
       {index}
-      row={row as Snippet<[EntityWithOptionalImage, number]> | undefined}
+      row={row as Snippet<[T, number]> | undefined}
     />
   {/if}
 {/snippet}
