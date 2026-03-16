@@ -146,7 +146,9 @@ function handleFocus(): void {
   void handleQuery('', { force: true })
 }
 
-function handleRootFocusIn(): void {
+function handleRootFocusIn(event: FocusEvent): void {
+  const target = event.target
+  if (target instanceof HTMLInputElement && target.type === 'text') return
   openResults()
 }
 

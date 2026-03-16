@@ -177,7 +177,7 @@ $effect(() => {
 
   {#if isAdding && showModeUi}
     <div
-      transition:slide={{ duration: showModeUi ? 200 : 0 }}
+      transition:slide={{ duration: showModeUi ? 120 : 0 }}
       class="bits-form__parent-resource-search"
     >
       <Search
