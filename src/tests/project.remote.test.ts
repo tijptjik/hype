@@ -319,39 +319,29 @@ vi.mock('$lib/db/services/property', () => ({
   updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
 }))
 
-vi.mock('$lib/i18n', () => ({
-  toLocaleRecordFromOrganisationFormI18n: mockToLocaleRecordFromOrganisationFormI18n,
-}))
+vi.mock('$lib/i18n', async importOriginal => {
+  const actual = await importOriginal<typeof import('$lib/i18n')>()
+  return {
+    ...actual,
+    toLocaleRecordFromOrganisationFormI18n: mockToLocaleRecordFromOrganisationFormI18n,
+  }
+})
 
-vi.mock('$lib/db/zod', () => ({
-  GetQueryParamsSchema: {},
-  ListQueryParamsSchema: {},
-  PublishProjectSchema: {},
-  RemoveProjectSchema: {},
-  ProjectFormData: {
-    parse: mockProjectFormDataParse,
-  },
-}))
+vi.mock('$lib/db/zod', async importOriginal => {
+  const actual = await importOriginal<typeof import('$lib/db/zod')>()
+  return {
+    ...actual,
+    GetQueryParamsSchema: {},
+    ListQueryParamsSchema: {},
+    PublishProjectSchema: {},
+    RemoveProjectSchema: {},
+    ProjectFormData: {
+      parse: mockProjectFormDataParse,
+    },
+  }
+})
 
-vi.mock('$lib/db/schema', () => ({
-  project: {
-    id: 'project.id',
-    organisationId: 'project.organisationId',
-    code: 'project.code',
-    isPublished: 'project.isPublished',
-    isArchived: 'project.isArchived',
-    modifiedAt: 'project.modifiedAt',
-  },
-  projectProperty: {
-    projectId: 'projectProperty.projectId',
-    propertyId: 'projectProperty.propertyId',
-    rank: 'projectProperty.rank',
-  },
-  property: {
-    id: 'property.id',
-    scope: 'property.scope',
-  },
-}))
+vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
 
 let remote: Awaited<typeof import('$lib/api/server/project.remote')>
 

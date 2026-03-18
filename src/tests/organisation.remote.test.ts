@@ -198,29 +198,19 @@ vi.mock('$lib/db/services/project', () => ({
     mockCascadeOrganisationCapabilitiesToProjects,
 }))
 
-vi.mock('$lib/db/schema', () => ({
-  organisation: {
-    id: 'organisation.id',
-    hubId: 'organisation.hubId',
-    code: 'organisation.code',
-    isPublished: 'organisation.isPublished',
-    isArchived: 'organisation.isArchived',
-    modifiedAt: 'organisation.modifiedAt',
-  },
-  organisationRole: {
-    userId: 'organisationRole.userId',
-    role: 'organisationRole.role',
-    organisationId: 'organisationRole.organisationId',
-  },
-}))
+vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
-  ListQueryParamsSchema: {},
-  GetQueryParamsSchema: {},
-  OrganisationFormData: { parse: (value: unknown) => value },
-  PublishOrganisationSchema: {},
-  RemoveOrganisationSchema: {},
-}))
+vi.mock('$lib/db/zod', async importOriginal => {
+  const actual = await importOriginal<typeof import('$lib/db/zod')>()
+  return {
+    ...actual,
+    ListQueryParamsSchema: {},
+    GetQueryParamsSchema: {},
+    OrganisationFormData: { parse: (value: unknown) => value },
+    PublishOrganisationSchema: {},
+    RemoveOrganisationSchema: {},
+  }
+})
 
 vi.mock('$lib/i18n', () => ({
   getLocale: vi.fn(() => 'en'),

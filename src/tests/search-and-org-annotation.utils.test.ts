@@ -5,6 +5,7 @@ import {
 } from '$lib/bits/custom/search/search.utils'
 import {
   isOrganisationSearchResultDisabled,
+  toOrganisationSearchDisabledMeta,
   toOrganisationSearchDiscriminator,
 } from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.utils'
 
@@ -38,13 +39,17 @@ describe('search utils', () => {
 
 describe('organisation search annotation utils', () => {
   it('returns hub annotation for organisations assigned to other hubs', () => {
-    const result = toOrganisationSearchDiscriminator({
+    const org = {
       code: 'org-a',
       assignedHubCode: 'core',
       isAssignedToOtherHub: true,
-    })
+    }
 
-    expect(result).toBe('@ core HUB')
+    expect(toOrganisationSearchDiscriminator(org)).toBe('org-a')
+    expect(toOrganisationSearchDisabledMeta(org)).toEqual({
+      label: 'Another Hub',
+      value: 'core',
+    })
   })
 
   it('falls back to org code and keeps selection enabled for unassigned orgs', () => {
@@ -64,7 +69,11 @@ describe('organisation search annotation utils', () => {
       assignedHubCode: null,
     }
 
-    expect(toOrganisationSearchDiscriminator(org)).toBe('@ ASSIGNED HUB')
+    expect(toOrganisationSearchDiscriminator(org)).toBe('org-locked')
+    expect(toOrganisationSearchDisabledMeta(org)).toEqual({
+      label: 'Another Hub',
+      value: null,
+    })
     expect(isOrganisationSearchResultDisabled(org)).toBe(true)
   })
 })
