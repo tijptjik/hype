@@ -2,6 +2,11 @@
 
 This document records the current authorization behavior implemented in code.
 
+Table provenance:
+- `Pure test output`: the table is fully backed by explicit matrix-style tests and can be printed from the test suite.
+- `User-defined summary`: the table is maintained in this document as a source-derived summary. Some or all rows may still be covered by tests, but the table itself is not generated verbatim from test output.
+- Bold text highlights a mismatch between the documented/specifed behavior and the currently tested behavior.
+
 Sources:
 - `src/lib/api/services/authz/organisation.ts`
 - `src/lib/api/services/authz/project.ts`
@@ -9,11 +14,19 @@ Sources:
 - `src/lib/api/server/organisation.remote.ts`
 - `src/lib/api/server/project.remote.ts`
 - `src/lib/api/server/hub.remote.ts`
+- `src/tests/authorization.organisation.test.ts`
+- `src/tests/authorization.project.test.ts`
+- `src/tests/authorization.hub.test.ts`
+- `src/tests/organisation.remote.test.ts`
+- `src/tests/project.remote.test.ts`
+- `src/tests/hub.remote.test.ts`
 
 
 ## Hub
 
 ### Action-Level Matrix
+Provenance: `Pure test output`
+
 | Action | Core hub admin | Scoped non-core hub admin (same hub) | Non-core hub admin (other hub) | Organisation owner | Unrelated authenticated user | Anonymous |
 | --- | --- | --- | --- | --- | --- | --- |
 | `listHubs` | Allow | Allow | Deny | Deny | Deny | Deny |
@@ -25,6 +38,8 @@ Sources:
 | `deleteHub` | Allow | Deny | Deny | Deny | Deny | Deny |
 
 ### Field-Level Matrix (`updateHub`)
+Provenance: `Pure test output`
+
 | Field group | Core hub admin | Scoped non-core hub admin (same hub) |
 | --- | --- | --- |
 | All hub form fields (`code`, `domain`, `i18n`, `userRoles`, `organisations`, `isPublished`, `isArchived`) | Allow | Allow |
@@ -32,6 +47,8 @@ Sources:
 Note: hub policy currently has no hub-field subgroup restrictions; field gating is action-based.
 
 ### Validation/Integrity Matrix
+Provenance: `User-defined summary`
+
 | Flow | Rule | Expected result |
 | --- | --- | --- |
 | Create/Update | `userRoles` empty | Deny (`invalid`: `USER_ROLES_REQUIRED`) |
@@ -47,6 +64,8 @@ Note: hub policy currently has no hub-field subgroup restrictions; field gating 
 ## Organisation
 
 ### Action-Level Matrix
+Provenance: `Pure test output`
+
 | Action | Core hub admin | Scoped non-core hub admin (same hub) | Non-core hub admin (other hub) | Organisation owner | Organisation member | Unrelated authenticated user | Anonymous |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `listOrganisations` (published) | Allow | Allow | Allow | Allow | Allow | Allow | Deny |
@@ -62,6 +81,8 @@ Note: hub policy currently has no hub-field subgroup restrictions; field gating 
 | `deleteOrganisation` | Allow | Allow | Deny | Allow | Deny | Deny | Deny |
 
 ### Field-Level Matrix (`updateOrganisation`)
+Provenance: `Pure test output`
+
 | Field group | Core hub admin | Scoped non-core hub admin (same hub) | Organisation owner |
 | --- | --- | --- | --- |
 | `hubId`, `isCoreInclusive` | Allow | Deny | Deny |
@@ -69,6 +90,8 @@ Note: hub policy currently has no hub-field subgroup restrictions; field gating 
 | Other organisation fields | Allow | Allow | Allow |
 
 ### Validation/Integrity Matrix
+Provenance: `User-defined summary`
+
 | Flow | Rule | Expected result |
 | --- | --- | --- |
 | Create/Update | `userRoles` empty | Deny (`invalid`: `USER_ROLES_REQUIRED`) |
@@ -84,6 +107,8 @@ Note: hub policy currently has no hub-field subgroup restrictions; field gating 
 ## Project
 
 ### Action-Level Matrix
+Provenance: `Pure test output`
+
 | Action | Core hub admin | Scoped non-core hub admin (same hub) | Non-core hub admin (other hub) | Organisation owner | Organisation member | Project owner | Project maintainer | Project translator | Project member | Project user | Unrelated authenticated user | Anonymous |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `listProjects` (published) | Allow | Allow | Allow | Allow | Allow | Allow | Allow | Allow | Allow | Allow | Allow | Deny |
@@ -102,6 +127,8 @@ Note: hub policy currently has no hub-field subgroup restrictions; field gating 
 | `deleteProject` (archive/restore) | Allow | Allow | Deny | Allow | Deny | Allow | Deny | Deny | Deny | Deny | Deny | Deny |
 
 ### Field-Level Matrix (`updateProject`)
+Provenance: `Pure test output`
+
 | Field group | Core hub admin | Scoped non-core hub admin (same hub) | Organisation owner | Project owner | Project maintainer | Project translator |
 | --- | --- | --- | --- | --- | --- | --- |
 | `organisationId` | Allow | Deny | Deny | Deny | Deny | Deny |
@@ -109,6 +136,8 @@ Note: hub policy currently has no hub-field subgroup restrictions; field gating 
 | Other project fields (`code`, `properties`, etc.) | Allow | Allow | Allow | Allow | Allow | Deny |
 
 ### Validation/Integrity Matrix
+Provenance: `User-defined summary`
+
 | Flow | Rule | Expected result |
 | --- | --- | --- |
 | Create/Update | `userRoles` empty | Deny (`invalid`: `USER_ROLES_REQUIRED`) |
@@ -116,7 +145,7 @@ Note: hub policy currently has no hub-field subgroup restrictions; field gating 
 | Create/Update | Duplicate property keys | Deny (`invalid`) |
 | Create/Update | `code` is reserved | Deny (`invalid`: `CODE_RESERVED`) |
 | Create/Update | `code` conflict | Deny (`invalid`: `CODE_ALREADY_EXISTS`) |
-| Update | Submitted `organisationId` differs from persisted one | Deny (`invalid`: `FIELD_FORBIDDEN`) |
+| Update | Submitted `projectId` differs from persisted one | Deny (`invalid`: `FIELD_FORBIDDEN`) |
 | Update | Missing `meta.updatedAt` | Deny (`invalid`: `STALE_WRITE`) |
 | Update | `meta.updatedAt` differs from persisted `modifiedAt` | Deny (`invalid`: `STALE_WRITE`) |
 | Role membership mutation | Actor lacks `manageProjectRoles` | Deny (`invalid` with authz code) |
