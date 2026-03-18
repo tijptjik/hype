@@ -10,6 +10,7 @@ import {
 } from '$lib/api/services/authz'
 import type { UserRoleDisco } from '$lib/types'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
+import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({
@@ -91,6 +92,7 @@ const toActor = (actor: Actor) => ({
 })
 
 const matrix = createAuthzMatrixReporter('hub')
+const policyMatrix = createPolicyMatrixReporter('hub')
 
 const assertMatrix = (row: {
   action: string
@@ -106,6 +108,7 @@ const assertMatrix = (row: {
 
 afterAll(() => {
   matrix.flush()
+  policyMatrix.flush()
 })
 
 describe('hub authorization policy matrix', () => {
@@ -264,5 +267,43 @@ describe('hub authorization policy matrix', () => {
     })
     expect(deleteDecision.allowed).toBe(false)
     expect(deleteDecision.code).toBe('HUB_SCOPE_FORBIDDEN')
+  })
+
+  describe('updateHub field-level restrictions', () => {
+    it('allows all hub form fields for core admin', () => {
+      const decision = authorizeHubUpdate(
+        toActor(ACTORS.coreAdmin),
+        { resourceId: 'hub-a', resourceHubId: 'hub-a' },
+        ['code', 'domain', 'i18n', 'userRoles', 'organisations', 'isPublished'],
+      )
+      policyMatrix.recordField({
+        action: 'updateHub',
+        fieldGroup:
+          'all hub form fields (code, domain, i18n, userRoles, organisations, isPublished, isArchived)',
+        actor: ACTORS.coreAdmin.name,
+        expected: true,
+        actual: decision.allowed,
+        code: decision.code,
+      })
+      expect(decision.allowed).toBe(true)
+    })
+
+    it('allows all hub form fields for scoped non-core hub admin', () => {
+      const decision = authorizeHubUpdate(
+        toActor(ACTORS.hubAdminSame),
+        { resourceId: 'hub-a', resourceHubId: 'hub-a' },
+        ['code', 'domain', 'i18n', 'userRoles', 'organisations', 'isArchived'],
+      )
+      policyMatrix.recordField({
+        action: 'updateHub',
+        fieldGroup:
+          'all hub form fields (code, domain, i18n, userRoles, organisations, isPublished, isArchived)',
+        actor: ACTORS.hubAdminSame.name,
+        expected: true,
+        actual: decision.allowed,
+        code: decision.code,
+      })
+      expect(decision.allowed).toBe(true)
+    })
   })
 })

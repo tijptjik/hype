@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const {
   mockGetRequestEvent,
   mockSetupRequestHandler,
   mockAuthorizeOrganisationListForContext,
   mockAuthorizeOrganisationReadForProbe,
+  mockAuthorizeOrganisationCreateForSubmission,
+  mockAuthorizeOrganisationUpdateForSubmission,
+  mockAuthorizeOrganisationManageRolesForSubmission,
   mockAuthorizeOrganisationPublishForSubmission,
   mockAuthorizeOrganisationDeleteForSubmission,
+  mockValidateUniqueNonReservedCode,
   mockToQueryConditions,
   mockToLookupConditions,
   mockToRequestedListState,
@@ -26,8 +31,12 @@ const {
   mockSetupRequestHandler: vi.fn(),
   mockAuthorizeOrganisationListForContext: vi.fn(),
   mockAuthorizeOrganisationReadForProbe: vi.fn(),
+  mockAuthorizeOrganisationCreateForSubmission: vi.fn(),
+  mockAuthorizeOrganisationUpdateForSubmission: vi.fn(),
+  mockAuthorizeOrganisationManageRolesForSubmission: vi.fn(),
   mockAuthorizeOrganisationPublishForSubmission: vi.fn(),
   mockAuthorizeOrganisationDeleteForSubmission: vi.fn(),
+  mockValidateUniqueNonReservedCode: vi.fn(async () => undefined),
   mockToQueryConditions: vi.fn(),
   mockToLookupConditions: vi.fn((params: unknown) => params),
   mockToRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
@@ -51,7 +60,22 @@ vi.mock(
   () => ({
     getRequestEvent: mockGetRequestEvent,
     query: (_schema: unknown, handler: unknown) => handler,
-    form: (_schema: unknown, handler: unknown) => handler,
+    form: (_schema: unknown, handler: unknown) => async (input: unknown) => {
+      const issue = (() => {
+        const issueBuilder = ((message: string) => message) as any
+        issueBuilder.data = new Proxy(
+          {},
+          {
+            get: () => (message: string) => message,
+          },
+        )
+        return issueBuilder
+      })()
+      return (handler as (payload: unknown, issue: unknown) => Promise<unknown>)(
+        input,
+        issue,
+      )
+    },
     command: (_schema: unknown, handler: unknown) => handler,
   }),
   { virtual: true },
@@ -63,8 +87,8 @@ vi.mock('@sveltejs/kit', () => ({
     err.status = status
     throw err
   },
-  invalid: (..._issues: unknown[]) => {
-    const err = new Error('INVALID')
+  invalid: (issue: unknown) => {
+    const err = new Error(String(issue))
     throw err
   },
 }))
@@ -80,12 +104,19 @@ vi.mock('$lib/api/services/authz', () => ({
   isReservedCode: (_value: string) => false,
   toAuthMessage: mockToAuthMessage,
   toIssueDetailMessage: (code: string) => code,
-  toOrganisationUserRoleSignature: (_roles: unknown[]) => '',
+  toOrganisationUserRoleSignature: (roles: Array<{ userId: string; role: string }>) =>
+    roles
+      .map(role => `${role.userId}:${role.role}`)
+      .sort()
+      .join('|'),
   authorizeOrganisationListForContext: mockAuthorizeOrganisationListForContext,
   authorizeOrganisationReadForProbe: mockAuthorizeOrganisationReadForProbe,
-  authorizeOrganisationCreateForSubmission: () => ({ allowed: true }),
-  authorizeOrganisationUpdateForSubmission: () => ({ allowed: true }),
-  authorizeOrganisationManageRolesForSubmission: () => ({ allowed: true }),
+  authorizeOrganisationCreateForSubmission:
+    mockAuthorizeOrganisationCreateForSubmission,
+  authorizeOrganisationUpdateForSubmission:
+    mockAuthorizeOrganisationUpdateForSubmission,
+  authorizeOrganisationManageRolesForSubmission:
+    mockAuthorizeOrganisationManageRolesForSubmission,
   authorizeOrganisationPublishForSubmission:
     mockAuthorizeOrganisationPublishForSubmission,
   authorizeOrganisationDeleteForSubmission:
@@ -161,7 +192,7 @@ vi.mock('$lib/api/services', () => ({
       [stateKey]: value[stateKey],
     },
   }),
-  validateUniqueNonReservedCode: vi.fn(async () => undefined),
+  validateUniqueNonReservedCode: mockValidateUniqueNonReservedCode,
 }))
 
 vi.mock('$lib/db/services/organisation', () => ({
@@ -224,6 +255,7 @@ vi.mock('$lib/i18n', () => ({
 }))
 
 let remote: Awaited<typeof import('$lib/api/server/organisation.remote')>
+const policyMatrix = createPolicyMatrixReporter('organisation.remote')
 
 describe('organisation.remote authz', () => {
   beforeEach(async () => {
@@ -237,8 +269,14 @@ describe('organisation.remote authz', () => {
 
     mockAuthorizeOrganisationListForContext.mockReturnValue({ allowed: true })
     mockAuthorizeOrganisationReadForProbe.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationCreateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationUpdateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationManageRolesForSubmission.mockReturnValue({
+      allowed: true,
+    })
     mockAuthorizeOrganisationPublishForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeOrganisationDeleteForSubmission.mockReturnValue({ allowed: true })
+    mockValidateUniqueNonReservedCode.mockResolvedValue(undefined)
 
     mockToQueryConditions.mockReturnValue({ conditions: [], filtersToApply: {} })
     mockProbeOrganisationQuery.mockResolvedValue({
@@ -277,6 +315,10 @@ describe('organisation.remote authz', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  afterAll(() => {
+    policyMatrix.flush()
   })
 
   it('getOrganisations denies when authz denies', async () => {
@@ -417,6 +459,169 @@ describe('organisation.remote authz', () => {
     await expect(
       remote.publishOrganisation({ id: 'org-1', state: true }),
     ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('organisationForm rejects empty userRoles', async () => {
+    await expect(
+      remote.organisationForm({
+        meta: { mode: 'create' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [],
+        },
+      }),
+    ).rejects.toThrow('USER_ROLES_REQUIRED')
+
+    policyMatrix.recordValidation({
+      flow: 'Create/Update',
+      rule: 'userRoles empty',
+      expected: 'Deny (invalid: USER_ROLES_REQUIRED)',
+      actual: 'Deny (invalid: USER_ROLES_REQUIRED)',
+      code: 'USER_ROLES_REQUIRED',
+    })
+  })
+
+  it('organisationForm rejects missing owner in userRoles', async () => {
+    await expect(
+      remote.organisationForm({
+        meta: { mode: 'create' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'member' }],
+        },
+      }),
+    ).rejects.toThrow('OWNER_REQUIRED')
+
+    policyMatrix.recordValidation({
+      flow: 'Create/Update',
+      rule: 'no owner in userRoles',
+      expected: 'Deny (invalid: OWNER_REQUIRED)',
+      actual: 'Deny (invalid: OWNER_REQUIRED)',
+      code: 'OWNER_REQUIRED',
+    })
+  })
+
+  it('organisationForm rejects duplicate userRoles.userId', async () => {
+    await expect(
+      remote.organisationForm({
+        meta: { mode: 'create' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [
+            { userId: 'u-1', role: 'owner' },
+            { userId: 'u-1', role: 'member' },
+          ],
+        },
+      }),
+    ).rejects.toThrow('Duplicate user roles submitted')
+
+    policyMatrix.recordValidation({
+      flow: 'Create/Update',
+      rule: 'duplicate userRoles.userId',
+      expected: 'Deny (invalid)',
+      actual: 'Deny (invalid)',
+    })
+  })
+
+  it('organisationForm rejects stale writes when updatedAt is missing', async () => {
+    const organisationServices = await import('$lib/db/services/organisation')
+    vi.mocked(organisationServices.probeOrganisationForUpdate).mockResolvedValue({
+      id: 'org-1',
+      code: 'org-code',
+      hubId: 'hub-a',
+      capabilities: {},
+      modifiedAt: '2026-03-08T00:00:00.000Z',
+    })
+
+    await expect(
+      remote.organisationForm({
+        meta: { id: 'org-1', mode: 'update' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'owner' }],
+        },
+      }),
+    ).rejects.toThrow('STALE_WRITE')
+
+    policyMatrix.recordValidation({
+      flow: 'Update',
+      rule: 'missing meta.updatedAt',
+      expected: 'Deny (invalid: STALE_WRITE)',
+      actual: 'Deny (invalid: STALE_WRITE)',
+      code: 'STALE_WRITE',
+    })
+  })
+
+  it('organisationForm rejects role mutation when manage roles authz denies', async () => {
+    const organisationServices = await import('$lib/db/services/organisation')
+    vi.mocked(organisationServices.probeOrganisationForUpdate).mockResolvedValue({
+      id: 'org-1',
+      code: 'org-code',
+      hubId: 'hub-a',
+      capabilities: {},
+      modifiedAt: '2026-03-08T00:00:00.000Z',
+    })
+    vi.mocked(organisationServices.listUserRoleAssignments).mockResolvedValue([
+      { userId: 'u-1', role: 'owner' },
+    ] as any)
+    mockAuthorizeOrganisationManageRolesForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.organisationForm({
+        meta: {
+          id: 'org-1',
+          mode: 'update',
+          updatedAt: '2026-03-08T00:00:00.000Z',
+        },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [
+            { userId: 'u-1', role: 'owner' },
+            { userId: 'u-2', role: 'member' },
+          ],
+        },
+      }),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+
+    policyMatrix.recordValidation({
+      flow: 'Role mutation',
+      rule: 'actor lacks manageOrganisationRoles',
+      expected: 'Deny (invalid with authz code)',
+      actual: 'Deny (invalid with authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
+  })
+
+  it('publishOrganisation denies unauthorized command with authz code', async () => {
+    mockAuthorizeOrganisationPublishForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.publishOrganisation({ id: 'org-1', state: true }),
+    ).rejects.toMatchObject({ status: 403 })
+
+    policyMatrix.recordValidation({
+      flow: 'Unauthorized command',
+      rule: 'actor lacks action permission',
+      expected: 'Deny (403 + authz code)',
+      actual: 'Deny (403 + authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
   })
 
   it('organisationForm cascades capability removals to projects and project roles', async () => {

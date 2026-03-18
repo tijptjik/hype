@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import authorize from '$lib/api/services/authz'
 import type { AuthorizeParams, UserRoleDisco } from '$lib/types'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
+import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({
@@ -161,6 +162,7 @@ const withActor = (
 })
 
 const matrix = createAuthzMatrixReporter('project')
+const policyMatrix = createPolicyMatrixReporter('project')
 
 const assertMatrix = (row: {
   action: string
@@ -176,6 +178,7 @@ const assertMatrix = (row: {
 
 afterAll(() => {
   matrix.flush()
+  policyMatrix.flush()
 })
 
 describe('project authorization policy matrix', () => {
@@ -521,6 +524,22 @@ describe('project authorization policy matrix', () => {
         actual: nonI18nDecision.allowed,
         code: nonI18nDecision.code,
       })
+      policyMatrix.recordField({
+        action: 'updateProject',
+        fieldGroup: 'i18n',
+        actor: ACTORS.projectTranslator.name,
+        expected: true,
+        actual: i18nDecision.allowed,
+        code: i18nDecision.code,
+      })
+      policyMatrix.recordField({
+        action: 'updateProject',
+        fieldGroup: 'other project fields',
+        actor: ACTORS.projectTranslator.name,
+        expected: false,
+        actual: nonI18nDecision.allowed,
+        code: nonI18nDecision.code,
+      })
       expect(nonI18nDecision.code).toBe('INSUFFICIENT_ROLE')
     })
 
@@ -540,7 +559,41 @@ describe('project authorization policy matrix', () => {
           fields: ['organisationId'],
         }),
       )
+      policyMatrix.recordField({
+        action: 'updateProject',
+        fieldGroup: 'organisationId',
+        actor: ACTORS.projectOwner.name,
+        expected: false,
+        actual: ownerDecision.allowed,
+        code: ownerDecision.code,
+      })
+      policyMatrix.recordField({
+        action: 'updateProject',
+        fieldGroup: 'organisationId',
+        actor: ACTORS.coreAdmin.name,
+        expected: true,
+        actual: coreDecision.allowed,
+        code: coreDecision.code,
+      })
       expect(coreDecision.allowed).toBe(true)
+    })
+
+    it('allows maintainers to write non-i18n standard project fields', () => {
+      const decision = authorize(
+        withActor(ACTORS.projectMaintainer, {
+          action: 'updateProject',
+          fields: ['code', 'properties'],
+        }),
+      )
+      policyMatrix.recordField({
+        action: 'updateProject',
+        fieldGroup: 'other project fields',
+        actor: ACTORS.projectMaintainer.name,
+        expected: true,
+        actual: decision.allowed,
+        code: decision.code,
+      })
+      expect(decision.allowed).toBe(true)
     })
   })
 

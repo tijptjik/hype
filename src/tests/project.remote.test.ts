@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const {
   mockProjectFormDataParse,
@@ -17,6 +18,14 @@ const {
   mockAuthorizeProjectUpdateForSubmission,
   mockAuthorizeProjectCreateForSubmission,
   mockAuthorizeProjectDeleteForSubmission,
+  mockAuthorizeProjectPublishForSubmission,
+  mockAuthorizeProjectManageRolesForSubmission,
+  mockAuthorizeProjectAssignCapabilitiesForSubmission,
+  mockAuthorizeProjectManageCapabilitiesForSubmission,
+  mockValidateUniqueNonReservedCode,
+  mockResolveProjectCommandProbe,
+  mockUpdateProjectPublishedStateById,
+  mockUpdateProjectArchivedStateById,
   mockGuardedContext,
 } = vi.hoisted(() => ({
   mockProjectFormDataParse: vi.fn((input: unknown) => input),
@@ -38,12 +47,28 @@ const {
   mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectCreateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectDeleteForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectPublishForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectAssignCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectManageCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
+  mockValidateUniqueNonReservedCode: vi.fn(async () => undefined),
+  mockResolveProjectCommandProbe: vi.fn(async () => ({
+    id: 'project-1',
+    organisationId: 'org-1',
+    hubId: 'hub-a',
+  })),
+  mockUpdateProjectPublishedStateById: vi.fn(async () => null),
+  mockUpdateProjectArchivedStateById: vi.fn(async () => null),
   mockGuardedContext: vi.fn(),
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) => handler,
-  guardedCommand: (_schema: unknown, handler: unknown) => handler,
+  guardedCommand: (_schema: unknown, handler: unknown) => async (input: unknown) =>
+    (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+      input,
+      await mockGuardedContext(),
+    ),
   guardedForm:
     (_schema: unknown, handler: unknown) =>
     async (input: unknown, invalid: (message: string) => never) => {
@@ -118,7 +143,7 @@ vi.mock('$lib/api/services', () => ({
       [stateKey]: value[stateKey],
     },
   }),
-  validateUniqueNonReservedCode: vi.fn(async () => undefined),
+  validateUniqueNonReservedCode: mockValidateUniqueNonReservedCode,
 }))
 
 vi.mock('$lib/api/services/project', () => ({
@@ -247,16 +272,25 @@ vi.mock('$lib/api/services/project', () => ({
 }))
 
 vi.mock('$lib/api/services/authz', () => ({
-  authorizeProjectAssignCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
+  authorizeProjectAssignCapabilitiesForSubmission:
+    mockAuthorizeProjectAssignCapabilitiesForSubmission,
   authorizeProjectCreateForSubmission: mockAuthorizeProjectCreateForSubmission,
   authorizeProjectDeleteForSubmission: mockAuthorizeProjectDeleteForSubmission,
   authorizeProjectListForContext: vi.fn(() => ({ allowed: true })),
-  authorizeProjectManageCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
-  authorizeProjectManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
-  authorizeProjectPublishForSubmission: vi.fn(() => ({ allowed: true })),
+  authorizeProjectManageCapabilitiesForSubmission:
+    mockAuthorizeProjectManageCapabilitiesForSubmission,
+  authorizeProjectManageRolesForSubmission:
+    mockAuthorizeProjectManageRolesForSubmission,
+  authorizeProjectPublishForSubmission: mockAuthorizeProjectPublishForSubmission,
   authorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
   authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
-  ensureProjectCommandAllowed: vi.fn(),
+  ensureProjectCommandAllowed: (
+    decision: { allowed: boolean; code?: string },
+    toIssueDetailMessage: (code: string) => string,
+  ) => {
+    if (decision.allowed) return
+    throw new Error(toIssueDetailMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+  },
   isReservedCode: vi.fn(() => false),
   toAuthMessage: vi.fn((code: string) => code),
   toIssueDetailMessage: vi.fn((code: string) => code),
@@ -298,16 +332,16 @@ vi.mock('$lib/db/services/project', () => ({
   probeExistingProject: vi.fn(async () => null),
   probeProjectQuery: vi.fn(async () => null),
   probeProjectForUpdate: mockProbeProjectForUpdate,
-  resolveProjectCommandProbe: vi.fn(async () => null),
+  resolveProjectCommandProbe: mockResolveProjectCommandProbe,
   syncUserRoles: mockSyncProjectUserRoles,
   toEntityResponseShape: vi.fn((value: unknown) => ({ data: value })),
   toUserRoles: vi.fn((roles: unknown[]) => roles),
   toListResponseShape: vi.fn((value: unknown) => value),
   updateI18n: mockUpdateI18n,
   cascadeOrganisationToDescendants: mockCascadeProjectOrganisationToDescendants,
-  updateProjectArchivedStateById: vi.fn(async () => null),
+  updateProjectArchivedStateById: mockUpdateProjectArchivedStateById,
   updateProjectByIdWithConcurrency: mockUpdateProjectByIdWithConcurrency,
-  updateProjectPublishedStateById: vi.fn(async () => null),
+  updateProjectPublishedStateById: mockUpdateProjectPublishedStateById,
 }))
 
 vi.mock('$lib/db/services/property', () => ({
@@ -344,6 +378,7 @@ vi.mock('$lib/db/zod', async importOriginal => {
 vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
 
 let remote: Awaited<typeof import('$lib/api/server/project.remote')>
+const policyMatrix = createPolicyMatrixReporter('project.remote')
 
 const buildUpdatePayload = (organisationId: string) => ({
   meta: {
@@ -403,6 +438,23 @@ describe('project.remote form organisation move authz', () => {
     mockAuthorizeProjectUpdateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeProjectCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeProjectDeleteForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeProjectPublishForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeProjectManageRolesForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeProjectAssignCapabilitiesForSubmission.mockReturnValue({
+      allowed: true,
+    })
+    mockAuthorizeProjectManageCapabilitiesForSubmission.mockReturnValue({
+      allowed: true,
+    })
+    mockValidateUniqueNonReservedCode.mockResolvedValue(undefined)
+    mockUpdateProjectPublishedStateById.mockResolvedValue({
+      id: 'project-1',
+      isPublished: true,
+    })
+    mockUpdateProjectArchivedStateById.mockResolvedValue({
+      id: 'project-1',
+      isArchived: true,
+    })
 
     mockGuardedContext.mockResolvedValue({
       db: {
@@ -424,6 +476,10 @@ describe('project.remote form organisation move authz', () => {
       isAdminRequest: true,
       event: { locals: { hub: null }, url: new URL('https://example.test/admin') },
     })
+  })
+
+  afterAll(() => {
+    policyMatrix.flush()
   })
 
   it('allows organisation reassignment when create(target) and delete(source) are both allowed', async () => {
@@ -629,5 +685,136 @@ describe('project.remote form organisation move authz', () => {
       ],
       'project-1',
     )
+  })
+
+  it('rejects duplicate property keys', async () => {
+    const payload = buildUpdatePayload('org-1')
+    payload.data.properties = [
+      { key: 'dup', type: 'classifier' },
+      { key: 'dup', type: 'specifier' },
+    ] as any
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'Duplicate property keys submitted',
+    )
+    policyMatrix.recordValidation({
+      flow: 'Create/Update',
+      rule: 'duplicate property keys',
+      expected: 'Deny (invalid)',
+      actual: 'Deny (invalid)',
+    })
+  })
+
+  it('rejects stale write when updatedAt is missing', async () => {
+    const payload = buildUpdatePayload('org-1')
+    delete (payload.meta as { updatedAt?: string }).updatedAt
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'STALE_WRITE',
+    )
+    policyMatrix.recordValidation({
+      flow: 'Update',
+      rule: 'missing meta.updatedAt',
+      expected: 'Deny (invalid: STALE_WRITE)',
+      actual: 'Deny (invalid: STALE_WRITE)',
+      code: 'STALE_WRITE',
+    })
+  })
+
+  it('rejects role membership mutation when manage roles authz denies', async () => {
+    mockAuthorizeProjectManageRolesForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    const payload = buildUpdatePayload('org-1')
+    payload.data.userRoles = [
+      { userId: 'u-1', role: 'owner', capabilities: {} },
+      { userId: 'u-2', role: 'member', capabilities: {} },
+    ] as any
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'INSUFFICIENT_ROLE',
+    )
+    policyMatrix.recordValidation({
+      flow: 'Role membership mutation',
+      rule: 'actor lacks manageProjectRoles',
+      expected: 'Deny (invalid with authz code)',
+      actual: 'Deny (invalid with authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
+  })
+
+  it('rejects role capability assignment when assign capabilities authz denies', async () => {
+    mockAuthorizeProjectAssignCapabilitiesForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    mockListProjectRoleAssignments.mockResolvedValue([
+      { userId: 'u-1', role: 'owner', capabilities: { a: true } },
+    ] as any)
+
+    const payload = buildUpdatePayload('org-1')
+    payload.data.userRoles = [
+      { userId: 'u-1', role: 'owner', capabilities: { a: false } },
+    ] as any
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'INSUFFICIENT_ROLE',
+    )
+    policyMatrix.recordValidation({
+      flow: 'Role capability assignment mutation',
+      rule: 'actor lacks assignCapabilities',
+      expected: 'Deny (invalid with authz code)',
+      actual: 'Deny (invalid with authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
+  })
+
+  it('rejects project capability mutation when manage capabilities authz denies', async () => {
+    mockAuthorizeProjectManageCapabilitiesForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    mockProbeProjectForUpdate.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      code: 'project-code',
+      capabilities: { old: true },
+      modifiedAt: '2026-02-24T00:00:00.000Z',
+    } as any)
+
+    const payload = buildUpdatePayload('org-1')
+    payload.data.capabilities = { next: true } as any
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'INSUFFICIENT_ROLE',
+    )
+    policyMatrix.recordValidation({
+      flow: 'Project capability config mutation',
+      rule: 'actor lacks manageCapabilities',
+      expected: 'Deny (invalid with authz code)',
+      actual: 'Deny (invalid with authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
+  })
+
+  it('denies unauthorized publish command with authz code', async () => {
+    mockAuthorizeProjectPublishForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.publishProject({ id: 'project-1', state: true } as any),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+    policyMatrix.recordValidation({
+      flow: 'Unauthorized command',
+      rule: 'actor lacks action permission',
+      expected: 'Deny (403 + authz code)',
+      actual: 'Deny (403 + authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
   })
 })

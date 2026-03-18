@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import authorize from '$lib/api/services/authz'
 import type { AuthorizeParams, UserRoleDisco } from '$lib/types'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
+import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({
@@ -111,6 +112,7 @@ const withActor = (
 })
 
 const matrix = createAuthzMatrixReporter('organisation')
+const policyMatrix = createPolicyMatrixReporter('organisation')
 
 const assertMatrix = (row: {
   action: string
@@ -126,6 +128,7 @@ const assertMatrix = (row: {
 
 afterAll(() => {
   matrix.flush()
+  policyMatrix.flush()
 })
 
 describe('organisation authorization policy matrix', () => {
@@ -380,7 +383,74 @@ describe('organisation authorization policy matrix', () => {
           fields: ['hubId', 'isCoreInclusive'],
         }),
       )
+      policyMatrix.recordField({
+        action: 'updateOrganisation',
+        fieldGroup: 'hubId, isCoreInclusive',
+        actor: ACTORS.owner.name,
+        expected: false,
+        actual: ownerDecision.allowed,
+        code: ownerDecision.code,
+      })
+      policyMatrix.recordField({
+        action: 'updateOrganisation',
+        fieldGroup: 'hubId, isCoreInclusive',
+        actor: ACTORS.coreAdmin.name,
+        expected: true,
+        actual: coreDecision.allowed,
+        code: coreDecision.code,
+      })
       expect(coreDecision.allowed).toBe(true)
+    })
+
+    it('allows hub admin but denies owner for isHubExclusive', () => {
+      const ownerDecision = authorize(
+        withActor(ACTORS.owner, {
+          action: 'updateOrganisation',
+          fields: ['isHubExclusive'],
+        }),
+      )
+      const hubAdminDecision = authorize(
+        withActor(ACTORS.hubAdminSame, {
+          action: 'updateOrganisation',
+          fields: ['isHubExclusive'],
+        }),
+      )
+      policyMatrix.recordField({
+        action: 'updateOrganisation',
+        fieldGroup: 'isHubExclusive',
+        actor: ACTORS.owner.name,
+        expected: false,
+        actual: ownerDecision.allowed,
+        code: ownerDecision.code,
+      })
+      policyMatrix.recordField({
+        action: 'updateOrganisation',
+        fieldGroup: 'isHubExclusive',
+        actor: ACTORS.hubAdminSame.name,
+        expected: true,
+        actual: hubAdminDecision.allowed,
+        code: hubAdminDecision.code,
+      })
+      expect(ownerDecision.allowed).toBe(false)
+      expect(hubAdminDecision.allowed).toBe(true)
+    })
+
+    it('allows standard fields for owner', () => {
+      const decision = authorize(
+        withActor(ACTORS.owner, {
+          action: 'updateOrganisation',
+          fields: ['code', 'i18n'],
+        }),
+      )
+      policyMatrix.recordField({
+        action: 'updateOrganisation',
+        fieldGroup: 'other organisation fields',
+        actor: ACTORS.owner.name,
+        expected: true,
+        actual: decision.allowed,
+        code: decision.code,
+      })
+      expect(decision.allowed).toBe(true)
     })
   })
 

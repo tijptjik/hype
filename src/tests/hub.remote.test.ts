@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const {
   mockHubFormDataParse,
@@ -16,6 +17,12 @@ const {
   mockAuthorizeHubCreateForSubmission,
   mockAuthorizeHubUpdateForSubmission,
   mockAuthorizeHubManageRolesForSubmission,
+  mockAuthorizeHubPublishForSubmission,
+  mockAuthorizeHubDeleteForSubmission,
+  mockValidateUniqueNonReservedCode,
+  mockResolveHubCommandProbe,
+  mockUpdateHubPublishedStateById,
+  mockUpdateHubArchivedStateById,
   mockHasInvalidHubOrganisationAssignmentsForSubmission,
   mockGuardedContext,
 } = vi.hoisted(() => ({
@@ -38,13 +45,23 @@ const {
   mockAuthorizeHubCreateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeHubUpdateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeHubManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeHubPublishForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeHubDeleteForSubmission: vi.fn(() => ({ allowed: true })),
+  mockValidateUniqueNonReservedCode: vi.fn(async () => undefined),
+  mockResolveHubCommandProbe: vi.fn(async () => ({ id: 'hub-1' })),
+  mockUpdateHubPublishedStateById: vi.fn(async () => null),
+  mockUpdateHubArchivedStateById: vi.fn(async () => null),
   mockHasInvalidHubOrganisationAssignmentsForSubmission: vi.fn(async () => false),
   mockGuardedContext: vi.fn(),
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) => handler,
-  guardedCommand: (_schema: unknown, handler: unknown) => handler,
+  guardedCommand: (_schema: unknown, handler: unknown) => async (input: unknown) =>
+    (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+      input,
+      await mockGuardedContext(),
+    ),
   guardedForm:
     (_schema: unknown, handler: unknown) =>
     async (input: unknown, invalid: unknown) => {
@@ -120,8 +137,12 @@ vi.mock('$lib/api/services/authz', () => ({
   authorizeHubCreateForSubmission: mockAuthorizeHubCreateForSubmission,
   authorizeHubUpdateForSubmission: mockAuthorizeHubUpdateForSubmission,
   authorizeHubManageRolesForSubmission: mockAuthorizeHubManageRolesForSubmission,
-  authorizeHubPublishForSubmission: () => ({ allowed: true }),
-  authorizeHubDeleteForSubmission: () => ({ allowed: true }),
+  authorizeHubPublishForSubmission: mockAuthorizeHubPublishForSubmission,
+  authorizeHubDeleteForSubmission: mockAuthorizeHubDeleteForSubmission,
+  ensureHubCommandAllowed: (decision: { allowed: boolean; code?: string }) => {
+    if (decision.allowed) return
+    throw new Error(decision.code ?? 'INSUFFICIENT_ROLE')
+  },
   hasInvalidHubOrganisationAssignmentsForSubmission:
     mockHasInvalidHubOrganisationAssignmentsForSubmission,
   toHubListConditions: vi.fn(() => []),
@@ -150,10 +171,11 @@ vi.mock('$lib/db/services/hub', () => ({
   createHubUserRoles: mockCreateHubUserRoles,
   probeExistingHub: mockProbeExistingHub,
   probeHubForUpdate: mockProbeHubForUpdate,
+  resolveHubCommandProbe: mockResolveHubCommandProbe,
   updateHubByIdWithConcurrency: mockUpdateHubByIdWithConcurrency,
   probeHubForCommand: vi.fn(async () => null),
-  updateHubPublishedStateById: vi.fn(async () => null),
-  updateHubArchivedStateById: vi.fn(async () => null),
+  updateHubPublishedStateById: mockUpdateHubPublishedStateById,
+  updateHubArchivedStateById: mockUpdateHubArchivedStateById,
   updateI18n: mockUpdateI18n,
   syncUserRoles: mockSyncHubUserRoles,
   syncHubUserRoles: mockSyncHubUserRoles,
@@ -164,6 +186,43 @@ vi.mock('$lib/db/services/hub', () => ({
   listHubs: vi.fn(),
   getHub: vi.fn(),
   syncHubOrganisations: mockSyncHubOrganisations,
+}))
+
+vi.mock('$lib/api/services', () => ({
+  getDuplicateValues: (values: string[]) => {
+    const seen = new Set<string>()
+    const duplicates: string[] = []
+    for (const value of values) {
+      if (seen.has(value)) duplicates.push(value)
+      seen.add(value)
+    }
+    return duplicates
+  },
+  hasRoleMembershipChanged: (
+    submitted: Array<{ userId: string; role: string }>,
+    existing: Array<{ userId: string; role: string }>,
+    toSignature: (roles: Array<{ userId: string; role: string }>) => string,
+  ) => toSignature(submitted) !== toSignature(existing),
+  requireValue: <T>(value: T | null | undefined, onEmpty: () => never): T => {
+    if (value === null || value === undefined) return onEmpty()
+    return value
+  },
+  toBooleanStateResponseShape: (
+    value: Record<string, unknown>,
+    stateKey: 'isPublished' | 'isArchived',
+  ) => ({
+    data: {
+      id: value.id,
+      [stateKey]: value[stateKey],
+    },
+  }),
+  toCreatedResponseShape: (value: { id: string; modifiedAt: string }) => ({
+    data: {
+      id: value.id,
+      modifiedAt: value.modifiedAt,
+    },
+  }),
+  validateUniqueNonReservedCode: mockValidateUniqueNonReservedCode,
 }))
 
 vi.mock('$lib/db/services/property', () => ({
@@ -191,6 +250,7 @@ vi.mock('$lib/db/schema', () => ({
 }))
 
 let remote: Awaited<typeof import('$lib/api/server/hub.remote')>
+const policyMatrix = createPolicyMatrixReporter('hub.remote')
 
 const buildDbForCreate = () => ({
   select: vi.fn(() => ({
@@ -229,9 +289,24 @@ describe('hub.remote form image handling', () => {
     mockAuthorizeHubCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeHubManageRolesForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeHubPublishForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeHubDeleteForSubmission.mockReturnValue({ allowed: true })
+    mockValidateUniqueNonReservedCode.mockResolvedValue(undefined)
+    mockUpdateHubPublishedStateById.mockResolvedValue({
+      id: 'hub-1',
+      isPublished: true,
+    })
+    mockUpdateHubArchivedStateById.mockResolvedValue({
+      id: 'hub-1',
+      isArchived: true,
+    })
     mockHasInvalidHubOrganisationAssignmentsForSubmission.mockResolvedValue(false)
     mockProbeExistingHub.mockResolvedValue(null)
     mockListHubRoleAssignments.mockResolvedValue([])
+  })
+
+  afterAll(() => {
+    policyMatrix.flush()
   })
 
   it('create mode ignores imageId from incoming form payload', async () => {
@@ -314,5 +389,237 @@ describe('hub.remote form image handling', () => {
     expect(
       mockUpdateHubByIdWithConcurrency.mock.calls[0]?.[1]?.data,
     ).not.toHaveProperty('imageId')
+  })
+
+  it('rejects empty userRoles', async () => {
+    const db = buildDbForCreate()
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+
+    await expect(
+      remote.hubForm(
+        {
+          meta: { mode: 'create' },
+          data: {
+            code: 'new-hub',
+            domain: '',
+            i18n: { en: {}, zhHans: {}, zhHant: {} },
+            userRoles: [],
+            organisations: [],
+          },
+        } as any,
+        ((message: string) => {
+          throw new Error(message)
+        }) as any,
+      ),
+    ).rejects.toThrow('USER_ROLES_REQUIRED')
+    policyMatrix.recordValidation({
+      flow: 'Create/Update',
+      rule: 'userRoles empty',
+      expected: 'Deny (invalid: USER_ROLES_REQUIRED)',
+      actual: 'Deny (invalid: USER_ROLES_REQUIRED)',
+      code: 'USER_ROLES_REQUIRED',
+    })
+  })
+
+  it('rejects duplicate userRoles.userId', async () => {
+    const db = buildDbForCreate()
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+
+    await expect(
+      remote.hubForm(
+        {
+          meta: { mode: 'create' },
+          data: {
+            code: 'new-hub',
+            domain: '',
+            i18n: { en: {}, zhHans: {}, zhHant: {} },
+            userRoles: [
+              { userId: 'u-1', role: 'admin' },
+              { userId: 'u-1', role: 'admin' },
+            ],
+            organisations: [],
+          },
+        } as any,
+        ((message: string) => {
+          throw new Error(message)
+        }) as any,
+      ),
+    ).rejects.toThrow('Duplicate user roles submitted')
+    policyMatrix.recordValidation({
+      flow: 'Create/Update',
+      rule: 'duplicate userRoles.userId',
+      expected: 'Deny (invalid)',
+      actual: 'Deny (invalid)',
+    })
+  })
+
+  it('rejects hub scope violations on submitted organisations', async () => {
+    const { db } = buildDbForUpdate({
+      existingRoles: [{ userId: 'u-1', role: 'admin' }],
+    })
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: '2026-02-23T00:00:00.000Z',
+    })
+    mockHasInvalidHubOrganisationAssignmentsForSubmission.mockResolvedValue(true)
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+
+    await expect(
+      remote.hubForm(
+        {
+          meta: {
+            id: 'hub-1',
+            mode: 'update',
+            updatedAt: '2026-02-23T00:00:00.000Z',
+          },
+          data: {
+            code: 'core',
+            domain: '',
+            i18n: { en: {}, zhHans: {}, zhHant: {} },
+            userRoles: [{ userId: 'u-1', role: 'admin' }],
+            organisations: [{ organisationId: 'org-1' }],
+          },
+        } as any,
+        ((message: string) => {
+          throw new Error(message)
+        }) as any,
+      ),
+    ).rejects.toThrow('HUB_SCOPE_FORBIDDEN')
+    policyMatrix.recordValidation({
+      flow: 'Update',
+      rule: 'submitted organisation assignment outside actor scope',
+      expected: 'Deny (invalid: HUB_SCOPE_FORBIDDEN)',
+      actual: 'Deny (invalid: HUB_SCOPE_FORBIDDEN)',
+      code: 'HUB_SCOPE_FORBIDDEN',
+    })
+  })
+
+  it('rejects stale write when updatedAt is missing', async () => {
+    const { db } = buildDbForUpdate({
+      existingRoles: [{ userId: 'u-1', role: 'admin' }],
+    })
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: '2026-02-23T00:00:00.000Z',
+    })
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+
+    await expect(
+      remote.hubForm(
+        {
+          meta: { id: 'hub-1', mode: 'update' },
+          data: {
+            code: 'core',
+            domain: '',
+            i18n: { en: {}, zhHans: {}, zhHant: {} },
+            userRoles: [{ userId: 'u-1', role: 'admin' }],
+            organisations: [],
+          },
+        } as any,
+        ((message: string) => {
+          throw new Error(message)
+        }) as any,
+      ),
+    ).rejects.toThrow('STALE_WRITE')
+    policyMatrix.recordValidation({
+      flow: 'Update',
+      rule: 'missing meta.updatedAt',
+      expected: 'Deny (invalid: STALE_WRITE)',
+      actual: 'Deny (invalid: STALE_WRITE)',
+      code: 'STALE_WRITE',
+    })
+  })
+
+  it('rejects role mutation when manage roles authz denies', async () => {
+    const { db } = buildDbForUpdate({
+      existingRoles: [{ userId: 'u-1', role: 'admin' }],
+    })
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: '2026-02-23T00:00:00.000Z',
+    })
+    mockAuthorizeHubManageRolesForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+
+    await expect(
+      remote.hubForm(
+        {
+          meta: {
+            id: 'hub-1',
+            mode: 'update',
+            updatedAt: '2026-02-23T00:00:00.000Z',
+          },
+          data: {
+            code: 'core',
+            domain: '',
+            i18n: { en: {}, zhHans: {}, zhHant: {} },
+            userRoles: [
+              { userId: 'u-1', role: 'admin' },
+              { userId: 'u-2', role: 'admin' },
+            ],
+            organisations: [],
+          },
+        } as any,
+        ((message: string) => {
+          throw new Error(message)
+        }) as any,
+      ),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+    policyMatrix.recordValidation({
+      flow: 'Role mutation',
+      rule: 'actor lacks manageHubRoles',
+      expected: 'Deny (invalid with authz code)',
+      actual: 'Deny (invalid with authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
+  })
+
+  it('denies unauthorized publish command with authz code', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+    mockAuthorizeHubPublishForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.publishHub({ id: 'hub-1', state: true } as any),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+    policyMatrix.recordValidation({
+      flow: 'Unauthorized command',
+      rule: 'actor lacks action permission',
+      expected: 'Deny (403 + authz code)',
+      actual: 'Deny (403 + authz code)',
+      code: 'INSUFFICIENT_ROLE',
+    })
   })
 })
