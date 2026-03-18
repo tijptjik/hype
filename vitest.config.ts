@@ -1,5 +1,5 @@
-import { configDefaults, defineConfig } from 'vitest/config'
-import { resolve } from 'path'
+import { defineConfig } from 'vitest/config'
+import { resolve } from 'node:path'
 
 const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run'
 

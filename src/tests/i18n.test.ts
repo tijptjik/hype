@@ -174,8 +174,7 @@ describe('I18N Message Validation', () => {
         locale,
         totalKeys: keys.length,
         emptyKeys: emptyKeys.length,
-        coverage:
-          (((keys.length - emptyKeys.length) / keys.length) * 100).toFixed(2) + '%',
+        coverage: `${(((keys.length - emptyKeys.length) / keys.length) * 100).toFixed(2)}%`,
       }
     })
 
