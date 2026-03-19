@@ -64,6 +64,7 @@ import {
   removeProjectProperty,
   resetProjectPropertyLocale,
   scrollWithMovedProperty,
+  sortProjectPropertyValuesAlphabetically,
   stopEvent,
   translateProjectPropertyLocale,
   updateProjectPropertyValue,
@@ -558,6 +559,15 @@ const updatePropertyI18n = (
 // Append a new value option to a classifier property.
 const addPropertyValue = (propertyId: Id): void => {
   addProjectPropertyValue(projectPropertyFormAdapter, propertyId)
+  revalidateAfterProgrammaticChange()
+}
+
+const sortPropertyValuesAlphabetically = (propertyId: Id, locale: Locale): void => {
+  sortProjectPropertyValuesAlphabetically(
+    projectPropertyFormAdapter,
+    propertyId,
+    locale,
+  )
   revalidateAfterProgrammaticChange()
 }
 
@@ -1157,11 +1167,12 @@ const imageProviderProps = $derived.by(() => {
     image: isValid ? activeProjectImage : undefined,
     context:
       isValid && hierarchy
-        ? {
+        ? ({
             ctxType: ImageContextResource.project,
             ctxId: projectData?.id,
             organisation: hierarchy.organisation,
-          }
+            project: projectData as any,
+          } as any)
         : undefined,
   }
 })
@@ -2089,6 +2100,7 @@ $effect(() => {
             onUpdateBase: updatePropertyBase,
             onUpdateI18n: updatePropertyI18n,
             onAddValue: addPropertyValue,
+            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
             onRemoveValue: removePropertyValue,
             onMoveValue: movePropertyValue,
             onUpdateValue: updatePropertyValue,
