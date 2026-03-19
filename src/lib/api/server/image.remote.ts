@@ -198,9 +198,6 @@ const probeContextState = async (
   return { resourceHubId: row.resourceHubId, requestedState: row }
 }
 
-const toRoleDebug = (roles: Array<{ type?: string; role?: string }>) =>
-  roles.map(role => ({ type: role.type, role: role.role }))
-
 /**
  * Returns image collections in context.
  */
