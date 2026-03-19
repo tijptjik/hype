@@ -705,6 +705,22 @@ describe('project.remote form organisation move authz', () => {
     })
   })
 
+  it('rejects empty userRoles when explicitly submitted', async () => {
+    const payload = buildUpdatePayload('org-1')
+    payload.data.userRoles = [] as any
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'USER_ROLES_REQUIRED',
+    )
+    policyMatrix.recordValidation({
+      flow: 'Create/Update',
+      rule: 'userRoles empty',
+      expected: 'Deny (invalid: USER_ROLES_REQUIRED)',
+      actual: 'Deny (invalid: USER_ROLES_REQUIRED)',
+      code: 'USER_ROLES_REQUIRED',
+    })
+  })
+
   it('rejects stale write when updatedAt is missing', async () => {
     const payload = buildUpdatePayload('org-1')
     delete (payload.meta as { updatedAt?: string }).updatedAt
