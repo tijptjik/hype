@@ -142,13 +142,7 @@ export const POST: RequestHandler = async ({ request, locals, platform, fetch })
     }
 
     // ASSERT : User has permission to create task
-    await assertPermissionsToCreateTask(
-      db,
-      user,
-      request,
-      form.data as TaskNew,
-      userRoles,
-    )
+    await assertPermissionsToCreateTask(user)
 
     // Get Azure translation credentials from platform for feature enrichment
     const subscriptionKey = platform?.env?.AZURE_TRANSLATION_KEY || ''

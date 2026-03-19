@@ -52,7 +52,7 @@ facetTabs.set('core', m.born_plane_javelina_strive())
 
 // Only set header if task exists to prevent undefined access
 // svelte-ignore state_referenced_locally
-if (task && task?.id) {
+if (task?.id) {
   headerCtrl.setHeaderForEntity(
     // svelte-ignore state_referenced_locally
     `${m.born_plane_javelina_strive()} #${task.id}`,
@@ -96,7 +96,7 @@ const imageProviderModel = useImageProviderModel(
 <!-- LAYOUT -->
 <ImageProvider model={imageProviderModel}>
   <div
-    class="h-full overflow-hidden bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed p-6"
+    class="h-full overflow-hidden bg-linear-to-br from-rose-500 to-indigo-700 bg-fixed p-6"
   >
     {#if task?.id}
       <TaskRoot {task}>

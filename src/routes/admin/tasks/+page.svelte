@@ -177,7 +177,7 @@ function updateRowFocus(index: number) {
     'svelte-virtual-list-viewport',
   ) as any
 
-  if (virtualList && virtualList.scrollToIndex) {
+  if (virtualList?.scrollToIndex) {
     // Scroll to the index using the virtual list's built-in method
     virtualList.scrollToIndex(index, true, false)
 
@@ -203,7 +203,7 @@ function updateRowFocus(index: number) {
 </script>
 
 <div
-  class="h-full overflow-y-auto overscroll-auto bg-gradient-to-br from-rose-500 to-indigo-700 bg-fixed pb-6"
+  class="h-full overflow-y-auto overscroll-auto bg-linear-to-br from-rose-500 to-indigo-700 bg-fixed pb-6"
 >
   <GroupedResourceIndex
     resource={FirstClassResource.task}

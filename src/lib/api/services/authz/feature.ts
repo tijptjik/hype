@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit'
-import { shouldLogAuthzDeny, toActorPolicyBase, toAuthMessage } from '.'
+import { shouldLogAuthzDeny, toActorPolicyBase } from '.'
 import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
 

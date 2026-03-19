@@ -64,7 +64,6 @@ export const GET: RequestHandler = async ({
 
   // CONTEXT : Get the query context
   const { conditions } = getTaskEntityQueryContext(
-    db,
     user,
     request,
     queryParams as QueryParams,

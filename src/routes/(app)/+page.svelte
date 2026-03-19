@@ -42,7 +42,7 @@ const buttonStyleClasses = hub.isCore
     </h1>
   </div>
   <button
-    class="z-50 mx-auto flex w-[230px] flex-row items-center justify-center gap-3 rounded-2xl border-none bg-white py-3 text-neutral-900 {buttonStyleClasses}"
+    class="z-50 mx-auto flex w-57.5 flex-row items-center justify-center gap-3 rounded-2xl border-none bg-white py-3 text-neutral-900 {buttonStyleClasses}"
     onclick={() => {
       signIn
         .social({

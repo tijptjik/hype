@@ -17,7 +17,7 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { task, feature, layer } from '$lib/db/schema/index'
+import { task } from '$lib/db/schema/index'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 // ZOD
@@ -37,9 +37,7 @@ import type {
   Task,
   TaskDBRaw,
   SessionUser,
-  Locale,
 } from '$lib/types'
-import type { HubOpts } from '$lib/db/zod/schema/hub.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -195,7 +193,6 @@ export const getTaskQueryContext = (
  * Tasks are admin-only resources, so public access is not allowed.
  */
 export const getTaskEntityQueryContext = (
-  db: Database,
   user: SessionUser,
   request: Request,
   params: QueryParams,
@@ -234,13 +231,7 @@ export const getTaskEntityQueryContext = (
  * Asserts permissions to create a task.
  * Any logged in user can create a task.
  */
-export const assertPermissionsToCreateTask = async (
-  db: Database,
-  user: SessionUser,
-  request: Request,
-  data: TaskDBNew,
-  userRoles: UserRoleDisco[],
-) => {
+export const assertPermissionsToCreateTask = async (user: SessionUser) => {
   const commonAssertions = [() => assertUserLoggedIn({ user } as any)]
 
   const assertionError = runAssertions(...commonAssertions)
