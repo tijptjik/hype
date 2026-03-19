@@ -1,4 +1,10 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
@@ -97,15 +103,24 @@ export const layerI18n = sqliteTable(
  * @remarks
  * Links properties to layers with visibility settings
  */
-export const layerProperty = sqliteTable('layerProperty', {
-  layerId: text('layerId')
-    .notNull()
-    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  propertyId: text('propertyId')
-    .notNull()
-    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true),
-  isUserContributable: integer('isUserContributable', { mode: 'boolean' })
-    .notNull()
-    .default(true),
-})
+export const layerProperty = sqliteTable(
+  'layerProperty',
+  {
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true),
+    isUserContributable: integer('isUserContributable', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+  },
+  table => [
+    uniqueIndex('layerProperty_layerId_propertyId_idx').on(
+      table.layerId,
+      table.propertyId,
+    ),
+  ],
+)
