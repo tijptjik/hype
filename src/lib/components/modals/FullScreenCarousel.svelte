@@ -100,11 +100,11 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-function closeModal(event?: Event) {
+function closeModal(_event?: Event) {
   removeParamFromUrl('fullscreen')
 }
 
-function openModal(event?: Event) {
+function openModal(_event?: Event) {
   addParamToUrl('fullscreen', 'true')
 }
 
@@ -115,11 +115,11 @@ function toggleAttribution(e: Event) {
 }
 
 // NAVIGATION HANDLERS
-function handlePrevious(e: MouseEvent | SwipeCustomEvent | TapCustomEvent) {
+function handlePrevious(_e: MouseEvent | SwipeCustomEvent | TapCustomEvent) {
   imageCtx.prev()
 }
 
-function handleNext(e: MouseEvent | SwipeCustomEvent | TapCustomEvent) {
+function handleNext(_e: MouseEvent | SwipeCustomEvent | TapCustomEvent) {
   imageCtx.next()
 }
 

@@ -3,7 +3,6 @@ import * as tilebelt from '@mapbox/tilebelt'
 import { bounds } from '@placemarkio/geo-viewport'
 import type { BBox } from 'geojson'
 import type { LngLatLike } from 'maplibre-gl'
-import * as _lib from 'maplibre-gl'
 
 let controller: AbortController | undefined
 let signal: AbortSignal | undefined
@@ -124,7 +123,7 @@ const precache_function = (o: any) => {
 
   // Fetch all
   Promise.all(urls.map(u => fetch(u, { signal })))
-    .then(d => {
+    .then(_d => {
       if (o.debug) console.log(`Estimated gain: ${Math.round((900 * tz) / 6)}ms`)
       if (o.debug)
         console.log(

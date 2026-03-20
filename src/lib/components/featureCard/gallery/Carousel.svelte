@@ -61,8 +61,8 @@ function handleNext(e: MouseEvent | SwipeCustomEvent) {
 
 // Tap gesture handler for image navigation
 function handleTap(event: TapCustomEvent) {
-  if (images.length == 0) return
-  if (images.length == 1 && !isStaged) {
+  if (images.length === 0) return
+  if (images.length === 1 && !isStaged) {
     addParamToUrl('fullscreen', 'true')
     return
   }

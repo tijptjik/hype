@@ -204,7 +204,7 @@ function clearResource(level: 'organisation' | 'project' | 'layer', e: Event) {
 
   const hierarchy = ['organisationId', 'projectId', 'layerId'] as const
 
-  const levelIndex = hierarchy.indexOf((level + 'Id') as any)
+  const levelIndex = hierarchy.indexOf(`${level}Id` as any)
   const updates: any = { feature: {} }
 
   // Clear from this level onwards

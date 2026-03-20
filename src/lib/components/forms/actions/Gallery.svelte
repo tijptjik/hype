@@ -38,7 +38,7 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (imageCtx.getImages().length == 0) {
+  if (imageCtx.getImages().length === 0) {
     removeMode = false
   }
 })

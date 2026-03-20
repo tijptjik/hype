@@ -115,7 +115,7 @@ const hasGradeProperty = $derived(
     ? isEditing
       ? 'flex-col pl-2 w-100:pl-4'
       : 'flex-col pl-2 w-100:pl-4'
-    : 'flex-row px-3 w-100:px-6'} min-h-6 flex-shrink-0 flex-grow-0 items-start justify-between overflow-visible bg-black pb-0 caret-transparent"
+    : 'flex-row px-3 w-100:px-6'} min-h-6 shrink-0 grow-0 items-start justify-between overflow-visible bg-black pb-0 caret-transparent"
 >
   {#if cardCtx.isNewMode}
     {#if isEditing}
@@ -203,7 +203,7 @@ const hasGradeProperty = $derived(
       <Icon src={Star} class="h-6 w-6" theme="solid" />
       <span>{grade}/5</span>
     {:else}
-      <span class="translate-x-[28px] rounded-full bg-black text-[8px] text-white"
+      <span class="translate-x-7 rounded-full bg-black text-[8px] text-white"
         >{m.misty_quiet_sheep_push()}</span
       >
       <Icon src={Star} class="h-6 w-6" theme="solid" />

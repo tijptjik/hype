@@ -18,7 +18,7 @@ import { Panel } from '$lib/enums'
 // SERVICES
 import { initAddNewFeature } from '$lib/client/services/feature'
 import { startCircularFlight } from '$lib/client/services/geospatial'
-import LibreMap from '$lib/components/common/StandaloneMap.svelte'
+import MapCanvas from '$lib/components/common/MapCanvas.svelte'
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte'
 import Filters from '$lib/components/panels/Filters.svelte'
 import Prisms from '$lib/components/panels/Prisms.svelte'
@@ -283,7 +283,7 @@ function handleMenuSelect(item: { value: Panel }): void {
       <!-- Map Container -->
       <div class="relative flex h-full flex-1 flex-col">
         <Omnibar />
-        <LibreMap />
+        <MapCanvas />
         {@render children()}
         {#snippet addFeatureIcon()}
           <Icon
@@ -350,7 +350,7 @@ function handleMenuSelect(item: { value: Panel }): void {
   {:else if !$session.isPending && !$session.data}
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
-      <LibreMap />
+      <MapCanvas />
     </main>
   {:else}
     <!-- Loading state while session is pending -->

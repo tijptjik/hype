@@ -109,7 +109,7 @@ let fullCollectionText = $derived(
         <!-- Collection Title -->
         <ScrollableText
           text={fullCollectionText}
-          containerClass="h-[22px] pt-1.5"
+          containerClass="h-5.5"
           textClass="text-xs text-base-content/60"
           separator="~"
           padding={20}

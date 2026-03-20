@@ -104,9 +104,7 @@ function handleEditCancel(propertyId: string) {
 </script>
 
 {#if cardCtx.isNewMode && availableFeatureProperties.length > 0}
-  <div
-    class="flex-grow-1 flex min-h-8 w-full flex-shrink-0 flex-col bg-black caret-transparent"
-  >
+  <div class="grow flex min-h-8 w-full shrink-0 flex-col bg-black caret-transparent">
     <div
       class="justify-flex-start dir-rtl pointer-events-auto mt-2 grid grid-cols-1 gap-2 pl-3 pr-3 w-100:grid-cols-2 w-100:pl-6 w-100:pr-6 w-120:gap-4"
     >

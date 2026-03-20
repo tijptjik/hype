@@ -3,8 +3,8 @@
 import { fade } from 'svelte/transition'
 import { onMount } from 'svelte'
 // MapLibre
-import SpectralStyle from '$lib/map/styles/style-protomaps.json'
 import { addAddressMarker } from '$lib/map/markers'
+import { getDefaultMapStyleKey } from '$lib/map/styles'
 import { getCoordinates } from '$lib/client/services/geospatial'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/lucide/shrink'
@@ -66,7 +66,7 @@ onMount(async () => {
 
   appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
-    style: SpectralStyle,
+    style: `/api/styles/${getDefaultMapStyleKey()}`,
     center: mapProps.initialCenter ?? mapProps.coordinates,
     zoom: 20,
     hash: false,
@@ -133,7 +133,7 @@ $effect(() => {
 // EVENTS
 const handleDragEnd = (e: Event) => {
   // @ts-expect-error
-  mapProps.dragEndCallback?.(e.target!.getLngLat().toArray())
+  mapProps.dragEndCallback?.(e.target?.getLngLat().toArray())
   appCtx.zoomToMarkerOnly = true
 }
 
@@ -246,7 +246,7 @@ $effect(() => {
 
   <!-- Map Container -->
   <div
-    class="map h-full w-full flex-grow rounded-lg bg-base-300"
+    class="map h-full w-full grow rounded-lg bg-base-300"
     class:opacity-0={!isMapLoaded}
     class:opacity-100={isMapLoaded}
     data-testid="map"
@@ -270,7 +270,7 @@ $effect(() => {
 }
 
 :global(.map-container.fullscreen) {
-  flex-basis: 100% !important;
+  flex-basis: 100%;
 }
 
 :global(.content-container) {
@@ -280,7 +280,7 @@ $effect(() => {
 }
 
 :global(.content-container.hidden) {
-  flex-basis: 0% !important;
+  flex-basis: 0%;
   opacity: 0;
   overflow: hidden;
 }

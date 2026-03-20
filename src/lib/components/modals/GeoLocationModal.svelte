@@ -167,7 +167,7 @@ function handleKeydown(e: KeyboardEvent) {
           : 'translate-x-0'}"
     >
       <div
-        class="group pointer-events-auto relative my-4 flex translate-x-[16px] cursor-pointer items-center justify-between caret-transparent"
+        class="group pointer-events-auto relative my-4 flex translate-x-4 cursor-pointer items-center justify-between caret-transparent"
         onclick={handleCloseModal}
       >
         <h3
@@ -178,16 +178,14 @@ function handleKeydown(e: KeyboardEvent) {
           {m.lazy_round_falcon_shine()}
         </h3>
         <button
-          class="group-hover:font-bolder btn btn-ghost btn-sm pointer-events-none mt-[2px] h-9 w-8 -translate-y-[1px] rounded-l-none p-0 py-[7px] transition-all duration-300 focus:outline-none group-hover:bg-black/80 group-hover:text-white"
+          class="group-hover:font-bolder btn btn-ghost btn-sm pointer-events-none mt-0.5 h-9 w-8 -translate-y-px rounded-l-none p-0 py-1.75 transition-all duration-300 focus:outline-none group-hover:bg-black/80 group-hover:text-white"
         >
           <Icon src={XMark} class="h-5 w-5" />
         </button>
       </div>
 
       <!-- Location Indicator -->
-      <div
-        class="relative mx-4 aspect-square max-h-[400px] min-h-[200px] min-w-[250px] max-w-[250px]"
-      >
+      <div class="relative mx-4 aspect-square max-h-100 min-h-50 min-w-62.5 max-w-62.5">
         <div class="absolute inset-0 rounded-full border-4 border-[#4987E2]"></div>
         <div
           class="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
@@ -222,7 +220,7 @@ function handleKeydown(e: KeyboardEvent) {
             </div>
           {:else}
             <div class="relative flex h-12 items-center justify-center gap-2">
-              <p class="max-w-[280px] flex-1 bg-black px-2 py-1 text-left">
+              <p class="max-w-70 flex-1 bg-black px-2 py-1 text-left">
                 {displayAddress[getLocale()] || 'No address found'}
               </p>
               <button

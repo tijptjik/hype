@@ -2,7 +2,7 @@
 // SERVICES
 import { calculateDistance } from '$lib/utils/geocoding'
 // COMPONENTS
-import Map from '$lib/components/common/Map.svelte'
+import Maplet from '$lib/components/common/Maplet.svelte'
 // MAP
 import { getCoordinates } from '$lib/client/services/geospatial'
 // TYPES
@@ -28,11 +28,7 @@ let lngLat = $derived(
 const syncUpCoordinates = (lngLat: number[]) => {
   featureForm.update($form => {
     ;($form.geometry as Point).coordinates = lngLat
-    if (
-      $form.addressMeta &&
-      $form.addressMeta?.longitude &&
-      $form.addressMeta?.latitude
-    ) {
+    if ($form.addressMeta?.longitude && $form.addressMeta?.latitude) {
       $form.addressMeta.distanceFromPoint = calculateDistance(
         lngLat[0],
         lngLat[1],
@@ -46,8 +42,8 @@ const syncUpCoordinates = (lngLat: number[]) => {
 </script>
 
 {#if lngLat}
-  <div class="relative h-full w-full flex-grow">
-    <Map
+  <div class="relative h-full w-full grow">
+    <Maplet
       coordinates={lngLat}
       dragEndCallback={syncUpCoordinates}
       addressMeta={$featureForm.addressMeta}

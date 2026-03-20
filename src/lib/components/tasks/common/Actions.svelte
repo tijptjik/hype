@@ -62,7 +62,7 @@ function toggleExpand() {
   isExpanded = !isExpanded
 }
 
-function closeExpand(e: MouseEvent) {
+function closeExpand(_e: MouseEvent) {
   if (isExpanded) {
     isExpanded = false
   }
@@ -90,7 +90,7 @@ function closeExpand(e: MouseEvent) {
             <Icon src={ExclamationCircle} class="h-8 w-8 text-base-content" />
             <p class="p-2 uppercase text-base-content">{m.mad_fresh_swan_trap()}</p>
             <p
-              class="line-clamp-1 max-w-[200px] text-sm/8 text-base-content {isExpanded
+              class="line-clamp-1 max-w-50 text-sm/8 text-base-content {isExpanded
                 ? 'opacity-0'
                 : 'opacity-100'} overflow-clip p-2 font-mono uppercase transition-opacity duration-300"
             >

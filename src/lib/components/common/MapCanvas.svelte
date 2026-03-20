@@ -1,36 +1,33 @@
 <script lang="ts">
-import { onMount } from 'svelte'
+import { page } from '$app/state'
+import { onDestroy, onMount } from 'svelte'
 import { watch } from 'runed'
 // I18N
-import { m } from '$lib/i18n'
+import { getLocale, m } from '$lib/i18n'
 // ANIMATION
 import { fade } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 // LIB
-import { updateMarkers } from '$lib/map/markers'
+import {
+  getUserMarkerStyleVariant,
+  updateMarkers,
+  USER_MARKER_STYLE_PARAM,
+} from '$lib/map/markers'
+import {
+  getDefaultMapStyleKey,
+} from '$lib/map/styles'
 // ICONS
 import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
-// MAPLibre STYLES
-import {
-  ghosteryEarth,
-  ghosteryRoads,
-  ghosteryBuildings,
-  ghosteryBuildingsOutline,
-  ghosteryAddressLabel,
-  ghosteryPlacesLocality,
-  ghosteryPlacesSubplace,
-  ghosteryRoadsLabelsMinor,
-  ghosteryRoadsLabelsMajor,
-} from '$lib/map/styles/ghostery'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
 import type { PointLike, LngLatLike, Point } from 'maplibre-gl'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { StyleSpecification } from 'maplibre-gl'
 
 // ELEMENTS
 let mapContainer: HTMLDivElement
@@ -42,6 +39,205 @@ const omniCtx = getOmniCtx()
 // STATE
 let lastHorizontalOffset = $state(0)
 let isAnimating = $state(false)
+let activeStyleToken = $state<string | null>(null)
+let isTrackingMapUrl = $state(false)
+let detachMapUrlTracking: (() => void) | null = null
+let styleRequestSerial = 0
+
+const MAP_TRACKING_PARAM = 'mapTracking'
+const MAP_LNG_PARAM = 'lng'
+const MAP_LAT_PARAM = 'lat'
+const MAP_ZOOM_PARAM = 'zoom'
+const MAP_BEARING_PARAM = 'bearing'
+const MAP_PITCH_PARAM = 'pitch'
+
+const DEFAULT_MAP_VIEW = {
+  center: [114.17276, 22.29191] as [number, number],
+  bearing: 17.6,
+  zoom: 14,
+  pitch: 45,
+}
+const MIN_MAP_ZOOM = 9
+
+const parseNumericSearchParam = (value: string | null): number | null => {
+  if (!value) return null
+
+  const parsedValue = Number(value)
+  return Number.isFinite(parsedValue) ? parsedValue : null
+}
+
+const getTrackedMapViewFromUrl = (
+  url: URL,
+): {
+  center: [number, number]
+  bearing: number
+  zoom: number
+  pitch: number
+} => {
+  const lng = parseNumericSearchParam(url.searchParams.get(MAP_LNG_PARAM))
+  const lat = parseNumericSearchParam(url.searchParams.get(MAP_LAT_PARAM))
+  const zoom = parseNumericSearchParam(url.searchParams.get(MAP_ZOOM_PARAM))
+  const bearing = parseNumericSearchParam(url.searchParams.get(MAP_BEARING_PARAM))
+  const pitch = parseNumericSearchParam(url.searchParams.get(MAP_PITCH_PARAM))
+
+  return {
+    center:
+      lng !== null && lat !== null ? [lng, lat] : DEFAULT_MAP_VIEW.center,
+    zoom: Math.max(zoom ?? DEFAULT_MAP_VIEW.zoom, MIN_MAP_ZOOM),
+    bearing: bearing ?? DEFAULT_MAP_VIEW.bearing,
+    pitch: pitch ?? DEFAULT_MAP_VIEW.pitch,
+  }
+}
+
+const formatMapViewNumber = (value: number, digits: number): string =>
+  value.toFixed(digits).replace(/\.?0+$/, '')
+
+const isMapTrackingEnabled = (url: URL): boolean =>
+  url.searchParams.get(MAP_TRACKING_PARAM) === 'true'
+
+const syncMapViewToUrl = (): void => {
+  if (!appCtx.map || !isTrackingMapUrl || typeof window === 'undefined') {
+    return
+  }
+
+  const center = appCtx.map.getCenter()
+  const url = new URL(window.location.href)
+
+  url.searchParams.set(MAP_TRACKING_PARAM, 'true')
+  url.searchParams.set(MAP_LNG_PARAM, formatMapViewNumber(center.lng, 5))
+  url.searchParams.set(MAP_LAT_PARAM, formatMapViewNumber(center.lat, 5))
+  url.searchParams.set(MAP_ZOOM_PARAM, formatMapViewNumber(appCtx.map.getZoom(), 2))
+  url.searchParams.set(MAP_BEARING_PARAM, formatMapViewNumber(appCtx.map.getBearing(), 1))
+  url.searchParams.set(MAP_PITCH_PARAM, formatMapViewNumber(appCtx.map.getPitch(), 1))
+
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
+const clearTrackedMapViewFromUrl = (): void => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const url = new URL(window.location.href)
+
+  url.searchParams.delete(MAP_LNG_PARAM)
+  url.searchParams.delete(MAP_LAT_PARAM)
+  url.searchParams.delete(MAP_ZOOM_PARAM)
+  url.searchParams.delete(MAP_BEARING_PARAM)
+  url.searchParams.delete(MAP_PITCH_PARAM)
+
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
+const updateMapUrlTracking = (): void => {
+  const shouldTrackMapUrl = isMapTrackingEnabled(page.url)
+
+  if (!appCtx.map) {
+    isTrackingMapUrl = shouldTrackMapUrl
+    return
+  }
+
+  if (shouldTrackMapUrl === isTrackingMapUrl) {
+    return
+  }
+
+  isTrackingMapUrl = shouldTrackMapUrl
+  detachMapUrlTracking?.()
+  detachMapUrlTracking = null
+
+  if (!shouldTrackMapUrl) {
+    clearTrackedMapViewFromUrl()
+    return
+  }
+
+  const onMoveEnd = () => syncMapViewToUrl()
+  appCtx.map.on('moveend', onMoveEnd)
+  detachMapUrlTracking = () => {
+    appCtx.map?.off('moveend', onMoveEnd)
+  }
+  syncMapViewToUrl()
+}
+
+const hideSymbolLayers = (style: StyleSpecification): StyleSpecification => {
+  if (!style.layers) {
+    return style
+  }
+
+  style.layers = style.layers.map(layer =>
+    layer.type === 'symbol'
+      ? {
+          ...layer,
+          layout: {
+            ...(layer.layout ?? {}),
+            visibility: 'none',
+          },
+        }
+      : layer,
+  )
+
+  return style
+}
+
+const getActiveProjectMapStyleRef = (): string | null => {
+  const activeResourceType = appCtx.getActiveResourceType()
+  const activeResourceRef = appCtx.getActiveResourceRef()
+
+  if (activeResourceType && activeResourceRef) {
+    const activeResource = appCtx.getResourceByRefSync(activeResourceType, activeResourceRef)
+    if (
+      activeResource &&
+      (activeResourceType === 'project' ||
+        activeResourceType === 'layer' ||
+        activeResourceType === 'feature' ||
+        activeResourceType === 'task')
+    ) {
+      return appCtx.getHierarchySync(activeResource).project?.code ?? null
+    }
+  }
+
+  if (appCtx.state.prisms.project.length === 1) {
+    return appCtx.cache.project.get(appCtx.state.prisms.project[0])?.code ?? null
+  }
+
+  if (appCtx.state.resources.project.length === 1) {
+    return appCtx.state.resources.project[0]?.code ?? null
+  }
+
+  return null
+}
+
+const getMapStyleEndpoint = (projectRef: string | null): string =>
+  projectRef
+    ? `/api/styles/project/${projectRef}`
+    : `/api/styles/${getDefaultMapStyleKey()}`
+
+const resolveRuntimeMapStyle = async (
+  endpoint: string,
+  noLabels: boolean,
+): Promise<string | StyleSpecification> => {
+  if (!noLabels) {
+    return endpoint
+  }
+
+  const response = await fetch(`${endpoint}?inline=1`)
+  if (!response.ok) {
+    throw new Error(`Failed to load map style from ${endpoint}`)
+  }
+
+  const style = (await response.json()) as StyleSpecification
+  return hideSymbolLayers(style)
+}
+
+// STATE : DERIVED
+const userMarkerStyleVariant = $derived(
+  getUserMarkerStyleVariant(page.url.searchParams.get(USER_MARKER_STYLE_PARAM)),
+)
+const activeLocale = $derived(getLocale())
+const activeProjectMapStyleRef = $derived.by(() => getActiveProjectMapStyleRef())
+const resolvedMapStyleEndpoint = $derived(getMapStyleEndpoint(activeProjectMapStyleRef))
+const activeStyleKey = $derived(
+  `${activeProjectMapStyleRef ?? getDefaultMapStyleKey()}:${activeLocale}:${appCtx.user?.experimental?.noLabelsMode ?? false}`,
+)
 
 // WATCHERS
 // Watch for changes in features
@@ -60,54 +256,33 @@ onMount(async () => {
     return
   }
 
+  const initialMapView =
+    isMapTrackingEnabled(page.url)
+      ? getTrackedMapViewFromUrl(page.url)
+      : DEFAULT_MAP_VIEW
+
   // MAP : Create the map instance
+  const initialStyle = await resolveRuntimeMapStyle(
+    resolvedMapStyleEndpoint,
+    appCtx.user?.experimental?.noLabelsMode ?? false,
+  )
+
   appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
-    style: {
-      version: 8,
-      sources: {},
-      layers: [],
-      sprite: 'https://protomaps.github.io/basemaps-assets/sprites/v4/dark',
-      glyphs:
-        'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
-    },
-    center: [114.17276, 22.29191],
-    bearing: 17.6,
-    zoom: 14,
+    style: initialStyle,
+    center: initialMapView.center,
+    bearing: initialMapView.bearing,
+    zoom: initialMapView.zoom,
+    minZoom: MIN_MAP_ZOOM,
     hash: false,
-    pitch: 45,
+    pitch: initialMapView.pitch,
     attributionControl: false,
   })
 
-  // LAYERS : Add the base layers to the map
+  activeStyleToken = activeStyleKey
+  updateMapUrlTracking()
+
   appCtx.map.on('load', () => {
-    appCtx.map.addSource('hongkong-latest', {
-      type: 'vector',
-      url: 'https://tiles.hype.hk/basemap/hongkong-latest.json',
-    })
-
-    if (!appCtx.user?.experimental?.noLabelsMode) {
-      appCtx.map.addLayer(ghosteryEarth)
-    }
-    for (const layer of [
-      ghosteryRoads,
-      ghosteryBuildings,
-      ghosteryBuildingsOutline,
-      ghosteryAddressLabel,
-    ]) {
-      appCtx.map.addLayer(layer)
-    }
-    if (!appCtx.user?.experimental?.noLabelsMode) {
-      for (const layer of [
-        ghosteryPlacesLocality,
-        ghosteryPlacesSubplace,
-        ghosteryRoadsLabelsMinor,
-        ghosteryRoadsLabelsMajor,
-      ]) {
-        appCtx.map.addLayer(layer)
-      }
-    }
-
     // CONTROLS : Add the controls to the map
     if (appCtx.user) {
       // Initialize and store the GeolocateControl
@@ -128,8 +303,8 @@ onMount(async () => {
       // replace updateCamera method with noop operation, so that we can control
       // the initial flyTo of the user's location.
       geolocateControl._updateCamera = () => {}
-      appCtx.map!.addControl(geolocateControl, 'bottom-right')
-      appCtx.map!.on('load', () => {
+      appCtx.map?.addControl(geolocateControl, 'bottom-right')
+      appCtx.map?.on('load', () => {
         // after first geolocate...
         geolocateControl.once('geolocate', () => {
           // restore update camera for future use
@@ -177,7 +352,7 @@ onMount(async () => {
 
           // Fly to user location on first GPS fix if no active feature
           const isViewingFeature = window.location.pathname.includes('/features/')
-          if (!hasReceivedFirstFix && !isViewingFeature) {
+          if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
             hasReceivedFirstFix = true
 
             // Calculate horizontal offset for panels already open
@@ -185,7 +360,7 @@ onMount(async () => {
 
             if (currentHorizontalOffset !== 0) {
               const originalCenter = { lng: longitude, lat: latitude }
-              const centerInPx = appCtx.map!.project(originalCenter)
+              const centerInPx = appCtx.map?.project(originalCenter)
 
               // Apply empirically derived adjustment factor for GPS centering
               // This accounts for the difference between panel positioning and GPS fix centering
@@ -196,7 +371,7 @@ onMount(async () => {
                 centerInPx.x + pixelAdjustment,
                 centerInPx.y,
               )
-              const adjustedCenter = appCtx.map!.unproject(adjustedPoint)
+              const adjustedCenter = appCtx.map?.unproject(adjustedPoint)
 
               appCtx.map?.flyTo({
                 center: [adjustedCenter.lng, adjustedCenter.lat],
@@ -220,7 +395,7 @@ onMount(async () => {
         { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity },
       )
 
-      appCtx.map!.addControl(
+      appCtx.map?.addControl(
         new appCtx.maplibre.NavigationControl({
           showZoom: false,
           showCompass: true,
@@ -233,7 +408,7 @@ onMount(async () => {
   })
 
   // LISTENERS : Add the listeners to the map
-  appCtx.map!.on('click', e => {
+  appCtx.map?.on('click', e => {
     e.originalEvent.preventDefault()
     e.originalEvent.stopPropagation()
     const target = e.originalEvent.target as HTMLElement
@@ -267,20 +442,52 @@ onMount(async () => {
     }
   })
   // TODO Add Attribution
+
+})
+
+onDestroy(() => {
+  detachMapUrlTracking?.()
+  detachMapUrlTracking = null
 })
 
 watch(
-  () => [appCtx.featuresVisible, appCtx.map],
+  () => [appCtx.featuresVisible, appCtx.map, userMarkerStyleVariant],
   () => {
     if (!isAnimating && appCtx.maplibre && appCtx.isMaplibreLoaded) {
       updateMarkers(
         appCtx,
         appCtx.getVisibleFeatures() as FeatureFromCollection[],
         appCtx.maplibre,
+        userMarkerStyleVariant,
       )
     }
   },
 )
+
+$effect(() => {
+  if (!appCtx.map || activeStyleToken === activeStyleKey) {
+    return
+  }
+
+  activeStyleToken = activeStyleKey
+
+  const currentSerial = ++styleRequestSerial
+
+  void resolveRuntimeMapStyle(
+    resolvedMapStyleEndpoint,
+    appCtx.user?.experimental?.noLabelsMode ?? false,
+  ).then(style => {
+    if (!appCtx.map || currentSerial !== styleRequestSerial) {
+      return
+    }
+
+    appCtx.map.setStyle(style)
+  })
+})
+
+$effect(() => {
+  updateMapUrlTracking()
+})
 
 // STATE : DERIVED
 let horizontalOffset = $derived(appCtx.getHorizontalOffset())
@@ -290,14 +497,14 @@ let horizontalOffset = $derived(appCtx.getHorizontalOffset())
 $effect(() => {
   if (horizontalOffset !== lastHorizontalOffset && appCtx.map && !isAnimating) {
     isAnimating = true
-    let coordinates = appCtx.map!.getCenter()
-    const centerInPx: Point = appCtx.map!.project(coordinates)
+    let coordinates = appCtx.map?.getCenter()
+    const centerInPx: Point = appCtx.map?.project(coordinates)
     const newPoint: PointLike = new appCtx.maplibre.Point(
       centerInPx.x +
         (horizontalOffset === 0 ? lastHorizontalOffset : -horizontalOffset),
       centerInPx.y,
     )
-    const newCenter: LngLatLike = appCtx.map!.unproject(newPoint)
+    const newCenter: LngLatLike = appCtx.map?.unproject(newPoint)
 
     lastHorizontalOffset = horizontalOffset
 
@@ -306,10 +513,10 @@ $effect(() => {
       isAnimating = false
       appCtx.map?.off('moveend', onMoveEnd)
     }
-    appCtx.map!.on('moveend', onMoveEnd)
+    appCtx.map?.on('moveend', onMoveEnd)
 
     // Start the animation
-    appCtx.map!.easeTo({
+    appCtx.map?.easeTo({
       center: newCenter,
       duration: 300,
     })
@@ -325,7 +532,7 @@ $effect(() => {
 
 <div
   id="map"
-  class="map !absolute !inset-0 {appCtx.user
+  class="map absolute! inset-0! {appCtx.user
     ? 'mb-[68px]'
     : ''} overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"

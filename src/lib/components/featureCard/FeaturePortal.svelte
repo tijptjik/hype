@@ -250,7 +250,7 @@ let lastAddressLineLengths: number[] = []
 let displayAddressLines = $state<string[]>([])
 
 $effect(() => {
-  if (lastAddressLines[0] != addressLines[0]) {
+  if (lastAddressLines[0] !== addressLines[0]) {
     lastAddressLineLengths.push(addressLines.length)
     lastAddressLines = addressLines
     displayAddressLines = Array(4)
@@ -265,7 +265,7 @@ $effect(() => {
 <div
   id="feature-card-portal"
   bind:this={portalEl}
-  class="pointer-events-none relative h-[200px] w-[200px] overflow-visible pr-3 w-96:pr-12"
+  class="pointer-events-none relative h-50 w-50 overflow-visible pr-3 w-96:pr-12"
 >
   <svg
     class="pointer-events-none absolute inset-0 h-full w-full"
@@ -291,7 +291,7 @@ $effect(() => {
     ></circle>
   </svg>
   <div
-    class="pointer-events-none absolute right-2 top-1/2 flex -translate-y-[90px] translate-x-3 flex-col items-end gap-1 overflow-visible transition-all duration-300 w-100:translate-x-5"
+    class="pointer-events-none absolute right-2 top-1/2 flex -translate-y-25.5 translate-x-3 flex-col items-end gap-1 overflow-visible transition-all duration-300 w-100:translate-x-5"
     style="width: max-content;"
   >
     {#each displayAddressLines as line, index}

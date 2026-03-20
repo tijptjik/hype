@@ -5,7 +5,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import Map from '$lib/components/common/Map.svelte'
+import Maplet from '$lib/components/common/Maplet.svelte'
 import TaskSection from '../common/TaskSection.svelte'
 import TaskStat from '../common/TaskStat.svelte'
 // TYPES
@@ -26,7 +26,7 @@ function handleMapCollapse(collapsed: boolean): void {
 }
 </script>
 
-<aside class="w-[380px]">
+<aside class="w-95">
   <!-- 3-Row Grid -->
   <div class="flex h-full flex-col items-stretch gap-4 rounded-xl font-bold">
     <!-- Core Details -->
@@ -92,7 +92,7 @@ function handleMapCollapse(collapsed: boolean): void {
           class="h-full w-full overflow-hidden rounded-lg"
           class:min-h-48={!isMapCollapsed}
         >
-          <Map
+          <Maplet
             coordinates={(task.feature?.geometry as Point)?.coordinates}
             draggable={false}
             addressMeta={null}
