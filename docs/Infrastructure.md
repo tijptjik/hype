@@ -147,3 +147,7 @@ npx wrangler secret put <KEY> --env preview
 ### 8. Google OAuth
 
 Visit the [Google Cloud Console](https://console.cloud.google.com/auth/clients/234870059065-fb1jvv6e72jb7ogtd755424bjm8pqgij.apps.googleusercontent.com?inv=1&invt=Abz-Pg&project=hypehk) and add `{https://domain.tld}` to the Authorized JavaScript origins and `{https://domain.tld/api/auth/callback/google}` to the Authorized redirect URIs.
+
+## Workers
+
+For the asynchronous map preview pipeline, bucket layout, and provisioning commands, see [Map-Preview-Infrastructure.md](./Map-Preview-Infrastructure.md).
