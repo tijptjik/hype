@@ -7,7 +7,7 @@ import * as HeaderPrimitive from './components'
 import type { HeaderProps } from './header.types'
 
 const DEFAULT_CLASS =
-  'bits-theme bg-black py-4 pl-6 navbar flex h-18 w-full justify-between caret-transparent transition-all duration-300'
+  'bg-black py-4 pt-6 pl-6 navbar flex h-18 w-full justify-between caret-transparent transition-all duration-300'
 const CONTROL_BAR_TRANSITION_MS = 180
 
 let {

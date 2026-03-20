@@ -2,6 +2,7 @@
 import { toLocaleCode, toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
+import { normalizeProjectLicense as normalizeSharedProjectLicense } from '$lib/project-license'
 // CAPABILITIES
 import {
   normalizeProjectCapabilities,
@@ -13,7 +14,12 @@ import {
   overrideResourceListItemBoolean,
 } from '$lib/client/services/resource'
 // TYPES
-import type { CapabilityDefinitions, CapabilityKey, Locale } from '$lib/types'
+import type {
+  CapabilityDefinitions,
+  CapabilityKey,
+  Locale,
+  ProjectLicense,
+} from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { User } from '$lib/db/zod/schema/user.types'
 import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'
@@ -62,14 +68,16 @@ function normalizeProjectFormLocale(
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
     description: locale?.description ?? '',
-    license: locale?.license ?? '',
-    attribution: locale?.attribution ?? '',
     nameGen: locale?.nameGen ?? false,
     nameShortGen: locale?.nameShortGen ?? false,
     descriptionGen: locale?.descriptionGen ?? false,
-    licenseGen: locale?.licenseGen ?? false,
-    attributionGen: locale?.attributionGen ?? false,
   }
+}
+
+function normalizeProjectLicense(
+  license: Project['license'] | null | undefined,
+): ProjectLicense {
+  return normalizeSharedProjectLicense(license)
 }
 
 type ProjectFormDefaults = {
@@ -248,12 +256,14 @@ export function toProjectFormInput(
       meta: { mode: 'create', isAdminRequest: true },
       data: {
         organisationId: defaults?.organisationId ?? '',
+        mapStyleCode: '',
         code: '',
         i18n: {
           en: normalizeProjectFormLocale(undefined),
           zhHans: normalizeProjectFormLocale(undefined),
           zhHant: normalizeProjectFormLocale(undefined),
         },
+        license: normalizeProjectLicense(undefined),
         capabilities: normalizeProjectCapabilities(undefined),
         userRoles: [],
         properties: [],
@@ -270,12 +280,14 @@ export function toProjectFormInput(
     },
     data: {
       organisationId: data.organisationId,
+      mapStyleCode: data.mapStyle?.code ?? '',
       code: data.code,
       i18n: {
         en: normalizeProjectFormLocale(data.i18n?.en),
         zhHans: normalizeProjectFormLocale(data.i18n?.zhHans),
         zhHant: normalizeProjectFormLocale(data.i18n?.zhHant),
       },
+      license: normalizeProjectLicense(data.license),
       capabilities: normalizeProjectCapabilities(data.capabilities),
       userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
@@ -328,11 +340,12 @@ export function getProjectSubmitUpdates<TEntityResult, TListResult>({
   projectId,
   entityQuery,
   listQuery,
+  extraQueries = [],
 }: ProjectSubmitUpdatesParams<TEntityResult, TListResult>): Array<
-  TEntityResult | TListResult
+  TEntityResult | TListResult | unknown
 > {
   if (!projectId) return []
-  return [entityQuery, listQuery]
+  return [entityQuery, listQuery, ...extraQueries]
 }
 
 export function resolveDefaultProjectOrganisationIdForCreate(params: {

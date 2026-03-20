@@ -1,5 +1,5 @@
 <script lang="ts">
-import LegacyMap from '$lib/components/common/Map.svelte'
+import LegacyMap from '$lib/components/common/Maplet.svelte'
 import type { AddressMeta } from '$lib/types'
 
 type Props = {

@@ -1193,9 +1193,7 @@ export function getGenAiState(
   if (field === 'title') return Boolean(localeData.titleGen)
   if (field === 'name') return Boolean(localeData.nameGen)
   if (field === 'nameShort') return Boolean(localeData.nameShortGen)
-  if (field === 'description') return Boolean(localeData.descriptionGen)
-  if (field === 'license') return Boolean(localeData.licenseGen)
-  return Boolean(localeData.attributionGen)
+  return Boolean(localeData.descriptionGen)
 }
 
 /**
@@ -1215,8 +1213,6 @@ export function toggleGenAiField<
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        licenseGen?: FormBooleanValue
-        attributionGen?: FormBooleanValue
       }
     >
   },
@@ -1229,8 +1225,6 @@ export function toggleGenAiField<
       | 'nameGen'
       | 'nameShortGen'
       | 'descriptionGen'
-      | 'licenseGen'
-      | 'attributionGen'
     const nextValue = !data.i18n[localeKey][fieldName]
     data.i18n[localeKey][fieldName] = nextValue
     return data
@@ -1271,13 +1265,9 @@ export async function translateLocaleIntoEmptyFields<
         name?: string
         nameShort?: string
         description?: string
-        license?: string
-        attribution?: string
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        licenseGen?: FormBooleanValue
-        attributionGen?: FormBooleanValue
       }
     >
   },
@@ -1368,13 +1358,9 @@ export function resetLocaleFields<
         name?: string
         nameShort?: string
         description?: string
-        license?: string
-        attribution?: string
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        licenseGen?: FormBooleanValue
-        attributionGen?: FormBooleanValue
       }
     >
   },

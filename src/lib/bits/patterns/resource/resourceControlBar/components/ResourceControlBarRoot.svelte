@@ -133,7 +133,7 @@ async function handleFilterAnchorHover(): Promise<void> {
   void resolveFilterCollisionAgainstSort()
 }
 
-async function handleFilterAnchorClick(event: MouseEvent): Promise<void> {
+async function handleFilterAnchorClick(_event: MouseEvent): Promise<void> {
   if (isFilterSuppressedByCollision) {
     isFilterSuppressedByCollision = false
     void resolveFilterCollisionAgainstSort()
