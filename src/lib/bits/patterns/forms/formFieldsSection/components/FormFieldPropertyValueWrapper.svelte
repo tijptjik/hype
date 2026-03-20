@@ -4,6 +4,7 @@ import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
+import ArrowDownAZ from 'virtual:icons/lucide/arrow-down-a-z'
 import X from 'virtual:icons/lucide/x'
 import ListPlus from 'virtual:icons/lucide/list-plus'
 // COMPONENTS
@@ -15,12 +16,14 @@ let {
   isEditing = false,
   optionRemoveMode = false,
   onAdd,
+  onSort,
   onToggleRemoveMode,
   rows,
 }: {
   isEditing?: boolean
   optionRemoveMode?: boolean
   onAdd: () => void
+  onSort: () => void
   onToggleRemoveMode: () => void
   rows?: Snippet
 } = $props()
@@ -43,6 +46,17 @@ let {
             iconComponent={ListPlus}
             disabled={optionRemoveMode}
             onClick={onAdd}
+            class="bits-project-field-card__value-action-btn"
+          />
+          <Button
+            text={m.admin__forms_property_sort_az()}
+            size="sm"
+            style="ghost"
+            color="light"
+            attrs={{ 'data-property-value-action': 'sort' }}
+            iconComponent={ArrowDownAZ}
+            disabled={optionRemoveMode}
+            onClick={onSort}
             class="bits-project-field-card__value-action-btn"
           />
           <Button

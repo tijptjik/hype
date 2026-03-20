@@ -66,6 +66,7 @@ const resolvedCardContext = $derived.by(() => {
       onUpdateBase={card.onUpdateBase}
       onUpdateI18n={card.onUpdateI18n}
       onAddValue={card.onAddValue}
+      onSortValuesAlphabetically={card.onSortValuesAlphabetically}
       onRemoveValue={card.onRemoveValue}
       onMoveValue={card.onMoveValue}
       onUpdateValue={card.onUpdateValue}

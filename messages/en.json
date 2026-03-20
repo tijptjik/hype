@@ -150,6 +150,7 @@
   "admin__forms_property_minimum": "Min",
   "admin__forms_property_maximum": "Max",
   "admin__forms_property_options": "Options",
+  "admin__forms_property_sort_az": "Sort A-Z",
   "admin__forms_project_fields_empty_title": "No Fields",
   "admin__forms_project_fields_empty_description": "Fields let you define structured inputs and metadata for this organisation.",
   "admin__forms_property_untitled": "Untitled field",

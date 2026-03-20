@@ -29,6 +29,7 @@ let {
   onUpdateBase,
   onUpdateI18n,
   onAddValue,
+  onSortValuesAlphabetically,
   onRemoveValue,
   onMoveValue,
   onUpdateValue,
@@ -226,6 +227,7 @@ const cardClass = $derived(
           {onUpdateBase}
           {onUpdateI18n}
           {onAddValue}
+          {onSortValuesAlphabetically}
           {onRemoveValue}
           {onMoveValue}
           {onUpdateValue}

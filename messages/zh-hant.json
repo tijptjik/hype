@@ -150,6 +150,7 @@
   "admin__forms_property_minimum": "最小值",
   "admin__forms_property_maximum": "最大值",
   "admin__forms_property_options": "選項",
+  "admin__forms_property_sort_az": "按 A-Z 排序",
   "admin__forms_project_fields_empty_title": "暫無欄位",
   "admin__forms_project_fields_empty_description": "欄位可讓你為此組織定義結構化輸入與中繼資料。",
   "admin__forms_property_untitled": "未命名欄位",

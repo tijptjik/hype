@@ -142,6 +142,7 @@ export interface FormFieldCardCallbacks {
     value: string | boolean,
   ) => void
   onAddValue: (propertyId: Id) => void
+  onSortValuesAlphabetically: (propertyId: Id, locale: Locale) => void
   onRemoveValue: (propertyId: Id, valueId: Id) => void
   onMoveValue: (propertyId: Id, valueId: Id, targetIndex: number) => void
   onUpdateValueI18n: (

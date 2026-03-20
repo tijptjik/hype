@@ -30,6 +30,7 @@ let {
   onUpdateBase,
   onUpdateI18n,
   onAddValue,
+  onSortValuesAlphabetically,
   onRemoveValue,
   onMoveValue,
   removeMode = false,
@@ -563,15 +564,15 @@ function onValueTab(event: KeyboardEvent, valueId: string, locale: Locale): void
 
 function bindValueEditable(
   node: HTMLElement,
-  params: { valueId: string; locale: Locale },
+  params: { valueId: string; locale: Locale; text: string },
 ): {
-  update: (next: { valueId: string; locale: Locale }) => void
+  update: (next: { valueId: string; locale: Locale; text: string }) => void
   destroy: () => void
 } {
   let current = params
   let currentKey = getValueRefKey(current.valueId, current.locale)
   valueEditableRefs.set(currentKey, node)
-  node.textContent = getValueDisplayText(current.valueId, current.locale)
+  node.textContent = current.text
 
   return {
     update(next) {
@@ -580,7 +581,7 @@ function bindValueEditable(
       currentKey = getValueRefKey(current.valueId, current.locale)
       valueEditableRefs.set(currentKey, node)
       if (document.activeElement !== node) {
-        node.textContent = getValueDisplayText(current.valueId, current.locale)
+        node.textContent = current.text
       }
     },
     destroy() {
@@ -832,6 +833,10 @@ $effect(() => {
             onLayoutMutationStart?.()
             onAddValue(property.id)
           }}
+          onSort={() => {
+            onLayoutMutationStart?.()
+            onSortValuesAlphabetically(property.id, locale)
+          }}
           onToggleRemoveMode={toggleOptionRemoveMode}
         >
           {#snippet rows()}
@@ -840,6 +845,7 @@ $effect(() => {
               candidate => candidate.id === value.id,
             )}
               {@const resolvedValueIndex = formValueIndex >= 0 ? formValueIndex : valueIndex}
+              {@const valueDisplayText = getValueDisplayText(value.id, locale)}
               {@const valueIdInputAttrs = getFieldAttrsWithValue(
               ['values', resolvedValueIndex, 'id'],
               'text',
@@ -877,13 +883,13 @@ $effect(() => {
                     <input
                       type="hidden"
                       name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].i18n.${locale}.value`}
-                      value={getValueDisplayText(value.id, locale)}
+                      value={valueDisplayText}
                     >
                   {:else if showCoreFields}
                     <input
                       type="hidden"
                       name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].value`}
-                      value={getValueDisplayText(value.id, locale)}
+                      value={valueDisplayText}
                     >
                   {/if}
 
@@ -903,7 +909,11 @@ $effect(() => {
                       class={`bits-project-field-card__value-editable ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
                       contenteditable={isEditing && (!showCoreFields || !valuesAreTranslatable) ? 'plaintext-only' : isEditing}
                       tabindex={isEditing ? 0 : -1}
-                      use:bindValueEditable={{ valueId: value.id, locale }}
+                      use:bindValueEditable={{
+                        valueId: value.id,
+                        locale,
+                        text: valueDisplayText,
+                      }}
                       onbeforeinput={preventDropBeforeInput}
                       onkeydown={event => {
                         onValueTab(event, value.id, locale)
