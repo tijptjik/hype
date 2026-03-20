@@ -44,4 +44,4 @@ scripts/.ipynb_checkpoints/
 /libs
 
 # Dev assets
-/mapPreviews
+static/mapPreviews/

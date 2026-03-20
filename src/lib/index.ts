@@ -116,7 +116,7 @@ export function formatDistanceToNow(
 }
 
 export const isNotLocale = (maybeLocale: LocaleExtended) => {
-  return maybeLocale === 'core' || maybeLocale == undefined
+  return maybeLocale === 'core' || maybeLocale === undefined
 }
 
 export const genField = (fieldRoot: Field) => `${fieldRoot}Gen` as Field
