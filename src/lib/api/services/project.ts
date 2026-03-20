@@ -103,6 +103,15 @@ import type {
 const projectCollectionWithRelations = {
   i18n: true,
   image: true,
+  mapStyleAssignment: {
+    with: {
+      mapStyle: {
+        with: {
+          i18n: true,
+        },
+      },
+    },
+  },
 }
 
 /**
@@ -111,6 +120,15 @@ const projectCollectionWithRelations = {
  */
 const projectEntityWithRelations = {
   i18n: true,
+  mapStyleAssignment: {
+    with: {
+      mapStyle: {
+        with: {
+          i18n: true,
+        },
+      },
+    },
+  },
   userRoles: {
     with: {
       user: {
@@ -169,6 +187,7 @@ const projectProfiles = ['list', 'card', 'detail', 'admin'] as const
 type ProjectResponseRow = ProjectDB & {
   i18n?: ProjectListDBRaw['i18n']
   image?: ProjectCardDBRaw['image']
+  mapStyleAssignment?: ProjectCardDBRaw['mapStyleAssignment']
   properties?: ProjectAdminDBRaw['properties']
   publisher?: ProjectAdminDBRaw['publisher']
   userRoles?: ProjectAdminDBRaw['userRoles']
@@ -234,6 +253,12 @@ const toProfileResponseShape = async (
           ImageContextResource.project,
           row.id,
         )
+      : null,
+    mapStyle: row.mapStyleAssignment?.mapStyle
+      ? {
+          ...row.mapStyleAssignment.mapStyle,
+          i18n: transformI18nSafely(row.mapStyleAssignment.mapStyle.i18n ?? [], null),
+        }
       : null,
   }
 
