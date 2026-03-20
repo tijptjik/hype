@@ -75,8 +75,13 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   // Get host from headers
   const host = event.request.headers.get('host')
 
+  // Allow a dev-only URL override so local hub switching does not depend on host setup.
+  const devHubCodeOverride = import.meta.env.DEV
+    ? (event.url.searchParams.get('hub') ?? undefined)
+    : undefined
+
   // Get hub code from platform env for development override
-  const hubCode = event.platform?.env?.PUBLIC_HUB_CODE
+  const hubCode = devHubCodeOverride || event.platform?.env?.PUBLIC_HUB_CODE
 
   // Parse hub info from domain without DB lookup
   const hubOpts = getHubFromDomain(host, hubCode) as Partial<HubOptsExtended> & {
