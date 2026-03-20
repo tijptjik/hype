@@ -16,14 +16,14 @@ let { image }: { image: Image } = $props()
 
 {#snippet MetadataRow(icon: Component, label: string, value: string)}
   <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/80">
-    <Icon src={icon} class="h-4 w-4 flex-grow-0" />
+    <Icon src={icon} class="h-4 w-4 grow-0" />
     <p class="font-medium">{label}:</p>
     <span>{value}</span>
   </div>
 {/snippet}
 
 <div
-  class="flex min-w-[200px] items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm"
+  class="flex min-w-50 items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm"
 >
   <div class="flex flex-col gap-2">
     {#if image.cameraModel}

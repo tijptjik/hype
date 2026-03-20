@@ -229,7 +229,6 @@ export const getImageQueryContext = (
  * This is used for the /images/[id] route.
  */
 export const getImageEntityQueryContext = (
-  db: Database,
   user: SessionUser,
   adminContext: Request | boolean,
   params: QueryParams,
@@ -273,7 +272,6 @@ export const getImageEntityQueryContext = (
  * Used for the /images?ids=... route.
  */
 export const getImageByIdsQueryContext = (
-  db: Database,
   user: SessionUser,
   adminContext: Request | boolean,
 ) => {
@@ -317,8 +315,6 @@ export const assertPermissionsToCreateImage = async (
   db: Database,
   user: SessionUser,
   request: Request,
-  hubOpts: HubOpts,
-  data: ImageNew,
   userRoles: UserRoleDisco[],
   ctxType: ImageContextResource,
   ctxId: Id,
@@ -329,7 +325,6 @@ export const assertPermissionsToCreateImage = async (
   ]
 
   let contextAssertion = () => {} // Placeholder for context-specific assertion
-  const hubOptsExtended = toHubOptsExtended(hubOpts, user, request)
 
   switch (ctxType) {
     case ImageContextResource.feature: {
@@ -360,8 +355,6 @@ export const assertPermissionsToUpdateImage = async (
   db: Database,
   user: SessionUser,
   request: Request,
-  hubOpts: HubOpts,
-  params: QueryParams,
   data: ImageDBFlat,
   userRoles: UserRoleDisco[],
   refId: Id,
@@ -378,7 +371,6 @@ export const assertPermissionsToUpdateImage = async (
   // 1. Users with specific roles in the context (feature's project members/maintainers, organisation's owners, project's maintainers).
   // 2. SuperAdmins.
   let contextAssertion = () => {} // Placeholder
-  const hubOptsExtended = toHubOptsExtended(hubOpts, user, request)
 
   switch (ctxType) {
     case ImageContextResource.feature: {
@@ -405,8 +397,6 @@ export const assertPermissionsToDeleteImage = async (
   db: Database,
   user: SessionUser,
   request: Request,
-  hubOpts: HubOpts,
-  params: QueryParams,
   userRoles: UserRoleDisco[],
   refId: Id,
   ctxId: Id,
@@ -416,8 +406,6 @@ export const assertPermissionsToDeleteImage = async (
     db,
     user,
     request,
-    hubOpts,
-    params,
     { id: refId } as ImageDBFlat,
     userRoles,
     refId,
@@ -498,7 +486,6 @@ export const updateImageForContext = async (args: {
     db,
     user,
     event.request,
-    event.locals.hub,
     { id } as QueryParams,
     payload,
     userRoles,

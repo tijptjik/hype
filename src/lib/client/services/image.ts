@@ -28,7 +28,6 @@ import type {
   ImageUploadCtx,
   Intent,
   ImageEditCtx,
-  ImageDB,
   ImageDBFlat,
   ImageDBBasic,
   Metadata,

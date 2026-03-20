@@ -217,7 +217,7 @@ export function calculateDistance(
     Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
-  return parseInt((R * c).toFixed(0)) // Distance in meters
+  return parseInt((R * c).toFixed(0), 10) // Distance in meters
 }
 
 export function applyAddressAbbreviations(address: string): string {

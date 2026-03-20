@@ -1,12 +1,12 @@
 // TYPES
 import type { NewFeatureTask, Id } from '$lib/types'
-import type { ImageUpload, UploadedPhoto } from '$lib/db/zod/schema/image.types'
+import type { ImageUpload } from '$lib/db/zod/schema/image.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 // API
 import { updateFeatureState } from '$lib/api/server/feature.remote'
-import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // ═══════════════════════
 // TASK CREATION CLIENT SERVICES

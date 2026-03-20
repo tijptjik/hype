@@ -304,7 +304,7 @@ export const getImagesForIds = guardedQuery(ImagesByIdsSchema, async (params, ct
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
-  const { conditions } = getImageByIdsQueryContext(db, user, isAdminRequest)
+  const { conditions } = getImageByIdsQueryContext(user, isAdminRequest)
   const images = (await getImagesByIds(db, params.ids, conditions)) as Image[]
   return toImageListResponseShape(
     images,
@@ -331,7 +331,7 @@ export const getImagesForIdsByProfile = getImagesForIds as typeof getImagesForId
 export const getImageById = guardedQuery(ImageByIdSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest } = ctx
   const profile = toImageProfile(params.meta?.profile, 'detail')
-  const { conditions } = getImageEntityQueryContext(db, user, isAdminRequest, {})
+  const { conditions } = getImageEntityQueryContext(user, isAdminRequest, {})
   conditions.push(eq(image.id, params.id))
   const data = (await loadImageById(db, conditions)) as ImageDBFlat | undefined
   if (!data) {
@@ -408,8 +408,6 @@ export const createImage = guardedCommand(async (input, ctx) => {
     db,
     user,
     event.request,
-    event.locals.hub,
-    imageData,
     userRoles,
     imageData.ctxType as ImageContextResource,
     imageData.ctxId as Id,
@@ -602,8 +600,6 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
     db,
     user,
     event.request,
-    event.locals.hub,
-    { id: params.id } as QueryParams,
     userRoles,
     params.id as Id,
     params.ctxId as Id,
