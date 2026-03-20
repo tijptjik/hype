@@ -154,15 +154,28 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper class="bits-search__results">
       <div class="bits-search__results-list">
         {#each results as item, index (index)}
-          <SearchPrimitive.ResultItem
-            image={resultMap.image(item)}
-            title={resultMap.title(item)}
-            descriminator={resultMap.descriminator?.(item)}
-            disabled={isSearchResultDisabled(item, resultMap)}
-            disabledMeta={resultMap.disabledMeta?.(item)}
-            staggerIndex={index}
-            onSelect={() => selectItem(item)}
-          />
+          {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
+            <SearchPrimitive.VisualResultItem
+              title={resultMap.title(item)}
+              descriminator={resultMap.descriminator?.(item)}
+              description={resultMap.description?.(item)}
+              previewImage={resultMap.previewImage?.(item)}
+              disabled={isSearchResultDisabled(item, resultMap)}
+              disabledMeta={resultMap.disabledMeta?.(item)}
+              staggerIndex={index}
+              onSelect={() => selectItem(item)}
+            />
+          {:else}
+            <SearchPrimitive.ResultItem
+              image={resultMap.image(item)}
+              title={resultMap.title(item)}
+              descriminator={resultMap.descriminator?.(item)}
+              disabled={isSearchResultDisabled(item, resultMap)}
+              disabledMeta={resultMap.disabledMeta?.(item)}
+              staggerIndex={index}
+              onSelect={() => selectItem(item)}
+            />
+          {/if}
         {/each}
       </div>
     </SearchPrimitive.ResultWrapper>
