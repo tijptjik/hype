@@ -1,0 +1,94 @@
+@layer components {
+  .bits-theme .bits-map-style-card {
+    @apply bg-grain border-3 border-primary bg-glass-300 shadow-xl;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0;
+    border-radius: var(--radius-box);
+    overflow: hidden;
+    min-height: calc(var(--spacing) * 16);
+    padding-right: calc(var(--spacing) * 3);
+  }
+
+  .bits-theme .bits-map-style-card__preview {
+    @apply relative overflow-hidden bg-glass-100;
+    width: 128px;
+    height: 128px;
+    margin-block: calc(var(--spacing) * -0.75);
+    margin-left: calc(var(--spacing) * -0.75);
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+  }
+
+  .bits-theme .bits-map-style-card__preview-image {
+    @apply h-full w-full object-cover;
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+  }
+
+  .bits-theme .bits-map-style-card__preview-fallback {
+    @apply flex h-full w-full items-center justify-center text-sm font-semibold uppercase;
+    border: 1px dashed var(--color-border-primary);
+    color: var(--color-text-primary);
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+  }
+
+  .bits-theme .bits-map-style-card__preview-status {
+    @apply absolute inset-0 flex items-center justify-center bg-black/45 backdrop-blur-[1px];
+  }
+
+  .bits-theme .bits-map-style-card__preview-spinner {
+    @apply h-7 w-7 animate-spin text-neutral-content/85;
+  }
+
+  .bits-theme .bits-map-style-card__body {
+    @apply flex min-w-0 flex-1 flex-col justify-center overflow-hidden py-0;
+  }
+
+  .bits-theme .bits-map-style-card__code {
+    @apply w-full min-w-0 text-xs text-primary;
+  }
+
+  .bits-theme .bits-map-style-card__name {
+    @apply w-full min-w-0 text-lg font-normal;
+  }
+
+  .bits-theme .bits-map-style-card__description {
+    @apply mt-2 overflow-hidden text-sm leading-5 text-neutral-content/78 pl-3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .bits-theme .bits-map-style-card__actions {
+    @apply flex items-center;
+  }
+
+  .bits-theme .bits-map-style-warning-bar {
+    @apply mx-2 flex w-full items-center gap-3 pb-4;
+  }
+
+  .bits-theme .bits-map-style-warning-bar__icon {
+    @apply h-10 w-10 shrink-0 text-error;
+  }
+
+  .bits-theme .bits-map-style-warning-bar__title {
+    @apply text-xl font-bold text-error;
+  }
+
+  .bits-theme .bits-map-style-warning-bar__copy {
+    @apply pl-2 text-sm text-neutral-content/82;
+  }
+
+  @media (max-width: 960px) {
+    .bits-theme .bits-map-style-card {
+      grid-template-columns: auto 1fr;
+    }
+
+    .bits-theme .bits-map-style-card__actions {
+      grid-column: 1 / -1;
+    }
+  }
+}

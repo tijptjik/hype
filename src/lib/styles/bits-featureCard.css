@@ -1,0 +1,35 @@
+@layer components {
+  .bits-theme .bits-feature-card__action-button.bits-btn {
+    width: 3rem;
+    padding-inline: 0;
+    text-transform: uppercase;
+  }
+
+  .bits-theme .bits-feature-card__action-button.bits-btn .bits-btn__label {
+    display: none;
+  }
+
+  @media (min-width: 30rem) {
+    .bits-theme .bits-feature-card__action-button.bits-btn {
+      width: auto;
+      padding-inline: var(--btn-padding-x);
+    }
+
+    .bits-theme .bits-feature-card__action-button.bits-btn .bits-btn__label {
+      display: inline-block;
+    }
+  }
+
+  @media (min-width: 16rem) {
+    .bits-theme .bits-feature-card__action-button--show-label-sm.bits-btn {
+      width: auto;
+      padding-inline: var(--btn-padding-x);
+    }
+
+    .bits-theme
+      .bits-feature-card__action-button--show-label-sm.bits-btn
+      .bits-btn__label {
+      display: inline-block;
+    }
+  }
+}
