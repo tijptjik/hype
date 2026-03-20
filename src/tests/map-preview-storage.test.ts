@@ -35,7 +35,7 @@ describe('preview storage helpers', () => {
     )
   })
 
-  it('resolves local previews to static fallback assets', () => {
+  it('resolves local previews to static assets', () => {
     expect(getPreviewStorageMode('local')).toBe('local-static')
     expect(getPreviewAssetBaseUrl('local')).toBeNull()
 
@@ -47,9 +47,9 @@ describe('preview storage helpers', () => {
           identifier: 'hyper',
           hash: 'abc123',
         },
-        '/generated/map-style-previews/hyper.png',
+        '/mapPreviews/styles/hyper.png',
       ),
-    ).toBe('/generated/map-style-previews/hyper.png')
+    ).toBe('/mapPreviews/styles/hyper.png')
   })
 
   it('resolves preview and production previews to CDN URLs', () => {
