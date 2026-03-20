@@ -24,7 +24,19 @@ if [ -n "$STAGED_FILES" ]; then
 
     if [ -n "$BIOME_FILES" ]; then
         # Run biome check with --write on staged files only
-        bun x biome check --write $BIOME_FILES
+        set +e
+        BIOME_OUTPUT=$(bun x biome check --write $BIOME_FILES 2>&1)
+        BIOME_STATUS=$?
+        set -e
+
+        if [ $BIOME_STATUS -ne 0 ]; then
+            if echo "$BIOME_OUTPUT" | grep -q "No files were processed in the specified paths."; then
+                echo "ℹ️  Biome had no matching files to process."
+            else
+                echo "$BIOME_OUTPUT"
+                exit $BIOME_STATUS
+            fi
+        fi
         
         # Check if any staged files were modified by formatting
         MODIFIED_FILES=$(git diff --name-only)
