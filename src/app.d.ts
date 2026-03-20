@@ -1,6 +1,7 @@
 import type { AvailableLanguageTag } from '../../lib/paraglide/runtime'
 import type { ParaglideLocals } from '@inlang/paraglide-sveltekit'
 import type { Auth, SessionSession, SessionUser } from '$lib/auth'
+import type { PreviewRenderJob } from '$lib/types'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { MiniflareD1Database } from 'miniflare'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -67,6 +68,7 @@ declare global {
         // Cloudflare Bindings
         DB: MiniflareD1Database
         ASSETS: Fetcher
+        PREVIEW_RENDER_QUEUE: Queue<PreviewRenderJob>
         // AUTH
         AUTH_SECRET: string
         AUTH_GOOGLE_ID: string
@@ -83,6 +85,8 @@ declare global {
         PUBLIC_DRIZZLE_LOGGER: string
         PUBLIC_HUB_CODE: string
         PUBLIC_GIPHY_KEY: string
+        PUBLIC_ORIGIN: string
+        PUBLIC_PREVIEW_ASSET_BASE_URL: string
       }
       context: ExecutionContext
       caches: CacheStorage & { default: Cache }
