@@ -8,6 +8,7 @@ export * from './property'
 export * from './feature'
 export * from './image'
 export * from './task'
+export * from './map'
 
 // Re-export all relations
 export * from './relations'
