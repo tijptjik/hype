@@ -37,9 +37,3 @@ export const ProjectMapStyleResolved = ProjectMapStyleBase.extend({
 export const ResolveProjectMapStyleParams = z.object({
   projectId: z.string().min(1),
 })
-
-export type MapStyleDB = z.infer<typeof MapStyleBase>
-export type MapStyleI18nDB = z.infer<typeof MapStyleI18nBase>
-export type MapStyleRowDB = z.infer<typeof MapStyleRow>
-export type MapStyleResolvedDB = z.infer<typeof MapStyleResolved>
-export type ProjectMapStyleDB = z.infer<typeof ProjectMapStyleBase>

@@ -99,6 +99,7 @@ export type ProjectListParamsByProfile<P extends ProjectProfile> = Omit<
 export type ProjectFormInput = z.input<typeof ProjectFormData>
 export type ProjectBooleanField = 'isPublished' | 'isArchived'
 export type ProjectSubmitBaselineRelations = {
+  license?: ProjectFormInput['data']['license']
   capabilities?: ProjectFormInput['data']['capabilities']
   userRoles?: unknown
   properties?: ProjectFormInput['data']['properties']
@@ -108,6 +109,7 @@ export type ProjectSubmitUpdatesParams<TEntityResult, TListResult> = {
   projectId?: string | null
   entityQuery: TEntityResult
   listQuery: TListResult
+  extraQueries?: unknown[]
 }
 
 export type ProjectOwnerRoleSeedOrganisation = {
@@ -128,6 +130,7 @@ export type ProjectPreflightInput = z.input<typeof ProjectPreflightFormData>
 
 export type ProjectCurrentFormDraft = {
   data?: {
+    license?: unknown
     capabilities?: unknown
     userRoles?: unknown
     properties?: unknown
@@ -135,10 +138,13 @@ export type ProjectCurrentFormDraft = {
 }
 
 export type ProjectSubmitDraft = ResourceSubmitDraft<{
+  license?: unknown
   capabilities?: unknown
   userRoles?: unknown
   properties?: unknown
 }>
+
+export type ProjectLicenseDB = ProjectDB['license']
 
 export type ProjectI18nDB = z.infer<typeof ProjectI18nBase>
 export type ProjectI18nNew = z.infer<typeof ProjectI18nInsert>
