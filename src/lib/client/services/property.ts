@@ -579,13 +579,13 @@ function collectMissingPropertyTranslations(
   for (const value of property.values || []) {
     const sourceValue =
       (
-        (value.i18n as WritableI18nRecord | undefined)?.[sourceFormLocale] as
+        (value.i18n as WritableI18nRecord | undefined)?.[sourceLocaleKey] as
           | { value?: string }
           | undefined
       )?.value?.trim() || ''
     const targetValue =
       (
-        (value.i18n as WritableI18nRecord | undefined)?.[targetFormLocale] as
+        (value.i18n as WritableI18nRecord | undefined)?.[targetLocaleKey] as
           | { value?: string }
           | undefined
       )?.value?.trim() || ''
@@ -1101,6 +1101,52 @@ export function addProjectPropertyValue(
       i18n: target.isTranslatable ? toEmptyPropertyValueI18n(valueId) : undefined,
     })
     target.values = values
+  })
+}
+
+export function sortProjectPropertyValuesAlphabetically(
+  form: FormDataUpdaterForm<PropertyFormData>,
+  propertyId: Id,
+  locale: Locale,
+): void {
+  mutatePropertyById(form, propertyId, target => {
+    if (!target.values || target.values.length < 2) return
+
+    const localeKey = toLocaleKey(locale)
+    const sortedValues = [...target.values].sort((left, right) => {
+      const leftLocalized =
+        (
+          (left.i18n as WritableI18nRecord | undefined)?.[localeKey] as
+            | { value?: string }
+            | undefined
+        )?.value ?? ''
+      const rightLocalized =
+        (
+          (right.i18n as WritableI18nRecord | undefined)?.[localeKey] as
+            | { value?: string }
+            | undefined
+        )?.value ?? ''
+
+      const leftText = (
+        leftLocalized.trim() || getFirstAvailablePropertyValueText(left)
+      ).trim()
+      const rightText = (
+        rightLocalized.trim() || getFirstAvailablePropertyValueText(right)
+      ).trim()
+
+      const byText = leftText.localeCompare(rightText, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
+      if (byText !== 0) return byText
+
+      return (left.rank ?? 0) - (right.rank ?? 0)
+    })
+
+    target.values = sortedValues.map((value, index) => ({
+      ...value,
+      rank: index,
+    }))
   })
 }
 
