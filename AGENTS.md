@@ -48,6 +48,9 @@ Run all commands with Bun:
   - Order imports by: framework first, then third-party, then project/library imports, then type imports.
 - Comments:
   - Use standard JSDoc for exported functions and remote APIs: include `@param`, `@returns`, and `@remarks` where behavior constraints matter.
+  - For service modules and route modules, always add JSDoc to exported functions and non-trivial file-local helpers.
+  - For service modules and route modules with multiple logical sections, add a file-level TOC comment that follows the repository TOC convention in `docs/Component Architecture.md`.
+  - For complex operations in service modules and route modules, add a concise one-line comment immediately above the block so the intent is scannable before reading the implementation.
   - Preserve existing comments when editing code; update wording if behavior changes instead of deleting useful context.
 - Styling:
   - For Bits `core/custom/pattern` components, do not use inline Tailwind utility class strings in Svelte markup.
