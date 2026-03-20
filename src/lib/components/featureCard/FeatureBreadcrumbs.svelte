@@ -72,7 +72,7 @@ const onMissingReport = () => {
 {#if appCtx.isInitialised && (!isOnlyLayerInHub || !cardCtx.isNewMode)}
   {#await appCtx.getHierarchy(feature as Feature)}
     <div
-      class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4"
+      class="pointer-events-auto flex w-full shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4"
     >
       <div
         class="flex items-center gap-2 font-mono text-xs uppercase text-neutral-content"
@@ -89,7 +89,7 @@ const onMissingReport = () => {
     {@const projectName = appCtx.getContextualProjectName(hierarchy.project)}
     {@const layerName = appCtx.getContextualLayerName(hierarchy.layer!)}
     <div
-      class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 pt-2 w-100:pl-4"
+      class="pointer-events-auto flex w-full shrink-0 items-center justify-between bg-black pl-2 pt-2 w-100:pl-4"
     >
       <div
         class="flex items-center gap-2 font-mono text-xs uppercase text-neutral-content"
@@ -116,20 +116,20 @@ const onMissingReport = () => {
             class="btn btn-ghost btn-sm rounded-none rounded-bl-lg px-3 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
             onclick={showLayerSelectionModal}
           >
-            <Icon src={PencilSquare} class="h-5 w-5 -translate-y-[1px]" />
+            <Icon src={PencilSquare} class="h-5 w-5 -translate-y-px" />
           </button>
         {:else}
           <button
             class="btn btn-ghost btn-sm rounded-none rounded-bl-lg p-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
             onclick={(e) => toggleMenu(e)}
           >
-            <Icon src={EllipsisVertical} class="h-6 w-6 -translate-y-[1px]" />
+            <Icon src={EllipsisVertical} class="h-6 w-6 -translate-y-px" />
           </button>
 
           {#if menuOpen}
             <div
               id="feature-card-menu"
-              class="absolute -top-[90px] right-1.5 mt-1 w-48 rounded-lg rounded-br-none bg-black p-0 caret-transparent shadow-xl"
+              class="absolute -top-22.5 right-1.5 mt-1 w-48 rounded-lg rounded-br-none bg-black p-0 caret-transparent shadow-xl"
               use:clickOutside={(e) => closeMenu(e)}
             >
               <button
@@ -157,7 +157,7 @@ const onMissingReport = () => {
     </div>
   {:catch error}
     <div
-      class="pointer-events-auto flex w-full flex-shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4"
+      class="pointer-events-auto flex w-full shrink-0 items-center justify-between bg-black pl-2 w-100:pl-4"
     >
       <div
         class="flex items-center gap-2 font-mono text-xs uppercase text-neutral-content"

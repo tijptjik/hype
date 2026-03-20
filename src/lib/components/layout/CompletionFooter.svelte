@@ -54,7 +54,7 @@ const overallStats = $derived(
 {/snippet}
 
 <footer
-  class="flex h-[37px] items-center justify-around gap-6 border-t-1 border-base-100 bg-base-400 px-6 uppercase text-base-content shadow-[0_-5px_15px_rgba(0,0,0,0.1)]"
+  class="flex h-9.25 items-center justify-around gap-6 border-t border-base-100 bg-base-400 px-6 uppercase text-base-content shadow-[0_-5px_15px_rgba(0,0,0,0.1)]"
   in:slide={{ duration: 300, axis: 'y', easing: quadInOut, delay: 100 }}
 >
   {@render statSection('content', overallStats.content, m.green_born_skate_jolt())}

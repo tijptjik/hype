@@ -110,7 +110,7 @@ function handleSlideStart() {
 
 <div
   bind:this={infoElement}
-  class="pointer-events-auto flex h-auto min-h-12 flex-shrink-0 basis-auto flex-col overflow-y-auto bg-black pb-1"
+  class="pointer-events-auto flex h-auto min-h-12 shrink-0 basis-auto flex-col overflow-y-auto bg-black pb-1"
 >
   <div
     class="cursor-transparent pointer-events-auto flex flex-row items-center justify-between gap-2 bg-black px-3 pt-4 hover:cursor-pointer w-100:px-6"

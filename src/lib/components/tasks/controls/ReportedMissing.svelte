@@ -51,7 +51,7 @@ let reportDate = $derived(
 )
 </script>
 
-<aside class="w-[380px]">
+<aside class="w-95">
   <!-- 3-Row Grid -->
   <div class="flex h-full flex-col items-stretch gap-4 rounded-xl font-bold">
     <!-- Report Details -->

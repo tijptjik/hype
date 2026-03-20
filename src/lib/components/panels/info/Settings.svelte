@@ -84,7 +84,7 @@ function toggleSection(sectionId: string) {
       >
         <Icon
           src={section.isOpen ? ChevronDown : ChevronRight}
-          class="h-5 w-5 flex-shrink-0 text-base-content"
+          class="h-5 w-5 shrink-0 text-base-content"
         />
         <h3 class="text-lg text-base-content">{section.titleKey()}</h3>
       </div>

@@ -135,7 +135,7 @@ let paths = $derived(
 </script>
 
 <div
-  class="background-lines pointer-events-none absolute inset-0 top-[-20px] z-0 mx-auto w-[85%] @container/lines"
+  class="background-lines pointer-events-none absolute inset-0 -top-5 z-0 mx-auto w-[85%] @container/lines"
   style="height: {totalHeight}px"
 >
   <svg

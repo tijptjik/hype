@@ -12,7 +12,7 @@ function handleClick(event: Event): void {
 </script>
 
 <div
-  class="relative h-16 w-16 flex-shrink-0 cursor-pointer"
+  class="relative h-16 w-16 shrink-0 cursor-pointer"
   onclick={handleClick}
   tabindex="-1"
   role="button"

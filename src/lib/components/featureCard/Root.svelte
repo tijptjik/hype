@@ -126,7 +126,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 
 {#if omniCtx.state.isCardOpen}
   <div
-    class="flex-grow-1 pointer-events-none relative z-20 mx-auto flex h-full w-full max-w-[520px] p-0 pb-[68px] duration-300 w-112:my-4 w-112:h-auto w-112:px-4"
+    class="grow pointer-events-none relative z-20 mx-auto flex h-full w-full max-w-130 p-0 pb-23 duration-300 w-112:my-4 w-112:h-auto w-112:px-4"
     style="transform: translateX({horizontalOffset}px);"
   >
     <!-- Shadow wrapper -->
@@ -141,7 +141,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
       >
         <div
           id="feature-card"
-          class="relative flex h-full max-h-[calc(100dvh-132px)] w-full flex-col overflow-x-visible rounded-none px-0 shadow-xl w-112:max-h-[calc(100dvh-162px)] w-112:rounded-lg"
+          class="relative flex h-full max-h-[calc(100dvh-156px)] w-full flex-col overflow-x-visible rounded-none px-0 shadow-xl w-112:max-h-[calc(100dvh-186px)] w-112:rounded-lg"
           in:scale={{
             duration: 300,
             delay: 0,
@@ -163,7 +163,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 
 {#if omniCtx.pageState === PageState.Transitioning}
   <div
-    class="fixed inset-x-[24px] z-50"
+    class="fixed inset-x-6 z-50"
     in:fade={{ duration: 200 }}
     out:fade={{ duration: 200 }}
   >

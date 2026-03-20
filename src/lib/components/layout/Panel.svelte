@@ -60,7 +60,7 @@ let shouldShowOverlay = $derived(
 {:else if shouldShowOverlay}
   <div
     id="{position}-panel"
-    class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black caret-transparent shadow-xl [@media(min-width:920px)]:w-[420px]"
+    class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black caret-transparent shadow-xl [@media(min-width:920px)]:w-105"
     class:overflow-y-hidden={!scrollable}
     class:overflow-y-auto={scrollable}
     class:md:left-0={position === 'left'}

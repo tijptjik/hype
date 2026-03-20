@@ -21,7 +21,7 @@ let images: ImageCtxEnvelope[] = $derived(imageCtx.getImages())
 </script>
 
 <div
-  class="pointer-events-auto relative flex min-h-[220px] w-full flex-1 items-center justify-center overflow-hidden bg-base-content/20 caret-transparent backdrop-blur-sm transition-all duration-300 w-112:min-h-[280px]"
+  class="pointer-events-auto relative flex min-h-55 w-full flex-1 items-center justify-center overflow-hidden bg-base-content/20 caret-transparent backdrop-blur-sm transition-all duration-300 w-112:min-h-70"
 >
   {#if images.length == 0}
     {#if cardCtx.isDisplayMode}

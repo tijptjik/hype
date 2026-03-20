@@ -69,7 +69,7 @@ function handleDescriptionCancel() {
 </script>
 
 <div
-  class="relative z-10 my-0 flex min-h-12 flex-shrink-0 flex-col bg-black caret-transparent"
+  class="relative z-10 my-0 flex min-h-12 shrink-0 flex-col bg-black caret-transparent"
 >
   <div class="overflow-y-auto">
     <div class="mb-2 bg-black py-0 pl-2">

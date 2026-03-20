@@ -55,7 +55,7 @@ const openFileDialog = () => {
 </script>
 
 <div
-  class="z-10 flex w-64 flex-shrink-0 flex-col rounded-2xl p-0 caret-transparent @container"
+  class="z-10 flex w-64 shrink-0 flex-col rounded-2xl p-0 caret-transparent @container"
 >
   <Header {...sectionProps}>
     <GalleryStats />

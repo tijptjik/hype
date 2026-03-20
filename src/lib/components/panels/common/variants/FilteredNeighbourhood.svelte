@@ -51,7 +51,7 @@ let neighbourhoodDisplay = $derived(
 
 {#if featureCount > 0}
   <div
-    class="focus:-ring-offset-2 group ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-[30px] caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
+    class="focus:-ring-offset-2 group ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-7.5 caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
     onclick={handleToggle}
     onkeydown={(e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -75,7 +75,7 @@ let neighbourhoodDisplay = $derived(
           ? `group-hover:bg-emerald-500/75 group-focus-visible:bg-emerald-500/75 ${selectedClass}`
           : ''}"
       ></div>
-      <div class="flex flex-grow flex-col">
+      <div class="flex grow flex-col">
         <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
           <span class="text-primary/80">{districtDisplay}</span>
           <span class="mtext-base-content/60 font-sans">::</span>

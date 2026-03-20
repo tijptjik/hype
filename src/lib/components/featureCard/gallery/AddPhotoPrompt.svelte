@@ -48,7 +48,7 @@ function handleFileSelect(event: Event) {
   class="z-5 absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-4 bg-base-200/70 focus:border-0 focus:outline-none focus:ring-0 focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0"
 >
   <h1
-    class="text-center text-2xl font-bold text-white/70 [text-shadow:_0_1px_2px_rgba(0,0,0,0.5)]"
+    class="text-center text-2xl font-bold text-white/70 [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]"
   >
     {m.filters__missing()}
     {m.true_equal_polecat_surge()}

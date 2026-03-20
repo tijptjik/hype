@@ -63,7 +63,7 @@ const handleKeydown = () => {
     <input
       name="attribution"
       type="text"
-      class="input m-0 h-12 w-full rounded-l-md rounded-r-none border-0 bg-base-200 pl-[26px] pr-10 text-sm placeholder:text-base-content/40 focus:border-none focus:outline-none"
+      class="input m-0 h-12 w-full rounded-l-md rounded-r-none border-0 bg-base-200 pl-6.5 pr-10 text-sm placeholder:text-base-content/40 focus:border-none focus:outline-none"
       placeholder={m.settings_contributor_placeholder()}
       value={appCtx.getUser()?.attribution}
       oninput={({ target }) => handleAttributionChange(target as HTMLInputElement)}

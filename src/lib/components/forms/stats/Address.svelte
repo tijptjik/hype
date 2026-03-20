@@ -61,7 +61,7 @@ function copyCoordinates() {
   >
     <Icon
       src={GlobeAsiaAustralia}
-      class="transition-size h-[2rem] w-[2rem] stroke-[2px] duration-300 hover:rotate-6 group-hover:scale-110"
+      class="transition-size h-8 w-8 stroke-[2px] duration-300 hover:rotate-6 group-hover:scale-110"
     />
   </a>
 </div>

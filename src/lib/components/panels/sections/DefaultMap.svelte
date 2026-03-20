@@ -43,7 +43,7 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
           class="min-h-21 flex w-full flex-row items-center justify-between gap-4 px-4 py-2 pl-2"
         >
           <!-- <Icon src={Map} class="flex-grow-1 my-6 h-5 w-5 flex-shrink-0" /> -->
-          <div class="flex flex-grow flex-col gap-0.5">
+          <div class="flex grow flex-col gap-0.5">
             {#if organisation && project}
               <div class="flex flex-row items-center gap-3">
                 <div class="flex flex-col items-start gap-0">
@@ -79,7 +79,7 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
           <input
             name={layer.id}
             type="checkbox"
-            class="flex-grow-1 toggle toggle-primary toggle-sm flex-shrink-0"
+            class="grow toggle toggle-primary toggle-sm shrink-0"
             checked={userLayerIds.has(layer.id)}
             onchange={(e) => appCtx.setUserLayer(layer.id, e.currentTarget.checked)}
           >

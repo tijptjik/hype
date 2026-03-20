@@ -159,7 +159,7 @@ function handleToggle() {
 {#if description !== m.zany_merry_seahorse_treasure() && description.length > 0 && description !== '-'}
   <div
     bind:this={descriptionElement}
-    class="pointer-events-auto relative z-10 my-0 flex-shrink-0 bg-black caret-transparent transition-all duration-300 ease-in-out"
+    class="pointer-events-auto relative z-10 my-0 shrink-0 bg-black caret-transparent transition-all duration-300 ease-in-out"
     style="height: {!hasOverflow && !expanded
       ? 'inherit'
       : expanded
@@ -191,7 +191,7 @@ function handleToggle() {
 
       {#if hasOverflow && !expanded}
         <div
-          class="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black to-transparent"
+          class="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-linear-to-t from-black to-transparent"
         ></div>
       {/if}
       <Toggle {hasCollapsedOverflow} {expanded} {handleToggle} />

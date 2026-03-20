@@ -56,9 +56,9 @@ let displayText = $derived(
 )
 </script>
 
-<div class="ml-4 min-h-10 flex-shrink-0 rounded-l-md bg-[#0a0a0a]">
+<div class="ml-4 min-h-10 shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-sky-600"
+    class="flex w-full shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-sky-600"
     onclick={() => (isOpen = !isOpen)}
   >
     <div class="flex flex-col justify-start gap-0 text-left">
@@ -67,12 +67,12 @@ let displayText = $derived(
       </p>
       <p class="font-medium">{displayText}</p>
     </div>
-    <Icon src={isOpen ? ChevronUp : ChevronDown} class="h-5 w-5 flex-shrink-0" />
+    <Icon src={isOpen ? ChevronUp : ChevronDown} class="h-5 w-5 shrink-0" />
   </button>
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-[260px] flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300"
+      class="flex max-h-65 flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300"
       tabindex="-1"
     >
       {#each propertyValues as value (value.id)}

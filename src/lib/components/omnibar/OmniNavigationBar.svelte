@@ -25,9 +25,9 @@ let isNewFeature = $derived(omniCtx.isNewFeatureMode)
 >
   {#if isNotFeatureMode && !isNewFeature && appCtx.state.active.collection}
     <div class="flex h-full w-full items-center">
-      <div class="h-full flex-shrink-0"><OmniNavArrow direction="left" /></div>
+      <div class="h-full shrink-0"><OmniNavArrow direction="left" /></div>
       <div class="min-w-0 flex-1"><OmniNavHeader /></div>
-      <div class="h-full flex-shrink-0"><OmniNavArrow direction="right" /></div>
+      <div class="h-full shrink-0"><OmniNavArrow direction="right" /></div>
     </div>
   {:else}
     <div class="w-full"><OmniNavHeader /></div>

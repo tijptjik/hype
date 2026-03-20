@@ -116,7 +116,7 @@ let advancedOpen = $state(false)
             <input
               type="checkbox"
               id={`fallback-${locale}`}
-              class="toggle toggle-primary toggle-sm flex-shrink-0"
+              class="toggle toggle-primary toggle-sm shrink-0"
               checked={userPreferences.fallbackLocales?.includes(locale) || false}
               onchange={(e) =>
                 appCtx.setFallbackLocales(locale, e.currentTarget.checked)}
@@ -147,7 +147,7 @@ let advancedOpen = $state(false)
             <input
               name={setting.code}
               type="checkbox"
-              class="toggle toggle-primary toggle-sm flex-shrink-0"
+              class="toggle toggle-primary toggle-sm shrink-0"
               checked={setting.currentValue}
               onchange={(e) =>
                 appCtx.setAdvancedFeature(

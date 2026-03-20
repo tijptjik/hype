@@ -256,25 +256,25 @@ $effect(() => {
   class="pointer-events-auto flex w-full items-center gap-4 bg-black px-3 pb-2 pt-4 w-100:px-6"
 >
   <p
-    class="flex w-20 min-w-0 flex-grow items-center overflow-hidden font-bold uppercase text-base-content/30 w-80:w-28"
+    class="flex w-20 min-w-0 grow items-center overflow-hidden font-bold uppercase text-base-content/30 w-80:w-28"
   >
     Name to credit
   </p>
   <div
-    class="flex h-full w-full min-w-0 flex-grow items-center justify-center gap-2 overflow-hidden"
+    class="flex h-full w-full min-w-0 grow items-center justify-center gap-2 overflow-hidden"
   >
     {#if !editedAttribution.trim() || editing}
       <input
         type="text"
         id="attribution-input"
-        class="h-8 min-w-0 flex-grow rounded-none border-0 border-b-2 border-gray-400 bg-transparent text-center text-xl font-semibold leading-8 text-white caret-white placeholder:text-gray-400 focus:border-primary focus:outline-none"
+        class="h-8 min-w-0 grow rounded-none border-0 border-b-2 border-gray-400 bg-transparent text-center text-xl font-semibold leading-8 text-white caret-white placeholder:text-gray-400 focus:border-primary focus:outline-none"
         placeholder={m.photo_credit_input_placeholder()}
         bind:value={editedAttribution}
         onkeydown={handleKeydown}
         use:clickOutside={handleClickOutside}
       >
     {:else}
-      <p class="min-w-0 flex-grow text-center text-xl font-semibold text-white">
+      <p class="min-w-0 grow text-center text-xl font-semibold text-white">
         {editedAttribution}
       </p>
     {/if}

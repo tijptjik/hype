@@ -62,7 +62,7 @@ if (container) {
   <div class="relative">
     <button
       type="button"
-      class="rounded-lg px-3 py-[6px] text-sm font-medium backdrop-blur-sm transition-all duration-200
+      class="rounded-lg px-3 py-1.5 text-sm font-medium backdrop-blur-sm transition-all duration-200
           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
           {intent === 'canonical'
         ? 'bg-primary hover:bg-primary/80'
@@ -81,14 +81,14 @@ if (container) {
 
     {#if intentContext.id === imageId}
       <div
-        class="absolute bottom-[34px] left-[-20px] mb-1 w-32 overflow-hidden rounded-lg bg-glass-result shadow-lg"
+        class="absolute bottom-8.5 -left-5 mb-1 w-32 overflow-hidden rounded-lg bg-glass-result shadow-lg"
         bind:this={intentContext.ref}
         transition:fade={{ duration: 150 }}
       >
         {#each adminIntentOrder.filter((option) => option !== intent) as option, idx}
           <button
             type="button"
-            class="w-full px-2 py-[5px] text-center text-sm hover:bg-primary focus:bg-primary
+            class="w-full px-2 py-1.25 text-center text-sm hover:bg-primary focus:bg-primary
                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary
                   {option === intent ? 'bg-glass-result' : ''}
                   {option === 'canonical' &&

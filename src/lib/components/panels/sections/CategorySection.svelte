@@ -42,17 +42,17 @@ let {
 </script>
 
 <div
-  class="mt-4 flex min-h-0 flex-shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen
+  class="mt-4 flex min-h-0 shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen
     ? 'flex-grow'
     : ''}"
   transition:slide
 >
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black pb-2 focus:outline-none focus:ring-0 focus-visible:text-primary"
+    class="flex w-full shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black pb-2 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={toggle}
   >
     <div class="flex items-center gap-3">
-      <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-[18px] w-[18px]" />
+      <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-4.5 w-4.5" />
       <!-- Hierarchy path -->
       <div class="flex flex-col space-y-1">
         <div class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">

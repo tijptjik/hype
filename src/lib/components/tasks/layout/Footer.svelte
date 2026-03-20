@@ -2,4 +2,4 @@
 let { children } = $props()
 </script>
 
-<div class="h-[232px] w-full flex-shrink-0 @container">{@render children()}</div>
+<div class="h-58 w-full shrink-0 @container">{@render children()}</div>

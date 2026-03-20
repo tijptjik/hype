@@ -94,7 +94,7 @@ $effect(() => {
     delay: omniCtx.state.isCardOpen ? 300 : 0
   }}
 >
-  <div class="max-h-[260px] overflow-y-auto px-4 pb-2 pt-1.5">
+  <div class="max-h-65 overflow-y-auto px-4 pb-2 pt-1.5">
     {#if items.length === 0}
       <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
     {:else}

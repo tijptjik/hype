@@ -68,7 +68,7 @@ function handleFilesSelect(
 
 <div class="relative z-10 flex h-full w-full flex-col overflow-hidden rounded-2xl">
   <Header {...sectionProps} />
-  <main class="relative mt-2 w-full flex-grow overflow-hidden rounded-2xl bg-base-300">
+  <main class="relative mt-2 w-full grow overflow-hidden rounded-2xl bg-base-300">
     <div class="absolute inset-0 h-full w-full flex-none">
       <Dropzone
         accept={['image/*']}
@@ -115,13 +115,13 @@ function handleFilesSelect(
 
         <!-- Upload overlay with loading ring -->
         {#if isUploading}
-          <div class="absolute inset-0 z-[60] rounded-b-2xl"><Uploading /></div>
+          <div class="absolute inset-0 z-60 rounded-b-2xl"><Uploading /></div>
         {/if}
 
         <!-- Error overlay for failed uploads -->
         {#if showErrorOverlay}
           <div
-            class="absolute inset-0 z-[60] flex items-center justify-center rounded-b-2xl bg-error text-white transition-opacity duration-300"
+            class="absolute inset-0 z-60 flex items-center justify-center rounded-b-2xl bg-error text-white transition-opacity duration-300"
             transition:fade
           >
             <div class="text-center">

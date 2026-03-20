@@ -460,7 +460,7 @@ const setupNextTrigger = () => {
   </h3>
 
   {#if userData?.contributedImages && typeof userData.contributedImages === 'object'}
-    <div class="relative pb-3 pr-[9px]">
+    <div class="relative pb-3 pr-2.25">
       <div class="max-h-[75vh] space-y-0 overflow-auto" bind:this={viewport}>
         {#each Object.entries(userData.contributedImages) as [ projectId, imageIds ] (projectId)}
           <div class="group-container px-1" bind:this={contents}>

@@ -81,7 +81,7 @@ function handleGlobeClick(e: Event) {
 </script>
 
 <div
-  class="pointer-events-auto flex min-h-8 flex-shrink-0 flex-grow-0 items-center justify-between overflow-visible bg-black pl-2 caret-transparent w-100:pl-4"
+  class="pointer-events-auto flex min-h-8 shrink-0 grow-0 items-center justify-between overflow-visible bg-black pl-2 caret-transparent w-100:pl-4"
 >
   {#if isEditingAddress}
     <div class="flex w-full items-center gap-2 pr-2">
@@ -132,7 +132,7 @@ function handleGlobeClick(e: Event) {
       >
         {currentAddress || 'Click to set address'}
       </p>
-      <div class="flex-grow-1 flex flex-row">
+      <div class="grow flex flex-row">
         <button
           class="btn btn-ghost btn-sm p-0.5 px-2 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
           onclick={handleGlobeClick}

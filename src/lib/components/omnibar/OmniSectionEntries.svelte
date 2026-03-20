@@ -27,7 +27,7 @@ let onSelection: (ref: string) => void = $derived(
 )
 </script>
 
-<div class="flex flex-shrink-0 select-none flex-col" role="group">
+<div class="flex shrink-0 select-none flex-col" role="group">
   {#each results.slice(0, limit) as result, idx}
     <OmniEntry {result} {onSelection} />
   {/each}

@@ -139,7 +139,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 <div class="relative flex w-full flex-col items-center overflow-hidden">
   <!-- Background SVG with Glow -->
   <div
-    class="pointer-events-none absolute z-0 flex w-full -translate-y-[110px] items-center justify-center overflow-hidden px-1.5"
+    class="pointer-events-none absolute z-0 flex w-full -translate-y-27.5 items-center justify-center overflow-hidden px-1.5"
   >
     <svg
       width="362"

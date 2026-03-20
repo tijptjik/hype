@@ -253,7 +253,7 @@ $effect(() => {
   >
     <!-- Dropzone always first -->
     {#if hasDropzone}
-      <div class="h-[200px] w-[200px] flex-none">
+      <div class="h-50 w-50 flex-none">
         <Dropzone {updateScrollArrows} bind:inputElement />
       </div>
     {/if}
@@ -262,7 +262,7 @@ $effect(() => {
     {#each imageCtx.getUploadQueue() as fileObject (fileObject.file)}
       {#if !fileObject.imageToReplace && fileObject.status === 'uploading'}
         <!-- Show new uploads normally -->
-        <div in:fade={{ duration: 200 }} class="relative h-[200px] w-[200px] flex-none">
+        <div in:fade={{ duration: 200 }} class="relative h-50 w-50 flex-none">
           <UploadThumbnail {fileObject} />
         </div>
       {/if}
@@ -275,7 +275,7 @@ $effect(() => {
         animate:flip={{ duration: 300 }}
         in:fade={{ duration: 200, delay: i * 100 }}
         out:fade={{ duration: 200 }}
-        class="relative h-[200px] w-[200px] flex-none cursor-pointer"
+        class="relative h-50 w-50 flex-none cursor-pointer"
         onmouseenter={(e) => handleThumbnailHover(image.image.id, e)}
         onclick={(e) => handleThumbnailClick(image.image.id, e)}
       >

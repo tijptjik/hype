@@ -29,7 +29,7 @@ function handleClick(e: MouseEvent): void {
 
 <button
   type="button"
-  class="btn btn-circle border-none bg-glass-result opacity-70 hover:bg-glass-result/100 hover:shadow-sm {className}"
+  class="btn btn-circle border-none bg-glass-result opacity-70 hover:bg-glass-result hover:shadow-sm {className}"
   onpointerdown={stopEvent}
   onclick={handleClick}
 >
