@@ -15,6 +15,7 @@
   "filters__between": "Between {min} and {max} stars",
   "filters__and": "and",
   "menu_stars": "Starred",
+  "menu_plan": "Plan",
   "maps__title": "Maps",
   "maps__organisations": "Organisations",
   "maps__projects": "Projects",

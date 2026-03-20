@@ -15,6 +15,7 @@
   "filters__between": "在{min}和{max}之間",
   "filters__and": "和",
   "menu_stars": "已被標記的",
+  "menu_plan": "行程",
   "maps__title": "地圖",
   "maps__organisations": "組織",
   "maps__projects": "企劃",
