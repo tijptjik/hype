@@ -47,9 +47,9 @@ describe('preview storage helpers', () => {
           identifier: 'hyper',
           hash: 'abc123',
         },
-        '/mapPreviews/styles/hyper.png',
+        '/mapPreviews/styles/hyper/abc123.png',
       ),
-    ).toBe('/mapPreviews/styles/hyper.png')
+    ).toBe('/mapPreviews/styles/hyper/abc123.png')
   })
 
   it('resolves preview and production previews to CDN URLs', () => {

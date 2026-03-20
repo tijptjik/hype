@@ -20,8 +20,8 @@ onMount(() => {
   const url = new URL(window.location.href)
   const styleParam = page.params.style ?? 'hyper'
   const style = isMapStyleKey(styleParam)
-    ? `/api/styles/${styleParam}`
-    : `/api/styles/hyper`
+    ? `/api/mapStyles/${styleParam}`
+    : `/api/mapStyles/hyper`
   const previewWindow = window as Window & {
     __HYPE_MAP_STYLE_PREVIEW_READY__?: boolean
   }
