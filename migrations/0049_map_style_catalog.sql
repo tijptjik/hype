@@ -73,7 +73,7 @@ SELECT
     WHEN seed.code = 'breadline' THEN scope.breadlineHubId
     ELSE NULL
   END,
-  '/generated/map-style-previews/' || seed.code || '.png',
+  '/mapPreviews/styles/' || seed.code || '.png',
   strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
   strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 FROM seed
