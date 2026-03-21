@@ -22,6 +22,10 @@
     @apply max-h-80 overflow-y-auto rounded-lg;
   }
 
+  .bits-theme .bits-search--compact-results .bits-search__results-wrapper {
+    max-height: 17.5rem;
+  }
+
   /* ----------------- */
   /* Search Bar */
   /* --------- */
@@ -123,6 +127,42 @@
 
   .bits-theme .bits-search-result-item__discriminator {
     @apply max-w-40 shrink-0 truncate text-right text-xs text-neutral-content/80 pr-4;
+  }
+
+  .bits-theme .bits-search-result-item--visual {
+    @apply rounded-xl p-0;
+  }
+
+  .bits-theme .bits-search-result-item__content--visual {
+    @apply items-stretch gap-0;
+  }
+
+  .bits-theme .bits-search-result-item__preview {
+    @apply h-24 w-24 shrink-0 overflow-hidden rounded-l-xl rounded-r-none border-r border-white/10 bg-black/50;
+  }
+
+  .bits-theme .bits-search-result-item__preview-image {
+    @apply h-full w-full object-cover;
+  }
+
+  .bits-theme .bits-search-result-item__preview-fallback {
+    @apply flex h-full w-full items-center justify-center text-lg font-semibold uppercase text-neutral-content/70;
+  }
+
+  .bits-theme .bits-search-result-item__copy {
+    @apply flex min-w-0 flex-1 flex-col justify-center gap-1 px-4 py-3;
+  }
+
+  .bits-theme .bits-search-result-item--visual .bits-search-result-item__title-wrap {
+    @apply min-w-0 flex-none pr-0;
+  }
+
+  .bits-theme .bits-search-result-item--visual .bits-search-result-item__title {
+    @apply text-base;
+  }
+
+  .bits-theme .bits-search-result-item--visual .bits-search-result-item__discriminator {
+    @apply max-w-none shrink-0 truncate pr-0 text-left text-sm text-neutral-content/62;
   }
 
   .bits-theme .bits-search-result-item__disabled-callout {

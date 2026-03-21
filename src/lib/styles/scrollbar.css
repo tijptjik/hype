@@ -2,7 +2,7 @@
    SCROLLBAR STYLES - NOW USING SVROLLBAR COMPONENT
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-/* 
+/*
    Custom scrollbar styles have been replaced with the svrollbar component.
    This provides better cross-browser compatibility and mobile-like behavior.
    See: https://github.com/tijptjik/svrollbar

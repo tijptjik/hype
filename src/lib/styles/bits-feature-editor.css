@@ -46,10 +46,6 @@
     flex-direction: row-reverse;
   }
 
-  .bits-feature-editor__facet-nav--facet-end {
-    margin-bottom: 8rem;
-  }
-
   .bits-feature-editor__fields-section {
     padding-bottom: 0.75rem;
   }
@@ -552,24 +548,24 @@
     height: 2.5rem;
     min-height: 2.5rem;
     padding: 0;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    border: none;
+    background: transparent;
+    box-shadow: none;
   }
 
   .bits-feature-visual__switch--icon-only .bits-swap[data-state="checked"],
   .bits-feature-visual__switch--icon-only .bits-swap:hover:not(:disabled),
   .bits-feature-visual__switch--icon-only .bits-swap:focus-visible:not(:disabled),
   .bits-feature-visual__switch--icon-only .bits-swap:active:not(:disabled) {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    border: none;
+    background: transparent;
+    box-shadow: none;
   }
 
   .bits-feature-visual__switch--icon-only .bits-swap:disabled {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    border: none;
+    background: transparent;
+    box-shadow: none;
   }
 
   .bits-feature-visual-media__img {
@@ -897,11 +893,11 @@
   }
 
   .bits-feature-field .bits-form__control-wrap:not(.bits-form__control-wrap--editing) {
-    background-color: color-mix(in oklab, #7d4f63 32%, transparent) !important;
+    background-color: color-mix(in oklab, #7d4f63 32%, transparent);
   }
 
   .bits-feature-field .bits-form__select-display-wrap {
-    background-color: color-mix(in oklab, #7d4f63 32%, transparent) !important;
+    background-color: color-mix(in oklab, #7d4f63 32%, transparent);
   }
 
   .bits-feature-field .bits-form__select-display {
@@ -940,8 +936,8 @@
   .bits-feature-field
     .bits-form__select-trigger.bits-form__select-trigger--default.bits-feature-field__select-trigger {
     min-height: 3rem;
-    border: none !important;
-    box-shadow: none !important;
+    border: none;
+    box-shadow: none;
     outline: none;
     background-color: #c3729080;
     color: color-mix(in oklab, white 90%, transparent);
@@ -952,7 +948,7 @@
   .bits-feature-field
     .bits-form__select-trigger.bits-form__select-trigger--default.bits-feature-field__select-trigger[data-state="open"] {
     border-color: transparent;
-    box-shadow: none !important;
+    box-shadow: none;
     outline: none;
   }
 

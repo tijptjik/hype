@@ -53,11 +53,6 @@
     gap: 0.75rem;
   }
 
-  .bits-theme .bits-project-fields__empty {
-    @apply flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center;
-    min-height: 16rem;
-  }
-
   .bits-theme .bits-project-fields__loading-shell {
     min-height: 16rem;
   }
@@ -67,18 +62,6 @@
     flex-direction: column;
     gap: 0.75rem;
     width: 100%;
-  }
-
-  .bits-theme .bits-project-fields__empty-title {
-    @apply text-2xl font-mono font-semibold;
-  }
-
-  .bits-theme .bits-project-fields__empty-description {
-    @apply max-w-2xl;
-  }
-
-  .bits-theme .bits-project-fields__empty-add-btn {
-    @apply mt-1;
   }
 
   .bits-theme .bits-project-fields__item {
@@ -274,7 +257,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    z-index: 2;
+    z-index: 4;
   }
 
   .bits-theme .bits-project-field-card__title-row {
@@ -502,7 +485,7 @@
   }
 
   .bits-theme .bits-project-field-card__icon-btn--round {
-    border-radius: 9999px !important;
+    border-radius: 9999px;
   }
 
   .bits-theme .bits-project-field-card__header-right-rail {
