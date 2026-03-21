@@ -89,7 +89,11 @@ export const getLocaleTextField = (
     return undefined
   }
 
-  const currentNameExpression: unknown[] = ['case', ['get', 'name'], ['get', 'name']]
+  const currentNameExpression: unknown[] = [
+    'coalesce',
+    ['get', 'name'],
+    ['get', 'pgf:name'],
+  ]
 
   const englishNameExpression: unknown[] =
     locale === 'en'

@@ -1,13 +1,50 @@
 import type { AppCtx } from '$lib/context/app.svelte'
+// API
+import { getImageSrc } from '$lib/client/services/image'
 // STYLES
 import '$lib/styles/map.css'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
-// Function to create SVG marker element with fade-in animation
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. MARKER STYLE HELPERS
+//    - getUserMarkerStyleVariant
+//    - createMarkerElement
+//
+// 2. MARKER LIFECYCLE
+//    - updateMarkers
+//    - addMarkerClass
+//    - removeMarkerClass
+//    - addAddressMarker
+
+export const USER_MARKER_STYLE_PARAM = 'markerStyle'
+
+export const MARKER_STYLE_VARIANTS = ['image', 'dot'] as const
+
+export type MarkerStyleVariant = (typeof MARKER_STYLE_VARIANTS)[number]
+
+/**
+ * Normalizes a raw marker-style value to a supported variant.
+ *
+ * @param value - Raw query param or persisted preference value.
+ * @returns Supported marker style variant.
+ */
+export function getUserMarkerStyleVariant(value: string | null): MarkerStyleVariant {
+  return value === 'dot' ? 'dot' : 'image'
+}
+
+/**
+ * Builds the default dot marker DOM subtree.
+ *
+ * @returns Root marker element ready to pass to MapLibre.
+ */
 export function createMarkerElement(): HTMLDivElement {
   const container = document.createElement('div')
   container.className = 'marker-container marker-fade-in'
   container.dataset.type = 'marker'
+  container.dataset.markerSignature = 'dot'
 
   const innerContainer = document.createElement('div')
   innerContainer.className = 'marker-inner'
@@ -47,10 +84,68 @@ export function createMarkerElement(): HTMLDivElement {
   return container
 }
 
+function getFeatureMarkerImageSrc(feature: FeatureFromCollection): string | null {
+  return getImageSrc(feature.image, {
+    transformation: 'c_fill,h_128,w_128',
+  })
+}
+
+function createFeatureMarkerElement(
+  feature: FeatureFromCollection,
+  markerStyle: MarkerStyleVariant,
+): HTMLDivElement {
+  if (markerStyle === 'dot') {
+    return createMarkerElement()
+  }
+
+  const imageSrc = getFeatureMarkerImageSrc(feature)
+  if (!imageSrc) {
+    return createMarkerElement()
+  }
+
+  const container = document.createElement('div')
+  container.className = 'marker-container marker-container--feature marker-fade-in'
+  container.dataset.type = 'marker'
+  container.dataset.markerSignature = imageSrc
+
+  const innerContainer = document.createElement('div')
+  innerContainer.className = 'marker-inner marker-inner--feature'
+  innerContainer.dataset.type = 'marker'
+
+  const image = document.createElement('img')
+  image.className = 'marker-image'
+  image.src = imageSrc
+  image.alt = ''
+  image.loading = 'lazy'
+  image.decoding = 'async'
+  image.draggable = false
+  image.dataset.type = 'marker'
+
+  const frame = document.createElement('div')
+  frame.className = 'marker-image-frame'
+  frame.dataset.type = 'marker'
+
+  innerContainer.appendChild(image)
+  innerContainer.appendChild(frame)
+  container.appendChild(innerContainer)
+
+  return container
+}
+
+/**
+ * Reconciles the rendered marker cache against the current feature set.
+ *
+ * @param appCtx - App context containing the active map and marker cache.
+ * @param features - Features that should currently render markers.
+ * @param maplibre - MapLibre namespace used to construct markers.
+ * @param markerStyle - Visual marker variant to render.
+ * @returns Cleanup function that removes all managed markers.
+ */
 export function updateMarkers(
   appCtx: AppCtx,
   features: FeatureFromCollection[],
   maplibre: any,
+  markerStyle: MarkerStyleVariant = 'image',
 ) {
   if (!appCtx.map) return
   // Create a set of new feature IDs
@@ -71,21 +166,24 @@ export function updateMarkers(
   features.forEach(feature => {
     if (feature.geometry?.type === 'Point') {
       const [lng, lat] = feature.geometry.coordinates
-      // Check if marker DOM element already exists on the map
-      const mapContainer = appCtx.map.getContainer()
-      const existingMarkerElement = mapContainer.querySelector(
-        `[data-feature-id="${feature.id}"]`,
-      )
-      if (existingMarkerElement) {
-        return
-      }
-      // If marker exists in state but not in DOM, remove it from state
       const existingMarker = appCtx.state.markers.get(feature.id)
       if (existingMarker) {
+        const nextMarkerSignature =
+          markerStyle === 'dot'
+            ? 'dot'
+            : (getFeatureMarkerImageSrc(feature) ?? 'default')
+        const currentMarkerSignature =
+          existingMarker.getElement().dataset.markerSignature ?? 'default'
+        // Skip churn when the rendered marker image/dot state is unchanged.
+        if (currentMarkerSignature === nextMarkerSignature) {
+          return
+        }
+
+        existingMarker.remove()
         appCtx.state.markers.delete(feature.id)
       }
       // Create new marker
-      const el = createMarkerElement()
+      const el = createFeatureMarkerElement(feature, markerStyle)
       // Add data attributes to all elements in the marker
       const addDataToElements = (element: Element) => {
         element.setAttribute('data-type', 'marker')
@@ -113,6 +211,14 @@ export function updateMarkers(
   }
 }
 
+/**
+ * Adds a CSS class to one rendered marker.
+ *
+ * @param appCtx - App context containing the marker cache.
+ * @param featureId - Feature id whose marker should be updated.
+ * @param className - CSS class to add.
+ * @returns Nothing.
+ */
 export function addMarkerClass(
   appCtx: AppCtx,
   featureId: string,
@@ -123,6 +229,14 @@ export function addMarkerClass(
   appCtx.state.markers.get(featureId)?.getElement().classList.add(className)
 }
 
+/**
+ * Removes a CSS class from one rendered marker.
+ *
+ * @param appCtx - App context containing the marker cache.
+ * @param featureId - Feature id whose marker should be updated.
+ * @param className - CSS class to remove.
+ * @returns Nothing.
+ */
 export function removeMarkerClass(
   appCtx: AppCtx,
   featureId: string,
@@ -132,6 +246,14 @@ export function removeMarkerClass(
   appCtx.state.markers.get(featureId)?.getElement().classList.remove(className)
 }
 
+/**
+ * Adds a temporary address/geocode marker to the active map.
+ *
+ * @param maplibre - MapLibre namespace used to construct markers.
+ * @param appCtx - App context containing the active map instance.
+ * @param lngLat - Marker coordinates in `[lng, lat]` order.
+ * @returns Newly created marker instance.
+ */
 export function addAddressMarker(
   maplibre: any,
   appCtx: AppCtx,

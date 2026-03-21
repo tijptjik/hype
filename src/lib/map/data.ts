@@ -14,7 +14,20 @@ import type {
   FeatureFromCollection,
 } from '$lib/db/zod/schema/feature.types'
 
-// Async version that uses getHierarchy for guaranteed data with cache-miss handling
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. SEARCH SOURCE HELPERS
+//    - getWishlistedFeaturesAsync
+//    - searchAllAsync
+
+/**
+ * Resolves the user's wishlisted features with hydrated hierarchy labels.
+ *
+ * @param appCtx - App context containing cached resources and hierarchy helpers.
+ * @returns Wishlisted features enriched with hierarchy display labels.
+ */
 export async function getWishlistedFeaturesAsync(
   appCtx: AppCtx,
 ): Promise<FeatureExtended[]> {
@@ -29,6 +42,7 @@ export async function getWishlistedFeaturesAsync(
             .length
         : 0
 
+      // Only include the layer label when it disambiguates multiple sibling layers.
       return {
         ...feature,
         hierarchy: {
@@ -49,6 +63,13 @@ export async function getWishlistedFeaturesAsync(
   )
 }
 
+/**
+ * Searches wishlisted features, neighbourhoods, and loaded features for one term.
+ *
+ * @param term - Raw search term.
+ * @param appCtx - App context containing search sources and locale helpers.
+ * @returns Search result groups matching the provided term.
+ */
 export async function searchAllAsync(
   term: string,
   appCtx: AppCtx,
@@ -86,6 +107,7 @@ export async function searchAllAsync(
   // Source 3 - Features
   Array.from(appCtx.features.values())
     .filter((feature): feature is FeatureFromCollection => {
+      // Search against the same locale-aware strings the user sees in the UI.
       const title = getI18n(feature, 'title', appCtx.getUserPreferences())
       const description = getI18n(feature, 'description', appCtx.getUserPreferences())
       const displayAddress = getI18n(

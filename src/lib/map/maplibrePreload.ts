@@ -1,5 +1,16 @@
 import type { Map, LngLatLike } from 'maplibre-gl'
 
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. OPTION NORMALIZATION
+//    - toPlainMaplibreOptions
+//    - normalizeMaplibreOptions
+//
+// 2. MAPLIBRE PATCHING
+//    - monkeyPatchMapLibre
+
 type MaplibreOptions = {
   type?: 'pan' | 'zoom' | 'jump' | 'ease' | 'fly' | 'fitBounds'
   center?: [number, number]
@@ -69,6 +80,12 @@ const toPlainMaplibreOptions = (value: unknown): unknown => {
 const normalizeMaplibreOptions = (options: MaplibreOptions = {}): MaplibreOptions =>
   (toPlainMaplibreOptions(options) as MaplibreOptions | undefined) ?? {}
 
+/**
+ * Adds cache-aware navigation helpers onto a MapLibre namespace at runtime.
+ *
+ * @param maplibregl - Optional MapLibre namespace to patch. Falls back to `globalThis`.
+ * @returns Patched MapLibre namespace with helper methods attached.
+ */
 export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => {
   const _lib = maplibregl || (globalThis as any).maplibregl
   // run only in the main thread

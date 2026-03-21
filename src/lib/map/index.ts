@@ -1,9 +1,25 @@
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. GEODESIC HELPERS
+//    - calculateDistance
+
+/**
+ * Approximates the geodesic distance between two latitude/longitude pairs in kilometers.
+ *
+ * @param lat1 - First latitude in decimal degrees.
+ * @param long1 - First longitude in decimal degrees.
+ * @param lat2 - Second latitude in decimal degrees.
+ * @param long2 - Second longitude in decimal degrees.
+ * @returns Distance between the two points in kilometers.
+ */
 export function calculateDistance(
   lat1: number,
   long1: number,
   lat2: number,
   long2: number,
-) {
+): number {
   //radians
   lat1 = (lat1 * 2.0 * Math.PI) / 60.0 / 360.0
   long1 = (long1 * 2.0 * Math.PI) / 60.0 / 360.0
