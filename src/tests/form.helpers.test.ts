@@ -50,10 +50,15 @@ vi.mock('$lib/navigation/admin', () => ({
   },
 }))
 
+vi.mock('$lib/navigation/facets', () => ({
+  getAdminFacetActionLabel: vi.fn(() => ''),
+}))
+
 import { FirstClassResource } from '$lib/enums'
 import {
   createCodeRefResourceResult,
   revalidateAfterSubmitAttempt,
+  resolveFacetTabsWithIssues,
   resolveDisplayUserRoles,
 } from '$lib/client/services/form'
 import type { AdminCtx } from '$lib/context/admin.svelte'
@@ -145,5 +150,28 @@ describe('form helpers', () => {
       }),
     ).toBe(true)
     expect(validate).toHaveBeenCalledTimes(1)
+  })
+
+  it('maps data.layers issues onto the layers facet', () => {
+    const facets = new Map([
+      ['core', { label: 'Core' }],
+      ['layers', { label: 'Layers' }],
+      ['fields', { label: 'Fields' }],
+    ]) as any
+
+    const result = resolveFacetTabsWithIssues({
+      issues: [
+        {
+          path: ['data', 'layers'],
+          message: 'At least one layer must be visible by default.',
+        },
+      ],
+      facets,
+    })
+
+    expect(result.facetIssueSummary.firstFacetWithIssues).toBe('layers')
+    expect(result.facetIssueSummary.facetsWithIssues.has('layers')).toBe(true)
+    expect(result.facetTabsWithIssues.get('layers')?.hasIssues).toBe(true)
+    expect(result.facetTabsWithIssues.get('core')?.hasIssues).toBe(false)
   })
 })
