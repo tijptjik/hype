@@ -15,6 +15,7 @@ const {
   mockListResolvedProjectProperties,
   mockUpdateI18n,
   mockSyncProjectUserRoles,
+  mockSyncProjectLayerPresentation,
   mockAuthorizeProjectUpdateForSubmission,
   mockAuthorizeProjectCreateForSubmission,
   mockAuthorizeProjectDeleteForSubmission,
@@ -26,6 +27,7 @@ const {
   mockResolveProjectCommandProbe,
   mockUpdateProjectPublishedStateById,
   mockUpdateProjectArchivedStateById,
+  mockSetProjectMapStyleByCode,
   mockGuardedContext,
 } = vi.hoisted(() => ({
   mockProjectFormDataParse: vi.fn((input: unknown) => input),
@@ -44,6 +46,7 @@ const {
   mockListResolvedProjectProperties: vi.fn(async () => []),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncProjectUserRoles: vi.fn(async () => undefined),
+  mockSyncProjectLayerPresentation: vi.fn(async () => undefined),
   mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectCreateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectDeleteForSubmission: vi.fn(() => ({ allowed: true })),
@@ -59,6 +62,7 @@ const {
   })),
   mockUpdateProjectPublishedStateById: vi.fn(async () => null),
   mockUpdateProjectArchivedStateById: vi.fn(async () => null),
+  mockSetProjectMapStyleByCode: vi.fn(async () => undefined),
   mockGuardedContext: vi.fn(),
 }))
 
@@ -353,6 +357,17 @@ vi.mock('$lib/db/services/property', () => ({
   updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
 }))
 
+vi.mock('$lib/db/services/layer', () => ({
+  syncProjectLayerPresentation: mockSyncProjectLayerPresentation,
+}))
+
+vi.mock('$lib/db/services/map', () => ({
+  listMapStylesForProject: vi.fn(async () => []),
+  getOrganisationMapStyleScope: vi.fn(async () => null),
+  listMapStylesForScope: vi.fn(async () => []),
+  setProjectMapStyleByCode: mockSetProjectMapStyleByCode,
+}))
+
 vi.mock('$lib/i18n', async importOriginal => {
   const actual = await importOriginal<typeof import('$lib/i18n')>()
   return {
@@ -388,11 +403,13 @@ const buildUpdatePayload = (organisationId: string) => ({
   },
   data: {
     organisationId,
+    mapStyleCode: 'hyper',
     code: 'project-code',
     i18n: { en: {}, zhHans: {}, zhHant: {} },
     capabilities: {},
     userRoles: [{ userId: 'u-1', role: 'owner', capabilities: {} }],
     properties: [],
+    layers: [],
   },
 })
 
@@ -637,6 +654,25 @@ describe('project.remote form organisation move authz', () => {
         modifiedAt: '2026-02-24T01:00:00.000Z',
       },
     })
+  })
+
+  it('preserves false default-layer values when unchecked form payloads submit strings', async () => {
+    const payload = buildUpdatePayload('org-1')
+    payload.data.layers = [
+      { id: 'layer-1', rank: 0, isDefaultVisible: 'false' },
+      { id: 'layer-2', rank: 1, isDefaultVisible: 'true' },
+    ] as any
+
+    await remote.projectForm(payload, throwingInvalid)
+
+    expect(mockSyncProjectLayerPresentation).toHaveBeenCalledWith(
+      expect.any(Object),
+      'project-1',
+      [
+        { id: 'layer-1', rank: 0, isDefaultVisible: false },
+        { id: 'layer-2', rank: 1, isDefaultVisible: true },
+      ],
+    )
   })
 
   it('preserves existing local project properties when submitted snapshot omits them', async () => {
