@@ -130,7 +130,9 @@ export const POST: RequestHandler = async ({ params, platform, url }) => {
     // Start a single local render job and let polling clients observe the pending state.
     triggerMapStylePreviewGenerationLocally(key, {
       baseUrl,
-      ensureArtifacts: true,
+      // Dev server startup already materializes map-style artifacts; rebuilding them
+      // here rewrites static assets and triggers a full app reload.
+      ensureArtifacts: false,
       manageServer: false,
     })
   }
