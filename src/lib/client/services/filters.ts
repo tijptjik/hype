@@ -1,3 +1,5 @@
+// GUARDS
+import { isFeature } from '$lib/types'
 //I18N
 import { getLocaleKey, m, supportedLocaleKeys, toLocaleCode } from '$lib/i18n'
 // ENUMS
@@ -26,7 +28,12 @@ import type {
   Id,
 } from '$lib/types'
 import type { ResourceControlBarLocaleToggleItem } from '$lib/bits/patterns/resource/resourceControlBar/components'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -117,6 +124,39 @@ const resourceFilterDefaults: Partial<
   hub: {
     isArchived: false,
   },
+}
+
+/**
+ * Matches free-text admin search input against core resource identifiers and localized text.
+ * @param entity Resource to test.
+ * @param query User-entered text query.
+ * @param localeKey Active locale used to resolve localized fields.
+ * @returns `true` when any candidate string contains the normalized query.
+ */
+export function matchesResourceTextQuery(
+  entity: Organisation | Project | Layer | Feature | Hub | FeatureFromCollection,
+  query: string,
+  localeKey: LocaleKey,
+): boolean {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (normalizedQuery === '') return true
+
+  const textObject = entity.i18n?.[localeKey] ?? entity.i18n?.en ?? null
+  const contributor = isFeature(entity) ? entity.contributor?.name : ''
+  const candidates = [
+    'code' in entity ? entity.code : '',
+    'id' in entity ? entity.id : '',
+    textObject?.name,
+    textObject?.title,
+    textObject?.nameShort,
+    textObject?.description,
+    textObject?.displayAddress,
+    contributor,
+  ]
+
+  return candidates.some(
+    value => typeof value === 'string' && value.toLowerCase().includes(normalizedQuery),
+  )
 }
 
 // ---
@@ -275,10 +315,16 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
     normalizedLocales[locale] = true
   }
 
+  const nextTranslationLocales = { ...resourceFilters.translationLocales }
   for (const supportedLocale of supportedLocaleKeys) {
-    resourceFilters.translationLocales[supportedLocale] =
+    nextTranslationLocales[supportedLocale] =
       supportedLocale === currentLocaleKey ? false : normalizedLocales[supportedLocale]
   }
+
+  adminCtx.appCtx.state.viewFilters[resource] = {
+    ...resourceFilters,
+    translationLocales: nextTranslationLocales,
+  } as ViewFilters[T]
 }
 
 /**
@@ -848,7 +894,10 @@ export function setResourceFilterState<
     )
   } else {
     // Handle simple filters
-    ;(resourceFilters as any)[filterKey] = newValue
+    adminCtx.appCtx.state.viewFilters[resource] = {
+      ...resourceFilters,
+      [filterKey]: newValue,
+    } as ViewFilters[T]
   }
 }
 
@@ -871,16 +920,15 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
   const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return
 
-  let sectionFilters = (resourceFilters as any)[filterKey]
-  if (!sectionFilters || typeof sectionFilters !== 'object') {
-    // Initialize if doesn't exist
-    sectionFilters = {
-      en: null,
-      zhHant: null,
-      zhHans: null,
-    }
-    ;(resourceFilters as any)[filterKey] = sectionFilters
-  }
+  const existingSectionFilters = (resourceFilters as any)[filterKey]
+  const sectionFilters =
+    existingSectionFilters && typeof existingSectionFilters === 'object'
+      ? { ...existingSectionFilters }
+      : {
+          en: null,
+          zhHant: null,
+          zhHans: null,
+        }
 
   // Set all locales: inactive ones to null, active ones to the provided value
   const translationLocales = (resourceFilters as any).translationLocales
@@ -891,6 +939,11 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
       ;(sectionFilters as any)[locale] = null
     }
   }
+
+  adminCtx.appCtx.state.viewFilters[resource] = {
+    ...resourceFilters,
+    [filterKey]: sectionFilters,
+  } as ViewFilters[T]
 }
 
 // ---
@@ -1042,7 +1095,13 @@ export function setSimpleFilterState<K extends keyof FeatureViewFilters>(
 
   const sectionFilters = featureFilters[filterKey]
   if (sectionFilters && typeof sectionFilters === 'object') {
-    ;(sectionFilters as any)[propertyId] = value
+    adminCtx.appCtx.state.viewFilters.feature = {
+      ...featureFilters,
+      [filterKey]: {
+        ...(sectionFilters as Record<string, FilterTriState>),
+        [propertyId]: value,
+      },
+    }
   }
 }
 
