@@ -5,20 +5,21 @@ import { m } from '$lib/i18n'
 // ICONS
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 // COMPONENTS
+import * as Panel from '$lib/bits/patterns/panels'
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
-import SelectedResources from '$lib/components/panels/elements/SelectedResources.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { PanelProps, Project, Id, ResourceContext } from '$lib/types'
+import type { PanelProps, Id, ResourceContext } from '$lib/types'
 import type { Snippet } from 'svelte'
 
 // CONTEXT
 const appCtx = getAppCtx()
+const MANAGED_LIST_FLIP_DURATION_MS = 150
 
 const resourceType = FirstClassResource.project
 
@@ -27,7 +28,7 @@ let {
   filteredItem,
   ...panelProps
 }: {
-  filteredItem: Snippet<[Project, Id[], ResourceContext]>
+  filteredItem: Snippet<[any, Id[], ResourceContext]>
 } & PanelProps = $props()
 
 // Get cached features for counting
@@ -42,7 +43,7 @@ $effect(() => {
   searchTerm = ''
 })
 
-function filterProjects(projects: Project[], term: string) {
+function filterProjects(projects: typeof appCtx.state.resources.project, term: string) {
   if (!term) return projects
 
   const searchLower = term.toLowerCase()
@@ -64,23 +65,39 @@ let isDefaultOpen = $derived(
 )
 
 let handleReset = () => {
-  if (selectedProjects.length == 0) {
+  if (selectedProjects.length === 0) {
     appCtx.closePanel(panelProps.panelType)
   } else {
     appCtx.resetProjects()
   }
 }
+
+let collapsedProjects = $derived(
+  projects.filter(project => selectedProjects.includes(project.id)),
+)
 </script>
 
 <!-- COMPONENTS -->
 
 {#snippet SelectedProjects()}
-  <SelectedResources
+  <Panel.Item.SelectedResource
     {resourceType}
     resources={projects}
     selectedIds={selectedProjects}
-    colorClass="text-accent"
     {...panelProps}
+  />
+{/snippet}
+
+{#snippet ManagedProjectItem(resource: (typeof projects)[number])}
+  {@const hierarchy = appCtx.getHierarchySync(resource)}
+  {@render filteredItem(resource, selectedProjects, hierarchy)}
+{/snippet}
+
+{#snippet ManagedProjects(isOpen: boolean)}
+  <Panel.Item.ManagedItems
+    items={isOpen ? filteredProjects : collapsedProjects}
+    item={ManagedProjectItem}
+    flipDurationMs={MANAGED_LIST_FLIP_DURATION_MS}
   />
 {/snippet}
 
@@ -92,16 +109,19 @@ let handleReset = () => {
   iconVerticalPaddingClass="py-2"
   iconColorClass="text-accent"
   collapsedContent={SelectedProjects}
+  managedContent={panelProps.isAdmin && panelProps.isNarrow ? ManagedProjects : undefined}
   defaultOpen={isDefaultOpen}
   {...panelProps}
 >
   {#if projects.length > 4 && !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
-  <ResourceContainer>
-    {#each filteredProjects as resource (resource.id)}
-      {@const hierarchy = appCtx.getHierarchySync(resource)}
-      {@render filteredItem(resource, selectedProjects, hierarchy)}
-    {/each}
-  </ResourceContainer>
+  {#if !(panelProps.isAdmin && panelProps.isNarrow)}
+    <ResourceContainer>
+      {#each filteredProjects as resource (resource.id)}
+        {@const hierarchy = appCtx.getHierarchySync(resource)}
+        {@render filteredItem(resource, selectedProjects, hierarchy)}
+      {/each}
+    </ResourceContainer>
+  {/if}
 </Section>

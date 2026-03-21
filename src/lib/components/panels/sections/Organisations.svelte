@@ -10,20 +10,21 @@ import { m } from '$lib/i18n'
 // ICONS
 import UserGroup from 'virtual:icons/lucide/users'
 // COMPONENTS
+import * as Panel from '$lib/bits/patterns/panels'
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
-import SelectedResources from '../elements/SelectedResources.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Id, Organisation, PanelProps } from '$lib/types'
+import type { Id, PanelProps } from '$lib/types'
 import type { Snippet } from 'svelte'
 
 // Initialize query client and map state
 const appCtx = getAppCtx()
+const MANAGED_LIST_FLIP_DURATION_MS = 150
 
 const resourceType = FirstClassResource.organisation
 
@@ -32,7 +33,7 @@ let {
   filteredItem,
   ...panelProps
 }: {
-  filteredItem: Snippet<[Organisation, Id[]]>
+  filteredItem: Snippet<[any, Id[]]>
 } & PanelProps = $props()
 
 // Get cached features for counting
@@ -46,7 +47,10 @@ $effect(() => {
   searchTerm = ''
 })
 
-function filterOrganisations(organisations: Organisation[], term: string) {
+function filterOrganisations(
+  organisations: typeof appCtx.state.resources.organisation,
+  term: string,
+) {
   if (!term) return organisations
 
   const searchLower = term.toLowerCase()
@@ -74,16 +78,31 @@ let handleReset = () => {
     appCtx.resetOrganisations()
   }
 }
+
+let collapsedOrganisations = $derived(
+  organisations.filter(organisation => selectedOrganisations.includes(organisation.id)),
+)
 </script>
 
 <!-- COMPONENTS -->
 {#snippet SelectedOrganisations()}
-  <SelectedResources
+  <Panel.Item.SelectedResource
     {resourceType}
     resources={organisations}
     selectedIds={selectedOrganisations}
-    colorClass="text-primary"
     {...panelProps}
+  />
+{/snippet}
+
+{#snippet ManagedOrganisationItem(resource: (typeof organisations)[number])}
+  {@render filteredItem(resource, selectedOrganisations)}
+{/snippet}
+
+{#snippet ManagedOrganisations(isOpen: boolean)}
+  <Panel.Item.ManagedItems
+    items={isOpen ? filteredOrganisations : collapsedOrganisations}
+    item={ManagedOrganisationItem}
+    flipDurationMs={MANAGED_LIST_FLIP_DURATION_MS}
   />
 {/snippet}
 
@@ -95,15 +114,18 @@ let handleReset = () => {
   iconVerticalPaddingClass="py-2"
   iconColorClass="text-primary"
   collapsedContent={SelectedOrganisations}
-  defaultOpen={isDefaultOpen}
+  managedContent={panelProps.isAdmin && panelProps.isNarrow ? ManagedOrganisations : undefined}
+  defaultOpen={panelProps.isAdmin ? isDefaultOpen : false}
   {...panelProps}
 >
   {#if organisations.length > 4 && !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
-  <ResourceContainer>
-    {#each filteredOrganisations as resource (resource.id)}
-      {@render filteredItem(resource as Organisation, selectedOrganisations)}
-    {/each}
-  </ResourceContainer>
+  {#if !(panelProps.isAdmin && panelProps.isNarrow)}
+    <ResourceContainer>
+      {#each filteredOrganisations as resource (resource.id)}
+        {@render filteredItem(resource, selectedOrganisations)}
+      {/each}
+    </ResourceContainer>
+  {/if}
 </Section>
