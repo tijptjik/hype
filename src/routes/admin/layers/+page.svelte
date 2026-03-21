@@ -25,6 +25,7 @@ import LayerIcon from 'virtual:icons/lucide/layers'
 import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
 import BookOpenIcon from 'virtual:icons/lucide/book-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
+import CopyleftIcon from 'virtual:icons/lucide/copyright'
 // TYPES
 import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
@@ -111,6 +112,49 @@ const filters = {
         }),
         createTranslationFilter('isDescriptionTranslated', {
           label: m.feature__description(),
+        }),
+      ],
+    },
+    {
+      key: 'license',
+      title: m.field_license(),
+      icon: CopyleftIcon,
+      filters: [
+        createToggleFilter('isAllRightsReserved', {
+          label: 'Ⓒ',
+          tooltip: 'All rights reserved for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isPublicDomain', {
+          label: '🄏',
+          tooltip: 'Public domain commitment for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseBy', {
+          label: 'BY',
+          tooltip: 'Attribution required for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseSa', {
+          label: 'SA',
+          tooltip: 'Share alike for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseNc', {
+          label: 'NC',
+          tooltip: 'Non-commercial for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseNd', {
+          label: 'ND',
+          tooltip: 'No derivatives for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
         }),
       ],
     },

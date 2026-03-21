@@ -25,6 +25,7 @@ import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
 import BookOpenIcon from 'virtual:icons/lucide/book-open'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ImageIcon from 'virtual:icons/lucide/image'
+import CopyleftIcon from 'virtual:icons/lucide/copyright'
 // TYPES
 import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Project } from '$lib/db/zod/schema/project.types'
@@ -96,16 +97,6 @@ const filters = {
           falseLabel: m.filters__no(),
           trueLabel: m.filters__has(),
         }),
-        createToggleFilter('hasAttribution', {
-          label: m.profile__attribution(),
-          falseLabel: m.filters__no(),
-          trueLabel: m.filters__has(),
-        }),
-        createToggleFilter('hasLicense', {
-          label: m.admin__forms_projects_license(),
-          falseLabel: m.filters__no(),
-          trueLabel: m.filters__has(),
-        }),
       ],
     },
     {
@@ -122,12 +113,6 @@ const filters = {
         createTranslationFilter('isDescriptionTranslated', {
           label: m.feature__description(),
         }),
-        createTranslationFilter('isAttributionTranslated', {
-          label: m.profile__attribution(),
-        }),
-        createTranslationFilter('isLicenseTranslated', {
-          label: m.admin__forms_projects_license(),
-        }),
       ],
     },
     {
@@ -142,6 +127,49 @@ const filters = {
         }),
       ],
     },
+    {
+      key: 'license',
+      title: m.field_license(),
+      icon: CopyleftIcon,
+      filters: [
+        createToggleFilter('isAllRightsReserved', {
+          label: 'Ⓒ',
+          tooltip: 'All rights reserved for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isPublicDomain', {
+          label: 'Public Domain',
+          tooltip: 'Public domain commitment for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseBy', {
+          label: 'BY',
+          tooltip: 'Attribution required for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseSa', {
+          label: 'SA',
+          tooltip: 'Share alike for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseNc', {
+          label: 'NC',
+          tooltip: 'Non-commercial for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseNd', {
+          label: 'ND',
+          tooltip: 'No derivatives for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+      ],
+    },
   ],
 } satisfies ResourceControlBarConfig
 
@@ -151,8 +179,6 @@ const sortables = createSortables([
   createSortable('name', m.field_name()),
   createSortable('nameShort', m.field_short_name()),
   createSortable('description', m.filters__content()),
-  createSortable('license', m.field_license()),
-  createSortable('attribution', m.field_attribution()),
   createSortable('code', m.field_code()),
 ])
 

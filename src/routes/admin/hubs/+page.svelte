@@ -109,9 +109,7 @@ adminCtx.setFacet(false, false, FirstClassResource.hub)
 
 // STATE
 let entities: Hub[] = $derived(
-  adminCtx.isInitialised
-    ? adminCtx.getViewFilteredResource<Hub>(FirstClassResource.hub)
-    : [],
+  adminCtx.getViewFilteredResource<Hub>(FirstClassResource.hub),
 )
 
 $effect(() => {

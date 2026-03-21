@@ -1,7 +1,11 @@
 <script lang="ts">
+// APP
+import { page } from '$app/state'
 // SVELTE
 import { onMount, untrack } from 'svelte'
 import { debounce } from '@sillvva/utils'
+// ADAPTERS
+import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -21,8 +25,8 @@ import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 // BITS PATTERNS
 import {
   CompletionFooter,
-  FeatureIndexCard,
   FeatureRow,
+  IndexCard,
   ResourceControlBar,
   ResourceIndex,
 } from '$lib/bits'
@@ -38,6 +42,7 @@ import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ImageIcon from 'virtual:icons/lucide/image'
 import TagsIcon from 'virtual:icons/lucide/tags'
 import PenLineIcon from 'virtual:icons/lucide/pen-line'
+import CopyrightIcon from 'virtual:icons/lucide/copyright'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
@@ -45,10 +50,20 @@ import type {
   FeatureRowModel,
   FeatureTextSearchWorkerRequest,
   FeatureTextSearchWorkerResponse,
+  KeyMap,
   ResourceControlBarConfig,
   Resource,
   LocaleKey,
 } from '$lib/types'
+
+const featureIndexCardKeyMap: KeyMap = {
+  id: 'id',
+  title: 'i18n.title',
+  subtitle: 'i18n.addressProperties.neighbourhood',
+  description: 'i18n.displayAddress',
+  image: 'image',
+  badges: [],
+}
 
 const filters = {
   resource: FirstClassResource.feature,
@@ -154,6 +169,49 @@ const filters = {
           falseLabel: m.filters__not_all(),
           trueLabel: m.filters__all(),
           transformOffset: 8,
+        }),
+      ],
+    },
+    {
+      key: 'license',
+      title: m.field_license(),
+      icon: CopyrightIcon,
+      filters: [
+        createToggleFilter('isAllRightsReserved', {
+          label: 'Ⓒ',
+          tooltip: 'All rights reserved for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('isPublicDomain', {
+          label: '🄏',
+          tooltip: 'Public domain commitment for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseBy', {
+          label: 'BY',
+          tooltip: 'Attribution required for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseSa', {
+          label: 'SA',
+          tooltip: 'Share alike for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseNc', {
+          label: 'NC',
+          tooltip: 'Non-commercial for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
+        }),
+        createToggleFilter('hasLicenseNd', {
+          label: 'ND',
+          tooltip: 'No derivatives for all content',
+          falseLabel: m.filters__no(),
+          trueLabel: m.filters__is(),
         }),
       ],
     },
@@ -367,7 +425,7 @@ const scheduleRemoteQuery = debounce((nextQuery: string) => {
 
 function runScheduledRemoteQuery(nextQuery: string): void {
   if (typeof scheduleRemoteQuery === 'function') {
-    scheduleRemoteQuery(nextQuery)
+    ;(scheduleRemoteQuery as (value: string) => void)(nextQuery)
     return
   }
 
@@ -657,7 +715,14 @@ function updateRowFocus(index: number) {
   bind:listContainer
 >
   {#snippet card(entity: Feature)}
-    <FeatureIndexCard {entity} />
+    <IndexCard
+      {...createAdminIndexCardModel({
+        adminCtx,
+        entity,
+        keyMap: featureIndexCardKeyMap,
+        search: page.url.search,
+      })}
+    />
   {/snippet}
   {#snippet row(entity, index)}
     {@const rowModel = rowModelsById.get(entity.id)}
