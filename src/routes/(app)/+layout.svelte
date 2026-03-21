@@ -18,12 +18,15 @@ import { Panel } from '$lib/enums'
 // SERVICES
 import { initAddNewFeature } from '$lib/client/services/feature'
 import { startCircularFlight } from '$lib/client/services/geospatial'
+import { getActiveMapStyleCode } from '$lib/client/services/map'
 import MapCanvas from '$lib/components/common/MapCanvas.svelte'
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte'
 import Filters from '$lib/components/panels/Filters.svelte'
 import Prisms from '$lib/components/panels/Prisms.svelte'
 import Hub from '$lib/components/panels/Hub.svelte'
-import Stars from '$lib/components/panels/Stars.svelte'
+import Plan from '$lib/components/panels/Plan.svelte'
+import Passport from '$lib/components/panels/Passport.svelte'
+import EventCompanion from '$lib/components/panels/EventCompanion.svelte'
 import Settings from '$lib/components/panels/Settings.svelte'
 import Profile from '$lib/components/panels/Profile.svelte'
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte'
@@ -122,6 +125,7 @@ let trailingMenuItems = $derived(
       ]
     : [],
 )
+const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
 const isAddButtonVisible = $derived(
   !omniCtx.state.isTrayOpen &&
     !appCtx.isTransitioning &&
@@ -271,19 +275,21 @@ function handleMenuSelect(item: { value: Panel }): void {
 <div class="flex h-dvh flex-col justify-around overflow-hidden">
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
     <main
-      class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden"
+      class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden pb-19"
     >
       <!-- Panels -->
       <Prisms />
       <Hub {hub} />
       <Filters />
-      <Stars />
+      <Plan />
+      <Passport />
+      <EventCompanion />
       <Settings />
       <Profile bind:panelContainer={profilePanelContainer} />
       <!-- Map Container -->
       <div class="relative flex h-full flex-1 flex-col">
         <Omnibar />
-        <MapCanvas />
+        <MapCanvas mapStyleCode={activeMapStyleCode} />
         {@render children()}
         {#snippet addFeatureIcon()}
           <Icon
@@ -350,7 +356,7 @@ function handleMenuSelect(item: { value: Panel }): void {
   {:else if !$session.isPending && !$session.data}
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
-      <MapCanvas />
+      <MapCanvas mapStyleCode={"ghostery"} />
     </main>
   {:else}
     <!-- Loading state while session is pending -->
