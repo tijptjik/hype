@@ -60,7 +60,7 @@ onDestroy(() => {
   bind:this={thumbnailRef}
 >
   <Img
-    class="mx-auto h-[200px] w-[200px] overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
+    class="mx-auto h-50 w-50 overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
       {isPublished ? 'opacity-100' : 'border-2 border-base-200/60 blur-sm'}
       {thumbnailLoadState === 'loading' ? '!opacity-30' : ''}"
     src={getURLfromImage({
@@ -80,14 +80,14 @@ onDestroy(() => {
 
   {#if isHighlighted}
     <div
-      class="absolute bottom-0 right-0 z-50 h-0 w-0 border-b-[20px] border-l-[20px] border-b-primary border-l-transparent"
+      class="absolute bottom-0 right-0 z-50 h-0 w-0 border-b-20 border-l-20 border-b-primary border-l-transparent"
     ></div>
   {/if}
 
   {#if thumbnailLoadState === 'loaded'}
     <IntentLabel
       container={thumbnailRef}
-      intent={(image.intent || 'undefined') as Intent}
+      intent={(image.intent || 'general') as Intent}
       {idx}
       imageId={image.image.id}
     />

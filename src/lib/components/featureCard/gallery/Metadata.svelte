@@ -12,7 +12,7 @@ import type { ImageCtxEnvelope, Intent } from '$lib/db/zod/schema/image.types'
 // PROPS
 let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()
 
-const intent: Intent = $derived((currentImage?.intent || 'undefined') as Intent)
+const intent: Intent = $derived((currentImage?.intent || 'general') as Intent)
 </script>
 
 <div
