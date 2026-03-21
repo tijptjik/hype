@@ -3,6 +3,7 @@ import { m } from '$lib/i18n'
 // ICONS
 import FormInputIcon from 'virtual:icons/lucide/form-input'
 import ImageIcon from 'virtual:icons/lucide/image'
+import Layers3Icon from 'virtual:icons/lucide/layers-3'
 import MapPinIcon from 'virtual:icons/lucide/map-pin'
 import ShieldCheckIcon from 'virtual:icons/lucide/shield-check'
 import TagIcon from 'virtual:icons/lucide/tag'
@@ -18,6 +19,7 @@ export const ADMIN_FACETS = {
   address: 'address',
   images: 'images',
   fields: 'fields',
+  layers: 'layers',
 } as const satisfies Record<FacetType, FacetType>
 
 export const ADMIN_FACET_DEFINITIONS = {
@@ -41,6 +43,10 @@ export const ADMIN_FACET_DEFINITIONS = {
     label: () => m.project__fields(),
     icon: TagIcon,
   },
+  [ADMIN_FACETS.layers]: {
+    label: () => m.maps__layers(),
+    icon: Layers3Icon,
+  },
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
@@ -54,7 +60,12 @@ export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   Record<FirstClassResource, readonly FacetType[]>
 > = {
-  hub: [ADMIN_FACETS.core, ADMIN_FACETS.fields, ADMIN_FACETS.images],
+  hub: [
+    ADMIN_FACETS.core,
+    ADMIN_FACETS.layers,
+    ADMIN_FACETS.fields,
+    ADMIN_FACETS.images,
+  ],
   organisation: [
     ADMIN_FACETS.core,
     ADMIN_FACETS.capabilities,
@@ -64,6 +75,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   project: [
     ADMIN_FACETS.core,
     ADMIN_FACETS.capabilities,
+    ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.images,
   ],
