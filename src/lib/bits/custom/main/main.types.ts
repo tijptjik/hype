@@ -1,16 +1,22 @@
 import type { Snippet } from 'svelte'
+import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
 
 export interface MainRootProps {
   children?: Snippet
   class?: string
 }
 
-export interface MainSectionProps {
+export interface MainFacetProps {
   children?: Snippet
   class?: string
   isVisible?: boolean
   transition?: 'none' | 'fade'
   attrs?: Record<string, unknown>
+  previousAction?: FormFacetNavAction | null
+  nextAction?: FormFacetNavAction | null
+  fillHeight?: boolean
+  navMode?: 'centered' | 'footer'
+  contentClass?: string
 }
 
 export interface MainFormProps {
