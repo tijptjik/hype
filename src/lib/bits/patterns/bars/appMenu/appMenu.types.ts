@@ -14,4 +14,5 @@ export interface AppMenuProps<T = string> {
   trailingItems?: AppMenuItem<T>[]
   onSelect?: (item: AppMenuItem<T>) => void
   class?: string
+  style?: string
 }
