@@ -20,6 +20,7 @@ let {
   bufferAfter = 25,
   canResize = false,
   padding = 0,
+  rowGap = 0,
   applyBottomOverflow = true,
 }: {
   items: Array<T>
@@ -31,6 +32,7 @@ let {
   bufferAfter?: number
   canResize?: boolean
   padding?: number
+  rowGap?: number
   applyBottomOverflow?: boolean
 } = $props()
 
@@ -414,7 +416,9 @@ $effect(() => {
       padding}px; padding-left: {padding}px; padding-right: {padding}px;"
   >
     {#each renderedItems as row (row.id)}
-      <svelte-virtual-list-row>
+      <svelte-virtual-list-row
+        style={`--bits-virtual-list-row-gap: ${Math.max(0, rowGap)}px;`}
+      >
         {@render children(row.data, row.index)}
       </svelte-virtual-list-row>
     {/each}
@@ -492,6 +496,8 @@ svelte-virtual-list-row {
   contain: layout style;
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
+  padding-bottom: var(--bits-virtual-list-row-gap, 0px);
 }
 
 svelte-virtual-list-row * {
