@@ -31,6 +31,34 @@ const hasDefinedValue = (value: unknown): boolean => {
 const isServerIssue = (issue: RemoteFormIssue): boolean =>
   (issue as RemoteFormIssue & { server?: unknown }).server === true
 
+const toIssuePathString = (path: readonly (string | number)[] | undefined): string => {
+  if (!path || path.length === 0) return '<root>'
+  return path
+    .map(segment => (typeof segment === 'number' ? `[${segment}]` : String(segment)))
+    .join('.')
+    .replace('.[', '[')
+}
+
+const getValueAtIssuePath = (
+  value: unknown,
+  path: readonly (string | number)[] | undefined,
+): unknown => {
+  if (!path || path.length === 0) return value
+
+  let current = value
+  for (const segment of path) {
+    if (current == null) return undefined
+    if (typeof segment === 'number') {
+      if (!Array.isArray(current)) return undefined
+      current = current[segment]
+      continue
+    }
+    if (typeof current !== 'object') return undefined
+    current = (current as Record<string, unknown>)[segment]
+  }
+  return current
+}
+
 const mergeWithDescriptors = <T extends object, U extends object>(
   base: T,
   extra: U,
@@ -123,12 +151,15 @@ const syncMetaHiddenInputs = (
 const logValidationIssues = (
   stage: 'preflight' | 'submit',
   issues: RemoteFormIssue[],
+  currentValue?: unknown,
 ): void => {
   if (issues.length === 0) return
   console.error(`[remote-form] ${stage} validation issues`, {
     issues: issues.map(issue => ({
       path: issue.path,
+      pathString: toIssuePathString(issue.path),
       message: issue.message,
+      value: getValueAtIssuePath(currentValue, issue.path),
     })),
   })
 }
@@ -340,7 +371,7 @@ export function configureForm<Input = RemoteFormInput>(
       const preflightIssues = await validate()
       const hasPreflightIssues = preflightIssues.length > 0
       if (hasPreflightIssues) {
-        logValidationIssues('preflight', preflightIssues)
+        logValidationIssues('preflight', preflightIssues, typedData)
         await focusInvalid(preflightIssues)
         onissues?.({ issues: preflightIssues })
         const outcome: SubmitOutcome = { success: false, issues: preflightIssues }
@@ -369,7 +400,7 @@ export function configureForm<Input = RemoteFormInput>(
         const submitIssues = form.fields.allIssues() ?? []
         const hasIssues = submitIssues.length > 0
         const success = !hasIssues
-        if (!success) logValidationIssues('submit', submitIssues)
+        if (!success) logValidationIssues('submit', submitIssues, form.fields.value())
         if (success) {
           syncMetaWriteTokenFromResult(
             form as unknown as {
@@ -517,6 +548,13 @@ export function configureForm<Input = RemoteFormInput>(
     const preflightIssues = preflightOnly
       ? nextIssues.filter(issue => !isServerIssue(issue))
       : nextIssues
+    if (
+      preflightOnly &&
+      (wasSubmitAttempted || isSubmitRequested) &&
+      preflightIssues.length
+    ) {
+      logValidationIssues('preflight', preflightIssues, form.fields.value())
+    }
     if (onissues && !deepEqual(lastIssues ?? [], nextIssues)) {
       onissues({ issues: nextIssues })
     }
