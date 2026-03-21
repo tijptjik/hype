@@ -5,11 +5,7 @@ import {
   FormFeatureSectionHeader,
   FormFeatureSubSectionHeader,
 } from '$lib/bits/patterns/forms/formFeatureSectionHeader'
-import {
-  FormParentLayerSection,
-  FormParentOrganisationSection,
-  FormParentProjectSection,
-} from '$lib/bits/patterns/forms/formParentSection'
+import { FormParentSection } from '$lib/bits/patterns/forms/formParentSection'
 import EraserIcon from 'virtual:icons/lucide/eraser'
 import type { FormFeatureParentSectionProps } from './formFeatureParentSection.types'
 
@@ -70,19 +66,19 @@ let {
       />
     {/snippet}
 
-    <FormParentOrganisationSection
+    <FormParentSection
       title={m.resource__organisation_singular()}
       subHeader={subHeader ?? defaultSubHeader}
       {...sharedSectionProps}
       {...organisationSection}
     />
-    <FormParentProjectSection
+    <FormParentSection
       title={m.resource__project_singular()}
       subHeader={subHeader ?? defaultSubHeader}
       {...sharedSectionProps}
       {...projectSection}
     />
-    <FormParentLayerSection
+    <FormParentSection
       title={m.resource__layer_singular()}
       subHeader={subHeader ?? defaultSubHeader}
       {...sharedSectionProps}

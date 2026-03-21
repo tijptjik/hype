@@ -1,8 +1,8 @@
 import type { Snippet } from 'svelte'
 import type {
+  FormParentProjectSectionProps,
   FormParentSectionHeaderContext,
   FormParentLayerSectionProps,
-  FormParentProjectSectionProps,
   FormParentSectionProps,
 } from '$lib/bits/patterns/forms/formParentSection'
 

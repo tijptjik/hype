@@ -13,17 +13,23 @@ let {
 } = $props()
 </script>
 
-<section class="bits-theme bits-form__section bits-form__capabilities-empty">
-  <h3 class="bits-form__capabilities-empty-title">
-    {m.admin__forms_capabilities_empty_title()}
-  </h3>
-  <p class="bits-form__capabilities-empty-description">
-    {m.admin__forms_capabilities_empty_description()}
-  </p>
+<section
+  class="bits-theme bits-form__section bits-form__capabilities-empty bits-form__empty-state"
+>
+  <div class="bits-form__empty-state-copy">
+    <h3 class="bits-form__capabilities-empty-title bits-form__empty-state-title">
+      {m.admin__forms_capabilities_empty_title()}
+    </h3>
+    <p
+      class="bits-form__capabilities-empty-description bits-form__empty-state-description"
+    >
+      {m.admin__forms_capabilities_empty_description()}
+    </p>
+  </div>
   <Button
     text={m.admin__forms_capabilities_add()}
     color="primary"
-    class="bits-form__capabilities-empty-cta"
+    class="bits-form__capabilities-empty-cta bits-form__empty-state-cta"
     {disabled}
     onClick={onEnterEditMode}
   />

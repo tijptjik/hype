@@ -34,62 +34,30 @@ export interface FormParentSectionHeaderContext {
   onToggleAdding: () => void
 }
 
-export interface FormParentSectionProps {
+export interface FormParentSectionProps<
+  TItem extends ParentSectionItemBase = ParentSectionOrganisationItem,
+> {
   title: string
   subtitle?: string
   issues?: string[]
   subHeader?: Snippet<[FormParentSectionHeaderContext]>
-  parent: ParentSectionOrganisationItem | null
-  hiddenOrganisationInputAttrs?: Record<string, unknown> | null
+  parent: TItem | null
+  hiddenInputAttrs?: Record<string, unknown> | null
   isEditing?: boolean
   isSubmitting?: boolean
   isSubmitRequested?: boolean
   startInAddingMode?: boolean
   searchScopeKey?: string
+  closeOnParentChange?: boolean
   onBeginReplaceParent?: () => void
   onCancelReplaceParent?: () => void
   onRemoveParent?: () => void
-  onSearchOrganisations: (query: string) => Promise<ParentSectionOrganisationItem[]>
-  onReplaceParent: (organisation: ParentSectionOrganisationItem) => void
+  onSearch: (query: string) => Promise<TItem[]>
+  onReplaceParent: (item: TItem) => void
   class?: string
 }
 
-export interface FormParentProjectSectionProps {
-  title: string
-  subtitle?: string
-  issues?: string[]
-  subHeader?: Snippet<[FormParentSectionHeaderContext]>
-  parent: ParentSectionProjectItem | null
-  hiddenProjectInputAttrs?: Record<string, unknown> | null
-  isEditing?: boolean
-  isSubmitting?: boolean
-  isSubmitRequested?: boolean
-  startInAddingMode?: boolean
-  searchScopeKey?: string
-  onBeginReplaceParent?: () => void
-  onCancelReplaceParent?: () => void
-  onRemoveParent?: () => void
-  onSearchProjects: (query: string) => Promise<ParentSectionProjectItem[]>
-  onReplaceParent: (project: ParentSectionProjectItem) => void
-  class?: string
-}
+export type FormParentProjectSectionProps =
+  FormParentSectionProps<ParentSectionProjectItem>
 
-export interface FormParentLayerSectionProps {
-  title: string
-  subtitle?: string
-  issues?: string[]
-  subHeader?: Snippet<[FormParentSectionHeaderContext]>
-  parent: ParentSectionLayerItem | null
-  hiddenLayerInputAttrs?: Record<string, unknown> | null
-  isEditing?: boolean
-  isSubmitting?: boolean
-  isSubmitRequested?: boolean
-  startInAddingMode?: boolean
-  searchScopeKey?: string
-  onBeginReplaceParent?: () => void
-  onCancelReplaceParent?: () => void
-  onRemoveParent?: () => void
-  onSearchLayers: (query: string) => Promise<ParentSectionLayerItem[]>
-  onReplaceParent: (layer: ParentSectionLayerItem) => void
-  class?: string
-}
+export type FormParentLayerSectionProps = FormParentSectionProps<ParentSectionLayerItem>

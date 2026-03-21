@@ -61,7 +61,7 @@ function toImageSrc(organisation: HubOrganisationItem): string | null {
   try {
     return getURLfromImage({
       image: organisation.image as any,
-      transformation: 'c_fill,h_96,w_96',
+      transformation: 'c_fill,h_256,w_256',
     })
   } catch {
     return null
@@ -211,6 +211,7 @@ $effect(() => {
       {@const selection = toSelection(organisation.id)}
       <ResourceCard.Root>
         <ResourceCard.Media
+          size="xl"
           image={toImageSrc(organisation)}
           alt={organisation.i18n?.en?.name || organisation.code}
         />
@@ -218,7 +219,7 @@ $effect(() => {
           code={organisation.code}
           name={organisation.i18n?.en?.name || organisation.code}
         />
-        <ResourceCard.Actions
+        <ResourceCard.HubActions
           {isRemoving}
           {isEditing}
           {isSubmitting}

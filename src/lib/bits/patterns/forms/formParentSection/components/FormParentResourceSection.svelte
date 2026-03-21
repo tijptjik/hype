@@ -4,7 +4,7 @@
 >
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
-import { Search, SectionHeader } from '$lib/bits/custom'
+import { Card, Search, SectionHeader } from '$lib/bits/custom'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 
 // PATTERNS
@@ -256,10 +256,11 @@ $effect(() => {
   <div class="bits-form__parent-resource-list">
     <ResourceCard.Root class={!parent ? 'bits-form__parent-resource-item--empty' : ''}>
       <ResourceCard.Media
+        size="xl"
         image={parent
           ? getImageSrcOrHashicon(parent.image, parent.id, {
-              transformation: 'c_fill,h_96,w_96',
-              hashiconSize: 64,
+              transformation: 'c_fill,h_256,w_256',
+              hashiconSize: 256,
             })
           : null}
         alt={parent?.i18n?.en?.name || parent?.code || `No ${title}`}
@@ -269,18 +270,19 @@ $effect(() => {
         name={parent?.i18n?.en?.name || parent?.code || `No ${title}`}
       />
       {#if hasPendingRemoval && parent}
-        <div class="bits-resource-card__actions">
+        <Card.Actions padding="sm" class="bits-form__parent-resource-card-actions">
           <Button
             text={m.filters__clear()}
             style="ghost"
             color="light"
-            size="sm"
+            size="md"
             modifier="circle"
             iconComponent={XIcon}
             onClick={handleRemoveParent}
             disabled={isSubmitting}
+            class="bits-form__parent-resource-card-remove-btn"
           />
-        </div>
+        </Card.Actions>
       {/if}
     </ResourceCard.Root>
   </div>

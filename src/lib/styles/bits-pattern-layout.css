@@ -32,7 +32,8 @@
   }
 
   .bits-theme .bits-overlay-bar :global(button),
-  .bits-theme .bits-overlay-bar :global(a) {
+  .bits-theme .bits-overlay-bar :global(a),
+  .bits-theme .bits-overlay-bar :global(.bits-btn__transition-shell) {
     pointer-events: auto;
   }
 
@@ -162,6 +163,323 @@
     @apply h-full;
   }
 
+  .bits-panel-section-header-root {
+    @apply flex w-full shrink-0 cursor-pointer items-center justify-between bg-black pl-4 pr-2.75 text-base-content focus:outline-none focus:ring-0;
+  }
+
+  .bits-panel-section-header {
+    @apply flex w-full flex-row items-center justify-between;
+  }
+
+  .bits-panel-section-header-root--narrow {
+    @apply justify-center;
+  }
+
+  .bits-panel-section-header-title {
+    @apply flex flex-row items-center gap-3;
+  }
+
+  .bits-panel-section-header-title__stack {
+    @apply space-y-0.5;
+  }
+
+  .bits-panel-section-header-title__row {
+    @apply flex items-center gap-3;
+  }
+
+  .bits-panel-section-header-title__chevron {
+    @apply h-[1.125rem] w-[1.125rem];
+  }
+
+  .bits-panel-section-header-title__heading {
+    @apply text-sm uppercase tracking-widest;
+  }
+
+  .bits-panel-section-header-title__description {
+    @apply text-left text-sm text-base-content/60;
+  }
+
+  .bits-panel-section-header-icon {
+    @apply focus:outline-none focus:ring-0;
+  }
+
+  .bits-panel-section-header-icon--narrow {
+    @apply px-2 py-2;
+  }
+
+  .bits-panel-section-header-icon__graphic {
+    @apply h-8 w-8;
+  }
+
+  .bits-panel-section-content {
+    @apply flex min-h-0 grow flex-col overflow-hidden bg-black caret-white;
+  }
+
+  .bits-panel-section-content--collapsed {
+    @apply shrink-0 overflow-visible;
+  }
+
+  .bits-panel-section-content--managed {
+    @apply shrink-0 overflow-visible;
+  }
+
+  .bits-theme .bits-panel-selected-filter {
+    @apply flex flex-wrap justify-start gap-2 px-8.5 pt-2;
+  }
+
+  .bits-theme .bits-panel-selected-filter__text {
+    @apply pb-2 text-sm text-base-content/60;
+  }
+
+  .bits-theme .bits-panel-selected-resource {
+    @apply px-2 pt-2 pb-4;
+  }
+
+  .bits-theme .bits-panel-selected-resource--narrow {
+    @apply w-full px-0 py-1;
+  }
+
+  .bits-theme .bits-panel-selected-resource__stack {
+    @apply grid;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state {
+    @apply col-start-1 row-start-1 transition-all duration-500 ease-in-out;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state[data-active="false"] {
+    @apply pointer-events-none opacity-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--wide[data-active="true"] {
+    @apply translate-x-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--wide[data-active="false"] {
+    @apply -translate-x-6;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--narrow {
+    @apply flex w-20 justify-center;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--narrow[data-active="true"] {
+    @apply translate-x-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--narrow[data-active="false"] {
+    @apply translate-x-6;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-list {
+    @apply mb-0 flex max-h-[33vh] flex-wrap content-start items-start gap-x-0 gap-y-2 overflow-y-auto overscroll-contain px-6 pt-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-chip {
+    @apply inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 rounded-full border border-current/20 bg-transparent px-3 py-1.5 text-left leading-tight;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-chip-label {
+    @apply min-w-0 justify-self-start whitespace-normal wrap-break-word leading-tight text-sm;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-chip-icon {
+    @apply h-3 w-3 shrink-0 self-center -ml-1;
+  }
+
+  .bits-theme .bits-panel-selected-resource__empty {
+    @apply flex flex-wrap justify-start gap-2 px-[1.625rem];
+  }
+
+  .bits-theme .bits-panel-selected-resource__empty-text {
+    @apply pb-2 text-sm text-base-content/60;
+  }
+
+  .bits-theme .bits-panel-selected-resource__narrow-list {
+    @apply flex w-auto min-w-12 flex-col items-center justify-start gap-[1px];
+  }
+
+  .bits-panel-item-resource {
+    @apply flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 text-base-content caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0;
+  }
+
+  .bits-panel-item-resource--narrow {
+    @apply w-auto justify-center gap-0 py-0;
+  }
+
+  .bits-panel-item-resource:not(.bits-panel-item-resource--narrow) {
+    @apply pl-9 pr-4;
+  }
+
+  .bits-panel-item-resource__main {
+    @apply flex flex-row items-center gap-3;
+  }
+
+  .bits-panel-item-resource__main--narrow {
+    @apply h-6 min-w-12 justify-center px-0;
+  }
+
+  .bits-panel-item-resource__main--wide {
+    @apply -translate-x-5;
+  }
+
+  .bits-panel-item-resource__dot {
+    @apply h-2 w-2 shrink-0 rounded-full bg-base-content/30 transition-all;
+  }
+
+  .bits-panel-item-resource__copy {
+    @apply flex min-w-0 overflow-visible flex-col items-start gap-0;
+  }
+
+  .bits-panel-item-resource__name {
+    @apply min-w-0 whitespace-normal break-words font-light leading-tight;
+  }
+
+  .bits-panel-item-resource__name--active {
+    color: var(--bits-panel-item-tone-text, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource__action {
+    @apply shrink-0 text-sm text-base-content/20 group-hover:text-base-content/40 group-focus-visible:text-base-content/40;
+  }
+
+  .bits-panel-item-resource__action-icon {
+    @apply h-6 w-6;
+  }
+
+  .bits-panel-item-resource__narrow-close {
+    @apply h-6 w-6;
+  }
+
+  .bits-panel-item-resource__narrow-close--active {
+    color: var(--bits-panel-item-tone-text, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource__dot--hidden {
+    @apply opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100;
+  }
+
+  .bits-panel-item-resource__dot--narrow-unselected {
+    @apply outline-2 outline-offset-2;
+  }
+
+  .bits-panel-item-resource__dot--active {
+    @apply outline-white group-hover:scale-[160%] group-hover:outline-1 group-hover:outline-offset-0;
+  }
+
+  .bits-panel-item-resource[data-selected="true"] .bits-panel-item-resource__dot {
+    background-color: var(--bits-panel-item-tone-bg, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource[data-selected="false"]:hover .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-selected="false"]:focus-visible
+    .bits-panel-item-resource__dot {
+    @apply bg-base-content/50;
+  }
+
+  .bits-panel-item-resource[data-selected="true"]:hover .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-selected="true"]:focus-visible
+    .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-active="true"] .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-active="true"]:hover .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-active="true"]:focus-visible
+    .bits-panel-item-resource__dot {
+    background-color: var(--bits-panel-item-tone-bg-hover, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource[data-tone="primary"] {
+    --bits-panel-item-tone-bg: var(--color-primary);
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-primary) 75%,
+      transparent
+    );
+    --bits-panel-item-tone-text: var(--color-primary);
+  }
+
+  .bits-panel-item-resource[data-tone="accent"] {
+    --bits-panel-item-tone-bg: var(--color-accent);
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-accent) 75%,
+      transparent
+    );
+    --bits-panel-item-tone-text: var(--color-accent);
+  }
+
+  .bits-panel-item-resource[data-tone="secondary"] {
+    --bits-panel-item-tone-bg: var(--color-secondary);
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-secondary) 75%,
+      transparent
+    );
+    --bits-panel-item-tone-text: var(--color-secondary);
+  }
+
+  .bits-panel-item-resource[data-tone="neutral"] {
+    --bits-panel-item-tone-bg: color-mix(
+      in oklab,
+      var(--color-base-content) 60%,
+      transparent
+    );
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-base-content) 60%,
+      transparent
+    );
+    --bits-panel-item-tone-text: color-mix(
+      in oklab,
+      var(--color-base-content) 60%,
+      transparent
+    );
+  }
+
+  .bits-panel-item-resource__tooltip {
+    @apply pointer-events-auto fixed z-50 min-h-4 min-w-10 whitespace-nowrap rounded-r-md bg-black px-3 py-2 text-center text-sm text-base-content;
+  }
+
+  .bits-panel-header-admin {
+    @apply flex h-18 shrink-0 flex-row items-center justify-between bg-black p-4 pt-6;
+  }
+
+  .bits-panel-header-admin__title {
+    @apply text-lg font-semibold uppercase text-white;
+  }
+
+  .bits-panel-header-admin__actions {
+    @apply flex gap-2;
+  }
+
+  .bits-panel-header-admin__button.btn {
+    @apply m-0;
+  }
+
+  .bits-panel-header-admin__button.bits-btn {
+    @apply m-0;
+  }
+
+  .bits-panel-header-admin__button.bits-btn .bits-btn__icon {
+    @apply h-6 w-6 hover:text-white;
+  }
+
+  .bits-panel-header-admin__narrow-trigger.bits-btn {
+    @apply m-0 w-full justify-center p-1;
+    --btn-bg: transparent;
+    --btn-border: transparent;
+    --btn-hover-bg: transparent;
+    --btn-active-bg: transparent;
+    --btn-fg: var(--color-primary);
+    --btn-hover-fg: color-mix(in oklab, var(--color-primary) 82%, white);
+    --btn-active-fg: color-mix(in oklab, var(--color-primary) 72%, white);
+    box-shadow: none;
+  }
+
+  .bits-panel-header-admin__narrow-trigger.bits-btn .bits-btn__icon {
+    @apply h-8 w-8;
+    color: oklch(var(--color-primary) 80% 1 1);
+  }
+
   .bits-theme .bits-admin-menu {
     @apply flex w-full shrink-0 caret-transparent;
   }
@@ -217,7 +535,7 @@
   }
 
   .bits-theme .bits-admin-menu__badge {
-    @apply pointer-events-none absolute right-0 top-0 inline-flex size-5 items-center justify-center rounded-full border border-base-100 bg-primary text-[0.7rem] font-semibold leading-none text-primary-content;
+    @apply pointer-events-none absolute right-2.5 top-0.5 inline-flex size-5 items-center justify-center rounded-full border border-base-100 bg-primary text-[0.7rem] font-semibold leading-none text-primary-content;
     transform: translate(20%, -12%);
   }
 
@@ -236,6 +554,6 @@
   }
 
   .bits-theme .bits-admin-shell__main {
-    @apply flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
   }
 }

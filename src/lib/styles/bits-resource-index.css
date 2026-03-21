@@ -17,7 +17,6 @@
 
   .bits-theme .bits-resource-index__fallback-card,
   .bits-theme .bits-resource-index__fallback-row,
-  .bits-theme .bits-resource-index__status,
   .bits-theme .bits-resource-group-header {
     border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
     background: color-mix(in oklab, var(--color-base-100) 88%, transparent);
@@ -58,6 +57,29 @@
     place-items: center;
     gap: 0.75rem;
     text-align: center;
+  }
+
+  .bits-theme .bits-resource-index__status--empty {
+    min-height: 100%;
+    align-content: center;
+    justify-items: center;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-resource-index__status--empty .bits-resource-index__status-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .bits-theme .bits-resource-index__status-subtitle {
+    max-width: 28rem;
+    font-size: 1.125rem;
+    line-height: 1.5;
+    color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
   }
 
   .bits-theme .bits-resource-index__spinner {

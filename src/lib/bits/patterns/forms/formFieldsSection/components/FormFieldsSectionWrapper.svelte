@@ -54,18 +54,22 @@ const moveWindowSize = $derived(
   </section>
 {:else if items.length === 0}
   <section
-    class="bits-theme bits-form__section bits-project-fields__empty"
+    class="bits-theme bits-form__section bits-project-fields__empty bits-form__empty-state"
     role="status"
     aria-live="polite"
     in:fade={{ duration: 140 }}
     out:fade={{ duration: 120 }}
   >
-    <h3 class="bits-project-fields__empty-title">
-      {m.admin__forms_project_fields_empty_title()}
-    </h3>
-    <p class="bits-project-fields__empty-description">
-      {m.admin__forms_project_fields_empty_description()}
-    </p>
+    <div class="bits-form__empty-state-copy">
+      <h3 class="bits-project-fields__empty-title bits-form__empty-state-title">
+        {m.admin__forms_project_fields_empty_title()}
+      </h3>
+      <p
+        class="bits-project-fields__empty-description bits-form__empty-state-description"
+      >
+        {m.admin__forms_project_fields_empty_description()}
+      </p>
+    </div>
     {#if canEdit}
       <Button
         text={m.fun_away_bird_peek()}
@@ -73,7 +77,7 @@ const moveWindowSize = $derived(
         iconComponent={ListPlus}
         disabled={disableEmptyAdd || !onAdd}
         onClick={event => onAdd?.(event)}
-        class="bits-project-fields__empty-add-btn"
+        class="bits-project-fields__empty-add-btn bits-form__empty-state-cta"
       />
     {/if}
   </section>

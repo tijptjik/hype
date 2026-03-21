@@ -68,7 +68,6 @@ $effect(() => {
 })
 
 const toggleCollapsed = (): void => {
-  onCollapseToggle?.()
   setCollapsed(!collapsed)
 }
 

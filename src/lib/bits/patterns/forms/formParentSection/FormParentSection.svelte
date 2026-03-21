@@ -1,4 +1,7 @@
-<script lang="ts">
+<script
+  lang="ts"
+  generics="TItem extends import('./formParentSection.types').ParentSectionItemBase"
+>
 // COMPONENTS
 import FormParentResourceSection from './components/FormParentResourceSection.svelte'
 
@@ -6,14 +9,16 @@ import FormParentResourceSection from './components/FormParentResourceSection.sv
 import type { FormParentSectionProps } from './formParentSection.types'
 
 let {
-  hiddenOrganisationInputAttrs = null,
-  onSearchOrganisations,
+  hiddenInputAttrs = null,
+  closeOnParentChange = false,
+  onSearch,
   ...props
-}: FormParentSectionProps = $props()
+}: FormParentSectionProps<TItem> = $props()
 </script>
 
 <FormParentResourceSection
   {...props}
-  hiddenInputAttrs={hiddenOrganisationInputAttrs}
-  onSearch={onSearchOrganisations}
+  {hiddenInputAttrs}
+  {closeOnParentChange}
+  {onSearch}
 />
