@@ -58,7 +58,6 @@ let activeStyleToken = $state<string | null>(null)
 let isTrackingMapUrl = $state(false)
 let detachMapUrlTracking: (() => void) | null = null
 let styleRequestSerial = 0
-let resizeObserver: ResizeObserver | null = null
 
 const MAP_TRACKING_PARAM = 'mapTracking'
 const MAP_LNG_PARAM = 'lng'
@@ -323,11 +322,6 @@ onMount(async () => {
   updateMapUrlTracking()
   queueMapResize()
 
-  resizeObserver = new ResizeObserver(() => {
-    queueMapResize()
-  })
-  resizeObserver.observe(mapContainer)
-
   appCtx.map.on('load', () => {
     const map = appCtx.map
     if (!map) {
@@ -500,8 +494,6 @@ onMount(async () => {
 onDestroy(() => {
   detachMapUrlTracking?.()
   detachMapUrlTracking = null
-  resizeObserver?.disconnect()
-  resizeObserver = null
 })
 
 watch(
