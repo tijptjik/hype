@@ -1,7 +1,7 @@
-import { supportedLocales } from '$lib/enums'
-import * as m from '$lib/paraglide/messages'
+import { supportedLocales } from '../../enums'
+import * as m from '../../paraglide/messages'
 
-import type { Locale } from '$lib/types'
+import type { Locale } from '../../types'
 import type { MapStyleCatalogKey } from './catalog'
 
 // ═══════════════════════

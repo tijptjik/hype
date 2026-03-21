@@ -1,5 +1,5 @@
 // TYPES
-import type { PreviewRenderJob } from '$lib/types'
+import type { PreviewRenderJob } from '../../types'
 // HELPERS
 import {
   getMapStylePreviewObjectKey,

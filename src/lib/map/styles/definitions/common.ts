@@ -1,7 +1,7 @@
 import { layers, namedFlavor } from '@protomaps/basemaps'
 import type { StyleSpecification } from 'maplibre-gl'
 
-import type { Locale } from '$lib/types'
+import type { Locale } from '../../../types'
 
 export type StyleBuildOptions = {
   noLabels?: boolean

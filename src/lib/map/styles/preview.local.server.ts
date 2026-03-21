@@ -6,7 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { chromium } from '@playwright/test'
 import sharp from 'sharp'
 
-import type { PreviewManifestEntry } from '$lib/types'
+import type { PreviewManifestEntry } from '../../types'
 import { buildMapStyleArtifacts } from './build'
 import { getMapStyleAssetRecord, type MapStyleKey } from './registry'
 import { MAP_STYLE_PREVIEW_DIR, getMapStylePreviewFilePath } from './preview.server'

@@ -1,6 +1,6 @@
 import type { StyleSpecification } from 'maplibre-gl'
 
-import type { Locale } from '$lib/types'
+import type { Locale } from '../../../types'
 
 import {
   buildNamedProtomapsStyle,

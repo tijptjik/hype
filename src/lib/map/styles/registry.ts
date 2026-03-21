@@ -7,7 +7,7 @@ import {
 import { applySpriteVariant, type MapStyleDefinition } from './definitions/common'
 // TYPES
 import type { StyleSpecification } from 'maplibre-gl'
-import type { Locale } from '$lib/types'
+import type { Locale } from '../../types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
