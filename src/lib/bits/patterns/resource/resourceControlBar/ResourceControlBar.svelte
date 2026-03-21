@@ -152,25 +152,31 @@ $effect(() => {
       {#each filters.sections as section, idx (section.key)}
         {#if activeSection !== section.key}
           {@const SectionIcon = section.icon}
-          <button
+          {@const sectionCount = getFilterSectionCount(
+            adminCtx,
+            filters,
+            section,
+            isSuperAdmin,
+          )}
+          <Button
+            text={section.title}
+            iconComponent={SectionIcon}
+            style="none"
+            size="sm"
+            transition="fade"
+            duration={220}
+            delay={50 * idx}
+            outDuration={180}
             class="bits-resource-filter-bar__section-button"
-            in:fade|global={{ duration: 220, delay: 50 * idx }}
-            out:fade|global={{ duration: 180 }}
-            onclick={() => {
+            attrs={{
+              'data-has-indicator': sectionCount > 0 ? 'true' : 'false',
+            }}
+            onClick={() => {
               selectSection(section.key)
               closeMenu()
               notifyLayoutChange()
             }}
-          >
-            <SectionIcon class="h-4 w-4" />
-            <span class="hidden lg:inline">{section.title}</span>
-            {#if getFilterSectionCount(adminCtx, filters, section, isSuperAdmin) > 0}
-              <span
-                class="bits-resource-filter-bar__section-indicator"
-                aria-hidden="true"
-              ></span>
-            {/if}
-          </button>
+          />
         {/if}
       {/each}
     {/snippet}
@@ -221,6 +227,7 @@ $effect(() => {
               {#each visibleItems as item, idx (item.id)}
                 <ResourceControlBarPrimitive.FilterToggle
                   label={item.label}
+                  tooltip={item.tooltip}
                   currentValue={item.currentValue}
                   idx={filterCarouselIndex + idx}
                   transformOffset={item.transformOffset ?? 12}

@@ -76,20 +76,34 @@
     opacity: 0.35;
   }
 
-  .bits-resource-filter-bar__section-button {
-    @apply relative inline-flex h-10 items-center gap-2 rounded-md border border-transparent bg-transparent px-2.5 text-sm text-base-content/70 shadow-none outline-none transition-colors duration-300;
+  .bits-resource-filter-bar__section-button.bits-btn {
+    @apply relative h-10 rounded-md border border-transparent bg-transparent px-2.5 text-sm text-base-content/70 shadow-none outline-none transition-colors duration-300;
+    min-width: 0;
   }
 
-  .bits-resource-filter-bar__section-button:hover,
-  .bits-resource-filter-bar__section-button:focus-visible {
+  .bits-resource-filter-bar__section-button.bits-btn:hover:not(:disabled):not(
+      [aria-disabled="true"]
+    ),
+  .bits-resource-filter-bar__section-button.bits-btn:focus-visible:not(:disabled):not(
+      [aria-disabled="true"]
+    ) {
     @apply bg-transparent text-white shadow-none outline-none;
     border-color: transparent;
   }
 
-  .bits-resource-filter-bar__section-indicator {
+  .bits-resource-filter-bar__section-button.bits-btn .bits-btn__label {
+    @apply hidden lg:inline;
+  }
+
+  .bits-resource-filter-bar__section-button.bits-btn .bits-btn__icon {
+    @apply h-4 w-4;
+  }
+
+  .bits-resource-filter-bar__section-button.bits-btn[data-has-indicator="true"]::after {
     @apply absolute right-0 top-0 h-2.5 w-2.5 rounded-full;
     background-color: var(--color-secondary);
     box-shadow: 0 0 0 2px var(--color-base-200);
+    content: "";
   }
 
   .bits-resource-filter-bar__sort {

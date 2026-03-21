@@ -63,6 +63,7 @@ export type ResourceControlBarFilterResetProps = {
 
 export type ResourceControlBarTriStateToggleProps = {
   label: string
+  tooltip?: string
   currentValue: boolean | null
   falseLabel?: string
   trueLabel?: string
@@ -74,6 +75,7 @@ export type ResourceControlBarTriStateToggleProps = {
 
 export type ResourceControlBarToggleProps = {
   label: string
+  tooltip?: string
   currentValue: boolean | null
   onToggleFalse: () => void
   onToggleTrue: () => void

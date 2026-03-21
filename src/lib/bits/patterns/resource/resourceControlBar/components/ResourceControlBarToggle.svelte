@@ -8,6 +8,7 @@ import type { ResourceControlBarToggleProps } from './resourceControlBarPrimitiv
 
 let {
   label,
+  tooltip,
   currentValue,
   onToggleFalse,
   onToggleTrue,
@@ -46,6 +47,7 @@ function handleCheckedChange(nextChecked: boolean | null): void {
 
 <TriStateToggle
   {label}
+  {tooltip}
   {currentValue}
   {falseLabel}
   {trueLabel}

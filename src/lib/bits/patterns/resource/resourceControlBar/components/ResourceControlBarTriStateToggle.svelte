@@ -1,4 +1,6 @@
 <script lang="ts">
+// BITS
+import { SimpleTooltip } from '$lib/bits/core/tooltip'
 // BITS CUSTOM
 import Switch from '$lib/bits/custom/switch/Switch.svelte'
 // TYPES
@@ -6,6 +8,7 @@ import type { ResourceControlBarTriStateToggleProps } from './resourceControlBar
 
 let {
   label,
+  tooltip,
   currentValue = null,
   falseLabel = '',
   trueLabel = '',
@@ -40,7 +43,15 @@ function handleTrueClick(event: MouseEvent): void {
   class={`bits-resource-filter-bar__tri-toggle ${className}`.trim()}
   style={offsetStyle}
 >
-  <div class="bits-resource-filter-bar__tri-toggle-label">{label}</div>
+  <SimpleTooltip disabled={!tooltip}>
+    {#snippet trigger()}
+      <div class="bits-resource-filter-bar__tri-toggle-label">{label}</div>
+    {/snippet}
+
+    {#snippet children()}
+      <span>{tooltip}</span>
+    {/snippet}
+  </SimpleTooltip>
   <div class="bits-theme bits-resource-filter-bar__tri-toggle-control">
     <button
       type="button"
