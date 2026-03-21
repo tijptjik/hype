@@ -113,10 +113,10 @@ export const createProject = async (
   db: Database,
   data: ProjectDBNew,
 ): Promise<ProjectDB> =>
-  await insert(db, project, {
+  (await insert(db, project, {
     ...data,
     isPublished: data.isPublished ?? false,
-  })
+  })) as ProjectDB
 
 /**
  * Creates relational i18n records for a project.
@@ -326,8 +326,6 @@ export async function listProjects<
       name: projectI18n.name,
       nameShort: projectI18n.nameShort,
       description: projectI18n.description,
-      license: projectI18n.license,
-      attribution: projectI18n.attribution,
     },
     i18nTable: projectI18n,
     parentIdColumn: project.id,
@@ -593,7 +591,7 @@ export const getProjectForFeatureId = async (
     with: { layer: { with: { project: true } } },
   })
 
-  return record?.layer?.project || undefined
+  return (record?.layer?.project as ProjectDB | undefined) || undefined
 }
 
 // ═══════════════════════
@@ -649,7 +647,7 @@ export const updateProjectById = async (
   db: Database,
   data: ProjectDBPartial,
   id: Id,
-): Promise<ProjectDB> => await update(db, project, data, project.id, id)
+): Promise<ProjectDB> => (await update(db, project, data, project.id, id)) as ProjectDB
 
 /**
  * Updates project core fields with optimistic concurrency guard on `modifiedAt`.
@@ -666,6 +664,7 @@ export const updateProjectByIdWithConcurrency = async (
     data: {
       organisationId: ProjectDB['organisationId']
       code: string
+      license: ProjectDB['license']
       capabilities: ProjectDB['capabilities']
     }
   },

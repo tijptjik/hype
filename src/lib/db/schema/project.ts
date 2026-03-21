@@ -55,11 +55,13 @@ export const project = sqliteTable('project', {
       manageDropOffs: false,
     } as ProjectCapabilities),
   // Project-level copyright / reuse policy and attribution settings.
-  // Stored as plain text so Zod/service layers own parsing and normalization.
-  license: text('license')
-    .$type<ProjectLicense | string>()
+  // Stored as JSON so Drizzle serializes/deserializes the license matrix consistently.
+  license: text('license', {
+    mode: 'json',
+  })
+    .$type<ProjectLicense>()
     .notNull()
-    .default(JSON.stringify(createDefaultProjectLicense())),
+    .default(createDefaultProjectLicense()),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
