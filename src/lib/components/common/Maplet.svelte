@@ -4,8 +4,9 @@ import { fade } from 'svelte/transition'
 import { onMount } from 'svelte'
 // MapLibre
 import { addAddressMarker } from '$lib/map/markers'
-import { getDefaultMapStyleKey } from '$lib/map/styles'
 import { getCoordinates } from '$lib/client/services/geospatial'
+import { getLocale } from '$lib/i18n'
+import { listMapStyleCatalog } from '$lib/map/styles'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/lucide/shrink'
 import ArrowsPointingOut from 'virtual:icons/lucide/expand'
@@ -20,6 +21,7 @@ type MapProps = {
   coordinates: number[]
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
+  mapStyleCode?: string | null
   draggable?: boolean
   toggleFullscreen?: (isFullscreen: boolean) => void
   toggleCollapsed?: (isCollapsed: boolean) => void
@@ -47,12 +49,43 @@ let feature = $state()
 let isMapLoaded = $state(false)
 let hasSyncedViewport = $state(false)
 let lastCoordinateKey = $state('')
+let activeStyleToken = $state<string | null>(null)
 
 // STATE : DERIVED
 let markedAddressLngLat: [number, number] | null = $state(null)
 let addressLngLat: [number, number] | null = $derived(
   getCoordinates(mapProps.addressMeta as LngLatLike),
 )
+const activeLocale = $derived(getLocale())
+const resolvedMapStyleCode = $derived(mapProps.mapStyleCode?.trim() || 'hyperAdmin')
+const resolvedMapStyle = $derived.by(() => {
+  const catalogEntry = listMapStyleCatalog().find(
+    mapStyle => mapStyle.key === resolvedMapStyleCode,
+  )
+  const fallbackEntry = listMapStyleCatalog().find(
+    mapStyle => mapStyle.key === 'hyperAdmin',
+  )
+  const targetEntry = catalogEntry ?? fallbackEntry
+
+  if (!targetEntry) {
+    throw new Error('Map style catalog is missing the hyperAdmin fallback')
+  }
+
+  return targetEntry.buildStyle({ locale: activeLocale })
+})
+const activeStyleKey = $derived(`${resolvedMapStyleCode}:${activeLocale}`)
+
+$effect(() => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  console.debug('[Maplet] mapStyleCode received', {
+    mapStyleCode: mapProps.mapStyleCode ?? null,
+    resolvedMapStyleCode,
+    activeLocale,
+  })
+})
 
 // STATE : UI
 let addressMarker: Marker | null = $state(null)
@@ -66,7 +99,7 @@ onMount(async () => {
 
   appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
-    style: `/api/styles/${getDefaultMapStyleKey()}`,
+    style: resolvedMapStyle,
     center: mapProps.initialCenter ?? mapProps.coordinates,
     zoom: 20,
     hash: false,
@@ -91,6 +124,8 @@ onMount(async () => {
 
   // @ts-expect-error
   feature.on('dragend', handleDragEnd)
+
+  activeStyleToken = activeStyleKey
 })
 
 // EFFECTS :: ON UPDATE
@@ -168,9 +203,18 @@ $effect(() => {
     }
   }
 })
+
+$effect(() => {
+  if (!appCtx.map || activeStyleToken === activeStyleKey) {
+    return
+  }
+
+  activeStyleToken = activeStyleKey
+  appCtx.map.setStyle(resolvedMapStyle)
+})
 </script>
 
-<!-- ENHANCEMENT - show the canonical image on top of the marker, so that we 
+<!-- ENHANCEMENT - show the canonical image on top of the marker, so that we
  can remove the canonical image box and leave more space for the properties -->
 <div class="relative h-full w-full">
   <div
@@ -180,6 +224,7 @@ $effect(() => {
   >
     {#if mapProps.toggleCollapsed}
       <button
+        type="button"
         class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isFullscreen
           ? 'hidden'
           : ''} "
@@ -208,6 +253,7 @@ $effect(() => {
     {/if}
     {#if mapProps.toggleFullscreen}
       <button
+        type="button"
         class="btn btn-circle btn-sm bg-base-100 opacity-80 hover:opacity-100 {isCollapsed
           ? 'hidden'
           : ''}"
@@ -255,7 +301,6 @@ $effect(() => {
 </div>
 
 <style>
-@import "https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css";
 .maplibregl-canvas {
   outline: none;
 }

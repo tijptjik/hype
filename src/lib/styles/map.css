@@ -1,11 +1,9 @@
-@import "https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css";
-
 /* ═══════════════════════════════════════════════════════════════════════════════
    MAP STYLES - TABLE OF CONTENTS
    ═══════════════════════════════════════════════════════════════════════════════
 
    1. GLOBAL STYLES ...................... Global map styles and utilities
-   2. MAPLIBRE OVERRIDES .................. MapLibre GL specific overrides  
+   2. MAPLIBRE OVERRIDES .................. MapLibre GL specific overrides
    3. FEATURE MARKERS .................... Custom feature marker styling
    4. USER LOCATION ...................... User location marker and controls
    5. MAP CONTROLS ....................... Navigation and other map controls
@@ -64,6 +62,40 @@
 .marker-inner {
   width: 24px;
   height: 24px;
+}
+
+.marker-container--feature .marker-inner {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.24), transparent 45%),
+    #20171d;
+  box-shadow:
+    0 12px 24px rgba(10, 10, 10, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.marker-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.marker-image-frame {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 245, 250, 0.88);
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+  transition:
+    border-color 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out,
+    opacity 0.2s ease-in-out;
 }
 
 .marker-fade-in {
@@ -148,6 +180,13 @@
     opacity 0.3s ease-in-out;
 }
 
+.highlighted .marker-image-frame {
+  border-color: #daffdb;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 0 2px rgba(164, 255, 114, 0.45);
+}
+
 .marker-address .marker-circle {
   stroke-width: 2;
   stroke: #ffffffee;
@@ -202,6 +241,20 @@
     opacity 0.3s ease-in-out;
 }
 
+.active .marker-image-frame {
+  border-color: #ffdaf3;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 0 3px rgba(206, 60, 116, 0.32);
+}
+
+.active.highlighted .marker-image-frame {
+  border-color: #eeedf8;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 0 3px rgba(164, 255, 114, 0.4);
+}
+
 .marker-dot {
   fill: #cb37c1;
 }
@@ -219,6 +272,10 @@
   fill: #d1e4f4;
 }
 
+.marker-container--feature:hover .marker-image-frame {
+  border-color: #ffffff;
+}
+
 /* ═══════════════════════
    4. USER LOCATION
    ═══════════════════════ */
@@ -232,17 +289,17 @@
     #9dff9d 30%,
     #7aff7a 90%,
     #ffffff 100%
-  ) !important;
-  width: 16px !important;
-  height: 16px !important;
-  border-radius: 50% !important;
+  );
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0),
     0 0 6px #fffffffb,
     0 0 12px #ffffff48,
     0 0 18px #68dc68d1,
     0 0 24px rgba(105, 221, 105, 0.294),
-    inset 0 0 6px rgba(255, 255, 255, 0.8) !important;
+    inset 0 0 6px rgba(255, 255, 255, 0.8);
 }
 
 /* Override the pulsing background pseudo-element */
@@ -254,27 +311,27 @@
     rgba(157, 255, 157, 0.6) 70%,
     rgba(122, 255, 122, 0.4) 85%,
     transparent 100%
-  ) !important;
-  width: 14px !important;
-  height: 14px !important;
-  border-radius: 50% !important;
-  content: "" !important;
-  position: absolute !important;
-  z-index: -1 !important;
+  );
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  content: "";
+  position: absolute;
+  z-index: -1;
 }
 
 /* Override the white border pseudo-element - ethereal glow */
 .maplibregl-user-location-dot::after {
-  border-radius: 50% !important;
-  border: none !important;
-  content: "" !important;
-  height: 20px !important;
-  left: -2px !important;
-  position: absolute !important;
-  top: -2px !important;
-  width: 20px !important;
-  box-sizing: border-box !important;
-  z-index: -2 !important;
+  border-radius: 50%;
+  border: none;
+  content: "";
+  height: 20px;
+  left: -2px;
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  box-sizing: border-box;
+  z-index: -2;
   background: radial-gradient(
     circle,
     rgba(255, 255, 255, 0.6) 10%,
@@ -282,13 +339,13 @@
     rgba(122, 255, 122, 0.3) 50%,
     rgba(77, 255, 77, 0.15) 70%,
     transparent 90%
-  ) !important;
+  );
   box-shadow:
     0 0 6px rgba(157, 255, 157, 0.8),
     0 0 12px rgba(122, 255, 122, 0.6),
     0 0 18px rgba(77, 255, 77, 0.4),
     0 0 24px rgba(77, 255, 77, 0.2),
-    0 0 30px rgba(77, 255, 77, 0.1) !important;
+    0 0 30px rgba(77, 255, 77, 0.1);
 }
 
 /* Smooth breathing pulse like a living beacon */
@@ -308,12 +365,12 @@
 }
 
 .maplibregl-user-location-dot-stale {
-  background: radial-gradient(circle, #66ffff 30%, #99eeee 70%) !important;
-  border: 2px solid #ffffff !important;
+  background: radial-gradient(circle, #66ffff 30%, #99eeee 70%);
+  border: 2px solid #ffffff;
   box-shadow:
     0 0 0 3px rgba(102, 255, 255, 0.3),
-    0 0 8px #66ffff !important;
-  animation: none !important;
+    0 0 8px #66ffff;
+  animation: none;
 }
 
 /* ═══════════════════════
@@ -321,34 +378,34 @@
    ═══════════════════════ */
 
 .maplibregl-ctrl-compass {
-  border-radius: 12px !important;
-  overflow: hidden !important;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .maplibregl-ctrl-compass .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23333' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23A294E5' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E") !important;
-  position: relative !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23333' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23A294E5' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
+  position: relative;
 }
 
 .maplibregl-ctrl-compass .maplibregl-ctrl-icon::after {
-  content: "" !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23555' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23B8A8FF' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E") !important;
-  opacity: 0 !important;
-  transition: opacity 0.3s ease-in-out !important;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23555' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23B8A8FF' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
 }
 
 .maplibregl-ctrl-compass:hover .maplibregl-ctrl-icon::after {
-  opacity: 1 !important;
+  opacity: 1;
 }
 
 .maplibregl-ctrl-compass:hover .maplibregl-ctrl-icon {
   filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(92%)
-    contrast(90%) !important;
+    contrast(90%);
 }
 
 /* <button class="maplibregl-ctrl-compass" type="button" title="Reset bearing to north" aria-label="Reset bearing to north"><span class="maplibregl-ctrl-icon" aria-hidden="true" style="transform: rotate(-17.6deg);"></span></button> */
@@ -359,42 +416,61 @@
 
 /* Geolocate control button styling */
 .maplibregl-ctrl-geolocate {
-  border-radius: 12px !important;
-  overflow: hidden !important;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .maplibregl-ctrl-geolocate:hover {
-  border-radius: 12px !important;
+  border-radius: 12px;
 }
 
 .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active {
-  border-radius: 12px !important;
+  border-radius: 12px;
 }
 
 /* Geolocate control icon - #4987E2 color */
 .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
   filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(115%)
-    contrast(90%) !important;
-  transition: all 0.3s ease-in-out !important;
+    contrast(90%);
+  transition: all 0.3s ease-in-out;
 }
 
 .maplibregl-ctrl-geolocate:hover .maplibregl-ctrl-icon {
   filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(92%)
-    contrast(90%) !important;
+    contrast(90%);
 }
 
 .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon {
   filter: invert(50%) sepia(100%) saturate(960%) hue-rotate(210deg) brightness(115%)
-    contrast(90%) !important;
+    contrast(90%);
 }
 
 /* Control groups */
 .maplibregl-ctrl-group {
-  background-color: #000;
-  border-radius: 12px;
-  border: 2px solid #15191e;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.maplibregl-ctrl-group button {
-  background-color: #000;
+.maplibregl-ctrl-group button,
+.maplibregl-ctrl-group button:hover,
+.maplibregl-ctrl-group button:focus,
+.maplibregl-ctrl-group button:active,
+.maplibregl-ctrl-group button.maplibregl-ctrl-geolocate-active,
+.maplibregl-ctrl-group button.maplibregl-ctrl-compass {
+  background: #000 !important;
+  border: 1px solid #15191e !important;
+  border-radius: 9999px !important;
+  outline: none !important;
+  box-shadow: none !important;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  background-color: transparent !important;
 }

@@ -13,9 +13,7 @@ import {
   updateMarkers,
   USER_MARKER_STYLE_PARAM,
 } from '$lib/map/markers'
-import {
-  getDefaultMapStyleKey,
-} from '$lib/map/styles'
+import { getMapStyleDefinition, isMapStyleKey } from '$lib/map/styles'
 // ICONS
 import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 import Icon from '$lib/components/common/Icon.svelte'
@@ -25,9 +23,26 @@ import { getOmniCtx } from '$lib/context/omni.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
-import type { PointLike, LngLatLike, Point } from 'maplibre-gl'
+import type {
+  GeolocateControl,
+  LngLatLike,
+  Map as MaplibreMap,
+  Point,
+  PointLike,
+} from 'maplibre-gl'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { StyleSpecification } from 'maplibre-gl'
+
+type MapCanvasProps = {
+  mapStyleCode?: string | null
+}
+
+type GeolocateControlWithPrivateFields = GeolocateControl & {
+  _updateCamera: () => void
+  _geolocateButton: HTMLButtonElement
+}
+
+let { mapStyleCode = null }: MapCanvasProps = $props()
 
 // ELEMENTS
 let mapContainer: HTMLDivElement
@@ -43,6 +58,7 @@ let activeStyleToken = $state<string | null>(null)
 let isTrackingMapUrl = $state(false)
 let detachMapUrlTracking: (() => void) | null = null
 let styleRequestSerial = 0
+let resizeObserver: ResizeObserver | null = null
 
 const MAP_TRACKING_PARAM = 'mapTracking'
 const MAP_LNG_PARAM = 'lng'
@@ -81,8 +97,7 @@ const getTrackedMapViewFromUrl = (
   const pitch = parseNumericSearchParam(url.searchParams.get(MAP_PITCH_PARAM))
 
   return {
-    center:
-      lng !== null && lat !== null ? [lng, lat] : DEFAULT_MAP_VIEW.center,
+    center: lng !== null && lat !== null ? [lng, lat] : DEFAULT_MAP_VIEW.center,
     zoom: Math.max(zoom ?? DEFAULT_MAP_VIEW.zoom, MIN_MAP_ZOOM),
     bearing: bearing ?? DEFAULT_MAP_VIEW.bearing,
     pitch: pitch ?? DEFAULT_MAP_VIEW.pitch,
@@ -107,7 +122,10 @@ const syncMapViewToUrl = (): void => {
   url.searchParams.set(MAP_LNG_PARAM, formatMapViewNumber(center.lng, 5))
   url.searchParams.set(MAP_LAT_PARAM, formatMapViewNumber(center.lat, 5))
   url.searchParams.set(MAP_ZOOM_PARAM, formatMapViewNumber(appCtx.map.getZoom(), 2))
-  url.searchParams.set(MAP_BEARING_PARAM, formatMapViewNumber(appCtx.map.getBearing(), 1))
+  url.searchParams.set(
+    MAP_BEARING_PARAM,
+    formatMapViewNumber(appCtx.map.getBearing(), 1),
+  )
   url.searchParams.set(MAP_PITCH_PARAM, formatMapViewNumber(appCtx.map.getPitch(), 1))
 
   window.history.replaceState(window.history.state, '', url.toString())
@@ -131,8 +149,9 @@ const clearTrackedMapViewFromUrl = (): void => {
 
 const updateMapUrlTracking = (): void => {
   const shouldTrackMapUrl = isMapTrackingEnabled(page.url)
+  const map = appCtx.map
 
-  if (!appCtx.map) {
+  if (!map) {
     isTrackingMapUrl = shouldTrackMapUrl
     return
   }
@@ -151,11 +170,21 @@ const updateMapUrlTracking = (): void => {
   }
 
   const onMoveEnd = () => syncMapViewToUrl()
-  appCtx.map.on('moveend', onMoveEnd)
+  map.on('moveend', onMoveEnd)
   detachMapUrlTracking = () => {
-    appCtx.map?.off('moveend', onMoveEnd)
+    map.off('moveend', onMoveEnd)
   }
   syncMapViewToUrl()
+}
+
+const queueMapResize = (): void => {
+  if (!appCtx.map) {
+    return
+  }
+
+  requestAnimationFrame(() => {
+    appCtx.map?.resize()
+  })
 }
 
 const hideSymbolLayers = (style: StyleSpecification): StyleSpecification => {
@@ -178,54 +207,36 @@ const hideSymbolLayers = (style: StyleSpecification): StyleSpecification => {
   return style
 }
 
-const getActiveProjectMapStyleRef = (): string | null => {
-  const activeResourceType = appCtx.getActiveResourceType()
-  const activeResourceRef = appCtx.getActiveResourceRef()
-
-  if (activeResourceType && activeResourceRef) {
-    const activeResource = appCtx.getResourceByRefSync(activeResourceType, activeResourceRef)
-    if (
-      activeResource &&
-      (activeResourceType === 'project' ||
-        activeResourceType === 'layer' ||
-        activeResourceType === 'feature' ||
-        activeResourceType === 'task')
-    ) {
-      return appCtx.getHierarchySync(activeResource).project?.code ?? null
-    }
-  }
-
-  if (appCtx.state.prisms.project.length === 1) {
-    return appCtx.cache.project.get(appCtx.state.prisms.project[0])?.code ?? null
-  }
-
-  if (appCtx.state.resources.project.length === 1) {
-    return appCtx.state.resources.project[0]?.code ?? null
-  }
-
-  return null
-}
-
-const getMapStyleEndpoint = (projectRef: string | null): string =>
-  projectRef
-    ? `/api/styles/project/${projectRef}`
-    : `/api/styles/${getDefaultMapStyleKey()}`
+const getMapStyleEndpoint = (mapStyleCode: string): string =>
+  `/api/mapStyles/${mapStyleCode}`
 
 const resolveRuntimeMapStyle = async (
   endpoint: string,
   noLabels: boolean,
-): Promise<string | StyleSpecification> => {
-  if (!noLabels) {
-    return endpoint
-  }
-
+): Promise<StyleSpecification> => {
   const response = await fetch(`${endpoint}?inline=1`)
   if (!response.ok) {
     throw new Error(`Failed to load map style from ${endpoint}`)
   }
 
   const style = (await response.json()) as StyleSpecification
-  return hideSymbolLayers(style)
+  return noLabels ? hideSymbolLayers(style) : style
+}
+
+const getCurrentMapStyleVariant = (
+  map: MaplibreMap | null | undefined,
+): string | null => {
+  if (!map) {
+    return null
+  }
+
+  const currentStyle = map.getStyle()
+
+  return (
+    (typeof currentStyle?.metadata?.['hype:style-variant'] === 'string'
+      ? currentStyle.metadata['hype:style-variant']
+      : null) ?? (typeof currentStyle?.name === 'string' ? currentStyle.name : null)
+  )
 }
 
 // STATE : DERIVED
@@ -233,11 +244,31 @@ const userMarkerStyleVariant = $derived(
   getUserMarkerStyleVariant(page.url.searchParams.get(USER_MARKER_STYLE_PARAM)),
 )
 const activeLocale = $derived(getLocale())
-const activeProjectMapStyleRef = $derived.by(() => getActiveProjectMapStyleRef())
-const resolvedMapStyleEndpoint = $derived(getMapStyleEndpoint(activeProjectMapStyleRef))
-const activeStyleKey = $derived(
-  `${activeProjectMapStyleRef ?? getDefaultMapStyleKey()}:${activeLocale}:${appCtx.user?.experimental?.noLabelsMode ?? false}`,
+const resolvedMapStyleCode = $derived(
+  mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : 'hyper',
 )
+const resolvedMapStyleEndpoint = $derived(getMapStyleEndpoint(resolvedMapStyleCode))
+const resolvedMapStyleVariant = $derived(
+  getMapStyleDefinition(resolvedMapStyleCode).label,
+)
+const activeStyleKey = $derived(
+  `${resolvedMapStyleCode}:${activeLocale}:${appCtx.user?.experimental?.noLabelsMode ?? false}`,
+)
+
+$effect(() => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  console.debug('[MapCanvas] mapStyleCode received', {
+    mapStyleCode,
+    resolvedMapStyleCode,
+    resolvedMapStyleVariant,
+    resolvedMapStyleEndpoint,
+    activeLocale,
+    noLabelsMode: appCtx.user?.experimental?.noLabelsMode ?? false,
+  })
+})
 
 // WATCHERS
 // Watch for changes in features
@@ -256,16 +287,21 @@ onMount(async () => {
     return
   }
 
-  const initialMapView =
-    isMapTrackingEnabled(page.url)
-      ? getTrackedMapViewFromUrl(page.url)
-      : DEFAULT_MAP_VIEW
+  const initialMapView = isMapTrackingEnabled(page.url)
+    ? getTrackedMapViewFromUrl(page.url)
+    : DEFAULT_MAP_VIEW
 
   // MAP : Create the map instance
-  const initialStyle = await resolveRuntimeMapStyle(
-    resolvedMapStyleEndpoint,
-    appCtx.user?.experimental?.noLabelsMode ?? false,
-  )
+  let initialStyle: StyleSpecification
+  try {
+    initialStyle = await resolveRuntimeMapStyle(
+      resolvedMapStyleEndpoint,
+      appCtx.user?.experimental?.noLabelsMode ?? false,
+    )
+  } catch (error) {
+    console.error('Failed to resolve initial map style', error)
+    return
+  }
 
   appCtx.map = new appCtx.maplibre.Map({
     container: mapContainer,
@@ -277,12 +313,29 @@ onMount(async () => {
     hash: false,
     pitch: initialMapView.pitch,
     attributionControl: false,
+    pixelRatio: window.devicePixelRatio,
+    canvasContextAttributes: {
+      antialias: true,
+    },
   })
 
   activeStyleToken = activeStyleKey
   updateMapUrlTracking()
+  queueMapResize()
+
+  resizeObserver = new ResizeObserver(() => {
+    queueMapResize()
+  })
+  resizeObserver.observe(mapContainer)
 
   appCtx.map.on('load', () => {
+    const map = appCtx.map
+    if (!map) {
+      return
+    }
+
+    queueMapResize()
+
     // CONTROLS : Add the controls to the map
     if (appCtx.user) {
       // Initialize and store the GeolocateControl
@@ -296,15 +349,15 @@ onMount(async () => {
         trackUserLocation: true,
         showUserHeading: true,
         showUserLocation: true,
-      })
+      }) as GeolocateControlWithPrivateFields
 
       // store the original _updateCamera implementation to restore later
       const updateCamera = geolocateControl._updateCamera
       // replace updateCamera method with noop operation, so that we can control
       // the initial flyTo of the user's location.
       geolocateControl._updateCamera = () => {}
-      appCtx.map?.addControl(geolocateControl, 'bottom-right')
-      appCtx.map?.on('load', () => {
+      map.addControl(geolocateControl, 'bottom-right')
+      map.on('load', () => {
         // after first geolocate...
         geolocateControl.once('geolocate', () => {
           // restore update camera for future use
@@ -360,7 +413,7 @@ onMount(async () => {
 
             if (currentHorizontalOffset !== 0) {
               const originalCenter = { lng: longitude, lat: latitude }
-              const centerInPx = appCtx.map?.project(originalCenter)
+              const centerInPx = map.project(originalCenter)
 
               // Apply empirically derived adjustment factor for GPS centering
               // This accounts for the difference between panel positioning and GPS fix centering
@@ -371,16 +424,16 @@ onMount(async () => {
                 centerInPx.x + pixelAdjustment,
                 centerInPx.y,
               )
-              const adjustedCenter = appCtx.map?.unproject(adjustedPoint)
+              const adjustedCenter = map.unproject(adjustedPoint)
 
-              appCtx.map?.flyTo({
+              map.flyTo({
                 center: [adjustedCenter.lng, adjustedCenter.lat],
                 zoom: 19,
                 duration: 2500,
               })
             } else {
               // No offset needed, center normally
-              appCtx.map?.flyTo({
+              map.flyTo({
                 center: [longitude, latitude],
                 zoom: 19,
                 duration: 2500,
@@ -395,7 +448,7 @@ onMount(async () => {
         { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity },
       )
 
-      appCtx.map?.addControl(
+      map.addControl(
         new appCtx.maplibre.NavigationControl({
           showZoom: false,
           showCompass: true,
@@ -442,12 +495,13 @@ onMount(async () => {
     }
   })
   // TODO Add Attribution
-
 })
 
 onDestroy(() => {
   detachMapUrlTracking?.()
   detachMapUrlTracking = null
+  resizeObserver?.disconnect()
+  resizeObserver = null
 })
 
 watch(
@@ -465,7 +519,23 @@ watch(
 )
 
 $effect(() => {
-  if (!appCtx.map || activeStyleToken === activeStyleKey) {
+  const map = appCtx.map
+  const currentMapStyleVariant = getCurrentMapStyleVariant(map)
+  const shouldApplyStyle =
+    Boolean(map) &&
+    (activeStyleToken !== activeStyleKey ||
+      currentMapStyleVariant !== resolvedMapStyleVariant)
+
+  if (!shouldApplyStyle || !map) {
+    if (typeof window !== 'undefined') {
+      console.debug('[MapCanvas] style update skipped', {
+        hasMap: Boolean(map),
+        activeStyleToken,
+        activeStyleKey,
+        currentMapStyleVariant,
+        resolvedMapStyleVariant,
+      })
+    }
     return
   }
 
@@ -476,13 +546,22 @@ $effect(() => {
   void resolveRuntimeMapStyle(
     resolvedMapStyleEndpoint,
     appCtx.user?.experimental?.noLabelsMode ?? false,
-  ).then(style => {
-    if (!appCtx.map || currentSerial !== styleRequestSerial) {
-      return
-    }
+  )
+    .then(style => {
+      if (styleRequestSerial !== currentSerial) {
+        return
+      }
 
-    appCtx.map.setStyle(style)
-  })
+      console.debug('[MapCanvas] applying map style', {
+        currentMapStyleVariant,
+        nextMapStyleVariant: resolvedMapStyleVariant,
+        resolvedMapStyleEndpoint,
+      })
+      map.setStyle(style)
+    })
+    .catch(error => {
+      console.error('Failed to update map style', error)
+    })
 })
 
 $effect(() => {
@@ -495,28 +574,30 @@ let horizontalOffset = $derived(appCtx.getHorizontalOffset())
 // Ensure that the center of the map is in the center of the viewport,
 // even after a panel is triggered.
 $effect(() => {
-  if (horizontalOffset !== lastHorizontalOffset && appCtx.map && !isAnimating) {
+  const map = appCtx.map
+
+  if (horizontalOffset !== lastHorizontalOffset && map && !isAnimating) {
     isAnimating = true
-    let coordinates = appCtx.map?.getCenter()
-    const centerInPx: Point = appCtx.map?.project(coordinates)
+    const coordinates = map.getCenter()
+    const centerInPx: Point = map.project(coordinates)
     const newPoint: PointLike = new appCtx.maplibre.Point(
       centerInPx.x +
         (horizontalOffset === 0 ? lastHorizontalOffset : -horizontalOffset),
       centerInPx.y,
     )
-    const newCenter: LngLatLike = appCtx.map?.unproject(newPoint)
+    const newCenter: LngLatLike = map.unproject(newPoint)
 
     lastHorizontalOffset = horizontalOffset
 
     // Set up one-time event listener for when animation completes
     const onMoveEnd = () => {
       isAnimating = false
-      appCtx.map?.off('moveend', onMoveEnd)
+      map.off('moveend', onMoveEnd)
     }
-    appCtx.map?.on('moveend', onMoveEnd)
+    map.on('moveend', onMoveEnd)
 
     // Start the animation
-    appCtx.map?.easeTo({
+    map.easeTo({
       center: newCenter,
       duration: 300,
     })
@@ -524,7 +605,7 @@ $effect(() => {
     // Fallback timeout in case moveend doesn't fire
     setTimeout(() => {
       isAnimating = false
-      appCtx.map?.off('moveend', onMoveEnd)
+      map.off('moveend', onMoveEnd)
     }, 500)
   }
 })
@@ -532,9 +613,7 @@ $effect(() => {
 
 <div
   id="map"
-  class="map absolute! inset-0! {appCtx.user
-    ? 'mb-[68px]'
-    : ''} overflow-hidden rounded-2xl caret-transparent"
+  class="map absolute! inset-0! overflow-hidden rounded-2xl caret-transparent"
   data-testid="map"
   bind:this={mapContainer}
 >
@@ -550,6 +629,7 @@ $effect(() => {
       >
         <p class="text-lg text-base-content">{m.map__no_markers_without_layers()}</p>
         <button
+          type="button"
           class="group-hover:inset-shadow-lg btn btn-outline border-[#4987E2] bg-black font-bold uppercase text-[#4987E2] ring-primary transition-all duration-300 group-hover:border-primary/70 group-hover:text-primary/70 group-hover:shadow-primary/70 group-hover:ring-2"
         >
           <Icon

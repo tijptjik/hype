@@ -1,4 +1,6 @@
 <script lang="ts">
+// CONTEXT
+import { getAppCtx } from '$lib/context/app.svelte'
 // SERVICES
 import { calculateDistance } from '$lib/utils/geocoding'
 // COMPONENTS
@@ -16,6 +18,8 @@ let sectionProps: SectionProps & {
   toggleCollapsed: (isCollapsed: boolean) => void
 } = $props()
 
+const appCtx = getAppCtx()
+
 // STATE : CONTEXT :: FORM
 let featureForm: FeatureForm['form'] = $derived((sectionProps.form as FeatureForm).form)
 
@@ -23,6 +27,26 @@ let featureForm: FeatureForm['form'] = $derived((sectionProps.form as FeatureFor
 let lngLat = $derived(
   getCoordinates(($featureForm.geometry as Point).coordinates as LngLatLike),
 )
+let mapStyleCode = $derived(
+  appCtx.cache.project.get(String($featureForm.projectId ?? ''))?.mapStyle?.code ??
+    null,
+)
+
+$effect(() => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const projectId = String($featureForm.projectId ?? '')
+  const project = appCtx.cache.project.get(projectId)
+
+  console.debug('[MapSection] resolved project mapStyleCode', {
+    projectId,
+    derivedMapStyleCode: mapStyleCode,
+    projectMapStyleCode: project?.mapStyle?.code ?? null,
+    cachedProject: project ?? null,
+  })
+})
 
 // UTILS
 const syncUpCoordinates = (lngLat: number[]) => {
@@ -47,6 +71,7 @@ const syncUpCoordinates = (lngLat: number[]) => {
       coordinates={lngLat}
       dragEndCallback={syncUpCoordinates}
       addressMeta={$featureForm.addressMeta}
+      {mapStyleCode}
       {...sectionProps}
     />
   </div>
