@@ -30,6 +30,8 @@ let innerWidth = $state<number>()!
 let featureCardEl: HTMLElement = $state()!
 let portalEl: HTMLElement = $state()!
 
+const addressLineRightPadding = [24, 12, 0, 12, 24] as const
+
 // Add ResizeObserver to watch feature card dimensions
 $effect(() => {
   if (!featureCardEl) {
@@ -301,7 +303,7 @@ $effect(() => {
           ''
             ? 'px-2 py-0.5 text-sm/6'
             : ''}"
-          style="transform: translateX(-{index * 0}px); rotate: -17deg; top: {index *
+          style="transform: translateX(-{addressLineRightPadding[index] ?? 0}px); rotate: -17deg; top: {index *
             34}px;"
           in:fly={{
             duration: 300,
