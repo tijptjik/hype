@@ -2,6 +2,7 @@
 // SVELTE
 import { watch } from 'runed'
 import { onMount } from 'svelte'
+import { dev } from '$app/environment'
 // STORES
 import { page } from '$app/state'
 // QUERY
@@ -15,9 +16,8 @@ import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
 // BITS
 import { App } from '$lib/bits'
-// LIB
-import { loadScript } from '$lib'
 // MAPLIBRE
+import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
 // STYLES
 import '$lib/styles/app.css'
@@ -65,15 +65,19 @@ onMount(async () => {
   try {
     // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
     // and the max worker size in the free tier is 1 MB
-    await loadScript('https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js')
-    const maplibre = monkeyPatchMapLibre()
+    await ensureMapLibreStyles()
+    const maplibreSource = await loadMapLibre()
+    const maplibre = monkeyPatchMapLibre(maplibreSource)
     globalThis.maplibregl = maplibre
 
     // Store maplibre in the app context so components can access it
     appCtx.maplibre = maplibre
     appCtx.isMaplibreLoaded = true
   } catch (error) {
-    console.error('Failed to load maplibre:', error)
+    console.error(
+      `Failed to load maplibre (${dev ? 'local dev asset' : 'remote CDN asset'})`,
+      error,
+    )
   }
 })
 

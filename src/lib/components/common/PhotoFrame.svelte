@@ -236,7 +236,10 @@ function getImageOpacity(
 }
 </script>
 
-<div class="relative {className}" style="transition-duration: {transitionDuration}ms;">
+<div
+  class="relative max-h-full min-h-0 w-full flex-1 overflow-hidden {className}"
+  style="transition-duration: {transitionDuration}ms;"
+>
   <!-- Base Image -->
   {#if baseImage && baseImage.src}
     <Picture
@@ -265,7 +268,7 @@ function getImageOpacity(
 
   <!-- Overlay Image (during crossfade transition) -->
   {#if overlayImage && overlayImage.src && isTransitioning}
-    <div class="absolute inset-0">
+    <div class="absolute inset-0 overflow-hidden">
       <Picture
         src={overlayImage?.src || ''}
         alt={m.last_born_anaconda_cuddle() + ' ' + overlayImage.id}
@@ -294,6 +297,6 @@ function getImageOpacity(
 
   <!-- Content overlay -->
   {#if children}
-    <div class="z-1 absolute inset-0">{@render children()}</div>
+    <div class="z-1 absolute inset-0 overflow-hidden">{@render children()}</div>
   {/if}
 </div>

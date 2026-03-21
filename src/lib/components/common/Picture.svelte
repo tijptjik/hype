@@ -49,7 +49,9 @@ const handleError = () => {
 </script>
 
 <figure
-  class="{className.includes('absolute') ? '' : 'relative'} {className
+  class="{className.includes('absolute') ? '' : 'relative'} {layout === 'contain' || layout === 'fit'
+    ? 'flex items-center justify-center overflow-hidden'
+    : 'overflow-hidden'} {className
     ? className
     : 'h-full w-full'} bg-transparent"
 >
@@ -80,8 +82,8 @@ const handleError = () => {
       : layout === 'fill'
         ? 'h-full w-full object-fill'
         : layout === 'fit'
-          ? 'h-full w-full object-scale-down'
-          : 'h-full w-full object-contain'} bg-transparent"
+          ? 'max-h-full max-w-full object-scale-down'
+          : 'max-h-full max-w-full object-contain'} bg-transparent"
     onload={handleLoad}
     onerror={handleError}
   >
