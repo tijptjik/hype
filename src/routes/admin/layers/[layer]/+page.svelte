@@ -11,8 +11,10 @@ import { toast } from 'svelte-sonner'
 // SERVICES
 import {
   captureHeaderTransitionSnapshot,
+  createFacetNavActionBuilder,
   createResourceEditorPage,
   createResourceFormConfig,
+  focusFacetFromHash,
   handleResourceBooleanStateToggle,
   revalidateAfterSubmitAttempt,
   resolveOptimisticHeaderFacets,
@@ -65,7 +67,7 @@ import { NEW_REF, NEW_TITLE } from '$lib/constants'
 import {
   FormI18nDescriptorFields,
   FormI18nSection,
-  FormParentProjectSection,
+  FormParentSection,
   GridSpacer,
   LayerPropertyCard,
   Main,
@@ -76,7 +78,12 @@ import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 import { configureForm } from '$lib/factories.svelte'
 import type { RemoteFormOptions } from '$lib/factories.svelte'
 // NAVIGATION
-import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
+import {
+  getAdminFacetOrderForResource,
+  getAdminFacetTabsForResource,
+  navigateOnAdmin,
+} from '$lib/navigation'
+import type { LayerFacet } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
@@ -297,6 +304,22 @@ function resolveKnownProjectIdForLayerRef(ref: string): string {
 
 const isCoreFacet = $derived(activeFacet === 'core')
 const isFieldsFacet = $derived(activeFacet === 'fields')
+
+const layerFacetOrder = $derived.by(
+  () =>
+    getAdminFacetOrderForResource(
+      FirstClassResource.layer,
+      headerFacetTabs,
+    ) as LayerFacet[],
+)
+
+const buildFacetNavAction = createFacetNavActionBuilder<LayerFacet>({
+  resourceType: FirstClassResource.layer,
+  getFacetOrder: () => layerFacetOrder,
+  getActiveFacet: () => activeFacet as LayerFacet,
+  navigateToFacet: facet =>
+    navigateOnAdmin(adminCtx, FirstClassResource.layer, layerRef, facet),
+})
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewLayerRef = $derived(layerRef === NEW_REF)
 
@@ -896,6 +919,12 @@ $effect(() => {
   })
 })
 
+$effect(() => {
+  activeFacet
+  contentsElement
+  focusFacetFromHash(contentsElement, activeFacet)
+})
+
 // Facet guards
 $effect(() => {
   if (activeFacet !== 'fields') return
@@ -1038,9 +1067,12 @@ $effect(() => {
     attrs={formCtx.attributes}
     isReady={Boolean(formCtx.form?.fields && (layer?.data || isNewLayerRef))}
   >
-    <Main.Section
+    <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('core', 'previous')}
+      nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
       <div class="space-y-4" data-facet-id="core">
@@ -1066,25 +1098,33 @@ $effect(() => {
           {/snippet}
         </FormI18nSection>
 
-        <FormParentProjectSection
-          title={m.admin__forms_layer_parent_project_title()}
-          subtitle={m.admin__forms_layer_parent_project_subtitle()}
-          issues={parentProjectIssues}
-          parent={selectedParentProject}
-          hiddenProjectInputAttrs={hiddenParentProjectInputAttrs}
-          isEditing={isEditing && canSetParentProject}
-          isSubmitting={formCtx.submitting}
-          isSubmitRequested={formCtx.isSubmitRequested}
-          startInAddingMode={isNewLayerRef}
-          onSearchProjects={onSearchParentProjects}
-          onReplaceParent={onReplaceParentProject}
-        />
+        <GridSpacer cols={3} leftCols={1} rightCols={2}>
+          {#snippet left()}
+            <FormParentSection
+              title={m.admin__forms_layer_parent_project_title()}
+              subtitle={m.admin__forms_layer_parent_project_subtitle()}
+              issues={parentProjectIssues}
+              parent={selectedParentProject}
+              hiddenInputAttrs={hiddenParentProjectInputAttrs}
+              closeOnParentChange={true}
+              isEditing={isEditing && canSetParentProject}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewLayerRef}
+              onSearch={onSearchParentProjects}
+              onReplaceParent={onReplaceParentProject}
+            />
+          {/snippet}
+        </GridSpacer>
       </div>
-    </Main.Section>
+    </Main.Facet>
 
-    <Main.Section
+    <Main.Facet
       isVisible={isFieldsFacet && hasSelectedParentProject}
       transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('fields', 'previous')}
+      nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <div class="bits-form__section" data-facet-id="fields">
@@ -1124,6 +1164,6 @@ $effect(() => {
           </GridSpacer>
         </section>
       </div>
-    </Main.Section>
+    </Main.Facet>
   </Main.Form>
 </Main.Root>

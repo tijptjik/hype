@@ -22,6 +22,11 @@ export const ADMIN_FACETS = {
   layers: 'layers',
 } as const satisfies Record<FacetType, FacetType>
 
+export type HubFacet = 'core' | 'layers' | 'fields' | 'images'
+export type OrganisationFacet = 'core' | 'capabilities' | 'fields' | 'images'
+export type ProjectFacet = 'core' | 'capabilities' | 'layers' | 'fields' | 'images'
+export type LayerFacet = 'core' | 'fields'
+
 export const ADMIN_FACET_DEFINITIONS = {
   [ADMIN_FACETS.core]: {
     label: () => m.resources__profile(),
@@ -49,11 +54,28 @@ export const ADMIN_FACET_DEFINITIONS = {
   },
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
+export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  [ADMIN_FACETS.core]: () => m.admin__forms_common_descriptors(),
+  [ADMIN_FACETS.capabilities]: () => m.resources__capabilities(),
+  [ADMIN_FACETS.address]: () => m.feature__address(),
+  [ADMIN_FACETS.images]: () => m.feature__images(),
+  [ADMIN_FACETS.fields]: () => m.admin__forms_common_fields(),
+  [ADMIN_FACETS.layers]: () => m.maps__layers(),
+} as const satisfies Record<FacetType, () => string>
+
 export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
   feature: {
     images: () => m.feature__images(),
+  },
+}
+
+export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
+  Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
+> = {
+  feature: {
+    fields: () => m.feature__fields_title(),
   },
 }
 
@@ -118,4 +140,35 @@ export const getAdminFacetTabsForResource = (
       return [facet, { label: labelResolver(), icon: definition.icon }] as const
     }),
   )
+}
+
+export const getAdminFacetActionLabel = (
+  resourceType: FirstClassResource,
+  facet: FacetType,
+): string => {
+  const labelOverrides =
+    ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE[resourceType] ?? {}
+  const labelResolver =
+    labelOverrides[facet] ?? ADMIN_FACET_ACTION_LABEL_DEFINITIONS[facet]
+  return labelResolver()
+}
+
+export const getAdminFacetOrderForResource = (
+  resourceType: FirstClassResource,
+  visibleFacets?:
+    | ReadonlyMap<FacetType, unknown>
+    | ReadonlySet<FacetType>
+    | readonly FacetType[],
+): FacetType[] => {
+  const supported = getAdminFacetSetForResource(resourceType)
+  if (!visibleFacets) return [...supported]
+
+  const isVisible = (facet: FacetType): boolean => {
+    if (visibleFacets instanceof Map || visibleFacets instanceof Set) {
+      return visibleFacets.has(facet)
+    }
+    return visibleFacets.includes(facet)
+  }
+
+  return supported.filter(isVisible)
 }

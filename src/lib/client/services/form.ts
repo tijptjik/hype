@@ -6,6 +6,7 @@ import type { Component } from 'svelte'
 import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
 import type { FirstClassResource } from '$lib/enums'
 import type { AdminCtx } from '$lib/context/admin.svelte'
+import { getAdminFacetActionLabel } from '$lib/navigation/facets'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { RemoteQuery, RemoteQueryOverride } from '@sveltejs/kit'
 import type {
@@ -361,21 +362,23 @@ function getAdjacentFacet<TFacet extends string>({
 /**
  * Creates a reusable section-header facet nav action builder for admin editors.
  * Used by resource pages to centralize previous/next facet behavior while keeping
- * page-local control over enabled tabs, labels, and resource navigation.
+ * page-local control over enabled tabs, disabled states, and resource navigation.
  *
- * @param params Getter callbacks for facet order, active facet, labels, and navigation.
+ * @param params Getter callbacks for resource type, facet order, active facet, and navigation.
  * @returns A builder for previous/next `FormFacetNavAction` objects.
  */
 export function createFacetNavActionBuilder<TFacet extends string>({
+  resourceType,
   getFacetOrder,
-  getFacetLabel,
   getActiveFacet,
   navigateToFacet,
+  isFacetDisabled,
 }: {
+  resourceType: FirstClassResource
   getFacetOrder: () => readonly TFacet[]
-  getFacetLabel: (facet: TFacet) => string
   getActiveFacet: () => TFacet
   navigateToFacet: (facet: TFacet) => void
+  isFacetDisabled?: (facet: TFacet) => boolean
 }): (facet: TFacet, direction: 'previous' | 'next') => FormFacetNavAction | null {
   return (facet, direction) => {
     const adjacentFacet = getAdjacentFacet({
@@ -385,9 +388,15 @@ export function createFacetNavActionBuilder<TFacet extends string>({
     })
     if (!adjacentFacet) return null
 
+    const disabled = isFacetDisabled?.(adjacentFacet) ?? false
+
     return {
-      text: m.admin__forms_common_set({ label: getFacetLabel(adjacentFacet) }),
+      text: m.admin__forms_common_set({
+        label: getAdminFacetActionLabel(resourceType, adjacentFacet as FacetType),
+      }),
+      disabled,
       onClick: () => {
+        if (disabled) return
         if (adjacentFacet === getActiveFacet()) return
         navigateToFacet(adjacentFacet)
       },

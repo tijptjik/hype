@@ -13,8 +13,10 @@ import { toast } from 'svelte-sonner'
 import {
   addUserRoleSelection,
   captureHeaderTransitionSnapshot,
+  createFacetNavActionBuilder,
   createResourceEditorPage,
   createResourceFormConfig,
+  focusFacetFromHash,
   getUserRoleHiddenInputAttrs,
   getRoleFieldNameByUserId,
   guardRefDesync,
@@ -72,7 +74,7 @@ import {
   resolveOrganisationActionPermissions,
 } from '$lib/api/services/authz'
 // SCHEMA
-import { OrganisationPreflightFormData } from '$lib/db/zod'
+import { OrganisationPreflightFormData } from '$lib/db/zod/schema/organisation'
 import {
   CAPABILITY_I18N_BY_KEY,
   CAPABILITY_KEYS,
@@ -98,7 +100,12 @@ import { setOrganisationImagePresentationMode } from '$lib/client/services/image
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
 // NAVIGATION
-import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
+import {
+  getAdminFacetOrderForResource,
+  getAdminFacetTabsForResource,
+  navigateOnAdmin,
+} from '$lib/navigation'
+import type { OrganisationFacet } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
 // ICONS
@@ -709,6 +716,22 @@ const resolvedFacetTabs = $derived.by(() => {
   tabs.delete('capabilities')
   return tabs
 })
+
+const organisationFacetOrder = $derived.by(
+  () =>
+    getAdminFacetOrderForResource(
+      FirstClassResource.organisation,
+      resolvedFacetTabs,
+    ) as OrganisationFacet[],
+)
+
+const buildFacetNavAction = createFacetNavActionBuilder<OrganisationFacet>({
+  resourceType: FirstClassResource.organisation,
+  getFacetOrder: () => organisationFacetOrder,
+  getActiveFacet: () => activeFacet as OrganisationFacet,
+  navigateToFacet: facet =>
+    navigateOnAdmin(adminCtx, FirstClassResource.organisation, organisationRef, facet),
+})
 const canSubmitOrganisation = $derived(
   isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,
 )
@@ -954,6 +977,12 @@ $effect(() => {
   })
 })
 
+$effect(() => {
+  activeFacet
+  contentsElement
+  focusFacetFromHash(contentsElement, activeFacet)
+})
+
 // Keep entity header metadata (title/icon/facets) aligned with loaded organisation data.
 $effect(() => {
   const title =
@@ -1099,9 +1128,12 @@ $effect(() => {
     isReady={isFormReady}
     class="space-y-4"
   >
-    <Main.Section
+    <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('core', 'previous')}
+      nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormI18nSection
@@ -1156,10 +1188,13 @@ $effect(() => {
           />
         {/snippet}
       </GridSpacer>
-    </Main.Section>
-    <Main.Section
+    </Main.Facet>
+    <Main.Facet
       isVisible={isCapabilitiesFacet && canEditOrganisation}
       transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('capabilities', 'previous')}
+      nextAction={buildFacetNavAction('capabilities', 'next')}
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
       <OrganisationCapabilities
@@ -1181,11 +1216,14 @@ $effect(() => {
         {onRemoveCapability}
         onEnterEditMode={() => headerCtrl.setEditing(true)}
       />
-    </Main.Section>
-    <Main.Section
+    </Main.Facet>
+    <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
+      fillHeight={true}
       class="bits-theme min-h-0 pb-4"
+      previousAction={buildFacetNavAction('fields', 'previous')}
+      nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormFieldsSection
@@ -1235,12 +1273,15 @@ $effect(() => {
           resolveSourceTag: resolveOrganisationPropertyTypeTag,
         }}
       />
-    </Main.Section>
+    </Main.Facet>
   </Main.Form>
-  <Main.Section
+  <Main.Facet
     isVisible={isImagesFacet}
     transition="fade"
-    class="flex min-h-0 flex-col"
+    fillHeight={true}
+    navMode="footer"
+    previousAction={buildFacetNavAction('images', 'previous')}
+    nextAction={buildFacetNavAction('images', 'next')}
     attrs={{ 'data-facet-id': 'images' }}
   >
     <EntityImage
@@ -1258,5 +1299,5 @@ $effect(() => {
       canEditDropzone={canEditImageDropzone}
       {onPresentationModeCommitted}
     />
-  </Main.Section>
+  </Main.Facet>
 </Main.Root>
