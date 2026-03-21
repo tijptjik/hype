@@ -2,7 +2,7 @@
 import { toLocaleCode, toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
-import { normalizeProjectLicense as normalizeSharedProjectLicense } from '$lib/project-license'
+import { normalizeProjectLicense as normalizeSharedProjectLicense } from '$lib/client/services/licence'
 // CAPABILITIES
 import {
   normalizeProjectCapabilities,
@@ -247,6 +247,27 @@ export function normalizePropertiesForSubmit(
     }))
 }
 
+export function normalizeProjectLayersForSubmit(
+  value: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  return value
+    .map((item, index) => ({ item, index }))
+    .filter(
+      entry => typeof entry.item.id === 'string' && entry.item.id.trim().length > 0,
+    )
+    .sort((a, b) => {
+      const aRank = toNumericRank((a.item as Record<string, unknown>).rank)
+      const bRank = toNumericRank((b.item as Record<string, unknown>).rank)
+      if (aRank !== bRank) return aRank - bRank
+      return a.index - b.index
+    })
+    .map(({ item }, rank) => ({
+      ...(item as Record<string, unknown>),
+      rank,
+      isDefaultVisible: Boolean((item as Record<string, unknown>).isDefaultVisible),
+    }))
+}
+
 export function toProjectFormInput(
   data?: Project | null,
   defaults?: ProjectFormDefaults,
@@ -267,6 +288,7 @@ export function toProjectFormInput(
         capabilities: normalizeProjectCapabilities(undefined),
         userRoles: [],
         properties: [],
+        layers: [],
       },
     }
   }
@@ -295,6 +317,11 @@ export function toProjectFormInput(
         capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
       })),
       properties: cloneProjectProperties(data.properties),
+      layers: (data.layers ?? []).map(layer => ({
+        id: layer.id,
+        rank: layer.rank ?? 0,
+        isDefaultVisible: Boolean(layer.isDefaultVisible),
+      })),
     },
   }
 }

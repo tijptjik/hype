@@ -55,7 +55,7 @@ export function getFilteredNeighbourhoods(appCtx: AppCtx): NeighbourhoodJSON {
 export function filterPlaces(appCtx: AppCtx, term: string) {
   if (!term) return Object.entries(neighbourhoods)
   const searchLower = term.toLowerCase()
-  return Object.entries(neighbourhoods).filter(([key, data]) => {
+  return Object.entries(neighbourhoods).filter(([_key, data]) => {
     return (
       getI18n(data, 'name', appCtx.getUserPreferences())
         .toLowerCase()
@@ -90,7 +90,7 @@ export function buildNeighbourhoodSubdivisionMap(
 
   const subNeighbourhoodsMap = new Map<string, string[]>()
 
-  for (const [key, data] of Object.entries(neighbourhoods)) {
+  for (const [_key, data] of Object.entries(neighbourhoods)) {
     const name = data.i18n[locale as keyof typeof data.i18n]?.name
     const neighbourhood = data.i18n[locale as keyof typeof data.i18n]?.neighbourhood
 
@@ -103,7 +103,7 @@ export function buildNeighbourhoodSubdivisionMap(
       if (!subNeighbourhoodsMap.has(hoodKey)) {
         subNeighbourhoodsMap.set(hoodKey, [])
       }
-      subNeighbourhoodsMap.get(hoodKey)!.push(name)
+      subNeighbourhoodsMap.get(hoodKey)?.push(name)
     }
   }
 
