@@ -18,7 +18,7 @@ const appCtx = getAppCtx()
 </script>
 
 <header
-  class="sticky top-0 z-30 flex h-18.75 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black pl-4 pr-6 py-2 caret-transparent focus:outline-none"
+  class="sticky top-0 z-30 flex h-18.75 shrink-0 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black px-4 py-2 caret-transparent focus:outline-none"
 >
   <div class="flex flex-row items-center gap-2">
     <h2 class="text-lg font-semibold uppercase tracking-widest text-primary">
@@ -28,6 +28,7 @@ const appCtx = getAppCtx()
   <div class="flex flex-row items-center gap-4">
     {#if onToggleInfo}
       <button
+        type="button"
         class="m-0 h-auto flex-none p-0 text-base-50 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
         onclick={(e) => {
           onToggleInfo?.(e);
@@ -37,6 +38,7 @@ const appCtx = getAppCtx()
       </button>
     {/if}
     <button
+      type="button"
       class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
       onclick={() => {
         appCtx.closePanel(panelType);

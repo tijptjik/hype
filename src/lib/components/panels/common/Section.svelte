@@ -64,7 +64,7 @@ const onNavigate = (e: MouseEvent) => {
 </script>
 
 <section
-  class="bits-theme flex min-h-0 flex-col overflow-hidden bg-black caret-transparent {isOpen
+  class="bits-theme flex min-h-0 pt-3 flex-col overflow-hidden bg-black caret-transparent {isOpen
     ? 'grow-0'
     : 'shrink-0'} {panelProps.position === 'left' && !panelProps.isNarrow
     ? 'pr-4'
