@@ -433,19 +433,25 @@ export const getLayerMap = async (
 }
 
 /**
- * Builds a predicate that matches projects with at least one layer.
+ * Builds a predicate that matches projects with at least one qualifying layer.
  */
-export const hasProjectLayersCondition = (): SQL<unknown> => sql`EXISTS (
+export const hasProjectLayersCondition = (options?: {
+  requirePublished?: boolean
+}): SQL<unknown> => sql`EXISTS (
   SELECT 1 FROM "layer"
   WHERE "layer"."projectId" = ${project.id}
+  ${options?.requirePublished ? sql`AND "layer"."isPublished" = 1` : sql``}
 )`
 
 /**
- * Builds a predicate that matches organisations with at least one layer.
+ * Builds a predicate that matches organisations with at least one qualifying layer.
  */
-export const hasOrganisationLayersCondition = (): SQL<unknown> => sql`EXISTS (
+export const hasOrganisationLayersCondition = (options?: {
+  requirePublished?: boolean
+}): SQL<unknown> => sql`EXISTS (
   SELECT 1 FROM "layer"
   WHERE "layer"."organisationId" = ${organisation.id}
+  ${options?.requirePublished ? sql`AND "layer"."isPublished" = 1` : sql``}
 )`
 
 // ═══════════════════════
