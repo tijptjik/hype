@@ -1,4 +1,5 @@
 <script lang="ts">
+import Button from '$lib/bits/core/button/Button.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
 import Check from 'virtual:icons/lucide/check'
@@ -50,7 +51,7 @@ async function toggleVisited() {
       ? false
       : wishlistedFeature?.isWishlisted || false
 
-    await toggleVisitedStatus(appCtx.user!.id, feature.id, isVisited, newWishlistStatus)
+    await toggleVisitedStatus(appCtx.user?.id, feature.id, isVisited, newWishlistStatus)
 
     await appCtx.invalidateAndRefresh('userFeatures')
   } catch (error) {
@@ -61,6 +62,19 @@ async function toggleVisited() {
   }
 }
 </script>
+
+{#snippet visitIcon()}
+  {#if isSubmitting}
+    <span class="loading loading-ring loading-md"></span>
+  {:else}
+    <Icon
+      src={Check}
+      class="h-6 w-6 font-bold transition-colors duration-300 {isVisited
+        ? 'text-primary'
+        : 'text-neutral-content'}"
+    />
+  {/if}
+{/snippet}
 
 {#if isVisited}
   <div
@@ -76,23 +90,13 @@ async function toggleVisited() {
     </p>
   </div>
 {:else}
-  <button
-    class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
-    onclick={toggleVisited}
+  <Button
+    text={isVisited ? 'Forget' : m.noble_fine_ibex_pinch()}
+    icon={visitIcon}
+    color="neutral"
+    class="bits-feature-card__action-button"
+    attrs={{ title: isVisited ? 'Forget' : m.noble_fine_ibex_pinch() }}
+    onClick={toggleVisited}
     disabled={isSubmitting}
-  >
-    {#if isSubmitting}
-      <span class="loading loading-ring loading-md"></span>
-    {:else}
-      <Icon
-        src={Check}
-        class="h-6 w-6 font-bold transition-colors duration-300 {isVisited
-          ? 'text-primary'
-          : 'text-neutral-content'}"
-      />
-      <span class="hidden w-120:block">
-        {isVisited ? 'Forget' : m.noble_fine_ibex_pinch()}
-      </span>
-    {/if}
-  </button>
+  />
 {/if}

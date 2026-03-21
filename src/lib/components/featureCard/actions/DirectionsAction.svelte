@@ -1,4 +1,5 @@
 <script lang="ts">
+import Button from '$lib/bits/core/button/Button.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
 import MapIcon from 'virtual:icons/lucide/map'
@@ -18,13 +19,15 @@ function getDirections() {
 }
 </script>
 
-<button
-  class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
-  onclick={getDirections}
->
-  <Icon
-    src={MapIcon}
-    class="h-6 w-6 stroke-2 font-bold text-primary w-64:hidden w-100:inline-block"
-  />
-  <span class="hidden w-64:inline-block">{m.alive_large_hawk_hunt()}</span>
-</button>
+{#snippet directionsIcon()}
+  <Icon src={MapIcon} class="h-6 w-6 stroke-2 font-bold text-primary" />
+{/snippet}
+
+<Button
+  text={m.alive_large_hawk_hunt()}
+  icon={directionsIcon}
+  color="neutral"
+  class="bits-feature-card__action-button bits-feature-card__action-button--show-label-sm"
+  attrs={{ title: m.alive_large_hawk_hunt() }}
+  onClick={getDirections}
+/>

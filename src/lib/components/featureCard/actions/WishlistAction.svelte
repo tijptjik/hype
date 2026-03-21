@@ -1,4 +1,5 @@
 <script lang="ts">
+import Button from '$lib/bits/core/button/Button.svelte'
 // ICONS
 import Icon from '$lib/components/common/Icon.svelte'
 import Star from 'virtual:icons/lucide/star'
@@ -41,7 +42,7 @@ async function toggleWishlisted() {
 
   try {
     await toggleWishlistStatus(
-      appCtx.user!.id,
+      appCtx.user?.id,
       feature.id,
       isWishlisted,
       visitedFeature?.isVisited || false,
@@ -58,11 +59,7 @@ async function toggleWishlisted() {
 }
 </script>
 
-<button
-  class="btn h-12 w-12 bg-base-400 uppercase hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-primary active:bg-base-300 w-64:h-auto w-64:w-auto"
-  onclick={toggleWishlisted}
-  disabled={isSubmitting}
->
+{#snippet wishlistIcon()}
   {#if isSubmitting}
     <span class="loading loading-ring loading-md"></span>
   {:else}
@@ -74,7 +71,16 @@ async function toggleWishlisted() {
       theme="solid"
     />
   {/if}
-  <span class="hidden w-120:block">
-    {isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
-  </span>
-</button>
+{/snippet}
+
+<Button
+  text={isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
+  icon={wishlistIcon}
+  color="neutral"
+  class="bits-feature-card__action-button"
+  attrs={{
+    title: isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link(),
+  }}
+  onClick={toggleWishlisted}
+  disabled={isSubmitting}
+/>
