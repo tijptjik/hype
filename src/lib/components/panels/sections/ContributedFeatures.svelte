@@ -122,7 +122,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
   // Sort by createdAt descending
   const filtered = features
     .filter(Boolean)
-    .sort((a, b) => new Date(b!.createdAt).getTime() - new Date(a!.createdAt).getTime())
+    .sort((a, b) => new Date(b?.createdAt).getTime() - new Date(a?.createdAt).getTime())
   let hierarchy = null
   if (filtered.length > 0) {
     hierarchy = await appCtx.getHierarchy(filtered[0]!)
@@ -140,7 +140,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
 
   {#if userData?.contributedFeatures && Object.keys(userData.contributedFeatures).length > 0}
     <div class="relative pb-3 pr-2">
-      <div class="max-h-[420px] space-y-0 overflow-y-auto" bind:this={viewport}>
+      <div class="max-h-105 space-y-0 overflow-y-auto" bind:this={viewport}>
         <div bind:this={contents}>
           {#each Object.entries(userData.contributedFeatures) as [ projectId, featureIds ] (projectId)}
             {#await fetchFeaturesForProject(featureIds) then groupData}

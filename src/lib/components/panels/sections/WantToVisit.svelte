@@ -7,6 +7,7 @@ import { flip } from 'svelte/animate'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
+import { Panel } from '$lib/enums'
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
@@ -28,7 +29,7 @@ let searchTerm = $state('')
 
 // PANEL PROPS
 let panelProps = $derived({
-  panelType: 'stars' as const,
+  panelType: Panel.plan,
   position: 'left' as const,
   scrollable: false,
   inline: appCtx.isAdmin(),
@@ -69,7 +70,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
 
 <Section title={m.stars__want_to_visit()} icon="/compass.svg" {...panelProps}>
   {#await wishlistedFeaturesPromise}
-    <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+    <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
       <span class="loading loading-ring loading-md"></span>
     </div>
   {:then wishlistedFeatures}
@@ -82,7 +83,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
     )}
     <div class="flex min-h-0 flex-col">
       {#if filteredFeatures.length === 0}
-        <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+        <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
           <p class="text-sm text-base-content/60">{m.short_watery_marten_race()}</p>
         </div>
       {:else}
@@ -126,8 +127,8 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
                 }
               }}
             >
-              <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
-              <div class="flex flex-grow flex-col">
+              <Icon src={Squares2x2} class="h-5 w-5 shrink-0" theme="fill" />
+              <div class="flex grow flex-col">
                 <p class="text-xs uppercase tracking-widest">
                   {#if showOrganisation}
                     <span class="text-primary">{organisationName}</span>
@@ -149,7 +150,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
       {/if}
     </div>
   {:catch error}
-    <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+    <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
       <p class="text-sm text-red-400">{m.honest_swift_lamb_sew()}</p>
     </div>
   {/await}

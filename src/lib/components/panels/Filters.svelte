@@ -67,12 +67,10 @@ even selecting a neighbourhood will not correctly affect the features shown on t
   />
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col">
-    <div class="flex-grow-1 flex max-h-[40vh] min-h-0 flex-shrink-0 flex-col">
+    <div class="grow flex max-h-[40vh] min-h-0 shrink-0 flex-col">
       <Neighbourhoods {...panelProps} />
     </div>
-    <div
-      class="flex-grow-1 flex max-h-[calc(100vh-206px)] min-h-0 flex-shrink-0 flex-col"
-    >
+    <div class="grow flex max-h-[calc(100vh-206px)] min-h-0 shrink-0 flex-col">
       <Categories {...panelProps} />
     </div>
   </div>

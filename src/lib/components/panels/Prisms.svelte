@@ -12,6 +12,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { navigate } from '$lib/navigation'
 // BITS
 import { PanelRoot as Panel } from '$lib/bits'
+import * as PanelPattern from '$lib/bits/patterns/panels'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Maps.svelte'
@@ -19,19 +20,14 @@ import Organisations from '$lib/components/panels/sections/Organisations.svelte'
 import Projects from '$lib/components/panels/sections/Projects.svelte'
 import Layers from '$lib/components/panels/sections/Layers.svelte'
 import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte'
-import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte'
+import ProjectPrismItem from '$lib/components/panels/common/variants/ProjectPrismItem.svelte'
 // ENUMS
 import { FirstClassResource, Panel as PanelType, PanelSide } from '$lib/enums'
 // TYPES
-import type {
-  Layer,
-  PanelProps,
-  PanelPosition,
-  Id,
-  ResourceContext,
-  Organisation,
-  Project,
-} from '$lib/types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { PanelProps, PanelPosition, Id, ResourceContext } from '$lib/types'
 // ENUMS
 import { OmniMode } from '$lib/enums'
 // CONTEXT
@@ -86,7 +82,7 @@ let panelProps: PanelProps = $derived({
       <div class="prisms-sections__section prisms-sections__section--bounded">
         <Organisations {...panelProps}>
           {#snippet filteredItem(resource: Organisation, selectedOrganisations: Id[])}
-            <FilteredResource
+            <PanelPattern.Item.ItemResource
               resourceType={FirstClassResource.organisation}
               {resource}
               selectedClass="bg-primary"
@@ -108,15 +104,23 @@ let panelProps: PanelProps = $derived({
             selectedProjects: Id[],
             hierarchy: ResourceContext
           )}
-            <FilteredResource
-              resourceType={FirstClassResource.project}
+            <ProjectPrismItem
               {resource}
               hierarchy={{
                 organisation: hierarchy.organisation
               }}
-              selectedClass="bg-accent"
               isSelected={selectedProjects.includes(resource.id)}
-              onToggle={(e) => {
+              isReplaceState={appCtx.isProjectReplaceState(resource.id)}
+              onPrimaryAction={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (appCtx.isProjectReplaceState(resource.id)) {
+                  appCtx.replaceWithProjectDefaultLayers(resource.id);
+                } else {
+                  appCtx.addProjectDefaultLayers(resource.id);
+                }
+              }}
+              onToggleFilter={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 appCtx.toggleProject(resource.id);

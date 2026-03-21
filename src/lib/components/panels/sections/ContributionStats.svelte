@@ -26,7 +26,7 @@ type Props = {
 let { userData }: Props = $props()
 
 // DERIVED STATE - Get data from cache
-let isChecked = $derived(!appCtx.state.panels.profile.ctx!.observePrisms)
+let isChecked = $derived(!appCtx.state.panels.profile.ctx?.observePrisms)
 let stats = $derived(
   userData
     ? {
@@ -189,9 +189,9 @@ const statsConfig = [
             <div class="relative z-10 flex flex-col items-center justify-center">
               <span
                 class="text-6xl {stat.textColor} font-extrabold leading-none"
-                style="font-family: 'Tilt Neon', sans-serif; text-shadow: 
+                style="font-family: 'Tilt Neon', sans-serif; text-shadow:
                     0 0 8px {getGlowColor(stat.key)},
-                    0 0 16px {getGlowColor(stat.key)}, 
+                    0 0 16px {getGlowColor(stat.key)},
                     0 0 24px {getGlowColor(stat.key)},
                     0 0 32px {getGlowColor(stat.key)};"
               >

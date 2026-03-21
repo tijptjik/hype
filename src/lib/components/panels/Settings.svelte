@@ -60,21 +60,17 @@ let panelProps: PanelProps = $derived({
   <Profile />
   <div class="flex h-[calc(100vh-206px)] flex-col">
     {#if panelProps.isAdmin}
-      <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
-        <Admin {...panelProps} />
-      </div>
+      <div class="grow flex min-h-0 shrink-0 flex-col"><Admin {...panelProps} /></div>
     {/if}
-    <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
-      <Language {...panelProps} />
-    </div>
+    <div class="grow flex min-h-0 shrink-0 flex-col"><Language {...panelProps} /></div>
     {#if !panelProps.isAdmin}
-      <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col">
+      <div class="grow flex min-h-0 shrink-0 flex-col">
         <Contributor {...panelProps} />
       </div>
-      <div class="flex-grow-1 flex max-h-[calc(50vh)] min-h-0 flex-shrink-0 flex-col">
+      <div class="grow flex max-h-[calc(50vh)] min-h-0 shrink-0 flex-col">
         <DefaultMap {...panelProps} />
       </div>
-      <div class="flex-grow-1 flex max-h-[calc(50vh)] min-h-0 flex-shrink-0 flex-col">
+      <div class="grow flex max-h-[calc(50vh)] min-h-0 shrink-0 flex-col">
         <Experimental {...panelProps} />
       </div>
     {/if}

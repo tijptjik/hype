@@ -45,7 +45,7 @@ let panelProps: PanelProps = $derived({
   <div
     class="h-calc(100vh-10rem) flex flex-col items-stretch overflow-y-auto overscroll-none"
   >
-    <h2 class="flex-grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
+    <h2 class="grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
       {getI18n(hub, 'nameShort', appCtx.getUserPreferences(), m.menu_about())}
     </h2>
     <div class="preformatted mb-12">
@@ -84,8 +84,8 @@ let panelProps: PanelProps = $derived({
   @apply hover:duration-300;
   @apply border-b-1;
   @apply border-primary;
-  border-bottom: 2px !important;
-  border-color: red !important;
+  border-bottom: 2px;
+  border-color: red;
 }
 :global(.preformatted strong) {
   @apply font-semibold;

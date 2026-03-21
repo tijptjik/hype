@@ -1,8 +1,7 @@
 <script lang="ts">
 import type { Component } from 'svelte'
 // COMPONENTS
-import SectionHeader from '../elements/SectionHeader.svelte'
-import SectionContent from '../elements/SectionContent.svelte'
+import * as Panel from '$lib/bits/patterns/panels'
 // SERVICES
 import { navigateOnAdmin } from '$lib/navigation'
 // TYPES
@@ -20,6 +19,7 @@ let {
   defaultOpen = true,
   children,
   collapsedContent = undefined,
+  managedContent = undefined,
   ...panelProps
 }: {
   resourceType?: FirstClassResource
@@ -31,6 +31,7 @@ let {
   defaultOpen?: boolean
   children?: any
   collapsedContent?: any
+  managedContent?: any
 } & PanelProps = $props()
 
 // STATE
@@ -69,7 +70,7 @@ const onNavigate = (e: MouseEvent) => {
     ? 'pr-4'
     : ''}"
 >
-  <SectionHeader
+  <Panel.Section.Header
     {title}
     {icon}
     {iconVerticalPaddingClass}
@@ -80,5 +81,11 @@ const onNavigate = (e: MouseEvent) => {
     {onNavigate}
     {...panelProps}
   />
-  <SectionContent {isOpen} {children} {collapsedContent} {...panelProps} />
+  <Panel.Section.Content
+    {isOpen}
+    {children}
+    {collapsedContent}
+    {managedContent}
+    {...panelProps}
+  />
 </section>

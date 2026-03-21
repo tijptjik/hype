@@ -4,10 +4,10 @@ import { m } from '$lib/i18n'
 // SERVICES
 import { getGroupedClassifierProperties } from '$lib/client/services/property'
 // COMPONENTS
+import * as Panel from '$lib/bits/patterns/panels'
 import CategorySection from '$lib/components/panels/sections/CategorySection.svelte'
 import CategoryFilter from '$lib/components/panels/controls/CategoryFilter.svelte'
 import RangeFilter from '$lib/components/panels/controls/RangeFilter.svelte'
-import SelectedFilters from '$lib/components/panels/elements/SelectedFilters.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
@@ -22,7 +22,7 @@ let { ...panelProps }: PanelProps = $props()
 </script>
 
 {#snippet SelectedCategories(layerId: Id, properties: Property[])}
-  <SelectedFilters {layerId} {appCtx} {properties} />
+  <Panel.Item.SelectedFilter {layerId} {appCtx} {properties} />
 {/snippet}
 
 <!-- LAYOUT -->
@@ -52,4 +52,4 @@ let { ...panelProps }: PanelProps = $props()
     </CategorySection>
   {/each}
 {/await}
-<div class="flex-grow-1 h-[84px] w-full flex-shrink-0"></div>
+<div class="grow h-21 w-full shrink-0"></div>

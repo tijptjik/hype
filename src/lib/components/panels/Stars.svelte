@@ -3,6 +3,7 @@
 import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import { Panel as PanelType } from '$lib/enums'
 // BITS
 import { PanelRoot as Panel } from '$lib/bits'
 // COMPONENTS
@@ -44,7 +45,7 @@ let handleToggleWantToVisit = (e: MouseEvent | TouchEvent) => {
 }
 
 let panelProps: PanelProps = $derived({
-  panelType: 'stars',
+  panelType: PanelType.stars,
   position: 'left',
   scrollable: false,
   inline: appCtx.isAdmin(),

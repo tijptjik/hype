@@ -8,11 +8,11 @@ import {
   getNeighbourhoodsAsResources,
 } from '$lib/client/services/geospatial'
 // COMPONENTS
+import * as Panel from '$lib/bits/patterns/panels'
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
 import FilteredNeighbourhood from '$lib/components/panels/common/variants/FilteredNeighbourhood.svelte'
 import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
-import SelectedResources from '$lib/components/panels/elements/SelectedResources.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPE
@@ -38,7 +38,7 @@ const filteredNeighbourhoods = $derived(filterPlaces(appCtx, searchTerm))
 <!-- COMPONENTS -->
 
 {#snippet SelectedNeighbourhoods()}
-  <SelectedResources
+  <Panel.Item.SelectedResource
     resourceType="neighbourhood"
     resources={allNeighbourhoods}
     selectedIds={selectedNeighbourhoodRefs}
