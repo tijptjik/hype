@@ -280,6 +280,26 @@ export function isCustomProjectLicense(license: ProjectLicense): boolean {
   )
 }
 
+export function toProjectLicenseFilterCache(license: ProjectLicense): {
+  isAllRightsReserved: boolean
+  isPublicDomain: boolean
+  hasLicenseBy: boolean | null
+  hasLicenseSa: boolean | null
+  hasLicenseNc: boolean | null
+  hasLicenseNd: boolean | null
+} {
+  const normalized = normalizeProjectLicense(license)
+
+  return {
+    isAllRightsReserved: normalized.meta.isAllRightsReserved,
+    isPublicDomain: normalized.meta.isPublicDomain,
+    hasLicenseBy: normalized.media.all.BY,
+    hasLicenseSa: normalized.media.all.SA,
+    hasLicenseNc: normalized.media.all.NC,
+    hasLicenseNd: normalized.media.all.ND,
+  }
+}
+
 export {
   createDefaultProjectLicense,
   normalizeProjectLicense,
