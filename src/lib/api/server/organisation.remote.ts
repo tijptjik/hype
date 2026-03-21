@@ -95,6 +95,7 @@ import type {
 //
 // GET
 // - getOrganisations
+// - getOrganisationsWhichHaveLayers
 // - getOrganisation
 //
 // FORM
@@ -218,7 +219,11 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
       userRoles,
     )
 
-    conditions.push(hasOrganisationLayersCondition())
+    conditions.push(
+      hasOrganisationLayersCondition({
+        requirePublished: !isAdminRequest,
+      }),
+    )
 
     const result = await listOrganisations(
       db,
