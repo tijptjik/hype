@@ -16,6 +16,25 @@ import type { Point } from 'geojson'
 let appCtx = getAppCtx()
 
 let { task }: { task: Task } = $props()
+const mapStyleCode = $derived(
+  appCtx.cache.project.get(task.feature?.projectId ?? '')?.mapStyle?.code ?? null,
+)
+
+$effect(() => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const projectId = task.feature?.projectId ?? ''
+  const project = appCtx.cache.project.get(projectId)
+
+  console.debug('[NewFeature] resolved project mapStyleCode', {
+    projectId,
+    derivedMapStyleCode: mapStyleCode,
+    projectMapStyleCode: project?.mapStyle?.code ?? null,
+    cachedProject: project ?? null,
+  })
+})
 
 // STATE: Map expansion
 let isMapCollapsed = $state(true)
@@ -96,6 +115,7 @@ function handleMapCollapse(collapsed: boolean): void {
             coordinates={(task.feature?.geometry as Point)?.coordinates}
             draggable={false}
             addressMeta={null}
+            {mapStyleCode}
             toggleCollapsed={handleMapCollapse}
           />
         </div>
