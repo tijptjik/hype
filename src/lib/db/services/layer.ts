@@ -459,6 +459,45 @@ export const hasOrganisationLayersCondition = (options?: {
 // ═══════════════════════
 
 /**
+ * Syncs persisted rank/default-visible presentation fields for one project's layers.
+ */
+export const syncProjectLayerPresentation = async (
+  db: Database,
+  projectId: Id,
+  rows: Array<{ id: Id; rank: number; isDefaultVisible: boolean }>,
+): Promise<void> => {
+  if (rows.length === 0) return
+
+  const existingRows = await db.query.layer.findMany({
+    where: and(
+      eq(layer.projectId, projectId),
+      inArray(
+        layer.id,
+        rows.map(row => row.id),
+      ),
+    ),
+    columns: {
+      id: true,
+    },
+  })
+  const existingIds = new Set(existingRows.map(row => row.id))
+
+  await Promise.all(
+    rows
+      .filter(row => existingIds.has(row.id))
+      .map(row =>
+        db
+          .update(layer)
+          .set({
+            rank: row.rank,
+            isDefaultVisible: row.isDefaultVisible,
+          })
+          .where(and(eq(layer.projectId, projectId), eq(layer.id, row.id))),
+      ),
+  )
+}
+
+/**
  * Updates a layer with modified-at match for optimistic concurrency control.
  * Used to prevent stale writes in remote form submissions.
  */
