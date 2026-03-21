@@ -52,12 +52,11 @@ const filteredNeighbourhoods = $derived(filterPlaces(appCtx, searchTerm))
 <Section
   title={m.filters__neighbourhoods()}
   icon="/neighbourhood.svg"
-  iconGraphicClass="bits-panel-section-header-icon__graphic--neighbourhood"
   iconVerticalPaddingClass="pt-0"
   collapsedContent={SelectedNeighbourhoods}
   {...panelProps}
 >
-  {#if Array.from(neighbourhoodCounts.values()).filter((count) => count > 0).length == 0}
+  {#if Array.from(neighbourhoodCounts.values()).filter((count) => count > 0).length === 0}
     {@render SelectedNeighbourhoods()}
   {/if}
   {#if Array.from(neighbourhoodCounts.values()).filter((count) => count > 0).length > 4}

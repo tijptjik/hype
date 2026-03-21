@@ -2,6 +2,8 @@
 // I18N
 import { getLocale } from '$lib/i18n'
 import { m } from '$lib/i18n'
+// BITS
+import { Switch } from '$lib/bits'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import Language from 'virtual:icons/lucide/languages'
@@ -63,7 +65,7 @@ let advancedOpen = $state(false)
   title={m.settings__language()}
   icon="/language.svg"
   position="right"
-  defaultOpen={panelProps.isAdmin ? false : true}
+  defaultOpen={!panelProps.isAdmin}
   iconVerticalPaddingClass="py-3 pr-4.5"
 >
   <div class="flex flex-col gap-4 px-4 caret-transparent">
@@ -101,9 +103,12 @@ let advancedOpen = $state(false)
       <div class="ml-4 flex flex-col gap-2 pt-2">
         {#each supportedLocales.filter((locale) => locale !== getLocale()) as locale (locale)}
           <div
-            class="flex w-full flex-row items-center justify-between gap-4 py-1 pr-1.5"
+            class="flex w-full flex-row items-start justify-between gap-3 py-1 pr-1.5"
           >
-            <label for={`fallback-${locale}`} class="flex cursor-pointer flex-col">
+            <label
+              for={`fallback-${locale}`}
+              class="flex min-w-0 grow cursor-pointer flex-col"
+            >
               <span class="font-normal text-base-content"
                 >{localeNames[locale][locale]}</span
               >
@@ -113,14 +118,15 @@ let advancedOpen = $state(false)
                 >
               {/if}
             </label>
-            <input
-              type="checkbox"
+            <Switch
               id={`fallback-${locale}`}
-              class="toggle toggle-primary toggle-sm shrink-0"
+              class="mt-0.5 shrink-0"
+              size="sm"
+              color="primary"
               checked={userPreferences.fallbackLocales?.includes(locale) || false}
-              onchange={(e) =>
-                appCtx.setFallbackLocales(locale, e.currentTarget.checked)}
-            >
+              onCheckedChange={(checked) =>
+                appCtx.setFallbackLocales(locale, checked === true)}
+            />
           </div>
         {/each}
       </div>
@@ -132,29 +138,26 @@ let advancedOpen = $state(false)
       <div class="ml-4 flex flex-col gap-2 pt-2">
         {#each advancedSettings as setting (setting.code)}
           <div
-            class="min-h-18 flex w-full flex-row items-center justify-between gap-4 py-2 pr-1.5"
+            class="flex w-full flex-row items-start justify-between gap-3 py-2 pr-1.5"
           >
-            <div class="flex flex-col">
-              <p class="font-normal text-base-content">
-                <span class="pr-1.5">{setting.name}</span>
-                {#if setting.description}
-                  <span class="text-sm text-neutral-content"
-                    >{setting.description}</span
-                  >
-                {/if}
-              </p>
+            <div class="min-w-0 grow flex flex-col gap-0.5">
+              <p class="font-normal text-base-content">{setting.name}</p>
+              {#if setting.description}
+                <p class="text-sm text-neutral-content">{setting.description}</p>
+              {/if}
             </div>
-            <input
+            <Switch
               name={setting.code}
-              type="checkbox"
-              class="toggle toggle-primary toggle-sm shrink-0"
+              class="mt-0.5 shrink-0"
+              size="sm"
+              color="primary"
               checked={setting.currentValue}
-              onchange={(e) =>
+              onCheckedChange={(checked) =>
                 appCtx.setAdvancedFeature(
                   setting.code as keyof UserPreferences,
-                  e.currentTarget.checked
+                  checked === true
                 )}
-            >
+            />
           </div>
         {/each}
       </div>
