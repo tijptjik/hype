@@ -13,6 +13,7 @@ let {
   resourceType,
   title,
   icon,
+  iconGraphicClass = '',
   iconVerticalPaddingClass = 'py-3',
   iconColorClass = 'text-base-content/60',
   description = undefined,
@@ -25,6 +26,7 @@ let {
   resourceType?: FirstClassResource
   title: string
   icon: string | Component
+  iconGraphicClass?: string
   iconVerticalPaddingClass?: string
   iconColorClass?: string
   description?: string
@@ -73,6 +75,7 @@ const onNavigate = (e: MouseEvent) => {
   <Panel.Section.Header
     {title}
     {icon}
+    {iconGraphicClass}
     {iconVerticalPaddingClass}
     {iconColorClass}
     {description}

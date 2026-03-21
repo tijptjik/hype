@@ -15,6 +15,7 @@ type Props = {
   resourceType?: FirstClassResource
   title: string
   icon: string | Component
+  iconGraphicClass?: string
   iconVerticalPaddingClass?: string
   iconColorClass?: string
   description?: string
@@ -27,6 +28,7 @@ let {
   resourceType,
   title,
   icon,
+  iconGraphicClass = '',
   iconVerticalPaddingClass = 'py-3',
   iconColorClass = 'text-base-content/60',
   description = undefined,
@@ -123,6 +125,7 @@ let href = $derived(
     {/if}
     <SectionHeaderIcon
       {icon}
+      {iconGraphicClass}
       {iconColorClass}
       {onToggle}
       {onNavigate}

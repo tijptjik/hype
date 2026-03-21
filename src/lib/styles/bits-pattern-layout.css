@@ -58,6 +58,10 @@
     @apply absolute right-0 hidden items-center gap-2 px-4 lg:flex;
   }
 
+  .bits-theme .bits-app-menu__separator {
+    display: none;
+  }
+
   .bits-theme .bits-app-menu__button.bits-btn {
     @apply min-h-12 flex-col justify-center gap-1 border-0 p-1;
     --btn-bg: transparent;
@@ -89,6 +93,83 @@
   @supports (-moz-appearance: none) {
     .bits-theme .bits-app-menu__button.bits-btn--label-hidden .bits-btn__label {
       display: none;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .bits-theme .bits-app-menu {
+      left: 50%;
+      right: auto;
+      bottom: 1.5rem;
+      width: auto;
+      min-height: 0;
+      max-width: calc(100vw - 2rem);
+      padding: 0;
+      padding-bottom: 0;
+      border-top: 0;
+      background: transparent;
+      transform: translateX(calc(-50% + var(--bits-app-menu-offset, 0px)));
+      pointer-events: none;
+    }
+
+    .bits-theme .bits-app-menu__inner {
+      display: inline-flex;
+      width: auto;
+      max-width: 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.3125rem 0.375rem;
+      border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+      border-radius: 999px;
+      background: color-mix(in oklab, black 84%, var(--color-glass-result) 16%);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 48px rgb(0 0 0 / 0.34);
+      pointer-events: auto;
+    }
+
+    .bits-theme .bits-app-menu__items {
+      margin-inline: 0;
+      flex: 0 1 auto;
+      width: auto;
+      max-width: none;
+      justify-content: center;
+      gap: 0.125rem;
+    }
+
+    .bits-theme .bits-app-menu__trailing {
+      position: static;
+      display: flex;
+      flex: 0 0 auto;
+      padding-inline: 0;
+    }
+
+    .bits-theme .bits-app-menu__separator {
+      display: block;
+      flex: 0 0 1px;
+      width: 2px;
+      min-width: 1px;
+      height: 24px;
+      padding: 0;
+      margin: 0 0.125rem;
+      align-self: center;
+      background: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+    }
+
+    .bits-theme .bits-app-menu__button.bits-btn {
+      min-height: 2.75rem;
+      flex-direction: row;
+      gap: 0.4375rem;
+      border-radius: 999px;
+      padding: 0.5rem 0.625rem;
+      --btn-hover-bg: color-mix(in oklab, var(--color-glass-result) 96%, black);
+      --btn-active-bg: color-mix(in oklab, var(--color-glass-result) 88%, black);
+    }
+
+    .bits-theme .bits-app-menu__button .bits-btn__label {
+      font-size: 0.75rem;
+      opacity: 1;
+      transform: none;
     }
   }
 
@@ -164,31 +245,43 @@
   }
 
   .bits-panel-section-header-root {
-    @apply flex w-full shrink-0 cursor-pointer items-center justify-between bg-black pl-4 pr-2.75 text-base-content focus:outline-none focus:ring-0;
+    @apply flex w-full shrink-0 items-center justify-between bg-black text-base-content focus:outline-none focus:ring-0;
   }
 
   .bits-panel-section-header {
-    @apply flex w-full flex-row items-center justify-between;
+    @apply flex w-full flex-row items-center justify-between pr-3;
   }
 
   .bits-panel-section-header-root--narrow {
     @apply justify-center;
   }
 
+  .bits-panel-section-header-root--narrow .bits-panel-section-header {
+    @apply justify-center pr-0;
+  }
+
   .bits-panel-section-header-title {
-    @apply flex flex-row items-center gap-3;
+    @apply flex flex-1 items-start;
   }
 
   .bits-panel-section-header-title__stack {
-    @apply space-y-0.5;
+    @apply w-full space-y-0.5;
   }
 
   .bits-panel-section-header-title__row {
-    @apply flex items-center gap-3;
+    @apply flex w-full items-center;
+  }
+
+  .bits-panel-section-header-title__chevron-button {
+    @apply flex shrink-0 items-center justify-center pl-4 pr-3 focus:outline-none focus:ring-0;
   }
 
   .bits-panel-section-header-title__chevron {
     @apply h-[1.125rem] w-[1.125rem];
+  }
+
+  .bits-panel-section-header-title__action {
+    @apply w-full text-left focus:outline-none focus:ring-0;
   }
 
   .bits-panel-section-header-title__heading {
@@ -200,15 +293,19 @@
   }
 
   .bits-panel-section-header-icon {
-    @apply focus:outline-none focus:ring-0;
+    @apply focus:outline-none focus:ring-0 pr-0.5;
   }
 
   .bits-panel-section-header-icon--narrow {
-    @apply px-2 py-2;
+    @apply px-0 py-2 pr-0;
   }
 
   .bits-panel-section-header-icon__graphic {
-    @apply h-8 w-8;
+    @apply h-7 w-7;
+  }
+
+  .bits-panel-section-header-icon__graphic--neighbourhood {
+    @apply h-12 w-auto max-w-12 object-contain;
   }
 
   .bits-panel-section-content {

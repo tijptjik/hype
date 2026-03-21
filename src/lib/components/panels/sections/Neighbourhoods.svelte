@@ -52,7 +52,8 @@ const filteredNeighbourhoods = $derived(filterPlaces(appCtx, searchTerm))
 <Section
   title={m.filters__neighbourhoods()}
   icon="/neighbourhood.svg"
-  iconVerticalPaddingClass="pt-2"
+  iconGraphicClass="bits-panel-section-header-icon__graphic--neighbourhood"
+  iconVerticalPaddingClass="pt-0"
   collapsedContent={SelectedNeighbourhoods}
   {...panelProps}
 >
