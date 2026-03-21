@@ -1,3 +1,5 @@
+// SVELTEKIT
+import { replaceState } from '$app/navigation'
 // CONSTANTS
 import { NEW_REF } from '$lib/constants'
 // CONTEXT
@@ -475,6 +477,12 @@ export function useAdminHeaderModel(
   // Forward facet tab changes into the admin context.
   function handleFacetChange(ref: string): void {
     adminCtx.setFacet(ref as Parameters<typeof adminCtx.setFacet>[0])
+
+    if (typeof window === 'undefined') return
+
+    const url = new URL(window.location.href)
+    url.hash = ref
+    replaceState(url, window.history.state)
   }
 
   // ---
