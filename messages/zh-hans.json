@@ -74,6 +74,8 @@
   "feature__translatable_fields_subtitle": "会随翻译而变化的自由输入栏位",
   "menu_filters": "过滤条件",
   "settings_contributor_placeholder": "输入你的姓名",
+  "common__read_more": "展开更多",
+  "common__read_less": "收起内容",
   "settings_experimental_contributor_mode": "贡献者用户模式",
   "settings_experimental_contributor_description": "提交照片及新地图项的高级用户界面",
   "report_missing__placeholder": "我认为这个地方并不存在是因为......",

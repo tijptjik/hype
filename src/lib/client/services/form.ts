@@ -1158,6 +1158,15 @@ const toFacetFromIssuePath = (
 ): FacetType => {
   const segments = toIssuePathSegments(issue)
   if (
+    supportedFacets.has('layers') &&
+    segments[0] === 'data' &&
+    segments[1] === 'layers'
+  ) {
+    // Layer ordering/default-visibility inputs are serialized outside the facet body.
+    return 'layers'
+  }
+
+  if (
     supportedFacets.has('fields') &&
     segments[0] === 'data' &&
     segments[1] === 'properties'

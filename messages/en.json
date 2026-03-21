@@ -74,6 +74,8 @@
   "feature__translatable_fields_subtitle": "Freeform fields that differ in translation",
   "menu_filters": "Filters",
   "settings_contributor_placeholder": "Enter your name",
+  "common__read_more": "Read more",
+  "common__read_less": "Read less",
   "settings_experimental_contributor_mode": "Contributor Mode",
   "settings_experimental_contributor_description": "Advanced UI for contributing photos and features",
   "report_missing__placeholder": "I believe this place is missing because...",
