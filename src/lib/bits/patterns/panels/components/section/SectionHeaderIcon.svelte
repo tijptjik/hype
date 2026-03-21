@@ -4,7 +4,7 @@ import type { Component } from 'svelte'
 import Icon from '$lib/components/common/Icon.svelte'
 
 type Props = {
-  icon: Component
+  icon: string | Component
   iconColorClass: string
   onToggle: (event: MouseEvent) => void
   onNavigate?: (event: MouseEvent) => void
@@ -49,10 +49,19 @@ const onPrimaryAction = (event: MouseEvent): void => {
   class:bits-panel-section-header-icon--narrow={isNarrow}
   onclick={onPrimaryAction}
 >
-  <Icon
-    size="lg"
-    src={icon}
-    class="bits-panel-section-header-icon__graphic {iconColorClass}"
-    aria-hidden="true"
-  />
+  {#if typeof icon === 'string'}
+    <img
+      src={icon}
+      alt=""
+      class="bits-panel-section-header-icon__graphic {iconColorClass}"
+      aria-hidden="true"
+    >
+  {:else}
+    <Icon
+      size="lg"
+      src={icon}
+      class="bits-panel-section-header-icon__graphic {iconColorClass}"
+      aria-hidden="true"
+    />
+  {/if}
 </button>
