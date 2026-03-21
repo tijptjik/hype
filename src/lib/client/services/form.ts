@@ -67,6 +67,7 @@ import type {
 // 2. RESOURCE EDITOR FACTORIES
 // - createResourceFormConfig
 // - createResourceEditorPage
+// - focusFacetFromHash
 //
 // 3. SUBMIT PAYLOAD NORMALIZATION
 // - prepareSubmitPayloadMeta
@@ -487,6 +488,39 @@ export function createResourceEditorPage({
       headerCtrl.clearFormActions()
     },
   }
+}
+
+/**
+ * Focuses the active facet section when the current URL hash matches that facet.
+ *
+ * @param container Root form element containing `data-facet-id` sections.
+ * @param facet Active facet identifier.
+ * @returns Nothing.
+ */
+export function focusFacetFromHash(
+  container: HTMLElement | null | undefined,
+  facet: FacetType | false,
+): void {
+  if (typeof window === 'undefined' || !container || !facet) return
+
+  const activeHash = window.location.hash.slice(1)
+  if (activeHash !== facet) return
+
+  const selectorFacet = typeof CSS !== 'undefined' ? CSS.escape(facet) : facet
+  const target = container.querySelector<HTMLElement>(
+    `[data-facet-id="${selectorFacet}"]`,
+  )
+
+  if (!target) return
+
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ block: 'start', behavior: 'auto' })
+
+    const hadTabIndex = target.hasAttribute('tabindex')
+    if (!hadTabIndex) target.setAttribute('tabindex', '-1')
+    target.focus({ preventScroll: true })
+    if (!hadTabIndex) target.removeAttribute('tabindex')
+  })
 }
 
 // ---
