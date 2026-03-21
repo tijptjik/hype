@@ -3,12 +3,15 @@
   Apply by wrapping migrated sections with: <div class="bits-theme">...</div>
 */
 @import "./bits-btn.css";
+@import "./bits-card.css";
 @import "./bits-checkbox.css";
 @import "./bits-completion-footer.css";
 @import "./bits-dialog.css";
 @import "./bits-index-card.css";
 @import "./bits-loading.css";
+@import "./bits-map-style.css";
 @import "./bits-entity-image.css";
+@import "./bits-featureCard.css";
 @import "./bits-feature-stats.css";
 @import "./bits-feature-editor.css";
 @import "./bits-form.css";
@@ -275,7 +278,7 @@
 
 @layer components {
   .bits-theme *:not(.focus-override) {
-    outline: none !important;
+    outline: none;
   }
 
   .bits-theme *:not(.focus-override):focus-visible {

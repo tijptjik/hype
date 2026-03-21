@@ -1,7 +1,7 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 import { Button, SimpleTooltip } from '$lib/bits/core'
-import { Switch } from '$lib/bits/custom'
+import { Card, Switch } from '$lib/bits/custom'
 import { m } from '$lib/i18n'
 import Inbox from 'virtual:icons/lucide/inbox'
 import Plus from 'virtual:icons/lucide/plus'
@@ -19,7 +19,11 @@ let {
 }: LayerPropertyCardActionsProps = $props()
 </script>
 
-<div class={`bits-form__layer-card-actions-rail ${className}`}>
+<Card.Actions
+  padding="md"
+  bg="subtle"
+  class={`bits-form__layer-card-actions-rail ${className}`}
+>
   <div class="bits-form__layer-card-actions">
     <div class="bits-form__layer-card-flag">
       <SimpleTooltip>
@@ -56,4 +60,4 @@ let {
       </div>
     {/if}
   </div>
-</div>
+</Card.Actions>

@@ -3,5 +3,5 @@ export type {
   ResourceCardRootProps,
   ResourceCardMediaProps,
   ResourceCardBodyProps,
-  ResourceCardActionsProps,
+  ResourceCardHubActionsProps,
 } from './resourceCard.types'

@@ -1,0 +1,845 @@
+@layer components {
+  .bits-theme .bits-card {
+    --bits-card-media-size: 64px;
+    --bits-card-body-padding-x: 1rem;
+    --bits-card-body-padding-y: 0.5rem;
+    position: relative;
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 1rem;
+    border: 4px solid color-mix(in oklab, var(--color-primary) 58%, transparent);
+    background:
+      radial-gradient(
+        140% 120% at 100% 0%,
+        color-mix(in oklab, var(--color-primary) 8%, transparent) 0%,
+        transparent 46%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--color-glass-300) 92%, transparent) 0%,
+        color-mix(in oklab, var(--color-glass-300) 82%, transparent) 100%
+      );
+    box-shadow: 0 0 22px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(20px) saturate(1.06);
+    background-clip: padding-box;
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    transform: translateZ(0);
+  }
+
+  .bits-theme .bits-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px;
+    opacity: 0.16;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .bits-theme .bits-card > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .bits-theme .bits-card[data-size="sm"] {
+    --bits-card-media-size: 48px;
+  }
+
+  .bits-theme .bits-card[data-size="md"] {
+    --bits-card-media-size: 64px;
+  }
+
+  .bits-theme .bits-card[data-size="lg"] {
+    --bits-card-media-size: 96px;
+  }
+
+  .bits-theme .bits-card[data-size="xl"] {
+    --bits-card-media-size: 128px;
+  }
+
+  .bits-theme .bits-card__drag-handle {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 2.5rem;
+    opacity: 0.8;
+    transform: translateY(-50%);
+    border-radius: 0.1rem 0.75rem 0.75rem 0.1rem;
+    background: color-mix(in oklab, var(--color-base-100) 92%, transparent);
+    color: color-mix(in oklab, var(--color-base-content) 52%, transparent);
+    box-shadow: 0 0 0 1px
+      color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
+
+  .bits-theme .bits-card[data-draggable="false"] .bits-card__drag-handle {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .bits-theme .bits-card__drag-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .bits-theme .bits-card__media {
+    flex: 0 0 auto;
+    width: var(--bits-card-media-size);
+    height: var(--bits-card-media-size);
+    margin: 0;
+    position: relative;
+    align-self: stretch;
+    overflow: hidden;
+    border-top-left-radius: calc(1rem - 4px);
+    border-bottom-left-radius: calc(1rem - 4px);
+    background: color-mix(in oklab, var(--color-base-200) 80%, transparent);
+    background-clip: padding-box;
+    isolation: isolate;
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    transform: translateZ(0);
+  }
+
+  .bits-theme .bits-card__media[data-size="sm"] {
+    width: 48px;
+    height: 48px;
+  }
+
+  .bits-theme .bits-card__media[data-size="md"] {
+    width: 64px;
+    height: 64px;
+  }
+
+  .bits-theme .bits-card__media[data-size="lg"] {
+    width: 96px;
+    height: 96px;
+  }
+
+  .bits-theme .bits-card__media[data-size="xl"] {
+    width: 128px;
+    height: 128px;
+  }
+
+  .bits-theme .bits-card__media-image,
+  .bits-theme .bits-card__media-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background-clip: border-box;
+    background-color: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+  }
+
+  .bits-theme .bits-card__media-image {
+    display: block;
+    object-fit: cover;
+    color: transparent;
+  }
+
+  .bits-theme .bits-card__media-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed color-mix(in oklab, var(--color-base-content) 16%, transparent);
+    background: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+    color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .bits-theme .bits-card__body {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 0%;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.075rem;
+    padding: var(--bits-card-body-padding-y) var(--bits-card-body-padding-x);
+    overflow: hidden;
+  }
+
+  .bits-theme .bits-card[data-draggable="true"] .bits-card__body,
+  .bits-theme .bits-card[data-reserve-drag-space="true"] .bits-card__body {
+    padding-left: calc(var(--bits-card-body-padding-x) + 1.5rem);
+  }
+
+  .bits-theme .bits-card[data-draggable="true"]:has(.bits-card__media) .bits-card__body,
+  .bits-theme
+    .bits-card[data-reserve-drag-space="true"]:has(.bits-card__media)
+    .bits-card__body {
+    padding-left: var(--bits-card-body-padding-x);
+  }
+
+  .bits-theme .bits-card__code {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: color-mix(in oklab, var(--color-primary) 86%, white 8%);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .bits-theme .bits-card__title-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-card__title-text {
+    color: var(--color-base-content);
+    font-size: 1.05rem;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .bits-theme .bits-card__description {
+    margin: 0;
+    overflow: hidden;
+    color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: var(--bits-card-description-lines, 2);
+    -webkit-box-orient: vertical;
+  }
+
+  .bits-theme .bits-card__tags {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .bits-theme .bits-card__actions {
+    --bits-card-actions-gap: 0px;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    gap: var(--bits-card-actions-gap);
+    padding-inline: 0;
+  }
+
+  .bits-theme .bits-card__actions[data-padding="xs"] {
+    padding-inline: 0.5rem;
+  }
+
+  .bits-theme .bits-card__actions[data-padding="sm"] {
+    padding-inline: 0.75rem;
+  }
+
+  .bits-theme .bits-card__actions[data-padding="md"] {
+    padding-inline: 1rem;
+  }
+
+  .bits-theme .bits-card__actions[data-padding="lg"] {
+    padding-inline: 1.5rem;
+  }
+
+  .bits-theme .bits-card__actions[data-padding="xl"] {
+    padding-inline: 2rem;
+  }
+
+  .bits-theme .bits-card__actions[data-bg="subtle"] {
+    background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+  }
+
+  .bits-theme .bits-card__actions[data-bg="panel"] {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, black 12%, var(--color-base-200)) 0%,
+      color-mix(in oklab, black 18%, var(--color-base-300)) 100%
+    );
+    border-left: 1px solid
+      color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
+
+  .bits-theme .bits-card__actions[data-bg="contrast"] {
+    background: color-mix(in oklab, var(--color-base-content) 12%, black 12%);
+    border-left: 1px solid
+      color-mix(in oklab, var(--color-base-content) 16%, transparent);
+  }
+
+  .bits-theme .bits-form__user-card-root {
+    min-height: 64px;
+    max-width: 24rem;
+  }
+
+  .bits-theme .bits-form__user-card-root.bits-form__user-card-root--full {
+    max-width: none;
+  }
+
+  .bits-theme .bits-form__user-card-avatar {
+    height: auto;
+    min-height: 100%;
+    max-width: 64px;
+    background: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+  }
+
+  .bits-theme .bits-form__user-card-avatar-image,
+  .bits-theme .bits-form__user-card-avatar-fallback {
+    border-radius: 0;
+  }
+
+  .bits-theme .bits-form__user-card-actions {
+    min-width: max-content;
+  }
+
+  .bits-theme .bits-form__user-card-actions-slot {
+    display: inline-grid;
+    grid-template-columns: max-content;
+    align-items: center;
+    justify-items: center;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-form__user-card-actions-slot--remove {
+    grid-template-columns: 4rem;
+  }
+
+  .bits-theme .bits-form__user-card-actions-slot-content {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    min-width: max-content;
+    align-items: center;
+    justify-content: center;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease,
+      visibility 0s linear 0.16s;
+  }
+
+  .bits-theme
+    .bits-form__user-card-actions-slot--select
+    .bits-form__user-card-actions-slot-content--select,
+  .bits-theme
+    .bits-form__user-card-actions-slot--remove
+    .bits-form__user-card-actions-slot-content--remove {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  .bits-theme
+    .bits-form__user-card-actions-slot--select
+    .bits-form__user-card-actions-slot-content--remove,
+  .bits-theme
+    .bits-form__user-card-actions-slot--remove
+    .bits-form__user-card-actions-slot-content--select {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(0.2rem);
+    pointer-events: none;
+  }
+
+  .bits-theme .bits-form__user-card-actions-select.bits-form__select-trigger,
+  .bits-theme .bits-form__user-card-actions-select.bits-form__select-display-wrap {
+    gap: 0.5rem;
+    width: max-content;
+    min-width: max-content;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-form__user-card-actions-select.bits-form__select-trigger {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .bits-theme .bits-form__user-card-actions-select.bits-form__select-display-wrap {
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
+
+  .bits-theme .bits-form__user-card-actions-select .bits-form__select-display {
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    width: max-content;
+    min-width: max-content;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-form__user-card-actions-select .bits-form__select-display::after {
+    content: "";
+    width: 1rem;
+    height: 1rem;
+    margin-left: auto;
+    flex: 0 0 1rem;
+  }
+
+  .bits-theme
+    button.bits-form__user-card-actions-select.bits-form__select-trigger
+    .bits-form__select-label {
+    padding-left: 0;
+  }
+
+  .bits-theme .bits-form__user-card-actions-remove-button {
+    min-width: 0;
+    width: 3rem;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-form__resource-card-hub-actions {
+    min-width: max-content;
+    padding-right: 16px;
+  }
+
+  .bits-theme .bits-form__resource-card-hub-actions-slot {
+    display: inline-grid;
+    grid-template-columns: max-content;
+    align-items: center;
+    justify-items: center;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-form__resource-card-hub-actions-slot-content {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    min-width: max-content;
+    align-items: center;
+    justify-content: center;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease,
+      visibility 0s linear 0.16s;
+  }
+
+  .bits-theme
+    .bits-form__resource-card-hub-actions-slot--controls
+    .bits-form__resource-card-hub-actions-slot-content--controls,
+  .bits-theme
+    .bits-form__resource-card-hub-actions-slot--remove
+    .bits-form__resource-card-hub-actions-slot-content--remove {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  .bits-theme
+    .bits-form__resource-card-hub-actions-slot--controls
+    .bits-form__resource-card-hub-actions-slot-content--remove,
+  .bits-theme
+    .bits-form__resource-card-hub-actions-slot--remove
+    .bits-form__resource-card-hub-actions-slot-content--controls {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(0.2rem);
+    pointer-events: none;
+  }
+
+  .bits-theme .bits-form__resource-card-hub-actions-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-form__parent-resource-item-flags {
+    display: grid;
+    grid-template-columns: minmax(0, max-content);
+    justify-items: center;
+    align-items: start;
+    gap: calc(var(--spacing) * 1.25);
+  }
+
+  .bits-theme .bits-form__parent-resource-flag {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: calc(var(--spacing) * 0.75);
+  }
+
+  .bits-theme .bits-form__parent-resource-flag-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .bits-theme .bits-form__parent-resource-item-remove {
+    display: flex;
+    align-items: center;
+  }
+
+  .bits-theme .bits-form__parent-resource-card-actions {
+    min-width: max-content;
+    align-self: center;
+  }
+
+  .bits-theme .bits-form__parent-resource-card-remove-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .bits-theme .bits-form__parent-resource-actions-rail {
+    flex: 0 0 auto;
+    width: max-content;
+    min-width: max-content;
+  }
+
+  .bits-theme .bits-form__parent-resource-actions {
+    display: flex;
+    width: max-content;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .bits-theme .bits-form__parent-resource-default {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .bits-theme .bits-form__parent-resource-default-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+  }
+
+  .bits-theme .bits-form__parent-resource-default-icon :global(svg) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .bits-theme .bits-form__parent-resource-default-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+  }
+
+  .bits-theme .bits-form__hub-layer-actions-rail {
+    width: auto;
+    min-width: fit-content;
+  }
+
+  .bits-theme .bits-form__hub-layer-actions {
+    width: auto;
+    gap: 0.625rem;
+  }
+
+  .bits-theme .bits-form__hub-layer-default {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .bits-theme .bits-form__hub-layer-default-icon {
+    flex: 0 0 auto;
+  }
+
+  .bits-theme .bits-form__hub-layer-default-label {
+    flex: 0 0 auto;
+  }
+
+  .bits-theme .bits-form__card-grid {
+    --bits-card-grid-gap: calc(var(--spacing) * 1.5);
+    --bits-card-grid-columns: 1;
+    display: grid;
+    gap: var(--bits-card-grid-gap);
+    grid-template-columns: repeat(var(--bits-card-grid-columns), minmax(0, 1fr));
+    align-items: start;
+  }
+
+  @container bits-parent-resource-card (max-width: 34rem) {
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-card-actions),
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-actions-rail),
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-item-flags) {
+      flex-wrap: wrap;
+    }
+
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-card-actions)
+      .bits-card__body,
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-actions-rail)
+      .bits-card__body,
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-item-flags)
+      .bits-card__body {
+      min-width: min(14rem, 100%);
+    }
+
+    .bits-theme .bits-form__parent-resource-card-actions,
+    .bits-theme .bits-form__parent-resource-actions-rail {
+      width: 100%;
+      justify-content: flex-start;
+      padding-top: 0;
+      padding-bottom: 1rem;
+      padding-left: 1rem;
+    }
+
+    .bits-theme .bits-form__parent-resource-item-flags {
+      width: 100%;
+      grid-template-columns: minmax(0, max-content);
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 960px) {
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-card-actions),
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-actions-rail),
+    .bits-theme
+      .bits-form__parent-resource-item:has(.bits-form__parent-resource-item-flags) {
+      flex-wrap: wrap;
+    }
+
+    .bits-theme .bits-form__parent-resource-card-actions,
+    .bits-theme .bits-form__parent-resource-actions-rail {
+      width: 100%;
+      justify-content: flex-end;
+      padding-block: 0 1rem;
+    }
+
+    .bits-theme .bits-form__parent-resource-item-flags {
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+  }
+
+  @container bits-main-root (min-width: 48rem) {
+    .bits-theme .bits-form__card-grid {
+      --bits-card-grid-columns: 2;
+    }
+  }
+
+  @container bits-main-root (min-width: 72rem) {
+    .bits-theme .bits-form__card-grid {
+      --bits-card-grid-columns: 3;
+    }
+  }
+
+  @container bits-main-root (min-width: 96rem) {
+    .bits-theme .bits-form__card-grid {
+      --bits-card-grid-columns: 4;
+    }
+  }
+
+  .bits-theme .bits-form__user-card-wrapper {
+    display: grid;
+    gap: calc(var(--spacing) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
+    justify-items: start;
+  }
+
+  .bits-theme .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
+    --bits-user-card-grid-gap: calc(var(--spacing) * 4);
+    gap: var(--bits-user-card-grid-gap);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  .bits-theme .bits-form__section.basis-2\/3 {
+    container-type: inline-size;
+    container-name: bits-user-card-section;
+  }
+
+  @container bits-user-card-section (min-width: 48rem) {
+    .bits-theme
+      .bits-form__section.basis-2\/3
+      .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
+      grid-template-columns: repeat(
+          2,
+          minmax(0, calc((100% - var(--bits-user-card-grid-gap)) / 2))
+        );
+    }
+  }
+
+  @container bits-user-card-section (min-width: 72rem) {
+    .bits-theme
+      .bits-form__section.basis-2\/3
+      .bits-form__user-card-wrapper.bits-form__user-card-wrapper--spacious {
+      grid-template-columns: repeat(
+          3,
+          minmax(0, calc((100% - (var(--bits-user-card-grid-gap) * 2)) / 3))
+        );
+    }
+  }
+
+  .bits-theme.bits-main__section[data-facet-id="fields"] {
+    container-type: inline-size;
+    container-name: bits-layer-fields-section;
+  }
+
+  .bits-theme .bits-form__layer-card-wrapper {
+    --bits-layer-card-grid-gap: calc(var(--spacing) * 2);
+    --bits-layer-card-columns: 1;
+    display: grid;
+    gap: var(--bits-layer-card-grid-gap);
+    grid-template-columns: repeat(var(--bits-layer-card-columns), minmax(0, 1fr));
+    justify-items: stretch;
+  }
+
+  @container bits-layer-fields-section (min-width: 78rem) {
+    .bits-theme .bits-form__layer-card-wrapper {
+      --bits-layer-card-columns: 2;
+    }
+  }
+
+  @container bits-layer-fields-section (min-width: 128rem) {
+    .bits-theme .bits-form__layer-card-wrapper {
+      --bits-layer-card-columns: 3;
+    }
+  }
+
+  .bits-theme .bits-form__layer-card-root {
+    min-height: 72px;
+  }
+
+  .bits-theme .bits-form__layer-card-item {
+    width: 100%;
+  }
+
+  .bits-theme .bits-form__layer-card-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap {
+    display: inline-flex;
+    width: 1.2rem;
+    height: 1.2rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--global {
+    color: color-mix(in oklab, #fff2bf 92%, transparent);
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--hub {
+    color: color-mix(in oklab, #ffe8c8 92%, transparent);
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--org {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-primary) 10%);
+  }
+
+  .bits-theme .bits-form__layer-card-type-icon-wrap--project {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-accent) 10%);
+  }
+
+  .bits-theme .bits-form__layer-card-scope {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    border-radius: 0.4rem;
+    border: 1px solid;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .bits-theme .bits-form__layer-card-scope--global {
+    color: color-mix(in oklab, #fff2bf 92%, transparent);
+    border-color: color-mix(in oklab, #f5d34b 68%, transparent);
+    background: color-mix(in oklab, #8a6510 44%, transparent 30%);
+  }
+
+  .bits-theme .bits-form__layer-card-scope--hub {
+    color: color-mix(in oklab, #ffe8c8 92%, transparent);
+    border-color: color-mix(in oklab, #ff9d3d 68%, transparent);
+    background: color-mix(in oklab, #8d4a12 44%, transparent 30%);
+  }
+
+  .bits-theme .bits-form__layer-card-scope--org {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-primary) 10%);
+    border-color: color-mix(in oklab, var(--color-primary) 66%, transparent);
+    background: color-mix(
+      in oklab,
+      color-mix(in oklab, var(--color-primary) 46%, black 54%) 70%,
+      transparent
+    );
+  }
+
+  .bits-theme .bits-form__layer-card-scope--project {
+    color: color-mix(in oklab, #fff1c6 90%, var(--color-accent) 10%);
+    border-color: color-mix(in oklab, var(--color-accent) 66%, transparent);
+    background: color-mix(
+      in oklab,
+      color-mix(in oklab, var(--color-accent) 46%, black 54%) 70%,
+      transparent
+    );
+  }
+
+  .bits-theme .bits-form__layer-card-actions-rail {
+    min-width: max-content;
+  }
+
+  .bits-theme .bits-form__layer-card-actions-rail[data-bg="subtle"] {
+    background: color-mix(in oklab, var(--color-base-100) 92%, transparent);
+    border-left: 1px solid
+      color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
+
+  .bits-theme .bits-form__layer-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-form__layer-card-action-btn {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+  }
+
+  .bits-theme .bits-form__layer-card-flag {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .bits-theme .bits-form__layer-card-flag-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+  }
+
+  .bits-theme .bits-form__layer-card-flag-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    color: color-mix(in oklab, var(--color-foreground) 72%, transparent);
+  }
+}

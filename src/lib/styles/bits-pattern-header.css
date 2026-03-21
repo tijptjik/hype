@@ -15,6 +15,7 @@
     user-select: none;
     -webkit-user-select: none;
     position: relative;
+    padding-top: 24px;
   }
 
   .bits-theme .bits-pattern-header__left {

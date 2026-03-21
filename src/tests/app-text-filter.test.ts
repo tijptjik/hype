@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { matchesResourceTextQuery } from '$lib/client/services/resourceText'
+import { matchesResourceTextQuery } from '$lib/client/services/filters'
 
 describe('matchesResourceTextQuery', () => {
   it('keeps entities visible for an empty query even without i18n', () => {

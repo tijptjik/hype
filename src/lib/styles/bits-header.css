@@ -18,8 +18,9 @@
     column-gap: 0;
     row-gap: 0;
     align-items: center;
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
 
   .bits-theme .bits-header--with-icon {
@@ -106,6 +107,11 @@
 
   .bits-theme .bits-header__subtitle {
     grid-column: 1;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: var(--header-description-size);
     line-height: var(--header-line-height);
     color: color-mix(in oklab, var(--color-base-content));

@@ -88,11 +88,11 @@ async function onPresentationModeChange(nextChecked: boolean | null): Promise<vo
       nextChecked,
       ctx,
       onSuccess: nextMode => {
-        if (viewerActiveImage) {
+        if (effectiveImage?.image) {
           viewerActiveImage = {
-            ...viewerActiveImage,
+            ...effectiveImage,
             image: {
-              ...viewerActiveImage.image,
+              ...effectiveImage.image,
               presentationMode: nextMode,
             },
           }
@@ -168,6 +168,10 @@ $effect(() => {
                 onActiveImageChange={image => {
                   viewerActiveImage = image
                 }}
+                onLayoutSettled={() => {
+                  if (typeof window === 'undefined') return
+                  window.dispatchEvent(new CustomEvent('bits:facet-layout-settled'))
+                }}
               />
             </main>
           </div>
@@ -175,8 +179,8 @@ $effect(() => {
       {/key}
     </div>
   {:else}
-    <p class="bits-entity-image__empty">
+    <div class="bits-entity-image__empty">
       {m.admin__forms_organisation_image_save_hint()}
-    </p>
+    </div>
   {/if}
 </div>

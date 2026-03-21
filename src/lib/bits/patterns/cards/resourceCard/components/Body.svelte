@@ -1,5 +1,5 @@
 <script lang="ts">
-import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
+import { Card } from '$lib/bits/custom'
 import type { ResourceCardBodyProps } from '../resourceCard.types'
 
 let {
@@ -12,11 +12,4 @@ const resolvedCode = $derived(name ? code || '-' : '-')
 const resolvedName = $derived(name || code || '-')
 </script>
 
-<div class={`bits-form__parent-resource-item-copy ${className}`}>
-  <div class="bits-form__parent-resource-item-code">
-    <ScrollableText text={resolvedCode} />
-  </div>
-  <div class="bits-form__parent-resource-item-name">
-    <ScrollableText text={resolvedName} />
-  </div>
-</div>
+<Card.Body code={resolvedCode} title={resolvedName} class={className} />

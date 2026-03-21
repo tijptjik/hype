@@ -139,11 +139,23 @@
   }
 
   .bits-theme .bits-form__capabilities-card-icon-wrap {
-    @apply flex h-16 w-16 shrink-0 items-center justify-center bg-base-100;
+    background: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+  }
+
+  .bits-theme .bits-form__capabilities-card-icon-shell {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
   }
 
   .bits-theme .bits-form__capabilities-card-icon {
     @apply h-6 w-6 text-primary;
+  }
+
+  .bits-theme .bits-form__capabilities-card-actions {
+    min-width: max-content;
   }
 
   .bits-theme .bits-form__capabilities-remove-button {
@@ -156,19 +168,14 @@
   }
 
   .bits-theme .bits-form__capabilities-empty {
-    @apply flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center;
-    min-height: 16rem;
   }
 
   .bits-theme .bits-form__capabilities-empty-title {
-    @apply text-2xl font-mono font-semibold;
   }
 
   .bits-theme .bits-form__capabilities-empty-description {
-    @apply max-w-2xl;
   }
 
   .bits-theme .bits-form__capabilities-empty-cta {
-    @apply mt-1;
   }
 }

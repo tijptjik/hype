@@ -5,6 +5,8 @@
   .bits-theme .bits-form__section,
   .bits-theme .bits-form__i18n-section {
     @apply z-10 flex flex-col gap-0 rounded-2xl pb-4;
+    width: 100%;
+    min-width: 0;
     overflow: visible;
   }
 
@@ -57,7 +59,7 @@
   }
 
   .bits-theme .bits-form__section-header--with-center {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 
   .bits-theme .bits-form__section-header-left {
@@ -70,12 +72,12 @@
     @apply flex justify-end gap-0 pr-1;
     container-type: inline-size;
     flex: 0 0 auto;
-    min-width: max-content;
+    min-width: 0;
     overflow: visible;
   }
 
   .bits-theme .bits-form__section-header-actions {
-    @apply flex-nowrap;
+    @apply inline-flex w-auto flex-row items-center justify-end gap-0 flex-nowrap;
     min-width: max-content;
     overflow: visible;
   }
@@ -107,7 +109,7 @@
   .bits-theme .bits-form__section-header--with-center .bits-form__section-header-right {
     grid-column: 3;
     justify-self: end;
-    min-width: max-content;
+    min-width: 0;
   }
 
   .bits-theme .bits-form__section-header-right .bits-btn {
@@ -130,11 +132,15 @@
   }
 
   .bits-theme .bits-form__section-header-heading {
-    @apply text-right;
+    @apply min-w-0 w-full text-right;
   }
 
   .bits-theme .bits-form__section-header-heading .bits-header__title {
-    @apply font-bold uppercase;
+    @apply truncate font-bold uppercase;
+  }
+
+  .bits-theme .bits-form__section-header-heading .bits-header__subtitle {
+    @apply block truncate whitespace-nowrap;
   }
 
   .bits-theme .bits-form__section-header-issues {
@@ -160,5 +166,26 @@
 
   .bits-theme .bits-form__section-header-issue-detail {
     @apply bg-glass-300 px-4 py-1 text-white tracking-wide;
+  }
+
+  .bits-theme .bits-form__empty-state {
+    @apply flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center;
+    min-height: 16rem;
+  }
+
+  .bits-theme .bits-form__empty-state-copy {
+    @apply flex w-full max-w-2xl flex-col items-center gap-3;
+  }
+
+  .bits-theme .bits-form__empty-state-title {
+    @apply text-2xl font-mono font-semibold;
+  }
+
+  .bits-theme .bits-form__empty-state-description {
+    @apply max-w-2xl;
+  }
+
+  .bits-theme .bits-form__empty-state-cta {
+    @apply mt-1;
   }
 }

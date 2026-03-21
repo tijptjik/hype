@@ -8,6 +8,6 @@ type Props = LayerPropertyCardRootProps & { children?: Snippet }
 let { class: className = '', children }: Props = $props()
 </script>
 
-<Card.Root class={`bits-form__layer-card-root ${className}`}>
+<Card.Root size="lg" class={`bits-form__layer-card-root ${className}`}>
   {@render children?.()}
 </Card.Root>

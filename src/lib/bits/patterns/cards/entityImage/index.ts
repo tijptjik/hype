@@ -1,1 +1,1 @@
-export { default as EntityImage } from './EntityImage.svelte'
+export { EntityImage } from '../../images/entityImage'

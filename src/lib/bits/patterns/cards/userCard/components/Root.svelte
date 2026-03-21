@@ -8,6 +8,6 @@ type Props = UserCardRootProps & { children?: Snippet }
 let { class: className = '', children }: Props = $props()
 </script>
 
-<Card.Root class={`bits-form__user-card-root ${className}`}>
+<Card.Root size="md" class={`bits-form__user-card-root ${className}`}>
   {@render children?.()}
 </Card.Root>

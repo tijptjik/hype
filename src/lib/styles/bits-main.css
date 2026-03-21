@@ -1,11 +1,68 @@
 @layer components {
   .bits-main {
-    @apply h-full overflow-y-auto px-6 pb-6;
+    @apply flex flex-1 min-h-0 flex-col overflow-hidden px-6;
+    container-type: inline-size;
+    container-name: bits-main-root;
     overflow-anchor: none;
   }
 
   .bits-main__section {
-    @apply block absolute inset-6 top-0;
+    @apply block absolute left-6 right-6 top-0 bottom-0 overflow-y-auto overflow-x-hidden;
+    overscroll-behavior-y: contain;
+  }
+
+  .bits-main__section-inner {
+    @apply flex min-h-full min-h-0 flex-col;
+  }
+
+  .bits-main__section-inner--fill-height {
+    @apply h-full;
+  }
+
+  .bits-main__section-body {
+    @apply flex min-h-0 flex-col;
+    min-height: var(--bits-main-section-body-min-height, 0px);
+    height: var(--bits-main-section-body-height, auto);
+  }
+
+  .bits-main__section-body--fill-height {
+    @apply flex min-h-0 flex-1 flex-col;
+    padding-bottom: 32px;
+  }
+
+  .bits-main__section-nav {
+    flex: 0 0 auto;
+    padding-top: 1rem;
+  }
+
+  .bits-main__section-nav--footer {
+    display: flex;
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    padding-top: 0;
+    align-items: center;
+  }
+
+  .bits-main__section-nav--footer .bits-feature-editor__facet-nav {
+    height: 48px;
+    min-height: 48px;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-items: center;
+  }
+
+  .bits-main__section--footer-nav .bits-main__section-body--fill-height {
+    padding-bottom: 0;
+  }
+
+  .bits-main__section--footer-nav .bits-main__section-body {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .bits-main__section-tail-spacer {
+    flex: 0 0 auto;
   }
 
   .bits-main__section--fade {

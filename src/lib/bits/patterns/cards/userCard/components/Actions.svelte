@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Button, Select } from '$lib/bits/core'
+import { Card } from '$lib/bits/custom'
 import { m } from '$lib/i18n'
 import Trash2Icon from 'virtual:icons/lucide/trash-2'
 import type { OrganisationRoleType } from '$lib/enums'
@@ -33,7 +34,7 @@ function handleRoleChange(nextValue: string): void {
 }
 </script>
 
-<div class={`bits-form__user-card-actions ${className}`}>
+<Card.Actions padding="sm" gap={8} class={`bits-form__user-card-actions ${className}`}>
   {#if roleFieldName}
     <input type="hidden" name={roleFieldName} value={selectedRole}>
   {/if}
@@ -72,4 +73,4 @@ function handleRoleChange(nextValue: string): void {
       />
     </div>
   </div>
-</div>
+</Card.Actions>

@@ -25,7 +25,12 @@
   }
 
   .bits-theme .bits-form__i18n-grid {
-    @apply grid grid-cols-3 gap-4 @xl:grid-cols-4 @5xl:grid-cols-5;
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
   }
 
   /* ----------------- */
@@ -33,6 +38,7 @@
   /* --------- */
   .bits-theme .bits-form__i18n-card {
     @apply relative flex flex-col overflow-visible rounded-xl border-4 bg-glass-300 p-5 shadow-xl;
+    min-width: 0;
     border-color: color-mix(in oklab, var(--color-primary) 100%, transparent);
   }
 

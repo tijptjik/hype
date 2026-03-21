@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Card } from '$lib/bits/custom'
 import type { UserCardBodyProps } from '../userCard.types'
 
 let {
@@ -8,7 +9,8 @@ let {
 }: UserCardBodyProps = $props()
 </script>
 
-<div class={`bits-form__user-card-body ${className}`}>
-  <span class="bits-form__user-card-body-attribution">{attribution}</span>
-  <span class="bits-form__user-card-body-name">{name || '-'}</span>
-</div>
+<Card.Body
+  code={attribution}
+  title={name || '-'}
+  class={`bits-form__user-card-body ${className}`}
+/>
