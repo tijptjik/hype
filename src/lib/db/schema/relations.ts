@@ -2,9 +2,10 @@ import { relations } from 'drizzle-orm'
 
 // Import all table definitions
 import { user, userFeature, userLayer } from './user'
-import { hub, hubI18n, hubRole } from './hub'
+import { hub, hubI18n, hubRole, hubLayer } from './hub'
 import { organisation, organisationI18n, organisationRole } from './organisation'
 import { project, projectI18n, projectRole } from './project'
+import { mapStyles, mapStyleI18n, projectMapStyles } from './map'
 import { layer, layerI18n, layerProperty } from './layer'
 import {
   property,
@@ -116,6 +117,33 @@ export const projectRelations = relations(project, ({ one, many }) => ({
     fields: [project.publisherId],
     references: [user.id],
   }),
+  mapStyleAssignment: one(projectMapStyles, {
+    fields: [project.id],
+    references: [projectMapStyles.projectId],
+  }),
+}))
+
+export const mapStylesRelations = relations(mapStyles, ({ many }) => ({
+  i18n: many(mapStyleI18n),
+  projectAssignments: many(projectMapStyles),
+}))
+
+export const mapStyleI18nRelations = relations(mapStyleI18n, ({ one }) => ({
+  mapStyle: one(mapStyles, {
+    fields: [mapStyleI18n.mapStyleId],
+    references: [mapStyles.id],
+  }),
+}))
+
+export const projectMapStylesRelations = relations(projectMapStyles, ({ one }) => ({
+  project: one(project, {
+    fields: [projectMapStyles.projectId],
+    references: [project.id],
+  }),
+  mapStyle: one(mapStyles, {
+    fields: [projectMapStyles.mapStyleId],
+    references: [mapStyles.id],
+  }),
 }))
 
 /**
@@ -163,6 +191,8 @@ export const layerRelations = relations(layer, ({ many, one }) => ({
     references: [user.id],
   }),
   features: many(feature),
+  hubDefaults: many(hubLayer),
+  userDefaults: many(userLayer),
 }))
 
 /**
@@ -186,6 +216,17 @@ export const layerPropertyRelations = relations(layerProperty, ({ one }) => ({
   property: one(property, {
     fields: [layerProperty.propertyId],
     references: [property.id],
+  }),
+}))
+
+export const hubLayerRelations = relations(hubLayer, ({ one }) => ({
+  hub: one(hub, {
+    fields: [hubLayer.hubId],
+    references: [hub.id],
+  }),
+  layer: one(layer, {
+    fields: [hubLayer.layerId],
+    references: [layer.id],
   }),
 }))
 
@@ -423,6 +464,10 @@ export const userLayerRelations = relations(userLayer, ({ one }) => ({
     fields: [userLayer.layerId],
     references: [layer.id],
   }),
+  hub: one(hub, {
+    fields: [userLayer.hubId],
+    references: [hub.id],
+  }),
 }))
 
 /**
@@ -481,6 +526,7 @@ export const hubRelations = relations(hub, ({ one, many }) => ({
   userRoles: many(hubRole, { relationName: 'hubUserRoles' }),
   properties: many(property),
   propertyAssignments: many(hubProperty),
+  layerDefaults: many(hubLayer),
   image: one(image, {
     fields: [hub.imageId],
     references: [image.id],

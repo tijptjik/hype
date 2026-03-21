@@ -303,7 +303,11 @@ export const getUserLayers = guardedQuery(
     }
 
     const targetUserId = resolveTargetUserId(sessionUser, params.userId)
-    const rows = await getUserLayersByUserId(db, targetUserId)
+    const rows = await getUserLayersByUserId(
+      db,
+      targetUserId,
+      params.hubId as Id | undefined,
+    )
     return { data: rows }
   },
 )
@@ -330,11 +334,12 @@ export const setUserLayerDefaults = guardedCommand(
     const targetUserId = resolveTargetUserId(sessionUser, params.userId)
     const rows = params.layers.map(layer => ({
       userId: targetUserId,
+      hubId: params.hubId,
       layerId: layer.layerId,
-      isVisibleOnLoad: Boolean(layer.isVisibleOnLoad),
+      isDefaultVisible: Boolean(layer.isDefaultVisible),
     }))
 
-    const updated = await updateUserLayers(db, rows, targetUserId)
+    const updated = await updateUserLayers(db, rows, targetUserId, params.hubId as Id)
     return { data: updated }
   },
 )

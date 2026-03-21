@@ -299,8 +299,6 @@ export const createTaskWithDependencies = async (
   subscriptionKey: string, // Azure translation API key for feature enrichment
   fetch?: typeof globalThis.fetch,
 ): Promise<TaskDB> => {
-  let createdFeature: typeof feature.$inferSelect | undefined
-
   // Step 1 : Set contributor ID from session
   taskData = setContributorId(taskData, userId)
 

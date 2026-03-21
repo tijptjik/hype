@@ -44,7 +44,6 @@ import type {
   FeatureProperty,
   NewFeatureProperty,
 } from '$lib/db/zod/schema/feature.types'
-import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

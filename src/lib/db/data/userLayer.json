@@ -2,11 +2,11 @@
   {
     "layerId": "7akti7OImSFg",
     "userId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
-    "isVisibleOnLoad": true
+    "isDefaultVisible": true
   },
   {
     "layerId": "7akti7OImSFg",
     "userId": "p6WnJ-DKl0c2",
-    "isVisibleOnLoad": false
+    "isDefaultVisible": false
   }
 ]

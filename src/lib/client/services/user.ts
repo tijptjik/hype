@@ -181,7 +181,11 @@ export const debouncedUpdateUsername = async (
   }
 }
 
-export const debouncedUpdateUserLayers = (userId: Id, userLayers: UserLayer[]) => {
+export const debouncedUpdateUserLayers = (
+  userId: Id,
+  hubId: Id,
+  userLayers: UserLayer[],
+) => {
   // ASSERT : We have userLayers
   if (!userLayers) return
 
@@ -194,9 +198,11 @@ export const debouncedUpdateUserLayers = (userId: Id, userLayers: UserLayer[]) =
     try {
       await setUserLayerDefaults({
         userId,
+        hubId,
         layers: userLayers.map(layer => ({
           layerId: layer.layerId,
-          isVisibleOnLoad: Boolean(layer.isVisibleOnLoad),
+          hubId: layer.hubId,
+          isDefaultVisible: Boolean(layer.isDefaultVisible),
         })),
       })
     } finally {

@@ -296,7 +296,7 @@ export const updatePanelUrlParams = (
 
   // Update URL and add to browser history for back/forward navigation
   const newUrl = `${url.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}${url.hash}`
-  window.history.pushState({}, '', newUrl)
+  pushState(newUrl, {})
 }
 
 /**

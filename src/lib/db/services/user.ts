@@ -296,8 +296,16 @@ export const getUserRoles = async (
 export const getUserLayersByUserId = async (
   db: Database,
   userId: Id,
+  hubId?: Id,
 ): Promise<UserLayerDB[]> =>
-  await db.select().from(userLayer).where(eq(userLayer.userId, userId))
+  await db
+    .select()
+    .from(userLayer)
+    .where(
+      hubId
+        ? and(eq(userLayer.userId, userId), eq(userLayer.hubId, hubId))
+        : eq(userLayer.userId, userId),
+    )
 
 /**
  * Loads paginated feature list-state rows (`visited` / `wishlist`) for a user.
@@ -399,9 +407,12 @@ export const updateUserLayers = async (
   db: Database,
   userLayers: UserLayerNew[],
   userId: Id,
+  hubId: Id,
 ): Promise<UserLayerDB[]> => {
   // Delete existing layer preferences
-  await db.delete(userLayer).where(eq(userLayer.userId, userId))
+  await db
+    .delete(userLayer)
+    .where(and(eq(userLayer.userId, userId), eq(userLayer.hubId, hubId)))
 
   // If no new preferences, we're done
   if (!userLayers?.length) return []

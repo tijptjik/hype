@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid'
 // SCHEMA
 import { feature } from './feature'
 import { layer } from './layer'
+import { hub } from './hub'
 // ENUM
 import { SupportedLocales } from '../../enums'
 
@@ -208,9 +209,12 @@ export const userLayer = sqliteTable(
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    isVisibleOnLoad: integer('isVisibleOnLoad', { mode: 'boolean' })
+    hubId: text('hubId')
+      .notNull()
+      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
       .notNull()
       .default(false),
   },
-  table => [primaryKey({ columns: [table.layerId, table.userId] })],
+  table => [primaryKey({ columns: [table.layerId, table.userId, table.hubId] })],
 )

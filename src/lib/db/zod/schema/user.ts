@@ -341,6 +341,7 @@ export const UpdateUserParamsSchema = z.object({
 
 export const GetUserLayersParamsSchema = z.object({
   userId: z.string().min(1).optional(),
+  hubId: z.string().min(1).optional(),
   meta: z
     .object({
       isAdminRequest: z.coerce.boolean<boolean>().optional(),
@@ -350,11 +351,13 @@ export const GetUserLayersParamsSchema = z.object({
 
 const UserLayerDefaultsItemSchema = z.object({
   layerId: z.string().min(1),
-  isVisibleOnLoad: z.boolean(),
+  hubId: z.string().min(1),
+  isDefaultVisible: z.boolean(),
 })
 
 export const SetUserLayerDefaultsSchema = z.object({
   userId: z.string().min(1).optional(),
+  hubId: z.string().min(1),
   layers: z.array(UserLayerDefaultsItemSchema).default([]),
   meta: z
     .object({
