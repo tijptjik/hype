@@ -7,10 +7,12 @@ import { image } from './image'
 import { user } from './user'
 // ENUM
 import { ProjectRoleType, supportedLocales } from '../../enums'
+import type { ProjectLicense } from '../../types'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,
 } from '../zod/schema/project.types'
+import { createDefaultProjectLicense } from '$lib/db/services/licence'
 
 /* ============================================================================
  * PROJECT MANAGEMENT
@@ -52,6 +54,12 @@ export const project = sqliteTable('project', {
       manageVolunteers: false,
       manageDropOffs: false,
     } as ProjectCapabilities),
+  // Project-level copyright / reuse policy and attribution settings.
+  // Stored as plain text so Zod/service layers own parsing and normalization.
+  license: text('license')
+    .$type<ProjectLicense | string>()
+    .notNull()
+    .default(JSON.stringify(createDefaultProjectLicense())),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
   localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
@@ -96,14 +104,6 @@ export const projectI18n = sqliteTable(
     // Description in {locale}
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
-      .notNull()
-      .default(true),
-    // License in {locale}
-    license: text('license').default('Copyright').notNull(),
-    licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(true),
-    // Attribution in {locale}
-    attribution: text('attribution').notNull(),
-    attributionGen: integer('attributionGen', { mode: 'boolean' })
       .notNull()
       .default(true),
   },

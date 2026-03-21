@@ -44,6 +44,7 @@ export const layer = sqliteTable('layer', {
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
+  rank: integer('rank').notNull().default(0),
   // Is this layer enabled for new users by default?
   isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
     .notNull()
