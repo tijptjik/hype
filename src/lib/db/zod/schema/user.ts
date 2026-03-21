@@ -351,20 +351,26 @@ export const GetUserLayersParamsSchema = z.object({
 
 const UserLayerDefaultsItemSchema = z.object({
   layerId: z.string().min(1),
-  hubId: z.string().min(1),
+  hubId: z.string().min(1).optional(),
   isDefaultVisible: z.boolean(),
 })
 
-export const SetUserLayerDefaultsSchema = z.object({
-  userId: z.string().min(1).optional(),
-  hubId: z.string().min(1),
-  layers: z.array(UserLayerDefaultsItemSchema).default([]),
-  meta: z
-    .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
-    })
-    .optional(),
-})
+export const SetUserLayerDefaultsSchema = z
+  .object({
+    userId: z.string().min(1).optional(),
+    hubId: z.string().min(1).optional(),
+    hubCode: z.string().min(1).optional(),
+    layers: z.array(UserLayerDefaultsItemSchema).default([]),
+    meta: z
+      .object({
+        isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      })
+      .optional(),
+  })
+  .refine(params => Boolean(params.hubId || params.hubCode), {
+    message: 'Either hubId or hubCode is required',
+    path: ['hubId'],
+  })
 
 export const GetUserFeaturesParamsSchema = z.object({
   userId: z.string().min(1).optional(),
