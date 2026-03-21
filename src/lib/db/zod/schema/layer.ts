@@ -97,7 +97,7 @@ export const LayerPropertyRecordUpdate = createUpdateSchema(layerProperty)
 export const UserLayerRecord = createSelectSchema(userLayer)
 
 export const UserLayerRecordCreate = createInsertSchema(userLayer).extend({
-  isVisibleOnLoad: z.boolean(),
+  isDefaultVisible: z.boolean(),
 })
 
 export const UserLayerRecordUpdate = createUpdateSchema(userLayer)
@@ -197,6 +197,7 @@ const LayerListFields = LayerRecord.pick({
   id: true,
   organisationId: true,
   projectId: true,
+  rank: true,
   isDefaultVisible: true,
   createdAt: true,
   modifiedAt: true,

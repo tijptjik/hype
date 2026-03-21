@@ -319,12 +319,12 @@ const OrganisationCardFields = OrganisationBase.pick({
   url: true,
   isPublished: true,
   isArchived: true,
+  hubId: true,
 })
 
 const OrganisationDetailFields = OrganisationBase.pick({
   publishedAt: true,
   publisherId: true,
-  hubId: true,
 })
 
 export const OrganisationListProfileAPI = OrganisationListFields.extend({

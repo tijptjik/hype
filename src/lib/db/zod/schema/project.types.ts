@@ -17,6 +17,7 @@ import type {
   ProjectDetailProfileAPI,
   ProjectEntityFormData,
   ProjectFormData,
+  ProjectLayerFormData,
   ProjectI18nBase,
   ProjectI18nInsert,
   ProjectI18nUpdate,
@@ -103,6 +104,7 @@ export type ProjectSubmitBaselineRelations = {
   capabilities?: ProjectFormInput['data']['capabilities']
   userRoles?: unknown
   properties?: ProjectFormInput['data']['properties']
+  layers?: ProjectFormInput['data']['layers']
 }
 
 export type ProjectSubmitUpdatesParams<TEntityResult, TListResult> = {
@@ -134,6 +136,7 @@ export type ProjectCurrentFormDraft = {
     capabilities?: unknown
     userRoles?: unknown
     properties?: unknown
+    layers?: unknown
   }
 }
 
@@ -142,6 +145,7 @@ export type ProjectSubmitDraft = ResourceSubmitDraft<{
   capabilities?: unknown
   userRoles?: unknown
   properties?: unknown
+  layers?: unknown
 }>
 
 export type ProjectLicenseDB = ProjectDB['license']
@@ -152,6 +156,7 @@ export type ProjectI18nPartial = z.infer<typeof ProjectI18nUpdate>
 export type ProjectI18n = z.infer<typeof ProjectI18nBase>
 
 export type ProjectRole = z.infer<typeof ProjectRoleAPI>
+export type ProjectLayerFormValue = z.infer<typeof ProjectLayerFormData>
 export type ProjectRoleUser = z.infer<typeof ProjectRoleWithUser>
 export type ProjectRoleDB = z.infer<typeof ProjectRoleBase>
 export type ProjectRoleNew = z.infer<typeof ProjectRoleInsert>

@@ -23,6 +23,8 @@ export * from './schema/organisation'
 // PROJECT SCHEMAS
 /* -------- */
 export * from './schema/project'
+export * from './schema/map'
+export * from './schema/map.types'
 
 /* ----------------- */
 // LAYER SCHEMAS

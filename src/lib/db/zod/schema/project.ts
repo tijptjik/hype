@@ -1,5 +1,11 @@
 // I18N
 import { m } from '$lib/i18n'
+import type { ProjectLicense, ProjectLicenseRights } from '$lib/types'
+import {
+  createDefaultProjectLicense,
+  normalizeProjectLicense,
+  parseProjectLicense,
+} from '$lib/db/services/licence'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,
@@ -15,7 +21,9 @@ import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'
 import { ProjectPropertyFormData } from './property'
 import { PropertyAdminProfileAPI } from './property'
+import { LayerCardProfileAPI, LayerRaw } from './layer'
 import { ImageContextEnvelopeAPI } from './image'
+import { MapStyleResolved } from './map'
 import { UserBasic } from './user'
 
 // ═══════════════════════
@@ -56,6 +64,7 @@ import { UserBasic } from './user'
 // 4. REMOTE COMMAND SCHEMAS
 //    - PublishProjectSchema
 //    - RemoveProjectSchema
+//    - GetProjectMapStylesSchema
 //
 // 5. REMOTE PROFILE SCHEMAS
 //    - ProjectProfile
@@ -113,20 +122,51 @@ const ProjectCapabilitiesBase = z.preprocess(
   }),
 )
 
+const ProjectLicenseRightsSchema: z.ZodType<ProjectLicenseRights> = z.object({
+  license: z.string().min(1).max(128),
+  BY: FormBoolean.nullable().default(true),
+  SA: FormBoolean.nullable().default(true),
+  NC: FormBoolean.nullable().default(false),
+  ND: FormBoolean.nullable().default(false),
+})
+
+export const ProjectLicenseSchema: z.ZodType<ProjectLicense> = z.object({
+  meta: z.object({
+    allMediaSameRights: FormBoolean.default(true),
+    attribution: z.string().max(128).default(''),
+    isAllRightsReserved: FormBoolean.default(false),
+    isPublicDomain: FormBoolean.default(false),
+  }),
+  media: z.object({
+    all: ProjectLicenseRightsSchema,
+    image: ProjectLicenseRightsSchema,
+    text: ProjectLicenseRightsSchema,
+    data: ProjectLicenseRightsSchema,
+  }),
+})
+
+const ProjectLicenseBase = z.preprocess(
+  value => normalizeProjectLicense(parseProjectLicense(value)),
+  ProjectLicenseSchema.default(createDefaultProjectLicense()),
+)
+
 // ═══════════════════════
 // 2. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
 export const ProjectBase = createSelectSchema(project).extend({
   capabilities: ProjectCapabilitiesBase,
+  license: ProjectLicenseBase,
 })
 
 export const ProjectInsert = createInsertSchema(project).extend({
   capabilities: ProjectCapabilitiesBase,
+  license: ProjectLicenseBase,
 })
 
 export const ProjectUpdate = createUpdateSchema(project).extend({
   capabilities: ProjectCapabilitiesBase.optional(),
+  license: ProjectLicenseBase.optional(),
 })
 
 export const ProjectI18nBase = createSelectSchema(projectI18n)
@@ -170,6 +210,7 @@ export const ProjectRoleAPI = ProjectRoleBase.extend({
  */
 export const ProjectListRow = ProjectBase.extend({
   i18n: z.array(ProjectI18nBase).nullish(),
+  mapStyleAssignment: z.unknown().nullish(),
 })
 
 /**
@@ -178,6 +219,7 @@ export const ProjectListRow = ProjectBase.extend({
  */
 export const ProjectCardRow = ProjectListRow.extend({
   image: z.unknown().nullish(),
+  mapStyleAssignment: z.unknown().nullish(),
 })
 
 /**
@@ -188,8 +230,10 @@ export const ProjectAdminRow = ProjectBase.extend({
   i18n: z.array(ProjectI18nBase).nullish(),
   userRoles: z.array(ProjectRoleWithUser).nullish(),
   properties: z.array(PropertyAdminProfileAPI).nullish(),
+  layers: z.array(LayerRaw).nullish(),
   image: z.unknown().nullish(),
   publisher: UserBasic.nullish(),
+  mapStyleAssignment: z.unknown().nullish(),
 })
 
 // ═══════════════════════
@@ -212,16 +256,6 @@ export const ProjectI18nFormData = z.object({
     .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
     .optional(),
   descriptionGen: FormBoolean.optional(),
-  license: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_license() }) })
-    .max(128, { message: m.admin__validation_lte_128_chars() }),
-  licenseGen: FormBoolean.optional(),
-  attribution: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_attribution() }) })
-    .max(128, { message: m.admin__validation_lte_128_chars() }),
-  attributionGen: FormBoolean.optional(),
 })
 
 export const ProjectRoleFormData = z.object({
@@ -241,11 +275,22 @@ export const ProjectI18nByLocaleFormData = z.object({
 export const ProjectUserRolesFormData = z.array(ProjectRoleFormData)
 
 const ProjectPropertiesFormData = z.array(ProjectPropertyFormData).optional()
+export const ProjectLayerFormData = z.object({
+  id: z.string().min(1),
+  rank: z.coerce.number<number>().int().min(0).default(0),
+  isDefaultVisible: FormBoolean.default(false),
+})
 
 export const ProjectEntityFormData = z.object({
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })
     .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
+  mapStyleCode: z
+    .string()
+    .trim()
+    .max(64, { message: m.admin__validation_lte_128_chars() })
+    .optional()
+    .default(''),
   code: z
     .string()
     .min(1, { message: m.field_is_required({ field: m.field_code() }) })
@@ -255,9 +300,11 @@ export const ProjectEntityFormData = z.object({
       message: m.admin__validation_key_valid_characters(),
     }),
   i18n: ProjectI18nByLocaleFormData,
+  license: ProjectLicenseBase,
   capabilities: ProjectCapabilitiesBase,
   userRoles: ProjectUserRolesFormData.optional(),
   properties: ProjectPropertiesFormData,
+  layers: z.array(ProjectLayerFormData).optional(),
 })
 
 export const ProjectFormMeta = z.object({
@@ -298,6 +345,11 @@ export const RemoveProjectSchema = z.object({
     .optional(),
 })
 
+export const GetProjectMapStylesSchema = z.object({
+  projectId: z.string().optional(),
+  organisationId: z.string().optional(),
+})
+
 // ═══════════════════════
 // 5. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
@@ -321,6 +373,7 @@ const ProjectDetailFields = ProjectCardFields
 
 export const ProjectListProfileAPI = ProjectListFields.extend({
   i18n: getLocales(ProjectI18nBase),
+  mapStyle: MapStyleResolved.nullish(),
 })
 
 export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({
@@ -330,12 +383,15 @@ export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({
 
 export const ProjectDetailProfileAPI = ProjectCardProfileAPI.extend({
   ...ProjectDetailFields.shape,
+  mapStyle: MapStyleResolved.nullish(),
 })
 
 export const ProjectAdminProfileAPI = ProjectBase.extend({
   i18n: getLocales(ProjectI18nBase),
   userRoles: z.array(ProjectRoleWithUser).default([]),
   properties: z.array(PropertyAdminProfileAPI).nullish(),
+  layers: z.array(LayerCardProfileAPI).nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
+  mapStyle: MapStyleResolved.nullish(),
 })
