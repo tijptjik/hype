@@ -158,6 +158,36 @@ export const buildNamedProtomapsStyle = (
         },
   ) as StyleSpecification['layers']
 
+  // Protomaps' v4 sprite set does not ship a dedicated `townhall` icon.
+  // Route that POI kind through the existing `building` sprite to avoid runtime
+  // style-image missing errors during symbol placement.
+  style.layers = style.layers?.map(layer => {
+    if (layer.id !== 'pois' || layer.type !== 'symbol') {
+      return layer
+    }
+
+    const iconImage = layer.layout?.['icon-image']
+    if (!Array.isArray(iconImage)) {
+      return layer
+    }
+
+    return {
+      ...layer,
+      layout: {
+        ...(layer.layout ?? {}),
+        'icon-image': [
+          'match',
+          ['get', 'kind'],
+          'station',
+          'train_station',
+          'townhall',
+          'building',
+          ['get', 'kind'],
+        ],
+      },
+    }
+  })
+
   return style
 }
 
