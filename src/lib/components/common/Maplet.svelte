@@ -301,10 +301,6 @@ $effect(() => {
 </div>
 
 <style>
-.maplibregl-canvas {
-  outline: none;
-}
-
 .map {
   transition: opacity 0.3s ease-in-out;
 }

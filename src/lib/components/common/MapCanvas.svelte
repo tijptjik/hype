@@ -605,7 +605,7 @@ $effect(() => {
 
 <div
   id="map"
-  class="map absolute! inset-0! overflow-hidden rounded-2xl caret-transparent"
+  class="map absolute! inset-0! overflow-hidden caret-transparent"
   data-testid="map"
   bind:this={mapContainer}
 >
