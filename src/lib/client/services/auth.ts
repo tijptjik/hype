@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { userLayer, layer } from '$lib/db/schema/index'
+import { userLayer } from '$lib/db/schema/index'
 // TYPES
 import type { Database, UserRoleDisco, SessionUser, Id } from '$lib/types'
 import type { UserLayer } from '$lib/db/zod/schema/user.types'
@@ -12,46 +12,14 @@ import type { UserLayer } from '$lib/db/zod/schema/user.types'
  * @returns A Promise that resolves to an array of UserLayer objects.
  *
  * @remarks
- * This function fetches all layers that the user has access to,
- * including those inherited from their organisation roles.
- * It then maps these layers into UserLayer objects and returns them.
+ * This function loads persisted user layer defaults across hubs.
+ * Initial fallbacks are handled by hub defaults in app state, not by auto-writing rows.
  */
 export async function getUserLayers(
   db: Database,
   userId: string,
 ): Promise<UserLayer[]> {
-  // Fetch user layers
-  let userLayers = await db.select().from(userLayer).where(eq(userLayer.userId, userId))
-
-  // If no layers exist, create default layer
-  if (userLayers.length === 0) {
-    // First, get the layer data
-    const defaultLayers = await db
-      .select({ id: layer.id })
-      .from(layer)
-      .where(eq(layer.isDefaultVisible, true))
-      .all()
-
-    if (!defaultLayers) {
-      console.error('Default layers not found')
-      return []
-    }
-
-    for (const layer of defaultLayers) {
-      // Create the user layer
-      const defaultUserLayer = {
-        layerId: layer.id,
-        userId: userId,
-        isVisibleOnLoad: true,
-      }
-      await db.insert(userLayer).values(defaultUserLayer)
-    }
-
-    // Return the newly created layer with the layer data
-    userLayers = await db.select().from(userLayer).where(eq(userLayer.userId, userId))
-  }
-
-  return userLayers
+  return await db.select().from(userLayer).where(eq(userLayer.userId, userId))
 }
 /**
  * Checks if the user has access to the control panel based on their roles.
