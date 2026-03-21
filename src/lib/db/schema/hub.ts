@@ -6,6 +6,7 @@ import { sql } from 'drizzle-orm'
 // SCHEMA
 import { user } from './user'
 import { image } from './image'
+import { layer } from './layer'
 // ENUMS
 import { supportedLocales, HubRoleType } from '../../enums'
 
@@ -96,4 +97,25 @@ export const hubRole = sqliteTable(
       .default(HubRoleType.admin),
   },
   table => [primaryKey({ columns: [table.hubId, table.userId] })],
+)
+
+/**
+ * Hub layer defaults
+ * @remarks
+ * Stores per-hub default visibility for layers on initial app load.
+ */
+export const hubLayer = sqliteTable(
+  'hubLayer',
+  {
+    hubId: text('hubId')
+      .notNull()
+      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+  },
+  table => [primaryKey({ columns: [table.hubId, table.layerId] })],
 )

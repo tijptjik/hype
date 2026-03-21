@@ -73,6 +73,15 @@ export const hubCollectionWithRelations = {
 export const hubEntityWithRelations = {
   i18n: true,
   image: true,
+  layerDefaults: {
+    with: {
+      layer: {
+        with: {
+          i18n: true,
+        },
+      },
+    },
+  },
   propertyAssignments: {
     orderBy: [asc(hubProperty.rank)],
     with: {
@@ -195,6 +204,22 @@ const mapOrganisationsWithImage = (
   }))
 
 /**
+ * Normalizes hub-layer default rows with nested layer i18n payloads.
+ */
+const mapLayerDefaults = (layerDefaults: unknown): UnknownRecord[] =>
+  ((layerDefaults as UnknownRecord[] | undefined) ?? []).map(layerDefault => ({
+    ...layerDefault,
+    layer: layerDefault.layer
+      ? {
+          ...(layerDefault.layer as UnknownRecord),
+          i18n: transformI18nSafely(
+            (layerDefault.layer as UnknownRecord).i18n as never,
+          ),
+        }
+      : null,
+  }))
+
+/**
  * Shapes a raw hub row into a profile-specific API payload.
  * Ensures i18n and nested relation payloads are normalized for frontend consumption.
  */
@@ -223,6 +248,7 @@ const toProfileResponseShape = <P extends HubProfileType>(
       row.organisations,
       'card',
     ) as Hub['organisations'],
+    layerDefaults: mapLayerDefaults(row.layerDefaults) as Hub['layerDefaults'],
     properties: mapPropertiesFromAssignments(row as UnknownRecord) as Hub['properties'],
   }
 

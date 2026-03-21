@@ -66,7 +66,7 @@ export const LayerPropertyUpdateExtra = LayerPropertyUpdate.extend({
 
 export const UserLayerBase = createSelectSchema(userLayer)
 export const UserLayerInsert = createInsertSchema(userLayer).extend({
-  isVisibleOnLoad: z.boolean(),
+  isDefaultVisible: z.boolean(),
 })
 export const UserLayerUpdate = createUpdateSchema(userLayer)
 

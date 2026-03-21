@@ -10,6 +10,8 @@ import {
 import type {
   HubOrganisationFieldNameResolverForm,
   HubOrganisationHiddenInputAttrs,
+  HubLayerDefaultFieldNameResolverForm,
+  HubLayerDefaultHiddenInputAttrs,
   Locale,
 } from '$lib/types'
 import type {
@@ -62,6 +64,7 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
         },
         userRoles: [],
         organisations: [],
+        layerDefaults: [],
         properties: [],
       },
     }
@@ -90,6 +93,11 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
         organisationId: organisation.id,
         isCoreInclusive: Boolean(organisation.isCoreInclusive),
         isHubExclusive: Boolean(organisation.isHubExclusive),
+      })),
+      layerDefaults: (data.layerDefaults ?? []).map(layerDefault => ({
+        hubId: layerDefault.hubId,
+        layerId: layerDefault.layerId,
+        isDefaultVisible: Boolean(layerDefault.isDefaultVisible),
       })),
       properties: cloneHubProperties(data.properties),
     },
@@ -128,6 +136,33 @@ export function getHubOrganisationHiddenInputAttrs(
       ]
     })
     .filter((attrs): attrs is HubOrganisationHiddenInputAttrs => Boolean(attrs))
+}
+
+export function getHubLayerDefaultHiddenInputAttrs(
+  form: HubLayerDefaultFieldNameResolverForm,
+  layerDefaults: Array<{
+    hubId: string
+    layerId: string
+    isDefaultVisible: boolean
+  }>,
+): HubLayerDefaultHiddenInputAttrs[] {
+  const layerDefaultFields = form.fields.data?.layerDefaults ?? []
+
+  return layerDefaults
+    .flatMap((layerDefault, index) => {
+      const row = layerDefaultFields[index]
+      if (!row) return []
+
+      return [
+        row.hubId?.as('hidden', layerDefault.hubId),
+        row.layerId?.as('hidden', layerDefault.layerId),
+        row.isDefaultVisible?.as(
+          'hidden',
+          layerDefault.isDefaultVisible ? 'true' : 'false',
+        ),
+      ]
+    })
+    .filter((attrs): attrs is HubLayerDefaultHiddenInputAttrs => Boolean(attrs))
 }
 
 export function overrideHubListItemBoolean(

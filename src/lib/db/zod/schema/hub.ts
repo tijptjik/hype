@@ -7,8 +7,11 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import {
   hub,
+  hubLayer,
   hubI18n,
   hubRole,
+  layer,
+  layerI18n,
   organisation,
   organisationI18n,
 } from '$lib/db/schema/index'
@@ -38,6 +41,8 @@ import { UserBasic } from './user'
 //    - HubRoleWithUser
 //    - HubRoleInsert
 //    - HubRoleUpdate
+//    - HubLayerBase
+//    - HubLayerWithLayer
 //    - HubRaw
 //    - HubOrganisationWithI18n
 //
@@ -97,6 +102,16 @@ export const HubRoleInsert = createInsertSchema(hubRole).omit({
 
 export const HubRoleUpdate = createUpdateSchema(hubRole)
 
+export const HubLayerBase = createSelectSchema(hubLayer)
+
+const HubLayerLayer = createSelectSchema(layer).extend({
+  i18n: getLocales(createSelectSchema(layerI18n)),
+})
+
+export const HubLayerWithLayer = HubLayerBase.extend({
+  layer: HubLayerLayer,
+})
+
 const HubOrganisationBase = createSelectSchema(organisation)
 export const HubOrganisationWithI18n = HubOrganisationBase.extend({
   i18n: getLocales(createSelectSchema(organisationI18n)),
@@ -113,6 +128,7 @@ export const HubRaw = HubBase.extend({
   image: ImageBase.nullish(),
   userRoles: z.array(HubRoleWithUser).nullish(),
   organisations: z.array(HubOrganisationRaw).nullish(),
+  layerDefaults: z.array(HubLayerWithLayer).nullish(),
   properties: z.array(PropertyRecordRaw).nullish(),
   propertyAssignments: z
     .array(
@@ -171,6 +187,12 @@ export const HubOrganisationFormData = z.object({
   isHubExclusive: FormBoolean.default(false),
 })
 
+export const HubLayerFormData = z.object({
+  hubId: z.string().min(1),
+  layerId: z.string().min(1),
+  isDefaultVisible: FormBoolean.default(false),
+})
+
 export const HubEntityFormData = z.object({
   code: z
     .string()
@@ -184,6 +206,7 @@ export const HubEntityFormData = z.object({
   i18n: HubI18nByLocaleFormData,
   userRoles: HubUserRolesFormData,
   organisations: z.array(HubOrganisationFormData).default([]),
+  layerDefaults: z.array(HubLayerFormData).default([]),
   properties: z.array(ProjectPropertyFormData).default([]),
 })
 
@@ -256,6 +279,7 @@ export const HubCardProfileAPI = HubListProfileAPI.extend({
 export const HubDetailProfileAPI = HubCardProfileAPI.extend({
   userRoles: z.array(HubRoleWithUser),
   organisations: z.array(HubOrganisationWithI18n),
+  layerDefaults: z.array(HubLayerWithLayer).default([]),
   properties: z.array(PropertyAdminProfileAPI).default([]),
 })
 

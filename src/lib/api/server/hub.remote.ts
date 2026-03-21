@@ -60,6 +60,7 @@ import {
   listHubs,
   getHub as loadHub,
   syncOrganisations,
+  syncHubLayerDefaults,
 } from '$lib/db/services/hub'
 import { syncHubProperties } from '$lib/db/services/property'
 // API UTILS
@@ -245,6 +246,10 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     rawData !== null &&
     typeof rawData === 'object' &&
     Object.hasOwn(rawData, 'properties')
+  const hasSubmittedLayerDefaultsField =
+    rawData !== null &&
+    typeof rawData === 'object' &&
+    Object.hasOwn(rawData, 'layerDefaults')
 
   // Parse and normalize submitted form input.
   const params = HubFormData.parse(input)
@@ -265,6 +270,9 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     ? data.organisations
     : []
   const submittedProperties = Array.isArray(data.properties) ? data.properties : []
+  const submittedLayerDefaults = Array.isArray(data.layerDefaults)
+    ? data.layerDefaults
+    : []
   const normalizedSubmittedProperties =
     hasSubmittedPropertiesField && Array.isArray(data.properties)
       ? normalizeSubmittedPropertyRanks(submittedProperties)
@@ -326,6 +334,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     await createI18n(db, data.i18n, created.id)
     await createUserRoles(db, submittedRoles, created.id)
     await syncOrganisations(db, created.id, submittedOrganisations)
+    await syncHubLayerDefaults(db, created.id, submittedLayerDefaults)
     await syncHubProperties(db, {
       hubId: created.id,
       properties: normalizedSubmittedProperties as Array<Record<string, unknown>>,
@@ -420,6 +429,9 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   await updateI18n(db, data.i18n, current.id)
   await syncUserRoles(db, submittedRoles, current.id)
   await syncOrganisations(db, current.id, submittedOrganisations)
+  if (hasSubmittedLayerDefaultsField) {
+    await syncHubLayerDefaults(db, current.id, submittedLayerDefaults)
+  }
   if (hasSubmittedPropertiesField) {
     await syncHubProperties(db, {
       hubId: current.id,

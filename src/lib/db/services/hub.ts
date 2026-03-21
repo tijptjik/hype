@@ -12,6 +12,7 @@ import {
   task,
   featureImage,
   image,
+  hubLayer,
 } from '$lib/db/schema/index'
 // DB
 import {
@@ -80,6 +81,7 @@ import { hubEntityWithRelations } from '$lib/api/services/hub'
 // 2.4 CRUD :: READ (RELATED)
 //    - listUserRoles
 //    - listOrganisations
+//    - listHubLayerDefaults
 //
 // 3.1 CRUD :: UPDATE
 //    - updateHubByIdWithConcurrency
@@ -90,6 +92,7 @@ import { hubEntityWithRelations } from '$lib/api/services/hub'
 // 3.2 CRUD :: UPDATE (SYNC)
 //    - syncUserRoles
 //    - syncOrganisations
+//    - syncHubLayerDefaults
 //
 // 4. CRUD :: DELETE
 //    - No hard delete helpers in this module (intentional)
@@ -573,6 +576,22 @@ export const listOrganisations = async (
     .where(inArray(organisation.id, organisationIds))
 }
 
+/**
+ * Lists persisted hub-layer default rows for one hub.
+ */
+export const listHubLayerDefaults = async (
+  db: Database,
+  hubId: string,
+): Promise<Array<{ hubId: string; layerId: string; isDefaultVisible: boolean }>> =>
+  await db
+    .select({
+      hubId: hubLayer.hubId,
+      layerId: hubLayer.layerId,
+      isDefaultVisible: hubLayer.isDefaultVisible,
+    })
+    .from(hubLayer)
+    .where(eq(hubLayer.hubId, hubId))
+
 // ═══════════════════════
 // 3.1 CRUD :: UPDATE
 // ═══════════════════════
@@ -735,6 +754,30 @@ export const syncOrganisations = async (
         row.organisationId,
       ),
     ),
+  )
+}
+
+/**
+ * Replaces persisted hub-layer default rows for one hub.
+ */
+export const syncHubLayerDefaults = async (
+  db: Parameters<typeof createHub>[0],
+  hubId: string,
+  nextRows: Array<{
+    layerId: string
+    isDefaultVisible: boolean
+  }>,
+): Promise<void> => {
+  await db.delete(hubLayer).where(eq(hubLayer.hubId, hubId))
+
+  if (nextRows.length === 0) return
+
+  await db.insert(hubLayer).values(
+    nextRows.map(row => ({
+      hubId,
+      layerId: row.layerId,
+      isDefaultVisible: row.isDefaultVisible,
+    })),
   )
 }
 

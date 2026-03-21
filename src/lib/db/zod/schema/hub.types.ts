@@ -14,6 +14,8 @@ import type {
   HubDetailProfileAPI,
   HubEntityFormData,
   HubFormData,
+  HubLayerBase,
+  HubLayerWithLayer,
   HubI18nBase,
   HubI18nInsert,
   HubI18nUpdate,
@@ -89,6 +91,8 @@ export type HubRoleDB = z.infer<typeof HubRoleBase>
 export type HubRoleNew = z.infer<typeof HubRoleInsert>
 export type HubRolePartial = z.infer<typeof HubRoleUpdate>
 export type HubRoleUser = z.infer<typeof HubRoleWithUser>
+export type HubLayer = z.infer<typeof HubLayerBase>
+export type HubLayerWithLayerRecord = z.infer<typeof HubLayerWithLayer>
 
 export type HubFormInput = z.input<typeof HubFormData>
 export type HubFormLocaleInput = FormLocaleInput<HubFormInput>

@@ -80,9 +80,6 @@ import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 // 1. CONFIG
 // ═══════════════════════
 
-// Duplicate here to avoid import from $lib
-const NEW_TITLE = 'New'
-
 export const resourceConfig: Record<HierarchicalResource, ResourceConfig> = {
   feature: {
     name: 'feature',
@@ -200,12 +197,6 @@ const getTable = <T extends SQLiteTableWithColumns<any>>(
 // Update getForeignKey function
 const getForeignKey = (slicedHierarchy: ResourceConfig[], index: number): string =>
   slicedHierarchy[index].keyToParent as string
-
-// Update getReverseForeignKey function
-const getReverseForeignKey = (
-  slicedHierarchy: ResourceConfig[],
-  index: number,
-): string => slicedHierarchy[index].keyToSelf
 
 // ═══════════════════════
 // 5. SUBQUERIES
@@ -621,7 +612,7 @@ export const isFieldUnique = async <T extends Resource>(
     .from(table)
     .where(eq(tableField, dataValue))
     .limit(1)
-  return existingEntity ? false : true
+  return !existingEntity
 }
 
 export const isFieldChanged = async <T extends ResourceDB>(
