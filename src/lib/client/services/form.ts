@@ -3,6 +3,7 @@ import { untrack } from 'svelte'
 import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
 import type { Component } from 'svelte'
+import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
 import type { FirstClassResource } from '$lib/enums'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -63,6 +64,8 @@ import type {
 // - shouldRedirectToSubmittedCode
 // - navigateToSubmittedCode
 // - createCodeRefResourceResult
+// - getAdjacentFacet
+// - createFacetNavActionBuilder
 //
 // 2. RESOURCE EDITOR FACTORIES
 // - createResourceFormConfig
@@ -329,6 +332,66 @@ export function createCodeRefResourceResult({
     shouldRedirect: ({ data, success }) =>
       shouldRedirectToSubmittedCode({ adminCtx, data, success, isRefCode }),
     onRedirect: ({ data }) => navigateToSubmittedCode({ adminCtx, resourceType, data }),
+  }
+}
+
+/**
+ * Resolves the previous or next facet from the current visible facet order.
+ * Used by admin editors so section header nav follows the active tab set.
+ *
+ * @param params Current facet, direction, and ordered facet list.
+ * @returns The adjacent facet, or `null` when none exists.
+ */
+function getAdjacentFacet<TFacet extends string>({
+  facet,
+  direction,
+  facetOrder,
+}: {
+  facet: TFacet
+  direction: 'previous' | 'next'
+  facetOrder: readonly TFacet[]
+}): TFacet | null {
+  const currentIndex = facetOrder.indexOf(facet)
+  if (currentIndex === -1) return null
+
+  const adjacentIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1
+  return facetOrder[adjacentIndex] ?? null
+}
+
+/**
+ * Creates a reusable section-header facet nav action builder for admin editors.
+ * Used by resource pages to centralize previous/next facet behavior while keeping
+ * page-local control over enabled tabs, labels, and resource navigation.
+ *
+ * @param params Getter callbacks for facet order, active facet, labels, and navigation.
+ * @returns A builder for previous/next `FormFacetNavAction` objects.
+ */
+export function createFacetNavActionBuilder<TFacet extends string>({
+  getFacetOrder,
+  getFacetLabel,
+  getActiveFacet,
+  navigateToFacet,
+}: {
+  getFacetOrder: () => readonly TFacet[]
+  getFacetLabel: (facet: TFacet) => string
+  getActiveFacet: () => TFacet
+  navigateToFacet: (facet: TFacet) => void
+}): (facet: TFacet, direction: 'previous' | 'next') => FormFacetNavAction | null {
+  return (facet, direction) => {
+    const adjacentFacet = getAdjacentFacet({
+      facet,
+      direction,
+      facetOrder: getFacetOrder(),
+    })
+    if (!adjacentFacet) return null
+
+    return {
+      text: m.admin__forms_common_set({ label: getFacetLabel(adjacentFacet) }),
+      onClick: () => {
+        if (adjacentFacet === getActiveFacet()) return
+        navigateToFacet(adjacentFacet)
+      },
+    }
   }
 }
 
