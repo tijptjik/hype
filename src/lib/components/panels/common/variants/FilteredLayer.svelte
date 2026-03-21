@@ -1,10 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { slide } from 'svelte/transition'
-// ICONS
-import MinusCircle from 'virtual:icons/lucide/circle-minus'
-import PlusCircle from 'virtual:icons/lucide/circle-plus'
-import Icon from '$lib/components/common/Icon.svelte'
 // I18N
 import { getI18n } from '$lib/i18n'
 // CONTEXT
@@ -91,13 +87,4 @@ const {
       <p class="font-light">{appCtx.getContextualLayerName(layer, false, false)}</p>
     </div>
   {/if}
-  <div
-    class="relative text-sm text-base-content/60 group-hover:text-base-content/80 group-focus-visible:text-base-content/80"
-  >
-    {#if isSelected}
-      <Icon src={MinusCircle} class="relative h-6 w-6" aria-hidden="true"></Icon>
-    {:else}
-      <Icon src={PlusCircle} class="relative h-6 w-6" aria-hidden="true" />
-    {/if}
-  </div>
 </div>
