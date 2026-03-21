@@ -23,6 +23,7 @@ import MapCanvas from '$lib/components/common/MapCanvas.svelte'
 import Omnibar from '$lib/components/omnibar/Omnibar.svelte'
 import Filters from '$lib/components/panels/Filters.svelte'
 import Prisms from '$lib/components/panels/Prisms.svelte'
+import Stars from '$lib/components/panels/Stars.svelte'
 import Hub from '$lib/components/panels/Hub.svelte'
 import Plan from '$lib/components/panels/Plan.svelte'
 import Passport from '$lib/components/panels/Passport.svelte'
@@ -275,10 +276,11 @@ function handleMenuSelect(item: { value: Panel }): void {
 <div class="flex h-dvh flex-col justify-around overflow-hidden">
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
     <main
-      class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden pb-19"
+      class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden pb-17 md:pb-0"
     >
       <!-- Panels -->
       <Prisms />
+      <Stars />
       <Hub {hub} />
       <Filters />
       <Plan />
