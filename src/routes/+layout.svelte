@@ -65,8 +65,10 @@ onMount(async () => {
   try {
     // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
     // and the max worker size in the free tier is 1 MB
-    await ensureMapLibreStyles()
-    const maplibreSource = await loadMapLibre()
+    const [, maplibreSource] = await Promise.all([
+      ensureMapLibreStyles(),
+      loadMapLibre(),
+    ])
     const maplibre = monkeyPatchMapLibre(maplibreSource)
     globalThis.maplibregl = maplibre
 
