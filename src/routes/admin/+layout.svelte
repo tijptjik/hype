@@ -56,7 +56,9 @@ const isPrimaryPanelAutoHide = $derived(
 $effect(() => {
   appCtx.isInitialised
   if (appCtx.isInitialised && !adminCtx.isInitialised) {
-    adminCtx.init()
+    void adminCtx.init().catch(error => {
+      console.error('[AdminLayout] Failed to initialize admin context', error)
+    })
   }
 })
 
