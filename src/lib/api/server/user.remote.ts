@@ -38,7 +38,7 @@ import {
   toAuthMessage,
 } from '$lib/api/services/authz'
 // DB
-import { user } from '$lib/db/schema/index'
+import { hub, user } from '$lib/db/schema/index'
 import {
   getUser as loadUser,
   getUserFeaturesByUserId,
@@ -332,14 +332,29 @@ export const setUserLayerDefaults = guardedCommand(
     }
 
     const targetUserId = resolveTargetUserId(sessionUser, params.userId)
+    const resolvedHubId =
+      params.hubId ??
+      (
+        await db.query.hub.findFirst({
+          columns: {
+            id: true,
+          },
+          where: eq(hub.code, params.hubCode ?? ''),
+        })
+      )?.id
+
+    if (!resolvedHubId) {
+      throw error(404, 'HUB_NOT_FOUND')
+    }
+
     const rows = params.layers.map(layer => ({
       userId: targetUserId,
-      hubId: params.hubId,
+      hubId: resolvedHubId,
       layerId: layer.layerId,
       isDefaultVisible: Boolean(layer.isDefaultVisible),
     }))
 
-    const updated = await updateUserLayers(db, rows, targetUserId, params.hubId as Id)
+    const updated = await updateUserLayers(db, rows, targetUserId, resolvedHubId as Id)
     return { data: updated }
   },
 )
