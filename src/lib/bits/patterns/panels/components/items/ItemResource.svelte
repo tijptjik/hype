@@ -1,6 +1,7 @@
 <script lang="ts">
 import { afterNavigate } from '$app/navigation'
 // SVELTE
+import { cubicOut } from 'svelte/easing'
 import { slide } from 'svelte/transition'
 import { tick } from 'svelte'
 import Portal from 'svelte-portal'
@@ -71,6 +72,23 @@ let focusRestoreKey = $derived(
 let buttonEl: HTMLDivElement
 let toolTipActive = $state(false)
 let tooltipPosition = $state({ left: 0, top: 0, width: 0, height: 0 })
+
+function tooltipShift(
+  _node: Element,
+  params: { duration?: number; offsetX?: number } = {},
+): {
+  duration: number
+  easing: typeof cubicOut
+  css: (t: number) => string
+} {
+  const { duration = 160, offsetX = 10 } = params
+
+  return {
+    duration,
+    easing: cubicOut,
+    css: t => `opacity:${t};transform:translateX(${(t - 1) * offsetX}px);`,
+  }
+}
 
 function showTooltip(): void {
   if (buttonEl && panelProps.isNarrow) {
@@ -196,7 +214,7 @@ afterNavigate(async () => {
 {#if toolTipActive}
   <Portal target="body">
     <div
-      transition:slide={{ duration: 200, axis: 'x' }}
+      transition:tooltipShift={{ duration: 160, offsetX: 10 }}
       class="bits-theme bits-panel-item-resource__tooltip"
       style="top: {tooltipPosition.top}px; left: {tooltipPosition.left}px;"
     >

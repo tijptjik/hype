@@ -6,16 +6,27 @@ import { tick, untrack } from 'svelte'
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
 import {
+  buildProjectLicense,
+  createDefaultProjectLicense,
+  getProjectLicenseIntent,
+  isCustomProjectLicense,
+  normalizeProjectLicense as normalizeSharedProjectLicense,
+  projectLicenseLeafMediaTypes,
+  type ProjectLicenseIntent,
+} from '$lib/client/services/licence'
+import {
   addUserRoleSelection,
   applyChangedRelationField,
   captureHeaderTransitionSnapshot,
+  createFacetNavActionBuilder,
   createResourceEditorPage,
   createResourceFormConfig,
+  focusFacetFromHash,
   guardRefDesync,
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
@@ -40,6 +51,7 @@ import {
 import {
   getProjectSubmitUpdates,
   normalizeProjectCapabilitiesForSubmit,
+  normalizeProjectLayersForSubmit,
   normalizePropertiesForSubmit,
   overrideProjectEntityBoolean,
   overrideProjectListItemBoolean,
@@ -83,22 +95,27 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 import {
   archiveProject,
   getProject,
+  getProjectMapStyles,
   getProjects,
   projectForm,
   publishProject,
 } from '$lib/api/server/project.remote'
+import { getLayers } from '$lib/api/server/layer.remote'
+import { getFeatures } from '$lib/api/server/feature.remote'
 import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
 // SCHEMA
-import { ProjectPreflightFormData } from '$lib/db/zod'
+import { ProjectPreflightFormData } from '$lib/db/zod/schema/project'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // BITS COMPONENTS
 import {
   EntityImage,
-  FormCreditFields,
   FormI18nDescriptorFields,
   FormI18nSection,
-  FormParentOrganisationSection,
+  FormMapStyleSection,
+  FormParentSection,
+  FormProjectLicenseSection,
+  FormProjectLayersSection,
   FormSpecifiersFields,
   FormFieldsSection,
   ProjectCapabilities,
@@ -106,13 +123,20 @@ import {
   GridSpacer,
   Main,
 } from '$lib/bits'
-import type { ParentSectionOrganisationItem } from '$lib/bits'
+
+import type { ParentSectionOrganisationItem } from '$lib/bits/patterns/forms/formParentSection'
+import type { MapStyleSelectionItem } from '$lib/bits/patterns/forms/formMapStyleSection'
 import type { UserCapabilityMatrixRow } from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
 // NAVIGATION
-import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
+import {
+  getAdminFacetOrderForResource,
+  getAdminFacetTabsForResource,
+  navigateOnAdmin,
+} from '$lib/navigation'
+import type { ProjectFacet } from '$lib/navigation'
 // AUTHZ
 import {
   authorizeProjectDelete,
@@ -128,6 +152,7 @@ import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
 import Blend from 'virtual:icons/lucide/blend'
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
+import RefreshCwIcon from 'virtual:icons/lucide/refresh-cw'
 import Type from 'virtual:icons/lucide/type'
 // ENUMS
 import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
@@ -140,12 +165,16 @@ import type {
   Locale,
   ResourceContext,
   UserRoleFieldNameResolverForm,
-  User,
   Id,
+  ProjectLicense,
+  ProjectLicenseRights,
+  ProjectLicenseMediaType,
 } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
+import type { User } from '$lib/db/zod/schema/user.types'
+import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
 import type {
-  OrganisationGetState,
   ProjectBooleanField,
   ProjectCurrentFormDraft,
   ProjectFormInput,
@@ -185,6 +214,7 @@ const resourceEditorPage = createResourceEditorPage({
 
 const projectRef = $derived(page.params.project as string)
 const locales = $derived(getLocaleOrder(getLocaleKey()))
+const propertyLocales = ['en', 'zh-hans', 'zh-hant'] as const
 const currentLocaleKey = $derived(getLocaleKey())
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
@@ -214,6 +244,9 @@ let selectedUsersById = $state<Record<string, User>>({})
 let selectedParentOrganisationById = $state<
   Record<string, ParentSectionOrganisationItem>
 >({})
+let availableMapStyles = $state<MapStyleSelectionItem[]>([])
+let selectedMapStyleSnapshot = $state<MapStyleSelectionItem | null>(null)
+let isMapStyleScopeLoading = $state(false)
 let autoSeededOwnerOrganisationIds = $state<Set<string>>(new Set())
 let ownerRoleSeedAttempt = $state(0)
 let hasAutoEnteredEditForNew = $state(false)
@@ -240,6 +273,13 @@ let stableProjectCapabilityLabelByKey = $state<Partial<Record<CapabilityKey, str
 )
 let stableCapabilityMatrixRows = $state<UserCapabilityMatrixRow[]>([])
 let showDisabledFields = $state(false)
+let useCustomLicenseLabels = $state(false)
+let customLicenseLabels = $state({
+  text: '',
+  image: '',
+  data: '',
+})
+let lastLicenseEditorSyncKey = $state('')
 
 // § State - Data
 
@@ -266,8 +306,25 @@ function isProjectStateForRef(state: ProjectGetState, ref: string): boolean {
 
 const isCoreFacet = $derived(activeFacet === 'core')
 const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
+const isLayersFacet = $derived(activeFacet === 'layers')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
+
+const projectFacetOrder = $derived.by(
+  () =>
+    getAdminFacetOrderForResource(
+      FirstClassResource.project,
+      resolvedFacetTabs,
+    ) as ProjectFacet[],
+)
+
+const buildFacetNavAction = createFacetNavActionBuilder<ProjectFacet>({
+  resourceType: FirstClassResource.project,
+  getFacetOrder: () => projectFacetOrder,
+  getActiveFacet: () => activeFacet as ProjectFacet,
+  navigateToFacet: facet =>
+    navigateOnAdmin(adminCtx, FirstClassResource.project, projectRef, facet),
+})
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewProjectRef = $derived(projectRef === NEW_REF)
 const activeProject = $derived.by(() =>
@@ -317,14 +374,13 @@ const effectiveProjectResourceHubId = $derived.by(() => {
 // ═══════════════════════
 
 // Named i18n sections rendered in the project form.
-type ProjectI18nSectionKey = 'descriptor' | 'credit'
+type ProjectI18nSectionKey = 'descriptor'
 // Fields eligible for machine translation/reset per i18n section.
 const translatableI18nFieldsBySection: Record<
   ProjectI18nSectionKey,
-  ReadonlyArray<'name' | 'nameShort' | 'description' | 'license' | 'attribution'>
+  ReadonlyArray<'name' | 'nameShort' | 'description'>
 > = {
   descriptor: ['name', 'nameShort', 'description'],
-  credit: ['license', 'attribution'],
 }
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
@@ -345,7 +401,7 @@ const configuredProjectForm = configureForm(() => ({
     // Guard against sparse form-array payloads (e.g. `data.properties.0 = undefined`)
     // so preflight always receives a dense object array.
     submittedPayload.data.properties = toDenseProperties(
-      submittedPayload.data.properties,
+      submittedPayload.data.properties as ProjectFormInput['data']['properties'],
     )
 
     // Last committed server state used as baseline for changed-only relation submission.
@@ -412,6 +468,51 @@ const configuredProjectForm = configureForm(() => ({
       toSignature: toStableSignature,
     })
 
+    applyChangedRelationField({
+      data: submittedPayload.data,
+      key: 'license',
+      submittedValue: submittedPayload.data.license,
+      currentValue: currentFormSnapshot.data?.license,
+      baselineValue:
+        (baselineFormInput.data as ProjectSubmitBaselineRelations).license ??
+        normalizeSharedProjectLicense(undefined, organisationAttributionFallback),
+      toEffective: ({ submittedValue, currentValue }) =>
+        normalizeSharedProjectLicense(
+          (submittedValue ?? currentValue) as ProjectLicense | null | undefined,
+          organisationAttributionFallback,
+        ),
+      toComparableEffective: value => value,
+      toComparableBaseline: value =>
+        normalizeSharedProjectLicense(
+          value as ProjectLicense | null | undefined,
+          organisationAttributionFallback,
+        ),
+      toSignature: toStableSignature,
+    })
+
+    submittedPayload.meta.licenseTouched = Object.hasOwn(
+      submittedPayload.data,
+      'license',
+    )
+
+    applyChangedRelationField({
+      data: submittedPayload.data,
+      key: 'layers',
+      submittedValue: submittedPayload.data.layers,
+      currentValue: currentFormSnapshot.data?.layers,
+      baselineValue:
+        (baselineFormInput.data as ProjectSubmitBaselineRelations).layers ?? [],
+      toEffective: ({ submittedValue, currentValue }) => {
+        const raw = submittedValue ?? currentValue ?? []
+        if (!Array.isArray(raw)) return []
+        return normalizeProjectLayersForSubmit(raw as Array<Record<string, unknown>>)
+      },
+      toComparableEffective: value => value,
+      toComparableBaseline: value =>
+        normalizeProjectLayersForSubmit(value as Array<Record<string, unknown>>),
+      toSignature: toStableSignature,
+    })
+
     return submittedPayload as typeof data
   }) as never,
   ...createResourceFormConfig({
@@ -434,7 +535,23 @@ const configuredProjectForm = configureForm(() => ({
           prisms: adminCtx.appCtx.state.prisms,
           meta: { isAdminRequest: true, profile: 'card' },
         }),
-      }),
+        extraQueries: [
+          getLayers({
+            conditions: adminCtx.appCtx.isSuperAdmin()
+              ? { isArchived: null, isPublished: null }
+              : { isArchived: false, isPublished: null },
+            prisms: adminCtx.appCtx.state.prisms,
+            meta: { isAdminRequest: true, profile: 'card' },
+          }),
+          getFeatures({
+            conditions: adminCtx.appCtx.isSuperAdmin()
+              ? { isArchived: null, isPublished: null }
+              : { isArchived: false, isPublished: null },
+            prisms: adminCtx.appCtx.state.prisms,
+            meta: { isAdminRequest: true, profile: 'card' },
+          }),
+        ],
+      }) as never,
     adminCtx,
     headerCtrl,
     resourceType: FirstClassResource.project,
@@ -461,6 +578,41 @@ const projectPropertyFormAdapter = $derived(
 )
 const currentProjectProperties = $derived(
   getCurrentProjectProperties(projectPropertyFormAdapter),
+)
+const formProjectLayerValues = $derived(
+  (formCtx.form.fields.value().data?.layers ?? []) as Array<{
+    id: string
+    rank?: number
+    isDefaultVisible?: boolean
+  }>,
+)
+const projectLayersInSection = $derived.by(() => {
+  const baseLayers = (activeProjectData?.layers ?? []).filter(
+    layer => !layer.isArchived,
+  )
+  const overridesById = new Map(
+    formProjectLayerValues.map(layer => [layer.id, layer] as const),
+  )
+
+  return [...baseLayers]
+    .map(layer => {
+      const override = overridesById.get(layer.id)
+      return {
+        ...layer,
+        rank: override?.rank ?? layer.rank ?? 0,
+        isDefaultVisible: override?.isDefaultVisible ?? layer.isDefaultVisible,
+      }
+    })
+    .sort((left, right) => {
+      const rankDiff = (left.rank ?? 0) - (right.rank ?? 0)
+      if (rankDiff !== 0) return rankDiff
+      return left.id.localeCompare(right.id)
+    })
+})
+const currentProjectShortName = $derived(
+  activeProjectData
+    ? getI18n(activeProjectData, 'nameShort', adminCtx.appCtx.getUserPreferences())
+    : '',
 )
 
 // ═══════════════════════
@@ -526,6 +678,44 @@ const fieldActions = {
     )
     revalidateAfterProgrammaticChange()
   },
+}
+
+function replaceProjectLayerFormValues(
+  layers: Array<{ id: string; isDefaultVisible: boolean }>,
+): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.layers = layers.map((layer, rank) => ({
+      id: layer.id,
+      rank,
+      isDefaultVisible: layer.isDefaultVisible,
+    }))
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onToggleProjectLayerDefault(layerId: string, nextValue: boolean): void {
+  const nextLayers = projectLayersInSection.map(layer => ({
+    id: layer.id,
+    isDefaultVisible:
+      layer.id === layerId ? nextValue : Boolean(layer.isDefaultVisible),
+  }))
+  replaceProjectLayerFormValues(nextLayers)
+}
+
+function onMoveProjectLayer(sourceLayerId: string, targetLayerId: string): void {
+  const nextLayers = projectLayersInSection.map(layer => ({
+    id: layer.id,
+    isDefaultVisible: Boolean(layer.isDefaultVisible),
+  }))
+  const sourceIndex = nextLayers.findIndex(layer => layer.id === sourceLayerId)
+  const targetIndex = nextLayers.findIndex(layer => layer.id === targetLayerId)
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return
+
+  const [movedLayer] = nextLayers.splice(sourceIndex, 1)
+  if (!movedLayer) return
+  nextLayers.splice(targetIndex, 0, movedLayer)
+  replaceProjectLayerFormValues(nextLayers)
 }
 
 // Update base property fields (`key`, `component`, numeric bounds, translatability).
@@ -745,7 +935,7 @@ $effect(() => {
   if (dense.length === properties.length) return
 
   updateFormData(projectEntityUpdaterForm, data => {
-    data.properties = dense
+    data.properties = dense as ProjectFormInput['data']['properties']
     return data
   })
 })
@@ -762,6 +952,18 @@ const fieldSectionIssues = $derived.by(() => {
     .map(issue => issue.message)
     .filter(Boolean)
     .map(message => String(message))
+  return Array.from(new Set(messages))
+})
+
+const projectLayerSectionIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'layers'
+    })
+    .map(toIssueMessage)
+    .filter((message): message is string => Boolean(message))
   return Array.from(new Set(messages))
 })
 
@@ -909,6 +1111,30 @@ const hiddenProjectCapabilityInputAttrs = $derived.by(() => {
     })
     .filter(Boolean) as Array<Record<string, unknown>>
 })
+const hiddenProjectLayerInputAttrs = $derived.by(() => {
+  return formProjectLayerValues.flatMap((layer, index) => {
+    const layerId = typeof layer.id === 'string' ? layer.id : ''
+    if (!layerId) return []
+
+    return [
+      {
+        type: 'hidden',
+        name: `data.layers[${index}].id`,
+        value: layerId,
+      },
+      {
+        type: 'hidden',
+        name: `data.layers[${index}].rank`,
+        value: String(layer.rank ?? index),
+      },
+      {
+        type: 'hidden',
+        name: `data.layers[${index}].isDefaultVisible`,
+        value: layer.isDefaultVisible ? 'true' : 'false',
+      },
+    ]
+  })
+})
 const hiddenUserRoleCapabilityInputAttrs = $derived.by(() => {
   const rows = userRoleFieldResolverForm.fields.data?.userRoles ?? []
   return formUserRoleValues.flatMap(
@@ -927,6 +1153,165 @@ const hiddenUserRoleCapabilityInputAttrs = $derived.by(() => {
         .filter(Boolean) as Array<Record<string, unknown>>,
   )
 })
+
+const organisationAttributionFallback = $derived.by(() => {
+  const selectedOrganisation = selectedParentOrganisation
+  const localeName =
+    (
+      selectedOrganisation?.i18n as
+        | Record<string, { name?: string; nameShort?: string } | undefined>
+        | undefined
+    )?.[currentLocaleKey]?.nameShort ??
+    (
+      selectedOrganisation?.i18n as
+        | Record<string, { name?: string; nameShort?: string } | undefined>
+        | undefined
+    )?.[currentLocaleKey]?.name ??
+    selectedOrganisation?.i18n?.en?.nameShort ??
+    selectedOrganisation?.i18n?.en?.name ??
+    (
+      hierarchy?.organisation?.i18n as
+        | Record<string, { name?: string; nameShort?: string } | undefined>
+        | undefined
+    )?.[currentLocaleKey]?.nameShort ??
+    (
+      hierarchy?.organisation?.i18n as
+        | Record<string, { name?: string; nameShort?: string } | undefined>
+        | undefined
+    )?.[currentLocaleKey]?.name ??
+    hierarchy?.organisation?.i18n?.en?.nameShort ??
+    hierarchy?.organisation?.i18n?.en?.name ??
+    ''
+  return typeof localeName === 'string' ? localeName : ''
+})
+
+const formProjectLicense = $derived.by(() =>
+  normalizeSharedProjectLicense(
+    formCtx.form.fields.value().data?.license as ProjectLicense | undefined,
+    organisationAttributionFallback,
+  ),
+)
+
+const baselineProjectLicense = $derived.by(() =>
+  normalizeSharedProjectLicense(
+    activeCommittedProjectData?.license as ProjectLicense | undefined,
+    organisationAttributionFallback,
+  ),
+)
+
+const hasLicenseChanges = $derived.by(
+  () =>
+    toStableSignature(formProjectLicense) !== toStableSignature(baselineProjectLicense),
+)
+
+const currentProjectLicenseIntent = $derived.by(() =>
+  getProjectLicenseIntent(formProjectLicense),
+)
+
+const licenseWizardChoiceCards = [
+  {
+    key: 'publicDomain' as const,
+    title: m.admin__project_license_choice_public_domain_title(),
+    description: m.admin__project_license_choice_public_domain_description(),
+  },
+  {
+    key: 'conditional' as const,
+    title: m.admin__project_license_choice_conditional_title(),
+    description: m.admin__project_license_choice_conditional_description(),
+  },
+  {
+    key: 'allRightsReserved' as const,
+    title: m.admin__project_license_choice_all_rights_reserved_title(),
+    description: m.admin__project_license_choice_all_rights_reserved_description(),
+  },
+]
+
+const licenseRightRows = [
+  {
+    key: 'BY' as const,
+    label: 'BY',
+    description: m.admin__project_license_condition_by_description(),
+  },
+  {
+    key: 'SA' as const,
+    label: 'SA',
+    description: m.admin__project_license_condition_sa_row_description(),
+  },
+  {
+    key: 'NC' as const,
+    label: 'NC',
+    description: m.admin__project_license_condition_nc_row_description(),
+  },
+] satisfies Array<{
+  key: 'BY' | 'SA' | 'NC'
+  label: string
+  description: string
+}>
+
+function onApplyProjectLicense(params: {
+  license: ProjectLicense
+  useCustomLicenseLabels: boolean
+  customLicenseLabels: typeof customLicenseLabels
+}): void {
+  useCustomLicenseLabels = params.useCustomLicenseLabels
+  customLicenseLabels = params.customLicenseLabels
+
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.license = {
+      ...params.license,
+      meta: {
+        ...params.license.meta,
+        history: formProjectLicense.meta.history ?? [],
+      },
+    }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function syncLicenseEditorStateFromForm(): void {
+  useCustomLicenseLabels = isCustomProjectLicense(formProjectLicense)
+  customLicenseLabels = {
+    text: formProjectLicense.media.text.license,
+    image: formProjectLicense.media.image.license,
+    data: formProjectLicense.media.data.license,
+  }
+}
+
+function updateProjectLicense(
+  params: Partial<{
+    intent: ProjectLicenseIntent
+    attribution: string
+    allMediaSameRights: boolean
+    rights: Partial<Record<ProjectLicenseMediaType, Partial<ProjectLicenseRights>>>
+    useCustomLabels: boolean
+    customLabels: typeof customLicenseLabels
+  }> = {},
+): void {
+  const nextUseCustomLabels = params.useCustomLabels ?? useCustomLicenseLabels
+  const nextCustomLabels = params.customLabels ?? customLicenseLabels
+  const nextLicense = buildProjectLicense({
+    attribution: params.attribution ?? formProjectLicense.meta.attribution,
+    intent: params.intent ?? currentProjectLicenseIntent,
+    allMediaSameRights:
+      params.allMediaSameRights ?? formProjectLicense.meta.allMediaSameRights,
+    rights: params.rights ?? {
+      all: formProjectLicense.media.all,
+      image: formProjectLicense.media.image,
+      text: formProjectLicense.media.text,
+      data: formProjectLicense.media.data,
+    },
+    useCustomLabels: nextUseCustomLabels,
+    customLabels: nextCustomLabels,
+  })
+
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.license = nextLicense
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 // Select field names keyed by userId for role dropdown binding.
 const roleFieldNameByUserId = $derived.by(() => {
   const rows = userRoleFieldResolverForm.fields.data?.userRoles ?? []
@@ -1152,11 +1537,20 @@ $effect(() => {
   }
 })
 
+$effect(() => {
+  const nextKey = `${projectRef}:${activeCommittedProjectData?.modifiedAt ?? 'new'}`
+  if (nextKey === lastLicenseEditorSyncKey) return
+  lastLicenseEditorSyncKey = nextKey
+  syncLicenseEditorStateFromForm()
+  console.log('Loaded project license', formProjectLicense)
+})
+
 // IMAGE
 
 const activeProjectImage = $derived(
   (activeProjectData?.image ?? null) as ImageCtxEnvelope | null,
 )
+let isRefreshingMapPreview = $state(false)
 const imageProviderProps = $derived.by(() => {
   const projectData = activeProjectData
   const isValid = isCurrentRefLoaded && Boolean(projectData?.id)
@@ -1226,6 +1620,26 @@ const canEditImagePresentationMode = $derived(
 const canEditImageDropzone = $derived(
   canEditProject && isCurrentRefLoaded && !optimisticProjectData?.isArchived,
 )
+const projectImageHeaderActions = $derived.by(() => {
+  if (!activeProjectData?.id) {
+    return []
+  }
+
+  return [
+    {
+      key: 'map-preview',
+      text: isRefreshingMapPreview ? 'Rendering...' : 'Map Preview',
+      iconComponent: RefreshCwIcon,
+      style: 'ghost' as const,
+      color: 'light' as const,
+      size: 'sm' as const,
+      disabled: isRefreshingMapPreview,
+      onClick: () => {
+        void refreshProjectMapPreview()
+      },
+    },
+  ]
+})
 const canSetParentOrganisation = $derived.by(() => {
   const projectData = optimisticProjectData
   return canSetProjectParentOrganisation({
@@ -1256,6 +1670,114 @@ const selectedParentOrganisation = $derived.by(() => {
     return hierarchy.organisation
   return null
 })
+const selectedMapStyleCodeValue = $derived(
+  String(formCtx.form.fields.data.mapStyleCode.value() ?? ''),
+)
+const hiddenMapStyleInputAttrs = $derived.by(() =>
+  selectedMapStyleCodeValue
+    ? [formCtx.form.fields.data.mapStyleCode.as('hidden', selectedMapStyleCodeValue)]
+    : [],
+)
+const selectedMapStyle = $derived.by(() => {
+  if (!selectedMapStyleCodeValue) return null
+
+  return (
+    availableMapStyles.find(mapStyle => mapStyle.code === selectedMapStyleCodeValue) ??
+    (selectedMapStyleSnapshot?.code === selectedMapStyleCodeValue
+      ? selectedMapStyleSnapshot
+      : null) ??
+    ((optimisticProjectData?.mapStyle?.code === selectedMapStyleCodeValue
+      ? optimisticProjectData.mapStyle
+      : null) as MapStyleSelectionItem | null | undefined) ??
+    null
+  )
+})
+
+let lastMapStyleScopeSignature = $state('')
+
+$effect(() => {
+  const optimisticMapStyle = optimisticProjectData?.mapStyle as
+    | MapStyleSelectionItem
+    | null
+    | undefined
+  const resolvedMapStyle =
+    availableMapStyles.find(mapStyle => mapStyle.code === selectedMapStyleCodeValue) ??
+    ((optimisticMapStyle?.code === selectedMapStyleCodeValue
+      ? optimisticMapStyle
+      : null) as MapStyleSelectionItem | null | undefined) ??
+    null
+
+  if (!resolvedMapStyle) return
+
+  const currentSnapshot = untrack(() => selectedMapStyleSnapshot)
+  if (currentSnapshot === resolvedMapStyle) return
+  selectedMapStyleSnapshot = resolvedMapStyle
+})
+
+$effect(() => {
+  const organisationId = parentOrganisationIdValue
+  const fallbackProject = !organisationId && !isNewProjectRef ? projectRef : ''
+  const nextSignature = organisationId
+    ? `organisation:${organisationId}`
+    : fallbackProject
+      ? `project:${fallbackProject}`
+      : ''
+
+  if (!nextSignature) {
+    availableMapStyles = []
+    isMapStyleScopeLoading = false
+    lastMapStyleScopeSignature = ''
+    return
+  }
+
+  if (lastMapStyleScopeSignature === nextSignature) {
+    return
+  }
+
+  lastMapStyleScopeSignature = nextSignature
+  isMapStyleScopeLoading = true
+
+  untrack(() => {
+    void (async () => {
+      try {
+        const response = organisationId
+          ? await getProjectMapStyles({ organisationId })
+          : await getProjectMapStyles({ projectId: fallbackProject })
+
+        if (lastMapStyleScopeSignature !== nextSignature) {
+          return
+        }
+
+        availableMapStyles = (response.data ?? []) as MapStyleSelectionItem[]
+      } finally {
+        if (lastMapStyleScopeSignature === nextSignature) {
+          isMapStyleScopeLoading = false
+        }
+      }
+    })()
+  })
+})
+
+$effect(() => {
+  if (!selectedMapStyleCodeValue) {
+    return
+  }
+
+  if (isMapStyleScopeLoading) {
+    return
+  }
+
+  if (
+    availableMapStyles.some(mapStyle => mapStyle.code === selectedMapStyleCodeValue)
+  ) {
+    return
+  }
+
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.mapStyleCode = ''
+    return data
+  })
+})
 
 // § Handlers
 
@@ -1273,8 +1795,7 @@ async function onTranslate(
   targetLocale: Locale,
   sectionKey: string = 'descriptor',
 ): Promise<boolean> {
-  const section =
-    sectionKey === 'credit' ? ('credit' as const) : ('descriptor' as const)
+  const section = 'descriptor' as const
   const translated = await translateLocaleIntoEmptyFields({
     form: projectI18nUpdaterForm,
     sourceLocale,
@@ -1286,8 +1807,7 @@ async function onTranslate(
 }
 
 function onResetLocale(targetLocale: Locale, sectionKey: string = 'descriptor'): void {
-  const section =
-    sectionKey === 'credit' ? ('credit' as const) : ('descriptor' as const)
+  const section = 'descriptor' as const
   resetLocaleFields({
     form: projectI18nUpdaterForm,
     targetLocale,
@@ -1351,7 +1871,7 @@ function onRoleChange(userId: string, role: ProjectRoleType): void {
       userRoles: data.userRoles,
       userId,
       role,
-    })
+    }) as typeof data.userRoles
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -1383,7 +1903,7 @@ function onToggleUserCapability(params: {
       userId: params.userId,
       capabilityKey: params.capabilityKey,
       value: params.value,
-    })
+    }) as typeof data.userRoles
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -1397,6 +1917,14 @@ function onReplaceParentOrganisation(
   }
   updateFormData(projectEntityUpdaterForm, data => {
     data.organisationId = organisation.id
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onSelectMapStyle(mapStyle: MapStyleSelectionItem): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.mapStyleCode = mapStyle.code
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -1557,10 +2085,12 @@ async function onReset(): Promise<void> {
   if (activeCommittedProjectData && activeCommittedProject) {
     project = activeCommittedProject
     formCtx.form.fields.set(toProjectFormInput(activeCommittedProjectData))
+    syncLicenseEditorStateFromForm()
   } else {
     autoSeededOwnerOrganisationIds = new Set()
     ownerRoleSeedAttempt += 1
     formCtx.reset()
+    syncLicenseEditorStateFromForm()
   }
 
   await tick()
@@ -1643,7 +2173,9 @@ function onSubmit(): void {
   }
 
   updateFormData(projectEntityUpdaterForm, data => {
-    data.properties = toDenseProperties(data.properties)
+    data.properties = toDenseProperties(
+      data.properties,
+    ) as ProjectFormInput['data']['properties']
     return data
   })
   const baseMeta = activeCommittedProjectData
@@ -1656,6 +2188,44 @@ function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
   if (!canEditImagePresentationMode) return
   setProjectImagePresentationMode(project, nextMode)
   setProjectImagePresentationMode(committedProject, nextMode)
+}
+
+async function refreshProjectMapPreview(): Promise<void> {
+  const projectId = activeProjectData?.id
+
+  if (!projectId || isRefreshingMapPreview) {
+    return
+  }
+
+  isRefreshingMapPreview = true
+
+  try {
+    const response = await fetch(`/api/mapPreviews/projects/${projectId}/refresh`, {
+      method: 'POST',
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh project map preview (${response.status})`)
+    }
+
+    const result = (await response.json()) as {
+      mode: 'enqueue' | 'local-generate'
+      assetUrl: string
+    }
+
+    if (result.mode === 'local-generate' && typeof window !== 'undefined') {
+      window.open(`${result.assetUrl}?t=${Date.now()}`, '_blank', 'noopener,noreferrer')
+      toast.success('Map preview regenerated')
+      return
+    }
+
+    toast.success('Map preview queued for regeneration')
+  } catch (error) {
+    console.error('Failed to refresh project map preview', error)
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    isRefreshingMapPreview = false
+  }
 }
 
 // § Effects
@@ -1704,6 +2274,12 @@ $effect(() => {
     load: refreshProject,
     commit: commitSettledProjectState,
   })
+})
+
+$effect(() => {
+  activeFacet
+  contentsElement
+  focusFacetFromHash(contentsElement, activeFacet)
 })
 
 // Keep entity header metadata (title/icon/facets) aligned with loaded organisation data.
@@ -1935,11 +2511,13 @@ $effect(() => {
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
     isReady={Boolean(formCtx.form?.fields)}
-    class="space-y-4"
   >
-    <Main.Section
+    <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('core', 'previous')}
+      nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormI18nSection
@@ -1965,28 +2543,53 @@ $effect(() => {
         {/snippet}
       </FormI18nSection>
 
-      <FormI18nSection
-        title={m.admin__forms_project_credit()}
-        subtitle={m.admin__forms_project_credit_subtitle()}
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        sectionKey="credit"
-        {isEditing}
-      >
-        {#snippet children(locale)}
-          <FormCreditFields
+      <GridSpacer cols={3} leftCols={1} centerCols={1} rightCols={1}>
+        {#snippet left()}
+          {#if canSetParentOrganisation}
+            <FormParentSection
+              title="Parent Organisation"
+              subtitle="This project belongs to"
+              issues={parentOrganisationIssues}
+              parent={selectedParentOrganisation as any}
+              hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewProjectRef}
+              onSearch={onSearchParentOrganisations}
+              onReplaceParent={onReplaceParentOrganisation}
+            />
+          {/if}
+        {/snippet}
+
+        {#snippet center()}
+          <FormMapStyleSection
+            title="Map style"
+            subtitle="Choose the basemap assigned to this project."
+            {availableMapStyles}
+            {selectedMapStyle}
+            {hiddenMapStyleInputAttrs}
+            {isEditing}
+            isSubmitting={formCtx.submitting}
+            isSubmitRequested={formCtx.isSubmitRequested}
+            startInAddingMode={isNewProjectRef}
+            {onSelectMapStyle}
+          />
+        {/snippet}
+
+        {#snippet right()}
+          <FormSpecifiersFields
+            title={m.admin__project_identifiers_title()}
             form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[locale] as never}
-            {locale}
+            fields={['code']}
             {isEditing}
             {isRequiredInPreflight}
           />
         {/snippet}
-      </FormI18nSection>
+      </GridSpacer>
 
-      <GridSpacer leftCols={1} rightCols={2}>
-        {#snippet right()}
+      <GridSpacer cols={3} leftCols={2} rightCols={1}>
+        {#snippet left()}
           <FormUserRolesSection
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
@@ -2013,34 +2616,30 @@ $effect(() => {
           />
         {/snippet}
 
-        {#snippet left()}
-          {#if canSetParentOrganisation}
-            <FormParentOrganisationSection
-              title="Parent Organisation"
-              subtitle="This project belongs to"
-              issues={parentOrganisationIssues}
-              parent={selectedParentOrganisation as any}
-              hiddenOrganisationInputAttrs={hiddenParentOrganisationInputAttrs}
-              {isEditing}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewProjectRef}
-              onSearchOrganisations={onSearchParentOrganisations}
-              onReplaceParent={onReplaceParentOrganisation}
-            />
-          {/if}
-          <FormSpecifiersFields
-            form={formCtx.form}
-            fields={['code']}
+        {#snippet right()}
+          <FormProjectLicenseSection
+            title={m.field_license()}
+            subtitle={m.admin__project_license_section_subtitle()}
+            attributionPlaceholder={organisationAttributionFallback || m.admin__project_license_attribution_placeholder()}
+            license={formProjectLicense}
+            choiceCards={licenseWizardChoiceCards}
+            rightRows={licenseRightRows}
+            leafMediaTypes={[...projectLicenseLeafMediaTypes]}
+            {useCustomLicenseLabels}
+            {customLicenseLabels}
             {isEditing}
-            {isRequiredInPreflight}
+            isSubmitting={formCtx.submitting}
+            onApplyLicense={onApplyProjectLicense}
           />
         {/snippet}
       </GridSpacer>
-    </Main.Section>
-    <Main.Section
+    </Main.Facet>
+    <Main.Facet
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
       transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('capabilities', 'previous')}
+      nextAction={buildFacetNavAction('capabilities', 'next')}
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
       <ProjectCapabilities
@@ -2054,11 +2653,39 @@ $effect(() => {
         onToggleCapability={onToggleProjectCapability}
         onToggleCell={onToggleUserCapability}
       />
-    </Main.Section>
-    <Main.Section
+    </Main.Facet>
+    <Main.Facet
+      isVisible={isLayersFacet}
+      transition="fade"
+      fillHeight={true}
+      class="bits-theme flex gap-4 min-h-0 flex-col"
+      previousAction={buildFacetNavAction('layers', 'previous')}
+      nextAction={buildFacetNavAction('layers', 'next')}
+      attrs={{ 'data-facet-id': 'layers' }}
+    >
+      <FormProjectLayersSection
+        title="Layer Order"
+        subtitle="Drag layers to control project order and choose which ones appear when the project is added to the map."
+        items={projectLayersInSection.map(layer => ({
+          id: layer.id,
+          projectNameShort: currentProjectShortName,
+          layerName: getI18n(layer, 'name', adminCtx.appCtx.getUserPreferences()),
+          isDefaultVisible: Boolean(layer.isDefaultVisible),
+        }))}
+        issues={projectLayerSectionIssues}
+        {isEditing}
+        isSubmitting={formCtx.submitting}
+        onToggleDefault={onToggleProjectLayerDefault}
+        onMove={onMoveProjectLayer}
+      />
+    </Main.Facet>
+    <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
       class="bits-theme flex gap-4 min-h-0 flex-col"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('fields', 'previous')}
+      nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormFieldsSection
@@ -2085,7 +2712,7 @@ $effect(() => {
         }}
         card={{
             removeMode: fieldRemoveMode,
-            locales,
+            locales: [...propertyLocales] as Array<'en' | 'zh-hans' | 'zh-hant'>,
             isEditing,
             isRequiredInPreflight,
             allIssues: visibleAllIssues as Array<{
@@ -2119,9 +2746,20 @@ $effect(() => {
             resolveSourceTag: resolveProjectPropertySourceTag,
           }}
       />
-    </Main.Section>
+    </Main.Facet>
 
     <div class="hidden" aria-hidden="true">
+      {#if hasLicenseChanges}
+        <input
+          type="hidden"
+          name="data.license"
+          value={JSON.stringify(formProjectLicense)}
+        >
+        <input type="hidden" name="meta.licenseTouched" value="true">
+      {/if}
+      {#each hiddenProjectLayerInputAttrs as inputAttrs, index (index)}
+        <input {...inputAttrs}>
+      {/each}
       {#each hiddenProjectCapabilityInputAttrs as inputAttrs, index (index)}
         <input {...inputAttrs}>
       {/each}
@@ -2130,10 +2768,13 @@ $effect(() => {
       {/each}
     </div>
   </Main.Form>
-  <Main.Section
+  <Main.Facet
     isVisible={isImagesFacet}
     transition="fade"
-    class="flex min-h-0 flex-col"
+    fillHeight={true}
+    navMode="footer"
+    previousAction={buildFacetNavAction('images', 'previous')}
+    nextAction={buildFacetNavAction('images', 'next')}
     attrs={{ 'data-facet-id': 'images' }}
   >
     <EntityImage
@@ -2141,6 +2782,7 @@ $effect(() => {
       entityId={activeProjectData?.id}
       {imageProviderProps}
       currentImage={activeProjectImage}
+      headerActions={projectImageHeaderActions}
       ctx={activeProjectData?.id
         ? {
             ctxType: ImageContextResource.project,
@@ -2151,5 +2793,5 @@ $effect(() => {
       canEditDropzone={canEditImageDropzone}
       {onPresentationModeCommitted}
     />
-  </Main.Section>
+  </Main.Facet>
 </Main.Root>

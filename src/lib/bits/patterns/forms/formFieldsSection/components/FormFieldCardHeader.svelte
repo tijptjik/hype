@@ -1,7 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { fade } from 'svelte/transition'
-import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
@@ -258,8 +257,6 @@ function handleAddToProject(event: Event): void {
     {#if isEditing}
       <div
         class="bits-project-field-card__header-actions-shell bits-project-field-card__header-actions-shell--visible"
-        in:slide={{ axis: 'x', duration: 220 }}
-        out:slide={{ axis: 'x', duration: 200 }}
       >
         <div class="bits-project-field-card__header-actions pr-2">
           <div
