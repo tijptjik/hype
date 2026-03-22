@@ -27,6 +27,72 @@ type CreateAdminIndexCardModelParams<T extends Exclude<Resource, Task>> = {
   onImageClick?: (entity: T) => void
 }
 
+function getPreviewImageSrc(
+  resourceType: FirstClassResource | null | false,
+  entity: AdminIndexCardEntity<Exclude<Resource, Task>>,
+): string | null {
+  if (!('id' in entity) || typeof entity.id !== 'string' || entity.id.length === 0) {
+    return null
+  }
+
+  if (resourceType === FirstClassResource.project) {
+    return `/api/mapPreviews/projects/${entity.id}/asset`
+  }
+
+  if (resourceType === FirstClassResource.layer) {
+    return `/api/mapPreviews/layers/${entity.id}/asset`
+  }
+
+  return null
+}
+
+function getHubMetricBreadcrumbs(
+  adminCtx: AdminCtx,
+  entity: AdminIndexCardEntity<Exclude<Resource, Task>>,
+): NonNullable<IndexCardProps['breadcrumbs']> {
+  const hubId = 'id' in entity && typeof entity.id === 'string' ? entity.id : null
+  const organisations =
+    hubId == null
+      ? []
+      : adminCtx.appCtx.state.resources.organisation.filter(
+          organisation => organisation.hubId === hubId,
+        )
+  const organisationIds = new Set(
+    organisations
+      .map(organisation => organisation.id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0),
+  )
+  const projectIds = new Set(
+    adminCtx.appCtx.state.resources.project
+      .filter(project => organisationIds.has(project.organisationId))
+      .map(project => project.id),
+  )
+  const layerCount = adminCtx.appCtx.state.resources.layer.filter(layer =>
+    organisationIds.has(layer.organisationId),
+  ).length
+
+  return [
+    {
+      label: String(organisationIds.size),
+      icon: OrganisationIcon,
+      tooltip: m.field_organisation(),
+      iconClass: 'bits-index-card__crumb-icon--organisation',
+    },
+    {
+      label: String(projectIds.size),
+      icon: ProjectIcon,
+      tooltip: m.maps__projects(),
+      iconClass: 'bits-index-card__crumb-icon--project',
+    },
+    {
+      label: String(layerCount),
+      icon: LayersIcon,
+      tooltip: m.maps__layers(),
+      iconClass: 'bits-index-card__crumb-icon--layer',
+    },
+  ]
+}
+
 function getNestedValue(obj: unknown, path: string): unknown {
   if (!path) return undefined
 
@@ -127,15 +193,27 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
   const appCtx = adminCtx.appCtx
   const preferences = appCtx.getUserPreferences()
 
+  const previewImageSrc = getPreviewImageSrc(resourceType, entity)
   const rawImage = getNestedValue(entity, keyMap.image)
   const imageEnvelope = rawImage ? (rawImage as ImageContextEnvelope) : null
-  const imageSrc = imageEnvelope
-    ? getURLfromImage({ image: imageEnvelope })
-    : getHashiconUrl(entity.id)
+  const imageSrc =
+    previewImageSrc ??
+    // TODO: Switch project index cards back to project images once the map-preview rollout is complete.
+    // (resourceType === FirstClassResource.project && imageEnvelope
+    //   ? getURLfromImage({ image: imageEnvelope })
+    //   : null) ??
+    (imageEnvelope
+      ? getURLfromImage({ image: imageEnvelope })
+      : getHashiconUrl(entity.id))
   const image = imageEnvelope?.image as
     | ({ presentationMode?: 'cover' | 'contain' } & Record<string, unknown>)
     | undefined
-  const imageLayout = image?.presentationMode === 'contain' ? 'contain' : 'cover'
+  const imageLayout =
+    previewImageSrc != null
+      ? 'cover'
+      : image?.presentationMode === 'contain'
+        ? 'contain'
+        : 'cover'
   const title = String(
     getIndexCardPropertyValue(entity, keyMap, localeKey, keyMap.title) ?? '',
   )
@@ -178,7 +256,7 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
       break
   }
 
-  const footerStatus =
+  const footerStatus: IndexCardProps['footerStatus'] =
     publicationState !== null || shortLabel
       ? {
           icon:
@@ -197,53 +275,57 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
 
   const breadcrumbs = [] as NonNullable<IndexCardProps['breadcrumbs']>
   if (resourceType) {
-    const hierarchy = appCtx.getHierarchySync(entity as never)
+    if (resourceType === FirstClassResource.hub) {
+      breadcrumbs.push(...getHubMetricBreadcrumbs(adminCtx, entity))
+    } else {
+      const hierarchy = appCtx.getHierarchySync(entity as never)
 
-    if (resourceType !== FirstClassResource.layer && hierarchy.layer) {
-      const label =
-        appCtx.getContextualLayerName(hierarchy.layer, false, false) ??
-        hierarchy.layer.id
-      if (label) {
-        breadcrumbs.push({
-          label,
-          icon: LayersIcon,
-          tooltip: m.active_bold_cobra_grin(),
-          iconClass: 'bits-index-card__crumb-icon--layer',
-        })
+      if (resourceType !== FirstClassResource.layer && hierarchy.layer) {
+        const label =
+          appCtx.getContextualLayerName(hierarchy.layer, false, false) ??
+          hierarchy.layer.id
+        if (label) {
+          breadcrumbs.push({
+            label,
+            icon: LayersIcon,
+            tooltip: m.active_bold_cobra_grin(),
+            iconClass: 'bits-index-card__crumb-icon--layer',
+          })
+        }
       }
-    }
 
-    if (resourceType !== FirstClassResource.project && hierarchy.project) {
-      const label =
-        appCtx.getContextualProjectName(hierarchy.project, false, false) ??
-        hierarchy.project.code
-      if (label) {
-        breadcrumbs.push({
-          label,
-          icon: ProjectIcon,
-          tooltip: m.deft_mealy_ant_vent(),
-          iconClass: 'bits-index-card__crumb-icon--project',
-        })
+      if (resourceType !== FirstClassResource.project && hierarchy.project) {
+        const label =
+          appCtx.getContextualProjectName(hierarchy.project, false, false) ??
+          hierarchy.project.code
+        if (label) {
+          breadcrumbs.push({
+            label,
+            icon: ProjectIcon,
+            tooltip: m.deft_mealy_ant_vent(),
+            iconClass: 'bits-index-card__crumb-icon--project',
+          })
+        }
       }
-    }
 
-    if (resourceType !== FirstClassResource.organisation && hierarchy.organisation) {
-      const label =
-        appCtx.getContextualOrganisationName(hierarchy.organisation, false, false) ??
-        hierarchy.organisation.code
-      if (label) {
-        breadcrumbs.push({
-          label,
-          icon: OrganisationIcon,
-          tooltip: m.field_organisation(),
-          iconClass: 'bits-index-card__crumb-icon--organisation',
-        })
+      if (resourceType !== FirstClassResource.organisation && hierarchy.organisation) {
+        const label =
+          appCtx.getContextualOrganisationName(hierarchy.organisation, false, false) ??
+          hierarchy.organisation.code
+        if (label) {
+          breadcrumbs.push({
+            label,
+            icon: OrganisationIcon,
+            tooltip: m.field_organisation(),
+            iconClass: 'bits-index-card__crumb-icon--organisation',
+          })
+        }
       }
     }
   }
 
   const href =
-    resourceType != null
+    resourceType != null && resourceType !== false
       ? `${getUrlForResource(adminCtx, resourceType, entity.id)}${search}`
       : null
 
