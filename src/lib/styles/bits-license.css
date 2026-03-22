@@ -1,0 +1,905 @@
+@layer components {
+  .bits-theme .bits-license {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-license__cards {
+    display: grid;
+    gap: 0.875rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-license-card__media-icon {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-base-content);
+    border-right: 1px solid
+      color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
+
+  .bits-theme .bits-license-card__content {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in oklab, var(--color-base-200) 80%, transparent);
+    padding-right: 0;
+  }
+
+  .bits-theme .bits-license-card__body {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 64px;
+    padding: 0 1rem;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license-card__conditions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    align-items: center;
+  }
+
+  .bits-theme .bits-license-card__state {
+    margin: 0;
+  }
+
+  .bits-theme .bits-license-card__condition {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--color-base-200) 78%, transparent);
+    color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-license-card__media,
+  .bits-theme .bits-card__actions.bits-license-card__actions {
+    background: color-mix(in oklab, var(--color-base-200) 84%, transparent);
+  }
+
+  .bits-theme .bits-license-card__content {
+    background: color-mix(in oklab, var(--color-base-200) 64%, transparent);
+  }
+
+  .bits-theme .bits-card__actions.bits-license-card__actions {
+    border-left: 1px solid
+      color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
+
+  .bits-theme .bits-license-card__attribution {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-license-card__attribution-text {
+    display: -webkit-box;
+    overflow: hidden;
+    color: color-mix(in oklab, var(--color-base-content) 76%, transparent);
+    font-size: 0.825rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .bits-theme .bits-license-card__tooltip-title {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+    color: var(--color-foreground);
+  }
+
+  .bits-theme.bits-license__dialog {
+    width: min(720px, calc(100vw - 2rem));
+    height: min(640px, calc(100vh - 2rem));
+    max-height: min(640px, calc(100vh - 2rem));
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    align-items: stretch;
+    overflow-y: auto;
+    border: none;
+    background: linear-gradient(
+      180deg,
+      rgba(8, 10, 16, 0.985),
+      rgba(10, 12, 18, 0.985)
+    );
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+  }
+
+  .bits-theme.bits-license__dialog::before {
+    display: none;
+  }
+
+  .bits-theme .bits-license__wizard,
+  .bits-theme .bits-license__prompt-block,
+  .bits-theme .bits-license__field-group {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .bits-theme .bits-license__wizard {
+    gap: 1rem;
+    align-self: center;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-license__dialog-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .bits-theme .bits-license__dialog-title {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .bits-theme .bits-license__dialog-topbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+
+  .bits-theme .bits-license__stepper {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .bits-theme .bits-license__step-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, white 20%, transparent);
+  }
+
+  .bits-theme .bits-license__step-dot--active,
+  .bits-theme .bits-license__step-dot--complete {
+    background: var(--color-primary);
+  }
+
+  .bits-theme .bits-license__prompt-title {
+    margin: 0;
+    color: var(--color-foreground);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    padding-bottom: 32px;
+    font-style: italic;
+  }
+
+  .bits-theme .bits-license__eyebrow {
+    margin: 0;
+    color: color-mix(in oklab, var(--color-foreground) 70%, transparent);
+    font-size: 0.95rem;
+    line-height: 1.2;
+    text-align: center;
+    padding-bottom: 64px;
+    margin-top: -64px;
+  }
+
+  .bits-theme .bits-license__intent-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 2fr);
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .bits-theme .bits-license__intent-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr) 1px minmax(0, 1fr);
+    row-gap: 0.75rem;
+    column-gap: 0.75rem;
+    align-items: start;
+  }
+
+  .bits-theme .bits-license__intent-grid-heading--no {
+    grid-column: 1;
+  }
+
+  .bits-theme .bits-license__intent-grid-heading--yes {
+    grid-column: 3 / 6;
+  }
+
+  .bits-theme .bits-license__intent-grid-heading {
+    justify-self: center;
+  }
+
+  .bits-theme .bits-license__intent-grid-divider,
+  .bits-theme .bits-license__intent-option-divider {
+    width: 1px;
+    height: 100%;
+    background: color-mix(in oklab, white 12%, transparent);
+  }
+
+  .bits-theme .bits-license__intent-grid-divider {
+    grid-column: 2;
+    grid-row: 1 / 5;
+  }
+
+  .bits-theme .bits-license__intent-grid-spacer {
+    min-height: 1.5rem;
+  }
+
+  .bits-theme .bits-license__intent-divider {
+    background: color-mix(in oklab, white 12%, transparent);
+  }
+
+  .bits-theme .bits-license__intent-column,
+  .bits-theme .bits-license__intent-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .bits-theme .bits-license__intent-column--centered,
+  .bits-theme .bits-license__prompt-block--centered,
+  .bits-theme .bits-license__field-group--centered {
+    align-items: center;
+  }
+
+  .bits-theme .bits-license__intent-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .bits-theme .bits-license__intent-option {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .bits-theme .bits-license__intent-heading,
+  .bits-theme .bits-license__intent-subheading {
+    margin: 0;
+    color: var(--color-foreground);
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__intent-heading {
+    font-size: 1.9rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .bits-theme .bits-license__intent-subheading {
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--color-foreground) 70%, transparent);
+    align-self: end;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .bits-theme .bits-license__scope-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-license__prompt-block,
+  .bits-theme .bits-license__field-group {
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-license__subtitle,
+  .bits-theme .bits-license__hint,
+  .bits-theme .bits-license__table-description {
+    color: color-mix(in oklab, var(--color-foreground) 68%, transparent);
+  }
+
+  .bits-theme .bits-license__choice-description {
+    color: color-mix(in oklab, var(--color-base-content) 66%, transparent);
+    padding-top: 24px;
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .bits-theme .bits-license__table-description {
+    font-size: 0.875rem;
+  }
+
+  .bits-theme .bits-license__choice-description--centered {
+    display: block;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__hint {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  .bits-theme .bits-license__hint--panel {
+    font-size: 0.875rem;
+  }
+
+  .bits-theme .bits-license__field-label,
+  .bits-theme .bits-license__prompt {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-foreground);
+  }
+
+  .bits-theme .bits-license__field-label--centered {
+    position: static;
+    width: 100%;
+    font-size: 1.3125rem;
+    line-height: 1;
+    text-align: right;
+  }
+
+  .bits-theme .bits-license__text-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 3rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.875rem;
+    border: 2px solid transparent;
+    background-color: color-mix(in oklab, var(--color-glass-100) 48%, transparent);
+    color: color-mix(in oklab, white 90%, transparent);
+    transition:
+      border-color 0.16s ease,
+      background-color 0.16s ease,
+      box-shadow 0.16s ease;
+  }
+
+  .bits-theme .bits-license__text-input::placeholder {
+    color: color-mix(in oklab, white 48%, transparent);
+  }
+
+  .bits-theme .bits-license__text-input:focus-visible {
+    outline: none;
+    border-color: color-mix(in oklab, var(--color-primary) 48%, white 10%);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 16%, transparent);
+  }
+
+  .bits-theme .bits-license__text-input:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .bits-theme .bits-license__text-input--attribution {
+    width: 75%;
+    min-height: 3.5rem;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__choice-grid,
+  .bits-theme .bits-license__custom-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .bits-theme .bits-license__choice-card,
+  .bits-theme .bits-license__conditional-card,
+  .bits-theme .bits-license__custom-card {
+    position: relative;
+    border-radius: 1rem;
+    border: 2px solid transparent;
+    background-color: color-mix(in oklab, var(--color-glass-100) 38%, transparent);
+  }
+
+  .bits-theme .bits-license__choice-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+    padding: 1rem;
+    text-align: left;
+    transition:
+      border-color 0.16s ease,
+      transform 0.16s ease,
+      background-color 0.16s ease;
+  }
+
+  .bits-theme .bits-license__choice-card:hover:not(:disabled),
+  .bits-theme .bits-license__choice-card:focus-visible {
+    transform: translateY(-1px);
+    outline: none;
+    border-color: color-mix(in oklab, var(--color-primary) 56%, white 10%);
+  }
+
+  .bits-theme .bits-license__choice-card:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .bits-theme .bits-license__choice-card--active {
+    border-color: color-mix(in oklab, var(--color-primary) 82%, white 8%);
+    background-color: color-mix(
+      in oklab,
+      var(--color-glass-100) 54%,
+      var(--color-primary) 12%
+    );
+  }
+
+  .bits-theme .bits-license__choice-card--centered {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__choice-card--compact {
+    min-width: 10rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .bits-theme .bits-license__choice-card--large {
+    width: 100%;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  .bits-theme .bits-license__choice-title,
+  .bits-theme .bits-license__table-key {
+    font-weight: 700;
+    color: var(--color-foreground);
+  }
+
+  .bits-theme .bits-license__table-key--icon {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    justify-content: flex-start;
+  }
+
+  .bits-theme .bits-license__table-key-icon {
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-license__table-key-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .bits-theme .bits-license__single-right-column {
+    width: 48px;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__conditional-card,
+  .bits-theme .bits-license__custom-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .bits-theme .bits-license__button-row,
+  .bits-theme .bits-license__dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .bits-theme .bits-license__dialog-actions {
+    justify-content: flex-end;
+  }
+
+  .bits-theme .bits-license__footer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .bits-theme .bits-license__stepper--footer {
+    margin-bottom: 0;
+    justify-self: start;
+  }
+
+  .bits-theme .bits-license__table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    border-radius: 0.875rem;
+    background-color: color-mix(in oklab, var(--color-base-100) 32%, transparent);
+  }
+
+  .bits-theme .bits-license__rights-matrix-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+    padding: 1.5rem 1.25rem;
+    border-radius: 0.875rem;
+    background-color: color-mix(in oklab, var(--color-base-100) 22%, transparent);
+    overflow-x: auto;
+  }
+
+  .bits-theme .bits-license__rights-matrix {
+    display: grid;
+    grid-template-columns: 4.75rem 48px 48px 48px minmax(10rem, 1fr);
+    width: min(100%, 42rem);
+    min-width: 0;
+    align-items: center;
+    column-gap: 0.75rem;
+    row-gap: 1rem;
+  }
+
+  .bits-theme .bits-license__rights-cell {
+    min-width: 0;
+    line-height: 32px;
+  }
+
+  .bits-theme .bits-license__rights-cell--media,
+  .bits-theme .bits-license__rights-cell--toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-license__rights-cell--media {
+    min-height: 32px;
+  }
+
+  .bits-theme .bits-license__rights-cell--label {
+    justify-content: flex-start;
+  }
+
+  .bits-theme .bits-license__rights-cell--description {
+    text-align: left;
+  }
+
+  .bits-theme .bits-license__rights-cell--spacer {
+    min-height: 1px;
+  }
+
+  .bits-theme .bits-license__table {
+    width: min(100%, 42rem);
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    margin-inline: auto;
+  }
+
+  .bits-theme .bits-license__table--same {
+    width: min(100%, 28rem);
+  }
+
+  .bits-theme .bits-license__table-col-label {
+    width: 4.75rem;
+  }
+
+  .bits-theme .bits-license__table-col-toggle {
+    width: 48px;
+  }
+
+  .bits-theme .bits-license__table-col-description {
+    width: 10rem;
+  }
+
+  .bits-theme .bits-license__table th,
+  .bits-theme .bits-license__table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid
+      color-mix(in oklab, var(--color-foreground) 10%, transparent);
+    vertical-align: middle;
+    text-align: left;
+  }
+
+  .bits-theme .bits-license__table thead th {
+    border-bottom: 1px solid
+      color-mix(in oklab, var(--color-foreground) 10%, transparent);
+    padding-top: 0;
+    padding-bottom: 0.875rem;
+  }
+
+  .bits-theme .bits-license__table-head-cell {
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__table-head-spacer {
+    width: auto;
+  }
+
+  .bits-theme .bits-license__table--same .bits-license__table-head-spacer {
+    width: auto;
+  }
+
+  .bits-theme .bits-license__table--same .bits-license__table-head-cell {
+    width: 48px;
+  }
+
+  .bits-theme .bits-license__table-head-label,
+  .bits-theme .bits-license__table-head-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: color-mix(in oklab, var(--color-foreground) 78%, transparent);
+  }
+
+  .bits-theme .bits-license__table-head-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .bits-theme .bits-license__table--same .bits-license__table-head-label {
+    width: 48px;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__table-head-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .bits-theme .bits-license__table-head-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .bits-theme .bits-license__table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .bits-theme .bits-license__table-toggle-cell {
+    text-align: center;
+    padding-inline: 0;
+  }
+
+  .bits-theme .bits-license__table tbody td:nth-child(2),
+  .bits-theme .bits-license__table tbody td:nth-child(3),
+  .bits-theme .bits-license__table tbody td:nth-child(4) {
+    width: 48px;
+    max-width: 48px;
+  }
+
+  .bits-theme .bits-license__table-description {
+    width: auto;
+    text-align: left;
+  }
+
+  .bits-theme .bits-license__checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: var(--color-primary);
+  }
+
+  .bits-theme .bits-license__binary-choice {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .bits-theme .bits-license__binary-choice--narrow {
+    width: min(66%, 28rem);
+  }
+
+  .bits-theme .bits-license__binary-choice-divider {
+    justify-self: center;
+    align-self: center;
+    width: 1px;
+    height: 100%;
+    background: color-mix(in oklab, white 12%, transparent);
+  }
+
+  .bits-theme .bits-license__field-group--centered {
+    width: min(100%, 28rem);
+    margin-inline: auto;
+  }
+
+  .bits-theme .bits-license__custom-field {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+    column-gap: 1rem;
+    align-items: center;
+  }
+
+  .bits-theme .bits-license__custom-field-label {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .bits-theme .bits-license__custom-field-actions {
+    display: flex;
+    grid-column: 3;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .bits-theme .bits-license__text-input--custom-license {
+    grid-column: 2;
+    width: 100%;
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__custom-preset-button {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid color-mix(in oklab, white 16%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: color-mix(in oklab, var(--color-foreground) 82%, transparent);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      border-color 0.16s ease,
+      background-color 0.16s ease,
+      color 0.16s ease;
+  }
+
+  .bits-theme .bits-license__custom-preset-button:hover,
+  .bits-theme .bits-license__custom-preset-button:focus-visible {
+    border-color: color-mix(in oklab, var(--color-primary) 56%, white 8%);
+    background: color-mix(in oklab, var(--color-primary) 12%, transparent);
+    color: var(--color-foreground);
+    outline: none;
+  }
+
+  .bits-theme .bits-license__custom-preset-label {
+    order: 1;
+  }
+
+  .bits-theme .bits-license__custom-preset-icon {
+    order: 2;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 1.5rem;
+  }
+
+  .bits-theme .bits-license__preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.75rem;
+    align-items: stretch;
+    width: min(100%, 36rem);
+    justify-items: center;
+  }
+
+  .bits-theme .bits-license__preview-grid--stage,
+  .bits-theme .bits-license__custom-grid--stage {
+    grid-area: 1 / 1;
+    justify-self: center;
+    align-self: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.16s ease;
+  }
+
+  .bits-theme .bits-license__preview-grid--stage {
+    display: flex;
+    width: min(100%, 36rem);
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.75rem;
+    transform: translateY(-48px);
+  }
+
+  .bits-theme .bits-license__license-panel--active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .bits-theme .bits-license__preview-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.875rem;
+    background: color-mix(in oklab, var(--color-base-100) 28%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 6%, transparent);
+  }
+
+  .bits-theme .bits-license__preview-label {
+    color: color-mix(in oklab, var(--color-foreground) 62%, transparent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .bits-theme .bits-license__preview-license {
+    color: var(--color-foreground);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .bits-theme .bits-license__preview-license-link {
+    text-decoration: none;
+    transition: color 0.16s ease;
+  }
+
+  .bits-theme .bits-license__preview-license-link:hover,
+  .bits-theme .bits-license__preview-license-link:focus-visible {
+    color: var(--color-primary);
+    text-decoration: underline;
+    outline: none;
+  }
+
+  .bits-theme .bits-license__license-stage {
+    display: grid;
+
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .bits-theme .bits-license__custom-grid--stage {
+    width: 100%;
+  }
+
+  .bits-theme .bits-license__license-stage-title {
+    margin: 0;
+    padding-block: 32px;
+    color: var(--color-foreground);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  @container bits-main-root (min-width: 48rem) {
+    .bits-theme .bits-license__cards {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+
+    .bits-theme .bits-license__choice-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .bits-theme .bits-license__custom-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}

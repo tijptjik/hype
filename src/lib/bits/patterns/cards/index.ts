@@ -1,5 +1,6 @@
 export * from './indexCard'
 export * from './layerPropertyCard'
+export * from './licenseCard'
 export * from './mapStyleCard'
 export * from './resourceCard'
 export * from './userAttributionCard'

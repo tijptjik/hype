@@ -2,6 +2,7 @@
 import {
   createDefaultProjectLicense,
   getCombinedLicenseLabel,
+  isKnownGeneratedProjectLicenseLabel,
   getStandardLicenseLabel,
   normalizeProjectLicense,
   projectLicenseLeafMediaTypes,
@@ -53,8 +54,17 @@ type ProjectLicenseBuildParams = {
  * @returns Intent discriminator used by the project form UI.
  */
 export function getProjectLicenseIntent(license: ProjectLicense): ProjectLicenseIntent {
+  const allLeafPublicDomain = projectLicenseLeafMediaTypes.every(
+    mediaType => license.media[mediaType].isPublicDomain === true,
+  )
+  const allLeafAllRightsReserved = projectLicenseLeafMediaTypes.every(
+    mediaType => license.media[mediaType].isAllRightsReserved === true,
+  )
+
   if (license.meta.isPublicDomain) return 'publicDomain'
   if (license.meta.isAllRightsReserved) return 'allRightsReserved'
+  if (allLeafPublicDomain) return 'publicDomain'
+  if (allLeafAllRightsReserved) return 'allRightsReserved'
   return 'conditional'
 }
 
@@ -74,6 +84,9 @@ function buildPresetProjectLicense(
   attribution: string,
 ): ProjectLicense {
   const isPublicDomain = intent === 'publicDomain'
+  const presetFlags = isPublicDomain
+    ? { BY: false, SA: false, NC: false, ND: false }
+    : { BY: null, SA: true, NC: true, ND: true }
 
   return {
     meta: {
@@ -81,35 +94,32 @@ function buildPresetProjectLicense(
       attribution,
       isAllRightsReserved: !isPublicDomain,
       isPublicDomain,
+      history: [],
     },
     media: {
       all: {
         license: isPublicDomain ? 'CC0 / PDDL' : 'Copyright',
-        BY: isPublicDomain ? false : null,
-        SA: isPublicDomain ? false : null,
-        NC: isPublicDomain ? false : true,
-        ND: isPublicDomain ? false : true,
+        isPublicDomain,
+        isAllRightsReserved: !isPublicDomain,
+        ...presetFlags,
       },
       image: {
         license: isPublicDomain ? 'CC0' : 'Copyright',
-        BY: isPublicDomain ? false : null,
-        SA: isPublicDomain ? false : null,
-        NC: isPublicDomain ? false : true,
-        ND: isPublicDomain ? false : true,
+        isPublicDomain,
+        isAllRightsReserved: !isPublicDomain,
+        ...presetFlags,
       },
       text: {
         license: isPublicDomain ? 'CC0' : 'Copyright',
-        BY: isPublicDomain ? false : null,
-        SA: isPublicDomain ? false : null,
-        NC: isPublicDomain ? false : true,
-        ND: isPublicDomain ? false : true,
+        isPublicDomain,
+        isAllRightsReserved: !isPublicDomain,
+        ...presetFlags,
       },
       data: {
         license: isPublicDomain ? 'PDDL' : 'Copyright',
-        BY: isPublicDomain ? false : null,
-        SA: isPublicDomain ? false : null,
-        NC: isPublicDomain ? false : true,
-        ND: isPublicDomain ? false : true,
+        isPublicDomain,
+        isAllRightsReserved: !isPublicDomain,
+        ...presetFlags,
       },
     },
   }
@@ -144,6 +154,12 @@ function toEffectiveLeafRights(
             SA: allRights.SA,
             NC: allRights.NC,
             ND: allRights.ND,
+            isPublicDomain:
+              rights[mediaType]?.isPublicDomain ??
+              defaults.media[mediaType].isPublicDomain,
+            isAllRightsReserved:
+              rights[mediaType]?.isAllRightsReserved ??
+              defaults.media[mediaType].isAllRightsReserved,
           }
         : {
             ...defaults.media[mediaType],
@@ -168,6 +184,14 @@ function resolveLeafLicenseLabel(
   useCustomLabels: boolean,
   customLabel?: string,
 ): string {
+  if (rights.isPublicDomain) {
+    return mediaType === 'data' ? 'PDDL' : 'CC0'
+  }
+
+  if (rights.isAllRightsReserved) {
+    return 'Copyright'
+  }
+
   if (useCustomLabels) {
     return customLabel?.trim() || 'Custom license'
   }
@@ -206,16 +230,20 @@ export function buildProjectLicense(params: ProjectLicenseBuildParams): ProjectL
     allMediaSameRights,
   )
 
+  // Keep `all` as a summary view while leaf media carry the effective persisted labels.
   return {
     meta: {
       allMediaSameRights,
       attribution,
       isAllRightsReserved: false,
       isPublicDomain: false,
+      history: [],
     },
     media: {
       all: {
         ...allRights,
+        isPublicDomain: allRights.isPublicDomain ?? false,
+        isAllRightsReserved: allRights.isAllRightsReserved ?? false,
         license: useCustomLabels
           ? 'Custom license'
           : getCombinedLicenseLabel(allRights),
@@ -262,21 +290,42 @@ export function buildProjectLicense(params: ProjectLicenseBuildParams): ProjectL
  * @returns `true` when one or more labels diverge from the standard derived labels.
  */
 export function isCustomProjectLicense(license: ProjectLicense): boolean {
+  const allLeafPublicDomain = projectLicenseLeafMediaTypes.every(
+    mediaType => license.media[mediaType].isPublicDomain === true,
+  )
+  const allLeafAllRightsReserved = projectLicenseLeafMediaTypes.every(
+    mediaType => license.media[mediaType].isAllRightsReserved === true,
+  )
+
+  if (
+    license.meta.isAllRightsReserved ||
+    license.meta.isPublicDomain ||
+    allLeafPublicDomain ||
+    allLeafAllRightsReserved
+  ) {
+    return false
+  }
+
+  return projectLicenseLeafMediaTypes.some(
+    mediaType => !isKnownGeneratedProjectLicenseLabel(license.media[mediaType].license),
+  )
+}
+
+/**
+ * Detects whether a conditional license uses any per-media PD/ARR preset states.
+ *
+ * @param license - Project license payload.
+ * @returns `true` when any leaf media diverges via a per-media preset.
+ */
+export function hasPerMediaPresetProjectLicense(license: ProjectLicense): boolean {
   if (license.meta.isAllRightsReserved || license.meta.isPublicDomain) return false
 
-  return (
-    license.media.all.license !==
-      getCombinedLicenseLabel({
-        BY: license.media.all.BY,
-        SA: license.media.all.SA,
-        NC: license.media.all.NC,
-        ND: license.media.all.ND,
-      }) ||
-    projectLicenseLeafMediaTypes.some(
-      mediaType =>
-        license.media[mediaType].license !==
-        getStandardLicenseLabel(mediaType, license.media[mediaType]),
-    )
+  return projectLicenseLeafMediaTypes.some(
+    mediaType =>
+      license.media[mediaType].license !==
+        getStandardLicenseLabel(mediaType, license.media[mediaType]) ||
+      license.media[mediaType].isPublicDomain === true ||
+      license.media[mediaType].isAllRightsReserved === true,
   )
 }
 

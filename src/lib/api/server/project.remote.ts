@@ -89,6 +89,10 @@ import {
   setProjectMapStyleByCode,
   syncMapStyleCatalog,
 } from '$lib/db/services/map'
+import {
+  appendProjectLicenseHistory,
+  normalizeProjectLicense,
+} from '$lib/db/services/licence'
 import { isMapStyleKey } from '$lib/map/styles'
 import { resolveMapStylePreviewPathForKey } from '$lib/map/styles/preview.shared'
 // SCHEMA
@@ -650,6 +654,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
   currentEntity.properties = await listResolvedProjectProperties(db, current.id)
+  const licenseTouched = meta?.licenseTouched === true
 
   /* ----------------- */
   // UPDATE FLOW: DIFF DETECTION
@@ -687,8 +692,15 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     toProjectStableAuthzSignature(data.i18n) !==
     toProjectStableAuthzSignature(normalizeProjectI18nForFormInput(currentEntity.i18n))
   const licenseChanged =
+    licenseTouched &&
     toProjectStableAuthzSignature(data.license) !==
-    toProjectStableAuthzSignature(currentEntity.license)
+      toProjectStableAuthzSignature(currentEntity.license)
+  const persistedLicense =
+    licenseChanged && currentEntity.isPublished
+      ? appendProjectLicenseHistory(data.license, new Date().toISOString())
+      : licenseChanged
+        ? normalizeProjectLicense(data.license)
+        : undefined
   const organisationChanged = data.organisationId !== current.organisationId
   const projectCapabilitiesChanged =
     toProjectStableAuthzSignature(submittedProjectCapabilities) !==
@@ -833,7 +845,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       data: {
         organisationId: data.organisationId,
         code: normalizedCode,
-        license: data.license,
+        ...(persistedLicense ? { license: persistedLicense } : {}),
         capabilities: submittedProjectCapabilities,
       },
     }),
@@ -957,11 +969,20 @@ export const publishProject = guardedCommand(
     )
 
     // Persist publish state update.
+    const publishedAt = new Date().toISOString()
+    const nextLicense = params.state
+      ? appendProjectLicenseHistory(
+          normalizeProjectLicense(probed.license),
+          publishedAt,
+        )
+      : undefined
     const persisted = requireValue(
       await updateProjectPublishedStateById(db, {
         id: projectId,
         state: params.state,
         publisherId: user.id,
+        publishedAt,
+        license: nextLicense,
       }),
       () => {
         throw error(404, 'PROJECT_NOT_FOUND')

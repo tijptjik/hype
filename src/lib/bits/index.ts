@@ -94,6 +94,7 @@ export {
   IndexCard,
   IndexCardPrimitive,
   LayerPropertyCard,
+  LicenseCard,
   MapStyleCard,
   MinWidthGuard,
   OrganisationCapabilities,

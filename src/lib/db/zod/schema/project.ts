@@ -124,10 +124,23 @@ const ProjectCapabilitiesBase = z.preprocess(
 
 const ProjectLicenseRightsSchema: z.ZodType<ProjectLicenseRights> = z.object({
   license: z.string().min(1).max(128),
+  isPublicDomain: FormBoolean.default(false),
+  isAllRightsReserved: FormBoolean.default(false),
   BY: FormBoolean.nullable().default(true),
   SA: FormBoolean.nullable().default(true),
   NC: FormBoolean.nullable().default(false),
   ND: FormBoolean.nullable().default(false),
+})
+
+const ProjectLicenseHistoryEntrySchema = z.object({
+  publishedAt: z.string().min(1),
+  attribution: z.string().max(128).default(''),
+  licenses: z.object({
+    all: z.string().min(1).max(128).optional(),
+    image: z.string().min(1).max(128).optional(),
+    text: z.string().min(1).max(128).optional(),
+    data: z.string().min(1).max(128).optional(),
+  }),
 })
 
 export const ProjectLicenseSchema: z.ZodType<ProjectLicense> = z.object({
@@ -136,6 +149,7 @@ export const ProjectLicenseSchema: z.ZodType<ProjectLicense> = z.object({
     attribution: z.string().max(128).default(''),
     isAllRightsReserved: FormBoolean.default(false),
     isPublicDomain: FormBoolean.default(false),
+    history: z.array(ProjectLicenseHistoryEntrySchema).default([]),
   }),
   media: z.object({
     all: ProjectLicenseRightsSchema,
@@ -312,6 +326,7 @@ export const ProjectFormMeta = z.object({
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
   isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  licenseTouched: z.coerce.boolean<boolean>().optional(),
 })
 
 export const ProjectFormData = z.object({
