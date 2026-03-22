@@ -100,6 +100,7 @@ export {
   OrganisationCapabilities,
   OverlayBar,
   PanelRoot,
+  ProfileSection,
   ProjectCapabilities,
   ResourceCard,
   ResourceControlBar,
@@ -119,3 +120,4 @@ export {
 } from './patterns'
 
 export type { HeaderProps } from './patterns/layout/header'
+export { cssVars, cx } from './utils'

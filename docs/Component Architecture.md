@@ -77,9 +77,11 @@ This document defines the UI layering model for Bits components and how logic sh
 
 ## Pattern Styling Placement
 
-- Prefer semantic pattern classes in component CSS files (for example `bits-pattern-*.css`) even when rules are mostly `@apply`.
-- Keep these styles centralized to preserve theme scoping (`.bits-theme`), maintain layering consistency, and support future growth into variables, container queries, and non-utility CSS.
-- Inline utility classes in Svelte markup only for truly local, one-off layout details that are unlikely to need reuse or theme-level overrides.
+- Prefer inline Tailwind utility classes directly in Svelte markup for component and pattern styling.
+- Do not introduce semantic wrapper classes by default when they only mirror a local set of utility classes.
+- Reserve shared CSS in `bits-*.css` files for the relatively small set of genuinely reusable theme tokens, CSS variables, cross-component states, or styling that cannot be expressed cleanly inline.
+- When styling needs to be reused across components, prefer extracting theme variables or a small reusable primitive over adding another layer of semantic class indirection.
+- Treat semantic classes as the exception, not the default.
 
 ## Primitive Composition Convention
 
