@@ -5,7 +5,7 @@ import { onMount } from 'svelte'
 import { getLocale } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // CONSTANTS
-import { PANEL_WIDTH } from '$lib/index'
+import { PANEL_WIDTH } from '$lib/constants'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'

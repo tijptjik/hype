@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+import { fade } from 'svelte/transition'
 import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { untrack } from 'svelte'
@@ -1104,7 +1105,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
@@ -1156,7 +1157,7 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isFieldsFacet && hasSelectedParentProject}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}

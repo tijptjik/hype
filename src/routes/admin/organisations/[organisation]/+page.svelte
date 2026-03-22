@@ -2,6 +2,7 @@
 // SVELTE
 import { page } from '$app/state'
 import { untrack } from 'svelte'
+import { fade } from 'svelte/transition'
 import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 // I18N
@@ -257,7 +258,7 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
     // optimistic view-only entity tweaks (e.g. role UI rows) cannot
     // rehydrate stale i18n values back into the live form.
     data: toOrganisationFormInput(
-      committedOrganisation?.data as any,
+      committedOrganisation?.data,
     ) as OrganisationRemoteFormInput,
     submitUpdates: async ({ data }) =>
       getOrganisationSubmitUpdates({
@@ -912,7 +913,7 @@ function onReset(): void {
   formCtx.clearSubmitAttemptState()
   if (committedOrganisation?.data) {
     organisation = committedOrganisation
-    formCtx.form.fields.set(toOrganisationFormInput(committedOrganisation.data as any))
+    formCtx.form.fields.set(toOrganisationFormInput(committedOrganisation.data))
     return
   }
   formCtx.reset()
@@ -928,7 +929,7 @@ function onSubmit(): void {
     return
   }
   const baseMeta = committedOrganisation?.data
-    ? (toOrganisationFormInput(committedOrganisation.data as any).meta ?? {})
+    ? (toOrganisationFormInput(committedOrganisation.data).meta ?? {})
     : undefined
   formCtx.requestSubmit(baseMeta ? { meta: baseMeta } : undefined)
 }
@@ -1129,7 +1130,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
@@ -1190,7 +1191,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && canEditOrganisation}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
@@ -1218,7 +1219,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       class="bits-theme min-h-0 pb-4"
       previousAction={buildFacetNavAction('fields', 'previous')}
@@ -1276,7 +1277,7 @@ $effect(() => {
   </Main.Form>
   <Main.Facet
     isVisible={isImagesFacet}
-    transition="fade"
+    transition={fade}
     fillHeight={true}
     navMode="footer"
     previousAction={buildFacetNavAction('images', 'previous')}

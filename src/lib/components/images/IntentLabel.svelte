@@ -93,7 +93,7 @@ if (container) {
                   {option === intent ? 'bg-glass-result' : ''}
                   {option === 'canonical' &&
             images.some(
-              img => img.image.id !== imageId && (img as any).intent === 'canonical'
+              img => img.image.id !== imageId && (img).intent === 'canonical'
             )
               ? 'text-primary hover:text-white'
               : ''}"

@@ -38,7 +38,7 @@ const featureProperties = $derived(
       class="dir-ltr flex max-h-48 flex-[0_0_calc(50%-4px)] flex-col justify-evenly w-120:flex-[0_0_calc(50%-16px)]"
     >
       <span class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
-        {getI18n(property.property as any, 'label', userPreferences)}
+        {getI18n(property.property, 'label', userPreferences)}
       </span>
       <span class="overflow-y-auto overscroll-contain font-medium">
         {getFPI18n(property, userPreferences)}

@@ -2,6 +2,7 @@
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
+import { fade } from 'svelte/transition'
 // ENUMS
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // I18N
@@ -1568,8 +1569,8 @@ const imageProviderProps = $derived.by(() => {
             ctxType: ImageContextResource.project,
             ctxId: projectData?.id,
             organisation: hierarchy.organisation,
-            project: projectData as any,
-          } as any)
+            project: projectData,
+          })
         : undefined,
   }
 })
@@ -2489,7 +2490,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
@@ -2525,7 +2526,7 @@ $effect(() => {
               title="Parent Organisation"
               subtitle="This project belongs to"
               issues={parentOrganisationIssues}
-              parent={selectedParentOrganisation as any}
+              parent={selectedParentOrganisation}
               hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
               {isEditing}
               isSubmitting={formCtx.submitting}
@@ -2571,7 +2572,7 @@ $effect(() => {
             transitionEntityKey={activeProjectData?.id ?? projectRef}
             removeSelfResourceLabel={m.resource__project_singular()}
             issues={userRoleSectionIssues}
-            userRoles={projectUserRoles as any}
+            userRoles={projectUserRoles}
             {hiddenUserIdInputAttrs}
             {roleFieldNameByUserId}
             {isEditing}
@@ -2579,15 +2580,15 @@ $effect(() => {
             isSubmitRequested={formCtx.isSubmitRequested}
             startInAddingMode={isNewProjectRef}
             availableRoles={[
-              { value: ProjectRoleType.owner as any, label: m.profile__role_type__owner() },
-              { value: ProjectRoleType.maintainer as any, label: 'Maintainer' },
-              { value: ProjectRoleType.member as any, label: m.profile__role_type__member() },
-              { value: ProjectRoleType.translator as any, label: 'Translator' },
-              { value: ProjectRoleType.user as any, label: 'User' },
+              { value: ProjectRoleType.owner, label: m.profile__role_type__owner() },
+              { value: ProjectRoleType.maintainer, label: 'Maintainer' },
+              { value: ProjectRoleType.member, label: m.profile__role_type__member() },
+              { value: ProjectRoleType.translator, label: 'Translator' },
+              { value: ProjectRoleType.user, label: 'User' },
             ]}
             {onAddUser}
             {onRemoveUser}
-            onRoleChange={onRoleChange as any}
+            onRoleChange={onRoleChange}
           />
         {/snippet}
 
@@ -2611,7 +2612,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
@@ -2631,7 +2632,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isLayersFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       class="bits-theme flex gap-4 min-h-0 flex-col"
       previousAction={buildFacetNavAction('layers', 'previous')}
@@ -2656,7 +2657,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
-      transition="fade"
+      transition={fade}
       class="bits-theme flex gap-4 min-h-0 flex-col"
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
@@ -2745,7 +2746,7 @@ $effect(() => {
   </Main.Form>
   <Main.Facet
     isVisible={isImagesFacet}
-    transition="fade"
+    transition={fade}
     fillHeight={true}
     navMode="footer"
     previousAction={buildFacetNavAction('images', 'previous')}

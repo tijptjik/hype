@@ -97,7 +97,7 @@ describe('property.remote', () => {
       { id: 'prop-1', projectId: 'project-1' },
       { id: 'prop-2', projectId: 'project-2' },
       { id: 'prop-3', projectId: null },
-    ] as any)
+    ])
     mockProbeProjectQuery.mockImplementation(async (_db: unknown, params: any) => ({
       id: params.ref,
       organisationId: 'org-1',
@@ -109,7 +109,7 @@ describe('property.remote', () => {
       probe.id === 'project-1' ? { allowed: true } : { allowed: false },
     )
 
-    const result = await remote.getProperties({ conditions: {} } as any)
+    const result = await remote.getProperties({ conditions: {} })
 
     expect(result).toEqual({
       data: [{ row: { id: 'prop-1', projectId: 'project-1' } }],
@@ -119,13 +119,13 @@ describe('property.remote', () => {
   it('returns null for getProperty when property is missing', async () => {
     mockLoadProperty.mockResolvedValue(null)
 
-    await expect(remote.getProperty({ id: 'prop-1' } as any)).resolves.toEqual({
+    await expect(remote.getProperty({ id: 'prop-1' })).resolves.toEqual({
       data: null,
     })
   })
 
   it('denies getProperty when linked project read authz denies', async () => {
-    mockLoadProperty.mockResolvedValue({ id: 'prop-1', projectId: 'project-1' } as any)
+    mockLoadProperty.mockResolvedValue({ id: 'prop-1', projectId: 'project-1' })
     mockProbeProjectQuery.mockResolvedValue({
       id: 'project-1',
       organisationId: 'org-1',
@@ -138,7 +138,7 @@ describe('property.remote', () => {
       code: 'INSUFFICIENT_ROLE',
     })
 
-    await expect(remote.getProperty({ id: 'prop-1' } as any)).rejects.toMatchObject({
+    await expect(remote.getProperty({ id: 'prop-1' })).rejects.toMatchObject({
       status: 403,
     })
   })
@@ -147,7 +147,7 @@ describe('property.remote', () => {
     mockProbeProjectQuery.mockResolvedValue(null)
 
     await expect(
-      remote.getProjectProperties({ projectId: 'project-1' } as any),
+      remote.getProjectProperties({ projectId: 'project-1' }),
     ).resolves.toEqual({
       data: [],
     })
@@ -164,9 +164,9 @@ describe('property.remote', () => {
     mockListResolvedProjectProperties.mockResolvedValue([
       { id: 'prop-b', rank: 2 },
       { id: 'prop-a', rank: 0 },
-    ] as any)
+    ])
 
-    const result = await remote.getProjectProperties({ projectId: 'project-1' } as any)
+    const result = await remote.getProjectProperties({ projectId: 'project-1' })
 
     expect(result).toEqual({
       data: [

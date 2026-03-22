@@ -556,8 +556,8 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
   activeLocales?: Set<LocaleKey>,
 ): FilterRenderItem {
   const currentValue = isTranslationFilterConfig(filterConfig)
-    ? getResourceFilterState(adminCtx, resource, filterConfig.key as any, activeLocales)
-    : getResourceFilterState(adminCtx, resource, filterConfig.key as any)
+    ? getResourceFilterState(adminCtx, resource, filterConfig.key, activeLocales)
+    : getResourceFilterState(adminCtx, resource, filterConfig.key)
 
   return {
     ...filterConfig,
@@ -567,7 +567,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
       toggleResourceFilterState(
         adminCtx,
         resource,
-        filterConfig.key as any,
+        filterConfig.key,
         false,
         activeLocales,
       )
@@ -580,7 +580,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
       toggleResourceFilterState(
         adminCtx,
         resource,
-        filterConfig.key as any,
+        filterConfig.key,
         true,
         activeLocales,
       )
@@ -594,7 +594,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
       setResourceFilterState(
         adminCtx,
         resource,
-        filterConfig.key as any,
+        filterConfig.key,
         nextState,
         activeLocales,
       )
@@ -824,7 +824,7 @@ export function getGenericTranslationFilterState<T extends keyof ViewFilters>(
   const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
 
-  const sectionFilters = (resourceFilters as any)[filterKey]
+  const sectionFilters = (resourceFilters)[filterKey]
   if (!sectionFilters || typeof sectionFilters !== 'object') {
     return null
   }
@@ -833,7 +833,7 @@ export function getGenericTranslationFilterState<T extends keyof ViewFilters>(
   const activeValues: FilterTriState[] = []
   for (const locale of activeLocales) {
     if (locale in sectionFilters) {
-      activeValues.push((sectionFilters as any)[locale])
+      activeValues.push((sectionFilters)[locale])
     } else {
       activeValues.push(null)
     }
@@ -920,7 +920,7 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
   const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return
 
-  const existingSectionFilters = (resourceFilters as any)[filterKey]
+  const existingSectionFilters = (resourceFilters)[filterKey]
   const sectionFilters =
     existingSectionFilters && typeof existingSectionFilters === 'object'
       ? { ...existingSectionFilters }
@@ -931,12 +931,12 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
         }
 
   // Set all locales: inactive ones to null, active ones to the provided value
-  const translationLocales = (resourceFilters as any).translationLocales
+  const translationLocales = (resourceFilters).translationLocales
   for (const locale of Object.keys(translationLocales)) {
     if (activeLocales.has(locale as LocaleKey)) {
-      ;(sectionFilters as any)[locale] = value
+      ;(sectionFilters)[locale] = value
     } else {
-      ;(sectionFilters as any)[locale] = null
+      ;(sectionFilters)[locale] = null
     }
   }
 
@@ -1018,7 +1018,7 @@ export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
     propertyId &&
     propertyId in sectionFilters
   ) {
-    return (sectionFilters as any)[propertyId]
+    return (sectionFilters)[propertyId]
   }
 
   return null

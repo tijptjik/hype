@@ -58,7 +58,7 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedQuery(schema, fn) resolves guarded context and forwards output', async () => {
-    const handler = guardedQuery({} as any, async (output, ctx) => {
+    const handler = guardedQuery({}, async (output, ctx) => {
       expect(output).toEqual({ ref: 'org-1' })
       expect(ctx.user.id).toBe('u-1')
       expect(Array.isArray(ctx.userRoles)).toBe(true)
@@ -91,7 +91,7 @@ describe('remote guard wrappers', () => {
       request: { method: 'POST' },
     })
 
-    const handler = guardedQuery({} as any, async (_output, ctx) => {
+    const handler = guardedQuery({}, async (_output, ctx) => {
       expect(ctx.isAdminRequest).toBe(true)
       return { ok: true }
     })
@@ -105,7 +105,7 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedForm(schema, fn) forwards invalid helper and context', async () => {
-    const handler = guardedForm({} as any, async (output, ctx) => {
+    const handler = guardedForm({}, async (output, ctx) => {
       expect(output).toEqual({ data: { code: 'abc' } })
       expect(typeof ctx.invalid).toBe('function')
       expect(ctx.user.id).toBe('u-1')
@@ -147,7 +147,7 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedCommand(schema, fn) forwards output and context', async () => {
-    const handler = guardedCommand({} as any, async (output, ctx) => {
+    const handler = guardedCommand({}, async (output, ctx) => {
       expect(output).toEqual({ id: 'org-1' })
       expect(ctx.user.id).toBe('u-1')
       return { ok: true }
@@ -175,8 +175,8 @@ describe('remote guard wrappers', () => {
   })
 
   it('throws Invalid arguments for unsupported signatures', () => {
-    expect(() => guardedQuery({} as any)).toThrow('Invalid arguments')
-    expect(() => guardedForm('unchecked' as any)).toThrow('Invalid arguments')
-    expect(() => guardedCommand({} as any)).toThrow('Invalid arguments')
+    expect(() => guardedQuery({})).toThrow('Invalid arguments')
+    expect(() => guardedForm('unchecked')).toThrow('Invalid arguments')
+    expect(() => guardedCommand({})).toThrow('Invalid arguments')
   })
 })

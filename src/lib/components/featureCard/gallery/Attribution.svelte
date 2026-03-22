@@ -38,7 +38,7 @@ const contributorName = $derived(
     m.anonymous(),
 )
 const createdAt = $derived(
-  'createdAt' in (feature || {}) ? (feature as any).createdAt : undefined,
+  'createdAt' in (feature || {}) ? (feature).createdAt : undefined,
 )
 
 $effect(() => {

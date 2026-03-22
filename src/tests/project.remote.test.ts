@@ -77,7 +77,7 @@ vi.mock('$lib/api/server/remote', () => ({
     (_schema: unknown, handler: unknown) =>
     async (input: unknown, invalid: (message: string) => never) => {
       const issue = (() => {
-        const issueBuilder = ((message: string) => message) as any
+        const issueBuilder = ((message: string) => message)
         issueBuilder.data = new Proxy(
           {},
           {
@@ -596,7 +596,7 @@ describe('project.remote form organisation move authz', () => {
       },
       { id: 'p-class-b', key: 'class-b', type: 'classifier', rank: 2 },
       { id: 'p-spec-a', key: 'spec-a', type: 'specifier' },
-    ] as any
+    ]
 
     await remote.projectForm(payload, throwingInvalid)
 
@@ -661,7 +661,7 @@ describe('project.remote form organisation move authz', () => {
     payload.data.layers = [
       { id: 'layer-1', rank: 0, isDefaultVisible: 'false' },
       { id: 'layer-2', rank: 1, isDefaultVisible: 'true' },
-    ] as any
+    ]
 
     await remote.projectForm(payload, throwingInvalid)
 
@@ -692,7 +692,7 @@ describe('project.remote form organisation move authz', () => {
         values: [],
         i18n: { en: {}, zhHans: {}, zhHant: {} },
       },
-    ] as any)
+    ])
 
     const payload = buildUpdatePayload('org-1')
     payload.data.properties = [
@@ -706,7 +706,7 @@ describe('project.remote form organisation move authz', () => {
         values: [],
         i18n: { en: {}, zhHans: {}, zhHant: {} },
       },
-    ] as any
+    ]
 
     await remote.projectForm(payload, throwingInvalid)
 
@@ -728,7 +728,7 @@ describe('project.remote form organisation move authz', () => {
     payload.data.properties = [
       { key: 'dup', type: 'classifier' },
       { key: 'dup', type: 'specifier' },
-    ] as any
+    ]
 
     await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
       'Duplicate property keys submitted',
@@ -743,7 +743,7 @@ describe('project.remote form organisation move authz', () => {
 
   it('rejects empty userRoles when explicitly submitted', async () => {
     const payload = buildUpdatePayload('org-1')
-    payload.data.userRoles = [] as any
+    payload.data.userRoles = []
 
     await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
       'USER_ROLES_REQUIRED',
@@ -783,7 +783,7 @@ describe('project.remote form organisation move authz', () => {
     payload.data.userRoles = [
       { userId: 'u-1', role: 'owner', capabilities: {} },
       { userId: 'u-2', role: 'member', capabilities: {} },
-    ] as any
+    ]
 
     await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
       'INSUFFICIENT_ROLE',
@@ -804,12 +804,12 @@ describe('project.remote form organisation move authz', () => {
     })
     mockListProjectRoleAssignments.mockResolvedValue([
       { userId: 'u-1', role: 'owner', capabilities: { a: true } },
-    ] as any)
+    ])
 
     const payload = buildUpdatePayload('org-1')
     payload.data.userRoles = [
       { userId: 'u-1', role: 'owner', capabilities: { a: false } },
-    ] as any
+    ]
 
     await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
       'INSUFFICIENT_ROLE',
@@ -835,10 +835,10 @@ describe('project.remote form organisation move authz', () => {
       code: 'project-code',
       capabilities: { old: true },
       modifiedAt: '2026-02-24T00:00:00.000Z',
-    } as any)
+    })
 
     const payload = buildUpdatePayload('org-1')
-    payload.data.capabilities = { next: true } as any
+    payload.data.capabilities = { next: true }
 
     await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
       'INSUFFICIENT_ROLE',
@@ -859,7 +859,7 @@ describe('project.remote form organisation move authz', () => {
     })
 
     await expect(
-      remote.publishProject({ id: 'project-1', state: true } as any),
+      remote.publishProject({ id: 'project-1', state: true }),
     ).rejects.toThrow('INSUFFICIENT_ROLE')
     policyMatrix.recordValidation({
       flow: 'Unauthorized command',

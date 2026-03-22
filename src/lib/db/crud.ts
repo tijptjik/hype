@@ -229,8 +229,8 @@ export const upsert = async <T extends DbTable>(
     .insert(table)
     .values(data)
     .onConflictDoUpdate({
-      target: conflictColumns as any,
-      set: conflictUpdateAllExcept(table, conflictUpdateAllExceptColumns) as any,
+      target: conflictColumns,
+      set: conflictUpdateAllExcept(table, conflictUpdateAllExceptColumns),
     })
     .returning()
 
@@ -266,7 +266,7 @@ export const upsertMany = async <T extends DbTable>(
     .insert(table)
     .values(data)
     .onConflictDoUpdate({
-      target: conflictColumns as any,
+      target: conflictColumns,
       set: data,
     })
     .returning()

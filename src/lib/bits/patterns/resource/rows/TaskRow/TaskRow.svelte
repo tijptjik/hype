@@ -95,7 +95,7 @@ function handleTitleClick(): void {
   onImageClick={entity.images?.[0] ? (handleImageClick as (image: unknown) => void) : undefined}
   title={entity.feature
     ? (getI18n(
-        entity.feature as any,
+        entity.feature,
         'title',
         appCtx.getUserPreferences(),
       ) as string)
@@ -103,7 +103,7 @@ function handleTitleClick(): void {
   onTitleClick={entity.feature ? handleTitleClick : undefined}
   description={entity.feature
     ? (getI18n(
-        entity.feature as any,
+        entity.feature,
         'displayAddress',
         appCtx.getUserPreferences(),
       ) as string)

@@ -68,7 +68,7 @@ vi.mock('$lib/api/server/remote', () => ({
     (_schema: unknown, handler: unknown) =>
     async (input: unknown, invalid: unknown) => {
       const issue = (() => {
-        const issueBuilder = ((message: string) => message) as any
+        const issueBuilder = ((message: string) => message)
         issueBuilder.data = new Proxy(
           {},
           {
@@ -331,8 +331,8 @@ describe('hub.remote form image handling', () => {
           userRoles: [{ userId: 'u-1', role: 'admin' }],
           organisations: [],
         },
-      } as any,
-      (() => undefined) as any,
+      },
+      (() => undefined),
     )
 
     expect(mockCreateHub).toHaveBeenCalledTimes(1)
@@ -376,8 +376,8 @@ describe('hub.remote form image handling', () => {
           userRoles: [{ userId: 'u-1', role: 'admin' }],
           organisations: [],
         },
-      } as any,
-      (() => undefined) as any,
+      },
+      (() => undefined),
     )
 
     expect(mockUpdateHubByIdWithConcurrency).toHaveBeenCalledWith(
@@ -413,10 +413,10 @@ describe('hub.remote form image handling', () => {
             userRoles: [],
             organisations: [],
           },
-        } as any,
+        },
         ((message: string) => {
           throw new Error(message)
-        }) as any,
+        }),
       ),
     ).rejects.toThrow('USER_ROLES_REQUIRED')
     policyMatrix.recordValidation({
@@ -450,10 +450,10 @@ describe('hub.remote form image handling', () => {
             ],
             organisations: [],
           },
-        } as any,
+        },
         ((message: string) => {
           throw new Error(message)
-        }) as any,
+        }),
       ),
     ).rejects.toThrow('Duplicate user roles submitted')
     policyMatrix.recordValidation({
@@ -495,10 +495,10 @@ describe('hub.remote form image handling', () => {
             userRoles: [{ userId: 'u-1', role: 'admin' }],
             organisations: [{ organisationId: 'org-1' }],
           },
-        } as any,
+        },
         ((message: string) => {
           throw new Error(message)
-        }) as any,
+        }),
       ),
     ).rejects.toThrow('HUB_SCOPE_FORBIDDEN')
     policyMatrix.recordValidation({
@@ -536,10 +536,10 @@ describe('hub.remote form image handling', () => {
             userRoles: [{ userId: 'u-1', role: 'admin' }],
             organisations: [],
           },
-        } as any,
+        },
         ((message: string) => {
           throw new Error(message)
-        }) as any,
+        }),
       ),
     ).rejects.toThrow('STALE_WRITE')
     policyMatrix.recordValidation({
@@ -588,10 +588,10 @@ describe('hub.remote form image handling', () => {
             ],
             organisations: [],
           },
-        } as any,
+        },
         ((message: string) => {
           throw new Error(message)
-        }) as any,
+        }),
       ),
     ).rejects.toThrow('INSUFFICIENT_ROLE')
     policyMatrix.recordValidation({
@@ -615,7 +615,7 @@ describe('hub.remote form image handling', () => {
     })
 
     await expect(
-      remote.publishHub({ id: 'hub-1', state: true } as any),
+      remote.publishHub({ id: 'hub-1', state: true }),
     ).rejects.toThrow('INSUFFICIENT_ROLE')
     policyMatrix.recordValidation({
       flow: 'Unauthorized command',

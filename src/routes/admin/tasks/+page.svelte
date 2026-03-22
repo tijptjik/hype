@@ -175,7 +175,7 @@ function updateRowFocus(index: number) {
   // Use the virtual list's scrollToIndex method
   const virtualList = listContainer?.querySelector(
     'svelte-virtual-list-viewport',
-  ) as any
+  )
 
   if (virtualList?.scrollToIndex) {
     // Scroll to the index using the virtual list's built-in method

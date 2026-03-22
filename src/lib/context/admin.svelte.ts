@@ -1009,8 +1009,8 @@ export class AdminCtx {
   ): boolean => {
     // Check if feature has the new count fields (from collection API)
     if ('imageCount' in feature && 'imagePublishedCount' in feature) {
-      const imageCount = (feature as any).imageCount as number
-      const imagePublishedCount = (feature as any).imagePublishedCount as number
+      const imageCount = (feature).imageCount as number
+      const imagePublishedCount = (feature).imagePublishedCount as number
       const hasImages = imageCount > 0
 
       if (filters.hasImage !== null) {
@@ -2210,7 +2210,7 @@ export const getAdminCtx = (): AdminCtx => {
   const ctx = getContext<AdminCtx | undefined>(ADMINCTX_KEY)
   if (!ctx) {
     // Return a safe proxy object that prevents errors when AdminCtx isn't ready
-    return new Proxy({} as any, {
+    return new Proxy({}, {
       get(_target, prop) {
         if (prop === 'isInitialised') return false
         if (prop === 'setFacet') return () => {}

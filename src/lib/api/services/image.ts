@@ -319,7 +319,7 @@ export const assertPermissionsToCreateImage = async (
   ctxId: Id,
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn(user as any),
+    () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
   ]
 
@@ -361,7 +361,7 @@ export const assertPermissionsToUpdateImage = async (
   ctxType: ImageContextResource | ImageContextResourceExtended,
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn(user as any),
+    () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id'),
   ]

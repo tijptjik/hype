@@ -1,3 +1,7 @@
+import { getLocale } from './i18n'
+import {
+  MOBILE_MAX_WIDTH
+} from '$lib/constants'
 // COMPONENTS
 // TYPES
 import type { Writable } from 'svelte/store'
@@ -12,7 +16,6 @@ import type {
   FeatureForm,
   Task,
 } from './types'
-import { getLocale } from './i18n'
 
 /**
  * Convenience functions to prevent event handlers from being called multiple times
@@ -137,13 +140,13 @@ export const getValues = (
     ref = form
     key = fieldRoot
   } else if (field.isArray && !field.isNested) {
-    ref = (form as any)[fieldRoot][fieldIndex]
+    ref = (form)[fieldRoot][fieldIndex]
     key = fieldKey
   } else if (field.isNested && !field.isTranslated) {
-    ref = (form as any)[fieldRoot][fieldIndex]
+    ref = (form)[fieldRoot][fieldIndex]
     key = fieldKey
   } else if (field.isNested && field.isTranslated) {
-    const baseRef = (form as any)[fieldRoot][fieldIndex]
+    const baseRef = (form)[fieldRoot][fieldIndex]
     // Initialize i18n structure if it doesn't exist
     if (!baseRef.i18n) {
       baseRef.i18n = {}
@@ -157,15 +160,15 @@ export const getValues = (
     key = fieldKey
   } else if (field.isTranslated) {
     // Initialize i18n structure if it doesn't exist
-    if (!(form as any).i18n) {
-      ;(form as any).i18n = {}
+    if (!(form).i18n) {
+      ;(form).i18n = {}
     }
-    if (!(form as any).i18n[locale as Locale]) {
-      ;(form as any).i18n[locale as Locale] = {
+    if (!(form).i18n[locale as Locale]) {
+      ;(form).i18n[locale as Locale] = {
         locale: locale as Locale, // Ensure locale field is set
       }
     }
-    ref = (form as any).i18n[locale as Locale]
+    ref = (form).i18n[locale as Locale]
     key = fieldRoot
   } else {
     console.error('NO FIELD REFERENCE FOUND', field)
@@ -225,7 +228,7 @@ export const updateForm = (
       baseObject = $form
       propertyKey = fieldRoot
     } else if (field.isArray || field.isNested) {
-      const array = ($form as any)[fieldRoot] as any[]
+      const array = ($form as Record<string, any>)[fieldRoot]
       if (!array || array[fieldIndex] === undefined) {
         return $form
       }
@@ -299,11 +302,6 @@ export const NEW_TITLE = 'New'
 export const NEW_REF = NEW_TITLE.toLowerCase()
 export const ADMIN_PATH = '/admin'
 export const API_PATH = '/api'
-
-export const ADMIN_MIN_WIDTH = 1200
-export const MOBILE_MAX_WIDTH = 920
-export const PANEL_WIDTH = 420
-export const DUAL_PANEL_MIN_WIDTH = 1320
 
 export const capitalizeFirstLetter = (text: string | null) => {
   if (!text) return null

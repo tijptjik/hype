@@ -118,7 +118,7 @@ const hashFacet = $derived(() => {
 $effect(() => {
   const facet = hashFacet()
   if (facet && ['core', 'address', 'images'].includes(facet)) {
-    adminCtx.setFacet(facet as any, pageProps.data.entity, FirstClassResource.feature)
+    adminCtx.setFacet(facet, pageProps.data.entity, FirstClassResource.feature)
   } else {
     adminCtx.setFacet('core', pageProps.data.entity, FirstClassResource.feature)
   }

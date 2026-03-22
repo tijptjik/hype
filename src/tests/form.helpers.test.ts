@@ -157,7 +157,7 @@ describe('form helpers', () => {
       ['core', { label: 'Core' }],
       ['layers', { label: 'Layers' }],
       ['fields', { label: 'Fields' }],
-    ]) as any
+    ])
 
     const result = resolveFacetTabsWithIssues({
       issues: [

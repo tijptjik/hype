@@ -17,7 +17,7 @@ import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
 import Icon from '$lib/components/common/Icon.svelte'
 import Camera from 'virtual:icons/lucide/camera'
 // UTILS
-import { PANEL_WIDTH } from '$lib/index'
+import { PANEL_WIDTH } from '$lib/constants'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
@@ -140,10 +140,10 @@ function handleTap(e: TapCustomEvent) {
 
   if (relativeX < leftBoundary) {
     // Left quarter - previous image
-    handlePrevious(e as any)
+    handlePrevious(e)
   } else if (relativeX > rightBoundary) {
     // Right quarter - next image
-    handleNext(e as any)
+    handleNext(e)
   } else {
     // Center half - close modal
     closeModal()

@@ -53,12 +53,12 @@ function handleMapCollapse(collapsed: boolean): void {
       <TaskSection>
         <TaskStat
           title={m.feature__title()}
-          value={getI18n(task.feature as any, 'title', appCtx.getUserPreferences())}
+          value={getI18n(task.feature, 'title', appCtx.getUserPreferences())}
         />
         <TaskStat
           title={m.feature__description()}
           value={getI18n(
-            task.feature as any,
+            task.feature,
             'description',
             appCtx.getUserPreferences()
           )}
@@ -67,7 +67,7 @@ function handleMapCollapse(collapsed: boolean): void {
         <TaskStat
           title={m.feature__address()}
           value={getI18n(
-            task.feature as any,
+            task.feature,
             'displayAddress',
             appCtx.getUserPreferences()
           )}
@@ -86,7 +86,7 @@ function handleMapCollapse(collapsed: boolean): void {
                 <div class="stat flex flex-col gap-1 rounded-lg bg-glass-100 p-3">
                   <div class="stat-title text-xs">
                     {getI18n(
-                      property.property as any,
+                      property.property,
                       'label',
                       appCtx.getUserPreferences()
                     )}

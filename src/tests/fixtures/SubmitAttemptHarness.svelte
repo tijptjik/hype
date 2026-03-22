@@ -29,7 +29,7 @@ const fakeRemoteForm = {
 }
 
 const configured = configureForm(() => ({
-  form: fakeRemoteForm as any,
+  form: fakeRemoteForm,
   formEl,
   key: 'submit-attempt-harness',
   data: currentValue,

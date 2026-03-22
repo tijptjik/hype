@@ -78,7 +78,7 @@ export function getLocaleKey(): LocaleKey {
  * @param locale - The locale to set.
  */
 export function setLocale(locale: Locale) {
-  runtime.setLocale(locale as any)
+  runtime.setLocale(locale)
 }
 
 // ═══════════════════════

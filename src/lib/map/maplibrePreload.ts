@@ -87,7 +87,7 @@ const normalizeMaplibreOptions = (options: MaplibreOptions = {}): MaplibreOption
  * @returns Patched MapLibre namespace with helper methods attached.
  */
 export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => {
-  const _lib = maplibregl || (globalThis as any).maplibregl
+  const _lib = maplibregl || (globalThis).maplibregl
   // run only in the main thread
   if (_lib !== undefined) {
     /*
@@ -105,9 +105,9 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
         {},
         safeOptions,
         { type: 'pan', center: lnglat },
-        (this as any)._context(safeOptions),
+        (this)._context(safeOptions),
       )
-      ;(this as any)._precache(o)
+      ;(this)._precache(o)
       if (safeOptions.run) return this.panTo(lnglat, safeOptions)
     }
     _lib.Map.prototype.cachedPanTo = cachedpanto

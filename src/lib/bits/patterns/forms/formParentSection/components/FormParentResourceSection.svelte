@@ -237,11 +237,11 @@ $effect(() => {
           mountTransitionDuration={showModeUi ? 80 : 0}
           prefetchOnMount={true}
           prefetchKey={searchScopeKey}
-          onInput={onSearch as any}
+          onInput={onSearch}
           onResultsVisibilityChange={handleResultsVisibilityChange}
           excludeIds={currentParentId ? [currentParentId] : []}
           getItemId={(item: TItem) => item.id}
-          onSelect={handleReplaceParent as any}
+          onSelect={handleReplaceParent}
           resultMap={{
             image: (item: TItem) =>
               getImageSrc(item.image, {

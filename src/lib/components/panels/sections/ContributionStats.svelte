@@ -38,7 +38,7 @@ let stats = $derived(
           (sum, arr) => sum + arr.length,
           0,
         ),
-        missingReports: (userData as any).reportedMissingCount || 0,
+        missingReports: (userData).reportedMissingCount || 0,
       }
     : null,
 )

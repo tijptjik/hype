@@ -62,7 +62,7 @@ describe('translation.remote', () => {
         source: 'en',
         target: 'zh-hant',
         texts: ['hello'],
-      } as any),
+      }),
     ).rejects.toMatchObject({ status: 500 })
   })
 
@@ -71,7 +71,7 @@ describe('translation.remote', () => {
       source: 'en',
       target: 'zh-hant',
       texts: ['hello', 'world'],
-    } as any)
+    })
 
     expect(mockTranslateWithAzure).toHaveBeenCalledWith(
       ['hello', 'world'],

@@ -90,7 +90,7 @@ vi.mock('$lib/api/server/remote', () => ({
     (_schema: unknown, handler: unknown) =>
     async (input: unknown, invalid: (message: string) => never) => {
       const issue = (() => {
-        const issueBuilder = ((message: string) => message) as any
+        const issueBuilder = ((message: string) => message)
         issueBuilder.data = new Proxy(
           {},
           {

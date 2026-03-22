@@ -62,7 +62,7 @@ vi.mock(
     query: (_schema: unknown, handler: unknown) => handler,
     form: (_schema: unknown, handler: unknown) => async (input: unknown) => {
       const issue = (() => {
-        const issueBuilder = ((message: string) => message) as any
+        const issueBuilder = ((message: string) => message)
         issueBuilder.data = new Proxy(
           {},
           {
@@ -571,7 +571,7 @@ describe('organisation.remote authz', () => {
     })
     vi.mocked(organisationServices.listUserRoleAssignments).mockResolvedValue([
       { userId: 'u-1', role: 'owner' },
-    ] as any)
+    ])
     mockAuthorizeOrganisationManageRolesForSubmission.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',

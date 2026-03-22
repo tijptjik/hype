@@ -247,8 +247,8 @@ export function getURLfromImage(opts: {
   const image = inputImage.image
 
   // Handle staged images with preview URLs
-  if ((image as any).preview) {
-    return (image as any).preview
+  if ((image).preview) {
+    return (image).preview
   }
 
   const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`

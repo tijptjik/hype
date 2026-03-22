@@ -163,20 +163,19 @@ $effect(() => {
       // Store in app context for this specific user
       const username = appCtx.state.panels.profile.ctx?.username
       if (username) {
-        ;(appCtx.state.panels.profile.ctx).savedScrollPosition = scrollTop
+        appCtx.state.panels.profile.ctx.savedScrollPosition = scrollTop
       }
     }
   } else if (isProfileOpen && profilePanelContainer) {
     // Panel is opening - restore scroll position
-    const savedScrollPosition = (appCtx.state.panels.profile.ctx)
-      ?.savedScrollPosition
+    const savedScrollPosition = appCtx.state.panels.profile.ctx?.savedScrollPosition
     if (savedScrollPosition > 0) {
       // Small delay to ensure content is rendered
       setTimeout(() => {
         if (profilePanelContainer) {
           profilePanelContainer.scrollTop = savedScrollPosition
           // Clear the saved position
-          ;(appCtx.state.panels.profile.ctx).savedScrollPosition = 0
+          appCtx.state.panels.profile.ctx.savedScrollPosition = 0
         }
       }, 250)
     }

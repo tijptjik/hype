@@ -840,7 +840,7 @@ export const applyQueryFilters = <T extends Table>(
       }
 
       // Type assertion to ensure column exists on table and is a Drizzle column
-      const tableColumn = table[column as keyof T] as unknown as AnyColumn
+      const tableColumn = table[column as keyof T] as unknownColumn
 
       // TODO Deprecated - Backward compatibility for deprecated URL-based string booleans.
       if (value === 'true' || value === 'false') {

@@ -321,7 +321,7 @@ export const createTaskWithDependencies = async (
 
     // Remove the feature object from taskData since we now have featureId
     // and task validation doesn't need the full feature object
-    delete (taskData as any).feature
+    delete (taskData).feature
   }
 
   // Step 3: Validate that all tasks have valid featureIds
@@ -336,7 +336,7 @@ export const createTaskWithDependencies = async (
   }
 
   // Step 4: Create the task
-  const createdTask = await createTask(db, taskToCreate as any)
+  const createdTask = await createTask(db, taskToCreate)
 
   // Step 5: Process images if provided
   if (images && images.length > 0) {
@@ -476,22 +476,22 @@ export const processTaskImagesDB = async (
       imageData.contributorId = taskData.contributorId
 
       // 7. Create image directly in database (bypasses API permission checks)
-      const createdImage = await createImage(db, imageData as any)
+      const createdImage = await createImage(db, imageData)
 
       // 8. Create feature image association
       const featureImageData = {
         imageId: createdImage.id,
         featureId: taskData.featureId as Id,
-        intent: extendedFeatureInfo.intent as any,
+        intent: extendedFeatureInfo.intent,
         isPublished: extendedFeatureInfo.isPublished,
       }
 
-      await createFeatureImage(db, featureImageData as any, createdImage.id)
+      await createFeatureImage(db, featureImageData, createdImage.id)
 
       // 9. Create task image association
       await createTaskImagesFromImageIds(db, taskData.id, [createdImage.id])
 
-      uploadedImages.push(createdImage as any)
+      uploadedImages.push(createdImage)
     } catch (error) {
       console.error('Failed to process task image:', error)
       // Continue with other images instead of failing the entire task

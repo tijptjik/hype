@@ -258,7 +258,7 @@ describe('layer authorization policy matrix', () => {
             ...actorBase(actor),
             resource,
             submittedData: { i18n: {} },
-          } as any)
+          })
           assertAction({
             action,
             scenario: 'write',

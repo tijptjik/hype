@@ -118,7 +118,7 @@ $effect(() => {
   const facet = hashFacet()
   if (facet && ['core', 'images'].includes(facet)) {
     adminCtx.setFacet(
-      facet as any,
+      facet,
       pageProps.data.entity,
       FirstClassResource.organisation,
     )

@@ -213,7 +213,7 @@ describe('image.remote', () => {
       remote.getImagesForContext({
         ctxType: 'feature',
         ctxId: 'feature-1',
-      } as any),
+      }),
     ).rejects.toMatchObject({ status: 403 })
   })
 
@@ -222,24 +222,24 @@ describe('image.remote', () => {
       id: 'img-1',
       featureId: 'feature-1',
       contributorId: 'u-1',
-    } as any)
+    })
     mockAuthorizeImageRead.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
     })
 
-    await expect(remote.getImageById({ id: 'img-1' } as any)).rejects.toMatchObject({
+    await expect(remote.getImageById({ id: 'img-1' })).rejects.toMatchObject({
       status: 403,
     })
   })
 
   it('createImage rejects missing image payload', async () => {
-    await expect(remote.createImage({} as any)).rejects.toMatchObject({ status: 400 })
+    await expect(remote.createImage({})).rejects.toMatchObject({ status: 400 })
   })
 
   it('createImage rejects missing ctxType/ctxId', async () => {
     await expect(
-      remote.createImage({ data: { title: 'Image' } } as any),
+      remote.createImage({ data: { title: 'Image' } }),
     ).rejects.toMatchObject({ status: 400 })
   })
 
@@ -250,7 +250,7 @@ describe('image.remote', () => {
         ctxId: 'feature-1',
         featureImage: {},
       },
-    } as any)
+    })
 
     expect(mockAssertPermissionsToCreateImage).toHaveBeenCalled()
     expect(mockCreateImageRecord).toHaveBeenCalled()
@@ -271,7 +271,7 @@ describe('image.remote', () => {
         ctxType: 'project',
         ctxId: 'project-1',
         intent: 'gallery',
-      } as any),
+      }),
     ).rejects.toMatchObject({ status: 400 })
   })
 
@@ -283,7 +283,7 @@ describe('image.remote', () => {
         id: 'img-1',
         ctxId: 'feature-1',
         ctxType: 'feature',
-      } as any),
+      }),
     ).rejects.toMatchObject({ status: 404 })
   })
 })

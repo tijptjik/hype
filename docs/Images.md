@@ -227,7 +227,7 @@ let isPublished = $derived.by(() => {
 let isPublished = $derived.by(() => {
   if (!activeImage) return false;
   const contextImage = imageCtx.getImage(activeImage.id);
-  return (contextImage as any)?.isPublished ?? activeImage.isPublished ?? false;
+  return (contextImage)?.isPublished ?? activeImage.isPublished ?? false;
 });
 ```
 
@@ -392,7 +392,7 @@ graph TD
 
 ```typescript
 // Before (broken reactivity)
-(image as any)[key] = value;
+(image)[key] = value;
 
 // After (proper reactivity)
 const updatedImage = { ...image, [key]: value };

@@ -2,7 +2,7 @@
 import { fly, slide } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 // CONSTANTS
-import { PANEL_WIDTH } from '$lib/index'
+import { PANEL_WIDTH } from '$lib/constants'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 

@@ -60,7 +60,7 @@ function toImageSrc(organisation: HubOrganisationItem): string | null {
   if (!organisation.image) return null
   try {
     return getURLfromImage({
-      image: organisation.image as any,
+      image: organisation.image,
       transformation: 'c_fill,h_256,w_256',
     })
   } catch {
@@ -181,10 +181,10 @@ $effect(() => {
         placeholder={m.forms__search_organisations_placeholder()}
         focusOnMount={true}
         mountTransitionDuration={showModeUi ? 80 : 0}
-        onInput={onSearchOrganisations as any}
+        onInput={onSearchOrganisations}
         excludeIds={Array.from(organisationIds)}
         getItemId={(organisation: any) => organisation.id}
-        onSelect={handleAddOrganisation as any}
+        onSelect={handleAddOrganisation}
         resultMap={{
           image: (organisation: any) => toImageSrc(organisation as HubOrganisationItem),
           title: (organisation: any) =>

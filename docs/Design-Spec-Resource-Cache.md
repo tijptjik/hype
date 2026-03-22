@@ -269,13 +269,13 @@ const projectionGraph: ProjectionGraph = {
   },
   // Phase 1 only needs organisation entries.
   // Other resources are added as they migrate into CacheCtx.
-  project: {} as any,
-  layer: {} as any,
-  feature: {} as any,
-  task: {} as any,
-  hub: {} as any,
-  property: {} as any,
-  user: {} as any,
+  project: {},
+  layer: {},
+  feature: {},
+  task: {},
+  hub: {},
+  property: {},
+  user: {},
 }
 ```
 

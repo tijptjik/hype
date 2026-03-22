@@ -34,9 +34,9 @@ let distance = $derived(
 
 // Format dates using relative time
 let captureDate = $derived(
-  (task.images?.[0]?.image?.metadata as any)?.capturedAt
+  (task.images?.[0]?.image?.metadata)?.capturedAt
     ? formatDistanceToNow(
-        new Date((task.images?.[0]?.image?.metadata as any)?.capturedAt),
+        new Date((task.images?.[0]?.image?.metadata)?.capturedAt),
         {
           addSuffix: true,
         },
@@ -76,7 +76,7 @@ let reportDate = $derived(
       <TaskStat
         title={m.male_silly_jannes_feel()}
         value={getI18n(
-          task.feature as any,
+          task.feature,
           'displayAddress',
           appCtx.getUserPreferences()
         )}

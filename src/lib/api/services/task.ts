@@ -232,7 +232,7 @@ export const getTaskEntityQueryContext = (
  * Any logged in user can create a task.
  */
 export const assertPermissionsToCreateTask = async (user: SessionUser) => {
-  const commonAssertions = [() => assertUserLoggedIn({ user } as any)]
+  const commonAssertions = [() => assertUserLoggedIn({ user })]
 
   const assertionError = runAssertions(...commonAssertions)
   if (assertionError) return assertionError
@@ -252,7 +252,7 @@ export const assertPermissionsToUpdateTask = async (
   taskData?: TaskDB,
 ) => {
   const commonAssertions = [
-    () => assertUserLoggedIn(user as any),
+    () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id'),
   ]

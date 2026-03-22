@@ -13,7 +13,7 @@ import {
   getI18n,
 } from '$lib/i18n'
 // LIB
-import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/index'
+import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/constants'
 import {
   getOrganisation,
   getOrganisationsWhichHaveLayers,
@@ -1877,7 +1877,7 @@ export class AppCtx {
         const response = (await remoteGet({
           ref,
           refKey: 'id',
-        } as any)) as { data?: unknown }
+        })) as { data?: unknown }
         return response?.data
       }
 
@@ -3045,7 +3045,7 @@ export class AppCtx {
   setPanelCtx = (panel: Panel, key: string, value: string | undefined | null): void => {
     // Set username context if provided
     if (value && this.state.panels[panel].ctx) {
-      ;(this.state.panels[panel].ctx as any)[key] = value
+      ;(this.state.panels[panel].ctx)[key] = value
     }
   }
 
@@ -3148,7 +3148,7 @@ export class AppCtx {
           locale: locale,
           title: undefined,
           description: undefined,
-        } as any
+        }
       })
     }
     this.newFeature = newFeature
@@ -3187,7 +3187,7 @@ export class AppCtx {
             ...this.newFeature?.feature?.i18n?.[locale],
             [key]: value,
           },
-        } as any,
+        },
       },
     }
   }
@@ -3318,35 +3318,6 @@ export class AppCtx {
     )
   }
 
-  setUsername = async (
-    username: string,
-    onSuccess?: (username: string) => void,
-    onInvalid?: (issues: import('@sveltejs/kit').RemoteFormIssue[]) => void,
-    onError?: (error: any) => void,
-  ) => {
-    if (!this.user) return
-
-    const { debouncedUpdateUsername, validateUsernameIssues } = await import(
-      '$lib/client/services/user'
-    )
-    const { normalizedUsername, issues } = validateUsernameIssues(username)
-    if (issues.length > 0) {
-      onInvalid?.(issues)
-      return
-    }
-
-    this.setUser({
-      ...this.user,
-      username: normalizedUsername,
-    } as CurrentUser)
-
-    await debouncedUpdateUsername((this.user as CurrentUser).id, normalizedUsername, {
-      onSuccess,
-      onInvalid,
-      onError,
-    })
-  }
-
   getUserLayers = (): UserLayer[] => {
     return this.getUserLayersForCurrentHub()
   }
@@ -3449,7 +3420,7 @@ export class AppCtx {
     for (const [_featureId, feature] of this.cache.feature) {
       if (feature && typeof feature === 'object' && 'images' in feature) {
         // Set images to undefined to force fresh API fetch
-        ;(feature as any).images = undefined
+        ;(feature).images = undefined
       }
     }
   }
@@ -3550,7 +3521,7 @@ export class AppCtx {
     // Initialize each classifier property with an empty array if not already set
     classifierProperties.forEach((property: Property) => {
       if (!(property.key in layerFilters)) {
-        ;(layerFilters as any)[property.key] = []
+        ;(layerFilters)[property.key] = []
       }
     })
   }
@@ -3605,7 +3576,7 @@ export class AppCtx {
           rangeMax: max, // Default rangeMax to globalMax
         }
 
-        ;(layerFilters as any)[property.key] = filterConfig
+        ;(layerFilters)[property.key] = filterConfig
       }
     })
   }

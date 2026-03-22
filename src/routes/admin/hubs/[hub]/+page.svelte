@@ -2,6 +2,7 @@
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
+import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 import { getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
@@ -221,7 +222,7 @@ const isNewHubRef = $derived(hubRef === NEW_REF)
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewHubRef) return true
-  return guardRefDesync(hub as any, committedHub as any, hubRef)
+  return guardRefDesync(hub, committedHub, hubRef)
 })
 const isCurrentRefSettled = $derived(isNewHubRef || settledHubRef === hubRef)
 
@@ -229,7 +230,7 @@ const isCurrentRefSettled = $derived(isNewHubRef || settledHubRef === hubRef)
 
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
 const configuredHubForm = configureForm<any>(() => ({
-  form: hubForm as any,
+  form: hubForm,
   onsubmit: (({ data }: { data: any }) => {
     const submittedPayload = prepareSubmitPayloadMeta(data, {
       defaultMode: isNewHubRef ? 'create' : 'update',
@@ -682,7 +683,7 @@ const hiddenOrganisationInputAttrs = $derived(
 )
 const hiddenLayerDefaultInputAttrs = $derived(
   getHubLayerDefaultHiddenInputAttrs(
-    formCtx.form as any,
+    formCtx.form,
     formLayerDefaultValues.map(item => ({
       hubId: item.hubId,
       layerId: item.layerId,
@@ -739,7 +740,7 @@ const hubLayerItems = $derived.by(() => {
       const project = adminCtx.appCtx.getResourceByIdSync(
         FirstClassResource.project,
         layer.projectId,
-      ) as any
+      )
       return {
         id: layer.id,
         projectNameShort: project?.i18n?.[localeKey]?.nameShort ?? project?.code ?? '-',
@@ -888,7 +889,7 @@ function onRoleChange(userId: string, role: HubRoleType): void {
 function onAddOrganisation(organisation: any): void {
   if (allowedOrganisationIds && !allowedOrganisationIdSet.has(organisation.id)) return
   selectedOrganisationsById[organisation.id] = organisation
-  updateFormData(formCtx.form as any, (data: any) => {
+  updateFormData(formCtx.form, (data: any) => {
     const existing = data.organisations ?? []
     if (existing.some((item: any) => item.organisationId === organisation.id))
       return data
@@ -908,7 +909,7 @@ function onAddOrganisation(organisation: any): void {
 function onRemoveOrganisation(organisationId: string): void {
   const { [organisationId]: _removed, ...rest } = selectedOrganisationsById
   selectedOrganisationsById = rest
-  updateFormData(formCtx.form as any, (data: any) => {
+  updateFormData(formCtx.form, (data: any) => {
     data.organisations = (data.organisations ?? []).filter(
       (item: any) => item.organisationId !== organisationId,
     )
@@ -919,7 +920,7 @@ function onRemoveOrganisation(organisationId: string): void {
       const layer = adminCtx.appCtx.getResourceByIdSync(
         FirstClassResource.layer,
         item.layerId,
-      ) as any
+      )
       return layer ? remainingOrganisationIds.has(layer.organisationId) : false
     })
     return data
@@ -929,7 +930,7 @@ function onRemoveOrganisation(organisationId: string): void {
 
 function onToggleCoreInclusive(organisationId: string, nextValue: boolean): void {
   if (!canSetCoreInclusive) return
-  updateFormData(formCtx.form as any, (data: any) => {
+  updateFormData(formCtx.form, (data: any) => {
     data.organisations = (data.organisations ?? []).map((item: any) =>
       item.organisationId === organisationId
         ? { ...item, isCoreInclusive: nextValue }
@@ -941,7 +942,7 @@ function onToggleCoreInclusive(organisationId: string, nextValue: boolean): void
 }
 
 function onToggleHubExclusive(organisationId: string, nextValue: boolean): void {
-  updateFormData(formCtx.form as any, (data: any) => {
+  updateFormData(formCtx.form, (data: any) => {
     data.organisations = (data.organisations ?? []).map((item: any) =>
       item.organisationId === organisationId
         ? { ...item, isHubExclusive: nextValue }
@@ -953,7 +954,7 @@ function onToggleHubExclusive(organisationId: string, nextValue: boolean): void 
 }
 
 function onToggleLayerDefault(layerId: string, nextValue: boolean): void {
-  updateFormData(formCtx.form as any, (data: any) => {
+  updateFormData(formCtx.form, (data: any) => {
     const currentHubId = hub?.data?.id ?? committedHub?.data?.id
     if (!currentHubId) return data
 
@@ -1017,7 +1018,7 @@ async function onSearchOrganisations(query: string): Promise<any[]> {
   })
 
   const currentHubId = hub?.data?.id ?? null
-  return (result.data as any[]).map(organisation => {
+  return (result.data[]).map(organisation => {
     const assignedHubId =
       typeof organisation.hubId === 'string' ? organisation.hubId : null
     const assignedHubCode =
@@ -1318,7 +1319,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
@@ -1355,20 +1356,20 @@ $effect(() => {
             transitionEntityKey={hub?.data?.id ?? hubRef}
             removeSelfResourceLabel={m.resource__hub_singular()}
             issues={userRoleSectionIssues}
-            userRoles={hubUserRoles as any}
+            userRoles={hubUserRoles}
             {roleFieldNameByUserId}
             {hiddenUserIdInputAttrs}
             {isEditing}
             isSubmitting={formCtx.submitting}
             isSubmitRequested={formCtx.isSubmitRequested}
             startInAddingMode={isNewHubRef}
-            availableRoles={[{ value: HubRoleType.admin as any, label: 'Admin' }]}
+            availableRoles={[{ value: HubRoleType.admin, label: 'Admin' }]}
             userQueryParams={{
               conditions: { isArchived: false },
             }}
             {onAddUser}
             {onRemoveUser}
-            onRoleChange={onRoleChange as any}
+            onRoleChange={onRoleChange}
           />
         {/snippet}
 
@@ -1377,7 +1378,7 @@ $effect(() => {
             title={m.maps__organisations()}
             subtitle={m.hub__organisations_note()}
             issues={organisationSectionIssues}
-            organisations={hubOrganisations as any}
+            organisations={hubOrganisations}
             selections={formOrganisationValues}
             {hiddenOrganisationInputAttrs}
             {isEditing}
@@ -1405,7 +1406,7 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isLayersFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
@@ -1426,7 +1427,7 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isFieldsFacet}
-      transition="fade"
+      transition={fade}
       fillHeight={true}
       class="bits-theme flex gap-4 min-h-0 flex-col"
       previousAction={buildFacetNavAction('fields', 'previous')}
@@ -1484,7 +1485,7 @@ $effect(() => {
 
   <Main.Facet
     isVisible={isImagesFacet}
-    transition="fade"
+    transition={fade}
     fillHeight={true}
     navMode="footer"
     previousAction={buildFacetNavAction('images', 'previous')}

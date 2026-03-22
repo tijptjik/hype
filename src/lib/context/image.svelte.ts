@@ -631,12 +631,12 @@ export class ImageCtx {
 
     // Convert staged images to uploads
     const uploads = stagedImages.map(img => {
-      const file = (img.image as any).file
+      const file = (img.image).file
       return {
         file,
         status: 'uploading',
         retries: 0,
-        preview: (img.image as any).preview,
+        preview: (img.image).preview,
       } as ImageUpload
     })
 
@@ -691,12 +691,12 @@ export class ImageCtx {
     const indexSize = this.getImages().length
 
     // Clean up the preview URL immediately
-    if ((image.image as any).preview) {
-      URL.revokeObjectURL((image.image as any).preview)
+    if ((image.image).preview) {
+      URL.revokeObjectURL((image.image).preview)
     }
 
     // Store file name for staging queue cleanup before removing from images
-    const fileName = (image.image as any).file?.name
+    const fileName = (image.image).file?.name
 
     // Remove from both data structures immediately to keep them in sync
     this.removeImage(imageId)
@@ -876,7 +876,7 @@ export class ImageCtx {
       )
 
       if (replacementUpload?.status === 'uploaded' || freshUpload) {
-        const uploadType = replacementUpload ? 'replacement' : 'fresh'
+        const _uploadType = replacementUpload ? 'replacement' : 'fresh'
 
         // Small delay to ensure the final image is ready to display before cleaning up preview
         const delay = 50
@@ -1079,7 +1079,7 @@ export class ImageCtx {
       this.state.preloadedImages.add(imageUrl)
 
       return true
-    } catch (error) {
+    } catch (_error) {
       this.setLoadStatus(targetImage.image.id, 'error')
       return false
     }
@@ -1142,7 +1142,7 @@ export class ImageCtx {
     this.setForImage(
       this.state.activeImage.image.id,
       key,
-      !(this.state.activeImage as any)[key],
+      !(this.state.activeImage)[key],
     )
   }
 
@@ -1606,7 +1606,7 @@ export class ImageCtx {
                 config.onSuccess(savedImage)
               }
             }
-          } catch (error) {
+          } catch (_error) {
             if (config.onError) {
               config.onError()
             }
@@ -1725,7 +1725,7 @@ export class ImageCtx {
   // ═══════════════════════
   async handleSetIntent(imageId: Id, newIntent: Intent) {
     const publicIntents = ['canonical', 'closeUp', 'context', 'general'] as const
-    const isPublished = publicIntents.includes(newIntent as any)
+    const isPublished = publicIntents.includes(newIntent)
 
     try {
       // If trying to set as canonical, first check if another image is already canonical
@@ -1877,7 +1877,7 @@ export class ImageCtx {
   // 9. Download Functionality
   // ═══════════════════════
   async downloadImage(
-    e: MouseEvent,
+    _e: MouseEvent,
     image: ImageCtxEnvelope = this.state.activeImage!,
   ) {
     if (!image) return
@@ -1955,7 +1955,7 @@ export class ImageCtx {
    * Checks if an image is staged (has a preview URL)
    */
   isImageStaged(image: ImageCtxEnvelope): boolean {
-    return image.image.cdn === 'preview' && Boolean((image.image as any).preview)
+    return image.image.cdn === 'preview' && Boolean((image.image).preview)
   }
 
   /**
