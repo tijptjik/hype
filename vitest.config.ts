@@ -27,6 +27,10 @@ export default defineConfig({
         replacement: resolve(__dirname, 'src/tests/mocks/form-context.ts'),
       },
       {
+        find: /^virtual:icons\/.*$/,
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+      },
+      {
         find: '$lib/components/forms/fields/Property.svelte',
         replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
       },

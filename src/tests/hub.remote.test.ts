@@ -8,6 +8,7 @@ const {
   mockCreateI18n,
   mockCreateHubUserRoles,
   mockSyncHubOrganisations,
+  mockSyncHubLayerDefaults,
   mockUpdateI18n,
   mockSyncHubUserRoles,
   mockListHubRoleAssignments,
@@ -36,6 +37,7 @@ const {
   mockCreateI18n: vi.fn(async () => undefined),
   mockCreateHubUserRoles: vi.fn(async () => undefined),
   mockSyncHubOrganisations: vi.fn(async () => undefined),
+  mockSyncHubLayerDefaults: vi.fn(async () => undefined),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncHubUserRoles: vi.fn(async () => undefined),
   mockListHubRoleAssignments: vi.fn(async () => []),
@@ -186,6 +188,7 @@ vi.mock('$lib/db/services/hub', () => ({
   listHubs: vi.fn(),
   getHub: vi.fn(),
   syncHubOrganisations: mockSyncHubOrganisations,
+  syncHubLayerDefaults: mockSyncHubLayerDefaults,
 }))
 
 vi.mock('$lib/api/services', () => ({
