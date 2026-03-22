@@ -26,10 +26,18 @@ const TONE_CLASS_MAP = {
   white: 'bits-icon--tone-white',
 } as const
 
+const ANIMATION_CLASS_MAP = {
+  inherit: 'animate-inherit',
+  spin: 'animate-spin',
+} as const
+
 let {
   src: DynamicIcon,
   size = 'md',
   tone = 'inherit',
+  animation = 'inherit',
+  transition: transitionFn,
+  transitionParams,
   filled = false,
   strokeWidth,
   title,
@@ -43,6 +51,7 @@ const classes = $derived(
     'bits-icon',
     SIZE_CLASS_MAP[size],
     TONE_CLASS_MAP[tone],
+    ANIMATION_CLASS_MAP[animation],
     filled ? 'fill-current' : 'fill-none',
     className,
   ]
@@ -57,4 +66,10 @@ const styles = $derived(
 )
 </script>
 
-<DynamicIcon class={classes} style={styles} {title} {...restProps} />
+{#if transitionFn}
+  <span class="inline-flex shrink-0" transition:transitionFn={transitionParams}>
+    <DynamicIcon class={classes} style={styles} {title} {...restProps} />
+  </span>
+{:else}
+  <DynamicIcon class={classes} style={styles} {title} {...restProps} />
+{/if}
