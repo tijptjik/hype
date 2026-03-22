@@ -10,7 +10,7 @@ import { useImageProviderModel } from '$lib/adapters/image'
 import { updateImagePresentationMode } from '$lib/client/services/image'
 // BITS COMPONENTS
 import { Switch } from '$lib/bits/custom/switch'
-import { SectionHeader } from '$lib/bits/custom/form'
+import { SectionHeader, SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // COMPONENTS
 import ImageProvider from '$lib/providers/ImageProvider.svelte'
 import Viewer from '$lib/components/common/Viewer.svelte'
@@ -21,6 +21,7 @@ import XIcon from 'virtual:icons/lucide/x'
 // TYPES
 import type { ImageCtxConstructorOptions } from '$lib/types'
 import type { ImageCtxEnvelope, ImageEditCtx } from '$lib/db/zod/schema/image.types'
+import type { SectionHeaderAction } from '$lib/bits/custom/form'
 
 let {
   page,
@@ -28,6 +29,7 @@ let {
   imageProviderProps,
   currentImage = null,
   ctx,
+  headerActions = [],
   canEditPresentationMode = true,
   canEditDropzone = true,
   onPresentationModeCommitted,
@@ -37,6 +39,7 @@ let {
   imageProviderProps: ImageCtxConstructorOptions
   currentImage?: ImageCtxEnvelope | null
   ctx?: ImageEditCtx
+  headerActions?: SectionHeaderAction[]
   canEditPresentationMode?: boolean
   canEditDropzone?: boolean
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
@@ -134,6 +137,9 @@ $effect(() => {
             >
               {#snippet right()}
                 <div class="bits-entity-image__switch-wrap">
+                  {#each headerActions as action, index (action.key ?? `${action.text ?? 'action'}-${index}`)}
+                    <SectionHeaderPrimitive.Action {...action} />
+                  {/each}
                   <span class="bits-entity-image__feedback">
                     {#if presentationModeFeedback === 'loading'}
                       <LoaderCircleIcon
