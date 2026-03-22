@@ -20,6 +20,12 @@ const MAP_PREVIEW_VIEWPORT = {
   deviceScaleFactor: 1,
 } as const
 
+const MAP_ENTITY_PREVIEW_VIEWPORT = {
+  width: 512,
+  height: 512,
+  deviceScaleFactor: 1,
+} as const
+
 const SCREENSHOT_TIMEOUT_MS = 60_000
 
 /**
@@ -52,6 +58,8 @@ const isPreviewRenderJob = (value: unknown): value is PreviewRenderJob => {
  * @returns PNG bytes returned by Browser Rendering.
  */
 const renderPreview = async (env: Env, job: PreviewRenderJob): Promise<ArrayBuffer> => {
+  const viewport =
+    job.kind === 'styles' ? MAP_PREVIEW_VIEWPORT : MAP_ENTITY_PREVIEW_VIEWPORT
   const response = await fetch(
     BROWSER_RENDERING_SCREENSHOT_URL(env.CLOUDFLARE_ACCOUNT_ID),
     {
@@ -62,9 +70,9 @@ const renderPreview = async (env: Env, job: PreviewRenderJob): Promise<ArrayBuff
       },
       body: JSON.stringify({
         url: job.sourceUrl,
-        viewport: MAP_PREVIEW_VIEWPORT,
+        viewport,
         gotoOptions: {
-          waitUntil: 'networkidle0',
+          waitUntil: 'load',
           timeout: SCREENSHOT_TIMEOUT_MS,
         },
         waitForSelector: MAP_PREVIEW_READY_SELECTOR,
