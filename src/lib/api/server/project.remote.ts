@@ -75,14 +75,25 @@ import {
   updateProjectPublishedStateById,
 } from '$lib/db/services/project'
 import { hasProjectLayersCondition } from '$lib/db/services/layer'
+import { syncProjectLayerPresentation } from '$lib/db/services/layer'
 import {
   listResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject,
   syncProjectInheritedProperties,
   upsertProjectProperties,
 } from '$lib/db/services/property'
+import {
+  getOrganisationMapStyleScope,
+  listMapStylesForProject,
+  listMapStylesForScope,
+  setProjectMapStyleByCode,
+  syncMapStyleCatalog,
+} from '$lib/db/services/map'
+import { isMapStyleKey } from '$lib/map/styles'
+import { resolveMapStylePreviewPathForKey } from '$lib/map/styles/preview.shared'
 // SCHEMA
 import {
+  GetProjectMapStylesSchema,
   GetQueryParamsSchema,
   ListQueryParamsSchema,
   ProjectFormData,
@@ -96,6 +107,7 @@ import { project } from '$lib/db/schema'
 // TYPES
 import type { Id, Prisms, ProjectAuthorizationField, QueryParams } from '$lib/types'
 import type { ProjectAdminDBRaw, ProjectDB } from '$lib/db/zod/schema/project.types'
+import type { MapStyleResolvedDB } from '$lib/db/zod/schema/map.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -103,7 +115,9 @@ import type { ProjectAdminDBRaw, ProjectDB } from '$lib/db/zod/schema/project.ty
 //
 // GET
 // - getProjects
+// - getProjectsWhichHaveLayers
 // - getProject
+// - getProjectMapStyles
 //
 // FORM
 // - projectForm
@@ -220,7 +234,11 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
       event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
     )
 
-    conditions.push(hasProjectLayersCondition())
+    conditions.push(
+      hasProjectLayersCondition({
+        requirePublished: !ctx.isAdminRequest,
+      }),
+    )
 
     const result = await listProjects(
       db,
@@ -262,6 +280,7 @@ export const getProjectsWhichHaveLayers = getProjectsWhichHaveLayersQuery
  */
 const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
+  await syncMapStyleCatalog(db)
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'admin')
 
@@ -340,6 +359,47 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
 
 export const getProject = getProjectQuery
 
+export const getProjectMapStylesQuery = guardedQuery(
+  GetProjectMapStylesSchema,
+  async (params, ctx): Promise<{ data: MapStyleResolvedDB[] }> => {
+    const { db, event } = ctx
+    const environment = event.platform?.env?.ENVIRONMENT
+
+    const withResolvedPreviewPath = async (
+      rows: MapStyleResolvedDB[],
+    ): Promise<MapStyleResolvedDB[]> =>
+      await Promise.all(
+        rows.map(async row => ({
+          ...row,
+          previewImagePath: isMapStyleKey(row.code)
+            ? await resolveMapStylePreviewPathForKey(environment, row.code)
+            : null,
+        })),
+      )
+
+    if (params.projectId) {
+      return {
+        data: await withResolvedPreviewPath(
+          await listMapStylesForProject(db, params.projectId),
+        ),
+      }
+    }
+
+    if (params.organisationId) {
+      const scope = await getOrganisationMapStyleScope(db, params.organisationId)
+      return {
+        data: scope
+          ? await withResolvedPreviewPath(await listMapStylesForScope(db, scope))
+          : [],
+      }
+    }
+
+    return { data: [] }
+  },
+)
+
+export const getProjectMapStyles = getProjectMapStylesQuery
+
 /**
  * Creates or updates a project and related i18n/role/property rows from form payloads.
  *
@@ -387,6 +447,33 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   const hasSubmittedProperties = Object.hasOwn(data, 'properties')
   const submittedProperties =
     hasSubmittedProperties && Array.isArray(data.properties) ? data.properties : []
+  const hasSubmittedLayers = Object.hasOwn(data, 'layers')
+  const submittedLayers =
+    hasSubmittedLayers && Array.isArray(data.layers) ? data.layers : []
+  const toSubmittedDefaultVisible = (input: unknown): boolean =>
+    input === true || input === 'true'
+  const normalizedSubmittedLayers = submittedLayers
+    .map((layer, index) => ({ layer, index }))
+    .filter(
+      entry => typeof entry.layer?.id === 'string' && entry.layer.id.trim().length > 0,
+    )
+    .sort((left, right) => {
+      const leftRank =
+        typeof left.layer.rank === 'number' && Number.isFinite(left.layer.rank)
+          ? left.layer.rank
+          : left.index
+      const rightRank =
+        typeof right.layer.rank === 'number' && Number.isFinite(right.layer.rank)
+          ? right.layer.rank
+          : right.index
+      if (leftRank !== rightRank) return leftRank - rightRank
+      return left.index - right.index
+    })
+    .map(({ layer }, rank) => ({
+      id: layer.id as Id,
+      rank,
+      isDefaultVisible: toSubmittedDefaultVisible(layer.isDefaultVisible),
+    }))
   const normalizedSubmittedProperties =
     normalizeSubmittedPropertyRanks(submittedProperties)
   const canonicalScopeByPropertyId = await resolveCanonicalScopeByPropertyId(
@@ -412,6 +499,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   /* -------- */
 
   // Validate payload invariants.
+  if (hasSubmittedUserRoles && submittedRoles.length === 0) {
+    invalid(issue(toIssueDetailMessage('USER_ROLES_REQUIRED')))
+  }
   if (duplicateSubmittedRoleUserIds.length > 0) {
     invalid(
       issue.data.userRoles(
@@ -425,6 +515,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         `INVALID: Duplicate property keys submitted (${Array.from(new Set(duplicateSubmittedPropertyKeys)).join(', ')})`,
       ),
     )
+  }
+  if (
+    hasSubmittedLayers &&
+    normalizedSubmittedLayers.length > 0 &&
+    !normalizedSubmittedLayers.some(layer => layer.isDefaultVisible)
+  ) {
+    invalid(issue.data.layers('At least one layer must be visible by default.'))
   }
   if (mode === 'create' && projectId) {
     invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
@@ -472,6 +569,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       id: nanoid(12),
       organisationId: data.organisationId,
       code: normalizedCode,
+      license: data.license,
       capabilities: submittedProjectCapabilities,
       isPublished: false,
       isArchived: false,
@@ -484,6 +582,16 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       created.id,
       created.organisationId,
     )
+    try {
+      await setProjectMapStyleByCode(db, {
+        projectId: created.id,
+        organisationId: created.organisationId,
+        hubId: organisationScope.hubId,
+        mapStyleCode: data.mapStyleCode,
+      })
+    } catch {
+      invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
+    }
 
     if (normalizedSubmittedProperties.length > 0) {
       const submittedPropertiesWithProjectId = toSubmittedLocalPropertiesWithProjectId(
@@ -578,6 +686,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   const i18nChanged =
     toProjectStableAuthzSignature(data.i18n) !==
     toProjectStableAuthzSignature(normalizeProjectI18nForFormInput(currentEntity.i18n))
+  const licenseChanged =
+    toProjectStableAuthzSignature(data.license) !==
+    toProjectStableAuthzSignature(currentEntity.license)
   const organisationChanged = data.organisationId !== current.organisationId
   const projectCapabilitiesChanged =
     toProjectStableAuthzSignature(submittedProjectCapabilities) !==
@@ -592,6 +703,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   const submittedDataForUpdate: Partial<Record<ProjectAuthorizationField, unknown>> = {}
   if (normalizedCode !== current.code) submittedDataForUpdate.code = normalizedCode
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
+  if (licenseChanged) submittedDataForUpdate.license = data.license
   if (projectCapabilitiesChanged) {
     submittedDataForUpdate.capabilities = submittedProjectCapabilities
   }
@@ -721,6 +833,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       data: {
         organisationId: data.organisationId,
         code: normalizedCode,
+        license: data.license,
         capabilities: submittedProjectCapabilities,
       },
     }),
@@ -732,6 +845,24 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       projectId: current.id as Id,
       organisationId: data.organisationId as Id,
     })
+  }
+  const targetMapStyleScope = organisationChanged
+    ? requireValue(
+        await probeOrganisationHubForProject(db, data.organisationId as Id),
+        () => invalid(issue('ORGANISATION_NOT_FOUND')),
+      )
+    : {
+        hubId: current.hubId,
+      }
+  try {
+    await setProjectMapStyleByCode(db, {
+      projectId: current.id,
+      organisationId: data.organisationId,
+      hubId: targetMapStyleScope.hubId,
+      mapStyleCode: data.mapStyleCode,
+    })
+  } catch {
+    invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
   }
 
   /* ----------------- */
@@ -785,6 +916,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         submittedInheritedProperties,
       ),
     })
+  }
+  if (hasSubmittedLayers) {
+    await syncProjectLayerPresentation(db, current.id, normalizedSubmittedLayers)
   }
 
   return toCreatedResponseShape(persisted)
