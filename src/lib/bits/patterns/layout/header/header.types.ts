@@ -51,6 +51,7 @@ export interface HeaderTitleConfig {
   text?: string
   description?: string
   icon?: Component
+  iconHoverColor?: string
   href?: string
   crumbs?: HeaderCrumb[]
   menuAction?: HeaderTitleMenuActionConfig

@@ -112,23 +112,9 @@
     min-width: 0;
   }
 
-  .bits-theme .bits-form__section-header-right .bits-btn {
+  .bits-theme .bits-form__section-header-right > :global(button),
+  .bits-theme .bits-form__section-header-right > :global(a) {
     max-height: none;
-  }
-
-  /* Header action label collapse tolerance. Lower value = labels stay visible longer. */
-  @container (max-width: 14rem) {
-    .bits-theme .bits-form__section-header-action-btn {
-      gap: 0;
-      padding-inline: calc(var(--btn-size) * 0.25);
-    }
-
-    .bits-theme .bits-form__section-header-action-btn .bits-btn__label {
-      max-width: 0;
-      opacity: 0;
-      margin-inline: 0;
-      transform: translateX(-0.125rem);
-    }
   }
 
   .bits-theme .bits-form__section-header-heading {
@@ -148,7 +134,7 @@
   }
 
   .bits-theme .bits-form__section-header-issue-chip {
-    @apply inline-flex items-stretch overflow-hidden rounded-md border border-2 border-error/70;
+    @apply inline-flex items-stretch overflow-hidden rounded-md border-2 border-error/70;
   }
 
   .bits-theme .bits-form__section-header-issue-icon {

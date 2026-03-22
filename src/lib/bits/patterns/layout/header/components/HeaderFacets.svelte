@@ -5,6 +5,15 @@ import { fade, scale } from 'svelte/transition'
 import { Button } from '$lib/bits/core'
 // TYPES
 import type { HeaderFacetsProps } from './headerPrimitives.types'
+// STYLES
+import {
+  getHeaderFacetButtonClasses,
+  HEADER_BUTTON_LABEL_CLASSES,
+  HEADER_FACETS_LIST_CLASSES,
+  HEADER_FACETS_LIST_STYLE,
+  HEADER_FACETS_WRAP_CLASSES,
+  HEADER_FACET_ITEM_CLASSES,
+} from './headerPrimitives.styles'
 
 let {
   items = [],
@@ -15,20 +24,20 @@ let {
 </script>
 
 {#if items.length > 0}
-  <div class="bits-pattern-header__facets-wrap">
-    <ul class="bits-pattern-header__facets">
+  <div class={HEADER_FACETS_WRAP_CLASSES}>
+    <ul class={HEADER_FACETS_LIST_CLASSES} style={HEADER_FACETS_LIST_STYLE}>
       {#each items as facet (facet.ref)}
         {@const isActive = active === facet.ref || (active === false && facet.ref === 'core')}
         {@const color = facet.hasIssues ? 'error' : isActive ? 'primary' : 'neutral'}
-        {@const facetButtonClass = [
-          'bits-pattern-header__facet-btn',
-          isActive ? 'bits-pattern-header__facet-btn--active' : '',
-          facet.hasIssues ? 'bits-pattern-header__facet-btn--issue' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        {@const facetButtonClass = getHeaderFacetButtonClasses({
+          isActive,
+          hasIssues: facet.hasIssues,
+          color,
+          hideLabel,
+          className: facet.class,
+        })}
         <li
-          class="bits-pattern-header__facet-item"
+          class={HEADER_FACET_ITEM_CLASSES}
           in:scale={{ duration: 120, start: 0.92 }}
           out:fade={{ duration: 120 }}
         >
@@ -37,6 +46,7 @@ let {
             {color}
             style="ghost"
             class={facetButtonClass}
+            labelClasses={HEADER_BUTTON_LABEL_CLASSES}
             iconComponent={facet.icon}
             {hideLabel}
             disabled={facet.disabled === true}

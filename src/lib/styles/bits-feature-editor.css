@@ -509,9 +509,7 @@
 
   .bits-feature-visual__control-icon svg,
   .bits-feature-visual__icon-button svg,
-  .bits-feature-visual .bits-dialog__trigger button svg,
-  .bits-feature-visual .bits-dialog__trigger .bits-btn__icon,
-  .bits-feature-visual .bits-dialog__trigger .bits-btn__icon svg {
+  .bits-feature-visual .bits-dialog__trigger button svg {
     width: 22px;
     height: 22px;
     min-width: 22px;

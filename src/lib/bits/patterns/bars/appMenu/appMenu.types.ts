@@ -13,6 +13,6 @@ export interface AppMenuProps<T = string> {
   items: AppMenuItem<T>[]
   trailingItems?: AppMenuItem<T>[]
   onSelect?: (item: AppMenuItem<T>) => void
+  offsetX?: number
   class?: string
-  style?: string
 }

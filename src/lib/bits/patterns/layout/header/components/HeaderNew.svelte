@@ -6,6 +6,12 @@ import { Button } from '$lib/bits/core'
 import Plus from 'virtual:icons/lucide/plus'
 // TYPES
 import type { HeaderNewProps } from './headerPrimitives.types'
+// STYLES
+import {
+  getHeaderActionClasses,
+  HEADER_BUTTON_LABEL_CLASSES,
+  HEADER_NEW_BUTTON_CLASSES,
+} from './headerPrimitives.styles'
 
 let {
   isCreatable = false,
@@ -29,6 +35,8 @@ let {
       color="neutral"
       style="ghost"
       icon={iconSnippet}
+      labelClasses={HEADER_BUTTON_LABEL_CLASSES}
+      class={getHeaderActionClasses(HEADER_NEW_BUTTON_CLASSES, hideLabel)}
       {hideLabel}
       onClick={() => onCreate?.()}
     />

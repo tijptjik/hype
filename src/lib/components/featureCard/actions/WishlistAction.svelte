@@ -77,6 +77,7 @@ async function toggleWishlisted() {
   text={isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
   icon={wishlistIcon}
   color="neutral"
+  labelClasses="hidden min-[30rem]:inline-block"
   class="bits-feature-card__action-button"
   attrs={{
     title: isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link(),

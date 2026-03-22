@@ -53,8 +53,11 @@ Run all commands with Bun:
   - For complex operations in service modules and route modules, add a concise one-line comment immediately above the block so the intent is scannable before reading the implementation.
   - Preserve existing comments when editing code; update wording if behavior changes instead of deleting useful context.
 - Styling:
-  - For Bits `core/custom/pattern` components, do not use inline Tailwind utility class strings in Svelte markup.
-  - Define and apply semantic class names, and place style rules in `src/lib/styles/*.css` under `@layer components`.
+  - Prefer inline Tailwind utility classes directly in Svelte markup for component and pattern styling.
+  - Do not add semantic wrapper classes by default when they only restate a local group of utility classes.
+  - Use shared CSS in `src/lib/styles/*.css` under `@layer components` only for genuinely reusable theme tokens, CSS variables, cross-component states, or styling that cannot be expressed cleanly inline.
+  - Treat semantic classes as the exception, not the default.
+  - When a core/custom/pattern component accumulates large class maps or CSS variable maps, extract them into a colocated `component.styles.ts` module (for example `button.styles.ts`) instead of crowding the `.svelte` file.
 
 ## Testing Guidelines
 - Framework: Vitest with `jsdom` and `@testing-library/jest-dom`.
@@ -92,6 +95,8 @@ Run all commands with Bun:
 ## Agent-Specific Notes
 - For Svelte/SvelteKit questions and implementation work, consult Context7 docs first, especially for experimental or cutting-edge APIs.
 - Treat framework docs as authoritative over memory; verify behavior against the current docs before coding.
+- Whenever you touch a component, make a brief refactoring pass on that component and its immediately related local pieces so the codebase improves incrementally over time.
+- During that refactoring pass, prefer simplifying toward inline Tailwind, reducing unnecessary semantic wrapper classes, and splitting obvious subcomponents when it materially improves clarity.
 - New UI and form migration rules:
   - Prefer SvelteKit remote functions `form` calls over `sveltekit-superforms` for new work and refactors.
   - Prefer Bits UI primitives over DaisyUI for new UI development.

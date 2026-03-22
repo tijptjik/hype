@@ -94,6 +94,7 @@ async function toggleVisited() {
     text={isVisited ? 'Forget' : m.noble_fine_ibex_pinch()}
     icon={visitIcon}
     color="neutral"
+    labelClasses="hidden min-[30rem]:inline-block"
     class="bits-feature-card__action-button"
     attrs={{ title: isVisited ? 'Forget' : m.noble_fine_ibex_pinch() }}
     onClick={toggleVisited}

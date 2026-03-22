@@ -2,7 +2,6 @@
   Scoped Bits UI theme layer.
   Apply by wrapping migrated sections with: <div class="bits-theme">...</div>
 */
-@import "./bits-btn.css";
 @import "./bits-card.css";
 @import "./bits-checkbox.css";
 @import "./bits-completion-footer.css";

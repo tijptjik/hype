@@ -3,6 +3,12 @@
 import { Button } from '$lib/bits/core'
 // TYPES
 import type { HeaderViewActionsProps } from './headerPrimitives.types'
+// STYLES
+import {
+  getHeaderActionClasses,
+  HEADER_BUTTON_LABEL_CLASSES,
+  HEADER_VIEW_ACTIONS_CLASSES,
+} from './headerPrimitives.styles'
 
 let {
   controlsAction = undefined,
@@ -11,13 +17,14 @@ let {
 }: HeaderViewActionsProps = $props()
 </script>
 
-<div class="bits-pattern-header__view-actions">
+<div class={HEADER_VIEW_ACTIONS_CLASSES}>
   {#if controlsAction}
     <Button
       text={controlsAction.text}
-      class={controlsAction.class}
+      class={getHeaderActionClasses(controlsAction.class, hideLabel)}
       color={controlsAction.color ?? 'neutral'}
       style={controlsAction.style ?? 'ghost'}
+      labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       iconComponent={controlsAction.icon}
       {hideLabel}
       disabled={controlsAction.disabled}
@@ -28,9 +35,10 @@ let {
   {#if layoutAction}
     <Button
       text={layoutAction.text}
-      class={layoutAction.class}
+      class={getHeaderActionClasses(layoutAction.class, hideLabel)}
       color={layoutAction.color ?? 'neutral'}
       style={layoutAction.style ?? 'ghost'}
+      labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       iconComponent={layoutAction.icon}
       {hideLabel}
       disabled={layoutAction.disabled}

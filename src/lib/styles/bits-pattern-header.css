@@ -222,7 +222,7 @@
   }
 
   .bits-theme
-    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--active:not(
+    .bits-pattern-header__facet-btn.bits-pattern-header__facet-btn--active:not(
       .bits-pattern-header__facet-btn--issue
     ) {
     --btn-hover-bg: color-mix(in oklab, var(--color-primary) 8%, transparent);
@@ -231,7 +231,7 @@
   }
 
   .bits-theme
-    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-btn--color-neutral:not(
+    .bits-pattern-header__facet-btn.bits-pattern-header__facet-btn--neutral:not(
       .bits-pattern-header__facet-btn--active
     ):not(.bits-pattern-header__facet-btn--issue) {
     --btn-hover-bg: color-mix(in oklab, var(--color-primary) 18%, transparent);
@@ -250,24 +250,23 @@
     --btn-active-fg: var(--color-white);
   }
 
-  .bits-theme
-    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue {
+  .bits-theme .bits-pattern-header__facet-btn.bits-pattern-header__facet-btn--issue {
     background-color: var(--color-error);
     color: var(--color-white);
     border-color: color-mix(in oklab, var(--color-error) 88%, black);
   }
 
   .bits-theme
-    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue:hover,
+    .bits-pattern-header__facet-btn.bits-pattern-header__facet-btn--issue:hover,
   .bits-theme
-    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue:focus-visible {
+    .bits-pattern-header__facet-btn.bits-pattern-header__facet-btn--issue:focus-visible {
     background-color: color-mix(in oklab, var(--color-error) 92%, black);
     color: var(--color-white);
     border-color: color-mix(in oklab, var(--color-error) 96%, black);
   }
 
   .bits-theme
-    .bits-pattern-header__facet-btn.bits-btn--style-ghost.bits-pattern-header__facet-btn--issue:active {
+    .bits-pattern-header__facet-btn.bits-pattern-header__facet-btn--issue:active {
     background-color: color-mix(in oklab, var(--color-error) 84%, black);
     color: var(--color-white);
     border-color: color-mix(in oklab, var(--color-error) 90%, black);
@@ -300,7 +299,8 @@
     @apply flex items-center gap-0 ml-4;
   }
 
-  .bits-theme .bits-pattern-header__form-actions .bits-btn {
+  .bits-theme .bits-pattern-header__form-actions > :global(button),
+  .bits-theme .bits-pattern-header__form-actions > :global(a) {
     --btn-padding-x: 0.875rem;
   }
 
@@ -323,8 +323,9 @@
     @apply whitespace-nowrap;
   }
 
-  .bits-theme .bits-pattern-header__measure-layer .bits-btn,
-  .bits-theme .bits-pattern-header__measure-layer .bits-btn__label,
+  .bits-theme .bits-pattern-header__measure-layer :global(button),
+  .bits-theme .bits-pattern-header__measure-layer :global(a),
+  .bits-theme .bits-pattern-header__measure-layer .bits-pattern-header__button-label,
   .bits-theme .bits-pattern-header__measure-layer .bits-header__title,
   .bits-theme .bits-pattern-header__measure-layer .bits-header__subtitle,
   .bits-theme .bits-pattern-header__measure-layer .bits-header__breadcrumbs,

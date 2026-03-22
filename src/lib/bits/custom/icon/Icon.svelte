@@ -1,5 +1,7 @@
 <script lang="ts">
-import type { IconProps } from './icon.types'
+import { fade } from 'svelte/transition'
+
+import type { IconProps, IconTransition, IconTransitionFn } from './icon.types'
 
 const SIZE_CLASS_MAP = {
   xs: 'bits-icon--size-xs',
@@ -37,7 +39,7 @@ let {
   tone = 'inherit',
   animation = 'inherit',
   transition: transitionFn,
-  transitionParams,
+  transitionOpts,
   filled = false,
   strokeWidth,
   title,
@@ -45,6 +47,8 @@ let {
   style = '',
   ...restProps
 }: IconProps = $props()
+
+const resolvedTransition = $derived(resolveTransition(transitionFn))
 
 const classes = $derived(
   [
@@ -64,10 +68,27 @@ const styles = $derived(
     .filter(Boolean)
     .join(' '),
 )
+
+function resolveTransition(
+  transition: IconTransition | undefined,
+): IconTransitionFn | undefined {
+  if (transition === undefined || transition === 'none') {
+    return undefined
+  }
+
+  if (transition === 'fade') {
+    return fade
+  }
+
+  return transition
+}
 </script>
 
-{#if transitionFn}
-  <span class="inline-flex shrink-0" transition:transitionFn={transitionParams}>
+{#if resolvedTransition}
+  <span
+    class="inline-flex shrink-0"
+    transition:resolvedTransition|global={transitionOpts}
+  >
     <DynamicIcon class={classes} style={styles} {title} {...restProps} />
   </span>
 {:else}

@@ -81,6 +81,7 @@ This document defines the UI layering model for Bits components and how logic sh
 - Do not introduce semantic wrapper classes by default when they only mirror a local set of utility classes.
 - Reserve shared CSS in `bits-*.css` files for the relatively small set of genuinely reusable theme tokens, CSS variables, cross-component states, or styling that cannot be expressed cleanly inline.
 - When styling needs to be reused across components, prefer extracting theme variables or a small reusable primitive over adding another layer of semantic class indirection.
+- When a component's styling logic grows into large class maps or CSS-variable maps, move that styling configuration into a colocated `component.styles.ts` file and keep the `.svelte` file focused on props, state, and markup.
 - Treat semantic classes as the exception, not the default.
 
 ## Primitive Composition Convention

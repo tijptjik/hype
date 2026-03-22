@@ -1,8 +1,20 @@
 <script lang="ts">
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
+// BITS
+import { cx } from '$lib/bits/utils'
+// ICONS
+import LoaderCircle from 'virtual:icons/lucide/loader-circle'
 // TYPES
 import type { HeaderFormActionsProps } from './headerPrimitives.types'
+// STYLES
+import {
+  getHeaderActionClasses,
+  HEADER_BUTTON_LABEL_CLASSES,
+  HEADER_FORM_ACTIONS_CLASSES,
+  HEADER_PUBLISH_STATUS_CLASSES,
+  HEADER_PUBLISH_STATUS_LABEL_CLASSES,
+} from './headerPrimitives.styles'
 
 let {
   primaryAction = null,
@@ -13,18 +25,23 @@ let {
 }: HeaderFormActionsProps = $props()
 
 function resolveActionClass(className?: string): string {
-  if (hideLabel) return ''
-  return className ?? ''
+  return getHeaderActionClasses(className, hideLabel)
+}
+
+function resolveIconClasses(icon?: unknown): string {
+  return icon === LoaderCircle ? 'animate-spin' : ''
 }
 </script>
 
-<div class="bits-pattern-header__form-actions">
+<div class={HEADER_FORM_ACTIONS_CLASSES}>
   {#if deleteAction}
     <Button
       text={deleteAction.text}
       color={deleteAction.color ?? 'warning'}
       style={deleteAction.style ?? 'ghost'}
       iconComponent={deleteAction.icon}
+      iconClasses={resolveIconClasses(deleteAction.icon)}
+      labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={resolveActionClass(deleteAction.class)}
       {hideLabel}
       disabled={deleteAction.disabled}
@@ -36,6 +53,8 @@ function resolveActionClass(className?: string): string {
       color={primaryAction.color ?? 'neutral'}
       style={primaryAction.style ?? 'ghost'}
       iconComponent={primaryAction.icon}
+      iconClasses={resolveIconClasses(primaryAction.icon)}
+      labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={resolveActionClass(primaryAction.class)}
       {hideLabel}
       disabled={primaryAction.disabled}
@@ -49,6 +68,8 @@ function resolveActionClass(className?: string): string {
       color={saveAction.color ?? 'success'}
       style={saveAction.style ?? 'ghost'}
       iconComponent={saveAction.icon}
+      iconClasses={resolveIconClasses(saveAction.icon)}
+      labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={resolveActionClass(saveAction.class)}
       {hideLabel}
       disabled={saveAction.disabled}
@@ -61,6 +82,8 @@ function resolveActionClass(className?: string): string {
         color={publishAction.color ?? 'success'}
         style={publishAction.style ?? 'ghost'}
         iconComponent={publishAction.icon}
+        iconClasses={resolveIconClasses(publishAction.icon)}
+        labelClasses={HEADER_BUTTON_LABEL_CLASSES}
         class={resolveActionClass(publishAction.class)}
         {hideLabel}
         disabled={publishAction.disabled}
@@ -68,24 +91,23 @@ function resolveActionClass(className?: string): string {
       />
     {:else}
       <div
-        class={[
-          'bits-pattern-header__publish-status',
+        class={cx(
+          HEADER_PUBLISH_STATUS_CLASSES,
           resolveActionClass(publishAction.class),
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        )}
         aria-live={publishAction.ariaLive ?? 'polite'}
       >
         {#if publishAction.icon}
           {@const PublishStatusIcon = publishAction.icon}
-          <span class="bits-pattern-header__publish-status-icon" aria-hidden="true">
+          <span
+            class={cx('shrink-0', resolveIconClasses(publishAction.icon))}
+            aria-hidden="true"
+          >
             <PublishStatusIcon />
           </span>
         {/if}
         {#if !hideLabel}
-          <span class="bits-pattern-header__publish-status-label"
-            >{publishAction.text}</span
-          >
+          <span class={HEADER_PUBLISH_STATUS_LABEL_CLASSES}>{publishAction.text}</span>
         {/if}
       </div>
     {/if}

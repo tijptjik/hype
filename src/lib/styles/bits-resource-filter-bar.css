@@ -21,13 +21,13 @@
     @apply flex items-center justify-center opacity-70 transition-opacity duration-300 hover:opacity-100;
   }
 
-  .bits-resource-filter-bar__filter-trigger.bits-btn {
+  .bits-resource-filter-bar__filter-trigger {
     @apply text-sm font-medium;
     border-color: var(--color-base-300);
     background-color: transparent;
   }
 
-  .bits-resource-filter-bar__filter-trigger.bits-btn:hover:not(:disabled):not(
+  .bits-resource-filter-bar__filter-trigger:hover:not(:disabled):not(
       [aria-disabled="true"]
     ) {
     background-color: color-mix(in oklab, var(--color-base-300) 10%, transparent);
@@ -59,51 +59,21 @@
     @apply flex min-w-0 flex-row items-center justify-center gap-4 overflow-hidden;
   }
 
-  .bits-resource-filter-bar__carousel-nav.bits-btn {
+  .bits-resource-filter-bar__carousel-nav {
     @apply h-9 w-9 min-w-9 rounded-full p-0;
     border-color: transparent;
     background-color: color-mix(in oklab, var(--color-base-300) 12%, transparent);
   }
 
-  .bits-resource-filter-bar__carousel-nav.bits-btn:hover:not(:disabled):not(
+  .bits-resource-filter-bar__carousel-nav:hover:not(:disabled):not(
       [aria-disabled="true"]
     ) {
     background-color: color-mix(in oklab, var(--color-base-300) 20%, transparent);
   }
 
-  .bits-resource-filter-bar__carousel-nav.bits-btn:disabled,
-  .bits-resource-filter-bar__carousel-nav.bits-btn[aria-disabled="true"] {
+  .bits-resource-filter-bar__carousel-nav:disabled,
+  .bits-resource-filter-bar__carousel-nav[aria-disabled="true"] {
     opacity: 0.35;
-  }
-
-  .bits-resource-filter-bar__section-button.bits-btn {
-    @apply relative h-10 rounded-md border border-transparent bg-transparent px-2.5 text-sm text-base-content/70 shadow-none outline-none transition-colors duration-300;
-    min-width: 0;
-  }
-
-  .bits-resource-filter-bar__section-button.bits-btn:hover:not(:disabled):not(
-      [aria-disabled="true"]
-    ),
-  .bits-resource-filter-bar__section-button.bits-btn:focus-visible:not(:disabled):not(
-      [aria-disabled="true"]
-    ) {
-    @apply bg-transparent text-white shadow-none outline-none;
-    border-color: transparent;
-  }
-
-  .bits-resource-filter-bar__section-button.bits-btn .bits-btn__label {
-    @apply hidden lg:inline;
-  }
-
-  .bits-resource-filter-bar__section-button.bits-btn .bits-btn__icon {
-    @apply h-4 w-4;
-  }
-
-  .bits-resource-filter-bar__section-button.bits-btn[data-has-indicator="true"]::after {
-    @apply absolute right-0 top-0 h-2.5 w-2.5 rounded-full;
-    background-color: var(--color-secondary);
-    box-shadow: 0 0 0 2px var(--color-base-200);
-    content: "";
   }
 
   .bits-resource-filter-bar__sort {
@@ -125,7 +95,7 @@
     letter-spacing: 0.01em;
   }
 
-  .bits-resource-filter-bar__reset.bits-btn {
+  .bits-resource-filter-bar__reset {
     @apply opacity-80 transition-opacity duration-300 hover:opacity-100;
     white-space: nowrap;
     background-color: color-mix(in oklab, var(--color-base-300) 14%, transparent);
@@ -133,10 +103,8 @@
     color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
   }
 
-  .bits-resource-filter-bar__reset.bits-btn:hover:not(:disabled):not(
-      [aria-disabled="true"]
-    ),
-  .bits-resource-filter-bar__reset.bits-btn:focus-visible:not(:disabled):not(
+  .bits-resource-filter-bar__reset:hover:not(:disabled):not([aria-disabled="true"]),
+  .bits-resource-filter-bar__reset:focus-visible:not(:disabled):not(
       [aria-disabled="true"]
     ) {
     background-color: color-mix(in oklab, var(--color-base-300) 20%, transparent);
@@ -244,22 +212,22 @@
     @apply flex flex-row gap-2;
   }
 
-  .bits-resource-filter-bar__locale-group-button.bits-btn {
+  .bits-resource-filter-bar__locale-group-button {
     @apply min-w-0 rounded-md px-2.5;
     border-color: transparent;
     color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
   }
 
-  .bits-resource-filter-bar__locale-group-button.bits-btn:hover:not(:disabled):not(
+  .bits-resource-filter-bar__locale-group-button:hover:not(:disabled):not(
       [aria-disabled="true"]
     ),
-  .bits-resource-filter-bar__locale-group-button.bits-btn:focus-visible:not(
-      :disabled
-    ):not([aria-disabled="true"]) {
+  .bits-resource-filter-bar__locale-group-button:focus-visible:not(:disabled):not(
+      [aria-disabled="true"]
+    ) {
     color: color-mix(in oklab, var(--color-base-content) 92%, transparent);
   }
 
-  .bits-resource-filter-bar__locale-group-button--active.bits-btn {
+  .bits-resource-filter-bar__locale-group-button--active {
     background-color: var(--color-secondary);
     border-color: transparent;
     color: white;
@@ -267,10 +235,10 @@
     box-shadow: none;
   }
 
-  .bits-resource-filter-bar__locale-group-button--active.bits-btn:hover:not(
-      :disabled
-    ):not([aria-disabled="true"]),
-  .bits-resource-filter-bar__locale-group-button--active.bits-btn:focus-visible:not(
+  .bits-resource-filter-bar__locale-group-button--active:hover:not(:disabled):not(
+      [aria-disabled="true"]
+    ),
+  .bits-resource-filter-bar__locale-group-button--active:focus-visible:not(
       :disabled
     ):not([aria-disabled="true"]) {
     background-color: color-mix(in oklab, var(--color-secondary) 90%, white);

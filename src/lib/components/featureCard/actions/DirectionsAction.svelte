@@ -27,6 +27,7 @@ function getDirections() {
   text={m.alive_large_hawk_hunt()}
   icon={directionsIcon}
   color="neutral"
+  labelClasses="hidden min-[16rem]:inline-block"
   class="bits-feature-card__action-button bits-feature-card__action-button--show-label-sm"
   attrs={{ title: m.alive_large_hawk_hunt() }}
   onClick={getDirections}

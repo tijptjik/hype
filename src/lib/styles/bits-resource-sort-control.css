@@ -29,16 +29,14 @@
     overflow: hidden;
   }
 
-  .bits-theme .bits-btn.bits-resource-sort__trigger {
+  .bits-theme .bits-resource-sort__trigger {
     background-color: transparent;
     border-color: var(--color-base-300);
     box-shadow: none;
   }
 
   .bits-theme
-    .bits-btn.bits-resource-sort__trigger:hover:not(:disabled):not(
-      [aria-disabled="true"]
-    ) {
+    .bits-resource-sort__trigger:hover:not(:disabled):not([aria-disabled="true"]) {
     background-color: color-mix(in oklab, var(--color-base-300) 12%, transparent);
     border-color: var(--color-base-300);
   }

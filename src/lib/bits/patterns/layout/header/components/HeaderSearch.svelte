@@ -1,5 +1,7 @@
 <script lang="ts">
 import { onDestroy } from 'svelte'
+// BITS
+import { HEADER_SEARCH_CLEAR_CLASSES } from './headerPrimitives.styles'
 // ICONS
 import Search from 'virtual:icons/lucide/search'
 import X from 'virtual:icons/lucide/x'
@@ -114,7 +116,7 @@ onDestroy(() => {
     {#if inputQuery.trim() !== ''}
       <button
         type="button"
-        class="bits-pattern-header__search-clear"
+        class={HEADER_SEARCH_CLEAR_CLASSES}
         aria-label="Clear filter"
         onclick={clearSearch}
       >

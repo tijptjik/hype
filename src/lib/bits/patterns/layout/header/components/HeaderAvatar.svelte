@@ -1,10 +1,15 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Avatar } from '$lib/bits/core'
+import { Avatar, Button } from '$lib/bits/core'
 // SVELTE
 import { fly } from 'svelte/transition'
 // TYPES
 import type { HeaderAvatarProps } from './headerPrimitives.types'
+// STYLES
+import {
+  getHeaderAvatarShellClasses,
+  HEADER_AVATAR_BUTTON_CLASSES,
+} from './headerPrimitives.styles'
 
 let {
   isVisible = true,
@@ -19,26 +24,26 @@ let {
 const transitionX = $derived(transitionDirection === 'left' ? -64 : 64)
 </script>
 
-<div
-  class={[
-    'bits-pattern-header__avatar-shell',
-    isVisible
-      ? 'bits-pattern-header__avatar-shell--visible'
-      : 'bits-pattern-header__avatar-shell--hidden',
-  ]
-    .filter(Boolean)
-    .join(' ')}
->
-  {#if isVisible}
-    <button
-      in:fly={{ x: transitionX, duration: 260, opacity: 1, delay: 350 }}
-      out:fly={{ x: transitionX, duration: 260, opacity: 1, delay: 20 }}
-      type="button"
-      class="bits-pattern-header__avatar-button"
-      onclick={() => onClick?.()}
-      aria-label="Open admin panel"
-    >
-      <Avatar {name} {src} {alt} {fallback} />
-    </button>
-  {/if}
-</div>
+{#snippet avatarIcon()}
+  <Avatar {name} {src} {alt} {fallback} fitHeight={true} />
+{/snippet}
+
+{#if isVisible}
+  <div
+    class={getHeaderAvatarShellClasses(isVisible)}
+    in:fly={{ x: transitionX, duration: 260, opacity: 1, delay: 350 }}
+    out:fly={{ x: transitionX, duration: 260, opacity: 1, delay: 20 }}
+  >
+    <Button
+      text="Open admin panel"
+      icon={avatarIcon}
+      modifier="circle"
+      style="transparent"
+      iconClasses="h-full w-full"
+      class={HEADER_AVATAR_BUTTON_CLASSES}
+      hideLabel={true}
+      hideLabelInstantly={true}
+      onClick={() => onClick?.()}
+    />
+  </div>
+{/if}

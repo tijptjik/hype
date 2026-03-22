@@ -12,6 +12,7 @@ type Props = Omit<DialogPrimitive.RootProps, 'open'> & {
   description?: string
   triggerText?: string
   triggerIconComponent?: Component
+  triggerIconClasses?: string
   overlayProps?: WithoutChild<DialogPrimitive.OverlayProps>
   contentProps?: WithoutChild<DialogPrimitive.ContentProps>
   children?: Snippet
@@ -23,6 +24,7 @@ let {
   description,
   triggerText = 'Info',
   triggerIconComponent,
+  triggerIconClasses = '',
   overlayProps,
   contentProps,
   children,
@@ -35,6 +37,7 @@ let {
     <Button
       text={triggerText}
       iconComponent={triggerIconComponent}
+      iconClasses={triggerIconClasses}
       modifier="circle"
       style="ghost"
       color="neutral"

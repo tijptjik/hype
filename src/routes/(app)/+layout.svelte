@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { fade } from 'svelte/transition'
 import { browser } from '$app/environment'
 // NAVIGATION
 import { goto, beforeNavigate } from '$app/navigation'
@@ -13,6 +14,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { setOmniCtx } from '$lib/context/omni.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // SERVICES
@@ -25,9 +27,9 @@ import Filters from '$lib/components/panels/Filters.svelte'
 import Prisms from '$lib/components/panels/Prisms.svelte'
 import Stars from '$lib/components/panels/Stars.svelte'
 import Hub from '$lib/components/panels/Hub.svelte'
-import Plan from '$lib/components/panels/Plan.svelte'
-import Passport from '$lib/components/panels/Passport.svelte'
-import EventCompanion from '$lib/components/panels/EventCompanion.svelte'
+// import Plan from '$lib/components/panels/Plan.svelte'
+// import Passport from '$lib/components/panels/Passport.svelte'
+// import EventCompanion from '$lib/components/panels/EventCompanion.svelte'
 import Settings from '$lib/components/panels/Settings.svelte'
 import Profile from '$lib/components/panels/Profile.svelte'
 import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte'
@@ -76,6 +78,7 @@ appCtx.setHub(hub)
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx)
+const responsiveCtx = getResponsiveCtx()
 
 // NAVIGATION :: Clear feature cache images when switching between admin/user apps
 beforeNavigate(({ from, to }) => {
@@ -140,7 +143,11 @@ const isCardToggleVisible = $derived(
     appCtx.getActiveFeature() &&
     !omniCtx.isNewFeatureMode,
 )
-const mapBarOffset = $derived(appCtx.getHorizontalOffset())
+const isCompactAppMenu = $derived(
+  (responsiveCtx.window.width > 0 && responsiveCtx.window.width < 520) ||
+    (responsiveCtx.window.height > 0 && responsiveCtx.window.height < 560),
+)
+const offsetDueToPanels = $derived(appCtx.getHorizontalOffset())
 
 // PROFILE PANEL SCROLL POSITION
 let profilePanelContainer: HTMLDivElement | undefined = $state()
@@ -156,12 +163,12 @@ $effect(() => {
       // Store in app context for this specific user
       const username = appCtx.state.panels.profile.ctx?.username
       if (username) {
-        ;(appCtx.state.panels.profile.ctx as any).savedScrollPosition = scrollTop
+        ;(appCtx.state.panels.profile.ctx).savedScrollPosition = scrollTop
       }
     }
   } else if (isProfileOpen && profilePanelContainer) {
     // Panel is opening - restore scroll position
-    const savedScrollPosition = (appCtx.state.panels.profile.ctx as any)
+    const savedScrollPosition = (appCtx.state.panels.profile.ctx)
       ?.savedScrollPosition
     if (savedScrollPosition > 0) {
       // Small delay to ensure content is rendered
@@ -169,7 +176,7 @@ $effect(() => {
         if (profilePanelContainer) {
           profilePanelContainer.scrollTop = savedScrollPosition
           // Clear the saved position
-          ;(appCtx.state.panels.profile.ctx as any).savedScrollPosition = 0
+          ;(appCtx.state.panels.profile.ctx).savedScrollPosition = 0
         }
       }, 250)
     }
@@ -277,16 +284,22 @@ function handleMenuSelect(item: { value: Panel }): void {
 <div class="flex h-dvh flex-col justify-around overflow-hidden">
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
     <main
-      class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden pb-17 md:pb-0"
+      class={[
+        'relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden transition-[padding] duration-260 ease-[ease]',
+        isCompactAppMenu ? 'pb-12' : 'pb-17',
+        'md:pb-0',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       <!-- Panels -->
       <Prisms />
       <Stars />
       <Hub {hub} />
       <Filters />
-      <Plan />
-      <Passport />
-      <EventCompanion />
+      <!-- <Plan /> -->
+      <!-- <Passport /> -->
+      <!-- <EventCompanion /> -->
       <Settings />
       <Profile bind:panelContainer={profilePanelContainer} />
       <!-- Map Container -->
@@ -309,7 +322,7 @@ function handleMenuSelect(item: { value: Panel }): void {
 
         <OverlayBar
           class="transition-transform duration-500 ease-in-out"
-          style={`transform: translateX(${mapBarOffset}px);`}
+          style={`transform: translateX(${offsetDueToPanels}px);`}
         >
           {#snippet left()}
             {#if isAddButtonVisible}
@@ -319,10 +332,8 @@ function handleMenuSelect(item: { value: Panel }): void {
                 modifier="circle"
                 style="ghost"
                 size="xl"
-                transition="fade"
-                duration={300}
-                delay={150}
-                outDuration={100}
+                transition={fade}
+                transitionOpts={{ duration: 300, delay: 150 }}
                 class="group z-30 shadow-lg"
                 attrs={{ title: m.whole_house_cougar_hurl() }}
                 onClick={handleAddFeature}
@@ -337,10 +348,8 @@ function handleMenuSelect(item: { value: Panel }): void {
                 icon={openCardIcon}
                 color="dark"
                 style="soft"
-                transition="fade"
-                duration={150}
-                delay={150}
-                outDuration={100}
+                transition={fade}
+                transitionOpts={{ duration: 150, delay: 150 }}
                 class="z-130 border border-white/10 bg-black/70 shadow-lg backdrop-blur-sm hover:text-primary"
                 attrs={{ title: m.mapbar__show_card() }}
                 onClick={handleOpenCard}
@@ -358,7 +367,7 @@ function handleMenuSelect(item: { value: Panel }): void {
     <AppMenu
       items={menuItems}
       trailingItems={trailingMenuItems}
-      style={`--bits-app-menu-offset: ${mapBarOffset}px;`}
+      offsetX={offsetDueToPanels}
       onSelect={handleMenuSelect}
     />
   {:else if !$session.isPending && !$session.data}

@@ -5,6 +5,7 @@ import { fade } from 'svelte/transition'
 import { m } from '$lib/i18n'
 // BITS
 import Button from '$lib/bits/core/button/Button.svelte'
+import { cx } from '$lib/bits/utils'
 import * as ResourceControlBarPrimitive from '$lib/bits/patterns/resource/resourceControlBar/components'
 import { ResourceSortControl } from '$lib/bits/patterns/resource/resourceSortControl'
 // CONTEXT
@@ -51,6 +52,20 @@ let activeSection = $state<string | null>(null)
 let filterCarouselIndex = $state(0)
 
 const FILTER_CAROUSEL_VISIBLE_COUNT = 6
+
+const FILTER_SECTION_BUTTON_CLASSES = cx(
+  'relative h-10 min-w-0 rounded-md px-2.5 text-sm text-base-content/70',
+  'transition-colors duration-300',
+  'data-[has-indicator=true]:after:absolute',
+  'data-[has-indicator=true]:after:right-0',
+  'data-[has-indicator=true]:after:top-0',
+  'data-[has-indicator=true]:after:h-2.5',
+  'data-[has-indicator=true]:after:w-2.5',
+  'data-[has-indicator=true]:after:rounded-full',
+  'data-[has-indicator=true]:after:bg-accent',
+  `data-[has-indicator=true]:after:content-['']`,
+  'data-[has-indicator=true]:after:shadow-[0_0_0_2px_var(--color-base-200)]',
+)
 
 let isControlBarVisible = $derived(
   adminCtx.appCtx.state.ui.isControlBarVisible[resource],
@@ -161,13 +176,12 @@ $effect(() => {
           <Button
             text={section.title}
             iconComponent={SectionIcon}
-            style="none"
+            style="transparent"
             size="sm"
-            transition="fade"
-            duration={220}
-            delay={50 * idx}
-            outDuration={180}
-            class="bits-resource-filter-bar__section-button"
+            transition={fade}
+            transitionOpts={{ duration: 220, delay: 50 * idx }}
+            iconClasses="h-5 w-5"
+            class={FILTER_SECTION_BUTTON_CLASSES}
             attrs={{
               'data-has-indicator': sectionCount > 0 ? 'true' : 'false',
             }}
