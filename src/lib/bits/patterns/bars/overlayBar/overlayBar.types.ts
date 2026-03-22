@@ -5,4 +5,5 @@ export interface OverlayBarProps {
   center?: Snippet
   right?: Snippet
   class?: string
+  style?: string
 }
