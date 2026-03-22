@@ -9,9 +9,7 @@ let {
   isReady = true,
 }: MainFormProps = $props()
 
-const formClass = $derived(
-  ['bits-theme', 'space-y-4', className].filter(Boolean).join(' '),
-)
+const formClass = $derived(['bits-theme', className].filter(Boolean).join(' '))
 const formAttrs = $derived(attrs ?? {})
 
 function handleKeyDown(event: KeyboardEvent): void {

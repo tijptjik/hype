@@ -1075,7 +1075,7 @@ $effect(() => {
       nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <div class="space-y-4" data-facet-id="core">
+      <div data-facet-id="core">
         <FormI18nSection
           title={m.admin__forms_common_descriptors()}
           {locales}

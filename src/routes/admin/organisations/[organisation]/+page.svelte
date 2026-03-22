@@ -1126,7 +1126,6 @@ $effect(() => {
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
     isReady={isFormReady}
-    class="space-y-4"
   >
     <Main.Facet
       isVisible={isCoreFacet}
