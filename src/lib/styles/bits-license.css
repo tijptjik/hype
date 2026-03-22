@@ -6,7 +6,7 @@
 
   .bits-theme .bits-license__cards {
     display: grid;
-    gap: 0.875rem;
+    gap: 1rem;
     width: 100%;
     min-width: 0;
   }

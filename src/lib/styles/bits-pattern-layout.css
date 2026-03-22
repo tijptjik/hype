@@ -12,7 +12,7 @@
   }
 
   .bits-theme .bits-overlay-bar {
-    @apply pointer-events-none absolute inset-x-0 bottom-0 z-40 px-3 pb-[80px] pt-4 caret-transparent;
+    @apply pointer-events-none absolute inset-x-0 bottom-0 z-40 px-3 pt-4 caret-transparent;
   }
 
   .bits-theme .bits-overlay-bar__grid {
@@ -301,11 +301,15 @@
   }
 
   .bits-panel-section-header-icon__graphic {
+    @apply object-contain;
+  }
+
+  .bits-panel-section-header-icon__graphic--icon {
     @apply h-7 w-7;
   }
 
-  .bits-panel-section-header-icon__graphic--neighbourhood {
-    @apply h-12 w-auto max-w-12 object-contain;
+  .bits-panel-section-header-icon__graphic--image {
+    @apply h-12 w-auto max-w-12;
   }
 
   .bits-panel-section-content {
@@ -652,5 +656,69 @@
 
   .bits-theme .bits-admin-shell__main {
     @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
+  }
+
+  .bits-theme .bits-profile-panel {
+    @apply relative flex w-full flex-col items-center overflow-hidden;
+  }
+
+  .bits-theme .bits-profile-panel__background {
+    @apply pointer-events-none absolute z-0 flex w-full -translate-y-27.5 items-center justify-center overflow-hidden px-1.5;
+  }
+
+  .bits-theme .bits-profile-panel__background-graphic {
+    @apply h-full w-full object-cover opacity-80;
+  }
+
+  .bits-theme .bits-profile-panel__content {
+    @apply flex flex-col items-center gap-3 py-4;
+  }
+
+  .bits-theme .bits-profile-panel__avatar-shell {
+    @apply relative z-10;
+  }
+
+  .bits-theme .bits-profile-panel__avatar-ring {
+    @apply w-32 overflow-hidden rounded-full ring ring-black/40;
+  }
+
+  .bits-theme .bits-profile-panel__avatar-image {
+    @apply block h-full w-full object-cover;
+  }
+
+  .bits-theme .bits-profile-panel__identity {
+    @apply z-20 -mt-6 rounded-full bg-black/80 px-4 py-1;
+  }
+
+  .bits-theme .bits-profile-panel__identity-row {
+    @apply flex items-center gap-2;
+  }
+
+  .bits-theme .bits-profile-panel__identity-name {
+    @apply font-medium text-white;
+  }
+
+  .bits-theme .bits-profile-panel__username-input {
+    @apply min-w-0 border-none bg-transparent font-medium text-white outline-none placeholder:text-white/60 focus:outline-none;
+  }
+
+  .bits-theme .bits-profile-panel__username-action {
+    @apply flex h-4 w-4 items-center justify-center text-white/80 transition-colors hover:text-white;
+  }
+
+  .bits-theme .bits-profile-panel__status-icon {
+    @apply h-4 w-4;
+  }
+
+  .bits-theme .bits-profile-panel__status-icon--error {
+    @apply text-red-400;
+  }
+
+  .bits-theme .bits-profile-panel__status-icon--success {
+    @apply text-green-400;
+  }
+
+  .bits-theme .bits-profile-panel__actions {
+    @apply z-10 flex flex-row items-center gap-2;
   }
 }

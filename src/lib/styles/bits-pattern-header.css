@@ -102,6 +102,11 @@
     color: color-mix(in oklab, var(--color-error) 82%, white 18%);
   }
 
+  .bits-theme .bits-pattern-header__title-menu-item-icon--info,
+  .bits-pattern-header__title-menu-item-icon--info {
+    color: color-mix(in oklab, var(--color-info) 82%, white 18%);
+  }
+
   .bits-theme .bits-pattern-header__right {
     @apply ml-4 flex items-center gap-0;
   }

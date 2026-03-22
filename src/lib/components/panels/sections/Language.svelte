@@ -65,6 +65,7 @@ let advancedOpen = $state(false)
   title={m.settings__language()}
   icon="/language.svg"
   position="right"
+  iconGraphicClass="scale-125 origin-bottom-left"
   defaultOpen={!panelProps.isAdmin}
   iconVerticalPaddingClass="py-3 pr-4.5"
 >

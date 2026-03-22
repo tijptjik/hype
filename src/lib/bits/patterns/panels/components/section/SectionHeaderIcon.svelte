@@ -23,6 +23,12 @@ let {
   href = null,
 }: Props = $props()
 
+const graphicTypeClass = $derived(
+  typeof icon === 'string'
+    ? 'bits-panel-section-header-icon__graphic--image'
+    : 'bits-panel-section-header-icon__graphic--icon',
+)
+
 const onNavigateToIndex = (event: MouseEvent): void => {
   if (onNavigate) {
     onNavigate(event)
@@ -36,6 +42,11 @@ const onNavigateToIndex = (event: MouseEvent): void => {
 }
 
 const onPrimaryAction = (event: MouseEvent): void => {
+  if (onNavigate) {
+    onNavigateToIndex(event)
+    return
+  }
+
   if (href) {
     onNavigateToIndex(event)
     return
@@ -55,14 +66,14 @@ const onPrimaryAction = (event: MouseEvent): void => {
     <img
       src={icon}
       alt=""
-      class="bits-panel-section-header-icon__graphic {iconGraphicClass} {iconColorClass}"
+      class="bits-panel-section-header-icon__graphic {graphicTypeClass} {iconGraphicClass} {iconColorClass}"
       aria-hidden="true"
     >
   {:else}
     <Icon
       size="lg"
       src={icon}
-      class="bits-panel-section-header-icon__graphic {iconGraphicClass} {iconColorClass}"
+      class="bits-panel-section-header-icon__graphic {graphicTypeClass} {iconGraphicClass} {iconColorClass}"
       aria-hidden="true"
     />
   {/if}

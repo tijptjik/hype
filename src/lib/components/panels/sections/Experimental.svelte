@@ -44,6 +44,7 @@ const featuresConfig: ExperimentalFeatureConfig[] = [
 
 <Section
   title={m.settings_experimental_title()}
+  iconGraphicClass="scale-125 origin-bottom-left -mr-1"
   icon="/experiment.svg"
   defaultOpen={false}
   iconVerticalPaddingClass="py-3 pr-5"

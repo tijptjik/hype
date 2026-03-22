@@ -68,7 +68,12 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
 )
 </script>
 
-<Section title={m.stars__want_to_visit()} icon="/compass.svg" {...panelProps}>
+<Section
+  title={m.stars__want_to_visit()}
+  iconGraphicClass="scale-130 origin-bottom"
+  icon="/compass.svg"
+  {...panelProps}
+>
   {#await wishlistedFeaturesPromise}
     <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
       <span class="loading loading-ring loading-md"></span>

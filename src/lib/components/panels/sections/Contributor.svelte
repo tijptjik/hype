@@ -54,6 +54,7 @@ const handleKeydown = () => {
 
 <Section
   title={m.settings_contributor_title()}
+  iconGraphicClass="scale-125 origin-bottom-right mr-1"
   icon="/contributor.svg"
   position="right"
 >

@@ -71,7 +71,12 @@ let visitedFeaturesPromise = $derived(
 )
 </script>
 
-<Section title={m.stars__have_visited()} icon="/map.svg" {...panelProps}>
+<Section
+  title={m.stars__have_visited()}
+  iconGraphicClass="scale-130 origin-bottom"
+  icon="/map.svg"
+  {...panelProps}
+>
   {#await visitedFeaturesPromise}
     <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
       <span class="loading loading-ring loading-md"></span>
