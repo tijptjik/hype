@@ -48,16 +48,19 @@ onMount(() => {
     fadeDuration: 0,
   }
 
-  const map = new maplibregl.Map(mapOptions)
-
   const markReady = () => {
+    window.clearTimeout(idleFallback)
     previewWindow.__HYPE_MAP_STYLE_PREVIEW_READY__ = true
     previewReady = true
   }
 
+  const map = new maplibregl.Map(mapOptions)
+  const idleFallback = window.setTimeout(markReady, 10_000)
+
   map.once('idle', markReady)
 
   return () => {
+    window.clearTimeout(idleFallback)
     map.remove()
   }
 })
