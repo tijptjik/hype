@@ -16,9 +16,6 @@ import {
 } from './enums'
 // ZOD SCHEMAS
 import type {
-  FeatureImageBase,
-  FeatureImageInsert,
-  FeatureImageUpdate,
   TaskAPI,
   TaskBase,
   TaskBaseRaw,
@@ -33,7 +30,6 @@ import type {
   HubDB,
   HubEntityByProfile,
   HubGetParamsByProfile,
-  HubI18nDB,
   HubListByProfile,
   HubListParamsByProfile,
   HubNew,
@@ -72,107 +68,25 @@ import type {
   ProjectRole,
 } from './db/zod/schema/project.types'
 import type {
-  FeatureImage,
-  FeatureImageDB,
-  FeatureImageDBNew,
-  FeatureImageDBPartial,
-  FeatureImageNew,
-  FeatureImagePartial,
   Image,
-  ImageAdminProfile,
-  ImageByIdParams,
-  ImageByIdParamsByProfile,
-  ImageByIdResponse,
-  ImageCollectionResponse,
   ImageContextEnvelope,
-  ImageContextType,
   ImageCtxEnvelope,
   ImageDB,
-  ImageDBBasic,
-  ImageDBFlat,
-  ImageDBFlatUpdate,
-  ImageDBNew,
-  ImageDBPartial,
-  ImageDBRaw,
-  ImageDetailProfile,
-  ImageEditCtx,
-  ImageEntityByProfile,
-  ImageListByProfile,
-  ImageListProfile,
-  ImageNew,
-  ImageNewWithFeature,
-  ImageNewWithProjectOrOrganisation,
-  ImagePartial,
-  ImageProfile,
-  ImageRemoteMeta,
-  ImagesForContextParams,
-  ImagesForContextParamsByProfile,
-  ImagesForIdsParams,
-  ImagesForIdsParamsByProfile,
   ImageUpload,
-  ImageUploadCtx,
-  Intent,
   LoadStatus,
-  LngLat,
-  Metadata,
-  SetImageIntentParams,
-  SetImagePublishedParams,
-  SignData,
-  UpdateImageParams,
-  UploadedPhoto,
-  UploadStatus,
-  EXIF,
-  DeleteImageParams,
-  CloudinarySignatureParams,
-  CreateImageParams,
 } from './db/zod/schema/image.types'
 import type {
   Feature,
   FeatureDB,
-  FeatureDBNew,
-  FeatureDBPartial,
   FeatureFromCollection,
   FeatureI18nDB,
   FeatureNew,
-  FeatureProperty,
-  FeaturePropertyI18nDB,
-  NewFeatureWithLocationAndParents,
   UserContributedFeature,
-  UserContributedFeatureProperty,
 } from './db/zod/schema/feature.types'
-import type {
-  FormFieldCardBodyProps,
-  ProjectPropertyForm,
-  Property,
-  PropertyAdminProfile,
-  PropertyDB,
-  PropertyDBNew,
-  PropertyDBPartial,
-  PropertyDBRaw,
-  PropertyDiscriminator,
-  PropertyFormData,
-  PropertyI18nDB,
-  PropertyI18nNew,
-  PropertyI18nPartial,
-  PropertyNew,
-  PropertyPartial,
-  PropertyTranslationOrigin,
-  PropertyValue,
-  PropertyValueAdminProfile,
-  PropertyValueDB,
-  PropertyValueDBRaw,
-  PropertyValueI18nDB,
-  PropertyValueI18nNew,
-  PropertyValueI18nPartial,
-  PropertyValueNew,
-  PropertyValueNewDB,
-  PropertyValuePartial,
-  PropertyValuePartialDB,
-  WritableI18nRecord,
-} from './db/zod/schema/property.types'
+import type { Property } from './db/zod/schema/property.types'
 // TYPES
 import type { Component, Snippet } from 'svelte'
-import type { Page, RemoteFormIssue } from '@sveltejs/kit'
+import type { RemoteFormIssue } from '@sveltejs/kit'
 import type { RequestEvent } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
 import type {
@@ -189,7 +103,6 @@ import type { enhance } from '$app/forms'
 import type { Marker } from 'maplibre-gl'
 import type { Writable } from 'svelte/store'
 import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
-import type { Geometry } from 'geojson'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { HeaderLayoutRegionConfig } from './bits/patterns/layout/header/header.types'
 
@@ -321,6 +234,77 @@ export type DbTable = SQLiteTable<any>
 // Drizzle withRelations
 export type NestedRelations = {
   [key: string]: boolean | { columns: NestedRelations } | { with: NestedRelations }
+}
+
+/* ----------------- */
+// PREVIEWS
+/* -------- */
+
+export type PreviewStage = 'local' | 'preview' | 'production'
+
+export type PreviewAssetKind = 'styles' | 'layers' | 'projects'
+
+export type PreviewStorageMode = 'local-static' | 'r2'
+
+export type PreviewAssetLocator = {
+  kind: PreviewAssetKind
+  identifier: string
+  hash: string
+  extension?: 'png'
+}
+
+export type PreviewManifestEntry = {
+  fileName: string
+  publicPath: string
+  objectKey: string
+  publicUrl: string
+  hash: string
+  sourceUrl: string
+}
+
+export type PreviewRenderJob = {
+  kind: PreviewAssetKind
+  identifier: string
+  hash: string
+  sourceUrl: string
+  targetObjectKey: string
+}
+
+/* ----------------- */
+// PROJECT LICENSE
+/* -------- */
+
+export type ProjectLicenseMediaType = 'all' | 'image' | 'text' | 'data'
+
+export type ProjectLicenseRights = {
+  license: string
+  isPublicDomain: boolean
+  isAllRightsReserved: boolean
+  BY: boolean | null
+  SA: boolean | null
+  NC: boolean | null
+  ND: boolean | null
+}
+
+export type ProjectLicenseMedia = Record<ProjectLicenseMediaType, ProjectLicenseRights>
+
+export type ProjectLicenseMeta = {
+  allMediaSameRights: boolean
+  attribution: string
+  isAllRightsReserved: boolean
+  isPublicDomain: boolean
+  history: ProjectLicenseHistoryEntry[]
+}
+
+export type ProjectLicenseHistoryEntry = {
+  publishedAt: string
+  licenses: Partial<Record<ProjectLicenseMediaType, string>>
+  attribution: string
+}
+
+export type ProjectLicense = {
+  meta: ProjectLicenseMeta
+  media: ProjectLicenseMedia
 }
 
 /* ----------------- */
@@ -472,6 +456,12 @@ export type FeatureViewFilters = {
   hasTitle: FilterTriState
   hasDescription: FilterTriState
   hasDisplayAddress: FilterTriState
+  isAllRightsReserved: FilterTriState
+  isPublicDomain: FilterTriState
+  hasLicenseBy: FilterTriState
+  hasLicenseSa: FilterTriState
+  hasLicenseNc: FilterTriState
+  hasLicenseNd: FilterTriState
 
   // Translation related (per locale)
   translationLocales: Record<LocaleKey, boolean> // Which locales to consider for translation filters
@@ -516,16 +506,18 @@ export type ProjectViewFilters = {
   hasName: FilterTriState
   hasContextualName: FilterTriState
   hasDescription: FilterTriState
-  hasAttribution: FilterTriState
-  hasLicense: FilterTriState
+  isAllRightsReserved: FilterTriState
+  isPublicDomain: FilterTriState
+  hasLicenseBy: FilterTriState
+  hasLicenseSa: FilterTriState
+  hasLicenseNc: FilterTriState
+  hasLicenseNd: FilterTriState
 
   // Translation related (per locale)
   translationLocales: Record<LocaleKey, boolean>
   isNameTranslated: LocalisedFilterTriState
   isContextualNameTranslated: LocalisedFilterTriState
   isDescriptionTranslated: LocalisedFilterTriState
-  isAttributionTranslated: LocalisedFilterTriState
-  isLicenseTranslated: LocalisedFilterTriState
 }
 
 export type LayerViewFilters = {
@@ -537,6 +529,12 @@ export type LayerViewFilters = {
   hasName: FilterTriState
   hasContextualName: FilterTriState
   hasDescription: FilterTriState
+  isAllRightsReserved: FilterTriState
+  isPublicDomain: FilterTriState
+  hasLicenseBy: FilterTriState
+  hasLicenseSa: FilterTriState
+  hasLicenseNc: FilterTriState
+  hasLicenseNd: FilterTriState
 
   // Translation related (per locale)
   translationLocales: Record<LocaleKey, boolean>
@@ -606,33 +604,6 @@ export type PlaceState = {
   }
 }
 
-/* ----------------- */
-// FILTERS :: ADMIN :: FEATURES
-/* -------- */
-
-export type FeatureStatusFilterKey =
-  | 'isPublished'
-  | 'isPendingReview'
-  | 'isArchived'
-  | 'isIntangible'
-  | 'isVisitable'
-
-export type FeatureTranslationFilterKey =
-  | 'isTitleTranslated'
-  | 'isDescriptionTranslated'
-  | 'isAddressTranslated'
-  | 'isSpecifierTranslated'
-
-export type FeatureAuthorshipFilterKey =
-  | 'hasTitle'
-  | 'hasDescription'
-  | 'hasDisplayAddress'
-
-export type FeatureImageFilterKey =
-  | 'hasImage'
-  | 'isOneImagePublished'
-  | 'isAllImagePublished'
-
 // Organisation filter keys
 export type OrganisationStatusFilterKey = 'isPublished' | 'isArchived'
 export type OrganisationTranslationFilterKey =
@@ -651,14 +622,17 @@ export type ProjectTranslationFilterKey =
   | 'isNameTranslated'
   | 'isContextualNameTranslated'
   | 'isDescriptionTranslated'
-  | 'isAttributionTranslated'
-  | 'isLicenseTranslated'
 export type ProjectAuthorshipFilterKey =
   | 'hasName'
   | 'hasContextualName'
   | 'hasDescription'
-  | 'hasAttribution'
-  | 'hasLicense'
+  | 'isAllRightsReserved'
+  | 'isPublicDomain'
+  | 'hasLicenseBy'
+  | 'hasLicenseSa'
+  | 'hasLicenseNc'
+  | 'hasLicenseNd'
+
 export type ProjectImageFilterKey = 'hasImage'
 
 // Layer filter keys (no image filters)
@@ -671,7 +645,38 @@ export type LayerAuthorshipFilterKey =
   | 'hasName'
   | 'hasContextualName'
   | 'hasDescription'
+  | 'isAllRightsReserved'
+  | 'isPublicDomain'
+  | 'hasLicenseBy'
+  | 'hasLicenseSa'
+  | 'hasLicenseNc'
+  | 'hasLicenseNd'
 
+export type FeatureStatusFilterKey =
+  | 'isPublished'
+  | 'isPendingReview'
+  | 'isArchived'
+  | 'isIntangible'
+  | 'isVisitable'
+export type FeatureTranslationFilterKey =
+  | 'isTitleTranslated'
+  | 'isDescriptionTranslated'
+  | 'isAddressTranslated'
+  | 'isSpecifierTranslated'
+export type FeatureAuthorshipFilterKey =
+  | 'hasTitle'
+  | 'hasDescription'
+  | 'hasDisplayAddress'
+  | 'isAllRightsReserved'
+  | 'isPublicDomain'
+  | 'hasLicenseBy'
+  | 'hasLicenseSa'
+  | 'hasLicenseNc'
+  | 'hasLicenseNd'
+export type FeatureImageFilterKey =
+  | 'hasImage'
+  | 'isOneImagePublished'
+  | 'isAllImagePublished'
 // Task filter keys
 export type TaskStatusFilterKey = 'isReviewed'
 
@@ -697,6 +702,7 @@ export type ResourceTranslationFilterKey<T extends ViewFilterResource> = Extract
 
 export type ResourceFilterConfigBase = {
   label: string
+  tooltip?: string
   invertBoolean?: boolean
   trueLabel?: string
   falseLabel?: string
@@ -951,7 +957,14 @@ export type Prisms = { organisation: Code[]; project: Code[]; layer: Id[] }
 // NAVIGATION :: FACETS
 /* -------- */
 
-export const Facets = ['core', 'capabilities', 'address', 'images', 'fields'] as const
+export const Facets = [
+  'core',
+  'capabilities',
+  'address',
+  'images',
+  'fields',
+  'layers',
+] as const
 export type FacetType = (typeof Facets)[number]
 
 /* ----------------- */
@@ -1254,19 +1267,28 @@ export type HubOrganisationFieldNameResolverForm = {
 
 export type HubOrganisationHiddenInputAttrs = Record<string, unknown>
 
-export type GenAiField =
-  | 'title'
-  | 'name'
-  | 'nameShort'
-  | 'description'
-  | 'license'
-  | 'attribution'
-export type I18nTranslatableField =
-  | 'name'
-  | 'nameShort'
-  | 'description'
-  | 'license'
-  | 'attribution'
+export type HubLayerDefaultFieldNameResolverForm = {
+  fields: {
+    data?: {
+      layerDefaults?: Array<{
+        hubId?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+        layerId?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+        isDefaultVisible?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+      }>
+    }
+  }
+}
+
+export type HubLayerDefaultHiddenInputAttrs = Record<string, unknown>
+
+export type GenAiField = 'title' | 'name' | 'nameShort' | 'description'
+export type I18nTranslatableField = 'name' | 'nameShort' | 'description'
 export type FormBooleanValue = boolean | 'true' | 'false'
 
 export type GenAiStateResolverForm = {
@@ -1280,8 +1302,6 @@ export type GenAiStateResolverForm = {
             nameGen?: FormBooleanValue
             nameShortGen?: FormBooleanValue
             descriptionGen?: FormBooleanValue
-            licenseGen?: FormBooleanValue
-            attributionGen?: FormBooleanValue
           }
         >
       }
@@ -1356,13 +1376,9 @@ export type TranslateLocaleIntoEmptyFieldsParams<
         name?: string
         nameShort?: string
         description?: string
-        license?: string
-        attribution?: string
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        licenseGen?: FormBooleanValue
-        attributionGen?: FormBooleanValue
       }
     >
   },
@@ -1381,13 +1397,9 @@ export type ResetLocaleFieldsParams<
         name?: string
         nameShort?: string
         description?: string
-        license?: string
-        attribution?: string
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        licenseGen?: FormBooleanValue
-        attributionGen?: FormBooleanValue
       }
     >
   },
@@ -1539,6 +1551,7 @@ export type ResourceSubmitMode = 'create' | 'replace' | 'update'
 export type ResourceSubmitMetaDraft = {
   id?: unknown
   mode?: unknown
+  licenseTouched?: unknown
 }
 export type ResourceSubmitDraft<TData extends Record<string, unknown>> = {
   meta?: ResourceSubmitMetaDraft
@@ -1686,6 +1699,7 @@ export const projectAuthorizationFields = [
   'organisationId',
   'code',
   'i18n',
+  'license',
   'capabilities',
   'userRoles',
   'projectRoleCapabilities',
@@ -2161,6 +2175,49 @@ export type PanelProps = {
 }
 
 export type PanelPosition = 'left' | 'right'
+
+export type PlanScheduleStop = {
+  time: string
+  featureId: Id
+  title: string
+  author: string
+  addressLine: string
+  country: string | null
+  flag: string
+  imageUrl: string | null
+  latitude: number | null
+  longitude: number | null
+  distanceFromPreviousKm: number | null
+  distanceLabel: string
+}
+
+export type PassportStamp = {
+  featureId: Id
+  title: string
+  addressLine: string
+  country: string | null
+  flagCode: string | null
+  imageUrl: string | null
+}
+
+export type EventCompanionPlatform = 'instagram' | 'linkedin' | 'facebook' | 'web'
+
+export type EventCompanionRole = 'host' | 'author' | 'performer'
+
+export type EventCompanionFollowLink = {
+  label: string
+  href: string
+  platform: EventCompanionPlatform
+}
+
+export type EventCompanionSession = {
+  featureId: Id
+  title: string
+  addressLine: string
+  imageUrl: string | null
+  buyHref: string
+  follows: Record<EventCompanionRole, EventCompanionFollowLink | null>
+}
 
 // Define a type for the function argument to avoid self-reference
 export interface SelectedResourcesProps {
