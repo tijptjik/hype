@@ -16,7 +16,7 @@ import type { PreviewRenderJob } from '$lib/types'
  * @returns Promise that resolves when the message has been accepted by the queue.
  */
 export const enqueuePreviewRenderJob = async (
-  queue: Queue<PreviewRenderJob>,
+  queue: { send: (job: PreviewRenderJob) => Promise<void> },
   job: PreviewRenderJob,
 ): Promise<void> => {
   await queue.send(job)

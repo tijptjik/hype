@@ -52,6 +52,15 @@ export const getMapStylePreviewPublicPath = (code: string, hash: string): string
   `/${getMapStylePreviewObjectKey(code, hash)}`
 
 /**
+ * Returns the local API path for a built-in map-style preview.
+ *
+ * @param code Map style code.
+ * @returns Local static image path.
+ */
+export const getMapStylePreviewLocalPath = (code: string): string =>
+  `/mapPreviews/styles/${code}.png`
+
+/**
  * Builds the immutable object key for a map-style preview.
  *
  * @param code Map style code.
@@ -77,9 +86,15 @@ export const resolveMapStylePreviewUrl = (
   environment: string | null | undefined,
   code: string,
   hash: string,
-): string =>
-  resolvePreviewAssetUrl(
-    getPreviewStage(environment),
+): string => {
+  const stage = getPreviewStage(environment)
+
+  if (stage === 'local') {
+    return getMapStylePreviewLocalPath(code)
+  }
+
+  return resolvePreviewAssetUrl(
+    stage,
     {
       kind: 'styles',
       identifier: code,
@@ -87,6 +102,7 @@ export const resolveMapStylePreviewUrl = (
     },
     getMapStylePreviewPublicPath(code, hash),
   )
+}
 
 /**
  * Resolves the environment-specific preview path for one registered built-in map style.

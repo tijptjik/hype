@@ -250,6 +250,9 @@ export function normalizePropertiesForSubmit(
 export function normalizeProjectLayersForSubmit(
   value: Array<Record<string, unknown>>,
 ): Array<Record<string, unknown>> {
+  const toSubmittedDefaultVisible = (input: unknown): boolean =>
+    input === true || input === 'true'
+
   return value
     .map((item, index) => ({ item, index }))
     .filter(
@@ -264,7 +267,9 @@ export function normalizeProjectLayersForSubmit(
     .map(({ item }, rank) => ({
       ...(item as Record<string, unknown>),
       rank,
-      isDefaultVisible: Boolean((item as Record<string, unknown>).isDefaultVisible),
+      isDefaultVisible: toSubmittedDefaultVisible(
+        (item as Record<string, unknown>).isDefaultVisible,
+      ),
     }))
 }
 

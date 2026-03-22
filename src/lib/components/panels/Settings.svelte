@@ -58,16 +58,14 @@ let panelProps: PanelProps = $derived({
   <Info isOpen={isInfoOpen} />
 
   <Profile />
-  <div class="flex h-[calc(100vh-206px)] min-h-0 flex-col">
+  <div class="flex flex-col">
     {#if panelProps.isAdmin}
       <div class="shrink-0"><Admin {...panelProps} /></div>
     {/if}
     <div class="shrink-0"><Language {...panelProps} /></div>
     {#if !panelProps.isAdmin}
       <div class="shrink-0"><Contributor {...panelProps} /></div>
-      <div class="flex min-h-0 grow flex-col overflow-hidden">
-        <DefaultMap {...panelProps} />
-      </div>
+      <div class="shrink-0"><DefaultMap {...panelProps} /></div>
       <div class="shrink-0"><Experimental {...panelProps} /></div>
     {/if}
   </div>

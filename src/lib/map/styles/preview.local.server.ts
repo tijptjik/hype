@@ -1,4 +1,5 @@
-import { access, mkdir, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
 import path from 'node:path'
 import process from 'node:process'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -9,15 +10,19 @@ import sharp from 'sharp'
 import type { PreviewManifestEntry } from '../../types'
 import { buildMapStyleArtifacts } from './build'
 import { getMapStyleAssetRecord, type MapStyleKey } from './registry'
-import { MAP_STYLE_PREVIEW_DIR, getMapStylePreviewFilePath } from './preview.server'
+import {
+  MAP_STYLE_PREVIEW_DIR,
+  getMapStylePreviewFilePath,
+  getMapStylePreviewManifestPath,
+} from './preview.server'
 import {
   MAP_STYLE_PREVIEW_BASE_URL,
   MAP_STYLE_PREVIEW_CAPTURE_SIZE,
   MAP_STYLE_PREVIEW_OUTPUT_SIZE,
   MAP_STYLE_PREVIEW_READY_SELECTOR,
   MAP_STYLE_PREVIEW_VIEW,
+  getMapStylePreviewLocalPath,
   getMapStylePreviewObjectKey,
-  getMapStylePreviewPublicPath,
 } from './preview.shared'
 
 // ═══════════════════════
@@ -37,13 +42,25 @@ import {
 
 const SERVER_START_TIMEOUT_MS = 45_000
 const PREVIEW_READY_TIMEOUT_MS = 45_000
+const PREVIEW_NAVIGATION_TIMEOUT_MS = 45_000
+const PREVIEW_FALLBACK_SETTLE_TIMEOUT_MS = 5_000
 
 const previewRenderPromises = new Map<string, Promise<PreviewManifestEntry>>()
+type MapStylePreviewManifest = Record<string, { hash: string }>
 
 type RenderMapStylePreviewOptions = {
   baseUrl?: string
   ensureArtifacts?: boolean
   manageServer?: boolean
+  browser?: Awaited<ReturnType<typeof chromium.launch>>
+  force?: boolean
+  onProgress?: (event: {
+    styleCode: string
+    index: number
+    total: number
+    stage: 'started' | 'completed'
+    entry?: PreviewManifestEntry
+  }) => void
 }
 
 const isServerReachable = async (baseUrl: string): Promise<boolean> => {
@@ -76,16 +93,18 @@ const ensurePreviewServer = async (
     return { dispose: () => undefined }
   }
 
-  const server = Bun.spawn({
-    cmd: ['bun', 'run', 'dev', '--', '--host', 'localhost', '--port', '5173'],
-    cwd: process.cwd(),
-    stdout: 'inherit',
-    stderr: 'inherit',
-    env: {
-      ...process.env,
-      NODE_ENV: 'development',
+  const server = spawn(
+    'bun',
+    ['run', 'dev', '--', '--host', 'localhost', '--port', '5173'],
+    {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        NODE_ENV: 'development',
+      },
     },
-  })
+  )
 
   await waitForServer(baseUrl)
 
@@ -94,6 +113,26 @@ const ensurePreviewServer = async (
       server.kill()
     },
   }
+}
+
+const readPreviewManifest = async (): Promise<MapStylePreviewManifest> => {
+  try {
+    return JSON.parse(
+      await readFile(getMapStylePreviewManifestPath(), 'utf8'),
+    ) as MapStylePreviewManifest
+  } catch {
+    return {}
+  }
+}
+
+const writePreviewManifest = async (
+  manifest: MapStylePreviewManifest,
+): Promise<void> => {
+  await mkdir(MAP_STYLE_PREVIEW_DIR, { recursive: true })
+  await writeFile(
+    getMapStylePreviewManifestPath(),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  )
 }
 
 const buildPreviewUrl = (baseUrl: string, style: string): string => {
@@ -125,15 +164,21 @@ const renderMapStylePreview = async (
   const server = manageServer
     ? await ensurePreviewServer(baseUrl)
     : { dispose: () => undefined }
-  const browser = await chromium.launch({
-    headless: true,
-  })
+  const browser =
+    options.browser ??
+    (await chromium.launch({
+      headless: true,
+    }))
+  const shouldCloseBrowser = !options.browser
 
   try {
     const page = await browser.newPage({
       viewport: MAP_STYLE_PREVIEW_CAPTURE_SIZE,
       deviceScaleFactor: 1,
     })
+    const consoleMessages: string[] = []
+    const requestFailures: string[] = []
+    const responseFailures: string[] = []
 
     const asset = await getMapStyleAssetRecord(styleCode as MapStyleKey)
     const sourceUrl = buildPreviewUrl(baseUrl, styleCode)
@@ -141,18 +186,83 @@ const renderMapStylePreview = async (
     const hash = asset.hash
     const objectKey = getMapStylePreviewObjectKey(styleCode, hash)
     const fileName = objectKey.split('/').pop() ?? `${hash}.png`
-    const publicPath = getMapStylePreviewPublicPath(styleCode, hash)
-    const outputPath = getMapStylePreviewFilePath(styleCode, hash)
+    const publicPath = getMapStylePreviewLocalPath(styleCode)
+    const outputPath = getMapStylePreviewFilePath(styleCode)
 
     await mkdir(MAP_STYLE_PREVIEW_DIR, { recursive: true })
 
-    await page.goto(sourceUrl, {
-      waitUntil: 'networkidle',
+    page.on('console', message => {
+      if (message.type() !== 'error' && message.type() !== 'warning') {
+        return
+      }
+
+      consoleMessages.push(`[${message.type()}] ${message.text()}`)
+    })
+    page.on('pageerror', error => {
+      consoleMessages.push(`[pageerror] ${error.message}`)
+    })
+    page.on('requestfailed', request => {
+      requestFailures.push(
+        `${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? 'unknown failure'}`,
+      )
+    })
+    page.on('response', response => {
+      if (response.status() < 400) {
+        return
+      }
+
+      responseFailures.push(`${response.status()} ${response.url()}`)
     })
 
-    await page.waitForSelector(MAP_STYLE_PREVIEW_READY_SELECTOR, {
-      timeout: PREVIEW_READY_TIMEOUT_MS,
-    })
+    try {
+      await page.goto(sourceUrl, {
+        waitUntil: 'load',
+        timeout: PREVIEW_NAVIGATION_TIMEOUT_MS,
+      })
+
+      await page.waitForSelector(MAP_STYLE_PREVIEW_READY_SELECTOR, {
+        timeout: PREVIEW_READY_TIMEOUT_MS,
+      })
+    } catch (error) {
+      const readyState = await page
+        .evaluate(() => {
+          const signal = document.querySelector('#map-style-preview-ready')
+
+          return {
+            dataReady:
+              signal instanceof HTMLElement ? (signal.dataset.ready ?? null) : null,
+            bodyClassName: document.body.className,
+            bodyChildCount: document.body.childElementCount,
+            title: document.title,
+            href: window.location.href,
+            appReady:
+              (window as Window & { __HYPE_MAP_STYLE_PREVIEW_READY__?: boolean })
+                .__HYPE_MAP_STYLE_PREVIEW_READY__ ?? false,
+          }
+        })
+        .catch(() => null)
+
+      console.error('[map:styles:preview] Failed while rendering map style preview', {
+        styleCode,
+        sourceUrl,
+        error:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+              }
+            : String(error),
+        readyState,
+        consoleMessages,
+        requestFailures,
+        responseFailures,
+      })
+
+      console.warn(
+        `[map:styles:preview] Falling back to a fixed settle delay for ${styleCode} (${PREVIEW_FALLBACK_SETTLE_TIMEOUT_MS}ms)`,
+      )
+      await page.waitForTimeout(PREVIEW_FALLBACK_SETTLE_TIMEOUT_MS)
+    }
 
     await page.screenshot({
       path: tempPath,
@@ -185,7 +295,11 @@ const renderMapStylePreview = async (
 
     return entry
   } finally {
-    await browser.close()
+    const pages = browser.contexts().flatMap(context => context.pages())
+    await Promise.all(pages.map(page => page.close().catch(() => undefined)))
+    if (shouldCloseBrowser) {
+      await browser.close()
+    }
     await server.dispose()
   }
 }
@@ -260,8 +374,10 @@ export const doesMapStylePreviewExistLocally = async (
 ): Promise<boolean> => {
   try {
     const asset = await getMapStyleAssetRecord(styleCode as MapStyleKey)
-    await access(getMapStylePreviewFilePath(styleCode, asset.hash))
-    return true
+    await access(getMapStylePreviewFilePath(styleCode))
+    const manifest = await readPreviewManifest()
+
+    return manifest[styleCode]?.hash === asset.hash
   } catch {
     return false
   }
@@ -278,19 +394,78 @@ export const generateAllMapStylePreviewsLocally = async (
   styleCodes: string[],
   options: RenderMapStylePreviewOptions = {},
 ): Promise<Record<string, PreviewManifestEntry>> => {
+  const force = options.force ?? false
+  const baseUrl =
+    options.baseUrl ??
+    process.env.MAP_STYLE_PREVIEW_BASE_URL ??
+    MAP_STYLE_PREVIEW_BASE_URL
+
   if (options.ensureArtifacts !== false) {
     await buildMapStyleArtifacts()
   }
 
-  await rm(MAP_STYLE_PREVIEW_DIR, { recursive: true, force: true })
+  if (force) {
+    await rm(MAP_STYLE_PREVIEW_DIR, { recursive: true, force: true })
+  }
 
+  const manifest = force ? {} : await readPreviewManifest()
   const previews: Record<string, PreviewManifestEntry> = {}
+  const server = await ensurePreviewServer(baseUrl)
+  const browser = await chromium.launch({
+    headless: true,
+  })
 
-  for (const styleCode of styleCodes) {
-    previews[styleCode] = await ensureMapStylePreviewGeneratedLocally(styleCode, {
-      ...options,
-      ensureArtifacts: false,
-    })
+  try {
+    for (const [index, styleCode] of styleCodes.entries()) {
+      const asset = await getMapStyleAssetRecord(styleCode as MapStyleKey)
+      const previewExists = await access(getMapStylePreviewFilePath(styleCode))
+        .then(() => true)
+        .catch(() => false)
+      const isCurrent =
+        !force && previewExists && manifest[styleCode]?.hash === asset.hash
+
+      options.onProgress?.({
+        styleCode,
+        index: index + 1,
+        total: styleCodes.length,
+        stage: 'started',
+      })
+
+      if (isCurrent) {
+        previews[styleCode] = {
+          fileName: `${styleCode}.png`,
+          publicPath: getMapStylePreviewLocalPath(styleCode),
+          objectKey: getMapStylePreviewObjectKey(styleCode, asset.hash),
+          publicUrl: `${baseUrl.replace(/\/$/, '')}${getMapStylePreviewLocalPath(styleCode)}`,
+          hash: asset.hash,
+          sourceUrl: buildPreviewUrl(baseUrl, styleCode),
+        }
+      } else {
+        previews[styleCode] = await ensureMapStylePreviewGeneratedLocally(styleCode, {
+          ...options,
+          browser,
+          manageServer: false,
+          ensureArtifacts: false,
+        })
+      }
+
+      manifest[styleCode] = {
+        hash: asset.hash,
+      }
+
+      options.onProgress?.({
+        styleCode,
+        index: index + 1,
+        total: styleCodes.length,
+        stage: 'completed',
+        entry: previews[styleCode],
+      })
+    }
+
+    await writePreviewManifest(manifest)
+  } finally {
+    await browser.close()
+    await server.dispose()
   }
 
   return previews
