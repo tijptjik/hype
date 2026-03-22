@@ -2,6 +2,8 @@
 // COMPONENTS
 import { Header as HeaderPrimitive } from './src'
 import HeaderBreadcrumbs from './src/components/HeaderBreadcrumbs.svelte'
+// BITS
+import { cx } from '$lib/bits/utils'
 // TYPES
 import type { HeaderProps } from './header.types'
 
@@ -11,6 +13,7 @@ let {
   hideTitle = false,
   hideDescription = false,
   icon: IconComponent,
+  iconHoverColor,
   href,
   crumbs = [],
   size = 'md',
@@ -38,6 +41,18 @@ const rootClass = $derived(
 )
 
 const resolvedStyle = $derived(style ?? undefined)
+const iconClass = $derived(
+  cx(
+    'bits-header__icon-wrap',
+    iconHoverColor &&
+      '[--bits-header-icon-hover-color:var(--bits-header-icon-hover-color-value)]',
+  ),
+)
+const iconStyle = $derived(
+  iconHoverColor
+    ? `--bits-header-icon-hover-color-value: ${iconHoverColor};`
+    : undefined,
+)
 </script>
 
 <HeaderPrimitive.Root bind:ref {id} class={rootClass} style={resolvedStyle}>
@@ -45,7 +60,8 @@ const resolvedStyle = $derived(style ?? undefined)
 
   {#if IconComponent}
     <HeaderPrimitive.Icon
-      class="bits-header__icon-wrap"
+      class={iconClass}
+      style={iconStyle}
       icon={IconComponent}
       {href}
       aria-hidden="true"

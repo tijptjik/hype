@@ -13,6 +13,7 @@ export interface HeaderProps {
   hideTitle?: boolean
   hideDescription?: boolean
   icon?: Component
+  iconHoverColor?: string
   href?: string
   crumbs?: HeaderCrumb[]
   size?: HeaderSize

@@ -286,6 +286,27 @@ export function useAdminHeaderModel(
     }
     return null
   }
+
+  function getHeaderIconHoverColor(
+    resourceType: FirstClassResource | false,
+  ): string | undefined {
+    switch (resourceType) {
+      case FirstClassResource.hub:
+        return 'var(--color-warning)'
+      case FirstClassResource.organisation:
+        return 'var(--color-primary)'
+      case FirstClassResource.project:
+        return 'var(--color-accent)'
+      case FirstClassResource.layer:
+        return 'var(--color-secondary)'
+      case FirstClassResource.feature:
+        return 'var(--color-primary)'
+      case FirstClassResource.task:
+        return 'var(--color-pending)'
+      default:
+        return undefined
+    }
+  }
   // ---
 
   /********************
@@ -346,6 +367,7 @@ export function useAdminHeaderModel(
     return getCachedHeaderTitle()
   })
   const headerIcon = $derived(headerCtrl.state.meta.icon)
+  const headerIconHoverColor = $derived(getHeaderIconHoverColor(headerResourceType))
   const formActions = $derived(headerCtrl.state.formActions)
   const syncCrumbs = $derived.by(() => getCachedHeaderCrumbs())
 
@@ -715,6 +737,7 @@ export function useAdminHeaderModel(
   const titleConfig = $derived.by(() => ({
     text: resolvedHeaderTitle,
     icon: (headerIcon ?? undefined) as Component | undefined,
+    iconHoverColor: headerIconHoverColor,
     href: headerHref,
     crumbs: syncCrumbs,
     menuAction: titleMenuAction,
