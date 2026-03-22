@@ -314,6 +314,7 @@ export const toProjectSubmittedFields = (
   if ('organisationId' in data) fields.push('organisationId')
   if ('code' in data) fields.push('code')
   if ('i18n' in data) fields.push('i18n')
+  if ('license' in data) fields.push('license')
   if ('capabilities' in data) fields.push('capabilities')
   if ('userRoles' in data) {
     fields.push('userRoles')
@@ -360,13 +361,9 @@ export const normalizeProjectI18nForFormInput = (
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
     description: locale?.description ?? '',
-    license: locale?.license ?? '',
-    attribution: locale?.attribution ?? '',
     nameGen: locale?.nameGen ?? false,
     nameShortGen: locale?.nameShortGen ?? false,
     descriptionGen: locale?.descriptionGen ?? false,
-    licenseGen: locale?.licenseGen ?? false,
-    attributionGen: locale?.attributionGen ?? false,
   })
 
   return {
