@@ -114,6 +114,19 @@ const projectCollectionWithRelations = {
   },
 }
 
+const projectListWithRelations = {
+  i18n: true,
+  mapStyleAssignment: {
+    with: {
+      mapStyle: {
+        with: {
+          i18n: true,
+        },
+      },
+    },
+  },
+}
+
 /**
  * Full relation graph for admin-oriented project reads.
  * Includes role assignments and local properties required by mutation flows.
@@ -146,6 +159,11 @@ const projectEntityWithRelations = {
       },
     },
   },
+  layers: {
+    with: {
+      i18n: true,
+    },
+  },
   image: true,
   publisher: true,
 }
@@ -154,7 +172,7 @@ type ProjectRelationsByProfile<P extends ProjectProfile> = P extends 'admin'
   ? typeof projectEntityWithRelations
   : P extends 'card' | 'detail'
     ? typeof projectCollectionWithRelations
-    : { i18n: true }
+    : typeof projectListWithRelations
 
 /**
  * Resolves the relation graph required for the requested project profile.
@@ -174,9 +192,7 @@ export const getProjectWithRelations = <P extends ProjectProfile>(
     return projectCollectionWithRelations as ProjectRelationsByProfile<P>
   }
 
-  return {
-    i18n: true,
-  } as ProjectRelationsByProfile<P>
+  return projectListWithRelations as ProjectRelationsByProfile<P>
 }
 
 /********************
@@ -189,6 +205,7 @@ type ProjectResponseRow = ProjectDB & {
   image?: ProjectCardDBRaw['image']
   mapStyleAssignment?: ProjectCardDBRaw['mapStyleAssignment']
   properties?: ProjectAdminDBRaw['properties']
+  layers?: ProjectAdminDBRaw['layers']
   publisher?: ProjectAdminDBRaw['publisher']
   userRoles?: ProjectAdminDBRaw['userRoles']
 }
@@ -246,6 +263,10 @@ const toProfileResponseShape = async (
           i18n: transformI18nSafely(value.i18n as never),
         })) || [],
     })),
+    layers: (row.layers ?? []).map(layer => ({
+      ...layer,
+      i18n: transformI18nSafely(layer.i18n as never),
+    })),
     image: row.image
       ? toImageEnvelope(
           row.image as Image,
@@ -254,10 +275,25 @@ const toProfileResponseShape = async (
           row.id,
         )
       : null,
-    mapStyle: row.mapStyleAssignment?.mapStyle
+    mapStyle: (
+      row.mapStyleAssignment as
+        | { mapStyle?: { i18n?: unknown[] } & Record<string, unknown> }
+        | undefined
+    )?.mapStyle
       ? {
-          ...row.mapStyleAssignment.mapStyle,
-          i18n: transformI18nSafely(row.mapStyleAssignment.mapStyle.i18n ?? [], null),
+          ...(
+            row.mapStyleAssignment as {
+              mapStyle: { i18n?: unknown[] } & Record<string, unknown>
+            }
+          ).mapStyle,
+          i18n: transformI18nSafely(
+            (
+              row.mapStyleAssignment as {
+                mapStyle: { i18n?: unknown[] } & Record<string, unknown>
+              }
+            ).mapStyle.i18n ?? [],
+            null,
+          ),
         }
       : null,
   }
