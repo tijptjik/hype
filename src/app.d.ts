@@ -87,6 +87,8 @@ declare global {
         PUBLIC_GIPHY_KEY: string
         PUBLIC_ORIGIN: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string
+        MAP_PREVIEW_REFRESH_TOKEN: string
+        MAP_PREVIEW_RENDER_TOKEN: string
       }
       context: ExecutionContext
       caches: CacheStorage & { default: Cache }

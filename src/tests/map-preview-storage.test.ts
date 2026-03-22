@@ -52,7 +52,7 @@ describe('preview storage helpers', () => {
     ).toBe('/mapPreviews/styles/hyper/abc123.png')
 
     expect(resolveMapStylePreviewUrl('local', 'hyper', 'abc123')).toBe(
-      '/api/mapPreviews/styles/hyper/asset?hash=abc123',
+      '/mapPreviews/styles/hyper.png',
     )
   })
 
