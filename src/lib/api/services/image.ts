@@ -43,7 +43,6 @@ import type {
   ImageContextEnvelope,
   ImageContextType,
   ImageDBFlat,
-  ImageNew,
   ImageProfile,
   SignData,
 } from '$lib/db/zod/schema/image.types'
@@ -486,7 +485,6 @@ export const updateImageForContext = async (args: {
     db,
     user,
     event.request,
-    { id } as QueryParams,
     payload,
     userRoles,
     id as Id,

@@ -7,6 +7,22 @@ export const toBooleanOrUndefined = (value: unknown): boolean | undefined => {
   return undefined
 }
 
+export function toBooleanOrNull(
+  value: unknown,
+  fallback: boolean | null,
+): boolean | null {
+  if (value === null) return null
+  if (typeof value === 'boolean') return value
+  if (value === 1 || value === '1' || value === 'true') return true
+  if (value === 0 || value === '0' || value === 'false') return false
+  return fallback
+}
+
+export function normalizeBoolean(value: unknown, fallback: boolean): boolean {
+  const normalized = toBooleanOrNull(value, fallback)
+  return normalized ?? fallback
+}
+
 export const toTriStateBooleanOrUndefined = (
   value: unknown,
 ): boolean | null | undefined => {
