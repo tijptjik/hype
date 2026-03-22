@@ -13,10 +13,13 @@ import {
   getI18n,
 } from '$lib/i18n'
 // LIB
-import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index'
-import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
+import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/index'
+import {
+  getOrganisation,
+  getOrganisationsWhichHaveLayers,
+} from '$lib/api/server/organisation.remote'
 import { getHub, getHubs } from '$lib/api/server/hub.remote'
-import { getProject, getProjects } from '$lib/api/server/project.remote'
+import { getProject, getProjectsWhichHaveLayers } from '$lib/api/server/project.remote'
 import { getLayer, getLayers } from '$lib/api/server/layer.remote'
 import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
 import { getProperties, getProperty } from '$lib/api/server/property.remote'
@@ -33,6 +36,7 @@ import {
   getFeatureIdsForProperties,
   sortProperties,
 } from '$lib/client/services/property'
+import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
@@ -52,7 +56,7 @@ import {
   type NewFeatureMode,
 } from '$lib/enums'
 // GUARDS
-import { isFeature, isTask } from '$lib/types'
+import { isTask } from '$lib/types'
 // TYPES
 import type {
   ActiveCollection,
@@ -75,7 +79,6 @@ import type {
   SessionUser,
   Task,
   ListResponse,
-  Ref,
   RemoteMap,
   RemoteListFn,
   RemoteGetFn,
@@ -264,6 +267,18 @@ export class AppCtx {
         isOpen: false,
         isOpenVisually: false,
       },
+      plan: {
+        isOpen: false,
+        isOpenVisually: false,
+      },
+      passport: {
+        isOpen: false,
+        isOpenVisually: false,
+      },
+      eventCompanion: {
+        isOpen: false,
+        isOpenVisually: false,
+      },
       settings: {
         isOpen: false,
         isOpenVisually: false,
@@ -365,8 +380,12 @@ export class AppCtx {
         hasName: null,
         hasContextualName: null,
         hasDescription: null,
-        hasAttribution: null,
-        hasLicense: null,
+        isAllRightsReserved: null,
+        isPublicDomain: null,
+        hasLicenseBy: null,
+        hasLicenseSa: null,
+        hasLicenseNc: null,
+        hasLicenseNd: null,
 
         // Translation related
         translationLocales: {
@@ -389,16 +408,6 @@ export class AppCtx {
           zhHant: null,
           zhHans: null,
         },
-        isAttributionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isLicenseTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
       },
       layer: {
         // Status related
@@ -409,6 +418,12 @@ export class AppCtx {
         hasName: null,
         hasContextualName: null,
         hasDescription: null,
+        isAllRightsReserved: null,
+        isPublicDomain: null,
+        hasLicenseBy: null,
+        hasLicenseSa: null,
+        hasLicenseNc: null,
+        hasLicenseNd: null,
 
         // Translation related
         translationLocales: {
@@ -449,6 +464,12 @@ export class AppCtx {
         hasTitle: null,
         hasDescription: null,
         hasDisplayAddress: null,
+        isAllRightsReserved: null,
+        isPublicDomain: null,
+        hasLicenseBy: null,
+        hasLicenseSa: null,
+        hasLicenseNc: null,
+        hasLicenseNd: null,
 
         // Translation related
         translationLocales: {
@@ -498,8 +519,8 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false,
-          zhHant: false,
-          zhHans: false,
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
@@ -588,19 +609,40 @@ export class AppCtx {
   constructor(queryClient: QueryClient, placeCtx: PlaceCtx, user: SessionUser | null) {
     this.queryClient = queryClient
     this.placeCtx = placeCtx
+    this.initializeNavigationFromUrl()
     this.setUser(user)
     this.initializeRemoteMap()
     this.initializeQueryMap()
     // Note: keydown handlers are managed dynamically by the root layout
   }
 
+  private initializeNavigationFromUrl = (): void => {
+    if (typeof window === 'undefined') return
+
+    const url = new URL(window.location.href)
+    const pathParts = url.pathname.split('/').filter(Boolean)
+    if (pathParts[0] !== 'admin') return
+
+    const resourcePath = pathParts[1]
+    const resourceRef = pathParts[2] ?? false
+    const resourceType =
+      Object.entries(ResourcePath).find(
+        ([_resource, path]) => path === resourcePath,
+      )?.[0] ?? false
+
+    this.state.nav.resourceType =
+      typeof resourceType === 'string' ? (resourceType as NavigableResource) : false
+    this.state.nav.resourceRef = typeof resourceRef === 'string' ? resourceRef : false
+    this.state.nav.facet = (url.hash.slice(1) as FacetType) || false
+  }
+
   private initializeRemoteMap = (): void => {
     this.remoteMap[FirstClassResource.organisation] = {
-      list: getOrganisations,
+      list: getOrganisationsWhichHaveLayers,
       get: getOrganisation,
     }
     this.remoteMap[FirstClassResource.project] = {
-      list: getProjects as unknown as RemoteListFn<unknown, unknown>,
+      list: getProjectsWhichHaveLayers as unknown as RemoteListFn<unknown, unknown>,
       get: getProject as unknown as RemoteGetFn<unknown, unknown>,
     }
     this.remoteMap[FirstClassResource.layer] = {
@@ -702,20 +744,17 @@ export class AppCtx {
   }
 
   initialFetch = async (): Promise<void> => {
-    // Fetch all resources in parallel without letting one failing query block app init.
-    const results = await Promise.allSettled([
-      // All resource types in parallel
+    // Bootstrap hierarchy first so layer defaults can be resolved before features load.
+    const hierarchyResults = await Promise.allSettled([
       this.refreshOrganisations(false),
       this.refreshProjects(false),
       this.refreshLayers(false),
       this.refreshProperties(false),
-      this.refreshFeatures(false),
-      this.refreshUserProfile(false),
       this.refreshUserFeatures(false),
-      this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
+      this.refreshUserProfile(false),
     ])
 
-    for (const result of results) {
+    for (const result of hierarchyResults) {
       if (result.status === 'rejected') {
         console.error(
           '[AppCtx][initialFetch] Resource bootstrap failed:',
@@ -723,6 +762,52 @@ export class AppCtx {
         )
       }
     }
+
+    this.applyInitialLayerPrisms()
+    await this.postLayerMutation(false)
+
+    const featureResults = await Promise.allSettled([
+      this.refreshFeatures(false),
+      this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
+    ])
+
+    for (const result of featureResults) {
+      if (result.status === 'rejected') {
+        console.error(
+          '[AppCtx][initialFetch] Resource bootstrap failed:',
+          result.reason,
+        )
+      }
+    }
+  }
+
+  private getCurrentHubId = (): Id | null => this.hub?.id ?? null
+
+  private getUserLayersForCurrentHub = (): UserLayer[] => {
+    const hubId = this.getCurrentHubId()
+    if (!hubId || !this.user || !('userLayers' in this.user)) return []
+    return ((this.user as CurrentUser).userLayers ?? []).filter(
+      layer => layer.hubId === hubId,
+    )
+  }
+
+  private getHubDefaultLayerIds = (): Id[] => {
+    const hubDefaults = this.hub?.layerDefaults ?? []
+    return hubDefaults
+      .filter(layerDefault => layerDefault.isDefaultVisible)
+      .map(layerDefault => layerDefault.layerId)
+      .filter(layerId => this.state.resources.layer.some(layer => layer.id === layerId))
+  }
+
+  private applyInitialLayerPrisms = (): void => {
+    const hubId = this.getCurrentHubId()
+    if (!hubId) return
+
+    const userLayerIds = this.getUserLayersForCurrentHub().map(layer => layer.layerId)
+    const nextLayerIds =
+      userLayerIds.length > 0 ? userLayerIds : this.getHubDefaultLayerIds()
+
+    this.state.prisms.layer = [...new Set(nextLayerIds)]
   }
 
   initStatsCache = (): void => {
@@ -751,52 +836,6 @@ export class AppCtx {
     return (
       typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
     )
-  }
-
-  // Helper method to build API URLs with filters
-  private buildApiUrl = (
-    resource: FirstClassResource,
-    ref?: Ref,
-    includePrisms: boolean = true,
-    includeFilters: boolean = true,
-  ): string => {
-    const path = ResourcePath[resource] + (ref ? `/${ref}` : '')
-    const params = new URLSearchParams()
-
-    // Add isArchived filter by default (except for properties which don't have these fields)
-    if (includeFilters) {
-      params.append('isArchived', 'false')
-      params.append('isPublished', 'true')
-    }
-
-    if (includePrisms) {
-      // Add prism filters based on resource hierarchy
-      if (resource !== FirstClassResource.organisation) {
-        this.state.prisms.organisation.forEach(org =>
-          params.append(FirstClassResource.organisation, org),
-        )
-      }
-
-      if (
-        resource !== FirstClassResource.organisation &&
-        resource !== FirstClassResource.project
-      ) {
-        this.state.prisms.project.forEach(proj =>
-          params.append(FirstClassResource.project, proj),
-        )
-      }
-
-      if (
-        resource === FirstClassResource.feature ||
-        resource === FirstClassResource.user
-      ) {
-        this.state.prisms.layer.forEach(layer =>
-          params.append(FirstClassResource.layer, layer),
-        )
-      }
-    }
-
-    return `/api/${path}?${params.toString()}`
   }
 
   organisationsQueryFn = async (): Promise<Organisation[]> => {
@@ -1263,6 +1302,43 @@ export class AppCtx {
     await this.togglePrism(FirstClassResource.project, id)
   }
 
+  getProjectDefaultVisibleLayerIds = (projectId: Id): Id[] =>
+    this.state.resources.layer
+      .filter(layer => layer.projectId === projectId && layer.isDefaultVisible)
+      .map(layer => layer.id)
+
+  isProjectReplaceState = (projectId: Id): boolean => {
+    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
+    if (defaultLayerIds.length === 0) return false
+
+    const activeLayerIds = this.state.prisms.layer.filter(layerId =>
+      this.state.resources.layer.some(
+        layer => layer.projectId === projectId && layer.id === layerId,
+      ),
+    )
+
+    if (activeLayerIds.length !== defaultLayerIds.length) return false
+
+    const defaultSet = new Set(defaultLayerIds)
+    return activeLayerIds.every(layerId => defaultSet.has(layerId))
+  }
+
+  addProjectDefaultLayers = async (projectId: Id): Promise<void> => {
+    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
+    if (defaultLayerIds.length === 0) return
+
+    this.state.prisms.layer = Array.from(
+      new Set([...this.state.prisms.layer, ...defaultLayerIds]),
+    )
+    await this.postLayerMutation(true)
+  }
+
+  replaceWithProjectDefaultLayers = async (projectId: Id): Promise<void> => {
+    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
+    this.state.prisms.layer = [...defaultLayerIds]
+    await this.postLayerMutation(true)
+  }
+
   toggleLayer = async (id: Id): Promise<void> => {
     await this.togglePrism(FirstClassResource.layer, id)
   }
@@ -1293,8 +1369,8 @@ export class AppCtx {
 
   refreshOrganisations = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.organisation = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.organisation)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.organisation)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.organisation)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.organisation)?.queryFn,
     })
     // Efficiently sync organization cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.organisation, this.state.resources.organisation)
@@ -1309,8 +1385,8 @@ export class AppCtx {
 
   refreshProjects = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.project = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.project)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.project)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.project)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.project)?.queryFn,
     })
     // Efficiently sync project cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.project, this.state.resources.project)
@@ -1326,8 +1402,8 @@ export class AppCtx {
 
   refreshLayers = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.layer = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.layer)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.layer)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.layer)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.layer)?.queryFn,
     })
     // Efficiently sync layer cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.layer, this.state.resources.layer)
@@ -1337,10 +1413,10 @@ export class AppCtx {
     await this.postLayerMutation(isCascading)
   }
 
-  refreshFeatures = async (isCascading: boolean = true): Promise<void> => {
+  refreshFeatures = async (_isCascading: boolean = true): Promise<void> => {
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.feature)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.feature)?.queryFn,
     })
     this.state.resources.feature = features
     this.syncCacheMap(this.cache.feature, features)
@@ -1359,10 +1435,10 @@ export class AppCtx {
     )
   }
 
-  refreshTasks = async (isCascading: boolean = true): Promise<void> => {
+  refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
     this.state.resources.task = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.task)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.task)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.task)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.task)?.queryFn,
     })
     // Efficiently sync task cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.task, this.state.resources.task)
@@ -1380,11 +1456,11 @@ export class AppCtx {
     this.cache.task.set(task.id, task)
   }
 
-  refreshHubs = async (isCascading: boolean = true): Promise<void> => {
+  refreshHubs = async (_isCascading: boolean = true): Promise<void> => {
     if (!this.isAdmin()) return
     this.state.resources.hub = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.hub)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.hub)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.hub)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.hub)?.queryFn,
     })
     // Efficiently sync hub cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.hub, this.state.resources.hub)
@@ -1392,20 +1468,20 @@ export class AppCtx {
     this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub)
   }
 
-  refreshProperties = async (isCascading: boolean = true): Promise<void> => {
+  refreshProperties = async (_isCascading: boolean = true): Promise<void> => {
     const properties = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.property)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.property)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.property)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.property)?.queryFn,
     })
     // Efficiently sync property cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.property, properties)
   }
 
-  refreshUserFeatures = async (isCascading: boolean = true): Promise<void> => {
+  refreshUserFeatures = async (_isCascading: boolean = true): Promise<void> => {
     this.state.userFeatures = await this.queryClient
       .fetchQuery({
-        queryKey: this.queryMap.get('userFeatures')!.queryKey(),
-        queryFn: this.queryMap.get('userFeatures')!.queryFn,
+        queryKey: this.queryMap.get('userFeatures')?.queryKey(),
+        queryFn: this.queryMap.get('userFeatures')?.queryFn,
       })
       .then(uf => ({
         wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
@@ -1416,10 +1492,10 @@ export class AppCtx {
     this.postUserFeaturesMutation()
   }
 
-  refreshUserProfile = async (isCascading: boolean = true): Promise<void> => {
+  refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
     const user = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.user)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.user)!.queryFn,
+      queryKey: this.queryMap.get(FirstClassResource.user)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.user)?.queryFn,
     })
     this.state.panels.profile.ctx!.userData = user
   }
@@ -1587,7 +1663,7 @@ export class AppCtx {
     // Remove filters for layers that are no longer active
     existingFilterLayerIds.forEach(layerId => {
       if (!currentLayerIds.has(layerId)) {
-        delete this.state.filters.feature.properties![layerId]
+        delete this.state.filters.feature.properties?.[layerId]
       }
     })
 
@@ -1607,11 +1683,7 @@ export class AppCtx {
   }
 
   postUserMutation = (): void => {
-    if (this.user && 'userLayers' in this.user) {
-      // Set default layers if user has userLayers
-      this.state.prisms.layer =
-        this.user.userLayers?.map((layer: UserLayer) => layer.layerId) ?? []
-    }
+    this.applyInitialLayerPrisms()
 
     // Set admin panel state based on user preferences
     if (this.isAdmin() && this.user && 'preferences' in this.user) {
@@ -1752,23 +1824,11 @@ export class AppCtx {
   textFilter = <
     T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection,
   >(
-    resource: FirstClassResource,
+    _resource: FirstClassResource,
     entity: T,
     query: string,
   ) => {
-    const localeKey = getLocaleKey()
-    const textObject = entity.i18n?.[localeKey] ?? entity.i18n?.en
-    const contributor = isFeature(entity) ? entity.contributor?.name : ''
-    if (!textObject) return false
-    return (
-      query === '' ||
-      textObject.name?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.title?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.description?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.displayAddress?.toLowerCase().includes(query.toLowerCase()) ||
-      contributor?.toLowerCase().includes(query.toLowerCase())
-    )
+    return matchesResourceTextQuery(entity, query, getLocaleKey())
   }
 
   // Filtered Helpers
@@ -2834,11 +2894,11 @@ export class AppCtx {
     const activeResourceType = this.getActiveResourceType()
     const resourceRef = this.getActiveResourceRef()
     if (typeof resourceRef === 'string') {
-      if (activeResourceType == FirstClassResource.organisation) {
+      if (activeResourceType === FirstClassResource.organisation) {
         return this.getOrganisationIdByCode(resourceRef as Code) ?? null
-      } else if (activeResourceType == FirstClassResource.project) {
+      } else if (activeResourceType === FirstClassResource.project) {
         return this.getProjectIdByCode(resourceRef as Code) ?? null
-      } else if (activeResourceType == FirstClassResource.hub) {
+      } else if (activeResourceType === FirstClassResource.hub) {
         return this.getHubIdByCode(resourceRef as Code) ?? null
       } else {
         return resourceRef
@@ -3288,36 +3348,84 @@ export class AppCtx {
   }
 
   getUserLayers = (): UserLayer[] => {
-    return (this.user as CurrentUser).userLayers
+    return this.getUserLayersForCurrentHub()
   }
 
   getUserLayerIds = (): string[] => {
-    return (this.user as CurrentUser).userLayers.map(
-      (layer: UserLayer) => layer.layerId,
-    )
+    return this.getUserLayersForCurrentHub().map((layer: UserLayer) => layer.layerId)
   }
 
   setUserLayer = (layerId: string, checked: boolean) => {
+    const hubId = this.getCurrentHubId()
+    const hubCode = this.hub?.code ?? null
+    if (!hubId && !hubCode) return
     const currentUserLayers = (this.user as CurrentUser).userLayers || []
-    if (checked) {
-      if (!currentUserLayers.some(ul => ul.layerId === layerId)) {
+    const currentHubLayers = currentUserLayers.filter(layer => layer.hubId === hubId)
+    const otherHubLayers = currentUserLayers.filter(layer => layer.hubId !== hubId)
+
+    if (hubId) {
+      if (checked) {
+        if (!currentHubLayers.some(ul => ul.layerId === layerId)) {
+          ;(this.user as CurrentUser).userLayers = [
+            ...otherHubLayers,
+            ...currentHubLayers,
+            {
+              userId: (this.user as CurrentUser).id,
+              hubId,
+              layerId,
+              isDefaultVisible: true,
+            },
+          ]
+        }
+      } else {
         ;(this.user as CurrentUser).userLayers = [
-          ...currentUserLayers,
-          {
-            userId: (this.user as CurrentUser).id,
-            layerId,
-            isVisibleOnLoad: true,
-          },
+          ...otherHubLayers,
+          ...currentHubLayers.filter(ul => ul.layerId !== layerId),
         ]
       }
-    } else {
-      ;(this.user as CurrentUser).userLayers = currentUserLayers.filter(
-        ul => ul.layerId !== layerId,
-      )
     }
+
+    const nextCurrentHubLayers = hubId
+      ? (this.user as CurrentUser).userLayers.filter(layer => layer.hubId === hubId)
+      : Array.from(
+          new Set(
+            checked
+              ? [...this.state.prisms.layer, layerId]
+              : this.state.prisms.layer.filter(id => id !== layerId),
+          ),
+        ).map(selectedLayerId => ({
+          userId: (this.user as CurrentUser).id,
+          hubId: null,
+          layerId: selectedLayerId,
+          isDefaultVisible: true,
+        }))
+
     debouncedUpdateUserLayers(
       (this.user as CurrentUser).id,
-      (this.user as CurrentUser).userLayers,
+      {
+        id: hubId,
+        code: hubCode,
+      },
+      hubId ? nextCurrentHubLayers : [],
+      {
+        onSuccess: layers => {
+          if (!layers.length) return
+
+          const resolvedHubId = layers[0]?.hubId
+          if (resolvedHubId && this.hub && !this.hub.id) {
+            this.hub = {
+              ...this.hub,
+              id: resolvedHubId,
+            }
+          }
+
+          const retainedLayers = ((this.user as CurrentUser).userLayers || []).filter(
+            layer => layer.hubId !== resolvedHubId,
+          )
+
+          ;(this.user as CurrentUser).userLayers = [...retainedLayers, ...layers]
+        },
+      },
     )
   }
 
@@ -3338,7 +3446,7 @@ export class AppCtx {
    * This forces fresh API calls for image data
    */
   clearFeatureCacheImages = (): void => {
-    for (const [featureId, feature] of this.cache.feature) {
+    for (const [_featureId, feature] of this.cache.feature) {
       if (feature && typeof feature === 'object' && 'images' in feature) {
         // Set images to undefined to force fresh API fetch
         ;(feature as any).images = undefined
@@ -3433,11 +3541,11 @@ export class AppCtx {
         ) || []
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties![layerId]) {
+    if (!this.state.filters.feature.properties?.[layerId]) {
       this.state.filters.feature.properties![layerId] = {}
     }
 
-    const layerFilters = this.state.filters.feature.properties![layerId]
+    const layerFilters = this.state.filters.feature.properties?.[layerId]
 
     // Initialize each classifier property with an empty array if not already set
     classifierProperties.forEach((property: Property) => {
@@ -3473,11 +3581,11 @@ export class AppCtx {
         ) || []
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties![layerId]) {
+    if (!this.state.filters.feature.properties?.[layerId]) {
       this.state.filters.feature.properties![layerId] = {}
     }
 
-    const layerFilters = this.state.filters.feature.properties![layerId]
+    const layerFilters = this.state.filters.feature.properties?.[layerId]
 
     // Initialize each range property using its min/max if not already set
     rangeProperties.forEach((property: Property) => {
