@@ -320,6 +320,7 @@ export function useAdminHeaderModel(
 
   // DERIVED :: HEADER CTRL / VIEW STATE
   const facetItems = $derived(headerCtrl.state.meta.facets)
+  const titleMenuMetaItems = $derived(headerCtrl.state.meta.titleMenuItems)
   const layoutMode = $derived(
     headerResourceType ? appCtx.state.ui.layoutMode[headerResourceType] : 'card',
   )
@@ -393,17 +394,18 @@ export function useAdminHeaderModel(
     isPublished ? m.published() : m.forms__unpublished(),
   )
   const titleMenuItems = $derived.by((): HeaderTitleMenuItemConfig[] => {
-    if (!showDeleteMenuAction) return []
+    const items = [...titleMenuMetaItems]
+    if (!showDeleteMenuAction) return items
 
-    return [
-      {
-        label: deleteMenuLabel,
-        onSelect: handleDeleteToggle,
-        icon: Trash2,
-        class: 'bits-pattern-header__title-menu-item--danger',
-        iconClass: 'bits-pattern-header__title-menu-item-icon',
-      },
-    ]
+    items.push({
+      label: deleteMenuLabel,
+      onSelect: handleDeleteToggle,
+      icon: Trash2,
+      class: 'bits-pattern-header__title-menu-item--danger',
+      iconClass: 'bits-pattern-header__title-menu-item-icon',
+    })
+
+    return items
   })
   // ---
   /********************
@@ -703,8 +705,10 @@ export function useAdminHeaderModel(
   })
 
   const titleMenuAction = $derived.by(() => ({
-    isVisible: showDeleteMenuAction,
-    ariaLabel: deleteMenuLabel,
+    isVisible: titleMenuItems.length > 0,
+    ariaLabel: resolvedHeaderTitle
+      ? `${resolvedHeaderTitle} actions`
+      : 'Header actions',
     items: titleMenuItems,
   }))
 

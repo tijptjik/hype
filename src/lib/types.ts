@@ -104,7 +104,10 @@ import type { Marker } from 'maplibre-gl'
 import type { Writable } from 'svelte/store'
 import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import type { HeaderLayoutRegionConfig } from './bits/patterns/layout/header/header.types'
+import type {
+  HeaderLayoutRegionConfig,
+  HeaderTitleMenuItemConfig,
+} from './bits/patterns/layout/header/header.types'
 
 type FieldComponentCtor = abstract new (...args: never[]) => unknown
 type LayerFormType = unknown
@@ -400,6 +403,7 @@ export type HeaderMetaState = {
   title: string
   icon: Component | null
   facets: HeaderFacetItem[]
+  titleMenuItems: HeaderTitleMenuItemConfig[]
 }
 
 export type HeaderFormActionsState = {

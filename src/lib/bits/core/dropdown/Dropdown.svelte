@@ -8,6 +8,7 @@ type DropdownItem = {
   icon?: Component | null
   class?: string
   iconClass?: string
+  disabled?: boolean
 }
 
 let {
@@ -52,6 +53,7 @@ let {
       {#each items as item, index (`${item.label}-${index}`)}
         <DropdownMenu.Item
           class={[itemClass, item.class].filter(Boolean).join(' ')}
+          disabled={item.disabled}
           onSelect={() => item.onSelect?.()}
         >
           {#if item.icon}

@@ -8,7 +8,10 @@ import type {
   HeaderFormActionsState,
   HeaderVisibilityOverrides,
 } from '$lib/types'
-import type { HeaderLayoutRegionConfig } from '$lib/bits/patterns/layout/header/header.types'
+import type {
+  HeaderLayoutRegionConfig,
+  HeaderTitleMenuItemConfig,
+} from '$lib/bits/patterns/layout/header/header.types'
 
 const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   dirty: false,
@@ -80,6 +83,7 @@ export class HeaderCtrl {
       title: '',
       icon: null,
       facets: [],
+      titleMenuItems: [],
     },
     formActions: null,
     layout: {
@@ -133,13 +137,30 @@ export class HeaderCtrl {
     facets:
       | Map<
           FacetType,
-          string | { label: string; icon?: Component | null; hasIssues?: boolean }
+          | string
+          | {
+              label: string
+              icon?: Component | null
+              hasIssues?: boolean
+              disabled?: boolean
+            }
         >
       | HeaderFacetItem[],
   ): void {
     const nextFacets = this.normalizeFacetItems(facets)
     if (untrack(() => isSameFacetItems(this.state.meta.facets, nextFacets))) return
     this.state.meta.facets = nextFacets
+  }
+
+  /**
+   * Set custom title-menu items supplied by the current route.
+   * @param items - Menu items rendered ahead of shared header actions.
+   * @returns void
+   */
+  setTitleMenuItems(items: HeaderTitleMenuItemConfig[]): void {
+    if (untrack(() => isSameTitleMenuItems(this.state.meta.titleMenuItems, items)))
+      return
+    this.state.meta.titleMenuItems = [...items]
   }
 
   /**
@@ -190,7 +211,13 @@ export class HeaderCtrl {
     icon: Component,
     facets: Map<
       FacetType,
-      string | { label: string; icon?: Component | null; hasIssues?: boolean }
+      | string
+      | {
+          label: string
+          icon?: Component | null
+          hasIssues?: boolean
+          disabled?: boolean
+        }
     >,
   ): void {
     this.applyEntityMeta(title, icon, facets)
@@ -208,6 +235,7 @@ export class HeaderCtrl {
     this.state.meta.title = ''
     this.state.meta.icon = null
     this.state.meta.facets = []
+    this.state.meta.titleMenuItems = []
   }
 
   /**
@@ -341,13 +369,15 @@ export class HeaderCtrl {
         () =>
           this.state.meta.title === title &&
           this.state.meta.icon === icon &&
-          this.state.meta.facets.length === 0,
+          this.state.meta.facets.length === 0 &&
+          this.state.meta.titleMenuItems.length === 0,
       )
     )
       return
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.facets = []
+    this.state.meta.titleMenuItems = []
   }
 
   /**
@@ -362,7 +392,13 @@ export class HeaderCtrl {
     icon: Component,
     facets: Map<
       FacetType,
-      string | { label: string; icon?: Component | null; hasIssues?: boolean }
+      | string
+      | {
+          label: string
+          icon?: Component | null
+          hasIssues?: boolean
+          disabled?: boolean
+        }
     >,
   ): void {
     const nextFacets = this.normalizeFacetItems(facets)
@@ -379,6 +415,7 @@ export class HeaderCtrl {
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.facets = nextFacets
+    this.state.meta.titleMenuItems = []
   }
 
   /**
@@ -390,7 +427,13 @@ export class HeaderCtrl {
     facets:
       | Map<
           FacetType,
-          string | { label: string; icon?: Component | null; hasIssues?: boolean }
+          | string
+          | {
+              label: string
+              icon?: Component | null
+              hasIssues?: boolean
+              disabled?: boolean
+            }
         >
       | HeaderFacetItem[],
   ): HeaderFacetItem[] {
@@ -429,16 +472,18 @@ export class HeaderCtrl {
   }
 }
 
-function shallowEqualRecord(
-  left: Record<string, unknown>,
-  right: Record<string, unknown>,
-): boolean {
+function shallowEqualRecord(left: object, right: object): boolean {
   const leftKeys = Object.keys(left)
   const rightKeys = Object.keys(right)
 
   if (leftKeys.length !== rightKeys.length) return false
 
-  return leftKeys.every(key => isComparableValueEqual(left[key], right[key]))
+  return leftKeys.every(key =>
+    isComparableValueEqual(
+      (left as Record<string, unknown>)[key],
+      (right as Record<string, unknown>)[key],
+    ),
+  )
 }
 
 function isComparableValueEqual(left: unknown, right: unknown): boolean {
@@ -500,6 +545,25 @@ function isSameLayoutRegionConfig(
     left.height === right.height &&
     shallowEqualRecord(left.props ?? {}, right.props ?? {})
   )
+}
+
+function isSameTitleMenuItems(
+  left: HeaderTitleMenuItemConfig[],
+  right: HeaderTitleMenuItemConfig[],
+): boolean {
+  if (left.length !== right.length) return false
+
+  return left.every((item, index) => {
+    const next = right[index]
+    return (
+      item?.label === next?.label &&
+      item?.onSelect === next?.onSelect &&
+      item?.icon === next?.icon &&
+      item?.class === next?.class &&
+      item?.iconClass === next?.iconClass &&
+      item?.disabled === next?.disabled
+    )
+  })
 }
 
 export const HEADER_CTRL_KEY = Symbol('headerCtrl')

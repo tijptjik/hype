@@ -41,6 +41,10 @@ import {
   updateFormData,
   updateUserRoleSelection,
 } from '$lib/client/services/form'
+import {
+  createMapPreviewTitleMenuItem,
+  refreshMapPreview,
+} from '$lib/client/services/map'
 import { getNameForToast } from '$lib/client/services/resource'
 import {
   getCapabilityKeysFromDefinitions,
@@ -152,7 +156,6 @@ import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
 import Blend from 'virtual:icons/lucide/blend'
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
-import RefreshCwIcon from 'virtual:icons/lucide/refresh-cw'
 import Type from 'virtual:icons/lucide/type'
 // ENUMS
 import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
@@ -1620,26 +1623,18 @@ const canEditImagePresentationMode = $derived(
 const canEditImageDropzone = $derived(
   canEditProject && isCurrentRefLoaded && !optimisticProjectData?.isArchived,
 )
-const projectImageHeaderActions = $derived.by(() => {
-  if (!activeProjectData?.id) {
-    return []
-  }
-
-  return [
-    {
-      key: 'map-preview',
-      text: isRefreshingMapPreview ? 'Rendering...' : 'Map Preview',
-      iconComponent: RefreshCwIcon,
-      style: 'ghost' as const,
-      color: 'light' as const,
-      size: 'sm' as const,
-      disabled: isRefreshingMapPreview,
-      onClick: () => {
-        void refreshProjectMapPreview()
-      },
-    },
-  ]
-})
+const projectTitleMenuItems = $derived.by(() =>
+  activeProjectData?.id
+    ? [
+        createMapPreviewTitleMenuItem({
+          isRefreshing: isRefreshingMapPreview,
+          onSelect: () => {
+            void refreshProjectMapPreview()
+          },
+        }),
+      ]
+    : [],
+)
 const canSetParentOrganisation = $derived.by(() => {
   const projectData = optimisticProjectData
   return canSetProjectParentOrganisation({
@@ -2191,41 +2186,14 @@ function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
 }
 
 async function refreshProjectMapPreview(): Promise<void> {
-  const projectId = activeProjectData?.id
-
-  if (!projectId || isRefreshingMapPreview) {
-    return
-  }
-
-  isRefreshingMapPreview = true
-
-  try {
-    const response = await fetch(`/api/mapPreviews/projects/${projectId}/refresh`, {
-      method: 'POST',
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to refresh project map preview (${response.status})`)
-    }
-
-    const result = (await response.json()) as {
-      mode: 'enqueue' | 'local-generate'
-      assetUrl: string
-    }
-
-    if (result.mode === 'local-generate' && typeof window !== 'undefined') {
-      window.open(`${result.assetUrl}?t=${Date.now()}`, '_blank', 'noopener,noreferrer')
-      toast.success('Map preview regenerated')
-      return
-    }
-
-    toast.success('Map preview queued for regeneration')
-  } catch (error) {
-    console.error('Failed to refresh project map preview', error)
-    toast.error(m.long_crazy_peacock_care())
-  } finally {
-    isRefreshingMapPreview = false
-  }
+  await refreshMapPreview({
+    kind: 'projects',
+    id: activeProjectData?.id,
+    isRefreshing: isRefreshingMapPreview,
+    setRefreshing: next => {
+      isRefreshingMapPreview = next
+    },
+  })
 }
 
 // § Effects
@@ -2250,6 +2218,7 @@ $effect(() => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
       settledProjectRef = null
+      isRefreshingMapPreview = false
       fieldRemoveMode = false
       showDisabledFields = false
       selectedUsersById = {}
@@ -2310,9 +2279,15 @@ $effect(() => {
   if (Array.isArray(displayFacets)) {
     headerCtrl.setHeaderForEntity(title, ProjectIcon, new Map())
     headerCtrl.setFacets(displayFacets)
+    headerCtrl.setTitleMenuItems(projectTitleMenuItems)
     return
   }
   headerCtrl.setHeaderForEntity(title, ProjectIcon, displayFacets)
+  headerCtrl.setTitleMenuItems(projectTitleMenuItems)
+})
+
+$effect(() => {
+  headerCtrl.setTitleMenuItems(projectTitleMenuItems)
 })
 
 $effect(() => {
@@ -2782,7 +2757,6 @@ $effect(() => {
       entityId={activeProjectData?.id}
       {imageProviderProps}
       currentImage={activeProjectImage}
-      headerActions={projectImageHeaderActions}
       ctx={activeProjectData?.id
         ? {
             ctxType: ImageContextResource.project,

@@ -38,6 +38,7 @@ export interface HeaderTitleMenuItemConfig {
   icon?: Component | null
   class?: string
   iconClass?: string
+  disabled?: boolean
 }
 
 export interface HeaderTitleMenuActionConfig {

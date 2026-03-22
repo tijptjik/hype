@@ -27,6 +27,10 @@ import {
   updateFormData,
 } from '$lib/client/services/form'
 import {
+  createMapPreviewTitleMenuItem,
+  refreshMapPreview,
+} from '$lib/client/services/map'
+import {
   getCurrentLayerFormData,
   getLayerSubmitUpdates,
   mergeProjectPropertiesIntoLayerForm as applyProjectPropertiesToLayerForm,
@@ -229,6 +233,7 @@ let hasAutoEnteredEditForNew = $state(false)
 let lastMergedProjectId = $state<string | null>(null)
 let prefetchedProjectPropertiesByProjectId = $state<Record<string, Property[]>>({})
 let settledLayerRef = $state<string | null>(null)
+let isRefreshingMapPreview = $state(false)
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
   canPublish: true,
@@ -304,6 +309,18 @@ function resolveKnownProjectIdForLayerRef(ref: string): string {
 
 const isCoreFacet = $derived(activeFacet === 'core')
 const isFieldsFacet = $derived(activeFacet === 'fields')
+const layerTitleMenuItems = $derived.by(() =>
+  layer?.data?.id
+    ? [
+        createMapPreviewTitleMenuItem({
+          isRefreshing: isRefreshingMapPreview,
+          onSelect: () => {
+            void refreshLayerMapPreview()
+          },
+        }),
+      ]
+    : [],
+)
 
 const layerFacetOrder = $derived.by(
   () =>
@@ -777,6 +794,17 @@ async function refreshLayer(refOverride?: string): Promise<LayerGetState> {
   return nextLayer
 }
 
+async function refreshLayerMapPreview(): Promise<void> {
+  await refreshMapPreview({
+    kind: 'layers',
+    id: layer?.data?.id,
+    isRefreshing: isRefreshingMapPreview,
+    setRefreshing: next => {
+      isRefreshingMapPreview = next
+    },
+  })
+}
+
 async function handleLayerStateToggle({
   field,
   successWhenTrue,
@@ -903,6 +931,7 @@ $effect(() => {
       lastMergedProjectId = null
       prefetchedProjectPropertiesByProjectId = {}
       settledLayerRef = null
+      isRefreshingMapPreview = false
     },
     setFacetForRef: nextRef => {
       untrack(() => {
@@ -971,9 +1000,15 @@ $effect(() => {
   if (Array.isArray(displayFacets)) {
     headerCtrl.setHeaderForEntity(title, LayerIcon, new Map())
     headerCtrl.setFacets(displayFacets)
+    headerCtrl.setTitleMenuItems(layerTitleMenuItems)
     return
   }
   headerCtrl.setHeaderForEntity(title, LayerIcon, displayFacets)
+  headerCtrl.setTitleMenuItems(layerTitleMenuItems)
+})
+
+$effect(() => {
+  headerCtrl.setTitleMenuItems(layerTitleMenuItems)
 })
 
 // Submit issue routing
