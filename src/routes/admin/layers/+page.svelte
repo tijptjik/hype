@@ -1,7 +1,5 @@
 <script lang="ts">
 import { page } from '$app/state'
-// I18N
-import { getLocaleKey } from '$lib/i18n'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -13,7 +11,6 @@ import {
   createToggleFilter,
   createTranslationFilter,
 } from '$lib/client/services/filters'
-import Image from '$lib/components/common/Image.svelte'
 // BITS PATTERNS
 import { IndexCard, ResourceControlBar, ResourceIndex } from '$lib/bits'
 // ENUMS
@@ -199,21 +196,13 @@ $effect(() => {
 
 <ResourceIndex resource={FirstClassResource.layer} {entities}>
   {#snippet card(entity: Layer)}
-    {@const cardModel = createAdminIndexCardModel({
-      adminCtx,
-      entity,
-      keyMap,
-      search: page.url.search,
-    })}
-    <IndexCard {...cardModel}>
-      {#snippet header()}
-        <Image
-          src="https://placehold.co/600x400/3c1535/CB37C1?font=source-sans-pro&text={entity
-            .i18n?.[getLocaleKey()]?.name}"
-          alt={entity.i18n?.[getLocaleKey()]?.name || ''}
-          layout="cover"
-        />
-      {/snippet}
-    </IndexCard>
+    <IndexCard
+      {...createAdminIndexCardModel({
+        adminCtx,
+        entity,
+        keyMap,
+        search: page.url.search,
+      })}
+    />
   {/snippet}
 </ResourceIndex>
