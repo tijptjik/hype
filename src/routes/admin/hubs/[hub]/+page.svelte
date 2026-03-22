@@ -12,8 +12,10 @@ import {
   addUserRoleSelection,
   applyChangedRelationField,
   captureHeaderTransitionSnapshot,
+  createFacetNavActionBuilder,
   createResourceEditorPage,
   createResourceFormConfig,
+  focusFacetFromHash,
   guardRefDesync,
   getUserRoleHiddenInputAttrs,
   getRoleFieldNameByUserId,
@@ -32,6 +34,7 @@ import {
 } from '$lib/client/services/form'
 import {
   getHubOrganisationHiddenInputAttrs,
+  getHubLayerDefaultHiddenInputAttrs,
   getHubSubmitUpdates,
   overrideHubEntityBoolean,
   overrideHubListItemBoolean,
@@ -75,13 +78,14 @@ import {
 import { toHubAuthActor, resolveHubActionPermissions } from '$lib/api/services/authz'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
 // SCHEMA
-import { HubPreflightFormData } from '$lib/db/zod'
+import { HubPreflightFormData } from '$lib/db/zod/schema/hub'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // BITS COMPONENTS
 import {
   EntityImage,
   FormFieldsSection,
+  FormHubLayersSection,
   FormOrganisationsSection,
   FormHubSpecifiersFields,
   FormI18nDescriptorFields,
@@ -94,7 +98,12 @@ import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
 // NAVIGATION
-import { getAdminFacetTabsForResource, navigateOnAdmin } from '$lib/navigation'
+import {
+  getAdminFacetOrderForResource,
+  getAdminFacetTabsForResource,
+  navigateOnAdmin,
+} from '$lib/navigation'
+import type { HubFacet } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
@@ -204,6 +213,7 @@ const commitSettledHubState = (value: HubGetState): void => {
 // § Derived State - Flags
 
 const isCoreFacet = $derived(activeFacet === 'core')
+const isLayersFacet = $derived(activeFacet === 'layers')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
@@ -233,7 +243,10 @@ const configuredHubForm = configureForm<any>(() => ({
 
     const baselineFormInput = toHubFormInput(committedHub?.data)
     const currentFormSnapshot = formCtx.form.fields.value() as {
-      data?: { properties?: Array<Record<string, unknown>> }
+      data?: {
+        properties?: Array<Record<string, unknown>>
+        layerDefaults?: Array<Record<string, unknown>>
+      }
     }
 
     applyChangedRelationField({
@@ -251,6 +264,37 @@ const configuredHubForm = configureForm<any>(() => ({
       toComparableEffective: value => value,
       toComparableBaseline: value =>
         normalizePropertiesForSubmit(value as Array<Record<string, unknown>>),
+      toSignature: toStableSignature,
+    })
+
+    applyChangedRelationField({
+      data: submittedPayload.data,
+      key: 'layerDefaults',
+      submittedValue: submittedPayload.data.layerDefaults,
+      currentValue: currentFormSnapshot.data?.layerDefaults,
+      baselineValue: baselineFormInput.data?.layerDefaults ?? [],
+      toEffective: ({ submittedValue, currentValue }) => {
+        const raw =
+          submittedValue ?? currentValue ?? baselineFormInput.data?.layerDefaults ?? []
+        if (!Array.isArray(raw)) return []
+        return raw
+          .map(item => ({
+            hubId: typeof item?.hubId === 'string' ? item.hubId : '',
+            layerId: typeof item?.layerId === 'string' ? item.layerId : '',
+            isDefaultVisible: Boolean(item?.isDefaultVisible),
+          }))
+          .filter(item => item.hubId && item.layerId)
+      },
+      toComparableEffective: value =>
+        (Array.isArray(value) ? value : []).map(item => ({
+          layerId: item.layerId,
+          isDefaultVisible: Boolean(item.isDefaultVisible),
+        })),
+      toComparableBaseline: value =>
+        (Array.isArray(value) ? value : []).map(item => ({
+          layerId: item.layerId,
+          isDefaultVisible: Boolean(item.isDefaultVisible),
+        })),
       toSignature: toStableSignature,
     })
 
@@ -313,6 +357,30 @@ const userRoleSectionIssues = $derived.by((): string[] => {
       if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
       const path = (issue as { path?: unknown }).path
       return Array.isArray(path) && path[0] === 'data' && path[1] === 'userRoles'
+    })
+    .map(toIssueMessage)
+    .filter((message: string | null): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
+
+const organisationSectionIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'organisations'
+    })
+    .map(toIssueMessage)
+    .filter((message: string | null): message is string => Boolean(message))
+  return Array.from(new Set(messages))
+})
+
+const hubLayerSectionIssues = $derived.by((): string[] => {
+  const messages = visibleAllIssues
+    .filter(issue => {
+      if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+      const path = (issue as { path?: unknown }).path
+      return Array.isArray(path) && path[0] === 'data' && path[1] === 'layerDefaults'
     })
     .map(toIssueMessage)
     .filter((message: string | null): message is string => Boolean(message))
@@ -599,11 +667,28 @@ const formOrganisationValues = $derived(
     isHubExclusive: boolean
   }>,
 )
+const formLayerDefaultValues = $derived(
+  (formCtx.form.fields.value().data?.layerDefaults ?? []) as Array<{
+    hubId: string
+    layerId: string
+    isDefaultVisible: boolean
+  }>,
+)
 const organisationResolverForm = $derived(
   formCtx.form as unknown as HubOrganisationFieldNameResolverForm,
 )
 const hiddenOrganisationInputAttrs = $derived(
   getHubOrganisationHiddenInputAttrs(organisationResolverForm, formOrganisationValues),
+)
+const hiddenLayerDefaultInputAttrs = $derived(
+  getHubLayerDefaultHiddenInputAttrs(
+    formCtx.form as any,
+    formLayerDefaultValues.map(item => ({
+      hubId: item.hubId,
+      layerId: item.layerId,
+      isDefaultVisible: item.isDefaultVisible,
+    })),
+  ),
 )
 
 const hubOrganisations = $derived.by(() => {
@@ -635,6 +720,38 @@ const hubOrganisations = $derived.by(() => {
       },
     ]
   }) as Array<Record<string, unknown>>
+})
+
+const hubLayerItems = $derived.by(() => {
+  const localeKey = getLocaleKey()
+  const selectedOrganisationIds = new Set(
+    formOrganisationValues.map(item => item.organisationId),
+  )
+  const defaultByLayerId = new Map(
+    formLayerDefaultValues.map(item => [item.layerId, item.isDefaultVisible]),
+  )
+
+  return adminCtx.appCtx.state.resources.layer
+    .filter(
+      layer => !layer.isArchived && selectedOrganisationIds.has(layer.organisationId),
+    )
+    .map(layer => {
+      const project = adminCtx.appCtx.getResourceByIdSync(
+        FirstClassResource.project,
+        layer.projectId,
+      ) as any
+      return {
+        id: layer.id,
+        projectNameShort: project?.i18n?.[localeKey]?.nameShort ?? project?.code ?? '-',
+        layerName: layer.i18n?.[localeKey]?.name ?? layer.id,
+        isDefaultVisible: Boolean(defaultByLayerId.get(layer.id)),
+      }
+    })
+    .sort((left, right) =>
+      `${left.projectNameShort} ${left.layerName}`.localeCompare(
+        `${right.projectNameShort} ${right.layerName}`,
+      ),
+    )
 })
 
 // IMAGE
@@ -795,6 +912,16 @@ function onRemoveOrganisation(organisationId: string): void {
     data.organisations = (data.organisations ?? []).filter(
       (item: any) => item.organisationId !== organisationId,
     )
+    const remainingOrganisationIds = new Set(
+      data.organisations.map((item: any) => item.organisationId),
+    )
+    data.layerDefaults = (data.layerDefaults ?? []).filter((item: any) => {
+      const layer = adminCtx.appCtx.getResourceByIdSync(
+        FirstClassResource.layer,
+        item.layerId,
+      ) as any
+      return layer ? remainingOrganisationIds.has(layer.organisationId) : false
+    })
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -824,6 +951,52 @@ function onToggleHubExclusive(organisationId: string, nextValue: boolean): void 
   })
   revalidateAfterProgrammaticChange()
 }
+
+function onToggleLayerDefault(layerId: string, nextValue: boolean): void {
+  updateFormData(formCtx.form as any, (data: any) => {
+    const currentHubId = hub?.data?.id ?? committedHub?.data?.id
+    if (!currentHubId) return data
+
+    const existing = data.layerDefaults ?? []
+    const index = existing.findIndex((item: any) => item.layerId === layerId)
+
+    if (index === -1) {
+      data.layerDefaults = [
+        ...existing,
+        {
+          hubId: currentHubId,
+          layerId,
+          isDefaultVisible: nextValue,
+        },
+      ]
+      return data
+    }
+
+    data.layerDefaults = existing.map((item: any) =>
+      item.layerId === layerId
+        ? { ...item, hubId: currentHubId, isDefaultVisible: nextValue }
+        : item,
+    )
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+const hubFacetOrder = $derived.by(
+  () =>
+    getAdminFacetOrderForResource(
+      FirstClassResource.hub,
+      resolvedFacetTabs,
+    ) as HubFacet[],
+)
+
+const buildFacetNavAction = createFacetNavActionBuilder<HubFacet>({
+  resourceType: FirstClassResource.hub,
+  getFacetOrder: () => hubFacetOrder,
+  getActiveFacet: () => activeFacet as HubFacet,
+  navigateToFacet: facet =>
+    navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, facet),
+})
 
 async function onSearchOrganisations(query: string): Promise<any[]> {
   if (Array.isArray(allowedOrganisationIds) && allowedOrganisationIds.length === 0) {
@@ -1012,6 +1185,12 @@ $effect(() => {
 })
 
 $effect(() => {
+  activeFacet
+  contentsElement
+  focusFacetFromHash(contentsElement, activeFacet)
+})
+
+$effect(() => {
   const title =
     (isNewHubRef ? `${NEW_TITLE} ${m.hub__title()}` : undefined) ??
     hub?.data?.i18n?.[getLocale()]?.name ??
@@ -1137,9 +1316,12 @@ $effect(() => {
     attrs={formCtx.attributes}
     isReady={Boolean(formCtx.form?.fields && (hub?.data || isNewHubRef))}
   >
-    <Main.Section
+    <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('core', 'previous')}
+      nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormI18nSection
@@ -1194,6 +1376,7 @@ $effect(() => {
           <FormOrganisationsSection
             title={m.maps__organisations()}
             subtitle={m.hub__organisations_note()}
+            issues={organisationSectionIssues}
             organisations={hubOrganisations as any}
             selections={formOrganisationValues}
             {hiddenOrganisationInputAttrs}
@@ -1218,12 +1401,36 @@ $effect(() => {
           />
         {/snippet}
       </GridSpacer>
-    </Main.Section>
+    </Main.Facet>
 
-    <Main.Section
+    <Main.Facet
+      isVisible={isLayersFacet}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('layers', 'previous')}
+      nextAction={buildFacetNavAction('layers', 'next')}
+      attrs={{ 'data-facet-id': 'layers' }}
+    >
+      <FormHubLayersSection
+        title={m.maps__layers()}
+        subtitle={m.admin__forms_hub_layers_subtitle()}
+        localeKey={getLocaleKey()}
+        items={hubLayerItems}
+        issues={hubLayerSectionIssues}
+        {hiddenLayerDefaultInputAttrs}
+        {isEditing}
+        isSubmitting={formCtx.submitting}
+        onToggleDefault={onToggleLayerDefault}
+      />
+    </Main.Facet>
+
+    <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
+      fillHeight={true}
       class="bits-theme flex gap-4 min-h-0 flex-col"
+      previousAction={buildFacetNavAction('fields', 'previous')}
+      nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormFieldsSection
@@ -1272,12 +1479,16 @@ $effect(() => {
             resolveSourceTag: resolveHubPropertyTypeTag,
           }}
       />
-    </Main.Section>
+    </Main.Facet>
   </Main.Form>
 
-  <Main.Section
+  <Main.Facet
     isVisible={isImagesFacet}
     transition="fade"
+    fillHeight={true}
+    navMode="footer"
+    previousAction={buildFacetNavAction('images', 'previous')}
+    nextAction={buildFacetNavAction('images', 'next')}
     attrs={{ 'data-facet-id': 'images' }}
   >
     <EntityImage
@@ -1295,5 +1506,5 @@ $effect(() => {
       canEditDropzone={canEditImageDropzone}
       {onPresentationModeCommitted}
     />
-  </Main.Section>
+  </Main.Facet>
 </Main.Root>
