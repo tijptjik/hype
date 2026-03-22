@@ -60,6 +60,44 @@ import type {
   UserContributedFeature,
 } from '$lib/db/zod/schema/feature.types'
 
+const requiredLocaleKeys = supportedLocales.map(locale =>
+  toLocaleKey(locale),
+) as LocaleKey[]
+
+const stripFeaturePropertyI18n = <T extends { properties?: unknown }>(input: T): T => ({
+  ...input,
+  properties: Array.isArray(input.properties)
+    ? input.properties.map(property =>
+        property && typeof property === 'object'
+          ? {
+              ...property,
+              i18n: null,
+            }
+          : property,
+      )
+    : input.properties,
+})
+
+function parseFeatureProfileWithFallback<T>(
+  schema: {
+    parse: (input: unknown) => T
+    safeParse: (input: unknown) => { success: boolean }
+  },
+  input: unknown,
+  profile: FeatureProfile,
+): T {
+  const parsed = schema.safeParse(input)
+  if (parsed.success) {
+    return schema.parse(input)
+  }
+
+  console.warn('Feature profile parse fallback applied', {
+    profile,
+  })
+
+  return schema.parse(stripFeaturePropertyI18n(input as { properties?: unknown }))
+}
+
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
@@ -248,6 +286,10 @@ const toPropertyShape = (properties: FeatureResponseRow['properties']) =>
       if (!property.property?.isTranslatable) return null
       const transformed = transformI18nSafely(property.i18n as never)
       if (!transformed) return null
+      const hasAllLocales = requiredLocaleKeys.every(
+        localeKey => transformed[localeKey],
+      )
+      if (!hasAllLocales) return null
       const hasValue = Object.values(transformed).some(entry => {
         const value =
           entry && typeof entry === 'object' && 'value' in entry
@@ -341,8 +383,10 @@ const toProfileResponseShape = async (
         ).length ??
         0,
     }
-    return FeatureListProfileAPI.parse(
+    return parseFeatureProfileWithFallback(
+      FeatureListProfileAPI,
       listData,
+      profile,
     ) as FeatureEntityByProfile<FeatureProfile>
   }
 
@@ -352,18 +396,22 @@ const toProfileResponseShape = async (
       row.properties,
       row.layer,
     )
-    return FeatureCardProfileAPI.parse({
-      ...base,
-      properties: toPropertyShape(normalizedProperties),
-      image: imageState,
-      imageCount: row.imageCount ?? row.images?.length ?? 0,
-      imagePublishedCount:
-        row.imagePublishedCount ??
-        (row.images as Array<{ isPublished?: boolean }> | undefined)?.filter(
-          imageRow => imageRow.isPublished,
-        ).length ??
-        0,
-    }) as FeatureEntityByProfile<FeatureProfile>
+    return parseFeatureProfileWithFallback(
+      FeatureCardProfileAPI,
+      {
+        ...base,
+        properties: toPropertyShape(normalizedProperties),
+        image: imageState,
+        imageCount: row.imageCount ?? row.images?.length ?? 0,
+        imagePublishedCount:
+          row.imagePublishedCount ??
+          (row.images as Array<{ isPublished?: boolean }> | undefined)?.filter(
+            imageRow => imageRow.isPublished,
+          ).length ??
+          0,
+      },
+      profile,
+    ) as FeatureEntityByProfile<FeatureProfile>
   }
 
   if (profile === 'detail') {
@@ -378,19 +426,23 @@ const toProfileResponseShape = async (
       'detail',
       { includeAll: true, filterUnpublished: false },
     ) as { image: unknown; images: unknown[] }
-    return FeatureDetailProfileAPI.parse({
-      ...base,
-      properties: toPropertyShape(normalizedProperties),
-      image: detailImageState.image,
-      images: detailImageState.images,
-      imageCount: row.imageCount ?? row.images?.length ?? 0,
-      imagePublishedCount:
-        row.imagePublishedCount ??
-        (row.images as Array<{ isPublished?: boolean }> | undefined)?.filter(
-          imageRow => imageRow.isPublished,
-        ).length ??
-        0,
-    }) as FeatureEntityByProfile<FeatureProfile>
+    return parseFeatureProfileWithFallback(
+      FeatureDetailProfileAPI,
+      {
+        ...base,
+        properties: toPropertyShape(normalizedProperties),
+        image: detailImageState.image,
+        images: detailImageState.images,
+        imageCount: row.imageCount ?? row.images?.length ?? 0,
+        imagePublishedCount:
+          row.imagePublishedCount ??
+          (row.images as Array<{ isPublished?: boolean }> | undefined)?.filter(
+            imageRow => imageRow.isPublished,
+          ).length ??
+          0,
+      },
+      profile,
+    ) as FeatureEntityByProfile<FeatureProfile>
   }
 
   const normalizedProperties = normalizeFeaturePropertiesForLayer(
@@ -405,12 +457,16 @@ const toProfileResponseShape = async (
     { includeAll: true, filterUnpublished: false },
   ) as { image: unknown; images: unknown[] }
 
-  return FeatureAdminProfileAPI.parse({
-    ...base,
-    properties: toPropertyShape(normalizedProperties),
-    image: adminImageState.image,
-    images: adminImageState.images,
-  }) as FeatureEntityByProfile<FeatureProfile>
+  return parseFeatureProfileWithFallback(
+    FeatureAdminProfileAPI,
+    {
+      ...base,
+      properties: toPropertyShape(normalizedProperties),
+      image: adminImageState.image,
+      images: adminImageState.images,
+    },
+    profile,
+  ) as FeatureEntityByProfile<FeatureProfile>
 }
 
 const toResponseShape = async <P extends FeatureProfile>(
