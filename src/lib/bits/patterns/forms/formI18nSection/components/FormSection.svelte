@@ -94,7 +94,7 @@ $effect(() => {
       {/if}
     </div>
   {/if}
-  {#if showsTranslationBar}
+  {#if showsTranslationBar && locale}
     <FormI18nTranslationBar
       targetLocale={toLocaleCode(locale)}
       {localeCodeClass}

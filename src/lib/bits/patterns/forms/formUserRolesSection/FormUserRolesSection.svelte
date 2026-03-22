@@ -95,9 +95,7 @@ function isDisplayReadyUserRole(userRole: OrganisationRoleUser): boolean {
 }
 
 const rootClass = $derived(
-  ['bits-form__section min-h-60 basis-2/3 rounded-2xl p-0', className]
-    .filter(Boolean)
-    .join(' '),
+  ['bits-form__section rounded-2xl p-0 pb-4', className].filter(Boolean).join(' '),
 )
 const showModeUi = $derived(isEditing && !isSubmitting)
 const renderedRoles = $derived(isSubmitting ? stableRoles : sortedRoles)

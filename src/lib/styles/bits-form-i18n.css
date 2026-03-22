@@ -42,6 +42,10 @@
     border-color: color-mix(in oklab, var(--color-primary) 100%, transparent);
   }
 
+  .bits-theme .bits-form__i18n-card.no-i18n {
+    @apply pt-3.5;
+  }
+
   .bits-theme .bits-form__i18n-card::before {
     content: "";
     position: absolute;

@@ -16,14 +16,14 @@
     --bits-form-grid-spacer-center-cols: 1;
     --bits-form-grid-spacer-right-cols: 1;
     --bits-form-grid-spacer-gap: calc(var(--spacing) * 3);
-    @apply grid grid-cols-1 pb-24;
+    @apply grid grid-cols-1;
     gap: var(--bits-form-grid-spacer-gap);
   }
 
   .bits-theme .bits-form__grid-spacer-left,
   .bits-theme .bits-form__grid-spacer-center,
   .bits-theme .bits-form__grid-spacer-right {
-    @apply min-w-0 flex flex-col gap-4;
+    @apply min-w-0 flex flex-col gap-0;
   }
 
   @media (min-width: 768px) {

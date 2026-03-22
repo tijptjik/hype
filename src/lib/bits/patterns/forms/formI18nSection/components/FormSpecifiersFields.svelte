@@ -8,11 +8,13 @@ let {
   isEditing = false,
   isRequiredInPreflight,
   fields = ['code', 'url'],
+  title = m.admin__forms_common_specifiers(),
 }: {
   form: any
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   fields?: Array<'code' | 'url'>
+  title?: string
 } = $props()
 
 const showCode = $derived(fields.includes('code'))
@@ -30,8 +32,8 @@ const urlIssues = $derived(showUrl ? form.fields.data.url.issues() : undefined)
 </script>
 
 <section class="bits-form__section">
-  <SectionHeader title={m.admin__forms_common_specifiers()} />
-  <FormSection>
+  <SectionHeader {title} />
+  <FormSection cardClass="bits-form__i18n-card no-i18n">
     {#if showCode}
       <TextInput
         label="Code"

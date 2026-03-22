@@ -27,9 +27,6 @@ let {
   onToggleAdding,
 }: FormFeatureSubSectionHeaderProps = $props()
 
-const ACTION_LABEL_HIDE_WIDTH = 22 * 16
-let rootWidth = $state<number>(Number.POSITIVE_INFINITY)
-
 const rootClass = $derived(
   ['bits-feature-sub-section-header', className].filter(Boolean).join(' '),
 )
@@ -38,14 +35,13 @@ const canShowAction = $derived(isEditing)
 const actionLabel = $derived(isSearchActive ? m.cancel() : m.replace())
 const actionIcon = $derived(isSearchActive ? XIcon : ReplaceIcon)
 const isActionDisabled = $derived(isSubmitting || (isSearchActive && !isResultsVisible))
-const shouldHideActionLabel = $derived(rootWidth <= ACTION_LABEL_HIDE_WIDTH)
 
 function handleToggleAdding(): void {
   onToggleAdding?.()
 }
 </script>
 
-<div class={rootClass} bind:clientWidth={rootWidth}>
+<div class={rootClass}>
   <div
     class="bits-feature-sub-section-header__rail bits-feature-sub-section-header__rail--left"
   >
@@ -83,7 +79,8 @@ function handleToggleAdding(): void {
         style="ghost"
         color="light"
         size="sm"
-        hideLabel={shouldHideActionLabel}
+        hideLabel={true}
+        hideLabelInstantly={true}
         iconComponent={actionIcon}
         onClick={handleToggleAdding}
         disabled={isActionDisabled}
