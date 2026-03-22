@@ -6,6 +6,7 @@ import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
 import { getFeatures } from '$lib/api/server/feature.remote'
 // SERVICES
+import { toProjectLicenseFilterCache } from '$lib/client/services/licence'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
@@ -111,8 +112,12 @@ const viewFilters: ViewFilters = {
     hasName: null,
     hasContextualName: null,
     hasDescription: null,
-    hasAttribution: null,
-    hasLicense: null,
+    isAllRightsReserved: null,
+    isPublicDomain: null,
+    hasLicenseBy: null,
+    hasLicenseSa: null,
+    hasLicenseNc: null,
+    hasLicenseNd: null,
 
     // Translation related
     translationLocales: {
@@ -135,16 +140,6 @@ const viewFilters: ViewFilters = {
       zhHant: null,
       zhHans: null,
     },
-    isAttributionTranslated: {
-      en: null,
-      zhHant: null,
-      zhHans: null,
-    },
-    isLicenseTranslated: {
-      en: null,
-      zhHant: null,
-      zhHans: null,
-    },
   },
   layer: {
     // Status related
@@ -155,6 +150,12 @@ const viewFilters: ViewFilters = {
     hasName: null,
     hasContextualName: null,
     hasDescription: null,
+    isAllRightsReserved: null,
+    isPublicDomain: null,
+    hasLicenseBy: null,
+    hasLicenseSa: null,
+    hasLicenseNc: null,
+    hasLicenseNd: null,
 
     // Translation related
     translationLocales: {
@@ -195,6 +196,12 @@ const viewFilters: ViewFilters = {
     hasTitle: null,
     hasDescription: null,
     hasDisplayAddress: null,
+    isAllRightsReserved: null,
+    isPublicDomain: null,
+    hasLicenseBy: null,
+    hasLicenseSa: null,
+    hasLicenseNc: null,
+    hasLicenseNd: null,
 
     // Translation related
     translationLocales: {
@@ -244,8 +251,8 @@ const viewFilters: ViewFilters = {
     // Translation related
     translationLocales: {
       en: false,
-      zhHant: false,
-      zhHans: false,
+      zhHant: true,
+      zhHans: true,
     },
     isNameTranslated: {
       en: null,
@@ -307,7 +314,7 @@ export class AdminCtx {
     this.appCtx = appCtx
 
     // Only initialize if appCtx is defined and has the required properties
-    if (this.appCtx && this.appCtx.queryMap) {
+    if (this.appCtx?.queryMap) {
       this.initializeAdminQueryMap()
     }
   }
@@ -475,7 +482,7 @@ export class AdminCtx {
       const isReviewed =
         this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed
       if (isReviewed !== null) {
-        params.append('isReviewed', isReviewed!.toString())
+        params.append('isReviewed', isReviewed?.toString())
       }
     }
     // Properties have no filters
@@ -645,7 +652,7 @@ export class AdminCtx {
   // Initialize data using appCtx's refresh methods
   init = async (): Promise<void> => {
     // Ensure query map is initialized if it wasn't done in constructor
-    if (this.appCtx && this.appCtx.queryMap && !this.isInitialised) {
+    if (this.appCtx?.queryMap && !this.isInitialised) {
       this.initializeAdminQueryMap()
     }
 
@@ -752,7 +759,6 @@ export class AdminCtx {
         activeLocales.add(locale as LocaleKey)
       }
     }
-
     return features.filter(feature => {
       if (!this.filterByStatus(feature, filters)) return false
       if (!this.filterByAuthorship(feature, filters)) return false
@@ -827,8 +833,8 @@ export class AdminCtx {
       const hasTitle = allLocales.some(
         locale =>
           feature.i18n?.[locale]?.title &&
-          feature.i18n[locale]!.title!.length > 1 &&
-          !feature.i18n[locale]!.titleGen,
+          feature.i18n[locale]?.title?.length > 1 &&
+          !feature.i18n[locale]?.titleGen,
       )
       if (hasTitle !== filters.hasTitle) return false
     }
@@ -837,8 +843,8 @@ export class AdminCtx {
       const hasDescription = allLocales.some(
         locale =>
           feature.i18n?.[locale]?.description &&
-          feature.i18n[locale]!.description!.length > 1 &&
-          !feature.i18n[locale]!.descriptionGen,
+          feature.i18n[locale]?.description?.length > 1 &&
+          !feature.i18n[locale]?.descriptionGen,
       )
       if (hasDescription !== filters.hasDescription) return false
     }
@@ -847,10 +853,19 @@ export class AdminCtx {
       const hasDisplayAddress = allLocales.some(
         locale =>
           feature.i18n?.[locale]?.displayAddress &&
-          feature.i18n[locale]!.displayAddress!.length > 1,
+          feature.i18n[locale]?.displayAddress?.length > 1,
       )
       // Count any non-empty display address, including generated content, for this admin filter.
       if (hasDisplayAddress !== filters.hasDisplayAddress) return false
+    }
+
+    if (
+      !this.matchesProjectLicenseFilters(
+        this.resolveProjectLicenseFilterCache(feature.projectId),
+        filters,
+      )
+    ) {
+      return false
     }
 
     return true
@@ -1152,8 +1167,8 @@ export class AdminCtx {
       const hasName = allLocales.some(
         locale =>
           organisation.i18n?.[locale]?.name &&
-          organisation.i18n[locale]!.name!.length > 1 &&
-          !organisation.i18n[locale]!.nameGen,
+          organisation.i18n[locale]?.name?.length > 1 &&
+          !organisation.i18n[locale]?.nameGen,
       )
       if (hasName !== filters.hasName) return false
     }
@@ -1162,8 +1177,8 @@ export class AdminCtx {
       const hasContextualName = allLocales.some(
         locale =>
           organisation.i18n?.[locale]?.nameShort &&
-          organisation.i18n[locale]!.nameShort!.length > 1 &&
-          !organisation.i18n[locale]!.nameShortGen,
+          organisation.i18n[locale]?.nameShort?.length > 1 &&
+          !organisation.i18n[locale]?.nameShortGen,
       )
       if (hasContextualName !== filters.hasContextualName) return false
     }
@@ -1172,8 +1187,8 @@ export class AdminCtx {
       const hasDescription = allLocales.some(
         locale =>
           organisation.i18n?.[locale]?.description &&
-          organisation.i18n[locale]!.description!.length > 1 &&
-          !organisation.i18n[locale]!.descriptionGen,
+          organisation.i18n[locale]?.description?.length > 1 &&
+          !organisation.i18n[locale]?.descriptionGen,
       )
       if (hasDescription !== filters.hasDescription) return false
     }
@@ -1266,9 +1281,66 @@ export class AdminCtx {
     filters: ViewFilters['organisation'],
   ): boolean => {
     if (filters.hasImage !== null) {
-      const hasImages = organisation.image ? true : false
+      const hasImages = !!organisation.image
       if (filters.hasImage !== hasImages) return false
     }
+    return true
+  }
+
+  private resolveProjectLicenseFilterCache(projectId?: string | null): {
+    isAllRightsReserved: boolean
+    isPublicDomain: boolean
+    hasLicenseBy: boolean | null
+    hasLicenseSa: boolean | null
+    hasLicenseNc: boolean | null
+    hasLicenseNd: boolean | null
+  } | null {
+    if (!projectId) return null
+    const cachedProject = this.appCtx.cache.project.get(projectId)
+    if (!cachedProject?.license) return null
+    return toProjectLicenseFilterCache(cachedProject.license)
+  }
+
+  private matchesProjectLicenseFilters(
+    cache: ReturnType<AdminCtx['resolveProjectLicenseFilterCache']>,
+    filters: ViewFilters['project'] | ViewFilters['layer'] | ViewFilters['feature'],
+  ): boolean {
+    const hasActiveLicenseFilter =
+      filters.isAllRightsReserved !== null ||
+      filters.isPublicDomain !== null ||
+      filters.hasLicenseBy !== null ||
+      filters.hasLicenseSa !== null ||
+      filters.hasLicenseNc !== null ||
+      filters.hasLicenseNd !== null
+
+    if (!hasActiveLicenseFilter) return true
+    if (!cache) return false
+
+    if (
+      filters.isAllRightsReserved !== null &&
+      cache.isAllRightsReserved !== filters.isAllRightsReserved
+    ) {
+      return false
+    }
+    if (
+      filters.isPublicDomain !== null &&
+      cache.isPublicDomain !== filters.isPublicDomain
+    ) {
+      return false
+    }
+    if (filters.hasLicenseBy !== null && cache.hasLicenseBy !== filters.hasLicenseBy) {
+      return false
+    }
+    if (filters.hasLicenseSa !== null && cache.hasLicenseSa !== filters.hasLicenseSa) {
+      return false
+    }
+    if (filters.hasLicenseNc !== null && cache.hasLicenseNc !== filters.hasLicenseNc) {
+      return false
+    }
+    if (filters.hasLicenseNd !== null && cache.hasLicenseNd !== filters.hasLicenseNd) {
+      return false
+    }
+
     return true
   }
 
@@ -1288,7 +1360,6 @@ export class AdminCtx {
         activeLocales.add(locale as LocaleKey)
       }
     }
-
     return projects.filter(project => {
       if (!this.filterProjectByStatus(project, filters)) return false
       if (!this.filterProjectByAuthorship(project, filters)) return false
@@ -1318,11 +1389,10 @@ export class AdminCtx {
       if (
         filters.hasName === true ||
         filters.hasContextualName === true ||
-        filters.hasDescription === true ||
-        filters.hasAttribution === true ||
-        filters.hasLicense === true
-      )
+        filters.hasDescription === true
+      ) {
         return false
+      }
       return true
     }
 
@@ -1332,8 +1402,8 @@ export class AdminCtx {
       const hasName = allLocales.some(
         locale =>
           project.i18n?.[locale]?.name &&
-          project.i18n[locale]!.name!.length > 1 &&
-          !project.i18n[locale]!.nameGen,
+          project.i18n[locale]?.name?.length > 1 &&
+          !project.i18n[locale]?.nameGen,
       )
       if (hasName !== filters.hasName) return false
     }
@@ -1342,8 +1412,8 @@ export class AdminCtx {
       const hasContextualName = allLocales.some(
         locale =>
           project.i18n?.[locale]?.nameShort &&
-          project.i18n[locale]!.nameShort!.length > 1 &&
-          !project.i18n[locale]!.nameShortGen,
+          project.i18n[locale]?.nameShort?.length > 1 &&
+          !project.i18n[locale]?.nameShortGen,
       )
       if (hasContextualName !== filters.hasContextualName) return false
     }
@@ -1352,30 +1422,19 @@ export class AdminCtx {
       const hasDescription = allLocales.some(
         locale =>
           project.i18n?.[locale]?.description &&
-          project.i18n[locale]!.description!.length > 1 &&
-          !project.i18n[locale]!.descriptionGen,
+          project.i18n[locale]?.description?.length > 1 &&
+          !project.i18n[locale]?.descriptionGen,
       )
       if (hasDescription !== filters.hasDescription) return false
     }
 
-    if (filters.hasAttribution !== null) {
-      const hasAttribution = allLocales.some(
-        locale =>
-          project.i18n?.[locale]?.attribution &&
-          project.i18n[locale]!.attribution!.length > 1 &&
-          !project.i18n[locale]!.attributionGen,
+    if (
+      !this.matchesProjectLicenseFilters(
+        toProjectLicenseFilterCache(project.license),
+        filters,
       )
-      if (hasAttribution !== filters.hasAttribution) return false
-    }
-
-    if (filters.hasLicense !== null) {
-      const hasLicense = allLocales.some(
-        locale =>
-          project.i18n?.[locale]?.license &&
-          project.i18n[locale]!.license!.length > 1 &&
-          !project.i18n[locale]!.licenseGen,
-      )
-      if (hasLicense !== filters.hasLicense) return false
+    ) {
+      return false
     }
 
     return true
@@ -1391,15 +1450,8 @@ export class AdminCtx {
         | 'isNameTranslated'
         | 'isContextualNameTranslated'
         | 'isDescriptionTranslated'
-        | 'isAttributionTranslated'
-        | 'isLicenseTranslated'
-      textField: 'name' | 'nameShort' | 'description' | 'attribution' | 'license'
-      genField:
-        | 'nameGen'
-        | 'nameShortGen'
-        | 'descriptionGen'
-        | 'attributionGen'
-        | 'licenseGen'
+      textField: 'name' | 'nameShort' | 'description'
+      genField: 'nameGen' | 'nameShortGen' | 'descriptionGen'
     }[] = [
       { filterKey: 'isNameTranslated', textField: 'name', genField: 'nameGen' },
       {
@@ -1411,16 +1463,6 @@ export class AdminCtx {
         filterKey: 'isDescriptionTranslated',
         textField: 'description',
         genField: 'descriptionGen',
-      },
-      {
-        filterKey: 'isAttributionTranslated',
-        textField: 'attribution',
-        genField: 'attributionGen',
-      },
-      {
-        filterKey: 'isLicenseTranslated',
-        textField: 'license',
-        genField: 'licenseGen',
       },
     ]
 
@@ -1483,7 +1525,7 @@ export class AdminCtx {
     filters: ViewFilters['project'],
   ): boolean => {
     if (filters.hasImage !== null) {
-      const hasImages = project.image ? true : false
+      const hasImages = !!project.image
       if (filters.hasImage !== hasImages) return false
     }
     return true
@@ -1505,7 +1547,6 @@ export class AdminCtx {
         activeLocales.add(locale as LocaleKey)
       }
     }
-
     return layers.filter(layer => {
       if (!this.filterLayerByStatus(layer, filters)) return false
       if (!this.filterLayerByAuthorship(layer, filters)) return false
@@ -1545,8 +1586,8 @@ export class AdminCtx {
       const hasName = allLocales.some(
         locale =>
           layer.i18n?.[locale]?.name &&
-          layer.i18n[locale]!.name!.length > 1 &&
-          !layer.i18n[locale]!.nameGen,
+          layer.i18n[locale]?.name?.length > 1 &&
+          !layer.i18n[locale]?.nameGen,
       )
       if (hasName !== filters.hasName) return false
     }
@@ -1555,8 +1596,8 @@ export class AdminCtx {
       const hasContextualName = allLocales.some(
         locale =>
           layer.i18n?.[locale]?.nameShort &&
-          layer.i18n[locale]!.nameShort!.length > 1 &&
-          !layer.i18n[locale]!.nameShortGen,
+          layer.i18n[locale]?.nameShort?.length > 1 &&
+          !layer.i18n[locale]?.nameShortGen,
       )
       if (hasContextualName !== filters.hasContextualName) return false
     }
@@ -1565,10 +1606,19 @@ export class AdminCtx {
       const hasDescription = allLocales.some(
         locale =>
           layer.i18n?.[locale]?.description &&
-          layer.i18n[locale]!.description!.length > 1 &&
-          !layer.i18n[locale]!.descriptionGen,
+          layer.i18n[locale]?.description?.length > 1 &&
+          !layer.i18n[locale]?.descriptionGen,
       )
       if (hasDescription !== filters.hasDescription) return false
+    }
+
+    if (
+      !this.matchesProjectLicenseFilters(
+        this.resolveProjectLicenseFilterCache(layer.projectId),
+        filters,
+      )
+    ) {
+      return false
     }
 
     return true
@@ -1669,10 +1719,8 @@ export class AdminCtx {
 
   private filterTaskByStatus = (task: Task, filters: ViewFilters['task']): boolean => {
     if (filters.isReviewed !== null) {
-      const filterIsReviewed =
-        filters.isReviewed === true || filters.isReviewed === 'true'
-      const taskIsReviewed =
-        task.isReviewed === true || task.isReviewed === 1 || task.isReviewed === 'true'
+      const filterIsReviewed = Boolean(filters.isReviewed)
+      const taskIsReviewed = Boolean(task.isReviewed)
       if (taskIsReviewed !== filterIsReviewed) return false
     }
     return true
@@ -1716,8 +1764,8 @@ export class AdminCtx {
       const hasName = allLocales.some(
         locale =>
           hub.i18n?.[locale]?.name &&
-          hub.i18n[locale]!.name!.length > 1 &&
-          !hub.i18n[locale]!.nameGen,
+          hub.i18n[locale]?.name?.length > 1 &&
+          !hub.i18n[locale]?.nameGen,
       )
       if (hasName !== filters.hasName) return false
     }
@@ -1726,8 +1774,8 @@ export class AdminCtx {
       const hasContextualName = allLocales.some(
         locale =>
           hub.i18n?.[locale]?.nameShort &&
-          hub.i18n[locale]!.nameShort!.length > 1 &&
-          !hub.i18n[locale]!.nameShortGen,
+          hub.i18n[locale]?.nameShort?.length > 1 &&
+          !hub.i18n[locale]?.nameShortGen,
       )
       if (hasContextualName !== filters.hasContextualName) return false
     }
@@ -1736,8 +1784,8 @@ export class AdminCtx {
       const hasDescription = allLocales.some(
         locale =>
           hub.i18n?.[locale]?.description &&
-          hub.i18n[locale]!.description!.length > 1 &&
-          !hub.i18n[locale]!.descriptionGen,
+          hub.i18n[locale]?.description?.length > 1 &&
+          !hub.i18n[locale]?.descriptionGen,
       )
       if (hasDescription !== filters.hasDescription) return false
     }
@@ -1823,7 +1871,7 @@ export class AdminCtx {
     return true
   }
 
-  private filterHubByImages = (hub: Hub, filters: ViewFilters['hub']): boolean => {
+  private filterHubByImages = (_hub: Hub, filters: ViewFilters['hub']): boolean => {
     if (filters.hasImage !== null) {
       // Hubs don't have direct image relationships, this filter is not applicable
       return true
@@ -2113,20 +2161,19 @@ export class AdminCtx {
 
   setAdminPreference = (code: keyof AdminPreferences, value: boolean) => {
     if (!this.appCtx.user) return
-    if (!(this.appCtx.user as CurrentUser).preferences?.admin) {
-      ;(this.appCtx.user as CurrentUser).preferences!.admin = {
+    const currentUser = this.appCtx.user as CurrentUser
+    currentUser.preferences = currentUser.preferences ?? {}
+    if (!currentUser.preferences.admin) {
+      currentUser.preferences.admin = {
         isAdminMapCollapsed: false,
         isPrimaryPanelCollapsed: false,
         isPrimaryPanelAutoHide: false,
       }
     }
-    if (!this.appCtx.user.preferences.admin) {
-      this.appCtx.user.preferences.admin = { [code]: value }
-    }
-    this.appCtx.user.preferences.admin![code] = value
+    currentUser.preferences.admin[code] = value
     debouncedUpdateUserPreferences(
-      (this.appCtx.user as CurrentUser).id,
-      (this.appCtx.user as CurrentUser).preferences as UserPreferences,
+      currentUser.id,
+      currentUser.preferences as UserPreferences,
     )
   }
 
@@ -2139,13 +2186,13 @@ export class AdminCtx {
   }
 
   isViewportContained = $derived(
-    this.appCtx.state.nav.resourceRef == false ||
-      this.appCtx.state.nav.facet == 'address' ||
-      this.appCtx.state.nav.facet == 'images' ||
-      (this.appCtx.state.nav.resourceType == 'feature' &&
-        (this.appCtx.state.nav.facet == 'core' ||
-          this.appCtx.state.nav.facet == false)) ||
-      (this.activeResourceType == 'task' && this.activeResourceRef),
+    this.appCtx.state.nav.resourceRef === false ||
+      this.appCtx.state.nav.facet === 'address' ||
+      this.appCtx.state.nav.facet === 'images' ||
+      (this.appCtx.state.nav.resourceType === 'feature' &&
+        (this.appCtx.state.nav.facet === 'core' ||
+          this.appCtx.state.nav.facet === false)) ||
+      (this.activeResourceType === 'task' && this.activeResourceRef),
   )
 
   isShowIndex = $derived(
@@ -2164,7 +2211,7 @@ export const getAdminCtx = (): AdminCtx => {
   if (!ctx) {
     // Return a safe proxy object that prevents errors when AdminCtx isn't ready
     return new Proxy({} as any, {
-      get(target, prop) {
+      get(_target, prop) {
         if (prop === 'isInitialised') return false
         if (prop === 'setFacet') return () => {}
         if (prop === 'filteredOrganisations') return []
@@ -2182,6 +2229,7 @@ export const getAdminCtx = (): AdminCtx => {
           return {
             isInitialised: false,
             state: { resources: {} },
+            getResourceByRefSync: () => undefined,
           }
         return undefined
       },
