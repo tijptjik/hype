@@ -493,13 +493,19 @@ export const probeProjectForUpdate = async (
 const probeProjectForCommand = async (
   db: Database,
   projectId: Id,
-): Promise<{ id: string; organisationId: string; hubId: string | null } | null> => {
+): Promise<{
+  id: string
+  organisationId: string
+  hubId: string | null
+  license: ProjectDB['license']
+} | null> => {
   return firstOrNull(
     await db
       .select({
         id: project.id,
         organisationId: project.organisationId,
         hubId: organisation.hubId,
+        license: project.license,
       })
       .from(project)
       .innerJoin(organisation, eq(project.organisationId, organisation.id))
@@ -519,7 +525,12 @@ export const resolveProjectCommandProbe = async (
   db: Database,
   projectId: Id,
   onNotFound: () => never,
-): Promise<{ id: string; organisationId: string; hubId: string | null }> => {
+): Promise<{
+  id: string
+  organisationId: string
+  hubId: string | null
+  license: ProjectDB['license']
+}> => {
   const probed = await probeProjectForCommand(db, projectId)
   return resolveRequiredProbe(probed, onNotFound)
 }
@@ -664,7 +675,7 @@ export const updateProjectByIdWithConcurrency = async (
     data: {
       organisationId: ProjectDB['organisationId']
       code: string
-      license: ProjectDB['license']
+      license?: ProjectDB['license']
       capabilities: ProjectDB['capabilities']
     }
   },
@@ -689,14 +700,24 @@ export const updateProjectByIdWithConcurrency = async (
  */
 export const updateProjectPublishedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean; publisherId: string | null },
+  params: {
+    id: Id
+    state: boolean
+    publisherId: string | null
+    publishedAt?: string
+    license?: ProjectDB['license']
+  },
 ): Promise<{ id: string; isPublished: boolean } | null> => {
+  const publishedAt = params.state
+    ? (params.publishedAt ?? new Date().toISOString())
+    : null
   const [updated] = await db
     .update(project)
     .set({
       isPublished: params.state,
-      publishedAt: params.state ? new Date().toISOString() : null,
+      publishedAt,
       publisherId: params.state ? params.publisherId : null,
+      ...(params.license ? { license: params.license } : {}),
     })
     .where(eq(project.id, params.id))
     .returning({
