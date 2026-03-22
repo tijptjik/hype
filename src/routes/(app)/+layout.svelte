@@ -140,6 +140,7 @@ const isCardToggleVisible = $derived(
     appCtx.getActiveFeature() &&
     !omniCtx.isNewFeatureMode,
 )
+const mapBarOffset = $derived(appCtx.getHorizontalOffset())
 
 // PROFILE PANEL SCROLL POSITION
 let profilePanelContainer: HTMLDivElement | undefined = $state()
@@ -306,7 +307,10 @@ function handleMenuSelect(item: { value: Panel }): void {
           <Icon src={SwatchIcon} size="lg" strokeWidth={2} />
         {/snippet}
 
-        <OverlayBar>
+        <OverlayBar
+          class="transition-transform duration-500 ease-in-out"
+          style={`transform: translateX(${mapBarOffset}px);`}
+        >
           {#snippet left()}
             {#if isAddButtonVisible}
               <Button
@@ -332,11 +336,12 @@ function handleMenuSelect(item: { value: Panel }): void {
                 text={m.mapbar__show_card()}
                 icon={openCardIcon}
                 color="dark"
+                style="soft"
                 transition="fade"
                 duration={150}
                 delay={150}
                 outDuration={100}
-                class="z-30 hover:text-primary"
+                class="z-130 border border-white/10 bg-black/70 shadow-lg backdrop-blur-sm hover:text-primary"
                 attrs={{ title: m.mapbar__show_card() }}
                 onClick={handleOpenCard}
               />
@@ -353,6 +358,7 @@ function handleMenuSelect(item: { value: Panel }): void {
     <AppMenu
       items={menuItems}
       trailingItems={trailingMenuItems}
+      style={`--bits-app-menu-offset: ${mapBarOffset}px;`}
       onSelect={handleMenuSelect}
     />
   {:else if !$session.isPending && !$session.data}
