@@ -824,7 +824,7 @@ export function getGenericTranslationFilterState<T extends keyof ViewFilters>(
   const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
 
-  const sectionFilters = (resourceFilters)[filterKey]
+  const sectionFilters = resourceFilters[filterKey]
   if (!sectionFilters || typeof sectionFilters !== 'object') {
     return null
   }
@@ -833,7 +833,7 @@ export function getGenericTranslationFilterState<T extends keyof ViewFilters>(
   const activeValues: FilterTriState[] = []
   for (const locale of activeLocales) {
     if (locale in sectionFilters) {
-      activeValues.push((sectionFilters)[locale])
+      activeValues.push(sectionFilters[locale])
     } else {
       activeValues.push(null)
     }
@@ -920,7 +920,7 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
   const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return
 
-  const existingSectionFilters = (resourceFilters)[filterKey]
+  const existingSectionFilters = resourceFilters[filterKey]
   const sectionFilters =
     existingSectionFilters && typeof existingSectionFilters === 'object'
       ? { ...existingSectionFilters }
@@ -931,12 +931,12 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
         }
 
   // Set all locales: inactive ones to null, active ones to the provided value
-  const translationLocales = (resourceFilters).translationLocales
+  const translationLocales = resourceFilters.translationLocales
   for (const locale of Object.keys(translationLocales)) {
     if (activeLocales.has(locale as LocaleKey)) {
-      ;(sectionFilters)[locale] = value
+      sectionFilters[locale] = value
     } else {
-      ;(sectionFilters)[locale] = null
+      sectionFilters[locale] = null
     }
   }
 
@@ -1018,7 +1018,7 @@ export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
     propertyId &&
     propertyId in sectionFilters
   ) {
-    return (sectionFilters)[propertyId]
+    return sectionFilters[propertyId]
   }
 
   return null

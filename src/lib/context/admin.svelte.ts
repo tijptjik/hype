@@ -1009,8 +1009,8 @@ export class AdminCtx {
   ): boolean => {
     // Check if feature has the new count fields (from collection API)
     if ('imageCount' in feature && 'imagePublishedCount' in feature) {
-      const imageCount = (feature).imageCount as number
-      const imagePublishedCount = (feature).imagePublishedCount as number
+      const imageCount = feature.imageCount as number
+      const imagePublishedCount = feature.imagePublishedCount as number
       const hasImages = imageCount > 0
 
       if (filters.hasImage !== null) {
@@ -2210,30 +2210,33 @@ export const getAdminCtx = (): AdminCtx => {
   const ctx = getContext<AdminCtx | undefined>(ADMINCTX_KEY)
   if (!ctx) {
     // Return a safe proxy object that prevents errors when AdminCtx isn't ready
-    return new Proxy({}, {
-      get(_target, prop) {
-        if (prop === 'isInitialised') return false
-        if (prop === 'setFacet') return () => {}
-        if (prop === 'filteredOrganisations') return []
-        if (prop === 'filteredProjects') return []
-        if (prop === 'filteredLayers') return []
-        if (prop === 'filteredFeatures') return []
-        if (prop === 'filteredTasks') return []
-        if (prop === 'filteredHubs') return []
-        if (prop === 'activeResourceType') return false
-        if (prop === 'activeResourceRef') return false
-        if (prop === 'activeFacet') return false
-        if (prop === 'isShowIndex') return false
-        if (prop === 'isViewportContained') return true
-        if (prop === 'appCtx')
-          return {
-            isInitialised: false,
-            state: { resources: {} },
-            getResourceByRefSync: () => undefined,
-          }
-        return undefined
+    return new Proxy(
+      {},
+      {
+        get(_target, prop) {
+          if (prop === 'isInitialised') return false
+          if (prop === 'setFacet') return () => {}
+          if (prop === 'filteredOrganisations') return []
+          if (prop === 'filteredProjects') return []
+          if (prop === 'filteredLayers') return []
+          if (prop === 'filteredFeatures') return []
+          if (prop === 'filteredTasks') return []
+          if (prop === 'filteredHubs') return []
+          if (prop === 'activeResourceType') return false
+          if (prop === 'activeResourceRef') return false
+          if (prop === 'activeFacet') return false
+          if (prop === 'isShowIndex') return false
+          if (prop === 'isViewportContained') return true
+          if (prop === 'appCtx')
+            return {
+              isInitialised: false,
+              state: { resources: {} },
+              getResourceByRefSync: () => undefined,
+            }
+          return undefined
+        },
       },
-    }) as AdminCtx
+    ) as AdminCtx
   }
   return ctx
 }

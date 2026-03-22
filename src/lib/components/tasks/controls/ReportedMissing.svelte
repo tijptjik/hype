@@ -34,13 +34,10 @@ let distance = $derived(
 
 // Format dates using relative time
 let captureDate = $derived(
-  (task.images?.[0]?.image?.metadata)?.capturedAt
-    ? formatDistanceToNow(
-        new Date((task.images?.[0]?.image?.metadata)?.capturedAt),
-        {
-          addSuffix: true,
-        },
-      )
+  task.images?.[0]?.image?.metadata?.capturedAt
+    ? formatDistanceToNow(new Date(task.images?.[0]?.image?.metadata?.capturedAt), {
+        addSuffix: true,
+      })
     : '-',
 )
 

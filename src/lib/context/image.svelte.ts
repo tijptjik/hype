@@ -631,12 +631,12 @@ export class ImageCtx {
 
     // Convert staged images to uploads
     const uploads = stagedImages.map(img => {
-      const file = (img.image).file
+      const file = img.image.file
       return {
         file,
         status: 'uploading',
         retries: 0,
-        preview: (img.image).preview,
+        preview: img.image.preview,
       } as ImageUpload
     })
 
@@ -691,12 +691,12 @@ export class ImageCtx {
     const indexSize = this.getImages().length
 
     // Clean up the preview URL immediately
-    if ((image.image).preview) {
-      URL.revokeObjectURL((image.image).preview)
+    if (image.image.preview) {
+      URL.revokeObjectURL(image.image.preview)
     }
 
     // Store file name for staging queue cleanup before removing from images
-    const fileName = (image.image).file?.name
+    const fileName = image.image.file?.name
 
     // Remove from both data structures immediately to keep them in sync
     this.removeImage(imageId)
@@ -1139,11 +1139,7 @@ export class ImageCtx {
 
   toggleForActiveImage(key: string) {
     if (!this.state.activeImage) return
-    this.setForImage(
-      this.state.activeImage.image.id,
-      key,
-      !(this.state.activeImage)[key],
-    )
+    this.setForImage(this.state.activeImage.image.id, key, !this.state.activeImage[key])
   }
 
   getReplacementUpload(imageId: Id): ImageUpload | undefined {
@@ -1955,7 +1951,7 @@ export class ImageCtx {
    * Checks if an image is staged (has a preview URL)
    */
   isImageStaged(image: ImageCtxEnvelope): boolean {
-    return image.image.cdn === 'preview' && Boolean((image.image).preview)
+    return image.image.cdn === 'preview' && Boolean(image.image.preview)
   }
 
   /**

@@ -1565,12 +1565,12 @@ const imageProviderProps = $derived.by(() => {
     image: isValid ? activeProjectImage : undefined,
     context:
       isValid && hierarchy
-        ? ({
+        ? {
             ctxType: ImageContextResource.project,
             ctxId: projectData?.id,
             organisation: hierarchy.organisation,
             project: projectData,
-          })
+          }
         : undefined,
   }
 })
@@ -2588,7 +2588,7 @@ $effect(() => {
             ]}
             {onAddUser}
             {onRemoveUser}
-            onRoleChange={onRoleChange}
+            {onRoleChange}
           />
         {/snippet}
 

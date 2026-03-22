@@ -62,7 +62,7 @@ vi.mock(
     query: (_schema: unknown, handler: unknown) => handler,
     form: (_schema: unknown, handler: unknown) => async (input: unknown) => {
       const issue = (() => {
-        const issueBuilder = ((message: string) => message)
+        const issueBuilder = (message: string) => message
         issueBuilder.data = new Proxy(
           {},
           {

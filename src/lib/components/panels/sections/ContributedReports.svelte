@@ -15,7 +15,7 @@ let { userData }: { userData?: UserProfile } = $props()
 const appCtx = getAppCtx()
 
 // DERIVED STATE
-let reports = $derived((userData)?.contributedReports || [])
+let reports = $derived(userData?.contributedReports || [])
 let isLoading = $derived(!userData)
 </script>
 

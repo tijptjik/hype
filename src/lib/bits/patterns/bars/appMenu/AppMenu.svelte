@@ -15,7 +15,11 @@ import {
 } from './appMenu.styles'
 // TYPES
 import type { AppMenuItem, AppMenuProps } from './appMenu.types'
-import { getAppMenuHideLabelBelow, isCompactAppMenuViewport, isMobile } from './appMenu.constants'
+import {
+  getAppMenuHideLabelBelow,
+  isCompactAppMenuViewport,
+  isMobile,
+} from './appMenu.constants'
 
 let {
   items,
@@ -50,7 +54,7 @@ function handleSelect(item: AppMenuItem<T>): void {
 
 {#snippet menuButton(item: AppMenuItem<T>)}
   {#snippet itemIcon()}
-    <Icon src={item.icon} size="lg" tone='inherit' strokeWidth={2} />
+    <Icon src={item.icon} size="lg" tone="inherit" strokeWidth={2} />
   {/snippet}
   <Button
     text={item.label}

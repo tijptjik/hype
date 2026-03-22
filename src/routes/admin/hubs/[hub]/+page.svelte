@@ -1018,7 +1018,7 @@ async function onSearchOrganisations(query: string): Promise<any[]> {
   })
 
   const currentHubId = hub?.data?.id ?? null
-  return (result.data[]).map(organisation => {
+  return result.data.map(organisation => {
     const assignedHubId =
       typeof organisation.hubId === 'string' ? organisation.hubId : null
     const assignedHubCode =
@@ -1369,7 +1369,7 @@ $effect(() => {
             }}
             {onAddUser}
             {onRemoveUser}
-            onRoleChange={onRoleChange}
+            {onRoleChange}
           />
         {/snippet}
 

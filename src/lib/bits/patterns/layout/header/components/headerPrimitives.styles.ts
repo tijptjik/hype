@@ -62,8 +62,7 @@ const HEADER_AVATAR_SHELL_HIDDEN_CLASSES =
   'w-0 transition-[width] duration-260 delay-20 ease-[ease]'
 
 const HEADER_FACET_BUTTON_BASE_CLASSES = 'h-full rounded-full px-4'
-const HEADER_FACET_BUTTON_HIDE_LABEL_CLASSES =
-  'shrink-0 [&>span:first-child]:mx-0'
+const HEADER_FACET_BUTTON_HIDE_LABEL_CLASSES = 'shrink-0 [&>span:first-child]:mx-0'
 const HEADER_FACET_BUTTON_ACTIVE_VARS = cx(
   '[--btn-hover-bg:var(--color-accent-soft-hover-bg)]',
   '[--btn-active-bg:var(--color-accent-soft-active-bg)]',

@@ -321,7 +321,7 @@ export const createTaskWithDependencies = async (
 
     // Remove the feature object from taskData since we now have featureId
     // and task validation doesn't need the full feature object
-    delete (taskData).feature
+    delete taskData.feature
   }
 
   // Step 3: Validate that all tasks have valid featureIds

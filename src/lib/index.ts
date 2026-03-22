@@ -1,7 +1,5 @@
 import { getLocale } from './i18n'
-import {
-  MOBILE_MAX_WIDTH
-} from '$lib/constants'
+import { MOBILE_MAX_WIDTH } from '$lib/constants'
 // COMPONENTS
 // TYPES
 import type { Writable } from 'svelte/store'
@@ -140,13 +138,13 @@ export const getValues = (
     ref = form
     key = fieldRoot
   } else if (field.isArray && !field.isNested) {
-    ref = (form)[fieldRoot][fieldIndex]
+    ref = form[fieldRoot][fieldIndex]
     key = fieldKey
   } else if (field.isNested && !field.isTranslated) {
-    ref = (form)[fieldRoot][fieldIndex]
+    ref = form[fieldRoot][fieldIndex]
     key = fieldKey
   } else if (field.isNested && field.isTranslated) {
-    const baseRef = (form)[fieldRoot][fieldIndex]
+    const baseRef = form[fieldRoot][fieldIndex]
     // Initialize i18n structure if it doesn't exist
     if (!baseRef.i18n) {
       baseRef.i18n = {}
@@ -160,15 +158,15 @@ export const getValues = (
     key = fieldKey
   } else if (field.isTranslated) {
     // Initialize i18n structure if it doesn't exist
-    if (!(form).i18n) {
-      ;(form).i18n = {}
+    if (!form.i18n) {
+      form.i18n = {}
     }
-    if (!(form).i18n[locale as Locale]) {
-      ;(form).i18n[locale as Locale] = {
+    if (!form.i18n[locale as Locale]) {
+      form.i18n[locale as Locale] = {
         locale: locale as Locale, // Ensure locale field is set
       }
     }
-    ref = (form).i18n[locale as Locale]
+    ref = form.i18n[locale as Locale]
     key = fieldRoot
   } else {
     console.error('NO FIELD REFERENCE FOUND', field)

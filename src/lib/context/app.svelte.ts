@@ -3045,7 +3045,7 @@ export class AppCtx {
   setPanelCtx = (panel: Panel, key: string, value: string | undefined | null): void => {
     // Set username context if provided
     if (value && this.state.panels[panel].ctx) {
-      ;(this.state.panels[panel].ctx)[key] = value
+      this.state.panels[panel].ctx[key] = value
     }
   }
 
@@ -3420,7 +3420,7 @@ export class AppCtx {
     for (const [_featureId, feature] of this.cache.feature) {
       if (feature && typeof feature === 'object' && 'images' in feature) {
         // Set images to undefined to force fresh API fetch
-        ;(feature).images = undefined
+        feature.images = undefined
       }
     }
   }
@@ -3521,7 +3521,7 @@ export class AppCtx {
     // Initialize each classifier property with an empty array if not already set
     classifierProperties.forEach((property: Property) => {
       if (!(property.key in layerFilters)) {
-        ;(layerFilters)[property.key] = []
+        layerFilters[property.key] = []
       }
     })
   }
@@ -3576,7 +3576,7 @@ export class AppCtx {
           rangeMax: max, // Default rangeMax to globalMax
         }
 
-        ;(layerFilters)[property.key] = filterConfig
+        layerFilters[property.key] = filterConfig
       }
     })
   }
