@@ -6,7 +6,7 @@ import { getI18n } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // CONFIG
-import { MOBILE_MAX_WIDTH, NEW_REF } from '$lib/index'
+import { MOBILE_MAX_WIDTH, NEW_REF } from '$lib/constants'
 // Types
 import type { Point } from 'geojson'
 import type {

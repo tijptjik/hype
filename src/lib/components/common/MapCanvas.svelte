@@ -7,6 +7,8 @@ import { getLocale, m } from '$lib/i18n'
 // ANIMATION
 import { fade } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
+// BITS COMPONENTS
+import { Button } from '$lib/bits'
 // LIB
 import {
   getUserMarkerStyleVariant,
@@ -16,7 +18,6 @@ import {
 import { getMapStyleDefinition, isMapStyleKey } from '$lib/map/styles'
 // ICONS
 import Square3Stack3d from 'virtual:icons/lucide/layers-3'
-import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
@@ -620,16 +621,13 @@ $effect(() => {
         class="group pointer-events-auto flex max-w-xs flex-col items-center gap-8 rounded-lg border-2 border-[#4987E2] bg-black p-8 px-8 font-mono shadow-[0_0_15px_rgba(0,0,255,0.5)]"
       >
         <p class="text-lg text-base-content">{m.map__no_markers_without_layers()}</p>
-        <button
-          type="button"
-          class="group-hover:inset-shadow-lg btn btn-outline border-[#4987E2] bg-black font-bold uppercase text-[#4987E2] ring-primary transition-all duration-300 group-hover:border-primary/70 group-hover:text-primary/70 group-hover:shadow-primary/70 group-hover:ring-2"
-        >
-          <Icon
-            src={Square3Stack3d}
-            class="transition-all duration-300 group-hover:scale-125 group-hover:text-primary"
-          />
-          {m.map__select_layer()}
-        </button>
+        <Button
+          text={m.map__select_layer()}
+          style="outline"
+          iconComponent={Square3Stack3d}
+          class="[--btn-color:#4987E2] [--btn-outline-fg:#4987E2] [--btn-hover-border:color-mix(in_oklab,var(--color-primary)_70%,transparent)] [--btn-hover-fg:color-mix(in_oklab,var(--color-primary)_70%,transparent)] bg-black font-bold uppercase ring-primary transition-all duration-300 group-hover:ring-2 group-hover:shadow-primary/70 group-hover:inset-shadow-lg"
+          iconClasses="transition-all duration-300 group-hover:scale-125 group-hover:text-primary"
+        />
       </div>
     </div>
   {/if}
