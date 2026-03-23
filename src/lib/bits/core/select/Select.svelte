@@ -40,8 +40,10 @@ function handleValueChange(nextValue: string): void {
   <div
     class={`bits-form__control-wrap bits-form__select-display-wrap ${displayClass} ${className}`}
   >
-    <div class={`bits-form__select-display bits-form__select-display--${variant}`}>
-      <span class="bits-form__select-label">{selectedLabel}</span>
+    <div
+      class={`bits-form__select-display bits-form__select-display--${variant} text-white`}
+    >
+      <span class="bits-form__select-label text-white">{selectedLabel}</span>
     </div>
   </div>
 {:else}
@@ -56,15 +58,15 @@ function handleValueChange(nextValue: string): void {
   >
     <SelectPrimitive.Trigger
       {...triggerAttrs}
-      class={`bits-form__select-trigger bits-form__select-trigger--${variant} ${triggerClass} ${className}`}
+      class={`bits-form__select-trigger bits-form__select-trigger--${variant} text-white ${triggerClass} ${className}`}
       aria-label={placeholder}
     >
-      <span class="bits-form__select-label">{selectedLabel}</span>
-      <ChevronsUpDownIcon class="bits-form__select-trigger-icon" />
+      <span class="bits-form__select-label text-white">{selectedLabel}</span>
+      <ChevronsUpDownIcon class="bits-form__select-trigger-icon text-white" />
     </SelectPrimitive.Trigger>
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
-        class={`bits-form__select-content ${contentClass}`}
+        class={`bits-form__select-content text-white ${contentClass}`}
         sideOffset={8}
       >
         <SelectPrimitive.Viewport class="bits-form__select-viewport">
@@ -73,12 +75,12 @@ function handleValueChange(nextValue: string): void {
               value={item.value}
               label={item.label}
               disabled={item.disabled}
-              class="bits-form__select-item"
+              class="bits-form__select-item text-white"
             >
               {#snippet children({ selected })}
-                <span class="bits-form__select-label">{item.label}</span>
+                <span class="bits-form__select-label text-white">{item.label}</span>
                 {#if selected}
-                  <CheckIcon class="bits-form__select-item-check-icon" />
+                  <CheckIcon class="bits-form__select-item-check-icon text-white" />
                 {/if}
               {/snippet}
             </SelectPrimitive.Item>
