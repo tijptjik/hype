@@ -22,6 +22,7 @@ import {
 import {
   addUserRoleSelection,
   applyChangedRelationField,
+  bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
   createResourceEditorPage,
@@ -35,6 +36,7 @@ import {
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   resetLocaleFields,
+  syncAdminFacetFromHash,
   toFormLevelIssueMessages,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
@@ -235,6 +237,7 @@ const cachedProjectState = $derived(
 // § State - Elements
 
 let contentsElement: HTMLFormElement | undefined = $state()
+let lastSyncedFacetHash = $state('')
 
 // § State - State
 
@@ -327,6 +330,28 @@ const buildFacetNavAction = createFacetNavActionBuilder<ProjectFacet>({
   getActiveFacet: () => activeFacet as ProjectFacet,
   navigateToFacet: facet =>
     navigateOnAdmin(adminCtx, FirstClassResource.project, projectRef, facet),
+})
+
+$effect(() => {
+  const currentHash = page.url.hash
+  if (currentHash === lastSyncedFacetHash) return
+  lastSyncedFacetHash = currentHash
+  syncAdminFacetFromHash({
+    hash: currentHash,
+    activeFacet,
+    facetOrder: projectFacetOrder,
+    adminCtx,
+    resourceType: FirstClassResource.project,
+    resourceRef: projectRef,
+  })
+})
+
+bindAdminFacetHistorySync({
+  getFacetOrder: () => projectFacetOrder,
+  getActiveFacet: () => adminCtx.activeFacet as ProjectFacet | false,
+  adminCtx,
+  resourceType: FirstClassResource.project,
+  getResourceRef: () => projectRef,
 })
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewProjectRef = $derived(projectRef === NEW_REF)

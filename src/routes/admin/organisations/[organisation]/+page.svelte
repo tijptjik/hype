@@ -12,6 +12,7 @@ import { toast } from 'svelte-sonner'
 // SERVICES
 import {
   addUserRoleSelection,
+  bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
   createResourceEditorPage,
@@ -27,6 +28,7 @@ import {
   resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
+  syncAdminFacetFromHash,
   toFormLevelIssueMessages,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
@@ -178,6 +180,7 @@ const cachedOrganisationState = $derived(
 // § State - Elements
 
 let contentsElement: HTMLFormElement | undefined = $state()
+let lastSyncedFacetHash = $state('')
 
 // § State - State
 
@@ -731,6 +734,28 @@ const buildFacetNavAction = createFacetNavActionBuilder<OrganisationFacet>({
   getActiveFacet: () => activeFacet as OrganisationFacet,
   navigateToFacet: facet =>
     navigateOnAdmin(adminCtx, FirstClassResource.organisation, organisationRef, facet),
+})
+
+$effect(() => {
+  const currentHash = page.url.hash
+  if (currentHash === lastSyncedFacetHash) return
+  lastSyncedFacetHash = currentHash
+  syncAdminFacetFromHash({
+    hash: currentHash,
+    activeFacet,
+    facetOrder: organisationFacetOrder,
+    adminCtx,
+    resourceType: FirstClassResource.organisation,
+    resourceRef: organisationRef,
+  })
+})
+
+bindAdminFacetHistorySync({
+  getFacetOrder: () => organisationFacetOrder,
+  getActiveFacet: () => adminCtx.activeFacet as OrganisationFacet | false,
+  adminCtx,
+  resourceType: FirstClassResource.organisation,
+  getResourceRef: () => organisationRef,
 })
 const canSubmitOrganisation = $derived(
   isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,

@@ -1,5 +1,5 @@
 import { toast } from 'svelte-sonner'
-import { untrack } from 'svelte'
+import { onMount, untrack } from 'svelte'
 import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
 import type { Component } from 'svelte'
@@ -402,6 +402,74 @@ export function createFacetNavActionBuilder<TFacet extends string>({
       },
     }
   }
+}
+
+/**
+ * Applies a hash fragment to admin facet state when it matches a valid facet.
+ *
+ * @param params Current hash, active facet, allowed facet order, and admin navigation context.
+ * @returns Nothing.
+ */
+export function syncAdminFacetFromHash<TFacet extends string>({
+  hash,
+  activeFacet,
+  facetOrder,
+  adminCtx,
+  resourceType,
+  resourceRef,
+}: {
+  hash: string
+  activeFacet: TFacet | false
+  facetOrder: readonly TFacet[]
+  adminCtx: AdminCtx
+  resourceType: FirstClassResource
+  resourceRef: string
+}): void {
+  const hashFacet = hash.slice(1) as TFacet | ''
+  if (!hashFacet || hashFacet === activeFacet) return
+  if (!facetOrder.includes(hashFacet)) return
+  adminCtx.setFacet(hashFacet as FacetType, resourceRef, resourceType)
+}
+
+/**
+ * Keeps admin facet state in sync with browser Back/Forward hash navigation.
+ *
+ * @param params Accessors for the current facet order, active facet, and resource identity.
+ * @returns Nothing.
+ */
+export function bindAdminFacetHistorySync<TFacet extends string>({
+  getFacetOrder,
+  getActiveFacet,
+  adminCtx,
+  resourceType,
+  getResourceRef,
+}: {
+  getFacetOrder: () => readonly TFacet[]
+  getActiveFacet: () => TFacet | false
+  adminCtx: AdminCtx
+  resourceType: FirstClassResource
+  getResourceRef: () => string
+}): void {
+  onMount(() => {
+    const handleFacetHistoryChange = (): void => {
+      syncAdminFacetFromHash({
+        hash: window.location.hash,
+        activeFacet: getActiveFacet(),
+        facetOrder: getFacetOrder(),
+        adminCtx,
+        resourceType,
+        resourceRef: getResourceRef(),
+      })
+    }
+
+    window.addEventListener('hashchange', handleFacetHistoryChange)
+    window.addEventListener('popstate', handleFacetHistoryChange)
+
+    return () => {
+      window.removeEventListener('hashchange', handleFacetHistoryChange)
+      window.removeEventListener('popstate', handleFacetHistoryChange)
+    }
+  })
 }
 
 // ---

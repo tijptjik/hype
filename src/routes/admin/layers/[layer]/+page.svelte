@@ -10,6 +10,7 @@ import { getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
 import { toast } from 'svelte-sonner'
 // SERVICES
 import {
+  bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
   createResourceEditorPage,
@@ -21,6 +22,7 @@ import {
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   resetLocaleFields,
+  syncAdminFacetFromHash,
   toFormLevelIssueMessages,
   toUniqueIssueMessages,
   translateLocaleIntoEmptyFields,
@@ -225,6 +227,7 @@ const cachedLayerState = $derived(
 )
 
 let contentsElement: HTMLFormElement | undefined = $state()
+let lastSyncedFacetHash = $state('')
 
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
@@ -336,6 +339,28 @@ const buildFacetNavAction = createFacetNavActionBuilder<LayerFacet>({
   getActiveFacet: () => activeFacet as LayerFacet,
   navigateToFacet: facet =>
     navigateOnAdmin(adminCtx, FirstClassResource.layer, layerRef, facet),
+})
+
+$effect(() => {
+  const currentHash = page.url.hash
+  if (currentHash === lastSyncedFacetHash) return
+  lastSyncedFacetHash = currentHash
+  syncAdminFacetFromHash({
+    hash: currentHash,
+    activeFacet,
+    facetOrder: layerFacetOrder,
+    adminCtx,
+    resourceType: FirstClassResource.layer,
+    resourceRef: layerRef,
+  })
+})
+
+bindAdminFacetHistorySync({
+  getFacetOrder: () => layerFacetOrder,
+  getActiveFacet: () => adminCtx.activeFacet as LayerFacet | false,
+  adminCtx,
+  resourceType: FirstClassResource.layer,
+  getResourceRef: () => layerRef,
 })
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewLayerRef = $derived(layerRef === NEW_REF)

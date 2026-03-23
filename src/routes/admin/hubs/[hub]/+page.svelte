@@ -11,6 +11,7 @@ import { toast } from 'svelte-sonner'
 import {
   addUserRoleSelection,
   applyChangedRelationField,
+  bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
   createResourceEditorPage,
@@ -26,6 +27,7 @@ import {
   resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
+  syncAdminFacetFromHash,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
   updateFormData,
@@ -174,6 +176,7 @@ const cachedHubState = $derived(
 // § State - Elements
 
 let contentsElement: HTMLFormElement | undefined = $state()
+let lastSyncedFacetHash = $state('')
 
 // § State - State
 
@@ -996,6 +999,28 @@ const buildFacetNavAction = createFacetNavActionBuilder<HubFacet>({
   getActiveFacet: () => activeFacet as HubFacet,
   navigateToFacet: facet =>
     navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, facet),
+})
+
+$effect(() => {
+  const currentHash = page.url.hash
+  if (currentHash === lastSyncedFacetHash) return
+  lastSyncedFacetHash = currentHash
+  syncAdminFacetFromHash({
+    hash: currentHash,
+    activeFacet,
+    facetOrder: hubFacetOrder,
+    adminCtx,
+    resourceType: FirstClassResource.hub,
+    resourceRef: hubRef,
+  })
+})
+
+bindAdminFacetHistorySync({
+  getFacetOrder: () => hubFacetOrder,
+  getActiveFacet: () => adminCtx.activeFacet as HubFacet | false,
+  adminCtx,
+  resourceType: FirstClassResource.hub,
+  getResourceRef: () => hubRef,
 })
 
 async function onSearchOrganisations(query: string): Promise<any[]> {

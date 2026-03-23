@@ -1,5 +1,5 @@
 // SVELTE
-import { goto } from '$app/navigation'
+import { goto, pushState } from '$app/navigation'
 // LIB
 import { ADMIN_PATH } from '$lib/constants'
 // ENUMS
@@ -124,7 +124,23 @@ export const navigateOnAdmin = (
   } else {
     adminCtx.setFacet(false)
   }
-  goto(url)
+
+  const currentUrl =
+    typeof window !== 'undefined' ? new URL(window.location.href) : null
+  const targetUrl = currentUrl ? new URL(url, currentUrl.origin) : null
+  const isHashOnlyNavigation =
+    currentUrl &&
+    targetUrl &&
+    currentUrl.pathname === targetUrl.pathname &&
+    currentUrl.search === targetUrl.search &&
+    currentUrl.hash !== targetUrl.hash
+
+  if (isHashOnlyNavigation) {
+    pushState(targetUrl.toString(), {})
+    return
+  }
+
+  void goto(url, { noScroll: true, keepFocus: true, replaceState: false })
 }
 
 export async function navigateOnAdminById(
