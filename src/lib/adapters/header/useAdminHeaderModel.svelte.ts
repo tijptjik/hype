@@ -330,6 +330,7 @@ export function useAdminHeaderModel(
     if (!headerResourceType) return []
     if (headerResourceType === FirstClassResource.feature) return ['card', 'table']
     if (
+      headerResourceType === FirstClassResource.hub ||
       headerResourceType === FirstClassResource.organisation ||
       headerResourceType === FirstClassResource.project ||
       headerResourceType === FirstClassResource.layer
