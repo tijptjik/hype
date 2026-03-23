@@ -80,6 +80,45 @@ export const getResourceRef = (
   return entity[refKey as keyof Resource]
 }
 
+/**
+ * Resolves previous and next resource ids for stepper-style admin navigation.
+ *
+ * @param items Ordered resource list to navigate within.
+ * @param currentId Current resource id.
+ * @returns Current index plus adjacent resource ids when available.
+ */
+export function getAdjacentResourceRefs<T extends { id?: string | null }>(
+  items: T[],
+  currentId: string | null,
+): {
+  currentIndex: number
+  previousRef: string | null
+  nextRef: string | null
+} {
+  if (!currentId) {
+    return {
+      currentIndex: -1,
+      previousRef: null,
+      nextRef: null,
+    }
+  }
+
+  const currentIndex = items.findIndex(item => item.id === currentId)
+  if (currentIndex < 0) {
+    return {
+      currentIndex,
+      previousRef: null,
+      nextRef: null,
+    }
+  }
+
+  return {
+    currentIndex,
+    previousRef: items[currentIndex - 1]?.id ?? null,
+    nextRef: items[currentIndex + 1]?.id ?? null,
+  }
+}
+
 export const getUrlForResource = (
   adminCtx: AdminCtx,
   resource: FirstClassResource,
