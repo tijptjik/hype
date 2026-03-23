@@ -487,7 +487,7 @@
   }
 
   .bits-theme .bits-admin-menu__badge {
-    @apply pointer-events-none absolute right-2.5 top-0.5 inline-flex size-5 items-center justify-center rounded-full border border-base-100 bg-primary text-[0.7rem] font-semibold leading-none text-primary-content;
+    @apply pointer-events-none absolute right-3 top-1.5 inline-flex size-5 items-center justify-center rounded-full border border-base-100 bg-primary text-[0.7rem] font-semibold leading-none text-primary-content;
     transform: translate(20%, -12%);
   }
 
