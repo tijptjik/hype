@@ -3,6 +3,7 @@ import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
 import { SectionHeader, Search, TransitionStack } from '$lib/bits/custom'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { FormGrid } from '$lib/bits/patterns/layout'
 import { OrganisationRoleType } from '$lib/enums'
 import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import * as FormUserRolesSectionPrimitive from './components'
@@ -22,6 +23,7 @@ type UserRoleCardViewModel = {
 let {
   title,
   subtitle,
+  layoutColumns = 2,
   transitionEntityKey = null,
   removeSelfResourceLabel,
   issues = [],
@@ -243,7 +245,7 @@ $effect(() => {
     duration={160}
   >
     {#snippet children(userRoles)}
-      <UserCard.Wrapper class="bits-form__user-card-wrapper--spacious">
+      <FormGrid {layoutColumns}>
         {#each userRoles as userRole (userRole.userId)}
           <UserCard.Root class="bits-form__user-card-root--full">
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
@@ -259,11 +261,11 @@ $effect(() => {
             />
           </UserCard.Root>
         {/each}
-      </UserCard.Wrapper>
+      </FormGrid>
     {/snippet}
 
     {#snippet previous(userRoles)}
-      <UserCard.Wrapper class="bits-form__user-card-wrapper--spacious">
+      <FormGrid {layoutColumns}>
         {#each userRoles as userRole (userRole.userId)}
           <UserCard.Root class="bits-form__user-card-root--full">
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
@@ -276,7 +278,7 @@ $effect(() => {
             />
           </UserCard.Root>
         {/each}
-      </UserCard.Wrapper>
+      </FormGrid>
     {/snippet}
   </TransitionStack>
 

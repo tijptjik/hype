@@ -1,6 +1,7 @@
 export * from './app'
 export * from './adaptiveToolbar'
 export * from './autoHide'
+export * from './formGrid'
 export * from './gridSpacer'
 export * from './header'
 export * from './minWidthGuard'

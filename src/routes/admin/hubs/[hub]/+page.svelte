@@ -1353,6 +1353,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
+            layoutColumns={3}
             transitionEntityKey={hub?.data?.id ?? hubRef}
             removeSelfResourceLabel={m.resource__hub_singular()}
             issues={userRoleSectionIssues}
