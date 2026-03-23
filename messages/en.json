@@ -581,6 +581,7 @@
   "use": "Use",
   "contributable": "Contributable",
   "default_enabled": "Default",
+  "admin__forms_layer_visible_by_default": "Is visible by default",
   "number__1": "One",
   "feature__graphemes": "Graphemes",
   "profile__role_type__contributor": "Contributor",
