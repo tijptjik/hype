@@ -270,6 +270,7 @@ let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
 })
 let lastSettledProjectResourceHubId = $state<string | null | undefined>(undefined)
 let stableCapabilityFacetVisibilityKey = $state('')
+let stableShouldHideCapabilitiesFacet = $state(false)
 let stableProjectCapabilityDefinitions = $state<CapabilityDefinitions>(
   {} as CapabilityDefinitions,
 )
@@ -1443,8 +1444,10 @@ const availableProjectCapabilityKeys = $derived(
 const hasAnyProjectCapabilitiesConfigured = $derived(
   availableProjectCapabilityKeys.length > 0,
 )
-const shouldHideCapabilitiesFacet = $derived(
-  isProjectCapabilitySourceResolved && !hasAnyProjectCapabilitiesConfigured,
+const shouldHideCapabilitiesFacet = $derived.by(() =>
+  isProjectCapabilitySourceResolved
+    ? !hasAnyProjectCapabilitiesConfigured
+    : stableShouldHideCapabilitiesFacet,
 )
 const isHeaderTransitionSettled = $derived.by(
   () =>
@@ -1477,6 +1480,10 @@ const projectCapabilityLabelByKey = $derived.by(
 
 $effect(() => {
   const nextVisibilityKey = `${projectRef}:${capabilitySourceOrganisationId}`
+  if (isProjectCapabilitySourceResolved) {
+    stableShouldHideCapabilitiesFacet = !hasAnyProjectCapabilitiesConfigured
+  }
+
   const hasLiveCapabilities =
     getCapabilityKeysFromDefinitions(organisationCapabilityDefinitions).length > 0
   const isSameCapabilitySource =
