@@ -562,6 +562,12 @@ export function createResourceFormConfig<Input>({
  *
  * @param params Shared header metadata for a resource editor page.
  * @returns Route, header, and action synchronization helpers.
+ * @remarks
+ * `syncHeader` is intentionally the generic path: it applies the provided title, icon,
+ * and base `facetTabs` without page-specific mutation. Editor pages that need runtime
+ * facet shaping before writing to the header, such as merging issue badges, optimistic
+ * state, or disabling facets based on local form/resource state, should bypass
+ * `syncHeader` and call `headerCtrl` directly for that custom header update.
  */
 export function getEditorCtrl({
   headerCtrl,
@@ -614,6 +620,17 @@ export function getEditorCtrl({
         cancelled = true
       }
     },
+    /**
+     * Synchronizes the generic editor header title/icon/base-facet state.
+     *
+     * @param params Header identity and dedupe inputs for the current resource.
+     * @returns Nothing.
+     * @remarks
+     * This helper assumes the header facets can be written directly from the static
+     * `facetTabs` provided to `getEditorCtrl()`. If a page needs to reshape facets
+     * first, for example to merge issue indicators or disable a facet based on local
+     * editor state, it should write to `headerCtrl` directly instead of using this.
+     */
     syncHeader: ({ ref, title, lastHeaderKey, setLastHeaderKey }) => {
       const headerKey = `${ref}:${title}`
       if (headerKey === lastHeaderKey) return
