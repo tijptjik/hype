@@ -158,7 +158,7 @@ const normalizeLayerPropertiesForProfile = (
 ): LayerDBRaw['properties'] => {
   if (!Array.isArray(properties)) return []
 
-  return properties.map(propertyRow => {
+  const normalized = properties.map(propertyRow => {
     const propertyDef =
       propertyRow && typeof propertyRow === 'object' ? propertyRow.property : null
 
@@ -180,6 +180,18 @@ const normalizeLayerPropertiesForProfile = (
       },
     }
   }) as LayerDBRaw['properties']
+
+  const deduped = new Map<string, (typeof normalized)[number]>()
+  for (const propertyRow of normalized) {
+    const propertyId =
+      typeof propertyRow?.propertyId === 'string'
+        ? propertyRow.propertyId
+        : propertyRow?.property?.id
+    if (!propertyId || deduped.has(propertyId)) continue
+    deduped.set(propertyId, propertyRow)
+  }
+
+  return Array.from(deduped.values()) as LayerDBRaw['properties']
 }
 
 /**
