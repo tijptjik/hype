@@ -17,6 +17,8 @@ import TagsIcon from 'virtual:icons/lucide/tags'
 import PenIcon from 'virtual:icons/lucide/pen'
 // I18N
 import { m } from '$lib/i18n'
+// SERVICES
+import { getFeatureIdenticonUrl } from '$lib/client/services/image'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { FeatureRowStatMap } from '$lib/types'
@@ -30,6 +32,7 @@ let {
   onImageClick,
   isSelected = false,
 }: FeatureRowProps = $props()
+
 const statSections = $derived([
   {
     key: 'status',
@@ -79,6 +82,12 @@ function toPlaceholderStatuses(statuses: FeatureRowStatMap): string[] {
   return Object.keys(statuses)
 }
 
+const fallbackImageSrc = $derived(
+  entity.image
+    ? undefined
+    : getFeatureIdenticonUrl(`${entity.id}:${model.title || 'feature'}`),
+)
+
 function handleRowKeyDown(event: KeyboardEvent): void {
   if (isSelected) return
 
@@ -118,6 +127,7 @@ function handleDescriptionClick(): void {
   onclick={handleTitleClick}
   onkeydown={handleRowKeyDown}
   image={entity.image}
+  imageSrc={fallbackImageSrc}
   alt={model.imageAlt}
   onImageClick={entity.image ? (handleImageClick as (image: unknown) => void) : undefined}
   title={model.title || m.deft_dry_chipmunk_blink()}
