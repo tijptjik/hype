@@ -73,10 +73,9 @@ export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Eve
 
 /**
  * Creates the default form payload for a new feature draft.
- * @param parentLayerId Optional parent layer id to seed into the form.
  * @returns An empty feature form input with default geometry and i18n structure.
  */
-export function toEmptyFeatureFormInput(parentLayerId: string = ''): FeatureFormInput {
+export function toEmptyFeatureFormInput(): FeatureFormInput {
   return {
     meta: {
       mode: 'create',
@@ -85,7 +84,7 @@ export function toEmptyFeatureFormInput(parentLayerId: string = ''): FeatureForm
     data: {
       organisationId: '',
       projectId: '',
-      layerId: parentLayerId,
+      layerId: '',
       contributorId: null,
       geometry: {
         type: 'Point',
@@ -132,14 +131,12 @@ export function toEmptyFeatureFormInput(parentLayerId: string = ''): FeatureForm
 /**
  * Normalizes a feature entity into the editable feature form shape.
  * @param value Feature entity to project into the form.
- * @param parentLayerId Optional fallback parent layer id when no entity is provided.
  * @returns A fully shaped feature form input.
  */
 export function toFeatureFormInput(
   value: Feature | null | undefined,
-  parentLayerId: string = '',
 ): FeatureFormInput {
-  if (!value) return toEmptyFeatureFormInput(parentLayerId)
+  if (!value) return toEmptyFeatureFormInput()
 
   return {
     meta: {
