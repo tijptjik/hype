@@ -1,4 +1,5 @@
 <script lang="ts">
+import { cx } from '$lib/bits/utils'
 import * as FormFacetNavPrimitive from './components'
 import type { FormFacetNavProps } from './formFacetNav.types'
 
@@ -9,13 +10,7 @@ let {
 }: FormFacetNavProps = $props()
 
 const rootClass = $derived(
-  [
-    'bits-feature-editor__facet-nav',
-    'bits-feature-editor__facet-nav--facet-end',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' '),
+  cx('flex w-full items-center justify-between gap-3 rounded-2xl', className),
 )
 </script>
 

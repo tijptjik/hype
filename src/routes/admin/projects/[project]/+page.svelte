@@ -2721,6 +2721,7 @@ $effect(() => {
             resolveSourceTag: resolveProjectPropertySourceTag,
           }}
       />
+      <div class="w-full min-h-20 flex-none"></div>
     </Main.Facet>
 
     <div class="hidden" aria-hidden="true">

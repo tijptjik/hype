@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from 'svelte'
+import { cx } from '$lib/bits/utils'
 import { FormFacetNav } from '$lib/bits/patterns/forms/formFacetNav'
 import type { MainFacetProps } from './main.types'
 
@@ -17,7 +18,7 @@ let {
 }: MainFacetProps = $props()
 
 const FACET_OVERSCROLL = 96
-const FACET_FOOTER_GUTTER = 48
+const FACET_FOOTER_GUTTER = 32
 
 let facetElement = $state<HTMLElement | null>(null)
 let innerElement = $state<HTMLDivElement | null>(null)
@@ -26,11 +27,11 @@ let navElement = $state<HTMLDivElement | null>(null)
 let bodyMinHeight = $state(0)
 let bodyHeight = $state<number | null>(null)
 let tailSpacer = $state(0)
-let hasScrollableOverflow = $state(false)
+let navShellStyle = $state('')
+let bodyBottomPadding = $state(0)
 
 const hasFacetNav = $derived(Boolean(previousAction || nextAction))
-const isRequestedFooterNav = $derived(hasFacetNav && navMode === 'footer')
-const isFooterNav = $derived(isRequestedFooterNav && !hasScrollableOverflow)
+const FACET_BOTTOM_CLEARANCE = 24
 
 const facetClass = $derived(
   [
@@ -40,7 +41,6 @@ const facetClass = $derived(
     transition === 'fade' && isVisible ? 'bits-main__section--active' : '',
     transition === 'fade' && !isVisible ? 'bits-main__section--faded' : '',
     transition !== 'fade' && !isVisible ? 'bits-main__section--hidden' : '',
-    isFooterNav ? 'bits-main__section--footer-nav' : '',
     className,
   ]
     .filter(Boolean)
@@ -71,14 +71,26 @@ const bodyStyle = $derived(
     bodyHeight != null
       ? `--bits-main-section-body-height: ${Math.max(0, bodyHeight)}px`
       : '--bits-main-section-body-height: auto',
+    `padding-bottom: ${Math.max(0, bodyBottomPadding)}px`,
   ].join('; '),
 )
 const tailSpacerStyle = $derived(`height: ${Math.max(0, tailSpacer)}px;`)
-const navClass = $derived(
-  ['bits-main__section-nav', isFooterNav ? 'bits-main__section-nav--footer' : '']
-    .filter(Boolean)
-    .join(' '),
+const navShellClass = $derived(
+  cx('fixed z-[120] flex min-h-12 items-center px-0 pt-0 pointer-events-auto'),
 )
+const navContentClass = 'min-h-12 py-0'
+const isViewportConstrainedFacet = $derived(navMode === 'footer')
+
+function getReservedBottomSpace(navHeight: number): number {
+  if (isViewportConstrainedFacet) {
+    return Math.max(FACET_BOTTOM_CLEARANCE, navHeight + FACET_FOOTER_GUTTER)
+  }
+
+  return Math.max(
+    FACET_BOTTOM_CLEARANCE,
+    hasFacetNav ? navHeight + FACET_FOOTER_GUTTER : FACET_BOTTOM_CLEARANCE,
+  )
+}
 
 function isLayoutDebugEnabled(): boolean {
   if (typeof window === 'undefined') return false
@@ -162,8 +174,9 @@ function measureLayout(): void {
   if (!facet || !body) {
     bodyMinHeight = 0
     bodyHeight = null
-    tailSpacer = 0
-    hasScrollableOverflow = false
+    bodyBottomPadding = isViewportConstrainedFacet ? FACET_BOTTOM_CLEARANCE : 0
+    tailSpacer = isViewportConstrainedFacet ? 0 : FACET_BOTTOM_CLEARANCE
+    navShellStyle = ''
     return
   }
 
@@ -172,33 +185,38 @@ function measureLayout(): void {
   const bodyContentHeight = getBodyContentHeight(body)
   const contentHeight = bodyContentHeight + navHeight
   const remainingHeight = Math.max(0, availableHeight - contentHeight)
-  const hasVerticalOverflow = body.scrollHeight > body.clientHeight + 1
-  const hasHorizontalOverflow = body.scrollWidth > body.clientWidth + 1
+  const facetRect = facet.getBoundingClientRect()
+  const bottomInset = Math.max(16, window.innerHeight - facetRect.bottom + 16)
+  const left = Math.max(24, Math.round(facetRect.left))
+  const width = Math.max(0, Math.round(facetRect.width))
 
-  hasScrollableOverflow = hasVerticalOverflow || hasHorizontalOverflow
-
-  if (isFooterNav) {
-    bodyHeight = null
-    bodyMinHeight = 0
-    tailSpacer = 0
-    logInnerChildrenHeights()
-    return
-  }
+  navShellStyle =
+    hasFacetNav && width > 0
+      ? `left: ${left}px; width: ${width}px; bottom: ${bottomInset}px;`
+      : ''
 
   bodyHeight = null
+  bodyBottomPadding = isViewportConstrainedFacet ? getReservedBottomSpace(navHeight) : 0
 
   if (contentHeight <= availableHeight) {
     const leadSpace = Math.floor(remainingHeight / 2)
     const trailSpace = remainingHeight - leadSpace
 
     bodyMinHeight = bodyContentHeight + leadSpace
-    tailSpacer = trailSpace
+    tailSpacer = isViewportConstrainedFacet
+      ? 0
+      : trailSpace + getReservedBottomSpace(navHeight)
     logInnerChildrenHeights()
     return
   }
 
   bodyMinHeight = bodyContentHeight
-  tailSpacer = hasFacetNav ? FACET_OVERSCROLL : 0
+  tailSpacer = isViewportConstrainedFacet
+    ? 0
+    : Math.max(
+        FACET_BOTTOM_CLEARANCE,
+        hasFacetNav ? navHeight + FACET_OVERSCROLL : FACET_BOTTOM_CLEARANCE,
+      )
   logInnerChildrenHeights()
 }
 
@@ -208,6 +226,28 @@ $effect(() => {
   navMode
   contentClass
   queueMicrotask(measureLayout)
+})
+
+$effect(() => {
+  navElement
+  isVisible
+  hasFacetNav
+  queueMicrotask(measureLayout)
+})
+
+$effect(() => {
+  const nav = navElement
+  if (!nav) return
+
+  const observer = new ResizeObserver(() => {
+    measureLayout()
+  })
+
+  observer.observe(nav)
+
+  return () => {
+    observer.disconnect()
+  }
 })
 
 onMount(() => {
@@ -222,7 +262,6 @@ onMount(() => {
 
   observer.observe(facet)
   observer.observe(body)
-  if (navElement) observer.observe(navElement)
   const handleLayoutSettled = (): void => {
     queueMicrotask(measureLayout)
   }
@@ -248,11 +287,6 @@ onMount(() => {
       <div bind:this={bodyElement} class={bodyClass} style={bodyStyle}>
         {@render children?.()}
       </div>
-      {#if hasFacetNav}
-        <div bind:this={navElement} class={navClass}>
-          <FormFacetNav {previousAction} {nextAction} />
-        </div>
-      {/if}
       {#if tailSpacer > 0}
         <div
           class="bits-main__section-tail-spacer"
@@ -262,6 +296,11 @@ onMount(() => {
       {/if}
     </div>
   </section>
+  {#if hasFacetNav && isVisible}
+    <div bind:this={navElement} class={navShellClass} style={navShellStyle}>
+      <FormFacetNav {previousAction} {nextAction} class={navContentClass} />
+    </div>
+  {/if}
 {:else}
   <section
     bind:this={facetElement}
@@ -274,11 +313,6 @@ onMount(() => {
       <div bind:this={bodyElement} class={bodyClass} style={bodyStyle}>
         {@render children?.()}
       </div>
-      {#if hasFacetNav}
-        <div bind:this={navElement} class={navClass}>
-          <FormFacetNav {previousAction} {nextAction} />
-        </div>
-      {/if}
       {#if tailSpacer > 0}
         <div
           class="bits-main__section-tail-spacer"
@@ -288,4 +322,9 @@ onMount(() => {
       {/if}
     </div>
   </section>
+  {#if hasFacetNav && isVisible}
+    <div bind:this={navElement} class={navShellClass} style={navShellStyle}>
+      <FormFacetNav {previousAction} {nextAction} class={navContentClass} />
+    </div>
+  {/if}
 {/if}
