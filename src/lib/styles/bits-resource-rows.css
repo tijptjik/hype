@@ -10,9 +10,9 @@
     display: grid;
     align-items: center;
     gap: 1rem;
-    padding: 0.5rem;
+    padding: 0.25rem;
     border-radius: 0.5rem;
-    background: color-mix(in oklab, var(--color-base-300) 20%, transparent);
+    background: color-mix(in oklab, var(--color-base-300) 36%, transparent);
     box-shadow: var(--shadow-mini);
     cursor: pointer;
     caret-color: transparent;

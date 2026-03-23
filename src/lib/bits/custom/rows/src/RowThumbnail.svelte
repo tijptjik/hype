@@ -1,34 +1,57 @@
 <script lang="ts">
 import { getURLfromImage } from '$lib/client/services/image'
+import {
+  getRowThumbnailClass,
+  rowThumbnailFallbackClass,
+  rowThumbnailFallbackTextClass,
+  rowThumbnailImageClass,
+} from '../row.styles'
 import type { RowThumbnailProps } from '../row.types'
 
-let { image = null, alt = 'Resource image', onClick }: RowThumbnailProps = $props()
+let {
+  image = null,
+  imageSrc,
+  alt = 'Resource image',
+  onClick,
+}: RowThumbnailProps = $props()
+
+const resolvedSrc = $derived(
+  image
+    ? getURLfromImage({
+        image: image as never,
+        transformation: 'c_fill,w_100,h_100,q_auto',
+      })
+    : imageSrc,
+)
 
 function handleClick(event: Event): void {
+  if (!onClick) {
+    return
+  }
+
   event.preventDefault()
   event.stopPropagation()
-  if (image && onClick) onClick(image)
+
+  if (image) {
+    ;(onClick as (image: unknown) => void)(image)
+    return
+  }
+
+  ;(onClick as () => void)()
 }
 </script>
 
 <div
-  class="relative h-16 w-16 shrink-0 cursor-pointer"
+  class={getRowThumbnailClass({ isClickable: !!onClick })}
   onclick={handleClick}
   tabindex="-1"
   role="button"
 >
-  {#if image}
-    <img
-      src={getURLfromImage({
-        image: image as never,
-        transformation: 'c_fill,w_100,h_100,q_auto',
-      })}
-      alt
-      class="h-full w-full rounded-md object-cover text-transparent"
-    >
+  {#if resolvedSrc}
+    <img src={resolvedSrc} alt class={rowThumbnailImageClass}>
   {:else}
-    <div class="flex h-full w-full items-center justify-center rounded-md bg-base-200">
-      <span class="text-xs text-base-content/60"></span>
+    <div class={rowThumbnailFallbackClass}>
+      <span class={rowThumbnailFallbackTextClass}></span>
     </div>
   {/if}
 </div>

@@ -6,6 +6,7 @@ let {
   label,
   tone = 'neutral',
   tooltipText = null,
+  icon = null,
   class: className = '',
 }: ResourceStatusBadgeProps = $props()
 
@@ -22,7 +23,15 @@ const badgeClasses = $derived(
   contentClass="bits-resource-status-badge__tooltip"
 >
   {#snippet trigger()}
-    <span class={badgeClasses}>{label}</span>
+    <span class={badgeClasses}>
+      {#if icon}
+        {@const StatusIcon = icon}
+        <span class="bits-index-card__status-icon" aria-hidden="true">
+          <StatusIcon />
+        </span>
+      {/if}
+      {label}
+    </span>
   {/snippet}
 
   {#snippet children()}

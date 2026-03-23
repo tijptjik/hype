@@ -12,7 +12,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { IndexCard, ResourceControlBar, ResourceIndex } from '$lib/bits'
+import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -222,17 +222,22 @@ $effect(() => {
 let entities: Project[] = $derived(
   adminCtx.getViewFilteredResource<Project>(FirstClassResource.project),
 )
+
+function getIndexModel(entity: Project) {
+  return createAdminIndexCardModel({
+    adminCtx,
+    entity,
+    keyMap,
+    search: page.url.search,
+  })
+}
 </script>
 
 <ResourceIndex resource={FirstClassResource.project} {entities}>
   {#snippet card(entity: Project)}
-    <IndexCard
-      {...createAdminIndexCardModel({
-        adminCtx,
-        entity,
-        keyMap,
-        search: page.url.search,
-      })}
-    />
+    <IndexCard {...getIndexModel(entity)} />
+  {/snippet}
+  {#snippet row(entity: Project, index)}
+    <ResourceRow {index} breadcrumbColumnCount={1} {...getIndexModel(entity)} />
   {/snippet}
 </ResourceIndex>

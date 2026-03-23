@@ -10,10 +10,12 @@ type ResourceTableRowProps<T extends { id: string }> = {
 let { entity, index, row }: ResourceTableRowProps<T> = $props()
 </script>
 
-{#if row}
-  {@render row(entity, index)}
-{:else}
-  <div class="bits-resource-index__fallback-row" data-entity-index={index}>
-    <span class="bits-resource-index__fallback-title">{entity.id}</span>
-  </div>
-{/if}
+<div class="px-2">
+  {#if row}
+    {@render row(entity, index)}
+  {:else}
+    <div class="bits-resource-index__fallback-row" data-entity-index={index}>
+      <span class="bits-resource-index__fallback-title">{entity.id}</span>
+    </div>
+  {/if}
+</div>

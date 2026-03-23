@@ -4,6 +4,7 @@ import { SimpleTooltip } from '$lib/bits/core'
 import type { IndexCardFooterProps } from '../indexCard.types'
 
 let { status = null, breadcrumbs = [], cardWidth = 0 }: IndexCardFooterProps = $props()
+const nonFocusableTooltipTriggerProps = { tabindex: -1 }
 
 let breadcrumbMeasureContainer: HTMLDivElement | null = $state(null)
 let breadcrumbSlotWidth = $state(0)
@@ -110,7 +111,10 @@ $effect(() => {
 <footer class="bits-index-card__footer">
   <div class="bits-index-card__footer-left">
     {#if status}
-      <SimpleTooltip disabled={!status.tooltip}>
+      <SimpleTooltip
+        disabled={!status.tooltip}
+        triggerProps={nonFocusableTooltipTriggerProps}
+      >
         {#snippet trigger()}
           <span
             class={[
@@ -145,7 +149,10 @@ $effect(() => {
     >
       <div class="bits-index-card__breadcrumbs bits-index-card__meta">
         {#each breadcrumbs.slice(0, visibleBreadcrumbCount) as breadcrumb, index (index)}
-          <SimpleTooltip disabled={!breadcrumb.tooltip}>
+          <SimpleTooltip
+            disabled={!breadcrumb.tooltip}
+            triggerProps={nonFocusableTooltipTriggerProps}
+          >
             {#snippet trigger()}
               <span class="bits-index-card__crumb">
                 <span class="bits-index-card__crumb-label">{breadcrumb.label}</span>

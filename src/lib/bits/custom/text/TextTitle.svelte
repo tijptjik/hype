@@ -10,5 +10,5 @@ let { text, onClick }: TextTitleProps = $props()
   {onClick}
   separator="•"
   padding={32}
-  class="cursor-pointer font-medium text-base-content"
+  class="w-full text-left font-medium text-base-content"
 />

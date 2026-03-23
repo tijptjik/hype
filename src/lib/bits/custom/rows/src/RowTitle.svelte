@@ -1,10 +1,12 @@
 <script lang="ts">
 import { TextDescription, TextTitle } from '$lib/bits/custom/text'
 import RowThumbnail from './RowThumbnail.svelte'
+import { rowTitleClass, rowTitleContentClass } from '../row.styles'
 import type { RowTitleProps } from '../row.types'
 
 let {
   image,
+  imageSrc,
   alt = 'Resource image',
   onImageClick,
   title = '',
@@ -14,9 +16,9 @@ let {
 }: RowTitleProps = $props()
 </script>
 
-<div class="flex items-center gap-4">
-  <RowThumbnail {image} {alt} onClick={onImageClick} />
-  <div class="flex flex-col overflow-hidden pt-1">
+<div class={rowTitleClass}>
+  <RowThumbnail {image} {imageSrc} {alt} onClick={onImageClick} />
+  <div class={rowTitleContentClass}>
     <TextTitle text={title} onClick={onTitleClick} />
     <TextDescription text={description} onClick={onDescriptionClick} />
   </div>

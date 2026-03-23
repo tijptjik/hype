@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getRowRootClass, rowShellClass } from '../row.styles'
 import type { RowRootProps } from '../row.types'
 
 let {
@@ -7,19 +8,19 @@ let {
   variant,
   onclick,
   onkeydown,
+  class: className = '',
   children,
 }: RowRootProps = $props()
 </script>
 
-<div class={`bits-resource-row-shell bits-resource-row-shell--${variant}`.trim()}>
+<div class={rowShellClass}>
   <div
     {onclick}
     {onkeydown}
     tabindex="0"
     role="button"
     data-entity-index={index}
-    class={`bits-theme bits-resource-row bits-resource-row--${variant}`.trim()}
-    class:bits-resource-row--selected={isSelected}
+    class={getRowRootClass({ variant, isSelected, className })}
   >
     {#if children}
       {@render children()}

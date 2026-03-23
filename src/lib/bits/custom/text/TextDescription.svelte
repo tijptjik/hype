@@ -10,5 +10,5 @@ let { text, onClick }: TextDescriptionProps = $props()
   {onClick}
   separator="•"
   padding={24}
-  class={`${onClick ? 'cursor-pointer ' : ''}text-sm text-base-content/60 hover:text-primary`.trim()}
+  class={`${onClick ? 'cursor-pointer ' : ''}w-full text-left text-sm text-base-content/60 hover:text-primary`.trim()}
 />

@@ -8,7 +8,9 @@ let {
   variant,
   onclick,
   onkeydown,
+  class: className = '',
   image,
+  imageSrc,
   alt = 'Resource image',
   onImageClick,
   title = '',
@@ -19,10 +21,18 @@ let {
 }: RowProps = $props()
 </script>
 
-<RowPrimitive.RowRoot {index} {isSelected} {variant} {onclick} {onkeydown}>
+<RowPrimitive.RowRoot
+  {index}
+  {isSelected}
+  {variant}
+  {onclick}
+  {onkeydown}
+  class={className}
+>
   {#if title}
     <RowPrimitive.RowTitleSection
       {image}
+      {imageSrc}
       {alt}
       {onImageClick}
       {title}

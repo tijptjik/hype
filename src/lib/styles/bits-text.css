@@ -3,7 +3,6 @@
     display: block;
     width: 100%;
     min-width: 0;
-    padding-inline: calc(var(--bits-scrollable-text-padding, 16px) / 2);
   }
 
   .bits-theme .bits-scrollable-text[data-overflow="true"] {

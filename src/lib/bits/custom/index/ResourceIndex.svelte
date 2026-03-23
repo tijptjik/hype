@@ -22,6 +22,7 @@ import { VirtualList } from './src'
 const GRID_HORIZONTAL_PADDING_PX = 16
 const GRID_COLUMN_GAP_PX = 16
 const GRID_ROW_GAP_PX = 16
+const TABLE_ROW_GAP_PX = 12
 const CARD_ITEM_WIDTH_PX = 340
 const CARD_ROW_HEIGHT_PX = 396
 const TABLE_ROW_HEIGHT_PX = 88
@@ -50,7 +51,9 @@ let lastKnownPanelOpenState = $state(
 const layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
 const isRowLayout = $derived(layoutMode === 'table' || layoutMode === 'list')
 const itemHeight = $derived(
-  isRowLayout ? TABLE_ROW_HEIGHT_PX : CARD_ROW_HEIGHT_PX + GRID_ROW_GAP_PX,
+  isRowLayout
+    ? TABLE_ROW_HEIGHT_PX + TABLE_ROW_GAP_PX
+    : CARD_ROW_HEIGHT_PX + GRID_ROW_GAP_PX,
 )
 const columnCount = $derived(isRowLayout ? 1 : stableColumnCount)
 
@@ -160,7 +163,7 @@ $effect(() => {
           getKey={item => item.id}
           height="100%"
           {itemHeight}
-          rowGap={isRowLayout ? 0 : GRID_ROW_GAP_PX}
+          rowGap={isRowLayout ? TABLE_ROW_GAP_PX : GRID_ROW_GAP_PX}
           bufferBefore={8}
           bufferAfter={10}
           padding={10}

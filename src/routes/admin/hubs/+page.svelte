@@ -14,7 +14,7 @@ import {
   createTranslationFilter,
 } from '$lib/client/services/filters'
 // BITS PATTERNS
-import { IndexCard, ResourceControlBar, ResourceIndex } from '$lib/bits'
+import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/bits'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
@@ -112,6 +112,15 @@ let entities: Hub[] = $derived(
   adminCtx.getViewFilteredResource<Hub>(FirstClassResource.hub),
 )
 
+function getIndexModel(entity: Hub) {
+  return createAdminIndexCardModel({
+    adminCtx,
+    entity,
+    keyMap,
+    search: page.url.search,
+  })
+}
+
 $effect(() => {
   headerCtrl.setHeaderForIndex(m.hub__title(), HubIcon)
   headerCtrl.setControlBar(
@@ -132,13 +141,14 @@ $effect(() => {
 
 <ResourceIndex resource={FirstClassResource.hub} {entities}>
   {#snippet card(entity: Hub)}
-    <IndexCard
-      {...createAdminIndexCardModel({
-        adminCtx,
-        entity,
-        keyMap,
-        search: page.url.search,
-      })}
+    <IndexCard {...getIndexModel(entity)} />
+  {/snippet}
+  {#snippet row(entity: Hub, index)}
+    <ResourceRow
+      {index}
+      breadcrumbColumnCount={3}
+      breadcrumbVariant="stats"
+      {...getIndexModel(entity)}
     />
   {/snippet}
 </ResourceIndex>

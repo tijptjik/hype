@@ -108,6 +108,7 @@ export {
   ResourceFeatureStatusBadge,
   ResourceIndex,
   ResourceIndexPrimitive,
+  ResourceRow,
   ResourceSortControl,
   ResourceStatusBadge,
   ResourceTaskStatusBadge,

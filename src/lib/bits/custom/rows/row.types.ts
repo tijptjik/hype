@@ -1,26 +1,31 @@
 import type { Snippet } from 'svelte'
 
-export type RowVariant = 'feature' | 'task'
+export type RowImageClickHandler = ((image: unknown) => void) | (() => void)
+
+export type RowVariant = 'feature' | 'task' | 'resource'
 
 export type RowRootProps = {
   index: number
   isSelected?: boolean
-  variant: RowVariant
+  variant?: RowVariant
   onclick: (event: MouseEvent) => void
   onkeydown: (event: KeyboardEvent) => void
+  class?: string
   children?: Snippet
 }
 
 export type RowThumbnailProps = {
   image?: unknown
+  imageSrc?: string
   alt?: string
-  onClick?: (image: unknown) => void
+  onClick?: RowImageClickHandler
 }
 
 export type RowTitleProps = {
   image?: unknown
+  imageSrc?: string
   alt?: string
-  onImageClick?: (image: unknown) => void
+  onImageClick?: RowImageClickHandler
   title?: string
   onTitleClick?: () => void
   description?: string
