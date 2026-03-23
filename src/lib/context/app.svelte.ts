@@ -781,14 +781,20 @@ export class AppCtx {
     }
   }
 
-  private getCurrentHubId = (): Id | null => this.hub?.id ?? null
+  private getCurrentHubId = (): Id | null =>
+    this.hub?.id ??
+    (this.hub?.code ? (this.getHubIdByCode(this.hub.code) ?? null) : null)
 
   private getUserLayersForCurrentHub = (): UserLayer[] => {
     const hubId = this.getCurrentHubId()
-    if (!hubId || !this.user || !('userLayers' in this.user)) return []
-    return ((this.user as CurrentUser).userLayers ?? []).filter(
-      layer => layer.hubId === hubId,
+    const hubCode = this.hub?.code ?? null
+    if ((!hubId && !hubCode) || !this.user || !('userLayers' in this.user)) {
+      return []
+    }
+    const hubUserLayers = ((this.user as CurrentUser).userLayers ?? []).filter(layer =>
+      hubId ? layer.hubId === hubId : layer.hubCode === hubCode,
     )
+    return hubUserLayers
   }
 
   private getHubDefaultLayerIds = (): Id[] => {
@@ -801,13 +807,23 @@ export class AppCtx {
 
   private applyInitialLayerPrisms = (): void => {
     const hubId = this.getCurrentHubId()
-    if (!hubId) return
+    const hubCode = this.hub?.code ?? null
+    if (!hubId && !hubCode) {
+      return
+    }
 
     const userLayerIds = this.getUserLayersForCurrentHub().map(layer => layer.layerId)
-    const nextLayerIds =
-      userLayerIds.length > 0 ? userLayerIds : this.getHubDefaultLayerIds()
+    const defaultLayerIds = this.getHubDefaultLayerIds()
+    const nextLayerIds = userLayerIds.length > 0 ? userLayerIds : defaultLayerIds
+    const dedupedLayerIds = [...new Set(nextLayerIds)]
+    const currentLayerIds = this.state.prisms.layer
+    const isUnchanged =
+      currentLayerIds.length === dedupedLayerIds.length &&
+      currentLayerIds.every((layerId, index) => layerId === dedupedLayerIds[index])
 
-    this.state.prisms.layer = [...new Set(nextLayerIds)]
+    if (isUnchanged) return
+
+    this.state.prisms.layer = dedupedLayerIds
   }
 
   initStatsCache = (): void => {
@@ -3371,24 +3387,37 @@ export class AppCtx {
           isDefaultVisible: true,
         }))
 
+    if (!hubId) {
+      ;(this.user as CurrentUser).userLayers = [
+        ...currentUserLayers.filter(layer => layer.hubId !== null),
+        ...nextCurrentHubLayers,
+      ]
+    }
+
+    this.setLayers(nextCurrentHubLayers.map(layer => layer.layerId))
+
     debouncedUpdateUserLayers(
       (this.user as CurrentUser).id,
       {
         id: hubId,
         code: hubCode,
       },
-      hubId ? nextCurrentHubLayers : [],
+      nextCurrentHubLayers,
       {
         onSuccess: layers => {
-          if (!layers.length) return
+          const resolvedHubId = layers[0]?.hubId ?? hubId
+          if (resolvedHubId && this.hub?.code) {
+            this.hubCodeToId.set(this.hub.code, resolvedHubId)
+          }
 
-          const resolvedHubId = layers[0]?.hubId
           if (resolvedHubId && this.hub && !this.hub.id) {
             this.hub = {
               ...this.hub,
               id: resolvedHubId,
             }
           }
+
+          if (!resolvedHubId) return
 
           const retainedLayers = ((this.user as CurrentUser).userLayers || []).filter(
             layer => layer.hubId !== resolvedHubId,
@@ -3585,7 +3614,29 @@ export class AppCtx {
   //
   // ═══════════════════════
   setHub = (hub: HubOptsExtended) => {
-    this.hub = hub
+    if (hub.code && hub.id) {
+      this.hubCodeToId.set(hub.code, hub.id)
+    }
+
+    const currentHub = this.hub
+    const isSameHub =
+      Boolean(currentHub) &&
+      ((hub.id && currentHub.id === hub.id) ||
+        (!hub.id && currentHub?.code && currentHub.code === hub.code))
+
+    if (!isSameHub) {
+      this.hub = hub
+      this.applyInitialLayerPrisms()
+      return
+    }
+
+    if (currentHub && !currentHub.id && hub.id) {
+      this.hub = {
+        ...currentHub,
+        ...hub,
+      }
+      this.applyInitialLayerPrisms()
+    }
   }
 
   resetHub = () => {

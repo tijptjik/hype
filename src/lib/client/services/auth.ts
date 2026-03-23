@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { userLayer } from '$lib/db/schema/index'
+import { hub, userLayer } from '$lib/db/schema/index'
 // TYPES
 import type { Database, UserRoleDisco, SessionUser, Id } from '$lib/types'
 import type { UserLayer } from '$lib/db/zod/schema/user.types'
@@ -19,7 +19,19 @@ export async function getUserLayers(
   db: Database,
   userId: string,
 ): Promise<UserLayer[]> {
-  return await db.select().from(userLayer).where(eq(userLayer.userId, userId))
+  const rows = await db
+    .select({
+      userId: userLayer.userId,
+      hubId: userLayer.hubId,
+      layerId: userLayer.layerId,
+      isDefaultVisible: userLayer.isDefaultVisible,
+      hubCode: hub.code,
+    })
+    .from(userLayer)
+    .leftJoin(hub, eq(userLayer.hubId, hub.id))
+    .where(eq(userLayer.userId, userId))
+
+  return rows as UserLayer[]
 }
 /**
  * Checks if the user has access to the control panel based on their roles.

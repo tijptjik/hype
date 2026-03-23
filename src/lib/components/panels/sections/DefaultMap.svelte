@@ -4,10 +4,12 @@ import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+// BITS
+import { Switch, cx } from '$lib/bits'
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte'
 // TYPES
-import type { Layer, Project, Organisation, PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
@@ -15,18 +17,60 @@ const appCtx = getAppCtx()
 // PROPS
 let { ...panelProps }: PanelProps = $props()
 
-// Enhanced layer type with project and organisation
-type EnhancedLayer = Layer & {
-  project?: Project
-  organisation?: Organisation
-}
+const DESCRIPTION_PREVIEW_THRESHOLD = 180
+
+let expandedLayerIds = $state(new Set<string>())
 
 const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
+const canSaveUserLayers = $derived(Boolean(appCtx.hub?.id || appCtx.hub?.code))
+const orderedLayers = $derived.by(() =>
+  [...appCtx.state.resources.layer].sort((left, right) => {
+    const leftSelected = userLayerIds.has(left.id)
+    const rightSelected = userLayerIds.has(right.id)
+    if (leftSelected !== rightSelected) return leftSelected ? -1 : 1
+
+    const rankDiff =
+      (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)
+    if (rankDiff !== 0) return rankDiff
+
+    return getI18n(left, 'name', appCtx.getUserPreferences()).localeCompare(
+      getI18n(right, 'name', appCtx.getUserPreferences()),
+    )
+  }),
+)
+
+/**
+ * Tracks whether a long layer description is expanded.
+ */
+const isDescriptionExpanded = (layerId: string): boolean => {
+  return expandedLayerIds.has(layerId)
+}
+
+/**
+ * Toggles the expanded state for a layer description preview.
+ */
+const toggleDescriptionExpanded = (layerId: string): void => {
+  const nextExpandedLayerIds = new Set(expandedLayerIds)
+
+  if (nextExpandedLayerIds.has(layerId)) {
+    nextExpandedLayerIds.delete(layerId)
+  } else {
+    nextExpandedLayerIds.add(layerId)
+  }
+
+  expandedLayerIds = nextExpandedLayerIds
+}
 </script>
 
-<Section title={m.settings_default_map_title()} icon="/globe.svg" position="right">
+<Section
+  {...panelProps}
+  title={m.settings_default_map_title()}
+  iconGraphicClass="scale-125 origin-bottom-right mr-1"
+  icon="/globe.svg"
+  position="right"
+>
   <div class="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3">
-    {#each appCtx.state.resources.layer as layer}
+    {#each orderedLayers as layer}
       {#await appCtx.getHierarchy(layer) then { organisation, project }}
         {@const organisationName = getI18n(
           organisation,
@@ -39,16 +83,19 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
           'description',
           appCtx.getUserPreferences()
         )}
+        {@const hasLongDescription =
+          Boolean(description && description !== '-') &&
+          description.length > DESCRIPTION_PREVIEW_THRESHOLD}
+        {@const isExpanded = isDescriptionExpanded(layer.id)}
         <div
-          class="min-h-21 flex w-full flex-row items-center justify-between gap-4 px-4 py-2 pl-2"
+          class="flex w-full flex-row items-start justify-between gap-3 px-4 py-2 pl-2"
         >
-          <!-- <Icon src={Map} class="flex-grow-1 my-6 h-5 w-5 flex-shrink-0" /> -->
-          <div class="flex grow flex-col gap-0.5">
+          <div class="flex min-w-0 grow flex-col gap-0.5">
             {#if organisation && project}
               <div class="flex flex-row items-center gap-3">
-                <div class="flex flex-col items-start gap-0">
+                <div class="flex min-w-0 flex-col items-start gap-0">
                   <p
-                    class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest"
+                    class="flex min-w-0 space-x-0.5 font-mono text-xs uppercase tracking-widest"
                   >
                     {#if organisationName}
                       <span class="text-primary">{organisationName}</span>
@@ -58,31 +105,50 @@ const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
                       <span class="text-accent">{projectName}</span>
                     {/if}
                   </p>
-                  <p class="font-light">
-                    {getI18n(layer, 'name', appCtx.getUserPreferences())}
+                  <div class="min-w-0 font-light">
+                    <p class="block">
+                      {getI18n(layer, 'name', appCtx.getUserPreferences())}
+                    </p>
                     {#if description && description !== '-'}
-                      <span class="pl-1.5 text-sm text-neutral-content">
+                      <p
+                        class={cx(
+                          'mt-0.5 block text-sm text-neutral-content',
+                          !isExpanded &&
+                            'overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]',
+                        )}
+                      >
                         {description}
-                      </span>
+                      </p>
+                      {#if hasLongDescription}
+                        <button
+                          type="button"
+                          class="mt-1 text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
+                          onclick={() => toggleDescriptionExpanded(layer.id)}
+                        >
+                          {isExpanded ? m.common__read_less() : m.common__read_more()}
+                        </button>
+                      {/if}
                     {/if}
-                  </p>
+                  </div>
                 </div>
               </div>
             {:else}
               <div class="flex flex-row items-center gap-3">
-                <p class="font-light">
+                <p class="min-w-0 font-light">
                   {getI18n(layer, 'name', appCtx.getUserPreferences())}
                 </p>
               </div>
             {/if}
           </div>
-          <input
+          <Switch
             name={layer.id}
-            type="checkbox"
-            class="grow toggle toggle-primary toggle-sm shrink-0"
+            class="mt-0.5 shrink-0"
+            size="sm"
+            color="primary"
             checked={userLayerIds.has(layer.id)}
-            onchange={(e) => appCtx.setUserLayer(layer.id, e.currentTarget.checked)}
-          >
+            disabled={!canSaveUserLayers}
+            onCheckedChange={(checked) => appCtx.setUserLayer(layer.id, checked === true)}
+          />
         </div>
       {:catch error}
         <p>{m.proof_grand_gadfly_dash()}</p>

@@ -183,11 +183,21 @@ export const debouncedUpdateUsername = async (
 
 export const debouncedUpdateUserLayers = (
   userId: Id,
-  hubId: Id,
-  userLayers: UserLayer[],
+  hub: {
+    id?: Id | null
+    code?: string | null
+  },
+  userLayers: Array<{
+    layerId: Id
+    hubId?: Id | null
+    isDefaultVisible: boolean
+  }>,
+  options: {
+    onSuccess?: (layers: UserLayer[]) => void
+  } = {},
 ) => {
-  // ASSERT : We have userLayers
-  if (!userLayers) return
+  // ASSERT : We have hub identity so the server can resolve where to persist defaults.
+  if (!userLayers || (!hub.id && !hub.code)) return
 
   const existingTimer = debouncedTimers.get('userLayers')
   if (existingTimer) {
@@ -196,15 +206,17 @@ export const debouncedUpdateUserLayers = (
 
   const timer = setTimeout(async () => {
     try {
-      await setUserLayerDefaults({
+      const response = await setUserLayerDefaults({
         userId,
-        hubId,
+        hubId: hub.id ?? undefined,
+        hubCode: hub.code ?? undefined,
         layers: userLayers.map(layer => ({
           layerId: layer.layerId,
-          hubId: layer.hubId,
+          hubId: layer.hubId ?? undefined,
           isDefaultVisible: Boolean(layer.isDefaultVisible),
         })),
       })
+      options.onSuccess?.((response?.data ?? []) as UserLayer[])
     } finally {
       debouncedTimers.delete('userLayers')
     }
