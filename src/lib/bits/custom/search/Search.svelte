@@ -42,14 +42,11 @@ let lastPrefetchKey = $state<unknown>(Symbol('search-prefetch-init'))
 let lastVisibility = $state<boolean | null>(null)
 let openEpoch = $state(0)
 let localExcludedIds = $state<string[]>([])
-let preserveEmptyStateWhileLoading = $state(false)
 let previousExcludeIds = excludeIds
 const emptyQueryResults = $derived(filterExcludedItems(cachedEmptyQueryResults))
 const results = $derived(filterExcludedItems(rawResults))
 const areResultsVisible = $derived(isOpen && results.length > 0)
-const shouldShowEmptyState = $derived(
-  isOpen && results.length === 0 && (!isLoading || preserveEmptyStateWhileLoading),
-)
+const shouldShowEmptyState = $derived(isOpen && results.length === 0 && !isLoading)
 
 function toItemId(item: T): string {
   if (getItemId) return getItemId(item)
@@ -92,7 +89,6 @@ async function handleQuery(
   }
 
   const currentRequestId = ++requestId
-  preserveEmptyStateWhileLoading = results.length === 0
   isLoading = true
   try {
     const response = onInput
@@ -118,7 +114,6 @@ async function handleQuery(
   } finally {
     if (currentRequestId === requestId) {
       isLoading = false
-      preserveEmptyStateWhileLoading = false
     }
   }
 }
