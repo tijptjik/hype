@@ -849,7 +849,7 @@ export function getProjectHubFilter(
     return undefined
   }
   if (opts.isCore) {
-    // Core: project's org has no hub OR org is not hub-exclusive
+    // Core: project's org must opt into core and not be exclusive to another hub.
     return exists(
       db
         .select()
@@ -857,6 +857,7 @@ export function getProjectHubFilter(
         .where(
           and(
             eq(organisation.id, project.organisationId),
+            eq(organisation.isCoreInclusive, true),
             or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
           ),
         ),
@@ -900,7 +901,7 @@ export function getLayerHubFilter(
     return undefined
   }
   if (opts.isCore) {
-    // Core: layer's project's org has no hub OR org is not hub-exclusive
+    // Core: layer's org must opt into core and not be exclusive to another hub.
     return exists(
       db
         .select()
@@ -909,6 +910,7 @@ export function getLayerHubFilter(
         .where(
           and(
             eq(project.id, layer.projectId),
+            eq(organisation.isCoreInclusive, true),
             or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
           ),
         ),
