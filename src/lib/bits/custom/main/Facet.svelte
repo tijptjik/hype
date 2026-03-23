@@ -26,9 +26,11 @@ let navElement = $state<HTMLDivElement | null>(null)
 let bodyMinHeight = $state(0)
 let bodyHeight = $state<number | null>(null)
 let tailSpacer = $state(0)
+let hasScrollableOverflow = $state(false)
 
 const hasFacetNav = $derived(Boolean(previousAction || nextAction))
-const isFooterNav = $derived(hasFacetNav && navMode === 'footer')
+const isRequestedFooterNav = $derived(hasFacetNav && navMode === 'footer')
+const isFooterNav = $derived(isRequestedFooterNav && !hasScrollableOverflow)
 
 const facetClass = $derived(
   [
@@ -122,16 +124,33 @@ function logInnerChildrenHeights(): void {
 }
 
 function getBodyContentHeight(body: HTMLDivElement): number {
-  if (body.children.length === 0) return 0
+  const previousInlineMinHeight = body.style.minHeight
+  const previousInlineHeight = body.style.height
+
+  body.style.minHeight = '0px'
+  body.style.height = 'auto'
+
+  const scrollHeight = Math.ceil(body.scrollHeight)
+
+  if (body.children.length === 0) {
+    body.style.minHeight = previousInlineMinHeight
+    body.style.height = previousInlineHeight
+    return scrollHeight
+  }
 
   const bodyTop = body.getBoundingClientRect().top
-  let contentHeight = 0
+  let contentHeight = scrollHeight
 
+  // Direct child bounds help when transformed content paints beyond the
+  // element's normal flow size, while scrollHeight captures regular overflow.
   for (const child of Array.from(body.children)) {
     if (!(child instanceof HTMLElement)) continue
     const rect = child.getBoundingClientRect()
     contentHeight = Math.max(contentHeight, rect.bottom - bodyTop)
   }
+
+  body.style.minHeight = previousInlineMinHeight
+  body.style.height = previousInlineHeight
 
   return Math.ceil(contentHeight)
 }
@@ -144,6 +163,7 @@ function measureLayout(): void {
     bodyMinHeight = 0
     bodyHeight = null
     tailSpacer = 0
+    hasScrollableOverflow = false
     return
   }
 
@@ -152,6 +172,10 @@ function measureLayout(): void {
   const bodyContentHeight = getBodyContentHeight(body)
   const contentHeight = bodyContentHeight + navHeight
   const remainingHeight = Math.max(0, availableHeight - contentHeight)
+  const hasVerticalOverflow = body.scrollHeight > body.clientHeight + 1
+  const hasHorizontalOverflow = body.scrollWidth > body.clientWidth + 1
+
+  hasScrollableOverflow = hasVerticalOverflow || hasHorizontalOverflow
 
   if (isFooterNav) {
     bodyHeight = null

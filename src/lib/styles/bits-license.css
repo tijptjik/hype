@@ -35,7 +35,7 @@
   .bits-theme .bits-license-card__body {
     display: flex;
     min-width: 0;
-    flex: 0 0 auto;
+    flex: 1 1 0%;
     align-items: center;
     justify-content: center;
     min-height: 64px;
@@ -45,7 +45,8 @@
 
   .bits-theme .bits-license-card__conditions {
     display: flex;
-    flex-wrap: wrap;
+    min-width: max-content;
+    flex-wrap: nowrap;
     gap: 0.625rem;
     align-items: center;
   }
@@ -56,6 +57,7 @@
 
   .bits-theme .bits-license-card__condition {
     display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
     width: 2.25rem;
@@ -75,25 +77,30 @@
   }
 
   .bits-theme .bits-card__actions.bits-license-card__actions {
+    min-width: 0;
+    flex: 0 1 auto;
     border-left: 1px solid
       color-mix(in oklab, var(--color-base-content) 10%, transparent);
   }
 
   .bits-theme .bits-license-card__attribution {
     display: inline-flex;
+    max-width: 100%;
     min-width: 0;
     align-items: center;
     gap: 0.5rem;
   }
 
   .bits-theme .bits-license-card__attribution-text {
-    display: -webkit-box;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: color-mix(in oklab, var(--color-base-content) 76%, transparent);
     font-size: 0.825rem;
     line-height: 1.35;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
   }
 
   .bits-theme .bits-license-card__tooltip-title {

@@ -7,7 +7,7 @@
   }
 
   .bits-main__section {
-    @apply block absolute left-6 right-6 top-0 bottom-0 overflow-y-auto overflow-x-hidden;
+    @apply block absolute left-6 right-6 top-0 bottom-0 overflow-y-auto overflow-x-auto;
     overscroll-behavior-y: contain;
   }
 
