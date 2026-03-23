@@ -31,7 +31,14 @@ import { getFeatureHubFilter } from './hub'
 // I18N
 import { toLocaleCode } from '$lib/i18n'
 // TYPES
-import type { Database, Id, ListResponse, Locale, LocaleKey } from '$lib/types'
+import type {
+  Database,
+  Id,
+  ListResponse,
+  Locale,
+  LocaleKey,
+  QueryParams,
+} from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type {
@@ -275,6 +282,7 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   sorting?: { sortBy?: string | null; sortOrder?: 'asc' | 'desc' | null },
   query?: {
     q?: string | null
+    filtersToApply?: QueryParams
     locale?: Locale
   },
 ): Promise<ListResponse<TRow>> => {
@@ -349,6 +357,7 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
     nextOffset: hasMore ? offset + data.length : null,
     sortBy,
     sortOrder,
+    appliedFilters: query?.filtersToApply,
     q: query?.q ?? undefined,
     durationMs: Date.now() - startedAt,
   }
