@@ -14,9 +14,9 @@ import {
   bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
-  createResourceEditorPage,
   createResourceFormConfig,
   focusFacetFromHash,
+  getEditorCtrl,
   guardRefDesync,
   getUserRoleHiddenInputAttrs,
   getRoleFieldNameByUserId,
@@ -153,7 +153,7 @@ const resolvedFacetTabs = $derived.by(() =>
     : facetTabs,
 )
 
-const resourceEditorPage = createResourceEditorPage({
+const editorCtrl = getEditorCtrl({
   headerCtrl,
   icon: HubIcon,
   facetTabs,
@@ -1248,7 +1248,7 @@ $effect(() => {
 
 $effect(() => {
   const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
-  return resourceEditorPage.syncRouteAndLoad({
+  return editorCtrl.syncRouteAndLoad({
     ref: hubRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
@@ -1349,7 +1349,7 @@ $effect(() => {
 })
 
 $effect(() => {
-  resourceEditorPage.wireHeaderHandlers({
+  editorCtrl.wireHeaderHandlers({
     reset: onReset,
     submit: onSubmit,
     togglePublish: onPublishToggle,
@@ -1385,7 +1385,7 @@ $effect(() => {
           onPublishToggle: () => {},
         }
 
-  lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
+  lastFormActionsSignature = editorCtrl.syncHeaderStatus({
     headerCtrl,
     status: {
       ...status,

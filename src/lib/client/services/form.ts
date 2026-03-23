@@ -70,7 +70,7 @@ import type {
 //
 // 2. RESOURCE EDITOR FACTORIES
 // - createResourceFormConfig
-// - createResourceEditorPage
+// - getEditorCtrl
 // - focusFacetFromHash
 //
 // 3. SUBMIT PAYLOAD NORMALIZATION
@@ -563,7 +563,7 @@ export function createResourceFormConfig<Input>({
  * @param params Shared header metadata for a resource editor page.
  * @returns Route, header, and action synchronization helpers.
  */
-export function createResourceEditorPage({
+export function getEditorCtrl({
   headerCtrl,
   icon,
   facetTabs,

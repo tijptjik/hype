@@ -15,9 +15,9 @@ import {
   bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
-  createResourceEditorPage,
   createResourceFormConfig,
   focusFacetFromHash,
+  getEditorCtrl,
   getUserRoleHiddenInputAttrs,
   getRoleFieldNameByUserId,
   guardRefDesync,
@@ -151,7 +151,7 @@ const headerCtrl = getHeaderCtrl()
 
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.organisation)
 
-const resourceEditorPage = createResourceEditorPage({
+const editorCtrl = getEditorCtrl({
   headerCtrl,
   icon: OrganisationIcon,
   facetTabs,
@@ -983,7 +983,7 @@ $effect(() => {
 
 // Keep facet + entity data in sync with the current route ref.
 $effect(() => {
-  return resourceEditorPage.syncRouteAndLoad({
+  return editorCtrl.syncRouteAndLoad({
     ref: organisationRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
@@ -1099,7 +1099,7 @@ $effect(() => {
 
 // Wire stable header action handlers once.
 $effect(() => {
-  resourceEditorPage.wireHeaderHandlers({
+  editorCtrl.wireHeaderHandlers({
     reset: onReset,
     submit: onSubmit,
     togglePublish: onPublishToggle,
@@ -1135,7 +1135,7 @@ $effect(() => {
           onDeleteToggle: () => {},
           onPublishToggle: () => {},
         }
-  lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
+  lastFormActionsSignature = editorCtrl.syncHeaderStatus({
     headerCtrl,
     status: {
       ...status,

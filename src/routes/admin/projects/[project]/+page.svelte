@@ -25,9 +25,9 @@ import {
   bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
-  createResourceEditorPage,
   createResourceFormConfig,
   focusFacetFromHash,
+  getEditorCtrl,
   guardRefDesync,
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
@@ -209,7 +209,7 @@ const resolvedFacetTabs = $derived.by(() => {
   return tabs
 })
 
-const resourceEditorPage = createResourceEditorPage({
+const editorCtrl = getEditorCtrl({
   headerCtrl,
   icon: ProjectIcon,
   facetTabs,
@@ -2244,7 +2244,7 @@ $effect(() => {
 
 $effect(() => {
   const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
-  return resourceEditorPage.syncRouteAndLoad({
+  return editorCtrl.syncRouteAndLoad({
     ref: projectRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
@@ -2465,7 +2465,7 @@ $effect(() => {
 })
 
 $effect(() => {
-  resourceEditorPage.wireHeaderHandlers({
+  editorCtrl.wireHeaderHandlers({
     reset: onReset,
     submit: onSubmit,
     togglePublish: onPublishToggle,
@@ -2502,7 +2502,7 @@ $effect(() => {
           onPublishToggle: () => {},
         }
 
-  lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
+  lastFormActionsSignature = editorCtrl.syncHeaderStatus({
     headerCtrl,
     status: {
       ...status,

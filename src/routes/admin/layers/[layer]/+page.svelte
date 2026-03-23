@@ -11,9 +11,9 @@ import {
   bindAdminFacetHistorySync,
   captureHeaderTransitionSnapshot,
   createFacetNavActionBuilder,
-  createResourceEditorPage,
   createResourceFormConfig,
   focusFacetFromHash,
+  getEditorCtrl,
   handleResourceBooleanStateToggle,
   revalidateAfterSubmitAttempt,
   resolveOptimisticHeaderFacets,
@@ -113,7 +113,7 @@ import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib
 // - adminCtx
 // - headerCtrl
 // - facetTabs
-// - resourceEditorPage
+// - editorCtrl
 // - layerRef
 // - locales
 // - activeFacet
@@ -205,7 +205,7 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.layer)
-const resourceEditorPage = createResourceEditorPage({
+const editorCtrl = getEditorCtrl({
   headerCtrl,
   icon: LayerIcon,
   facetTabs,
@@ -947,7 +947,7 @@ $effect(() => {
 
 $effect(() => {
   const resolvedFacetTabsSnapshot = untrack(() => headerFacetTabsWithIssues)
-  return resourceEditorPage.syncRouteAndLoad({
+  return editorCtrl.syncRouteAndLoad({
     ref: layerRef,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
@@ -1075,7 +1075,7 @@ $effect(() => {
 
 // Header action wiring
 $effect(() => {
-  resourceEditorPage.wireHeaderHandlers({
+  editorCtrl.wireHeaderHandlers({
     reset: onReset,
     submit: onSubmit,
     togglePublish: onPublishToggle,
@@ -1109,7 +1109,7 @@ $effect(() => {
         onPublishToggle: () => {},
       }
 
-  lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
+  lastFormActionsSignature = editorCtrl.syncHeaderStatus({
     headerCtrl,
     status: {
       ...status,
