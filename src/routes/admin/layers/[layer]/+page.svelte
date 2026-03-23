@@ -1,8 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
-import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
-import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { untrack } from 'svelte'
 // I18N
 import { getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
@@ -33,7 +31,6 @@ import {
   refreshMapPreview,
 } from '$lib/client/services/map'
 import {
-  getCurrentLayerFormData,
   getLayerSubmitUpdates,
   mergeProjectPropertiesIntoLayerForm as applyProjectPropertiesToLayerForm,
   overrideLayerEntityFromSubmit,
@@ -78,18 +75,15 @@ import {
   LayerPropertyCard,
   Main,
 } from '$lib/bits'
-import type { ParentSectionProjectItem } from '$lib/bits'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
-import type { RemoteFormOptions } from '$lib/factories.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
 } from '$lib/navigation'
-import type { LayerFacet } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
@@ -97,7 +91,11 @@ import LayerIcon from 'virtual:icons/lucide/layers'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib/types'
+import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { RemoteFormOptions } from '$lib/factories.svelte'
+import type { LayerFacet } from '$lib/navigation'
+import type { ParentSectionProjectItem } from '$lib/bits/patterns/forms/formParentSection/formParentSection.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {
   Layer,
@@ -105,6 +103,7 @@ import type {
   LayerPropertyPartialExtra,
   LayerSubmitData,
 } from '$lib/db/zod/schema/layer.types'
+import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
