@@ -24,6 +24,7 @@ let {
     {#if !isAdding}
       <Button
         text={isRemoving ? m.moving_each_orangutan_care() : m.admin__forms_hub_remove_org()}
+        hideLabel={true}
         style="ghost"
         color="light"
         size="sm"
@@ -37,6 +38,7 @@ let {
     {#if !isRemoving}
       <Button
         text={isAdding ? m.keen_antsy_bulldog_zoom() : m.admin__forms_hub_add_org()}
+        hideLabel={true}
         style="ghost"
         color="light"
         size="sm"
