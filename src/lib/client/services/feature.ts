@@ -22,6 +22,7 @@ import type { SessionUser } from '$lib/types'
 // 1. FORM SHAPING
 // - toEmptyFeatureFormInput
 // - toFeatureFormInput
+// - getProgrammaticFeatureInputEntries
 //
 // 2. USER PROJECTIONS
 // - toCurrentContributorUser
@@ -223,6 +224,104 @@ export function toFeatureFormInput(
         })) ?? [],
     },
   }
+}
+
+/**
+ * Serializes feature form fields into hidden-input name/value entries for programmatic form submission.
+ *
+ * @param value Current feature form input state.
+ * @returns Flat hidden-input entries preserving nested feature form data.
+ */
+export function getProgrammaticFeatureInputEntries(
+  value: FeatureFormInput['data'] | null | undefined,
+): Array<{ name: string; value: string }> {
+  const entries: Array<{ name: string; value: string }> = []
+  const featureData = value
+
+  const appendEntry = (name: string, entryValue: unknown): void => {
+    if (entryValue === undefined || entryValue === null) return
+    if (
+      typeof entryValue === 'string' ||
+      typeof entryValue === 'number' ||
+      typeof entryValue === 'boolean' ||
+      typeof entryValue === 'bigint'
+    ) {
+      entries.push({ name, value: String(entryValue) })
+    }
+  }
+
+  const appendNestedEntries = (path: string, entryValue: unknown): void => {
+    if (entryValue === undefined || entryValue === null) return
+    if (
+      typeof entryValue === 'string' ||
+      typeof entryValue === 'number' ||
+      typeof entryValue === 'boolean' ||
+      typeof entryValue === 'bigint'
+    ) {
+      entries.push({ name: path, value: String(entryValue) })
+      return
+    }
+    if (Array.isArray(entryValue)) {
+      entryValue.forEach((item, index) => {
+        appendNestedEntries(`${path}[${index}]`, item)
+      })
+      return
+    }
+    if (typeof entryValue === 'object') {
+      Object.entries(entryValue as Record<string, unknown>).forEach(([key, nested]) => {
+        appendNestedEntries(`${path}.${key}`, nested)
+      })
+    }
+  }
+
+  appendEntry('data.isIntangible', Boolean(featureData?.isIntangible))
+  appendEntry('data.isVisitable', Boolean(featureData?.isVisitable))
+  appendEntry('data.isPendingReview', Boolean(featureData?.isPendingReview))
+
+  const geometry = featureData?.geometry as Point | undefined
+  if (geometry?.type) appendEntry('data.geometry.type', geometry.type)
+  geometry?.coordinates?.forEach((coordinate, index) => {
+    appendEntry(`data.geometry.coordinates[${index}]`, coordinate)
+  })
+
+  appendNestedEntries('data.addressMeta', featureData?.addressMeta ?? {})
+  ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
+    const localeI18n = featureData?.i18n?.[locale]
+    appendEntry(`data.i18n.${locale}.displayAddress`, localeI18n?.displayAddress ?? '')
+    appendEntry(
+      `data.i18n.${locale}.displayAddressGen`,
+      Boolean(localeI18n?.displayAddressGen),
+    )
+    appendNestedEntries(
+      `data.i18n.${locale}.addressProperties`,
+      localeI18n?.addressProperties ?? {},
+    )
+  })
+
+  ;(featureData?.properties ?? []).forEach((property, index) => {
+    appendEntry(`data.properties[${index}].propertyId`, property.propertyId)
+    appendEntry(`data.properties[${index}].value`, property.value ?? '')
+    appendEntry(
+      `data.properties[${index}].propertyValueId`,
+      property.propertyValueId ?? '',
+    )
+
+    if (property.property?.isTranslatable) {
+      const propertyI18n = property.i18n ?? {}
+      ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
+        appendEntry(
+          `data.properties[${index}].i18n.${locale}.value`,
+          propertyI18n[locale]?.value ?? '',
+        )
+        appendEntry(
+          `data.properties[${index}].i18n.${locale}.valueGen`,
+          Boolean(propertyI18n[locale]?.valueGen),
+        )
+      })
+    }
+  })
+
+  return entries
 }
 
 // ---
