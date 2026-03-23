@@ -33,6 +33,13 @@ function createCollapsedGroups(
   return nextGroups
 }
 
+function toggleGroup(groupId: string): void {
+  collapsedGroups = {
+    ...collapsedGroups,
+    [groupId]: !(collapsedGroups[groupId] ?? false),
+  }
+}
+
 // STATE - Track collapsed state for each group
 let collapsedGroups = $state(createCollapsedGroups(groupedEntities))
 
@@ -81,8 +88,9 @@ function getGroupId(group: Record<string, unknown>): string {
       <section class="flex flex-col">
         <GroupHeader
           group={groupedRow.group}
-          bind:isCollapsed={collapsedGroups[groupedRow.groupId]}
+          isCollapsed={collapsedGroups[groupedRow.groupId] ?? false}
           entityCount={groupedRow.entities.length}
+          onToggle={() => toggleGroup(groupedRow.groupId)}
         />
 
         {#if !groupedRow.isCollapsed}

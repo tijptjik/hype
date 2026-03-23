@@ -7,12 +7,14 @@ type GroupHeaderProps<G extends Record<string, unknown>> = {
   group: G
   isCollapsed?: boolean
   entityCount?: number
+  onToggle?: () => void
 }
 
 let {
   group,
-  isCollapsed = $bindable(false),
+  isCollapsed = false,
   entityCount = 0,
+  onToggle,
 }: GroupHeaderProps<G> = $props()
 
 function getGroupLabel(): string {
@@ -40,7 +42,7 @@ function getGroupLabel(): string {
     type="button"
     class="flex h-12 cursor-pointer items-center gap-4 transition-opacity hover:opacity-80"
     aria-expanded={!isCollapsed}
-    onclick={() => (isCollapsed = !isCollapsed)}
+    onclick={() => onToggle?.()}
   >
     <div
       class="rotate-90 text-base-content transition-transform duration-200"
