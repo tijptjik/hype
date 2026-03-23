@@ -2633,6 +2633,8 @@ $effect(() => {
           />
         {/snippet}
       </GridSpacer>
+
+      <div class="h-16 shrink-0" aria-hidden="true"></div>
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
