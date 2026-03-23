@@ -79,12 +79,12 @@ export class OmniCtx {
    */
   private registerEventHandlers() {
     // Handler for opening card
-    const handleOpenCard = (event: CustomEvent) => {
+    const handleOpenCard = (_event: CustomEvent) => {
       this.openCard()
     }
 
     // Handler for closing card
-    const handleCloseCard = (event: CustomEvent) => {
+    const handleCloseCard = (_event: CustomEvent) => {
       this.closeCard()
     }
 
@@ -98,9 +98,6 @@ export class OmniCtx {
       window.removeEventListener('OmniCtx.closeCard', handleCloseCard as EventListener)
     }
   }
-
-  // Cleanup function for event handlers
-  private eventCleanup?: () => void
 
   // ═══════════════════════
   // MODE
@@ -824,7 +821,7 @@ const getStandardNavOptions = (
  * @param customOptions - Custom options to override defaults
  * @returns Feature selection options
  */
-const getFeatureSelectionDefaults = (
+const _getFeatureSelectionDefaults = (
   customOptions: Record<string, any> = {},
 ): Record<string, any> => {
   return mergeOmniOptions(customOptions, {
@@ -860,7 +857,7 @@ const getCollectionInitDefaults = (
  * @param customI18n - Custom i18n overrides
  * @returns i18n configuration object
  */
-const createCollectionI18n = (
+const _createCollectionI18n = (
   type: 'walk' | 'neighbourhood' | 'feature',
   identifier: string,
   customI18n?: Record<Locale, string>,
