@@ -63,7 +63,7 @@ function getCanonicalDistricts(): string[] {
 }
 
 // Handle disambiguation of neighbourhoods with the same name, e.g. Ping Shan in Kwun Tong vs Yuen Long
-function getKeyFromSubNeighbourhoodAndDistrict(
+function _getKeyFromSubNeighbourhoodAndDistrict(
   name: string,
   district: string,
 ): Neighbourhood {
@@ -75,8 +75,8 @@ function getKeyFromSubNeighbourhoodAndDistrict(
 }
 
 const canonicalSubNeighbourhoods = getCanonicalSubNeighbourhoods()
-const canonicalNeighbourhoods = getCanonicalNeighbourhoods()
-const canonicalDistricts = getCanonicalDistricts()
+const _canonicalNeighbourhoods = getCanonicalNeighbourhoods()
+const _canonicalDistricts = getCanonicalDistricts()
 
 /************
  * UTILS
@@ -116,7 +116,7 @@ function convertFromWebMercator(x: number, y: number): [number, number] {
 function getDistrictFromNeighbourhood(
   neighbourhoodRef: string | null,
   locale: Locale = 'en',
-  neighbourhoodRaw?: string | null,
+  _neighbourhoodRaw?: string | null,
 ): string | null {
   if (!neighbourhoodRef) return null
   // Canonical neighbourhood names
@@ -177,7 +177,7 @@ async function fetchReverseGeocodeResult(
 
 export async function fetchForwardGeocodeALSResult(
   address: string,
-  neighbourhood: string | null = null,
+  _neighbourhood: string | null = null,
   minConfidence: number = 60,
   maxResults: number = 1,
 ): Promise<ALSResult> {
@@ -588,7 +588,7 @@ function parseALSResultToDisplay(
         if (chi.ChiStreet.BuildingNoTo) {
           numberRange = `${chi.ChiStreet.BuildingNoFrom}-${chi.ChiStreet.BuildingNoTo}`
         }
-        parts.push(numberRange + '號')
+        parts.push(`${numberRange}號`)
       }
     }
 
