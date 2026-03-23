@@ -2,7 +2,6 @@
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
-import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 import { getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
@@ -1319,7 +1318,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
@@ -1353,7 +1352,7 @@ $effect(() => {
           <FormUserRolesSection
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
-            layoutColumns={3}
+            minCardWidth={250}
             transitionEntityKey={hub?.data?.id ?? hubRef}
             removeSelfResourceLabel={m.resource__hub_singular()}
             issues={userRoleSectionIssues}
@@ -1407,7 +1406,7 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isLayersFacet}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
@@ -1428,7 +1427,7 @@ $effect(() => {
 
     <Main.Facet
       isVisible={isFieldsFacet}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       class="bits-theme flex gap-4 min-h-0 flex-col"
       previousAction={buildFacetNavAction('fields', 'previous')}
@@ -1486,7 +1485,7 @@ $effect(() => {
 
   <Main.Facet
     isVisible={isImagesFacet}
-    transition={fade}
+    transition="fade"
     fillHeight={true}
     navMode="footer"
     previousAction={buildFacetNavAction('images', 'previous')}

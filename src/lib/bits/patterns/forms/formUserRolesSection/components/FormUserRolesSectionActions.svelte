@@ -25,6 +25,7 @@ let {
         text={isRemoving
         ? m.moving_each_orangutan_care()
         : m.hour_polite_ocelot_kiss()}
+        hideLabel={true}
         style="ghost"
         color="light"
         size="sm"
@@ -38,6 +39,7 @@ let {
     {#if !isRemoving}
       <Button
         text={isAdding ? m.keen_antsy_bulldog_zoom() : m.kind_active_haddock_ascend()}
+        hideLabel={true}
         style="ghost"
         color="light"
         size="sm"

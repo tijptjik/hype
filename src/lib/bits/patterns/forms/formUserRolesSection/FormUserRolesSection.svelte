@@ -23,7 +23,7 @@ type UserRoleCardViewModel = {
 let {
   title,
   subtitle,
-  layoutColumns = 2,
+  minCardWidth = 320,
   transitionEntityKey = null,
   removeSelfResourceLabel,
   issues = [],
@@ -245,7 +245,7 @@ $effect(() => {
     duration={160}
   >
     {#snippet children(userRoles)}
-      <FormGrid {layoutColumns}>
+      <FormGrid minWidth={minCardWidth}>
         {#each userRoles as userRole (userRole.userId)}
           <UserCard.Root class="bits-form__user-card-root--full">
             <UserCard.Avatar name={userRole.name} image={userRole.image} />
@@ -265,7 +265,7 @@ $effect(() => {
     {/snippet}
 
     {#snippet previous(userRoles)}
-      <FormGrid {layoutColumns}>
+      <FormGrid minWidth={minCardWidth}>
         {#each userRoles as userRole (userRole.userId)}
           <UserCard.Root class="bits-form__user-card-root--full">
             <UserCard.Avatar name={userRole.name} image={userRole.image} />

@@ -2,7 +2,6 @@
 // SVELTE
 import { page } from '$app/state'
 import { untrack } from 'svelte'
-import { fade } from 'svelte/transition'
 import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 // I18N
@@ -1130,7 +1129,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
@@ -1191,7 +1190,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && canEditOrganisation}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
@@ -1219,7 +1218,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       class="bits-theme min-h-0 pb-4"
       previousAction={buildFacetNavAction('fields', 'previous')}
@@ -1277,7 +1276,7 @@ $effect(() => {
   </Main.Form>
   <Main.Facet
     isVisible={isImagesFacet}
-    transition={fade}
+    transition="fade"
     fillHeight={true}
     navMode="footer"
     previousAction={buildFacetNavAction('images', 'previous')}

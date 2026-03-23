@@ -295,6 +295,8 @@
   }
 
   .bits-theme .bits-form__user-card-actions {
+    margin-left: 0;
+    padding-left: 0;
     min-width: max-content;
   }
 
@@ -557,15 +559,6 @@
     flex: 0 0 auto;
   }
 
-  .bits-theme .bits-form__card-grid {
-    --bits-card-grid-gap: calc(var(--spacing) * 1.5);
-    --bits-card-grid-columns: 1;
-    display: grid;
-    gap: var(--bits-card-grid-gap);
-    grid-template-columns: repeat(var(--bits-card-grid-columns), minmax(0, 1fr));
-    align-items: start;
-  }
-
   @container bits-parent-resource-card (max-width: 34rem) {
     .bits-theme
       .bits-form__parent-resource-item:has(.bits-form__parent-resource-card-actions),
@@ -624,24 +617,6 @@
     .bits-theme .bits-form__parent-resource-item-flags {
       justify-content: flex-start;
       flex-wrap: wrap;
-    }
-  }
-
-  @container bits-main-root (min-width: 48rem) {
-    .bits-theme .bits-form__card-grid {
-      --bits-card-grid-columns: 2;
-    }
-  }
-
-  @container bits-main-root (min-width: 72rem) {
-    .bits-theme .bits-form__card-grid {
-      --bits-card-grid-columns: 3;
-    }
-  }
-
-  @container bits-main-root (min-width: 96rem) {
-    .bits-theme .bits-form__card-grid {
-      --bits-card-grid-columns: 4;
     }
   }
 

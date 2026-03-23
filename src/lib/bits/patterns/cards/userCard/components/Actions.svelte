@@ -34,7 +34,11 @@ function handleRoleChange(nextValue: string): void {
 }
 </script>
 
-<Card.Actions padding="sm" gap={8} class={`bits-form__user-card-actions ${className}`}>
+<Card.Actions
+  padding="sm"
+  gap={8}
+  class={`bits-form__user-card-actions ${className} px-0`}
+>
   {#if roleFieldName}
     <input type="hidden" name={roleFieldName} value={selectedRole}>
   {/if}

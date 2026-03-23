@@ -12,5 +12,5 @@ let {
 <Card.Body
   code={attribution}
   title={name || '-'}
-  class={`bits-form__user-card-body ${className}`}
+  class={`bits-form__user-card-body ${className} pr-0`}
 />

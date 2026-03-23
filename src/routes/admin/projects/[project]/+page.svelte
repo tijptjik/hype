@@ -2,7 +2,6 @@
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
-import { fade } from 'svelte/transition'
 // ENUMS
 import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
 // I18N
@@ -2490,7 +2489,7 @@ $effect(() => {
   >
     <Main.Facet
       isVisible={isCoreFacet}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
@@ -2612,7 +2611,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
@@ -2632,7 +2631,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isLayersFacet}
-      transition={fade}
+      transition="fade"
       fillHeight={true}
       class="bits-theme flex gap-4 min-h-0 flex-col"
       previousAction={buildFacetNavAction('layers', 'previous')}
@@ -2657,7 +2656,7 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
-      transition={fade}
+      transition="fade"
       class="bits-theme flex gap-4 min-h-0 flex-col"
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
@@ -2746,7 +2745,7 @@ $effect(() => {
   </Main.Form>
   <Main.Facet
     isVisible={isImagesFacet}
-    transition={fade}
+    transition="fade"
     fillHeight={true}
     navMode="footer"
     previousAction={buildFacetNavAction('images', 'previous')}
