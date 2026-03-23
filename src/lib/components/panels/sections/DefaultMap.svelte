@@ -112,9 +112,8 @@ const toggleDescriptionExpanded = (layerId: string): void => {
                     {#if description && description !== '-'}
                       <p
                         class={cx(
-                          'mt-0.5 block text-sm text-neutral-content',
-                          !isExpanded &&
-                            'overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]',
+                          'mt-0.5 block max-h-96 overflow-hidden text-sm leading-5 text-neutral-content transition-[max-height] duration-300 ease-in-out',
+                          !isExpanded && 'max-h-15',
                         )}
                       >
                         {description}
