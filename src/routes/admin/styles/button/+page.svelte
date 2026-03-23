@@ -29,6 +29,8 @@ function onButtonClick(variant: string) {
   {#snippet globeIcon()}
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      focusable="false"
       fill="none"
       viewBox="0 0 24 24"
       stroke-width="2.5"
@@ -42,129 +44,148 @@ function onButtonClick(variant: string) {
     </svg>
   {/snippet}
 
-  <section
-    class="bits-theme space-y-8 rounded-xl border border-base-300 bg-base-100 p-6"
-  >
-    <h1 class="text-xl font-semibold text-foreground">Bits Button Variations</h1>
-
-    <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
-        Colors
-      </h2>
-      <div class="flex flex-wrap gap-3">
-        {#each BUTTON_COLORS as color}
-          <Button
-            text={color}
-            {color}
-            onClick={() => onButtonClick(`color:${color}`)}
-          />
-        {/each}
+  {#snippet buttonDemoColumn(title: string, shellClasses: string, titleClasses: string)}
+    <section class={shellClasses}>
+      <div class="space-y-1">
+        <h1 class={titleClasses}>{title}</h1>
+        <p class="text-sm text-base-content/70">
+          Same button set, different surrounding surface.
+        </p>
       </div>
-    </div>
 
-    <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
-        Styles
-      </h2>
-      <div class="space-y-3">
-        {#each BUTTON_STYLES_WITH_VARIANTS as styleVariant}
-          <div class="space-y-2">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider text-foreground-alt"
-            >
-              {styleVariant}
-            </p>
-            <div class="flex flex-wrap gap-3">
-              {#each BUTTON_COLORS as color}
-                <Button
-                  text={color}
-                  {color}
-                  style={styleVariant}
-                  onClick={() =>
-                    onButtonClick(`style:${styleVariant}|color:${color}`)}
-                />
-              {/each}
+      <div class="space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+          Colors
+        </h2>
+        <div class="flex flex-wrap gap-3">
+          {#each BUTTON_COLORS as color}
+            <Button
+              text={color}
+              {color}
+              onClick={() => onButtonClick(`color:${color}`)}
+            />
+          {/each}
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+          Styles
+        </h2>
+        <div class="space-y-3">
+          {#each BUTTON_STYLES_WITH_VARIANTS as styleVariant}
+            <div class="space-y-2">
+              <p
+                class="text-xs font-semibold uppercase tracking-wider text-foreground-alt"
+              >
+                {styleVariant}
+              </p>
+              <div class="flex flex-wrap gap-3">
+                {#each BUTTON_COLORS as color}
+                  <Button
+                    text={color}
+                    {color}
+                    style={styleVariant}
+                    onClick={() =>
+                      onButtonClick(`style:${styleVariant}|color:${color}`)}
+                  />
+                {/each}
+              </div>
             </div>
-          </div>
-        {/each}
+          {/each}
+        </div>
       </div>
-    </div>
 
-    <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
-        Sizes
-      </h2>
-      <div class="flex flex-wrap items-end gap-3">
-        {#each BUTTON_SIZES as size}
-          <Button
-            class="uppercase font-mono"
-            text={size}
-            color="primary"
-            {size}
-            onClick={() => onButtonClick(`size:${size}`)}
-          />
-        {/each}
-      </div>
-      <div class="flex flex-wrap items-end gap-3">
-        {#each BUTTON_SIZES as size}
-          <Button
-            text={`circle-${size}`}
-            color="accent"
-            icon={globeIcon}
-            modifier="circle"
-            {size}
-            onClick={() => onButtonClick(`size:circle:${size}`)}
-          />
-        {/each}
-      </div>
-    </div>
-
-    <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
-        Modifiers
-      </h2>
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {#each BUTTON_MODIFIERS as modifier}
-          {#if modifier === 'square' || modifier === 'circle'}
+      <div class="space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+          Sizes
+        </h2>
+        <div class="flex flex-wrap items-end gap-3">
+          {#each BUTTON_SIZES as size}
             <Button
-              text={modifier}
-              color="secondary"
+              class="font-mono uppercase"
+              text={size}
+              color="primary"
+              {size}
+              onClick={() => onButtonClick(`size:${size}`)}
+            />
+          {/each}
+        </div>
+        <div class="flex flex-wrap items-end gap-3">
+          {#each BUTTON_SIZES as size}
+            <Button
+              text={`circle-${size}`}
+              color="accent"
               icon={globeIcon}
-              {modifier}
-              onClick={() => onButtonClick(`modifier:${modifier}`)}
+              modifier="circle"
+              {size}
+              onClick={() => onButtonClick(`size:circle:${size}`)}
             />
-          {:else}
-            <Button
-              text={modifier}
-              color="secondary"
-              {modifier}
-              onClick={() => onButtonClick(`modifier:${modifier}`)}
-            />
-          {/if}
-        {/each}
+          {/each}
+        </div>
       </div>
-    </div>
 
-    <div class="space-y-4">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
-        Icon, href, and disabled
-      </h2>
-      <div class="flex flex-wrap gap-3">
-        <Button text="With icon" color="accent" icon={globeIcon} />
-        <Button
-          text="Link button"
-          color="info"
-          style="link"
-          href="/admin/styles/buttons"
-        />
-        <Button text="Disabled" color="error" disabled={true} />
-        <Button
-          text="Disabled outline"
-          color="warning"
-          style="outline"
-          disabled={true}
-        />
+      <div class="space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+          Modifiers
+        </h2>
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {#each BUTTON_MODIFIERS as modifier}
+            {#if modifier === 'square' || modifier === 'circle'}
+              <Button
+                text={modifier}
+                color="secondary"
+                icon={globeIcon}
+                {modifier}
+                onClick={() => onButtonClick(`modifier:${modifier}`)}
+              />
+            {:else}
+              <Button
+                text={modifier}
+                color="secondary"
+                {modifier}
+                onClick={() => onButtonClick(`modifier:${modifier}`)}
+              />
+            {/if}
+          {/each}
+        </div>
       </div>
-    </div>
-  </section>
+
+      <div class="space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-foreground-alt">
+          Icon, href, and disabled
+        </h2>
+        <div class="flex flex-wrap gap-3">
+          <Button text="With icon" color="accent" icon={globeIcon} />
+          <Button
+            text="Link button"
+            color="info"
+            style="link"
+            href="/admin/styles/buttons"
+          />
+          <Button text="Disabled" color="error" disabled={true} />
+          <Button
+            text="Disabled outline"
+            color="warning"
+            style="outline"
+            disabled={true}
+          />
+        </div>
+      </div>
+    </section>
+  {/snippet}
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    {@render buttonDemoColumn(
+      'Bits Button Variations / Black Surface',
+      'bits-theme space-y-8 rounded-xl border border-white/10 bg-black p-6 text-white shadow-2xl',
+      'text-xl font-semibold text-white',
+    )}
+
+    {@render buttonDemoColumn(
+      'Bits Button Variations / Page Background',
+      'bits-theme space-y-8 rounded-xl border border-base-300 p-6',
+      'text-xl font-semibold text-foreground',
+    )}
+  </div>
 </main>
