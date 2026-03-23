@@ -106,6 +106,7 @@ export type HubAuthActor = {
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
   isAnonymous?: boolean
+  isSuperAdmin?: boolean
 }
 
 export type HubAuthTarget = {
@@ -308,6 +309,7 @@ export const toHubAuthActor = (user: unknown): HubAuthActor => {
       userRoles: [],
       isAuthenticated: false,
       isAnonymous: false,
+      isSuperAdmin: false,
     }
   }
 
@@ -322,12 +324,14 @@ export const toHubAuthActor = (user: unknown): HubAuthActor => {
   })()
 
   const isAnonymous = (user as { isAnonymous?: unknown }).isAnonymous === true
+  const isExplicitSuperAdmin = (user as { superAdmin?: unknown }).superAdmin === true
 
   return {
     userId,
     userRoles,
     isAuthenticated: Boolean(userId) && !isAnonymous,
     isAnonymous,
+    isSuperAdmin: isExplicitSuperAdmin || isCoreHubAdmin(userRoles),
   }
 }
 
@@ -347,7 +351,7 @@ const toHubPolicyBase = (
   actor: HubAuthActor,
 ): Pick<
   HubAuthorizeParams,
-  'userId' | 'userRoles' | 'isAuthenticated' | 'isAnonymous'
+  'userId' | 'userRoles' | 'isAuthenticated' | 'isAnonymous' | 'isSuperAdmin'
 > => toActorPolicyBase(actor)
 
 /* ----------------- */
@@ -357,6 +361,10 @@ const toHubPolicyBase = (
 const listHubsPolicy: HubPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
     return logHubReject('list', params, 'UNAUTHENTICATED')
+  }
+
+  if (params.isSuperAdmin) {
+    return { allowed: true }
   }
 
   if (isCoreHubAdmin(params.userRoles)) {
@@ -375,6 +383,10 @@ const listHubsPolicy: HubPolicyHandler = params => {
 const readHubPolicy: HubPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
     return logHubReject('read', params, 'UNAUTHENTICATED')
+  }
+
+  if (params.isSuperAdmin) {
+    return { allowed: true }
   }
 
   if (isRelevantHubAdmin(params.userRoles, params.resourceHubId)) {
@@ -398,6 +410,10 @@ const createHubPolicy: HubPolicyHandler = params => {
     return logHubReject('create', params, 'UNAUTHENTICATED')
   }
 
+  if (params.isSuperAdmin) {
+    return { allowed: true }
+  }
+
   return isCoreHubAdmin(params.userRoles)
     ? { allowed: true }
     : logHubReject('create', params, 'HUB_SCOPE_FORBIDDEN')
@@ -406,6 +422,10 @@ const createHubPolicy: HubPolicyHandler = params => {
 const updateHubPolicy: HubPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
     return logHubReject('update', params, 'UNAUTHENTICATED')
+  }
+
+  if (params.isSuperAdmin) {
+    return { allowed: true }
   }
 
   if (!params.resourceId) {
@@ -420,6 +440,10 @@ const updateHubPolicy: HubPolicyHandler = params => {
 const deleteHubPolicy: HubPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
     return logHubReject('delete', params, 'UNAUTHENTICATED')
+  }
+
+  if (params.isSuperAdmin) {
+    return { allowed: true }
   }
 
   return isCoreHubAdmin(params.userRoles)

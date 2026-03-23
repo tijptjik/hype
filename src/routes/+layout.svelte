@@ -14,6 +14,7 @@ import { getLocaleKey } from '$lib/i18n'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
+import { setResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
 import { App } from '$lib/bits'
 // MAPLIBRE
@@ -25,7 +26,7 @@ import '$lib/styles/app.css'
 import type { LayoutData, LayoutProps } from './$types'
 import type { SessionUser } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import { MOBILE_MAX_WIDTH } from '$lib'
+import { MOBILE_MAX_WIDTH } from '$lib/constants'
 
 // PROPS
 let { children, data }: LayoutProps = $props()
@@ -36,6 +37,7 @@ const { queryClient } = data as LayoutData & {
 }
 
 const session = useSession()
+const responsive = setResponsiveCtx()
 
 // Set AppCtx in context
 const appCtx = setAppCtx(
@@ -54,10 +56,13 @@ $effect(() => {
 
 // Reactive window width binding
 let windowWidth = $state(0)
+let windowHeight = $state(0)
 
 // Update mobile state when window width changes
 $effect(() => {
   appCtx.isMobile = windowWidth < MOBILE_MAX_WIDTH
+  responsive.window.width = windowWidth
+  responsive.window.height = windowHeight
 })
 
 // Load maplibre globally
@@ -145,6 +150,8 @@ watch(
   },
 )
 </script>
+
+<svelte:window bind:innerHeight={windowHeight} />
 
 <App
   bind:windowWidth
