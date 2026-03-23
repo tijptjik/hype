@@ -70,7 +70,9 @@ const attributionIcon = $derived.by(() => {
     <Card.Actions padding="sm" bg="panel" class="bits-license-card__actions">
       <span class="bits-license-card__attribution">
         <Icon src={attributionIcon} size="lg" tone="inherit" />
-        <span class="bits-license-card__attribution-text">{attributionLabel}</span>
+        <span class="bits-license-card__attribution-text truncate">
+          {attributionLabel}
+        </span>
       </span>
     </Card.Actions>
   {/if}

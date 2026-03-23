@@ -37,7 +37,9 @@
   .bits-feature-editor__facet-nav-button {
     --btn-hover-fg: color-mix(in oklab, var(--color-light) 84%, white);
     --btn-active-fg: color-mix(in oklab, var(--color-light) 72%, white);
-    min-width: 0;
+    flex: 0 0 auto;
+    min-width: max-content;
+    white-space: nowrap;
     color: color-mix(in oklab, var(--color-light) 72%, transparent);
   }
 
