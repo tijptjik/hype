@@ -1,12 +1,12 @@
 import type { StyleSpecification } from 'maplibre-gl'
 
 import type { StyleBuildOptions } from './common'
-import { buildHyperStyle } from './hyper'
+import { buildHyperLightStyle } from './hyperLight'
 
 export const buildBreadlineStyle = (
   options: StyleBuildOptions = {},
 ): StyleSpecification => {
-  const style = buildHyperStyle(options)
+  const style = buildHyperLightStyle(options)
 
   return {
     ...style,
