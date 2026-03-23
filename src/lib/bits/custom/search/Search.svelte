@@ -42,11 +42,14 @@ let lastPrefetchKey = $state<unknown>(Symbol('search-prefetch-init'))
 let lastVisibility = $state<boolean | null>(null)
 let openEpoch = $state(0)
 let localExcludedIds = $state<string[]>([])
+let preserveEmptyStateWhileLoading = $state(false)
 let previousExcludeIds = excludeIds
 const emptyQueryResults = $derived(filterExcludedItems(cachedEmptyQueryResults))
 const results = $derived(filterExcludedItems(rawResults))
 const areResultsVisible = $derived(isOpen && results.length > 0)
-const shouldShowEmptyState = $derived(isOpen && !isLoading && results.length === 0)
+const shouldShowEmptyState = $derived(
+  isOpen && results.length === 0 && (!isLoading || preserveEmptyStateWhileLoading),
+)
 
 function toItemId(item: T): string {
   if (getItemId) return getItemId(item)
@@ -89,6 +92,7 @@ async function handleQuery(
   }
 
   const currentRequestId = ++requestId
+  preserveEmptyStateWhileLoading = results.length === 0
   isLoading = true
   try {
     const response = onInput
@@ -112,7 +116,10 @@ async function handleQuery(
     if (currentRequestId !== requestId) return
     rawResults = []
   } finally {
-    if (currentRequestId === requestId) isLoading = false
+    if (currentRequestId === requestId) {
+      isLoading = false
+      preserveEmptyStateWhileLoading = false
+    }
   }
 }
 
@@ -247,38 +254,55 @@ $effect(() => {
   />
 
   {#if areResultsVisible}
-    <SearchPrimitive.ResultWrapper class="bits-search__results">
-      <div class="bits-search__results-list">
-        {#each results as item, index (index)}
-          {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
-            <SearchPrimitive.VisualResultItem
-              title={resultMap.title(item)}
-              descriminator={resultMap.descriminator?.(item)}
-              description={resultMap.description?.(item)}
-              previewImage={resultMap.previewImage?.(item)}
-              disabled={isSearchResultDisabled(item, resultMap)}
-              disabledMeta={resultMap.disabledMeta?.(item)}
-              staggerIndex={index}
-              onSelect={() => selectItem(item)}
-            />
-          {:else}
-            <SearchPrimitive.ResultItem
-              image={resultMap.image(item)}
-              title={resultMap.title(item)}
-              descriminator={resultMap.descriminator?.(item)}
-              disabled={isSearchResultDisabled(item, resultMap)}
-              disabledMeta={resultMap.disabledMeta?.(item)}
-              staggerIndex={index}
-              onSelect={() => selectItem(item)}
-            />
-          {/if}
-        {/each}
+    <SearchPrimitive.ResultWrapper class="bits-search__results mx-[5%]">
+      <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
+        <div class="overflow-hidden rounded-md">
+          <div
+            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
+          >
+            {#each results as item, index (index)}
+              {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
+                <SearchPrimitive.VisualResultItem
+                  title={resultMap.title(item)}
+                  descriminator={resultMap.descriminator?.(item)}
+                  description={resultMap.description?.(item)}
+                  previewImage={resultMap.previewImage?.(item)}
+                  disabled={isSearchResultDisabled(item, resultMap)}
+                  disabledMeta={resultMap.disabledMeta?.(item)}
+                  staggerIndex={index}
+                  onSelect={() => selectItem(item)}
+                />
+              {:else}
+                <SearchPrimitive.ResultItem
+                  image={resultMap.image(item)}
+                  title={resultMap.title(item)}
+                  descriminator={resultMap.descriminator?.(item)}
+                  disabled={isSearchResultDisabled(item, resultMap)}
+                  disabledMeta={resultMap.disabledMeta?.(item)}
+                  staggerIndex={index}
+                  onSelect={() => selectItem(item)}
+                />
+              {/if}
+            {/each}
+          </div>
+        </div>
       </div>
     </SearchPrimitive.ResultWrapper>
   {:else if shouldShowEmptyState}
-    <SearchPrimitive.ResultWrapper class="bits-search__results">
-      <div class="bits-search__results-list">
-        <div class="bits-search__empty" aria-live="polite">{noResultsText}</div>
+    <SearchPrimitive.ResultWrapper class="bits-search__results mx-[5%]">
+      <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
+        <div class="overflow-hidden rounded-md">
+          <div
+            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
+          >
+            <div
+              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-[#242424] px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-neutral-content/80"
+              aria-live="polite"
+            >
+              {noResultsText}
+            </div>
+          </div>
+        </div>
       </div>
     </SearchPrimitive.ResultWrapper>
   {/if}

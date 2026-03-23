@@ -37,11 +37,15 @@ export interface LocalSearchProps<T> {
   focusOnMount?: boolean
   mountTransitionDuration?: number
   maxResults?: number
+  noResultsText?: string
   excludeIds?: string[]
   getItemId?: (item: T) => string
   getSearchText?: (item: T) => string
   onSelect: (item: T) => void
   resultMap: SearchResultMap<T>
+  resultItemClass?: string
+  visualResultItemClass?: string
+  visualPreviewClass?: string
   class?: string
 }
 
@@ -74,6 +78,7 @@ export interface SearchResultItemProps {
   staggerIndex?: number
   onSelect?: () => void
   class?: string
+  previewClass?: string
 }
 
 export interface SearchResultDisabledMeta {

@@ -14,16 +14,8 @@
     @apply flex flex-col gap-1;
   }
 
-  .bits-theme .bits-search__empty {
-    @apply rounded-md bg-[#242424] px-3 py-3 text-sm text-neutral-content/80;
-  }
-
   .bits-theme .bits-search__results-wrapper {
-    @apply max-h-80 overflow-y-auto rounded-lg;
-  }
-
-  .bits-theme .bits-search--compact-results .bits-search__results-wrapper {
-    max-height: 17.5rem;
+    @apply rounded-lg;
   }
 
   /* ----------------- */
@@ -61,7 +53,7 @@
   /* Search Results */
   /* --------- */
   .bits-theme .bits-search-result-item {
-    @apply relative flex w-full items-center gap-3 overflow-hidden rounded-md bg-[#242424] px-3 py-3 text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none focus-visible:bg-base-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-base-300;
+    @apply relative flex min-h-[4.5rem] w-full items-center gap-3 overflow-hidden rounded-md bg-[#242424] px-3 py-3 text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none focus-visible:bg-base-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-base-300;
   }
 
   .bits-theme .bits-search-result-item[data-staggered-entrance="true"] {
@@ -96,7 +88,7 @@
   }
 
   .bits-theme .bits-search-result-item__avatar {
-    @apply relative h-9 w-9 shrink-0 overflow-hidden rounded-full;
+    @apply relative h-12 w-12 shrink-0 overflow-hidden rounded-full;
   }
 
   .bits-theme .bits-search-result-item__avatar-skeleton {
@@ -110,7 +102,7 @@
   }
 
   .bits-theme .bits-search-result-item__fallback {
-    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-base-100 text-xs font-semibold uppercase;
+    @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-base-100 text-sm font-semibold uppercase;
   }
 
   .bits-theme .bits-search-result-item__fallback--image-failed {
@@ -130,7 +122,7 @@
   }
 
   .bits-theme .bits-search-result-item--visual {
-    @apply rounded-xl p-0;
+    @apply min-h-0 rounded-md p-0;
   }
 
   .bits-theme .bits-search-result-item__content--visual {
@@ -138,7 +130,7 @@
   }
 
   .bits-theme .bits-search-result-item__preview {
-    @apply h-24 w-24 shrink-0 overflow-hidden rounded-l-xl rounded-r-none border-r border-white/10 bg-black/50;
+    @apply h-24 w-24 shrink-0 overflow-hidden rounded-none border-r border-white/10 bg-black/50;
   }
 
   .bits-theme .bits-search-result-item__preview-image {

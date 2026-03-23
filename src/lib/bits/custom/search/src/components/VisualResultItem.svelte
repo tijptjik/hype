@@ -10,6 +10,7 @@ let {
   staggerIndex = 0,
   onSelect,
   class: className = '',
+  previewClass = '',
 }: SearchResultItemProps = $props()
 
 const resolvedDiscriminator = $derived(descriminator?.trim() || null)
@@ -32,7 +33,7 @@ const resolvedDisabledValue = $derived(disabledMeta?.value?.trim() || null)
   <div
     class="bits-search-result-item__content bits-search-result-item__content--visual"
   >
-    <div class="bits-search-result-item__preview">
+    <div class={`bits-search-result-item__preview ${previewClass}`}>
       {#if previewImage}
         <img
           src={previewImage}
