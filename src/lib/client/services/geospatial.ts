@@ -29,6 +29,9 @@ import type { LngLatLike } from 'maplibre-gl'
 //    - getCoordinates(lngLat: LngLatLike | null): [number, number] | null
 //      Extracts coordinates from various LngLatLike formats
 //
+//    - getUserLocationCoordinates(appCtx: AppCtx): [number, number] | null
+//      Extracts the current user location as an `[lng, lat]` tuple
+//
 // 4. ANIMATION
 //    - startCircularFlight(appCtx: AppCtx, center: [number, number], radiusKm?: number)
 //      Starts circular flight animation around center point
@@ -121,6 +124,19 @@ export function getCoordinates(lngLat: LngLatLike | null): [number, number] | nu
     return [lngLat.lng, lngLat.lat]
   }
   return null
+}
+
+/**
+ * Extracts the current user location from app state as `[lng, lat]`.
+ *
+ * @param appCtx Application context containing the current geolocation state.
+ * @returns The current user coordinates or `null` when location is unavailable.
+ */
+export function getUserLocationCoordinates(appCtx: AppCtx): [number, number] | null {
+  const userLocation = appCtx.state.userLocation
+  if (!userLocation) return null
+
+  return [userLocation.coords.longitude, userLocation.coords.latitude]
 }
 
 // ═══════════════════════
