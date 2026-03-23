@@ -75,10 +75,10 @@ function getGroupId(group: Record<string, unknown>): string {
 }
 </script>
 
-<div bind:this={listContainer} class="h-full">
+<div bind:this={listContainer} class="flex h-full flex-col gap-0 px-4 pt-4">
   {#if groupedRows.length > 0}
     {#each groupedRows as groupedRow (groupedRow.groupId)}
-      <div class="flex flex-col">
+      <section class="flex flex-col">
         <GroupHeader
           group={groupedRow.group}
           bind:isCollapsed={collapsedGroups[groupedRow.groupId]}
@@ -86,7 +86,7 @@ function getGroupId(group: Record<string, unknown>): string {
         />
 
         {#if !groupedRow.isCollapsed}
-          <div transition:slide={{ duration: 300 }}>
+          <div class="min-h-0" transition:slide={{ duration: 300 }}>
             <ResourceIndex
               {resource}
               entities={groupedRow.entities}
@@ -96,7 +96,7 @@ function getGroupId(group: Record<string, unknown>): string {
             />
           </div>
         {/if}
-      </div>
+      </section>
     {/each}
   {:else}
     <ResourceEmptyState />

@@ -1,5 +1,5 @@
 <script lang="ts" generics="G extends Record<string, unknown>">
-import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
+import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
 // BITS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 
@@ -33,21 +33,30 @@ function getGroupLabel(): string {
 }
 </script>
 
-<button
-  type="button"
-  class="bits-resource-group-header"
-  aria-expanded={!isCollapsed}
-  onclick={() => (isCollapsed = !isCollapsed)}
+<div
+  class="flex h-10 flex-row items-center justify-between gap-2 rounded-2xl bg-transparent px-3  @container"
 >
-  <span class="bits-resource-group-header__content">
-    <span class="bits-resource-group-header__title">{getGroupLabel()}</span>
-    <span class="bits-resource-group-header__count">{entityCount}</span>
-  </span>
-  <span
-    class="bits-resource-group-header__icon"
-    class:bits-resource-group-header__icon--collapsed={isCollapsed}
-    aria-hidden="true"
+  <button
+    type="button"
+    class="flex h-12 cursor-pointer items-center gap-4 transition-opacity hover:opacity-80"
+    aria-expanded={!isCollapsed}
+    onclick={() => (isCollapsed = !isCollapsed)}
   >
-    <Icon src={ChevronDownIcon} size="sm" />
-  </span>
-</button>
+    <div
+      class="rotate-90 text-base-content transition-transform duration-200"
+      class:rotate-0={isCollapsed}
+      aria-hidden="true"
+    >
+      <Icon src={ChevronRightIcon} size="md" strokeWidth={3.5} class="h-5 w-5" />
+    </div>
+    <h3 class="flex-shrink-1 text-xl font-bold uppercase text-base-content">
+      {getGroupLabel()}
+    </h3>
+  </button>
+
+  <small
+    class="hidden select-text pr-3 text-sm capitalize text-base-content/50 @sm:block"
+  >
+    {entityCount} {entityCount === 1 ? 'Task' : 'Tasks'}
+  </small>
+</div>

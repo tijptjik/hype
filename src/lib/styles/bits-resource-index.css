@@ -91,50 +91,6 @@
     animation: bits-resource-index-spin 0.75s linear infinite;
   }
 
-  .bits-theme .bits-resource-group-header {
-    width: 100%;
-    min-height: 3.5rem;
-    border-radius: 1rem;
-    padding: 0.875rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    transition:
-      background-color 0.15s ease,
-      border-color 0.15s ease,
-      color 0.15s ease,
-      transform 0.15s ease;
-  }
-
-  .bits-theme .bits-resource-group-header:hover {
-    background: color-mix(in oklab, var(--color-base-100) 94%, transparent);
-  }
-
-  .bits-theme .bits-resource-group-header__content {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .bits-theme .bits-resource-group-header__count {
-    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-
-  .bits-theme .bits-resource-group-header__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s ease;
-  }
-
-  .bits-theme .bits-resource-group-header__icon--collapsed {
-    transform: rotate(-90deg);
-  }
-
   @keyframes bits-resource-index-spin {
     to {
       transform: rotate(360deg);
