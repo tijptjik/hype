@@ -66,6 +66,7 @@ export interface MainVisualSectionImageProps {
   src?: string | null
   alt: string
   isPending?: boolean
+  isCollapsed?: boolean
   emptyText?: string
   onImageLoad?: (size: { width: number; height: number }) => void
 }

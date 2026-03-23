@@ -9,24 +9,38 @@ let {
   src = null,
   alt,
   isPending = false,
+  isCollapsed = false,
   emptyText = 'No image available',
   onImageLoad,
 }: MainVisualSectionImageProps = $props()
 
-const rootClass = $derived(cx('relative h-full w-full min-h-0', className))
+const rootClass = $derived(
+  cx(
+    'relative w-full min-h-0',
+    !isCollapsed && 'h-full',
+    isCollapsed && 'self-start',
+    className,
+  ),
+)
+const mediaClass = $derived(
+  cx(
+    'relative flex h-full min-h-0 w-full overflow-hidden border-0 bg-transparent',
+    isCollapsed ? 'items-center justify-center' : 'items-center justify-end',
+  ),
+)
 const imageClass = $derived(
   cx(
-    'block h-full w-full object-contain object-right transition-[filter,opacity] duration-[220ms]',
+    'block transition-[filter,opacity] duration-[220ms]',
+    isCollapsed
+      ? 'absolute inset-0 h-full w-full object-cover object-center'
+      : 'h-full w-full object-contain object-right',
     isPending && 'blur-[10px] opacity-[0.58]',
   ),
 )
 </script>
 
 <div class={rootClass}>
-  <a
-    class="flex h-full min-h-0 w-full items-center justify-end overflow-hidden border-0 bg-transparent"
-    {href}
-  >
+  <a class={mediaClass} {href}>
     {#if src}
       <img
         class={imageClass}
