@@ -77,6 +77,7 @@ import {
   hubForm,
   publishHub,
 } from '$lib/api/server/hub.remote'
+import { getLayers } from '$lib/api/server/layer.remote'
 import { toHubAuthActor, resolveHubActionPermissions } from '$lib/api/services/authz'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
 // SCHEMA
@@ -134,6 +135,7 @@ import type {
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Hub, HubGetState, HubRoleUser } from '$lib/db/zod/schema/hub.types'
+import type { LayerCardProfile } from '$lib/db/zod/schema/layer.types'
 
 // § Context
 
@@ -188,6 +190,9 @@ let selectedUsersById = $state<Record<string, User>>({})
 let selectedOrganisationsById = $state<Record<string, any>>({})
 let hasAutoEnteredEditForNew = $state(false)
 let settledHubRef = $state<string | null>(null)
+let availableHubLayers = $state<LayerCardProfile[]>([])
+let hubLayerRequestId = $state(0)
+let lastHubLayerOrganisationKey = $state('')
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
   canPublish: true,
@@ -221,6 +226,7 @@ const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewHubRef = $derived(hubRef === NEW_REF)
+const isCoreHub = $derived(Boolean(hub?.data?.isCore) || hubRef === 'core')
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewHubRef) return true
@@ -734,9 +740,11 @@ const hubLayerItems = $derived.by(() => {
     formLayerDefaultValues.map(item => [item.layerId, item.isDefaultVisible]),
   )
 
-  return adminCtx.appCtx.state.resources.layer
+  return availableHubLayers
     .filter(
-      layer => !layer.isArchived && selectedOrganisationIds.has(layer.organisationId),
+      layer =>
+        !layer.isArchived &&
+        (isCoreHub || selectedOrganisationIds.has(layer.organisationId)),
     )
     .map(layer => {
       const project = adminCtx.appCtx.getResourceByIdSync(
@@ -755,6 +763,50 @@ const hubLayerItems = $derived.by(() => {
         `${right.projectNameShort} ${right.layerName}`,
       ),
     )
+})
+
+$effect(() => {
+  const organisationIds = isCoreHub
+    ? []
+    : Array.from(
+        new Set(
+          formOrganisationValues.map(item => item.organisationId).filter(Boolean),
+        ),
+      ).sort()
+  const organisationKey = organisationIds.join('|')
+  const isSuperAdmin = adminCtx.appCtx.isSuperAdmin()
+  const requestKey = `${isCoreHub ? 'core' : 'scoped'}:${isSuperAdmin ? 'super' : 'admin'}:${organisationKey}`
+
+  if (lastHubLayerOrganisationKey === requestKey) return
+  lastHubLayerOrganisationKey = requestKey
+
+  if (!isCoreHub && organisationIds.length === 0) {
+    if (availableHubLayers.length > 0) {
+      availableHubLayers = []
+    }
+    hubLayerRequestId += 1
+    return
+  }
+
+  const currentRequestId = ++hubLayerRequestId
+
+  void untrack(() =>
+    getLayers({
+      conditions: isSuperAdmin
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      prisms: isCoreHub ? undefined : { organisation: organisationIds },
+      meta: { isAdminRequest: true, profile: 'card' },
+    })
+      .then(result => {
+        if (currentRequestId !== hubLayerRequestId) return
+        availableHubLayers = result.data
+      })
+      .catch(() => {
+        if (currentRequestId !== hubLayerRequestId) return
+        availableHubLayers = []
+      }),
+  )
 })
 
 // IMAGE
@@ -1399,24 +1451,26 @@ $effect(() => {
         {/snippet}
 
         {#snippet center()}
-          <FormOrganisationsSection
-            title={m.maps__organisations()}
-            subtitle={m.hub__organisations_note()}
-            issues={organisationSectionIssues}
-            organisations={hubOrganisations}
-            selections={formOrganisationValues}
-            {hiddenOrganisationInputAttrs}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            isSubmitRequested={formCtx.isSubmitRequested}
-            startInAddingMode={isNewHubRef}
-            {canSetCoreInclusive}
-            {onSearchOrganisations}
-            {onAddOrganisation}
-            {onRemoveOrganisation}
-            {onToggleCoreInclusive}
-            {onToggleHubExclusive}
-          />
+          {#if !isCoreHub}
+            <FormOrganisationsSection
+              title={m.maps__organisations()}
+              subtitle={m.hub__organisations_note()}
+              issues={organisationSectionIssues}
+              organisations={hubOrganisations}
+              selections={formOrganisationValues}
+              {hiddenOrganisationInputAttrs}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewHubRef}
+              {canSetCoreInclusive}
+              {onSearchOrganisations}
+              {onAddOrganisation}
+              {onRemoveOrganisation}
+              {onToggleCoreInclusive}
+              {onToggleHubExclusive}
+            />
+          {/if}
         {/snippet}
 
         {#snippet right()}
