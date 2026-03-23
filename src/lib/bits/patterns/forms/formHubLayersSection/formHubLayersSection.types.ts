@@ -2,6 +2,8 @@ import type { LocaleKey } from '$lib/types'
 
 export type HubLayerSectionItem = {
   id: string
+  organisationId: string
+  organisationName: string
   projectNameShort: string
   layerName: string
   isDefaultVisible: boolean

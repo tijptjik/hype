@@ -4,7 +4,7 @@ import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
+import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -751,8 +751,17 @@ const hubLayerItems = $derived.by(() => {
         FirstClassResource.project,
         layer.projectId,
       )
+      const organisation = adminCtx.appCtx.getResourceByIdSync(
+        FirstClassResource.organisation,
+        layer.organisationId,
+      )
       return {
         id: layer.id,
+        organisationId: layer.organisationId,
+        organisationName:
+          getI18n(organisation, 'name', adminCtx.appCtx.getUserPreferences()) ??
+          organisation?.code ??
+          layer.organisationId,
         projectNameShort: project?.i18n?.[localeKey]?.nameShort ?? project?.code ?? '-',
         layerName: layer.i18n?.[localeKey]?.name ?? layer.id,
         isDefaultVisible: Boolean(defaultByLayerId.get(layer.id)),
