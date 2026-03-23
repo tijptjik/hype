@@ -3,6 +3,8 @@ import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
 import { NewFeatureMode, OmniMode } from '$lib/enums'
 import type { Feature, FeatureFormInput } from '$lib/db/zod/schema/feature.types'
+import type { CurrentUser, UserProfile } from '$lib/db/zod/schema/user.types'
+import type { SessionUser } from '$lib/types'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -15,6 +17,10 @@ import type { Feature, FeatureFormInput } from '$lib/db/zod/schema/feature.types
 // 1. FORM SHAPING
 // - toEmptyFeatureFormInput
 // - toFeatureFormInput
+//
+// 2. USER PROJECTIONS
+// - toCurrentContributorUser
+// - toCurrentAuthorizationUser
 // ---
 
 const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
@@ -207,5 +213,47 @@ export function toFeatureFormInput(
           propertyValue: property.propertyValue,
         })) ?? [],
     },
+  }
+}
+
+// ---
+/********************
+ *  2. USER PROJECTIONS
+ ************/
+// +++ User Projections
+
+/**
+ * Projects the current app user into the subset needed for contributor UI.
+ * @param user Current app user from app context.
+ * @returns Contributor-facing user fields or `null` when no user is present.
+ */
+export function toCurrentContributorUser(
+  user: CurrentUser | UserProfile | SessionUser | null | undefined,
+): Pick<CurrentUser, 'name' | 'attribution' | 'image' | 'id'> | null {
+  if (!user) return null
+
+  return {
+    id: 'id' in user ? (user.id ?? null) : null,
+    name: 'name' in user ? (user.name ?? null) : null,
+    attribution: 'attribution' in user ? (user.attribution ?? null) : null,
+    image: 'image' in user ? (user.image ?? null) : null,
+  }
+}
+
+/**
+ * Projects the current app user into the subset needed for auth checks.
+ * @param user Current app user from app context.
+ * @returns Authorization-facing user fields or `null` when no user is present.
+ */
+export function toCurrentAuthorizationUser(
+  user: CurrentUser | UserProfile | SessionUser | null | undefined,
+): Pick<CurrentUser, 'id' | 'isAnonymous' | 'superAdmin' | 'roles'> | null {
+  if (!user) return null
+
+  return {
+    id: 'id' in user ? (user.id ?? null) : null,
+    isAnonymous: 'isAnonymous' in user ? user.isAnonymous : undefined,
+    superAdmin: 'superAdmin' in user ? user.superAdmin : undefined,
+    roles: 'roles' in user ? user.roles : undefined,
   }
 }

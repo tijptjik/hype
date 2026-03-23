@@ -11,5 +11,6 @@ export type {
   MainFixedSectionProps,
   MainDualSectionProps,
   MainVisualSectionProps,
+  MainVisualSectionImageProps,
   MainVisualSectionPaneProps,
 } from './main.types'

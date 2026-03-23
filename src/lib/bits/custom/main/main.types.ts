@@ -59,3 +59,13 @@ export interface MainVisualSectionPaneProps {
   children?: Snippet
   class?: string
 }
+
+export interface MainVisualSectionImageProps {
+  class?: string
+  href?: string
+  src?: string | null
+  alt: string
+  isPending?: boolean
+  emptyText?: string
+  onImageLoad?: (size: { width: number; height: number }) => void
+}
