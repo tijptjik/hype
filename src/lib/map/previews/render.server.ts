@@ -168,7 +168,7 @@ const getPreviewFeatureRecords = async (
 }
 
 /**
- * Loads the deterministic payload needed to render one published layer preview.
+ * Loads the deterministic payload needed to render one layer preview.
  *
  * @param db Database connection.
  * @param layerId Target layer id.
@@ -321,7 +321,7 @@ const buildLayerPreviewRefreshCandidates = async (
         id: layer.id,
       })
       .from(layer)
-      .where(and(eq(layer.isPublished, true), eq(layer.isArchived, false)))
+      .where(eq(layer.isArchived, false))
       .orderBy(desc(layer.modifiedAt), layer.id)
 
     return rows.map(row => row.id)
@@ -334,7 +334,6 @@ const buildLayerPreviewRefreshCandidates = async (
     .from(layer)
     .where(
       and(
-        eq(layer.isPublished, true),
         eq(layer.isArchived, false),
         sql`(
           ${layer.modifiedAt} >= ${cutoffIso}
@@ -342,7 +341,6 @@ const buildLayerPreviewRefreshCandidates = async (
             SELECT 1
             FROM "feature"
             WHERE "feature"."layerId" = ${layer.id}
-              AND "feature"."isPublished" = 1
               AND "feature"."isArchived" = 0
               AND "feature"."modifiedAt" >= ${cutoffIso}
           )
