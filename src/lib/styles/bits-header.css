@@ -41,11 +41,16 @@
     height: var(--header-icon-size);
     border-radius: 9999px;
     color: var(--color-base-content);
+    transition: color 150ms ease;
   }
 
   .bits-theme .bits-header__icon-wrap[href] {
     text-decoration: none;
     color: var(--color-base-content);
+  }
+
+  .bits-theme .bits-header__icon-wrap[href]:hover {
+    color: var(--bits-header-icon-hover-color, var(--color-primary));
   }
 
   .bits-theme .bits-header__icon-wrap[href]:focus-visible {

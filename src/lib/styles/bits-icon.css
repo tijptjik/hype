@@ -85,6 +85,6 @@
   }
 
   .bits-theme .bits-icon-anchor__content {
-    @apply z-50 max-w-sm rounded-box border border-base-50 bg-base-100 p-3 shadow-xl;
+    @apply z-50 max-w-sm rounded-xl border border-base-50 bg-base-100 p-3 shadow-xl;
   }
 }
