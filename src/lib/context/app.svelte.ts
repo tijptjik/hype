@@ -3347,52 +3347,30 @@ export class AppCtx {
     const hubCode = this.hub?.code ?? null
     if (!hubId && !hubCode) return
     const currentUserLayers = (this.user as CurrentUser).userLayers || []
-    const currentHubLayers = currentUserLayers.filter(layer => layer.hubId === hubId)
-    const otherHubLayers = currentUserLayers.filter(layer => layer.hubId !== hubId)
+    const isCurrentHubLayer = (layer: UserLayer): boolean =>
+      hubId ? layer.hubId === hubId : layer.hubCode === hubCode
+    const currentHubLayers = currentUserLayers.filter(isCurrentHubLayer)
+    const otherHubLayers = currentUserLayers.filter(layer => !isCurrentHubLayer(layer))
 
-    if (hubId) {
-      if (checked) {
-        if (!currentHubLayers.some(ul => ul.layerId === layerId)) {
-          ;(this.user as CurrentUser).userLayers = [
-            ...otherHubLayers,
+    const nextCurrentHubLayers = checked
+      ? currentHubLayers.some(layer => layer.layerId === layerId)
+        ? currentHubLayers
+        : [
             ...currentHubLayers,
             {
               userId: (this.user as CurrentUser).id,
-              hubId,
+              hubId: hubId ?? null,
+              hubCode: hubCode ?? undefined,
               layerId,
               isDefaultVisible: true,
             },
           ]
-        }
-      } else {
-        ;(this.user as CurrentUser).userLayers = [
-          ...otherHubLayers,
-          ...currentHubLayers.filter(ul => ul.layerId !== layerId),
-        ]
-      }
-    }
+      : currentHubLayers.filter(layer => layer.layerId !== layerId)
 
-    const nextCurrentHubLayers = hubId
-      ? (this.user as CurrentUser).userLayers.filter(layer => layer.hubId === hubId)
-      : Array.from(
-          new Set(
-            checked
-              ? [...this.state.prisms.layer, layerId]
-              : this.state.prisms.layer.filter(id => id !== layerId),
-          ),
-        ).map(selectedLayerId => ({
-          userId: (this.user as CurrentUser).id,
-          hubId: null,
-          layerId: selectedLayerId,
-          isDefaultVisible: true,
-        }))
-
-    if (!hubId) {
-      ;(this.user as CurrentUser).userLayers = [
-        ...currentUserLayers.filter(layer => layer.hubId !== null),
-        ...nextCurrentHubLayers,
-      ]
-    }
+    ;(this.user as CurrentUser).userLayers = [
+      ...otherHubLayers,
+      ...nextCurrentHubLayers,
+    ]
 
     this.setLayers(nextCurrentHubLayers.map(layer => layer.layerId))
 

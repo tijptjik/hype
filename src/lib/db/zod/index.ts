@@ -70,6 +70,7 @@ import { ProjectRoleBase } from './schema/project'
 import { HubRoleBase } from './schema/hub'
 
 export const UserLayerDetailProfileAPI = UserLayerRecord.extend({
+  hubCode: z.string().nullable().optional(),
   user: UserBase.optional(),
   layer: UserLayerRecord.optional(),
 })
