@@ -14,13 +14,17 @@ import {
   getCloudinarySignature as getCloudinarySignatureRemote,
   updateImage as updateImageRemote,
 } from '$lib/api/server/image.remote'
+// NAVIGATION
+import { getUrlForResource } from '$lib/navigation'
 import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectGetState } from '$lib/db/zod/schema/project.types'
 import type { HubGetState } from '$lib/db/zod/schema/hub.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
+import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
-import type { ParamsToSign } from '$lib/types'
+import type { AdminCtx } from '$lib/context/admin.svelte'
+import type { Id, ImageCtxConstructorOptions, ParamsToSign } from '$lib/types'
 import type {
   Image,
   ImageContextEnvelope,
@@ -38,6 +42,17 @@ import type {
 // CONTEXT
 import type { ImageCtx } from '$lib/context/image.svelte'
 import { hashicon } from '@emeraldpay/hashicon'
+
+type FeatureImageProviderOrganisation = {
+  id?: string | null
+  code?: string | null
+}
+
+type FeatureImageProviderProject = {
+  id?: string | null
+  organisationId?: string | null
+  code?: string | null
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -69,6 +84,9 @@ import { hashicon } from '@emeraldpay/hashicon'
 //    - sortImages
 //    - getHashiconUrl
 //    - getImageSrcOrHashicon
+//    - getFeatureImagesFacetHref
+//    - getSafeImageUrl
+//    - getFeatureImageProviderOptions
 //    - updateImagePresentationMode
 //    - setOrganisationImagePresentationMode
 //
@@ -303,6 +321,89 @@ export function getImageSrcOrHashicon(
   if (imageSrc) return imageSrc
   if (!fallbackId) return null
   return getHashiconUrl(fallbackId, options.hashiconSize)
+}
+
+/**
+ * Resolves the admin images facet URL for a feature when the feature id is known.
+ *
+ * @param adminCtx Admin context used to resolve resource URLs.
+ * @param featureId Feature id to target.
+ * @returns The images facet URL or `undefined` when the feature id is unavailable.
+ */
+export function getFeatureImagesFacetHref(
+  adminCtx: AdminCtx,
+  featureId?: Id | null,
+): string | undefined {
+  if (!featureId) return undefined
+
+  return (
+    getUrlForResource(adminCtx, FirstClassResource.feature, featureId, 'images') ??
+    undefined
+  )
+}
+
+/**
+ * Safely resolves a display URL for an image envelope.
+ *
+ * @param image Image envelope to resolve.
+ * @returns The resolved URL or `null` when no image is available or URL generation fails.
+ */
+export function getSafeImageUrl(
+  image: ImageCtxEnvelope | null | undefined,
+): string | null {
+  if (!image) return null
+
+  try {
+    return getURLfromImage({ image })
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Builds image-provider options for the admin feature editor.
+ *
+ * @param params Feature image provider inputs.
+ * @returns Normalized image-provider options for the feature editor provider.
+ */
+export function getFeatureImageProviderOptions(params: {
+  featureRef: string
+  isNewFeatureRef: boolean
+  feature: Feature | null | undefined
+  organisation: FeatureImageProviderOrganisation | null
+  project: FeatureImageProviderProject | null
+}): ImageCtxConstructorOptions {
+  const { featureRef, isNewFeatureRef, feature, organisation, project } = params
+  const isValid =
+    !isNewFeatureRef &&
+    feature?.id === featureRef &&
+    Boolean(organisation?.id) &&
+    Boolean(project?.id)
+
+  return {
+    isAdminMode: true,
+    isValid,
+    image: isValid ? ((feature?.image as ImageCtxEnvelope | null) ?? null) : undefined,
+    images: isValid
+      ? ((feature?.images as ImageCtxEnvelope[] | null) ?? null)
+      : undefined,
+    context:
+      isValid && feature && organisation && project
+        ? ({
+            ctxType: ImageContextResource.feature,
+            ctxId: feature.id as Id,
+            organisation: {
+              id: organisation.id,
+              code: organisation.code,
+            },
+            project: {
+              id: project.id,
+              organisationId: project.organisationId,
+              code: project.code,
+            },
+          } as never)
+        : undefined,
+  }
 }
 
 /**
