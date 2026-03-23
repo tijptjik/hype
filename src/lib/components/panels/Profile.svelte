@@ -2,10 +2,11 @@
 // I18N
 import { m } from '$lib/i18n'
 // BITS
-import { PanelRoot as Panel } from '$lib/bits'
+import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
+// ADAPTERS
+import { useProfileSectionModel } from '$lib/adapters/panels'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
-import Profile from '$lib/components/panels/sections/Profile.svelte'
 import ContributionStats from '$lib/components/panels/sections/ContributionStats.svelte'
 import ContributedFeatures from '$lib/components/panels/sections/ContributedFeatures.svelte'
 import ContributedImages from '$lib/components/panels/sections/ContributedImages.svelte'
@@ -35,13 +36,17 @@ let panelProps: PanelProps = $derived({
 // Get the username from URL parameters
 let username = $derived(appCtx.state.panels.profile.ctx?.username)
 let userData = $derived(appCtx.state.panels.profile.ctx?.userData)
+const profileSectionModel = useProfileSectionModel(appCtx, () => ({
+  hideActions: true,
+  hideEditableFields: true,
+}))
 </script>
 
 {#if username}
   <Panel bind:panelContainer {...panelProps}>
     <Header title={m.navbar__profile()} {...panelProps} />
 
-    <Profile hideActions={true} hideEditableFields={true} />
+    <ProfileSection {...profileSectionModel.getProfileProps()} />
     {#if userData}
       <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <ContributionStats {userData} />

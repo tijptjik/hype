@@ -2,11 +2,12 @@
 // I18N
 import { m } from '$lib/i18n'
 // BITS
-import { PanelRoot as Panel } from '$lib/bits'
+import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
+// ADAPTERS
+import { useProfileSectionModel } from '$lib/adapters/panels'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Settings.svelte'
-import Profile from '$lib/components/panels/sections/Profile.svelte'
 import Language from '$lib/components/panels/sections/Language.svelte'
 import Contributor from '$lib/components/panels/sections/Contributor.svelte'
 import DefaultMap from '$lib/components/panels/sections/DefaultMap.svelte'
@@ -17,7 +18,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { Panel as PanelEnum, PanelSide } from '$lib/enums'
 // TYPES
-import type { PanelPosition, PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
@@ -45,19 +46,24 @@ let panelProps: PanelProps = $derived({
   isNarrow: false,
   isAdmin: appCtx.isAdmin(),
 })
+
+const profileSectionModel = useProfileSectionModel(appCtx, () => ({
+  hideActions: false,
+  hideEditableFields: false,
+}))
 </script>
 
 <Panel bind:panelContainer {...panelProps}>
   <Header
     title={m.menu_settings()}
-    onToggleInfo={(e) => {
-      handleToggleInfo(e);
+    onToggleInfo={e => {
+      handleToggleInfo(e)
     }}
     {...panelProps}
   />
   <Info isOpen={isInfoOpen} />
 
-  <Profile />
+  <ProfileSection {...profileSectionModel.getProfileProps()} />
   <div class="flex flex-col">
     {#if panelProps.isAdmin}
       <div class="shrink-0"><Admin {...panelProps} /></div>
