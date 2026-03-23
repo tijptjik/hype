@@ -16,7 +16,7 @@ let {
 </script>
 
 <div class={`bits-task-row__watermark bits-task-row__watermark--${colorSuffix}`.trim()}>
-  <SimpleTooltip disabled={!message}>
+  <SimpleTooltip disabled={!message} triggerProps={{ tabindex: -1 }}>
     {#snippet trigger()}
       <div class="bits-task-row__watermark-label">
         <span class="bits-task-row__watermark-text">{typeDisplay}</span>

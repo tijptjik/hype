@@ -19,6 +19,7 @@ const badgeClasses = $derived(
 
 <SimpleTooltip
   disabled={!tooltipText}
+  triggerProps={{ tabindex: -1 }}
   triggerClass="bits-resource-status-badge__trigger"
   contentClass="bits-resource-status-badge__tooltip"
 >

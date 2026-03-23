@@ -30,7 +30,7 @@ const createdAtLabel = $derived.by(() => {
 <div class="bits-task-row__meta">
   <div class="bits-task-row__meta-item bits-task-row__meta-item--created">
     <small class="bits-task-row__meta-label">{m.close_muddy_trout_clap()}</small>
-    <SimpleTooltip disabled={!createdAtLabel}>
+    <SimpleTooltip disabled={!createdAtLabel} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
         <p class="bits-task-row__meta-value">
           {createdAtLabel
@@ -46,7 +46,7 @@ const createdAtLabel = $derived.by(() => {
     <small class="bits-task-row__meta-label"
       >{m.profile__role_type__contributor()}</small
     >
-    <SimpleTooltip disabled={!contributorAttribution}>
+    <SimpleTooltip disabled={!contributorAttribution} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
         <p class="bits-task-row__meta-value bits-task-row__meta-value--wide">
           {contributorName}
@@ -58,7 +58,7 @@ const createdAtLabel = $derived.by(() => {
 
   <div class="bits-task-row__meta-item bits-task-row__meta-item--reviewer">
     <small class="bits-task-row__meta-label">{m.stock_active_kestrel_offer()}</small>
-    <SimpleTooltip disabled={!reviewerAttribution}>
+    <SimpleTooltip disabled={!reviewerAttribution} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
         <p class="bits-task-row__meta-value bits-task-row__meta-value--wide">
           {reviewerName}
