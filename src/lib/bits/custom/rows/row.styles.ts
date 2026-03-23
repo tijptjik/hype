@@ -44,6 +44,9 @@ export function getRowRootClass({
     'focus-visible:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
     'focus-visible:shadow-[0_1rem_2.2rem_color-mix(in_oklab,black_14%,transparent),0_0_0_1px_color-mix(in_oklab,white_2%,transparent)]',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary',
+    'focus-within:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
+    'focus-within:shadow-[0_1rem_2.2rem_color-mix(in_oklab,black_14%,transparent),0_0_0_1px_color-mix(in_oklab,white_2%,transparent)]',
+    'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-secondary',
     isSelected &&
       'shadow-[0_0_0_2px_var(--color-primary),0_0_0_4px_color-mix(in_oklab,var(--color-primary)_30%,transparent)]',
     variant ? `bits-resource-row--${variant}` : '',
@@ -82,7 +85,7 @@ export function getResourceRowClass({
     breadcrumbColumnCount === 2 && 'md:grid-cols-[minmax(0,1fr)_20rem_14rem]',
     breadcrumbColumnCount >= 3 &&
       breadcrumbVariant === 'stats' &&
-      'md:grid-cols-[minmax(0,1fr)_24rem_14rem]',
+      'md:grid-cols-[minmax(0,1fr)_13rem_14rem]',
     breadcrumbColumnCount >= 3 &&
       breadcrumbVariant !== 'stats' &&
       'md:grid-cols-[minmax(0,1fr)_30rem_14rem]',
@@ -101,7 +104,7 @@ export function getResourceRowMetaGridClass({
       'md:w-[20rem] md:min-w-[20rem] md:max-w-[20rem] md:grid-cols-[repeat(2,minmax(10rem,1fr))]',
     breadcrumbColumnCount >= 3 &&
       breadcrumbVariant === 'stats' &&
-      'md:w-[24rem] md:min-w-[24rem] md:max-w-[24rem] md:grid-cols-[repeat(3,minmax(8rem,1fr))] md:gap-2',
+      'md:w-[13rem] md:min-w-[13rem] md:max-w-[13rem] md:grid-cols-[repeat(3,64px)] md:justify-end md:gap-2',
     breadcrumbColumnCount >= 3 &&
       breadcrumbVariant !== 'stats' &&
       'md:w-[30rem] md:min-w-[30rem] md:max-w-[30rem] md:grid-cols-[repeat(3,minmax(10rem,1fr))]',
@@ -114,7 +117,7 @@ export const resourceRowMetaItemClass =
   'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2'
 
 export const resourceRowMetaItemStatsClass =
-  'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-1.5 px-1'
+  'grid h-full w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-1.5'
 
 export const resourceRowRailSurfaceClass = 'bg-base-300/70'
 

@@ -19,7 +19,7 @@ let {
 <div class={rowTitleClass}>
   <RowThumbnail {image} {imageSrc} {alt} onClick={onImageClick} />
   <div class={rowTitleContentClass}>
-    <TextTitle text={title} onClick={onTitleClick} />
-    <TextDescription text={description} onClick={onDescriptionClick} />
+    <TextTitle text={title} onClick={onTitleClick} tabIndex={-1} />
+    <TextDescription text={description} onClick={onDescriptionClick} tabIndex={-1} />
   </div>
 </div>

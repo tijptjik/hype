@@ -1,14 +1,16 @@
 <script lang="ts">
 import TextAction from './src/TextAction.svelte'
+import { getTextDescriptionClass } from './text.styles'
 import type { TextDescriptionProps } from './text.types'
 
-let { text, onClick }: TextDescriptionProps = $props()
+let { text, onClick, tabIndex }: TextDescriptionProps = $props()
 </script>
 
 <TextAction
   {text}
   {onClick}
+  {tabIndex}
   separator="•"
   padding={24}
-  class={`${onClick ? 'cursor-pointer ' : ''}w-full text-left text-sm text-base-content/60 hover:text-primary`.trim()}
+  class={getTextDescriptionClass(Boolean(onClick))}
 />

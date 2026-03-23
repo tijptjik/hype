@@ -7,6 +7,7 @@ let {
   onClick,
   separator,
   padding,
+  tabIndex,
   class: className = '',
 }: TextActionProps = $props()
 
@@ -28,6 +29,7 @@ function handleKeyDown(event: KeyboardEvent): void {
 {#if onClick}
   <button
     type="button"
+    tabindex={tabIndex}
     class={className}
     onclick={handleClick}
     onkeydown={handleKeyDown}
