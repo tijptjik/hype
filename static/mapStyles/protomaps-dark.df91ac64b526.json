@@ -7859,6 +7859,8 @@
           ],
           "station",
           "train_station",
+          "townhall",
+          "building",
           [
             "get",
             "kind"
@@ -12059,9 +12061,5 @@
       }
     }
   ],
-  "name": "Breadline",
-  "metadata": {
-    "hype:style-variant": "Breadline"
-  },
-  "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/light"
+  "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/dark"
 }

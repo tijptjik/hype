@@ -7859,6 +7859,8 @@
           ],
           "station",
           "train_station",
+          "townhall",
+          "building",
           [
             "get",
             "kind"
@@ -12059,5 +12061,9 @@
       }
     }
   ],
+  "name": "Hyper Light",
+  "metadata": {
+    "hype:style-variant": "Hyper Light"
+  },
   "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/light"
 }

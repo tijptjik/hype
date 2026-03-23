@@ -7859,6 +7859,8 @@
           ],
           "station",
           "train_station",
+          "townhall",
+          "building",
           [
             "get",
             "kind"

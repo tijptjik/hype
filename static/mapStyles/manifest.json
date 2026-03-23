@@ -1,18 +1,18 @@
 {
   "hyper": {
-    "fileName": "hyper.a47bb5e35619.json",
-    "publicPath": "/mapStyles/hyper.a47bb5e35619.json",
-    "hash": "a47bb5e356190001786da91c875d826ebcdf1bba1fd12bae5f4de79869351589"
+    "fileName": "hyper.e0abb60cbc18.json",
+    "publicPath": "/mapStyles/hyper.e0abb60cbc18.json",
+    "hash": "e0abb60cbc188dfdf52c3a72daba7e44852a528086b8f6d243542157a5591818"
   },
   "hyperLight": {
-    "fileName": "hyperLight.7f7a5a18aed4.json",
-    "publicPath": "/mapStyles/hyperLight.7f7a5a18aed4.json",
-    "hash": "7f7a5a18aed441f6d3d8f0629a2f4618e06f3599ddcc28f5d16fd8c7cc3f26ce"
+    "fileName": "hyperLight.1eb792e1dc99.json",
+    "publicPath": "/mapStyles/hyperLight.1eb792e1dc99.json",
+    "hash": "1eb792e1dc990270b639b9ce876061a725adeea52a2534cbb6bb1ef8a48ac4cc"
   },
   "ghostery": {
-    "fileName": "ghostery.207c4ad8d835.json",
-    "publicPath": "/mapStyles/ghostery.207c4ad8d835.json",
-    "hash": "207c4ad8d835b172c0b37bb29a713d043dae840ab4ddd15d6e07f3bf87100c65"
+    "fileName": "ghostery.835bfc399a3d.json",
+    "publicPath": "/mapStyles/ghostery.835bfc399a3d.json",
+    "hash": "835bfc399a3d22272d47a1e4740c387408ba740e1e624c6cc8877c96b511f569"
   },
   "ghostery-legacy": {
     "fileName": "ghostery-legacy.1818f6f4257d.json",
@@ -20,19 +20,19 @@
     "hash": "1818f6f4257d837288ea34d9308169fbf3a2fa37fbbcfe11b33380f95eae80be"
   },
   "breadline": {
-    "fileName": "breadline.3ccad770442e.json",
-    "publicPath": "/mapStyles/breadline.3ccad770442e.json",
-    "hash": "3ccad770442ee063efa5b6429dce4c31043cc9bacdc345f8a6c55fe41fe6dc40"
+    "fileName": "breadline.055fb7c18f3f.json",
+    "publicPath": "/mapStyles/breadline.055fb7c18f3f.json",
+    "hash": "055fb7c18f3fc40f97294ffddd26019e50211a12c0da8302f177abab14a1c554"
   },
   "protomaps-light": {
-    "fileName": "protomaps-light.47e6e28581bf.json",
-    "publicPath": "/mapStyles/protomaps-light.47e6e28581bf.json",
-    "hash": "47e6e28581bf81faf30618e4c3ceabbafc938ce60509adffc649a76f3fa2b825"
+    "fileName": "protomaps-light.e63d0b58e07b.json",
+    "publicPath": "/mapStyles/protomaps-light.e63d0b58e07b.json",
+    "hash": "e63d0b58e07bec1256c256308d794ee764629bd8831a23a5b679e339bd0d3dc0"
   },
   "protomaps-dark": {
-    "fileName": "protomaps-dark.5233941b72ff.json",
-    "publicPath": "/mapStyles/protomaps-dark.5233941b72ff.json",
-    "hash": "5233941b72ff6bb433c0deb47c980ec15e0c33f58c80f83e6b3dbe36a428551d"
+    "fileName": "protomaps-dark.df91ac64b526.json",
+    "publicPath": "/mapStyles/protomaps-dark.df91ac64b526.json",
+    "hash": "df91ac64b5260dcb5d76a29298b918c7b5aa16e6efb5b7d492db5c4436930d0d"
   },
   "protomaps-white": {
     "fileName": "protomaps-white.5680bb2b0b9d.json",
