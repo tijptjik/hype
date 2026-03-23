@@ -1,8 +1,13 @@
 import type { Point } from 'geojson'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
+import type { FeatureFieldSectionItem } from '$lib/bits/patterns/forms/formFeatureFieldsSection'
 import { NewFeatureMode, OmniMode } from '$lib/enums'
-import type { Feature, FeatureFormInput } from '$lib/db/zod/schema/feature.types'
+import type {
+  Feature,
+  FeatureFormInput,
+  FeatureProperty,
+} from '$lib/db/zod/schema/feature.types'
 import type { CurrentUser, UserProfile } from '$lib/db/zod/schema/user.types'
 import type { SessionUser } from '$lib/types'
 
@@ -21,9 +26,13 @@ import type { SessionUser } from '$lib/types'
 // 2. USER PROJECTIONS
 // - toCurrentContributorUser
 // - toCurrentAuthorizationUser
+//
+// 3. PROPERTY PROJECTIONS
+// - getNonTranslatableFeatureFieldItems
+// - getTranslatableSpecifierProperties
 // ---
 
-const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
+export const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
   114.1693671540923, 22.319307515052614,
 ]
 
@@ -256,4 +265,87 @@ export function toCurrentAuthorizationUser(
     superAdmin: 'superAdmin' in user ? user.superAdmin : undefined,
     roles: 'roles' in user ? user.roles : undefined,
   }
+}
+
+// ---
+/********************
+ *  3. PROPERTY PROJECTIONS
+ ************/
+// +++ Property Projections
+
+type FeaturePropertyDefinition = NonNullable<FeatureProperty['property']>
+type FeaturePropertyValueOption = NonNullable<
+  FeaturePropertyDefinition['values']
+>[number]
+type FeaturePropertyWithDefinition = FeatureProperty & {
+  property: FeaturePropertyDefinition
+}
+
+/**
+ * Narrows a feature property to entries that include a hydrated property definition.
+ *
+ * @param property Feature property candidate.
+ * @returns Whether the property has a loaded definition.
+ */
+function hasFeaturePropertyDefinition(
+  property: FeatureProperty,
+): property is FeaturePropertyWithDefinition {
+  return property.property != null
+}
+
+/**
+ * Builds form field items for classifier and non-translatable specifier properties.
+ *
+ * @param params Input properties and UI bindings for the feature fields section.
+ * @returns Field-section items consumable by `FormFeatureFieldsSection`.
+ */
+export function getNonTranslatableFeatureFieldItems({
+  properties,
+  localeKey,
+  isEditing,
+  onChange,
+}: {
+  properties: FeatureProperty[] | null | undefined
+  localeKey: 'en' | 'zhHans' | 'zhHant'
+  isEditing: boolean
+  onChange: (propertyId: string, nextValue: string | boolean) => void
+}): FeatureFieldSectionItem[] {
+  return (properties ?? [])
+    .filter(hasFeaturePropertyDefinition)
+    .filter(
+      property =>
+        property.property.type === 'classifier' ||
+        (property.property.type === 'specifier' && !property.property.isTranslatable),
+    )
+    .map(property => ({
+      property: property.property,
+      value: property.value ?? '',
+      checked: property.value === 'true',
+      isEditing,
+      options:
+        property.property.values?.map((option: FeaturePropertyValueOption) => ({
+          value: option.id,
+          label:
+            option.i18n?.[localeKey]?.value ?? option.i18n?.en?.value ?? option.value,
+        })) ?? [],
+      onChange: (nextValue: string | boolean) => {
+        onChange(property.propertyId, nextValue)
+      },
+    }))
+}
+
+/**
+ * Selects translatable specifier properties for locale-specific editing.
+ *
+ * @param properties Feature properties from the current form state.
+ * @returns Specifier properties that support translated values.
+ */
+export function getTranslatableSpecifierProperties(
+  properties: FeatureProperty[] | null | undefined,
+): FeatureProperty[] {
+  return (properties ?? []).filter(
+    property =>
+      property.property?.type === 'specifier' &&
+      Boolean(property.property?.isTranslatable),
+  )
 }
