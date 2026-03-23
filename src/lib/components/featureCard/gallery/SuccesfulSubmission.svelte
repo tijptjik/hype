@@ -3,6 +3,8 @@
 import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+// BITS
+import { Button } from '$lib/bits/core/button'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import UserCircle from 'virtual:icons/lucide/circle-user'
@@ -29,8 +31,14 @@ let handleClick = () => {
   <p class="-white/70 [text-shadow:_0_1px_2px_rgba(0,0,0,0.5) max-w-[60%] text-center">
     {m.user_contributions__received_body()}
   </p>
-  <button class="btn mt-4 bg-base-300 text-white" onclick={handleClick}>
-    <Icon src={UserCircle} class="h-6 w-6 stroke-[2px] text-primary" />
-    {m.user_contributions__received_button()}
-  </button>
+  <Button
+    class="mt-4"
+    text={m.user_contributions__received_button()}
+    color="dark"
+    onClick={handleClick}
+  >
+    {#snippet icon()}
+      <Icon src={UserCircle} class="h-6 w-6 stroke-[2px] text-primary" />
+    {/snippet}
+  </Button>
 </div>

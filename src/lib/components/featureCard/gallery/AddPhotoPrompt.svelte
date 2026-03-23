@@ -6,6 +6,8 @@ import { getCardCtx } from '$lib/context/card.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'
 // SERVICES
 import { checkCameraAvailability } from '$lib/client/services/image'
+// BITS
+import { Button } from '$lib/bits/core/button'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import Camera from 'virtual:icons/lucide/camera'
@@ -56,19 +58,22 @@ function handleFileSelect(event: Event) {
   <p class="-white/70 [text-shadow:_0_1px_2px_rgba(0,0,0,0.5) max-w-[60%] text-center">
     {m.viewer__no_image_note()}
   </p>
-  <button
-    class="btn mt-4 bg-base-300 text-white"
-    onclick={() => {
-      checkCameraAvailability().then((hasCameraAccess) => {
+  <Button
+    class="mt-4"
+    text={m.honest_fluffy_falcon_enjoy()}
+    color="dark"
+    onClick={() => {
+      checkCameraAvailability().then(hasCameraAccess => {
         if (hasCameraAccess) {
-          cardCtx.setMode(FeatureCardMode.AddPhoto);
+          cardCtx.setMode(FeatureCardMode.AddPhoto)
         } else {
-          galleryInput.click();
+          galleryInput.click()
         }
-      });
+      })
     }}
   >
-    <Icon src={Camera} class="h-6 w-6" />
-    {m.honest_fluffy_falcon_enjoy()}
-  </button>
+    {#snippet icon()}
+      <Icon src={Camera} class="h-6 w-6" />
+    {/snippet}
+  </Button>
 </div>
