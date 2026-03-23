@@ -293,9 +293,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   )
   const resolvedOrganisationId = projectScope.organisationId
 
-  const isCreateMode = mode === 'create'
-
-  if (isCreateMode) {
+  if (mode === 'create') {
     const createDecision = authorizeLayerCreateForSubmission({
       user,
       userRoles,
@@ -320,7 +318,6 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
       isArchived: false,
     })
     await createI18n(db, data.i18n, created.id)
-
     await updateProperties(db, created.id, submittedProperties)
 
     return toCreatedResponseShape(created)
@@ -472,14 +469,9 @@ export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx
   const { db, user, userRoles } = ctx
   const layerId = params.id as Id
 
-  const probed = requireValue(
-    (await resolveLayerCommandProbe(db, layerId, () => {
-      throw error(404, 'LAYER_NOT_FOUND')
-    })) as LayerCommandProbe,
-    () => {
-      throw error(404, 'LAYER_NOT_FOUND')
-    },
-  )
+  const probed = (await resolveLayerCommandProbe(db, layerId, () => {
+    throw error(404, 'LAYER_NOT_FOUND')
+  })) as LayerCommandProbe
 
   ensureLayerCommandAllowed(
     authorizeLayerDeleteForSubmission({
