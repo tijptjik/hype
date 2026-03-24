@@ -1,9 +1,26 @@
-import { decode as decodeAvif, encode as encodeAvif } from '@jsquash/avif'
-import { decode as decodeJpeg, encode as encodeJpeg } from '@jsquash/jpeg'
-import { decode as decodeJxl, encode as encodeJxl } from '@jsquash/jxl'
-import { decode as decodePng, encode as encodePng } from '@jsquash/png'
-import resize from '@jsquash/resize'
-import { decode as decodeWebp, encode as encodeWebp } from '@jsquash/webp'
+import { simd } from 'wasm-feature-detect'
+import resize, { initResize } from '@jsquash/resize'
+import squooshResizeWasm from '@jsquash/resize/lib/resize/pkg/squoosh_resize_bg.wasm'
+import decodeAvif, { init as initAvifDecode } from '@jsquash/avif/decode'
+import encodeAvif, { init as initAvifEncode } from '@jsquash/avif/encode'
+import avifDecodeWasm from '@jsquash/avif/codec/dec/avif_dec.wasm'
+import avifEncodeWasm from '@jsquash/avif/codec/enc/avif_enc.wasm'
+import decodeJpeg, { init as initJpegDecode } from '@jsquash/jpeg/decode'
+import encodeJpeg, { init as initJpegEncode } from '@jsquash/jpeg/encode'
+import jpegDecodeWasm from '@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm'
+import jpegEncodeWasm from '@jsquash/jpeg/codec/enc/mozjpeg_enc.wasm'
+import decodeJxl, { init as initJxlDecode } from '@jsquash/jxl/decode'
+import encodeJxl, { init as initJxlEncode } from '@jsquash/jxl/encode'
+import jxlDecodeWasm from '@jsquash/jxl/codec/dec/jxl_dec.wasm'
+import jxlEncodeWasm from '@jsquash/jxl/codec/enc/jxl_enc.wasm'
+import decodePng, { init as initPngDecode } from '@jsquash/png/decode'
+import encodePng, { init as initPngEncode } from '@jsquash/png/encode'
+import pngWasm from '@jsquash/png/codec/pkg/squoosh_png_bg.wasm'
+import decodeWebp, { init as initWebpDecode } from '@jsquash/webp/decode'
+import encodeWebp, { init as initWebpEncode } from '@jsquash/webp/encode'
+import webpDecodeWasm from '@jsquash/webp/codec/dec/webp_dec.wasm'
+import webpEncodeWasm from '@jsquash/webp/codec/enc/webp_enc.wasm'
+import webpEncodeSimdWasm from '@jsquash/webp/codec/enc/webp_enc_simd.wasm'
 import smartcrop from 'smartcrop'
 
 type ImageStage = 'local' | 'preview' | 'production'
@@ -98,6 +115,94 @@ const QUALITY_BY_FORMAT = {
   jxl: 75,
   webp: 75,
 } as const
+
+const ensureResizeReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = initResize(squooshResizeWasm).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureJpegReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = Promise.all([
+        initJpegDecode(jpegDecodeWasm),
+        initJpegEncode(jpegEncodeWasm),
+      ]).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensurePngReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = Promise.all([initPngDecode(pngWasm), initPngEncode(pngWasm)]).then(
+        () => undefined,
+      )
+    }
+
+    return ready
+  }
+})()
+
+const ensureWebpReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = Promise.all([
+        initWebpDecode(webpDecodeWasm),
+        simd().then(isSimd =>
+          initWebpEncode(isSimd ? webpEncodeSimdWasm : webpEncodeWasm),
+        ),
+      ]).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureAvifReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = Promise.all([
+        initAvifDecode(avifDecodeWasm),
+        initAvifEncode(avifEncodeWasm),
+      ]).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureJxlReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = Promise.all([
+        initJxlDecode(jxlDecodeWasm),
+        initJxlEncode(jxlEncodeWasm),
+      ]).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -583,6 +688,8 @@ const transformSourceAsset = async (
   source: SourceAsset,
   request: TransformRequest & { format: OutputFormat },
 ): Promise<{ body: ArrayBuffer; contentType: string }> => {
+  await ensureResizeReady()
+
   if (source.contentType === 'image/svg+xml') {
     if (request.format !== 'svg') {
       return {
@@ -621,18 +728,24 @@ const transformSourceAsset = async (
 const decodeSourceImage = async (source: SourceAsset): Promise<DecodedImage> => {
   const format = inferInputFormat(source.contentType, source.objectKey)
   const buffer = source.body
-  const data =
-    format === 'jpeg'
-      ? await decodeJpeg(buffer, { preserveOrientation: true })
-      : format === 'png'
-        ? await decodePng(buffer)
-        : format === 'webp'
-          ? await decodeWebp(buffer)
-          : format === 'avif'
-            ? await decodeAvif(buffer)
-            : format === 'jxl'
-              ? await decodeJxl(buffer)
-              : await decodeJpeg(buffer, { preserveOrientation: true })
+  let data: ImageData
+
+  if (format === 'png') {
+    await ensurePngReady()
+    data = await decodePng(buffer)
+  } else if (format === 'webp') {
+    await ensureWebpReady()
+    data = await decodeWebp(buffer)
+  } else if (format === 'avif') {
+    await ensureAvifReady()
+    data = await decodeAvif(buffer)
+  } else if (format === 'jxl') {
+    await ensureJxlReady()
+    data = await decodeJxl(buffer)
+  } else {
+    await ensureJpegReady()
+    data = await decodeJpeg(buffer, { preserveOrientation: true })
+  }
 
   return {
     data,
@@ -758,6 +871,7 @@ const encodeOutput = async (
   }
 
   if (format === 'png') {
+    await ensurePngReady()
     return {
       body: await encodePng(image),
       contentType: 'image/png',
@@ -765,6 +879,7 @@ const encodeOutput = async (
   }
 
   if (format === 'webp') {
+    await ensureWebpReady()
     return {
       body: await encodeWebp(image, { quality: resolveQuality(quality, 'webp') }),
       contentType: 'image/webp',
@@ -772,6 +887,7 @@ const encodeOutput = async (
   }
 
   if (format === 'avif') {
+    await ensureAvifReady()
     return {
       body: await encodeAvif(image, { quality: resolveQuality(quality, 'avif') }),
       contentType: 'image/avif',
@@ -779,11 +895,14 @@ const encodeOutput = async (
   }
 
   if (format === 'jxl') {
+    await ensureJxlReady()
     return {
       body: await encodeJxl(image, { quality: resolveQuality(quality, 'jxl') }),
       contentType: 'image/jxl',
     }
   }
+
+  await ensureJpegReady()
 
   return {
     body: await encodeJpeg(hasAlpha ? flattenAlpha(image) : image, {
