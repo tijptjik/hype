@@ -1,13 +1,15 @@
 const encoder = new TextEncoder()
 
-type UploadTokenPayload = {
+export type UploadTokenPayload = {
   publicId: string
   env: string
   ctxType: string
   ctxId: string
+  filename: string
   replaceImageId?: string
   contentType: string
   size: number
+  uploaderUserId: string
   exp: number
 }
 
@@ -35,6 +37,9 @@ const importKey = async (secret: string): Promise<CryptoKey> =>
     ['sign', 'verify'],
   )
 
+/**
+ * Creates an HMAC-signed upload token for the direct-to-R2 upload flow.
+ */
 export const createUploadToken = async (
   payload: UploadTokenPayload,
   secret: string,
@@ -45,6 +50,9 @@ export const createUploadToken = async (
   return `${toBase64Url(data)}.${toBase64Url(signature)}`
 }
 
+/**
+ * Verifies and decodes an HMAC-signed upload token.
+ */
 export const verifyUploadToken = async (
   token: string,
   secret: string,
@@ -53,9 +61,16 @@ export const verifyUploadToken = async (
   if (!dataPart || !signaturePart) return null
 
   const payloadBytes = fromBase64Url(dataPart)
-  const signature = fromBase64Url(signaturePart)
+  const payloadBuffer = Uint8Array.from(payloadBytes)
+  const signatureBytes = fromBase64Url(signaturePart)
+  const signatureBuffer = Uint8Array.from(signatureBytes)
   const key = await importKey(secret)
-  const verified = await crypto.subtle.verify('HMAC', key, signature, payloadBytes)
+  const verified = await crypto.subtle.verify(
+    'HMAC',
+    key,
+    signatureBuffer,
+    payloadBuffer,
+  )
   if (!verified) return null
 
   const payload = JSON.parse(

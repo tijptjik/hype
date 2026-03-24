@@ -1,5 +1,6 @@
 // ENUMS
 import { ImageEnv } from '$lib/enums'
+import { AwsClient } from 'aws4fetch'
 // TYPES
 import type {
   ImageMetadataBasic,
@@ -9,11 +10,18 @@ import type {
 import { error } from '@sveltejs/kit'
 
 type ImageStage = `${ImageEnv}`
+type ImageBucket = App.Platform['env']['IMAGE_ORIGINALS_LOCAL']
+type ImageObjectBody = Awaited<ReturnType<ImageBucket['get']>>
 
 export type ImageMetadataDocument = ImageMetadataFull
 
 const IMAGE_METADATA_SUFFIX = '.json'
 const IMAGE_MANIFEST_SUFFIX = '.manifest.json'
+const IMAGE_BUCKET_BY_STAGE = {
+  [ImageEnv.local]: 'hype-images-local',
+  [ImageEnv.preview]: 'hype-images-preview',
+  [ImageEnv.production]: 'hype-images-production',
+} as const
 
 /**
  * Normalises an unknown environment value into a valid image storage stage.
@@ -43,7 +51,7 @@ export const toImageStage = (value: unknown): ImageStage => {
 export const getOriginalsBucketForStage = (
   platform: App.Platform | undefined,
   stage: ImageStage,
-): R2Bucket => {
+): ImageBucket => {
   if (!platform) throw error(500, 'Platform not available')
 
   switch (stage) {
@@ -68,7 +76,7 @@ export const getOriginalsBucketForStage = (
 export const getDerivedBucketForStage = (
   platform: App.Platform | undefined,
   stage: ImageStage,
-): R2Bucket => {
+): ImageBucket => {
   if (!platform) throw error(500, 'Platform not available')
 
   switch (stage) {
@@ -124,6 +132,15 @@ export const toManifestObjectKey = (publicId: string): string =>
   `${publicId}${IMAGE_MANIFEST_SUFFIX}`
 
 /**
+ * Resolves the canonical R2 originals bucket name for a stage.
+ *
+ * @param stage Normalised image stage.
+ * @returns Bucket name used by direct browser uploads and migration tooling.
+ */
+export const getOriginalsBucketNameForStage = (stage: ImageStage): string =>
+  IMAGE_BUCKET_BY_STAGE[stage]
+
+/**
  * Reads the public image base URL configured for the current build.
  *
  * @returns Configured public base URL, or an empty string when unset.
@@ -137,9 +154,54 @@ export const toPublicImageBaseUrl = (): string =>
  * @param object R2 object body returned from a bucket read.
  * @returns Parsed JSON payload, or `null` when the object does not exist.
  */
-const readJson = async <T>(object: R2ObjectBody | null): Promise<T | null> => {
+const readJson = async <T>(object: ImageObjectBody): Promise<T | null> => {
   if (!object) return null
   return (await object.json()) as T
+}
+
+const encodeObjectKeyPath = (objectKey: string): string =>
+  objectKey
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
+
+/**
+ * Creates a presigned direct-upload URL for an R2 object.
+ *
+ * @param params Presign parameters.
+ * @returns Presigned `PUT` URL for the target object.
+ */
+export const createPresignedR2UploadUrl = async (params: {
+  accountId: string
+  bucket: string
+  objectKey: string
+  accessKeyId: string
+  secretAccessKey: string
+  expiresInSeconds?: number
+}): Promise<string> => {
+  const aws = new AwsClient({
+    accessKeyId: params.accessKeyId,
+    secretAccessKey: params.secretAccessKey,
+    service: 's3',
+    region: 'auto',
+  })
+  const targetUrl = new URL(
+    `https://${params.accountId}.r2.cloudflarestorage.com/${params.bucket}/${encodeObjectKeyPath(params.objectKey)}`,
+  )
+  if (params.expiresInSeconds) {
+    targetUrl.searchParams.set('X-Amz-Expires', String(params.expiresInSeconds))
+  }
+  const signedRequest = await aws.sign(targetUrl, {
+    method: 'PUT',
+    headers: {
+      'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+    },
+    aws: {
+      signQuery: true,
+    },
+  })
+
+  return signedRequest.url.toString()
 }
 
 /**
@@ -150,7 +212,7 @@ const readJson = async <T>(object: R2ObjectBody | null): Promise<T | null> => {
  * @returns Manifest version when available, otherwise `null`.
  */
 export const readManifestVersion = async (
-  bucket: R2Bucket,
+  bucket: ImageBucket,
   publicId: string,
 ): Promise<number | null> => {
   const manifest = await readJson<{ version?: number }>(
@@ -200,7 +262,11 @@ export const readMetadataDocument = async ({
       const fallback = await bucket.get(toMetadataObjectKey(publicId))
       const document = await readJson<ImageMetadataDocument>(fallback)
       if (document) {
-        return { document, resolvedEnv: readableStage, resolvedVersion }
+        return {
+          document,
+          resolvedEnv: readableStage,
+          resolvedVersion: resolvedVersion ?? undefined,
+        }
       }
       continue
     }
