@@ -2,10 +2,14 @@
 import { error } from '@sveltejs/kit'
 // I18N
 import { m } from '$lib/i18n'
-// COORDINATES
-import Coordinates from 'coordinate-parser'
 // UTILS
-import { capitalizeFirstLetter, resolveAppStage } from '$lib'
+import { resolveAppStage } from '$lib'
+import {
+  getCameraFromMetadata,
+  getCapturedAtFromMetadata,
+  getCoordinatesFromMetadata,
+  getCreditFromMetadata,
+} from '$lib/utils/image-metadata'
 // SERVICES
 import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
 // REMOTE
@@ -467,96 +471,6 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
 // ═══════════════════════
 // 6. METADATA
 // ═══════════════════════
-
-/**
- * Converts GPS metadata to latitude and longitude.
- * @param metadata - The image metadata object.
- * @returns An object containing latitude and longitude strings, or undefined if parsing fails.
- */
-export function getCoordinatesFromMetadata(metadata: Metadata): LngLat {
-  try {
-    const coordinates = new Coordinates(
-      `${metadata.GPSLatitude.replace(' deg', '°')} ${metadata.GPSLongitude.replace(' deg', '°')}`,
-    )
-    return {
-      latitude: coordinates.getLatitude().toString(),
-      longitude: coordinates.getLongitude().toString(),
-    }
-  } catch {
-    console.warn('Failed to parse coordinates with coordinate-parser') // Fallback or simplified parsing if direct fields are available
-    if (metadata.GPSLatitude && metadata.GPSLongitude) {
-      return {
-        latitude: String(metadata.GPSLatitude),
-        longitude: String(metadata.GPSLongitude),
-      }
-    }
-    return { latitude: undefined, longitude: undefined }
-  }
-}
-
-/**
- * Extracts and parses the capture date from metadata.
- * @param metadata - The image metadata object.
- * @returns An ISO string of the capture date, or the current date as a fallback.
- */
-export function getCapturedAtFromMetadata(metadata: Metadata): string {
-  const parseExifDate = (dateStr: string): string => {
-    const normalized = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
-    return new Date(normalized).toISOString()
-  }
-
-  const possibleFields = ['DateTimeOriginal', 'CreateDate', 'ModifyDate']
-  for (const field of possibleFields) {
-    if (metadata[field]) {
-      try {
-        return parseExifDate(metadata[field])
-      } catch {
-        console.warn(`Failed to parse ${field}:`, metadata[field])
-      }
-    }
-  }
-
-  if (metadata.DateCreated && metadata.TimeCreated) {
-    try {
-      return parseExifDate(`${metadata.DateCreated} ${metadata.TimeCreated}`)
-    } catch {
-      console.warn(
-        'Failed to parse DateCreated/TimeCreated:',
-        metadata.DateCreated,
-        metadata.TimeCreated,
-      )
-    }
-  }
-
-  return new Date().toISOString()
-}
-
-/**
- * Extracts and formats the camera model from metadata.
- * @param metadata - The image metadata object.
- * @returns The camera model string, or undefined.
- */
-export function getCameraFromMetadata(metadata: Metadata): string | undefined {
-  const make = capitalizeFirstLetter(metadata.Make) ?? ''
-  const model = capitalizeFirstLetter(metadata.Model) ?? ''
-  const hasCamera = model.includes(make)
-  return hasCamera ? model.trim() : `${make} ${model}`.trim() || undefined
-}
-
-/**
- * Extracts credit/copyright information from metadata.
- * @param metadata - The image metadata object.
- * @returns The credit string, or undefined.
- */
-export function getCreditFromMetadata(metadata: Metadata): string | undefined {
-  const possibleFields = ['CopyrightNotice', 'Credit', 'By-line']
-  for (const field of possibleFields) {
-    if (metadata[field]) {
-      return metadata[field]
-    }
-  }
-  return undefined
-}
 
 // ═══════════════════════
 // 7. UTILS
