@@ -34,7 +34,7 @@ type AnalyticsWindowKey = '24h' | '7d' | '30d'
 type Env = {
   ENVIRONMENT: ImageStage
   RAW_ASSET_BASE_URL: string
-  IMAGE_ANALYTICS: AnalyticsEngineDataset
+  ASSET_ANALYTICS: AnalyticsEngineDataset
   ASSET_RAW_DEV: R2Bucket
   ASSET_RAW_PREVIEW: R2Bucket
   ASSET_RAW_PRODUCTION: R2Bucket
@@ -43,7 +43,7 @@ type Env = {
   ASSET_PUBLIC_PRODUCTION: R2Bucket
   CLOUDFLARE_ACCOUNT_ID?: string
   CLOUDFLARE_ANALYTICS_API_TOKEN?: string
-  IMAGE_ANALYTICS_READ_TOKEN?: string
+  ASSET_ANALYTICS_READ_TOKEN?: string
 }
 
 type ImageMetadataDocument = {
@@ -172,15 +172,17 @@ type AnalyticsSummaryResponse = {
 
 const CACHE_CONTROL_IMMUTABLE = 'public, max-age=31536000, immutable'
 const CACHE_CONTROL_SHORT = 'public, max-age=300'
-const IMAGE_ANALYTICS_DATASET = 'hype_asset_delivery'
-const IMAGE_ANALYTICS_WINDOWS: Record<AnalyticsWindowKey, string> = {
+const ASSET_ANALYTICS_DATASET = 'hype_asset_delivery'
+const ASSET_ANALYTICS_WINDOWS: Record<AnalyticsWindowKey, string> = {
   '24h': "INTERVAL '24' HOUR",
   '7d': "INTERVAL '7' DAY",
   '30d': "INTERVAL '30' DAY",
 }
+const ASSET_ANALYTICS_PUBLIC_ID_PREFIX = 'h/'
 const MANIFEST_SUFFIX = '.manifest.json'
 const METADATA_SUFFIX = '.json'
 const MAX_CONCURRENT_TRANSFORMS = 4
+const TRANSFORM_QUEUE_RETRY_AFTER_SECONDS = 2
 const MAX_TRANSFORM_DIMENSION = 4096
 const QUALITY_BY_FORMAT = {
   avif: 45,
@@ -190,7 +192,6 @@ const QUALITY_BY_FORMAT = {
 } as const
 
 let activeTransformCount = 0
-const pendingTransformResolvers: Array<() => void> = []
 
 const ensureResizeReady = (() => {
   let ready: Promise<void> | null = null
@@ -294,7 +295,7 @@ const ensureJxlReady = (() => {
 // 8. BUCKET / CACHE HELPERS
 
 /**
- * Dispatches image delivery and metadata requests for the standalone image worker.
+ * Dispatches asset delivery and metadata requests for the standalone asset worker.
  *
  * @param request Incoming request.
  * @param env Worker bindings.
@@ -357,7 +358,7 @@ const handleFetch = async (
 }
 
 /**
- * Returns aggregate image delivery analytics for fixed product windows.
+ * Returns aggregate asset delivery analytics for fixed product windows.
  *
  * @param request Incoming HTTP request.
  * @param env Worker bindings and secrets.
@@ -375,7 +376,7 @@ const handleAnalyticsSummaryRequest = async (
     return Response.json(
       {
         error:
-          'Analytics query support is not configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_ANALYTICS_API_TOKEN on the image worker.',
+          'Analytics query support is not configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_ANALYTICS_API_TOKEN on the asset worker.',
       },
       { status: 500 },
     )
@@ -384,7 +385,7 @@ const handleAnalyticsSummaryRequest = async (
   try {
     const windowEntries = await Promise.all(
       (
-        Object.entries(IMAGE_ANALYTICS_WINDOWS) as Array<[AnalyticsWindowKey, string]>
+        Object.entries(ASSET_ANALYTICS_WINDOWS) as Array<[AnalyticsWindowKey, string]>
       ).map(
         async ([windowKey, intervalExpression]) =>
           [
@@ -428,7 +429,7 @@ const handleAnalyticsSummaryRequest = async (
  * @returns Whether the request is authorized.
  */
 const isAuthorizedAnalyticsRequest = (request: Request, env: Env): boolean => {
-  const expectedToken = env.IMAGE_ANALYTICS_READ_TOKEN
+  const expectedToken = env.ASSET_ANALYTICS_READ_TOKEN
   if (!expectedToken) {
     return false
   }
@@ -438,8 +439,19 @@ const isAuthorizedAnalyticsRequest = (request: Request, env: Env): boolean => {
     return authorizationHeader.slice('Bearer '.length) === expectedToken
   }
 
-  return request.headers.get('x-image-analytics-token') === expectedToken
+  return (
+    request.headers.get('x-asset-analytics-token') === expectedToken ||
+    request.headers.get('x-image-analytics-token') === expectedToken
+  )
 }
+
+const toAssetAnalyticsPublicId = (publicId: string): string =>
+  publicId.startsWith(ASSET_ANALYTICS_PUBLIC_ID_PREFIX)
+    ? publicId
+    : `${ASSET_ANALYTICS_PUBLIC_ID_PREFIX}${publicId}`
+
+const toAssetAnalyticsNamespaceClause = (): string =>
+  `index1 LIKE ${toSqlString(`${ASSET_ANALYTICS_PUBLIC_ID_PREFIX}%`)}`
 
 /**
  * Loads one analytics summary window from Workers Analytics Engine.
@@ -461,9 +473,10 @@ const loadAnalyticsWindowSummary = async (
         SELECT
           blob1 AS key,
           sum(_sample_interval) AS request_count
-        FROM ${IMAGE_ANALYTICS_DATASET}
+        FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
+          AND ${toAssetAnalyticsNamespaceClause()}
         GROUP BY key
         ORDER BY request_count DESC
         LIMIT 25
@@ -476,9 +489,10 @@ const loadAnalyticsWindowSummary = async (
         SELECT
           index1 AS key,
           sum(_sample_interval) AS request_count
-        FROM ${IMAGE_ANALYTICS_DATASET}
+        FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
+          AND ${toAssetAnalyticsNamespaceClause()}
         GROUP BY key
         ORDER BY request_count DESC
         LIMIT 25
@@ -493,9 +507,10 @@ const loadAnalyticsWindowSummary = async (
           sumIf(_sample_interval, blob2 = 'edge-hit') AS edge_hit_requests,
           sumIf(_sample_interval, blob2 = 'r2-derived-hit') AS derived_hit_requests,
           sumIf(_sample_interval, blob2 = 'transform-miss') AS transform_miss_requests
-        FROM ${IMAGE_ANALYTICS_DATASET}
+        FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
+          AND ${toAssetAnalyticsNamespaceClause()}
         FORMAT JSON
       `,
     ),
@@ -506,9 +521,10 @@ const loadAnalyticsWindowSummary = async (
           blob2 AS cache_status,
           quantileExactWeighted(0.95)(double1, _sample_interval) AS p95_total_ms,
           sum(_sample_interval) AS request_count
-        FROM ${IMAGE_ANALYTICS_DATASET}
+        FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
+          AND ${toAssetAnalyticsNamespaceClause()}
         GROUP BY cache_status
         FORMAT JSON
       `,
@@ -612,8 +628,8 @@ const queryAnalyticsRows = async <TRow>(env: Env, sql: string): Promise<TRow[]> 
  * @returns Nothing.
  */
 const recordAssetAnalytics = (env: Env, event: AssetAnalyticsEvent): void => {
-  env.IMAGE_ANALYTICS.writeDataPoint({
-    indexes: [event.publicId],
+  env.ASSET_ANALYTICS.writeDataPoint({
+    indexes: [toAssetAnalyticsPublicId(event.publicId)],
     blobs: [
       event.transformKey,
       event.cacheStatus,
@@ -837,8 +853,17 @@ const handleTransformRequest = async (
   }
 
   const queueStartedAt = Date.now()
-  const releaseTransformSlot = await acquireTransformSlot()
+  const releaseTransformSlot = tryAcquireTransformSlot()
   const queueMs = Date.now() - queueStartedAt
+
+  if (!releaseTransformSlot) {
+    return new Response('Asset transform capacity exceeded', {
+      status: 503,
+      headers: {
+        'retry-after': String(TRANSFORM_QUEUE_RETRY_AFTER_SECONDS),
+      },
+    })
+  }
 
   try {
     // Re-check the cheap derived path after queueing because another request may have filled it.
@@ -947,11 +972,34 @@ const handleTransformRequest = async (
     }
 
     const transformStartedAt = Date.now()
-    const transformed = await transformSourceAsset(source, {
-      ...transformRequest,
-      version: resolvedVersion,
-      format: outputFormat,
-    })
+    let transformed: { body: ArrayBuffer; contentType: string }
+
+    try {
+      transformed = await transformSourceAsset(source, {
+        ...transformRequest,
+        version: resolvedVersion,
+        format: outputFormat,
+      })
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: 'asset-transform-failed',
+          requestedStage: transformRequest.requestedStage,
+          sourceStage: source.stage,
+          publicId: transformRequest.publicId,
+          sourceContentType: source.contentType,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+
+      return new Response('Unsupported or invalid source asset data', {
+        status: 415,
+        headers: {
+          'cache-control': 'no-store',
+          'content-type': 'text/plain; charset=utf-8',
+        },
+      })
+    }
 
     const response = withImageDebugHeaders(
       new Response(request.method === 'HEAD' ? null : transformed.body, {
@@ -1142,31 +1190,22 @@ const toNumericHeader = (value: string | null): number | undefined => {
 /**
  * Caps concurrent source decode / transform work to avoid worker OOMs on large cold batches.
  *
- * @returns Release callback for the acquired slot.
+ * @returns Release callback for the acquired slot, or `null` when the worker is saturated.
  */
-const acquireTransformSlot = async (): Promise<() => void> => {
+const tryAcquireTransformSlot = (): (() => void) | null => {
   if (activeTransformCount < MAX_CONCURRENT_TRANSFORMS) {
     activeTransformCount += 1
     return releaseTransformSlot
   }
 
-  await new Promise<void>(resolve => {
-    pendingTransformResolvers.push(() => {
-      activeTransformCount += 1
-      resolve()
-    })
-  })
-
-  return releaseTransformSlot
+  return null
 }
 
 /**
- * Releases one queued transform slot and wakes the next waiter if present.
+ * Releases one transform slot.
  */
 const releaseTransformSlot = (): void => {
   activeTransformCount = Math.max(0, activeTransformCount - 1)
-  const nextResolver = pendingTransformResolvers.shift()
-  nextResolver?.()
 }
 
 const resolveVersionHint = async (

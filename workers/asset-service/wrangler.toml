@@ -14,7 +14,7 @@ ENVIRONMENT = "local"
 RAW_ASSET_BASE_URL = "http://localhost:8788"
 
 [[analytics_engine_datasets]]
-binding = "IMAGE_ANALYTICS"
+binding = "ASSET_ANALYTICS"
 dataset = "hype_asset_delivery"
 
 [[r2_buckets]]
@@ -55,7 +55,7 @@ ENVIRONMENT = "preview"
 RAW_ASSET_BASE_URL = "https://raw.assets.preview.hype.hk"
 
 [[env.preview.analytics_engine_datasets]]
-binding = "IMAGE_ANALYTICS"
+binding = "ASSET_ANALYTICS"
 dataset = "hype_asset_delivery"
 
 [[env.preview.r2_buckets]]
@@ -94,7 +94,7 @@ ENVIRONMENT = "production"
 RAW_ASSET_BASE_URL = "https://raw.assets.hype.hk"
 
 [[env.production.analytics_engine_datasets]]
-binding = "IMAGE_ANALYTICS"
+binding = "ASSET_ANALYTICS"
 dataset = "hype_asset_delivery"
 
 [[env.production.r2_buckets]]
