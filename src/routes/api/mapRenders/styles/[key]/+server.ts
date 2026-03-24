@@ -2,6 +2,7 @@ import { dev } from '$app/environment'
 import { error, json, type RequestHandler } from '@sveltejs/kit'
 
 import { isMapStyleKey } from '$lib/map/styles'
+import { getMapRenderRemoteConfig } from '$lib/api/services/render'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -79,24 +80,6 @@ const ensureLocalRenderRuntime = (platform?: App.Platform): void => {
 const loadLocalRenderRuntime = async () =>
   await import('$lib/map/styles/render.local.server')
 
-const getRemoteConfig = (platform?: App.Platform) => {
-  const env = platform?.env
-
-  if (
-    !env?.CLOUDFLARE_ACCOUNT_ID ||
-    !env.R2_S3_ACCESS_KEY_ID ||
-    !env.R2_S3_SECRET_ACCESS_KEY
-  ) {
-    throw error(500, 'Map render persistence is not configured')
-  }
-
-  return {
-    accountId: env.CLOUDFLARE_ACCOUNT_ID,
-    accessKeyId: env.R2_S3_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_S3_SECRET_ACCESS_KEY,
-  }
-}
-
 // ---
 /********************
  *  3. ROUTE HANDLERS
@@ -115,7 +98,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 
   const { doesMapStyleRenderExistLocally, isMapStyleRenderGenerationPendingLocally } =
     await loadLocalRenderRuntime()
-  const remoteConfig = getRemoteConfig(platform)
+  const remoteConfig = getMapRenderRemoteConfig(platform)
 
   return json({
     key,
@@ -140,7 +123,7 @@ export const POST: RequestHandler = async ({ params, platform, url }) => {
     isMapStyleRenderGenerationPendingLocally,
     triggerMapStyleRenderGenerationLocally,
   } = await loadLocalRenderRuntime()
-  const remoteConfig = getRemoteConfig(platform)
+  const remoteConfig = getMapRenderRemoteConfig(platform)
 
   const baseUrl = url.origin
   const exists = await doesMapStyleRenderExistLocally(key, {

@@ -5,6 +5,7 @@ import { getDatabaseWithoutAuth } from '$lib/api'
 // HELPERS
 import { requireMapRenderAccess } from '$lib/map/renders/auth.server'
 import { getProjectMapRenderData } from '$lib/map/renders/render.server'
+import { toMapRenderPayload } from '$lib/api/services/render'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -35,10 +36,5 @@ export const GET: RequestHandler = async ({ params, platform, request, url }) =>
     throw error(404, 'Project preview data not found')
   }
 
-  return json({
-    styleCode: renderData.styleCode,
-    features: renderData.featureRecords,
-    layers: renderData.layers,
-    selectedLayerIds: renderData.selectedLayerIds,
-  })
+  return json(toMapRenderPayload(renderData))
 }

@@ -11,6 +11,7 @@ import {
   planProjectMapRenderRefreshJobs,
 } from '$lib/map/renders/render.server'
 import type { MapRenderJob } from '$lib/types'
+import { getMapRenderQueue, getMapRenderRemoteConfig } from '$lib/api/services/render'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -24,24 +25,6 @@ import type { MapRenderJob } from '$lib/types'
 //    - POST
 
 type RefreshMode = 'plan' | 'enqueue' | 'local-generate'
-
-const getRemoteConfig = (platform?: App.Platform) => {
-  const env = platform?.env
-
-  if (
-    !env?.CLOUDFLARE_ACCOUNT_ID ||
-    !env.R2_S3_ACCESS_KEY_ID ||
-    !env.R2_S3_SECRET_ACCESS_KEY
-  ) {
-    throw new Error('Map render persistence is not configured')
-  }
-
-  return {
-    accountId: env.CLOUDFLARE_ACCOUNT_ID,
-    accessKeyId: env.R2_S3_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_S3_SECRET_ACCESS_KEY,
-  }
-}
 
 const parseKinds = (url: URL): Array<'layers' | 'projects'> => {
   const rawKinds = url.searchParams.get('kinds') ?? 'layers,projects'
@@ -147,7 +130,7 @@ export const POST: RequestHandler = async ({ platform, request, url }) => {
     const entries = await generateRenderJobsLocally(jobs, {
       baseUrl: publicOrigin,
       stage: 'local',
-      remoteConfig: getRemoteConfig(platform),
+      remoteConfig: getMapRenderRemoteConfig(platform),
       onProgress: ({ job, index, total, stage, entry }) => {
         if (stage === 'started') {
           console.log(
@@ -175,19 +158,8 @@ export const POST: RequestHandler = async ({ platform, request, url }) => {
     })
   }
 
-  if (!platform?.env.MAP_RENDER_QUEUE) {
-    return json(
-      {
-        ok: false,
-        mode,
-        error: 'Preview queue binding is not available.',
-      },
-      { status: 500 },
-    )
-  }
-
   for (const job of jobs) {
-    await enqueueMapRenderJob(platform.env.MAP_RENDER_QUEUE, job)
+    await enqueueMapRenderJob(getMapRenderQueue(platform), job)
   }
 
   return json({

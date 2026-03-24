@@ -1,16 +1,14 @@
-import { error, redirect, type RequestHandler } from '@sveltejs/kit'
+import { error, type RequestHandler } from '@sveltejs/kit'
 
 // API
 import { getDatabaseWithoutAuth } from '$lib/api'
 // HELPERS
-import {
-  buildMapRenderObjectKey,
-  resolveMapRenderAssetUrl,
-} from '$lib/map/renders/storage.shared'
+import { buildMapRenderObjectKey } from '$lib/map/renders/storage.shared'
 import {
   buildLayerMapRenderHash,
   getLayerMapRenderData,
 } from '$lib/map/renders/render.server'
+import { serveMapRenderAsset } from '$lib/api/services/render'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -46,33 +44,13 @@ export const GET: RequestHandler = async ({ params, platform }) => {
     identifier: layerId,
     hash,
   })
-  const stage = platform?.env.ENVIRONMENT
-
-  if (stage === 'preview' || stage === 'production') {
-    throw redirect(
-      307,
-      resolveMapRenderAssetUrl(
-        stage,
-        {
-          kind: 'layers',
-          identifier: layerId,
-          hash,
-        },
-        `/${objectKey}`,
-      ),
-    )
-  }
-
-  const object = await platform?.env.ASSET_PUBLIC_DEV.get(objectKey)
-
-  if (!object) {
-    throw error(404, 'Layer preview not found')
-  }
-
-  return new Response(object.body, {
-    headers: {
-      'cache-control': 'no-store',
-      'content-type': object.httpMetadata?.contentType ?? 'image/png',
-    },
+  return await serveMapRenderAsset({
+    platform,
+    stage: platform?.env.ENVIRONMENT,
+    kind: 'layers',
+    identifier: layerId,
+    hash,
+    objectKey,
+    notFoundMessage: 'Layer preview not found',
   })
 }
