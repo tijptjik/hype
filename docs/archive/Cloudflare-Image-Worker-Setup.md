@@ -18,7 +18,7 @@ bunx wrangler r2 bucket create hype-assets-raw-prod
 Run the asset worker locally:
 
 ```bash
-bun run dev:asset-service
+bun run dev:asset-service:remote
 ```
 
 Deploy preview:
@@ -30,7 +30,7 @@ bun run deploy:asset-service:preview
 Deploy production:
 
 ```bash
-bun run deploy:asset-service:production
+bun run deploy:asset-service:prod
 ```
 
 ## App Config
@@ -71,7 +71,7 @@ Map the raw asset worker routes separately:
 
 ```bash
 bun run deploy:asset-service:preview
-bun run deploy:asset-service:production
+bun run deploy:asset-service:prod
 ```
 
 The raw asset worker routes remain on:

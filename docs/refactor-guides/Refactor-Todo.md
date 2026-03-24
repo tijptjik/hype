@@ -3,25 +3,25 @@
 Use this checklist for execution tracking. Keep items small enough for one PR.
 
 ## Now
-- [ ] Inventory all `sveltekit-superforms` usage by route and component.
-- [ ] Define the first migration slice (1 route) to SvelteKit remote `form` call.
-- [ ] Create/standardize first Bits UI primitives under `src/lib/bits`.
-- [ ] Add migration note template for PRs (before/after behavior + screenshots).
-- [ ] Review and approve `docs/Resource-Cache-Architecture.md` as the cache/source-of-truth direction.
+- [x] Inventory all `sveltekit-superforms` usage by route and component.
+- [x] Define the first migration slice (1 route) to SvelteKit remote `form` call.
+- [x] Create/standardize first Bits UI primitives under `src/lib/bits`.
+- [x] Add migration note template for PRs (before/after behavior + screenshots).
+- [x] Review and approve `docs/Resource-Cache-Architecture.md` as the cache/source-of-truth direction.
 
 ## Forms: Superforms -> Remote `form`
-- [ ] Replace first production form end-to-end.
-- [ ] Preserve server validation and error message behavior.
-- [ ] Confirm optimistic/pending UI behavior.
-- [ ] Add/update tests for success, validation failure, and server failure.
-- [ ] Repeat per route until no `sveltekit-superforms` remains.
+- [x] Replace first production form end-to-end.
+- [x] Preserve server validation and error message behavior.
+- [x] Confirm optimistic/pending UI behavior.
+- [x] Add/update tests for success, validation failure, and server failure.
+- [x] Repeat per route until no `sveltekit-superforms` remains.
 
 ## UI: DaisyUI -> Bits UI
-- [ ] Add `// BITS COMPONENTS` import grouping in mixed files.
-- [ ] Keep legacy imports under `// COMPONENTS`.
-- [ ] Rebuild key interactive elements with Bits UI primitives.
-- [ ] Remove DaisyUI classes from migrated screens.
-- [ ] Track screens still on DaisyUI and prioritize by usage.
+- [x] Add `// BITS COMPONENTS` import grouping in mixed files.
+- [x] Keep legacy imports under `// COMPONENTS`.
+- [x] Rebuild key interactive elements with Bits UI primitives.
+- [x] Remove DaisyUI classes from migrated screens.
+- [x] Track screens still on DaisyUI and prioritize by usage.
 
 ## Svelte / Architecture Items (migrated from old cursor checklist)
 - [ ] Evaluate async guidance: https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944

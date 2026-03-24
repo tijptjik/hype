@@ -28,19 +28,19 @@ Resource cache architecture: `docs/Resource-Cache-Architecture.md`
 - [x] Guardrails added for post-migration UX regressions (pointer cursor, button border defaults).
 
 ### Phase 2: Forms Migration (`in progress`)
-- Identify all `sveltekit-superforms` usage by route/feature.
+- [x] Identify all `sveltekit-superforms` usage by route/feature.
 - Replace with SvelteKit remote functions `form` call patterns.
-- Keep validation and error UX equivalent.
-- Add tests for submission success/error flows where missing.
+- [x] Keep validation and error UX equivalent.
+- [x] Add tests for submission success/error flows where missing.
 
 ### Phase 3: Component Migration (Bits UI) (`in progress`)
-- Build new primitives/components in `src/lib/bits`.
-- Migrate feature UIs progressively from DaisyUI to Bits UI.
-- Keep legacy components functional until parity is reached.
+- [x] Build new primitives/components in `src/lib/bits`.
+- [x] Migrate feature UIs progressively from DaisyUI to Bits UI.
+- [x] Keep legacy components functional until parity is reached.
 
 ### Phase 4: Dependency and Styling Cleanup
 - Remove dead CSS/classes and old framework-specific overrides.
-- Remove unused DaisyUI dependencies when migration completes.
+- [x] Remove unused DaisyUI dependencies when migration completes.
 - Confirm no regressions in map, filters, and admin flows.
 
 ### Phase 5: Resource Cache Unification
@@ -70,5 +70,5 @@ Resource cache architecture: `docs/Resource-Cache-Architecture.md`
 ## Definition of Done
 - No active feature routes depend on `sveltekit-superforms`.
 - New UI work is implemented in `src/lib/bits`.
-- DaisyUI usage reduced to approved legacy areas or fully removed.
+- [x] DaisyUI usage reduced to approved legacy areas or fully removed.
 - Tests cover critical form and UI state transitions after migration.
