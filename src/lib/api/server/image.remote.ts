@@ -3,6 +3,7 @@ import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // AUTHORIZATION
 import {
   authorizeImageList,
@@ -60,9 +61,15 @@ import {
   SetImageIntentSchema,
   SetImagePublishedSchema,
   UpdateImageSchema,
+  GetImageMetadataSchema,
+  AuthImageUploadSchema,
 } from '$lib/db/zod'
 // ENUMS
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
+import {
+  ImageContextResource,
+  ImageContextResourceExtended,
+  ImageEnv,
+} from '$lib/enums'
 // TYPES
 import type {
   DeleteParamsToSign,
@@ -82,8 +89,17 @@ import type {
   ImageProfile,
   ImagesForContextParamsByProfile,
   ImagesForIdsParamsByProfile,
+  ImageUploadSession,
+  ImageMetadataResponse,
   SignData,
 } from '$lib/db/zod/schema/image.types'
+import { createUploadToken } from '$lib/server/image-upload-auth'
+import {
+  getOriginalsBucketForStage,
+  readMetadataDocument,
+  toImageStage,
+  toMetadataProfilePayload,
+} from '$lib/server/image-storage'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -93,6 +109,7 @@ import type {
 // - getImagesForContext
 // - getImagesForIds
 // - getImageById
+// - getMetadata
 //
 // FORM
 // - none
@@ -104,6 +121,7 @@ import type {
 // - setImagePublished
 // - deleteImage
 // - getCloudinarySignature
+// - authImageUpload
 
 const probeContextState = async (
   db: any,
@@ -384,6 +402,101 @@ export const getImageByIdByProfile = getImageById as typeof getImageById &
   (<P extends ImageProfile = 'detail'>(
     params: ImageByIdParamsByProfile<P>,
   ) => Promise<EntityResponse<ImageContextEnvelope<P> | null> & { profile: P }>)
+
+/**
+ * Returns image metadata from R2 sidecars instead of the database payload.
+ */
+export const getMetadata = guardedQuery(
+  GetImageMetadataSchema,
+  async (params, ctx): Promise<ImageMetadataResponse> => {
+    const startedAt = Date.now()
+    const env = toImageStage(
+      params.env ?? ctx.event.platform?.env.ENVIRONMENT ?? ImageEnv.local,
+    )
+    const { document } = await readMetadataDocument({
+      platform: ctx.event.platform,
+      env,
+      publicId: params.publicId,
+      version: params.version,
+    })
+
+    return {
+      data: document ? toMetadataProfilePayload(document, params.profile) : null,
+      durationMs: Date.now() - startedAt,
+    }
+  },
+)
+
+/**
+ * Issues a short-lived upload session for the app-managed upload endpoint.
+ */
+export const authImageUpload = guardedCommand(
+  AuthImageUploadSchema,
+  async (params, ctx): Promise<ImageUploadSession> => {
+    const { db, user, userRoles, event } = ctx
+
+    await assertPermissionsToCreateImage(
+      db,
+      user,
+      event.request,
+      userRoles,
+      params.ctxType as ImageContextResource,
+      params.ctxId as Id,
+    )
+
+    const stage = toImageStage(params.env)
+    const bucket = getOriginalsBucketForStage(event.platform, stage)
+    let publicId = `${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
+
+    if (params.replaceImageId) {
+      const existing = await loadImageById(db, [eq(image.id, params.replaceImageId)])
+      if (!existing) throw error(404, 'Replacement image not found')
+
+      await assertPermissionsToDeleteImage(
+        db,
+        user,
+        event.request,
+        userRoles,
+        params.replaceImageId as Id,
+        params.ctxId as Id,
+        params.ctxType as ImageContextResource,
+      )
+
+      publicId = existing.publicId
+    } else {
+      while (await bucket.head(publicId)) {
+        publicId = `${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
+      }
+    }
+
+    const token = await createUploadToken(
+      {
+        publicId,
+        env: stage,
+        ctxType: params.ctxType,
+        ctxId: params.ctxId,
+        replaceImageId: params.replaceImageId,
+        contentType: params.contentType,
+        size: params.size,
+        exp: Date.now() + 5 * 60 * 1000,
+      },
+      event.platform?.env.AUTH_SECRET ?? '',
+    )
+
+    return {
+      cdn: params.cdn,
+      env: stage,
+      publicId,
+      version: Date.now(),
+      uploadUrl: '/api/images/upload',
+      method: 'POST',
+      headers: {
+        'x-image-upload-token': token,
+      },
+      ...(params.replaceImageId ? { replaceImageId: params.replaceImageId } : {}),
+    }
+  },
+)
 
 /**
  * Creates a new image in context.

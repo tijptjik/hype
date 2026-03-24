@@ -292,17 +292,6 @@ export const getImageByIdsQueryContext = (
   return { conditions }
 }
 
-const toHubOptsExtended = (
-  hubOpts: HubOpts,
-  user: SessionUser,
-  request: Request,
-): HubOptsExtended =>
-  ({
-    ...(hubOpts as HubOptsExtended),
-    isAdminRequest: isAdminRequest(request),
-    isSuperAdmin: Boolean(user.superAdmin),
-  }) as HubOptsExtended
-
 // ═══════════════════════
 // 4. ASSERTIONS
 // ═══════════════════════
