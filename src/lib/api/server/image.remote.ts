@@ -26,6 +26,7 @@ import {
 import {
   createFeatureImage,
   createImage as createImageRecord,
+  createTaskImagesFromImageIds,
   getImageById as loadImageById,
   toImageEnvelope,
   getImageForContextType,
@@ -72,6 +73,7 @@ import {
 import type { Id, EntityResponse } from '$lib/types'
 import type {
   CreateImageParams,
+  FinalizeImageUploadLink,
   FinalizeImageUploadParams,
   Image,
   ImageByIdParamsByProfile,
@@ -210,6 +212,119 @@ const probeContextState = async (
 
   if (!row) throw error(404, 'Context resource not found')
   return { resourceHubId: row.resourceHubId, requestedState: row }
+}
+
+const attachImageLinks = async (params: {
+  db: any
+  imageId: Id
+  links?: FinalizeImageUploadLink[]
+}): Promise<void> => {
+  for (const link of params.links ?? []) {
+    if (link.type === 'taskImage') {
+      await createTaskImagesFromImageIds(params.db, link.taskId, [params.imageId])
+    }
+  }
+}
+
+const createImageInContext = async (params: {
+  db: any
+  userId: Id
+  imageData: ImageNew
+}): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
+  const userWithAttribution = await getUserById(params.db, params.userId)
+
+  if (params.imageData.ctxType === ImageContextResource.feature) {
+    const validatedData = ImageInsertWithFeatureAPI.parse(params.imageData)
+    const createdImage = await createImageRecord(params.db, validatedData)
+    const createdFeatureImage = await createFeatureImage(
+      params.db,
+      {
+        ...validatedData.featureImage,
+        imageId: createdImage.id,
+        featureId: validatedData.ctxId,
+        localIsPublished: validatedData.featureImage.localIsPublished ?? null,
+        publishedAt: validatedData.featureImage.publishedAt ?? null,
+        publisherId: validatedData.featureImage.publisherId ?? null,
+      },
+      createdImage.id,
+    )
+
+    const responseData = await toResponseShape(
+      createdImage,
+      createdFeatureImage,
+      userWithAttribution?.attribution ?? undefined,
+    )
+    return {
+      data: toImageEnvelope(
+        responseData as unknown as Image,
+        'detail',
+        ImageContextResource.feature,
+        validatedData.ctxId,
+      ),
+    }
+  }
+
+  if (
+    params.imageData.ctxType === ImageContextResource.project ||
+    params.imageData.ctxType === ImageContextResource.organisation
+  ) {
+    const validatedData = ImageInsertWithProjectOrOrganisationAPI.parse(
+      params.imageData,
+    )
+    const createdImage = await createImageRecord(params.db, validatedData)
+
+    if (validatedData.ctxType === ImageContextResource.project) {
+      await updateProjectById(
+        params.db,
+        { imageId: createdImage.id },
+        validatedData.ctxId,
+      )
+    } else {
+      await updateOrganisationById(
+        params.db,
+        { imageId: createdImage.id },
+        validatedData.ctxId,
+      )
+    }
+
+    const responseData = await toResponseShapeProjectOrOrganisation(
+      createdImage,
+      userWithAttribution?.attribution ?? undefined,
+    )
+    return {
+      data: toImageEnvelope(
+        responseData,
+        'detail',
+        validatedData.ctxType as ImageContextType,
+        validatedData.ctxId,
+      ),
+    }
+  }
+
+  if (params.imageData.ctxType === ImageContextResource.hub) {
+    const validatedData = ImageInsertWithHubAPI.parse(params.imageData)
+    const createdImage = await createImageRecord(params.db, validatedData)
+
+    await params.db
+      .update(hub)
+      .set({ imageId: createdImage.id })
+      .where(eq(hub.id, validatedData.ctxId))
+
+    const responseData = await toResponseShapeProjectOrOrganisation(
+      createdImage,
+      userWithAttribution?.attribution ?? undefined,
+    )
+    return {
+      data: toImageEnvelope(
+        responseData,
+        'detail',
+        validatedData.ctxType as ImageContextType,
+        validatedData.ctxId,
+      ),
+    }
+  }
+
+  throw error(400, `Unsupported image context: ${params.imageData.ctxType}`)
 }
 
 /**
@@ -451,7 +566,7 @@ export const authImageUpload = guardedCommand(
     const accessKeyId = event.platform?.env.R2_S3_ACCESS_KEY_ID
     const secretAccessKey = event.platform?.env.R2_S3_SECRET_ACCESS_KEY
     const authSecret = event.platform?.env.AUTH_SECRET
-    let publicId = `${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
+    let publicId = `h/${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
 
     if (!accountId || !accessKeyId || !secretAccessKey || !authSecret) {
       throw error(500, 'R2 direct upload credentials are not configured')
@@ -474,7 +589,7 @@ export const authImageUpload = guardedCommand(
       publicId = existing.publicId
     } else {
       while (await bucket.head(publicId)) {
-        publicId = `${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
+        publicId = `h/${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
       }
     }
 
@@ -525,8 +640,8 @@ export const authImageUpload = guardedCommand(
  */
 export const finalizeImageUpload = guardedCommand(
   FinalizeImageUploadSchema,
-  async (params: FinalizeImageUploadParams, ctx): Promise<ImageNew> => {
-    const { user, event } = ctx
+  async (params: FinalizeImageUploadParams, ctx) => {
+    const { db, user, userId, userRoles, event } = ctx
     const secret = event.platform?.env.AUTH_SECRET
     if (!secret) throw error(500, 'Upload auth secret not available')
 
@@ -535,6 +650,15 @@ export const finalizeImageUpload = guardedCommand(
     if (payload.uploaderUserId !== user.id) {
       throw error(403, 'Upload token does not belong to the current user')
     }
+
+    await assertPermissionsToCreateImage(
+      db,
+      user,
+      event.request,
+      userRoles,
+      payload.ctxType as ImageContextResource,
+      payload.ctxId as Id,
+    )
 
     const stage = toImageStage(payload.env)
     const originalsBucket = getOriginalsBucketForStage(event.platform, stage)
@@ -597,16 +721,60 @@ export const finalizeImageUpload = guardedCommand(
       },
     )
 
-    return {
+    const imageData: ImageNew = {
       cdn: 'cloudflareR2',
       env: stage,
       cdnId: null,
       publicId: payload.publicId,
       version,
-      contributorId: user.id,
+      contributorId: params.persist?.contributorId ?? user.id,
       ctxType: payload.ctxType as ImageContextResource,
       ctxId: payload.ctxId,
-    } satisfies ImageNew
+      ...(params.persist?.featureImage
+        ? { featureImage: params.persist.featureImage }
+        : {}),
+    }
+
+    if (payload.replaceImageId) {
+      const updated = await updateImageForContext({
+        db,
+        user,
+        userId,
+        userRoles,
+        event,
+        id: payload.replaceImageId as Id,
+        ctxType: payload.ctxType as ImageContextType,
+        ctxId: payload.ctxId,
+        data: imageData,
+      })
+      return updated
+    }
+
+    const created = await createImageInContext({
+      db,
+      userId,
+      imageData:
+        payload.ctxType === ImageContextResource.feature
+          ? {
+              ...imageData,
+              featureImage: imageData.featureImage ?? {
+                featureId: payload.ctxId,
+                intent: 'undefined',
+                isPublished: false,
+              },
+            }
+          : imageData,
+    })
+
+    if (created.data?.image?.id) {
+      await attachImageLinks({
+        db,
+        imageId: created.data.image.id,
+        links: params.persist?.links,
+      })
+    }
+
+    return created
   },
 )
 
@@ -622,7 +790,6 @@ export const createImage = guardedCommand(async (input, ctx) => {
   }
 
   const { db, user, userId, userRoles, event } = ctx
-  const userWithAttribution = await getUserById(db, userId)
   const imageData: ImageNew = { ...data, contributorId: data.contributorId ?? userId }
 
   if (!imageData.ctxType || !imageData.ctxId) {
@@ -637,93 +804,7 @@ export const createImage = guardedCommand(async (input, ctx) => {
     imageData.ctxType as ImageContextResource,
     imageData.ctxId as Id,
   )
-
-  if (imageData.ctxType === ImageContextResource.feature) {
-    const validatedData = ImageInsertWithFeatureAPI.parse(imageData)
-    const createdImage = await createImageRecord(db, validatedData)
-    const createdFeatureImage = await createFeatureImage(
-      db,
-      {
-        ...validatedData.featureImage,
-        imageId: createdImage.id,
-        featureId: validatedData.ctxId,
-        localIsPublished: validatedData.featureImage.localIsPublished ?? null,
-        publishedAt: validatedData.featureImage.publishedAt ?? null,
-        publisherId: validatedData.featureImage.publisherId ?? null,
-      },
-      createdImage.id,
-    )
-
-    const responseData = await toResponseShape(
-      createdImage,
-      createdFeatureImage,
-      userWithAttribution?.attribution ?? undefined,
-    )
-    return {
-      data: toImageEnvelope(
-        responseData as unknown as Image,
-        'detail',
-        ImageContextResource.feature,
-        validatedData.ctxId,
-      ),
-    }
-  }
-
-  if (
-    imageData.ctxType === ImageContextResource.project ||
-    imageData.ctxType === ImageContextResource.organisation
-  ) {
-    const validatedData = ImageInsertWithProjectOrOrganisationAPI.parse(imageData)
-    const createdImage = await createImageRecord(db, validatedData)
-
-    if (validatedData.ctxType === ImageContextResource.project) {
-      await updateProjectById(db, { imageId: createdImage.id }, validatedData.ctxId)
-    } else {
-      await updateOrganisationById(
-        db,
-        { imageId: createdImage.id },
-        validatedData.ctxId,
-      )
-    }
-
-    const responseData = await toResponseShapeProjectOrOrganisation(
-      createdImage,
-      userWithAttribution?.attribution ?? undefined,
-    )
-    return {
-      data: toImageEnvelope(
-        responseData,
-        'detail',
-        validatedData.ctxType as ImageContextType,
-        validatedData.ctxId,
-      ),
-    }
-  }
-
-  if (imageData.ctxType === ImageContextResource.hub) {
-    const validatedData = ImageInsertWithHubAPI.parse(imageData)
-    const createdImage = await createImageRecord(db, validatedData)
-
-    await db
-      .update(hub)
-      .set({ imageId: createdImage.id })
-      .where(eq(hub.id, validatedData.ctxId))
-
-    const responseData = await toResponseShapeProjectOrOrganisation(
-      createdImage,
-      userWithAttribution?.attribution ?? undefined,
-    )
-    return {
-      data: toImageEnvelope(
-        responseData,
-        'detail',
-        validatedData.ctxType as ImageContextType,
-        validatedData.ctxId,
-      ),
-    }
-  }
-
-  throw error(400, `Unsupported image context: ${imageData.ctxType}`)
+  return createImageInContext({ db, userId, imageData })
 })
 
 /**

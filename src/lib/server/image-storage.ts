@@ -154,9 +154,7 @@ export const toPublicAssetBaseUrl = (): string =>
  * @returns Configured public raw-asset base URL, or an empty string when unset.
  */
 export const toPublicRawAssetBaseUrl = (): string =>
-  import.meta.env.PUBLIC_RAW_ASSET_BASE_URL ||
-  import.meta.env.PUBLIC_IMAGE_BASE_URL ||
-  ''
+  import.meta.env.PUBLIC_RAW_ASSET_BASE_URL || ''
 
 /**
  * Parses a JSON object body from R2 when present.

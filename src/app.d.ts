@@ -95,7 +95,6 @@ declare global {
         PUBLIC_ASSET_BASE_URL: string
         PUBLIC_RAW_ASSET_BASE_URL: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string
-        PUBLIC_IMAGE_BASE_URL: string
         IMAGE_ANALYTICS_READ_TOKEN: string
         CLOUDFLARE_ACCOUNT_ID: string
         R2_S3_ACCESS_KEY_ID: string
