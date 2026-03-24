@@ -16,26 +16,32 @@ IMAGE_PUBLIC_BASE_URL = "http://localhost:8788"
 [[r2_buckets]]
 binding = "IMAGE_ORIGINALS_LOCAL"
 bucket_name = "hype-images-local"
+remote = true
 
 [[r2_buckets]]
 binding = "IMAGE_ORIGINALS_PREVIEW"
 bucket_name = "hype-images-preview"
+remote = true
 
 [[r2_buckets]]
 binding = "IMAGE_ORIGINALS_PRODUCTION"
 bucket_name = "hype-images-production"
+remote = true
 
 [[r2_buckets]]
 binding = "IMAGE_DERIVED_LOCAL"
 bucket_name = "hype-images-derived-local"
+remote = true
 
 [[r2_buckets]]
 binding = "IMAGE_DERIVED_PREVIEW"
 bucket_name = "hype-images-derived-preview"
+remote = true
 
 [[r2_buckets]]
 binding = "IMAGE_DERIVED_PRODUCTION"
 bucket_name = "hype-images-derived-production"
+remote = true
 
 [env.preview]
 name = "hype-image-service-preview"
