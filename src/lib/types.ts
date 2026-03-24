@@ -274,6 +274,68 @@ export type PreviewRenderJob = {
 }
 
 /* ----------------- */
+// ASSET ANALYTICS
+/* -------- */
+
+export type AssetAnalyticsWindowKey = '1h' | '24h' | '7d' | '30d'
+
+export type AssetAnalyticsPercentKey =
+  | 'cacheHitPercent'
+  | 'derivedHitPercent'
+  | 'derivedMissPercent'
+
+export type AssetAnalyticsLatencyTier = 'p50Ms' | 'p95Ms' | 'p99Ms'
+
+export type AssetAnalyticsLatencyBucket = {
+  cache: number | null
+  derivedHit: number | null
+  derivedMiss: number | null
+}
+
+export type AssetAnalyticsRankedTransformation = {
+  transformKey: string
+  requests: number
+}
+
+export type AssetAnalyticsRankedImage = {
+  publicId: string
+  requests: number
+}
+
+export type AssetAnalyticsSummaryWindow = {
+  totalRequests: number
+  cacheHitPercent: number
+  derivedHitPercent: number
+  derivedMissPercent: number
+  p50Ms: AssetAnalyticsLatencyBucket
+  p95Ms: AssetAnalyticsLatencyBucket
+  p99Ms: AssetAnalyticsLatencyBucket
+  topTransformations: AssetAnalyticsRankedTransformation[]
+  topImages: AssetAnalyticsRankedImage[]
+}
+
+export type AssetAnalyticsSummary = {
+  environment: string
+  generatedAt: string
+  windows: Record<AssetAnalyticsWindowKey, AssetAnalyticsSummaryWindow | null>
+}
+
+export type AssetAnalyticsSummaryResult =
+  | {
+      status: 'success'
+      data: AssetAnalyticsSummary
+    }
+  | {
+      status: 'empty'
+      message: string
+      data: AssetAnalyticsSummary | null
+    }
+  | {
+      status: 'error'
+      message: string
+    }
+
+/* ----------------- */
 // PROJECT LICENSE
 /* -------- */
 
