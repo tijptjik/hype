@@ -18,7 +18,7 @@ PREVIEW_PUBLIC_BASE_URL = "https://assets.preview.hype.hk"
 
 [[env.preview.r2_buckets]]
 binding = "PREVIEW_ASSETS"
-bucket_name = "hype-map-previews-preview"
+bucket_name = "hype-assets-preview"
 
 [[env.preview.queues.consumers]]
 queue = "hype-map-preview-render-jobs-preview"
@@ -34,7 +34,7 @@ PREVIEW_PUBLIC_BASE_URL = "https://assets.hype.hk"
 
 [[env.production.r2_buckets]]
 binding = "PREVIEW_ASSETS"
-bucket_name = "hype-map-previews-prod"
+bucket_name = "hype-assets-prod"
 
 [[env.production.queues.consumers]]
 queue = "hype-map-preview-render-jobs-prod"
