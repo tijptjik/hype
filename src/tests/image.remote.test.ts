@@ -65,7 +65,7 @@ const {
   mockCreatePresignedR2UploadUrl: vi.fn(
     async () => 'https://upload.example.test/object',
   ),
-  mockGetOriginalsBucketNameForStage: vi.fn(() => 'hype-images-local'),
+  mockGetOriginalsBucketNameForStage: vi.fn(() => 'hype-assets-raw-dev'),
   mockVerifyUploadToken: vi.fn(async () => null),
 }))
 
@@ -134,13 +134,13 @@ vi.mock('$lib/db/services/user', () => ({
   getUserById: mockGetUserById,
 }))
 
-vi.mock('$lib/server/image-upload-auth', () => ({
+vi.mock('$lib/images/auth', () => ({
   createUploadToken: vi.fn(async () => 'signed-upload-token'),
   verifyUploadToken: mockVerifyUploadToken,
 }))
 
-vi.mock('$lib/server/image-storage', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/server/image-storage')>()
+vi.mock('$lib/images/storage', async importOriginal => {
+  const actual = await importOriginal<typeof import('$lib/images/storage')>()
 
   return {
     ...actual,
@@ -221,17 +221,23 @@ describe('image.remote', () => {
             CLOUDFLARE_ACCOUNT_ID: 'account-id',
             R2_S3_ACCESS_KEY_ID: 'access-key',
             R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            IMAGE_ORIGINALS_LOCAL: {
+            ASSET_RAW_DEV: {
               head: vi.fn(async () => null),
               put: vi.fn(async () => undefined),
             },
-            IMAGE_ORIGINALS_PREVIEW: {
+            ASSET_RAW_PREVIEW: {
               head: vi.fn(async () => null),
               put: vi.fn(async () => undefined),
             },
-            IMAGE_ORIGINALS_PRODUCTION: {
+            ASSET_RAW_PRODUCTION: {
               head: vi.fn(async () => null),
               put: vi.fn(async () => undefined),
+            },
+            ASSET_PUBLIC_DEV: { put: vi.fn(async () => undefined), get: vi.fn() },
+            ASSET_PUBLIC_PREVIEW: { put: vi.fn(async () => undefined), get: vi.fn() },
+            ASSET_PUBLIC_PRODUCTION: {
+              put: vi.fn(async () => undefined),
+              get: vi.fn(),
             },
           },
         },
@@ -338,7 +344,7 @@ describe('image.remote', () => {
 
     expect(mockCreatePresignedR2UploadUrl).toHaveBeenCalled()
     expect(result).toMatchObject({
-      publicId: expect.stringContaining('features/feature-1/'),
+      publicId: expect.stringContaining('h/features/feature-1/'),
       uploadUrl: 'https://upload.example.test/object',
       method: 'PUT',
       confirmToken: 'signed-upload-token',
@@ -371,15 +377,18 @@ describe('image.remote', () => {
             CLOUDFLARE_ACCOUNT_ID: 'account-id',
             R2_S3_ACCESS_KEY_ID: 'access-key',
             R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            IMAGE_ORIGINALS_LOCAL: { head, put },
-            IMAGE_ORIGINALS_PREVIEW: { head: vi.fn(async () => null), put },
-            IMAGE_ORIGINALS_PRODUCTION: { head: vi.fn(async () => null), put },
+            ASSET_RAW_DEV: { head, put },
+            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
+            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
+            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
           },
         },
       },
     })
     mockVerifyUploadToken.mockResolvedValue({
-      publicId: 'features/feature-1/image-a',
+      publicId: 'h/features/feature-1/image-a',
       env: 'local',
       ctxType: 'feature',
       ctxId: 'feature-1',
@@ -406,14 +415,13 @@ describe('image.remote', () => {
       },
     })
 
-    expect(head).toHaveBeenCalledWith('features/feature-1/image-a')
+    expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
     expect(put).toHaveBeenCalledTimes(3)
     expect(result).toMatchObject({
-      cdn: 'cloudflareR2',
-      env: 'local',
-      publicId: 'features/feature-1/image-a',
-      ctxType: 'feature',
-      ctxId: 'feature-1',
+      data: {
+        ctxType: 'feature',
+        ctxId: 'feature-1',
+      },
     })
   })
 })
