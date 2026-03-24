@@ -1,0 +1,108 @@
+#:schema ../../node_modules/wrangler/config-schema.json
+name = "hype-image-service"
+main = "src/index.ts"
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
+send_metrics = false
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+ENVIRONMENT = "local"
+IMAGE_PUBLIC_BASE_URL = "http://localhost:8788"
+
+[[r2_buckets]]
+binding = "IMAGE_ORIGINALS_LOCAL"
+bucket_name = "hype-images-local"
+
+[[r2_buckets]]
+binding = "IMAGE_ORIGINALS_PREVIEW"
+bucket_name = "hype-images-preview"
+
+[[r2_buckets]]
+binding = "IMAGE_ORIGINALS_PRODUCTION"
+bucket_name = "hype-images-production"
+
+[[r2_buckets]]
+binding = "IMAGE_DERIVED_LOCAL"
+bucket_name = "hype-images-derived-local"
+
+[[r2_buckets]]
+binding = "IMAGE_DERIVED_PREVIEW"
+bucket_name = "hype-images-derived-preview"
+
+[[r2_buckets]]
+binding = "IMAGE_DERIVED_PRODUCTION"
+bucket_name = "hype-images-derived-production"
+
+[env.preview]
+name = "hype-image-service-preview"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+IMAGE_PUBLIC_BASE_URL = "https://images.preview.hype.hk"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGE_ORIGINALS_LOCAL"
+bucket_name = "hype-images-local"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGE_ORIGINALS_PREVIEW"
+bucket_name = "hype-images-preview"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGE_ORIGINALS_PRODUCTION"
+bucket_name = "hype-images-production"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGE_DERIVED_LOCAL"
+bucket_name = "hype-images-derived-local"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGE_DERIVED_PREVIEW"
+bucket_name = "hype-images-derived-preview"
+
+[[env.preview.r2_buckets]]
+binding = "IMAGE_DERIVED_PRODUCTION"
+bucket_name = "hype-images-derived-production"
+
+[[env.preview.routes]]
+pattern = "images.preview.hype.hk"
+custom_domain = true
+
+[env.production]
+name = "hype-image-service-prod"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+IMAGE_PUBLIC_BASE_URL = "https://images.hype.hk"
+
+[[env.production.r2_buckets]]
+binding = "IMAGE_ORIGINALS_LOCAL"
+bucket_name = "hype-images-local"
+
+[[env.production.r2_buckets]]
+binding = "IMAGE_ORIGINALS_PREVIEW"
+bucket_name = "hype-images-preview"
+
+[[env.production.r2_buckets]]
+binding = "IMAGE_ORIGINALS_PRODUCTION"
+bucket_name = "hype-images-production"
+
+[[env.production.r2_buckets]]
+binding = "IMAGE_DERIVED_LOCAL"
+bucket_name = "hype-images-derived-local"
+
+[[env.production.r2_buckets]]
+binding = "IMAGE_DERIVED_PREVIEW"
+bucket_name = "hype-images-derived-preview"
+
+[[env.production.r2_buckets]]
+binding = "IMAGE_DERIVED_PRODUCTION"
+bucket_name = "hype-images-derived-production"
+
+[[env.production.routes]]
+pattern = "images.hype.hk"
+custom_domain = true
