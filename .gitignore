@@ -4,7 +4,7 @@ scripts/.venv
 
 # Output
 .output
-/.wrangler
+.wrangler
 /.svelte-kit
 /build
 /build-static
