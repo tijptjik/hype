@@ -6,7 +6,7 @@
     "url": "https://github.com/tijptjik/hype/issues"
   },
   "scripts": {
-    "dev": "sh -c 'bun run dev:no-cf & bun run dev:image-service & wait'",
+    "dev": "sh -c 'bun run dev:cf & bun run dev:image-service & wait'",
     "dev:cf": "vite dev",
     "dev:no-cf": "DISABLE_LOCAL_CLOUDFLARE=1 vite dev",
     "dev:no-mullvad": "DISABLE_LOCAL_CLOUDFLARE=1 mullvad-exclude vite dev",
@@ -50,7 +50,7 @@
     "deploy:preview": "bun wrangler deploy --name hype-preview --env preview",
     "deploy:image-service:production": "bun wrangler deploy -c workers/image-service/wrangler.toml --env production",
     "deploy:image-service:preview": "bun wrangler deploy -c workers/image-service/wrangler.toml --env preview",
-    "dev:image-service": "bun wrangler dev -c workers/image-service/wrangler.toml --port 8788",
+    "dev:image-service": "bun wrangler dev -c workers/image-service/wrangler.toml --local --persist-to .wrangler/state --port 8788",
     "lint": "biome check --write .",
     "lint:branch": "bunx branch-name-lint .husky/branch-name-lint.json",
     "format": "biome format --write .",
