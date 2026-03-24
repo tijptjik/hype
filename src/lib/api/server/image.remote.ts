@@ -60,6 +60,7 @@ import {
   UpdateImageSchema,
   GetImageMetadataSchema,
   AuthImageUploadSchema,
+  FinalizeImageUploadSchema,
 } from '$lib/db/zod'
 // ENUMS
 import {
@@ -71,6 +72,7 @@ import {
 import type { Id, EntityResponse } from '$lib/types'
 import type {
   CreateImageParams,
+  FinalizeImageUploadParams,
   Image,
   ImageByIdParamsByProfile,
   ImageContextEnvelope,
@@ -83,10 +85,14 @@ import type {
   ImageUploadSession,
   ImageMetadataResponse,
 } from '$lib/db/zod/schema/image.types'
-import { createUploadToken } from '$lib/server/image-upload-auth'
+import { createUploadToken, verifyUploadToken } from '$lib/server/image-upload-auth'
 import {
+  createPresignedR2UploadUrl,
+  getOriginalsBucketNameForStage,
   getOriginalsBucketForStage,
   readMetadataDocument,
+  toManifestObjectKey,
+  toMetadataObjectKey,
   toImageStage,
   toMetadataProfilePayload,
 } from '$lib/server/image-storage'
@@ -111,6 +117,7 @@ import {
 // - setImagePublished
 // - deleteImage
 // - authImageUpload
+// - finalizeImageUpload
 
 const probeContextState = async (
   db: any,
@@ -417,12 +424,16 @@ export const getMetadata = guardedQuery(
 )
 
 /**
- * Issues a short-lived upload session for the app-managed upload endpoint.
+ * Issues a short-lived direct-to-R2 upload session.
  */
 export const authImageUpload = guardedCommand(
   AuthImageUploadSchema,
   async (params, ctx): Promise<ImageUploadSession> => {
     const { db, user, userRoles, event } = ctx
+
+    if (params.cdn !== 'cloudflareR2') {
+      throw error(400, 'Only cloudflareR2 uploads are supported')
+    }
 
     await assertPermissionsToCreateImage(
       db,
@@ -435,7 +446,16 @@ export const authImageUpload = guardedCommand(
 
     const stage = toImageStage(params.env)
     const bucket = getOriginalsBucketForStage(event.platform, stage)
+    const bucketName = getOriginalsBucketNameForStage(stage)
+    const accountId = event.platform?.env.CLOUDFLARE_ACCOUNT_ID
+    const accessKeyId = event.platform?.env.R2_S3_ACCESS_KEY_ID
+    const secretAccessKey = event.platform?.env.R2_S3_SECRET_ACCESS_KEY
+    const authSecret = event.platform?.env.AUTH_SECRET
     let publicId = `${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
+
+    if (!accountId || !accessKeyId || !secretAccessKey || !authSecret) {
+      throw error(500, 'R2 direct upload credentials are not configured')
+    }
 
     if (params.replaceImageId) {
       const existing = await loadImageById(db, [eq(image.id, params.replaceImageId)])
@@ -458,32 +478,135 @@ export const authImageUpload = guardedCommand(
       }
     }
 
+    const expiresAtMs = Date.now() + 5 * 60 * 1000
     const token = await createUploadToken(
       {
         publicId,
         env: stage,
         ctxType: params.ctxType,
         ctxId: params.ctxId,
+        filename: params.filename,
         replaceImageId: params.replaceImageId,
         contentType: params.contentType,
         size: params.size,
-        exp: Date.now() + 5 * 60 * 1000,
+        uploaderUserId: user.id,
+        exp: expiresAtMs,
       },
-      event.platform?.env.AUTH_SECRET ?? '',
+      authSecret,
+    )
+    const uploadUrl = await createPresignedR2UploadUrl({
+      accountId,
+      bucket: bucketName,
+      objectKey: publicId,
+      accessKeyId,
+      secretAccessKey,
+      expiresInSeconds: 5 * 60,
+    })
+
+    return {
+      cdn: 'cloudflareR2',
+      env: stage,
+      publicId,
+      uploadUrl,
+      method: 'PUT',
+      headers: {
+        'content-type': params.contentType,
+        'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+      },
+      confirmToken: token,
+      expiresAt: new Date(expiresAtMs).toISOString(),
+      ...(params.replaceImageId ? { replaceImageId: params.replaceImageId } : {}),
+    }
+  },
+)
+
+/**
+ * Confirms a completed direct R2 upload and writes metadata sidecars.
+ */
+export const finalizeImageUpload = guardedCommand(
+  FinalizeImageUploadSchema,
+  async (params: FinalizeImageUploadParams, ctx): Promise<ImageNew> => {
+    const { user, event } = ctx
+    const secret = event.platform?.env.AUTH_SECRET
+    if (!secret) throw error(500, 'Upload auth secret not available')
+
+    const payload = await verifyUploadToken(params.token, secret)
+    if (!payload) throw error(403, 'Invalid upload token')
+    if (payload.uploaderUserId !== user.id) {
+      throw error(403, 'Upload token does not belong to the current user')
+    }
+
+    const stage = toImageStage(payload.env)
+    const originalsBucket = getOriginalsBucketForStage(event.platform, stage)
+    const uploadedObject = await originalsBucket.head(payload.publicId)
+
+    if (!uploadedObject) {
+      throw error(404, 'Uploaded image not found in storage')
+    }
+    if (uploadedObject.size !== payload.size) {
+      throw error(400, 'Uploaded image size does not match the authorized upload')
+    }
+
+    const uploadedContentType = uploadedObject.httpMetadata?.contentType
+    if (uploadedContentType && uploadedContentType !== payload.contentType) {
+      throw error(
+        400,
+        'Uploaded image content type does not match the authorized upload',
+      )
+    }
+
+    const version = Date.now()
+    const timestamp = new Date(version).toISOString()
+    const metadataDocument = {
+      ...params.metadata,
+      originalFilename: params.metadata.originalFilename ?? payload.filename,
+      originalExtension:
+        params.metadata.originalExtension ??
+        payload.filename.split('.').pop()?.toLowerCase() ??
+        null,
+      sourceVersion: version,
+      uploadedAt: params.metadata.uploadedAt ?? timestamp,
+      modifiedAt: timestamp,
+    }
+    const manifestDocument = {
+      publicId: payload.publicId,
+      version,
+      updatedAt: timestamp,
+    }
+
+    // Keep metadata sidecars adjacent to the stable source object key.
+    await originalsBucket.put(
+      toMetadataObjectKey(payload.publicId),
+      JSON.stringify(metadataDocument),
+      {
+        httpMetadata: { contentType: 'application/json' },
+      },
+    )
+    await originalsBucket.put(
+      toMetadataObjectKey(payload.publicId, version),
+      JSON.stringify(metadataDocument),
+      {
+        httpMetadata: { contentType: 'application/json' },
+      },
+    )
+    await originalsBucket.put(
+      toManifestObjectKey(payload.publicId),
+      JSON.stringify(manifestDocument),
+      {
+        httpMetadata: { contentType: 'application/json' },
+      },
     )
 
     return {
-      cdn: params.cdn,
+      cdn: 'cloudflareR2',
       env: stage,
-      publicId,
-      version: Date.now(),
-      uploadUrl: '/api/images/upload',
-      method: 'POST',
-      headers: {
-        'x-image-upload-token': token,
-      },
-      ...(params.replaceImageId ? { replaceImageId: params.replaceImageId } : {}),
-    }
+      cdnId: null,
+      publicId: payload.publicId,
+      version,
+      contributorId: user.id,
+      ctxType: payload.ctxType as ImageContextResource,
+      ctxId: payload.ctxId,
+    } satisfies ImageNew
   },
 )
 
