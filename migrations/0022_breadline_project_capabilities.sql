@@ -1,4 +1,3 @@
--- Custom SQL migration file, put your code below! --
 UPDATE "project"
 SET
   "capabilities" = json(
@@ -12,19 +11,18 @@ SET
 WHERE lower("code") = 'breadline';
 
 INSERT INTO "projectRole" ("projectId", "userId", "role", "capabilities")
-VALUES
-  (
-    (SELECT "id" FROM "project" WHERE lower("code") = 'breadline'),
+SELECT
+  p."id" AS "projectId",
+  u."id" AS "userId",
+  'maintainer' AS "role",
+  json('{"manageBakeries":true,"manageVolunteers":true,"manageDropOffs":true}') AS "capabilities"
+FROM "project" p
+JOIN "user" u
+  ON u."id" IN (
     'iRgLi3RYOhIYgtM1jyGcZ2U5rGNrKeGa',
-    'maintainer',
-    json('{"manageBakeries":true,"manageVolunteers":true,"manageDropOffs":true}')
-  ),
-  (
-    (SELECT "id" FROM "project" WHERE lower("code") = 'breadline'),
-    'gH7yxAJ81DVC371yfqKrEalgB8HqQyao',
-    'maintainer',
-    json('{"manageBakeries":true,"manageVolunteers":true,"manageDropOffs":true}')
+    'gH7yxAJ81DVC371yfqKrEalgB8HqQyao'
   )
+WHERE lower(p."code") = 'breadline'
 ON CONFLICT("projectId", "userId") DO UPDATE SET
   "role" = excluded."role",
   "capabilities" = excluded."capabilities";
