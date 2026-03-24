@@ -95,7 +95,7 @@ Apply the companion R2 CORS policy from `scripts/cloud/r2-image-upload.cors.json
 
 ## Asset Analytics
 
-The asset worker now writes one Workers Analytics Engine event for each successful `GET` asset delivery. The dataset is bound as `IMAGE_ANALYTICS` and writes into `hype_asset_delivery`, recording:
+The asset worker now writes one Workers Analytics Engine event for each successful `GET` asset delivery. The dataset is bound as `ASSET_ANALYTICS` and writes into `hype_asset_delivery`, recording:
 
 - `publicId`
 - canonical transformation key
@@ -110,7 +110,7 @@ The worker also exposes a protected summary endpoint:
 
 ```text
 GET /analytics/summary
-Authorization: Bearer <IMAGE_ANALYTICS_READ_TOKEN>
+Authorization: Bearer <ASSET_ANALYTICS_READ_TOKEN>
 ```
 
 It returns `24h`, `7d`, and `30d` windows for:
@@ -129,8 +129,8 @@ bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/asset-service/wr
 bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/asset-service/wrangler.toml --env production
 bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/asset-service/wrangler.toml --env preview
 bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/asset-service/wrangler.toml --env production
-bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env preview
-bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env production
+bunx wrangler secret put ASSET_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env preview
+bunx wrangler secret put ASSET_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env production
 ```
 
 The Cloudflare API token needs permission to query Analytics Engine for the account.

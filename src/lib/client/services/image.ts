@@ -4,6 +4,7 @@ import { error } from '@sveltejs/kit'
 import { m } from '$lib/i18n'
 // IMAGE
 import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
 // UTILS
 import { resolveAppStage } from '$lib'
 import {
@@ -113,7 +114,8 @@ export async function uploadAndProcessImage(
   },
   fetchFn: typeof fetch = fetch,
 ): Promise<ImageCtxEnvelope> {
-  const metadata = await buildBasicMetadataDocument(file)
+  const normalizedFile = await normalizeUploadFileForAssetPipeline(file)
+  const metadata = await buildBasicMetadataDocument(normalizedFile)
   const env = toImageEnv()
   const isAdminRequest = uploadCtx.isAdminRequest ?? true
   const featureImage =
@@ -137,9 +139,9 @@ export async function uploadAndProcessImage(
     ctxId: uploadCtx.ctxId,
     organisationId: uploadCtx.organisation?.id ?? undefined,
     projectId: uploadCtx.project?.id ?? undefined,
-    filename: file.name,
-    contentType: file.type || 'application/octet-stream',
-    size: file.size,
+    filename: normalizedFile.name,
+    contentType: normalizedFile.type || 'application/octet-stream',
+    size: normalizedFile.size,
     replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
     meta: { isAdminRequest },
   })
@@ -147,7 +149,7 @@ export async function uploadAndProcessImage(
   const uploadResponse = await fetchFn(auth.uploadUrl, {
     method: auth.method,
     headers: auth.headers,
-    body: file,
+    body: normalizedFile,
   })
 
   if (!uploadResponse.ok) {

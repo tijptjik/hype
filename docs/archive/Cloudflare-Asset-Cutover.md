@@ -80,8 +80,8 @@ bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/asset-service/wr
 bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/asset-service/wrangler.toml --env production
 bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/asset-service/wrangler.toml --env preview
 bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/asset-service/wrangler.toml --env production
-bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env preview
-bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env production
+bunx wrangler secret put ASSET_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env preview
+bunx wrangler secret put ASSET_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env production
 ```
 
 Preview render/scheduler secrets:
@@ -158,8 +158,8 @@ curl -I https://hkghostsigns.preview.hype.hk
 Check analytics summary:
 
 ```sh
-curl -H "Authorization: Bearer $IMAGE_ANALYTICS_READ_TOKEN" https://raw.assets.preview.hype.hk/analytics/summary
-curl -H "Authorization: Bearer $IMAGE_ANALYTICS_READ_TOKEN" https://raw.assets.hype.hk/analytics/summary
+curl -H "Authorization: Bearer $ASSET_ANALYTICS_READ_TOKEN" https://raw.assets.preview.hype.hk/analytics/summary
+curl -H "Authorization: Bearer $ASSET_ANALYTICS_READ_TOKEN" https://raw.assets.hype.hk/analytics/summary
 ```
 
 ## 8. Post-cutover cleanup
