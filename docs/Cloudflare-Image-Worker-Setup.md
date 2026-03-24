@@ -50,6 +50,18 @@ PUBLIC_IMAGE_BASE_URL=https://images.hype.hk
 
 for preview and production respectively.
 
+## Direct Upload Flow
+
+The app now uses a three-step upload flow:
+
+1. `authImageUpload(...)` issues a short-lived presigned R2 `PUT` URL plus a confirmation token.
+2. The browser uploads the original file directly to the stage originals bucket at the stable `{publicId}` key.
+3. `finalizeImageUpload(...)` confirms the object exists, writes `{publicId}.json`, `{publicId}.v{version}.json`, and `{publicId}.manifest.json`, and returns the live image pointer for DB persistence.
+
+For local development, the app worker and image worker R2 bindings use `remote = true` so direct uploads and image reads target the same real buckets instead of separate local Miniflare state.
+
+Apply the companion R2 CORS policy from `scripts/cloud/r2-image-upload.cors.json` to each image originals bucket so browser `PUT` uploads are allowed from local, preview, and production app origins.
+
 ## Notes
 
 - Originals are read from the stage-specific originals buckets.
