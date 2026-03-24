@@ -18,6 +18,8 @@ DROP TABLE IF EXISTS featureI18n;
 DROP TABLE IF EXISTS featureImage;
 DROP TABLE IF EXISTS featurePropertyI18n;
 DROP TABLE IF EXISTS featureProperty;
+DROP TABLE IF EXISTS projectMapStyles;
+DROP TABLE IF EXISTS mapStyleI18n;
 
 -- Resource children
 DROP TABLE IF EXISTS projectI18n;
@@ -34,6 +36,7 @@ DROP TABLE IF EXISTS feature;
 DROP TABLE IF EXISTS layer;
 DROP TABLE IF EXISTS property;
 DROP TABLE IF EXISTS project;
+DROP TABLE IF EXISTS mapStyles;
 
 -- Organisation + hub children
 DROP TABLE IF EXISTS account;
