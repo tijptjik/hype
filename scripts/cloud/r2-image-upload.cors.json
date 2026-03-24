@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "id": "browser-direct-upload",
+      "allowed": {
+        "origins": [
+          "http://localhost:5173",
+          "https://preview.hype.hk",
+          "https://hype.hk",
+          "https://hkghostsigns.com",
+          "https://hkghostsigns.hype.hk",
+          "https://preview.hkghostsigns.com",
+          "https://breadline.hk",
+          "https://breadline.hype.hk",
+          "https://preview.breadline.hk",
+          "https://breadline.preview.hype.hk"
+        ],
+        "methods": [
+          "PUT",
+          "GET",
+          "HEAD"
+        ],
+        "headers": [
+          "content-type",
+          "x-amz-content-sha256"
+        ]
+      },
+      "expose_headers": [
+        "etag"
+      ],
+      "max_age_seconds": 3600
+    }
+  ]
+}
