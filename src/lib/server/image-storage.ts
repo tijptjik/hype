@@ -10,7 +10,7 @@ import type {
 import { error } from '@sveltejs/kit'
 
 type ImageStage = `${ImageEnv}`
-type ImageBucket = App.Platform['env']['IMAGE_ORIGINALS_LOCAL']
+type ImageBucket = App.Platform['env']['ASSET_RAW_DEV']
 type ImageObjectBody = Awaited<ReturnType<ImageBucket['get']>>
 
 export type ImageMetadataDocument = ImageMetadataFull
@@ -18,9 +18,9 @@ export type ImageMetadataDocument = ImageMetadataFull
 const IMAGE_METADATA_SUFFIX = '.json'
 const IMAGE_MANIFEST_SUFFIX = '.manifest.json'
 const IMAGE_BUCKET_BY_STAGE = {
-  [ImageEnv.local]: 'hype-images-local',
-  [ImageEnv.preview]: 'hype-images-preview',
-  [ImageEnv.production]: 'hype-images-production',
+  [ImageEnv.local]: 'hype-assets-raw-dev',
+  [ImageEnv.preview]: 'hype-assets-raw-preview',
+  [ImageEnv.production]: 'hype-assets-raw-prod',
 } as const
 
 /**
@@ -56,12 +56,12 @@ export const getOriginalsBucketForStage = (
 
   switch (stage) {
     case ImageEnv.production:
-      return platform.env.IMAGE_ORIGINALS_PRODUCTION
+      return platform.env.ASSET_RAW_PRODUCTION
     case ImageEnv.preview:
-      return platform.env.IMAGE_ORIGINALS_PREVIEW
+      return platform.env.ASSET_RAW_PREVIEW
     case ImageEnv.local:
     default:
-      return platform.env.IMAGE_ORIGINALS_LOCAL
+      return platform.env.ASSET_RAW_DEV
   }
 }
 
@@ -81,12 +81,12 @@ export const getDerivedBucketForStage = (
 
   switch (stage) {
     case ImageEnv.production:
-      return platform.env.IMAGE_DERIVED_PRODUCTION
+      return platform.env.ASSET_PUBLIC_PRODUCTION
     case ImageEnv.preview:
-      return platform.env.IMAGE_DERIVED_PREVIEW
+      return platform.env.ASSET_PUBLIC_PREVIEW
     case ImageEnv.local:
     default:
-      return platform.env.IMAGE_DERIVED_LOCAL
+      return platform.env.ASSET_PUBLIC_DEV
   }
 }
 
@@ -141,12 +141,22 @@ export const getOriginalsBucketNameForStage = (stage: ImageStage): string =>
   IMAGE_BUCKET_BY_STAGE[stage]
 
 /**
- * Reads the public image base URL configured for the current build.
+ * Reads the public asset base URL configured for the current build.
  *
- * @returns Configured public base URL, or an empty string when unset.
+ * @returns Configured public base URL for CDN-served assets, or an empty string when unset.
  */
-export const toPublicImageBaseUrl = (): string =>
-  import.meta.env.PUBLIC_IMAGE_BASE_URL || ''
+export const toPublicAssetBaseUrl = (): string =>
+  import.meta.env.PUBLIC_ASSET_BASE_URL || ''
+
+/**
+ * Reads the public raw-asset base URL configured for the current build.
+ *
+ * @returns Configured public raw-asset base URL, or an empty string when unset.
+ */
+export const toPublicRawAssetBaseUrl = (): string =>
+  import.meta.env.PUBLIC_RAW_ASSET_BASE_URL ||
+  import.meta.env.PUBLIC_IMAGE_BASE_URL ||
+  ''
 
 /**
  * Parses a JSON object body from R2 when present.
