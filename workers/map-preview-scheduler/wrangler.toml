@@ -1,5 +1,5 @@
 #:schema ../../node_modules/wrangler/config-schema.json
-name = "hype-map-preview-scheduler"
+name = "hype-render-scheduler"
 main = "src/index.ts"
 compatibility_date = "2026-03-22"
 compatibility_flags = ["nodejs_compat"]
@@ -10,7 +10,7 @@ workers_dev = false
 enabled = true
 
 [env.preview]
-name = "hype-map-preview-scheduler-preview"
+name = "hype-render-scheduler-preview"
 
 [env.preview.vars]
 APP_BASE_URL = "https://preview.hype.hk"
@@ -21,7 +21,7 @@ PREVIEW_REFRESH_SINCE_HOURS = "24"
 crons = ["0 * * * *"]
 
 [env.production]
-name = "hype-map-preview-scheduler-prod"
+name = "hype-render-scheduler-prod"
 
 [env.production.vars]
 APP_BASE_URL = "https://hype.hk"

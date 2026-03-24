@@ -1,5 +1,5 @@
 #:schema ../../node_modules/wrangler/config-schema.json
-name = "hype-map-preview-renderer"
+name = "hype-render-service"
 main = "src/index.ts"
 compatibility_date = "2026-03-19"
 compatibility_flags = ["nodejs_compat"]
@@ -10,7 +10,7 @@ workers_dev = false
 enabled = true
 
 [env.preview]
-name = "hype-map-preview-renderer-preview"
+name = "hype-render-service-preview"
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
@@ -26,7 +26,7 @@ max_batch_size = 1
 max_batch_timeout = 5
 
 [env.production]
-name = "hype-map-preview-renderer-prod"
+name = "hype-render-service-prod"
 
 [env.production.vars]
 ENVIRONMENT = "production"
