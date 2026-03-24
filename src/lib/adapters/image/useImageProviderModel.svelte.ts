@@ -21,14 +21,14 @@ export function useImageProviderModel(
   getPage: () => Page,
   getOptions: () => ImageCtxConstructorOptions,
 ): ImageProviderModel {
-  let lastSet: string | undefined = $state()
-  let lastImageId: string | undefined | null = $state()
-  let lastImageState = $state('')
-  let lastFullScreen: boolean | undefined = $state(false)
-  let lastPathname = $state('')
-  let targetImage = $state<ImageCtxEnvelope | null>(null)
-  let initialisingContext = $state(false)
-  let requestedImageId = $state<string | null>(null)
+  let lastSet: string | undefined
+  let lastImageId: string | undefined | null
+  let lastImageState = ''
+  let lastFullScreen: boolean | undefined = false
+  let lastPathname = ''
+  let targetImage: ImageCtxEnvelope | null = null
+  let initialisingContext = false
+  let requestedImageId: string | null = null
 
   function getUrlImageId(): string | null {
     return getPage().url.searchParams.get('imageId') || null
