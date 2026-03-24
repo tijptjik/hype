@@ -245,7 +245,7 @@ $effect(() => {
           resultMap={{
             image: (item: TItem) =>
               getImageSrc(item.image, {
-                transformation: 'c_fill,h_96,w_96',
+                transformation: 'c_fill,h_256,w_256',
               }),
             title: (item: TItem) => item.i18n?.en?.name || item.code,
             descriminator: (item: TItem) => item.code ?? null,

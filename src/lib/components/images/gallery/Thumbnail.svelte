@@ -60,12 +60,12 @@ onDestroy(() => {
   bind:this={thumbnailRef}
 >
   <Img
-    class="mx-auto h-50 w-50 overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300 
+    class="mx-auto h-50 w-50 overflow-hidden rounded-lg border-base-100 text-neutral transition-opacity duration-300
       {isPublished ? 'opacity-100' : 'border-2 border-base-200/60 blur-sm'}
       {thumbnailLoadState === 'loading' ? '!opacity-30' : ''}"
     src={getURLfromImage({
       image,
-      transformation: 'c_fill,w_200,h_200,q_auto'
+      transformation: 'c_fill,h_256,w_256,q_auto'
     })}
     alt="thumbnail"
     layout="cover"

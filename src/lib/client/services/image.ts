@@ -262,7 +262,7 @@ export function getURLfromImage(opts: {
 }): string {
   const {
     image: inputImage,
-    transformation = 'c_fit,h_1000,w_1000',
+    transformation = 'c_fit,h_1024,w_1024',
     gravity = 'auto',
     format = 'auto',
     quality = 'auto',
@@ -303,7 +303,7 @@ export function getImageSrc(
   if (!input) return null
   if (typeof input === 'string') return input
 
-  const transformation = options.transformation ?? 'c_fill,h_96,w_96'
+  const transformation = options.transformation ?? 'c_fill,h_256,w_256'
 
   try {
     const imageEnvelope =
