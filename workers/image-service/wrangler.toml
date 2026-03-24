@@ -1,5 +1,5 @@
 #:schema ../../node_modules/wrangler/config-schema.json
-name = "hype-image-service"
+name = "hype-asset-service"
 main = "src/index.ts"
 compatibility_date = "2026-03-24"
 compatibility_flags = ["nodejs_compat"]
@@ -13,102 +13,114 @@ enabled = true
 ENVIRONMENT = "local"
 IMAGE_PUBLIC_BASE_URL = "http://localhost:8788"
 
+[[analytics_engine_datasets]]
+binding = "IMAGE_ANALYTICS"
+dataset = "hype_asset_delivery"
+
 [[r2_buckets]]
-binding = "IMAGE_ORIGINALS_LOCAL"
-bucket_name = "hype-images-local"
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
 remote = true
 
 [[r2_buckets]]
-binding = "IMAGE_ORIGINALS_PREVIEW"
-bucket_name = "hype-images-preview"
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
 remote = true
 
 [[r2_buckets]]
-binding = "IMAGE_ORIGINALS_PRODUCTION"
-bucket_name = "hype-images-production"
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
 remote = true
 
 [[r2_buckets]]
-binding = "IMAGE_DERIVED_LOCAL"
-bucket_name = "hype-images-derived-local"
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
 remote = true
 
 [[r2_buckets]]
-binding = "IMAGE_DERIVED_PREVIEW"
-bucket_name = "hype-images-derived-preview"
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
 remote = true
 
 [[r2_buckets]]
-binding = "IMAGE_DERIVED_PRODUCTION"
-bucket_name = "hype-images-derived-production"
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
 remote = true
 
 [env.preview]
-name = "hype-image-service-preview"
+name = "hype-asset-service-preview"
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
-IMAGE_PUBLIC_BASE_URL = "https://images.preview.hype.hk"
+IMAGE_PUBLIC_BASE_URL = "https://raw.assets.preview.hype.hk"
+
+[[env.preview.analytics_engine_datasets]]
+binding = "IMAGE_ANALYTICS"
+dataset = "hype_asset_delivery"
 
 [[env.preview.r2_buckets]]
-binding = "IMAGE_ORIGINALS_LOCAL"
-bucket_name = "hype-images-local"
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
 
 [[env.preview.r2_buckets]]
-binding = "IMAGE_ORIGINALS_PREVIEW"
-bucket_name = "hype-images-preview"
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
 
 [[env.preview.r2_buckets]]
-binding = "IMAGE_ORIGINALS_PRODUCTION"
-bucket_name = "hype-images-production"
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
 
 [[env.preview.r2_buckets]]
-binding = "IMAGE_DERIVED_LOCAL"
-bucket_name = "hype-images-derived-local"
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
 
 [[env.preview.r2_buckets]]
-binding = "IMAGE_DERIVED_PREVIEW"
-bucket_name = "hype-images-derived-preview"
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
 
 [[env.preview.r2_buckets]]
-binding = "IMAGE_DERIVED_PRODUCTION"
-bucket_name = "hype-images-derived-production"
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
 
 [[env.preview.routes]]
-pattern = "images.preview.hype.hk"
+pattern = "raw.assets.preview.hype.hk"
 custom_domain = true
 
 [env.production]
-name = "hype-image-service-prod"
+name = "hype-asset-service-prod"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-IMAGE_PUBLIC_BASE_URL = "https://images.hype.hk"
+IMAGE_PUBLIC_BASE_URL = "https://raw.assets.hype.hk"
+
+[[env.production.analytics_engine_datasets]]
+binding = "IMAGE_ANALYTICS"
+dataset = "hype_asset_delivery"
 
 [[env.production.r2_buckets]]
-binding = "IMAGE_ORIGINALS_LOCAL"
-bucket_name = "hype-images-local"
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
 
 [[env.production.r2_buckets]]
-binding = "IMAGE_ORIGINALS_PREVIEW"
-bucket_name = "hype-images-preview"
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
 
 [[env.production.r2_buckets]]
-binding = "IMAGE_ORIGINALS_PRODUCTION"
-bucket_name = "hype-images-production"
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
 
 [[env.production.r2_buckets]]
-binding = "IMAGE_DERIVED_LOCAL"
-bucket_name = "hype-images-derived-local"
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
 
 [[env.production.r2_buckets]]
-binding = "IMAGE_DERIVED_PREVIEW"
-bucket_name = "hype-images-derived-preview"
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
 
 [[env.production.r2_buckets]]
-binding = "IMAGE_DERIVED_PRODUCTION"
-bucket_name = "hype-images-derived-production"
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
 
 [[env.production.routes]]
-pattern = "images.hype.hk"
+pattern = "raw.assets.hype.hk"
 custom_domain = true
