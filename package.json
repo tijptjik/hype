@@ -6,7 +6,7 @@
     "url": "https://github.com/tijptjik/hype/issues"
   },
   "scripts": {
-    "dev": "DISABLE_LOCAL_CLOUDFLARE=1 vite dev",
+    "dev": "sh -c 'bun run dev:no-cf & bun run dev:image-service & wait'",
     "dev:cf": "vite dev",
     "dev:no-cf": "DISABLE_LOCAL_CLOUDFLARE=1 vite dev",
     "dev:no-mullvad": "DISABLE_LOCAL_CLOUDFLARE=1 mullvad-exclude vite dev",
@@ -48,6 +48,9 @@
     "db:studio:cf:preview": "export $(xargs <.env.drizzle.preview.local) && drizzle-kit studio --config=drizzle.config.ts",
     "deploy:production": "bun wrangler deploy --name hype-prod --env production",
     "deploy:preview": "bun wrangler deploy --name hype-preview --env preview",
+    "deploy:image-service:production": "bun wrangler deploy -c workers/image-service/wrangler.toml --env production",
+    "deploy:image-service:preview": "bun wrangler deploy -c workers/image-service/wrangler.toml --env preview",
+    "dev:image-service": "bun wrangler dev -c workers/image-service/wrangler.toml --port 8788",
     "lint": "biome check --write .",
     "lint:branch": "bunx branch-name-lint .husky/branch-name-lint.json",
     "format": "biome format --write .",
