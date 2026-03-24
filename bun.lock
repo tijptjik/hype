@@ -5,7 +5,7 @@
     "": {
       "name": "hype",
       "dependencies": {
-        "@cloudflare/vite-plugin": "^1.30.0",
+        "@cloudflare/vite-plugin": "^1.30.1",
         "@emeraldpay/hashicon": "^0.5.2",
         "@inlang/paraglide-js": "^2.15.1",
         "@jsquash/avif": "^2.1.1",
@@ -37,6 +37,7 @@
         "date-fns": "^4.1.0",
         "drizzle-orm": "^0.45.1",
         "drizzle-zod": "^0.8.3",
+        "heic2any": "^0.0.4",
         "maplibre-gl": "^5.21.0",
         "node-gyp": "^12.2.0",
         "papaparse": "^5.5.3",
@@ -44,7 +45,7 @@
         "proj4": "^2.20.4",
         "runed": "^0.37.1",
         "smartcrop": "^2.0.5",
-        "svelte": "^5.54.1",
+        "svelte": "^5.55.0",
         "svelte-auto-animate": "^0.0.1",
         "svelte-fa": "^4.0.4",
         "svelte-file-dropzone": "^2.0.9",
@@ -59,7 +60,7 @@
         "tailwindcss-animate": "^1.0.7",
         "typescript": "^5.9.3",
         "unique-names-generator": "^4.7.1",
-        "vite": "^8.0.1",
+        "vite": "^8.0.2",
         "zod": "4.3.6",
       },
       "devDependencies": {
@@ -75,7 +76,7 @@
         "@playwright/test": "^1.58.2",
         "@protomaps/basemaps": "^5.7.2",
         "@sveltejs/adapter-static": "^3.0.10",
-        "@tanstack/svelte-query-devtools": "^6.1.8",
+        "@tanstack/svelte-query-devtools": "^6.1.10",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/user-event": "^14.6.1",
         "@types/geojson": "^7946.0.16",
@@ -92,8 +93,8 @@
         "tsx": "^4.21.0",
         "vite-node": "^6.0.0",
         "vite-plugin-node-polyfills": "^0.25.0",
-        "vitest": "^4.1.0",
-        "wrangler": "^4.76.0",
+        "vitest": "^4.1.1",
+        "wrangler": "^4.77.0",
       },
     },
   },
@@ -1351,6 +1352,8 @@
     "hash.js": ["hash.js@1.1.7", "", { "dependencies": { "inherits": "^2.0.3", "minimalistic-assert": "^1.0.1" } }, "sha512-taOaskGt4z4SOANNseOviYDvjEJinIkRgmp7LbKP2YTTmVxWBl87s/uzK9r+44BclBSp2X7K1hqeNfz9JbBeXA=="],
 
     "hasown": ["hasown@2.0.2", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ=="],
+
+    "heic2any": ["heic2any@0.0.4", "", {}, "sha512-3lLnZiDELfabVH87htnRolZ2iehX9zwpRyGNz22GKXIu0fznlblf0/ftppXKNqS26dqFSeqfIBhAmAj/uSp0cA=="],
 
     "hmac-drbg": ["hmac-drbg@1.0.1", "", { "dependencies": { "hash.js": "^1.0.3", "minimalistic-assert": "^1.0.0", "minimalistic-crypto-utils": "^1.0.1" } }, "sha512-Tti3gMqLdZfhOQY1Mzf/AanLiqh1WTiJgEj26ZuYQ9fbkLomzGchCws4FyrSd4VkpBfiNhaE1On+lOz894jvXg=="],
 
