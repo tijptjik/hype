@@ -12,7 +12,7 @@ repository source files.
   from admin card selection.
 - Project and layer previews are rendered from headless app routes that reuse the real
   `MapCanvas` path.
-- Local style previews are written to `static/mapPreviews/styles/{styleCode}.png`.
+- Local style previews are written to `static/mapRender/styles/{styleCode}.png`.
 - Local project and layer previews are written under `/tmp/hype-map-previews/...` and
   served through app asset routes.
 - Remote project and layer previews are rendered asynchronously through a Cloudflare
@@ -104,7 +104,7 @@ Current preview endpoints:
 
 - Style preview asset resolution
   - local static path:
-    `/mapPreviews/styles/{styleCode}.png`
+    `/mapRender/styles/{styleCode}.png`
 - Layer preview routes
   - asset:
     `GET /api/mapPreviews/layers/[layer]/asset`
@@ -163,13 +163,13 @@ Command behavior:
 
 - `map:preview:styles`
   - uses the current style content hash to skip up-to-date previews
-  - writes local style previews to `static/mapPreviews/styles`
+  - writes local style previews to `static/mapRender/styles`
 - `map:preview:layers`
   - plans layer preview jobs changed in the last 24 hours by default
-  - writes local layer previews to `/tmp/hype-map-previews/mapPreviews/layers/...`
+  - writes local layer previews to `/tmp/hype-map-previews/mapRender/layers/...`
 - `map:preview:projects`
   - plans project preview jobs changed in the last 24 hours by default
-  - writes local project previews to `/tmp/hype-map-previews/mapPreviews/projects/...`
+  - writes local project previews to `/tmp/hype-map-previews/mapRender/projects/...`
 - `map:preview`
   - runs styles first, then layers/projects
 
@@ -185,7 +185,7 @@ bun run build:cf:production
 - `local`
   - app origin: `http://localhost:5173`
   - style asset base URL: local app static files under `/mapStyles`
-  - style preview asset path: `/mapPreviews/styles/{styleCode}.png`
+  - style preview asset path: `/mapRender/styles/{styleCode}.png`
   - layer/project preview local files: `/tmp/hype-map-previews/...`
   - layer/project asset delivery: app routes under `/api/mapPreviews/.../asset`
   - queue binding exists locally in Wrangler config, but local preview commands render
@@ -214,13 +214,13 @@ Built-in style JSON artifacts use immutable static file paths:
 
 Preview images use immutable object keys:
 
-- `mapPreviews/styles/{styleCode}/{hash}.png`
-- `mapPreviews/layers/{layerId}/{hash}.png`
-- `mapPreviews/projects/{projectId}/{hash}.png`
+- `mapRender/styles/{styleCode}/{hash}.png`
+- `mapRender/layers/{layerId}/{hash}.png`
+- `mapRender/projects/{projectId}/{hash}.png`
 
 Local development differences:
 
-- styles are flattened to `/mapPreviews/styles/{styleCode}.png`
+- styles are flattened to `/mapRender/styles/{styleCode}.png`
 - layers/projects still use the hash-addressed object-key shape on disk under `/tmp`
 
 ## Workers

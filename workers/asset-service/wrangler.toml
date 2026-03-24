@@ -11,7 +11,7 @@ enabled = true
 
 [vars]
 ENVIRONMENT = "local"
-IMAGE_PUBLIC_BASE_URL = "http://localhost:8788"
+RAW_ASSET_BASE_URL = "http://localhost:8788"
 
 [[analytics_engine_datasets]]
 binding = "IMAGE_ANALYTICS"
@@ -52,7 +52,7 @@ name = "hype-asset-service-preview"
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
-IMAGE_PUBLIC_BASE_URL = "https://raw.assets.preview.hype.hk"
+RAW_ASSET_BASE_URL = "https://raw.assets.preview.hype.hk"
 
 [[env.preview.analytics_engine_datasets]]
 binding = "IMAGE_ANALYTICS"
@@ -91,7 +91,7 @@ name = "hype-asset-service-prod"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-IMAGE_PUBLIC_BASE_URL = "https://raw.assets.hype.hk"
+RAW_ASSET_BASE_URL = "https://raw.assets.hype.hk"
 
 [[env.production.analytics_engine_datasets]]
 binding = "IMAGE_ANALYTICS"

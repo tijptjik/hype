@@ -34,7 +34,7 @@ describe('preview render job helpers', () => {
       hash: 'abc123',
       sourceUrl:
         'https://hype.hk/headless/map-project-preview/project-123?token=render-token',
-      targetObjectKey: 'mapPreviews/projects/project-123/abc123.png',
+      targetObjectKey: 'mapRender/projects/project-123/abc123.png',
     })
   })
 })

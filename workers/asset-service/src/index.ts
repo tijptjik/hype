@@ -33,7 +33,7 @@ type AnalyticsWindowKey = '24h' | '7d' | '30d'
 
 type Env = {
   ENVIRONMENT: ImageStage
-  IMAGE_PUBLIC_BASE_URL: string
+  RAW_ASSET_BASE_URL: string
   IMAGE_ANALYTICS: AnalyticsEngineDataset
   ASSET_RAW_DEV: R2Bucket
   ASSET_RAW_PREVIEW: R2Bucket
@@ -312,7 +312,7 @@ const handleFetch = async (
     return Response.json({
       ok: true,
       environment: env.ENVIRONMENT,
-      imagePublicBaseUrl: env.IMAGE_PUBLIC_BASE_URL,
+      rawAssetBaseUrl: env.RAW_ASSET_BASE_URL,
     })
   }
 

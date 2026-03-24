@@ -14,7 +14,7 @@ import type { PreviewAssetLocator, PreviewStage, PreviewStorageMode } from '../.
 //    - getPreviewAssetBaseUrl
 //    - resolvePreviewAssetUrl
 
-export const PREVIEW_ASSET_PATH_PREFIX = 'mapPreviews'
+export const PREVIEW_ASSET_PATH_PREFIX = 'mapRender'
 
 const PREVIEW_ASSET_BASE_URLS: Record<Exclude<PreviewStage, 'local'>, string> = {
   preview: 'https://assets.preview.hype.hk',

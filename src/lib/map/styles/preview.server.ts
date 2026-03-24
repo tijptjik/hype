@@ -13,7 +13,7 @@ import {
 //    - getMapStylePreviewFilePath
 //    - getMapStylePreviewManifestPath
 
-export const MAP_STYLE_PREVIEW_DIR = path.resolve('static', 'mapPreviews', 'styles')
+export const MAP_STYLE_PREVIEW_DIR = path.resolve('static', 'mapRender', 'styles')
 
 export { getMapStylePreviewPublicPath }
 

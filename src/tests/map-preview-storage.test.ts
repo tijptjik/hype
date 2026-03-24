@@ -28,10 +28,10 @@ describe('preview storage helpers', () => {
         identifier: 'hyper',
         hash: 'abc123',
       }),
-    ).toBe('mapPreviews/styles/hyper/abc123.png')
+    ).toBe('mapRender/styles/hyper/abc123.png')
 
     expect(getMapStylePreviewObjectKey('hyper', 'abc123')).toBe(
-      'mapPreviews/styles/hyper/abc123.png',
+      'mapRender/styles/hyper/abc123.png',
     )
   })
 
@@ -47,12 +47,12 @@ describe('preview storage helpers', () => {
           identifier: 'hyper',
           hash: 'abc123',
         },
-        '/mapPreviews/styles/hyper/abc123.png',
+        '/mapRender/styles/hyper/abc123.png',
       ),
-    ).toBe('/mapPreviews/styles/hyper/abc123.png')
+    ).toBe('/mapRender/styles/hyper/abc123.png')
 
     expect(resolveMapStylePreviewUrl('local', 'hyper', 'abc123')).toBe(
-      '/mapPreviews/styles/hyper.png',
+      '/mapRender/styles/hyper.png',
     )
   })
 
@@ -62,11 +62,11 @@ describe('preview storage helpers', () => {
     expect(getPreviewAssetBaseUrl('production')).toBe('https://assets.hype.hk')
 
     expect(resolveMapStylePreviewUrl('preview', 'hyper', 'abc123')).toBe(
-      'https://assets.preview.hype.hk/mapPreviews/styles/hyper/abc123.png',
+      'https://assets.preview.hype.hk/mapRender/styles/hyper/abc123.png',
     )
 
     expect(resolveMapStylePreviewUrl('production', 'hyper', 'abc123')).toBe(
-      'https://assets.hype.hk/mapPreviews/styles/hyper/abc123.png',
+      'https://assets.hype.hk/mapRender/styles/hyper/abc123.png',
     )
   })
 

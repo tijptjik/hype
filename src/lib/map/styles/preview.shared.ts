@@ -58,7 +58,7 @@ export const getMapStylePreviewPublicPath = (code: string, hash: string): string
  * @returns Local static image path.
  */
 export const getMapStylePreviewLocalPath = (code: string): string =>
-  `/mapPreviews/styles/${code}.png`
+  `/mapRender/styles/${code}.png`
 
 /**
  * Builds the immutable object key for a map-style preview.

@@ -6,7 +6,10 @@ import { error, redirect, type RequestHandler } from '@sveltejs/kit'
 import { getDatabaseWithoutAuth } from '$lib/api'
 // HELPERS
 import { getLocalPreviewFilePath } from '$lib/map/previews/local.server'
-import { resolvePreviewAssetUrl } from '$lib/map/previews/storage.shared'
+import {
+  buildPreviewObjectKey,
+  resolvePreviewAssetUrl,
+} from '$lib/map/previews/storage.shared'
 import {
   buildProjectPreviewHash,
   getProjectPreviewRenderData,
@@ -41,7 +44,11 @@ export const GET: RequestHandler = async ({ params, platform }) => {
   }
 
   const hash = await buildProjectPreviewHash(renderData)
-  const objectKey = `mapPreviews/projects/${projectId}/${hash}.png`
+  const objectKey = buildPreviewObjectKey({
+    kind: 'projects',
+    identifier: projectId,
+    hash,
+  })
   const stage = platform?.env.ENVIRONMENT
 
   if (stage === 'preview' || stage === 'production') {

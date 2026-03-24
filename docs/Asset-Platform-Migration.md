@@ -44,7 +44,7 @@ Move from image-specific storage/service naming to asset-oriented naming:
    - Prefix existing `image.publicId` values with `h/`.
 
 5. Add storage migration scripts
-   - Copy image objects from old buckets to new buckets.
+   - Copy raw image objects from old buckets to new raw asset buckets with the new `h/` namespace.
    - Repoint any worker/tooling scripts still targeting old bucket names.
 
 6. Verify and cut over
