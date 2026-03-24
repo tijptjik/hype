@@ -178,7 +178,9 @@ export enum ImagePresentationMode {
 }
 
 export enum ImageEnv {
-  dg6vtsga1 = 'dg6vtsga1',
+  local = 'local',
+  preview = 'preview',
+  production = 'production',
 }
 
 /* ----------------- */
