@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit'
 // I18N
 import { m } from '$lib/i18n'
 // IMAGE
-import { toCloudflareImageWorkerPath } from '$lib/image/delivery.shared'
+import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
 // UTILS
 import { resolveAppStage } from '$lib'
 import {

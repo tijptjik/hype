@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { toCloudflareImageWorkerPath } from '$lib/images/delivery.shared'
+import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
 
 describe('image delivery helpers', () => {
   it('builds worker paths for transformed and raw image requests', () => {
