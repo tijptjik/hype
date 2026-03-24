@@ -1,0 +1,10 @@
+ALTER TABLE "image" DROP COLUMN "originalFilename";
+ALTER TABLE "image" DROP COLUMN "originalExtension";
+ALTER TABLE "image" DROP COLUMN "originalWidth";
+ALTER TABLE "image" DROP COLUMN "originalHeight";
+ALTER TABLE "image" DROP COLUMN "metadata";
+ALTER TABLE "image" DROP COLUMN "cameraModel";
+ALTER TABLE "image" DROP COLUMN "capturedAt";
+ALTER TABLE "image" DROP COLUMN "latitude";
+ALTER TABLE "image" DROP COLUMN "longitude";
+ALTER TABLE "image" DROP COLUMN "credit";
