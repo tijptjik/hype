@@ -283,10 +283,3 @@ export type ImageByIdResponse<P extends ImageProfile = 'detail'> =
 export type ImageMetadataResponse = EntityResponse<
   ImageMetadataBasic | ImageMetadataFull | null
 >
-
-export type SignData = {
-  cloudname: string
-  apikey: string
-  timestamp: string
-  signature: string
-}

@@ -1,13 +1,7 @@
 // DRIZZLE
 import { eq, and, type SQL } from 'drizzle-orm'
 // SCHEMA
-import {
-  task,
-  taskImage,
-  image,
-  featureImage,
-  type feature,
-} from '$lib/db/schema/index'
+import { task, taskImage, image, featureImage } from '$lib/db/schema/index'
 // CRUD
 import { insert, update, del } from '../crud'
 // SERVICES
@@ -15,19 +9,6 @@ import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
 import { getTaskHubFilter } from './hub'
 import { uploadAndProcessImage } from '$lib/client/services/image'
-import {
-  createTaskImagesFromImageIds,
-  createImage,
-  createFeatureImage,
-} from '$lib/db/services/image'
-import {
-  createCloudinaryImage,
-  getPublicPathCloudinaryImage,
-  getImageFromCloudinaryResponse,
-  extendFeatureImage,
-  extendImageWithResource,
-} from '$lib/client/services/image'
-import { getCloudinarySignature } from '$lib/api/server/image.remote'
 // FEATURE
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
@@ -417,88 +398,7 @@ export const processTaskImagesDB = async (
   taskData: TaskDB,
   fetch?: typeof globalThis.fetch,
 ): Promise<Image[]> => {
-  const uploadedImages: Image[] = []
-
-  for (const file of images) {
-    try {
-      // Get context for image upload
-      const project = await getProjectForFeatureId(db, taskData.featureId as Id)
-      if (!project) {
-        console.warn('No project found for feature:', taskData.featureId)
-        continue
-      }
-
-      const organisation = await getOrganisationForProjectId(db, project.id)
-      if (!organisation) {
-        console.warn('No organisation found for project:', project.id)
-        continue
-      }
-
-      // Create image context with required properties
-      const imageCtx: ImageUploadCtx = {
-        ctxType: ImageContextResource.feature,
-        ctxId: taskData.featureId as Id,
-        organisation,
-        project,
-      }
-
-      // 1. Determine public path for Cloudinary
-      const { folder, public_id } = getPublicPathCloudinaryImage(imageCtx)
-      const paramsToSign = { folder }
-
-      // 2. Fetch Cloudinary signature
-      const signData = await getCloudinarySignature({
-        paramsToSign,
-        meta: { isAdminRequest: true },
-      })
-
-      // 3. Upload file to Cloudinary
-      const cloudinaryResponse = await createCloudinaryImage(
-        file,
-        paramsToSign,
-        signData,
-        fetch,
-      )
-
-      // 4. Process Cloudinary response into our image format
-      const imageData = getImageFromCloudinaryResponse(cloudinaryResponse)
-
-      // 5. Extend image data with feature/hierarchical info
-      const extendedFeatureInfo = {
-        isPublished: false,
-        intent: taskData.type === 'reportedMissing' ? 'research' : 'undefined',
-      }
-
-      extendFeatureImage(imageData, imageCtx, { featureImage: extendedFeatureInfo })
-      extendImageWithResource(imageData, imageCtx)
-
-      // 6. Set the contributor ID from the task
-      imageData.contributorId = taskData.contributorId
-
-      // 7. Create image directly in database (bypasses API permission checks)
-      const createdImage = await createImage(db, imageData)
-
-      // 8. Create feature image association
-      const featureImageData = {
-        imageId: createdImage.id,
-        featureId: taskData.featureId as Id,
-        intent: extendedFeatureInfo.intent,
-        isPublished: extendedFeatureInfo.isPublished,
-      }
-
-      await createFeatureImage(db, featureImageData, createdImage.id)
-
-      // 9. Create task image association
-      await createTaskImagesFromImageIds(db, taskData.id, [createdImage.id])
-
-      uploadedImages.push(createdImage)
-    } catch (error) {
-      console.error('Failed to process task image:', error)
-      // Continue with other images instead of failing the entire task
-    }
-  }
-
-  return uploadedImages
+  return processTaskImages(db, images, taskData, fetch)
 }
 
 // ═══════════════════════

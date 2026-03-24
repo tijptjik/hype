@@ -1692,8 +1692,8 @@ export class ImageCtx {
 
   // Feature images are stored in
   // - {organsation.code}/{project.code}/{image.image.publicId}
-  // There can be multiple images per feature, so by default, we consider an upload to not replace the existing image and cloudinary will generate a new publicId.
-  // However, if we do want to replace the existing image, we can set the publicId in the paramsToSign object to override the asset in Cloudinary.
+  // There can be multiple images per feature, so by default uploads create a new asset path.
+  // A replace flow can explicitly reuse the existing publicId to overwrite the current source object.
   // Admins can drop images into the viewer to replace the existing image from the Feature Image section.
 
   // Task images are stored in
@@ -1864,10 +1864,7 @@ export class ImageCtx {
     if (!image) return
     let downloadUrl = ''
 
-    if (
-      image.image.cdn.toLowerCase() === 'cloudinary' ||
-      image.image.cdn.toLowerCase() === 'cloudflarer2'
-    ) {
+    if (image.image.cdn.toLowerCase() === 'cloudflarer2') {
       downloadUrl = getURLfromImage({ image, raw: true })
     } else {
       throw new Error('Unsupported CDN')

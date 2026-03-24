@@ -1,7 +1,5 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit'
-// REMOTE
-import { getCloudinarySignature } from '$lib/api/server/image.remote'
 // DRIZZLE
 import { eq, inArray } from 'drizzle-orm'
 // SUPERFORMS
@@ -44,12 +42,10 @@ import type {
   QueryParams,
   PaginationParams,
   DbTable,
-  ParamsToSign,
-  DeleteParamsToSign,
   Session,
   SessionUser,
 } from '$lib/types'
-import type { Image, SignData } from '$lib/db/zod/schema/image.types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer, LayerPropertyPartialExtra } from '$lib/db/zod/schema/layer.types'
@@ -1006,56 +1002,5 @@ export const getPaginationOpts = (url: URL): PaginationParams => {
       parsedOffset !== null && Number.isInteger(parsedOffset) && parsedOffset >= 0
         ? parsedOffset
         : undefined,
-  }
-}
-
-export const getSignedRequest = async (
-  _eventFetch: typeof fetch,
-  paramsToSign: ParamsToSign | DeleteParamsToSign,
-) => {
-  const signData = await getCloudinarySignature({
-    paramsToSign,
-    meta: { isAdminRequest: true },
-  })
-  if (
-    !signData.apikey ||
-    !signData.timestamp ||
-    !signData.signature ||
-    !signData.cloudname
-  ) {
-    return error(500, 'Invalid signature data for Cloudinary.')
-  }
-  return signData
-}
-
-export const delFromCloudinary = async (
-  eventFetch: typeof fetch,
-  signData: SignData,
-  publicId: string,
-) => {
-  const destroyResponse = await eventFetch(
-    `https://api.cloudinary.com/v1_1/${signData.cloudname}/image/destroy`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        public_id: publicId,
-        api_key: signData.apikey,
-        timestamp: signData.timestamp,
-        signature: signData.signature,
-      }),
-    },
-  )
-  if (!destroyResponse.ok) {
-    const destroyJson = await destroyResponse.json()
-    console.error('Cloudinary delete failed:', destroyJson.error?.message)
-    // Non-critical if it's already deleted, but log and potentially flag
-    // For now, we'll allow DB deletion to proceed but this could be stricter
-  } else {
-    const destroyJson = await destroyResponse.json()
-    if (destroyJson.result !== 'ok' && destroyJson.result !== 'not found') {
-      console.warn('Cloudinary deletion reported non-standard result:', destroyJson)
-      // Potentially flag this, but proceed with DB deletion
-    }
   }
 }

@@ -1,6 +1,6 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
-import { PUBLIC_IMAGE_BASE_URL } from '$env/static/public'
+import { env as publicEnv } from '$env/dynamic/public'
 // I18N
 import { m } from '$lib/i18n'
 // COORDINATES
@@ -62,26 +62,20 @@ type FeatureImageProviderProject = {
 // 1. ORCHESTRATION
 //    - uploadAndProcessImage
 //
-// 3. CLOUDINARY :: API
-//    - createCloudinaryImage
-//
-// 4. CLOUDINARY :: UTILS
-//    - getCloudinaryUploadEndpoint
+// 3. DELIVERY
 //    - getURLfromImage
-//    - getImageFromCloudinaryResponse
-//    - getPublicPathCloudinaryImage
 //
-// 5. EXTENSIONS
+// 4. EXTENSIONS
 //    - extendFeatureImage
 //    - extendImageWithResource
 //
-// 6. METADATA
+// 5. METADATA
 //    - getCoordinatesFromMetadata
 //    - getCapturedAtFromMetadata
 //    - getCameraFromMetadata
 //    - getCreditFromMetadata
 //
-// 7. UTILS
+// 6. UTILS
 //    - sortImages
 //    - getHashiconUrl
 //    - getImageSrcOrHashicon
@@ -97,8 +91,7 @@ type FeatureImageProviderProject = {
 // ═══════════════════════
 
 /**
- * Orchestrates the full image upload process: gets path, signs, uploads to Cloudinary,
- * processes response, extends metadata, and saves/updates the image record in the backend.
+ * Orchestrates the full image upload process against the current R2-backed image service.
  * This function does NOT handle frontend state updates (e.g., upload queue status, image list updates).
  *
  * @param file The file to upload.
@@ -183,7 +176,7 @@ export async function uploadAndProcessImage(
 
 const toImageEnv = (): 'local' | 'preview' | 'production' =>
   resolveAppStage(
-    PUBLIC_IMAGE_BASE_URL ||
+    publicEnv.PUBLIC_IMAGE_BASE_URL ||
       (typeof window !== 'undefined' ? window.location.origin : ''),
   )
 
@@ -229,7 +222,7 @@ export async function buildBasicMetadataDocument(
 }
 
 /**
- * Generates a URL for a Cloudinary image based on the image data.
+ * Generates a URL for an image backed by the current image service.
  * @remarks
  * - If the image has a preview URL, return the preview URL.
  * - If the image has a CDN, return the URL from the CDN.
@@ -268,19 +261,13 @@ export function getURLfromImage(opts: {
     return image.preview
   }
 
-  const baseUrl = PUBLIC_IMAGE_BASE_URL || ''
+  const baseUrl = publicEnv.PUBLIC_IMAGE_BASE_URL || ''
   const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`
 
   if (image.cdn === 'cloudflareR2') {
     return raw
       ? `${baseUrl}/${image.env}/image/upload/v${image.version}/${image.publicId}`
       : `${baseUrl}/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`
-  }
-
-  if (image.cdn === 'cloudinary') {
-    return raw
-      ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
-      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`
   }
 
   throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)

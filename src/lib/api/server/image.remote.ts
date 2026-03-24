@@ -18,8 +18,6 @@ import {
   getImageEntityQueryContext,
   getImageQueryContext,
   toImageProfile,
-  createCloudinarySignature,
-  deleteCloudinaryImage,
   toResponseShape,
   toResponseShapeProjectOrOrganisation,
   updateImageForContext,
@@ -50,7 +48,6 @@ import {
 } from '$lib/db/schema'
 // SCHEMA
 import {
-  CloudinarySignatureSchema,
   DeleteImageSchema,
   ImageByIdSchema,
   ImageInsertWithHubAPI,
@@ -71,13 +68,7 @@ import {
   ImageEnv,
 } from '$lib/enums'
 // TYPES
-import type {
-  DeleteParamsToSign,
-  Id,
-  EntityResponse,
-  ParamsToSign,
-  QueryParams,
-} from '$lib/types'
+import type { Id, EntityResponse } from '$lib/types'
 import type {
   CreateImageParams,
   Image,
@@ -91,7 +82,6 @@ import type {
   ImagesForIdsParamsByProfile,
   ImageUploadSession,
   ImageMetadataResponse,
-  SignData,
 } from '$lib/db/zod/schema/image.types'
 import { createUploadToken } from '$lib/server/image-upload-auth'
 import {
@@ -120,7 +110,6 @@ import {
 // - setImageIntent
 // - setImagePublished
 // - deleteImage
-// - getCloudinarySignature
 // - authImageUpload
 
 const probeContextState = async (
@@ -704,7 +693,7 @@ export const setImagePublished = guardedCommand(
 )
 
 /**
- * Deletes an image in context and attempts Cloudinary cleanup.
+ * Deletes an image in context.
  */
 export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx) => {
   const { db, user, userRoles, event } = ctx
@@ -726,33 +715,5 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
 
   await db.delete(image).where(eq(image.id, params.id as Id))
 
-  if (imageToDelete.publicId) {
-    try {
-      const signData = await createCloudinarySignature(
-        { public_id: imageToDelete.publicId },
-        event.platform,
-      )
-      await deleteCloudinaryImage(signData, imageToDelete.publicId)
-    } catch (cloudinaryError) {
-      console.warn(
-        'Failed to delete from Cloudinary (database already cleaned up):',
-        cloudinaryError,
-      )
-    }
-  }
-
   return { type: 'success', message: 'Image deleted successfully' }
 })
-
-/**
- * Creates Cloudinary signature data for direct upload.
- */
-export const getCloudinarySignature = guardedCommand(
-  CloudinarySignatureSchema,
-  async (params, ctx): Promise<SignData> => {
-    return createCloudinarySignature(
-      params.paramsToSign as ParamsToSign | DeleteParamsToSign,
-      ctx.event.platform,
-    )
-  },
-)

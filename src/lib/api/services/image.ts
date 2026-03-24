@@ -28,23 +28,13 @@ import {
   updateImage as updateImageRecord,
 } from '$lib/db/services/image'
 // TYPES
-import type {
-  UserRoleDisco,
-  Database,
-  Id,
-  QueryParams,
-  SessionUser,
-  ParamsToSign,
-  DeleteParamsToSign,
-} from '$lib/types'
-import type { HubOpts, HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { UserRoleDisco, Database, Id, QueryParams, SessionUser } from '$lib/types'
 import type {
   Image,
   ImageContextEnvelope,
   ImageContextType,
   ImageDBFlat,
   ImageProfile,
-  SignData,
 } from '$lib/db/zod/schema/image.types'
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
 import { error, type RequestEvent } from '@sveltejs/kit'
@@ -76,8 +66,6 @@ import { getUserById } from '$lib/db/services/user'
 // 5. UTILS
 //    - getCtxFromUrl
 //    - updateImageForContext
-//    - createCloudinarySignature
-//    - deleteCloudinaryImage
 //
 
 // ═══════════════════════
@@ -516,77 +504,4 @@ export const updateImageForContext = async (args: {
   }
 
   return { data: envelope }
-}
-
-/**
- * Creates Cloudinary signature payload for direct uploads/deletes.
- */
-export const createCloudinarySignature = async (
-  paramsToSign: ParamsToSign | DeleteParamsToSign,
-  platform: App.Platform | undefined,
-): Promise<SignData> => {
-  const timestamp = String(Date.now())
-  const apiSecret = platform?.env?.CLOUDINARY_API_SECRET
-  const apiKey = platform?.env?.CLOUDINARY_API_KEY
-  const cloudName = platform?.env?.PUBLIC_CLOUDINARY_CLOUD_NAME
-
-  if (!apiSecret || !apiKey || !cloudName) {
-    throw error(500, 'Missing Cloudinary API credentials')
-  }
-
-  const params = Object.fromEntries(
-    Object.entries({ ...paramsToSign, timestamp }).filter(
-      ([, value]) => value !== undefined && value !== null,
-    ),
-  )
-  const sortedParams = Object.keys(params)
-    .sort()
-    .map(key => `${key}=${params[key as keyof typeof params]}`)
-    .join('&')
-
-  const payload = new TextEncoder().encode(sortedParams + apiSecret)
-  const hashBuffer = await crypto.subtle.digest('SHA-1', payload)
-  const signature = Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-
-  return {
-    signature,
-    timestamp,
-    cloudname: cloudName,
-    apikey: apiKey,
-  }
-}
-
-/**
- * Deletes a Cloudinary image by publicId using signed credentials.
- */
-export const deleteCloudinaryImage = async (
-  signData: SignData,
-  publicId: string,
-): Promise<void> => {
-  const destroyResponse = await fetch(
-    `https://api.cloudinary.com/v1_1/${signData.cloudname}/image/destroy`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        public_id: publicId,
-        api_key: signData.apikey,
-        timestamp: signData.timestamp,
-        signature: signData.signature,
-      }),
-    },
-  )
-
-  if (!destroyResponse.ok) {
-    const destroyJson = await destroyResponse.json()
-    console.error('Cloudinary delete failed:', destroyJson.error?.message)
-    return
-  }
-
-  const destroyJson = await destroyResponse.json()
-  if (destroyJson.result !== 'ok' && destroyJson.result !== 'not found') {
-    console.warn('Cloudinary deletion reported non-standard result:', destroyJson)
-  }
 }
