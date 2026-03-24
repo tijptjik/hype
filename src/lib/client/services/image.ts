@@ -1,6 +1,5 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
-import { env as publicEnv } from '$env/dynamic/public'
 // I18N
 import { m } from '$lib/i18n'
 // COORDINATES
@@ -174,11 +173,26 @@ export async function uploadAndProcessImage(
 // 3. UPLOAD / URL UTILS
 // ═══════════════════════
 
+const resolvePublicImageBaseUrl = (): string => {
+  const configuredBaseUrl = import.meta.env.PUBLIC_IMAGE_BASE_URL || ''
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
+  }
+
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  const { protocol, hostname } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:8788`
+  }
+
+  return window.location.origin
+}
+
 const toImageEnv = (): 'local' | 'preview' | 'production' =>
-  resolveAppStage(
-    publicEnv.PUBLIC_IMAGE_BASE_URL ||
-      (typeof window !== 'undefined' ? window.location.origin : ''),
-  )
+  resolveAppStage(resolvePublicImageBaseUrl())
 
 const getImageDimensions = async (
   file: File,
@@ -261,7 +275,7 @@ export function getURLfromImage(opts: {
     return image.preview
   }
 
-  const baseUrl = publicEnv.PUBLIC_IMAGE_BASE_URL || ''
+  const baseUrl = resolvePublicImageBaseUrl()
   const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`
 
   if (image.cdn === 'cloudflareR2') {
