@@ -11,9 +11,6 @@ import { nanoid } from 'nanoid'
 import { feature } from './feature'
 // ENUM
 import { ImageCDN, ImageEnv, ImageIntent, ImagePresentationMode } from '../../enums'
-// TYPES
-import type { EXIF } from '../zod/schema/image.types'
-
 /* ============================================================================
  * IMAGE MANAGEMENT
  * ============================================================================
@@ -36,17 +33,17 @@ export const image = sqliteTable('image', {
   contributorId: text('contributorId'),
   // CDN
   cdn: text('cdn', { enum: Object.values(ImageCDN) as [string, ...string[]] })
-    .default(ImageCDN.cloudinary)
+    .default(ImageCDN.cloudflareR2)
     .notNull(),
-  // Cloudinary Cloud Name
+  // Stage / bucket namespace
   env: text('env', { enum: Object.values(ImageEnv) as [string, ...string[]] })
-    .default(ImageEnv.dg6vtsga1)
+    .default(ImageEnv.local)
     .notNull(),
-  // Cloudinary Asset ID
+  // Optional provider asset id
   cdnId: text('cdnId'),
-  // Cloudinary Public ID
+  // Stable logical path for the asset
   publicId: text('publicId').notNull(),
-  // Cloudinary Version
+  // Cache-busting version
   version: integer('version'),
   // Preferred presentation policy for UI rendering
   presentationMode: text('presentationMode', {
@@ -54,20 +51,6 @@ export const image = sqliteTable('image', {
   })
     .default(ImagePresentationMode.contain)
     .notNull(),
-
-  originalFilename: text('originalFilename'),
-  originalExtension: text('originalExtension'),
-  originalWidth: integer('originalWidth'),
-  originalHeight: integer('originalHeight'),
-
-  // EXIF Metadata
-  metadata: text('metadata', { mode: 'json' }).$type<EXIF>(),
-  cameraModel: text('cameraModel'),
-  capturedAt: text('capturedAt'),
-  latitude: text('latitude'),
-  longitude: text('longitude'),
-  credit: text('credit'),
-
   // False : Images may be shown in the Admin Panel
   // True : Image is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
