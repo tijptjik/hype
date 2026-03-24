@@ -1,13 +1,14 @@
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
-import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod'
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { image, feature, featureImage } from '$lib/db/schema/index'
+import { feature, featureImage, image } from '$lib/db/schema/index'
 import {
   ImageCDN,
   ImageContextResource,
   ImageContextResourceExtended,
+  ImageEnv,
   ImageIntent,
 } from '$lib/enums'
 import { UserBase } from './user'
@@ -16,10 +17,7 @@ import { UserBase } from './user'
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// 1. SUPPORTING SCHEMAS
-//    - EXIFBasic
-//
-// 2. DB / RELATIONAL PRIMITIVES
+// 1. DB / RELATIONAL PRIMITIVES
 //    - ImageBase
 //    - ImageBasic
 //    - ImageInsert
@@ -28,7 +26,7 @@ import { UserBase } from './user'
 //    - FeatureImageInsert
 //    - FeatureImageUpdate
 //
-// 3. REMOTE PROFILE SCHEMAS
+// 2. REMOTE PROFILE SCHEMAS
 //    - ImageProfile
 //    - ImageListProfileAPI
 //    - ImageCardProfileAPI
@@ -36,7 +34,7 @@ import { UserBase } from './user'
 //    - ImageAdminProfileAPI
 //    - ImageContextEnvelopeAPI
 //
-// 4. REMOTE MUTATION SCHEMAS
+// 3. REMOTE MUTATION SCHEMAS
 //    - FeatureImageAPI
 //    - ImageAPI
 //    - ImageInsertAPI
@@ -45,6 +43,12 @@ import { UserBase } from './user'
 //    - ImageInsertWithHubAPI
 //    - ImageUpdateAPI
 //    - FeatureImageUpdateAPI
+//
+// 4. METADATA SCHEMAS
+//    - ImageMetadataBasicSchema
+//    - ImageMetadataFullSchema
+//    - ImageMetadataProfileSchema
+//    - GetImageMetadataSchema
 //
 // 5. INTERMEDIATE SCHEMAS
 //    - ImageFlat
@@ -60,39 +64,14 @@ import { UserBase } from './user'
 //    - SetImageIntentSchema
 //    - SetImagePublishedSchema
 //    - DeleteImageSchema
-//    - CloudinarySignatureSchema
+//    - AuthImageUploadSchema
+//    - FinalizeImageUploadSchema
 
 // ═══════════════════════
-// 1. SUPPORTING SCHEMAS
+// 1. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
-export const EXIFBasic = z.object({
-  Copyright: z.string().nullish(),
-  CopyrightNotice: z.string().nullish(),
-  Credit: z.string().nullish(),
-  DateTimeOriginal: z.string().nullish(),
-  CreateDate: z.string().nullish(),
-  ModifyDate: z.string().nullish(),
-  GPSLatitude: z.string().nullish(),
-  GPSLongitude: z.string().nullish(),
-  'By-line': z.string().nullish(),
-  Keywords: z.string().nullish(),
-  ImageWidth: z.string().nullish(),
-  ImageHeight: z.string().nullish(),
-  Make: z.string().nullish(),
-  Model: z.string().nullish(),
-  LensModel: z.string().nullish(),
-  LensInfo: z.string().nullish(),
-  RawFileName: z.string().nullish(),
-})
-
-// ═══════════════════════
-// 2. DB / RELATIONAL PRIMITIVES
-// ═══════════════════════
-
-export const ImageBase = createSelectSchema(image).extend({
-  metadata: EXIFBasic.nullish(),
-})
+export const ImageBase = createSelectSchema(image)
 export const ImageBasic = ImageBase.pick({
   id: true,
   cdn: true,
@@ -101,16 +80,17 @@ export const ImageBasic = ImageBase.pick({
   publicId: true,
   version: true,
   presentationMode: true,
-  metadata: true,
 })
 export const ImageInsert = createInsertSchema(image).extend({
   id: z.string().optional(),
   publicId: z.string().min(1, 'Public ID is required'),
   cdn: z
     .enum(Object.values(ImageCDN) as [string, ...string[]])
-    .prefault(ImageCDN.cloudinary as string),
+    .prefault(ImageCDN.cloudflareR2 as string),
+  env: z
+    .enum(Object.values(ImageEnv) as [string, ...string[]])
+    .prefault(ImageEnv.local as string),
   contributorId: z.string(),
-  capturedAt: z.string(),
 })
 export const ImageUpdate = createUpdateSchema(image)
 
@@ -131,7 +111,7 @@ export const FeatureImageInsert = createInsertSchema(featureImage).extend({
 export const FeatureImageUpdate = createUpdateSchema(featureImage)
 
 // ═══════════════════════
-// 3. REMOTE PROFILE SCHEMAS
+// 2. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
 const ImageListFields = ImageBase.pick({
@@ -142,7 +122,6 @@ const ImageListFields = ImageBase.pick({
   publicId: true,
   version: true,
   presentationMode: true,
-  capturedAt: true,
   contributorId: true,
   createdAt: true,
   modifiedAt: true,
@@ -152,26 +131,12 @@ export const ImageProfile = z.enum(['list', 'card', 'detail', 'admin'])
 
 export const ImageListProfileAPI = ImageListFields
 export const ImageCardProfileAPI = ImageListProfileAPI
-// Alias for compatibility with organisation profile semantics.
 export const ImageDetailProfileAPI = ImageCardProfileAPI
-const ImageAdminFields = ImageBase.pick({
-  originalFilename: true,
-  originalExtension: true,
-  originalWidth: true,
-  originalHeight: true,
-  cameraModel: true,
-  credit: true,
-  latitude: true,
-  longitude: true,
-})
-export const ImageAdminProfileAPI = ImageDetailProfileAPI.extend({
-  ...ImageAdminFields.shape,
-})
+export const ImageAdminProfileAPI = ImageDetailProfileAPI
 
 export const ImageContextEnvelopeAPI = z.object({
-  ctxType: z.string(), // ImageContextType
-  ctxId: z.string(), // Id
-  // New envelope contract: profile-based image payloads only.
+  ctxType: z.string(),
+  ctxId: z.string(),
   image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
   intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
   isPublished: z.boolean().nullish(),
@@ -179,7 +144,7 @@ export const ImageContextEnvelopeAPI = z.object({
 })
 
 // ═══════════════════════
-// 4. REMOTE MUTATION SCHEMAS
+// 3. REMOTE MUTATION SCHEMAS
 // ═══════════════════════
 
 export const FeatureImageAPI = FeatureImageBase.extend({
@@ -198,7 +163,6 @@ export const ImageAPI = ImageBase.extend({
   isPublished: z.boolean().prefault(false).optional(),
   publishedAt: z.string().optional(),
   preview: z.string().optional(),
-  // Feature context fields
   organisationId: z.string().nullish(),
   projectId: z.string().nullish(),
   layerId: z.string().nullish(),
@@ -236,6 +200,31 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
   feature: z.lazy(() => createSelectSchema(feature)),
   image: ImageBase,
 })
+
+// ═══════════════════════
+// 4. METADATA SCHEMAS
+// ═══════════════════════
+
+export const ImageMetadataBasicSchema = z.object({
+  originalFilename: z.string().nullish(),
+  originalExtension: z.string().nullish(),
+  originalWidth: z.number().int().nullish(),
+  originalHeight: z.number().int().nullish(),
+  cameraModel: z.string().nullish(),
+  capturedAt: z.string().nullish(),
+  credit: z.string().nullish(),
+  latitude: z.string().nullish(),
+  longitude: z.string().nullish(),
+})
+
+export const ImageMetadataFullSchema = ImageMetadataBasicSchema.extend({
+  metadata: z.record(z.string(), z.string()).nullish(),
+  sourceVersion: z.number().int().nullish(),
+  uploadedAt: z.string().nullish(),
+  modifiedAt: z.string().nullish(),
+})
+
+export const ImageMetadataProfileSchema = z.enum(['basic', 'full', 'auto', 'admin'])
 
 // ═══════════════════════
 // 5. INTERMEDIATE SCHEMAS
@@ -286,7 +275,6 @@ export const ImageContextNarrowingTypeSchema = z.enum(
 export const ImagesByContextSchema = z.object({
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
-  // Optional secondary narrowing (for example task-scoped images within a feature context).
   ctxNarrowingType: ImageContextNarrowingTypeSchema.optional(),
   ctxNarrowingId: z.string().min(1).optional(),
   pagination: z
@@ -311,6 +299,39 @@ export const ImagesByIdsSchema = z.object({
 
 export const ImageByIdSchema = z.object({
   id: z.string().min(1),
+  meta: ImageRequestMetaSchema,
+})
+
+export const GetImageMetadataSchema = z.object({
+  publicId: z.string().min(1),
+  profile: ImageMetadataProfileSchema.default('basic'),
+  version: z.number().int().positive().optional(),
+  env: z.enum(Object.values(ImageEnv) as [string, ...string[]]).optional(),
+  meta: ImageRequestMetaSchema,
+})
+
+export const AuthImageUploadSchema = z.object({
+  cdn: z.enum(Object.values(ImageCDN) as [string, ...string[]]),
+  env: z.enum(Object.values(ImageEnv) as [string, ...string[]]),
+  ctxType: z.enum(Object.values(ImageContextResource) as [string, ...string[]]),
+  ctxId: z.string().min(1),
+  organisationId: z.string().optional(),
+  projectId: z.string().optional(),
+  filename: z.string().min(1),
+  contentType: z.string().min(1),
+  size: z.number().int().positive(),
+  replaceImageId: z.string().optional(),
+  meta: ImageRequestMetaSchema,
+})
+
+export const FinalizeImageUploadSchema = z.object({
+  publicId: z.string().min(1),
+  env: z.enum(Object.values(ImageEnv) as [string, ...string[]]),
+  ctxType: z.enum(Object.values(ImageContextResource) as [string, ...string[]]),
+  ctxId: z.string().min(1),
+  contributorId: z.string().optional(),
+  replaceImageId: z.string().optional(),
+  featureImage: FeatureImageInsert.omit({ imageId: true }).optional(),
   meta: ImageRequestMetaSchema,
 })
 
@@ -345,14 +366,5 @@ export const DeleteImageSchema = z.object({
   id: z.string().min(1),
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
-  meta: ImageRequestMetaSchema,
-})
-
-export const CloudinarySignatureSchema = z.object({
-  paramsToSign: z.object({
-    folder: z.string().optional(),
-    public_id: z.string().nullish(),
-    media_metadata: z.literal('true').optional(),
-  }),
   meta: ImageRequestMetaSchema,
 })

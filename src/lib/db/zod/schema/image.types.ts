@@ -1,6 +1,11 @@
 import type { z } from 'zod'
-import type { EntityResponse, Id, ParamsToSign } from '$lib/types'
-import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
+import type { EntityResponse, Id } from '$lib/types'
+import type {
+  ImageCDN,
+  ImageContextResource,
+  ImageContextResourceExtended,
+  ImageEnv,
+} from '$lib/enums'
 import type { HubDB } from '$lib/db/zod/schema/hub.types'
 import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectDB } from '$lib/db/zod/schema/project.types'
@@ -16,6 +21,9 @@ import type {
   ImageDetailProfileAPI,
   ImageFlat,
   ImageFlatUpdate,
+  ImageMetadataBasicSchema,
+  ImageMetadataFullSchema,
+  ImageMetadataProfileSchema,
   ImageInsert,
   ImageInsertAPI,
   ImageInsertWithFeatureAPI,
@@ -24,6 +32,9 @@ import type {
   ImageListProfileAPI,
   ImageUpdate,
   ImageUpdateAPI,
+  GetImageMetadataSchema,
+  AuthImageUploadSchema,
+  FinalizeImageUploadSchema,
 } from '$lib/db/zod/schema/image'
 
 export type ImageDB = z.infer<typeof ImageBase>
@@ -39,6 +50,9 @@ export type ImageListProfile = z.infer<typeof ImageListProfileAPI>
 export type ImageDetailProfile = z.infer<typeof ImageDetailProfileAPI>
 export type ImageAdminProfile = z.infer<typeof ImageAdminProfileAPI>
 export type ImageProfile = z.infer<typeof ImageProfileSchema>
+export type ImageMetadataBasic = z.infer<typeof ImageMetadataBasicSchema>
+export type ImageMetadataFull = z.infer<typeof ImageMetadataFullSchema>
+export type ImageMetadataProfile = z.infer<typeof ImageMetadataProfileSchema>
 export type ImageNew = z.infer<typeof ImageInsertAPI>
 export type ImageNewWithFeature = z.infer<typeof ImageInsertWithFeatureAPI>
 export type ImageNewWithProjectOrOrganisation = z.infer<
@@ -114,6 +128,19 @@ export type LngLat = {
 }
 
 export type Metadata = Record<string, string>
+export type AuthImageUploadParams = z.infer<typeof AuthImageUploadSchema>
+export type FinalizeImageUploadParams = z.infer<typeof FinalizeImageUploadSchema>
+export type GetImageMetadataParams = z.infer<typeof GetImageMetadataSchema>
+export type ImageUploadSession = {
+  cdn: `${ImageCDN}`
+  env: `${ImageEnv}`
+  publicId: string
+  version: number
+  uploadUrl: string
+  method: 'POST'
+  headers: Record<string, string>
+  replaceImageId?: string
+}
 
 export type LoadStatus = 'initial' | 'uploaded' | 'loading' | 'loaded' | 'error'
 export type UploadStatus =
@@ -242,11 +269,6 @@ export type DeleteImageParams = {
   meta?: ImageRemoteMeta
 }
 
-export type CloudinarySignatureParams = {
-  paramsToSign: ParamsToSign
-  meta?: ImageRemoteMeta
-}
-
 export type ImageCollectionResponse<P extends ImageProfile = 'list'> = EntityResponse<
   Array<ImageContextEnvelope<P>>
 > & {
@@ -257,6 +279,10 @@ export type ImageByIdResponse<P extends ImageProfile = 'detail'> =
   EntityResponse<ImageContextEnvelope<P> | null> & {
     profile: P
   }
+
+export type ImageMetadataResponse = EntityResponse<
+  ImageMetadataBasic | ImageMetadataFull | null
+>
 
 export type SignData = {
   cloudname: string
