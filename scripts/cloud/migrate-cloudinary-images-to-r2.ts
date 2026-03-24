@@ -89,9 +89,9 @@ type MigrationResult = {
 }
 
 const DEFAULT_BUCKET_BY_STAGE: Record<Stage, string> = {
-  local: 'hype-images-local',
-  preview: 'hype-images-preview',
-  production: 'hype-images-production',
+  local: 'hype-assets-raw-dev',
+  preview: 'hype-assets-raw-preview',
+  production: 'hype-assets-raw-prod',
 }
 
 const DEFAULT_SQL_OUT_PATH = 'sql/data/cloudinary-to-r2-production.sql'

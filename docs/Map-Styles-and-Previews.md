@@ -195,13 +195,13 @@ bun run build:cf:production
   - style asset base URL: app-served static assets
   - preview asset base URL: `https://assets.preview.hype.hk`
   - queue: `hype-map-preview-render-jobs-preview`
-  - bucket: `hype-map-previews-preview`
+  - bucket: `hype-assets-preview`
 - `production`
   - app origin: `https://hype.hk`
   - style asset base URL: app-served static assets
   - preview asset base URL: `https://assets.hype.hk`
   - queue: `hype-map-preview-render-jobs-prod`
-  - bucket: `hype-map-previews-prod`
+  - bucket: `hype-assets-prod`
 
 ## Object Key Convention
 
@@ -256,25 +256,13 @@ Authenticate first:
 bunx wrangler login
 ```
 
-Create the remote buckets:
-
-```sh
-bunx wrangler r2 bucket create hype-map-previews-preview
-bunx wrangler r2 bucket create hype-map-previews-prod
-```
+Map previews now live in the shared asset buckets, so there are no separate remote preview buckets to create.
 
 Create the remote queues:
 
 ```sh
 bunx wrangler queues create hype-map-preview-render-jobs-preview
 bunx wrangler queues create hype-map-preview-render-jobs-prod
-```
-
-Attach the public asset domains to the remote buckets:
-
-```sh
-bunx wrangler r2 bucket domain add hype-map-previews-preview --domain assets.preview.hype.hk --zone-id <HYPE_HK_ZONE_ID>
-bunx wrangler r2 bucket domain add hype-map-previews-prod --domain assets.hype.hk --zone-id <HYPE_HK_ZONE_ID>
 ```
 
 Upload renderer worker secrets:
@@ -320,7 +308,7 @@ Deploy the app worker:
 
 ```sh
 bun run deploy:preview
-bun run deploy:production
+bun run deploy:prod
 ```
 
 Useful scheduler dev/test commands:
