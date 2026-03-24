@@ -3,7 +3,7 @@ import {
   readMetadataDocument,
   toImageStage,
   toMetadataProfilePayload,
-} from '$lib/server/image-storage'
+} from '$lib/images/storage'
 import { ImageMetadataProfileSchema } from '$lib/db/zod'
 
 const isProfileSegment = (segment: string): boolean => segment.startsWith('p_')

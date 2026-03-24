@@ -3,7 +3,7 @@ import {
   getOriginalsBucketForStage,
   readManifestVersion,
   toImageStage,
-} from '$lib/server/image-storage'
+} from '$lib/images/storage'
 
 export const GET = async ({ params, platform }) => {
   const segments = (params.path ?? '').split('/').filter(Boolean)

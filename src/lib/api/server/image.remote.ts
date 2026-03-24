@@ -87,7 +87,7 @@ import type {
   ImageUploadSession,
   ImageMetadataResponse,
 } from '$lib/db/zod/schema/image.types'
-import { createUploadToken, verifyUploadToken } from '$lib/server/image-upload-auth'
+import { createUploadToken, verifyUploadToken } from '$lib/images/auth'
 import {
   createPresignedR2UploadUrl,
   getOriginalsBucketNameForStage,
@@ -97,7 +97,7 @@ import {
   toMetadataObjectKey,
   toImageStage,
   toMetadataProfilePayload,
-} from '$lib/server/image-storage'
+} from '$lib/images/storage'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
