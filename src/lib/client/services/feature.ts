@@ -379,6 +379,7 @@ type FeaturePropertyValueOption = NonNullable<
 type FeaturePropertyWithDefinition = FeatureProperty & {
   property: FeaturePropertyDefinition
 }
+type FeatureFormProperty = NonNullable<FeatureFormInput['data']['properties']>[number]
 
 /**
  * Narrows a feature property to entries that include a hydrated property definition.
@@ -387,7 +388,7 @@ type FeaturePropertyWithDefinition = FeatureProperty & {
  * @returns Whether the property has a loaded definition.
  */
 function hasFeaturePropertyDefinition(
-  property: FeatureProperty,
+  property: FeatureFormProperty,
 ): property is FeaturePropertyWithDefinition {
   return property.property != null
 }
@@ -404,7 +405,7 @@ export function getNonTranslatableFeatureFieldItems({
   isEditing,
   onChange,
 }: {
-  properties: FeatureProperty[] | null | undefined
+  properties: FeatureFormInput['data']['properties'] | null | undefined
   localeKey: 'en' | 'zhHans' | 'zhHant'
   isEditing: boolean
   onChange: (propertyId: string, nextValue: string | boolean) => void
@@ -440,8 +441,8 @@ export function getNonTranslatableFeatureFieldItems({
  * @returns Specifier properties that support translated values.
  */
 export function getTranslatableSpecifierProperties(
-  properties: FeatureProperty[] | null | undefined,
-): FeatureProperty[] {
+  properties: FeatureFormInput['data']['properties'] | null | undefined,
+): FeatureFormProperty[] {
   return (properties ?? []).filter(
     property =>
       property.property?.type === 'specifier' &&
