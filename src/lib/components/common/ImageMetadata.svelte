@@ -8,10 +8,39 @@ import Document from 'virtual:icons/lucide/file-text'
 import AtSymbol from 'virtual:icons/lucide/at-sign'
 import Calendar from 'virtual:icons/lucide/calendar'
 import { formatDate } from '$lib'
+import { getMetadata } from '$lib/api/server/image.remote'
 // TYPES
-import type { Image, ImageUploadCtx as Refs } from '$lib/db/zod/schema/image.types'
+import type { Image } from '$lib/db/zod/schema/image.types'
 
 let { image }: { image: Image } = $props()
+let metadata = $state<{
+  originalFilename?: string | null
+  originalExtension?: string | null
+  originalWidth?: number | null
+  originalHeight?: number | null
+  cameraModel?: string | null
+  capturedAt?: string | null
+  credit?: string | null
+} | null>(null)
+
+$effect(() => {
+  if (!image?.publicId) {
+    metadata = null
+    return
+  }
+
+  void getMetadata({
+    publicId: image.publicId,
+    env: image.env ?? undefined,
+    profile: 'basic',
+  })
+    .then(response => {
+      metadata = response?.data ?? null
+    })
+    .catch(() => {
+      metadata = null
+    })
+})
 </script>
 
 {#snippet MetadataRow(icon: Component, label: string, value: string)}
@@ -26,28 +55,28 @@ let { image }: { image: Image } = $props()
   class="flex min-w-50 items-center gap-3 rounded-lg bg-glass-result p-3 backdrop-blur-sm"
 >
   <div class="flex flex-col gap-2">
-    {#if image.cameraModel}
-      {@render MetadataRow(Camera, 'Camera', image.cameraModel)}
+    {#if metadata?.cameraModel}
+      {@render MetadataRow(Camera, 'Camera', metadata.cameraModel)}
     {/if}
-    {#if image.originalWidth && image.originalHeight}
+    {#if metadata?.originalWidth && metadata?.originalHeight}
       {@render MetadataRow(
         Square2Stack,
         'Dimensions',
-        `${image.originalWidth} x ${image.originalHeight}`
+        `${metadata.originalWidth} x ${metadata.originalHeight}`
       )}
     {/if}
-    {#if image.capturedAt}
-      {@render MetadataRow(Calendar, 'Captured', formatDate(image.capturedAt))}
+    {#if metadata?.capturedAt}
+      {@render MetadataRow(Calendar, 'Captured', formatDate(metadata.capturedAt))}
     {/if}
-    {#if image.originalFilename && image.originalExtension}
+    {#if metadata?.originalFilename && metadata?.originalExtension}
       {@render MetadataRow(
         Document,
         'Filename',
-        `${image.originalFilename}.${image.originalExtension}`
+        `${metadata.originalFilename}.${metadata.originalExtension}`
       )}
     {/if}
-    {#if image.credit}
-      {@render MetadataRow(AtSymbol, 'Credit', image.credit)}
+    {#if metadata?.credit}
+      {@render MetadataRow(AtSymbol, 'Credit', metadata.credit)}
     {/if}
   </div>
 </div>

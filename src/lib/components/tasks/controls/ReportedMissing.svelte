@@ -10,6 +10,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
 import TaskSection from '../common/TaskSection.svelte'
 import TaskStat from '../common/TaskStat.svelte'
+import { getMetadata } from '$lib/api/server/image.remote'
 // TYPES
 import type { Task } from '$lib/types'
 import type { Point } from 'geojson'
@@ -18,24 +19,48 @@ import type { Point } from 'geojson'
 const appCtx = getAppCtx()
 
 let { task }: { task: Task } = $props()
+let imageMetadata = $state<{
+  latitude?: string | null
+  longitude?: string | null
+  capturedAt?: string | null
+} | null>(null)
+
+$effect(() => {
+  const image = task.images?.[0]?.image
+  if (!image?.publicId) {
+    imageMetadata = null
+    return
+  }
+
+  void getMetadata({
+    publicId: image.publicId,
+    env: image.env ?? undefined,
+    profile: 'basic',
+    meta: {
+      isAdminRequest: true,
+    },
+  })
+    .then(response => {
+      imageMetadata = response?.data ?? null
+    })
+    .catch(() => {
+      imageMetadata = null
+    })
+})
 
 let distance = $derived(
   calculateDistance(
     (task.feature?.geometry as Point).coordinates[0] || 0,
     (task.feature?.geometry as Point).coordinates[1] || 0,
-    parseFloat(
-      (task.images?.[0]?.image?.metadata as Record<string, string>)?.latitude || '0',
-    ),
-    parseFloat(
-      (task.images?.[0]?.image?.metadata as Record<string, string>)?.longitude || '0',
-    ),
+    parseFloat(imageMetadata?.latitude || '0'),
+    parseFloat(imageMetadata?.longitude || '0'),
   ),
 )
 
 // Format dates using relative time
 let captureDate = $derived(
-  task.images?.[0]?.image?.metadata?.capturedAt
-    ? formatDistanceToNow(new Date(task.images?.[0]?.image?.metadata?.capturedAt), {
+  imageMetadata?.capturedAt
+    ? formatDistanceToNow(new Date(imageMetadata.capturedAt), {
         addSuffix: true,
       })
     : '-',

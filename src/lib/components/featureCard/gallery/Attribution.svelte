@@ -7,6 +7,7 @@ import { formatDate } from '$lib'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
+import { getMetadata } from '$lib/api/server/image.remote'
 import { getUserForAttribution } from '$lib/api/server/user.remote'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
@@ -32,6 +33,10 @@ let toggleAttribution = () => {
 const contextId = $derived(imageCtx.state.context?.ctxId)
 const feature = $derived(contextId ? appCtx.features.get(contextId) : undefined)
 let contributorAttribution = $state<string | null>(null)
+let imageMetadata = $state<{
+  credit?: string | null
+  capturedAt?: string | null
+} | null>(null)
 const contributorName = $derived(
   contributorAttribution ||
     (feature as Feature)?.contributor?.attribution ||
@@ -61,6 +66,30 @@ $effect(() => {
     })
     .catch(() => {
       contributorAttribution = null
+    })
+})
+
+$effect(() => {
+  const publicId = currentImage?.image.publicId
+  const env = currentImage?.image.env
+  if (!publicId) {
+    imageMetadata = null
+    return
+  }
+
+  void getMetadata({
+    publicId,
+    env: env ?? undefined,
+    profile: 'basic',
+    meta: {
+      ...(appCtx.isAdmin() ? { isAdminRequest: true } : {}),
+    },
+  })
+    .then(response => {
+      imageMetadata = response?.data ?? null
+    })
+    .catch(() => {
+      imageMetadata = null
     })
 })
 </script>
@@ -96,8 +125,8 @@ $effect(() => {
   {@render metadataItem(MapPin, contributorName, createdAt, 1)}
   {@render metadataItem(
     Camera,
-    currentImage.image.attribution || currentImage.image.credit,
-    currentImage.image.capturedAt || currentImage.image.createdAt,
+    currentImage.image.attribution || imageMetadata?.credit || null,
+    imageMetadata?.capturedAt || currentImage.image.createdAt,
     2
   )}
 </div>
