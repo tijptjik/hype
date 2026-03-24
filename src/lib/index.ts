@@ -8,6 +8,7 @@ import type {
   FieldDiscriminator,
   Locale,
   LocaleExtended,
+  PreviewStage,
   Resource,
   FormFieldDefinition,
   Form,
@@ -312,6 +313,47 @@ export const fetchOrThrow = async <T>(url: string): Promise<T> => {
     throw new Error(`Network response was not ok for ${url} (${response.status})`)
   }
   return (await response.json()) as T
+}
+
+const HUB_ORIGINS = ['hype.hk', 'hkghostsigns.com', 'breadline.hk'] as const
+
+const toHostname = (originOrHostname: string): string => {
+  if (!originOrHostname) return ''
+
+  try {
+    return new URL(originOrHostname).hostname.toLowerCase()
+  } catch {
+    return originOrHostname.toLowerCase()
+  }
+}
+
+/**
+ * Resolves the runtime deployment stage from an origin or hostname.
+ *
+ * @param originOrHostname Full origin or bare hostname to inspect.
+ * @returns Normalised app stage for client-side environment decisions.
+ */
+export const resolveAppStage = (originOrHostname = ''): PreviewStage => {
+  const hostname = toHostname(originOrHostname)
+
+  if (!hostname) {
+    return 'local'
+  }
+
+  if (hostname === 'preview' || hostname.startsWith('preview.')) {
+    return 'preview'
+  }
+
+  if (
+    HUB_ORIGINS.some(
+      productionHostname =>
+        hostname === productionHostname || hostname.endsWith(`.${productionHostname}`),
+    )
+  ) {
+    return 'production'
+  }
+
+  return 'local'
 }
 
 export const isMobile = () => {
