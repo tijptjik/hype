@@ -1,11 +1,11 @@
 import { error, json } from '@sveltejs/kit'
-import { verifyUploadToken } from '$lib/server/image-upload-auth'
+import { verifyUploadToken } from '$lib/images/auth'
 import {
   getOriginalsBucketForStage,
   toImageStage,
   toManifestObjectKey,
   toMetadataObjectKey,
-} from '$lib/server/image-storage'
+} from '$lib/images/storage'
 
 type UploadMetadataInput = {
   originalFilename?: string | null
