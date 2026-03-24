@@ -1096,6 +1096,11 @@ export function getTaskHubFilter(
       hubConditions.push(eq(hub.domain, opts.domain))
     }
 
+    // Fail closed when request hub context could not be resolved to a stable identifier.
+    if (hubConditions.length === 0) {
+      return sql`false`
+    }
+
     return exists(
       db
         .select()

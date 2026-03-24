@@ -362,6 +362,8 @@ export const processTaskImages = async (
       ctxId: taskData.featureId as Id,
       organisation,
       project,
+      isAdminRequest: true,
+      links: [{ type: 'taskImage', taskId: taskData.id }],
     }
 
     // Upload and process the image

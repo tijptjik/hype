@@ -2,6 +2,8 @@
 import { error } from '@sveltejs/kit'
 // I18N
 import { m } from '$lib/i18n'
+// IMAGE
+import { toCloudflareImageWorkerPath } from '$lib/image/delivery.shared'
 // UTILS
 import { resolveAppStage } from '$lib'
 import {
@@ -15,7 +17,6 @@ import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
 // REMOTE
 import {
   authImageUpload as authImageUploadRemote,
-  createImage as createImageRemote,
   finalizeImageUpload as finalizeImageUploadRemote,
   updateImage as updateImageRemote,
 } from '$lib/api/server/image.remote'
@@ -114,6 +115,21 @@ export async function uploadAndProcessImage(
 ): Promise<ImageCtxEnvelope> {
   const metadata = await buildBasicMetadataDocument(file)
   const env = toImageEnv()
+  const isAdminRequest = uploadCtx.isAdminRequest ?? true
+  const featureImage =
+    uploadCtx.ctxType === 'feature'
+      ? {
+          featureId: uploadCtx.imageToReplace?.ctxId ?? uploadCtx.ctxId,
+          intent:
+            uploadCtx.imageToReplace?.intent ??
+            extendedFeatureInfo?.intent ??
+            'undefined',
+          isPublished:
+            uploadCtx.imageToReplace?.isPublished ??
+            extendedFeatureInfo?.isPublished ??
+            false,
+        }
+      : undefined
   const auth = await authImageUploadRemote({
     cdn: 'cloudflareR2',
     env,
@@ -125,7 +141,7 @@ export async function uploadAndProcessImage(
     contentType: file.type || 'application/octet-stream',
     size: file.size,
     replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
-    meta: { isAdminRequest: true },
+    meta: { isAdminRequest },
   })
 
   const uploadResponse = await fetchFn(auth.uploadUrl, {
@@ -138,48 +154,38 @@ export async function uploadAndProcessImage(
     throw new Error(`Image upload failed: ${uploadResponse.statusText}`)
   }
 
-  const imageData = (await finalizeImageUploadRemote({
+  const savedImage = await finalizeImageUploadRemote({
     token: auth.confirmToken,
     metadata,
-    meta: { isAdminRequest: true },
-  })) as Partial<ImageNew>
-
-  extendFeatureImage(
-    imageData,
-    uploadCtx,
-    extendedFeatureInfo ? { featureImage: extendedFeatureInfo } : undefined,
-  )
-  extendImageWithResource(imageData, uploadCtx)
-
-  if (uploadCtx.imageToReplace) {
-    const result = await updateImageRemote({
-      id: uploadCtx.imageToReplace.image.id,
-      ctxType: uploadCtx.ctxType,
-      ctxId: uploadCtx.ctxId,
-      data: imageData as Record<string, unknown>,
-      meta: { isAdminRequest: true },
-    })
-    if (!result?.data) {
-      throw new Error('Failed to update image in backend')
-    }
-    return result.data as ImageCtxEnvelope
-  }
-  const result = await createImageRemote({
-    data: imageData as ImageNew,
-    meta: { isAdminRequest: true },
+    persist: {
+      ...(featureImage ? { featureImage } : {}),
+      ...(uploadCtx.links?.length ? { links: uploadCtx.links } : {}),
+    },
+    meta: { isAdminRequest },
   })
-  if (!result?.data) {
-    throw new Error('Failed to create new image in backend')
+
+  if (!savedImage?.data) {
+    throw new Error('Failed to persist finalized image in backend')
   }
-  return result.data as ImageCtxEnvelope
+
+  return savedImage.data as ImageCtxEnvelope
 }
 
 // ═══════════════════════
 // 3. UPLOAD / URL UTILS
 // ═══════════════════════
 
-const resolvePublicImageBaseUrl = (): string => {
-  const configuredBaseUrl = import.meta.env.PUBLIC_IMAGE_BASE_URL || ''
+const resolveConfiguredPublicAssetBaseUrl = (): string =>
+  import.meta.env.PUBLIC_ASSET_BASE_URL || ''
+
+const resolveConfiguredPublicRawAssetBaseUrl = (): string =>
+  import.meta.env.PUBLIC_RAW_ASSET_BASE_URL || ''
+
+const resolvePublicAssetBaseUrl = (): string =>
+  resolveConfiguredPublicAssetBaseUrl() || resolvePublicRawAssetBaseUrl()
+
+const resolvePublicRawAssetBaseUrl = (): string => {
+  const configuredBaseUrl = resolveConfiguredPublicRawAssetBaseUrl()
   if (configuredBaseUrl) {
     return configuredBaseUrl
   }
@@ -197,7 +203,7 @@ const resolvePublicImageBaseUrl = (): string => {
 }
 
 const toImageEnv = (): 'local' | 'preview' | 'production' =>
-  resolveAppStage(resolvePublicImageBaseUrl())
+  resolveAppStage(resolvePublicAssetBaseUrl())
 
 const getImageDimensions = async (
   file: File,
@@ -280,13 +286,22 @@ export function getURLfromImage(opts: {
     return image.preview
   }
 
-  const baseUrl = resolvePublicImageBaseUrl()
-  const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`
-
   if (image.cdn === 'cloudflareR2') {
-    return raw
-      ? `${baseUrl}/${image.env}/image/upload/v${image.version}/${image.publicId}`
-      : `${baseUrl}/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`
+    const imageBaseUrl = resolvePublicRawAssetBaseUrl()
+    const publicBaseUrl = resolvePublicAssetBaseUrl()
+
+    return `${(raw ? imageBaseUrl : publicBaseUrl) || imageBaseUrl}${toCloudflareImageWorkerPath(
+      {
+        env: image.env,
+        publicId: image.publicId,
+        version: image.version,
+        raw,
+        transformation,
+        gravity,
+        quality,
+        format,
+      },
+    )}`
   }
 
   throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)
