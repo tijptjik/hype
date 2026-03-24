@@ -28,16 +28,22 @@ type CropMode = 'c_fill' | 'c_fit' | 'c_thumb'
 type GravityMode = 'g_auto' | 'g_center'
 type OutputFormat = 'avif' | 'jpeg' | 'jxl' | 'png' | 'svg' | 'webp'
 type MetadataProfile = 'admin' | 'auto' | 'basic' | 'full'
+type ImageCacheStatus = 'edge-hit' | 'r2-derived-hit' | 'transform-miss'
+type AnalyticsWindowKey = '24h' | '7d' | '30d'
 
 type Env = {
   ENVIRONMENT: ImageStage
   IMAGE_PUBLIC_BASE_URL: string
-  IMAGE_ORIGINALS_LOCAL: R2Bucket
-  IMAGE_ORIGINALS_PREVIEW: R2Bucket
-  IMAGE_ORIGINALS_PRODUCTION: R2Bucket
-  IMAGE_DERIVED_LOCAL: R2Bucket
-  IMAGE_DERIVED_PREVIEW: R2Bucket
-  IMAGE_DERIVED_PRODUCTION: R2Bucket
+  IMAGE_ANALYTICS: AnalyticsEngineDataset
+  ASSET_RAW_DEV: R2Bucket
+  ASSET_RAW_PREVIEW: R2Bucket
+  ASSET_RAW_PRODUCTION: R2Bucket
+  ASSET_PUBLIC_DEV: R2Bucket
+  ASSET_PUBLIC_PREVIEW: R2Bucket
+  ASSET_PUBLIC_PRODUCTION: R2Bucket
+  CLOUDFLARE_ACCOUNT_ID?: string
+  CLOUDFLARE_ANALYTICS_API_TOKEN?: string
+  IMAGE_ANALYTICS_READ_TOKEN?: string
 }
 
 type ImageMetadataDocument = {
@@ -104,10 +110,77 @@ type SmartCropResult = {
   }
 }
 
+type ImageResponseMetrics = {
+  cacheStatus: ImageCacheStatus
+  totalMs: number
+  queueMs?: number
+  versionMs?: number
+  sourceMs?: number
+  derivedLookupMs?: number
+  transformMs?: number
+}
+
+type AssetAnalyticsEvent = {
+  cacheStatus: ImageCacheStatus
+  contentLength: number
+  outputFormat: OutputFormat
+  publicId: string
+  requestedStage: ImageStage
+  sourceStage: ImageStage
+  totalMs: number
+  transformKey: string
+  version?: number
+}
+
+type AnalyticsTopRow = {
+  key: string | null
+  request_count: number | string
+}
+
+type AnalyticsRatiosRow = {
+  total_requests: number | string
+  edge_hit_requests: number | string
+  derived_hit_requests: number | string
+  transform_miss_requests: number | string
+}
+
+type AnalyticsP95Row = {
+  cache_status: ImageCacheStatus | null
+  p95_total_ms: number | string | null
+  request_count: number | string
+}
+
+type AnalyticsWindowSummary = {
+  cacheHitPercent: number
+  derivedHitPercent: number
+  derivedMissPercent: number
+  p95Ms: {
+    cache: number | null
+    derivedHit: number | null
+    derivedMiss: number | null
+  }
+  topImages: Array<{ publicId: string; requests: number }>
+  topTransformations: Array<{ requests: number; transformKey: string }>
+  totalRequests: number
+}
+
+type AnalyticsSummaryResponse = {
+  environment: ImageStage
+  generatedAt: string
+  windows: Record<AnalyticsWindowKey, AnalyticsWindowSummary>
+}
+
 const CACHE_CONTROL_IMMUTABLE = 'public, max-age=31536000, immutable'
 const CACHE_CONTROL_SHORT = 'public, max-age=300'
+const IMAGE_ANALYTICS_DATASET = 'hype_asset_delivery'
+const IMAGE_ANALYTICS_WINDOWS: Record<AnalyticsWindowKey, string> = {
+  '24h': "INTERVAL '24' HOUR",
+  '7d': "INTERVAL '7' DAY",
+  '30d': "INTERVAL '30' DAY",
+}
 const MANIFEST_SUFFIX = '.manifest.json'
 const METADATA_SUFFIX = '.json'
+const MAX_CONCURRENT_TRANSFORMS = 4
 const MAX_TRANSFORM_DIMENSION = 4096
 const QUALITY_BY_FORMAT = {
   avif: 45,
@@ -115,6 +188,9 @@ const QUALITY_BY_FORMAT = {
   jxl: 75,
   webp: 75,
 } as const
+
+let activeTransformCount = 0
+const pendingTransformResolvers: Array<() => void> = []
 
 const ensureResizeReady = (() => {
   let ready: Promise<void> | null = null
@@ -210,11 +286,12 @@ const ensureJxlReady = (() => {
 //
 // 1. FETCH ENTRY
 // 2. ROUTE PARSING
-// 3. SOURCE RESOLUTION
-// 4. METADATA
-// 5. TRANSFORM PIPELINE
-// 6. FORMATS / CODECS
-// 7. BUCKET / CACHE HELPERS
+// 3. ANALYTICS
+// 4. SOURCE RESOLUTION
+// 5. METADATA
+// 6. TRANSFORM PIPELINE
+// 7. FORMATS / CODECS
+// 8. BUCKET / CACHE HELPERS
 
 /**
  * Dispatches image delivery and metadata requests for the standalone image worker.
@@ -237,6 +314,10 @@ const handleFetch = async (
       environment: env.ENVIRONMENT,
       imagePublicBaseUrl: env.IMAGE_PUBLIC_BASE_URL,
     })
+  }
+
+  if (request.method === 'GET' && url.pathname === '/analytics/summary') {
+    return handleAnalyticsSummaryRequest(request, env)
   }
 
   const segments = url.pathname.split('/').filter(Boolean)
@@ -273,6 +354,330 @@ const handleFetch = async (
   }
 
   return new Response('Not found', { status: 404 })
+}
+
+/**
+ * Returns aggregate image delivery analytics for fixed product windows.
+ *
+ * @param request Incoming HTTP request.
+ * @param env Worker bindings and secrets.
+ * @returns Summary response or an authorization/configuration error.
+ */
+const handleAnalyticsSummaryRequest = async (
+  request: Request,
+  env: Env,
+): Promise<Response> => {
+  if (!isAuthorizedAnalyticsRequest(request, env)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_ANALYTICS_API_TOKEN) {
+    return Response.json(
+      {
+        error:
+          'Analytics query support is not configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_ANALYTICS_API_TOKEN on the image worker.',
+      },
+      { status: 500 },
+    )
+  }
+
+  try {
+    const windowEntries = await Promise.all(
+      (
+        Object.entries(IMAGE_ANALYTICS_WINDOWS) as Array<[AnalyticsWindowKey, string]>
+      ).map(
+        async ([windowKey, intervalExpression]) =>
+          [
+            windowKey,
+            await loadAnalyticsWindowSummary(env, env.ENVIRONMENT, intervalExpression),
+          ] as const,
+      ),
+    )
+
+    const response: AnalyticsSummaryResponse = {
+      environment: env.ENVIRONMENT,
+      generatedAt: new Date().toISOString(),
+      windows: Object.fromEntries(windowEntries) as Record<
+        AnalyticsWindowKey,
+        AnalyticsWindowSummary
+      >,
+    }
+
+    return Response.json(response, {
+      headers: {
+        'cache-control': 'private, max-age=60',
+        'content-type': 'application/json; charset=utf-8',
+      },
+    })
+  } catch (error) {
+    return Response.json(
+      {
+        error:
+          error instanceof Error ? error.message : 'Analytics summary request failed',
+      },
+      { status: 500 },
+    )
+  }
+}
+
+/**
+ * Checks the shared read token used to expose analytics safely.
+ *
+ * @param request Incoming HTTP request.
+ * @param env Worker bindings and secrets.
+ * @returns Whether the request is authorized.
+ */
+const isAuthorizedAnalyticsRequest = (request: Request, env: Env): boolean => {
+  const expectedToken = env.IMAGE_ANALYTICS_READ_TOKEN
+  if (!expectedToken) {
+    return false
+  }
+
+  const authorizationHeader = request.headers.get('authorization') ?? ''
+  if (authorizationHeader.startsWith('Bearer ')) {
+    return authorizationHeader.slice('Bearer '.length) === expectedToken
+  }
+
+  return request.headers.get('x-image-analytics-token') === expectedToken
+}
+
+/**
+ * Loads one analytics summary window from Workers Analytics Engine.
+ *
+ * @param env Worker bindings and secrets.
+ * @param environment Environment to summarize.
+ * @param intervalExpression SQL interval expression.
+ * @returns Aggregated summary payload.
+ */
+const loadAnalyticsWindowSummary = async (
+  env: Env,
+  environment: ImageStage,
+  intervalExpression: string,
+): Promise<AnalyticsWindowSummary> => {
+  const [topTransformRows, topImageRows, ratioRows, p95Rows] = await Promise.all([
+    queryAnalyticsRows<AnalyticsTopRow>(
+      env,
+      `
+        SELECT
+          blob1 AS key,
+          sum(_sample_interval) AS request_count
+        FROM ${IMAGE_ANALYTICS_DATASET}
+        WHERE timestamp > NOW() - ${intervalExpression}
+          AND blob3 = ${toSqlString(environment)}
+        GROUP BY key
+        ORDER BY request_count DESC
+        LIMIT 25
+        FORMAT JSON
+      `,
+    ),
+    queryAnalyticsRows<AnalyticsTopRow>(
+      env,
+      `
+        SELECT
+          index1 AS key,
+          sum(_sample_interval) AS request_count
+        FROM ${IMAGE_ANALYTICS_DATASET}
+        WHERE timestamp > NOW() - ${intervalExpression}
+          AND blob3 = ${toSqlString(environment)}
+        GROUP BY key
+        ORDER BY request_count DESC
+        LIMIT 25
+        FORMAT JSON
+      `,
+    ),
+    queryAnalyticsRows<AnalyticsRatiosRow>(
+      env,
+      `
+        SELECT
+          sum(_sample_interval) AS total_requests,
+          sumIf(_sample_interval, blob2 = 'edge-hit') AS edge_hit_requests,
+          sumIf(_sample_interval, blob2 = 'r2-derived-hit') AS derived_hit_requests,
+          sumIf(_sample_interval, blob2 = 'transform-miss') AS transform_miss_requests
+        FROM ${IMAGE_ANALYTICS_DATASET}
+        WHERE timestamp > NOW() - ${intervalExpression}
+          AND blob3 = ${toSqlString(environment)}
+        FORMAT JSON
+      `,
+    ),
+    queryAnalyticsRows<AnalyticsP95Row>(
+      env,
+      `
+        SELECT
+          blob2 AS cache_status,
+          quantileExactWeighted(0.95)(double1, _sample_interval) AS p95_total_ms,
+          sum(_sample_interval) AS request_count
+        FROM ${IMAGE_ANALYTICS_DATASET}
+        WHERE timestamp > NOW() - ${intervalExpression}
+          AND blob3 = ${toSqlString(environment)}
+        GROUP BY cache_status
+        FORMAT JSON
+      `,
+    ),
+  ])
+
+  const ratioRow = ratioRows[0]
+  const totalRequests = toSafeNumber(ratioRow?.total_requests)
+  const edgeHitRequests = toSafeNumber(ratioRow?.edge_hit_requests)
+  const derivedHitRequests = toSafeNumber(ratioRow?.derived_hit_requests)
+  const transformMissRequests = toSafeNumber(ratioRow?.transform_miss_requests)
+
+  return {
+    cacheHitPercent: toPercent(edgeHitRequests, totalRequests),
+    derivedHitPercent: toPercent(derivedHitRequests, totalRequests),
+    derivedMissPercent: toPercent(transformMissRequests, totalRequests),
+    p95Ms: {
+      cache: findP95ForStatus(p95Rows, 'edge-hit'),
+      derivedHit: findP95ForStatus(p95Rows, 'r2-derived-hit'),
+      derivedMiss: findP95ForStatus(p95Rows, 'transform-miss'),
+    },
+    topImages: topImageRows
+      .map(row => ({
+        publicId: row.key ?? '',
+        requests: toSafeNumber(row.request_count),
+      }))
+      .filter(row => row.publicId.length > 0),
+    topTransformations: topTransformRows
+      .map(row => ({
+        requests: toSafeNumber(row.request_count),
+        transformKey: row.key ?? '',
+      }))
+      .filter(row => row.transformKey.length > 0),
+    totalRequests,
+  }
+}
+
+/**
+ * Executes a SQL query against the Analytics Engine REST API.
+ *
+ * @param env Worker bindings and secrets.
+ * @param sql SQL statement to execute.
+ * @returns Parsed result rows.
+ */
+const queryAnalyticsRows = async <TRow>(env: Env, sql: string): Promise<TRow[]> => {
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(
+      env.CLOUDFLARE_ACCOUNT_ID ?? '',
+    )}/analytics_engine/sql`,
+    {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_API_TOKEN ?? ''}`,
+        'content-type': 'text/plain',
+      },
+      body: sql.trim(),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      `Analytics query failed (${response.status} ${response.statusText}): ${await response.text()}`,
+    )
+  }
+
+  const payload = (await response.json()) as {
+    data?: TRow[]
+    errors?: Array<{ message?: string }>
+    result?: { data?: TRow[] } | TRow[]
+    success?: boolean
+  }
+
+  if (payload.success === false) {
+    const message = payload.errors
+      ?.map(error => error.message)
+      .filter(Boolean)
+      .join('; ')
+    throw new Error(message || 'Analytics query returned an unsuccessful result')
+  }
+
+  if (Array.isArray(payload.data)) {
+    return payload.data
+  }
+
+  if (Array.isArray(payload.result)) {
+    return payload.result
+  }
+
+  if (payload.result && Array.isArray(payload.result.data)) {
+    return payload.result.data
+  }
+
+  return []
+}
+
+/**
+ * Writes a delivery event to Analytics Engine without blocking the response path.
+ *
+ * @param env Worker bindings.
+ * @param event Structured delivery event.
+ * @returns Nothing.
+ */
+const recordAssetAnalytics = (env: Env, event: AssetAnalyticsEvent): void => {
+  env.IMAGE_ANALYTICS.writeDataPoint({
+    indexes: [event.publicId],
+    blobs: [
+      event.transformKey,
+      event.cacheStatus,
+      event.requestedStage,
+      event.sourceStage,
+      event.outputFormat,
+      event.version ? String(event.version) : null,
+    ],
+    doubles: [event.totalMs, event.contentLength],
+  })
+}
+
+/**
+ * Escapes a string literal for an Analytics Engine SQL statement.
+ *
+ * @param value Untrusted string value.
+ * @returns Quoted SQL string literal.
+ */
+const toSqlString = (value: string): string => `'${value.replace(/'/g, "''")}'`
+
+/**
+ * Converts a sampled count or duration into a finite number.
+ *
+ * @param value Numeric or string result value.
+ * @returns Finite number or zero.
+ */
+const toSafeNumber = (value: number | string | null | undefined): number => {
+  const numericValue =
+    typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN
+  return Number.isFinite(numericValue) ? numericValue : 0
+}
+
+/**
+ * Converts a weighted count into a percentage of the window total.
+ *
+ * @param value Partial count.
+ * @param total Window total count.
+ * @returns Percentage with two decimal precision.
+ */
+const toPercent = (value: number, total: number): number => {
+  if (total <= 0) {
+    return 0
+  }
+
+  return Math.round((value / total) * 10000) / 100
+}
+
+/**
+ * Finds the p95 latency for a specific cache status bucket.
+ *
+ * @param rows Status-grouped p95 rows.
+ * @param status Requested cache status.
+ * @returns p95 latency or null.
+ */
+const findP95ForStatus = (
+  rows: AnalyticsP95Row[],
+  status: ImageCacheStatus,
+): number | null => {
+  const row = rows.find(candidate => candidate.cache_status === status)
+  if (!row || toSafeNumber(row.request_count) <= 0) {
+    return null
+  }
+
+  return toSafeNumber(row.p95_total_ms)
 }
 
 /**
@@ -342,94 +747,464 @@ const handleTransformRequest = async (
   ctx: ExecutionContext,
   transformRequest: TransformRequest,
 ): Promise<Response> => {
-  const source = await resolveSourceAsset(env, transformRequest.requestedStage, {
-    publicId: transformRequest.publicId,
-    version: transformRequest.version,
-  })
-  if (!source) {
-    return new Response('Image not found', { status: 404 })
-  }
-
-  if (source.stage !== transformRequest.requestedStage) {
-    console.warn(
-      JSON.stringify({
-        event: 'cross-stage-image-read',
-        requestedStage: transformRequest.requestedStage,
-        resolvedStage: source.stage,
-        publicId: transformRequest.publicId,
-      }),
+  const startedAt = Date.now()
+  const cacheKey = toEdgeCacheKey(request)
+  const edgeCached = await caches.default.match(cacheKey)
+  if (edgeCached) {
+    const response = withImageDebugHeaders(
+      toHeadAwareResponse(edgeCached, request.method),
+      {
+        cacheStatus: 'edge-hit',
+        totalMs: Date.now() - startedAt,
+      },
     )
+    maybeRecordAssetAnalytics(env, request, response, {
+      cacheStatus: 'edge-hit',
+      outputFormat: getResponseOutputFormat(response),
+      publicId: transformRequest.publicId,
+      requestedStage: transformRequest.requestedStage,
+      sourceStage: toResponseSourceStage(response, transformRequest.requestedStage),
+      totalMs: Date.now() - startedAt,
+      transformKey:
+        response.headers.get('x-image-transform-key') ??
+        toCanonicalTransformKey({
+          ...transformRequest,
+          format: chooseOutputFormatFromRequest(request, transformRequest.format),
+        }),
+      version: toNumericHeader(response.headers.get('x-image-version')),
+    })
+    return response
   }
 
-  const resolvedVersion =
-    source.version ??
-    transformRequest.version ??
-    (await readManifestVersion(
-      getOriginalsBucket(env, source.stage),
-      transformRequest.publicId,
-    )) ??
-    undefined
-
-  const outputFormat = chooseOutputFormat(
+  const versionStartedAt = Date.now()
+  const manifestVersion = await resolveVersionHint(
+    env,
+    transformRequest.requestedStage,
+    {
+      publicId: transformRequest.publicId,
+      version: transformRequest.version,
+    },
+  )
+  const resolvedVersion = manifestVersion ?? transformRequest.version ?? undefined
+  const outputFormatGuess = chooseOutputFormatFromRequest(
     request,
-    source.contentType,
     transformRequest.format,
   )
-  const canonical = toCanonicalTransformKey({
+  const optimisticCanonical = toCanonicalTransformKey({
     ...transformRequest,
-    format: outputFormat,
+    format: outputFormatGuess,
     version: resolvedVersion,
   })
-  const derivedKey = toDerivedObjectKey({
+  const optimisticDerivedKey = toDerivedObjectKey({
     requestedStage: transformRequest.requestedStage,
     publicId: transformRequest.publicId,
     version: resolvedVersion,
-    canonicalKey: canonical,
+    canonicalKey: optimisticCanonical,
   })
   const derivedBucket = getDerivedBucket(env, transformRequest.requestedStage)
 
-  const cached = await derivedBucket.get(derivedKey)
-  if (cached) {
-    return toObjectResponse(cached, {
-      method: request.method,
-      stage: source.stage,
+  const derivedLookupStartedAt = Date.now()
+  const optimisticCached = await derivedBucket.get(optimisticDerivedKey)
+  if (optimisticCached) {
+    const response = withImageDebugHeaders(
+      toObjectResponse(optimisticCached, {
+        method: request.method,
+        stage: transformRequest.requestedStage,
+        version: resolvedVersion,
+        canonicalKey: optimisticCanonical,
+      }),
+      {
+        cacheStatus: 'r2-derived-hit',
+        totalMs: Date.now() - startedAt,
+        versionMs: derivedLookupStartedAt - versionStartedAt,
+        derivedLookupMs: Date.now() - derivedLookupStartedAt,
+      },
+    )
+    maybeRecordAssetAnalytics(env, request, response, {
+      cacheStatus: 'r2-derived-hit',
+      outputFormat: outputFormatGuess,
+      publicId: transformRequest.publicId,
+      requestedStage: transformRequest.requestedStage,
+      sourceStage: transformRequest.requestedStage,
+      totalMs: Date.now() - startedAt,
+      transformKey: optimisticCanonical,
+      version: resolvedVersion,
+    })
+    if (request.method === 'GET') {
+      ctx.waitUntil(caches.default.put(cacheKey, response.clone()))
+    }
+    return response
+  }
+
+  const queueStartedAt = Date.now()
+  const releaseTransformSlot = await acquireTransformSlot()
+  const queueMs = Date.now() - queueStartedAt
+
+  try {
+    // Re-check the cheap derived path after queueing because another request may have filled it.
+    const queuedOptimisticCached = await derivedBucket.get(optimisticDerivedKey)
+    if (queuedOptimisticCached) {
+      const response = withImageDebugHeaders(
+        toObjectResponse(queuedOptimisticCached, {
+          method: request.method,
+          stage: transformRequest.requestedStage,
+          version: resolvedVersion,
+          canonicalKey: optimisticCanonical,
+        }),
+        {
+          cacheStatus: 'r2-derived-hit',
+          totalMs: Date.now() - startedAt,
+          queueMs,
+          versionMs: derivedLookupStartedAt - versionStartedAt,
+          derivedLookupMs: Date.now() - derivedLookupStartedAt,
+        },
+      )
+      maybeRecordAssetAnalytics(env, request, response, {
+        cacheStatus: 'r2-derived-hit',
+        outputFormat: outputFormatGuess,
+        publicId: transformRequest.publicId,
+        requestedStage: transformRequest.requestedStage,
+        sourceStage: transformRequest.requestedStage,
+        totalMs: Date.now() - startedAt,
+        transformKey: optimisticCanonical,
+        version: resolvedVersion,
+      })
+      if (request.method === 'GET') {
+        ctx.waitUntil(caches.default.put(cacheKey, response.clone()))
+      }
+      return response
+    }
+
+    const sourceStartedAt = Date.now()
+    const source = await resolveSourceAsset(env, transformRequest.requestedStage, {
+      publicId: transformRequest.publicId,
+      version: resolvedVersion,
+    })
+    if (!source) {
+      return new Response('Image not found', { status: 404 })
+    }
+
+    if (source.stage !== transformRequest.requestedStage) {
+      console.warn(
+        JSON.stringify({
+          event: 'cross-stage-image-read',
+          requestedStage: transformRequest.requestedStage,
+          resolvedStage: source.stage,
+          publicId: transformRequest.publicId,
+        }),
+      )
+    }
+
+    const outputFormat = chooseOutputFormat(
+      request,
+      source.contentType,
+      transformRequest.format,
+    )
+    const canonical = toCanonicalTransformKey({
+      ...transformRequest,
+      format: outputFormat,
+      version: resolvedVersion,
+    })
+    const derivedKey = toDerivedObjectKey({
+      requestedStage: transformRequest.requestedStage,
+      publicId: transformRequest.publicId,
       version: resolvedVersion,
       canonicalKey: canonical,
     })
+    const secondDerivedLookupStartedAt = Date.now()
+    const cached = await derivedBucket.get(derivedKey)
+    if (cached) {
+      const response = withImageDebugHeaders(
+        toObjectResponse(cached, {
+          method: request.method,
+          stage: source.stage,
+          version: resolvedVersion,
+          canonicalKey: canonical,
+        }),
+        {
+          cacheStatus: 'r2-derived-hit',
+          totalMs: Date.now() - startedAt,
+          queueMs,
+          versionMs: derivedLookupStartedAt - versionStartedAt,
+          sourceMs: secondDerivedLookupStartedAt - sourceStartedAt,
+          derivedLookupMs: Date.now() - secondDerivedLookupStartedAt,
+        },
+      )
+      maybeRecordAssetAnalytics(env, request, response, {
+        cacheStatus: 'r2-derived-hit',
+        outputFormat,
+        publicId: transformRequest.publicId,
+        requestedStage: transformRequest.requestedStage,
+        sourceStage: source.stage,
+        totalMs: Date.now() - startedAt,
+        transformKey: canonical,
+        version: resolvedVersion,
+      })
+      if (request.method === 'GET') {
+        ctx.waitUntil(caches.default.put(cacheKey, response.clone()))
+      }
+      return response
+    }
+
+    const transformStartedAt = Date.now()
+    const transformed = await transformSourceAsset(source, {
+      ...transformRequest,
+      version: resolvedVersion,
+      format: outputFormat,
+    })
+
+    const response = withImageDebugHeaders(
+      new Response(request.method === 'HEAD' ? null : transformed.body, {
+        headers: {
+          'cache-control': CACHE_CONTROL_IMMUTABLE,
+          'content-type': transformed.contentType,
+          vary: 'Accept',
+          'x-image-source-env': source.stage,
+          'x-image-transform-key': canonical,
+          ...(resolvedVersion ? { 'x-image-version': String(resolvedVersion) } : {}),
+        },
+      }),
+      {
+        cacheStatus: 'transform-miss',
+        totalMs: Date.now() - startedAt,
+        queueMs,
+        versionMs: derivedLookupStartedAt - versionStartedAt,
+        sourceMs: secondDerivedLookupStartedAt - sourceStartedAt,
+        derivedLookupMs: transformStartedAt - secondDerivedLookupStartedAt,
+        transformMs: Date.now() - transformStartedAt,
+      },
+    )
+
+    maybeRecordAssetAnalytics(env, request, response, {
+      cacheStatus: 'transform-miss',
+      contentLength: transformed.body.byteLength,
+      outputFormat,
+      publicId: transformRequest.publicId,
+      requestedStage: transformRequest.requestedStage,
+      sourceStage: source.stage,
+      totalMs: Date.now() - startedAt,
+      transformKey: canonical,
+      version: resolvedVersion,
+    })
+
+    ctx.waitUntil(
+      Promise.all([
+        derivedBucket.put(derivedKey, transformed.body, {
+          httpMetadata: {
+            contentType: transformed.contentType,
+            cacheControl: CACHE_CONTROL_IMMUTABLE,
+          },
+          customMetadata: {
+            sourceStage: source.stage,
+            sourceObjectKey: source.objectKey,
+            publicId: transformRequest.publicId,
+            version: resolvedVersion ? String(resolvedVersion) : 'latest',
+            canonicalTransform: canonical,
+            generatedAt: new Date().toISOString(),
+          },
+        }),
+        ...(request.method === 'GET'
+          ? [caches.default.put(cacheKey, response.clone())]
+          : []),
+      ]),
+    )
+
+    return response
+  } finally {
+    releaseTransformSlot()
+  }
+}
+
+const withImageDebugHeaders = (
+  response: Response,
+  metrics: ImageResponseMetrics,
+): Response => {
+  const headers = new Headers(response.headers)
+  headers.set('x-image-cache-status', metrics.cacheStatus)
+  headers.set('x-image-total-ms', String(metrics.totalMs))
+  headers.delete('x-image-queue-ms')
+  headers.delete('x-image-version-ms')
+  headers.delete('x-image-source-ms')
+  headers.delete('x-image-derived-lookup-ms')
+  headers.delete('x-image-transform-ms')
+
+  if (metrics.queueMs !== undefined) {
+    headers.set('x-image-queue-ms', String(metrics.queueMs))
+  }
+  if (metrics.versionMs !== undefined) {
+    headers.set('x-image-version-ms', String(metrics.versionMs))
+  }
+  if (metrics.sourceMs !== undefined) {
+    headers.set('x-image-source-ms', String(metrics.sourceMs))
   }
 
-  const transformed = await transformSourceAsset(source, {
-    ...transformRequest,
-    version: resolvedVersion,
-    format: outputFormat,
+  if (metrics.derivedLookupMs !== undefined) {
+    headers.set('x-image-derived-lookup-ms', String(metrics.derivedLookupMs))
+  }
+
+  if (metrics.transformMs !== undefined) {
+    headers.set('x-image-transform-ms', String(metrics.transformMs))
+  }
+
+  const serverTiming = [
+    `total;dur=${metrics.totalMs}`,
+    ...(metrics.queueMs !== undefined ? [`queue;dur=${metrics.queueMs}`] : []),
+    ...(metrics.versionMs !== undefined ? [`version;dur=${metrics.versionMs}`] : []),
+    ...(metrics.sourceMs !== undefined ? [`source;dur=${metrics.sourceMs}`] : []),
+    ...(metrics.derivedLookupMs !== undefined
+      ? [`derived;dur=${metrics.derivedLookupMs}`]
+      : []),
+    ...(metrics.transformMs !== undefined
+      ? [`transform;dur=${metrics.transformMs}`]
+      : []),
+  ].join(', ')
+  headers.set('server-timing', serverTiming)
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
+}
+
+/**
+ * Emits delivery analytics for successful image GET requests.
+ *
+ * @param env Worker bindings.
+ * @param request Incoming request.
+ * @param response Outgoing response.
+ * @param event Partial analytics payload.
+ * @returns Nothing.
+ */
+const maybeRecordAssetAnalytics = (
+  env: Env,
+  request: Request,
+  response: Response,
+  event: Omit<AssetAnalyticsEvent, 'contentLength'> & { contentLength?: number },
+): void => {
+  if (request.method !== 'GET' || response.status < 200 || response.status >= 300) {
+    return
+  }
+
+  recordAssetAnalytics(env, {
+    ...event,
+    contentLength:
+      event.contentLength ?? toSafeNumber(response.headers.get('content-length')) ?? 0,
+  })
+}
+
+/**
+ * Infers an output format from a response content type.
+ *
+ * @param response Image response.
+ * @returns Output format.
+ */
+const getResponseOutputFormat = (response: Response): OutputFormat => {
+  const contentType = response.headers.get('content-type') ?? 'image/jpeg'
+  if (contentType.includes('image/avif')) return 'avif'
+  if (contentType.includes('image/jxl')) return 'jxl'
+  if (contentType.includes('image/png')) return 'png'
+  if (contentType.includes('image/svg+xml')) return 'svg'
+  if (contentType.includes('image/webp')) return 'webp'
+  return 'jpeg'
+}
+
+/**
+ * Reads the source stage debug header while preserving a safe fallback.
+ *
+ * @param response Image response.
+ * @param fallbackStage Fallback stage.
+ * @returns Resolved stage.
+ */
+const toResponseSourceStage = (
+  response: Response,
+  fallbackStage: ImageStage,
+): ImageStage => {
+  const headerValue = response.headers.get('x-image-source-env')
+  return headerValue === 'local' ||
+    headerValue === 'preview' ||
+    headerValue === 'production'
+    ? headerValue
+    : fallbackStage
+}
+
+/**
+ * Parses a numeric header without throwing.
+ *
+ * @param value Header string.
+ * @returns Parsed number or undefined.
+ */
+const toNumericHeader = (value: string | null): number | undefined => {
+  const numericValue = value === null ? NaN : Number(value)
+  return Number.isFinite(numericValue) ? numericValue : undefined
+}
+
+/**
+ * Caps concurrent source decode / transform work to avoid worker OOMs on large cold batches.
+ *
+ * @returns Release callback for the acquired slot.
+ */
+const acquireTransformSlot = async (): Promise<() => void> => {
+  if (activeTransformCount < MAX_CONCURRENT_TRANSFORMS) {
+    activeTransformCount += 1
+    return releaseTransformSlot
+  }
+
+  await new Promise<void>(resolve => {
+    pendingTransformResolvers.push(() => {
+      activeTransformCount += 1
+      resolve()
+    })
   })
 
-  await derivedBucket.put(derivedKey, transformed.body, {
-    httpMetadata: {
-      contentType: transformed.contentType,
-      cacheControl: CACHE_CONTROL_IMMUTABLE,
-    },
-    customMetadata: {
-      sourceStage: source.stage,
-      sourceObjectKey: source.objectKey,
-      publicId: transformRequest.publicId,
-      version: resolvedVersion ? String(resolvedVersion) : 'latest',
-      canonicalTransform: canonical,
-      generatedAt: new Date().toISOString(),
-    },
-  })
+  return releaseTransformSlot
+}
 
-  ctx.waitUntil(Promise.resolve())
+/**
+ * Releases one queued transform slot and wakes the next waiter if present.
+ */
+const releaseTransformSlot = (): void => {
+  activeTransformCount = Math.max(0, activeTransformCount - 1)
+  const nextResolver = pendingTransformResolvers.shift()
+  nextResolver?.()
+}
 
-  return new Response(request.method === 'HEAD' ? null : transformed.body, {
-    headers: {
-      'cache-control': CACHE_CONTROL_IMMUTABLE,
-      'content-type': transformed.contentType,
-      'x-image-source-env': source.stage,
-      'x-image-transform-key': canonical,
-      ...(resolvedVersion ? { 'x-image-version': String(resolvedVersion) } : {}),
-    },
-  })
+const resolveVersionHint = async (
+  env: Env,
+  requestedStage: ImageStage,
+  lookup: { publicId: string; version?: number },
+): Promise<number | null> => {
+  if (typeof lookup.version === 'number') {
+    return lookup.version
+  }
+
+  for (const stage of getReadableStages(requestedStage)) {
+    const version = await readManifestVersion(
+      getOriginalsBucket(env, stage),
+      lookup.publicId,
+    )
+    if (typeof version === 'number') {
+      return version
+    }
+  }
+
+  return null
+}
+
+const chooseOutputFormatFromRequest = (
+  request: Request,
+  requestedFormat: 'auto' | OutputFormat,
+): OutputFormat => {
+  if (requestedFormat !== 'auto') {
+    return requestedFormat
+  }
+
+  const accept = request.headers.get('accept') ?? ''
+  if (accept.includes('image/avif')) return 'avif'
+  if (accept.includes('image/webp')) return 'webp'
+  if (accept.includes('image/jxl')) return 'jxl'
+  if (accept.includes('image/png')) return 'png'
+  return 'jpeg'
 }
 
 /**
@@ -1094,11 +1869,29 @@ const toObjectResponse = (
       'cache-control': object.httpMetadata?.cacheControl ?? CACHE_CONTROL_IMMUTABLE,
       'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream',
       etag: object.httpEtag,
+      vary: 'Accept',
       'x-image-source-env': options.stage,
       'x-image-transform-key': options.canonicalKey,
       ...(options.version ? { 'x-image-version': String(options.version) } : {}),
     },
   })
+
+const toEdgeCacheKey = (request: Request): Request =>
+  new Request(request.url, {
+    method: 'GET',
+    headers: {
+      Accept: request.headers.get('Accept') ?? '*/*',
+    },
+  })
+
+const toHeadAwareResponse = (response: Response, method: string): Response =>
+  method === 'HEAD'
+    ? new Response(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      })
+    : response
 
 /**
  * Maps metadata profiles onto the subset returned to callers.
@@ -1212,9 +2005,9 @@ const readManifestVersion = async (
  * @returns R2 originals bucket.
  */
 const getOriginalsBucket = (env: Env, stage: ImageStage): R2Bucket => {
-  if (stage === 'production') return env.IMAGE_ORIGINALS_PRODUCTION
-  if (stage === 'preview') return env.IMAGE_ORIGINALS_PREVIEW
-  return env.IMAGE_ORIGINALS_LOCAL
+  if (stage === 'production') return env.ASSET_RAW_PRODUCTION
+  if (stage === 'preview') return env.ASSET_RAW_PREVIEW
+  return env.ASSET_RAW_DEV
 }
 
 /**
@@ -1225,9 +2018,9 @@ const getOriginalsBucket = (env: Env, stage: ImageStage): R2Bucket => {
  * @returns R2 derived bucket.
  */
 const getDerivedBucket = (env: Env, stage: ImageStage): R2Bucket => {
-  if (stage === 'production') return env.IMAGE_DERIVED_PRODUCTION
-  if (stage === 'preview') return env.IMAGE_DERIVED_PREVIEW
-  return env.IMAGE_DERIVED_LOCAL
+  if (stage === 'production') return env.ASSET_PUBLIC_PRODUCTION
+  if (stage === 'preview') return env.ASSET_PUBLIC_PREVIEW
+  return env.ASSET_PUBLIC_DEV
 }
 
 /**
