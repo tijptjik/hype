@@ -29,6 +29,7 @@ import type {
   ImageInsertWithFeatureAPI,
   ImageInsertWithProjectOrOrganisationAPI,
   ImageProfile as ImageProfileSchema,
+  FinalizeImageUploadLinkSchema,
   ImageListProfileAPI,
   ImageUpdate,
   ImageUpdateAPI,
@@ -129,16 +130,18 @@ export type LngLat = {
 
 export type Metadata = Record<string, string>
 export type AuthImageUploadParams = z.infer<typeof AuthImageUploadSchema>
+export type FinalizeImageUploadLink = z.infer<typeof FinalizeImageUploadLinkSchema>
 export type FinalizeImageUploadParams = z.infer<typeof FinalizeImageUploadSchema>
 export type GetImageMetadataParams = z.infer<typeof GetImageMetadataSchema>
 export type ImageUploadSession = {
   cdn: `${ImageCDN}`
   env: `${ImageEnv}`
   publicId: string
-  version: number
   uploadUrl: string
-  method: 'POST'
+  method: 'PUT'
   headers: Record<string, string>
+  confirmToken: string
+  expiresAt: string
   replaceImageId?: string
 }
 
@@ -171,6 +174,8 @@ export type ImageUploadCtx = {
   organisation?: OrganisationDB
   project?: ProjectDB
   imageToReplace?: ImageCtxEnvelope
+  isAdminRequest?: boolean
+  links?: FinalizeImageUploadLink[]
 }
 
 export type ImageEditCtx = {

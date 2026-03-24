@@ -324,14 +324,23 @@ export const AuthImageUploadSchema = z.object({
   meta: ImageRequestMetaSchema,
 })
 
+export const FinalizeImageUploadLinkSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('taskImage'),
+    taskId: z.string().min(1),
+  }),
+])
+
 export const FinalizeImageUploadSchema = z.object({
-  publicId: z.string().min(1),
-  env: z.enum(Object.values(ImageEnv) as [string, ...string[]]),
-  ctxType: z.enum(Object.values(ImageContextResource) as [string, ...string[]]),
-  ctxId: z.string().min(1),
-  contributorId: z.string().optional(),
-  replaceImageId: z.string().optional(),
-  featureImage: FeatureImageInsert.omit({ imageId: true }).optional(),
+  token: z.string().min(1),
+  metadata: ImageMetadataFullSchema,
+  persist: z
+    .object({
+      contributorId: z.string().optional(),
+      featureImage: FeatureImageInsert.omit({ imageId: true }).optional(),
+      links: z.array(FinalizeImageUploadLinkSchema).optional(),
+    })
+    .optional(),
   meta: ImageRequestMetaSchema,
 })
 
