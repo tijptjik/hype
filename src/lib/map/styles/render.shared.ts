@@ -52,13 +52,13 @@ export const getMapStyleRenderPublicPath = (code: string, hash: string): string 
   `/${getMapStyleRenderObjectKey(code, hash)}`
 
 /**
- * Returns the local API path for a built-in map-style render.
+ * Returns the local API asset path for a built-in map-style render.
  *
  * @param code Map style code.
- * @returns Local static image path.
+ * @returns Local asset route path.
  */
 export const getMapStyleRenderLocalPath = (code: string): string =>
-  `/mapRender/styles/${code}.png`
+  `/api/mapRenders/styles/${code}/asset`
 
 /**
  * Builds the immutable object key for a map-style render.

@@ -247,7 +247,7 @@ export type PreviewStage = 'local' | 'preview' | 'production'
 
 export type MapRenderAssetKind = 'styles' | 'layers' | 'projects'
 
-export type MapRenderStorageMode = 'local-static' | 'r2'
+export type MapRenderStorageMode = 'r2'
 
 export type MapRenderPersistenceTarget = 'local' | 'remote'
 

@@ -1,11 +1,8 @@
-import { readFile } from 'node:fs/promises'
-
 import { error, redirect, type RequestHandler } from '@sveltejs/kit'
 
 // API
 import { getDatabaseWithoutAuth } from '$lib/api'
 // HELPERS
-import { getLocalRenderFilePath } from '$lib/map/renders/local.server'
 import {
   buildMapRenderObjectKey,
   resolveMapRenderAssetUrl,
@@ -23,7 +20,7 @@ import {
 //    - GET
 
 /**
- * Serves the current layer render image from local storage or redirects to the
+ * Serves the current layer render image from the dev asset bucket or redirects to the
  * current immutable remote asset URL.
  *
  * @param event Request event carrying the layer id.
@@ -66,24 +63,16 @@ export const GET: RequestHandler = async ({ params, platform }) => {
     )
   }
 
-  try {
-    const body = await readFile(
-      getLocalRenderFilePath({
-        kind: 'layers',
-        identifier: layerId,
-        hash,
-        sourceUrl: '',
-        targetObjectKey: objectKey,
-      }),
-    )
+  const object = await platform?.env.ASSET_PUBLIC_DEV.get(objectKey)
 
-    return new Response(body, {
-      headers: {
-        'cache-control': 'no-store',
-        'content-type': 'image/png',
-      },
-    })
-  } catch {
+  if (!object) {
     throw error(404, 'Layer preview not found')
   }
+
+  return new Response(object.body, {
+    headers: {
+      'cache-control': 'no-store',
+      'content-type': object.httpMetadata?.contentType ?? 'image/png',
+    },
+  })
 }

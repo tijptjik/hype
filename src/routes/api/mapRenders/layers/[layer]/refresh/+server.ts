@@ -11,6 +11,24 @@ import {
   getLayerMapRenderData,
 } from '$lib/map/renders/render.server'
 
+const getRemoteConfig = (platform?: App.Platform) => {
+  const env = platform?.env
+
+  if (
+    !env?.CLOUDFLARE_ACCOUNT_ID ||
+    !env.R2_S3_ACCESS_KEY_ID ||
+    !env.R2_S3_SECRET_ACCESS_KEY
+  ) {
+    throw error(500, 'Map render persistence is not configured.')
+  }
+
+  return {
+    accountId: env.CLOUDFLARE_ACCOUNT_ID,
+    accessKeyId: env.R2_S3_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_S3_SECRET_ACCESS_KEY,
+  }
+}
+
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
@@ -64,6 +82,8 @@ export const POST: RequestHandler = async ({ params, platform, locals, url }) =>
 
   const entries = await generateRenderJobsLocally([job], {
     baseUrl: publicOrigin,
+    stage: 'local',
+    remoteConfig: getRemoteConfig(platform),
   })
 
   return json({

@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { access, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -41,6 +41,7 @@ const SERVER_START_TIMEOUT_MS = 45_000
 const PREVIEW_READY_TIMEOUT_MS = 45_000
 const LOCAL_RENDER_ROOT_DIR = path.join(os.tmpdir(), 'hype-map-renders')
 const RENDER_PUBLIC_BUCKET_BY_STAGE = {
+  local: 'hype-assets-dev',
   preview: 'hype-assets-preview',
   production: 'hype-assets-prod',
 } as const
@@ -83,11 +84,11 @@ const encodeObjectKeyPath = (objectKey: string): string =>
 const getRenderPublicBucketName = (
   stage: PreviewStage,
 ): (typeof RENDER_PUBLIC_BUCKET_BY_STAGE)[keyof typeof RENDER_PUBLIC_BUCKET_BY_STAGE] => {
-  if (stage === 'preview' || stage === 'production') {
+  if (stage === 'local' || stage === 'preview' || stage === 'production') {
     return RENDER_PUBLIC_BUCKET_BY_STAGE[stage]
   }
 
-  throw new Error('Remote mapRender persistence requires preview or production stage')
+  throw new Error('Map render persistence requires a valid stage')
 }
 
 const persistRemoteRender = async (params: {
@@ -202,14 +203,14 @@ export const ensureRenderServer = async (
   }
 }
 
-export const getLocalRenderFilePath = (job: MapRenderJob): string =>
-  path.join(LOCAL_RENDER_ROOT_DIR, job.targetObjectKey)
-
 const getRenderViewport = (job: MapRenderJob): { width: number; height: number } =>
   job.kind === 'styles' ? MAP_STYLE_RENDER_CAPTURE_SIZE : MAP_ENTITY_PREVIEW_SIZE
 
 const getRenderOutputSize = (job: MapRenderJob): { width: number; height: number } =>
   job.kind === 'styles' ? MAP_STYLE_RENDER_OUTPUT_SIZE : MAP_ENTITY_PREVIEW_SIZE
+
+const getLocalRenderAssetPath = (job: MapRenderJob): string =>
+  `/api/mapRenders/${job.kind}/${job.identifier}/asset`
 
 /**
  * Renders one preview job locally and stores the image under `/tmp/hype-map-renders/...`.
@@ -232,14 +233,12 @@ export const renderMapRenderJobLocally = async (
       headless: true,
     }))
   const shouldCloseBrowser = !options.browser
-  const storage = options.storage ?? 'local'
   const stage = options.stage ?? 'local'
   const fileName = job.targetObjectKey.split('/').pop() ?? `${job.hash}.png`
   const tempPath = path.join(
     LOCAL_RENDER_ROOT_DIR,
     `${job.kind}-${job.identifier}.capture.png`,
   )
-  const outputPath = getLocalRenderFilePath(job)
 
   try {
     const page = await browser.newPage({
@@ -247,7 +246,7 @@ export const renderMapRenderJobLocally = async (
       deviceScaleFactor: 1,
     })
 
-    await mkdir(path.dirname(outputPath), { recursive: true })
+    await mkdir(LOCAL_RENDER_ROOT_DIR, { recursive: true })
 
     await page.goto(job.sourceUrl, {
       waitUntil: 'load',
@@ -268,33 +267,28 @@ export const renderMapRenderJobLocally = async (
       .png()
       .toBuffer()
 
-    if (storage === 'local') {
-      await writeFile(outputPath, resizedBuffer)
-      await rm(tempPath, { force: true })
-    } else {
-      if (!options.remoteConfig) {
-        throw new Error('Remote mapRender persistence requires remoteConfig')
-      }
-      await persistRemoteRender({
-        stage,
-        objectKey: job.targetObjectKey,
-        contentType: 'image/png',
-        body: resizedBuffer.buffer.slice(
-          resizedBuffer.byteOffset,
-          resizedBuffer.byteOffset + resizedBuffer.byteLength,
-        ),
-        remoteConfig: options.remoteConfig,
-      })
-      await rm(tempPath, { force: true })
+    if (!options.remoteConfig) {
+      throw new Error('Map render persistence requires remoteConfig')
     }
+    await persistRemoteRender({
+      stage,
+      objectKey: job.targetObjectKey,
+      contentType: 'image/png',
+      body: resizedBuffer.buffer.slice(
+        resizedBuffer.byteOffset,
+        resizedBuffer.byteOffset + resizedBuffer.byteLength,
+      ),
+      remoteConfig: options.remoteConfig,
+    })
+    await rm(tempPath, { force: true })
 
     return {
       fileName,
       publicPath: `/${job.targetObjectKey}`,
       objectKey: job.targetObjectKey,
       publicUrl:
-        storage === 'local'
-          ? outputPath
+        stage === 'local'
+          ? getLocalRenderAssetPath(job)
           : resolveMapRenderAssetUrl(
               stage,
               {
@@ -336,26 +330,19 @@ export const generateRenderJobsLocally = async (
   const browser = await chromium.launch({
     headless: true,
   })
-  const storage = options.storage ?? 'local'
   const stage = options.stage ?? 'local'
   const force = options.force ?? false
 
   try {
     for (const [index, job] of jobs.entries()) {
       const isCurrent =
-        storage === 'local'
-          ? !force &&
-            (await access(getLocalRenderFilePath(job))
-              .then(() => true)
-              .catch(() => false))
-          : !force &&
-            !!options.remoteConfig &&
-            stage !== 'local' &&
-            (await doesRemoteRenderExist({
-              stage,
-              objectKey: job.targetObjectKey,
-              remoteConfig: options.remoteConfig,
-            }))
+        !force &&
+        !!options.remoteConfig &&
+        (await doesRemoteRenderExist({
+          stage,
+          objectKey: job.targetObjectKey,
+          remoteConfig: options.remoteConfig,
+        }))
 
       options.onProgress?.({
         job,
@@ -370,8 +357,8 @@ export const generateRenderJobsLocally = async (
           publicPath: `/${job.targetObjectKey}`,
           objectKey: job.targetObjectKey,
           publicUrl:
-            storage === 'local'
-              ? getLocalRenderFilePath(job)
+            stage === 'local'
+              ? getLocalRenderAssetPath(job)
               : resolveMapRenderAssetUrl(
                   stage,
                   {
@@ -387,7 +374,6 @@ export const generateRenderJobsLocally = async (
       } else {
         entries[job.targetObjectKey] = await renderMapRenderJobLocally(job, {
           browser,
-          storage,
           stage,
           remoteConfig: options.remoteConfig,
         })

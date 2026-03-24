@@ -46,7 +46,7 @@ export const getMapRenderStage = (environment?: string | null): PreviewStage => 
  * @returns Storage mode for the current environment.
  */
 export const getMapRenderStorageMode = (stage: PreviewStage): MapRenderStorageMode =>
-  stage === 'local' ? 'local-static' : 'r2'
+  'r2'
 
 /**
  * Builds the canonical object key for a generated preview asset.

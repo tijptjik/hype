@@ -25,6 +25,24 @@ import type { MapRenderJob } from '$lib/types'
 
 type RefreshMode = 'plan' | 'enqueue' | 'local-generate'
 
+const getRemoteConfig = (platform?: App.Platform) => {
+  const env = platform?.env
+
+  if (
+    !env?.CLOUDFLARE_ACCOUNT_ID ||
+    !env.R2_S3_ACCESS_KEY_ID ||
+    !env.R2_S3_SECRET_ACCESS_KEY
+  ) {
+    throw new Error('Map render persistence is not configured')
+  }
+
+  return {
+    accountId: env.CLOUDFLARE_ACCOUNT_ID,
+    accessKeyId: env.R2_S3_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_S3_SECRET_ACCESS_KEY,
+  }
+}
+
 const parseKinds = (url: URL): Array<'layers' | 'projects'> => {
   const rawKinds = url.searchParams.get('kinds') ?? 'layers,projects'
 
@@ -128,6 +146,8 @@ export const POST: RequestHandler = async ({ platform, request, url }) => {
     const startedAt = Date.now()
     const entries = await generateRenderJobsLocally(jobs, {
       baseUrl: publicOrigin,
+      stage: 'local',
+      remoteConfig: getRemoteConfig(platform),
       onProgress: ({ job, index, total, stage, entry }) => {
         if (stage === 'started') {
           console.log(

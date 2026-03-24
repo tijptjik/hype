@@ -82,29 +82,17 @@ const main = async (): Promise<void> => {
     throw new Error(`Unsupported --stage value: ${stage}`)
   }
 
-  if (storage === 'remote' && stage === 'local') {
-    throw new Error('Remote mapRender persistence requires --stage preview or --stage production')
-  }
-
   await loadLocalEnvForStage(stage)
 
-  const remoteConfig =
-    storage === 'remote'
-      ? {
-          accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? '',
-          accessKeyId: process.env.R2_S3_ACCESS_KEY_ID ?? '',
-          secretAccessKey: process.env.R2_S3_SECRET_ACCESS_KEY ?? '',
-        }
-      : undefined
+  const remoteConfig = {
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? '',
+    accessKeyId: process.env.R2_S3_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.R2_S3_SECRET_ACCESS_KEY ?? '',
+  }
 
-  if (
-    storage === 'remote' &&
-    (!remoteConfig?.accountId ||
-      !remoteConfig.accessKeyId ||
-      !remoteConfig.secretAccessKey)
-  ) {
+  if (!remoteConfig.accountId || !remoteConfig.accessKeyId || !remoteConfig.secretAccessKey) {
     throw new Error(
-      'Remote mapRender persistence requires CLOUDFLARE_ACCOUNT_ID, R2_S3_ACCESS_KEY_ID, and R2_S3_SECRET_ACCESS_KEY',
+      'Map render persistence requires CLOUDFLARE_ACCOUNT_ID, R2_S3_ACCESS_KEY_ID, and R2_S3_SECRET_ACCESS_KEY',
     )
   }
 

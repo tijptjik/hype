@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { rm } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 import process from 'node:process'
@@ -8,14 +8,13 @@ import { AwsClient } from 'aws4fetch'
 import { chromium } from '@playwright/test'
 import sharp from 'sharp'
 
-import type { MapRenderManifestEntry, PreviewStage } from '../../types'
+import type {
+  MapRenderManifestEntry,
+  MapRenderRemoteConfig,
+  PreviewStage,
+} from '../../types'
 import { buildMapStyleArtifacts } from './build'
 import { getMapStyleAssetRecord, type MapStyleKey } from './registry'
-import {
-  MAP_STYLE_RENDER_DIR,
-  getMapStyleRenderFilePath,
-  getMapStyleRenderManifestPath,
-} from './render.server'
 import {
   MAP_STYLE_RENDER_BASE_URL,
   MAP_STYLE_RENDER_CAPTURE_SIZE,
@@ -47,12 +46,12 @@ const PREVIEW_READY_TIMEOUT_MS = 45_000
 const PREVIEW_NAVIGATION_TIMEOUT_MS = 45_000
 const PREVIEW_FALLBACK_SETTLE_TIMEOUT_MS = 5_000
 const RENDER_PUBLIC_BUCKET_BY_STAGE = {
+  local: 'hype-assets-dev',
   preview: 'hype-assets-preview',
   production: 'hype-assets-prod',
 } as const
 
 const renderPromises = new Map<string, Promise<MapRenderManifestEntry>>()
-type MapStyleRenderManifest = Record<string, { hash: string }>
 
 type RenderMapStyleOptions = {
   baseUrl?: string
@@ -62,11 +61,7 @@ type RenderMapStyleOptions = {
   force?: boolean
   storage?: 'local' | 'remote'
   stage?: PreviewStage
-  remoteConfig?: {
-    accountId: string
-    accessKeyId: string
-    secretAccessKey: string
-  }
+  remoteConfig?: MapRenderRemoteConfig
   onProgress?: (event: {
     styleCode: string
     index: number
@@ -94,11 +89,11 @@ const encodeObjectKeyPath = (objectKey: string): string =>
 const getRenderPublicBucketName = (
   stage: PreviewStage,
 ): (typeof RENDER_PUBLIC_BUCKET_BY_STAGE)[keyof typeof RENDER_PUBLIC_BUCKET_BY_STAGE] => {
-  if (stage === 'preview' || stage === 'production') {
+  if (stage === 'local' || stage === 'preview' || stage === 'production') {
     return RENDER_PUBLIC_BUCKET_BY_STAGE[stage]
   }
 
-  throw new Error('Remote mapRender persistence requires preview or production stage')
+  throw new Error('Map render persistence requires a valid stage')
 }
 
 const persistRemoteRender = async (params: {
@@ -207,24 +202,6 @@ const ensureRenderServer = async (
   }
 }
 
-const readRenderManifest = async (): Promise<MapStyleRenderManifest> => {
-  try {
-    return JSON.parse(
-      await readFile(getMapStyleRenderManifestPath(), 'utf8'),
-    ) as MapStyleRenderManifest
-  } catch {
-    return {}
-  }
-}
-
-const writeRenderManifest = async (manifest: MapStyleRenderManifest): Promise<void> => {
-  await mkdir(MAP_STYLE_RENDER_DIR, { recursive: true })
-  await writeFile(
-    getMapStyleRenderManifestPath(),
-    `${JSON.stringify(manifest, null, 2)}\n`,
-  )
-}
-
 const buildRenderUrl = (baseUrl: string, style: string): string => {
   const url = new URL(`/headless/map-style-render/${style}`, baseUrl)
 
@@ -246,7 +223,6 @@ const renderMapStyleRender = async (
     process.env.MAP_STYLE_RENDER_BASE_URL ??
     MAP_STYLE_RENDER_BASE_URL
   const manageServer = options.manageServer ?? true
-  const storage = options.storage ?? 'local'
   const stage = options.stage ?? 'local'
 
   if (options.ensureArtifacts !== false) {
@@ -274,17 +250,12 @@ const renderMapStyleRender = async (
 
     const asset = await getMapStyleAssetRecord(styleCode as MapStyleKey)
     const sourceUrl = buildRenderUrl(baseUrl, styleCode)
-    const tempPath = path.join(MAP_STYLE_RENDER_DIR, `${styleCode}.capture.png`)
+    const tempPath = path.join('/tmp', `${styleCode}.capture.png`)
     const hash = asset.hash
     const objectKey = getMapStyleRenderObjectKey(styleCode, hash)
     const fileName = objectKey.split('/').pop() ?? `${hash}.png`
     const publicPath =
-      storage === 'local' ? getMapStyleRenderLocalPath(styleCode) : `/${objectKey}`
-    const outputPath = getMapStyleRenderFilePath(styleCode)
-
-    if (storage === 'local') {
-      await mkdir(MAP_STYLE_RENDER_DIR, { recursive: true })
-    }
+      stage === 'local' ? getMapStyleRenderLocalPath(styleCode) : `/${objectKey}`
 
     page.on('console', message => {
       if (message.type() !== 'error' && message.type() !== 'warning') {
@@ -370,34 +341,27 @@ const renderMapStyleRender = async (
       .png()
       .toBuffer()
 
-    if (storage === 'local') {
-      // Store the preview under the same hash-addressed object key shape used by remote storage.
-      await mkdir(path.dirname(outputPath), { recursive: true })
-      await writeFile(outputPath, resizedBuffer)
-      await rm(tempPath, { force: true })
-    } else {
-      if (!options.remoteConfig) {
-        throw new Error('Remote mapRender persistence requires remoteConfig')
-      }
-      await persistRemoteRender({
-        stage,
-        objectKey,
-        contentType: 'image/png',
-        body: resizedBuffer.buffer.slice(
-          resizedBuffer.byteOffset,
-          resizedBuffer.byteOffset + resizedBuffer.byteLength,
-        ),
-        remoteConfig: options.remoteConfig,
-      })
-      await rm(tempPath, { force: true })
+    if (!options.remoteConfig) {
+      throw new Error('Map render persistence requires remoteConfig')
     }
+    await persistRemoteRender({
+      stage,
+      objectKey,
+      contentType: 'image/png',
+      body: resizedBuffer.buffer.slice(
+        resizedBuffer.byteOffset,
+        resizedBuffer.byteOffset + resizedBuffer.byteLength,
+      ),
+      remoteConfig: options.remoteConfig,
+    })
+    await rm(tempPath, { force: true })
 
     const entry: MapRenderManifestEntry = {
       fileName,
       publicPath,
       objectKey,
       publicUrl:
-        storage === 'local'
+        stage === 'local'
           ? `${baseUrl.replace(/\/$/, '')}${publicPath}`
           : resolveMapStyleRenderUrl(stage, styleCode, hash),
       hash,
@@ -482,13 +446,18 @@ export const isMapStyleRenderGenerationPendingLocally = (styleCode: string): boo
  */
 export const doesMapStyleRenderExistLocally = async (
   styleCode: string,
+  options: {
+    remoteConfig: MapRenderRemoteConfig
+    stage?: PreviewStage
+  },
 ): Promise<boolean> => {
   try {
     const asset = await getMapStyleAssetRecord(styleCode as MapStyleKey)
-    await access(getMapStyleRenderFilePath(styleCode))
-    const manifest = await readRenderManifest()
-
-    return manifest[styleCode]?.hash === asset.hash
+    return await doesRemoteRenderExist({
+      stage: options.stage ?? 'local',
+      objectKey: getMapStyleRenderObjectKey(styleCode, asset.hash),
+      remoteConfig: options.remoteConfig,
+    })
   } catch {
     return false
   }
@@ -506,7 +475,6 @@ export const generateAllMapStyleRendersLocally = async (
   options: RenderMapStyleOptions = {},
 ): Promise<Record<string, MapRenderManifestEntry>> => {
   const force = options.force ?? false
-  const storage = options.storage ?? 'local'
   const stage = options.stage ?? 'local'
   const baseUrl =
     options.baseUrl ??
@@ -517,11 +485,6 @@ export const generateAllMapStyleRendersLocally = async (
     await buildMapStyleArtifacts()
   }
 
-  if (storage === 'local' && force) {
-    await rm(MAP_STYLE_RENDER_DIR, { recursive: true, force: true })
-  }
-
-  const manifest = storage === 'local' ? (force ? {} : await readRenderManifest()) : {}
   const previews: Record<string, MapRenderManifestEntry> = {}
   const server = await ensureRenderServer(baseUrl)
   const browser = await chromium.launch({
@@ -532,20 +495,13 @@ export const generateAllMapStyleRendersLocally = async (
     for (const [index, styleCode] of styleCodes.entries()) {
       const asset = await getMapStyleAssetRecord(styleCode as MapStyleKey)
       const isCurrent =
-        storage === 'local'
-          ? !force &&
-            (await access(getMapStyleRenderFilePath(styleCode))
-              .then(() => true)
-              .catch(() => false)) &&
-            manifest[styleCode]?.hash === asset.hash
-          : !force &&
-            !!options.remoteConfig &&
-            stage !== 'local' &&
-            (await doesRemoteRenderExist({
-              stage,
-              objectKey: getMapStyleRenderObjectKey(styleCode, asset.hash),
-              remoteConfig: options.remoteConfig,
-            }))
+        !force &&
+        !!options.remoteConfig &&
+        (await doesRemoteRenderExist({
+          stage,
+          objectKey: getMapStyleRenderObjectKey(styleCode, asset.hash),
+          remoteConfig: options.remoteConfig,
+        }))
 
       options.onProgress?.({
         styleCode,
@@ -558,12 +514,12 @@ export const generateAllMapStyleRendersLocally = async (
         previews[styleCode] = {
           fileName: `${styleCode}.png`,
           publicPath:
-            storage === 'local'
+            stage === 'local'
               ? getMapStyleRenderLocalPath(styleCode)
               : `/${getMapStyleRenderObjectKey(styleCode, asset.hash)}`,
           objectKey: getMapStyleRenderObjectKey(styleCode, asset.hash),
           publicUrl:
-            storage === 'local'
+            stage === 'local'
               ? `${baseUrl.replace(/\/$/, '')}${getMapStyleRenderLocalPath(styleCode)}`
               : resolveMapStyleRenderUrl(stage, styleCode, asset.hash),
           hash: asset.hash,
@@ -575,15 +531,8 @@ export const generateAllMapStyleRendersLocally = async (
           browser,
           manageServer: false,
           ensureArtifacts: false,
-          storage,
           stage,
         })
-      }
-
-      if (storage === 'local') {
-        manifest[styleCode] = {
-          hash: asset.hash,
-        }
       }
 
       options.onProgress?.({
@@ -593,10 +542,6 @@ export const generateAllMapStyleRendersLocally = async (
         stage: 'completed',
         entry: previews[styleCode],
       })
-    }
-
-    if (storage === 'local') {
-      await writeRenderManifest(manifest)
     }
   } finally {
     await browser.close()
