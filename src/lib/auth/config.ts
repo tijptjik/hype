@@ -25,10 +25,13 @@ export const authConfig = {
     'https://preview.hype.hk',
     // HUBS :: SUBDOMAINS
     'https://hkghostsigns.hype.hk',
+    'https://breadline.hype.hk',
     // HUBS :: DOMAINS
     'https://hkghostsigns.com',
+    'https://breadline.hk',
     // HUBS :: PREVIEW
-    'https://preview.hkghostsigns.com',
+    'https://hkghostsigns.preview.hype.hk',
+    'https://breadline.preview.hype.hk',
     // DEV
     'http://localhost:5173',
     'https://dove-main-tapir.ngrok-free.app',
