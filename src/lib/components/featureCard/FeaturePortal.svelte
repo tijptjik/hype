@@ -267,7 +267,7 @@ $effect(() => {
 <div
   id="feature-card-portal"
   bind:this={portalEl}
-  class="pointer-events-none relative h-50 w-50 overflow-visible pr-3 w-96:pr-12"
+  class="pointer-events-none relative -top-px h-50 w-50 overflow-visible pr-3 w-96:pr-12"
 >
   <svg
     class="pointer-events-none absolute inset-0 h-full w-full"

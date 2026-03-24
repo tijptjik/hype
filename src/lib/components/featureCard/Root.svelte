@@ -7,18 +7,28 @@ import { cubicInOut } from 'svelte/easing'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { PageState } from '$lib/enums'
 
 // CONTEXT
 let appCtx = getAppCtx()
 let omniCtx = getOmniCtx()
+let responsiveCtx = getResponsiveCtx()
 
 // STATE : PROPS
 let { children }: { children: any } = $props()
 
 // STATE : DERIVED
 let horizontalOffset = $derived(appCtx.getHorizontalOffset())
+let featureCardMaxWidth = $derived.by(() => {
+  const windowWidth = responsiveCtx.window.width
+
+  if (windowWidth >= 1080 + 840) return 1080
+  if (windowWidth >= 720 + 840) return 720
+
+  return null
+})
 
 // PAGE STATE HANDLING
 function handleOutroStart() {
@@ -126,8 +136,8 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
 
 {#if omniCtx.state.isCardOpen}
   <div
-    class="grow pointer-events-none relative z-20 mx-auto flex h-full w-full max-w-130 p-0 pb-23 duration-300 w-112:my-4 w-112:h-auto w-112:px-4"
-    style="transform: translateX({horizontalOffset}px);"
+    class="grow pointer-events-none relative z-20 mx-auto flex h-full w-full p-0 pb-23 duration-300 w-112:my-4 w-112:h-auto w-112:px-4"
+    style="transform: translateX({horizontalOffset}px); max-width: {featureCardMaxWidth ? `${featureCardMaxWidth}px` : '100%'};"
   >
     <!-- Shadow wrapper -->
     <div
@@ -142,6 +152,7 @@ export function conditionalTouchScroll(node: HTMLElement, options = { threshold:
         <div
           id="feature-card"
           class="relative flex h-full max-h-[calc(100dvh-156px)] w-full flex-col overflow-x-visible rounded-none px-0 shadow-xl w-112:max-h-[calc(100dvh-186px)] w-112:rounded-lg"
+          style="max-width: {featureCardMaxWidth ? `${featureCardMaxWidth}px` : '100%'};"
           in:scale={{
             duration: 300,
             delay: 0,

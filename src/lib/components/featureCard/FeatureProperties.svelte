@@ -31,12 +31,10 @@ const featureProperties = $derived(
 </script>
 
 <div
-  class="justify-flex-start dir-rtl pointer-events-auto flex h-48 flex-wrap items-start gap-2 overflow-y-auto overscroll-contain pl-3 pr-0 w-100:pl-6 w-120:gap-4"
+  class="dir-rtl pointer-events-auto grid h-48 grid-cols-2 items-start gap-2 overflow-y-auto overscroll-contain pl-3 pr-0 w-100:pl-6 w-120:gap-4 [@media(min-width:1920px)]:grid-cols-3"
 >
   {#each featureProperties as property (property.propertyId)}
-    <div
-      class="dir-ltr flex max-h-48 flex-[0_0_calc(50%-4px)] flex-col justify-evenly w-120:flex-[0_0_calc(50%-16px)]"
-    >
+    <div class="dir-ltr flex max-h-48 min-w-0 flex-col justify-evenly">
       <span class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
         {getI18n(property.property, 'label', userPreferences)}
       </span>
