@@ -16,6 +16,7 @@ import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
 import {
   authImageUpload as authImageUploadRemote,
   createImage as createImageRemote,
+  finalizeImageUpload as finalizeImageUploadRemote,
   updateImage as updateImageRemote,
 } from '$lib/api/server/image.remote'
 // NAVIGATION
@@ -127,21 +128,21 @@ export async function uploadAndProcessImage(
     meta: { isAdminRequest: true },
   })
 
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('metadata', JSON.stringify(metadata))
-
   const uploadResponse = await fetchFn(auth.uploadUrl, {
-    method: 'POST',
+    method: auth.method,
     headers: auth.headers,
-    body: formData,
+    body: file,
   })
 
   if (!uploadResponse.ok) {
     throw new Error(`Image upload failed: ${uploadResponse.statusText}`)
   }
 
-  const imageData = (await uploadResponse.json()) as Partial<ImageNew>
+  const imageData = (await finalizeImageUploadRemote({
+    token: auth.confirmToken,
+    metadata,
+    meta: { isAdminRequest: true },
+  })) as Partial<ImageNew>
 
   extendFeatureImage(
     imageData,
