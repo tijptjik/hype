@@ -551,27 +551,12 @@ export class ImageCtx {
           presentationMode: 'contain',
           createdAt: new Date().toISOString(),
           contributorId: null,
-          cdn: 'preview',
-          env: 'staging',
+          cdn: 'cloudflareR2',
+          env: 'local',
           cdnId: null,
           publicId: tempId,
           version: null,
-          originalFilename: file.name,
-          originalExtension: file.name.split('.').pop() || '',
-          format: file.type.split('/')[1] || 'jpg',
-          width: null,
-          height: null,
-          originalWidth: null,
-          originalHeight: null,
-          bytes: file.size,
-          cameraModel: null,
-          createdBy: null,
-          capturedAt: null,
-          latitude: null,
-          longitude: null,
-          credit: null,
           modifiedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
           preview,
           file,
         } as Image & { preview: string; file: File },
@@ -1879,7 +1864,10 @@ export class ImageCtx {
     if (!image) return
     let downloadUrl = ''
 
-    if (image.image.cdn.toLowerCase() === 'cloudinary') {
+    if (
+      image.image.cdn.toLowerCase() === 'cloudinary' ||
+      image.image.cdn.toLowerCase() === 'cloudflarer2'
+    ) {
       downloadUrl = getURLfromImage({ image, raw: true })
     } else {
       throw new Error('Unsupported CDN')
