@@ -1,17 +1,18 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
+import { PUBLIC_IMAGE_BASE_URL } from '$env/static/public'
 // I18N
 import { m } from '$lib/i18n'
 // COORDINATES
 import Coordinates from 'coordinate-parser'
 // UTILS
-import { capitalizeFirstLetter } from '$lib'
+import { capitalizeFirstLetter, resolveAppStage } from '$lib'
 // SERVICES
 import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
 // REMOTE
 import {
+  authImageUpload as authImageUploadRemote,
   createImage as createImageRemote,
-  getCloudinarySignature as getCloudinarySignatureRemote,
   updateImage as updateImageRemote,
 } from '$lib/api/server/image.remote'
 // NAVIGATION
@@ -24,7 +25,7 @@ import type { Feature } from '$lib/db/zod/schema/feature.types'
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { Id, ImageCtxConstructorOptions, ParamsToSign } from '$lib/types'
+import type { Id, ImageCtxConstructorOptions } from '$lib/types'
 import type {
   Image,
   ImageContextEnvelope,
@@ -36,8 +37,8 @@ import type {
   ImageDBBasic,
   Metadata,
   LngLat,
-  SignData,
   ImageNew,
+  ImageMetadataBasic,
 } from '$lib/db/zod/schema/image.types'
 // CONTEXT
 import type { ImageCtx } from '$lib/context/image.svelte'
@@ -114,32 +115,38 @@ export async function uploadAndProcessImage(
   },
   fetchFn: typeof fetch = fetch,
 ): Promise<ImageCtxEnvelope> {
-  // 1. Determine public path for Cloudinary
-  const { folder, public_id } = getPublicPathCloudinaryImage(uploadCtx)
-  const paramsToSign: ParamsToSign = {
-    folder,
-    media_metadata: 'true',
-    ...(uploadCtx.imageToReplace && public_id ? { public_id } : {}),
-  }
-
-  // 2. Fetch Cloudinary signature
-  const signData = await getCloudinarySignatureRemote({
-    paramsToSign: { ...paramsToSign },
+  const metadata = await buildBasicMetadataDocument(file)
+  const env = toImageEnv()
+  const auth = await authImageUploadRemote({
+    cdn: 'cloudflareR2',
+    env,
+    ctxType: uploadCtx.ctxType,
+    ctxId: uploadCtx.ctxId,
+    organisationId: uploadCtx.organisation?.id ?? undefined,
+    projectId: uploadCtx.project?.id ?? undefined,
+    filename: file.name,
+    contentType: file.type || 'application/octet-stream',
+    size: file.size,
+    replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
     meta: { isAdminRequest: true },
   })
 
-  // 3. Upload file to Cloudinary
-  const cloudinaryResponse = await createCloudinaryImage(
-    file,
-    paramsToSign,
-    signData,
-    fetchFn,
-  )
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('metadata', JSON.stringify(metadata))
 
-  // 4. Process Cloudinary response into our image format
-  const imageData = getImageFromCloudinaryResponse(cloudinaryResponse)
+  const uploadResponse = await fetchFn(auth.uploadUrl, {
+    method: 'POST',
+    headers: auth.headers,
+    body: formData,
+  })
 
-  // 5. Extend image data with feature/hierarchical info
+  if (!uploadResponse.ok) {
+    throw new Error(`Image upload failed: ${uploadResponse.statusText}`)
+  }
+
+  const imageData = (await uploadResponse.json()) as Partial<ImageNew>
+
   extendFeatureImage(
     imageData,
     uploadCtx,
@@ -147,7 +154,6 @@ export async function uploadAndProcessImage(
   )
   extendImageWithResource(imageData, uploadCtx)
 
-  // 6. Upsert image in the backend
   if (uploadCtx.imageToReplace) {
     const result = await updateImageRemote({
       id: uploadCtx.imageToReplace.image.id,
@@ -172,61 +178,54 @@ export async function uploadAndProcessImage(
 }
 
 // ═══════════════════════
-// 3. CLOUDINARY :: API
+// 3. UPLOAD / URL UTILS
 // ═══════════════════════
 
-/**
- * Uploads a file directly to Cloudinary.
- * @param file - The file to upload.
- * @param paramsToSign - Original parameters that were signed (folder, public_id if replacing).
- * @param signData - The signature data obtained from `serviceFetchCloudinarySignature`.
- * @param fetchFn - The fetch function to use for the API call.
- * @returns The Cloudinary API response.
- */
-export async function createCloudinaryImage(
+const toImageEnv = (): 'local' | 'preview' | 'production' =>
+  resolveAppStage(
+    PUBLIC_IMAGE_BASE_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : ''),
+  )
+
+const getImageDimensions = async (
   file: File,
-  paramsToSign: ParamsToSign, // folder, public_id (if any)
-  signData: SignData,
-  fetchFn: typeof fetch = fetch,
-): Promise<any> {
-  const url = getCloudinaryUploadEndpoint(signData.cloudname)
-  const formData = new FormData()
+): Promise<{ width: number | null; height: number | null }> =>
+  await new Promise(resolve => {
+    const objectUrl = URL.createObjectURL(file)
+    const image = new Image()
 
-  formData.append('file', file)
-  formData.append('folder', paramsToSign.folder)
-  formData.append('api_key', signData.apikey)
-  formData.append('timestamp', signData.timestamp)
-  formData.append('signature', signData.signature)
-  formData.append('media_metadata', 'true')
+    image.onload = () => {
+      resolve({
+        width: image.naturalWidth || null,
+        height: image.naturalHeight || null,
+      })
+      URL.revokeObjectURL(objectUrl)
+    }
 
-  if (paramsToSign.public_id) {
-    formData.append('public_id', paramsToSign.public_id)
-  }
+    image.onerror = () => {
+      resolve({ width: null, height: null })
+      URL.revokeObjectURL(objectUrl)
+    }
 
-  const response = await fetchFn(url, {
-    method: 'POST',
-    body: formData,
+    image.src = objectUrl
   })
 
-  if (!response.ok) {
-    const errorData = await response.text()
-    console.error('Cloudinary upload failed:', errorData)
-    throw new Error(`Cloudinary upload failed: ${response.statusText}`)
+export async function buildBasicMetadataDocument(
+  file: File,
+): Promise<ImageMetadataBasic & { metadata?: Record<string, string> | null }> {
+  const { width, height } = await getImageDimensions(file)
+  return {
+    originalFilename: file.name,
+    originalExtension: file.name.split('.').pop()?.toLowerCase() ?? null,
+    originalWidth: width,
+    originalHeight: height,
+    cameraModel: null,
+    capturedAt: null,
+    credit: null,
+    latitude: null,
+    longitude: null,
+    metadata: null,
   }
-  return response.json()
-}
-
-// ═══════════════════════
-// 4. CLOUDINARY :: UTILS
-// ═══════════════════════
-
-/**
- * Generates the Cloudinary upload endpoint URL.
- * @param cloudname - The Cloudinary cloud name.
- * @returns The upload URL string.
- */
-export function getCloudinaryUploadEndpoint(cloudname: string): string {
-  return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`
 }
 
 /**
@@ -269,15 +268,22 @@ export function getURLfromImage(opts: {
     return image.preview
   }
 
+  const baseUrl = PUBLIC_IMAGE_BASE_URL || ''
   const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`
+
+  if (image.cdn === 'cloudflareR2') {
+    return raw
+      ? `${baseUrl}/${image.env}/image/upload/v${image.version}/${image.publicId}`
+      : `${baseUrl}/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`
+  }
 
   if (image.cdn === 'cloudinary') {
     return raw
       ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
       : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`
-  } else {
-    throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)
   }
+
+  throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)
 }
 
 /**
@@ -404,94 +410,6 @@ export function getFeatureImageProviderOptions(params: {
           } as never)
         : undefined,
   }
-}
-
-/**
- * Transforms a Cloudinary API response into a partial NewImageAPI object.
- * @param response - The raw Cloudinary API response.
- * @returns A partial NewImageAPI object.
- */
-export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew> {
-  const metadata = response.image_metadata || {} // Ensure metadata is an object
-  return {
-    cdn: 'cloudinary' as const,
-    env: response.env,
-    cdnId: response.asset_id,
-    publicId: response.public_id,
-    version: response.version,
-    originalFilename: response.original_filename,
-    originalExtension: response.format,
-    originalWidth: response.width,
-    originalHeight: response.height,
-    metadata: metadata,
-    cameraModel: getCameraFromMetadata(metadata),
-    capturedAt: getCapturedAtFromMetadata(metadata),
-    credit: getCreditFromMetadata(metadata),
-    ...getCoordinatesFromMetadata(metadata),
-  }
-}
-
-/**
- * Fetches the signature required for Cloudinary upload from the backend.
- * @param paramsToSign - Parameters to be signed for the Cloudinary upload.
- * @returns The signature data from the backend.
- */
-/**
- * Determines the public path for Cloudinary upload based on resource type.
- * @param ctx - The upload context containing resource type, IDs and optional parent entities.
- * @returns An object with folder and public_id (which can be null).
- * @throws Error if ctx are invalid for determining path.
- */
-export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
-  folder: string
-  public_id: string | null
-} {
-  if (ctx.ctxType === ImageContextResource.hub) {
-    if (!ctx.hub?.code) {
-      console.error('Missing hub code for hub image path:', ctx)
-      throw new Error('Missing hub code for hub image path')
-    }
-    return {
-      folder: `/+/hubs/${ctx.hub.code}`,
-      public_id: ctx.ctxId,
-    }
-  } else if (ctx.ctxType === ImageContextResource.organisation && ctx.organisation) {
-    return {
-      folder: `/${ctx.organisation.code}`,
-      public_id: ctx.ctxId,
-    }
-  } else if (
-    ctx.ctxType === ImageContextResource.project &&
-    ctx.project &&
-    ctx.organisation
-  ) {
-    return {
-      folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: ctx.ctxId,
-    }
-  } else if (
-    ctx.ctxType === ImageContextResource.feature &&
-    ctx.project &&
-    ctx.organisation &&
-    ctx.imageToReplace
-  ) {
-    return {
-      folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: ctx.imageToReplace.image.publicId.split('/').pop()!,
-    }
-  } else if (
-    ctx.ctxType === ImageContextResource.feature &&
-    ctx.project &&
-    ctx.organisation
-  ) {
-    // New feature image, no public_id for replacement
-    return {
-      folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: null,
-    }
-  }
-  console.error('Invalid ctx for getPublicPath:', ctx)
-  throw new Error('Invalid ctx for getPublicPath')
 }
 
 // ═══════════════════════
