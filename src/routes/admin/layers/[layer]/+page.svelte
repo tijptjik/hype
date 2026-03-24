@@ -27,8 +27,8 @@ import {
   updateFormData,
 } from '$lib/client/services/form'
 import {
-  createMapPreviewTitleMenuItem,
-  refreshMapPreview,
+  createMapRenderTitleMenuItem,
+  refreshMapRender,
 } from '$lib/client/services/map'
 import {
   getLayerSubmitUpdates,
@@ -235,7 +235,7 @@ let hasAutoEnteredEditForNew = $state(false)
 let lastMergedProjectId = $state<string | null>(null)
 let prefetchedProjectPropertiesByProjectId = $state<Record<string, Property[]>>({})
 let settledLayerRef = $state<string | null>(null)
-let isRefreshingMapPreview = $state(false)
+let isRefreshingMapRender = $state(false)
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
   canPublish: true,
@@ -314,10 +314,10 @@ const isFieldsFacet = $derived(activeFacet === 'fields')
 const layerTitleMenuItems = $derived.by(() =>
   layer?.data?.id
     ? [
-        createMapPreviewTitleMenuItem({
-          isRefreshing: isRefreshingMapPreview,
+        createMapRenderTitleMenuItem({
+          isRefreshing: isRefreshingMapRender,
           onSelect: () => {
-            void refreshLayerMapPreview()
+            void refreshLayerMapRender()
           },
         }),
       ]
@@ -818,13 +818,13 @@ async function refreshLayer(refOverride?: string): Promise<LayerGetState> {
   return nextLayer
 }
 
-async function refreshLayerMapPreview(): Promise<void> {
-  await refreshMapPreview({
+async function refreshLayerMapRender(): Promise<void> {
+  await refreshMapRender({
     kind: 'layers',
     id: layer?.data?.id,
-    isRefreshing: isRefreshingMapPreview,
+    isRefreshing: isRefreshingMapRender,
     setRefreshing: next => {
-      isRefreshingMapPreview = next
+      isRefreshingMapRender = next
     },
   })
 }
@@ -955,7 +955,7 @@ $effect(() => {
       lastMergedProjectId = null
       prefetchedProjectPropertiesByProjectId = {}
       settledLayerRef = null
-      isRefreshingMapPreview = false
+      isRefreshingMapRender = false
     },
     setFacetForRef: nextRef => {
       untrack(() => {

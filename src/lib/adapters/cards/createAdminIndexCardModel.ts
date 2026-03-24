@@ -36,11 +36,11 @@ function getPreviewImageSrc(
   }
 
   if (resourceType === FirstClassResource.project) {
-    return `/api/mapPreviews/projects/${entity.id}/asset`
+    return `/api/mapRenders/projects/${entity.id}/asset`
   }
 
   if (resourceType === FirstClassResource.layer) {
-    return `/api/mapPreviews/layers/${entity.id}/asset`
+    return `/api/mapRenders/layers/${entity.id}/asset`
   }
 
   return null

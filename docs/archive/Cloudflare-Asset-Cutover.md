@@ -87,16 +87,16 @@ bunx wrangler secret put ASSET_ANALYTICS_READ_TOKEN --config workers/asset-servi
 Preview render/scheduler secrets:
 
 ```sh
-bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-preview-renderer/wrangler.toml --env preview
-bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-preview-renderer/wrangler.toml --env production
-bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-preview-renderer/wrangler.toml --env preview
-bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-preview-renderer/wrangler.toml --env production
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --config workers/map-preview-scheduler/wrangler.toml --env preview
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --config workers/map-preview-scheduler/wrangler.toml --env production
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --env preview
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --env production
-bunx wrangler secret put MAP_PREVIEW_RENDER_TOKEN --env preview
-bunx wrangler secret put MAP_PREVIEW_RENDER_TOKEN --env production
+bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-render-service/wrangler.toml --env preview
+bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-render-service/wrangler.toml --env production
+bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-render-service/wrangler.toml --env preview
+bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-render-service/wrangler.toml --env production
+bunx wrangler secret put MAP_REFRESH_TOKEN --config workers/map-render-scheduler/wrangler.toml --env preview
+bunx wrangler secret put MAP_REFRESH_TOKEN --config workers/map-render-scheduler/wrangler.toml --env production
+bunx wrangler secret put MAP_REFRESH_TOKEN --env preview
+bunx wrangler secret put MAP_REFRESH_TOKEN --env production
+bunx wrangler secret put MAP_RENDER_TOKEN --env preview
+bunx wrangler secret put MAP_RENDER_TOKEN --env production
 ```
 
 ## 6. Migrate raw objects into the new buckets

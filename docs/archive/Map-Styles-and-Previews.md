@@ -90,7 +90,7 @@ The app treats style JSON and preview PNGs as separate concerns.
 This separation matters:
 
 - `api/mapStyles` is for style JSON responses only.
-- `api/mapPreviews` is for preview image orchestration, planning, and asset serving.
+- `api/mapRenders` is for preview image orchestration, planning, and asset serving.
 
 ## Map Previews
 
@@ -107,24 +107,24 @@ Current preview endpoints:
     `/mapRender/styles/{styleCode}.png`
 - Layer preview routes
   - asset:
-    `GET /api/mapPreviews/layers/[layer]/asset`
+    `GET /api/mapRenders/layers/[layer]/asset`
   - render payload:
-    `GET /api/mapPreviews/layers/[layer]/render`
+    `GET /api/mapRenders/layers/[layer]/render`
   - single refresh:
-    `POST /api/mapPreviews/layers/[layer]/refresh`
+    `POST /api/mapRenders/layers/[layer]/refresh`
 - Project preview routes
   - asset:
-    `GET /api/mapPreviews/projects/[project]/asset`
+    `GET /api/mapRenders/projects/[project]/asset`
   - render payload:
-    `GET /api/mapPreviews/projects/[project]/render`
+    `GET /api/mapRenders/projects/[project]/render`
   - single refresh:
-    `POST /api/mapPreviews/projects/[project]/refresh`
+    `POST /api/mapRenders/projects/[project]/refresh`
 - Batch planning / refresh
-  - `POST /api/mapPreviews/refresh`
+  - `POST /api/mapRenders/refresh`
 - Headless render pages
-  - `GET /headless/map-style-preview/[style]`
-  - `GET /headless/map-layer-preview/[layer]`
-  - `GET /headless/map-project-preview/[project]`
+  - `GET /headless/map-style-render/[style]`
+  - `GET /headless/map-layer-render/[layer]`
+  - `GET /headless/map-project-render/[project]`
 
 Important current behavior:
 
@@ -187,7 +187,7 @@ bun run build:cf:production
   - style asset base URL: local app static files under `/mapStyles`
   - style preview asset path: `/mapRender/styles/{styleCode}.png`
   - layer/project preview local files: `/tmp/hype-map-previews/...`
-  - layer/project asset delivery: app routes under `/api/mapPreviews/.../asset`
+  - layer/project asset delivery: app routes under `/api/mapRenders/.../asset`
   - queue binding exists locally in Wrangler config, but local preview commands render
     directly instead of enqueueing
 - `preview`
@@ -233,16 +233,16 @@ Three workers currently participate in the preview pipeline:
   - serves generated `static/mapStyles` artifacts
   - handles `api/mapStyles/[key]` style requests
   - handles preview planning, asset routes, render payload routes, and local refresh routes
-  - enqueues remote preview render jobs through `PREVIEW_RENDER_QUEUE`
+  - enqueues remote preview render jobs through `MAP_RENDER_QUEUE`
 - Preview renderer worker:
-  [`workers/map-preview-renderer/wrangler.toml`](/home/io/code/hype/workers/map-preview-renderer/wrangler.toml)
+  [`workers/map-render-service/wrangler.toml`](/home/io/code/hype/workers/map-render-service/wrangler.toml)
   - consumes queue messages
   - calls Cloudflare Browser Rendering's screenshot API
   - uploads immutable PNGs into R2
 - Preview scheduler worker:
-  [`workers/map-preview-scheduler/wrangler.toml`](/home/io/code/hype/workers/map-preview-scheduler/wrangler.toml)
+  [`workers/map-render-scheduler/wrangler.toml`](/home/io/code/hype/workers/map-render-scheduler/wrangler.toml)
   - runs on cron
-  - calls `POST /api/mapPreviews/refresh?mode=enqueue`
+  - calls `POST /api/mapRenders/refresh?mode=enqueue`
   - triggers periodic layer/project regeneration planning
 
 The queue payload contract lives in
@@ -268,40 +268,40 @@ bunx wrangler queues create hype-map-preview-render-jobs-prod
 Upload renderer worker secrets:
 
 ```sh
-bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-preview-renderer/wrangler.toml --env preview
-bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-preview-renderer/wrangler.toml --env production
-bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-preview-renderer/wrangler.toml --env preview
-bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-preview-renderer/wrangler.toml --env production
+bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-render-service/wrangler.toml --env preview
+bunx wrangler secret put BROWSER_RENDERING_API_TOKEN --config workers/map-render-service/wrangler.toml --env production
+bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-render-service/wrangler.toml --env preview
+bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/map-render-service/wrangler.toml --env production
 ```
 
 Upload app worker secrets:
 
 ```sh
-bunx wrangler secret put MAP_PREVIEW_RENDER_TOKEN --env preview
-bunx wrangler secret put MAP_PREVIEW_RENDER_TOKEN --env production
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --env preview
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --env production
+bunx wrangler secret put MAP_RENDER_TOKEN --env preview
+bunx wrangler secret put MAP_RENDER_TOKEN --env production
+bunx wrangler secret put MAP_REFRESH_TOKEN --env preview
+bunx wrangler secret put MAP_REFRESH_TOKEN --env production
 ```
 
 Upload scheduler worker secrets:
 
 ```sh
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --config workers/map-preview-scheduler/wrangler.toml --env preview
-bunx wrangler secret put MAP_PREVIEW_REFRESH_TOKEN --config workers/map-preview-scheduler/wrangler.toml --env production
+bunx wrangler secret put MAP_REFRESH_TOKEN --config workers/map-render-scheduler/wrangler.toml --env preview
+bunx wrangler secret put MAP_REFRESH_TOKEN --config workers/map-render-scheduler/wrangler.toml --env production
 ```
 
 Deploy the preview renderer worker:
 
 ```sh
-bunx wrangler deploy --config workers/map-preview-renderer/wrangler.toml --env preview
-bunx wrangler deploy --config workers/map-preview-renderer/wrangler.toml --env production
+bunx wrangler deploy --config workers/map-render-service/wrangler.toml --env preview
+bunx wrangler deploy --config workers/map-render-service/wrangler.toml --env production
 ```
 
 Deploy the preview scheduler worker:
 
 ```sh
-bunx wrangler deploy --config workers/map-preview-scheduler/wrangler.toml --env preview
-bunx wrangler deploy --config workers/map-preview-scheduler/wrangler.toml --env production
+bunx wrangler deploy --config workers/map-render-scheduler/wrangler.toml --env preview
+bunx wrangler deploy --config workers/map-render-scheduler/wrangler.toml --env production
 ```
 
 Deploy the app worker:
@@ -314,7 +314,7 @@ bun run deploy:prod
 Useful scheduler dev/test commands:
 
 ```sh
-bunx wrangler dev --config workers/map-preview-scheduler/wrangler.toml --test-scheduled
+bunx wrangler dev --config workers/map-render-scheduler/wrangler.toml --test-scheduled
 curl "http://localhost:8787/__scheduled?cron=0+*+*+*+*"
 ```
 
@@ -335,22 +335,22 @@ curl "http://localhost:8787/__scheduled?cron=0+*+*+*+*"
 
 1. Persist the project or layer change.
 2. Compute the effective preview hash from the current render inputs.
-3. Build a `PreviewRenderJob`.
+3. Build a `MapRenderJob`.
 4. Local:
    - open the headless route in Playwright
    - capture the preview
    - write it under `/tmp/hype-map-previews/...`
 5. Preview / production:
-   - enqueue the job through the app worker's `PREVIEW_RENDER_QUEUE` binding
+   - enqueue the job through the app worker's `MAP_RENDER_QUEUE` binding
    - let the preview renderer worker capture and upload the PNG into R2
-6. Serve the preview through `GET /api/mapPreviews/{layers|projects}/[id]/asset`,
+6. Serve the preview through `GET /api/mapRenders/{layers|projects}/[id]/asset`,
    which computes the current hash live and resolves the correct local file or remote
    immutable URL.
 
 ### Scheduled Regeneration Flow
 
 1. The scheduler worker runs on cron.
-2. It calls `POST /api/mapPreviews/refresh?mode=enqueue`.
+2. It calls `POST /api/mapRenders/refresh?mode=enqueue`.
 3. The app worker plans layer/project preview jobs whose effective inputs changed
    within the configured time window.
 4. The app enqueues only the relevant preview jobs.

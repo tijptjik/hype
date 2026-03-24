@@ -48,8 +48,8 @@ database_id = "6757bbf2-ac2c-4323-b73a-0a48f0c41d62"
 migrations_dir = "migrations"
 
 [[queues.producers]]
-binding = "PREVIEW_RENDER_QUEUE"
-queue = "hype-map-preview-render-jobs-local"
+binding = "MAP_RENDER_QUEUE"
+queue = "hype-map-render-jobs-local"
 
 [[r2_buckets]]
 binding = "ASSET_RAW_DEV"
@@ -129,8 +129,8 @@ database_name = "hype-db-prod"
 database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
 
 [[env.production.queues.producers]]
-binding = "PREVIEW_RENDER_QUEUE"
-queue = "hype-map-preview-render-jobs-prod"
+binding = "MAP_RENDER_QUEUE"
+queue = "hype-map-render-jobs-prod"
 
 [[env.production.r2_buckets]]
 binding = "ASSET_RAW_DEV"
@@ -206,8 +206,8 @@ database_name = "hype-db-preview"
 database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
 
 [[env.preview.queues.producers]]
-binding = "PREVIEW_RENDER_QUEUE"
-queue = "hype-map-preview-render-jobs-preview"
+binding = "MAP_RENDER_QUEUE"
+queue = "hype-map-render-jobs-preview"
 
 [[env.preview.r2_buckets]]
 binding = "ASSET_RAW_DEV"

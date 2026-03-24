@@ -245,18 +245,26 @@ export type NestedRelations = {
 
 export type PreviewStage = 'local' | 'preview' | 'production'
 
-export type PreviewAssetKind = 'styles' | 'layers' | 'projects'
+export type MapRenderAssetKind = 'styles' | 'layers' | 'projects'
 
-export type PreviewStorageMode = 'local-static' | 'r2'
+export type MapRenderStorageMode = 'local-static' | 'r2'
 
-export type PreviewAssetLocator = {
-  kind: PreviewAssetKind
+export type MapRenderPersistenceTarget = 'local' | 'remote'
+
+export type MapRenderRemoteConfig = {
+  accountId: string
+  accessKeyId: string
+  secretAccessKey: string
+}
+
+export type MapRenderAssetLocator = {
+  kind: MapRenderAssetKind
   identifier: string
   hash: string
   extension?: 'png'
 }
 
-export type PreviewManifestEntry = {
+export type MapRenderManifestEntry = {
   fileName: string
   publicPath: string
   objectKey: string
@@ -265,8 +273,8 @@ export type PreviewManifestEntry = {
   sourceUrl: string
 }
 
-export type PreviewRenderJob = {
-  kind: PreviewAssetKind
+export type MapRenderJob = {
+  kind: MapRenderAssetKind
   identifier: string
   hash: string
   sourceUrl: string

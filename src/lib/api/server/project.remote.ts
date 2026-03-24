@@ -94,7 +94,7 @@ import {
   normalizeProjectLicense,
 } from '$lib/db/services/licence'
 import { isMapStyleKey } from '$lib/map/styles'
-import { resolveMapStylePreviewPathForKey } from '$lib/map/styles/preview.shared'
+import { resolveMapStyleRenderPathForKey } from '$lib/map/styles/render.shared'
 // SCHEMA
 import {
   GetProjectMapStylesSchema,
@@ -376,7 +376,7 @@ export const getProjectMapStylesQuery = guardedQuery(
         rows.map(async row => ({
           ...row,
           previewImagePath: isMapStyleKey(row.code)
-            ? await resolveMapStylePreviewPathForKey(environment, row.code)
+            ? await resolveMapStyleRenderPathForKey(environment, row.code)
             : null,
         })),
       )

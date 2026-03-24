@@ -7,14 +7,14 @@
    Serialize the resolved payload in a stable way and hash that. The hash should change only when the visual output can change.
 
 5. Add a dedicated headless preview route.
-   Create something like `/headless/map-layer-preview/[layerId]` that renders only the deterministic preview surface, no app chrome, and emits the same ready marker used by the current `mapRender/styles` renderer flow.
+   Create something like `/headless/map-layer-render/[layerId]` that renders only the deterministic preview surface, no app chrome, and emits the same ready marker used by the current `mapRender/styles` renderer flow.
 
 6. Extend the queue job builder for layers.
    Add a layer-specific job builder that:
    - computes the layer preview hash
    - builds the headless render URL using `PUBLIC_ORIGIN`
    - writes object keys as `mapRender/layers/{layerId}/{hash}.png`
-   - fits under the `api/mapPreviews` namespace, where `mapRender/styles` backs the built-in style previews
+   - fits under the `api/mapRenders` namespace, where `mapRender/styles` backs the built-in style previews
 
 7. Add enqueue points on layer mutations.
    After successful persistence of layer style/composition changes:
@@ -41,6 +41,6 @@
    - route/consumer tests for headless readiness and queue payload handling
 
 12. Only after layers, repeat the same pattern for projects.
-   Projects should reuse the same preview-state model and pipeline, with a different effective render-payload resolver and object key namespace, likely under `api/mapPreviews/project/[project]`.
+   Projects should reuse the same preview-state model and pipeline, with a different effective render-payload resolver and object key namespace, likely under `api/mapRenders/project/[project]`.
 
 When you want to start, I’d begin with steps 2 through 6 together so we get one thin end-to-end vertical slice before touching the mutation flows.

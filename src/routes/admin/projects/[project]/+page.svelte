@@ -44,8 +44,8 @@ import {
   updateUserRoleSelection,
 } from '$lib/client/services/form'
 import {
-  createMapPreviewTitleMenuItem,
-  refreshMapPreview,
+  createMapRenderTitleMenuItem,
+  refreshMapRender,
 } from '$lib/client/services/map'
 import { getNameForToast } from '$lib/client/services/resource'
 import {
@@ -1585,7 +1585,7 @@ $effect(() => {
 const activeProjectImage = $derived(
   (activeProjectData?.image ?? null) as ImageCtxEnvelope | null,
 )
-let isRefreshingMapPreview = $state(false)
+let isRefreshingMapRender = $state(false)
 const imageProviderProps = $derived.by(() => {
   const projectData = activeProjectData
   const isValid = isCurrentRefLoaded && Boolean(projectData?.id)
@@ -1658,10 +1658,10 @@ const canEditImageDropzone = $derived(
 const projectTitleMenuItems = $derived.by(() =>
   activeProjectData?.id
     ? [
-        createMapPreviewTitleMenuItem({
-          isRefreshing: isRefreshingMapPreview,
+        createMapRenderTitleMenuItem({
+          isRefreshing: isRefreshingMapRender,
           onSelect: () => {
-            void refreshProjectMapPreview()
+            void refreshProjectMapRender()
           },
         }),
       ]
@@ -2217,13 +2217,13 @@ function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
   setProjectImagePresentationMode(committedProject, nextMode)
 }
 
-async function refreshProjectMapPreview(): Promise<void> {
-  await refreshMapPreview({
+async function refreshProjectMapRender(): Promise<void> {
+  await refreshMapRender({
     kind: 'projects',
     id: activeProjectData?.id,
-    isRefreshing: isRefreshingMapPreview,
+    isRefreshing: isRefreshingMapRender,
     setRefreshing: next => {
-      isRefreshingMapPreview = next
+      isRefreshingMapRender = next
     },
   })
 }
@@ -2250,7 +2250,7 @@ $effect(() => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
       settledProjectRef = null
-      isRefreshingMapPreview = false
+      isRefreshingMapRender = false
       fieldRemoveMode = false
       showDisabledFields = false
       selectedUsersById = {}

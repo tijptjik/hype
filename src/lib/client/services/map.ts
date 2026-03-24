@@ -16,8 +16,8 @@ import type { AppCtx } from '$lib/context/app.svelte'
 //    - getActiveMapStyleCode(appCtx: AppCtx): string | null
 //
 // 2. MAP PREVIEW ACTIONS
-//    - createMapPreviewTitleMenuItem(...)
-//    - refreshMapPreview(...)
+//    - createMapRenderTitleMenuItem(...)
+//    - refreshMapRender(...)
 //
 // ═══════════════════════
 
@@ -74,15 +74,15 @@ export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   return null
 }
 
-type MapPreviewKind = 'projects' | 'layers'
+type MapRenderKind = 'projects' | 'layers'
 
 /**
- * Resolves the localized singular resource label used by map-preview feedback.
+ * Resolves the localized singular resource label used by map-render feedback.
  *
  * @param kind - Preview resource collection kind.
  * @returns Localized singular label for the preview target resource.
  */
-function getMapPreviewKindLabel(kind: MapPreviewKind): string {
+function getMapRenderKindLabel(kind: MapRenderKind): string {
   return kind === 'projects'
     ? m.admin__map_preview_kind_project()
     : m.admin__map_preview_kind_layer()
@@ -94,7 +94,7 @@ function getMapPreviewKindLabel(kind: MapPreviewKind): string {
  * @param params - Preview action state and callback.
  * @returns Header dropdown item for the map preview action.
  */
-export function createMapPreviewTitleMenuItem(params: {
+export function createMapRenderTitleMenuItem(params: {
   isRefreshing: boolean
   onSelect: () => void
 }): HeaderTitleMenuItemConfig {
@@ -116,14 +116,14 @@ export function createMapPreviewTitleMenuItem(params: {
  * @param params - Preview target and the setter used to mirror in-flight state.
  * @returns Promise that resolves after the preview request settles.
  */
-export async function refreshMapPreview(params: {
-  kind: MapPreviewKind
+export async function refreshMapRender(params: {
+  kind: MapRenderKind
   id: string | null | undefined
   isRefreshing: boolean
   setRefreshing: (next: boolean) => void
 }): Promise<void> {
   const identifier = params.id?.trim()
-  const kindLabel = getMapPreviewKindLabel(params.kind)
+  const kindLabel = getMapRenderKindLabel(params.kind)
 
   if (!identifier || params.isRefreshing) {
     return
@@ -133,7 +133,7 @@ export async function refreshMapPreview(params: {
 
   try {
     const response = await fetch(
-      `/api/mapPreviews/${params.kind}/${identifier}/refresh`,
+      `/api/mapRenders/${params.kind}/${identifier}/refresh`,
       {
         method: 'POST',
       },
