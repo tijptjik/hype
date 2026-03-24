@@ -69,6 +69,12 @@ declare global {
         DB: MiniflareD1Database
         ASSETS: Fetcher
         PREVIEW_RENDER_QUEUE: Queue<PreviewRenderJob>
+        IMAGE_ORIGINALS_LOCAL: R2Bucket
+        IMAGE_ORIGINALS_PREVIEW: R2Bucket
+        IMAGE_ORIGINALS_PRODUCTION: R2Bucket
+        IMAGE_DERIVED_LOCAL: R2Bucket
+        IMAGE_DERIVED_PREVIEW: R2Bucket
+        IMAGE_DERIVED_PRODUCTION: R2Bucket
         // AUTH
         AUTH_SECRET: string
         AUTH_GOOGLE_ID: string
@@ -87,6 +93,10 @@ declare global {
         PUBLIC_GIPHY_KEY: string
         PUBLIC_ORIGIN: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string
+        PUBLIC_IMAGE_BASE_URL: string
+        CLOUDFLARE_ACCOUNT_ID: string
+        R2_S3_ACCESS_KEY_ID: string
+        R2_S3_SECRET_ACCESS_KEY: string
         MAP_PREVIEW_REFRESH_TOKEN: string
         MAP_PREVIEW_RENDER_TOKEN: string
       }
