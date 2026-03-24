@@ -7,7 +7,7 @@ import { isRelevantHubAdmin } from '$lib/api/services/authz'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { toImageEnvelope } from '$lib/db/services/image'
+import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
   createFeature,
@@ -251,7 +251,7 @@ const toFeatureImageEnvelope = (
   const image = canonical?.image
   const selected = image
     ? toImageEnvelope(
-        image,
+        toNormalizedImageRecord(image),
         profile === 'admin' ? 'admin' : profile,
         ImageContextResource.feature,
         featureId,
@@ -268,7 +268,7 @@ const toFeatureImageEnvelope = (
       )
       .map(imageRow =>
         toImageEnvelope(
-          imageRow.image,
+          toNormalizedImageRecord(imageRow.image),
           profile === 'admin' ? 'admin' : 'detail',
           ImageContextResource.feature,
           featureId,

@@ -16,7 +16,7 @@ import { isRelevantHubAdmin } from '$lib/api/services/authz'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { toImageEnvelope } from '$lib/db/services/image'
+import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
   ProjectAdminProfileAPI,
@@ -269,7 +269,7 @@ const toProfileResponseShape = async (
     })),
     image: row.image
       ? toImageEnvelope(
-          row.image as Image,
+          toNormalizedImageRecord(row.image as Image),
           imageProfile,
           ImageContextResource.project,
           row.id,

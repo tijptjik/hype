@@ -26,6 +26,8 @@ import { insert, insertRelated, update, updateRelated } from '../crud'
 import {
   ImageContextResource,
   ImageContextResourceExtended,
+  ImageCDN,
+  ImageEnv,
   ImageIntentPublic,
 } from '$lib/enums'
 // TYPES
@@ -519,14 +521,36 @@ export const applyResourceContextConstraints = (
 //  5. UTILS :: RESHAPE
 // ═══════════════════════
 
+export const toNormalizedImageRecord = (value: Image): Image => {
+  const nextValue = { ...value }
+
+  // Coerce legacy Cloudinary records onto the new provider contract until the data
+  // migration rewrites persisted rows.
+  if (nextValue.cdn === ImageCDN.cloudinary) {
+    nextValue.cdn = ImageCDN.cloudflareR2
+  }
+
+  if (
+    nextValue.env !== ImageEnv.local &&
+    nextValue.env !== ImageEnv.preview &&
+    nextValue.env !== ImageEnv.production
+  ) {
+    nextValue.env = ImageEnv.production
+  }
+
+  return nextValue
+}
+
 const toProfileResponseShape = <P extends ImageProfile>(
   value: Image,
   profile: P,
 ): ImageEntityByProfile<P> => {
+  const normalizedValue = toNormalizedImageRecord(value)
+
   if (profile === 'list' || profile === 'card' || profile === 'detail') {
-    return ImageListProfileAPI.parse(value) as ImageEntityByProfile<P>
+    return ImageListProfileAPI.parse(normalizedValue) as ImageEntityByProfile<P>
   }
-  return ImageAdminProfileAPI.parse(value) as ImageEntityByProfile<P>
+  return ImageAdminProfileAPI.parse(normalizedValue) as ImageEntityByProfile<P>
 }
 
 export const toImageEnvelope = <P extends ImageProfile>(

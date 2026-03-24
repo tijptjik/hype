@@ -20,6 +20,7 @@ import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
 import { task } from '$lib/db/schema/index'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
+import { toNormalizedImageRecord } from '$lib/db/services/image'
 // ZOD
 import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schema/task'
 // ENUMS
@@ -354,7 +355,13 @@ export const toResponseShape = async (
         }
       : null,
     feature: transformedFeature,
-    images: data.images?.filter(taskImage => taskImage.image) || [],
+    images:
+      data.images
+        ?.filter(taskImage => taskImage.image)
+        .map(taskImage => ({
+          ...taskImage,
+          image: taskImage.image ? toNormalizedImageRecord(taskImage.image) : null,
+        })) || [],
   }
 
   return (isCollection ? TaskCollectionAPI : TaskAPI).parse(transformedData)

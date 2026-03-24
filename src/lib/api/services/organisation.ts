@@ -11,7 +11,7 @@ import { toBooleanOrUndefined } from '$lib/api/services'
 // DB
 import { transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { toImageEnvelope } from '$lib/db/services/image'
+import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
 import {
@@ -209,7 +209,7 @@ const toProfileResponseShape = async (
     })),
     image: organisation.image
       ? toImageEnvelope(
-          organisation.image,
+          toNormalizedImageRecord(organisation.image),
           profile,
           ImageContextResource.organisation,
           organisation.id,
