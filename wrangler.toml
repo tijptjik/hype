@@ -90,7 +90,7 @@ PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
 PUBLIC_ORIGIN = "http://localhost:5173"
 PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
-PUBLIC_IMAGE_BASE_URL = "http://localhost:5173"
+PUBLIC_IMAGE_BASE_URL = "http://localhost:8788"
 
 ########
 # PRODUCTION ENVIRONMENT
