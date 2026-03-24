@@ -1,10 +1,13 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
+import { sveltekit } from '@sveltejs/kit/vite'
 
 const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run'
 
 export default defineConfig({
+  plugins: [sveltekit()],
   resolve: {
+    conditions: ['browser'],
     alias: [
       {
         find: /^\$lib$/,
