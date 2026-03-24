@@ -9,8 +9,6 @@ const {
   mockGetImageEntityQueryContext,
   mockGetImageQueryContext,
   mockToImageProfile,
-  mockCreateCloudinarySignature,
-  mockDeleteCloudinaryImage,
   mockToResponseShape,
   mockToResponseShapeProjectOrOrganisation,
   mockUpdateImageForContext,
@@ -37,8 +35,6 @@ const {
   mockToImageProfile: vi.fn((value: unknown, fallback: string) =>
     typeof value === 'string' ? value : fallback,
   ),
-  mockCreateCloudinarySignature: vi.fn(async () => ({ signature: 'sig' })),
-  mockDeleteCloudinaryImage: vi.fn(async () => undefined),
   mockToResponseShape: vi.fn(async (image: any) => image),
   mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: any) => image),
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
@@ -102,8 +98,6 @@ vi.mock('$lib/api/services/image', () => ({
   getImageEntityQueryContext: mockGetImageEntityQueryContext,
   getImageQueryContext: mockGetImageQueryContext,
   toImageProfile: mockToImageProfile,
-  createCloudinarySignature: mockCreateCloudinarySignature,
-  deleteCloudinaryImage: mockDeleteCloudinaryImage,
   toResponseShape: mockToResponseShape,
   toResponseShapeProjectOrOrganisation: mockToResponseShapeProjectOrOrganisation,
   updateImageForContext: mockUpdateImageForContext,
@@ -135,8 +129,9 @@ vi.mock('$lib/db/services/user', () => ({
 vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
 
 vi.mock('$lib/db/zod', () => ({
-  CloudinarySignatureSchema: {},
+  AuthImageUploadSchema: {},
   DeleteImageSchema: {},
+  GetImageMetadataSchema: {},
   ImageByIdSchema: {},
   ImageInsertWithHubAPI: { parse: (value: unknown) => value },
   ImageInsertWithFeatureAPI: { parse: (value: unknown) => value },
