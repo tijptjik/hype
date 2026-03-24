@@ -125,12 +125,12 @@ It returns `24h`, `7d`, and `30d` windows for:
 To enable the summary endpoint in preview and production, set these secrets on the image worker:
 
 ```bash
-bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/image-service/wrangler.toml --env preview
-bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/image-service/wrangler.toml --env production
-bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/image-service/wrangler.toml --env preview
-bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/image-service/wrangler.toml --env production
-bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/image-service/wrangler.toml --env preview
-bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/image-service/wrangler.toml --env production
+bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/asset-service/wrangler.toml --env preview
+bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/asset-service/wrangler.toml --env production
+bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/asset-service/wrangler.toml --env preview
+bunx wrangler secret put CLOUDFLARE_ANALYTICS_API_TOKEN --config workers/asset-service/wrangler.toml --env production
+bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env preview
+bunx wrangler secret put IMAGE_ANALYTICS_READ_TOKEN --config workers/asset-service/wrangler.toml --env production
 ```
 
 The Cloudflare API token needs permission to query Analytics Engine for the account.
