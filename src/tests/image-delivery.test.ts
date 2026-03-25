@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import {
+  toCloudflareImageWorkerPath,
+  toImagePrerenderWorkerPaths,
+} from '$lib/images/delivery'
 
 describe('image delivery helpers', () => {
   it('builds worker paths for transformed and raw image requests', () => {
@@ -26,5 +29,29 @@ describe('image delivery helpers', () => {
         raw: true,
       }),
     ).toBe('/production/image/upload/v3/features/example.jpg')
+  })
+
+  it('omits the version segment when no version exists and returns prerender variants', () => {
+    expect(
+      toCloudflareImageWorkerPath({
+        env: 'preview',
+        publicId: 'features/example.jpg',
+        transformation: 'c_fill,h_256,w_256',
+      }),
+    ).toBe(
+      '/preview/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/features/example.jpg',
+    )
+
+    expect(
+      toImagePrerenderWorkerPaths({
+        env: 'preview',
+        publicId: 'features/example.jpg',
+        version: 7,
+      }),
+    ).toEqual([
+      '/preview/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v7/features/example.jpg',
+      '/preview/image/upload/c_fill,h_128,w_128/g_auto/f_auto/q_auto/v7/features/example.jpg',
+      '/preview/image/upload/c_fit,h_1024,w_1024/g_auto/f_auto/q_auto/v7/features/example.jpg',
+    ])
   })
 })

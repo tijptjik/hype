@@ -27,6 +27,7 @@ const {
   mockCreatePresignedR2UploadUrl,
   mockGetOriginalsBucketNameForStage,
   mockVerifyUploadToken,
+  mockWaitUntil,
 } = vi.hoisted(() => ({
   mockAuthorizeImageList: vi.fn(() => ({ allowed: true })),
   mockAuthorizeImageRead: vi.fn(() => ({ allowed: true })),
@@ -67,6 +68,7 @@ const {
   ),
   mockGetOriginalsBucketNameForStage: vi.fn(() => 'hype-assets-raw-dev'),
   mockVerifyUploadToken: vi.fn(async () => null),
+  mockWaitUntil: vi.fn(),
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
@@ -139,6 +141,14 @@ vi.mock('$lib/images/auth', () => ({
   verifyUploadToken: mockVerifyUploadToken,
 }))
 
+vi.mock('$lib/images/delivery', () => ({
+  toImagePrerenderWorkerPaths: vi.fn(({ env, publicId, version }) => [
+    `/${env}/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v${version}/${publicId}`,
+    `/${env}/image/upload/c_fill,h_128,w_128/g_auto/f_auto/q_auto/v${version}/${publicId}`,
+    `/${env}/image/upload/c_fit,h_1024,w_1024/g_auto/f_auto/q_auto/v${version}/${publicId}`,
+  ]),
+}))
+
 vi.mock('$lib/images/storage', async importOriginal => {
   const actual = await importOriginal<typeof import('$lib/images/storage')>()
 
@@ -202,6 +212,7 @@ describe('image.remote', () => {
     vi.resetModules()
     remote = await import('$lib/api/server/image.remote')
     vi.clearAllMocks()
+    mockWaitUntil.mockReset()
     mockGuardedContext.mockResolvedValue({
       db: buildDbWithContextRow({
         isPublished: true,
@@ -239,6 +250,9 @@ describe('image.remote', () => {
               put: vi.fn(async () => undefined),
               get: vi.fn(),
             },
+          },
+          context: {
+            waitUntil: mockWaitUntil,
           },
         },
       },
@@ -357,6 +371,10 @@ describe('image.remote', () => {
       size: 1234,
       httpMetadata: { contentType: 'image/jpeg' },
     }))
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1768)
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }))
 
     mockGuardedContext.mockResolvedValue({
       db: buildDbWithContextRow({
@@ -377,12 +395,16 @@ describe('image.remote', () => {
             CLOUDFLARE_ACCOUNT_ID: 'account-id',
             R2_S3_ACCESS_KEY_ID: 'access-key',
             R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+            PUBLIC_RAW_ASSET_BASE_URL: 'https://raw.assets.example.test',
             ASSET_RAW_DEV: { head, put },
             ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
             ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
             ASSET_PUBLIC_DEV: { put, get: vi.fn() },
             ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
             ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+          },
+          context: {
+            waitUntil: mockWaitUntil,
           },
         },
       },
@@ -417,11 +439,22 @@ describe('image.remote', () => {
 
     expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
     expect(put).toHaveBeenCalledTimes(3)
+    expect(mockWaitUntil).toHaveBeenCalledTimes(1)
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://raw.assets.example.test/local/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v1768/h/features/feature-1/image-a',
+      expect.objectContaining({
+        method: 'HEAD',
+      }),
+    )
     expect(result).toMatchObject({
       data: {
         ctxType: 'feature',
         ctxId: 'feature-1',
       },
     })
+
+    fetchSpy.mockRestore()
+    dateNowSpy.mockRestore()
   })
 })
