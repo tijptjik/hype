@@ -1,6 +1,6 @@
 // REMOTE
 import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
-import { error } from '@sveltejs/kit'
+import { error, type RequestEvent } from '@sveltejs/kit'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -21,6 +21,7 @@ import {
   toResponseShape,
   toResponseShapeProjectOrOrganisation,
   updateImageForContext,
+  warmImageDerivatives,
 } from '$lib/api/services/image'
 // DB SERVICES
 import {
@@ -747,6 +748,14 @@ export const finalizeImageUpload = guardedCommand(
         ctxId: payload.ctxId,
         data: imageData,
       })
+      event.platform?.context.waitUntil(
+        warmImageDerivatives({
+          event,
+          env: stage,
+          publicId: payload.publicId,
+          version,
+        }),
+      )
       return updated
     }
 
@@ -773,6 +782,15 @@ export const finalizeImageUpload = guardedCommand(
         links: params.persist?.links,
       })
     }
+
+    event.platform?.context.waitUntil(
+      warmImageDerivatives({
+        event,
+        env: stage,
+        publicId: payload.publicId,
+        version,
+      }),
+    )
 
     return created
   },
