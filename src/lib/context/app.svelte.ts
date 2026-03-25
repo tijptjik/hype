@@ -753,11 +753,19 @@ export class AppCtx {
       this.refreshUserFeatures(false),
       this.refreshUserProfile(false),
     ])
+    const hierarchyLabels = [
+      'organisations',
+      'projects',
+      'layers',
+      'properties',
+      'userFeatures',
+      'userProfile',
+    ] as const
 
-    for (const result of hierarchyResults) {
+    for (const [index, result] of hierarchyResults.entries()) {
       if (result.status === 'rejected') {
         console.error(
-          '[AppCtx][initialFetch] Resource bootstrap failed:',
+          `[AppCtx][initialFetch] Resource bootstrap failed (${hierarchyLabels[index]}):`,
           result.reason,
         )
       }
@@ -770,11 +778,12 @@ export class AppCtx {
       this.refreshFeatures(false),
       this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
     ])
+    const featureLabels = ['features', 'tasks'] as const
 
-    for (const result of featureResults) {
+    for (const [index, result] of featureResults.entries()) {
       if (result.status === 'rejected') {
         console.error(
-          '[AppCtx][initialFetch] Resource bootstrap failed:',
+          `[AppCtx][initialFetch] Resource bootstrap failed (${featureLabels[index]}):`,
           result.reason,
         )
       }
