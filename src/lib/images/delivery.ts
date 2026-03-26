@@ -7,6 +7,8 @@
 //    - toImagePrerenderWorkerPaths
 
 const DEFAULT_CROP_MODE = 'c_fit'
+const DEFAULT_RAW_TRANSFORMATION = 'h_2048,w_2048'
+export const IMAGE_PRERENDER_FORMATS = ['webp', 'jpeg'] as const
 export const IMAGE_PRERENDER_TRANSFORMATIONS = [
   'c_fill,h_256,w_256',
   'c_fill,h_128,w_128',
@@ -20,10 +22,11 @@ export const IMAGE_PRERENDER_TRANSFORMATIONS = [
  * @returns Public worker path.
  */
 export const toCloudflareImageWorkerPath = (params: {
-  env: string
+  env?: string
   publicId: string
   version?: number | null
   raw?: boolean
+  rawTransformation?: string | null
   transformation?: string
   gravity?: string
   quality?: string
@@ -32,10 +35,16 @@ export const toCloudflareImageWorkerPath = (params: {
   const versionSegment = typeof params.version === 'number' ? `/v${params.version}` : ''
 
   if (params.raw) {
-    return `/${params.env}/image/upload${versionSegment}/${params.publicId}`
+    const rawTransformation =
+      params.rawTransformation === undefined
+        ? DEFAULT_RAW_TRANSFORMATION
+        : params.rawTransformation
+    const rawTransformationSegment = rawTransformation ? `/${rawTransformation}` : ''
+
+    return `/image/raw${rawTransformationSegment}${versionSegment}/${params.publicId}`
   }
 
-  return `/${params.env}/image/upload/${params.transformation ?? DEFAULT_CROP_MODE}/g_${params.gravity ?? 'auto'}/f_${params.format ?? 'auto'}/q_${params.quality ?? 'auto'}${versionSegment}/${params.publicId}`
+  return `/image/upload/${params.transformation ?? DEFAULT_CROP_MODE}/g_${params.gravity ?? 'auto'}/f_${params.format ?? 'auto'}/q_${params.quality ?? 'auto'}${versionSegment}/${params.publicId}`
 }
 
 /**
@@ -51,15 +60,20 @@ export const toImagePrerenderWorkerPaths = (params: {
   gravity?: string
   quality?: string
   format?: string
+  formats?: readonly string[]
 }): string[] =>
-  IMAGE_PRERENDER_TRANSFORMATIONS.map(transformation =>
-    toCloudflareImageWorkerPath({
-      env: params.env,
-      publicId: params.publicId,
-      version: params.version,
-      transformation,
-      gravity: params.gravity,
-      quality: params.quality,
-      format: params.format,
-    }),
+  (
+    params.formats ?? (params.format ? [params.format] : IMAGE_PRERENDER_FORMATS)
+  ).flatMap(format =>
+    IMAGE_PRERENDER_TRANSFORMATIONS.map(transformation =>
+      toCloudflareImageWorkerPath({
+        env: params.env,
+        publicId: params.publicId,
+        version: params.version,
+        transformation,
+        gravity: params.gravity,
+        quality: params.quality,
+        format,
+      }),
+    ),
   )
