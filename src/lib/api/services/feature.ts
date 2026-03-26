@@ -224,6 +224,7 @@ type FeatureImageRelation = {
   featureId?: string
   intent?: string | null
   isPublished?: boolean | null
+  publishedAt?: string | null
   image?: ImageDB | null
 }
 
@@ -250,12 +251,17 @@ const toFeatureImageEnvelope = (
 
   const image = canonical?.image
   const selected = image
-    ? toImageEnvelope(
-        toNormalizedImageRecord(image),
-        profile === 'admin' ? 'admin' : profile,
-        ImageContextResource.feature,
-        featureId,
-      )
+    ? {
+        ...toImageEnvelope(
+          toNormalizedImageRecord(image),
+          profile === 'admin' ? 'admin' : profile,
+          ImageContextResource.feature,
+          featureId,
+        ),
+        intent: canonical?.intent ?? null,
+        isPublished: canonical?.isPublished ?? null,
+        publishedAt: canonical?.publishedAt ?? null,
+      }
     : null
 
   if (!options.includeAll) return selected
@@ -266,14 +272,17 @@ const toFeatureImageEnvelope = (
       .filter((imageRow): imageRow is FeatureImageRelation & { image: ImageDB } =>
         Boolean(imageRow.image),
       )
-      .map(imageRow =>
-        toImageEnvelope(
+      .map(imageRow => ({
+        ...toImageEnvelope(
           toNormalizedImageRecord(imageRow.image),
           profile === 'admin' ? 'admin' : 'detail',
           ImageContextResource.feature,
           featureId,
         ),
-      ),
+        intent: imageRow.intent ?? null,
+        isPublished: imageRow.isPublished ?? null,
+        publishedAt: imageRow.publishedAt ?? null,
+      })),
     imageCount: imageRows.length,
     imagePublishedCount: imageRows.filter(imageRow => imageRow.isPublished).length,
   }
