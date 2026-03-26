@@ -342,6 +342,9 @@ export function useAdminHeaderModel(
 
   // DERIVED :: HEADER CTRL / VIEW STATE
   const facetItems = $derived(headerCtrl.state.meta.facets)
+  const customActiveFacet = $derived(headerCtrl.state.meta.activeFacet)
+  const customFacetChangeHandler = $derived(headerCtrl.state.meta.onFacetChange)
+  const customViewActions = $derived(headerCtrl.state.meta.viewActions)
   const titleMenuMetaItems = $derived(headerCtrl.state.meta.titleMenuItems)
   const layoutMode = $derived(
     headerResourceType ? appCtx.state.ui.layoutMode[headerResourceType] : 'card',
@@ -768,13 +771,14 @@ export function useAdminHeaderModel(
     },
     facets: {
       items: resolvedVisibility.showFacets ? facetItems : [],
-      active: adminCtx.activeFacet,
-      onFacetChange: handleFacetChange,
+      active: customActiveFacet ?? adminCtx.activeFacet,
+      onFacetChange: customFacetChangeHandler ?? handleFacetChange,
     },
     viewActions: {
       isVisible: resolvedVisibility.showViewActions,
-      controlsAction,
+      controlsAction: controlsAction ?? customViewActions[0],
       layoutAction,
+      extraActions: controlsAction ? customViewActions : customViewActions.slice(1),
     },
     formActions: {
       isVisible: resolvedVisibility.showFormActions,
