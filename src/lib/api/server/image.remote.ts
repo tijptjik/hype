@@ -525,16 +525,31 @@ export const getMetadata = guardedQuery(
     const env = toImageStage(
       params.env ?? ctx.event.platform?.env.ENVIRONMENT ?? ImageEnv.local,
     )
-    const { document } = await readMetadataDocument({
-      platform: ctx.event.platform,
-      env,
-      publicId: params.publicId,
-      version: params.version,
-    })
 
-    return {
-      data: document ? toMetadataProfilePayload(document, params.profile) : null,
-      durationMs: Date.now() - startedAt,
+    try {
+      const { document } = await readMetadataDocument({
+        platform: ctx.event.platform,
+        env,
+        publicId: params.publicId,
+        version: params.version,
+      })
+
+      return {
+        data: document ? toMetadataProfilePayload(document, params.profile) : null,
+        durationMs: Date.now() - startedAt,
+      }
+    } catch (error) {
+      console.error('[image.remote.getMetadata] failed', {
+        publicId: params.publicId,
+        env,
+        version: params.version ?? null,
+        error,
+      })
+
+      return {
+        data: null,
+        durationMs: Date.now() - startedAt,
+      }
     }
   },
 )
