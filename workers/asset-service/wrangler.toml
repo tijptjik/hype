@@ -11,7 +11,9 @@ enabled = true
 
 [vars]
 ENVIRONMENT = "local"
-RAW_ASSET_BASE_URL = "http://localhost:8788"
+ASSET_DEBUG_MEMORY = "0"
+ASSET_DEBUG_MEMORY_MATCH = ""
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
 
 [[analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
@@ -52,7 +54,9 @@ name = "hype-asset-service-preview"
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
-RAW_ASSET_BASE_URL = "https://raw.assets.preview.hype.hk"
+ASSET_DEBUG_MEMORY = "0"
+ASSET_DEBUG_MEMORY_MATCH = ""
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
 
 [[env.preview.analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
@@ -83,7 +87,7 @@ binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
 
 [[env.preview.routes]]
-pattern = "raw.assets.preview.hype.hk"
+pattern = "assets.preview.hype.hk"
 custom_domain = true
 
 [env.production]
@@ -91,7 +95,9 @@ name = "hype-asset-service-prod"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-RAW_ASSET_BASE_URL = "https://raw.assets.hype.hk"
+ASSET_DEBUG_MEMORY = "1"
+ASSET_DEBUG_MEMORY_MATCH = "lix6swwj3bbky2hmp1s2"
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "1"
 
 [[env.production.analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
@@ -122,5 +128,5 @@ binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
 
 [[env.production.routes]]
-pattern = "raw.assets.hype.hk"
+pattern = "assets.hype.hk"
 custom_domain = true

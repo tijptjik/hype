@@ -17,11 +17,11 @@ type Stage = 'local' | 'preview' | 'production'
 
 type CliOptions = {
   bucket: string
-  dbPath?: string
-  finalDbEnv: Stage
+  overwriteExisting: boolean
+  sourcePath: string
   filterId?: string
   limit?: number
-  sqlOutPath: string
+  missingLogOutPath: string
   targetStage: Stage
   write: boolean
 }
@@ -85,7 +85,14 @@ type MigrationResult = {
   latitude: string | null
   longitude: string | null
   publicId: string
+  rawObjectKey: string
   version: number
+}
+
+type SourceFetchResult = {
+  arrayBuffer: ArrayBuffer
+  contentType: string
+  url: string
 }
 
 const DEFAULT_BUCKET_BY_STAGE: Record<Stage, string> = {
@@ -94,7 +101,11 @@ const DEFAULT_BUCKET_BY_STAGE: Record<Stage, string> = {
   production: 'hype-assets-raw-prod',
 }
 
-const DEFAULT_SQL_OUT_PATH = 'sql/data/cloudinary-to-r2-production.sql'
+const DEFAULT_SOURCE_PATH = 'sql/backup/hype-db-prod-2026-03-26T09:59:42-ordered.sql'
+const DEFAULT_MISSING_LOG_OUT_PATH = 'tmp/cloudinary-migration-missing-images.log'
+const OBJECT_KEY_PREFIX = 'h/'
+const RAW_OBJECT_SUFFIX = '.raw'
+const MAX_SOURCE_FETCH_ATTEMPTS = 3
 
 const loadEnvFile = async (filePath: string): Promise<void> => {
   if (!existsSync(filePath)) return
@@ -139,8 +150,9 @@ const loadLocalEnvForStage = async (stage: Stage): Promise<void> => {
 
 const parseArgs = (argv: string[]): CliOptions => {
   const options: Partial<CliOptions> = {
-    finalDbEnv: 'production',
-    sqlOutPath: DEFAULT_SQL_OUT_PATH,
+    missingLogOutPath: DEFAULT_MISSING_LOG_OUT_PATH,
+    overwriteExisting: false,
+    sourcePath: DEFAULT_SOURCE_PATH,
     targetStage: 'production',
     write: false,
   }
@@ -153,7 +165,8 @@ const parseArgs = (argv: string[]): CliOptions => {
         index += 1
         break
       case '--db':
-        options.dbPath = argv[index + 1]
+      case '--source':
+        options.sourcePath = argv[index + 1]
         index += 1
         break
       case '--filter-id':
@@ -164,12 +177,8 @@ const parseArgs = (argv: string[]): CliOptions => {
         options.limit = Number.parseInt(argv[index + 1] ?? '', 10)
         index += 1
         break
-      case '--final-db-env':
-        options.finalDbEnv = (argv[index + 1] as Stage | undefined) ?? 'production'
-        index += 1
-        break
-      case '--sql-out':
-        options.sqlOutPath = argv[index + 1]
+      case '--missing-log-out':
+        options.missingLogOutPath = argv[index + 1]
         index += 1
         break
       case '--stage':
@@ -180,21 +189,19 @@ const parseArgs = (argv: string[]): CliOptions => {
       case '--write':
         options.write = true
         break
+      case '--overwrite-existing':
+        options.overwriteExisting = true
+        break
       default:
         throw new Error(`Unknown argument: ${arg}`)
     }
   }
 
   const targetStage = options.targetStage ?? 'production'
-  const finalDbEnv = options.finalDbEnv ?? 'production'
   const bucket = options.bucket ?? DEFAULT_BUCKET_BY_STAGE[targetStage]
 
   if (!['local', 'preview', 'production'].includes(targetStage)) {
     throw new Error(`Invalid --target-stage value: ${targetStage}`)
-  }
-
-  if (!['local', 'preview', 'production'].includes(finalDbEnv)) {
-    throw new Error(`Invalid --final-db-env value: ${finalDbEnv}`)
   }
 
   if (options.limit !== undefined && Number.isNaN(options.limit)) {
@@ -203,35 +210,14 @@ const parseArgs = (argv: string[]): CliOptions => {
 
   return {
     bucket,
-    dbPath: options.dbPath,
-    finalDbEnv,
     filterId: options.filterId,
     limit: options.limit,
-    sqlOutPath: options.sqlOutPath ?? DEFAULT_SQL_OUT_PATH,
+    missingLogOutPath: options.missingLogOutPath ?? DEFAULT_MISSING_LOG_OUT_PATH,
+    overwriteExisting: options.overwriteExisting ?? false,
+    sourcePath: options.sourcePath ?? DEFAULT_SOURCE_PATH,
     targetStage,
     write: options.write ?? false,
   }
-}
-
-/**
- * Resolves the local mirrored D1 sqlite database when no explicit path is provided.
- */
-const resolveLocalDatabasePath = async (): Promise<string> => {
-  const proc = Bun.spawn([
-    'bash',
-    '-lc',
-    "find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit",
-  ])
-  const output = await new Response(proc.stdout).text()
-  const dbPath = output.trim()
-
-  if (!dbPath) {
-    throw new Error(
-      'Could not find a local mirrored D1 database. Run `bun run db:mirror:prod:to:local` first or pass --db.',
-    )
-  }
-
-  return dbPath
 }
 
 /**
@@ -397,35 +383,63 @@ const extractMetadataFromSource = async ({
 const toMetadataDocument = (
   row: LegacyImageRow,
   extracted: ExtractedMetadata,
-): MetadataDocument => ({
-  originalFilename:
-    row.originalFilename ??
-    row.publicId.split('/').at(-1) ??
-    null,
-  originalExtension: extracted.originalExtension,
-  originalWidth: extracted.originalWidth,
-  originalHeight: extracted.originalHeight,
-  cameraModel: extracted.cameraModel,
-  capturedAt: extracted.capturedAt,
-  credit: extracted.credit,
-  latitude: extracted.latitude,
-  longitude: extracted.longitude,
-  metadata: extracted.metadata,
-  sourceVersion: row.version,
-  uploadedAt: row.createdAt,
-  modifiedAt: row.modifiedAt,
-})
+): MetadataDocument => {
+  const namespacedPublicId = toNamespacedPublicId(row.publicId)
 
-const toManifestDocument = (row: LegacyImageRow): Record<string, string | number | null> => ({
-  publicId: row.publicId,
-  version: row.version,
-  updatedAt: row.modifiedAt,
-})
+  return {
+    originalFilename:
+      row.originalFilename ??
+      row.publicId.split('/').at(-1) ??
+      null,
+    originalExtension: extracted.originalExtension,
+    originalWidth: extracted.originalWidth,
+    originalHeight: extracted.originalHeight,
+    cameraModel: extracted.cameraModel,
+    capturedAt: extracted.capturedAt,
+    credit: extracted.credit,
+    latitude: extracted.latitude,
+    longitude: extracted.longitude,
+    metadata: {
+      ...(extracted.metadata ?? {}),
+      originalObjectKey: `${namespacedPublicId}${RAW_OBJECT_SUFFIX}`,
+      workingObjectKey: namespacedPublicId,
+    },
+    sourceVersion: row.version,
+    uploadedAt: row.createdAt,
+    modifiedAt: row.modifiedAt,
+  }
+}
+
+const toManifestDocument = (
+  row: LegacyImageRow,
+): Record<string, string | number | boolean | null> => {
+  const namespacedPublicId = toNamespacedPublicId(row.publicId)
+
+  return {
+    hasRaw: true,
+    originalObjectKey: `${namespacedPublicId}${RAW_OBJECT_SUFFIX}`,
+    publicId: namespacedPublicId,
+    version: row.version,
+    workingObjectKey: namespacedPublicId,
+    updatedAt: row.modifiedAt,
+  }
+}
+
+const toNamespacedPublicId = (publicId: string): string =>
+  publicId.startsWith(OBJECT_KEY_PREFIX) ? publicId : `${OBJECT_KEY_PREFIX}${publicId}`
 
 const toMetadataObjectKey = (publicId: string, version?: number): string =>
-  version ? `${publicId}.v${version}.json` : `${publicId}.json`
+  version
+    ? `${toNamespacedPublicId(publicId)}.v${version}.json`
+    : `${toNamespacedPublicId(publicId)}.json`
 
-const toManifestObjectKey = (publicId: string): string => `${publicId}.manifest.json`
+const toManifestObjectKey = (publicId: string): string =>
+  `${toNamespacedPublicId(publicId)}.manifest.json`
+
+const toWorkingObjectKey = (publicId: string): string => toNamespacedPublicId(publicId)
+
+const toRawObjectKey = (publicId: string): string =>
+  `${toNamespacedPublicId(publicId)}${RAW_OBJECT_SUFFIX}`
 
 const toR2ObjectUrl = (
   accountId: string,
@@ -498,31 +512,6 @@ const objectExists = async ({
   return true
 }
 
-const escapeSqlString = (value: string): string => value.replaceAll("'", "''")
-
-const toSqlUpdateStatement = (row: LegacyImageRow, finalDbEnv: Stage): string =>
-  [
-    'UPDATE image',
-    "SET cdn = 'cloudflareR2',",
-    `    env = '${finalDbEnv}',`,
-    '    cdnId = NULL',
-    `WHERE id = '${escapeSqlString(row.id)}';`,
-  ].join('\n')
-
-const buildSqlFile = (rows: LegacyImageRow[], finalDbEnv: Stage): string => {
-  const statements = rows.map(row => toSqlUpdateStatement(row, finalDbEnv))
-  return [
-    '-- Generated by scripts/cloud/migrate-cloudinary-images-to-r2.ts',
-    '-- Source DB rows: cloudinary-backed images from the provided sqlite mirror',
-    '-- Target bucket stage is controlled independently at runtime',
-    `-- Final DB env in this SQL patch: ${finalDbEnv}`,
-    'BEGIN TRANSACTION;',
-    ...statements,
-    'COMMIT;',
-    '',
-  ].join('\n')
-}
-
 const queryLegacyRows = (
   db: Database,
   options: Pick<CliOptions, 'filterId' | 'limit'>,
@@ -580,6 +569,33 @@ const queryLegacyRows = (
   return db.query(sql).all(...bindings) as LegacyImageRow[]
 }
 
+/**
+ * Loads either a sqlite mirror or an ordered SQL dump into a queryable sqlite database.
+ */
+const openSourceDatabase = async (sourcePath: string): Promise<Database> => {
+  if (!existsSync(sourcePath)) {
+    throw new Error(`Source database does not exist: ${sourcePath}`)
+  }
+
+  if (sourcePath.endsWith('.sqlite')) {
+    return new Database(sourcePath, { readonly: true })
+  }
+
+  if (sourcePath.endsWith('.sql')) {
+    const db = new Database(':memory:')
+    const sql = await Bun.file(sourcePath).text()
+    const sanitizedSql = sql
+      .replace(/^DELETE FROM sqlite_sequence;\n?/gmu, '')
+      .replace(/^INSERT INTO "sqlite_sequence".*;\n?/gmu, '')
+    db.exec(sanitizedSql)
+    return db
+  }
+
+  throw new Error(
+    `Unsupported --source path: ${sourcePath}. Expected a .sqlite mirror or .sql ordered dump.`,
+  )
+}
+
 const requireEnv = (name: string): string => {
   const value = process.env[name]
   if (!value) {
@@ -588,16 +604,69 @@ const requireEnv = (name: string): string => {
   return value
 }
 
+const sleep = async (ms: number): Promise<void> =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms)
+  })
+
+/**
+ * Fetches the Cloudinary source asset with bounded retries to handle flaky export reads.
+ */
+const fetchSourceWithRetries = async ({
+  contentTypeHint,
+  publicId,
+  rowId,
+  url,
+}: {
+  contentTypeHint: string | null
+  publicId: string
+  rowId: string
+  url: string
+}): Promise<SourceFetchResult> => {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= MAX_SOURCE_FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        lastError = new Error(
+          `Cloudinary source fetch failed for ${rowId} (${publicId}) on attempt ${attempt}/${MAX_SOURCE_FETCH_ATTEMPTS}: ${response.status} ${response.statusText}`,
+        )
+      } else {
+        return {
+          arrayBuffer: await response.arrayBuffer(),
+          contentType: inferContentType(response.headers.get('content-type'), contentTypeHint),
+          url,
+        }
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+    }
+
+    if (attempt < MAX_SOURCE_FETCH_ATTEMPTS) {
+      await sleep(attempt * 250)
+    }
+  }
+
+  throw (
+    lastError ??
+    new Error(`Cloudinary source fetch failed for ${rowId} (${publicId}) after retries`)
+  )
+}
+
 const migrateRow = async ({
   accountId,
   aws,
   bucket,
   row,
+  overwriteExisting,
   write,
 }: {
   accountId: string
   aws: AwsClient
   bucket: string
+  overwriteExisting: boolean
   row: LegacyImageRow
   write: boolean
 }): Promise<MigrationResult> => {
@@ -608,20 +677,15 @@ const migrateRow = async ({
 
   const cloudName = row.env || requireEnv('PUBLIC_CLOUDINARY_CLOUD_NAME')
   const cloudinaryUrl = toCloudinaryOriginalUrl(cloudName, row.publicId, version)
-  const sourceResponse = await fetch(cloudinaryUrl)
-
-  if (!sourceResponse.ok) {
-    throw new Error(
-      `Cloudinary source fetch failed for ${row.id}: ${sourceResponse.status} ${sourceResponse.statusText}`,
-    )
-  }
-
-  const arrayBuffer = await sourceResponse.arrayBuffer()
+  const sourceAsset = await fetchSourceWithRetries({
+    contentTypeHint: row.originalExtension,
+    publicId: row.publicId,
+    rowId: row.id,
+    url: cloudinaryUrl,
+  })
+  const arrayBuffer = sourceAsset.arrayBuffer
   const sourceBuffer = Buffer.from(arrayBuffer)
-  const contentType = inferContentType(
-    sourceResponse.headers.get('content-type'),
-    row.originalExtension,
-  )
+  const contentType = sourceAsset.contentType
   const extractedMetadata = await extractMetadataFromSource({
     contentType,
     row,
@@ -632,21 +696,45 @@ const migrateRow = async ({
   const manifestJson = JSON.stringify(toManifestDocument(row), null, 2)
 
   if (write) {
-    const originalExists = await objectExists({
-      accountId,
-      aws,
-      bucket,
-      objectKey: row.publicId,
-    })
+    const workingObjectKey = toWorkingObjectKey(row.publicId)
+    const originalExists = overwriteExisting
+      ? false
+      : await objectExists({
+          accountId,
+          aws,
+          bucket,
+          objectKey: workingObjectKey,
+        })
 
-    if (!originalExists) {
+    if (!originalExists || overwriteExisting) {
       await putObject({
         accountId,
         aws,
         body: sourceBuffer,
         bucket,
         contentType,
-        objectKey: row.publicId,
+        objectKey: workingObjectKey,
+      })
+    }
+
+    const rawObjectKey = toRawObjectKey(row.publicId)
+    const rawExists = overwriteExisting
+      ? false
+      : await objectExists({
+          accountId,
+          aws,
+          bucket,
+          objectKey: rawObjectKey,
+        })
+
+    if (!rawExists || overwriteExisting) {
+      await putObject({
+        accountId,
+        aws,
+        body: sourceBuffer,
+        bucket,
+        contentType,
+        objectKey: rawObjectKey,
       })
     }
 
@@ -688,6 +776,7 @@ const migrateRow = async ({
     latitude: extractedMetadata.latitude,
     longitude: extractedMetadata.longitude,
     publicId: row.publicId,
+    rawObjectKey: toRawObjectKey(row.publicId),
     version,
   }
 }
@@ -695,11 +784,7 @@ const migrateRow = async ({
 const main = async (): Promise<void> => {
   const options = parseArgs(process.argv.slice(2))
   await loadLocalEnvForStage(options.targetStage)
-  const dbPath = options.dbPath ?? (await resolveLocalDatabasePath())
-  if (!existsSync(dbPath)) {
-    throw new Error(`SQLite database does not exist: ${dbPath}`)
-  }
-  const db = new Database(dbPath, { readonly: true })
+  const db = await openSourceDatabase(options.sourcePath)
 
   const rows = queryLegacyRows(db, options)
   if (rows.length === 0) {
@@ -708,22 +793,18 @@ const main = async (): Promise<void> => {
   }
 
   console.log(
-    `Preparing ${rows.length} Cloudinary image ${rows.length === 1 ? 'row' : 'rows'} from ${dbPath}`,
+    `Preparing ${rows.length} Cloudinary image ${rows.length === 1 ? 'row' : 'rows'} from ${options.sourcePath}`,
   )
   console.log(`Target bucket stage: ${options.targetStage}`)
   console.log(`Target bucket: ${options.bucket}`)
-  console.log(`Final DB env in generated SQL: ${options.finalDbEnv}`)
   console.log(`Mode: ${options.write ? 'sync' : 'plan'}`)
+  console.log(`Source mode: ${options.sourcePath.endsWith('.sql') ? 'ordered SQL dump' : 'sqlite mirror'}`)
 
   const results: MigrationResult[] = []
   const failures: { id: string; message: string }[] = []
+  const missingSources: { id: string; publicId: string; url: string; message: string }[] = []
 
   if (!options.write) {
-    const sql = buildSqlFile(rows, options.finalDbEnv)
-    await mkdir(path.dirname(options.sqlOutPath), { recursive: true })
-    await writeFile(options.sqlOutPath, sql, 'utf8')
-
-    console.log(`Wrote SQL migration patch to ${options.sqlOutPath}`)
     console.log(`Summary: ${rows.length} candidate rows, 0 validated writes, 0 failures`)
     return
   }
@@ -744,6 +825,7 @@ const main = async (): Promise<void> => {
         accountId,
         aws,
         bucket: options.bucket,
+        overwriteExisting: options.overwriteExisting,
         row,
         write: options.write,
       })
@@ -751,25 +833,46 @@ const main = async (): Promise<void> => {
       console.log(
         `${options.write ? 'Synced' : 'Planned'} ${row.id} -> ${row.publicId} (${result.contentType})`,
       )
+      console.log(`  rawObjectKey=${result.rawObjectKey}`)
       console.log(
         `  credit=${result.credit ?? 'null'}, cameraModel=${result.cameraModel ?? 'null'}, latitude=${result.latitude ?? 'null'}, longitude=${result.longitude ?? 'null'}`,
       )
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       failures.push({ id: row.id, message })
+      if (message.includes('Cloudinary source fetch failed')) {
+        missingSources.push({
+          id: row.id,
+          publicId: row.publicId,
+          url: toCloudinaryOriginalUrl(
+            row.env || process.env.PUBLIC_CLOUDINARY_CLOUD_NAME || 'unknown-cloud',
+            row.publicId,
+            row.version ?? 0,
+          ),
+          message,
+        })
+      }
       console.error(`Failed ${row.id}: ${message}`)
     }
   }
 
-  const migratedRows = rows.filter(row => results.some(result => result.id === row.id))
-  const sql = buildSqlFile(migratedRows, options.finalDbEnv)
-  await mkdir(path.dirname(options.sqlOutPath), { recursive: true })
-  await writeFile(options.sqlOutPath, sql, 'utf8')
-
-  console.log(`Wrote SQL migration patch to ${options.sqlOutPath}`)
   console.log(
     `Summary: ${results.length} successful, ${failures.length} failed, ${rows.length} total`,
   )
+
+  if (missingSources.length > 0) {
+    await mkdir(path.dirname(options.missingLogOutPath), { recursive: true })
+    const missingLog = [
+      '# Cloudinary source failures',
+      ...missingSources.map(
+        failure =>
+          `${failure.id}\t${failure.publicId}\t${failure.url}\t${failure.message}`,
+      ),
+      '',
+    ].join('\n')
+    await writeFile(options.missingLogOutPath, missingLog, 'utf8')
+    console.log(`Wrote missing source log to ${options.missingLogOutPath}`)
+  }
 
   if (failures.length > 0) {
     console.log('Failures:')
