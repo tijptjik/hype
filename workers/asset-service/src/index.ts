@@ -29,11 +29,13 @@ type GravityMode = 'g_auto' | 'g_center'
 type OutputFormat = 'avif' | 'jpeg' | 'jxl' | 'png' | 'svg' | 'webp'
 type MetadataProfile = 'admin' | 'auto' | 'basic' | 'full'
 type ImageCacheStatus = 'edge-hit' | 'r2-derived-hit' | 'transform-miss'
-type AnalyticsWindowKey = '24h' | '7d' | '30d'
+type AnalyticsWindowKey = '1h' | '24h' | '7d' | '30d'
 
 type Env = {
   ENVIRONMENT: ImageStage
-  RAW_ASSET_BASE_URL: string
+  ASSET_DEBUG_MEMORY?: string
+  ASSET_DEBUG_MEMORY_MATCH?: string
+  BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS?: string
   ASSET_ANALYTICS: AnalyticsEngineDataset
   ASSET_RAW_DEV: R2Bucket
   ASSET_RAW_PREVIEW: R2Bucket
@@ -81,6 +83,14 @@ type MetadataRequest = {
   format: 'json'
 }
 
+type RawRequest = {
+  requestedStage: ImageStage
+  publicId: string
+  version?: number
+  width?: number
+  height?: number
+}
+
 type SourceAsset = {
   body: ArrayBuffer
   contentType: string
@@ -93,6 +103,23 @@ type DecodedImage = {
   data: ImageData
   hasAlpha: boolean
   inputFormat: OutputFormat | 'unknown'
+}
+
+type TransformDebugContext = {
+  enabled: boolean
+  publicId: string
+  requestedStage: ImageStage
+  requestPath: string
+}
+
+type TransformPipelineResult = {
+  image: ImageData
+  estimatedPeakPixelBytes: number
+}
+
+type AssetTransformStageErrorDetails = {
+  error: string
+  [key: string]: unknown
 }
 
 type SmartCropImage = {
@@ -144,20 +171,66 @@ type AnalyticsRatiosRow = {
   transform_miss_requests: number | string
 }
 
-type AnalyticsP95Row = {
+type AnalyticsQuantilesRow = {
   cache_status: ImageCacheStatus | null
+  p50_total_ms: number | string | null
   p95_total_ms: number | string | null
+  p99_total_ms: number | string | null
   request_count: number | string
 }
+
+type AnalyticsTimeseriesRow = {
+  date: string | null
+  cache_status: ImageCacheStatus | null
+  request_count: number | string
+}
+
+type AnalyticsScope = {
+  organisationIds: string[]
+  projectIds: string[]
+}
+
+type BreakdownBucketKey =
+  | 'cropModes'
+  | 'formats'
+  | 'dimensions'
+  | 'qualities'
+  | 'gravities'
+
+type AnalyticsBreakdownAccumulator = Record<BreakdownBucketKey, Map<string, number>>
 
 type AnalyticsWindowSummary = {
   cacheHitPercent: number
   derivedHitPercent: number
   derivedMissPercent: number
+  p50Ms: {
+    cache: number | null
+    derivedHit: number | null
+    derivedMiss: number | null
+  }
   p95Ms: {
     cache: number | null
     derivedHit: number | null
     derivedMiss: number | null
+  }
+  p99Ms: {
+    cache: number | null
+    derivedHit: number | null
+    derivedMiss: number | null
+  }
+  timeseries30d: Array<{
+    date: string
+    totalRequests: number
+    cacheRequests: number
+    derivedHitRequests: number
+    derivedMissRequests: number
+  }>
+  breakdowns: {
+    cropModes: Array<{ key: string; label: string; requests: number; percent: number }>
+    formats: Array<{ key: string; label: string; requests: number; percent: number }>
+    dimensions: Array<{ key: string; label: string; requests: number; percent: number }>
+    qualities: Array<{ key: string; label: string; requests: number; percent: number }>
+    gravities: Array<{ key: string; label: string; requests: number; percent: number }>
   }
   topImages: Array<{ publicId: string; requests: number }>
   topTransformations: Array<{ requests: number; transformKey: string }>
@@ -167,6 +240,7 @@ type AnalyticsWindowSummary = {
 type AnalyticsSummaryResponse = {
   environment: ImageStage
   generatedAt: string
+  scope: AnalyticsScope
   windows: Record<AnalyticsWindowKey, AnalyticsWindowSummary>
 }
 
@@ -174,6 +248,7 @@ const CACHE_CONTROL_IMMUTABLE = 'public, max-age=31536000, immutable'
 const CACHE_CONTROL_SHORT = 'public, max-age=300'
 const ASSET_ANALYTICS_DATASET = 'hype_asset_delivery'
 const ASSET_ANALYTICS_WINDOWS: Record<AnalyticsWindowKey, string> = {
+  '1h': "INTERVAL '1' HOUR",
   '24h': "INTERVAL '24' HOUR",
   '7d': "INTERVAL '7' DAY",
   '30d': "INTERVAL '30' DAY",
@@ -184,6 +259,11 @@ const METADATA_SUFFIX = '.json'
 const MAX_CONCURRENT_TRANSFORMS = 2
 const TRANSFORM_QUEUE_RETRY_AFTER_SECONDS = 2
 const MAX_TRANSFORM_DIMENSION = 4096
+const MAX_SMARTCROP_SOURCE_PIXELS = 4_000_000
+const MAX_LOW_MEMORY_SOURCE_PIXELS = 6_000_000
+const LOW_MEMORY_MIN_INTERMEDIATE_DIMENSION = 1024
+const LOW_MEMORY_MAX_INTERMEDIATE_DIMENSION = 2048
+const LOW_MEMORY_FALLBACK_MAX_SOURCE_DIMENSION = 4096
 const QUALITY_BY_FORMAT = {
   avif: 45,
   jpeg: 80,
@@ -192,6 +272,111 @@ const QUALITY_BY_FORMAT = {
 } as const
 
 let activeTransformCount = 0
+
+const bytesPerPixel = 4
+
+const toImageDataBytes = (image: ImageData): number =>
+  image.width * image.height * bytesPerPixel
+const toPixelCount = (image: Pick<ImageData, 'width' | 'height'>): number =>
+  image.width * image.height
+const toMegapixels = (image: Pick<ImageData, 'width' | 'height'>): number =>
+  Number((toPixelCount(image) / 1_000_000).toFixed(2))
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value))
+
+const getProcessMemoryUsage = (): Record<string, number> | null => {
+  const processValue = (
+    globalThis as typeof globalThis & {
+      process?: { memoryUsage?: () => Record<string, number> }
+    }
+  ).process
+
+  if (!processValue?.memoryUsage) {
+    return null
+  }
+
+  try {
+    return processValue.memoryUsage()
+  } catch {
+    return null
+  }
+}
+
+const isTransformDebugEnabled = (
+  env: Env,
+  request: Request,
+  transformRequest: TransformRequest,
+): boolean => {
+  if (request.headers.get('x-image-debug-memory') === '1') {
+    return true
+  }
+
+  if (env.ASSET_DEBUG_MEMORY !== '1') {
+    return false
+  }
+
+  const match = env.ASSET_DEBUG_MEMORY_MATCH?.trim()
+  if (!match) {
+    return true
+  }
+
+  return transformRequest.publicId.includes(match)
+}
+
+const logTransformDebug = (
+  debug: TransformDebugContext,
+  phase: string,
+  details: Record<string, unknown>,
+): void => {
+  if (!debug.enabled) {
+    return
+  }
+
+  console.warn(
+    JSON.stringify(
+      {
+        event: 'asset-transform-memory-debug',
+        phase,
+        publicId: debug.publicId,
+        requestedStage: debug.requestedStage,
+        requestPath: debug.requestPath,
+        processMemory: getProcessMemoryUsage(),
+        ...details,
+      },
+      null,
+      2,
+    ),
+  )
+}
+
+const isDebugTransformRequest = (debug: TransformDebugContext): boolean => debug.enabled
+
+class AssetTransformStageError extends Error {
+  phase: string
+  details: AssetTransformStageErrorDetails
+
+  constructor(phase: string, details: AssetTransformStageErrorDetails) {
+    super(details.error)
+    this.name = 'AssetTransformStageError'
+    this.phase = phase
+    this.details = details
+  }
+}
+
+const chooseAutoOutputFormat = (accept: string): OutputFormat => {
+  // Auto delivery is intentionally restricted to the two derived formats we
+  // prerender operationally: WebP first, then JPEG as the universal fallback.
+  if (accept.includes('image/webp')) return 'webp'
+  return 'jpeg'
+}
+
+const shouldBlockProductionAutoTransformMiss = (
+  env: Env,
+  request: TransformRequest,
+): boolean =>
+  request.requestedStage === 'production' &&
+  request.format === 'auto' &&
+  env.BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS === '1'
 
 const ensureResizeReady = (() => {
   let ready: Promise<void> | null = null
@@ -205,76 +390,122 @@ const ensureResizeReady = (() => {
   }
 })()
 
-const ensureJpegReady = (() => {
+const ensureJpegDecodeReady = (() => {
   let ready: Promise<void> | null = null
 
   return (): Promise<void> => {
     if (!ready) {
-      ready = Promise.all([
-        initJpegDecode(jpegDecodeWasm),
-        initJpegEncode(jpegEncodeWasm),
-      ]).then(() => undefined)
+      ready = initJpegDecode(jpegDecodeWasm).then(() => undefined)
     }
 
     return ready
   }
 })()
 
-const ensurePngReady = (() => {
+const ensureJpegEncodeReady = (() => {
   let ready: Promise<void> | null = null
 
   return (): Promise<void> => {
     if (!ready) {
-      ready = Promise.all([initPngDecode(pngWasm), initPngEncode(pngWasm)]).then(
-        () => undefined,
-      )
+      ready = initJpegEncode(jpegEncodeWasm).then(() => undefined)
     }
 
     return ready
   }
 })()
 
-const ensureWebpReady = (() => {
+const ensurePngDecodeReady = (() => {
   let ready: Promise<void> | null = null
 
   return (): Promise<void> => {
     if (!ready) {
-      ready = Promise.all([
-        initWebpDecode(webpDecodeWasm),
-        simd().then(isSimd =>
-          initWebpEncode(isSimd ? webpEncodeSimdWasm : webpEncodeWasm),
-        ),
-      ]).then(() => undefined)
+      ready = initPngDecode(pngWasm).then(() => undefined)
     }
 
     return ready
   }
 })()
 
-const ensureAvifReady = (() => {
+const ensurePngEncodeReady = (() => {
   let ready: Promise<void> | null = null
 
   return (): Promise<void> => {
     if (!ready) {
-      ready = Promise.all([
-        initAvifDecode(avifDecodeWasm),
-        initAvifEncode(avifEncodeWasm),
-      ]).then(() => undefined)
+      ready = initPngEncode(pngWasm).then(() => undefined)
     }
 
     return ready
   }
 })()
 
-const ensureJxlReady = (() => {
+const ensureWebpDecodeReady = (() => {
   let ready: Promise<void> | null = null
 
   return (): Promise<void> => {
     if (!ready) {
-      ready = Promise.all([
-        initJxlDecode(jxlDecodeWasm),
-        initJxlEncode(jxlEncodeWasm),
-      ]).then(() => undefined)
+      ready = initWebpDecode(webpDecodeWasm).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureWebpEncodeReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = simd()
+        .then(isSimd => initWebpEncode(isSimd ? webpEncodeSimdWasm : webpEncodeWasm))
+        .then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureAvifDecodeReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = initAvifDecode(avifDecodeWasm).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureAvifEncodeReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = initAvifEncode(avifEncodeWasm).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureJxlDecodeReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = initJxlDecode(jxlDecodeWasm).then(() => undefined)
+    }
+
+    return ready
+  }
+})()
+
+const ensureJxlEncodeReady = (() => {
+  let ready: Promise<void> | null = null
+
+  return (): Promise<void> => {
+    if (!ready) {
+      ready = initJxlEncode(jxlEncodeWasm).then(() => undefined)
     }
 
     return ready
@@ -313,7 +544,6 @@ const handleFetch = async (
     return Response.json({
       ok: true,
       environment: env.ENVIRONMENT,
-      rawAssetBaseUrl: env.RAW_ASSET_BASE_URL,
     })
   }
 
@@ -322,13 +552,18 @@ const handleFetch = async (
   }
 
   const segments = url.pathname.split('/').filter(Boolean)
-  if (segments.length < 3) {
+  if (segments.length < 2) {
     return new Response('Not found', { status: 404 })
   }
 
-  const stage = toStage(segments[0])
-  const mediaType = segments[1]
-  const serviceType = segments[2]
+  const hasLegacyStagePrefix =
+    segments[0] === 'local' || segments[0] === 'preview' || segments[0] === 'production'
+  const stage = hasLegacyStagePrefix
+    ? toStage(segments[0])
+    : resolveRequestedStageFromRequest(url, env)
+  const routeOffset = hasLegacyStagePrefix ? 1 : 0
+  const mediaType = segments[routeOffset]
+  const serviceType = segments[routeOffset + 1]
 
   if (mediaType !== 'image') {
     return new Response('Not found', { status: 404 })
@@ -339,15 +574,23 @@ const handleFetch = async (
   }
 
   if (serviceType === 'metadata') {
-    const parsed = parseMetadataRequest(stage, segments.slice(3))
+    const parsed = parseMetadataRequest(stage, segments.slice(routeOffset + 2))
     if (!parsed.ok) {
       return Response.json({ error: parsed.error }, { status: 400 })
     }
     return handleMetadataRequest(request, env, parsed.value)
   }
 
+  if (serviceType === 'raw') {
+    const parsed = parseRawRequest(stage, segments.slice(routeOffset + 2))
+    if (!parsed.ok) {
+      return Response.json({ error: parsed.error }, { status: 400 })
+    }
+    return handleRawRequest(request, env, parsed.value)
+  }
+
   if (serviceType === 'upload') {
-    const parsed = parseTransformRequest(stage, segments.slice(3))
+    const parsed = parseTransformRequest(stage, segments.slice(routeOffset + 2))
     if (!parsed.ok) {
       return Response.json({ error: parsed.error }, { status: 400 })
     }
@@ -383,6 +626,7 @@ const handleAnalyticsSummaryRequest = async (
   }
 
   try {
+    const scope = toAnalyticsScope(new URL(request.url))
     const windowEntries = await Promise.all(
       (
         Object.entries(ASSET_ANALYTICS_WINDOWS) as Array<[AnalyticsWindowKey, string]>
@@ -390,7 +634,12 @@ const handleAnalyticsSummaryRequest = async (
         async ([windowKey, intervalExpression]) =>
           [
             windowKey,
-            await loadAnalyticsWindowSummary(env, env.ENVIRONMENT, intervalExpression),
+            await loadAnalyticsWindowSummary(
+              env,
+              env.ENVIRONMENT,
+              intervalExpression,
+              scope,
+            ),
           ] as const,
       ),
     )
@@ -398,6 +647,7 @@ const handleAnalyticsSummaryRequest = async (
     const response: AnalyticsSummaryResponse = {
       environment: env.ENVIRONMENT,
       generatedAt: new Date().toISOString(),
+      scope,
       windows: Object.fromEntries(windowEntries) as Record<
         AnalyticsWindowKey,
         AnalyticsWindowSummary
@@ -453,6 +703,45 @@ const toAssetAnalyticsPublicId = (publicId: string): string =>
 const toAssetAnalyticsNamespaceClause = (): string =>
   `index1 LIKE ${toSqlString(`${ASSET_ANALYTICS_PUBLIC_ID_PREFIX}%`)}`
 
+const toAssetAnalyticsScopeClause = (scope: AnalyticsScope): string => {
+  const scopePrefixes = [
+    ...scope.organisationIds.map(
+      organisationId =>
+        `${ASSET_ANALYTICS_PUBLIC_ID_PREFIX}organisations/${organisationId}/%`,
+    ),
+    ...scope.projectIds.map(
+      projectId => `${ASSET_ANALYTICS_PUBLIC_ID_PREFIX}projects/${projectId}/%`,
+    ),
+  ]
+
+  if (scopePrefixes.length === 0) {
+    return toAssetAnalyticsNamespaceClause()
+  }
+
+  return `(${scopePrefixes
+    .map(prefix => `index1 LIKE ${toSqlString(prefix)}`)
+    .join(' OR ')})`
+}
+
+const toAnalyticsScope = (url: URL): AnalyticsScope => ({
+  organisationIds: Array.from(
+    new Set(
+      url.searchParams
+        .getAll('organisationId')
+        .map(id => id.trim())
+        .filter(Boolean),
+    ),
+  ),
+  projectIds: Array.from(
+    new Set(
+      url.searchParams
+        .getAll('projectId')
+        .map(id => id.trim())
+        .filter(Boolean),
+    ),
+  ),
+})
+
 /**
  * Loads one analytics summary window from Workers Analytics Engine.
  *
@@ -465,8 +754,17 @@ const loadAnalyticsWindowSummary = async (
   env: Env,
   environment: ImageStage,
   intervalExpression: string,
+  scope: AnalyticsScope,
 ): Promise<AnalyticsWindowSummary> => {
-  const [topTransformRows, topImageRows, ratioRows, p95Rows] = await Promise.all([
+  const scopeClause = toAssetAnalyticsScopeClause(scope)
+  const [
+    topTransformRows,
+    topImageRows,
+    ratioRows,
+    quantileRows,
+    transformRows,
+    timeseriesRows,
+  ] = await Promise.all([
     queryAnalyticsRows<AnalyticsTopRow>(
       env,
       `
@@ -476,7 +774,7 @@ const loadAnalyticsWindowSummary = async (
         FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
-          AND ${toAssetAnalyticsNamespaceClause()}
+          AND ${scopeClause}
         GROUP BY key
         ORDER BY request_count DESC
         LIMIT 25
@@ -492,7 +790,7 @@ const loadAnalyticsWindowSummary = async (
         FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
-          AND ${toAssetAnalyticsNamespaceClause()}
+          AND ${scopeClause}
         GROUP BY key
         ORDER BY request_count DESC
         LIMIT 25
@@ -510,25 +808,61 @@ const loadAnalyticsWindowSummary = async (
         FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
-          AND ${toAssetAnalyticsNamespaceClause()}
+          AND ${scopeClause}
         FORMAT JSON
       `,
     ),
-    queryAnalyticsRows<AnalyticsP95Row>(
+    queryAnalyticsRows<AnalyticsQuantilesRow>(
       env,
       `
         SELECT
           blob2 AS cache_status,
+          quantileExactWeighted(0.50)(double1, _sample_interval) AS p50_total_ms,
           quantileExactWeighted(0.95)(double1, _sample_interval) AS p95_total_ms,
+          quantileExactWeighted(0.99)(double1, _sample_interval) AS p99_total_ms,
           sum(_sample_interval) AS request_count
         FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
-          AND ${toAssetAnalyticsNamespaceClause()}
+          AND ${scopeClause}
         GROUP BY cache_status
         FORMAT JSON
       `,
     ),
+    queryAnalyticsRows<AnalyticsTopRow>(
+      env,
+      `
+        SELECT
+          blob1 AS key,
+          sum(_sample_interval) AS request_count
+        FROM ${ASSET_ANALYTICS_DATASET}
+        WHERE timestamp > NOW() - ${intervalExpression}
+          AND blob3 = ${toSqlString(environment)}
+          AND ${scopeClause}
+        GROUP BY key
+        ORDER BY request_count DESC
+        LIMIT 500
+        FORMAT JSON
+      `,
+    ),
+    intervalExpression === ASSET_ANALYTICS_WINDOWS['30d']
+      ? queryAnalyticsRows<AnalyticsTimeseriesRow>(
+          env,
+          `
+            SELECT
+              toDate(timestamp) AS date,
+              blob2 AS cache_status,
+              sum(_sample_interval) AS request_count
+            FROM ${ASSET_ANALYTICS_DATASET}
+            WHERE timestamp > NOW() - ${intervalExpression}
+              AND blob3 = ${toSqlString(environment)}
+              AND ${scopeClause}
+            GROUP BY date, cache_status
+            ORDER BY date ASC
+            FORMAT JSON
+          `,
+        )
+      : Promise.resolve([]),
   ])
 
   const ratioRow = ratioRows[0]
@@ -536,16 +870,41 @@ const loadAnalyticsWindowSummary = async (
   const edgeHitRequests = toSafeNumber(ratioRow?.edge_hit_requests)
   const derivedHitRequests = toSafeNumber(ratioRow?.derived_hit_requests)
   const transformMissRequests = toSafeNumber(ratioRow?.transform_miss_requests)
+  const breakdowns = toAnalyticsBreakdowns(transformRows, totalRequests)
 
   return {
     cacheHitPercent: toPercent(edgeHitRequests, totalRequests),
     derivedHitPercent: toPercent(derivedHitRequests, totalRequests),
     derivedMissPercent: toPercent(transformMissRequests, totalRequests),
-    p95Ms: {
-      cache: findP95ForStatus(p95Rows, 'edge-hit'),
-      derivedHit: findP95ForStatus(p95Rows, 'r2-derived-hit'),
-      derivedMiss: findP95ForStatus(p95Rows, 'transform-miss'),
+    p50Ms: {
+      cache: findQuantileForStatus(quantileRows, 'edge-hit', 'p50_total_ms'),
+      derivedHit: findQuantileForStatus(quantileRows, 'r2-derived-hit', 'p50_total_ms'),
+      derivedMiss: findQuantileForStatus(
+        quantileRows,
+        'transform-miss',
+        'p50_total_ms',
+      ),
     },
+    p95Ms: {
+      cache: findQuantileForStatus(quantileRows, 'edge-hit', 'p95_total_ms'),
+      derivedHit: findQuantileForStatus(quantileRows, 'r2-derived-hit', 'p95_total_ms'),
+      derivedMiss: findQuantileForStatus(
+        quantileRows,
+        'transform-miss',
+        'p95_total_ms',
+      ),
+    },
+    p99Ms: {
+      cache: findQuantileForStatus(quantileRows, 'edge-hit', 'p99_total_ms'),
+      derivedHit: findQuantileForStatus(quantileRows, 'r2-derived-hit', 'p99_total_ms'),
+      derivedMiss: findQuantileForStatus(
+        quantileRows,
+        'transform-miss',
+        'p99_total_ms',
+      ),
+    },
+    timeseries30d: toAnalyticsTimeseries(timeseriesRows),
+    breakdowns,
     topImages: topImageRows
       .map(row => ({
         publicId: row.key ?? '',
@@ -677,23 +1036,233 @@ const toPercent = (value: number, total: number): number => {
   return Math.round((value / total) * 10000) / 100
 }
 
+const toDisplayCropMode = (value: string): string => {
+  const normalized = value.toLowerCase()
+  if (normalized === 'fill' || normalized === 'cover') return 'Fill'
+  if (normalized === 'fit' || normalized === 'contain') return 'Fit'
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+const toDisplayGravity = (value: string): string =>
+  `G:${value.charAt(0).toUpperCase()}${value.slice(1)}`
+
+const toDisplayQuality = (value: string): string =>
+  `Q:${value === 'auto' ? 'Auto' : value}`
+
+const toDisplayFormat = (value: string): string => value.toUpperCase()
+
+const createBreakdownAccumulator = (): AnalyticsBreakdownAccumulator => ({
+  cropModes: new Map(),
+  formats: new Map(),
+  dimensions: new Map(),
+  qualities: new Map(),
+  gravities: new Map(),
+})
+
+const addBreakdownValue = (
+  map: Map<string, number>,
+  key: string,
+  requests: number,
+): void => {
+  if (!key) return
+  map.set(key, (map.get(key) ?? 0) + requests)
+}
+
+const toAnalyticsBreakdownItems = (
+  values: Map<string, number>,
+  totalRequests: number,
+): Array<{ key: string; label: string; requests: number; percent: number }> =>
+  Array.from(values.entries())
+    .map(([label, requests]) => ({
+      key: label,
+      label,
+      requests,
+      percent: toPercent(requests, totalRequests),
+    }))
+    .sort((left, right) => right.requests - left.requests)
+
+const toAnalyticsBreakdowns = (
+  rows: AnalyticsTopRow[],
+  totalRequests: number,
+): AnalyticsWindowSummary['breakdowns'] => {
+  const breakdowns = createBreakdownAccumulator()
+
+  for (const row of rows) {
+    const transformKey = row.key ?? ''
+    const requests = toSafeNumber(row.request_count)
+    if (!transformKey || requests <= 0) continue
+
+    const tokens = transformKey
+      .split(',')
+      .map(token => token.trim())
+      .filter(Boolean)
+
+    let width: string | null = null
+    let height: string | null = null
+
+    for (const token of tokens) {
+      if (token.startsWith('c_')) {
+        addBreakdownValue(
+          breakdowns.cropModes,
+          toDisplayCropMode(token.slice(2)),
+          requests,
+        )
+        continue
+      }
+      if (token.startsWith('fit=')) {
+        addBreakdownValue(
+          breakdowns.cropModes,
+          toDisplayCropMode(token.slice('fit='.length)),
+          requests,
+        )
+        continue
+      }
+      if (token.startsWith('g_')) {
+        addBreakdownValue(
+          breakdowns.gravities,
+          toDisplayGravity(token.slice(2)),
+          requests,
+        )
+        continue
+      }
+      if (token.startsWith('gravity=')) {
+        addBreakdownValue(
+          breakdowns.gravities,
+          toDisplayGravity(token.slice('gravity='.length)),
+          requests,
+        )
+        continue
+      }
+      if (token.startsWith('q_')) {
+        addBreakdownValue(
+          breakdowns.qualities,
+          toDisplayQuality(token.slice(2)),
+          requests,
+        )
+        continue
+      }
+      if (token.startsWith('quality=')) {
+        addBreakdownValue(
+          breakdowns.qualities,
+          toDisplayQuality(token.slice('quality='.length)),
+          requests,
+        )
+        continue
+      }
+      if (token.startsWith('f_')) {
+        addBreakdownValue(breakdowns.formats, toDisplayFormat(token.slice(2)), requests)
+        continue
+      }
+      if (token.startsWith('format=')) {
+        addBreakdownValue(
+          breakdowns.formats,
+          toDisplayFormat(token.slice('format='.length)),
+          requests,
+        )
+        continue
+      }
+      if (token.startsWith('w_') || token.startsWith('w=')) {
+        width = token.slice(2)
+        continue
+      }
+      if (token.startsWith('width=')) {
+        width = token.slice('width='.length)
+        continue
+      }
+      if (token.startsWith('h_') || token.startsWith('h=')) {
+        height = token.slice(2)
+        continue
+      }
+      if (token.startsWith('height=')) {
+        height = token.slice('height='.length)
+      }
+    }
+
+    if (width || height) {
+      addBreakdownValue(
+        breakdowns.dimensions,
+        width && height
+          ? `${width}x${height}`
+          : width
+            ? `W:${width}`
+            : `H:${height ?? ''}`,
+        requests,
+      )
+    }
+  }
+
+  return {
+    cropModes: toAnalyticsBreakdownItems(breakdowns.cropModes, totalRequests),
+    formats: toAnalyticsBreakdownItems(breakdowns.formats, totalRequests),
+    dimensions: toAnalyticsBreakdownItems(breakdowns.dimensions, totalRequests),
+    qualities: toAnalyticsBreakdownItems(breakdowns.qualities, totalRequests),
+    gravities: toAnalyticsBreakdownItems(breakdowns.gravities, totalRequests),
+  }
+}
+
+const toAnalyticsTimeseries = (
+  rows: AnalyticsTimeseriesRow[],
+): AnalyticsWindowSummary['timeseries30d'] => {
+  const byDate = new Map<
+    string,
+    {
+      date: string
+      totalRequests: number
+      cacheRequests: number
+      derivedHitRequests: number
+      derivedMissRequests: number
+    }
+  >()
+
+  for (const row of rows) {
+    const date = row.date ?? ''
+    if (!date) continue
+
+    const entry = byDate.get(date) ?? {
+      date,
+      totalRequests: 0,
+      cacheRequests: 0,
+      derivedHitRequests: 0,
+      derivedMissRequests: 0,
+    }
+    const requests = toSafeNumber(row.request_count)
+    entry.totalRequests += requests
+
+    if (row.cache_status === 'edge-hit') {
+      entry.cacheRequests += requests
+    } else if (row.cache_status === 'r2-derived-hit') {
+      entry.derivedHitRequests += requests
+    } else if (row.cache_status === 'transform-miss') {
+      entry.derivedMissRequests += requests
+    }
+
+    byDate.set(date, entry)
+  }
+
+  return Array.from(byDate.values()).sort((left, right) =>
+    left.date.localeCompare(right.date),
+  )
+}
+
 /**
- * Finds the p95 latency for a specific cache status bucket.
+ * Finds a latency quantile for a specific cache status bucket.
  *
- * @param rows Status-grouped p95 rows.
+ * @param rows Status-grouped quantile rows.
  * @param status Requested cache status.
- * @returns p95 latency or null.
+ * @param field Requested quantile field.
+ * @returns Quantile latency or null.
  */
-const findP95ForStatus = (
-  rows: AnalyticsP95Row[],
+const findQuantileForStatus = (
+  rows: AnalyticsQuantilesRow[],
   status: ImageCacheStatus,
+  field: 'p50_total_ms' | 'p95_total_ms' | 'p99_total_ms',
 ): number | null => {
   const row = rows.find(candidate => candidate.cache_status === status)
   if (!row || toSafeNumber(row.request_count) <= 0) {
     return null
   }
 
-  return toSafeNumber(row.p95_total_ms)
+  return toSafeNumber(row[field])
 }
 
 /**
@@ -748,6 +1317,66 @@ const handleMetadataRequest = async (
   )
 }
 
+const handleRawRequest = async (
+  request: Request,
+  env: Env,
+  rawRequest: RawRequest,
+): Promise<Response> => {
+  if (typeof rawRequest.width === 'number' || typeof rawRequest.height === 'number') {
+    const source = await resolveSourceAsset(env, rawRequest.requestedStage, {
+      publicId: rawRequest.publicId,
+      version: rawRequest.version,
+    })
+
+    if (!source) {
+      return new Response('Image not found', { status: 404 })
+    }
+
+    return new Response(request.method === 'HEAD' ? null : source.body, {
+      headers: {
+        'cache-control': source.version ? CACHE_CONTROL_IMMUTABLE : CACHE_CONTROL_SHORT,
+        'content-type': source.contentType,
+        'x-image-source-env': source.stage,
+        ...(source.version ? { 'x-image-version': String(source.version) } : {}),
+      },
+    })
+  }
+
+  const resolvedMetadata = await resolveMetadataDocument(
+    env,
+    rawRequest.requestedStage,
+    {
+      publicId: rawRequest.publicId,
+      version: rawRequest.version,
+    },
+  )
+  const source = await resolveRawDownloadAsset(env, rawRequest.requestedStage, {
+    publicId: rawRequest.publicId,
+    version: rawRequest.version,
+  })
+
+  if (!source) {
+    return new Response('Image not found', { status: 404 })
+  }
+
+  const filename = toRawDownloadFilename(
+    rawRequest.publicId,
+    source.objectKey,
+    source.contentType,
+    resolvedMetadata.document,
+  )
+
+  return new Response(request.method === 'HEAD' ? null : source.body, {
+    headers: {
+      'cache-control': source.version ? CACHE_CONTROL_IMMUTABLE : CACHE_CONTROL_SHORT,
+      'content-type': source.contentType,
+      'content-disposition': `attachment; filename="${filename}"`,
+      'x-image-source-env': source.stage,
+      ...(source.version ? { 'x-image-version': String(source.version) } : {}),
+    },
+  })
+}
+
 /**
  * Resolves or generates a transformed image, then persists the derived variant to R2.
  *
@@ -765,7 +1394,22 @@ const handleTransformRequest = async (
 ): Promise<Response> => {
   const startedAt = Date.now()
   const cacheKey = toEdgeCacheKey(request)
-  const edgeCached = await caches.default.match(cacheKey)
+  const debug: TransformDebugContext = {
+    enabled: isTransformDebugEnabled(env, request, transformRequest),
+    publicId: transformRequest.publicId,
+    requestedStage: transformRequest.requestedStage,
+    requestPath: new URL(request.url).pathname,
+  }
+  const bypassCacheReads = isDebugTransformRequest(debug)
+
+  if (bypassCacheReads) {
+    logTransformDebug(debug, 'cache-bypassed', {
+      reason: 'debug-request',
+      cacheLayers: ['edge', 'derived'],
+    })
+  }
+
+  const edgeCached = bypassCacheReads ? null : await caches.default.match(cacheKey)
   if (edgeCached) {
     const response = withImageDebugHeaders(
       toHeadAwareResponse(edgeCached, request.method),
@@ -812,7 +1456,6 @@ const handleTransformRequest = async (
     version: resolvedVersion,
   })
   const optimisticDerivedKey = toDerivedObjectKey({
-    requestedStage: transformRequest.requestedStage,
     publicId: transformRequest.publicId,
     version: resolvedVersion,
     canonicalKey: optimisticCanonical,
@@ -820,7 +1463,9 @@ const handleTransformRequest = async (
   const derivedBucket = getDerivedBucket(env, transformRequest.requestedStage)
 
   const derivedLookupStartedAt = Date.now()
-  const optimisticCached = await derivedBucket.get(optimisticDerivedKey)
+  const optimisticCached = bypassCacheReads
+    ? null
+    : await derivedBucket.get(optimisticDerivedKey)
   if (optimisticCached) {
     const response = withImageDebugHeaders(
       toObjectResponse(optimisticCached, {
@@ -867,7 +1512,9 @@ const handleTransformRequest = async (
 
   try {
     // Re-check the cheap derived path after queueing because another request may have filled it.
-    const queuedOptimisticCached = await derivedBucket.get(optimisticDerivedKey)
+    const queuedOptimisticCached = bypassCacheReads
+      ? null
+      : await derivedBucket.get(optimisticDerivedKey)
     if (queuedOptimisticCached) {
       const response = withImageDebugHeaders(
         toObjectResponse(queuedOptimisticCached, {
@@ -909,6 +1556,13 @@ const handleTransformRequest = async (
       return new Response('Image not found', { status: 404 })
     }
 
+    logTransformDebug(debug, 'source-loaded', {
+      sourceStage: source.stage,
+      sourceContentType: source.contentType,
+      sourceBytes: source.body.byteLength,
+      resolvedVersion: resolvedVersion ?? null,
+    })
+
     if (source.stage !== transformRequest.requestedStage) {
       console.warn(
         JSON.stringify({
@@ -925,19 +1579,25 @@ const handleTransformRequest = async (
       source.contentType,
       transformRequest.format,
     )
+    logTransformDebug(debug, 'format-selected', {
+      sourceContentType: source.contentType,
+      sourceBytes: source.body.byteLength,
+      outputFormat,
+      accept: request.headers.get('accept') ?? '',
+      requestMethod: request.method,
+    })
     const canonical = toCanonicalTransformKey({
       ...transformRequest,
       format: outputFormat,
       version: resolvedVersion,
     })
     const derivedKey = toDerivedObjectKey({
-      requestedStage: transformRequest.requestedStage,
       publicId: transformRequest.publicId,
       version: resolvedVersion,
       canonicalKey: canonical,
     })
     const secondDerivedLookupStartedAt = Date.now()
-    const cached = await derivedBucket.get(derivedKey)
+    const cached = bypassCacheReads ? null : await derivedBucket.get(derivedKey)
     if (cached) {
       const response = withImageDebugHeaders(
         toObjectResponse(cached, {
@@ -971,16 +1631,43 @@ const handleTransformRequest = async (
       return response
     }
 
+    if (shouldBlockProductionAutoTransformMiss(env, transformRequest)) {
+      return withImageDebugHeaders(
+        new Response('Production auto transforms must be pre-rendered', {
+          status: 404,
+          headers: {
+            'cache-control': 'no-store',
+            'content-type': 'text/plain; charset=UTF-8',
+            'x-image-transform-key': canonical,
+            ...(resolvedVersion ? { 'x-image-version': String(resolvedVersion) } : {}),
+          },
+        }),
+        {
+          cacheStatus: 'transform-miss',
+          totalMs: Date.now() - startedAt,
+          queueMs,
+          versionMs: derivedLookupStartedAt - versionStartedAt,
+          derivedLookupMs: Date.now() - secondDerivedLookupStartedAt,
+        },
+      )
+    }
+
     const transformStartedAt = Date.now()
     let transformed: { body: ArrayBuffer; contentType: string }
 
     try {
-      transformed = await transformSourceAsset(source, {
-        ...transformRequest,
-        version: resolvedVersion,
-        format: outputFormat,
-      })
+      transformed = await transformSourceAsset(
+        source,
+        {
+          ...transformRequest,
+          version: resolvedVersion,
+          format: outputFormat,
+        },
+        debug,
+      )
     } catch (error) {
+      const stageError = error instanceof AssetTransformStageError ? error : null
+
       console.error(
         JSON.stringify({
           event: 'asset-transform-failed',
@@ -988,9 +1675,34 @@ const handleTransformRequest = async (
           sourceStage: source.stage,
           publicId: transformRequest.publicId,
           sourceContentType: source.contentType,
+          phase: stageError?.phase ?? null,
+          details: stageError?.details ?? null,
           error: error instanceof Error ? error.message : String(error),
         }),
       )
+
+      if (debug.enabled) {
+        const debugPayload = {
+          error: 'Unsupported or invalid source asset data',
+          phase: stageError?.phase ?? null,
+          details: stageError?.details ?? null,
+          message: error instanceof Error ? error.message : String(error),
+        }
+
+        return new Response(
+          request.method === 'HEAD' ? null : JSON.stringify(debugPayload, null, 2),
+          {
+            status: 415,
+            headers: {
+              'cache-control': 'no-store',
+              'content-type': 'application/json; charset=utf-8',
+              ...(stageError?.phase
+                ? { 'x-image-debug-failure-phase': stageError.phase }
+                : {}),
+            },
+          },
+        )
+      }
 
       return new Response('Unsupported or invalid source asset data', {
         status: 415,
@@ -1035,27 +1747,29 @@ const handleTransformRequest = async (
       version: resolvedVersion,
     })
 
-    ctx.waitUntil(
-      Promise.all([
-        derivedBucket.put(derivedKey, transformed.body, {
-          httpMetadata: {
-            contentType: transformed.contentType,
-            cacheControl: CACHE_CONTROL_IMMUTABLE,
-          },
-          customMetadata: {
-            sourceStage: source.stage,
-            sourceObjectKey: source.objectKey,
-            publicId: transformRequest.publicId,
-            version: resolvedVersion ? String(resolvedVersion) : 'latest',
-            canonicalTransform: canonical,
-            generatedAt: new Date().toISOString(),
-          },
-        }),
-        ...(request.method === 'GET'
-          ? [caches.default.put(cacheKey, response.clone())]
-          : []),
-      ]),
-    )
+    if (!bypassCacheReads) {
+      ctx.waitUntil(
+        Promise.all([
+          derivedBucket.put(derivedKey, transformed.body, {
+            httpMetadata: {
+              contentType: transformed.contentType,
+              cacheControl: CACHE_CONTROL_IMMUTABLE,
+            },
+            customMetadata: {
+              sourceStage: source.stage,
+              sourceObjectKey: source.objectKey,
+              publicId: transformRequest.publicId,
+              version: resolvedVersion ? String(resolvedVersion) : 'latest',
+              canonicalTransform: canonical,
+              generatedAt: new Date().toISOString(),
+            },
+          }),
+          ...(request.method === 'GET'
+            ? [caches.default.put(cacheKey, response.clone())]
+            : []),
+        ]),
+      )
+    }
 
     return response
   } finally {
@@ -1239,11 +1953,7 @@ const chooseOutputFormatFromRequest = (
   }
 
   const accept = request.headers.get('accept') ?? ''
-  if (accept.includes('image/avif')) return 'avif'
-  if (accept.includes('image/webp')) return 'webp'
-  if (accept.includes('image/jxl')) return 'jxl'
-  if (accept.includes('image/png')) return 'png'
-  return 'jpeg'
+  return chooseAutoOutputFormat(accept)
 }
 
 /**
@@ -1298,6 +2008,59 @@ const parseMetadataRequest = (
       version,
       profile,
       format,
+    },
+  }
+}
+
+const parseRawRequest = (
+  requestedStage: ImageStage,
+  rawSegments: string[],
+): { ok: true; value: RawRequest } | { ok: false; error: string } => {
+  if (rawSegments.length === 0) {
+    return { ok: false, error: 'Missing raw image path' }
+  }
+
+  let version: number | undefined
+  let width: number | undefined
+  let height: number | undefined
+  const publicIdSegments: string[] = []
+
+  for (const segment of rawSegments) {
+    if (segment.startsWith('v') && isIntegerString(segment.slice(1))) {
+      version = Number(segment.slice(1))
+      continue
+    }
+
+    if (looksLikeModifierSegment(segment)) {
+      for (const part of segment.split(',')) {
+        if (part.startsWith('w_') && isIntegerString(part.slice(2))) {
+          width = clampDimension(Number(part.slice(2)))
+          continue
+        }
+
+        if (part.startsWith('h_') && isIntegerString(part.slice(2))) {
+          height = clampDimension(Number(part.slice(2)))
+        }
+      }
+      continue
+    }
+
+    publicIdSegments.push(segment)
+  }
+
+  const publicId = publicIdSegments.join('/')
+  if (!publicId) {
+    return { ok: false, error: 'Missing publicId' }
+  }
+
+  return {
+    ok: true,
+    value: {
+      requestedStage,
+      publicId: stripKnownExtension(publicId),
+      version,
+      width,
+      height,
     },
   }
 }
@@ -1430,6 +2193,28 @@ const resolveSourceAsset = async (
       lookup.version ??
       (await readManifestVersion(bucket, lookup.publicId)) ??
       undefined
+    const rawObjectKey = `${lookup.publicId}.raw`
+    const rawObject = await bucket.get(rawObjectKey)
+    if (rawObject) {
+      const rawBody = await rawObject.arrayBuffer()
+      const rawContentType =
+        rawObject.httpMetadata?.contentType ?? inferContentTypeFromKey(rawObjectKey)
+      const rawFormat = inferInputFormat(rawContentType, rawObjectKey, rawBody)
+
+      // Prefer the `.raw` source whenever it is directly transformable. This avoids
+      // inheriting stale or mis-normalized working objects while still falling back to
+      // the extensionless working copy for TIFF-backed assets.
+      if (rawFormat !== 'unknown') {
+        return {
+          body: rawBody,
+          contentType: rawContentType,
+          objectKey: rawObjectKey,
+          stage,
+          version,
+        }
+      }
+    }
+
     const object = await bucket.get(lookup.publicId)
     if (!object) {
       continue
@@ -1442,6 +2227,38 @@ const resolveSourceAsset = async (
       objectKey: lookup.publicId,
       stage,
       version,
+    }
+  }
+
+  return null
+}
+
+const resolveRawDownloadAsset = async (
+  env: Env,
+  requestedStage: ImageStage,
+  lookup: { publicId: string; version?: number },
+): Promise<SourceAsset | null> => {
+  for (const stage of getReadableStages(requestedStage)) {
+    const bucket = getOriginalsBucket(env, stage)
+    const version =
+      lookup.version ??
+      (await readManifestVersion(bucket, lookup.publicId)) ??
+      undefined
+
+    for (const objectKey of [`${lookup.publicId}.raw`, lookup.publicId]) {
+      const object = await bucket.get(objectKey)
+      if (!object) {
+        continue
+      }
+
+      return {
+        body: await object.arrayBuffer(),
+        contentType:
+          object.httpMetadata?.contentType ?? inferContentTypeFromKey(objectKey),
+        objectKey,
+        stage,
+        version,
+      }
     }
   }
 
@@ -1501,6 +2318,7 @@ const resolveMetadataDocument = async (
 const transformSourceAsset = async (
   source: SourceAsset,
   request: TransformRequest & { format: OutputFormat },
+  debug: TransformDebugContext,
 ): Promise<{ body: ArrayBuffer; contentType: string }> => {
   await ensureResizeReady()
 
@@ -1518,18 +2336,70 @@ const transformSourceAsset = async (
     }
   }
 
-  const decoded = await decodeSourceImage(source)
-  const transformed = await applyTransforms(decoded.data, request)
+  const transformed = await decodeAndTransformSourceAsset(source, request, debug)
+  logTransformDebug(debug, 'transformed', {
+    transformedWidth: transformed.image.width,
+    transformedHeight: transformed.image.height,
+    transformedBytes: toImageDataBytes(transformed.image),
+    transformedMegapixels: toMegapixels(transformed.image),
+  })
   const encoded = await encodeOutput(
-    transformed,
+    transformed.image,
     request.format,
     request.quality,
-    decoded.hasAlpha,
+    transformed.hasAlpha,
   )
+  logTransformDebug(debug, 'encoded', {
+    codecPath: `${transformed.inputFormat}->${request.format}`,
+    outputFormat: request.format,
+    encodedBytes: encoded.body.byteLength,
+    estimatedLivePixelBytes: transformed.estimatedPeakPixelBytes,
+  })
 
   return {
     body: encoded.body,
     contentType: encoded.contentType,
+  }
+}
+
+/**
+ * Decodes the source and runs the resize pipeline in a tighter scope so large
+ * intermediate buffers can fall out of reach before the encode stage begins.
+ *
+ * @param source Source object bytes and metadata.
+ * @param request Parsed transform request.
+ * @param debug Debug logging context.
+ * @returns Final transformed pixels plus lightweight decode metadata.
+ */
+const decodeAndTransformSourceAsset = async (
+  source: SourceAsset,
+  request: TransformRequest & { format: OutputFormat },
+  debug: TransformDebugContext,
+): Promise<
+  TransformPipelineResult & Pick<DecodedImage, 'hasAlpha' | 'inputFormat'>
+> => {
+  const decoded = await decodeSourceImage(source)
+  const decodedBytes = toImageDataBytes(decoded.data)
+
+  logTransformDebug(debug, 'decoded', {
+    inputFormat: decoded.inputFormat,
+    decodedWidth: decoded.data.width,
+    decodedHeight: decoded.data.height,
+    decodedBytes,
+    decodedMegapixels: toMegapixels(decoded.data),
+    hasAlpha: decoded.hasAlpha,
+  })
+
+  const transformed = await applyTransforms(decoded.data, request, debug)
+
+  return {
+    image: transformed.image,
+    estimatedPeakPixelBytes: Math.max(
+      transformed.estimatedPeakPixelBytes,
+      decodedBytes + toImageDataBytes(transformed.image),
+    ),
+    hasAlpha: decoded.hasAlpha,
+    inputFormat: decoded.inputFormat,
   }
 }
 
@@ -1540,24 +2410,24 @@ const transformSourceAsset = async (
  * @returns Decoded image and alpha metadata.
  */
 const decodeSourceImage = async (source: SourceAsset): Promise<DecodedImage> => {
-  const format = inferInputFormat(source.contentType, source.objectKey)
+  const format = inferInputFormat(source.contentType, source.objectKey, source.body)
   const buffer = source.body
   let data: ImageData
 
   if (format === 'png') {
-    await ensurePngReady()
+    await ensurePngDecodeReady()
     data = await decodePng(buffer)
   } else if (format === 'webp') {
-    await ensureWebpReady()
+    await ensureWebpDecodeReady()
     data = await decodeWebp(buffer)
   } else if (format === 'avif') {
-    await ensureAvifReady()
+    await ensureAvifDecodeReady()
     data = await decodeAvif(buffer)
   } else if (format === 'jxl') {
-    await ensureJxlReady()
+    await ensureJxlDecodeReady()
     data = await decodeJxl(buffer)
   } else {
-    await ensureJpegReady()
+    await ensureJpegDecodeReady()
     data = await decodeJpeg(buffer, { preserveOrientation: true })
   }
 
@@ -1578,28 +2448,258 @@ const decodeSourceImage = async (source: SourceAsset): Promise<DecodedImage> => 
 const applyTransforms = async (
   image: ImageData,
   request: TransformRequest,
-): Promise<ImageData> => {
+  debug?: TransformDebugContext,
+): Promise<TransformPipelineResult> => {
   const target = resolveTargetDimensions(image, request)
   if (!target) {
-    return image
+    return {
+      image,
+      estimatedPeakPixelBytes: toImageDataBytes(image),
+    }
   }
 
+  const workingImage = await maybeDownscaleForLowMemoryPath(
+    image,
+    target,
+    request,
+    debug,
+  )
+  const workingBytes = toImageDataBytes(workingImage)
+
   if (request.cropMode === 'c_fit') {
-    return resize(image, {
+    if (debug) {
+      logTransformDebug(debug, 'resize-start', {
+        resizeStage: 'fit',
+        sourceWidth: workingImage.width,
+        sourceHeight: workingImage.height,
+        targetWidth: target.width,
+        targetHeight: target.height,
+        sourceMegapixels: toMegapixels(workingImage),
+      })
+    }
+
+    let transformed: ImageData
+
+    try {
+      transformed = await resize(workingImage, {
+        width: target.width,
+        height: target.height,
+        method: 'lanczos3',
+      })
+    } catch (error) {
+      if (debug) {
+        logTransformDebug(debug, 'resize-failed', {
+          resizeStage: 'fit',
+          sourceWidth: workingImage.width,
+          sourceHeight: workingImage.height,
+          targetWidth: target.width,
+          targetHeight: target.height,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+
+      throw new AssetTransformStageError('resize-fit', {
+        error: error instanceof Error ? error.message : String(error),
+        resizeStage: 'fit',
+        sourceWidth: workingImage.width,
+        sourceHeight: workingImage.height,
+        targetWidth: target.width,
+        targetHeight: target.height,
+      })
+    }
+
+    return {
+      image: transformed,
+      estimatedPeakPixelBytes: workingBytes + toImageDataBytes(transformed),
+    }
+  }
+
+  const crop = await resolveCropRect(workingImage, target, request.gravity, debug)
+  const cropped = cropImageData(workingImage, crop.x, crop.y, crop.width, crop.height)
+  const croppedBytes = toImageDataBytes(cropped)
+  if (debug) {
+    logTransformDebug(debug, 'cropped', {
+      cropX: crop.x,
+      cropY: crop.y,
+      cropWidth: crop.width,
+      cropHeight: crop.height,
+      croppedBytes,
+      croppedMegapixels: toMegapixels(cropped),
+      estimatedLivePixelBytes: workingBytes + croppedBytes,
+    })
+  }
+
+  if (debug) {
+    logTransformDebug(debug, 'resize-start', {
+      resizeStage: 'post-crop',
+      sourceWidth: cropped.width,
+      sourceHeight: cropped.height,
+      targetWidth: target.width,
+      targetHeight: target.height,
+      sourceMegapixels: toMegapixels(cropped),
+    })
+  }
+
+  let transformed: ImageData
+
+  try {
+    transformed = await resize(cropped, {
       width: target.width,
       height: target.height,
       method: 'lanczos3',
     })
+  } catch (error) {
+    if (debug) {
+      logTransformDebug(debug, 'resize-failed', {
+        resizeStage: 'post-crop',
+        sourceWidth: cropped.width,
+        sourceHeight: cropped.height,
+        targetWidth: target.width,
+        targetHeight: target.height,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+
+    throw new AssetTransformStageError('resize-post-crop', {
+      error: error instanceof Error ? error.message : String(error),
+      resizeStage: 'post-crop',
+      sourceWidth: cropped.width,
+      sourceHeight: cropped.height,
+      targetWidth: target.width,
+      targetHeight: target.height,
+    })
   }
 
-  const crop = await resolveCropRect(image, target, request.gravity)
-  const cropped = cropImageData(image, crop.x, crop.y, crop.width, crop.height)
+  return {
+    image: transformed,
+    estimatedPeakPixelBytes: Math.max(
+      workingBytes + croppedBytes,
+      croppedBytes + toImageDataBytes(transformed),
+    ),
+  }
+}
 
-  return resize(cropped, {
-    width: target.width,
-    height: target.height,
-    method: 'lanczos3',
-  })
+const maybeDownscaleForLowMemoryPath = async (
+  image: ImageData,
+  target: { width: number; height: number },
+  request: TransformRequest,
+  debug?: TransformDebugContext,
+): Promise<ImageData> => {
+  const shouldUseLowMemoryPath = toPixelCount(image) > MAX_LOW_MEMORY_SOURCE_PIXELS
+
+  if (!shouldUseLowMemoryPath) {
+    return image
+  }
+
+  const currentMaxDimension = Math.max(image.width, image.height)
+  const intermediateMaxDimension = clamp(
+    Math.max(target.width, target.height) * 4,
+    LOW_MEMORY_MIN_INTERMEDIATE_DIMENSION,
+    LOW_MEMORY_MAX_INTERMEDIATE_DIMENSION,
+  )
+  const ratio = Math.min(1, intermediateMaxDimension / currentMaxDimension)
+  const downscaleWidth = Math.max(1, Math.round(image.width * ratio))
+  const downscaleHeight = Math.max(1, Math.round(image.height * ratio))
+
+  if (debug) {
+    logTransformDebug(debug, 'low-memory-downscale-start', {
+      originalWidth: image.width,
+      originalHeight: image.height,
+      originalMegapixels: toMegapixels(image),
+      intermediateMaxDimension,
+      targetWidth: downscaleWidth,
+      targetHeight: downscaleHeight,
+      targetMegapixels: Number(
+        ((downscaleWidth * downscaleHeight) / 1_000_000).toFixed(2),
+      ),
+    })
+  }
+
+  let downscaled = image
+
+  try {
+    while (
+      downscaled.width > downscaleWidth * 2 ||
+      downscaled.height > downscaleHeight * 2
+    ) {
+      const nextWidth = Math.max(downscaleWidth, Math.round(downscaled.width / 2))
+      const nextHeight = Math.max(downscaleHeight, Math.round(downscaled.height / 2))
+
+      if (debug) {
+        logTransformDebug(debug, 'low-memory-downscale-step', {
+          sourceWidth: downscaled.width,
+          sourceHeight: downscaled.height,
+          nextWidth,
+          nextHeight,
+          sourceMegapixels: toMegapixels(downscaled),
+        })
+      }
+
+      downscaled = await resize(downscaled, {
+        width: nextWidth,
+        height: nextHeight,
+        method: 'triangle',
+      })
+    }
+
+    downscaled = await resize(downscaled, {
+      width: downscaleWidth,
+      height: downscaleHeight,
+      method: 'triangle',
+    })
+  } catch (error) {
+    if (debug) {
+      logTransformDebug(debug, 'low-memory-downscale-failed', {
+        originalWidth: image.width,
+        originalHeight: image.height,
+        originalMegapixels: toMegapixels(image),
+        intermediateMaxDimension,
+        targetWidth: downscaleWidth,
+        targetHeight: downscaleHeight,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+
+    if (
+      Math.max(image.width, image.height) <= LOW_MEMORY_FALLBACK_MAX_SOURCE_DIMENSION
+    ) {
+      if (debug) {
+        logTransformDebug(debug, 'low-memory-downscale-fallback', {
+          fallback: 'use-original-working-image',
+          originalWidth: image.width,
+          originalHeight: image.height,
+          originalMegapixels: toMegapixels(image),
+          maxSourceDimension: LOW_MEMORY_FALLBACK_MAX_SOURCE_DIMENSION,
+        })
+      }
+
+      return image
+    }
+
+    throw new AssetTransformStageError('low-memory-downscale', {
+      error: error instanceof Error ? error.message : String(error),
+      originalWidth: image.width,
+      originalHeight: image.height,
+      originalMegapixels: toMegapixels(image),
+      intermediateMaxDimension,
+      targetWidth: downscaleWidth,
+      targetHeight: downscaleHeight,
+    })
+  }
+
+  if (debug) {
+    logTransformDebug(debug, 'low-memory-downscale', {
+      originalWidth: image.width,
+      originalHeight: image.height,
+      originalMegapixels: toMegapixels(image),
+      downscaledWidth: downscaled.width,
+      downscaledHeight: downscaled.height,
+      downscaledMegapixels: toMegapixels(downscaled),
+      downscaledBytes: toImageDataBytes(downscaled),
+    })
+  }
+
+  return downscaled
 }
 
 /**
@@ -1614,6 +2714,7 @@ const resolveCropRect = async (
   image: ImageData,
   target: { width: number; height: number },
   gravity: GravityMode,
+  debug?: TransformDebugContext,
 ): Promise<{ x: number; y: number; width: number; height: number }> => {
   const imageRatio = image.width / image.height
   const targetRatio = target.width / target.height
@@ -1623,6 +2724,23 @@ const resolveCropRect = async (
     imageRatio > targetRatio ? image.height : Math.round(image.width / targetRatio)
 
   if (gravity === 'g_center') {
+    return {
+      x: Math.max(0, Math.round((image.width - cropWidth) / 2)),
+      y: Math.max(0, Math.round((image.height - cropHeight) / 2)),
+      width: cropWidth,
+      height: cropHeight,
+    }
+  }
+
+  if (toPixelCount(image) > MAX_SMARTCROP_SOURCE_PIXELS) {
+    if (debug) {
+      logTransformDebug(debug, 'smartcrop-skipped', {
+        reason: 'source-too-large',
+        sourceMegapixels: toMegapixels(image),
+        maxSmartcropPixels: MAX_SMARTCROP_SOURCE_PIXELS,
+      })
+    }
+
     return {
       x: Math.max(0, Math.round((image.width - cropWidth) / 2)),
       y: Math.max(0, Math.round((image.height - cropHeight) / 2)),
@@ -1685,43 +2803,49 @@ const encodeOutput = async (
   }
 
   if (format === 'png') {
-    await ensurePngReady()
+    await ensurePngEncodeReady()
+    const body = await encodePng(image)
     return {
-      body: await encodePng(image),
+      body,
       contentType: 'image/png',
     }
   }
 
   if (format === 'webp') {
-    await ensureWebpReady()
+    await ensureWebpEncodeReady()
+    const body = await encodeWebp(image, { quality: resolveQuality(quality, 'webp') })
     return {
-      body: await encodeWebp(image, { quality: resolveQuality(quality, 'webp') }),
+      body,
       contentType: 'image/webp',
     }
   }
 
   if (format === 'avif') {
-    await ensureAvifReady()
+    await ensureAvifEncodeReady()
+    const body = await encodeAvif(image, { quality: resolveQuality(quality, 'avif') })
     return {
-      body: await encodeAvif(image, { quality: resolveQuality(quality, 'avif') }),
+      body,
       contentType: 'image/avif',
     }
   }
 
   if (format === 'jxl') {
-    await ensureJxlReady()
+    await ensureJxlEncodeReady()
+    const body = await encodeJxl(image, { quality: resolveQuality(quality, 'jxl') })
     return {
-      body: await encodeJxl(image, { quality: resolveQuality(quality, 'jxl') }),
+      body,
       contentType: 'image/jxl',
     }
   }
 
-  await ensureJpegReady()
+  await ensureJpegEncodeReady()
+
+  const body = await encodeJpeg(hasAlpha ? flattenAlpha(image) : image, {
+    quality: resolveQuality(quality, 'jpeg'),
+  })
 
   return {
-    body: await encodeJpeg(hasAlpha ? flattenAlpha(image) : image, {
-      quality: resolveQuality(quality, 'jpeg'),
-    }),
+    body,
     contentType: 'image/jpeg',
   }
 }
@@ -1880,11 +3004,7 @@ const chooseOutputFormat = (
   }
 
   const accept = request.headers.get('accept') ?? ''
-  if (accept.includes('image/avif')) return 'avif'
-  if (accept.includes('image/webp')) return 'webp'
-  if (accept.includes('image/jxl')) return 'jxl'
-  if (accept.includes('image/png')) return 'png'
-  return 'jpeg'
+  return chooseAutoOutputFormat(accept)
 }
 
 /**
@@ -1988,12 +3108,11 @@ const toCanonicalTransformKey = (
  * @returns Derived bucket object key.
  */
 const toDerivedObjectKey = (params: {
-  requestedStage: ImageStage
   publicId: string
   version?: number
   canonicalKey: string
 }): string =>
-  `${params.requestedStage}/${params.publicId}/${params.version ? `v${params.version}` : 'latest'}/${params.canonicalKey}`
+  `${params.publicId}/${params.version ? `v${params.version}` : 'latest'}/${params.canonicalKey}`
 
 /**
  * Creates the metadata sidecar key next to the original object.
@@ -2072,6 +3191,29 @@ const getReadableStages = (requestedStage: ImageStage): ImageStage[] => {
   if (requestedStage === 'local') return ['local', 'preview', 'production']
   if (requestedStage === 'preview') return ['preview', 'production']
   return ['production']
+}
+
+/**
+ * Resolves the logical stage for a request from host/runtime rather than URL path.
+ *
+ * @param url Incoming request URL.
+ * @param env Worker bindings.
+ * @returns Requested image stage.
+ */
+const resolveRequestedStageFromRequest = (url: URL, env: Env): ImageStage => {
+  if (url.hostname === 'assets.hype.hk') {
+    return 'production'
+  }
+
+  if (url.hostname === 'raw.assets.preview.hype.hk') {
+    return 'preview'
+  }
+
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return env.ENVIRONMENT
+  }
+
+  return env.ENVIRONMENT
 }
 
 /**
@@ -2183,6 +3325,7 @@ const stripKnownExtension = (publicId: string): string =>
 const inferInputFormat = (
   contentType: string,
   objectKey: string,
+  body?: ArrayBuffer,
 ): OutputFormat | 'unknown' => {
   if (contentType === 'image/avif') return 'avif'
   if (contentType === 'image/jpeg' || contentType === 'image/jpg') return 'jpeg'
@@ -2190,7 +3333,102 @@ const inferInputFormat = (
   if (contentType === 'image/png') return 'png'
   if (contentType === 'image/svg+xml') return 'svg'
   if (contentType === 'image/webp') return 'webp'
-  return extractExtension(objectKey) ?? 'unknown'
+
+  const extensionFormat = extractExtension(objectKey)
+  if (extensionFormat) {
+    return extensionFormat
+  }
+
+  return body ? sniffInputFormat(body) : 'unknown'
+}
+
+/**
+ * Sniffs common raster signatures when object metadata does not preserve the source type.
+ *
+ * @param body Source bytes.
+ * @returns Best-effort input format.
+ */
+const sniffInputFormat = (body: ArrayBuffer): OutputFormat | 'unknown' => {
+  const bytes = new Uint8Array(body)
+
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return 'png'
+  }
+
+  if (
+    bytes.length >= 3 &&
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff
+  ) {
+    return 'jpeg'
+  }
+
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return 'webp'
+  }
+
+  if (
+    bytes.length >= 12 &&
+    bytes[4] === 0x66 &&
+    bytes[5] === 0x74 &&
+    bytes[6] === 0x79 &&
+    bytes[7] === 0x70
+  ) {
+    const brand = String.fromCharCode(
+      bytes[8] ?? 0,
+      bytes[9] ?? 0,
+      bytes[10] ?? 0,
+      bytes[11] ?? 0,
+    )
+    if (brand === 'avif' || brand === 'avis') {
+      return 'avif'
+    }
+    if (brand === 'jxl ' || brand === 'jxs ') {
+      return 'jxl'
+    }
+  }
+
+  if (
+    (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0x0a) ||
+    (bytes.length >= 12 &&
+      bytes[0] === 0x00 &&
+      bytes[1] === 0x00 &&
+      bytes[2] === 0x00 &&
+      bytes[3] === 0x0c &&
+      bytes[4] === 0x4a &&
+      bytes[5] === 0x58 &&
+      bytes[6] === 0x4c &&
+      bytes[7] === 0x20 &&
+      bytes[8] === 0x0d &&
+      bytes[9] === 0x0a &&
+      bytes[10] === 0x87 &&
+      bytes[11] === 0x0a)
+  ) {
+    return 'jxl'
+  }
+
+  return 'unknown'
 }
 
 /**
@@ -2200,6 +3438,7 @@ const inferInputFormat = (
  * @returns Best-effort content type.
  */
 const inferContentTypeFromKey = (objectKey: string): string => {
+  if (objectKey.endsWith('.raw')) return 'image/tiff'
   const extension = extractExtension(objectKey)
   if (extension === 'avif') return 'image/avif'
   if (extension === 'jpeg') return 'image/jpeg'
@@ -2208,6 +3447,43 @@ const inferContentTypeFromKey = (objectKey: string): string => {
   if (extension === 'svg') return 'image/svg+xml'
   if (extension === 'webp') return 'image/webp'
   return 'application/octet-stream'
+}
+
+const extensionFromContentType = (contentType: string): string => {
+  if (contentType === 'image/avif') return 'avif'
+  if (contentType === 'image/jpeg' || contentType === 'image/jpg') return 'jpg'
+  if (contentType === 'image/jxl') return 'jxl'
+  if (contentType === 'image/png') return 'png'
+  if (contentType === 'image/svg+xml') return 'svg'
+  if (contentType === 'image/webp') return 'webp'
+  if (contentType === 'image/tiff') return 'tiff'
+  return 'bin'
+}
+
+const stripExtensionFromFilename = (filename: string): string =>
+  filename.replace(/\.[^.]+$/u, '')
+
+const sanitizeDownloadFilename = (filename: string): string =>
+  filename.replace(/[/\\?%*:|"<>]/gu, '-').trim() || 'image'
+
+const toRawDownloadFilename = (
+  publicId: string,
+  objectKey: string,
+  contentType: string,
+  metadata: ImageMetadataDocument | null,
+): string => {
+  const extension = extensionFromContentType(contentType)
+  const originalFilename = metadata?.originalFilename?.trim()
+
+  if (originalFilename) {
+    return `${sanitizeDownloadFilename(stripExtensionFromFilename(originalFilename))}.${extension}`
+  }
+
+  const fallbackBase = objectKey.endsWith('.raw')
+    ? objectKey.slice(0, -'.raw'.length).split('/').at(-1)
+    : publicId.split('/').at(-1)
+
+  return `${sanitizeDownloadFilename(fallbackBase ?? 'image')}.${extension}`
 }
 
 /**
