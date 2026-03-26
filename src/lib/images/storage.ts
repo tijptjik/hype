@@ -119,8 +119,8 @@ export const getReadableStages = (stage: ImageStage): ImageStage[] => {
  */
 export const toMetadataObjectKey = (publicId: string, version?: number): string =>
   version
-    ? `${publicId}.v${version}${IMAGE_METADATA_SUFFIX}`
-    : `${publicId}${IMAGE_METADATA_SUFFIX}`
+    ? `${publicId.trim().replace(/^\/+/, '')}.v${version}${IMAGE_METADATA_SUFFIX}`
+    : `${publicId.trim().replace(/^\/+/, '')}${IMAGE_METADATA_SUFFIX}`
 
 /**
  * Builds the manifest object key for an image metadata manifest.
@@ -129,7 +129,7 @@ export const toMetadataObjectKey = (publicId: string, version?: number): string 
  * @returns Object key used to store the manifest document in R2.
  */
 export const toManifestObjectKey = (publicId: string): string =>
-  `${publicId}${IMAGE_MANIFEST_SUFFIX}`
+  `${publicId.trim().replace(/^\/+/, '')}${IMAGE_MANIFEST_SUFFIX}`
 
 /**
  * Resolves the canonical R2 originals bucket name for a stage.
@@ -149,14 +149,6 @@ export const toPublicAssetBaseUrl = (): string =>
   import.meta.env.PUBLIC_ASSET_BASE_URL || ''
 
 /**
- * Reads the public raw-asset base URL configured for the current build.
- *
- * @returns Configured public raw-asset base URL, or an empty string when unset.
- */
-export const toPublicRawAssetBaseUrl = (): string =>
-  import.meta.env.PUBLIC_RAW_ASSET_BASE_URL || ''
-
-/**
  * Parses a JSON object body from R2 when present.
  *
  * @param object R2 object body returned from a bucket read.
@@ -165,6 +157,21 @@ export const toPublicRawAssetBaseUrl = (): string =>
 const readJson = async <T>(object: ImageObjectBody): Promise<T | null> => {
   if (!object) return null
   return (await object.json()) as T
+}
+
+const safeBucketGet = async (
+  bucket: ImageBucket,
+  key: string,
+): Promise<ImageObjectBody> => {
+  try {
+    return await bucket.get(key)
+  } catch (error) {
+    console.error('[images.storage.safeBucketGet] get failed', {
+      key,
+      error,
+    })
+    return null
+  }
 }
 
 const encodeObjectKeyPath = (objectKey: string): string =>
@@ -224,7 +231,7 @@ export const readManifestVersion = async (
   publicId: string,
 ): Promise<number | null> => {
   const manifest = await readJson<{ version?: number }>(
-    await bucket.get(toManifestObjectKey(publicId)),
+    await safeBucketGet(bucket, toManifestObjectKey(publicId)),
   )
   return typeof manifest?.version === 'number' ? manifest.version : null
 }
@@ -256,18 +263,23 @@ export const readMetadataDocument = async ({
   resolvedEnv: ImageStage
   resolvedVersion?: number
 }> => {
+  const normalizedPublicId = publicId.trim().replace(/^\/+/, '')
+
   for (const readableStage of getReadableStages(env)) {
     const bucket = getOriginalsBucketForStage(platform, readableStage)
     const resolvedVersion =
       typeof version === 'number'
         ? version
-        : await readManifestVersion(bucket, publicId)
-    const object = await bucket.get(
-      toMetadataObjectKey(publicId, resolvedVersion ?? undefined),
+        : await readManifestVersion(bucket, normalizedPublicId)
+    const versionedKey = toMetadataObjectKey(
+      normalizedPublicId,
+      resolvedVersion ?? undefined,
     )
+    const unversionedKey = toMetadataObjectKey(normalizedPublicId)
+    const object = await safeBucketGet(bucket, versionedKey)
 
     if (!object && resolvedVersion !== undefined) {
-      const fallback = await bucket.get(toMetadataObjectKey(publicId))
+      const fallback = await safeBucketGet(bucket, unversionedKey)
       const document = await readJson<ImageMetadataDocument>(fallback)
       if (document) {
         return {
