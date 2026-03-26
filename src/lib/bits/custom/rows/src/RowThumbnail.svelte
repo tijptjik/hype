@@ -19,7 +19,7 @@ const resolvedSrc = $derived(
   image
     ? getURLfromImage({
         image: image as never,
-        transformation: 'c_fill,w_100,h_100,q_auto',
+        transformation: 'c_fill,h_128,w_128,q_auto',
       })
     : imageSrc,
 )

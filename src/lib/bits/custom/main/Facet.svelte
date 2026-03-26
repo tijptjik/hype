@@ -15,6 +15,7 @@ let {
   fillHeight = false,
   navMode = 'centered',
   contentClass = '',
+  edgeToEdge = false,
 }: MainFacetProps = $props()
 
 const FACET_OVERSCROLL = 96
@@ -37,6 +38,7 @@ const facetClass = $derived(
   [
     'bits-theme bits-main__section',
     fillHeight ? 'bits-main__section--fill-height' : '',
+    edgeToEdge ? 'bits-main__section--edge-to-edge' : '',
     transition === 'fade' ? 'bits-main__section--fade' : '',
     transition === 'fade' && isVisible ? 'bits-main__section--active' : '',
     transition === 'fade' && !isVisible ? 'bits-main__section--faded' : '',
@@ -51,6 +53,7 @@ const innerClass = $derived(
   [
     'bits-main__section-inner',
     fillHeight ? 'bits-main__section-inner--fill-height' : '',
+    edgeToEdge ? 'bits-main__section-inner--edge-to-edge' : '',
   ]
     .filter(Boolean)
     .join(' '),
@@ -60,6 +63,7 @@ const bodyClass = $derived(
   [
     'bits-main__section-body',
     fillHeight ? 'bits-main__section-body--fill-height' : '',
+    edgeToEdge ? 'bits-main__section-body--edge-to-edge' : '',
     contentClass,
   ]
     .filter(Boolean)
@@ -173,14 +177,32 @@ function measureLayout(): void {
 
   if (!facet || !body) {
     bodyMinHeight = 0
-    bodyHeight = null
-    bodyBottomPadding = isViewportConstrainedFacet ? FACET_BOTTOM_CLEARANCE : 0
-    tailSpacer = isViewportConstrainedFacet ? 0 : FACET_BOTTOM_CLEARANCE
+    bodyHeight = edgeToEdge ? 0 : null
+    bodyBottomPadding = edgeToEdge
+      ? 0
+      : isViewportConstrainedFacet
+        ? FACET_BOTTOM_CLEARANCE
+        : 0
+    tailSpacer = edgeToEdge
+      ? 0
+      : isViewportConstrainedFacet
+        ? 0
+        : FACET_BOTTOM_CLEARANCE
     navShellStyle = ''
     return
   }
 
   const availableHeight = facet.clientHeight
+
+  if (edgeToEdge) {
+    bodyMinHeight = 0
+    bodyHeight = availableHeight
+    bodyBottomPadding = 0
+    tailSpacer = 0
+    navShellStyle = ''
+    return
+  }
+
   const navHeight = hasFacetNav && navElement ? navElement.offsetHeight : 0
   const bodyContentHeight = getBodyContentHeight(body)
   const contentHeight = bodyContentHeight + navHeight

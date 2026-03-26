@@ -17,6 +17,7 @@ export interface MainFacetProps {
   fillHeight?: boolean
   navMode?: 'centered' | 'footer'
   contentClass?: string
+  edgeToEdge?: boolean
 }
 
 export interface MainFormProps {
