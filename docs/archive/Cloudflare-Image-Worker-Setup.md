@@ -35,28 +35,32 @@ bun run deploy:asset-service:prod
 
 ## App Config
 
-Point the main app at the raw asset worker for original downloads:
+Configure the main app with the shared asset host:
 
 ```text
-PUBLIC_RAW_ASSET_BASE_URL=http://localhost:8788
-```
-
-For transformed asset delivery, configure the shared asset host:
-
-```text
-PUBLIC_ASSET_BASE_URL=
+PUBLIC_ASSET_BASE_URL=https://assets.hype.hk
 PUBLIC_ASSET_BASE_URL=https://assets.preview.hype.hk
 PUBLIC_ASSET_BASE_URL=https://assets.hype.hk
 ```
 
-For preview and production, use the dedicated raw asset domains:
+The app now resolves both transformed delivery and explicit normalized-intermediate
+delivery against `PUBLIC_ASSET_BASE_URL`.
+
+If `PUBLIC_ASSET_BASE_URL` is omitted during local development, the app now falls
+back to `https://assets.hype.hk` rather than a local asset worker.
+
+Canonical public paths:
 
 ```text
-PUBLIC_RAW_ASSET_BASE_URL=https://raw.assets.preview.hype.hk
-PUBLIC_RAW_ASSET_BASE_URL=https://raw.assets.hype.hk
+/image/upload/<transform>/g_<gravity>/f_<format>/q_<quality>[/v<version>]/<publicId>
+/image/raw/h_2048,w_2048[/v<version>]/<publicId>
 ```
 
-The app resolves transformed asset URLs against `assets.*`, while raw downloads use `raw.assets.*`.
+The `/image/raw/h_2048,w_2048...` route serves the normalized intermediate object
+at `{publicId}` and intentionally does not fall back to `{publicId}.raw`.
+
+The bare `/image/raw[/v<version>]/<publicId>` route remains the original-download
+endpoint and may serve `{publicId}.raw` when present.
 
 ## Public Domains
 
@@ -67,14 +71,14 @@ bunx wrangler r2 bucket domain add hype-assets-preview --domain assets.preview.h
 bunx wrangler r2 bucket domain add hype-assets-prod --domain assets.hype.hk
 ```
 
-Map the raw asset worker routes separately:
+Deploy the asset worker routes:
 
 ```bash
 bun run deploy:asset-service:preview
 bun run deploy:asset-service:prod
 ```
 
-The raw asset worker routes remain on:
+The worker is reachable on:
 
 ```text
 raw.assets.preview.hype.hk
