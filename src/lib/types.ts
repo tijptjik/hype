@@ -105,6 +105,7 @@ import type { Writable } from 'svelte/store'
 import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type {
+  HeaderButtonActionConfig,
   HeaderLayoutRegionConfig,
   HeaderTitleMenuItemConfig,
 } from './bits/patterns/layout/header/header.types'
@@ -305,6 +306,29 @@ export type AssetAnalyticsRankedTransformation = {
   requests: number
 }
 
+export type AssetAnalyticsTimeseriesPoint = {
+  date: string
+  totalRequests: number
+  cacheRequests: number
+  derivedHitRequests: number
+  derivedMissRequests: number
+}
+
+export type AssetAnalyticsBreakdownItem = {
+  key: string
+  label: string
+  requests: number
+  percent: number
+}
+
+export type AssetAnalyticsBreakdowns = {
+  cropModes: AssetAnalyticsBreakdownItem[]
+  formats: AssetAnalyticsBreakdownItem[]
+  dimensions: AssetAnalyticsBreakdownItem[]
+  qualities: AssetAnalyticsBreakdownItem[]
+  gravities: AssetAnalyticsBreakdownItem[]
+}
+
 export type AssetAnalyticsRankedImage = {
   publicId: string
   requests: number
@@ -318,6 +342,8 @@ export type AssetAnalyticsSummaryWindow = {
   p50Ms: AssetAnalyticsLatencyBucket
   p95Ms: AssetAnalyticsLatencyBucket
   p99Ms: AssetAnalyticsLatencyBucket
+  timeseries30d: AssetAnalyticsTimeseriesPoint[]
+  breakdowns: AssetAnalyticsBreakdowns
   topTransformations: AssetAnalyticsRankedTransformation[]
   topImages: AssetAnalyticsRankedImage[]
 }
@@ -325,6 +351,10 @@ export type AssetAnalyticsSummaryWindow = {
 export type AssetAnalyticsSummary = {
   environment: string
   generatedAt: string
+  scope: {
+    organisationIds: string[]
+    projectIds: string[]
+  }
   windows: Record<AssetAnalyticsWindowKey, AssetAnalyticsSummaryWindow | null>
 }
 
@@ -462,9 +492,10 @@ export interface HeaderVisibilityOverrides {
 }
 
 export type HeaderFacetItem = {
-  ref: FacetType
+  ref: string
   label: string
   icon: Component | null
+  class?: string
   hasIssues?: boolean
   disabled?: boolean
 }
@@ -473,7 +504,10 @@ export type HeaderMetaState = {
   title: string
   icon: Component | null
   facets: HeaderFacetItem[]
+  activeFacet: string | false | null
+  onFacetChange: ((ref: string) => void) | null
   titleMenuItems: HeaderTitleMenuItemConfig[]
+  viewActions: HeaderButtonActionConfig[]
 }
 
 export type HeaderFormActionsState = {
@@ -2157,6 +2191,17 @@ export type ListFieldProps = FieldPropsExtended & {
 export type ImageProviderProps = {
   children: any
   model: ImageProviderModel
+}
+
+export type NormalizedImageUploadAsset = {
+  file: File
+  originalFilename: string
+  originalExtension: string | null
+  originalWidth: number | null
+  originalHeight: number | null
+  uploadedWidth: number | null
+  uploadedHeight: number | null
+  wasResized: boolean
 }
 
 export interface ImageContextConfig {
