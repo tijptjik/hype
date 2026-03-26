@@ -97,8 +97,6 @@ PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
 PUBLIC_ORIGIN = "http://localhost:5173"
 PUBLIC_ASSET_BASE_URL = ""
 PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
-PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN = "83c62304f42740d29a10fcb3007edb35"
-PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN_MAP = "{\"hkghostsigns.com\":\"ef71ccbaeda247df9bcfa15d5af1a190\"}"
 
 ########
 # PRODUCTION ENVIRONMENT
@@ -122,8 +120,6 @@ PUBLIC_HUB_CODE = "core"
 PUBLIC_ORIGIN = "https://hype.hk"
 PUBLIC_ASSET_BASE_URL = "https://assets.hype.hk"
 PUBLIC_PREVIEW_ASSET_BASE_URL = "https://assets.hype.hk"
-PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN = "83c62304f42740d29a10fcb3007edb35"
-PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN_MAP = "{\"hkghostsigns.com\":\"ef71ccbaeda247df9bcfa15d5af1a190\"}"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -200,8 +196,6 @@ PUBLIC_HUB_CODE = "core"
 PUBLIC_ORIGIN = "https://preview.hype.hk"
 PUBLIC_ASSET_BASE_URL = "https://assets.preview.hype.hk"
 PUBLIC_PREVIEW_ASSET_BASE_URL = "https://assets.preview.hype.hk"
-PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN = "83c62304f42740d29a10fcb3007edb35"
-PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN_MAP = "{\"hkghostsigns.com\":\"ef71ccbaeda247df9bcfa15d5af1a190\"}"
 
 [[env.preview.d1_databases]]
 binding = "DB"
