@@ -12,6 +12,7 @@ let {
   class: className = '',
   triggerClass = '',
   contentClass = '',
+  sideOffset = 12,
 }: IconAnchorProps = $props()
 
 const rootClasses = $derived(
@@ -34,7 +35,7 @@ const align = $derived(position === 'left' ? 'start' : 'end')
 
     {#if children}
       <Popover.Portal>
-        <Popover.Content class={contentClasses} side="top" sideOffset={12} {align}>
+        <Popover.Content class={contentClasses} side="top" {sideOffset} {align}>
           {@render children()}
         </Popover.Content>
       </Popover.Portal>

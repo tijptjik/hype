@@ -9,4 +9,5 @@ export interface IconAnchorProps {
   class?: string
   triggerClass?: string
   contentClass?: string
+  sideOffset?: number
 }
