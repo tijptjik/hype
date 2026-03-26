@@ -42,6 +42,7 @@ import { applyResourceContextConstraints } from '$lib/db/services/image'
 import { getProjectForFeatureId } from '$lib/db/services/project'
 import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
 import { getUserById } from '$lib/db/services/user'
+import { toImagePrerenderWorkerPaths } from '$lib/images/delivery'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -49,6 +50,7 @@ import { getUserById } from '$lib/db/services/user'
 //
 // 1. CONFIG
 //    - intentOrder (const)
+//    - resolveAssetWorkerBaseUrl
 //
 // 2. COMMON
 //    - imageCollectionWithRelations (const)
@@ -65,6 +67,7 @@ import { getUserById } from '$lib/db/services/user'
 //
 // 5. UTILS
 //    - getCtxFromUrl
+//    - warmImageDerivatives
 //    - updateImageForContext
 //
 
@@ -93,12 +96,34 @@ export const adminIntentOrder = [
   'research',
 ] as const
 
+const DEFAULT_PRERENDER_ACCEPT = 'image/webp,image/jpeg,image/*;q=0.9,*/*;q=0.8'
+const DEFAULT_ASSET_WORKER_BASE_URL = 'https://assets.hype.hk'
+
 const imageProfiles = ['list', 'card', 'detail', 'admin'] as const
 
 export const toImageProfile = (value: unknown, fallback: ImageProfile): ImageProfile =>
   typeof value === 'string' && (imageProfiles as readonly string[]).includes(value)
     ? (value as ImageProfile)
     : fallback
+
+/**
+ * Resolves the asset worker base URL for image derivative warmups.
+ *
+ * @param event - Current request event.
+ * @returns Base URL or null when no worker target is configured.
+ */
+export const resolveAssetWorkerBaseUrl = (event: RequestEvent): string | null => {
+  const assetBaseUrl = event.platform?.env.PUBLIC_ASSET_BASE_URL?.trim()
+  if (assetBaseUrl) {
+    return assetBaseUrl.replace(/\/+$/, '')
+  }
+
+  if (event.url.hostname === 'localhost' || event.url.hostname === '127.0.0.1') {
+    return DEFAULT_ASSET_WORKER_BASE_URL
+  }
+
+  return null
+}
 
 /**
  * Shapes an image record plus optional feature-image fields into API wire format.
@@ -434,6 +459,64 @@ export const getCtxFromUrl = (url: URL) => {
   }
 
   return { ctxId, ctxType }
+}
+
+/**
+ * Warms the standard derivative variants for an image in the asset worker.
+ *
+ * @param params - Warmup request inputs.
+ * @returns Promise that settles after all warmup attempts complete.
+ */
+export const warmImageDerivatives = (params: {
+  event: RequestEvent
+  env: string
+  publicId: string
+  version?: number | null
+}): Promise<void> => {
+  const baseUrl = resolveAssetWorkerBaseUrl(params.event)
+  if (!baseUrl) {
+    return Promise.resolve()
+  }
+
+  const warmupUrls = toImagePrerenderWorkerPaths({
+    env: params.env,
+    publicId: params.publicId,
+    version: params.version,
+  })
+
+  // Use HEAD so the worker persists the derived object without sending image bytes back.
+  return Promise.allSettled(
+    warmupUrls.map(async path => {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: 'HEAD',
+        headers: {
+          accept: DEFAULT_PRERENDER_ACCEPT,
+        },
+      })
+
+      if (!response.ok && response.status !== 404) {
+        throw new Error(
+          `Warmup request failed with status ${response.status} for ${path}`,
+        )
+      }
+    }),
+  ).then(results => {
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.warn(
+          JSON.stringify({
+            event: 'image-prerender-warmup-failed',
+            publicId: params.publicId,
+            version: params.version ?? null,
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : String(result.reason),
+          }),
+        )
+      }
+    }
+  })
 }
 
 /**
