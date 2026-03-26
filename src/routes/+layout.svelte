@@ -2,7 +2,6 @@
 // SVELTE
 import { watch } from 'runed'
 import { onMount } from 'svelte'
-import { dev } from '$app/environment'
 // STORES
 import { page } from '$app/state'
 // QUERY
@@ -81,10 +80,7 @@ onMount(async () => {
     appCtx.maplibre = maplibre
     appCtx.isMaplibreLoaded = true
   } catch (error) {
-    console.error(
-      `Failed to load maplibre (${dev ? 'local dev asset' : 'remote CDN asset'})`,
-      error,
-    )
+    console.error('Failed to load maplibre', error)
   }
 })
 

@@ -395,7 +395,7 @@ describe('image.remote', () => {
             CLOUDFLARE_ACCOUNT_ID: 'account-id',
             R2_S3_ACCESS_KEY_ID: 'access-key',
             R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_RAW_ASSET_BASE_URL: 'https://raw.assets.example.test',
+            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
             ASSET_RAW_DEV: { head, put },
             ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
             ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },

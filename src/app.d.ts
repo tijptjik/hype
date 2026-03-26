@@ -93,7 +93,6 @@ declare global {
         PUBLIC_GIPHY_KEY: string
         PUBLIC_ORIGIN: string
         PUBLIC_ASSET_BASE_URL: string
-        PUBLIC_RAW_ASSET_BASE_URL: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string
         ASSET_ANALYTICS_READ_TOKEN: string
         CLOUDFLARE_ACCOUNT_ID: string
