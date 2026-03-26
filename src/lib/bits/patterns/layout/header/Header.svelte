@@ -125,6 +125,7 @@ const rootClass = $derived(
               <HeaderPrimitive.ViewActions
                 controlsAction={viewActions.controlsAction}
                 layoutAction={viewActions.layoutAction}
+                extraActions={viewActions.extraActions}
                 hideLabel={true}
               />
             {/if}
@@ -173,6 +174,7 @@ const rootClass = $derived(
 
   {#if renderedControlBar?.component}
     {@const ControlBar = renderedControlBar.component}
+    {@const controlBarProps = renderedControlBar?.props ?? {}}
     <HeaderPrimitive.BarRoot
       height={controlBarHeight}
       isExpanded={isControlBarExpanded}
@@ -180,7 +182,7 @@ const rootClass = $derived(
       ontransitionend={handleControlBarTransitionEnd}
     >
       {#snippet children()}
-        <ControlBar {...(renderedControlBar.props ?? {})} />
+        <ControlBar {...controlBarProps} />
       {/snippet}
     </HeaderPrimitive.BarRoot>
   {/if}

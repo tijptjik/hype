@@ -15,6 +15,7 @@ export interface HeaderButtonActionConfig {
   icon?: Component | null
   iconClass?: string
   class?: string
+  attrs?: Record<string, unknown>
   disabled?: boolean
   color?: ButtonColor
   style?: ButtonStyle
@@ -76,6 +77,7 @@ export interface HeaderFacetItem {
   ref: string
   label: string
   icon?: Component | null
+  class?: string
   hasIssues?: boolean
   disabled?: boolean
 }
@@ -90,6 +92,7 @@ export interface HeaderViewActionsConfig {
   isVisible?: boolean
   controlsAction?: HeaderButtonActionConfig
   layoutAction?: HeaderButtonActionConfig
+  extraActions?: HeaderButtonActionConfig[]
 }
 
 export interface HeaderFormActionsConfig {
