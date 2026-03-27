@@ -29,6 +29,7 @@ type GravityMode = 'g_auto' | 'g_center'
 type OutputFormat = 'avif' | 'jpeg' | 'jxl' | 'png' | 'svg' | 'webp'
 type MetadataProfile = 'admin' | 'auto' | 'basic' | 'full'
 type ImageCacheStatus = 'edge-hit' | 'r2-derived-hit' | 'transform-miss'
+type AssetAnalyticsStatus = ImageCacheStatus | 'not-found' | 'server-error'
 type AnalyticsWindowKey = '1h' | '24h' | '7d' | '30d'
 
 type Env = {
@@ -148,6 +149,7 @@ type ImageResponseMetrics = {
 }
 
 type AssetAnalyticsEvent = {
+  analyticsStatus: AssetAnalyticsStatus
   cacheStatus: ImageCacheStatus
   contentLength: number
   outputFormat: OutputFormat
@@ -169,10 +171,12 @@ type AnalyticsRatiosRow = {
   edge_hit_requests: number | string
   derived_hit_requests: number | string
   transform_miss_requests: number | string
+  not_found_requests: number | string
+  server_error_requests: number | string
 }
 
 type AnalyticsQuantilesRow = {
-  cache_status: ImageCacheStatus | null
+  cache_status: AssetAnalyticsStatus | null
   p50_total_ms: number | string | null
   p95_total_ms: number | string | null
   p99_total_ms: number | string | null
@@ -181,11 +185,12 @@ type AnalyticsQuantilesRow = {
 
 type AnalyticsTimeseriesRow = {
   date: string | null
-  cache_status: ImageCacheStatus | null
+  cache_status: AssetAnalyticsStatus | null
   request_count: number | string
 }
 
 type AnalyticsScope = {
+  scopePrefixes: string[]
   organisationIds: string[]
   projectIds: string[]
 }
@@ -203,20 +208,28 @@ type AnalyticsWindowSummary = {
   cacheHitPercent: number
   derivedHitPercent: number
   derivedMissPercent: number
+  notFoundPercent: number
+  serverErrorPercent: number
   p50Ms: {
     cache: number | null
     derivedHit: number | null
     derivedMiss: number | null
+    notFound: number | null
+    serverError: number | null
   }
   p95Ms: {
     cache: number | null
     derivedHit: number | null
     derivedMiss: number | null
+    notFound: number | null
+    serverError: number | null
   }
   p99Ms: {
     cache: number | null
     derivedHit: number | null
     derivedMiss: number | null
+    notFound: number | null
+    serverError: number | null
   }
   timeseries30d: Array<{
     date: string
@@ -224,6 +237,8 @@ type AnalyticsWindowSummary = {
     cacheRequests: number
     derivedHitRequests: number
     derivedMissRequests: number
+    notFoundRequests: number
+    serverErrorRequests: number
   }>
   breakdowns: {
     cropModes: Array<{ key: string; label: string; requests: number; percent: number }>
@@ -233,6 +248,8 @@ type AnalyticsWindowSummary = {
     gravities: Array<{ key: string; label: string; requests: number; percent: number }>
   }
   topImages: Array<{ publicId: string; requests: number }>
+  topMissingImages: Array<{ publicId: string; requests: number }>
+  topServerErrorImages: Array<{ publicId: string; requests: number }>
   topTransformations: Array<{ requests: number; transformKey: string }>
   totalRequests: number
 }
@@ -242,6 +259,7 @@ type AnalyticsSummaryResponse = {
   generatedAt: string
   scope: AnalyticsScope
   windows: Record<AnalyticsWindowKey, AnalyticsWindowSummary>
+  windowErrors?: Partial<Record<AnalyticsWindowKey, string>>
 }
 
 const CACHE_CONTROL_IMMUTABLE = 'public, max-age=31536000, immutable'
@@ -630,9 +648,9 @@ const handleAnalyticsSummaryRequest = async (
     const windowEntries = await Promise.all(
       (
         Object.entries(ASSET_ANALYTICS_WINDOWS) as Array<[AnalyticsWindowKey, string]>
-      ).map(
-        async ([windowKey, intervalExpression]) =>
-          [
+      ).map(async ([windowKey, intervalExpression]) => {
+        try {
+          return [
             windowKey,
             await loadAnalyticsWindowSummary(
               env,
@@ -640,18 +658,39 @@ const handleAnalyticsSummaryRequest = async (
               intervalExpression,
               scope,
             ),
-          ] as const,
-      ),
+            null,
+          ] as const
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : `Failed to load ${windowKey} analytics window`
+
+          return [windowKey, null, message] as const
+        }
+      }),
     )
+
+    const windows = Object.fromEntries(
+      windowEntries.flatMap(([windowKey, summary]) =>
+        summary ? [[windowKey, summary]] : [],
+      ),
+    ) as Record<AnalyticsWindowKey, AnalyticsWindowSummary>
+
+    const windowErrors = Object.fromEntries(
+      windowEntries.flatMap(([windowKey, _summary, message]) =>
+        typeof message === 'string' && message.trim()
+          ? [[windowKey, message.trim()]]
+          : [],
+      ),
+    ) as Partial<Record<AnalyticsWindowKey, string>>
 
     const response: AnalyticsSummaryResponse = {
       environment: env.ENVIRONMENT,
       generatedAt: new Date().toISOString(),
       scope,
-      windows: Object.fromEntries(windowEntries) as Record<
-        AnalyticsWindowKey,
-        AnalyticsWindowSummary
-      >,
+      windows,
+      ...(Object.keys(windowErrors).length > 0 ? { windowErrors } : {}),
     }
 
     return Response.json(response, {
@@ -705,6 +744,7 @@ const toAssetAnalyticsNamespaceClause = (): string =>
 
 const toAssetAnalyticsScopeClause = (scope: AnalyticsScope): string => {
   const scopePrefixes = [
+    ...scope.scopePrefixes.map(prefix => `${prefix}%`),
     ...scope.organisationIds.map(
       organisationId =>
         `${ASSET_ANALYTICS_PUBLIC_ID_PREFIX}organisations/${organisationId}/%`,
@@ -724,6 +764,14 @@ const toAssetAnalyticsScopeClause = (scope: AnalyticsScope): string => {
 }
 
 const toAnalyticsScope = (url: URL): AnalyticsScope => ({
+  scopePrefixes: Array.from(
+    new Set(
+      url.searchParams
+        .getAll('scopePrefix')
+        .map(prefix => prefix.trim())
+        .filter(Boolean),
+    ),
+  ),
   organisationIds: Array.from(
     new Set(
       url.searchParams
@@ -760,6 +808,8 @@ const loadAnalyticsWindowSummary = async (
   const [
     topTransformRows,
     topImageRows,
+    topMissingImageRows,
+    topServerErrorImageRows,
     ratioRows,
     quantileRows,
     transformRows,
@@ -790,6 +840,41 @@ const loadAnalyticsWindowSummary = async (
         FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
+          AND blob2 IN ('edge-hit', 'r2-derived-hit', 'transform-miss')
+          AND ${scopeClause}
+        GROUP BY key
+        ORDER BY request_count DESC
+        LIMIT 25
+        FORMAT JSON
+      `,
+    ),
+    queryAnalyticsRows<AnalyticsTopRow>(
+      env,
+      `
+        SELECT
+          index1 AS key,
+          sum(_sample_interval) AS request_count
+        FROM ${ASSET_ANALYTICS_DATASET}
+        WHERE timestamp > NOW() - ${intervalExpression}
+          AND blob3 = ${toSqlString(environment)}
+          AND blob2 = 'not-found'
+          AND ${scopeClause}
+        GROUP BY key
+        ORDER BY request_count DESC
+        LIMIT 25
+        FORMAT JSON
+      `,
+    ),
+    queryAnalyticsRows<AnalyticsTopRow>(
+      env,
+      `
+        SELECT
+          index1 AS key,
+          sum(_sample_interval) AS request_count
+        FROM ${ASSET_ANALYTICS_DATASET}
+        WHERE timestamp > NOW() - ${intervalExpression}
+          AND blob3 = ${toSqlString(environment)}
+          AND blob2 = 'server-error'
           AND ${scopeClause}
         GROUP BY key
         ORDER BY request_count DESC
@@ -804,7 +889,9 @@ const loadAnalyticsWindowSummary = async (
           sum(_sample_interval) AS total_requests,
           sumIf(_sample_interval, blob2 = 'edge-hit') AS edge_hit_requests,
           sumIf(_sample_interval, blob2 = 'r2-derived-hit') AS derived_hit_requests,
-          sumIf(_sample_interval, blob2 = 'transform-miss') AS transform_miss_requests
+          sumIf(_sample_interval, blob2 = 'transform-miss') AS transform_miss_requests,
+          sumIf(_sample_interval, blob2 = 'not-found') AS not_found_requests,
+          sumIf(_sample_interval, blob2 = 'server-error') AS server_error_requests
         FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
@@ -824,6 +911,7 @@ const loadAnalyticsWindowSummary = async (
         FROM ${ASSET_ANALYTICS_DATASET}
         WHERE timestamp > NOW() - ${intervalExpression}
           AND blob3 = ${toSqlString(environment)}
+          AND blob2 IN ('edge-hit', 'r2-derived-hit', 'transform-miss')
           AND ${scopeClause}
         GROUP BY cache_status
         FORMAT JSON
@@ -870,12 +958,16 @@ const loadAnalyticsWindowSummary = async (
   const edgeHitRequests = toSafeNumber(ratioRow?.edge_hit_requests)
   const derivedHitRequests = toSafeNumber(ratioRow?.derived_hit_requests)
   const transformMissRequests = toSafeNumber(ratioRow?.transform_miss_requests)
+  const notFoundRequests = toSafeNumber(ratioRow?.not_found_requests)
+  const serverErrorRequests = toSafeNumber(ratioRow?.server_error_requests)
   const breakdowns = toAnalyticsBreakdowns(transformRows, totalRequests)
 
   return {
     cacheHitPercent: toPercent(edgeHitRequests, totalRequests),
     derivedHitPercent: toPercent(derivedHitRequests, totalRequests),
     derivedMissPercent: toPercent(transformMissRequests, totalRequests),
+    notFoundPercent: toPercent(notFoundRequests, totalRequests),
+    serverErrorPercent: toPercent(serverErrorRequests, totalRequests),
     p50Ms: {
       cache: findQuantileForStatus(quantileRows, 'edge-hit', 'p50_total_ms'),
       derivedHit: findQuantileForStatus(quantileRows, 'r2-derived-hit', 'p50_total_ms'),
@@ -884,6 +976,8 @@ const loadAnalyticsWindowSummary = async (
         'transform-miss',
         'p50_total_ms',
       ),
+      notFound: findQuantileForStatus(quantileRows, 'not-found', 'p50_total_ms'),
+      serverError: findQuantileForStatus(quantileRows, 'server-error', 'p50_total_ms'),
     },
     p95Ms: {
       cache: findQuantileForStatus(quantileRows, 'edge-hit', 'p95_total_ms'),
@@ -893,6 +987,8 @@ const loadAnalyticsWindowSummary = async (
         'transform-miss',
         'p95_total_ms',
       ),
+      notFound: findQuantileForStatus(quantileRows, 'not-found', 'p95_total_ms'),
+      serverError: findQuantileForStatus(quantileRows, 'server-error', 'p95_total_ms'),
     },
     p99Ms: {
       cache: findQuantileForStatus(quantileRows, 'edge-hit', 'p99_total_ms'),
@@ -902,10 +998,24 @@ const loadAnalyticsWindowSummary = async (
         'transform-miss',
         'p99_total_ms',
       ),
+      notFound: findQuantileForStatus(quantileRows, 'not-found', 'p99_total_ms'),
+      serverError: findQuantileForStatus(quantileRows, 'server-error', 'p99_total_ms'),
     },
     timeseries30d: toAnalyticsTimeseries(timeseriesRows),
     breakdowns,
     topImages: topImageRows
+      .map(row => ({
+        publicId: row.key ?? '',
+        requests: toSafeNumber(row.request_count),
+      }))
+      .filter(row => row.publicId.length > 0),
+    topMissingImages: topMissingImageRows
+      .map(row => ({
+        publicId: row.key ?? '',
+        requests: toSafeNumber(row.request_count),
+      }))
+      .filter(row => row.publicId.length > 0),
+    topServerErrorImages: topServerErrorImageRows
       .map(row => ({
         publicId: row.key ?? '',
         requests: toSafeNumber(row.request_count),
@@ -980,7 +1090,7 @@ const queryAnalyticsRows = async <TRow>(env: Env, sql: string): Promise<TRow[]> 
 }
 
 /**
- * Writes a delivery event to Analytics Engine without blocking the response path.
+ * Writes an asset delivery outcome event to Analytics Engine without blocking the response path.
  *
  * @param env Worker bindings.
  * @param event Structured delivery event.
@@ -991,7 +1101,7 @@ const recordAssetAnalytics = (env: Env, event: AssetAnalyticsEvent): void => {
     indexes: [toAssetAnalyticsPublicId(event.publicId)],
     blobs: [
       event.transformKey,
-      event.cacheStatus,
+      event.analyticsStatus,
       event.requestedStage,
       event.sourceStage,
       event.outputFormat,
@@ -1211,6 +1321,8 @@ const toAnalyticsTimeseries = (
       cacheRequests: number
       derivedHitRequests: number
       derivedMissRequests: number
+      notFoundRequests: number
+      serverErrorRequests: number
     }
   >()
 
@@ -1224,6 +1336,8 @@ const toAnalyticsTimeseries = (
       cacheRequests: 0,
       derivedHitRequests: 0,
       derivedMissRequests: 0,
+      notFoundRequests: 0,
+      serverErrorRequests: 0,
     }
     const requests = toSafeNumber(row.request_count)
     entry.totalRequests += requests
@@ -1234,6 +1348,10 @@ const toAnalyticsTimeseries = (
       entry.derivedHitRequests += requests
     } else if (row.cache_status === 'transform-miss') {
       entry.derivedMissRequests += requests
+    } else if (row.cache_status === 'not-found') {
+      entry.notFoundRequests += requests
+    } else if (row.cache_status === 'server-error') {
+      entry.serverErrorRequests += requests
     }
 
     byDate.set(date, entry)
@@ -1323,7 +1441,7 @@ const handleRawRequest = async (
   rawRequest: RawRequest,
 ): Promise<Response> => {
   if (typeof rawRequest.width === 'number' || typeof rawRequest.height === 'number') {
-    const source = await resolveSourceAsset(env, rawRequest.requestedStage, {
+    const source = await resolveIntermediateAsset(env, rawRequest.requestedStage, {
       publicId: rawRequest.publicId,
       version: rawRequest.version,
     })
@@ -1375,6 +1493,43 @@ const handleRawRequest = async (
       ...(source.version ? { 'x-image-version': String(source.version) } : {}),
     },
   })
+}
+
+/**
+ * Resolves the normalized working object used by the raw intermediate route.
+ *
+ * @param env Worker bindings.
+ * @param requestedStage Requested environment.
+ * @param lookup Public id and optional version.
+ * @returns Intermediate asset bytes or null when absent.
+ */
+const resolveIntermediateAsset = async (
+  env: Env,
+  requestedStage: ImageStage,
+  lookup: { publicId: string; version?: number },
+): Promise<SourceAsset | null> => {
+  for (const stage of getReadableStages(requestedStage)) {
+    const bucket = getOriginalsBucket(env, stage)
+    const version =
+      lookup.version ??
+      (await readManifestVersion(bucket, lookup.publicId)) ??
+      undefined
+    const object = await bucket.get(lookup.publicId)
+    if (!object) {
+      continue
+    }
+
+    return {
+      body: await object.arrayBuffer(),
+      contentType:
+        object.httpMetadata?.contentType ?? inferContentTypeFromKey(lookup.publicId),
+      objectKey: lookup.publicId,
+      stage,
+      version,
+    }
+  }
+
+  return null
 }
 
 /**
@@ -1502,12 +1657,25 @@ const handleTransformRequest = async (
   const queueMs = Date.now() - queueStartedAt
 
   if (!releaseTransformSlot) {
-    return new Response('Asset transform capacity exceeded', {
+    const response = new Response('Asset transform capacity exceeded', {
       status: 503,
       headers: {
         'retry-after': String(TRANSFORM_QUEUE_RETRY_AFTER_SECONDS),
       },
     })
+
+    maybeRecordAssetAnalytics(env, request, response, {
+      cacheStatus: 'transform-miss',
+      outputFormat: outputFormatGuess,
+      publicId: transformRequest.publicId,
+      requestedStage: transformRequest.requestedStage,
+      sourceStage: transformRequest.requestedStage,
+      totalMs: Date.now() - startedAt,
+      transformKey: optimisticCanonical,
+      version: resolvedVersion,
+    })
+
+    return response
   }
 
   try {
@@ -1553,7 +1721,18 @@ const handleTransformRequest = async (
       version: resolvedVersion,
     })
     if (!source) {
-      return new Response('Image not found', { status: 404 })
+      const response = new Response('Image not found', { status: 404 })
+      maybeRecordAssetAnalytics(env, request, response, {
+        cacheStatus: 'transform-miss',
+        outputFormat: outputFormatGuess,
+        publicId: transformRequest.publicId,
+        requestedStage: transformRequest.requestedStage,
+        sourceStage: transformRequest.requestedStage,
+        totalMs: Date.now() - startedAt,
+        transformKey: optimisticCanonical,
+        version: resolvedVersion,
+      })
+      return response
     }
 
     logTransformDebug(debug, 'source-loaded', {
@@ -1632,7 +1811,7 @@ const handleTransformRequest = async (
     }
 
     if (shouldBlockProductionAutoTransformMiss(env, transformRequest)) {
-      return withImageDebugHeaders(
+      const response = withImageDebugHeaders(
         new Response('Production auto transforms must be pre-rendered', {
           status: 404,
           headers: {
@@ -1650,6 +1829,17 @@ const handleTransformRequest = async (
           derivedLookupMs: Date.now() - secondDerivedLookupStartedAt,
         },
       )
+      maybeRecordAssetAnalytics(env, request, response, {
+        cacheStatus: 'transform-miss',
+        outputFormat,
+        publicId: transformRequest.publicId,
+        requestedStage: transformRequest.requestedStage,
+        sourceStage: source.stage,
+        totalMs: Date.now() - startedAt,
+        transformKey: canonical,
+        version: resolvedVersion,
+      })
+      return response
     }
 
     const transformStartedAt = Date.now()
@@ -1830,7 +2020,7 @@ const withImageDebugHeaders = (
 }
 
 /**
- * Emits delivery analytics for successful image GET requests.
+ * Emits asset delivery analytics for successful, missing, and server-error GET requests.
  *
  * @param env Worker bindings.
  * @param request Incoming request.
@@ -1844,12 +2034,26 @@ const maybeRecordAssetAnalytics = (
   response: Response,
   event: Omit<AssetAnalyticsEvent, 'contentLength'> & { contentLength?: number },
 ): void => {
-  if (request.method !== 'GET' || response.status < 200 || response.status >= 300) {
+  if (request.method !== 'GET') {
+    return
+  }
+
+  const analyticsStatus =
+    response.status === 404
+      ? 'not-found'
+      : response.status >= 500
+        ? 'server-error'
+        : response.status >= 200 && response.status < 300
+          ? event.cacheStatus
+          : null
+
+  if (!analyticsStatus) {
     return
   }
 
   recordAssetAnalytics(env, {
     ...event,
+    analyticsStatus,
     contentLength:
       event.contentLength ?? toSafeNumber(response.headers.get('content-length')) ?? 0,
   })
