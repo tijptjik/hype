@@ -13,6 +13,7 @@ import {
 import {
   deleteImage as deleteImageRemote,
   getImagesForContext,
+  rotateImage as rotateImageRemote,
   setImageIntent,
   setImagePublished,
 } from '$lib/api/server/image.remote'
@@ -38,6 +39,31 @@ import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 import { addParamToUrl } from '$lib/navigation'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
+
+function isAbortedImageLoadError(error: unknown): boolean {
+  if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+    return error.name === 'AbortError'
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'type' in error &&
+    (error as { type?: unknown }).type === 'error'
+  ) {
+    const target = (error as { target?: unknown }).target
+
+    if (
+      typeof HTMLImageElement !== 'undefined' &&
+      target instanceof HTMLImageElement &&
+      target.currentSrc.length > 0
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
 
 // ═══════════════════════
 // TYPES :: ImageCtx
@@ -151,6 +177,7 @@ import type { Feature } from '$lib/db/zod/schema/feature.types'
 // 7. Image Attribute Updates (Patching)
 //    - handleSetIntent
 //    - handlePublishToggle
+//    - handleRotate
 //
 // 8. Deletion Handling
 //    - handlePreDelete
@@ -1124,7 +1151,8 @@ export class ImageCtx {
 
   toggleForActiveImage(key: string) {
     if (!this.state.activeImage) return
-    this.setForImage(this.state.activeImage.image.id, key, !this.state.activeImage[key])
+    const currentImage = this.state.activeImage as Record<string, unknown>
+    this.setForImage(this.state.activeImage.image.id, key, !currentImage[key])
   }
 
   getReplacementUpload(imageId: Id): ImageUpload | undefined {
@@ -1197,6 +1225,10 @@ export class ImageCtx {
     ctxId: Id,
     includeSingleImage = true,
   ): Promise<ImageCtxEnvelope[]> {
+    if (this.isAdminMode && ctxType === 'feature') {
+      return this.fetchImagesFromAPI(ctxType, ctxId, includeSingleImage)
+    }
+
     // Try to get images from AppCtx cache first
     if (ctxType === 'feature') {
       const feature = this.appCtx.cache.feature.get(ctxId) as Feature | undefined
@@ -1204,7 +1236,7 @@ export class ImageCtx {
       if (feature) {
         // If we have feature.images array, use it
         if (feature.images && feature.images.length > 0) {
-          return feature.images
+          return feature.images as ImageCtxEnvelope[]
         }
 
         // If feature.images is undefined/null, this is likely a FeatureFromCollection
@@ -1215,7 +1247,7 @@ export class ImageCtx {
 
         // If we have feature.image but empty images array, use the single image
         if (feature.image && includeSingleImage) {
-          return [feature.image]
+          return [feature.image as ImageCtxEnvelope]
         }
       }
     }
@@ -1372,8 +1404,7 @@ export class ImageCtx {
       // For now, just set empty state
       await this.setImages([])
       this.resetActiveImage()
-    } catch (error) {
-      console.error('Failed to fetch single image:', error)
+    } catch {
       await this.setImages([])
       this.resetActiveImage()
     }
@@ -1558,7 +1589,6 @@ export class ImageCtx {
 
     const resource = resourceMap[ctxType]
     if (!resource) {
-      console.warn(`Unsupported resource type for invalidation: ${ctxType}`)
       return
     }
 
@@ -1567,6 +1597,28 @@ export class ImageCtx {
       ctxType as unknown as FirstClassResource,
       ctxId,
     )
+  }
+
+  /**
+   * Marks cached feature image collections stale after admin image mutations so future
+   * feature payloads rehydrate relation fields from the server instead of replaying
+   * pre-mutation image arrays.
+   */
+  private invalidateFeatureImageCache(): void {
+    if (this.state.context?.ctxType !== 'feature' || !this.state.context?.ctxId) {
+      return
+    }
+
+    const feature = this.appCtx.cache.feature.get(this.state.context.ctxId) as
+      | Feature
+      | undefined
+
+    if (!feature) return
+
+    this.appCtx.cache.feature.set(this.state.context.ctxId, {
+      ...feature,
+      images: undefined,
+    })
   }
 
   private async processUploadQueue(config: {
@@ -1644,7 +1696,6 @@ export class ImageCtx {
         return savedImage
       }
     } catch (error) {
-      console.error('Failed to process image (ImageCtx.upload):', error)
       this.setUploadStatus(fileObject, 'error')
       // Clean up the failed upload
       this.cleanupFailedUpload(fileObject)
@@ -1706,7 +1757,9 @@ export class ImageCtx {
   // ═══════════════════════
   async handleSetIntent(imageId: Id, newIntent: Intent) {
     const publicIntents = ['canonical', 'closeUp', 'context', 'general'] as const
-    const isPublished = publicIntents.includes(newIntent)
+    const isPublished = publicIntents.includes(
+      newIntent as (typeof publicIntents)[number],
+    )
 
     try {
       // If trying to set as canonical, first check if another image is already canonical
@@ -1745,10 +1798,10 @@ export class ImageCtx {
       })
       this.setForImage(imageId, 'intent', newIntent)
       this.setForImage(imageId, 'isPublished', isPublished)
+      await this.refreshImages(imageId)
       this.sortImagesInternal() // Calls the private sortImages method
-    } catch (error) {
-      console.error('Failed to update intent:', error)
-    }
+      this.invalidateFeatureImageCache()
+    } catch {}
   }
 
   // NOTE: This is currently only used for Images belonging to a feature.
@@ -1765,18 +1818,35 @@ export class ImageCtx {
     })
     if (updatedImage?.data?.image?.id) {
       this.toggleForActiveImage('isPublished')
+      await this.refreshImages(this.state.activeImage?.image.id)
       // Re-sort images when publish status changes
       this.sortImagesInternal()
-      // Set the feature's images to undefined to undefined, so it'll be refetched in the user app
-      if (this.state.context?.ctxType === 'feature' && this.state.context?.ctxId) {
-        const feature = this.appCtx.cache.feature.get(this.state.context.ctxId)
-        if (feature) {
-          this.appCtx.cache.feature.set(this.state.context.ctxId, {
-            ...feature,
-            images: undefined,
-          })
-        }
-      }
+      this.invalidateFeatureImageCache()
+    }
+  }
+
+  async handleRotate(
+    rotation: 0 | 90 | 180 | 270,
+    imageId: Id | null = this.state.activeImage?.image.id ?? null,
+  ): Promise<void> {
+    if (!imageId) return
+
+    const ctx = this.getCtx()
+
+    try {
+      await rotateImageRemote({
+        id: imageId,
+        ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId,
+        rotation,
+        meta: { isAdminRequest: true },
+      })
+
+      await this.refreshImages(imageId)
+      this.invalidateFeatureImageCache()
+    } catch (error) {
+      toast.error('Failed to rotate image')
+      throw error
     }
   }
 
@@ -1828,8 +1898,6 @@ export class ImageCtx {
         this.setActiveImageToTargetOrFirst()
       }
     } catch (error: any) {
-      console.error('Failed to delete image (ImageCtx.delete context):', error)
-
       // Extract error message from the server response
       let errorMessage = 'Failed to delete image'
       if (error?.message) {
@@ -1865,28 +1933,28 @@ export class ImageCtx {
     let downloadUrl = ''
 
     if (image.image.cdn.toLowerCase() === 'cloudflarer2') {
-      downloadUrl = getURLfromImage({ image, raw: true })
+      downloadUrl = getURLfromImage({
+        image,
+        raw: true,
+        rawTransformation: '',
+      })
     } else {
       throw new Error('Unsupported CDN')
     }
 
     try {
-      const response = await fetch(downloadUrl)
-      const contentType = response.headers.get('content-type')
-      const extension = contentType ? `.${contentType.split('/')[1]}` : ''
-      const filename = `${image.image.publicId.split('/').pop()}${extension}`
-
       const link = document.createElement('a')
       link.style.display = 'none'
       link.href = downloadUrl
       link.target = '_blank'
-      link.download = filename
+      link.rel = 'noopener noreferrer'
+      link.download = image.image.publicId.split('/').pop() ?? image.image.id
 
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
 
-      toast.success(`Downloaded ${filename}`)
+      toast.success('Download started')
     } catch (err) {
       toast.error(`Failed to download image: ${err}`)
     }
@@ -1899,7 +1967,14 @@ export class ImageCtx {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => resolve()
-      img.onerror = reject
+      img.onerror = event => {
+        if (img.currentSrc === '' || img.currentSrc !== src) {
+          resolve()
+          return
+        }
+
+        reject(event)
+      }
       img.src = src
     })
   }
@@ -1917,7 +1992,9 @@ export class ImageCtx {
           await this.preloadImage(url)
           this.state.preloadedImages.add(url)
         } catch (error) {
-          console.error('Failed to preload image:', url, error)
+          if (isAbortedImageLoadError(error)) {
+            return
+          }
         }
       }),
     )

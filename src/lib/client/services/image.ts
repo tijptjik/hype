@@ -31,7 +31,11 @@ import type { Feature } from '$lib/db/zod/schema/feature.types'
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { Id, ImageCtxConstructorOptions } from '$lib/types'
+import type {
+  Id,
+  ImageCtxConstructorOptions,
+  NormalizedImageUploadAsset,
+} from '$lib/types'
 import type {
   Image,
   ImageContextEnvelope,
@@ -114,8 +118,8 @@ export async function uploadAndProcessImage(
   },
   fetchFn: typeof fetch = fetch,
 ): Promise<ImageCtxEnvelope> {
-  const normalizedFile = await normalizeUploadFileForAssetPipeline(file)
-  const metadata = await buildBasicMetadataDocument(normalizedFile)
+  const normalizedUpload = await normalizeUploadFileForAssetPipeline(file)
+  const metadata = await buildBasicMetadataDocument(normalizedUpload)
   const env = toImageEnv()
   const isAdminRequest = uploadCtx.isAdminRequest ?? true
   const featureImage =
@@ -139,9 +143,9 @@ export async function uploadAndProcessImage(
     ctxId: uploadCtx.ctxId,
     organisationId: uploadCtx.organisation?.id ?? undefined,
     projectId: uploadCtx.project?.id ?? undefined,
-    filename: normalizedFile.name,
-    contentType: normalizedFile.type || 'application/octet-stream',
-    size: normalizedFile.size,
+    filename: normalizedUpload.file.name,
+    contentType: normalizedUpload.file.type || 'application/octet-stream',
+    size: normalizedUpload.file.size,
     replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
     meta: { isAdminRequest },
   })
@@ -149,7 +153,7 @@ export async function uploadAndProcessImage(
   const uploadResponse = await fetchFn(auth.uploadUrl, {
     method: auth.method,
     headers: auth.headers,
-    body: normalizedFile,
+    body: normalizedUpload.file,
   })
 
   if (!uploadResponse.ok) {
@@ -177,74 +181,55 @@ export async function uploadAndProcessImage(
 // 3. UPLOAD / URL UTILS
 // ═══════════════════════
 
+const DEFAULT_PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
+
 const resolveConfiguredPublicAssetBaseUrl = (): string =>
   import.meta.env.PUBLIC_ASSET_BASE_URL || ''
 
-const resolveConfiguredPublicRawAssetBaseUrl = (): string =>
-  import.meta.env.PUBLIC_RAW_ASSET_BASE_URL || ''
-
-const resolvePublicAssetBaseUrl = (): string =>
-  resolveConfiguredPublicAssetBaseUrl() || resolvePublicRawAssetBaseUrl()
-
-const resolvePublicRawAssetBaseUrl = (): string => {
-  const configuredBaseUrl = resolveConfiguredPublicRawAssetBaseUrl()
+const resolvePublicAssetBaseUrl = (): string => {
+  const configuredBaseUrl = resolveConfiguredPublicAssetBaseUrl()
   if (configuredBaseUrl) {
     return configuredBaseUrl
   }
 
   if (typeof window === 'undefined') {
-    return ''
+    return DEFAULT_PUBLIC_ASSET_BASE_URL
   }
 
-  const { protocol, hostname } = window.location
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${hostname}:8788`
-  }
-
-  return window.location.origin
+  return DEFAULT_PUBLIC_ASSET_BASE_URL
 }
 
 const toImageEnv = (): 'local' | 'preview' | 'production' =>
   resolveAppStage(resolvePublicAssetBaseUrl())
 
-const getImageDimensions = async (
-  file: File,
-): Promise<{ width: number | null; height: number | null }> =>
-  await new Promise(resolve => {
-    const objectUrl = URL.createObjectURL(file)
-    const image = new Image()
-
-    image.onload = () => {
-      resolve({
-        width: image.naturalWidth || null,
-        height: image.naturalHeight || null,
-      })
-      URL.revokeObjectURL(objectUrl)
-    }
-
-    image.onerror = () => {
-      resolve({ width: null, height: null })
-      URL.revokeObjectURL(objectUrl)
-    }
-
-    image.src = objectUrl
-  })
-
 export async function buildBasicMetadataDocument(
-  file: File,
+  normalizedUpload: NormalizedImageUploadAsset,
 ): Promise<ImageMetadataBasic & { metadata?: Record<string, string> | null }> {
-  const { width, height } = await getImageDimensions(file)
+  const metadataEntries: Record<string, string> = {}
+
+  if (normalizedUpload.uploadedWidth !== null) {
+    metadataEntries.uploadedWidth = String(normalizedUpload.uploadedWidth)
+  }
+  if (normalizedUpload.uploadedHeight !== null) {
+    metadataEntries.uploadedHeight = String(normalizedUpload.uploadedHeight)
+  }
+  if (normalizedUpload.wasResized) {
+    metadataEntries.clientResizeApplied = 'true'
+    metadataEntries.clientResizeMaxDimension = '2048'
+  }
+
   return {
-    originalFilename: file.name,
-    originalExtension: file.name.split('.').pop()?.toLowerCase() ?? null,
-    originalWidth: width,
-    originalHeight: height,
+    originalFilename: normalizedUpload.originalFilename,
+    originalExtension: normalizedUpload.originalExtension,
+    originalWidth: normalizedUpload.originalWidth,
+    originalHeight: normalizedUpload.originalHeight,
+    rotation: 0,
     cameraModel: null,
     capturedAt: null,
     credit: null,
     latitude: null,
     longitude: null,
-    metadata: null,
+    metadata: Object.keys(metadataEntries).length > 0 ? metadataEntries : null,
   }
 }
 
@@ -257,13 +242,14 @@ export async function buildBasicMetadataDocument(
  * @param opts - Options for generating the URL.
  * @param opts.image - The image data.
  * @param opts.transformation - The transformation to apply to the image.
- * @param opts.raw - Whether to return the raw image URL.
+ * @param opts.raw - Whether to return the normalized intermediate image URL.
  * @returns The generated URL string.
  */
 export function getURLfromImage(opts: {
   image: ImageContextEnvelope | ImageCtxEnvelope
   transformation?: string
   raw?: boolean
+  rawTransformation?: string | null
   gravity?: string
   quality?: string
   format?: string
@@ -271,6 +257,7 @@ export function getURLfromImage(opts: {
   const {
     image: inputImage,
     transformation = 'c_fit,h_1024,w_1024',
+    rawTransformation,
     gravity = 'auto',
     format = 'auto',
     quality = 'auto',
@@ -284,26 +271,23 @@ export function getURLfromImage(opts: {
   const image = inputImage.image
 
   // Handle staged images with preview URLs
-  if (image.preview) {
+  if ('preview' in image && typeof image.preview === 'string' && image.preview) {
     return image.preview
   }
 
   if (image.cdn === 'cloudflareR2') {
-    const imageBaseUrl = resolvePublicRawAssetBaseUrl()
-    const publicBaseUrl = resolvePublicAssetBaseUrl()
+    const imageBaseUrl = resolvePublicAssetBaseUrl()
 
-    return `${(raw ? imageBaseUrl : publicBaseUrl) || imageBaseUrl}${toCloudflareImageWorkerPath(
-      {
-        env: image.env,
-        publicId: image.publicId,
-        version: image.version,
-        raw,
-        transformation,
-        gravity,
-        quality,
-        format,
-      },
-    )}`
+    return `${imageBaseUrl}${toCloudflareImageWorkerPath({
+      publicId: image.publicId,
+      version: image.version,
+      raw,
+      rawTransformation,
+      transformation,
+      gravity,
+      quality,
+      format,
+    })}`
   }
 
   throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)

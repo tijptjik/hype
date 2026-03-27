@@ -63,6 +63,7 @@ import { UserBase } from './user'
 //    - UpdateImageSchema
 //    - SetImageIntentSchema
 //    - SetImagePublishedSchema
+//    - RotateImageSchema
 //    - DeleteImageSchema
 //    - AuthImageUploadSchema
 //    - FinalizeImageUploadSchema
@@ -210,6 +211,7 @@ export const ImageMetadataBasicSchema = z.object({
   originalExtension: z.string().nullish(),
   originalWidth: z.number().int().nullish(),
   originalHeight: z.number().int().nullish(),
+  rotation: z.number().int().min(0).max(270).nullish(),
   cameraModel: z.string().nullish(),
   capturedAt: z.string().nullish(),
   credit: z.string().nullish(),
@@ -368,6 +370,14 @@ export const SetImagePublishedSchema = z.object({
   ctxId: z.string().min(1),
   featureId: z.string().optional(),
   isPublished: z.boolean(),
+  meta: ImageRequestMetaSchema,
+})
+
+export const RotateImageSchema = z.object({
+  id: z.string().min(1),
+  ctxType: ImageContextTypeExtendedSchema,
+  ctxId: z.string().min(1),
+  rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]),
   meta: ImageRequestMetaSchema,
 })
 

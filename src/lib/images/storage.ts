@@ -166,10 +166,16 @@ const safeBucketGet = async (
   try {
     return await bucket.get(key)
   } catch (error) {
-    console.error('[images.storage.safeBucketGet] get failed', {
-      key,
-      error,
-    })
+    const message = error instanceof Error ? error.message : String(error)
+    const isLocalReadFailure = message.includes('get: Unspecified error (0)')
+
+    if (!isLocalReadFailure) {
+      console.error('[images.storage.safeBucketGet] get failed', {
+        key,
+        error,
+      })
+    }
+
     return null
   }
 }
@@ -324,6 +330,7 @@ export const toMetadataProfilePayload = (
     originalExtension: document.originalExtension ?? null,
     originalWidth: document.originalWidth ?? null,
     originalHeight: document.originalHeight ?? null,
+    rotation: document.rotation ?? 0,
     cameraModel: document.cameraModel ?? null,
     capturedAt: document.capturedAt ?? null,
     credit: document.credit ?? null,

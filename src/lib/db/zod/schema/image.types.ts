@@ -36,6 +36,7 @@ import type {
   GetImageMetadataSchema,
   AuthImageUploadSchema,
   FinalizeImageUploadSchema,
+  RotateImageSchema,
 } from '$lib/db/zod/schema/image'
 
 export type ImageDB = z.infer<typeof ImageBase>
@@ -133,6 +134,7 @@ export type AuthImageUploadParams = z.infer<typeof AuthImageUploadSchema>
 export type FinalizeImageUploadLink = z.infer<typeof FinalizeImageUploadLinkSchema>
 export type FinalizeImageUploadParams = z.infer<typeof FinalizeImageUploadSchema>
 export type GetImageMetadataParams = z.infer<typeof GetImageMetadataSchema>
+export type RotateImageParams = z.infer<typeof RotateImageSchema>
 export type ImageUploadSession = {
   cdn: `${ImageCDN}`
   env: `${ImageEnv}`

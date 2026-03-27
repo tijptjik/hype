@@ -14,6 +14,7 @@ import {
 import {
   assertPermissionsToCreateImage,
   assertPermissionsToDeleteImage,
+  assertPermissionsToUpdateImage,
   getImageByIdsQueryContext,
   getImageEntityQueryContext,
   getImageQueryContext,
@@ -59,6 +60,7 @@ import {
   ImagesByIdsSchema,
   SetImageIntentSchema,
   SetImagePublishedSchema,
+  RotateImageSchema,
   UpdateImageSchema,
   GetImageMetadataSchema,
   AuthImageUploadSchema,
@@ -94,6 +96,7 @@ import {
   getOriginalsBucketNameForStage,
   getOriginalsBucketForStage,
   readMetadataDocument,
+  type ImageMetadataDocument,
   toManifestObjectKey,
   toMetadataObjectKey,
   toImageStage,
@@ -118,6 +121,7 @@ import {
 // - updateImage
 // - setImageIntent
 // - setImagePublished
+// - rotateImage
 // - deleteImage
 // - authImageUpload
 // - finalizeImageUpload
@@ -224,6 +228,202 @@ const attachImageLinks = async (params: {
     if (link.type === 'taskImage') {
       await createTaskImagesFromImageIds(params.db, link.taskId, [params.imageId])
     }
+  }
+}
+
+const loadSharp = async (): Promise<typeof import('sharp').default> => {
+  const module = await import('sharp')
+  return module.default
+}
+
+/**
+ * Reads an originals-bucket object while tolerating provider-level get errors.
+ *
+ * @param bucket Bound raw/originals bucket.
+ * @param key Object key to read.
+ * @returns The object when available, otherwise `null`.
+ */
+const safeOriginalsBucketGet = async (
+  bucket: ReturnType<typeof getOriginalsBucketForStage>,
+  key: string,
+): Promise<
+  Awaited<ReturnType<ReturnType<typeof getOriginalsBucketForStage>['get']>>
+> => {
+  try {
+    return await bucket.get(key)
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause)
+    const isLocalReadFailure = message.includes('get: Unspecified error (0)')
+
+    if (!isLocalReadFailure) {
+      console.error('[image.remote.safeOriginalsBucketGet] get failed', {
+        key,
+        cause,
+      })
+    }
+
+    return null
+  }
+}
+
+/**
+ * Normalizes a rotation value into the quarter-turn values supported by the editor.
+ *
+ * @param rotation Rotation value to normalize.
+ * @returns Rotation modulo 360 constrained to supported quarter turns.
+ */
+const normalizeRotation = (rotation: number | null | undefined): 0 | 90 | 180 | 270 => {
+  const normalized = (((rotation ?? 0) % 360) + 360) % 360
+
+  if (normalized === 90 || normalized === 180 || normalized === 270) {
+    return normalized
+  }
+
+  return 0
+}
+
+/**
+ * Rotates a stored image object relative to its displayed orientation.
+ *
+ * @param params Rotation inputs for a single R2 object body.
+ * @returns The rotated bytes plus the content type that should be persisted.
+ */
+const rotateStoredImageObject = async (params: {
+  body: ArrayBuffer
+  contentType?: string | null
+  rotation: 0 | 90 | 180 | 270
+}): Promise<{
+  body: Uint8Array
+  contentType: string
+  sourceOrientation: number | null
+  sourceWidth: number | null
+  sourceHeight: number | null
+}> => {
+  const input = new Uint8Array(params.body)
+  const sharp = await loadSharp()
+  const source = sharp(input, {
+    animated: false,
+    limitInputPixels: false,
+  })
+  const metadata = await source.metadata()
+
+  if ((metadata.pages ?? 1) > 1) {
+    throw error(400, 'Animated images cannot be rotated in-place')
+  }
+
+  let pipeline = sharp(input, {
+    animated: false,
+    limitInputPixels: false,
+  }).rotate(params.rotation)
+
+  if (metadata.format === 'jpeg') {
+    pipeline = pipeline.jpeg({ mozjpeg: true, quality: 90 })
+  } else if (metadata.format === 'png') {
+    pipeline = pipeline.png({ compressionLevel: 9 })
+  } else if (metadata.format === 'webp') {
+    pipeline = pipeline.webp({ quality: 90 })
+  } else if (metadata.format === 'tiff') {
+    pipeline = pipeline.tiff({ compression: 'lzw', quality: 90 })
+  }
+
+  const rotated = await pipeline.toBuffer()
+
+  const contentType =
+    metadata.format === 'jpeg'
+      ? 'image/jpeg'
+      : metadata.format === 'png'
+        ? 'image/png'
+        : metadata.format === 'webp'
+          ? 'image/webp'
+          : metadata.format === 'tiff'
+            ? 'image/tiff'
+            : params.contentType || 'application/octet-stream'
+
+  return {
+    body: new Uint8Array(rotated),
+    contentType,
+    sourceOrientation: metadata.orientation ?? null,
+    sourceWidth: metadata.width ?? null,
+    sourceHeight: metadata.height ?? null,
+  }
+}
+
+/**
+ * Applies an absolute quarter-turn rotation to image dimensions.
+ *
+ * @param width Existing width value.
+ * @param height Existing height value.
+ * @returns Rotated width/height pair.
+ */
+const rotateDimensionsForRotation = (
+  width: number | null | undefined,
+  height: number | null | undefined,
+  rotation: 0 | 90 | 180 | 270,
+): {
+  width: number | null | undefined
+  height: number | null | undefined
+} =>
+  rotation === 90 || rotation === 270
+    ? {
+        width: height ?? null,
+        height: width ?? null,
+      }
+    : {
+        width: width ?? null,
+        height: height ?? null,
+      }
+
+/**
+ * Updates the persisted metadata document to reflect an in-place rotation.
+ *
+ * @param params Current metadata document and new manifest version metadata.
+ * @returns Rotated metadata document for unversioned and versioned sidecars.
+ */
+const toRotatedMetadataDocument = (params: {
+  document: ImageMetadataDocument
+  rotation: 0 | 90 | 180 | 270
+  version: number
+  timestamp: string
+}): ImageMetadataDocument => {
+  const originalDimensions = rotateDimensionsForRotation(
+    params.document.originalWidth,
+    params.document.originalHeight,
+    params.rotation,
+  )
+  const metadataEntries = params.document.metadata
+    ? { ...params.document.metadata }
+    : null
+
+  if (metadataEntries) {
+    const uploadedDimensions = rotateDimensionsForRotation(
+      metadataEntries.uploadedWidth
+        ? Number.parseInt(metadataEntries.uploadedWidth, 10)
+        : null,
+      metadataEntries.uploadedHeight
+        ? Number.parseInt(metadataEntries.uploadedHeight, 10)
+        : null,
+      params.rotation,
+    )
+
+    if (uploadedDimensions.width !== null && !Number.isNaN(uploadedDimensions.width)) {
+      metadataEntries.uploadedWidth = String(uploadedDimensions.width)
+    }
+    if (
+      uploadedDimensions.height !== null &&
+      !Number.isNaN(uploadedDimensions.height)
+    ) {
+      metadataEntries.uploadedHeight = String(uploadedDimensions.height)
+    }
+  }
+
+  return {
+    ...params.document,
+    originalWidth: originalDimensions.width ?? null,
+    originalHeight: originalDimensions.height ?? null,
+    rotation: params.rotation,
+    metadata: metadataEntries,
+    sourceVersion: params.version,
+    modifiedAt: params.timestamp,
   }
 }
 
@@ -928,6 +1128,140 @@ export const setImagePublished = guardedCommand(
     })
   },
 )
+
+/**
+ * Rotates an image and refreshes its normalized intermediate and standard derivatives.
+ */
+export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx) => {
+  const { db, user, userId, userRoles, event } = ctx
+  const existing = await loadImageById(db, [eq(image.id, params.id as Id)])
+
+  if (!existing) {
+    throw error(404, 'Image not found')
+  }
+
+  await assertPermissionsToUpdateImage(
+    db,
+    user,
+    event.request,
+    { id: params.id } as ImageDBFlat,
+    userRoles,
+    params.id as Id,
+    params.ctxId as Id,
+    params.ctxType as ImageContextResource | ImageContextResourceExtended,
+  )
+
+  const env = toImageStage(
+    existing.env ?? event.platform?.env.ENVIRONMENT ?? ImageEnv.local,
+  )
+  const originalsBucket = getOriginalsBucketForStage(event.platform, env)
+  const originalObject = await safeOriginalsBucketGet(
+    originalsBucket,
+    existing.publicId,
+  )
+
+  if (!originalObject) {
+    throw error(404, 'Stored image intermediate not found or unreadable')
+  }
+
+  const { document } = await readMetadataDocument({
+    platform: event.platform,
+    env,
+    publicId: existing.publicId,
+    version: existing.version ?? undefined,
+  })
+
+  if (!document) {
+    throw error(404, 'Image metadata not found')
+  }
+
+  const currentRotation = normalizeRotation(document.rotation)
+  const targetRotation = normalizeRotation(params.rotation)
+  const sourceRotation = normalizeRotation(targetRotation - currentRotation)
+
+  const rotatedIntermediate = await rotateStoredImageObject({
+    body: await originalObject.arrayBuffer(),
+    contentType: originalObject.httpMetadata?.contentType,
+    rotation: sourceRotation,
+  })
+  console.info('[image.remote.rotateImage] applying rotation', {
+    imageId: existing.id,
+    publicId: existing.publicId,
+    requestedRotation: targetRotation,
+    currentRotation,
+    appliedDeltaRotation: sourceRotation,
+    sourceOrientation: rotatedIntermediate.sourceOrientation,
+    sourceWidth: rotatedIntermediate.sourceWidth,
+    sourceHeight: rotatedIntermediate.sourceHeight,
+    previousVersion: existing.version ?? null,
+  })
+  await originalsBucket.put(existing.publicId, rotatedIntermediate.body, {
+    httpMetadata: {
+      contentType: rotatedIntermediate.contentType,
+    },
+  })
+
+  const version = Date.now()
+  const timestamp = new Date(version).toISOString()
+  const metadataDocument = toRotatedMetadataDocument({
+    document,
+    rotation: targetRotation,
+    version,
+    timestamp,
+  })
+  const manifestDocument = {
+    publicId: existing.publicId,
+    version,
+    updatedAt: timestamp,
+  }
+
+  await originalsBucket.put(
+    toMetadataObjectKey(existing.publicId),
+    JSON.stringify(metadataDocument),
+    {
+      httpMetadata: { contentType: 'application/json' },
+    },
+  )
+  await originalsBucket.put(
+    toMetadataObjectKey(existing.publicId, version),
+    JSON.stringify(metadataDocument),
+    {
+      httpMetadata: { contentType: 'application/json' },
+    },
+  )
+  await originalsBucket.put(
+    toManifestObjectKey(existing.publicId),
+    JSON.stringify(manifestDocument),
+    {
+      httpMetadata: { contentType: 'application/json' },
+    },
+  )
+
+  const updated = await updateImageForContext({
+    db,
+    user,
+    userId,
+    userRoles,
+    event,
+    id: params.id,
+    ctxType: params.ctxType as ImageContextType,
+    ctxId: params.ctxId,
+    data: {
+      version,
+    },
+  })
+
+  event.platform?.context.waitUntil(
+    warmImageDerivatives({
+      event,
+      env,
+      publicId: existing.publicId,
+      version,
+    }),
+  )
+
+  return updated
+})
 
 /**
  * Deletes an image in context.

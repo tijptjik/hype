@@ -343,8 +343,9 @@ export const applyPrismConstraints = (
         getTable(slicedHierarchy, i).id,
       ),
     )
+    // CTE names must be emitted as identifiers, not string literals.
     subQueryConditions.push(
-      sql`${getTable(slicedHierarchy, i).id} IN (SELECT id FROM ${`level_min_${i}`})`.inlineParams(),
+      sql`${getTable(slicedHierarchy, i).id} IN (SELECT id FROM ${sql.raw(`level_min_${i}`)})`.inlineParams(),
     )
   }
 
