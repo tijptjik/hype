@@ -26,10 +26,12 @@ let {
   image,
   metadata: metadataProp = undefined,
   loading: loadingProp = undefined,
+  enabled = metadataProp !== undefined || loadingProp !== undefined,
 }: {
   image: Image
   metadata?: ImageMetadataBasic | null
   loading?: boolean
+  enabled?: boolean
 } = $props()
 
 const appCtx = getAppCtx()
@@ -84,6 +86,11 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
 
 $effect(() => {
   if (metadataProp !== undefined || loadingProp !== undefined) {
+    return
+  }
+
+  if (!enabled) {
+    isLoading = false
     return
   }
 
