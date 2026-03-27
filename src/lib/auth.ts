@@ -83,7 +83,9 @@ function createAuthInstance(
             // Generate username if not provided
             const dbUser = user as Partial<typeof userSchema.$inferSelect>
             if (!dbUser.username) {
-              const { generateUsernameFromId } = await import('$lib/utils/username')
+              const { generateUsernameFromId } = await import(
+                '$lib/utils/username-generator.server'
+              )
               const username = generateUsernameFromId(user.id)
               return {
                 data: {
