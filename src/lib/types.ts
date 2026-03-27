@@ -282,6 +282,12 @@ export type MapRenderJob = {
   targetObjectKey: string
 }
 
+export type AssetRenderJob = {
+  env: PreviewStage
+  publicId: string
+  version?: number
+}
+
 /* ----------------- */
 // ASSET ANALYTICS
 /* -------- */

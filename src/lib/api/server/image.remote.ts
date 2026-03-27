@@ -22,7 +22,7 @@ import {
   toResponseShape,
   toResponseShapeProjectOrOrganisation,
   updateImageForContext,
-  warmImageDerivatives,
+  enqueueDerivedAssetWarmup,
 } from '$lib/api/services/image'
 // DB SERVICES
 import {
@@ -964,7 +964,7 @@ export const finalizeImageUpload = guardedCommand(
         data: imageData,
       })
       event.platform?.context.waitUntil(
-        warmImageDerivatives({
+        enqueueDerivedAssetWarmup({
           event,
           env: stage,
           publicId: payload.publicId,
@@ -999,7 +999,7 @@ export const finalizeImageUpload = guardedCommand(
     }
 
     event.platform?.context.waitUntil(
-      warmImageDerivatives({
+      enqueueDerivedAssetWarmup({
         event,
         env: stage,
         publicId: payload.publicId,
@@ -1252,7 +1252,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   })
 
   event.platform?.context.waitUntil(
-    warmImageDerivatives({
+    enqueueDerivedAssetWarmup({
       event,
       env,
       publicId: existing.publicId,

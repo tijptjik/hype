@@ -28,7 +28,14 @@ import {
   updateImage as updateImageRecord,
 } from '$lib/db/services/image'
 // TYPES
-import type { UserRoleDisco, Database, Id, QueryParams, SessionUser } from '$lib/types'
+import type {
+  UserRoleDisco,
+  Database,
+  Id,
+  AssetRenderJob,
+  QueryParams,
+  SessionUser,
+} from '$lib/types'
 import type {
   Image,
   ImageContextEnvelope,
@@ -42,10 +49,6 @@ import { applyResourceContextConstraints } from '$lib/db/services/image'
 import { getProjectForFeatureId } from '$lib/db/services/project'
 import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
 import { getUserById } from '$lib/db/services/user'
-import {
-  toImagePrerenderWorkerPaths,
-  toImageRawIntermediateWorkerPath,
-} from '$lib/images/delivery'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -53,7 +56,7 @@ import {
 //
 // 1. CONFIG
 //    - intentOrder (const)
-//    - resolveAssetWorkerBaseUrl
+//    - getImageWarmupQueue
 //
 // 2. COMMON
 //    - imageCollectionWithRelations (const)
@@ -70,7 +73,7 @@ import {
 //
 // 5. UTILS
 //    - getCtxFromUrl
-//    - warmImageDerivatives
+//    - enqueueImageDerivativeWarmup
 //    - updateImageForContext
 //
 
@@ -99,9 +102,6 @@ export const adminIntentOrder = [
   'research',
 ] as const
 
-const DEFAULT_PRERENDER_ACCEPT = 'image/webp,image/jpeg,image/*;q=0.9,*/*;q=0.8'
-const DEFAULT_ASSET_WORKER_BASE_URL = 'https://assets.hype.hk'
-
 const imageProfiles = ['list', 'card', 'detail', 'admin'] as const
 
 export const toImageProfile = (value: unknown, fallback: ImageProfile): ImageProfile =>
@@ -109,24 +109,9 @@ export const toImageProfile = (value: unknown, fallback: ImageProfile): ImagePro
     ? (value as ImageProfile)
     : fallback
 
-/**
- * Resolves the asset worker base URL for image derivative warmups.
- *
- * @param event - Current request event.
- * @returns Base URL or null when no worker target is configured.
- */
-export const resolveAssetWorkerBaseUrl = (event: RequestEvent): string | null => {
-  const assetBaseUrl = event.platform?.env.PUBLIC_ASSET_BASE_URL?.trim()
-  if (assetBaseUrl) {
-    return assetBaseUrl.replace(/\/+$/, '')
-  }
-
-  if (event.url.hostname === 'localhost' || event.url.hostname === '127.0.0.1') {
-    return DEFAULT_ASSET_WORKER_BASE_URL
-  }
-
-  return null
-}
+export const getAssetRenderQueue = (
+  platform?: App.Platform,
+): Queue<AssetRenderJob> | null => platform?.env.ASSET_RENDER_QUEUE ?? null
 
 /**
  * Shapes an image record plus optional feature-image fields into API wire format.
@@ -465,66 +450,24 @@ export const getCtxFromUrl = (url: URL) => {
 }
 
 /**
- * Warms the standard derivative variants for an image in the asset worker.
+ * Enqueues asynchronous image derivative warmup in the asset worker queue.
  *
- * @param params - Warmup request inputs.
- * @returns Promise that settles after all warmup attempts complete.
+ * @param params Queue payload inputs.
+ * @returns Promise that settles after the queue accepts the message.
  */
-export const warmImageDerivatives = (params: {
+export const enqueueDerivedAssetWarmup = async (params: {
   event: RequestEvent
   env: string
   publicId: string
   version?: number | null
 }): Promise<void> => {
-  const baseUrl = resolveAssetWorkerBaseUrl(params.event)
-  if (!baseUrl) {
-    return Promise.resolve()
-  }
+  const queue = getAssetRenderQueue(params.event.platform)
+  if (!queue) return
 
-  const warmupUrls = [
-    toImageRawIntermediateWorkerPath({
-      publicId: params.publicId,
-      version: params.version,
-    }),
-    ...toImagePrerenderWorkerPaths({
-      env: params.env,
-      publicId: params.publicId,
-      version: params.version,
-    }),
-  ]
-
-  // Use HEAD so the worker persists the derived object without sending image bytes back.
-  return Promise.allSettled(
-    warmupUrls.map(async path => {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'HEAD',
-        headers: {
-          accept: DEFAULT_PRERENDER_ACCEPT,
-        },
-      })
-
-      if (!response.ok && response.status !== 404) {
-        throw new Error(
-          `Warmup request failed with status ${response.status} for ${path}`,
-        )
-      }
-    }),
-  ).then(results => {
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.warn(
-          JSON.stringify({
-            event: 'image-prerender-warmup-failed',
-            publicId: params.publicId,
-            version: params.version ?? null,
-            error:
-              result.reason instanceof Error
-                ? result.reason.message
-                : String(result.reason),
-          }),
-        )
-      }
-    }
+  await queue.send({
+    env: params.env === 'production' || params.env === 'preview' ? params.env : 'local',
+    publicId: params.publicId,
+    ...(typeof params.version === 'number' ? { version: params.version } : {}),
   })
 }
 
