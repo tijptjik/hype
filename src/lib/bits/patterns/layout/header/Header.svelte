@@ -107,31 +107,6 @@ const rootClass = $derived(
 
     {#snippet right({ showButtonText })}
       <div class="bits-pattern-header__right-slot">
-        {#if showFilter || showViewActions}
-          <div
-            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
-            in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-            out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
-          >
-            <HeaderPrimitive.Search
-              bind:query
-              isFilterable={showFilter}
-              placeholder={filter.placeholder}
-              onFilter={filter.onFilter}
-              onAdvanceFromSearch={filter.onAdvanceFromSearch}
-            />
-
-            {#if showViewActions}
-              <HeaderPrimitive.ViewActions
-                controlsAction={viewActions.controlsAction}
-                layoutAction={viewActions.layoutAction}
-                extraActions={viewActions.extraActions}
-                hideLabel={true}
-              />
-            {/if}
-          </div>
-        {/if}
-
         {#if showFacets || showFormActions}
           <div
             class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
@@ -153,6 +128,31 @@ const rootClass = $derived(
                 saveAction={formActions.saveAction}
                 deleteAction={formActions.deleteAction}
                 publishAction={formActions.publishAction}
+                hideLabel={!showButtonText}
+              />
+            {/if}
+          </div>
+        {/if}
+
+        {#if showFilter || showViewActions}
+          <div
+            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+            in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
+            out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+          >
+            <HeaderPrimitive.Search
+              bind:query
+              isFilterable={showFilter}
+              placeholder={filter.placeholder}
+              onFilter={filter.onFilter}
+              onAdvanceFromSearch={filter.onAdvanceFromSearch}
+            />
+
+            {#if showViewActions}
+              <HeaderPrimitive.ViewActions
+                controlsAction={viewActions.controlsAction}
+                layoutAction={viewActions.layoutAction}
+                extraActions={viewActions.extraActions}
                 hideLabel={!showButtonText}
               />
             {/if}
