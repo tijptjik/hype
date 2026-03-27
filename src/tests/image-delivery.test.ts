@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   toCloudflareImageWorkerPath,
+  toImageRawIntermediateWorkerPath,
   toImagePrerenderWorkerPaths,
 } from '$lib/images/delivery'
 
@@ -39,6 +40,13 @@ describe('image delivery helpers', () => {
         transformation: 'c_fill,h_256,w_256',
       }),
     ).toBe('/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/features/example.jpg')
+
+    expect(
+      toImageRawIntermediateWorkerPath({
+        publicId: 'features/example.jpg',
+        version: 7,
+      }),
+    ).toBe('/image/raw/h_2048,w_2048/v7/features/example.jpg')
 
     expect(
       toImagePrerenderWorkerPaths({

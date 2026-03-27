@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import sharp from 'sharp'
 
 const {
   mockAuthorizeImageList,
   mockAuthorizeImageRead,
   mockAssertPermissionsToCreateImage,
   mockAssertPermissionsToDeleteImage,
+  mockAssertPermissionsToUpdateImage,
   mockGetImageByIdsQueryContext,
   mockGetImageEntityQueryContext,
   mockGetImageQueryContext,
@@ -26,6 +28,7 @@ const {
   mockGuardedContext,
   mockCreatePresignedR2UploadUrl,
   mockGetOriginalsBucketNameForStage,
+  mockReadMetadataDocument,
   mockVerifyUploadToken,
   mockWaitUntil,
 } = vi.hoisted(() => ({
@@ -33,6 +36,7 @@ const {
   mockAuthorizeImageRead: vi.fn(() => ({ allowed: true })),
   mockAssertPermissionsToCreateImage: vi.fn(async () => undefined),
   mockAssertPermissionsToDeleteImage: vi.fn(async () => undefined),
+  mockAssertPermissionsToUpdateImage: vi.fn(async () => undefined),
   mockGetImageByIdsQueryContext: vi.fn(() => ({ conditions: [] })),
   mockGetImageEntityQueryContext: vi.fn(() => ({ conditions: [] })),
   mockGetImageQueryContext: vi.fn(() => ({ conditions: [] })),
@@ -67,6 +71,11 @@ const {
     async () => 'https://upload.example.test/object',
   ),
   mockGetOriginalsBucketNameForStage: vi.fn(() => 'hype-assets-raw-dev'),
+  mockReadMetadataDocument: vi.fn(async () => ({
+    document: null,
+    resolvedEnv: 'local',
+    resolvedVersion: undefined,
+  })),
   mockVerifyUploadToken: vi.fn(async () => null),
   mockWaitUntil: vi.fn(),
 }))
@@ -104,6 +113,7 @@ vi.mock('$lib/api/services/authz', () => ({
 vi.mock('$lib/api/services/image', () => ({
   assertPermissionsToCreateImage: mockAssertPermissionsToCreateImage,
   assertPermissionsToDeleteImage: mockAssertPermissionsToDeleteImage,
+  assertPermissionsToUpdateImage: mockAssertPermissionsToUpdateImage,
   getImageByIdsQueryContext: mockGetImageByIdsQueryContext,
   getImageEntityQueryContext: mockGetImageEntityQueryContext,
   getImageQueryContext: mockGetImageQueryContext,
@@ -136,12 +146,27 @@ vi.mock('$lib/db/services/user', () => ({
   getUserById: mockGetUserById,
 }))
 
+vi.mock('coordinate-parser', () => ({
+  default: class Coordinates {
+    getLatitude(): number {
+      return 0
+    }
+
+    getLongitude(): number {
+      return 0
+    }
+  },
+}))
+
 vi.mock('$lib/images/auth', () => ({
   createUploadToken: vi.fn(async () => 'signed-upload-token'),
   verifyUploadToken: mockVerifyUploadToken,
 }))
 
 vi.mock('$lib/images/delivery', () => ({
+  toImageRawIntermediateWorkerPath: vi.fn(
+    ({ publicId, version }) => `/image/raw/h_2048,w_2048/v${version}/${publicId}`,
+  ),
   toImagePrerenderWorkerPaths: vi.fn(({ env, publicId, version }) => [
     `/${env}/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v${version}/${publicId}`,
     `/${env}/image/upload/c_fill,h_128,w_128/g_auto/f_auto/q_auto/v${version}/${publicId}`,
@@ -156,6 +181,7 @@ vi.mock('$lib/images/storage', async importOriginal => {
     ...actual,
     createPresignedR2UploadUrl: mockCreatePresignedR2UploadUrl,
     getOriginalsBucketNameForStage: mockGetOriginalsBucketNameForStage,
+    readMetadataDocument: mockReadMetadataDocument,
   }
 })
 
@@ -174,6 +200,7 @@ vi.mock('$lib/db/zod', () => ({
   ImagesByIdsSchema: {},
   SetImageIntentSchema: {},
   SetImagePublishedSchema: {},
+  RotateImageSchema: {},
   UpdateImageSchema: {},
 }))
 
@@ -213,6 +240,12 @@ describe('image.remote', () => {
     remote = await import('$lib/api/server/image.remote')
     vi.clearAllMocks()
     mockWaitUntil.mockReset()
+    mockReadMetadataDocument.mockReset()
+    mockReadMetadataDocument.mockResolvedValue({
+      document: null,
+      resolvedEnv: 'local',
+      resolvedVersion: undefined,
+    })
     mockGuardedContext.mockResolvedValue({
       db: buildDbWithContextRow({
         isPublished: true,
@@ -440,7 +473,21 @@ describe('image.remote', () => {
     expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
     expect(put).toHaveBeenCalledTimes(3)
     expect(mockWaitUntil).toHaveBeenCalledTimes(1)
-    expect(fetchSpy).toHaveBeenCalledTimes(3)
+    expect(fetchSpy).toHaveBeenCalledTimes(4)
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      'https://raw.assets.example.test/image/raw/h_2048,w_2048/v1768/h/features/feature-1/image-a',
+      expect.objectContaining({
+        method: 'HEAD',
+      }),
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      'https://raw.assets.example.test/local/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v1768/h/features/feature-1/image-a',
+      expect.objectContaining({
+        method: 'HEAD',
+      }),
+    )
     expect(fetchSpy).toHaveBeenCalledWith(
       'https://raw.assets.example.test/local/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v1768/h/features/feature-1/image-a',
       expect.objectContaining({
@@ -453,6 +500,186 @@ describe('image.remote', () => {
         ctxId: 'feature-1',
       },
     })
+
+    fetchSpy.mockRestore()
+    dateNowSpy.mockRestore()
+  })
+
+  it('getMetadata reads the metadata sidecar for the requested public id and env', async () => {
+    mockReadMetadataDocument.mockResolvedValue({
+      document: {
+        originalFilename: 'sample',
+        originalExtension: 'jpg',
+        originalWidth: 1200,
+        originalHeight: 800,
+        cameraModel: 'Leica Q2',
+        capturedAt: '2024-03-01T10:00:00.000Z',
+        credit: 'Hype',
+        metadata: null,
+      },
+      resolvedEnv: 'production',
+      resolvedVersion: undefined,
+    })
+
+    const response = await remote.getMetadata({
+      publicId: 'h/hkghostsigns/example-id',
+      env: 'production',
+      profile: 'basic',
+    })
+
+    expect(mockReadMetadataDocument).toHaveBeenCalledWith({
+      platform: expect.any(Object),
+      env: 'production',
+      publicId: 'h/hkghostsigns/example-id',
+      version: undefined,
+    })
+    expect(response.data).toEqual({
+      originalFilename: 'sample',
+      originalExtension: 'jpg',
+      originalWidth: 1200,
+      originalHeight: 800,
+      cameraModel: 'Leica Q2',
+      capturedAt: '2024-03-01T10:00:00.000Z',
+      credit: 'Hype',
+    })
+  })
+
+  it('rotateImage rewrites stored objects, bumps version, and warms fresh variants', async () => {
+    const put = vi.fn(async () => undefined)
+    const originalGet = vi.fn(async (key: string) => {
+      if (key === 'h/features/feature-1/image-a') {
+        return {
+          arrayBuffer: async () =>
+            await sharp({
+              create: {
+                width: 100,
+                height: 200,
+                channels: 3,
+                background: '#112233',
+              },
+            })
+              .jpeg()
+              .toBuffer(),
+          httpMetadata: { contentType: 'image/jpeg' },
+        }
+      }
+
+      if (key === 'h/features/feature-1/image-a.raw') {
+        return {
+          arrayBuffer: async () =>
+            await sharp({
+              create: {
+                width: 100,
+                height: 200,
+                channels: 3,
+                background: '#445566',
+              },
+            })
+              .jpeg()
+              .toBuffer(),
+          httpMetadata: { contentType: 'image/jpeg' },
+        }
+      }
+
+      return null
+    })
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(2468)
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }))
+
+    mockLoadImageById.mockResolvedValue({
+      id: 'img-1',
+      env: 'local',
+      publicId: 'h/features/feature-1/image-a',
+      version: 1234,
+      featureId: 'feature-1',
+    })
+
+    mockGuardedContext.mockResolvedValue({
+      db: buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub-a',
+      }),
+      user: { id: 'u-1', isAnonymous: false },
+      userId: 'u-1',
+      userRoles: [],
+      isAdminRequest: true,
+      event: {
+        request: new Request('https://example.test'),
+        locals: { hub: null },
+        platform: {
+          env: {
+            ENVIRONMENT: 'local',
+            AUTH_SECRET: 'secret',
+            CLOUDFLARE_ACCOUNT_ID: 'account-id',
+            R2_S3_ACCESS_KEY_ID: 'access-key',
+            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+            ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+            ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
+            ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
+            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+          },
+          context: {
+            waitUntil: mockWaitUntil,
+          },
+        },
+      },
+    })
+
+    mockReadMetadataDocument.mockResolvedValue({
+      document: {
+        originalFilename: 'image.jpg',
+        originalExtension: 'jpg',
+        originalWidth: 100,
+        originalHeight: 200,
+        cameraModel: null,
+        capturedAt: null,
+        credit: null,
+        latitude: null,
+        longitude: null,
+        metadata: {
+          uploadedWidth: '100',
+          uploadedHeight: '200',
+        },
+        sourceVersion: 1234,
+        uploadedAt: '2026-03-01T00:00:00.000Z',
+        modifiedAt: '2026-03-01T00:00:00.000Z',
+      },
+      resolvedEnv: 'local',
+      resolvedVersion: 1234,
+    })
+
+    const result = await remote.rotateImage({
+      id: 'img-1',
+      ctxType: 'feature',
+      ctxId: 'feature-1',
+      direction: 'right',
+    })
+
+    expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
+    expect(originalGet).toHaveBeenCalledWith('h/features/feature-1/image-a')
+    expect(originalGet).toHaveBeenCalledWith('h/features/feature-1/image-a.raw')
+    expect(put).toHaveBeenCalledTimes(5)
+    expect(mockUpdateImageForContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'img-1',
+        ctxType: 'feature',
+        ctxId: 'feature-1',
+        data: { version: 2468 },
+      }),
+    )
+    expect(fetchSpy).toHaveBeenCalledTimes(4)
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      'https://raw.assets.example.test/image/raw/h_2048,w_2048/v2468/h/features/feature-1/image-a',
+      expect.objectContaining({ method: 'HEAD' }),
+    )
+    expect(result).toEqual({ data: { id: 'img-1' } })
 
     fetchSpy.mockRestore()
     dateNowSpy.mockRestore()
