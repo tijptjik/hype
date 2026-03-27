@@ -508,6 +508,7 @@ describe('image.remote', () => {
         originalExtension: 'jpg',
         originalWidth: 1200,
         originalHeight: 800,
+        rotation: 90,
         cameraModel: 'Leica Q2',
         capturedAt: '2024-03-01T10:00:00.000Z',
         credit: 'Hype',
@@ -534,6 +535,7 @@ describe('image.remote', () => {
       originalExtension: 'jpg',
       originalWidth: 1200,
       originalHeight: 800,
+      rotation: 90,
       cameraModel: 'Leica Q2',
       capturedAt: '2024-03-01T10:00:00.000Z',
       credit: 'Hype',
@@ -554,23 +556,6 @@ describe('image.remote', () => {
                 height: 200,
                 channels: 3,
                 background: '#112233',
-              },
-            })
-              .jpeg()
-              .toBuffer(),
-          httpMetadata: { contentType: 'image/jpeg' },
-        }
-      }
-
-      if (key === 'h/features/feature-1/image-a.raw') {
-        return {
-          arrayBuffer: async () =>
-            await sharp({
-              create: {
-                width: 100,
-                height: 200,
-                channels: 3,
-                background: '#445566',
               },
             })
               .jpeg()
@@ -635,6 +620,7 @@ describe('image.remote', () => {
         originalExtension: 'jpg',
         originalWidth: 100,
         originalHeight: 200,
+        rotation: 0,
         cameraModel: null,
         capturedAt: null,
         credit: null,
@@ -656,13 +642,13 @@ describe('image.remote', () => {
       id: 'img-1',
       ctxType: 'feature',
       ctxId: 'feature-1',
-      direction: 'right',
+      rotation: 90,
     })
 
     expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
     expect(originalGet).toHaveBeenCalledWith('h/features/feature-1/image-a')
-    expect(originalGet).toHaveBeenCalledWith('h/features/feature-1/image-a.raw')
-    expect(put).toHaveBeenCalledTimes(5)
+    expect(originalGet).toHaveBeenCalledTimes(1)
+    expect(put).toHaveBeenCalledTimes(4)
     expect(mockUpdateImageForContext).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'img-1',
@@ -670,6 +656,11 @@ describe('image.remote', () => {
         ctxId: 'feature-1',
         data: { version: 2468 },
       }),
+    )
+    expect(put).toHaveBeenCalledWith(
+      'h/features/feature-1/image-a.json',
+      expect.stringContaining('"rotation":90'),
+      expect.any(Object),
     )
     expect(mockWarmImageDerivatives).toHaveBeenCalledWith({
       event: expect.objectContaining({
