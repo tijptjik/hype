@@ -42,7 +42,10 @@ import { applyResourceContextConstraints } from '$lib/db/services/image'
 import { getProjectForFeatureId } from '$lib/db/services/project'
 import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
 import { getUserById } from '$lib/db/services/user'
-import { toImagePrerenderWorkerPaths } from '$lib/images/delivery'
+import {
+  toImagePrerenderWorkerPaths,
+  toImageRawIntermediateWorkerPath,
+} from '$lib/images/delivery'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -478,11 +481,17 @@ export const warmImageDerivatives = (params: {
     return Promise.resolve()
   }
 
-  const warmupUrls = toImagePrerenderWorkerPaths({
-    env: params.env,
-    publicId: params.publicId,
-    version: params.version,
-  })
+  const warmupUrls = [
+    toImageRawIntermediateWorkerPath({
+      publicId: params.publicId,
+      version: params.version,
+    }),
+    ...toImagePrerenderWorkerPaths({
+      env: params.env,
+      publicId: params.publicId,
+      version: params.version,
+    }),
+  ]
 
   // Use HEAD so the worker persists the derived object without sending image bytes back.
   return Promise.allSettled(
