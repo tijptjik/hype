@@ -6,19 +6,23 @@ import { m } from '$lib/i18n'
 import { getImageCtx } from '$lib/context/image.svelte'
 // BITS
 import { Icon, IconAnchor, UserAttributionCard } from '$lib/bits'
+import { LazyIconAnchor } from '$lib/bits/custom/icon'
 // COMPONENTS
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
 import Camera from 'virtual:icons/lucide/camera'
+import LoaderCircle from 'virtual:icons/lucide/loader-circle'
 import Photo from 'virtual:icons/lucide/image'
 import InformationCircle from 'virtual:icons/lucide/info'
 import Dropzone from 'svelte-file-dropzone'
 import Metadata from '$lib/components/common/ImageMetadata.svelte'
 import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte'
+import { loadImageMetadata } from '$lib/components/common/imageMetadata'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
 import type { Snippet } from 'svelte'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageMetadataData } from '$lib/components/common/imageMetadata'
 
 type Props = {
   LeftActions?: Snippet
@@ -63,6 +67,9 @@ let emptyStateTimer: ReturnType<typeof setTimeout> | null = null
 let isEmpty = $derived(isPendingEmptyResolution && isResolvedEmpty)
 let showResolvingLoader = $derived(!hasActiveImage && !isError && !isEmpty)
 let isDropzoneDisabled = $derived(showResolvingLoader)
+let metadata = $state<ImageMetadataData | null>(null)
+let isMetadataLoading = $state(false)
+let hasLoadedMetadata = $state(false)
 
 function emitLayoutSettled(): void {
   onLayoutSettled?.()
@@ -128,6 +135,45 @@ $effect(() => {
 $effect(() => {
   onActiveImageChange?.(image ?? null)
 })
+
+$effect(() => {
+  image?.image.id
+  metadata = null
+  isMetadataLoading = false
+  hasLoadedMetadata = false
+})
+
+async function ensureMetadataLoaded(): Promise<void> {
+  const currentImage = image?.image
+
+  if (!currentImage?.publicId || isMetadataLoading || hasLoadedMetadata) {
+    return
+  }
+
+  isMetadataLoading = true
+
+  try {
+    const result = await loadImageMetadata(currentImage, imageCtx.appCtx.isAdmin())
+
+    if (image?.image.id !== currentImage.id) {
+      return
+    }
+
+    metadata = result
+    hasLoadedMetadata = true
+  } catch (error) {
+    if (image?.image.id !== currentImage.id) {
+      return
+    }
+
+    metadata = null
+    hasLoadedMetadata = true
+  } finally {
+    if (image?.image.id === currentImage.id) {
+      isMetadataLoading = false
+    }
+  }
+}
 </script>
 
 {#snippet EmptyContent()}
@@ -150,7 +196,11 @@ $effect(() => {
 
 {#snippet LoadingContent()}
   <div class="flex min-h-0 w-full flex-1 flex-col items-center justify-center">
-    <div class="viewer-resolve-loader" aria-label="Loading image" role="status"></div>
+    <div
+      class="viewer-resolve-loader"
+      aria-label={m.viewer__loading_image()}
+      role="status"
+    ></div>
   </div>
 {/snippet}
 
@@ -192,9 +242,17 @@ $effect(() => {
               {#if LeftActions}
                 {@render LeftActions()}
               {:else}
-                <IconAnchor position="left" icon={Camera}>
-                  <Metadata image={image.image} />
-                </IconAnchor>
+                <LazyIconAnchor
+                  position="left"
+                  icon={Camera}
+                  loadingIcon={LoaderCircle}
+                  loading={isMetadataLoading}
+                  showContent={hasLoadedMetadata && !isMetadataLoading}
+                  label={m.image__metadata_open()}
+                  onOpenIntent={ensureMetadataLoaded}
+                >
+                  <Metadata image={image.image} {metadata} loading={false} />
+                </LazyIconAnchor>
               {/if}
             </div>
 
