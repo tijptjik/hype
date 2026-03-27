@@ -1,7 +1,6 @@
 import { getContext, setContext, untrack } from 'svelte'
 import type { Component } from 'svelte'
 import type {
-  FacetType,
   HeaderCtrlState,
   HeaderControlsMode,
   HeaderFacetItem,
@@ -9,6 +8,7 @@ import type {
   HeaderVisibilityOverrides,
 } from '$lib/types'
 import type {
+  HeaderButtonActionConfig,
   HeaderLayoutRegionConfig,
   HeaderTitleMenuItemConfig,
 } from '$lib/bits/patterns/layout/header/header.types'
@@ -83,7 +83,10 @@ export class HeaderCtrl {
       title: '',
       icon: null,
       facets: [],
+      activeFacet: null,
+      onFacetChange: null,
       titleMenuItems: [],
+      viewActions: [],
     },
     formActions: null,
     layout: {
@@ -136,7 +139,7 @@ export class HeaderCtrl {
   setFacets(
     facets:
       | Map<
-          FacetType,
+          string,
           | string
           | {
               label: string
@@ -146,10 +149,34 @@ export class HeaderCtrl {
             }
         >
       | HeaderFacetItem[],
+    options: {
+      active?: string | false | null
+      onFacetChange?: ((ref: string) => void) | null
+    } = {},
   ): void {
     const nextFacets = this.normalizeFacetItems(facets)
-    if (untrack(() => isSameFacetItems(this.state.meta.facets, nextFacets))) return
+    if (
+      untrack(
+        () =>
+          isSameFacetItems(this.state.meta.facets, nextFacets) &&
+          this.state.meta.activeFacet === (options.active ?? null) &&
+          this.state.meta.onFacetChange === (options.onFacetChange ?? null),
+      )
+    )
+      return
     this.state.meta.facets = nextFacets
+    this.state.meta.activeFacet = options.active ?? null
+    this.state.meta.onFacetChange = options.onFacetChange ?? null
+  }
+
+  /**
+   * Set additional header view actions supplied by the current route.
+   * @param actions - Extra action buttons rendered alongside default view actions.
+   * @returns void
+   */
+  setViewActions(actions: HeaderButtonActionConfig[]): void {
+    if (untrack(() => isSameViewActions(this.state.meta.viewActions, actions))) return
+    this.state.meta.viewActions = [...actions]
   }
 
   /**
@@ -210,7 +237,7 @@ export class HeaderCtrl {
     title: string,
     icon: Component,
     facets: Map<
-      FacetType,
+      string,
       | string
       | {
           label: string
@@ -235,7 +262,10 @@ export class HeaderCtrl {
     this.state.meta.title = ''
     this.state.meta.icon = null
     this.state.meta.facets = []
+    this.state.meta.activeFacet = null
+    this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
+    this.state.meta.viewActions = []
   }
 
   /**
@@ -370,14 +400,20 @@ export class HeaderCtrl {
           this.state.meta.title === title &&
           this.state.meta.icon === icon &&
           this.state.meta.facets.length === 0 &&
-          this.state.meta.titleMenuItems.length === 0,
+          this.state.meta.activeFacet == null &&
+          this.state.meta.onFacetChange == null &&
+          this.state.meta.titleMenuItems.length === 0 &&
+          this.state.meta.viewActions.length === 0,
       )
     )
       return
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.facets = []
+    this.state.meta.activeFacet = null
+    this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
+    this.state.meta.viewActions = []
   }
 
   /**
@@ -391,7 +427,7 @@ export class HeaderCtrl {
     title: string,
     icon: Component,
     facets: Map<
-      FacetType,
+      string,
       | string
       | {
           label: string
@@ -415,7 +451,10 @@ export class HeaderCtrl {
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.facets = nextFacets
+    this.state.meta.activeFacet = null
+    this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
+    this.state.meta.viewActions = []
   }
 
   /**
@@ -426,7 +465,7 @@ export class HeaderCtrl {
   private normalizeFacetItems(
     facets:
       | Map<
-          FacetType,
+          string,
           | string
           | {
               label: string
@@ -530,6 +569,15 @@ function isSameFacetItems(left: HeaderFacetItem[], right: HeaderFacetItem[]): bo
       item?.disabled === next?.disabled
     )
   })
+}
+
+function isSameViewActions(
+  left: HeaderButtonActionConfig[],
+  right: HeaderButtonActionConfig[],
+): boolean {
+  if (left.length !== right.length) return false
+
+  return left.every((action, index) => isComparableValueEqual(action, right[index]))
 }
 
 function isSameLayoutRegionConfig(

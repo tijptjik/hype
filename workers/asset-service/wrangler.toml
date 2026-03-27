@@ -97,7 +97,7 @@ name = "hype-asset-service-prod"
 ENVIRONMENT = "production"
 ASSET_DEBUG_MEMORY = "1"
 ASSET_DEBUG_MEMORY_MATCH = "lix6swwj3bbky2hmp1s2"
-BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "1"
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
 
 [[env.production.analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
