@@ -1,6 +1,14 @@
 // ENV
 import { and, asc, desc, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
-import { user, userFeature, userLayer } from '../schema'
+import {
+  hub,
+  hubRole,
+  organisationRole,
+  projectRole,
+  user,
+  userFeature,
+  userLayer,
+} from '../schema'
 // TYPES
 import type { Id, UserRoleDisco, Database } from '$lib/types'
 import type {
@@ -54,6 +62,49 @@ export const userColumnsWithPrivacyProtected = {
   name: true,
   image: true,
   attribution: true,
+}
+
+/**
+ * Returns whether an unknown database error represents transient SQLite lock contention.
+ *
+ * @param error - Unknown error thrown by D1/Drizzle.
+ * @returns `true` when the error message indicates `SQLITE_BUSY`.
+ */
+export const isSqliteBusyError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false
+
+  const message = error.message.toUpperCase()
+  const causeMessage =
+    error.cause instanceof Error ? error.cause.message.toUpperCase() : ''
+
+  return message.includes('SQLITE_BUSY') || causeMessage.includes('SQLITE_BUSY')
+}
+
+/**
+ * Retries a D1 read operation when local Miniflare/workerd hits transient SQLite locks.
+ *
+ * @param operation - Async DB read to execute.
+ * @returns Operation result once successful.
+ */
+const retryBusyRead = async <T>(operation: () => Promise<T>): Promise<T> => {
+  let attempt = 0
+  let lastError: unknown
+
+  while (attempt < 3) {
+    try {
+      return await operation()
+    } catch (error) {
+      if (!isSqliteBusyError(error) || attempt === 2) {
+        throw error
+      }
+
+      lastError = error
+      attempt += 1
+      await new Promise(resolve => setTimeout(resolve, 25 * attempt))
+    }
+  }
+
+  throw lastError
 }
 
 // ═══════════════════════
@@ -232,43 +283,32 @@ export const getUserRoles = async (
   db: Database,
   userId: Id,
 ): Promise<UserRoleDisco[]> => {
-  const hubRoles = await db.query.hubRole.findMany({
-    where: (hubRole, { eq }) => eq(hubRole.userId, userId),
-    with: {
-      hub: {
-        columns: {
-          code: true,
+  const hubRoles = await retryBusyRead(() =>
+    db
+      .select({
+        hubId: hubRole.hubId,
+        userId: hubRole.userId,
+        role: hubRole.role,
+        hub: {
+          code: hub.code,
         },
-      },
-    },
-  })
+      })
+      .from(hubRole)
+      .innerJoin(hub, eq(hubRole.hubId, hub.id))
+      .where(eq(hubRole.userId, userId)),
+  )
 
-  const orgRoles = await db.query.organisationRole.findMany({
-    where: (organisationRole, { eq }) => eq(organisationRole.userId, userId),
-    with: {
-      organisation: {
-        with: {
-          i18n: true,
-        },
-      },
-    },
-  })
+  const orgRoles = await retryBusyRead(() =>
+    db.query.organisationRole.findMany({
+      where: (organisationRole, { eq }) => eq(organisationRole.userId, userId),
+    }),
+  )
 
-  const projectRoles = await db.query.projectRole.findMany({
-    where: (projectRole, { eq }) => eq(projectRole.userId, userId),
-    with: {
-      project: {
-        with: {
-          i18n: true,
-          organisation: {
-            with: {
-              i18n: true,
-            },
-          },
-        },
-      },
-    },
-  })
+  const projectRoles = await retryBusyRead(() =>
+    db.query.projectRole.findMany({
+      where: (projectRole, { eq }) => eq(projectRole.userId, userId),
+    }),
+  )
 
   return [
     ...hubRoles.map(role => ({
