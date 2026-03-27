@@ -12,6 +12,10 @@
     caret-color: transparent;
   }
 
+  img {
+    color: transparent;
+  }
+
   input,
   textarea,
   [contenteditable]:not([contenteditable="false"]) {
