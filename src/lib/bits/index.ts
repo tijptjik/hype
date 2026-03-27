@@ -5,6 +5,7 @@ export {
   Dropdown,
   DropdownMenu,
   InfoDialog,
+  Popover,
   Select,
   Separator,
   SimpleMeter,
@@ -12,6 +13,8 @@ export {
 } from './core'
 
 export {
+  AnalyticsCard,
+  AnalyticsCardPrimitive,
   Card,
   Checkbox,
   CrossfadeValue,
@@ -59,6 +62,8 @@ export {
   AdminShell,
   AdaptiveToolbar,
   AdminMenu,
+  AssetAnalyticsDashboard,
+  AssetAnalyticsDashboardSkeleton,
   App,
   AppMenu,
   AutoHide,
@@ -79,6 +84,8 @@ export {
   FormI18nCapabilities,
   FormI18nDescriptorFields,
   FormI18nSection,
+  Gallery,
+  ImageEditor,
   FormMapSection,
   FormMapStyleSection,
   FormOrganisationsSection,
@@ -91,6 +98,7 @@ export {
   GridSpacer,
   GroupedResourceIndex,
   Header,
+  Image,
   IndexCard,
   IndexCardPrimitive,
   LayerPropertyCard,
@@ -115,9 +123,16 @@ export {
   SwapField,
   TaskRow,
   TaskRowPrimitive,
+  Thumbnail,
+  ThumbnailWrapper,
   UserAttributionCard,
   UserCapabilityMatrix,
   UserCard,
+  AdminGallery,
+  AdminThumbnail,
+  AdminViewer,
+  CameraViewer,
+  Viewer,
 } from './patterns'
 
 export type { HeaderProps } from './patterns/layout/header'

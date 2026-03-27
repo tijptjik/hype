@@ -1,7 +1,7 @@
 <script lang="ts">
-import PlusCircle from 'virtual:icons/lucide/plus-circle'
-import Eye from 'virtual:icons/lucide/eye'
+import { tick } from 'svelte'
 import { getUserForAttribution } from '$lib/api/server/user.remote'
+import { TransitionStack } from '$lib/bits/custom/transition'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import RelativeDate from './components/RelativeDate.svelte'
@@ -19,37 +19,107 @@ let {
   class: className = '',
 }: UserAttributionCardProps = $props()
 
+type AttributionCardDisplay = {
+  key: string
+  user: UserHydrationResult
+  date?: string
+  friendlyDate: boolean
+}
+
 const appCtx = getAppCtx()
 
 const userProfile = $derived(appCtx.isAdmin() ? 'card' : 'attribution')
-const Icon = $derived(type.toLowerCase().includes('contributor') ? PlusCircle : Eye)
+const persistenceKey = $derived(
+  `user-attribution-card:${type}:${appCtx.isAdmin() ? 'admin' : 'public'}`,
+)
 
 const isAdminUser = (user: UserHydrationResult): user is UserHydrationAdminProfile =>
   Boolean(user && 'name' in user && 'image' in user)
 
-const getAttributionUser = (): Promise<UserHydrationResult> => {
-  if (!userId) return Promise.resolve(null)
-  return getUserForAttribution({
-    id: userId,
+const toDisplayState = (
+  user: UserHydrationResult,
+  nextUserId: string,
+  nextDate?: string,
+  nextFriendlyDate = true,
+): AttributionCardDisplay => ({
+  key: [nextUserId, nextDate ?? '', nextFriendlyDate ? 'friendly' : 'absolute'].join(
+    ':',
+  ),
+  user,
+  date: nextDate,
+  friendlyDate: nextFriendlyDate,
+})
+
+let resolvedAttribution = $state<AttributionCardDisplay | null>(null)
+let hasResolvedAttribution = $state(false)
+let attributionRequestVersion = 0
+let measuredWidth = $state<number | null>(null)
+let hasMeasuredWidth = $state(false)
+let measureElement = $state<HTMLDivElement | null>(null)
+
+$effect(() => {
+  if (!userId) {
+    attributionRequestVersion += 1
+    resolvedAttribution = null
+    hasResolvedAttribution = false
+    return
+  }
+
+  const requestVersion = ++attributionRequestVersion
+  const nextUserId = userId
+  const nextDate = date
+  const nextFriendlyDate = friendlyDate
+  const nextProfile = userProfile
+  const isAdminRequest = appCtx.isAdmin()
+
+  void getUserForAttribution({
+    id: nextUserId,
     meta: {
-      profile: userProfile,
-      ...(appCtx.isAdmin() ? { isAdminRequest: true } : {}),
+      profile: nextProfile,
+      ...(isAdminRequest ? { isAdminRequest: true } : {}),
     },
-  }).then(user => user as UserHydrationResult)
+  })
+    .then(user => {
+      if (requestVersion !== attributionRequestVersion) return
+      resolvedAttribution = toDisplayState(
+        user as UserHydrationResult,
+        nextUserId,
+        nextDate,
+        nextFriendlyDate,
+      )
+      hasResolvedAttribution = true
+    })
+    .catch(() => {
+      if (requestVersion !== attributionRequestVersion) return
+      resolvedAttribution = toDisplayState(null, nextUserId, nextDate, nextFriendlyDate)
+      hasResolvedAttribution = true
+    })
+})
+
+const getDisplayName = (user: UserHydrationResult): string => {
+  const adminUser = isAdminUser(user) ? user : null
+  return adminUser?.name ?? user?.attribution ?? 'Unknown User'
 }
+
+$effect(() => {
+  if (!resolvedAttribution) return
+
+  void tick().then(() => {
+    if (!measureElement) return
+
+    const nextWidth = Math.ceil(measureElement.getBoundingClientRect().width)
+    if (nextWidth <= 0) return
+
+    measuredWidth = nextWidth
+    hasMeasuredWidth = true
+  })
+})
 </script>
 
-{#if userId}
-  {#await getAttributionUser()}
-    <article class={`bits-feature-attribution ${className}`}>
-      <div class="bits-feature-attribution__avatar"></div>
-      <div class="bits-feature-attribution__body">
-        <span class="bits-feature-attribution__title">...</span>
-      </div>
-    </article>
-  {:then user}
-    {@const adminUser = isAdminUser(user) ? user : null}
-    {@const displayName = adminUser?.name ?? user?.attribution ?? 'Unknown User'}
+{#if userId && resolvedAttribution}
+  {#snippet AttributionContent(attribution: AttributionCardDisplay)}
+    {@const adminUser = isAdminUser(attribution.user) ? attribution.user : null}
+    {@const displayName = getDisplayName(attribution.user)}
     <article class={`bits-feature-attribution ${className}`}>
       <img
         class="bits-feature-attribution__avatar"
@@ -58,16 +128,39 @@ const getAttributionUser = (): Promise<UserHydrationResult> => {
       >
       <div class="bits-feature-attribution__body">
         <span class="bits-feature-attribution__title">{displayName}</span>
-        <span class="bits-feature-attribution__subtitle">
-          <RelativeDate {date} friendly={friendlyDate} />
+        <span class="bits-feature-attribution__subtitle" style="line-height:1.15">
+          <RelativeDate date={attribution.date} friendly={attribution.friendlyDate} />
         </span>
       </div>
     </article>
-  {:catch _error}
-    <article class={`bits-feature-attribution ${className}`}>
-      <div class="bits-feature-attribution__body">
-        <span class="bits-feature-attribution__title">Unknown User</span>
+  {/snippet}
+
+  <div
+    class="bits-feature-attribution-shell"
+    style={hasMeasuredWidth && measuredWidth ? `width:${measuredWidth}px` : undefined}
+  >
+    <div class="bits-feature-attribution-shell__visible">
+      <TransitionStack
+        valueKey={resolvedAttribution.key}
+        value={resolvedAttribution}
+        isReady={hasResolvedAttribution}
+        duration={180}
+        {persistenceKey}
+      >
+        {#snippet children(attribution: AttributionCardDisplay)}
+          {@render AttributionContent(attribution)}
+        {/snippet}
+      </TransitionStack>
+    </div>
+
+    <div
+      bind:this={measureElement}
+      class="bits-feature-attribution-shell__measure"
+      aria-hidden="true"
+    >
+      <div class="bits-feature-attribution-shell__measure-group">
+        {@render AttributionContent(resolvedAttribution)}
       </div>
-    </article>
-  {/await}
+    </div>
+  </div>
 {/if}
