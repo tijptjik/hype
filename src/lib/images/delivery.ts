@@ -4,6 +4,7 @@
 //
 // 1. PUBLIC PATH HELPERS
 //    - toCloudflareImageWorkerPath
+//    - toImageRawIntermediateWorkerPath
 //    - toImagePrerenderWorkerPaths
 
 const DEFAULT_CROP_MODE = 'c_fit'
@@ -46,6 +47,22 @@ export const toCloudflareImageWorkerPath = (params: {
 
   return `/image/upload/${params.transformation ?? DEFAULT_CROP_MODE}/g_${params.gravity ?? 'auto'}/f_${params.format ?? 'auto'}/q_${params.quality ?? 'auto'}${versionSegment}/${params.publicId}`
 }
+
+/**
+ * Builds the canonical worker path for the normalized intermediate image object.
+ *
+ * @param params Intermediate image path inputs.
+ * @returns Public worker path for the normalized intermediate variant.
+ */
+export const toImageRawIntermediateWorkerPath = (params: {
+  publicId: string
+  version?: number | null
+}): string =>
+  toCloudflareImageWorkerPath({
+    publicId: params.publicId,
+    version: params.version,
+    raw: true,
+  })
 
 /**
  * Builds the fixed worker paths that should be pre-rendered for an image.
