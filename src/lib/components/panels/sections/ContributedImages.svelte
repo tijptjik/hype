@@ -195,7 +195,7 @@ const loadNextBatch = async () => {
           ...image,
           url: getURLfromImage({
             image: entity,
-            transformation: 'c_fill,h_256,w_256,q_auto',
+            transformation: 'c_fill,h_256,w_256',
             quality: 'auto',
           }),
           href: featureId ? `/features/${featureId}` : undefined,
@@ -555,7 +555,7 @@ const setupNextTrigger = () => {
                                 ...fallbackImage,
                                 url: getURLfromImage({
                                   image: fallbackEntity,
-                                  transformation: 'c_fill,h_256,w_256,q_auto',
+                                  transformation: 'c_fill,h_256,w_256',
                                   quality: 'auto'
                                 }),
                                 href: `/features/${fallbackFeatureId}`

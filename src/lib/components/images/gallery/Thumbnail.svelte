@@ -65,7 +65,7 @@ onDestroy(() => {
       {thumbnailLoadState === 'loading' ? '!opacity-30' : ''}"
     src={getURLfromImage({
       image,
-      transformation: 'c_fill,h_256,w_256,q_auto'
+      transformation: 'c_fill,h_256,w_256'
     })}
     alt="thumbnail"
     layout="cover"
