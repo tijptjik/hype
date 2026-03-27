@@ -278,7 +278,9 @@ const MAX_CONCURRENT_TRANSFORMS = 2
 const TRANSFORM_QUEUE_RETRY_AFTER_SECONDS = 2
 const MAX_TRANSFORM_DIMENSION = 4096
 const MAX_SMARTCROP_SOURCE_PIXELS = 4_000_000
-const MAX_LOW_MEMORY_SOURCE_PIXELS = 6_000_000
+// Bias toward the staged downscale path before a full-frame decode/resize/encode
+// spikes worker memory on moderately large production images.
+const MAX_LOW_MEMORY_SOURCE_PIXELS = 2_000_000
 const LOW_MEMORY_MIN_INTERMEDIATE_DIMENSION = 1024
 const LOW_MEMORY_MAX_INTERMEDIATE_DIMENSION = 2048
 const LOW_MEMORY_FALLBACK_MAX_SOURCE_DIMENSION = 4096
@@ -2397,40 +2399,41 @@ const resolveSourceAsset = async (
       lookup.version ??
       (await readManifestVersion(bucket, lookup.publicId)) ??
       undefined
-    const rawObjectKey = `${lookup.publicId}.raw`
-    const rawObject = await bucket.get(rawObjectKey)
-    if (rawObject) {
-      const rawBody = await rawObject.arrayBuffer()
-      const rawContentType =
-        rawObject.httpMetadata?.contentType ?? inferContentTypeFromKey(rawObjectKey)
-      const rawFormat = inferInputFormat(rawContentType, rawObjectKey, rawBody)
-
-      // Prefer the `.raw` source whenever it is directly transformable. This avoids
-      // inheriting stale or mis-normalized working objects while still falling back to
-      // the extensionless working copy for TIFF-backed assets.
-      if (rawFormat !== 'unknown') {
-        return {
-          body: rawBody,
-          contentType: rawContentType,
-          objectKey: rawObjectKey,
-          stage,
-          version,
-        }
+    const object = await bucket.get(lookup.publicId)
+    if (object) {
+      return {
+        body: await object.arrayBuffer(),
+        contentType:
+          object.httpMetadata?.contentType ?? inferContentTypeFromKey(lookup.publicId),
+        objectKey: lookup.publicId,
+        stage,
+        version,
       }
     }
 
-    const object = await bucket.get(lookup.publicId)
-    if (!object) {
+    const rawObjectKey = `${lookup.publicId}.raw`
+    const rawObject = await bucket.get(rawObjectKey)
+    if (!rawObject) {
       continue
     }
 
-    return {
-      body: await object.arrayBuffer(),
-      contentType:
-        object.httpMetadata?.contentType ?? inferContentTypeFromKey(lookup.publicId),
-      objectKey: lookup.publicId,
-      stage,
-      version,
+    const rawBody = await rawObject.arrayBuffer()
+    const rawContentType =
+      rawObject.httpMetadata?.contentType ?? inferContentTypeFromKey(rawObjectKey)
+    const rawFormat = inferInputFormat(rawContentType, rawObjectKey, rawBody)
+
+    // Transform requests should prefer the normalized working object because the
+    // worker cannot safely decode large originals on demand. Fall back to `.raw`
+    // only when the working copy is missing and the original is directly
+    // transformable.
+    if (rawFormat !== 'unknown') {
+      return {
+        body: rawBody,
+        contentType: rawContentType,
+        objectKey: rawObjectKey,
+        stage,
+        version,
+      }
     }
   }
 
