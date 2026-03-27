@@ -292,6 +292,15 @@ export type AssetAnalyticsPercentKey =
   | 'cacheHitPercent'
   | 'derivedHitPercent'
   | 'derivedMissPercent'
+  | 'notFoundPercent'
+  | 'serverErrorPercent'
+
+export type AssetAnalyticsSeriesKey =
+  | 'cache'
+  | 'derivedHit'
+  | 'derivedMiss'
+  | 'notFound'
+  | 'serverError'
 
 export type AssetAnalyticsLatencyTier = 'p50Ms' | 'p95Ms' | 'p99Ms'
 
@@ -299,6 +308,8 @@ export type AssetAnalyticsLatencyBucket = {
   cache: number | null
   derivedHit: number | null
   derivedMiss: number | null
+  notFound: number | null
+  serverError: number | null
 }
 
 export type AssetAnalyticsRankedTransformation = {
@@ -312,6 +323,8 @@ export type AssetAnalyticsTimeseriesPoint = {
   cacheRequests: number
   derivedHitRequests: number
   derivedMissRequests: number
+  notFoundRequests: number
+  serverErrorRequests: number
 }
 
 export type AssetAnalyticsBreakdownItem = {
@@ -339,6 +352,8 @@ export type AssetAnalyticsSummaryWindow = {
   cacheHitPercent: number
   derivedHitPercent: number
   derivedMissPercent: number
+  notFoundPercent: number
+  serverErrorPercent: number
   p50Ms: AssetAnalyticsLatencyBucket
   p95Ms: AssetAnalyticsLatencyBucket
   p99Ms: AssetAnalyticsLatencyBucket
@@ -346,7 +361,13 @@ export type AssetAnalyticsSummaryWindow = {
   breakdowns: AssetAnalyticsBreakdowns
   topTransformations: AssetAnalyticsRankedTransformation[]
   topImages: AssetAnalyticsRankedImage[]
+  topMissingImages: AssetAnalyticsRankedImage[]
+  topServerErrorImages: AssetAnalyticsRankedImage[]
 }
+
+export type AssetAnalyticsWindowErrors = Partial<
+  Record<AssetAnalyticsWindowKey, string>
+>
 
 export type AssetAnalyticsSummary = {
   environment: string
@@ -356,6 +377,7 @@ export type AssetAnalyticsSummary = {
     projectIds: string[]
   }
   windows: Record<AssetAnalyticsWindowKey, AssetAnalyticsSummaryWindow | null>
+  windowErrors: AssetAnalyticsWindowErrors
 }
 
 export type AssetAnalyticsSummaryResult =
