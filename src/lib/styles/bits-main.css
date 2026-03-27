@@ -11,8 +11,16 @@
     overscroll-behavior-y: contain;
   }
 
+  .bits-main__section--edge-to-edge {
+    @apply left-0 right-0 overflow-hidden;
+  }
+
   .bits-main__section-inner {
     @apply flex min-h-full min-h-0 flex-col;
+  }
+
+  .bits-main__section-inner--edge-to-edge {
+    @apply h-full;
   }
 
   .bits-main__section-inner--fill-height {
@@ -28,6 +36,11 @@
   .bits-main__section-body--fill-height {
     @apply flex min-h-0 flex-1 flex-col;
     padding-bottom: 32px;
+  }
+
+  .bits-main__section-body--edge-to-edge {
+    @apply h-full min-h-0 flex-1 overflow-hidden;
+    padding-bottom: 0;
   }
 
   .bits-main__section-nav {

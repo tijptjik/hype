@@ -277,18 +277,19 @@
   }
 
   .bits-theme .bits-pattern-header__right-slot {
-    display: grid;
+    display: flex;
     align-items: center;
-    justify-items: end;
+    justify-content: flex-end;
+    gap: 0.75rem;
     margin-right: 1rem;
+    min-width: 0;
   }
 
   .bits-theme .bits-pattern-header__right-slot-item {
     @apply flex items-center gap-0;
-    grid-area: 1 / 1;
     width: max-content;
     max-width: 100%;
-    justify-self: end;
+    flex: 0 0 auto;
   }
 
   .bits-theme .bits-pattern-header__right-cluster {
