@@ -1,5 +1,7 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import sharp from 'sharp'
+import { withRemoteMeta } from './remote-function-mock'
 
 const {
   mockAuthorizeImageList,
@@ -14,6 +16,7 @@ const {
   mockToResponseShape,
   mockToResponseShapeProjectOrOrganisation,
   mockUpdateImageForContext,
+  mockWarmImageDerivatives,
   mockCreateFeatureImage,
   mockCreateImageRecord,
   mockLoadImageById,
@@ -46,6 +49,7 @@ const {
   mockToResponseShape: vi.fn(async (image: any) => image),
   mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: any) => image),
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
+  mockWarmImageDerivatives: vi.fn(async () => undefined),
   mockCreateFeatureImage: vi.fn(async () => ({ id: 'fi-1' })),
   mockCreateImageRecord: vi.fn(async () => ({ id: 'img-1', publicId: null })),
   mockLoadImageById: vi.fn(async () => null),
@@ -81,18 +85,21 @@ const {
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
-  guardedQuery: (_schema: unknown, handler: unknown) => async (input: unknown) =>
-    (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
-      input,
-      await mockGuardedContext(),
-    ),
-  guardedCommand: (_schemaOrFn: unknown, maybeHandler?: unknown) => {
-    const handler = typeof maybeHandler === 'function' ? maybeHandler : _schemaOrFn
-    return async (input: unknown) =>
-      (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+  guardedQuery: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
         input,
         await mockGuardedContext(),
       )
+    }, 'query'),
+  guardedCommand: (_schemaOrFn: unknown, maybeHandler?: unknown) => {
+    const handler = typeof maybeHandler === 'function' ? maybeHandler : _schemaOrFn
+    return withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'command')
   },
 }))
 
@@ -121,6 +128,7 @@ vi.mock('$lib/api/services/image', () => ({
   toResponseShape: mockToResponseShape,
   toResponseShapeProjectOrOrganisation: mockToResponseShapeProjectOrOrganisation,
   updateImageForContext: mockUpdateImageForContext,
+  warmImageDerivatives: mockWarmImageDerivatives,
 }))
 
 vi.mock('$lib/db/services/image', () => ({
@@ -473,27 +481,15 @@ describe('image.remote', () => {
     expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
     expect(put).toHaveBeenCalledTimes(3)
     expect(mockWaitUntil).toHaveBeenCalledTimes(1)
-    expect(fetchSpy).toHaveBeenCalledTimes(4)
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      1,
-      'https://raw.assets.example.test/image/raw/h_2048,w_2048/v1768/h/features/feature-1/image-a',
-      expect.objectContaining({
-        method: 'HEAD',
+    expect(mockWarmImageDerivatives).toHaveBeenCalledWith({
+      event: expect.objectContaining({
+        request: expect.any(Request),
       }),
-    )
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      2,
-      'https://raw.assets.example.test/local/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v1768/h/features/feature-1/image-a',
-      expect.objectContaining({
-        method: 'HEAD',
-      }),
-    )
-    expect(fetchSpy).toHaveBeenCalledWith(
-      'https://raw.assets.example.test/local/image/upload/c_fill,h_256,w_256/g_auto/f_auto/q_auto/v1768/h/features/feature-1/image-a',
-      expect.objectContaining({
-        method: 'HEAD',
-      }),
-    )
+      env: 'local',
+      publicId: 'h/features/feature-1/image-a',
+      version: 1768,
+    })
+    expect(fetchSpy).not.toHaveBeenCalled()
     expect(result).toMatchObject({
       data: {
         ctxType: 'feature',
@@ -541,6 +537,8 @@ describe('image.remote', () => {
       cameraModel: 'Leica Q2',
       capturedAt: '2024-03-01T10:00:00.000Z',
       credit: 'Hype',
+      latitude: null,
+      longitude: null,
     })
   })
 
@@ -673,12 +671,15 @@ describe('image.remote', () => {
         data: { version: 2468 },
       }),
     )
-    expect(fetchSpy).toHaveBeenCalledTimes(4)
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      1,
-      'https://raw.assets.example.test/image/raw/h_2048,w_2048/v2468/h/features/feature-1/image-a',
-      expect.objectContaining({ method: 'HEAD' }),
-    )
+    expect(mockWarmImageDerivatives).toHaveBeenCalledWith({
+      event: expect.objectContaining({
+        request: expect.any(Request),
+      }),
+      env: 'local',
+      publicId: 'h/features/feature-1/image-a',
+      version: 2468,
+    })
+    expect(fetchSpy).not.toHaveBeenCalled()
     expect(result).toEqual({ data: { id: 'img-1' } })
 
     fetchSpy.mockRestore()

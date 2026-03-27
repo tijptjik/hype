@@ -1,4 +1,6 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { withRemoteMeta } from './remote-function-mock'
 
 const {
   mockGetRequestEvent,
@@ -20,7 +22,8 @@ const {
 
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
-  query: (_schema: unknown, handler: unknown) => handler,
+  query: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
 }))
 
 vi.mock('@sveltejs/kit', () => ({
@@ -155,9 +158,8 @@ vi.mock('$lib/api/services/user', () => ({
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
-  guardedQuery:
-    (_schema: unknown, handler: unknown) =>
-    async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
+  guardedQuery: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
       const event = mockGetRequestEvent()
       const baseCtx = await mockSetupRequestHandler(event)
       return (handler as (params: unknown, ctx: unknown) => Promise<unknown>)(arg, {
@@ -168,10 +170,9 @@ vi.mock('$lib/api/server/remote', () => ({
             ? Boolean((baseCtx as { isAdminRequest?: unknown }).isAdminRequest)
             : arg.meta.isAdminRequest === true,
       })
-    },
-  guardedCommand:
-    (_schema: unknown, handler: unknown) =>
-    async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
+    }, 'query'),
+  guardedCommand: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
       const event = mockGetRequestEvent()
       const baseCtx = await mockSetupRequestHandler(event)
       return (handler as (params: unknown, ctx: unknown) => Promise<unknown>)(arg, {
@@ -182,10 +183,9 @@ vi.mock('$lib/api/server/remote', () => ({
             ? Boolean((baseCtx as { isAdminRequest?: unknown }).isAdminRequest)
             : arg.meta.isAdminRequest === true,
       })
-    },
-  guardedBatchByIdQuery:
-    (_schema: unknown, fn: unknown) =>
-    async (arg: { id: string; meta?: { profile?: string } }) => {
+    }, 'command'),
+  guardedBatchByIdQuery: (_schema: unknown, fn: unknown) =>
+    withRemoteMeta(async (arg: { id: string; meta?: { profile?: string } }) => {
       const event = mockGetRequestEvent()
       const baseCtx = await mockSetupRequestHandler(event)
       const ctx = {
@@ -209,7 +209,7 @@ vi.mock('$lib/api/server/remote', () => ({
         ctx,
       })
       return resolver(arg)
-    },
+    }, 'query'),
 }))
 
 vi.mock('$lib/db/services/user', () => ({

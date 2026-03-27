@@ -1,5 +1,7 @@
+// @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
+import { withRemoteMeta } from './remote-function-mock'
 
 const {
   mockHubFormDataParse,
@@ -58,15 +60,17 @@ const {
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
-  guardedQuery: (_schema: unknown, handler: unknown) => handler,
-  guardedCommand: (_schema: unknown, handler: unknown) => async (input: unknown) =>
-    (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
-      input,
-      await mockGuardedContext(),
-    ),
-  guardedForm:
-    (_schema: unknown, handler: unknown) =>
-    async (input: unknown, invalid: unknown) => {
+  guardedQuery: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
+  guardedCommand: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'command'),
+  guardedForm: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (input: unknown, invalid: unknown) => {
       const issue = (() => {
         const issueBuilder = (message: string) => message
         issueBuilder.data = new Proxy(
@@ -94,7 +98,7 @@ vi.mock('$lib/api/server/remote', () => ({
         invalid,
         issue,
       })
-    },
+    }, 'form'),
 }))
 
 vi.mock('$lib/db/zod', () => ({

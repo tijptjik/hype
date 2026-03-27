@@ -35,39 +35,39 @@ export default defineConfig({
       },
       {
         find: /^virtual:icons\/.*$/,
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Property.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Input.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Textarea.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Select.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Range.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Users.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Toggle.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: '$lib/components/forms/fields/Display.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.ts'),
+        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
       },
       {
         find: /^sveltekit-superforms\/adapters$/,
@@ -95,6 +95,12 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    environmentMatchGlobs: [
+      ['src/tests/*.remote.test.ts', 'node'],
+      ['src/tests/authorization*.test.ts', 'node'],
+      ['src/tests/*.services.test.ts', 'node'],
+      ['src/tests/image-analytics.server.test.ts', 'node'],
+    ],
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     coverage: {

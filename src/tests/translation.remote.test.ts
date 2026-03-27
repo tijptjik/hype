@@ -1,4 +1,6 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { withRemoteMeta } from './remote-function-mock'
 
 const { mockTranslateWithAzure, mockGuardedContext } = vi.hoisted(() => ({
   mockTranslateWithAzure: vi.fn(async (texts: string[]) =>
@@ -8,11 +10,13 @@ const { mockTranslateWithAzure, mockGuardedContext } = vi.hoisted(() => ({
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
-  guardedCommand: (_schema: unknown, handler: unknown) => async (input: unknown) =>
-    (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
-      input,
-      await mockGuardedContext(),
-    ),
+  guardedCommand: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'command'),
 }))
 
 vi.mock('@sveltejs/kit', () => ({

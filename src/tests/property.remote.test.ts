@@ -1,4 +1,6 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { withRemoteMeta } from './remote-function-mock'
 
 const {
   mockGetPrisms,
@@ -23,11 +25,13 @@ const {
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
-  guardedQuery: (_schema: unknown, handler: unknown) => async (input: unknown) =>
-    (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
-      input,
-      await mockGuardedContext(),
-    ),
+  guardedQuery: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'query'),
 }))
 
 vi.mock('@sveltejs/kit', () => ({

@@ -1,5 +1,7 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
+import { withRemoteMeta } from './remote-function-mock'
 
 const {
   mockGetRequestEvent,
@@ -59,24 +61,27 @@ vi.mock(
   '$app/server',
   () => ({
     getRequestEvent: mockGetRequestEvent,
-    query: (_schema: unknown, handler: unknown) => handler,
-    form: (_schema: unknown, handler: unknown) => async (input: unknown) => {
-      const issue = (() => {
-        const issueBuilder = (message: string) => message
-        issueBuilder.data = new Proxy(
-          {},
-          {
-            get: () => (message: string) => message,
-          },
+    query: (_schema: unknown, handler: unknown) =>
+      withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
+    form: (_schema: unknown, handler: unknown) =>
+      withRemoteMeta(async (input: unknown) => {
+        const issue = (() => {
+          const issueBuilder = (message: string) => message
+          issueBuilder.data = new Proxy(
+            {},
+            {
+              get: () => (message: string) => message,
+            },
+          )
+          return issueBuilder
+        })()
+        return (handler as (payload: unknown, issue: unknown) => Promise<unknown>)(
+          input,
+          issue,
         )
-        return issueBuilder
-      })()
-      return (handler as (payload: unknown, issue: unknown) => Promise<unknown>)(
-        input,
-        issue,
-      )
-    },
-    command: (_schema: unknown, handler: unknown) => handler,
+      }, 'form'),
+    command: (_schema: unknown, handler: unknown) =>
+      withRemoteMeta(handler as (...args: any[]) => unknown, 'command'),
   }),
   { virtual: true },
 )
