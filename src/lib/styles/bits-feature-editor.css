@@ -677,11 +677,45 @@
     z-index: 10;
   }
 
+  .bits-feature-attribution-shell {
+    position: relative;
+    display: inline-block;
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;
+    transition: width 180ms ease;
+  }
+
+  .bits-feature-attribution-shell__visible {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .bits-feature-attribution-shell__measure {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .bits-feature-attribution-shell__measure-group {
+    width: max-content;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .bits-feature-attribution-shell__measure .bits-crossfade-value__item--previous,
+  .bits-feature-attribution-shell__measure .bits-transition-stack__layer--previous {
+    display: none;
+  }
+
   .bits-feature-attribution {
     display: flex;
     align-items: center;
     gap: 0.625rem;
     height: 2.75rem;
+    min-width: 0;
     padding: 0 1rem 0 3.25rem;
     border-radius: 999px;
     background: color-mix(in oklab, black 82%, var(--color-glass-result) 18%);
@@ -704,22 +738,31 @@
   .bits-feature-attribution__body {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: 0.125rem;
     min-width: 0;
+    max-width: 100%;
   }
 
   .bits-feature-attribution__title {
+    overflow: hidden;
     font-weight: 600;
     line-height: 1.1;
     font-size: 0.9375rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .bits-feature-attribution__subtitle {
     display: flex;
     align-items: center;
     gap: 0.35rem;
+    min-width: 0;
+    overflow: hidden;
     font-size: 0.8125rem;
     line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   }
 
