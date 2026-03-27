@@ -51,6 +51,10 @@ migrations_dir = "migrations"
 binding = "MAP_RENDER_QUEUE"
 queue = "hype-map-render-jobs-local"
 
+[[queues.producers]]
+binding = "IMAGE_WARMUP_QUEUE"
+queue = "hype-asset-render-jobs-local"
+
 [[r2_buckets]]
 binding = "ASSET_RAW_DEV"
 bucket_name = "hype-assets-raw-dev"
@@ -130,6 +134,10 @@ database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
 binding = "MAP_RENDER_QUEUE"
 queue = "hype-map-render-jobs-prod"
 
+[[env.production.queues.producers]]
+binding = "IMAGE_WARMUP_QUEUE"
+queue = "hype-asset-render-jobs-prod"
+
 [[env.production.r2_buckets]]
 binding = "ASSET_RAW_DEV"
 bucket_name = "hype-assets-raw-dev"
@@ -205,6 +213,10 @@ database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
 [[env.preview.queues.producers]]
 binding = "MAP_RENDER_QUEUE"
 queue = "hype-map-render-jobs-preview"
+
+[[env.preview.queues.producers]]
+binding = "IMAGE_WARMUP_QUEUE"
+queue = "hype-asset-render-jobs-preview"
 
 [[env.preview.r2_buckets]]
 binding = "ASSET_RAW_DEV"

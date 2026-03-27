@@ -49,6 +49,11 @@ binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
 remote = true
 
+[[queues.consumers]]
+queue = "hype-asset-render-jobs-local"
+max_batch_size = 4
+max_batch_timeout = 5
+
 [env.preview]
 name = "hype-asset-service-preview"
 
@@ -85,6 +90,11 @@ bucket_name = "hype-assets-preview"
 [[env.preview.r2_buckets]]
 binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
+
+[[env.preview.queues.consumers]]
+queue = "hype-asset-render-jobs-preview"
+max_batch_size = 4
+max_batch_timeout = 5
 
 [[env.preview.routes]]
 pattern = "assets.preview.hype.hk"
@@ -126,6 +136,11 @@ bucket_name = "hype-assets-preview"
 [[env.production.r2_buckets]]
 binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
+
+[[env.production.queues.consumers]]
+queue = "hype-asset-render-jobs-prod"
+max_batch_size = 4
+max_batch_timeout = 5
 
 [[env.production.routes]]
 pattern = "assets.hype.hk"

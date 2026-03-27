@@ -22,6 +22,11 @@ import webpDecodeWasm from '@jsquash/webp/codec/dec/webp_dec.wasm'
 import webpEncodeWasm from '@jsquash/webp/codec/enc/webp_enc.wasm'
 import webpEncodeSimdWasm from '@jsquash/webp/codec/enc/webp_enc_simd.wasm'
 import smartcrop from 'smartcrop'
+import {
+  getImageWarmupPlan,
+  IMAGE_WARMUP_ACCEPT_HEADER,
+} from '../../../src/lib/images/warmup'
+import type { ImageWarmupJob } from '../../../src/lib/types'
 
 type ImageStage = 'local' | 'preview' | 'production'
 type CropMode = 'c_fill' | 'c_fit' | 'c_thumb'
@@ -262,6 +267,13 @@ type AnalyticsSummaryResponse = {
   windowErrors?: Partial<Record<AnalyticsWindowKey, string>>
 }
 
+type WarmupAttemptResult = {
+  ok: boolean
+  status: number | null
+  error: string | null
+  retryable: boolean
+}
+
 const CACHE_CONTROL_IMMUTABLE = 'public, max-age=31536000, immutable'
 const CACHE_CONTROL_SHORT = 'public, max-age=300'
 const ASSET_ANALYTICS_DATASET = 'hype_asset_delivery'
@@ -284,6 +296,8 @@ const MAX_LOW_MEMORY_SOURCE_PIXELS = 2_000_000
 const LOW_MEMORY_MIN_INTERMEDIATE_DIMENSION = 1024
 const LOW_MEMORY_MAX_INTERMEDIATE_DIMENSION = 2048
 const LOW_MEMORY_FALLBACK_MAX_SOURCE_DIMENSION = 4096
+const WARMUP_RETRY_DELAY_MS = 750
+const WARMUP_RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504, 522, 524])
 const QUALITY_BY_FORMAT = {
   avif: 45,
   jpeg: 80,
@@ -618,6 +632,225 @@ const handleFetch = async (
   }
 
   return new Response('Not found', { status: 404 })
+}
+
+/**
+ * Validates that a queue payload matches the image warmup contract.
+ *
+ * @param value Queue message body.
+ * @returns Whether the payload is a valid warmup job.
+ */
+const isImageWarmupJob = (value: unknown): value is ImageWarmupJob => {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const job = value as Record<string, unknown>
+
+  return (
+    (job.env === 'local' || job.env === 'preview' || job.env === 'production') &&
+    typeof job.publicId === 'string' &&
+    (job.version === undefined || typeof job.version === 'number')
+  )
+}
+
+const waitForWarmupRetry = async (ms: number): Promise<void> =>
+  await new Promise(resolve => {
+    setTimeout(resolve, ms)
+  })
+
+/**
+ * Executes one internal warmup request against the existing asset router.
+ *
+ * @param env Worker bindings.
+ * @param ctx Worker execution context.
+ * @param target Warmup target path and metadata.
+ * @returns Attempt outcome used for summary logging and retry decisions.
+ */
+const warmImageTarget = async (
+  env: Env,
+  ctx: ExecutionContext,
+  target: { path: string; required: boolean },
+): Promise<WarmupAttemptResult> => {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await handleFetch(
+        new Request(`https://asset-warmup.invalid${target.path}`, {
+          method: 'HEAD',
+          headers: {
+            accept: IMAGE_WARMUP_ACCEPT_HEADER,
+            'x-image-warmup': '1',
+          },
+        }),
+        env,
+        ctx,
+      )
+
+      if (response.ok) {
+        return {
+          ok: true,
+          status: response.status,
+          error: null,
+          retryable: false,
+        }
+      }
+
+      const retryable =
+        WARMUP_RETRYABLE_STATUS_CODES.has(response.status) ||
+        (target.required && response.status >= 500)
+
+      if (retryable && attempt === 0) {
+        await waitForWarmupRetry(WARMUP_RETRY_DELAY_MS)
+        continue
+      }
+
+      return {
+        ok: false,
+        status: response.status,
+        error: `Warmup request failed with status ${response.status} for ${target.path}`,
+        retryable,
+      }
+    } catch (error) {
+      if (attempt === 0) {
+        await waitForWarmupRetry(WARMUP_RETRY_DELAY_MS)
+        continue
+      }
+
+      return {
+        ok: false,
+        status: null,
+        error: error instanceof Error ? error.message : String(error),
+        retryable: true,
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    status: null,
+    error: `Warmup request exhausted retries for ${target.path}`,
+    retryable: true,
+  }
+}
+
+/**
+ * Processes one queued image warmup job using metadata-aware target planning.
+ *
+ * @param env Worker bindings.
+ * @param ctx Worker execution context.
+ * @param job Queue payload.
+ * @returns Whether the message should be retried.
+ */
+const processImageWarmupJob = async (
+  env: Env,
+  ctx: ExecutionContext,
+  job: ImageWarmupJob,
+): Promise<{ retry: boolean }> => {
+  const resolvedMetadata = await resolveMetadataDocument(env, job.env, {
+    publicId: job.publicId,
+    version: job.version,
+  })
+  const resolvedJob = {
+    ...job,
+    ...(typeof resolvedMetadata.version === 'number'
+      ? { version: resolvedMetadata.version }
+      : {}),
+  } satisfies ImageWarmupJob
+  const plan = getImageWarmupPlan({
+    job: resolvedJob,
+    metadata: resolvedMetadata.document,
+  })
+
+  if (!plan.shouldWarm) {
+    console.log(
+      JSON.stringify({
+        event: 'image-prerender-warmup-skipped',
+        publicId: job.publicId,
+        version: resolvedJob.version ?? null,
+        env: job.env,
+        sourceExtension: plan.sourceExtension,
+        derivativesSupported: plan.derivativesSupported,
+        normalizedIntermediateExpected: plan.normalizedIntermediateExpected,
+        skipReason: plan.skipReason,
+      }),
+    )
+
+    return { retry: false }
+  }
+
+  const failures: Array<{
+    kind: 'rawIntermediate' | 'prerender'
+    path: string
+    required: boolean
+    status: number | null
+    error: string
+  }> = []
+  let shouldRetry = false
+
+  for (const target of plan.targets) {
+    const result = await warmImageTarget(env, ctx, target)
+
+    if (result.ok) {
+      continue
+    }
+
+    failures.push({
+      kind: target.kind,
+      path: target.path,
+      required: target.required,
+      status: result.status,
+      error: result.error ?? `Warmup request failed for ${target.path}`,
+    })
+    shouldRetry ||= result.retryable
+  }
+
+  for (const failure of failures) {
+    console.warn(
+      JSON.stringify({
+        event: 'image-prerender-warmup-failed',
+        publicId: job.publicId,
+        version: resolvedJob.version ?? null,
+        env: job.env,
+        warmupKind: failure.kind,
+        required: failure.required,
+        status: failure.status,
+        path: failure.path,
+        error: failure.error,
+      }),
+    )
+  }
+
+  const summary = JSON.stringify({
+    event: 'image-prerender-warmup-summary',
+    publicId: job.publicId,
+    version: resolvedJob.version ?? null,
+    env: job.env,
+    sourceExtension: plan.sourceExtension,
+    derivativesSupported: plan.derivativesSupported,
+    normalizedIntermediateExpected: plan.normalizedIntermediateExpected,
+    totalRequested: plan.targets.length,
+    failedCount: failures.length,
+    rawIntermediateRequestedCount: plan.targets.filter(
+      target => target.kind === 'rawIntermediate',
+    ).length,
+    rawIntermediateFailedCount: failures.filter(
+      failure => failure.kind === 'rawIntermediate',
+    ).length,
+    prerenderRequestedCount: plan.targets.filter(target => target.kind === 'prerender')
+      .length,
+    prerenderFailedCount: failures.filter(failure => failure.kind === 'prerender')
+      .length,
+    metadataResolvedStage: resolvedMetadata.stage,
+    shouldRetry,
+  })
+
+  if (failures.length > 0) {
+    console.warn(summary)
+  } else {
+    console.log(summary)
+  }
+
+  return { retry: shouldRetry }
 }
 
 /**
@@ -3780,4 +4013,34 @@ const isIntegerString = (value: string): boolean => /^\d+$/.test(value)
 
 export default {
   fetch: handleFetch,
+  async queue(
+    batch: MessageBatch<unknown>,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    for (const message of batch.messages) {
+      if (!isImageWarmupJob(message.body)) {
+        console.error('Discarding invalid image warmup job payload.')
+        message.ack()
+        continue
+      }
+
+      try {
+        const result = await processImageWarmupJob(env, ctx, message.body)
+
+        if (result.retry) {
+          message.retry()
+          continue
+        }
+
+        message.ack()
+      } catch (error) {
+        console.error('Image warmup job failed', {
+          error,
+          job: message.body,
+        })
+        message.retry()
+      }
+    }
+  },
 } satisfies ExportedHandler<Env>
