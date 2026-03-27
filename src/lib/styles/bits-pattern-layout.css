@@ -435,6 +435,17 @@
   }
 
   .bits-theme .bits-admin-menu {
+    --bits-admin-menu-slot-size: 3.25rem;
+    --bits-admin-menu-slot-gap: 0.75rem;
+    --bits-admin-menu-badge-bleed: 1rem;
+    --bits-admin-menu-page-size: calc(
+      (var(--bits-admin-menu-slot-size) * 5) +
+      (var(--bits-admin-menu-slot-gap) * 4)
+    );
+    --bits-admin-menu-narrow-viewport-size: calc(
+      var(--bits-admin-menu-page-size) +
+      var(--bits-admin-menu-badge-bleed)
+    );
     @apply flex w-full shrink-0 caret-transparent;
   }
 
@@ -446,20 +457,86 @@
     @apply justify-center px-4 py-3;
   }
 
+  .bits-theme .bits-admin-menu__viewport {
+    @apply min-w-0 flex-1;
+  }
+
+  .bits-theme .bits-admin-menu__track {
+    @apply flex w-full;
+  }
+
+  .bits-theme .bits-admin-menu__page {
+    @apply w-full shrink-0;
+    overflow: visible;
+  }
+
   .bits-theme .bits-admin-menu__list {
-    @apply flex items-center;
+    @apply flex items-center justify-center;
+    overflow: visible;
   }
 
   .bits-theme .bits-admin-menu--narrow .bits-admin-menu__list {
-    @apply flex-col gap-3;
+    @apply h-full w-full flex-col items-end justify-end;
+    gap: var(--bits-admin-menu-slot-gap);
   }
 
   .bits-theme .bits-admin-menu--wide .bits-admin-menu__list {
     @apply flex-row-reverse gap-2;
   }
 
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__viewport {
+    @apply overflow-x-auto overflow-y-hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__track {
+    @apply flex-row;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__page {
+    scroll-snap-align: start;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__viewport {
+    overflow-x: visible;
+    overflow-y: auto;
+    block-size: var(--bits-admin-menu-narrow-viewport-size);
+    min-block-size: var(--bits-admin-menu-narrow-viewport-size);
+    padding-block-start: var(--bits-admin-menu-badge-bleed);
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__track {
+    @apply flex-col;
+    margin-block-start: calc(var(--bits-admin-menu-badge-bleed) * -1);
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__page {
+    block-size: var(--bits-admin-menu-narrow-viewport-size);
+    min-block-size: var(--bits-admin-menu-narrow-viewport-size);
+    scroll-snap-align: start;
+  }
+
   .bits-theme .bits-admin-menu__item {
     @apply relative flex shrink-0 items-center justify-center;
+  }
+
+  .bits-theme .bits-admin-menu__item--placeholder {
+    @apply invisible pointer-events-none shrink-0;
+    block-size: var(--bits-admin-menu-slot-size);
+    inline-size: var(--bits-admin-menu-slot-size);
   }
 
   .bits-theme .bits-admin-menu__button {
@@ -500,9 +577,8 @@
   }
 
   .bits-theme .bits-admin-shell {
-    @apply flex h-full min-h-0 w-full min-w-0 overflow-hidden;
+    @apply flex h-full min-h-0 w-full min-w-0 overflow-hidden drag-none;
     -webkit-user-drag: none;
-    user-drag: none;
   }
 
   .bits-theme .bits-admin-shell__main {
