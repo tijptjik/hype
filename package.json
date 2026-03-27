@@ -44,6 +44,7 @@
     "deploy:render-scheduler:prod": "bun wrangler deploy -c workers/map-render-scheduler/wrangler.toml --env production",
     "deploy:render-scheduler:preview": "bun wrangler deploy -c workers/map-render-scheduler/wrangler.toml --env preview",
     "render:assets": "bun run scripts/generate-image-derived-assets.ts",
+    "images:test:fixtures": "bun run scripts/generate-upload-test-images.ts",
     "stage:asset-worker:fixtures": "bun run scripts/cloud/stage-asset-worker-probe-fixtures.ts",
     "test:asset-worker:memory": "bun run scripts/cloud/probe-asset-worker-memory.ts",
     "r2:normalize:raw": "bun run scripts/cloud/normalize-r2-raw-images.ts",
