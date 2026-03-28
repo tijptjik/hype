@@ -43,6 +43,7 @@ type Env = {
   ASSET_DEBUG_MEMORY_MATCH?: string
   BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS?: string
   ASSET_ANALYTICS: AnalyticsEngineDataset
+  ASSET_WARMUP_ANALYTICS: AnalyticsEngineDataset
   ASSET_RAW_DEV: R2Bucket
   ASSET_RAW_PREVIEW: R2Bucket
   ASSET_RAW_PRODUCTION: R2Bucket
@@ -272,7 +273,16 @@ type WarmupAttemptResult = {
   status: number | null
   error: string | null
   retryable: boolean
+  retried: boolean
 }
+
+type AssetWarmupAnalyticsEventType =
+  | 'skipped_by_format'
+  | 'raw_intermediate_requested'
+  | 'raw_intermediate_failed'
+  | 'prerender_failed'
+  | 'retried'
+  | 'final_outcome'
 
 const CACHE_CONTROL_IMMUTABLE = 'public, max-age=31536000, immutable'
 const CACHE_CONTROL_SHORT = 'public, max-age=300'
@@ -692,6 +702,7 @@ const warmImageTarget = async (
           status: response.status,
           error: null,
           retryable: false,
+          retried: attempt > 0,
         }
       }
 
@@ -709,6 +720,7 @@ const warmImageTarget = async (
         status: response.status,
         error: `Warmup request failed with status ${response.status} for ${target.path}`,
         retryable,
+        retried: attempt > 0,
       }
     } catch (error) {
       if (attempt === 0) {
@@ -721,6 +733,7 @@ const warmImageTarget = async (
         status: null,
         error: error instanceof Error ? error.message : String(error),
         retryable: true,
+        retried: attempt > 0,
       }
     }
   }
@@ -730,6 +743,7 @@ const warmImageTarget = async (
     status: null,
     error: `Warmup request exhausted retries for ${target.path}`,
     retryable: true,
+    retried: true,
   }
 }
 
@@ -762,6 +776,16 @@ const processImageWarmupJob = async (
   })
 
   if (!plan.shouldWarm) {
+    recordAssetWarmupAnalytics(env, {
+      type: 'skipped_by_format',
+      publicId: job.publicId,
+      requestedStage: job.env,
+      resolvedStage: resolvedMetadata.stage,
+      sourceExtension: plan.sourceExtension,
+      variantKind: 'image',
+      version: resolvedJob.version ?? null,
+    })
+
     console.log(
       JSON.stringify({
         event: 'image-prerender-warmup-skipped',
@@ -778,6 +802,20 @@ const processImageWarmupJob = async (
     return { retry: false }
   }
 
+  if (plan.targets.some(target => target.kind === 'rawIntermediate')) {
+    recordAssetWarmupAnalytics(env, {
+      type: 'raw_intermediate_requested',
+      publicId: job.publicId,
+      requestedStage: job.env,
+      resolvedStage: resolvedMetadata.stage,
+      sourceExtension: plan.sourceExtension,
+      variantKind: 'rawIntermediate',
+      version: resolvedJob.version ?? null,
+      requestedCount: plan.targets.filter(target => target.kind === 'rawIntermediate')
+        .length,
+    })
+  }
+
   const failures: Array<{
     kind: 'rawIntermediate' | 'prerender'
     path: string
@@ -789,6 +827,19 @@ const processImageWarmupJob = async (
 
   for (const target of plan.targets) {
     const result = await warmImageTarget(env, ctx, target)
+
+    if (result.retried) {
+      recordAssetWarmupAnalytics(env, {
+        type: 'retried',
+        publicId: job.publicId,
+        requestedStage: job.env,
+        resolvedStage: resolvedMetadata.stage,
+        sourceExtension: plan.sourceExtension,
+        variantKind: target.kind,
+        version: resolvedJob.version ?? null,
+        status: result.status,
+      })
+    }
 
     if (result.ok) {
       continue
@@ -802,6 +853,21 @@ const processImageWarmupJob = async (
       error: result.error ?? `Warmup request failed for ${target.path}`,
     })
     shouldRetry ||= result.retryable
+
+    recordAssetWarmupAnalytics(env, {
+      type:
+        target.kind === 'rawIntermediate'
+          ? 'raw_intermediate_failed'
+          : 'prerender_failed',
+      publicId: job.publicId,
+      requestedStage: job.env,
+      resolvedStage: resolvedMetadata.stage,
+      sourceExtension: plan.sourceExtension,
+      variantKind: target.kind,
+      version: resolvedJob.version ?? null,
+      status: result.status,
+      failedCount: 1,
+    })
   }
 
   for (const failure of failures) {
@@ -849,6 +915,19 @@ const processImageWarmupJob = async (
   } else {
     console.log(summary)
   }
+
+  recordAssetWarmupAnalytics(env, {
+    type: 'final_outcome',
+    publicId: job.publicId,
+    requestedStage: job.env,
+    resolvedStage: resolvedMetadata.stage,
+    sourceExtension: plan.sourceExtension,
+    variantKind: 'image',
+    version: resolvedJob.version ?? null,
+    queueRetry: shouldRetry,
+    requestedCount: plan.targets.length,
+    failedCount: failures.length,
+  })
 
   return { retry: shouldRetry }
 }
@@ -1343,6 +1422,44 @@ const recordAssetAnalytics = (env: Env, event: AssetAnalyticsEvent): void => {
       event.version ? String(event.version) : null,
     ],
     doubles: [event.totalMs, event.contentLength],
+  })
+}
+
+/**
+ * Writes image warmup lifecycle events to Analytics Engine.
+ *
+ * @param env Worker bindings.
+ * @param event Structured warmup event.
+ * @returns Nothing.
+ */
+const recordAssetWarmupAnalytics = (
+  env: Env,
+  event: {
+    type: AssetWarmupAnalyticsEventType
+    publicId: string
+    requestedStage: ImageStage
+    resolvedStage?: ImageStage | null
+    sourceExtension?: string | null
+    variantKind?: 'rawIntermediate' | 'prerender' | 'image' | null
+    status?: number | null
+    version?: number | null
+    queueRetry?: boolean
+    requestedCount?: number
+    failedCount?: number
+  },
+): void => {
+  env.ASSET_WARMUP_ANALYTICS.writeDataPoint({
+    indexes: [toAssetAnalyticsPublicId(event.publicId)],
+    blobs: [
+      event.type,
+      event.requestedStage,
+      event.resolvedStage ?? null,
+      event.sourceExtension ?? null,
+      event.variantKind ?? null,
+      event.version != null ? String(event.version) : null,
+      event.queueRetry ? 'true' : 'false',
+    ],
+    doubles: [event.status ?? 0, event.requestedCount ?? 0, event.failedCount ?? 0],
   })
 }
 

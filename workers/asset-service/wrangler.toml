@@ -19,6 +19,10 @@ BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
 binding = "ASSET_ANALYTICS"
 dataset = "hype_asset_delivery"
 
+[[analytics_engine_datasets]]
+binding = "ASSET_WARMUP_ANALYTICS"
+dataset = "hype_asset_warmup"
+
 [[r2_buckets]]
 binding = "ASSET_RAW_DEV"
 bucket_name = "hype-assets-raw-dev"
@@ -67,6 +71,10 @@ BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
 binding = "ASSET_ANALYTICS"
 dataset = "hype_asset_delivery"
 
+[[env.preview.analytics_engine_datasets]]
+binding = "ASSET_WARMUP_ANALYTICS"
+dataset = "hype_asset_warmup"
+
 [[env.preview.r2_buckets]]
 binding = "ASSET_RAW_DEV"
 bucket_name = "hype-assets-raw-dev"
@@ -112,6 +120,10 @@ BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
 [[env.production.analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
 dataset = "hype_asset_delivery"
+
+[[env.production.analytics_engine_datasets]]
+binding = "ASSET_WARMUP_ANALYTICS"
+dataset = "hype_asset_warmup"
 
 [[env.production.r2_buckets]]
 binding = "ASSET_RAW_DEV"
