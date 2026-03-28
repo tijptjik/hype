@@ -52,7 +52,7 @@ binding = "MAP_RENDER_QUEUE"
 queue = "hype-map-render-jobs-local"
 
 [[queues.producers]]
-binding = "IMAGE_WARMUP_QUEUE"
+binding = "ASSET_RENDER_QUEUE"
 queue = "hype-asset-render-jobs-local"
 
 [[r2_buckets]]
@@ -135,7 +135,7 @@ binding = "MAP_RENDER_QUEUE"
 queue = "hype-map-render-jobs-prod"
 
 [[env.production.queues.producers]]
-binding = "IMAGE_WARMUP_QUEUE"
+binding = "ASSET_RENDER_QUEUE"
 queue = "hype-asset-render-jobs-prod"
 
 [[env.production.r2_buckets]]
@@ -215,7 +215,7 @@ binding = "MAP_RENDER_QUEUE"
 queue = "hype-map-render-jobs-preview"
 
 [[env.preview.queues.producers]]
-binding = "IMAGE_WARMUP_QUEUE"
+binding = "ASSET_RENDER_QUEUE"
 queue = "hype-asset-render-jobs-preview"
 
 [[env.preview.r2_buckets]]
