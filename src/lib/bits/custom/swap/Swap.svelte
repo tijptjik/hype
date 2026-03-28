@@ -1,13 +1,22 @@
 <script lang="ts">
-import type { ButtonColor } from '$lib/bits/core/button/button.types'
+// BITS
+import { cx } from '$lib/bits/utils'
+import {
+  getSwapRootClasses,
+  getSwapRootVars,
+  SWAP_ICON_LAYER_CLASSES,
+  SWAP_ICON_STACK_CLASSES,
+} from './swap.styles'
+// TYPES
 import type { SwapProps } from './swap.types'
 
 let {
   checked = $bindable(false),
   disabled = false,
-  onIcon,
-  offIcon,
+  onIcon: OnIcon,
+  offIcon: OffIcon,
   size = 'md',
+  variant = 'default',
   onColor = 'primary',
   offColor = 'neutral',
   label = '',
@@ -18,24 +27,10 @@ let {
 }: SwapProps = $props()
 
 let isHoverSuppressed = $state(false)
-
-const resolvedOnIcon = $derived(onIcon ?? offIcon)
-const resolvedOffIcon = $derived(offIcon ?? onIcon)
-
-const rootClass = $derived(
-  ['bits-swap', `bits-swap--size-${size}`, className].filter(Boolean).join(' '),
-)
-
-const colorStyle = $derived(
-  `--swap-on-color:${resolveSwapColorToken(onColor)}; --swap-off-color:${resolveSwapColorToken(offColor)};`,
-)
-
-function resolveSwapColorToken(color: ButtonColor): string {
-  if (color === 'neutral') return 'var(--color-glass-base)'
-  if (color === 'light') return 'var(--color-base-100)'
-  if (color === 'dark') return 'var(--color-base-content)'
-  return `var(--color-${color})`
-}
+const rootClass = $derived(getSwapRootClasses({ variant, className }))
+const rootStyle = $derived(getSwapRootVars({ checked, size, onColor, offColor }))
+const offIconClass = $derived(checked ? 'opacity-0' : 'opacity-100')
+const onIconClass = $derived(checked ? 'opacity-100' : 'opacity-0')
 
 function handleClick(event: MouseEvent): void {
   if (disabled) {
@@ -59,8 +54,9 @@ function handleMouseLeave(): void {
 <button
   {...attrs}
   {type}
+  data-ui="swap"
   class={rootClass}
-  style={colorStyle}
+  style={rootStyle}
   aria-pressed={checked}
   aria-label={label || undefined}
   data-state={checked ? 'checked' : 'unchecked'}
@@ -69,12 +65,16 @@ function handleMouseLeave(): void {
   onclick={handleClick}
   onmouseleave={handleMouseLeave}
 >
-  <span class="bits-swap__icon-stack" aria-hidden="true">
-    <span class="bits-swap__icon-layer bits-swap__icon-layer--off">
-      {@render resolvedOffIcon?.()}
+  <span data-slot="icon-stack" class={SWAP_ICON_STACK_CLASSES} aria-hidden="true">
+    <span data-slot="icon-off" class={cx(SWAP_ICON_LAYER_CLASSES, offIconClass)}>
+      {#if OffIcon}
+        <OffIcon />
+      {/if}
     </span>
-    <span class="bits-swap__icon-layer bits-swap__icon-layer--on">
-      {@render resolvedOnIcon?.()}
+    <span data-slot="icon-on" class={cx(SWAP_ICON_LAYER_CLASSES, onIconClass)}>
+      {#if OnIcon}
+        <OnIcon />
+      {/if}
     </span>
   </span>
 </button>

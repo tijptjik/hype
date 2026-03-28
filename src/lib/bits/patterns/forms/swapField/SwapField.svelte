@@ -13,9 +13,10 @@ let {
   name,
   value = 'on',
   id = generatedId,
-  onIcon,
-  offIcon,
+  onIcon = null,
+  offIcon = null,
   size = 'md',
+  variant = 'default',
   onColor = 'primary',
   offColor = 'neutral',
   label = '',
@@ -37,6 +38,7 @@ function handleCheckedChange(nextChecked: boolean): void {
     {onIcon}
     {offIcon}
     {size}
+    {variant}
     {onColor}
     {offColor}
     {label}
