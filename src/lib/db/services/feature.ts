@@ -28,6 +28,7 @@ import {
   featurePropertyI18n,
 } from '../schema'
 import { getFeatureHubFilter } from './hub'
+import { retryBusyRead } from './sqlite'
 // I18N
 import { toLocaleCode } from '$lib/i18n'
 // TYPES
@@ -335,15 +336,19 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   })
   const whereClause = allConditions.length > 0 ? and(...allConditions) : undefined
 
-  const data = (await db.query.feature.findMany({
-    with: withRelations,
-    where: whereClause,
-    limit: pagination?.limit ?? undefined,
-    offset: pagination?.offset ?? undefined,
-    orderBy,
-  })) as unknown as TRow[]
+  const data = (await retryBusyRead(() =>
+    db.query.feature.findMany({
+      with: withRelations,
+      where: whereClause,
+      limit: pagination?.limit ?? undefined,
+      offset: pagination?.offset ?? undefined,
+      orderBy,
+    }),
+  )) as unknown as TRow[]
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(feature)
-  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
+  const totalRows = await retryBusyRead(() =>
+    whereClause ? countQuery.where(whereClause) : countQuery,
+  )
   const totalCount = Number(totalRows[0]?.count || 0)
   const offset = pagination?.offset ?? 0
   const hasMore = offset + data.length < totalCount
@@ -387,10 +392,12 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
     allConditions.push(hubFilter)
   }
 
-  return (await db.query.feature.findFirst({
-    with: withRelations,
-    where: allConditions.length > 0 ? and(...allConditions) : undefined,
-  })) as unknown as TRow | undefined
+  return (await retryBusyRead(() =>
+    db.query.feature.findFirst({
+      with: withRelations,
+      where: allConditions.length > 0 ? and(...allConditions) : undefined,
+    }),
+  )) as unknown as TRow | undefined
 }
 
 // ═══════════════════════
@@ -411,22 +418,25 @@ export const probeFeatureQuery = async (
   params: { ref?: string; refKey?: string | null },
 ) => {
   if (!params.ref) return null
+  const featureRef = params.ref
 
   return firstOrNull(
-    await db
-      .select({
-        id: feature.id,
-        organisationId: feature.organisationId,
-        projectId: feature.projectId,
-        layerId: feature.layerId,
-        resourceHubId: organisation.hubId,
-        isPublished: feature.isPublished,
-        isArchived: feature.isArchived,
-      })
-      .from(feature)
-      .innerJoin(organisation, eq(feature.organisationId, organisation.id))
-      .where(eq(feature.id, params.ref))
-      .limit(1),
+    await retryBusyRead(() =>
+      db
+        .select({
+          id: feature.id,
+          organisationId: feature.organisationId,
+          projectId: feature.projectId,
+          layerId: feature.layerId,
+          resourceHubId: organisation.hubId,
+          isPublished: feature.isPublished,
+          isArchived: feature.isArchived,
+        })
+        .from(feature)
+        .innerJoin(organisation, eq(feature.organisationId, organisation.id))
+        .where(eq(feature.id, featureRef))
+        .limit(1),
+    ),
   )
 }
 
@@ -441,26 +451,28 @@ export const probeFeatureQuery = async (
  */
 export const probeFeatureForUpdate = async (db: Database, featureId: Id) => {
   return firstOrNull(
-    await db
-      .select({
-        id: feature.id,
-        organisationId: feature.organisationId,
-        projectId: feature.projectId,
-        layerId: feature.layerId,
-        contributorId: feature.contributorId,
-        geometry: feature.geometry,
-        addressMeta: feature.addressMeta,
-        isPublished: feature.isPublished,
-        isArchived: feature.isArchived,
-        isIntangible: feature.isIntangible,
-        isVisitable: feature.isVisitable,
-        modifiedAt: feature.modifiedAt,
-        resourceHubId: organisation.hubId,
-      })
-      .from(feature)
-      .innerJoin(organisation, eq(feature.organisationId, organisation.id))
-      .where(eq(feature.id, featureId))
-      .limit(1),
+    await retryBusyRead(() =>
+      db
+        .select({
+          id: feature.id,
+          organisationId: feature.organisationId,
+          projectId: feature.projectId,
+          layerId: feature.layerId,
+          contributorId: feature.contributorId,
+          geometry: feature.geometry,
+          addressMeta: feature.addressMeta,
+          isPublished: feature.isPublished,
+          isArchived: feature.isArchived,
+          isIntangible: feature.isIntangible,
+          isVisitable: feature.isVisitable,
+          modifiedAt: feature.modifiedAt,
+          resourceHubId: organisation.hubId,
+        })
+        .from(feature)
+        .innerJoin(organisation, eq(feature.organisationId, organisation.id))
+        .where(eq(feature.id, featureId))
+        .limit(1),
+    ),
   )
 }
 

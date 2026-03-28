@@ -9,6 +9,7 @@ import {
   userFeature,
   userLayer,
 } from '../schema'
+import { retryBusyRead } from './sqlite'
 // TYPES
 import type { Id, UserRoleDisco, Database } from '$lib/types'
 import type {
@@ -63,50 +64,6 @@ export const userColumnsWithPrivacyProtected = {
   image: true,
   attribution: true,
 }
-
-/**
- * Returns whether an unknown database error represents transient SQLite lock contention.
- *
- * @param error - Unknown error thrown by D1/Drizzle.
- * @returns `true` when the error message indicates `SQLITE_BUSY`.
- */
-export const isSqliteBusyError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) return false
-
-  const message = error.message.toUpperCase()
-  const causeMessage =
-    error.cause instanceof Error ? error.cause.message.toUpperCase() : ''
-
-  return message.includes('SQLITE_BUSY') || causeMessage.includes('SQLITE_BUSY')
-}
-
-/**
- * Retries a D1 read operation when local Miniflare/workerd hits transient SQLite locks.
- *
- * @param operation - Async DB read to execute.
- * @returns Operation result once successful.
- */
-const retryBusyRead = async <T>(operation: () => Promise<T>): Promise<T> => {
-  let attempt = 0
-  let lastError: unknown
-
-  while (attempt < 3) {
-    try {
-      return await operation()
-    } catch (error) {
-      if (!isSqliteBusyError(error) || attempt === 2) {
-        throw error
-      }
-
-      lastError = error
-      attempt += 1
-      await new Promise(resolve => setTimeout(resolve, 25 * attempt))
-    }
-  }
-
-  throw lastError
-}
-
 // ═══════════════════════
 // 2.1 CRUD :: READ
 // ═══════════════════════
