@@ -49,8 +49,6 @@ import type {
   Intent,
 } from '$lib/db/zod/schema/image.types'
 import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
-// UTILS
-import { sortImages } from '$lib/client/services/image'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -80,6 +78,7 @@ import { sortImages } from '$lib/client/services/image'
 // 5. UTILS :: RESHAPE
 //    - toResponseShape
 //    - toResponseShapeProjectOrOrganisation
+//    - sortImages
 //
 
 // ═══════════════════════
@@ -643,4 +642,63 @@ export const toResponseShapeProjectOrOrganisation = async (
     ...image,
     attribution,
   }
+}
+
+const intentOrder = [
+  'canonical',
+  'closeUp',
+  'context',
+  'general',
+  'undefined',
+  'research',
+] as const
+
+const adminIntentOrder = [
+  'undefined',
+  'canonical',
+  'closeUp',
+  'context',
+  'general',
+  'research',
+] as const
+
+/**
+ * Sorts image rows for public or admin presentation without depending on client-only modules.
+ *
+ * @param images Image rows to sort in place.
+ * @param isAdmin Whether admin ordering rules should apply.
+ * @returns The sorted input array.
+ */
+export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false) {
+  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder
+
+  return images.sort((a, b) => {
+    if (isAdmin) {
+      const aIsUnpublishedNoIntent =
+        !a.isPublished && (!a.intent || a.intent === 'undefined')
+      const bIsUnpublishedNoIntent =
+        !b.isPublished && (!b.intent || b.intent === 'undefined')
+
+      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
+      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
+
+      if (a.isPublished !== b.isPublished) {
+        return a.isPublished ? -1 : 1
+      }
+    }
+
+    if (a.intent && b.intent) {
+      const intentCompare =
+        intentOrderToUse.indexOf(a.intent as Intent) -
+        intentOrderToUse.indexOf(b.intent as Intent)
+      if (intentCompare !== 0) {
+        return intentCompare
+      }
+    }
+
+    return (
+      new Date(b.createdAt as string).getTime() -
+      new Date(a.createdAt as string).getTime()
+    )
+  })
 }
