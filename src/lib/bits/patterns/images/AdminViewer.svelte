@@ -6,6 +6,7 @@ import type { AdminViewerProps } from './images.types'
 let {
   items,
   activeId = $bindable<string | null>(null),
+  retainedItem = null,
   isFullscreen = $bindable(false),
   fullscreenRequestKey = 0,
   fit = 'fit',
@@ -41,6 +42,7 @@ let {
     <Viewer
       {items}
       {activeId}
+      {retainedItem}
       bind:isFullscreen
       {fullscreenRequestKey}
       {fit}

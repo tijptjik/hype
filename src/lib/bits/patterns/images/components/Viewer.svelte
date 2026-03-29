@@ -1,5 +1,5 @@
 <script lang="ts">
-import { tick } from 'svelte'
+import { onDestroy, tick } from 'svelte'
 import { m } from '$lib/i18n'
 import EmptyState from './EmptyState.svelte'
 import FullScreen from './FullScreen.svelte'
@@ -16,6 +16,7 @@ type StartViewTransitionCapableDocument = Document & {
 let {
   items,
   activeId = $bindable<string | null>(null),
+  retainedItem = null,
   isFullscreen = $bindable(false),
   fullscreenRequestKey = 0,
   fit = 'fit',
@@ -31,26 +32,40 @@ let {
   onCurrentItemLoad,
 }: ViewerProps = $props()
 
+const EMPTY_STATE_CLEAR_DELAY_MS = 320
+
 const activeIndex = $derived.by(() => {
   if (!items.length) return -1
   if (!activeId) return -1
   return items.findIndex(item => item.id === activeId)
 })
+const resolvedActiveIndex = $derived.by(() => {
+  if (!items.length) return -1
+  if (activeIndex >= 0) return activeIndex
+  return 0
+})
+const resolvedActiveId = $derived.by(() => {
+  if (resolvedActiveIndex < 0) return null
+  return items[resolvedActiveIndex]?.id ?? null
+})
 
 const rawCurrentItem = $derived.by(() => {
   if (!items.length) return null
-  if (activeIndex < 0) return null
-  return items[activeIndex] ?? null
+  if (resolvedActiveIndex < 0) return null
+  return items[resolvedActiveIndex] ?? null
 })
-let currentItem = $state<ViewerRenderable | null>(null)
+let currentItem = $state<ViewerRenderable | null>(retainedItem)
 let lastHandledFullscreenRequestKey = $state<number | null>(null)
+let emptyStateTimer: ReturnType<typeof setTimeout> | null = null
 const isFirefox = $derived.by(() => {
   if (typeof navigator === 'undefined') return false
   return navigator.userAgent.includes('Firefox/')
 })
 
-const canGoPrev = $derived(activeIndex > 0)
-const canGoNext = $derived(activeIndex >= 0 && activeIndex < items.length - 1)
+const canGoPrev = $derived(resolvedActiveIndex > 0)
+const canGoNext = $derived(
+  resolvedActiveIndex >= 0 && resolvedActiveIndex < items.length - 1,
+)
 const hasCenterAction = $derived(
   centerAction === 'fullscreen' ||
     (centerAction === 'custom' && Boolean(onCenterAction)),
@@ -77,6 +92,7 @@ const fullscreenViewTransitionName = $derived(
     ? `gallery-viewer-image-${currentItem.id}`
     : undefined,
 )
+const currentSceneActiveId = $derived(currentItem?.id ?? resolvedActiveId)
 
 function shouldReuseCurrentItem(
   previous: ViewerRenderable | null,
@@ -97,20 +113,42 @@ function shouldReuseCurrentItem(
   )
 }
 
+function clearEmptyStateTimer(): void {
+  if (!emptyStateTimer) return
+
+  clearTimeout(emptyStateTimer)
+  emptyStateTimer = null
+}
+
 $effect(() => {
   const nextItem = rawCurrentItem
 
-  if (!nextItem) {
-    currentItem = null
+  if (nextItem) {
+    clearEmptyStateTimer()
+
+    if (shouldReuseCurrentItem(currentItem, nextItem)) {
+      return
+    }
+
+    currentItem = nextItem
+    return
+  }
+
+  clearEmptyStateTimer()
+
+  if (!currentItem) {
     isFullscreen = false
     return
   }
 
-  if (shouldReuseCurrentItem(currentItem, nextItem)) {
-    return
-  }
-
-  currentItem = nextItem
+  // Keep the previous resource image alive briefly so a newly loaded item from
+  // the next resource can reuse the existing stage crossfade instead of
+  // dropping straight to empty.
+  emptyStateTimer = setTimeout(() => {
+    currentItem = null
+    isFullscreen = false
+    emptyStateTimer = null
+  }, EMPTY_STATE_CLEAR_DELAY_MS)
 })
 
 $effect(() => {
@@ -189,6 +227,10 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   event.preventDefault()
   void toggleFullscreen(false)
 }
+
+onDestroy(() => {
+  clearEmptyStateTimer()
+})
 </script>
 
 <svelte:window onkeydown={handleWindowKeydown} />
@@ -198,7 +240,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
     <div class="group/viewer relative min-h-0 flex-1 overflow-hidden">
       <ViewerStage
         {currentItem}
-        {activeId}
+        activeId={currentSceneActiveId}
         fit={viewerFit}
         viewTransitionName={inlineViewTransitionName}
         {onCurrentItemLoad}
@@ -212,7 +254,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
           <button
             type="button"
             class={`h-full w-full bg-transparent ${canGoPrev ? 'cursor-w-resize' : 'cursor-default'}`}
-            onclick={() => moveToIndex(activeIndex - 1)}
+            onclick={() => moveToIndex(resolvedActiveIndex - 1)}
             disabled={!canGoPrev}
             aria-label={m.gallery__previous_image()}
           ></button>
@@ -230,7 +272,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
           <button
             type="button"
             class={`h-full w-full bg-transparent ${canGoNext ? 'cursor-e-resize' : 'cursor-default'}`}
-            onclick={() => moveToIndex(activeIndex + 1)}
+            onclick={() => moveToIndex(resolvedActiveIndex + 1)}
             disabled={!canGoNext}
             aria-label={m.gallery__next_image()}
           ></button>
@@ -242,8 +284,8 @@ function handleWindowKeydown(event: KeyboardEvent): void {
           <ViewerControls
             {canGoPrev}
             {canGoNext}
-            onPrev={() => moveToIndex(activeIndex - 1)}
-            onNext={() => moveToIndex(activeIndex + 1)}
+            onPrev={() => moveToIndex(resolvedActiveIndex - 1)}
+            onNext={() => moveToIndex(resolvedActiveIndex + 1)}
           />
         {/key}
       {/if}
@@ -281,7 +323,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 {#if currentItem && isFullscreen}
   <FullScreen
     {currentItem}
-    {activeId}
+    activeId={currentSceneActiveId}
     fit={viewerFit}
     viewTransitionName={fullscreenViewTransitionName}
     {onCurrentItemLoad}

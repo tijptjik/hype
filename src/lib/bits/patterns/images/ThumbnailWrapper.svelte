@@ -1,8 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { flip } from 'svelte/animate'
+import { onDestroy } from 'svelte'
 // LIB
 import { cx } from '$lib/bits/utils'
+import { buildGallerySceneAssetUrls } from '$lib/client/services/image'
 // BITS
 import Thumbnail from './Thumbnail.svelte'
 import AdminThumbnail from './AdminThumbnail.svelte'
@@ -15,6 +17,7 @@ let {
   followActiveIdRequestKey = 0,
   followActiveIdRequestId = null,
   fit = 'fit',
+  prefetchFit = fit,
   variant = 'default',
   class: className = '',
   size = 128,
@@ -45,6 +48,8 @@ let lastTrackInteractionAt = 0
 let hoverDebounceTimeout: ReturnType<typeof setTimeout> | null = null
 let uploadBatchScrollTimeout: ReturnType<typeof setTimeout> | null = null
 let isWaitingForUploadBatchScroll = false
+let prefetchedSceneAssetUrls = $state<string[]>([])
+let visiblePrefetchFrame: number | null = null
 
 const HOVER_TARGET_DEBOUNCE_MS = 80
 const UPLOAD_BATCH_SCROLL_SETTLE_MS = 160
@@ -64,6 +69,13 @@ function clearUploadBatchScroll(): void {
   if (uploadBatchScrollTimeout !== null) {
     clearTimeout(uploadBatchScrollTimeout)
     uploadBatchScrollTimeout = null
+  }
+}
+
+function clearVisiblePrefetchFrame(): void {
+  if (visiblePrefetchFrame !== null) {
+    cancelAnimationFrame(visiblePrefetchFrame)
+    visiblePrefetchFrame = null
   }
 }
 
@@ -107,6 +119,8 @@ function handleTrackPointerMove(): void {
 }
 
 function handleTrackScroll(): void {
+  scheduleVisiblePrefetchSync()
+
   if (!isPointerInsideTrack) return
   lastTrackInteractionAt = Date.now()
 
@@ -145,6 +159,68 @@ function resolveIsGreyscale(item: ViewerRenderable): boolean {
 
 function hasUploadingItems(nextItems: ViewerRenderable[]): boolean {
   return nextItems.some(item => getIsUploading?.(item) ?? false)
+}
+
+function areStringListsEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false
+
+  return left.every((value, index) => value === right[index])
+}
+
+function syncVisibleScenePrefetch(): void {
+  visiblePrefetchFrame = null
+
+  if (!trackEl || items.length === 0) return
+
+  const isVertical = orientation === 'vertical'
+  const viewportStart = isVertical ? trackEl.scrollTop : trackEl.scrollLeft
+  const viewportSize = isVertical ? trackEl.clientHeight : trackEl.clientWidth
+  const viewportEnd = viewportStart + viewportSize
+  const visibleIndices = new Set<number>()
+  const nextSceneAssetUrls = new Set(prefetchedSceneAssetUrls)
+
+  for (const node of trackEl.querySelectorAll<HTMLElement>(
+    '[data-gallery-thumb-index]',
+  )) {
+    const index = Number.parseInt(node.dataset.galleryThumbIndex ?? '', 10)
+    if (!Number.isInteger(index) || index < 0 || index >= items.length) continue
+
+    const nodeStart = isVertical ? node.offsetTop : node.offsetLeft
+    const nodeSize = isVertical ? node.offsetHeight : node.offsetWidth
+    const nodeEnd = nodeStart + nodeSize
+
+    if (nodeEnd > viewportStart && nodeStart < viewportEnd) {
+      visibleIndices.add(index)
+    }
+  }
+
+  if (visibleIndices.size === 0) return
+
+  for (const visibleIndex of visibleIndices) {
+    for (const candidateIndex of [visibleIndex - 1, visibleIndex, visibleIndex + 1]) {
+      const item = items[candidateIndex]
+      if (!item) continue
+
+      for (const url of buildGallerySceneAssetUrls(item, prefetchFit)) {
+        nextSceneAssetUrls.add(url)
+      }
+    }
+  }
+
+  const nextPrefetchedSceneAssetUrls = Array.from(nextSceneAssetUrls)
+  if (areStringListsEqual(nextPrefetchedSceneAssetUrls, prefetchedSceneAssetUrls)) {
+    return
+  }
+
+  prefetchedSceneAssetUrls = nextPrefetchedSceneAssetUrls
+}
+
+function scheduleVisiblePrefetchSync(): void {
+  if (visiblePrefetchFrame !== null) return
+
+  visiblePrefetchFrame = requestAnimationFrame(() => {
+    syncVisibleScenePrefetch()
+  })
 }
 
 function scheduleUploadBatchScroll(): void {
@@ -254,6 +330,26 @@ $effect(() => {
 $effect(() => {
   if (!trackEl) return
 
+  items.length
+  prefetchFit
+  orientation
+
+  scheduleVisiblePrefetchSync()
+
+  const resizeObserver = new ResizeObserver(() => {
+    scheduleVisiblePrefetchSync()
+  })
+
+  resizeObserver.observe(trackEl)
+
+  return () => {
+    resizeObserver.disconnect()
+  }
+})
+
+$effect(() => {
+  if (!trackEl) return
+
   if (isWaitingForUploadBatchScroll) {
     return
   }
@@ -286,9 +382,22 @@ $effect(() => {
     clearUploadBatchScroll()
   }
 })
+
+onDestroy(() => {
+  clearVisiblePrefetchFrame()
+})
 </script>
 
 <div class={cx('flex h-full w-full min-h-0 flex-col overflow-hidden', className)}>
+  {#each prefetchedSceneAssetUrls as url (url)}
+    <img
+      src={url}
+      alt=""
+      aria-hidden="true"
+      class="pointer-events-none absolute h-0 w-0 opacity-0"
+    >
+  {/each}
+
   <div
     bind:this={trackEl}
     onmouseenter={handleTrackPointerEnter}
@@ -309,6 +418,7 @@ $effect(() => {
     {#each items as item, index (item.renderKey ?? item.id)}
       <div
         data-gallery-thumb-id={item.id}
+        data-gallery-thumb-index={index}
         class="relative shrink-0"
         animate:flip={flipMode ? { duration: 220 } : undefined}
         onmouseenter={() => handleItemHover(item)}

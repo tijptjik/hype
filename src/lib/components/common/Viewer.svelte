@@ -16,7 +16,6 @@ import Camera from 'virtual:icons/lucide/camera'
 import Photo from 'virtual:icons/lucide/image'
 import InformationCircle from 'virtual:icons/lucide/info'
 import Dropzone from 'svelte-file-dropzone'
-import DownloadImageButton from '$lib/components/images/DownloadImageButton.svelte'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
@@ -245,7 +244,6 @@ $effect(() => {
                     type="imageContributor"
                   />
                 </IconAnchor>
-                <DownloadImageButton {image} />
               {/if}
             </div>
           {/if}

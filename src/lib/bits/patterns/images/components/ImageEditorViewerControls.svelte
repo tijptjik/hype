@@ -86,7 +86,11 @@ function handleChange(event: Event): void {
 }
 
 const buttonClass =
-  '[--btn-transparent-active-fg:var(--color-white)] [--btn-transparent-fg:var(--color-white)] [--btn-transparent-hover-fg:var(--color-white)] bg-black/70 hover:bg-black/85'
+  '[--btn-transparent-active-fg:var(--color-white)] [--btn-transparent-fg:var(--color-white)] [--btn-transparent-hover-fg:var(--color-white)] bg-black/70 transition-[background-color,color,opacity,transform] duration-200 ease-out hover:bg-black/85'
+const disabledToggleClass =
+  'cursor-not-allowed opacity-45 transition-[background-color,color,opacity,transform] duration-200 ease-out'
+const enabledToggleClass =
+  'transition-[background-color,color,opacity,transform] duration-200 ease-out'
 const editButtonClass = $derived(
   cx(
     buttonClass,
@@ -133,7 +137,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
           <Swap
             checked={isPublished}
             disabled={disabled || !canMutate}
-            class={disabled || !canMutate ? 'cursor-not-allowed opacity-45' : ''}
+            class={disabled || !canMutate ? disabledToggleClass : enabledToggleClass}
             label={isPublished
               ? m.gallery__unpublish_image()
               : m.gallery__publish_image()}
@@ -165,8 +169,8 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
             checked={isCoverPresentationMode}
             disabled={disabled || isPresentationModePending || !canMutate}
             class={disabled || isPresentationModePending || !canMutate
-                ? 'cursor-not-allowed opacity-45'
-                : ''}
+              ? disabledToggleClass
+              : enabledToggleClass}
             label={isCoverPresentationMode
               ? m.gallery__set_image_to_fill_mode()
               : m.gallery__set_image_to_fit_mode()}
@@ -309,7 +313,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
                 onClick={() => onRotateLeft?.()}
                 iconComponent={RotateCcwIcon}
                 iconClasses="h-[22px] w-[22px]"
-                class="[--btn-transparent-active-fg:var(--color-white)] [--btn-transparent-fg:var(--color-white)] [--btn-transparent-hover-fg:var(--color-white)]"
+                class="[--btn-transparent-active-fg:var(--color-white)] [--btn-transparent-fg:var(--color-white)] [--btn-transparent-hover-fg:var(--color-white)] transition-[background-color,color,opacity,transform] duration-200 ease-out"
               />
             {/snippet}
             <span>{m.gallery__rotate_image_left()}</span>
@@ -326,7 +330,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
                 onClick={() => onRotateRight?.()}
                 iconComponent={RotateCwIcon}
                 iconClasses="h-[22px] w-[22px]"
-                class="[--btn-transparent-active-fg:var(--color-white)] [--btn-transparent-fg:var(--color-white)] [--btn-transparent-hover-fg:var(--color-white)]"
+                class="[--btn-transparent-active-fg:var(--color-white)] [--btn-transparent-fg:var(--color-white)] [--btn-transparent-hover-fg:var(--color-white)] transition-[background-color,color,opacity,transform] duration-200 ease-out"
               />
             {/snippet}
             <span>{m.gallery__rotate_image_right()}</span>

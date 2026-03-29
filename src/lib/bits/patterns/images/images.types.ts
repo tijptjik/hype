@@ -92,6 +92,7 @@ export type ImageProps = {
 export type ViewerProps = {
   items: ViewerRenderable[]
   activeId?: string | null
+  retainedItem?: ViewerRenderable | null
   isFullscreen?: boolean
   fullscreenRequestKey?: number
   fit?: GalleryObjectFit
@@ -125,6 +126,7 @@ export type ThumbnailWrapperProps = {
   followActiveIdRequestKey?: number
   followActiveIdRequestId?: string | null
   fit?: GalleryObjectFit
+  prefetchFit?: GalleryObjectFit
   variant?: 'default' | 'admin'
   class?: string
   size?: number | string

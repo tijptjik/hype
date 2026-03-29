@@ -153,6 +153,7 @@ $effect(() => {
           class="min-h-0 h-full"
           size={adminThumbnailSize}
           {fit}
+          prefetchFit={viewerFit}
           {isDeleteMode}
           {getIsBlurred}
           {getIsGreyscale}

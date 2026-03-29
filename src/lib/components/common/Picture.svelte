@@ -1,7 +1,5 @@
 <script lang="ts">
 // COMPONENTS
-import Loading from '$lib/components/images/gallery/overlays/Loading.svelte'
-import LoadError from '$lib/components/images/gallery/overlays/LoadError.svelte'
 
 // TYPES
 type Props = {
@@ -55,14 +53,6 @@ const handleError = () => {
     ? className
     : 'h-full w-full'} bg-transparent"
 >
-  {#if showLoading && !loaded && !error}
-    <Loading />
-  {/if}
-
-  {#if showError && error}
-    <LoadError />
-  {/if}
-
   {#if showBackground}
     <!-- Background Image (blurred) -->
     <img
