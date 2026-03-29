@@ -4,6 +4,15 @@ import type {
   ParentSectionProjectItem,
 } from '$lib/bits/patterns/forms/formParentSection'
 
+/********************
+ *  TABLE OF CONTENTS
+ ************/
+// - createFeatureParentSearchPrisms
+// - toParentOrganisationItem
+// - toParentProjectItem
+// - toParentLayerItem
+// - createFeatureParentSectionController
+
 export type ParentOrganisationRecord = {
   id?: string | null
   code?: string | null
@@ -80,6 +89,9 @@ type AutoSelectedProjectAndLayer = {
 /**
  * Restrict parent searches to the active organisation/project scope without
  * over-constraining layer searches.
+ *
+ * @param params Optional organisation/project filters for remote queries.
+ * @returns Search prism arrays keyed by parent resource type.
  */
 export function createFeatureParentSearchPrisms(params: ParentSearchScopeParams = {}): {
   organisation: string[]
@@ -95,6 +107,9 @@ export function createFeatureParentSearchPrisms(params: ParentSearchScopeParams 
 
 /**
  * Converts an organisation record into the parent-section item shape.
+ *
+ * @param organisation Raw organisation-like record.
+ * @returns A normalized parent-section organisation item, or `null` when unusable.
  */
 export function toParentOrganisationItem(
   organisation: ParentOrganisationRecord | null | undefined,
@@ -110,6 +125,9 @@ export function toParentOrganisationItem(
 
 /**
  * Converts a project record into the parent-section item shape.
+ *
+ * @param project Raw project-like record.
+ * @returns A normalized parent-section project item, or `null` when unusable.
  */
 export function toParentProjectItem(
   project: ParentProjectRecord | null | undefined,
@@ -126,6 +144,9 @@ export function toParentProjectItem(
 
 /**
  * Converts a layer record into the parent-section item shape.
+ *
+ * @param layer Raw layer-like record.
+ * @returns A normalized parent-section layer item, or `null` when unusable.
  */
 export function toParentLayerItem(
   layer: ParentLayerRecord | null | undefined,
@@ -144,6 +165,9 @@ export function toParentLayerItem(
 /**
  * Builds the feature-parent-section interaction handlers while leaving page
  * state ownership and form mutation in the caller.
+ *
+ * @param deps Page-owned state readers/writers and remote search adapters.
+ * @returns A controller object with parent search and replacement handlers.
  */
 export function createFeatureParentSectionController(
   deps: FeatureParentSectionControllerDeps,
@@ -187,6 +211,7 @@ export function createFeatureParentSectionController(
 
     deps.syncSelectedProject(project)
 
+    // When a single project is creatable under an organisation, probe for a single viable layer too.
     const layers = (
       await deps.searchParentLayers({
         query: '',
@@ -217,6 +242,7 @@ export function createFeatureParentSectionController(
     const nextLayer =
       selectedLayer && selectedLayer.projectId === project.id ? selectedLayer : null
 
+    // Preserve still-valid upstream/downstream selections so project swaps only clear invalid children.
     deps.applyFeatureParentSelection({
       organisationId: nextOrganisation?.id ?? project.organisationId ?? '',
       projectId: project.id,

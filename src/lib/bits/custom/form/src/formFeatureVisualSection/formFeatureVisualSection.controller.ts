@@ -1,6 +1,11 @@
 import { FirstClassResource } from '$lib/enums'
 import { navigateOnAdmin } from '$lib/navigation'
 
+/********************
+ *  TABLE OF CONTENTS
+ ************/
+// - createFeatureVisualSectionController
+
 type FeatureVisualSectionControllerOptions = {
   collapseScrollThreshold?: number
   reopenSettleDelayMs?: number
@@ -34,6 +39,10 @@ type FeatureVisualSectionControllerDeps = {
 /**
  * Builds the feature visual-section interaction handlers while keeping page
  * state ownership in the caller.
+ *
+ * @param deps Page-owned state readers/writers and navigation hooks.
+ * @param options Optional timing and threshold overrides for collapse/reopen UX.
+ * @returns A controller object with visual-section event handlers.
  */
 export function createFeatureVisualSectionController(
   deps: FeatureVisualSectionControllerDeps,
@@ -93,6 +102,7 @@ export function createFeatureVisualSectionController(
   function armVisualSectionReopenAfterSettle(): void {
     clearVisualSectionReopenState()
     deps.setIsVisualSectionReopenArmed(false)
+    // Hold reopen gestures briefly after collapsing so scroll momentum does not immediately reopen.
     deps.setVisualSectionReopenSettleTimeout(
       setTimeout(() => {
         deps.setVisualSectionReopenSettleTimeout(null)
@@ -109,6 +119,7 @@ export function createFeatureVisualSectionController(
       deps.getContentsElement() ??
       document.documentElement
 
+    // Scroll the active editor viewport back to the top so the reopened section has room to expand.
     requestAnimationFrame(() => {
       if (
         scrollTarget instanceof HTMLElement &&
@@ -178,6 +189,7 @@ export function createFeatureVisualSectionController(
       clearTimeout(timeout)
     }
 
+    // Require a short sustained upward wheel gesture before reopening the collapsed section.
     deps.setVisualSectionReopenBufferTimeout(
       setTimeout(() => {
         deps.setVisualSectionReopenBufferTimeout(null)

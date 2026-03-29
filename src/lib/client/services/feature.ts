@@ -2,12 +2,14 @@ import type { Point } from 'geojson'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
 import type { FeatureFieldSectionItem } from '$lib/bits/patterns/forms/formFeatureFieldsSection'
+import { sortFeatureProperties } from '$lib/client/services/property'
 import { NewFeatureMode, OmniMode } from '$lib/enums'
 import type {
   Feature,
   FeatureFormInput,
   FeatureProperty,
 } from '$lib/db/zod/schema/feature.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { CurrentUser, UserProfile } from '$lib/db/zod/schema/user.types'
 import type { SessionUser } from '$lib/types'
 
@@ -29,6 +31,7 @@ import type { SessionUser } from '$lib/types'
 // - toCurrentAuthorizationUser
 //
 // 3. PROPERTY PROJECTIONS
+// - toLayerBackedFeatureProperties
 // - getNonTranslatableFeatureFieldItems
 // - getTranslatableSpecifierProperties
 // ---
@@ -380,6 +383,66 @@ type FeaturePropertyWithDefinition = FeatureProperty & {
   property: FeaturePropertyDefinition
 }
 type FeatureFormProperty = NonNullable<FeatureFormInput['data']['properties']>[number]
+
+/**
+ * Derives the feature-property rows implied by the selected layer.
+ *
+ * @param layer Resolved layer with visible classifier/specifier properties.
+ * @param currentProperties Existing feature property rows.
+ * @returns A sorted property collection aligned to the layer definition.
+ */
+export function toLayerBackedFeatureProperties(
+  layer: Layer | null | undefined,
+  currentProperties: FeatureFormInput['data']['properties'] | null | undefined,
+): FeatureFormInput['data']['properties'] {
+  if (!layer) return []
+
+  const currentByPropertyId = new Map(
+    (currentProperties ?? []).map(property => [property.propertyId, property]),
+  )
+  const seenPropertyIds = new Set<string>()
+
+  // Keep only visible classifier/specifier properties and preserve any existing entered values.
+  const nextProperties = (layer.properties ?? [])
+    .filter(layerProperty => {
+      const property = layerProperty.property
+      const propertyId = layerProperty.propertyId ?? ''
+      if (!propertyId || seenPropertyIds.has(propertyId)) return false
+      seenPropertyIds.add(propertyId)
+      return (
+        layerProperty.isVisible === true &&
+        property &&
+        (property.type === 'classifier' || property.type === 'specifier')
+      )
+    })
+    .map(layerProperty => {
+      const propertyId = layerProperty.propertyId ?? ''
+      const current = currentByPropertyId.get(propertyId)
+      if (current) {
+        return {
+          ...current,
+          property: layerProperty.property,
+        }
+      }
+
+      return {
+        propertyId,
+        value: '',
+        propertyValueId: '',
+        i18n: {
+          en: { value: '', valueGen: false },
+          zhHans: { value: '', valueGen: false },
+          zhHant: { value: '', valueGen: false },
+        },
+        property: layerProperty.property,
+        propertyValue: null,
+      }
+    })
+
+  return sortFeatureProperties(
+    nextProperties as Omit<FeatureProperty, 'featureId'>[],
+  ) as FeatureFormInput['data']['properties']
+}
 
 /**
  * Narrows a feature property to entries that include a hydrated property definition.
