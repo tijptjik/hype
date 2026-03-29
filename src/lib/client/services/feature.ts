@@ -11,7 +11,7 @@ import type {
 } from '$lib/db/zod/schema/feature.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { CurrentUser, UserProfile } from '$lib/db/zod/schema/user.types'
-import type { SessionUser } from '$lib/types'
+import type { SessionUser, UserRoleDisco } from '$lib/types'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -340,7 +340,12 @@ export function getProgrammaticFeatureInputEntries(
  */
 export function toCurrentContributorUser(
   user: CurrentUser | UserProfile | SessionUser | null | undefined,
-): Pick<CurrentUser, 'name' | 'attribution' | 'image' | 'id'> | null {
+): {
+  id: string | null
+  name: string | null
+  attribution: string | null
+  image: string | null
+} | null {
   if (!user) return null
 
   return {
@@ -358,14 +363,19 @@ export function toCurrentContributorUser(
  */
 export function toCurrentAuthorizationUser(
   user: CurrentUser | UserProfile | SessionUser | null | undefined,
-): Pick<CurrentUser, 'id' | 'isAnonymous' | 'superAdmin' | 'roles'> | null {
+): {
+  id: string | null
+  isAnonymous: boolean | null
+  superAdmin: boolean | null
+  roles: UserRoleDisco[]
+} | null {
   if (!user) return null
 
   return {
     id: 'id' in user ? (user.id ?? null) : null,
-    isAnonymous: 'isAnonymous' in user ? user.isAnonymous : undefined,
-    superAdmin: 'superAdmin' in user ? user.superAdmin : undefined,
-    roles: 'roles' in user ? user.roles : undefined,
+    isAnonymous: 'isAnonymous' in user ? (user.isAnonymous ?? null) : null,
+    superAdmin: 'superAdmin' in user ? (user.superAdmin ?? null) : null,
+    roles: 'roles' in user && Array.isArray(user.roles) ? user.roles : [],
   }
 }
 
@@ -379,10 +389,10 @@ type FeaturePropertyDefinition = NonNullable<FeatureProperty['property']>
 type FeaturePropertyValueOption = NonNullable<
   FeaturePropertyDefinition['values']
 >[number]
-type FeaturePropertyWithDefinition = FeatureProperty & {
+type FeatureFormProperty = NonNullable<FeatureFormInput['data']['properties']>[number]
+type FeaturePropertyWithDefinition = FeatureFormProperty & {
   property: FeaturePropertyDefinition
 }
-type FeatureFormProperty = NonNullable<FeatureFormInput['data']['properties']>[number]
 
 /**
  * Derives the feature-property rows implied by the selected layer.

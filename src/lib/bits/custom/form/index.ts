@@ -1,5 +1,6 @@
 export { default as SectionHeader } from './SectionHeader.svelte'
 export { default as FormDebug } from './FormDebug.svelte'
+export { default as HiddenInputs } from './HiddenInputs.svelte'
 export {
   createFeatureVisualSectionController,
   FormFeatureVisualSection,

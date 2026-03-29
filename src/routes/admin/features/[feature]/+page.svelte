@@ -1,16 +1,69 @@
 <script lang="ts">
+// SVELTE
+import type { RemoteQuery, RemoteQueryOverride } from '@sveltejs/kit'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
-import { getCoordinates } from '$lib/client/services/geospatial'
-import { getURLfromImage } from '$lib/client/services/image'
-import { sortFeatureProperties } from '$lib/client/services/property'
-import { getNameForToast } from '$lib/client/services/resource'
+import { onMount, untrack } from 'svelte'
+// TOAST
+import { toast } from 'svelte-sonner'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
+// I18N
 import {
-  overrideFeatureEntityBoolean,
-  overrideFeatureListItemBoolean,
+  getLocale,
+  getLocaleKey,
+  getLocaleOrder,
+  m,
+  toLocaleKey,
+  translateI18nFields,
+} from '$lib/i18n'
+// SERVICES
+import {
+  bindAdminFacetHistorySync,
+  captureHeaderTransitionSnapshot,
+  createFacetNavActionBuilder,
+  createResourceFormConfig,
+  focusFacetFromHash,
+  getEditorCtrl,
+  prepareSubmitPayloadMeta,
+  revalidateAfterSubmitAttempt,
+  resolveFacetTabsWithIssues,
+  resolveOptimisticHeaderFacets,
+  resolveOptimisticHeaderStatus,
+  syncAdminFacetFromHash,
+  toFormLevelIssueMessages,
+  updateFormData,
+} from '$lib/client/services/form'
+import {
+  getProgrammaticFeatureInputEntries,
+  getNonTranslatableFeatureFieldItems,
+  getTranslatableSpecifierProperties,
+  toLayerBackedFeatureProperties,
   toEmptyFeatureFormInput,
+  toCurrentAuthorizationUser,
+  toCurrentContributorUser,
   toFeatureFormInput,
+  DEFAULT_NEW_FEATURE_COORDINATES,
 } from '$lib/client/services/feature'
+import {
+  getCoordinates,
+  getUserLocationCoordinates,
+} from '$lib/client/services/geospatial'
+import {
+  getFeatureImageProviderOptions,
+  getFeatureImagesFacetHref,
+  getSafeImageUrl,
+} from '$lib/client/services/image'
+import { getIssueMessagesForPath } from '$lib/client/services/issues'
+import {
+  getNameForToast,
+  overrideResourceEntityBoolean,
+  overrideResourceListItemBoolean,
+} from '$lib/client/services/resource'
+// CONTEXT
+import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getHeaderCtrl } from '$lib/context/header.svelte'
+// REMOTE
 import {
   archiveFeature,
   featureForm,
@@ -20,124 +73,473 @@ import {
 } from '$lib/api/server/feature.remote'
 import { getLayer, getLayers } from '$lib/api/server/layer.remote'
 import { getOrganisationsWhichHaveLayers } from '$lib/api/server/organisation.remote'
-import { getProjects, getProjectsWhichHaveLayers } from '$lib/api/server/project.remote'
-import {
-  captureHeaderTransitionSnapshot,
-  createResourceEditorPage,
-  prepareSubmitPayloadMeta,
-  resolveOptimisticHeaderFacets,
-  resolveOptimisticHeaderStatus,
-  updateFormData,
-} from '$lib/client/services/form'
+import { getProjectsWhichHaveLayers } from '$lib/api/server/project.remote'
+// SCHEMA
 import { FeaturePreflightFormData } from '$lib/db/zod'
+// FACTORIES
+import { configureForm } from '$lib/factories.svelte'
+// BITS
 import {
+  cx,
   FormFacetNav,
-  FormFeatureFieldsSection,
+  FormFeatureFields,
   FormFeatureParentSection,
+  FormFeatureVisualSection,
   FormFeatureSectionHeader,
-  FormSection as FormI18nSectionFormSection,
+  FeatureImageEditor,
   FormI18nDescriptorFields,
   FormI18nSection,
   FormMapSection,
-  InfoDialog,
   Main,
-  Separator,
-  SwapField,
-  TextArea,
-  TextInput,
-  UserAttributionCard,
 } from '$lib/bits'
-import { configureForm } from '$lib/factories.svelte'
-import { getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
-import { NEW_REF } from '$lib/constants'
-import { FirstClassResource } from '$lib/enums'
-import { getAdminFacetTabsForResource, getUrlForResource } from '$lib/navigation'
+import {
+  createFeatureParentSearchPrisms,
+  createFeatureParentSectionController,
+  toParentLayerItem,
+  toParentOrganisationItem,
+  toParentProjectItem,
+} from '$lib/bits/patterns/forms/formFeatureParentSection'
+import {
+  createFeatureVisualSectionController,
+  HiddenInputs,
+} from '$lib/bits/custom/form'
+import {
+  FEATURE_EDITOR_COLLECTIONS_SECTION_CLASS,
+  FEATURE_EDITOR_CONTENT_PAD_CLASS,
+  FEATURE_EDITOR_CONTENT_SECTION_CLASS,
+  FEATURE_EDITOR_FORM_CLASS,
+  FEATURE_EDITOR_PLACEHOLDER_CLASS,
+  FEATURE_EDITOR_ROOT_CLASS,
+  getFeatureEditorFacetClass,
+} from './page.styles'
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import { canCreateFeatureForProject } from '$lib/api/services/authz/feature'
+// NAVIGATION
+import {
+  getAdjacentResourceRefs,
+  getAdminFacetOrderForResource,
+  getAdminFacetTabsForResource,
+  getUrlForResource,
+} from '$lib/navigation'
+// UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
-import { onMount, untrack } from 'svelte'
-import { toast } from 'svelte-sonner'
-import ChevronLeftIcon from 'virtual:icons/lucide/chevron-left'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
-import CircleHelpIcon from 'virtual:icons/lucide/circle-help'
-import ExpandIcon from 'virtual:icons/lucide/expand'
+// ICONS
 import FeatureIcon from 'virtual:icons/lucide/map-pin'
-import ImageIcon from 'virtual:icons/lucide/image'
-import ShrinkIcon from 'virtual:icons/lucide/shrink'
+// CONFIG
+import { NEW_REF, NEW_TITLE } from '$lib/constants'
+// ENUMS
+import { FirstClassResource } from '$lib/enums'
+// TYPES
+import type { Point } from 'geojson'
+import type { FacetType, HeaderTransitionSnapshot, Id, Locale } from '$lib/types'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type {
   FeatureFormInput,
   FeatureGetState,
-  FeatureProperty,
 } from '$lib/db/zod/schema/feature.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Point } from 'geojson'
 import type {
   ParentSectionLayerItem,
   ParentSectionOrganisationItem,
   ParentSectionProjectItem,
 } from '$lib/bits/patterns/forms/formParentSection'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { FacetType, HeaderTransitionSnapshot } from '$lib/types'
-import type { FormFacetNavAction } from '$lib/bits'
+import type { ParentProjectRecord } from '$lib/bits/patterns/forms/formFeatureParentSection'
+
+type FeaturePageState = FeatureGetState
+const noopHeaderAction = (): void => {}
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// PAGE SETUP
+// - adminCtx
+// - headerCtrl
+// - facetTabs
+// - editorCtrl
+// - featureRef
+// - localeKey
+// - locales
+// - activeFacet
+// - featureFacetOrder
+//
+// INTERNAL NAVIGATION STATE
+// - isCoreFacet
+// - isFieldsFacet
+// - isAddressFacet
+// - isImagesFacet
+//
+// INTERNAL NAVIGATION ACTIONS
+// - goToFacet
+// - buildFacetNavAction
+//
+// INTERNAL NAVIGATION SYNC
+// - lastSyncedFacetHash
+// - hash -> facet sync
+// - facet -> history sync
+// - route/ref load sync
+// - facet focus sync
+// - header facet sync
+// - validation facet redirect
+//
+// UI STATE
+// - isNewFeatureRef
+// - lastHeaderKey
+// - lastFormActionsSignature
+// - optimisticHeaderState
+// - isEditing
+// - showsVisualSection
+// - isVisualSectionCollapsed
+// - visualSectionReopenScrollStartAt
+// - visualSectionReopenBufferTimeout
+// - visualSectionReopenSettleTimeout
+// - isVisualSectionReopenArmed
+// - contentsElement
+//
+// UI EFFECTS
+// - optimistic header snapshot sync
+//
+// RESOURCE STATE
+// - feature
+// - committedFeature
+// - settledFeatureRef
+//
+// SET NAVIGATION STATE
+// - featureList
+// - currentFeatureId
+// - previousFeatureRef
+// - nextFeatureRef
+//
+// ON MOUNT
+// - fields facet guard
+// - new-feature bootstrap effects
+//
+// FORM STATE
+// - emptyFeatureFormSeed
+// - featureFormSource
+// - hasProgrammaticDirtyChanges
+// - suppressFormLevelIssues
+// - configuredFeatureForm
+// - formCtx
+// - isDirty
+// - isRequiredInPreflight
+// - currentFormValue
+//
+// USER + RESOURCE DERIVATIONS
+// - currentUser
+// - currentContributorUser
+// - currentAuthorizationUser
+// - currentFeatureData
+//
+// PARENT RESOURCE STATE
+// - organisationIdValue
+// - projectIdValue
+// - layerIdValue
+// - hasSelectedLayer
+// - selectedOrganisationById
+// - selectedProjectById
+// - selectedLayerById
+// - isReplacingParentOrganisation
+// - isReplacingParentProject
+// - isReplacingParentLayer
+// - selectedOrganisation
+// - selectedProject
+// - selectedLayer
+// - organisationIssues
+// - projectIssues
+// - layerIssues
+// - hiddenOrganisationInputAttrs
+// - hiddenProjectInputAttrs
+// - hiddenLayerInputAttrs
+// - syncSelectedOrganisation
+// - syncSelectedProject
+// - syncSelectedLayer
+// - applyFeatureParentSelection
+// - featureParentSectionCtrl
+// - getCreatableProjectRecords
+//
+// MAP STATE
+// - featureCoordinates
+// - initialMapCenter
+//
+// DESCRIPTOR STATE
+// - title
+//
+// IMAGE + PRESENTATION STATE
+// - isCanonicalImagePending
+// - canonicalImageMeasuredAspectRatio
+// - presentedCanonicalImageSrc
+// - presentedCanonicalImageHref
+// - presentedCanonicalImageTitle
+// - featureVisualSectionCtrl
+// - canonicalImageHref
+// - canonicalImage
+// - canonicalImageSrc
+// - resolvedCanonicalImageAspectRatio
+// - hasPresentedCanonicalImageSizing
+// - featureImageProviderProps
+// - featureImageProviderModel
+//
+// ISSUE STATE
+// - visibleAllIssues
+// - facetIssueState
+// - facetIssueSummary
+// - resolvedFacetTabsWithIssues
+// - formLevelIssues
+//
+// FIELD + PROPERTY STATE
+// - nonTranslatableItems
+// - translatableSpecifierItems
+// - featureDescriptorFieldConfigs
+// - featureDescriptorTranslatableFields
+// - commitFeatureState
+// - commitSettledFeatureState
+// - isCurrentRefLoaded
+// - isCurrentRefSettled
+// - refreshFeature
+// - syncLayerBackedProperties
+// - updateFeatureData
+// - updatePropertyValue
+// - updatePropertyI18nValue
+// - togglePropertyI18nValueGen
+//
+// PROGRAMMATIC FORM SERIALIZATION
+// - programmaticFeatureInputEntries
+//
+// TRANSLATION ACTIONS
+// - onTranslateDescriptorLocale
+// - onResetDescriptorLocale
+// - onTranslateTranslatableValues
+// - onResetTranslatableValues
+//
+// GEOMETRY + RESOURCE STATE TOGGLES
+// - handleCoordinateChange
+// - handleFeatureStateToggle
+// - onPublishToggle
+// - onDeleteToggle
+//
+// FORM ACTIONS
+// - revalidateAfterProgrammaticChange
+// - onSubmit
+// - onReset
+//
+// HEADER WIRING
+// - noopHeaderAction
+// - header handler wiring
+// - header status sync
+//
+// IMAGE EFFECTS
+// - canonical image pending sync
+// - canonical image ref sync
+// - canonical image presentation sync
+//
+// PARENT RESOURCE EFFECTS
+// - selected parent hydration
+// - new-feature parent bootstrap
+//
+// VISUAL SECTION EFFECTS
+// - visual section scroll wiring
+
+/********************
+ *  PAGE SETUP
+ ************/
+
+// § Context
 
 const adminCtx = getAdminCtx()
+
+// § Controllers
+
 const headerCtrl = getHeaderCtrl()
+
+// Build the shared editor controller once so route sync and header wiring stay consistent.
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.feature)
-const resourceEditorPage = createResourceEditorPage({
+const editorCtrl = getEditorCtrl({
   headerCtrl,
   icon: FeatureIcon,
   facetTabs,
 })
 
 const featureRef = $derived(page.params.feature as string)
+
+// § i18n
+
+const locales = $derived(getLocaleOrder(getLocaleKey()))
 const localeKey = $derived(getLocaleKey())
+
+// § Internal navigation
+
+let lastSyncedFacetHash = $state('')
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
+// Resolve the canonical facet order once so hash sync and step navigation use the same source.
+const featureFacetOrder = $derived.by(() =>
+  getAdminFacetOrderForResource(FirstClassResource.feature),
+)
+
+/********************
+ *  INTERNAL NAVIGATION STATE
+ ************/
+
 const isCoreFacet = $derived(activeFacet === 'core')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isAddressFacet = $derived(activeFacet === 'address')
 const isImagesFacet = $derived(activeFacet === 'images')
-const showsVisualSection = $derived(isCoreFacet || isFieldsFacet)
-const isNewFeatureRef = $derived(featureRef === NEW_REF)
-const locales = $derived(getLocaleOrder(localeKey))
-const parentLayerId = $derived(page.url.searchParams.get('parentId') ?? '')
-const visibleFacetTabs = $derived.by(() => {
-  const tabs = new Map(facetTabs)
-  if (isNewFeatureRef) tabs.delete('images')
-  return tabs
-})
-const visibleFacetOrder = $derived.by((): readonly FacetType[] =>
-  isNewFeatureRef
-    ? ['core', 'fields', 'address']
-    : ['core', 'fields', 'address', 'images'],
-)
 
-let emptyFeatureFormSeed = $state<FeatureFormInput>(
-  toEmptyFeatureFormInput(parentLayerId),
-)
-let featureFormSource = $state<FeatureFormInput>(emptyFeatureFormSeed)
-let feature = $state<FeatureGetState>(null)
-let committedFeature = $state<FeatureGetState>(null)
-let featureList = $state<Array<Record<string, any>>>([])
-let selectedOrganisationById = $state<Record<string, ParentSectionOrganisationItem>>({})
-let selectedProjectById = $state<Record<string, ParentSectionProjectItem>>({})
-let selectedLayerById = $state<Record<string, ParentSectionLayerItem>>({})
-let organisationReplaceOrganisationId = $state<string | null>(null)
-let organisationReplaceProjectId = $state<string | null>(null)
-let organisationReplaceLayerId = $state<string | null>(null)
-let projectReplaceProjectId = $state<string | null>(null)
-let projectReplaceLayerId = $state<string | null>(null)
-let layerReplaceLayerId = $state<string | null>(null)
-let isVisualSectionCollapsed = $state(false)
-let isCanonicalImageLoaded = $state(false)
-let isCanonicalImagePending = $state(false)
-let canonicalImageMeasuredAspectRatio = $state<number | null>(null)
-let presentedCanonicalImageSrc = $state<string | null>(null)
-let presentedCanonicalImageHref = $state<string | undefined>(undefined)
-let presentedCanonicalImageTitle = $state('')
+/********************
+ *  INTERNAL NAVIGATION ACTIONS
+ ************/
+
+function goToFacet(facet: FacetType): void {
+  if (facet === 'fields' && !hasSelectedLayer) return
+  if (facet === activeFacet) return
+  const href = getUrlForResource(
+    adminCtx,
+    FirstClassResource.feature,
+    featureRef,
+    facet,
+  )
+  if (!href) return
+  adminCtx.setFacet(facet, featureRef, FirstClassResource.feature)
+  void goto(href, {
+    noScroll: true,
+    keepFocus: true,
+    replaceState: false,
+  })
+}
+
+const buildFacetNavAction = createFacetNavActionBuilder<FacetType>({
+  resourceType: FirstClassResource.feature,
+  getFacetOrder: () => featureFacetOrder,
+  getActiveFacet: () => activeFacet as FacetType,
+  navigateToFacet: goToFacet,
+  isFacetDisabled: facet => facet === 'fields' && !hasSelectedLayer,
+})
+
+/********************
+ *  INTERNAL NAVIGATION SYNC
+ ************/
+
+// Reflect URL hash changes back into admin facet state without echoing locally synced updates.
+$effect(() => {
+  const currentHash = page.url.hash
+  if (currentHash === lastSyncedFacetHash) return
+  lastSyncedFacetHash = currentHash
+  syncAdminFacetFromHash({
+    hash: currentHash,
+    activeFacet,
+    facetOrder: featureFacetOrder,
+    adminCtx,
+    resourceType: FirstClassResource.feature,
+    resourceRef: featureRef,
+  })
+})
+
+// Keep browser history/hash output in sync when facet state changes from in-app navigation.
+bindAdminFacetHistorySync({
+  getFacetOrder: () => featureFacetOrder,
+  getActiveFacet: () => adminCtx.activeFacet as FacetType | false,
+  adminCtx,
+  resourceType: FirstClassResource.feature,
+  getResourceRef: () => featureRef,
+})
+
+// Delegate feature-ref transitions to the shared editor controller so load/reset behavior stays centralized.
+$effect(() => {
+  const resolvedFacetTabsSnapshot = untrack(() => facetTabs)
+  return editorCtrl.syncRouteAndLoad({
+    ref: featureRef,
+    resetFormActionsSignature: () => {
+      lastFormActionsSignature = ''
+      suppressFormLevelIssues = true
+      settledFeatureRef = null
+    },
+    setFacetForRef: nextRef => {
+      untrack(() => {
+        const currentFacet = adminCtx.activeFacet
+        const nextFacet =
+          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+            ? currentFacet
+            : 'core'
+        adminCtx.setFacet(nextFacet as never, nextRef, FirstClassResource.feature)
+      })
+    },
+    load: refreshFeature,
+    commit: commitSettledFeatureState,
+  })
+})
+
+// Move focus into the active facet section after the active facet or form root changes.
+$effect(() => {
+  activeFacet
+  contentsElement
+  focusFacetFromHash(contentsElement, activeFacet)
+})
+
+// Rebuild the header facet model only when its visible signature changes.
+$effect(() => {
+  const resolvedFacets = resolveOptimisticHeaderFacets(
+    isCurrentRefSettled,
+    resolvedFacetTabsWithIssues,
+    optimisticHeaderState,
+  )
+  const displayFacets = (
+    Array.isArray(resolvedFacets)
+      ? resolvedFacets
+      : Array.from(resolvedFacets.entries()).map(([ref, config]) =>
+          typeof config === 'string'
+            ? { ref, label: config, icon: null, disabled: false }
+            : {
+                ref,
+                label: config.label,
+                icon: config.icon ?? null,
+                hasIssues: config.hasIssues === true,
+                disabled: false,
+              },
+        )
+  ).map(facet => ({
+    ...facet,
+    disabled: facet.ref === 'fields' ? !hasSelectedLayer : Boolean(facet.disabled),
+  }))
+  const facetKey = displayFacets
+    .map(
+      facet =>
+        `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}:${facet.disabled === true ? '1' : '0'}`,
+    )
+    .join('|')
+  const headerKey = `${featureRef}:${title}:${facetKey}`
+  if (headerKey === lastHeaderKey) return
+  lastHeaderKey = headerKey
+  untrack(() => {
+    headerCtrl.setHeaderForEntity(title, FeatureIcon, new Map())
+    headerCtrl.setFacets(displayFacets)
+  })
+})
+
+// After a failed submit, jump to the first facet with issues so validation errors are immediately visible.
+$effect(() => {
+  if (!formCtx.wasSubmitAttempted) return
+  if (visibleAllIssues.length === 0) return
+  const targetFacet = facetIssueSummary.firstFacetWithIssues
+  if (!targetFacet) return
+  if (activeFacet === targetFacet) return
+  adminCtx.setFacet(targetFacet, featureRef, FirstClassResource.feature)
+})
+
+/********************
+ *  UI STATE
+ ************/
+
+// § Variant
+
+const isNewFeatureRef = $derived(featureRef === NEW_REF)
+
+// § Header
+
 let lastHeaderKey = ''
 let lastFormActionsSignature = ''
+// Preserve the last known header affordances while the next ref is still loading.
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
   canPublish: true,
@@ -147,19 +549,709 @@ let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   isDeleted: false,
   facets: [],
 })
+const isEditing = $derived(headerCtrl.state.isEditing)
+
+// § Sections
+
+// Only keep the visual section mounted on facets that actually render it.
+const showsVisualSection = $derived(isCoreFacet || isFieldsFacet)
+let isVisualSectionCollapsed = $state(
+  adminCtx.appCtx.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
+)
+let visualSectionReopenScrollStartAt: number | null = null
+let visualSectionReopenBufferTimeout: ReturnType<typeof setTimeout> | null = null
+let visualSectionReopenSettleTimeout: ReturnType<typeof setTimeout> | null = null
+let isVisualSectionReopenArmed = true
+
+// § Elements
+
+let contentsElement = $state<HTMLFormElement | undefined>()
+
+/********************
+ *  UI EFFECTS
+ ************/
+
+$effect(() => {
+  featureRef
+  optimisticHeaderState = captureHeaderTransitionSnapshot(headerCtrl)
+})
+
+$effect(() => {
+  const isImageFacetActive = isImagesFacet
+  const status = resolveOptimisticHeaderStatus({
+    isSettled: isCurrentRefSettled,
+    isImageFacetActive,
+    isNewRef: isNewFeatureRef,
+    dirty: isDirty,
+    isSubmitting: formCtx.submitting,
+    hasIssues: visibleAllIssues.length > 0,
+    isPublished: Boolean(feature?.data?.isPublished),
+    isDeleted: Boolean(feature?.data?.isArchived),
+    canEdit: true,
+    canPublish: true,
+    showDeleteAction: !isNewFeatureRef,
+    showPublishAction: !isNewFeatureRef,
+    snapshot: optimisticHeaderState,
+  })
+  const inertActionOverrides =
+    isCurrentRefSettled && !isImageFacetActive
+      ? {}
+      : {
+          onEditingToggle: noopHeaderAction,
+          onReset: noopHeaderAction,
+          onSave: noopHeaderAction,
+          onDeleteToggle: noopHeaderAction,
+          onPublishToggle: noopHeaderAction,
+        }
+
+  lastFormActionsSignature = editorCtrl.syncHeaderStatus({
+    headerCtrl,
+    status: {
+      ...status,
+      ...inertActionOverrides,
+    },
+    lastSignature: lastFormActionsSignature,
+  })
+})
+
+/********************
+ *  RESOURCE STATE
+ ************/
+
+let feature = $state<FeaturePageState>(null)
+let committedFeature = $state<FeaturePageState>(null)
+let settledFeatureRef = $state<string | null>(null)
+
+/********************
+ *  SET NAVIGATION STATE
+ ************/
+
+const featureList = $derived(adminCtx.appCtx.state.resources.feature ?? [])
+const currentFeatureId = $derived(feature?.data?.id ?? null)
+const featureStepperRefs = $derived(
+  getAdjacentResourceRefs(featureList, currentFeatureId),
+)
+const previousFeatureRef = $derived(featureStepperRefs.previousRef)
+const nextFeatureRef = $derived(featureStepperRefs.nextRef)
+
+/********************
+ *  ON MOUNT
+ ************/
+
+onMount(() => {
+  untrack(() => {
+    editorCtrl.wireHeaderHandlers({
+      reset: onReset,
+      submit: onSubmit,
+      togglePublish: onPublishToggle,
+      toggleDelete: onDeleteToggle,
+    })
+  })
+})
+
+$effect(() => {
+  if (activeFacet !== 'fields') return
+  if (hasSelectedLayer) return
+  untrack(() => {
+    adminCtx.setFacet('core', featureRef, FirstClassResource.feature)
+  })
+})
 
 $effect(() => {
   if (!isNewFeatureRef) return
-  const nextSeed = toEmptyFeatureFormInput(parentLayerId)
+  if (!organisationIdValue || projectIdValue) return
+
+  let cancelled = false
+  void getCreatableProjectRecords({
+    organisationIds: [organisationIdValue],
+  }).then(projects => {
+    if (cancelled || projectIdValue) return
+    if (projects.length !== 1) return
+
+    const project = toParentProjectItem(projects[0])
+    if (!project) return
+    onReplaceParentProject(project)
+  })
+
+  return () => {
+    cancelled = true
+  }
+})
+
+$effect(() => {
+  if (!isNewFeatureRef) return
+  if (!projectIdValue || layerIdValue) return
+
+  let cancelled = false
+  void getLayers({
+    q: '',
+    prisms: createFeatureParentSearchPrisms({
+      organisationIds: organisationIdValue ? [organisationIdValue] : [],
+      projectIds: [projectIdValue],
+    }),
+    conditions: { isArchived: false, isPublished: null },
+    meta: { isAdminRequest: true, profile: 'admin' as const },
+  }).then(result => {
+    if (cancelled || layerIdValue) return
+
+    const layers = (result.data ?? [])
+      .map(item => toParentLayerItem(item as never))
+      .filter(Boolean) as ParentSectionLayerItem[]
+
+    if (layers.length !== 1) return
+    onReplaceParentLayer(layers[0])
+  })
+
+  return () => {
+    cancelled = true
+  }
+})
+
+/********************
+ *  FORM STATE
+ ************/
+
+let hasProgrammaticDirtyChanges = $state(false)
+let suppressFormLevelIssues = $state(false)
+const initialEmptyFeatureFormSeed = toEmptyFeatureFormInput()
+let emptyFeatureFormSeed = $state<FeatureFormInput>(initialEmptyFeatureFormSeed)
+let featureFormSource = $state<FeatureFormInput>(initialEmptyFeatureFormSeed)
+
+const configuredFeatureForm = configureForm(() => ({
+  form: featureForm as never,
+  onsubmit: (({ data }: { data: FeatureFormInput }) => {
+    // Stamp create/update submit metadata late so the payload always matches the active ref.
+    const submittedPayload = prepareSubmitPayloadMeta(data, {
+      defaultMode: isNewFeatureRef ? 'create' : 'update',
+      resolveUpdateId: () => feature?.data?.id ?? committedFeature?.data?.id ?? '',
+    })
+    return submittedPayload as typeof data
+  }) as never,
+  ...createResourceFormConfig({
+    formEl: contentsElement,
+    key: featureRef,
+    schema: FeaturePreflightFormData as never,
+    data: featureFormSource,
+    submitUpdates: async () => {
+      // Refresh the list after every submit and prepend the entity query when editing an existing feature.
+      const updates: Array<RemoteQuery<unknown> | RemoteQueryOverride> = [
+        getFeatures({
+          conditions: adminCtx.appCtx.isSuperAdmin()
+            ? { isArchived: null, isPublished: null }
+            : { isArchived: false, isPublished: null },
+          prisms: adminCtx.appCtx.state.prisms,
+          meta: { isAdminRequest: true, profile: 'card' },
+        }),
+      ]
+
+      if (!isNewFeatureRef) {
+        updates.unshift(
+          getFeature({
+            ref: featureRef,
+            refKey: 'id',
+            meta: { isAdminRequest: true, profile: 'admin' },
+          }),
+        )
+      }
+
+      return updates
+    },
+    adminCtx,
+    headerCtrl,
+    resourceType: FirstClassResource.feature,
+    getEntity: () => feature,
+    refreshResource: async () => {
+      await refreshFeature()
+    },
+  }),
+  onissues: ({ issues }) => {
+    console.error('[feature-editor] preflight invalidation', {
+      featureRef,
+      issues: issues.map(issue => ({
+        path: issue.path,
+        message: issue.message,
+      })),
+    })
+  },
+}))
+const formCtx = $derived(configuredFeatureForm())
+const isDirty = $derived(Boolean(formCtx.dirty || hasProgrammaticDirtyChanges))
+const isRequiredInPreflight = createSchemaRequiredInferer(() => featureFormSource)
+const currentFormValue = $derived(formCtx.form.fields.value() as FeatureFormInput)
+const currentFeatureData = $derived(currentFormValue?.data ?? emptyFeatureFormSeed.data)
+
+// Hide form-level issues during programmatic resets so transient invalid states do not flash.
+const visibleAllIssues = $derived.by((): unknown[] =>
+  suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
+)
+// Derive both the first bad facet and the decorated facet tabs from the same issue snapshot.
+const facetIssueState = $derived.by(() =>
+  resolveFacetTabsWithIssues({
+    issues: visibleAllIssues,
+    facets: facetTabs,
+    formEl: contentsElement,
+  }),
+)
+const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
+const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
+const formLevelIssues = $derived.by((): string[] =>
+  toFormLevelIssueMessages(visibleAllIssues),
+)
+
+/********************
+ *  FORM STATE : EFFECTS
+ ************/
+
+$effect(() => {
+  if (!isNewFeatureRef) return
+  const nextSeed = toEmptyFeatureFormInput()
+  nextSeed.data.contributorId = currentUser?.id ?? null
   emptyFeatureFormSeed = nextSeed
   featureFormSource = nextSeed
 })
 
+/********************
+ *  SECTION : CORE STATE
+ ************/
+
+let selectedOrganisationById = $state<Record<string, ParentSectionOrganisationItem>>({})
+let selectedProjectById = $state<Record<string, ParentSectionProjectItem>>({})
+let selectedLayerById = $state<Record<string, ParentSectionLayerItem>>({})
+
+let isReplacingParentOrganisation = $state(false)
+let isReplacingParentProject = $state(false)
+let isReplacingParentLayer = $state(false)
+
+const organisationIdValue = $derived(String(currentFeatureData.organisationId ?? ''))
+const projectIdValue = $derived(String(currentFeatureData.projectId ?? ''))
+const layerIdValue = $derived(String(currentFeatureData.layerId ?? ''))
+const hasSelectedLayer = $derived(layerIdValue.trim().length > 0)
+
+// Resolve the currently selected hydrated parent records from the local caches keyed by form ids.
+const selectedOrganisation = $derived.by(() => {
+  if (!organisationIdValue) return null
+  return selectedOrganisationById[organisationIdValue] ?? null
+})
+const selectedProject = $derived.by(() => {
+  if (!projectIdValue) return null
+  return selectedProjectById[projectIdValue] ?? null
+})
+const selectedLayer = $derived.by(() => {
+  if (!layerIdValue) return null
+  return selectedLayerById[layerIdValue] ?? null
+})
+
+// Fall back to the new-feature coordinates until the form geometry becomes valid.
+const featureCoordinates = $derived(
+  getCoordinates(
+    ((currentFeatureData.geometry as Point)?.coordinates ??
+      DEFAULT_NEW_FEATURE_COORDINATES) as [number, number],
+  ),
+)
+const title = $derived(
+  currentFeatureData.i18n?.[localeKey]?.title ||
+    feature?.data?.i18n?.[localeKey]?.title ||
+    NEW_TITLE,
+)
+
+const featureDescriptorFieldConfigs = [
+  { key: 'title', label: m.feature__title(), kind: 'input' },
+  { key: 'description', label: m.feature__description(), kind: 'textarea' },
+] as const
+const featureDescriptorTranslatableFields = ['title', 'description'] as const
+
+/********************
+ *  SECTION : CORE ISSUES
+ ************/
+
+const organisationIssues = $derived(
+  getIssueMessagesForPath(visibleAllIssues, ['data', 'organisationId']),
+)
+const projectIssues = $derived(
+  getIssueMessagesForPath(visibleAllIssues, ['data', 'projectId']),
+)
+const layerIssues = $derived(
+  getIssueMessagesForPath(visibleAllIssues, ['data', 'layerId']),
+)
+
+/********************
+ *  SECTION : CORE FLAGS
+ ************/
+
+async function handleFeatureStateToggle(
+  field: 'isPublished' | 'isArchived',
+): Promise<void> {
+  if (!isCurrentRefLoaded) return
+  const current = feature?.data
+  if (!current) return
+  const nextState = !current[field]
+  const mutate = field === 'isPublished' ? publishFeature : archiveFeature
+  const setBusy =
+    field === 'isPublished'
+      ? (value: boolean) => headerCtrl.setPublishing(value)
+      : (value: boolean) => headerCtrl.setDeleting(value)
+
+  try {
+    setBusy(true)
+    await mutate({
+      id: current.id,
+      state: nextState,
+      meta: { isAdminRequest: true },
+    }).updates(
+      getFeature({
+        ref: current.id,
+        refKey: 'id',
+        meta: { isAdminRequest: true, profile: 'admin' },
+      }).withOverride(overrideResourceEntityBoolean(field, nextState)),
+      getFeatures({
+        conditions: adminCtx.appCtx.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: adminCtx.appCtx.state.prisms,
+        meta: { isAdminRequest: true, profile: 'card' },
+      }).withOverride(overrideResourceListItemBoolean(current.id, field, nextState)),
+    )
+
+    await refreshFeature()
+    toast.success(
+      `${
+        field === 'isPublished'
+          ? nextState
+            ? m.published()
+            : m.forms__unpublished()
+          : nextState
+            ? m.forms__delete()
+            : m.forms__restored()
+      } ${getNameForToast(feature, 'title')}`,
+    )
+  } catch {
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    setBusy(false)
+  }
+}
+
+function onPublishToggle(): void {
+  void handleFeatureStateToggle('isPublished')
+}
+
+function onDeleteToggle(): void {
+  void handleFeatureStateToggle('isArchived')
+}
+
+/********************
+ *  SECTION : CORE I18N
+ ************/
+
+async function onTranslateDescriptorLocale(
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> {
+  const targetLocaleKey = toLocaleKey(targetLocale)
+  const fieldsToTranslate = featureDescriptorTranslatableFields.filter(field => {
+    const currentValue = currentFeatureData.i18n?.[targetLocaleKey]?.[field] ?? ''
+    return currentValue.trim().length === 0
+  })
+  if (fieldsToTranslate.length === 0) return false
+
+  const translated = await translateI18nFields({
+    source: sourceLocale,
+    target: targetLocale,
+    fields: [...fieldsToTranslate],
+    i18n: {
+      en: Object.fromEntries(
+        fieldsToTranslate.map(field => [
+          field,
+          currentFeatureData.i18n?.en?.[field] ?? '',
+        ]),
+      ),
+      'zh-hans': Object.fromEntries(
+        fieldsToTranslate.map(field => [
+          field,
+          currentFeatureData.i18n?.zhHans?.[field] ?? '',
+        ]),
+      ),
+      'zh-hant': Object.fromEntries(
+        fieldsToTranslate.map(field => [
+          field,
+          currentFeatureData.i18n?.zhHant?.[field] ?? '',
+        ]),
+      ),
+    },
+  })
+
+  updateFeatureData(
+    data => ({
+      ...data,
+      i18n: {
+        ...data.i18n,
+        [targetLocaleKey]: {
+          ...data.i18n[targetLocaleKey],
+          ...Object.fromEntries(
+            fieldsToTranslate.map(field => [field, translated[field] ?? '']),
+          ),
+          ...Object.fromEntries(
+            fieldsToTranslate.map(field => [
+              `${field}Gen`,
+              Boolean((translated[field] ?? '').trim()),
+            ]),
+          ),
+        },
+      },
+    }),
+    { revalidate: true },
+  )
+  return true
+}
+
+function onResetDescriptorLocale(targetLocale: Locale): void {
+  const targetLocaleKey = toLocaleKey(targetLocale)
+  updateFeatureData(
+    data => ({
+      ...data,
+      i18n: {
+        ...data.i18n,
+        [targetLocaleKey]: {
+          ...data.i18n[targetLocaleKey],
+          title: '',
+          titleGen: false,
+          description: '',
+          descriptionGen: false,
+        },
+      },
+    }),
+    { revalidate: true },
+  )
+}
+
+async function onTranslateTranslatableValues(
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> {
+  const targetLocaleKey = toLocaleKey(targetLocale)
+  const propertyIds = translatableSpecifierItems
+    .filter(property => {
+      const currentValue = property.i18n?.[targetLocaleKey]?.value ?? ''
+      return currentValue.trim().length === 0
+    })
+    .map(property => property.propertyId)
+
+  if (propertyIds.length === 0) return false
+
+  const i18nPayload = {
+    en: Object.fromEntries(
+      propertyIds.map(propertyId => [
+        propertyId,
+        translatableSpecifierItems.find(property => property.propertyId === propertyId)
+          ?.i18n?.en?.value ?? '',
+      ]),
+    ),
+    'zh-hans': Object.fromEntries(
+      propertyIds.map(propertyId => [
+        propertyId,
+        translatableSpecifierItems.find(property => property.propertyId === propertyId)
+          ?.i18n?.zhHans?.value ?? '',
+      ]),
+    ),
+    'zh-hant': Object.fromEntries(
+      propertyIds.map(propertyId => [
+        propertyId,
+        translatableSpecifierItems.find(property => property.propertyId === propertyId)
+          ?.i18n?.zhHant?.value ?? '',
+      ]),
+    ),
+  }
+
+  const translated = await translateI18nFields({
+    source: sourceLocale,
+    target: targetLocale,
+    fields: propertyIds,
+    i18n: i18nPayload,
+  })
+
+  for (const propertyId of propertyIds) {
+    const nextValue = translated[propertyId] ?? ''
+    updatePropertyI18nValue(
+      propertyId,
+      targetLocaleKey,
+      nextValue,
+      nextValue.trim().length > 0,
+    )
+  }
+  revalidateAfterProgrammaticChange()
+  return true
+}
+
+function onResetTranslatableValues(targetLocale: Locale): void {
+  const targetLocaleKey = toLocaleKey(targetLocale)
+  for (const property of translatableSpecifierItems) {
+    updatePropertyI18nValue(property.propertyId, targetLocaleKey, '', false)
+  }
+  revalidateAfterProgrammaticChange()
+}
+
+/********************
+ *  SECTION : CORE HIDDEN INPUTS
+ ************/
+
+// Mirror parent ids into hidden controls so replacement flows keep submitting the current selection.
+const hiddenOrganisationInputAttrs = $derived.by(() => {
+  if (!organisationIdValue) return null
+  return formCtx.form.fields.data.organisationId.as('hidden', organisationIdValue)
+})
+const hiddenProjectInputAttrs = $derived.by(() => {
+  if (!projectIdValue) return null
+  return formCtx.form.fields.data.projectId.as('hidden', projectIdValue)
+})
+const hiddenLayerInputAttrs = $derived.by(() => {
+  if (!layerIdValue) return null
+  return formCtx.form.fields.data.layerId.as('hidden', layerIdValue)
+})
+
+/********************
+ *  USER STATE
+ ************/
+
+const currentUser = $derived(adminCtx.appCtx.user ?? null)
+const currentContributorUser = $derived(toCurrentContributorUser(currentUser))
+const currentAuthorizationUser = $derived(toCurrentAuthorizationUser(currentUser))
+
+/********************
+ *  MAP STATE
+ ************/
+
+const initialMapCenter = $derived(getUserLocationCoordinates(adminCtx.appCtx))
+
+/********************
+ *  MAP MUTATION
+ ************/
+
+function handleCoordinateChange(nextCoordinates: number[]): void {
+  updateFeatureData(
+    data => ({
+      ...data,
+      geometry: {
+        ...(data.geometry as Point),
+        type: 'Point',
+        coordinates: nextCoordinates,
+      },
+    }),
+    { revalidate: true },
+  )
+}
+
+/********************
+ *  IMAGE STATE
+ ************/
+
+let isCanonicalImagePending = $state(false)
+let canonicalImageMeasuredAspectRatio = $state<number | null>(null)
+let presentedCanonicalImageSrc = $state<string | null>(null)
+let presentedCanonicalImageHref = $state<string | undefined>(undefined)
+let presentedCanonicalImageTitle = $state(NEW_TITLE)
+const featureVisualSectionCtrl = createFeatureVisualSectionController({
+  adminCtx,
+  getActiveFacet: () => activeFacet,
+  getShowsVisualSection: () => showsVisualSection,
+  getPreviousFeatureRef: () => previousFeatureRef,
+  getNextFeatureRef: () => nextFeatureRef,
+  getIsVisualSectionCollapsed: () => isVisualSectionCollapsed,
+  setIsVisualSectionCollapsed: value => {
+    isVisualSectionCollapsed = value
+  },
+  getVisualSectionReopenScrollStartAt: () => visualSectionReopenScrollStartAt,
+  setVisualSectionReopenScrollStartAt: value => {
+    visualSectionReopenScrollStartAt = value
+  },
+  getVisualSectionReopenBufferTimeout: () => visualSectionReopenBufferTimeout,
+  setVisualSectionReopenBufferTimeout: value => {
+    visualSectionReopenBufferTimeout = value
+  },
+  getVisualSectionReopenSettleTimeout: () => visualSectionReopenSettleTimeout,
+  setVisualSectionReopenSettleTimeout: value => {
+    visualSectionReopenSettleTimeout = value
+  },
+  getIsVisualSectionReopenArmed: () => isVisualSectionReopenArmed,
+  setIsVisualSectionReopenArmed: value => {
+    isVisualSectionReopenArmed = value
+  },
+  getContentsElement: () => contentsElement,
+  setCanonicalImageMeasuredAspectRatio: value => {
+    canonicalImageMeasuredAspectRatio = value
+  },
+})
+const {
+  clearVisualSectionReopenState,
+  collapseVisualSectionAndScrollToTop,
+  expandVisualSection,
+  handleCanonicalImageLoad,
+  handleFeatureStepperNavigation,
+  syncVisualSectionWithScrollPosition,
+  syncVisualSectionWithWheelIntent,
+} = featureVisualSectionCtrl
+
+// Keep visual-section routing and presentation URLs derived from the currently committed feature image.
+const canonicalImageHref = $derived(
+  getFeatureImagesFacetHref(adminCtx, feature?.data?.id as Id | null | undefined),
+)
+const canonicalImage = $derived.by(() => {
+  const primaryImage = (feature?.data?.image as ImageCtxEnvelope | null) ?? null
+  if (primaryImage) return primaryImage
+
+  const fallbackImage = Array.isArray(feature?.data?.images)
+    ? ((feature?.data?.images[0] as ImageCtxEnvelope | null | undefined) ?? null)
+    : null
+
+  return fallbackImage
+})
+const canonicalImageSrc = $derived(getSafeImageUrl(canonicalImage))
+const resolvedCanonicalImageAspectRatio = $derived(
+  canonicalImageMeasuredAspectRatio ?? 1,
+)
+const hasPresentedCanonicalImageSizing = $derived(
+  Boolean(presentedCanonicalImageSrc && canonicalImageMeasuredAspectRatio != null),
+)
+
+// Build image-provider context from the resolved parent hierarchy so gallery actions target the right feature.
+const featureImageProviderProps = $derived.by(() => {
+  const featureData = feature?.data
+  const organisation =
+    selectedOrganisation ??
+    adminCtx.appCtx.state.resources.organisation?.find(
+      item => item.id === organisationIdValue,
+    ) ??
+    null
+  const project =
+    selectedProject ??
+    adminCtx.appCtx.state.resources.project?.find(item => item.id === projectIdValue) ??
+    null
+
+  return getFeatureImageProviderOptions({
+    featureRef,
+    isNewFeatureRef,
+    feature: featureData,
+    organisation,
+    project,
+  })
+})
+
+const featureImageProviderModel = useImageProviderModel(
+  () => page,
+  () => featureImageProviderProps,
+)
+
+/********************
+ *  IMAGE : EFFECTS
+ ************/
+
 $effect(() => {
   canonicalImageSrc
-  isCanonicalImageLoaded = false
   isCanonicalImagePending = Boolean(presentedCanonicalImageSrc)
-  canonicalImageMeasuredAspectRatio = null
+
+  // Keep the last confirmed ratio while a replacement image is loading.
+  if (!presentedCanonicalImageSrc) {
+    canonicalImageMeasuredAspectRatio = null
+  }
 })
 
 $effect(() => {
@@ -175,10 +1267,13 @@ $effect(() => {
   const nextTitle = title
 
   if (!nextSrc) {
-    presentedCanonicalImageSrc = null
-    presentedCanonicalImageHref = nextHref
-    presentedCanonicalImageTitle = nextTitle
-    isCanonicalImagePending = false
+    if (isCurrentRefSettled) {
+      presentedCanonicalImageSrc = null
+      presentedCanonicalImageHref = nextHref
+      presentedCanonicalImageTitle = nextTitle
+      isCanonicalImagePending = false
+      canonicalImageMeasuredAspectRatio = null
+    }
     return
   }
 
@@ -192,11 +1287,15 @@ $effect(() => {
   let cancelled = false
   const image = new Image()
 
+  // Show the resolved image source immediately and keep it in a pending visual
+  // state while the browser finishes loading/measuring the asset.
+  presentedCanonicalImageSrc = nextSrc
+  presentedCanonicalImageHref = nextHref
+  presentedCanonicalImageTitle = nextTitle
+  isCanonicalImagePending = true
+
   image.onload = () => {
     if (cancelled) return
-    presentedCanonicalImageSrc = nextSrc
-    presentedCanonicalImageHref = nextHref
-    presentedCanonicalImageTitle = nextTitle
     isCanonicalImagePending = false
     handleCanonicalImageLoad({
       width: image.naturalWidth,
@@ -206,9 +1305,6 @@ $effect(() => {
 
   image.onerror = () => {
     if (cancelled) return
-    presentedCanonicalImageSrc = nextSrc
-    presentedCanonicalImageHref = nextHref
-    presentedCanonicalImageTitle = nextTitle
     isCanonicalImagePending = false
   }
 
@@ -219,225 +1315,270 @@ $effect(() => {
   }
 })
 
-const configuredFeatureForm = configureForm(() => ({
-  form: featureForm as never,
-  onsubmit: (({ data }: { data: FeatureFormInput }) => {
-    const submittedPayload = prepareSubmitPayloadMeta(data, {
-      defaultMode: isNewFeatureRef ? 'create' : 'update',
-      resolveUpdateId: () => feature?.data?.id ?? committedFeature?.data?.id ?? '',
-    })
-    return submittedPayload as typeof data
-  }) as never,
-  key: featureRef,
-  schema: FeaturePreflightFormData as never,
-  data: featureFormSource,
-}))
-const formCtx = $derived(configuredFeatureForm())
-const currentFormValue = $derived(formCtx.form.fields.value() as FeatureFormInput)
-const currentFeatureData = $derived(currentFormValue?.data ?? emptyFeatureFormSeed.data)
-const isRequiredInPreflight = createSchemaRequiredInferer(() => featureFormSource)
-const isEditing = $derived(isNewFeatureRef || headerCtrl.state.isEditing)
-const organisationIdValue = $derived(String(currentFeatureData.organisationId ?? ''))
-const projectIdValue = $derived(String(currentFeatureData.projectId ?? ''))
-const layerIdValue = $derived(String(currentFeatureData.layerId ?? ''))
-const hasSelectedLayer = $derived(layerIdValue.trim().length > 0)
-const title = $derived(
-  currentFeatureData.i18n?.[localeKey]?.title ||
-    feature?.data?.i18n?.[localeKey]?.title ||
-    m.feature__title(),
-)
-const featureCoordinates = $derived(
-  getCoordinates(
-    ((currentFeatureData.geometry as Point)?.coordinates ?? [
-      114.1693671540923, 22.319307515052614,
-    ]) as [number, number],
-  ),
-)
-const initialMapCenter = $derived.by(() => {
-  const userLocation = adminCtx.appCtx.state.userLocation
-  if (!userLocation) return null
-  return [userLocation.coords.longitude, userLocation.coords.latitude] as [
-    number,
-    number,
-  ]
-})
-const canonicalImageHref = $derived(
-  feature?.data?.id
-    ? (getUrlForResource(
-        adminCtx,
-        FirstClassResource.feature,
-        feature.data.id,
-        'images',
-      ) ?? undefined)
-    : undefined,
-)
-const canonicalImage = $derived(feature?.data?.image as ImageCtxEnvelope | null)
-const canonicalImageSrc = $derived.by(() => {
-  if (!canonicalImage) return null
-  try {
-    return getURLfromImage({ image: canonicalImage })
-  } catch {
-    return null
-  }
-})
-const resolvedCanonicalImageAspectRatio = $derived(
-  canonicalImageMeasuredAspectRatio ?? 1,
-)
-const visualSectionClass = $derived(
-  [
-    'bits-feature-editor__section',
-    'bits-feature-editor__section--with-visual',
-    isVisualSectionCollapsed
-      ? 'bits-feature-editor__section--visual-collapsed'
-      : 'bits-feature-editor__section--visual-expanded',
-  ].join(' '),
-)
-const sectionClass = 'bits-feature-editor__section'
-const featureDescriptorFieldConfigs = [
-  { key: 'title', label: m.feature__title(), kind: 'input' },
-  { key: 'description', label: m.feature__description(), kind: 'textarea' },
-] as const
+/********************
+ *  SECTION : FIELDS STATE
+ ************/
+
 const nonTranslatableItems = $derived(
-  (currentFeatureData.properties ?? [])
-    .filter(
-      property =>
-        property.property?.type === 'classifier' ||
-        (property.property?.type === 'specifier' && !property.property?.isTranslatable),
-    )
-    .map(property => ({
-      property: property.property!,
-      value: property.value ?? '',
-      checked: property.value === 'true',
-      isEditing,
-      options:
-        property.property?.values?.map((option: any) => ({
-          value: option.id,
-          label:
-            option.i18n?.[localeKey]?.value ?? option.i18n?.en?.value ?? option.value,
-        })) ?? [],
-      onChange: (nextValue: string | boolean) => {
-        updatePropertyValue(property.propertyId, nextValue)
-      },
-    })),
+  getNonTranslatableFeatureFieldItems({
+    properties: currentFeatureData.properties,
+    localeKey,
+    isEditing,
+    onChange: updatePropertyValue,
+  }),
 )
+
 const translatableSpecifierItems = $derived(
-  (currentFeatureData.properties ?? []).filter(
-    property =>
-      property.property?.type === 'specifier' &&
-      Boolean(property.property?.isTranslatable),
-  ),
+  getTranslatableSpecifierProperties(currentFeatureData.properties),
 )
-const visibleAllIssues = $derived(
-  (formCtx.allIssues ?? []) as Array<{
-    message?: string
-    path?: Array<string | number>
-  }>,
+
+/********************
+ *  SECTION :: FIELDS MUTATION
+ ************/
+
+function updatePropertyValue(propertyId: string, nextValue: string | boolean): void {
+  updateFeatureData(data => ({
+    ...data,
+    properties: (data.properties ?? []).map(property =>
+      property.propertyId === propertyId
+        ? {
+            ...property,
+            value:
+              typeof nextValue === 'boolean' ? String(nextValue) : String(nextValue),
+            propertyValueId:
+              property.property?.component === 'SelectField'
+                ? String(nextValue)
+                : property.propertyValueId,
+          }
+        : property,
+    ),
+  }))
+}
+
+function updatePropertyI18nValue(
+  propertyId: string,
+  locale: keyof FeatureFormInput['data']['i18n'],
+  nextValue: string,
+  valueGen: boolean = false,
+): void {
+  updateFeatureData(data => ({
+    ...data,
+    properties: (data.properties ?? []).map(property =>
+      property.propertyId === propertyId
+        ? {
+            ...property,
+            i18n: {
+              en: property.i18n?.en ?? { value: '', valueGen: false },
+              zhHans: property.i18n?.zhHans ?? { value: '', valueGen: false },
+              zhHant: property.i18n?.zhHant ?? { value: '', valueGen: false },
+              ...(property.i18n ?? {}),
+              [locale]: {
+                value: nextValue,
+                valueGen,
+              },
+            },
+          }
+        : property,
+    ),
+  }))
+}
+
+function togglePropertyI18nValueGen(
+  propertyId: string,
+  locale: keyof FeatureFormInput['data']['i18n'],
+): void {
+  const currentProperty = currentFeatureData.properties?.find(
+    property => property.propertyId === propertyId,
+  )
+
+  updatePropertyI18nValue(
+    propertyId,
+    locale,
+    currentProperty?.i18n?.[locale]?.value ?? '',
+    !currentProperty?.i18n?.[locale]?.valueGen,
+  )
+}
+
+/**
+ * Refreshes layer-backed feature properties for the current layer selection.
+ *
+ * @param layerId Selected layer id, if any.
+ * @returns A promise that resolves after property state is synchronized.
+ */
+async function syncLayerBackedProperties(
+  layerId: string | null | undefined,
+): Promise<void> {
+  const resolvedLayerId = layerId?.trim() ?? ''
+
+  if (!resolvedLayerId) {
+    updateFeatureData(data => {
+      if ((data.properties ?? []).length === 0) return data
+      return {
+        ...data,
+        properties: [],
+      }
+    })
+    return
+  }
+
+  try {
+    // Fetch the authoritative layer definition before rebuilding derived feature properties.
+    const result = await getLayer({
+      ref: resolvedLayerId,
+      refKey: 'id',
+      meta: { isAdminRequest: true, profile: 'admin' },
+    })
+    const layer = (result?.data ?? null) as Layer | null
+    syncSelectedLayer(toParentLayerItem(layer as never))
+    updateFeatureData(data => ({
+      ...data,
+      properties: toLayerBackedFeatureProperties(layer, data.properties),
+    }))
+  } catch {
+    updateFeatureData(data => {
+      if ((data.properties ?? []).length === 0) return data
+      return {
+        ...data,
+        properties: [],
+      }
+    })
+  }
+}
+
+/********************
+ *  FORM MUTATION
+ ************/
+
+/**
+ * Applies a programmatic form-data mutation and optionally revalidates issues.
+ *
+ * @param mutator Pure function that returns the next feature form data.
+ * @param options Optional revalidation behavior.
+ */
+function updateFeatureData(
+  mutator: (data: FeatureFormInput['data']) => FeatureFormInput['data'],
+  options: { revalidate?: boolean } = {},
+): void {
+  updateFormData(formCtx.form, data => mutator(data as FeatureFormInput['data']))
+  hasProgrammaticDirtyChanges = true
+  if (options.revalidate) revalidateAfterProgrammaticChange()
+}
+
+/********************
+ *  FORM SUBMISSION STATE
+ ************/
+
+function commitFeatureState(value: FeaturePageState): void {
+  committedFeature = value
+  feature = value
+}
+
+// Mark the ref as settled only after the loaded feature state has been committed.
+function commitSettledFeatureState(value: FeaturePageState): void {
+  commitFeatureState(value)
+  settledFeatureRef = value?.data?.id ?? null
+}
+
+/********************
+ *  FORM SUBMISSION ACTION
+ ************/
+
+function onSubmit(): void {
+  suppressFormLevelIssues = false
+  if (!isCurrentRefLoaded) return
+  formCtx.requestSubmit({
+    meta: {
+      ...(currentFormValue.meta ?? {}),
+      mode: isNewFeatureRef ? 'create' : 'update',
+      isAdminRequest: true,
+    },
+  })
+}
+
+/********************
+ *  FORM SUBMISSION GUARD
+ ************/
+
+const isCurrentRefLoaded = $derived.by(() => {
+  if (isNewFeatureRef) return true
+  return feature?.data?.id === featureRef && committedFeature?.data?.id === featureRef
+})
+
+const isCurrentRefSettled = $derived(
+  isNewFeatureRef || settledFeatureRef === featureRef,
 )
-const formLevelIssues = $derived.by(() => {
-  const messages = visibleAllIssues
-    .filter(issue => !Array.isArray(issue.path) || issue.path.length === 0)
-    .map(issue => issue.message)
-    .filter((message): message is string => Boolean(message))
-  return Array.from(new Set(messages))
-})
-const organisationIssues = $derived.by(() => {
-  const messages = visibleAllIssues
-    .filter(issue => issue.path?.[1] === 'organisationId')
-    .map(issue => issue.message)
-    .filter((message): message is string => Boolean(message))
-  return Array.from(new Set(messages))
-})
-const projectIssues = $derived.by(() => {
-  const messages = visibleAllIssues
-    .filter(issue => issue.path?.[1] === 'projectId')
-    .map(issue => issue.message)
-    .filter((message): message is string => Boolean(message))
-  return Array.from(new Set(messages))
-})
-const layerIssues = $derived.by(() => {
-  const messages = visibleAllIssues
-    .filter(issue => issue.path?.[1] === 'layerId')
-    .map(issue => issue.message)
-    .filter((message): message is string => Boolean(message))
-  return Array.from(new Set(messages))
-})
-const hiddenOrganisationInputAttrs = $derived.by(() => {
-  if (!organisationIdValue) return null
-  return formCtx.form.fields.data.organisationId.as('hidden', organisationIdValue)
-})
-const hiddenProjectInputAttrs = $derived.by(() => {
-  if (!projectIdValue) return null
-  return formCtx.form.fields.data.projectId.as('hidden', projectIdValue)
-})
-const hiddenLayerInputAttrs = $derived.by(() => {
-  if (!layerIdValue) return null
-  return formCtx.form.fields.data.layerId.as('hidden', layerIdValue)
-})
-const selectedOrganisation = $derived.by(() => {
-  if (!organisationIdValue) return null
-  return selectedOrganisationById[organisationIdValue] ?? null
-})
-const selectedProject = $derived.by(() => {
-  if (!projectIdValue) return null
-  return selectedProjectById[projectIdValue] ?? null
-})
-const selectedLayer = $derived.by(() => {
-  if (!layerIdValue) return null
-  return selectedLayerById[layerIdValue] ?? null
-})
-const currentFeatureId = $derived(feature?.data?.id ?? '')
-const currentFeatureIndex = $derived.by(() => {
-  if (!currentFeatureId) return -1
-  return featureList.findIndex(item => item.id === currentFeatureId)
-})
-const previousFeatureRef = $derived.by(() => {
-  if (currentFeatureIndex <= 0) return null
-  return featureList[currentFeatureIndex - 1]?.id ?? null
-})
-const nextFeatureRef = $derived.by(() => {
-  if (currentFeatureIndex < 0) return null
-  return featureList[currentFeatureIndex + 1]?.id ?? null
-})
 
-function toParentOrganisationItem(
-  organisation: Record<string, any> | null | undefined,
-): ParentSectionOrganisationItem | null {
-  if (!organisation?.id) return null
-  return {
-    id: organisation.id,
-    code: organisation.code ?? '',
-    i18n: organisation.i18n ?? null,
-    image: organisation.image ?? null,
-  }
+/********************
+ *  FORM RESET
+ ************/
+
+function onReset(): void {
+  suppressFormLevelIssues = true
+  const emptyResetValue = toEmptyFeatureFormInput()
+  const resetValue = committedFeature?.data
+    ? toFeatureFormInput(committedFeature.data)
+    : {
+        ...emptyResetValue,
+        data: {
+          ...emptyResetValue.data,
+          contributorId: currentUser?.id ?? null,
+        },
+      }
+  featureFormSource = resetValue
+  hasProgrammaticDirtyChanges = false
+  formCtx.reset(resetValue)
 }
 
-function toParentProjectItem(
-  project: Record<string, any> | null | undefined,
-): ParentSectionProjectItem | null {
-  if (!project?.id) return null
-  return {
-    id: project.id,
-    organisationId: project.organisationId ?? '',
-    code: project.code ?? '',
-    i18n: project.i18n ?? null,
-    image: project.image ?? null,
-  }
+/********************
+ *  PROGRAMMATIC FORM
+ ************/
+
+// Serialize non-native feature fields into hidden inputs before remote form submission.
+const programmaticFeatureInputEntries = $derived(
+  getProgrammaticFeatureInputEntries(currentFeatureData),
+)
+
+function revalidateAfterProgrammaticChange(): void {
+  revalidateAfterSubmitAttempt({
+    wasSubmitAttempted: formCtx.wasSubmitAttempted,
+    validate: formCtx.validate,
+  })
 }
 
-function toParentLayerItem(
-  layer: Record<string, any> | null | undefined,
-): ParentSectionLayerItem | null {
-  if (!layer?.id) return null
-  return {
-    id: layer.id,
-    organisationId: layer.organisationId ?? '',
-    projectId: layer.projectId ?? '',
-    code: layer.code ?? '',
-    i18n: layer.i18n ?? null,
-    image: layer.image ?? null,
+/********************
+ *  SEARCH : PARENTS
+ ************/
+
+async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState> {
+  if (ref === NEW_REF) {
+    const emptyState: FeatureGetState = null
+    commitSettledFeatureState(emptyState)
+    featureFormSource = emptyFeatureFormSeed
+    hasProgrammaticDirtyChanges = false
+    return emptyState
   }
+
+  const result = (await getFeature({
+    ref,
+    refKey: 'id',
+    meta: { isAdminRequest: true, profile: 'admin' },
+  }).catch(() => null)) as FeatureGetState
+
+  commitSettledFeatureState(result)
+  if (result?.data) {
+    const nextFormSource = toFeatureFormInput(result.data)
+    featureFormSource = nextFormSource
+    hasProgrammaticDirtyChanges = false
+    adminCtx.appCtx.setFeatureById(result.data as never)
+  }
+  return result
 }
 
+/**
+ * Caches the hydrated organisation record for the current parent-selection UI.
+ *
+ * @param organisation Normalized organisation item from a search or fetch result.
+ */
 function syncSelectedOrganisation(
   organisation: ParentSectionOrganisationItem | null | undefined,
 ): void {
@@ -448,6 +1589,11 @@ function syncSelectedOrganisation(
   }
 }
 
+/**
+ * Caches the hydrated project record for the current parent-selection UI.
+ *
+ * @param project Normalized project item from a search or fetch result.
+ */
 function syncSelectedProject(
   project: ParentSectionProjectItem | null | undefined,
 ): void {
@@ -458,6 +1604,11 @@ function syncSelectedProject(
   }
 }
 
+/**
+ * Caches the hydrated layer record for the current parent-selection UI.
+ *
+ * @param layer Normalized layer item from a search or fetch result.
+ */
 function syncSelectedLayer(layer: ParentSectionLayerItem | null | undefined): void {
   if (!layer?.id) return
   selectedLayerById = {
@@ -465,6 +1616,35 @@ function syncSelectedLayer(layer: ParentSectionLayerItem | null | undefined): vo
     [layer.id]: layer,
   }
 }
+
+/**
+ * Applies the selected parent ids into form state and refreshes any layer-backed
+ * feature properties derived from the resulting layer.
+ *
+ * @param params Selected organisation/project/layer ids.
+ */
+function applyFeatureParentSelection(params: {
+  organisationId?: string
+  projectId?: string
+  layerId?: string
+}): void {
+  const nextLayerId = params.layerId ?? ''
+  // Commit the parent-id trio together so downstream derived state sees one coherent selection.
+  updateFeatureData(
+    data => ({
+      ...data,
+      organisationId: params.organisationId ?? '',
+      projectId: params.projectId ?? '',
+      layerId: nextLayerId,
+    }),
+    { revalidate: true },
+  )
+  void syncLayerBackedProperties(nextLayerId)
+}
+
+/********************
+ *  SEARCH : PARENTS : EFFECTS
+ ************/
 
 $effect(() => {
   const id = organisationIdValue
@@ -505,497 +1685,6 @@ $effect(() => {
   }
 })
 
-function resetFeatureParents(): void {
-  applyFeatureParentSelection({
-    organisationId: '',
-    projectId: '',
-    layerId: '',
-  })
-  organisationReplaceOrganisationId = null
-  organisationReplaceProjectId = null
-  organisationReplaceLayerId = null
-  projectReplaceProjectId = null
-  projectReplaceLayerId = null
-  layerReplaceLayerId = null
-}
-
-function getFacetActionLabel(facet: FacetType): string {
-  switch (facet) {
-    case 'core':
-      return m.admin__forms_common_descriptors()
-    case 'fields':
-      return m.feature__fields_title()
-    case 'address':
-      return m.feature__address()
-    case 'images':
-      return m.feature__images()
-    default:
-      return facet
-  }
-}
-
-function getAdjacentFacet(
-  facet: FacetType,
-  direction: 'previous' | 'next',
-): FacetType | null {
-  const currentIndex = visibleFacetOrder.indexOf(facet)
-  if (currentIndex === -1) return null
-  const adjacentIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1
-  return visibleFacetOrder[adjacentIndex] ?? null
-}
-
-function buildFacetNavAction(
-  facet: FacetType,
-  direction: 'previous' | 'next',
-): FormFacetNavAction | null {
-  const adjacentFacet = getAdjacentFacet(facet, direction)
-  if (!adjacentFacet) return null
-  const isDisabled = adjacentFacet === 'fields' && !hasSelectedLayer
-
-  return {
-    text: m.admin__forms_common_set({ label: getFacetActionLabel(adjacentFacet) }),
-    disabled: isDisabled,
-    onClick: () => {
-      if (isDisabled) return
-      goToFacet(adjacentFacet)
-    },
-  }
-}
-
-function goToFacet(facet: FacetType): void {
-  if (facet === 'fields' && !hasSelectedLayer) return
-  if (facet === 'images' && isNewFeatureRef) return
-  if (facet === activeFacet) return
-
-  const href = getUrlForResource(
-    adminCtx,
-    FirstClassResource.feature,
-    featureRef,
-    facet,
-  )
-  if (!href) return
-
-  adminCtx.setFacet(facet, featureRef, FirstClassResource.feature)
-  void goto(href, {
-    noScroll: true,
-    keepFocus: true,
-    replaceState: false,
-  })
-}
-
-function commitFeatureState(value: FeatureGetState): void {
-  committedFeature = value
-  feature = value
-}
-
-async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState> {
-  if (ref === NEW_REF) {
-    const nextSeed = toEmptyFeatureFormInput(parentLayerId)
-    commitFeatureState(null)
-    emptyFeatureFormSeed = nextSeed
-    featureFormSource = nextSeed
-    return null
-  }
-
-  const result = (await getFeature({
-    ref,
-    refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
-  }).catch(() => null)) as FeatureGetState
-
-  commitFeatureState(result)
-  if (result?.data) {
-    featureFormSource = toFeatureFormInput(result.data, parentLayerId)
-  }
-  return result
-}
-
-async function refreshFeatureList(): Promise<void> {
-  if (isNewFeatureRef) {
-    featureList = []
-    return
-  }
-
-  try {
-    const result = await getFeatures({
-      conditions: adminCtx.appCtx.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      prisms: adminCtx.appCtx.state.prisms,
-      meta: { isAdminRequest: true, profile: 'card' },
-    })
-    featureList = (result.data ?? []) as Array<Record<string, any>>
-  } catch {
-    featureList = []
-  }
-}
-
-function handleCanonicalImageLoad(payload: { width: number; height: number }): void {
-  if (payload.width <= 0 || payload.height <= 0) return
-  isCanonicalImageLoaded = true
-  canonicalImageMeasuredAspectRatio = payload.width / payload.height
-}
-
-function updateFeatureData(
-  mutator: (data: FeatureFormInput['data']) => FeatureFormInput['data'],
-): void {
-  updateFormData(formCtx.form, data => mutator(data as FeatureFormInput['data']))
-}
-
-function updatePropertyValue(propertyId: string, nextValue: string | boolean): void {
-  updateFeatureData(data => ({
-    ...data,
-    properties: (data.properties ?? []).map(property =>
-      property.propertyId === propertyId
-        ? {
-            ...property,
-            value: String(nextValue),
-            propertyValueId:
-              property.property?.component === 'SelectField'
-                ? String(nextValue)
-                : property.propertyValueId,
-          }
-        : property,
-    ),
-  }))
-}
-
-function updatePropertyI18nValue(
-  propertyId: string,
-  locale: string,
-  nextValue: string,
-): void {
-  updateFeatureData(data => ({
-    ...data,
-    properties: (data.properties ?? []).map(property =>
-      property.propertyId === propertyId
-        ? {
-            ...property,
-            i18n: {
-              ...(property.i18n ?? {}),
-              [locale]: {
-                ...(property.i18n?.[locale as keyof typeof property.i18n] ?? {}),
-                value: nextValue,
-              },
-            },
-          }
-        : property,
-    ),
-  }))
-}
-
-function togglePropertyI18nValueGen(propertyId: string, locale: string): void {
-  updateFeatureData(data => ({
-    ...data,
-    properties: (data.properties ?? []).map(property =>
-      property.propertyId === propertyId
-        ? {
-            ...property,
-            i18n: {
-              ...(property.i18n ?? {}),
-              [locale]: {
-                ...(property.i18n?.[locale as keyof typeof property.i18n] ?? {}),
-                valueGen:
-                  !property.i18n?.[locale as keyof typeof property.i18n]?.valueGen,
-              },
-            },
-          }
-        : property,
-    ),
-  }))
-}
-
-function onResetTranslatableValues(targetLocale: string): void {
-  updateFeatureData(data => ({
-    ...data,
-    properties: (data.properties ?? []).map(property => {
-      if (
-        property.property?.type !== 'specifier' ||
-        !property.property?.isTranslatable
-      ) {
-        return property
-      }
-
-      return {
-        ...property,
-        i18n: {
-          ...(property.i18n ?? {}),
-          [targetLocale]: {
-            ...(property.i18n?.[targetLocale as keyof typeof property.i18n] ?? {}),
-            value: '',
-            valueGen: false,
-          },
-        },
-      }
-    }),
-  }))
-}
-
-async function onTranslateTranslatableValues(
-  _sourceLocale: string,
-  _targetLocale: string,
-  _sectionKey?: string,
-): Promise<void> {
-  toast.info('Translation restore is not wired yet.')
-}
-
-function handleCoordinateChange(nextCoordinates: number[]): void {
-  updateFeatureData(data => ({
-    ...data,
-    geometry: {
-      ...(data.geometry as Point),
-      type: 'Point',
-      coordinates: nextCoordinates,
-    },
-  }))
-}
-
-function applyFeatureParentSelection(params: {
-  organisationId?: string
-  projectId?: string
-  layerId?: string
-}): void {
-  const nextLayerId = params.layerId ?? ''
-  updateFeatureData(data => ({
-    ...data,
-    organisationId: params.organisationId ?? '',
-    projectId: params.projectId ?? '',
-    layerId: nextLayerId,
-  }))
-  void syncLayerBackedProperties(nextLayerId)
-}
-
-function beginReplaceParentOrganisation(): void {
-  if (!organisationIdValue) return
-  organisationReplaceOrganisationId = organisationIdValue
-  organisationReplaceProjectId = projectIdValue
-  organisationReplaceLayerId = layerIdValue
-}
-
-function cancelReplaceParentOrganisation(): void {
-  organisationReplaceOrganisationId = null
-  organisationReplaceProjectId = null
-  organisationReplaceLayerId = null
-}
-
-function beginReplaceParentProject(): void {
-  if (!projectIdValue) return
-  projectReplaceProjectId = projectIdValue
-  projectReplaceLayerId = layerIdValue
-}
-
-function cancelReplaceParentProject(): void {
-  projectReplaceProjectId = null
-  projectReplaceLayerId = null
-}
-
-function beginReplaceParentLayer(): void {
-  if (!layerIdValue) return
-  layerReplaceLayerId = layerIdValue
-}
-
-function cancelReplaceParentLayer(): void {
-  layerReplaceLayerId = null
-}
-
-function toLayerBackedFeatureProperties(
-  layer: Layer | null | undefined,
-  currentProperties: FeatureFormInput['data']['properties'] | null | undefined,
-): FeatureFormInput['data']['properties'] {
-  if (!layer) return []
-
-  const currentByPropertyId = new Map(
-    (currentProperties ?? []).map(property => [property.propertyId, property]),
-  )
-
-  const nextProperties = (layer.properties ?? [])
-    .filter(layerProperty => {
-      const property = layerProperty.property
-      return (
-        layerProperty.isVisible === true &&
-        layerProperty.isUserContributable === true &&
-        property &&
-        (property.type === 'classifier' || property.type === 'specifier') &&
-        property.key !== 'grade'
-      )
-    })
-    .map(layerProperty => {
-      const current = currentByPropertyId.get(layerProperty.propertyId)
-      if (current) {
-        return {
-          ...current,
-          property: layerProperty.property,
-        }
-      }
-
-      return {
-        propertyId: layerProperty.propertyId,
-        value: '',
-        propertyValueId: '',
-        i18n: {
-          en: { value: '', valueGen: false },
-          zhHans: { value: '', valueGen: false },
-          zhHant: { value: '', valueGen: false },
-        },
-        property: layerProperty.property,
-        propertyValue: null,
-      }
-    })
-
-  return sortFeatureProperties(
-    nextProperties as Omit<FeatureProperty, 'featureId'>[],
-  ) as FeatureFormInput['data']['properties']
-}
-
-async function syncLayerBackedProperties(
-  layerId: string | null | undefined,
-): Promise<void> {
-  const resolvedLayerId = layerId?.trim() ?? ''
-
-  if (!resolvedLayerId) {
-    updateFeatureData(data => {
-      if ((data.properties ?? []).length === 0) return data
-      return {
-        ...data,
-        properties: [],
-      }
-    })
-    return
-  }
-
-  try {
-    const result = await getLayer({
-      ref: resolvedLayerId,
-      refKey: 'id',
-      meta: { isAdminRequest: true, profile: 'admin' },
-    })
-    const layer = (result?.data ?? null) as Layer | null
-    syncSelectedLayer(toParentLayerItem(layer as never))
-    updateFeatureData(data => ({
-      ...data,
-      properties: toLayerBackedFeatureProperties(layer, data.properties),
-    }))
-  } catch {
-    updateFeatureData(data => {
-      if ((data.properties ?? []).length === 0) return data
-      return {
-        ...data,
-        properties: [],
-      }
-    })
-  }
-}
-
-async function onSearchParentOrganisations(
-  query: string,
-): Promise<ParentSectionOrganisationItem[]> {
-  const result = await getOrganisationsWhichHaveLayers({
-    q: query,
-    prisms: adminCtx.appCtx.state.prisms,
-    conditions: {
-      isArchived: false,
-      isPublished: null,
-    },
-    meta: { isAdminRequest: true, profile: 'admin' as const },
-  })
-
-  return (result.data ?? [])
-    .map(item => toParentOrganisationItem(item as never))
-    .filter(Boolean) as ParentSectionOrganisationItem[]
-}
-
-async function onSearchParentProjects(
-  query: string,
-): Promise<ParentSectionProjectItem[]> {
-  const result = await getProjectsWhichHaveLayers({
-    q: query,
-    prisms: {
-      ...adminCtx.appCtx.state.prisms,
-      organisation: organisationIdValue ? [organisationIdValue] : [],
-      project: [],
-    },
-    conditions: { isArchived: false, isPublished: null },
-    meta: { isAdminRequest: true, profile: 'admin' as const },
-  })
-
-  return (result.data ?? [])
-    .map(item => toParentProjectItem(item as never))
-    .filter(Boolean) as ParentSectionProjectItem[]
-}
-
-async function onSearchParentLayers(query: string): Promise<ParentSectionLayerItem[]> {
-  const result = await getLayers({
-    q: query,
-    prisms: {
-      ...adminCtx.appCtx.state.prisms,
-      organisation: organisationIdValue ? [organisationIdValue] : [],
-      project: projectIdValue ? [projectIdValue] : [],
-      layer: [],
-    },
-    conditions: { isArchived: false, isPublished: null },
-    meta: { isAdminRequest: true, profile: 'admin' as const },
-  })
-
-  return (result.data ?? [])
-    .map(item => toParentLayerItem(item as never))
-    .filter(Boolean) as ParentSectionLayerItem[]
-}
-
-function onReplaceParentOrganisation(
-  organisation: ParentSectionOrganisationItem,
-): void {
-  organisationReplaceOrganisationId = null
-  organisationReplaceProjectId = null
-  organisationReplaceLayerId = null
-  syncSelectedOrganisation(organisation)
-
-  applyFeatureParentSelection({
-    organisationId: organisation.id,
-    projectId: '',
-    layerId: '',
-  })
-}
-
-function onReplaceParentProject(project: ParentSectionProjectItem): void {
-  projectReplaceProjectId = null
-  projectReplaceLayerId = null
-  syncSelectedProject(project)
-
-  applyFeatureParentSelection({
-    organisationId: project.organisationId ?? '',
-    projectId: project.id,
-    layerId: '',
-  })
-}
-
-function onReplaceParentLayer(layer: ParentSectionLayerItem): void {
-  layerReplaceLayerId = null
-  syncSelectedLayer(layer)
-
-  applyFeatureParentSelection({
-    organisationId: layer.organisationId ?? '',
-    projectId: layer.projectId ?? '',
-    layerId: layer.id,
-  })
-}
-
-async function getCreatableProjectRecords(
-  params: { query?: string; organisationIds?: string[] } = {},
-): Promise<Record<string, any>[]> {
-  const result = await getProjectsWhichHaveLayers({
-    q: params.query ?? '',
-    prisms: {
-      ...adminCtx.appCtx.state.prisms,
-      organisation: params.organisationIds ?? [],
-      project: [],
-    },
-    conditions: { isArchived: false, isPublished: null },
-    meta: { isAdminRequest: true, profile: 'admin' as const },
-  })
-
-  return (result.data ?? []) as Record<string, any>[]
-}
-
 $effect(() => {
   if (!isNewFeatureRef) return
   if (organisationIdValue || projectIdValue) return
@@ -1006,14 +1695,7 @@ $effect(() => {
 
     if (projects.length === 1) {
       const project = toParentProjectItem(projects[0])
-      if (project) {
-        onReplaceParentOrganisation({
-          id: project.organisationId,
-          code: '',
-          i18n: null,
-          image: null,
-        })
-      }
+      if (project) onReplaceParentProject(project)
       return
     }
 
@@ -1042,641 +1724,368 @@ $effect(() => {
   }
 })
 
-$effect(() => {
-  if (!isNewFeatureRef) return
-  if (!organisationIdValue || projectIdValue) return
+/********************
+ *  PARENT RESOURCE ACTIONS
+ ************/
 
-  let cancelled = false
-  void getCreatableProjectRecords({
-    organisationIds: [organisationIdValue],
-  }).then(projects => {
-    if (cancelled || projectIdValue) return
-    if (projects.length !== 1) return
-
-    const project = toParentProjectItem(projects[0])
-    if (!project) return
-    onReplaceParentProject(project)
-  })
-
-  return () => {
-    cancelled = true
-  }
+const featureParentSectionCtrl = createFeatureParentSectionController({
+  getCreatableProjectRecords,
+  searchParentOrganisations: async ({ query, organisationIds }) =>
+    (
+      await getOrganisationsWhichHaveLayers({
+        q: query,
+        prisms: createFeatureParentSearchPrisms(),
+        conditions: {
+          id: organisationIds,
+          isArchived: false,
+          isPublished: null,
+        },
+        meta: { isAdminRequest: true, profile: 'admin' as const },
+      })
+    ).data ?? [],
+  searchParentLayers: async ({ query, organisationIds = [], projectIds = [] }) =>
+    (
+      await getLayers({
+        q: query,
+        prisms: createFeatureParentSearchPrisms({
+          organisationIds,
+          projectIds,
+        }),
+        conditions: { isArchived: false, isPublished: null },
+        meta: { isAdminRequest: true, profile: 'admin' as const },
+      })
+    ).data ?? [],
+  syncSelectedOrganisation,
+  syncSelectedProject,
+  syncSelectedLayer,
+  getSelectedOrganisation: () => selectedOrganisation,
+  getSelectedProject: () => selectedProject,
+  getSelectedLayer: () => selectedLayer,
+  getOrganisationIdValue: () => organisationIdValue,
+  getProjectIdValue: () => projectIdValue,
+  getLayerIdValue: () => layerIdValue,
+  getIsReplacingParentProject: () => isReplacingParentProject,
+  getIsReplacingParentLayer: () => isReplacingParentLayer,
+  setIsReplacingParentOrganisation: value => {
+    isReplacingParentOrganisation = value
+  },
+  setIsReplacingParentProject: value => {
+    isReplacingParentProject = value
+  },
+  setIsReplacingParentLayer: value => {
+    isReplacingParentLayer = value
+  },
+  applyFeatureParentSelection,
 })
+const {
+  beginReplaceParentLayer,
+  beginReplaceParentOrganisation,
+  beginReplaceParentProject,
+  cancelReplaceParentLayer,
+  cancelReplaceParentOrganisation,
+  cancelReplaceParentProject,
+  onRemoveParentLayer,
+  onRemoveParentOrganisation,
+  onRemoveParentProject,
+  onReplaceParentLayer,
+  onReplaceParentOrganisation,
+  onReplaceParentProject,
+  onSearchParentLayers,
+  onSearchParentOrganisations,
+  onSearchParentProjects,
+  resetFeatureParents,
+} = featureParentSectionCtrl
 
-$effect(() => {
-  if (!isNewFeatureRef) return
-  if (!projectIdValue || layerIdValue) return
-
-  let cancelled = false
-  void getLayers({
-    q: '',
-    prisms: {
-      ...adminCtx.appCtx.state.prisms,
-      organisation: organisationIdValue ? [organisationIdValue] : [],
-      project: [projectIdValue],
-      layer: [],
-    },
+/**
+ * Loads projects that currently support feature creation within the requested scope.
+ *
+ * @param params Optional query text and organisation filters.
+ * @returns Creatable project records filtered by authorization.
+ */
+async function getCreatableProjectRecords(
+  params: { query?: string; organisationIds?: string[] } = {},
+): Promise<ParentProjectRecord[]> {
+  const result = await getProjectsWhichHaveLayers({
+    q: params.query ?? '',
+    prisms: createFeatureParentSearchPrisms({
+      organisationIds: params.organisationIds ?? [],
+    }),
     conditions: { isArchived: false, isPublished: null },
     meta: { isAdminRequest: true, profile: 'admin' as const },
-  }).then(result => {
-    if (cancelled || layerIdValue) return
-
-    const layers = (result.data ?? [])
-      .map(item => toParentLayerItem(item as never))
-      .filter(Boolean) as ParentSectionLayerItem[]
-
-    if (layers.length !== 1) return
-    onReplaceParentLayer(layers[0])
   })
 
-  return () => {
-    cancelled = true
-  }
-})
-
-$effect(() => {
-  if (activeFacet === 'images' && isNewFeatureRef) {
-    adminCtx.setFacet('core', featureRef, FirstClassResource.feature)
-  }
-})
-
-$effect(() => {
-  let cancelled = false
-  void Promise.all([refreshFeature(featureRef), refreshFeatureList()]).then(() => {
-    if (cancelled) return
-  })
-  return () => {
-    cancelled = true
-  }
-})
-
-$effect(() => {
-  if (!isNewFeatureRef) return
-  if (headerCtrl.state.isEditing) return
-  headerCtrl.setEditing(true)
-})
-
-$effect(() => {
-  featureRef
-  optimisticHeaderState = captureHeaderTransitionSnapshot(headerCtrl)
-})
-
-$effect(() => {
-  const resolvedFacets = resolveOptimisticHeaderFacets(
-    true,
-    visibleFacetTabs,
-    optimisticHeaderState,
-  )
-  const displayFacets = (
-    Array.isArray(resolvedFacets)
-      ? resolvedFacets
-      : Array.from(resolvedFacets.entries()).map(([ref, config]) =>
-          typeof config === 'string'
-            ? { ref, label: config, icon: null, disabled: false }
-            : {
-                ref,
-                label: config.label,
-                icon: config.icon ?? null,
-                hasIssues: config.hasIssues === true,
-                disabled: false,
-              },
-        )
-  ).map(facet => ({
-    ...facet,
-    disabled: facet.ref === 'fields' ? !hasSelectedLayer : Boolean(facet.disabled),
-  }))
-
-  const facetKey = displayFacets
-    .map(
-      facet =>
-        `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}:${facet.disabled === true ? '1' : '0'}`,
-    )
-    .join('|')
-  const headerKey = `${featureRef}:${title}:${facetKey}`
-  if (headerKey === lastHeaderKey) return
-  lastHeaderKey = headerKey
-
-  untrack(() => {
-    headerCtrl.setHeaderForEntity(title, FeatureIcon, new Map())
-    headerCtrl.setFacets(displayFacets)
-  })
-})
-
-onMount(() => {
-  untrack(() => {
-    resourceEditorPage.wireHeaderHandlers({
-      reset: () => onReset(),
-      submit: () => onSubmit(),
-      togglePublish: () => void onPublishToggle(),
-      toggleDelete: () => void onDeleteToggle(),
-    })
-  })
-})
-
-$effect(() => {
-  const status = resolveOptimisticHeaderStatus({
-    isSettled: true,
-    isImageFacetActive: isImagesFacet,
-    isNewRef: isNewFeatureRef,
-    dirty: Boolean(formCtx.dirty),
-    isSubmitting: formCtx.submitting,
-    hasIssues: (formCtx.allIssues?.length ?? 0) > 0,
-    isPublished: Boolean(feature?.data?.isPublished),
-    isDeleted: Boolean(feature?.data?.isArchived),
-    canEdit: true,
-    canPublish: !isNewFeatureRef,
-    showDeleteAction: !isNewFeatureRef,
-    showPublishAction: !isNewFeatureRef,
-    snapshot: optimisticHeaderState,
-  })
-
-  lastFormActionsSignature = resourceEditorPage.syncHeaderStatus({
-    headerCtrl,
-    status: {
-      ...status,
-      onEditingToggle: (next?: boolean) => {
-        headerCtrl.setEditing(Boolean(next))
+  return (result.data ?? []).filter(project =>
+    canCreateFeatureForProject({
+      user: {
+        id: currentAuthorizationUser?.id,
+        isAnonymous: currentAuthorizationUser?.isAnonymous,
+        superAdmin: currentAuthorizationUser?.superAdmin,
       },
-      onReset: () => onReset(),
-      onSave: () => onSubmit(),
-      onDeleteToggle: () => void onDeleteToggle(),
-      onPublishToggle: () => void onPublishToggle(),
-    },
-    lastSignature: lastFormActionsSignature,
-  })
-})
+      userRoles: currentAuthorizationUser?.roles ?? [],
+      resource: {
+        organisationId: project.organisationId,
+        projectId: project.id,
+        layerId: '',
+        resourceHubId: project.hubId ?? null,
+      },
+    }),
+  ) as ParentProjectRecord[]
+}
 
-async function handleFeatureStateToggle(
-  field: 'isPublished' | 'isArchived',
-): Promise<void> {
-  const current = feature?.data
-  if (!current) return
+/********************
+ *  SCROLL EFFECTS
+ ************/
 
-  const nextState = !current[field]
-  const mutate = field === 'isPublished' ? publishFeature : archiveFeature
-  const setBusy =
-    field === 'isPublished'
-      ? (value: boolean) => headerCtrl.setPublishing(value)
-      : (value: boolean) => headerCtrl.setDeleting(value)
+$effect(() => {
+  showsVisualSection
+  activeFacet
 
-  try {
-    setBusy(true)
-    await mutate({
-      id: current.id,
-      state: nextState,
-      meta: { isAdminRequest: true },
-    }).updates(
-      getFeature({
-        ref: current.id,
-        refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
-      }).withOverride(overrideFeatureEntityBoolean(field, nextState)),
-      getFeatures({
-        conditions: adminCtx.appCtx.isSuperAdmin()
-          ? { isArchived: null, isPublished: null }
-          : { isArchived: false, isPublished: null },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
-      }).withOverride(overrideFeatureListItemBoolean(current.id, field, nextState)),
-    )
-
-    commitFeatureState(await refreshFeature())
-    toast.success(
-      `${
-        nextState
-          ? field === 'isPublished'
-            ? m.published()
-            : m.bad_swift_cheetah_surge()
-          : field === 'isPublished'
-            ? m.forms__unpublished()
-            : m.forms__restored()
-      } ${getNameForToast(feature, 'title')}`,
-    )
-  } catch {
-    toast.error(m.long_crazy_peacock_care())
-  } finally {
-    setBusy(false)
+  if (!showsVisualSection) {
+    clearVisualSectionReopenState()
+    return
   }
-}
 
-async function onPublishToggle(): Promise<void> {
-  if (isNewFeatureRef) return
-  await handleFeatureStateToggle('isPublished')
-}
+  let activeSection: HTMLElement | null = null
 
-async function onDeleteToggle(): Promise<void> {
-  if (isNewFeatureRef) return
-  await handleFeatureStateToggle('isArchived')
-}
+  const bindScrollTarget = (): void => {
+    activeSection?.removeEventListener('scroll', syncVisualSectionWithScrollPosition)
+    activeSection?.removeEventListener('wheel', syncVisualSectionWithWheelIntent)
+    activeSection = document.querySelector<HTMLElement>(
+      `[data-facet-id="${activeFacet}"]`,
+    )
+    activeSection?.addEventListener('scroll', syncVisualSectionWithScrollPosition, {
+      passive: true,
+    })
+    activeSection?.addEventListener('wheel', syncVisualSectionWithWheelIntent, {
+      passive: true,
+    })
+    syncVisualSectionWithScrollPosition()
+  }
 
-function onSubmit(): void {
-  formCtx.requestSubmit({
-    meta: {
-      ...(currentFormValue.meta ?? {}),
-      mode: isNewFeatureRef ? 'create' : 'update',
-      isAdminRequest: true,
-    },
-  })
-}
+  queueMicrotask(bindScrollTarget)
 
-function onReset(): void {
-  formCtx.clearSubmitAttemptState()
-  const resetValue = committedFeature?.data
-    ? toFeatureFormInput(committedFeature.data, parentLayerId)
-    : emptyFeatureFormSeed
-  featureFormSource = resetValue
-  formCtx.form.fields.set(resetValue)
-}
-
-function getVisualInfoTitle(): string {
-  return m.feature__map()
-}
-
-function handleFeatureStepperNavigation(direction: 'previous' | 'next'): void {
-  const targetRef = direction === 'previous' ? previousFeatureRef : nextFeatureRef
-  if (!targetRef) return
-  if (targetRef === featureRef) return
-
-  const href = getUrlForResource(
-    adminCtx,
-    FirstClassResource.feature,
-    targetRef,
-    activeFacet === 'images' && isNewFeatureRef ? 'core' : activeFacet,
-  )
-  if (!href) return
-
-  adminCtx.setFacet(activeFacet, targetRef, FirstClassResource.feature)
-  void goto(href, {
-    noScroll: true,
-    keepFocus: true,
-    replaceState: false,
-  })
-}
+  return () => {
+    activeSection?.removeEventListener('scroll', syncVisualSectionWithScrollPosition)
+    activeSection?.removeEventListener('wheel', syncVisualSectionWithWheelIntent)
+    clearVisualSectionReopenState()
+  }
+})
 </script>
 
-<Main.Root class="bits-feature-editor">
+<Main.Root class={FEATURE_EDITOR_ROOT_CLASS}>
   <Main.Form
+    bind:formEl={contentsElement}
     attrs={formCtx.attributes}
     isReady={true}
-    class="bits-feature-editor__form"
+    class={FEATURE_EDITOR_FORM_CLASS}
   >
+    <HiddenInputs inputs={programmaticFeatureInputEntries} />
+
     {#if showsVisualSection}
-      <Main.VisualSection
-        class="bits-feature-editor__visual"
-        isCollapsed={isVisualSectionCollapsed}
+      <FormFeatureVisualSection
+        {hasPresentedCanonicalImageSizing}
+        {isCanonicalImagePending}
         imageAspectRatio={resolvedCanonicalImageAspectRatio}
+        isCollapsed={isVisualSectionCollapsed}
+        isNewFeature={isNewFeatureRef}
+        contributorUser={currentContributorUser}
+        contributorId={feature?.data?.contributorId ?? null}
+        createdAt={feature?.data?.createdAt ?? null}
+        {isEditing}
+        isIntangible={Boolean(currentFeatureData.isIntangible)}
+        isVisitable={currentFeatureData.isVisitable}
+        hasPrevious={Boolean(previousFeatureRef)}
+        hasNext={Boolean(nextFeatureRef)}
+        onIntangibleChange={value =>
+          updateFeatureData(data => ({ ...data, isIntangible: value }))}
+        onVisitableChange={value =>
+          updateFeatureData(data => ({ ...data, isVisitable: value }))}
+        onExpand={expandVisualSection}
+        onCollapse={collapseVisualSectionAndScrollToTop}
+        onNavigatePrevious={() => handleFeatureStepperNavigation('previous')}
+        onNavigateNext={() => handleFeatureStepperNavigation('next')}
       >
-        {#snippet leftControls()}
-          <UserAttributionCard
-            userId={currentFeatureData.contributorId ?? feature?.data?.contributorId ?? null}
-            date={currentFeatureData.createdAt ?? feature?.data?.createdAt ?? undefined}
-            type="contributor"
-          />
-        {/snippet}
-
-        {#snippet centerControls()}
-          <div class="bits-feature-visual__control-bar">
-            <div class="bits-feature-visual__toggle-control">
-              <SwapField
-                class="bits-feature-visual__switch bits-feature-visual__switch--icon-only"
-                checked={Boolean(currentFeatureData.isIntangible)}
-                label={m.feature__intangible()}
-                onCheckedChange={checked => {
-                  updateFeatureData(data => ({
-                    ...data,
-                    isIntangible: checked,
-                  }))
-                }}
-              />
-            </div>
-            <div class="bits-feature-visual__toggle-control">
-              <SwapField
-                class="bits-feature-visual__switch bits-feature-visual__switch--icon-only"
-                checked={Boolean(currentFeatureData.isVisitable)}
-                label="Visitable"
-                onCheckedChange={checked => {
-                  updateFeatureData(data => ({
-                    ...data,
-                    isVisitable: checked,
-                  }))
-                }}
-              />
-            </div>
-            <Separator
-              orientation="vertical"
-              class="bits-feature-visual__control-separator"
-            />
-            <InfoDialog
-              title={getVisualInfoTitle()}
-              triggerText=""
-              triggerIconComponent={CircleHelpIcon}
-            >
-              <section>
-                <h3 class="bits-feature-info__heading">{m.feature__intangible()}</h3>
-                <p>{@html m.home_legal_trout_hurl()}</p>
-              </section>
-            </InfoDialog>
-            <button
-              type="button"
-              class="bits-feature-visual__icon-button bits-feature-visual__icon-button--collapse bits-feature-visual__icon-button--collapse-tight"
-              aria-label={isVisualSectionCollapsed
-                  ? m.admin__forms_common_expand()
-                  : m.admin__forms_common_collapse()}
-              onclick={() => {
-                isVisualSectionCollapsed = !isVisualSectionCollapsed
-              }}
-            >
-              {#if isVisualSectionCollapsed}
-                <ExpandIcon />
-              {:else}
-                <ShrinkIcon />
-              {/if}
-            </button>
-          </div>
-        {/snippet}
-
-        {#snippet rightControls()}
-          <div class="bits-feature-visual__control-bar">
-            <button
-              type="button"
-              class="bits-feature-visual__icon-button"
-              aria-label="Previous feature"
-              disabled={!previousFeatureRef}
-              onclick={() => {
-                handleFeatureStepperNavigation('previous')
-              }}
-            >
-              <ChevronLeftIcon />
-            </button>
-            <button
-              type="button"
-              class="bits-feature-visual__icon-button"
-              aria-label="Next feature"
-              disabled={!nextFeatureRef}
-              onclick={() => {
-                handleFeatureStepperNavigation('next')
-              }}
-            >
-              <ChevronRightIcon />
-            </button>
-          </div>
-        {/snippet}
-
         {#snippet map()}
-          <Main.VisualSectionMap>
+          <Main.VisualSectionMap isCollapsed={isVisualSectionCollapsed}>
             <FormMapSection
-              class="bits-feature-visual__map-surface"
               initialCenter={initialMapCenter}
-              coordinates={featureCoordinates ?? [114.1693671540923, 22.319307515052614]}
+              coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
               addressMeta={currentFeatureData.addressMeta ?? null}
-              draggable={!isEditing}
+              draggable={isEditing}
               onCoordinateChange={handleCoordinateChange}
             />
           </Main.VisualSectionMap>
         {/snippet}
 
         {#snippet image()}
-          <Main.VisualSectionImage>
-            <a
-              class="bits-feature-visual-media bits-feature-visual__image-surface"
-              href={presentedCanonicalImageHref}
-            >
-              {#if presentedCanonicalImageSrc}
-                <img
-                  class={[
-                    'bits-feature-visual-media__img',
-                    isCanonicalImagePending ? 'bits-feature-visual-media__img--pending' : '',
-                  ].filter(Boolean).join(' ')}
-                  src={presentedCanonicalImageSrc}
-                  alt={presentedCanonicalImageTitle}
-                >
-              {:else}
-                <div class="bits-feature-visual-media__empty">
-                  <div>
-                    <ImageIcon />
-                    <p>
-                      {isNewFeatureRef ? 'Save the feature to add images' : 'No canonical image yet'}
-                    </p>
-                  </div>
-                </div>
-              {/if}
-            </a>
-          </Main.VisualSectionImage>
+          <Main.VisualSectionImage
+            href={presentedCanonicalImageHref}
+            src={presentedCanonicalImageSrc}
+            alt={presentedCanonicalImageTitle}
+            isPending={isCanonicalImagePending}
+            isCollapsed={isVisualSectionCollapsed}
+            emptyText={m.feature__no_canonical_image_yet()}
+            onImageLoad={handleCanonicalImageLoad}
+          />
         {/snippet}
-      </Main.VisualSection>
+      </FormFeatureVisualSection>
     {/if}
 
-    <Main.Section
+    <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
-      class={showsVisualSection ? visualSectionClass : sectionClass}
+      fillHeight={true}
+      class={getFeatureEditorFacetClass({
+        showsVisualSection,
+        isVisualSectionCollapsed,
+      })}
       attrs={{ 'data-facet-id': 'core' }}
     >
-      {#if isCoreFacet}
-        <div class="bits-feature-editor__content-pad">
-          <FormI18nSection
-            class="bits-feature-editor__content-section mt-4"
-            {locales}
-            {isEditing}
-          >
-            {#snippet center()}
-              <FormFeatureSectionHeader
-                title={m.admin__forms_common_descriptors()}
-                subtitle={m.feature__descriptor_subtitle()}
-                issues={formLevelIssues}
-              />
-            {/snippet}
+      <div class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
+        <FormI18nSection
+          class={cx(FEATURE_EDITOR_CONTENT_SECTION_CLASS, 'mt-4')}
+          {locales}
+          onTranslate={onTranslateDescriptorLocale}
+          onResetLocale={onResetDescriptorLocale}
+          sectionKey="descriptor"
+          {isEditing}
+        >
+          {#snippet center()}
+            <FormFeatureSectionHeader
+              title={m.admin__forms_common_descriptors()}
+              subtitle={m.feature__descriptor_subtitle()}
+              issues={formLevelIssues}
+            />
+          {/snippet}
 
-            {#snippet children(locale)}
-              <FormI18nDescriptorFields
-                form={formCtx.form}
-                fields={formCtx.form.fields.data.i18n[locale]}
-                {locale}
-                {isEditing}
-                fieldConfigs={featureDescriptorFieldConfigs as never}
-                {isRequiredInPreflight}
-              />
-            {/snippet}
-          </FormI18nSection>
+          {#snippet children(locale)}
+            <FormI18nDescriptorFields
+              form={formCtx.form}
+              fields={formCtx.form.fields.data.i18n[locale]}
+              {locale}
+              {isEditing}
+              fieldConfigs={featureDescriptorFieldConfigs as never}
+              {isRequiredInPreflight}
+            />
+          {/snippet}
+        </FormI18nSection>
 
-          <FormFeatureParentSection
-            class="bits-feature-editor__content-section bits-feature-editor__collections-section"
-            {isEditing}
-            onClearAll={resetFeatureParents}
-            sharedSectionProps={{
-              isEditing,
-              isSubmitting: formCtx.submitting,
-              isSubmitRequested: formCtx.isSubmitRequested,
-            }}
-            organisationSection={{
-              issues: organisationIssues,
-              parent: selectedOrganisation as any,
-              hiddenOrganisationInputAttrs,
-              startInAddingMode: organisationIdValue.length === 0,
-              searchScopeKey: 'organisation',
-              onBeginReplaceParent: beginReplaceParentOrganisation,
-              onCancelReplaceParent: cancelReplaceParentOrganisation,
-              onSearchOrganisations: onSearchParentOrganisations,
-              onReplaceParent: onReplaceParentOrganisation,
-            }}
-            projectSection={{
-              issues: projectIssues,
-              parent: selectedProject as any,
-              hiddenProjectInputAttrs,
-              startInAddingMode: projectIdValue.length === 0,
-              searchScopeKey: organisationIdValue,
-              onBeginReplaceParent: beginReplaceParentProject,
-              onCancelReplaceParent: cancelReplaceParentProject,
-              onSearchProjects: onSearchParentProjects,
-              onReplaceParent: onReplaceParentProject,
-            }}
-            layerSection={{
-              issues: layerIssues,
-              parent: selectedLayer as any,
-              hiddenLayerInputAttrs,
-              startInAddingMode: layerIdValue.length === 0,
-              searchScopeKey: `${organisationIdValue}:${projectIdValue}`,
-              onBeginReplaceParent: beginReplaceParentLayer,
-              onCancelReplaceParent: cancelReplaceParentLayer,
-              onSearchLayers: onSearchParentLayers,
-              onReplaceParent: onReplaceParentLayer,
-            }}
-          />
+        <FormFeatureParentSection
+          class={cx(
+            FEATURE_EDITOR_CONTENT_SECTION_CLASS,
+            FEATURE_EDITOR_COLLECTIONS_SECTION_CLASS,
+          )}
+          {isEditing}
+          onClearAll={resetFeatureParents}
+          sharedSectionProps={{
+                isEditing,
+                isSubmitting: formCtx.submitting,
+                isSubmitRequested: formCtx.isSubmitRequested,
+              }}
+          organisationSection={{
+                issues: organisationIssues,
+                parent: selectedOrganisation,
+                hiddenInputAttrs: hiddenOrganisationInputAttrs,
+                startInAddingMode: organisationIdValue.length === 0,
+                searchScopeKey: 'organisation',
+                onBeginReplaceParent: beginReplaceParentOrganisation,
+                onCancelReplaceParent: cancelReplaceParentOrganisation,
+                onRemoveParent: onRemoveParentOrganisation,
+                onSearch: onSearchParentOrganisations,
+                onReplaceParent: onReplaceParentOrganisation,
+              }}
+          projectSection={{
+                issues: projectIssues,
+                parent: selectedProject,
+                hiddenInputAttrs: hiddenProjectInputAttrs,
+                closeOnParentChange: true,
+                startInAddingMode: projectIdValue.length === 0,
+                searchScopeKey: organisationIdValue,
+                onBeginReplaceParent: beginReplaceParentProject,
+                onCancelReplaceParent: cancelReplaceParentProject,
+                onRemoveParent: onRemoveParentProject,
+                onSearch: onSearchParentProjects,
+                onReplaceParent: onReplaceParentProject,
+              }}
+          layerSection={{
+                issues: layerIssues,
+                parent: selectedLayer,
+                hiddenInputAttrs: hiddenLayerInputAttrs,
+                closeOnParentChange: true,
+                startInAddingMode: layerIdValue.length === 0,
+                searchScopeKey: `${organisationIdValue}:${projectIdValue}`,
+                onBeginReplaceParent: beginReplaceParentLayer,
+                onCancelReplaceParent: cancelReplaceParentLayer,
+                onRemoveParent: onRemoveParentLayer,
+                onSearch: onSearchParentLayers,
+                onReplaceParent: onReplaceParentLayer,
+              }}
+        />
+        <FormFacetNav
+          previousAction={buildFacetNavAction('core', 'previous')}
+          nextAction={buildFacetNavAction('core', 'next')}
+        />
+      </div>
+    </Main.Facet>
 
-          <FormFacetNav
-            previousAction={buildFacetNavAction('core', 'previous')}
-            nextAction={buildFacetNavAction('core', 'next')}
-          />
-        </div>
-      {/if}
-    </Main.Section>
-
-    <Main.Section
+    <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
-      class={showsVisualSection ? visualSectionClass : sectionClass}
+      fillHeight={true}
+      class={getFeatureEditorFacetClass({
+        showsVisualSection,
+        isVisualSectionCollapsed,
+      })}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      {#if isFieldsFacet}
-        <div class="bits-feature-editor__content-pad">
-          {#if nonTranslatableItems.length > 0}
-            <div class="pt-4">
-              <FormFeatureSectionHeader
-                title={m.feature__fields_title()}
-                subtitle={m.feature__fields_subtitle()}
-                issues={[]}
-              />
-            </div>
-            <FormFeatureFieldsSection
-              class="bits-feature-editor__content-section bits-feature-editor__fields-section"
-              {localeKey}
-              items={nonTranslatableItems}
-              {isEditing}
-            />
-          {/if}
+      <FormFeatureFields
+        {localeKey}
+        {locales}
+        {nonTranslatableItems}
+        {translatableSpecifierItems}
+        {isEditing}
+        previousAction={buildFacetNavAction('fields', 'previous')}
+        nextAction={buildFacetNavAction('fields', 'next')}
+        onTranslate={onTranslateTranslatableValues}
+        onResetLocale={onResetTranslatableValues}
+        onToggleGenAI={togglePropertyI18nValueGen}
+        onValueChange={updatePropertyI18nValue}
+      />
+    </Main.Facet>
 
-          {#if translatableSpecifierItems.length > 0}
-            <section
-              class="bits-form__i18n-section bits-feature-editor__content-section bits-feature-editor__fields-section bits-feature-editor__translatable-fields"
-            >
-              <FormFeatureSectionHeader
-                title={m.feature__translatable_fields_title()}
-                subtitle={m.feature__translatable_fields_subtitle()}
-                issues={[]}
-              />
-
-              <div class="bits-feature-editor__translatable-card-grid">
-                {#each locales as locale (locale)}
-                  <FormI18nSectionFormSection
-                    {locale}
-                    cardClass="bits-form__i18n-card bits-feature-editor__translatable-card"
-                    onTranslate={onTranslateTranslatableValues}
-                    onResetLocale={onResetTranslatableValues}
-                    sectionKey="feature-translatable-values"
-                    {isEditing}
-                    showTranslationBar={true}
-                  >
-                    {#snippet children(locale)}
-                      <div class="flex flex-col gap-4">
-                        {#each translatableSpecifierItems as property (property.propertyId)}
-                          {@const label = ((property.property?.i18n?.[locale] as { label?: string } | undefined)?.label ?? (property.property?.i18n?.en as { label?: string } | undefined)?.label ?? property.property?.key ?? property.propertyId) as string}
-                          {@const currentValue = property.i18n?.[locale]?.value ?? ''}
-                          {@const isTextarea = property.property?.component === 'TextareaField'}
-
-                          {#if isTextarea}
-                            <TextArea
-                              {label}
-                              value={currentValue}
-                              {locale}
-                              isTranslated={locale !== getLocaleKey()}
-                              isGenAI={Boolean(property.i18n?.[locale]?.valueGen)}
-                              {isEditing}
-                              onToggleGenAI={() =>
-                                togglePropertyI18nValueGen(property.propertyId, locale)}
-                              onValueChange={nextValue =>
-                                updatePropertyI18nValue(property.propertyId, locale, nextValue)}
-                            />
-                          {:else}
-                            <TextInput
-                              {label}
-                              value={currentValue}
-                              {locale}
-                              isTranslated={locale !== getLocaleKey()}
-                              isGenAI={Boolean(property.i18n?.[locale]?.valueGen)}
-                              {isEditing}
-                              onToggleGenAI={() =>
-                                togglePropertyI18nValueGen(property.propertyId, locale)}
-                              onValueChange={nextValue =>
-                                updatePropertyI18nValue(property.propertyId, locale, nextValue)}
-                            />
-                          {/if}
-                        {/each}
-                      </div>
-                    {/snippet}
-                  </FormI18nSectionFormSection>
-                {/each}
-              </div>
-            </section>
-          {/if}
-
-          <FormFacetNav
-            previousAction={buildFacetNavAction('fields', 'previous')}
-            nextAction={buildFacetNavAction('fields', 'next')}
-          />
-        </div>
-      {/if}
-    </Main.Section>
-
-    <Main.Section
+    <Main.Facet
       isVisible={isAddressFacet}
       transition="fade"
-      class={sectionClass}
+      fillHeight={true}
+      class={getFeatureEditorFacetClass({
+        showsVisualSection,
+        isVisualSectionCollapsed,
+      })}
       attrs={{ 'data-facet-id': 'address' }}
     >
-      <div class="bits-feature-facet-placeholder">
-        <p>Address facet shell restored.</p>
+      <div class={FEATURE_EDITOR_PLACEHOLDER_CLASS}>
+        <p>{m.feature__address_refactor_placeholder()}</p>
+
         <FormFacetNav
           previousAction={buildFacetNavAction('address', 'previous')}
           nextAction={buildFacetNavAction('address', 'next')}
         />
       </div>
-    </Main.Section>
+    </Main.Facet>
 
-    <Main.Section
-      isVisible={isImagesFacet && !isNewFeatureRef}
+    <Main.Facet
+      isVisible={isImagesFacet}
       transition="fade"
-      class={sectionClass}
+      fillHeight={true}
+      edgeToEdge={true}
+      contentClass="h-full overflow-hidden"
       attrs={{ 'data-facet-id': 'images' }}
     >
-      <div class="bits-feature-facet-placeholder">
-        <p>
-          {isNewFeatureRef ? 'Images are available after the feature is created.' : 'Image controls will be restored next.'}
-        </p>
-        <FormFacetNav
-          previousAction={buildFacetNavAction('images', 'previous')}
-          nextAction={buildFacetNavAction('images', 'next')}
-        />
-      </div>
-    </Main.Section>
+      {#if featureImageProviderProps.isValid}
+        <ImageProvider model={featureImageProviderModel}>
+          <FeatureImageEditor />
+        </ImageProvider>
+      {/if}
+    </Main.Facet>
   </Main.Form>
 </Main.Root>

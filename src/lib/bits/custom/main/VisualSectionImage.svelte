@@ -19,7 +19,8 @@ const rootClass = $derived(
   cx(
     'relative w-full min-h-0',
     !isCollapsed && 'h-full',
-    isCollapsed && 'self-start',
+    isCollapsed &&
+      'top-[calc((var(--bits-feature-visual-collapsed-height,64px)-var(--bits-feature-visual-expanded-height,520px))/2)] h-[var(--bits-feature-visual-expanded-height,520px)] self-start',
     className,
   ),
 )

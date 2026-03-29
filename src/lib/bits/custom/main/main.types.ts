@@ -59,6 +59,7 @@ export interface MainVisualSectionProps {
 export interface MainVisualSectionPaneProps {
   children?: Snippet
   class?: string
+  isCollapsed?: boolean
 }
 
 export interface MainVisualSectionImageProps {

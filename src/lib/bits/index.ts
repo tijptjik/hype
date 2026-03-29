@@ -75,6 +75,7 @@ export {
   FeatureRowPrimitive,
   FormFacetNav,
   FormFeatureField,
+  FormFeatureFields,
   FormFeatureFieldsSection,
   FormFeatureParentSection,
   FormFeatureSectionHeader,

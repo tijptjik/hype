@@ -1,29 +1,4 @@
 @layer components {
-  .bits-main.bits-feature-editor {
-    padding-top: 0;
-    padding-inline: 0;
-    padding-bottom: 1.5rem;
-  }
-
-  .bits-feature-editor__form > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0;
-  }
-
-  .bits-feature-editor__content-pad {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    padding-inline: 1.5rem;
-  }
-
-  .bits-feature-editor__content-pad > * {
-    width: 100%;
-  }
-
-  .bits-feature-editor__content-section {
-    padding-bottom: 3rem;
-  }
-
   .bits-feature-editor__facet-nav {
     display: flex;
     align-items: center;
@@ -46,14 +21,6 @@
   .bits-feature-editor__facet-nav-button--next {
     margin-left: auto;
     flex-direction: row-reverse;
-  }
-
-  .bits-feature-editor__fields-section {
-    padding-bottom: 0.75rem;
-  }
-
-  .bits-feature-editor__collections-section {
-    padding-bottom: 1.5rem;
   }
 
   .bits-feature-editor__collections-reset {
@@ -257,21 +224,6 @@
     align-self: center;
   }
 
-  .bits-main__section.bits-feature-editor__section {
-    --bits-feature-editor-visual-offset: 0px;
-    inset: 0 0 1.5rem;
-    top: var(--bits-feature-editor-visual-offset);
-    transition: top 180ms ease;
-  }
-
-  .bits-main__section.bits-feature-editor__section--with-visual.bits-feature-editor__section--visual-expanded {
-    --bits-feature-editor-visual-offset: 520px;
-  }
-
-  .bits-main__section.bits-feature-editor__section--with-visual.bits-feature-editor__section--visual-collapsed {
-    --bits-feature-editor-visual-offset: 64px;
-  }
-
   .bits-feature-editor__visual {
     margin-bottom: 0;
     border-top: 0;
@@ -361,16 +313,6 @@
 
   .bits-feature-visual__pane--map,
   .bits-feature-visual__pane--image {
-    width: 100%;
-    height: 100%;
-  }
-
-  .bits-feature-visual__map-surface {
-    width: 100%;
-    height: 100%;
-  }
-
-  .bits-feature-visual__image-surface {
     width: 100%;
     height: 100%;
   }
@@ -475,19 +417,6 @@
   .bits-feature-visual--collapsed .bits-feature-visual__map,
   .bits-feature-visual--collapsed .bits-feature-visual__image {
     overflow: hidden;
-  }
-
-  .bits-feature-visual--collapsed .bits-feature-visual__map-surface,
-  .bits-feature-visual--collapsed .bits-feature-visual__image-surface {
-    position: relative;
-    top: calc(
-      (
-        var(--bits-feature-visual-collapsed-height, 64px) -
-        var(--bits-feature-visual-expanded-height, 520px)
-      ) /
-      2
-    );
-    height: var(--bits-feature-visual-expanded-height, 520px);
   }
 
   .bits-feature-visual__toggle-control {
@@ -1015,19 +944,18 @@
     color: color-mix(in oklab, white 92%, transparent);
   }
 
+  .bits-feature-field .bits-form__control-wrap input,
+  .bits-feature-field .bits-form__control-wrap textarea,
+  .bits-feature-field .bits-form__select-label {
+    color: color-mix(in oklab, white 92%, transparent);
+  }
+
   .bits-feature-field .bits-form__control--display.bits-form__control--placeholder,
   .bits-feature-field
     .bits-form__control--textarea[readonly].bits-form__control--placeholder,
   .bits-feature-field .bits-form__select-display .bits-form__select-label {
     color: color-mix(in oklab, white 82%, transparent);
     font-style: normal;
-  }
-
-  .bits-feature-field .bits-form__control-wrap input,
-  .bits-feature-field .bits-form__control-wrap textarea,
-  .bits-feature-field .bits-form__select-label,
-  .bits-feature-field .bits-form__select-display .bits-form__select-label {
-    color: color-mix(in oklab, white 92%, transparent);
   }
 
   .bits-feature-field .bits-form__control-wrap input::placeholder,
@@ -1165,34 +1093,6 @@
     opacity: 0.55;
   }
 
-  .bits-feature-editor__translatable-card-grid {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-  }
-
-  .bits-feature-editor__translatable-fields {
-    display: block;
-    width: 100%;
-    min-width: 100%;
-    align-self: stretch;
-  }
-
-  .bits-feature-editor__translatable-fields :global(.bits-form__i18n-section) {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-width: 100%;
-    align-self: stretch;
-  }
-
-  .bits-feature-editor__translatable-card {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-  }
-
   .bits-feature-visual-media {
     display: flex;
     width: 100%;
@@ -1242,12 +1142,7 @@
     border: 0;
   }
 
-  .bits-feature-visual .bits-feature-canonical-image__empty {
-    border-radius: 0;
-  }
-
-  .bits-feature-canonical-image__empty,
-  .bits-feature-facet-placeholder {
+  .bits-feature-canonical-image__empty {
     display: flex;
     min-height: 18rem;
     align-items: center;
@@ -1258,6 +1153,10 @@
     background:
       radial-gradient(circle at top left, rgb(240 77 127 / 16%), transparent 40%),
       color-mix(in oklab, var(--color-glass-base) 72%, transparent);
+  }
+
+  .bits-feature-visual .bits-feature-canonical-image__empty {
+    border-radius: 0;
   }
 
   .bits-feature-info {
@@ -1278,8 +1177,7 @@
       gap: 0.75rem;
     }
 
-    .bits-feature-parent-section__grid,
-    .bits-feature-editor__translatable-card-grid {
+    .bits-feature-parent-section__grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
@@ -1323,8 +1221,7 @@
       justify-content: center;
     }
 
-    .bits-feature-parent-section__grid,
-    .bits-feature-editor__translatable-card-grid {
+    .bits-feature-parent-section__grid {
       grid-template-columns: minmax(0, 1fr);
     }
   }

@@ -1,4 +1,5 @@
 export * from './formFeatureField'
+export * from './formFeatureFields'
 export * from './formFeatureFieldsSection'
 export * from './formFacetNav'
 export * from './formFeatureSectionHeader'
