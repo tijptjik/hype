@@ -34,27 +34,14 @@ let {
 
 let isDragActive = $state(false)
 const isSingleUpload = $derived(uploadSelectionMode === 'single')
-const emptyTitle = $derived(
-  isSingleUpload
-    ? m.gallery__empty_upload_title_single()
-    : m.gallery__empty_upload_title(),
-)
-const emptyDescription = $derived(
-  isSingleUpload
-    ? m.gallery__empty_upload_description_single()
-    : m.gallery__empty_upload_description(),
-)
+const emptyTitle = m.gallery__empty_upload_title()
 const idleLabel = $derived(
   isSingleUpload ? m.gallery__select_image() : m.gallery__select_images(),
 )
 const promptTitle = $derived(
   isSingleUpload ? m.gallery__upload_image() : m.gallery__upload_images(),
 )
-const promptDescription = $derived(
-  isSingleUpload
-    ? m.gallery__empty_upload_description_single()
-    : m.gallery__empty_upload_description(),
-)
+const promptDescription = m.gallery__empty_upload_description()
 
 async function handleFiles(event: CustomEvent): Promise<void> {
   isDragActive = false
