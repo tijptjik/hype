@@ -8,7 +8,7 @@ import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
 import { getImageCtx } from '$lib/context/image.svelte'
 // BITS
 import { Icon, IconAnchor, UserAttributionCard } from '$lib/bits'
-import ImageMetadataCard from '$lib/bits/patterns/gallery/components/ImageMetadataCard.svelte'
+import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
 import { LazyIconAnchor } from '$lib/bits/custom/icon'
 // COMPONENTS
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'

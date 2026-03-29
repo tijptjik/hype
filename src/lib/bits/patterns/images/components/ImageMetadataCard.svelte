@@ -11,6 +11,7 @@ import { formatDate } from '$lib'
 import AtSymbol from 'virtual:icons/lucide/at-sign'
 import Calendar from 'virtual:icons/lucide/calendar'
 import Camera from 'virtual:icons/lucide/camera'
+import MapPinned from 'virtual:icons/lucide/map-pinned'
 import Square2Stack from 'virtual:icons/lucide/copy'
 import Document from 'virtual:icons/lucide/file-text'
 // TYPES
@@ -23,7 +24,7 @@ import type {
 type MetadataRow = {
   icon: Component
   label: string
-  value: string
+  value: string | { primary: string; secondary?: string }
 }
 
 let {
@@ -43,8 +44,72 @@ const appCtx = getAppCtx()
 let metadata = $state<ImageMetadataFull | null>(null)
 let isLoading = $state(false)
 
+function toDisplayFilename(
+  filename: string | null | undefined,
+  extension: string | null | undefined,
+): string | null {
+  if (!filename) return null
+  return extension ? `${filename}.${extension}` : filename
+}
+
+function parseOriginalMetadataSnapshot(
+  value: string | null | undefined,
+): ImageMetadataFull | null {
+  if (!value) return null
+
+  try {
+    return JSON.parse(value) as ImageMetadataFull
+  } catch {
+    return null
+  }
+}
+
+function toDmsCoordinate(
+  value: number,
+  positiveLabel: string,
+  negativeLabel: string,
+): string {
+  const absolute = Math.abs(value)
+  const degrees = Math.floor(absolute)
+  const minutesFloat = (absolute - degrees) * 60
+  const minutes = Math.floor(minutesFloat)
+  const seconds = (minutesFloat - minutes) * 60
+  const direction = value >= 0 ? positiveLabel : negativeLabel
+
+  return `${degrees}° ${minutes}′ ${Math.round(seconds)}″ ${direction}`
+}
+
+function formatCoordinatePair(
+  latitude: number,
+  longitude: number,
+): { primary: string; secondary: string } {
+  return {
+    primary: `LAT ${toDmsCoordinate(latitude, 'N', 'S')}`,
+    secondary: `LNG ${toDmsCoordinate(longitude, 'E', 'W')}`,
+  }
+}
+
 const resolvedMetadata = $derived(metadataProp ?? metadata)
 const resolvedLoading = $derived(loadingProp ?? isLoading)
+const originalMetadataSnapshot = $derived(
+  resolvedMetadata && 'metadata' in resolvedMetadata
+    ? parseOriginalMetadataSnapshot(
+        resolvedMetadata.metadata?.originalMetadataSnapshot ?? null,
+      )
+    : null,
+)
+const originalFilename = $derived(
+  toDisplayFilename(
+    originalMetadataSnapshot?.originalFilename,
+    originalMetadataSnapshot?.originalExtension,
+  ),
+)
+const editedFilename = $derived(
+  toDisplayFilename(
+    resolvedMetadata?.originalFilename,
+    resolvedMetadata?.originalExtension,
+  ),
+)
 const replacementEditedAt = $derived(
   resolvedMetadata && 'metadata' in resolvedMetadata
     ? (resolvedMetadata.metadata?.replacementEditedAt ?? null)
@@ -89,11 +154,28 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
           value: formatDate(resolvedMetadata.capturedAt),
         }
       : null,
-    resolvedMetadata.originalFilename && resolvedMetadata.originalExtension
+    resolvedMetadata.latitude != null && resolvedMetadata.longitude != null
+      ? {
+          icon: MapPinned,
+          label: 'Coordinates',
+          value: formatCoordinatePair(
+            resolvedMetadata.latitude,
+            resolvedMetadata.longitude,
+          ),
+        }
+      : null,
+    originalFilename && originalFilename !== editedFilename
       ? {
           icon: Document,
-          label: m.image__metadata_filename(),
-          value: `${resolvedMetadata.originalFilename}.${resolvedMetadata.originalExtension}`,
+          label: 'Original filename',
+          value: originalFilename,
+        }
+      : null,
+    editedFilename
+      ? {
+          icon: Document,
+          label: originalFilename ? 'Edited filename' : m.image__metadata_filename(),
+          value: editedFilename,
         }
       : null,
     resolvedMetadata.credit
@@ -184,7 +266,30 @@ $effect(() => {
           </div>
           <p class="font-medium text-white">{row.label}</p>
           <div></div>
-          <span>{row.value}</span>
+          {#if typeof row.value === 'string'}
+            <span>{row.value}</span>
+          {:else}
+            <div class="flex flex-col gap-0.5">
+              <span>
+                <span
+                  class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55"
+                >
+                  LAT
+                </span>
+                <span class="ml-2">{row.value.primary.replace(/^LAT\s+/, '')}</span>
+              </span>
+              {#if row.value.secondary}
+                <span>
+                  <span
+                    class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55"
+                  >
+                    LNG
+                  </span>
+                  <span class="ml-2">{row.value.secondary.replace(/^LNG\s+/, '')}</span>
+                </span>
+              {/if}
+            </div>
+          {/if}
         </div>
       {/each}
     {/if}
