@@ -75,18 +75,6 @@ const resolvedMapStyle = $derived.by(() => {
 })
 const activeStyleKey = $derived(`${resolvedMapStyleCode}:${activeLocale}`)
 
-$effect(() => {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  console.debug('[Maplet] mapStyleCode received', {
-    mapStyleCode: mapProps.mapStyleCode ?? null,
-    resolvedMapStyleCode,
-    activeLocale,
-  })
-})
-
 // STATE : UI
 let addressMarker: Marker | null = $state(null)
 let featureMarkerId: Id | null = $state(null)
