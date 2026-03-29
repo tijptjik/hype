@@ -7,7 +7,5 @@ export { default as ImageEditor } from './ImageEditor.svelte'
 export { default as ResourceViewer } from './ResourceViewer.svelte'
 export { default as Thumbnail } from './Thumbnail.svelte'
 export { default as ThumbnailWrapper } from './ThumbnailWrapper.svelte'
-export { default as Viewer } from './Viewer.svelte'
 
-export * from './entityImage'
 export type * from './images.types'

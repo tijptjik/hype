@@ -1,8 +1,11 @@
 <script lang="ts">
 import { tick } from 'svelte'
-import * as ImagePrimitive from './components'
 import { m } from '$lib/i18n'
-import type { GalleryCenterAction, ViewerProps, ViewerRenderable } from './images.types'
+import EmptyState from './EmptyState.svelte'
+import FullScreen from './FullScreen.svelte'
+import ViewerControls from './ViewerControls.svelte'
+import ViewerStage from './ViewerStage.svelte'
+import type { ViewerProps, ViewerRenderable } from '../images.types'
 
 type StartViewTransitionCapableDocument = Document & {
   startViewTransition?: (update: () => void | Promise<void>) => {
@@ -193,7 +196,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 <div class="flex h-full w-full min-h-0 flex-col gap-3">
   {#if currentItem}
     <div class="group/viewer relative min-h-0 flex-1 overflow-hidden">
-      <ImagePrimitive.ViewerStage
+      <ViewerStage
         {currentItem}
         {activeId}
         fit={viewerFit}
@@ -236,7 +239,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 
       {#if items.length > 1}
         {#key currentItem.id}
-          <ImagePrimitive.ViewerControls
+          <ViewerControls
             {canGoPrev}
             {canGoNext}
             onPrev={() => moveToIndex(activeIndex - 1)}
@@ -268,7 +271,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
       {/if}
     </div>
   {:else}
-    <ImagePrimitive.EmptyState
+    <EmptyState
       title={m.gallery__empty_state_title()}
       description={m.gallery__empty_state_description()}
     />
@@ -276,7 +279,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 </div>
 
 {#if currentItem && isFullscreen}
-  <ImagePrimitive.FullScreen
+  <FullScreen
     {currentItem}
     {activeId}
     fit={viewerFit}

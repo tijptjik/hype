@@ -1,6 +1,6 @@
 <script lang="ts">
 import * as ImagePrimitive from './components'
-import Viewer from './Viewer.svelte'
+import Viewer from './components/Viewer.svelte'
 import type { AdminViewerProps } from './images.types'
 
 let {

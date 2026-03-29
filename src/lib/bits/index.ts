@@ -69,7 +69,6 @@ export {
   AutoHide,
   CompletionFooter,
   CompletionFooterPrimitive,
-  EntityImage,
   FeatureRow,
   FeatureRowPrimitive,
   FormFacetNav,
@@ -131,7 +130,6 @@ export {
   AdminThumbnail,
   AdminViewer,
   CameraViewer,
-  Viewer,
 } from './patterns'
 
 export type { HeaderProps } from './patterns/layout/header'
