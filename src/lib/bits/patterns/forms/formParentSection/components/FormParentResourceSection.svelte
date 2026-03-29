@@ -52,6 +52,7 @@ let isResultsVisible = $state(false)
 let hasPendingRemoval = $state(false)
 let shouldFocusSearchOnOpen = $state(false)
 let previousParentId = $state('')
+let previousSearchScopeKey = $state(searchScopeKey)
 
 const showModeUi = $derived(isEditing && !isSubmitting)
 const currentParentId = $derived(parent?.id ?? '')
@@ -175,6 +176,20 @@ $effect(() => {
     isAdding = false
   }
   previousParentId = nextParentId
+})
+
+$effect(() => {
+  const nextSearchScopeKey = searchScopeKey
+  if (nextSearchScopeKey === previousSearchScopeKey) return
+
+  previousSearchScopeKey = nextSearchScopeKey
+
+  if (!isSearchActive) return
+
+  // Force a fresh search instance when an upstream parent changes so empty-query
+  // prefetches rerun against the new scope instead of relying on in-place updates.
+  searchResetKey += 1
+  shouldFocusSearchOnOpen = currentParentId.length === 0
 })
 
 $effect(() => {
