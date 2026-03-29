@@ -237,6 +237,9 @@ const isCurrentRefLoaded = $derived.by(() => {
   return guardRefDesync(hub, committedHub, hubRef)
 })
 const isCurrentRefSettled = $derived(isNewHubRef || settledHubRef === hubRef)
+const optimisticHubData = $derived.by(() =>
+  isCurrentRefLoaded ? hub?.data : cachedHubForRef,
+)
 
 // § Form
 
@@ -824,15 +827,17 @@ $effect(() => {
 
 // IMAGE
 
-const activeHubImage = $derived((hub?.data?.image ?? null) as ImageCtxEnvelope | null)
+const optimisticHubImage = $derived(
+  (optimisticHubData?.image ?? null) as ImageCtxEnvelope | null,
+)
 const imageProviderProps = $derived.by(() => {
-  const hubData = hub?.data
-  const isValid = isCurrentRefLoaded && Boolean(hubData?.id)
+  const hubData = optimisticHubData
+  const isValid = Boolean(hubData?.id)
 
   return {
     isAdminMode: true,
     isValid,
-    image: isValid ? activeHubImage : undefined,
+    image: isValid ? optimisticHubImage : undefined,
     context: isValid
       ? {
           ctxType: ImageContextResource.hub,

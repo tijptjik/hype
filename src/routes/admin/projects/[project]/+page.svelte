@@ -1586,24 +1586,25 @@ $effect(() => {
 
 // IMAGE
 
-const activeProjectImage = $derived(
-  (activeProjectData?.image ?? null) as ImageCtxEnvelope | null,
+const optimisticProjectImage = $derived(
+  (optimisticProjectData?.image ?? null) as ImageCtxEnvelope | null,
 )
 let isRefreshingMapRender = $state(false)
 const imageProviderProps = $derived.by(() => {
-  const projectData = activeProjectData
-  const isValid = isCurrentRefLoaded && Boolean(projectData?.id)
+  const projectData = optimisticProjectData
+  const projectHierarchy = hierarchy ?? optimisticProjectHierarchy
+  const isValid = Boolean(projectData?.id && projectHierarchy)
 
   return {
     isAdminMode: true,
     isValid,
-    image: isValid ? activeProjectImage : undefined,
+    image: isValid ? optimisticProjectImage : undefined,
     context:
-      isValid && hierarchy
+      isValid && projectHierarchy
         ? {
             ctxType: ImageContextResource.project,
             ctxId: projectData?.id,
-            organisation: hierarchy.organisation,
+            organisation: projectHierarchy.organisation,
             project: projectData,
           }
         : undefined,
