@@ -15,7 +15,7 @@ export type ImageSurfaceProps = {
   isBlurred?: boolean
   isGreyscale?: boolean
   rounded?: string
-  onLoad?: () => void
+  onLoad?: (size?: { width: number; height: number }) => void
   onError?: () => void
 }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 import { cx } from '$lib/bits'
+import * as ImagePrimitive from '$lib/bits/patterns/images/components'
 import ImageIcon from 'virtual:icons/lucide/image'
 import type { MainVisualSectionImageProps } from './main.types'
 
@@ -25,36 +26,35 @@ const rootClass = $derived(
 const mediaClass = $derived(
   cx(
     'relative flex h-full min-h-0 w-full overflow-hidden border-0 bg-transparent',
-    isCollapsed ? 'items-center justify-center' : 'items-center justify-end',
+    'items-center justify-center',
   ),
 )
-const imageClass = $derived(
-  cx(
-    'block transition-[filter,opacity] duration-[220ms]',
-    isCollapsed
-      ? 'absolute inset-0 h-full w-full object-cover object-center'
-      : 'h-full w-full object-contain object-right',
-    isPending && 'blur-[10px] opacity-[0.58]',
-  ),
+const imageItem = $derived(
+  src
+    ? {
+        id: src,
+        src,
+        alt,
+      }
+    : null,
 )
 </script>
 
 <div class={rootClass}>
   <a class={mediaClass} {href}>
     {#if src}
-      <img
-        class={imageClass}
-        {src}
-        {alt}
-        aria-label={alt}
-        onload={event => {
-          const image = event.currentTarget as HTMLImageElement
-          onImageLoad?.({
-            width: image.naturalWidth,
-            height: image.naturalHeight,
-          })
+      <ImagePrimitive.ImageSurface
+        item={imageItem}
+        fit={isCollapsed ? 'cover' : 'fit'}
+        isLoading={isPending}
+        showBackdrop={!isCollapsed}
+        class="h-full w-full"
+        rounded="rounded-none"
+        onLoad={size => {
+          if (!size) return
+          onImageLoad?.(size)
         }}
-      >
+      />
     {:else}
       <div
         class="flex h-full min-h-[18rem] w-full items-center justify-center text-center text-[color:color-mix(in_oklab,var(--color-base-content)_68%,transparent)]"

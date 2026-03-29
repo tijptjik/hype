@@ -419,10 +419,14 @@ onDestroy(() => {
           isHidden: Boolean(rotationOverlaySrc && rotationOverlayVisible),
         })}
         onload={event => {
+          const image = event.currentTarget as HTMLImageElement
           hasLoaded = true
           hasError = false
           showSkeleton = false
-          onLoad?.()
+          onLoad?.({
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+          })
         }}
         onerror={handleImageError}
       >
