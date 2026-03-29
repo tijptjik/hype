@@ -10,7 +10,7 @@ export const SUPPORTED_UPLOAD_IMAGE_CONTENT_TYPES = [
   'image/tiff',
   'image/x-tiff',
   'image/jxl',
- ] as const
+] as const
 
 const SUPPORTED_UPLOAD_IMAGE_EXTENSIONS = [
   '.jpg',
