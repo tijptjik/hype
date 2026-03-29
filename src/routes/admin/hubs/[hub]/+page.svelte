@@ -86,20 +86,24 @@ import { HubPreflightFormData } from '$lib/db/zod/schema/hub'
 import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // BITS COMPONENTS
 import {
-  EntityImage,
   FormFieldsSection,
   FormHubLayersSection,
-  FormOrganisationsSection,
   FormHubSpecifiersFields,
+  FormOrganisationsSection,
   FormI18nDescriptorFields,
   FormI18nSection,
   FormUserRolesSection,
   GridSpacer,
   Main,
+  ResourceViewer,
 } from '$lib/bits'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
+// COMPONENTS
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
@@ -838,6 +842,10 @@ const imageProviderProps = $derived.by(() => {
       : undefined,
   }
 })
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => imageProviderProps,
+)
 
 // § Auth
 
@@ -1580,20 +1588,20 @@ $effect(() => {
     nextAction={buildFacetNavAction('images', 'next')}
     attrs={{ 'data-facet-id': 'images' }}
   >
-    <EntityImage
-      {page}
-      entityId={hub?.data?.id}
-      {imageProviderProps}
-      currentImage={activeHubImage}
-      ctx={hub?.data?.id
-          ? {
-              ctxType: ImageContextResource.hub,
-              ctxId: hub.data.id,
-            }
-          : undefined}
-      canEditPresentationMode={canEditImagePresentationMode}
-      canEditDropzone={canEditImageDropzone}
-      {onPresentationModeCommitted}
-    />
+    {#if imageProviderProps.isValid}
+      <ImageProvider model={imageProviderModel}>
+        <ResourceViewer
+          canEditPresentationMode={canEditImagePresentationMode}
+          canEditDropzone={canEditImageDropzone}
+          {onPresentationModeCommitted}
+        />
+      </ImageProvider>
+    {:else}
+      <div
+        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+      >
+        {m.admin__forms_organisation_image_save_hint()}
+      </div>
+    {/if}
   </Main.Facet>
 </Main.Root>

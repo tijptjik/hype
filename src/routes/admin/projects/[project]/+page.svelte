@@ -115,27 +115,31 @@ import { ProjectPreflightFormData } from '$lib/db/zod/schema/project'
 import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // BITS COMPONENTS
 import {
-  EntityImage,
+  FormFieldsSection,
   FormI18nDescriptorFields,
   FormI18nSection,
   FormMapStyleSection,
   FormParentSection,
-  FormProjectLicenseSection,
   FormProjectLayersSection,
+  FormProjectLicenseSection,
   FormSpecifiersFields,
-  FormFieldsSection,
-  ProjectCapabilities,
   FormUserRolesSection,
   GridSpacer,
   Main,
+  ProjectCapabilities,
+  ResourceViewer,
 } from '$lib/bits'
 
 import type { ParentSectionOrganisationItem } from '$lib/bits/patterns/forms/formParentSection'
 import type { MapStyleSelectionItem } from '$lib/bits/patterns/forms/formMapStyleSection'
 import type { UserCapabilityMatrixRow } from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
+// COMPONENTS
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
@@ -1605,6 +1609,10 @@ const imageProviderProps = $derived.by(() => {
         : undefined,
   }
 })
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => imageProviderProps,
+)
 
 // § Auth
 
@@ -2787,20 +2795,20 @@ $effect(() => {
     nextAction={buildFacetNavAction('images', 'next')}
     attrs={{ 'data-facet-id': 'images' }}
   >
-    <EntityImage
-      {page}
-      entityId={activeProjectData?.id}
-      {imageProviderProps}
-      currentImage={activeProjectImage}
-      ctx={activeProjectData?.id
-        ? {
-            ctxType: ImageContextResource.project,
-            ctxId: activeProjectData.id,
-          }
-        : undefined}
-      canEditPresentationMode={canEditImagePresentationMode}
-      canEditDropzone={canEditImageDropzone}
-      {onPresentationModeCommitted}
-    />
+    {#if imageProviderProps.isValid}
+      <ImageProvider model={imageProviderModel}>
+        <ResourceViewer
+          canEditPresentationMode={canEditImagePresentationMode}
+          canEditDropzone={canEditImageDropzone}
+          {onPresentationModeCommitted}
+        />
+      </ImageProvider>
+    {:else}
+      <div
+        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+      >
+        {m.admin__forms_organisation_image_save_hint()}
+      </div>
+    {/if}
   </Main.Facet>
 </Main.Root>
