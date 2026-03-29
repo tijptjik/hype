@@ -1,7 +1,4 @@
 <script lang="ts">
-// COMPONENTS
-import Loading from '$lib/components/images/gallery/overlays/Loading.svelte'
-import LoadError from '$lib/components/images/gallery/overlays/LoadError.svelte'
 import { onDestroy } from 'svelte'
 
 // IMAGE
@@ -144,10 +141,22 @@ $effect(() => {
     : 'h-64 w-full'} bg-transparent"
 >
   {#if showLoading && !loaded}
-    <Loading />
+    <div
+      aria-label="Image loading"
+      class="absolute inset-0 z-10 flex items-center justify-center bg-black/5"
+    >
+      <div
+        class="h-8 w-8 animate-spin rounded-full border-2 border-black/15 border-t-black/45"
+      ></div>
+    </div>
   {/if}
   {#if showError && error}
-    <LoadError />
+    <div
+      aria-label="Image failed to load"
+      class="absolute inset-0 z-10 flex items-center justify-center bg-black/10 px-4 text-center text-sm text-black/70"
+    >
+      Failed to load image
+    </div>
   {/if}
 
   <!-- Base image (currently visible) -->
