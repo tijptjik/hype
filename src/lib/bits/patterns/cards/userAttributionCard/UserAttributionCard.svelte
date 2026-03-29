@@ -1,5 +1,4 @@
 <script lang="ts">
-import { tick } from 'svelte'
 import { getUserForAttribution } from '$lib/api/server/user.remote'
 import { TransitionStack } from '$lib/bits/custom/transition'
 import { getAppCtx } from '$lib/context/app.svelte'
@@ -16,6 +15,8 @@ let {
   date,
   type = 'imageContributor',
   friendlyDate = true,
+  openDirection = 'right',
+  isOpen = false,
   class: className = '',
 }: UserAttributionCardProps = $props()
 
@@ -53,9 +54,6 @@ const toDisplayState = (
 let resolvedAttribution = $state<AttributionCardDisplay | null>(null)
 let hasResolvedAttribution = $state(false)
 let attributionRequestVersion = 0
-let measuredWidth = $state<number | null>(null)
-let hasMeasuredWidth = $state(false)
-let measureElement = $state<HTMLDivElement | null>(null)
 
 $effect(() => {
   if (!userId) {
@@ -100,67 +98,75 @@ const getDisplayName = (user: UserHydrationResult): string => {
   const adminUser = isAdminUser(user) ? user : null
   return adminUser?.name ?? user?.attribution ?? 'Unknown User'
 }
-
-$effect(() => {
-  if (!resolvedAttribution) return
-
-  void tick().then(() => {
-    if (!measureElement) return
-
-    const nextWidth = Math.ceil(measureElement.getBoundingClientRect().width)
-    if (nextWidth <= 0) return
-
-    measuredWidth = nextWidth
-    hasMeasuredWidth = true
-  })
-})
 </script>
 
 {#if userId && resolvedAttribution}
   {#snippet AttributionContent(attribution: AttributionCardDisplay)}
     {@const adminUser = isAdminUser(attribution.user) ? attribution.user : null}
     {@const displayName = getDisplayName(attribution.user)}
-    <article class={`bits-feature-attribution ${className}`}>
-      <img
-        class="bits-feature-attribution__avatar"
-        src={resolveAvatarImageSrc(adminUser?.image) ?? ''}
-        alt={displayName}
-      >
-      <div class="bits-feature-attribution__body">
-        <span class="bits-feature-attribution__title">{displayName}</span>
-        <span class="bits-feature-attribution__subtitle" style="line-height:1.15">
-          <RelativeDate date={attribution.date} friendly={attribution.friendlyDate} />
-        </span>
-      </div>
-    </article>
+    <div class="bits-feature-attribution__body">
+      <span class="bits-feature-attribution__title">{displayName}</span>
+      <span class="bits-feature-attribution__subtitle" style="line-height:1.15">
+        <RelativeDate date={attribution.date} friendly={attribution.friendlyDate} />
+      </span>
+    </div>
   {/snippet}
 
-  <div
-    class="bits-feature-attribution-shell"
-    style={hasMeasuredWidth && measuredWidth ? `width:${measuredWidth}px` : undefined}
-  >
-    <div class="bits-feature-attribution-shell__visible">
-      <TransitionStack
-        valueKey={resolvedAttribution.key}
-        value={resolvedAttribution}
-        isReady={hasResolvedAttribution}
-        duration={180}
-        {persistenceKey}
-      >
-        {#snippet children(attribution: AttributionCardDisplay)}
-          {@render AttributionContent(attribution)}
-        {/snippet}
-      </TransitionStack>
-    </div>
-
-    <div
-      bind:this={measureElement}
-      class="bits-feature-attribution-shell__measure"
-      aria-hidden="true"
+  {@const adminUser = isAdminUser(resolvedAttribution.user) ? resolvedAttribution.user : null}
+  {@const displayName = getDisplayName(resolvedAttribution.user)}
+  {#if isOpen}
+    <article
+      class={`bits-feature-attribution-shell ${className}`}
+      data-direction={openDirection}
+      data-open="true"
     >
-      <div class="bits-feature-attribution-shell__measure-group">
-        {@render AttributionContent(resolvedAttribution)}
+      <div class="bits-feature-attribution-shell__panel">
+        <div class="bits-feature-attribution-shell__visible">
+          {@render AttributionContent(resolvedAttribution)}
+        </div>
       </div>
-    </div>
-  </div>
+
+      <div class="bits-feature-attribution-shell__trigger" aria-hidden="true">
+        <img
+          class="bits-feature-attribution__avatar"
+          src={resolveAvatarImageSrc(adminUser?.image) ?? ''}
+          alt={displayName}
+        >
+      </div>
+    </article>
+  {:else}
+    <article
+      class={`bits-feature-attribution-shell ${className}`}
+      data-direction={openDirection}
+      data-open="false"
+    >
+      <div class="bits-feature-attribution-shell__panel">
+        <div class="bits-feature-attribution-shell__visible">
+          <TransitionStack
+            valueKey={resolvedAttribution.key}
+            value={resolvedAttribution}
+            isReady={hasResolvedAttribution}
+            duration={180}
+            {persistenceKey}
+          >
+            {#snippet children(attribution: AttributionCardDisplay)}
+              {@render AttributionContent(attribution)}
+            {/snippet}
+          </TransitionStack>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="bits-feature-attribution-shell__trigger"
+        aria-label={displayName}
+      >
+        <img
+          class="bits-feature-attribution__avatar"
+          src={resolveAvatarImageSrc(adminUser?.image) ?? ''}
+          alt={displayName}
+        >
+      </button>
+    </article>
+  {/if}
 {/if}
