@@ -654,7 +654,10 @@ describe('image.remote', () => {
         id: 'img-1',
         ctxType: 'feature',
         ctxId: 'feature-1',
-        data: { version: 2468 },
+        data: {
+          env: 'local',
+          version: 2468,
+        },
       }),
     )
     expect(put).toHaveBeenCalledWith(
@@ -671,6 +674,143 @@ describe('image.remote', () => {
       version: 2468,
     })
     expect(fetchSpy).not.toHaveBeenCalled()
+    expect(result).toEqual({ data: { id: 'img-1' } })
+
+    fetchSpy.mockRestore()
+    dateNowSpy.mockRestore()
+  })
+
+  it('rotateImage falls back to direct R2 reads and writes when the binding cannot access the original', async () => {
+    const put = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('binding write unavailable'))
+      .mockResolvedValue(undefined)
+    const originalGet = vi.fn(async () => null)
+    const previewGet = vi.fn(async () => null)
+    const rotatedSource = await sharp({
+      create: {
+        width: 120,
+        height: 80,
+        channels: 3,
+        background: '#445566',
+      },
+    })
+      .jpeg()
+      .toBuffer()
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(97531)
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input, init) => {
+        const method = init?.method ?? (input instanceof Request ? input.method : 'GET')
+
+        if (method === 'GET') {
+          return new Response(rotatedSource, {
+            status: 200,
+            headers: { 'content-type': 'image/jpeg' },
+          })
+        }
+
+        if (method === 'PUT') {
+          return new Response(null, { status: 200 })
+        }
+
+        return new Response(null, { status: 500 })
+      })
+
+    mockLoadImageById.mockResolvedValue({
+      id: 'img-2',
+      env: 'local',
+      publicId: 'h/features/feature-2/image-b',
+      version: 4321,
+      featureId: 'feature-2',
+    })
+
+    mockGuardedContext.mockResolvedValue({
+      db: buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub-a',
+      }),
+      user: { id: 'u-1', isAnonymous: false },
+      userId: 'u-1',
+      userRoles: [],
+      isAdminRequest: true,
+      event: {
+        request: new Request('https://example.test'),
+        fetch: globalThis.fetch,
+        locals: { hub: null },
+        platform: {
+          env: {
+            ENVIRONMENT: 'local',
+            AUTH_SECRET: 'secret',
+            CLOUDFLARE_ACCOUNT_ID: 'account-id',
+            R2_S3_ACCESS_KEY_ID: 'access-key',
+            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+            ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+            ASSET_RAW_PREVIEW: { get: previewGet, head: vi.fn(), put },
+            ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
+            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+          },
+          context: {
+            waitUntil: mockWaitUntil,
+          },
+        },
+      },
+    })
+
+    mockReadMetadataDocument.mockResolvedValue({
+      document: {
+        originalFilename: 'image.jpg',
+        originalExtension: 'jpg',
+        originalWidth: 120,
+        originalHeight: 80,
+        rotation: 0,
+        cameraModel: null,
+        capturedAt: null,
+        credit: null,
+        latitude: null,
+        longitude: null,
+        metadata: {
+          uploadedWidth: '120',
+          uploadedHeight: '80',
+        },
+        sourceVersion: 4321,
+        uploadedAt: '2026-03-01T00:00:00.000Z',
+        modifiedAt: '2026-03-01T00:00:00.000Z',
+      },
+      resolvedEnv: 'preview',
+      resolvedVersion: 4321,
+    })
+
+    const result = await remote.rotateImage({
+      id: 'img-2',
+      ctxType: 'feature',
+      ctxId: 'feature-2',
+      rotation: 90,
+    })
+
+    expect(previewGet).toHaveBeenCalledWith('h/features/feature-2/image-b')
+    expect(fetchSpy).toHaveBeenCalled()
+    expect(mockUpdateImageForContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'img-2',
+        data: expect.objectContaining({
+          env: 'preview',
+          version: 97531,
+        }),
+      }),
+    )
+    expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
+      event: expect.objectContaining({
+        request: expect.any(Request),
+      }),
+      env: 'preview',
+      publicId: 'h/features/feature-2/image-b',
+      version: 97531,
+    })
     expect(result).toEqual({ data: { id: 'img-1' } })
 
     fetchSpy.mockRestore()
