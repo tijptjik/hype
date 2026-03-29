@@ -9,6 +9,7 @@ let {
   trigger,
   children,
   disabled = false,
+  withProvider = true,
   triggerProps = {},
   triggerClass = '',
   contentProps = {},
@@ -30,27 +31,31 @@ const arrowClasses = $derived(
 )
 </script>
 
+{#snippet tooltipRoot()}
+  <TooltipPrimitive.Root bind:open {...restProps}>
+    <TooltipPrimitive.Trigger {...triggerProps}>
+      {#snippet child({ props })}
+        <div {...props} class={triggerClasses}>{@render trigger()}</div>
+      {/snippet}
+    </TooltipPrimitive.Trigger>
+
+    <TooltipPrimitive.Portal>
+      <TooltipPrimitive.Content
+        {...contentProps}
+        class={contentClasses}
+        sideOffset={contentProps.sideOffset ?? 8}
+      >
+        {@render children()}
+        <!-- <TooltipPrimitive.Arrow class={arrowClasses} /> -->
+      </TooltipPrimitive.Content>
+    </TooltipPrimitive.Portal>
+  </TooltipPrimitive.Root>
+{/snippet}
+
 {#if disabled || !children}
   {@render trigger()}
+{:else if withProvider}
+  <TooltipPrimitive.Provider> {@render tooltipRoot()} </TooltipPrimitive.Provider>
 {:else}
-  <TooltipPrimitive.Provider>
-    <TooltipPrimitive.Root bind:open {...restProps}>
-      <TooltipPrimitive.Trigger {...triggerProps}>
-        {#snippet child({ props })}
-          <div {...props} class={triggerClasses}>{@render trigger()}</div>
-        {/snippet}
-      </TooltipPrimitive.Trigger>
-
-      <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Content
-          {...contentProps}
-          class={contentClasses}
-          sideOffset={contentProps.sideOffset ?? 8}
-        >
-          {@render children()}
-          <!-- <TooltipPrimitive.Arrow class={arrowClasses} /> -->
-        </TooltipPrimitive.Content>
-      </TooltipPrimitive.Portal>
-    </TooltipPrimitive.Root>
-  </TooltipPrimitive.Provider>
+  {@render tooltipRoot()}
 {/if}

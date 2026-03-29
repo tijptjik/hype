@@ -8,6 +8,7 @@ export type SimpleTooltipProps = Omit<Tooltip.RootProps, 'open'> & {
   trigger: Snippet
   children?: Snippet
   disabled?: boolean
+  withProvider?: boolean
   triggerProps?: WithoutChild<Tooltip.TriggerProps>
   triggerClass?: string
   contentProps?: WithoutChild<Tooltip.ContentProps>
