@@ -176,6 +176,12 @@ const handle_auth: Handle = async ({ event, resolve }) => {
  */
 const handle_session_auth: Handle = async ({ event, resolve }) => {
   try {
+    // if auth was not initialized for this request, don't try to fetch a session.
+    // This is used for scripted requests that don't need auth.
+    if (!event.locals.auth) {
+      return resolve(event)
+    }
+
     // LOCALS
     const sessionData = await event.locals.auth.api.getSession({
       headers: event.request.headers,

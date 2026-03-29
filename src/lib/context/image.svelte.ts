@@ -6,10 +6,14 @@ import { toast } from 'svelte-sonner'
 import { m } from '$lib/i18n'
 // SERVICES
 import {
+  finalizePreparedImageUpload,
   uploadAndProcessImage,
   getURLfromImage,
+  prepareImageUpload,
   sortImages,
+  uploadPreparedImageObject,
 } from '$lib/client/services/image'
+import { createPreviewableUploadFile } from '$lib/images/upload'
 import {
   deleteImage as deleteImageRemote,
   getImagesForContext,
@@ -63,6 +67,15 @@ function isAbortedImageLoadError(error: unknown): boolean {
   }
 
   return false
+}
+
+async function createOptimisticPreviewUrl(file: File): Promise<string> {
+  try {
+    const previewFile = await createPreviewableUploadFile(file)
+    return URL.createObjectURL(previewFile)
+  } catch {
+    return URL.createObjectURL(file)
+  }
 }
 
 // ═══════════════════════
@@ -259,7 +272,9 @@ export class ImageCtx {
       }
     }
     setTimeout(() => {
-      this.setActiveImageToFirst()
+      if (!this.state.activeImage) {
+        this.setActiveImageToFirst()
+      }
     }, 100)
   }
 
@@ -348,6 +363,7 @@ export class ImageCtx {
 
     // CRUD :: READ
     images: new SvelteMap<Id, ImageCtxEnvelope>(),
+    activeItemId: null as string | null,
     activeImage: null as ImageCtxEnvelope | null,
     targetImage: null as ImageCtxEnvelope | null, // Image we're transitioning to
     targetImageId: null as Id | null, // Use if we don't have the targetImage, so still need to fetch it.
@@ -490,37 +506,82 @@ export class ImageCtx {
     this.resetActivePreview()
   }
 
-  addToUploadQueue(files: File[], imageToReplace?: ImageCtxEnvelope) {
-    const newUploads = files.map(
-      file =>
-        ({
+  async addToUploadQueue(
+    files: File[],
+    imageToReplace?: ImageCtxEnvelope,
+  ): Promise<void> {
+    if (imageToReplace) {
+      this.state.uploadQueue = this.state.uploadQueue.filter(upload => {
+        const isReplacementForSameImage =
+          upload.imageToReplace?.image.id === imageToReplace.image.id
+
+        if (!isReplacementForSameImage) {
+          return true
+        }
+
+        if (upload.preview) {
+          URL.revokeObjectURL(upload.preview)
+        }
+
+        return false
+      })
+    }
+
+    const queuedAtBase = Date.now()
+    const newUploads = await Promise.all(
+      files.map(async (file, index) => {
+        const preview = await createOptimisticPreviewUrl(file)
+
+        return {
           file,
           status: 'uploading',
           retries: 0,
+          queuedAt: queuedAtBase + index,
+          optimisticKey: `optimistic-upload-${queuedAtBase}-${index}-${file.name}-${file.lastModified}`,
           imageToReplace,
-          preview: URL.createObjectURL(file),
-        }) as ImageUpload,
+          preview,
+        } as ImageUpload
+      }),
     )
 
     this.state.uploadQueue.push(...newUploads)
 
     // Update preview URLs for replacing images
-    files.forEach(file => {
+    newUploads.forEach(upload => {
       if (imageToReplace && this.state.images.has(imageToReplace.image.id)) {
         const existingImage = this.state.images.get(imageToReplace.image.id)
         if (existingImage) {
-          this.state.images.set(existingImage.image.id, {
+          if (existingImage.image.preview) {
+            URL.revokeObjectURL(existingImage.image.preview)
+          }
+
+          const updatedImage = {
             ...existingImage,
             image: {
               ...existingImage.image,
-              preview: URL.createObjectURL(file),
+              preview: upload.preview,
             },
-          })
+          } satisfies ImageCtxEnvelope
+
+          this.state.images.set(existingImage.image.id, updatedImage)
+
+          if (this.state.activeImage?.image.id === updatedImage.image.id) {
+            this.state.activeImage = updatedImage
+          }
+
+          if (this.state.targetImage?.image.id === updatedImage.image.id) {
+            this.state.targetImage = updatedImage
+          }
         }
       }
     })
 
     this.updateActivePreview()
+
+    if (!imageToReplace && newUploads.length > 0) {
+      const latestUpload = newUploads[newUploads.length - 1]
+      this.targetItem(latestUpload?.optimisticKey ?? null)
+    }
   }
 
   removeFromUploadQueue(file: File) {
@@ -533,7 +594,9 @@ export class ImageCtx {
 
   setUploadStatus(fileObject: ImageUpload, status: UploadStatus) {
     const upload = this.state.uploadQueue.find(
-      item => item.file.name === fileObject.file.name,
+      item =>
+        item.optimisticKey === fileObject.optimisticKey ||
+        item.file === fileObject.file,
     )
     if (upload) {
       upload.status = status
@@ -545,10 +608,152 @@ export class ImageCtx {
     this.setUploadQueue(
       this.state.uploadQueue.map(item =>
         item.file === fileObject.file
-          ? { ...item, status: 'uploading', retries: item.retries + 1 }
+          ? {
+              ...item,
+              status: 'uploading',
+              retries: item.retries + 1,
+              errorMessage: null,
+            }
           : item,
       ),
     )
+  }
+
+  private setUploadError(fileObject: ImageUpload, errorMessage: string): void {
+    this.setUploadQueue(
+      this.state.uploadQueue.map(item =>
+        item.file === fileObject.file
+          ? {
+              ...item,
+              status: 'error',
+              errorMessage,
+            }
+          : item,
+      ),
+    )
+  }
+
+  private getUploadErrorMessage(error: unknown): string {
+    const fallbackMessage = 'Upload failed'
+
+    if (!(error instanceof Error) || !error.message) {
+      return fallbackMessage
+    }
+
+    if (
+      error.message.includes('SQLITE_BUSY') ||
+      error.message.includes('database is locked')
+    ) {
+      return 'The image uploaded, but saving it hit a temporary database lock. Retry it.'
+    }
+
+    return error.message
+  }
+
+  private shouldApplyUploadResult(
+    fileObject: ImageUpload,
+    uploadCtx: ImageUploadCtx,
+  ): boolean {
+    const queuedUpload = this.state.uploadQueue.find(
+      item => item.optimisticKey === fileObject.optimisticKey,
+    )
+
+    if (!queuedUpload) {
+      return false
+    }
+
+    if (!uploadCtx.imageToReplace) {
+      return true
+    }
+
+    const replacementImageId = uploadCtx.imageToReplace.image.id
+    const latestReplacementUpload = [...this.state.uploadQueue]
+      .filter(
+        upload =>
+          upload.imageToReplace?.image.id === replacementImageId &&
+          upload.status !== 'invalidated',
+      )
+      .sort((a, b) => b.queuedAt - a.queuedAt)[0]
+
+    return latestReplacementUpload?.optimisticKey === fileObject.optimisticKey
+  }
+
+  private applySuccessfulUploadResult(
+    fileObject: ImageUpload,
+    uploadCtx: ImageUploadCtx,
+    savedImage: ImageCtxEnvelope,
+  ): ImageCtxEnvelope {
+    const savedEnvelope = {
+      ...savedImage,
+      image: uploadCtx.imageToReplace
+        ? savedImage.image
+        : {
+            ...savedImage.image,
+            createdAt: new Date(fileObject.queuedAt).toISOString(),
+          },
+    }
+
+    if (!this.shouldApplyUploadResult(fileObject, uploadCtx)) {
+      return (
+        (uploadCtx.imageToReplace
+          ? this.getImage(uploadCtx.imageToReplace.image.id)
+          : this.getImage(savedEnvelope.image.id)) ?? savedEnvelope
+      )
+    }
+
+    if (uploadCtx.imageToReplace) {
+      this.state.images.set(savedEnvelope.image.id, savedEnvelope)
+      this.setUploadQueue(
+        this.state.uploadQueue.map(item =>
+          item.optimisticKey === fileObject.optimisticKey
+            ? {
+                ...item,
+                status: 'uploaded',
+                savedImage: savedEnvelope,
+                errorMessage: null,
+              }
+            : item,
+        ),
+      )
+
+      if (this.state.activeImage?.image.id === uploadCtx.imageToReplace.image.id) {
+        this.state.lastChangeType = 'target'
+        this.setActiveImage(savedEnvelope)
+      }
+    } else {
+      this.state.images.set(savedEnvelope.image.id, savedEnvelope)
+      this.setUploadQueue(
+        this.state.uploadQueue.map(item =>
+          item.optimisticKey === fileObject.optimisticKey
+            ? {
+                ...item,
+                status: 'uploaded',
+                savedImage: savedEnvelope,
+                errorMessage: null,
+              }
+            : item,
+        ),
+      )
+
+      const hasOtherPendingAdditiveUploads = this.state.uploadQueue.some(
+        upload =>
+          upload.optimisticKey !== fileObject.optimisticKey &&
+          !upload.imageToReplace &&
+          (upload.status === 'uploading' || upload.status === 'finalizing'),
+      )
+
+      const shouldPromoteFinalizedImage =
+        !hasOtherPendingAdditiveUploads &&
+        (this.state.activeItemId === fileObject.optimisticKey ||
+          !this.state.activeImage)
+
+      if (shouldPromoteFinalizedImage) {
+        this.setActiveImage(savedEnvelope, false, fileObject.optimisticKey)
+      }
+    }
+
+    this.setLoadStatus(savedImage.image.id, 'loading')
+    return savedEnvelope
   }
 
   // ═══════════════════════
@@ -558,37 +763,41 @@ export class ImageCtx {
   /**
    * Converts staged files to temporary Image objects with preview URLs
    */
-  private createStagedImagesFromFiles(files: File[]): ImageCtxEnvelope[] {
+  private async createStagedImagesFromFiles(
+    files: File[],
+  ): Promise<ImageCtxEnvelope[]> {
     const ctxType = this.state.context?.ctxType ?? ('feature' as ImageContextResource)
     const ctxId = this.state.context?.ctxId ?? ''
-    return files.map((file, index) => {
-      const tempId = `staged-${Date.now()}-${index}`
-      const preview = URL.createObjectURL(file)
+    return await Promise.all(
+      files.map(async (file, index) => {
+        const tempId = `staged-${Date.now()}-${index}`
+        const preview = await createOptimisticPreviewUrl(file)
 
-      return {
-        ctxType,
-        ctxId,
-        intent: 'general',
-        isPublished: false,
-        publishedAt: null,
-        image: {
-          id: tempId,
-          isArchived: false,
-          localIsArchived: null,
-          presentationMode: 'contain',
-          createdAt: new Date().toISOString(),
-          contributorId: null,
-          cdn: 'cloudflareR2',
-          env: 'local',
-          cdnId: null,
-          publicId: tempId,
-          version: null,
-          modifiedAt: new Date().toISOString(),
-          preview,
-          file,
-        } as Image & { preview: string; file: File },
-      }
-    })
+        return {
+          ctxType,
+          ctxId,
+          intent: 'general',
+          isPublished: false,
+          publishedAt: null,
+          image: {
+            id: tempId,
+            isArchived: false,
+            localIsArchived: null,
+            presentationMode: 'contain',
+            createdAt: new Date().toISOString(),
+            contributorId: null,
+            cdn: 'cloudflareR2',
+            env: 'local',
+            cdnId: null,
+            publicId: tempId,
+            version: null,
+            modifiedAt: new Date().toISOString(),
+            preview,
+            file,
+          } as Image & { preview: string; file: File },
+        }
+      }),
+    )
   }
 
   async handleStagedFilesSelect(acceptedFiles: File[], fileRejections: File[]) {
@@ -602,7 +811,7 @@ export class ImageCtx {
     }
 
     // Convert files to staged Image objects
-    const stagedImages = this.createStagedImagesFromFiles(acceptedFiles)
+    const stagedImages = await this.createStagedImagesFromFiles(acceptedFiles)
 
     // Add staged images to existing images (or set if we just reset)
     if (hasApiImages) {
@@ -623,7 +832,7 @@ export class ImageCtx {
     this.addToRejected(fileRejections)
 
     // Update staging queue for upload tracking
-    this.addToStagingQueue(acceptedFiles)
+    await this.addToStagingQueue(acceptedFiles)
   }
 
   /**
@@ -648,6 +857,8 @@ export class ImageCtx {
         file,
         status: 'uploading',
         retries: 0,
+        queuedAt: new Date(img.image.createdAt).getTime(),
+        optimisticKey: img.image.id,
         preview: img.image.preview,
       } as ImageUpload
     })
@@ -666,15 +877,21 @@ export class ImageCtx {
     this.state.stagingQueue = []
   }
 
-  addToStagingQueue(files: File[]) {
-    const newStaged = files.map(
-      file =>
-        ({
+  async addToStagingQueue(files: File[]): Promise<void> {
+    const queuedAtBase = Date.now()
+    const newStaged = await Promise.all(
+      files.map(async (file, index) => {
+        const preview = await createOptimisticPreviewUrl(file)
+
+        return {
           file,
           status: 'staged',
           retries: 0,
-          preview: URL.createObjectURL(file),
-        }) as ImageUpload,
+          queuedAt: queuedAtBase + index,
+          optimisticKey: `staged-upload-${queuedAtBase}-${index}-${file.name}-${file.lastModified}`,
+          preview,
+        } as ImageUpload
+      }),
     )
 
     this.state.stagingQueue.push(...newStaged)
@@ -830,6 +1047,17 @@ export class ImageCtx {
     })
     this.state.images = newImages
 
+    if (this.state.activeImage?.image.id) {
+      const refreshedActiveImage = newImages.get(this.state.activeImage.image.id)
+      if (refreshedActiveImage) {
+        this.state.activeImage = refreshedActiveImage
+        this.state.activeItemId = this.getSelectionIdForImage(
+          refreshedActiveImage,
+          this.state.activeItemId,
+        )
+      }
+    }
+
     // Only preload non-preview images
     if (sortedApiImages.length > 0) {
       await this.preloadImages()
@@ -859,6 +1087,10 @@ export class ImageCtx {
     // Also update activeImage if it's the same image
     if (this.state.activeImage?.image.id === imageId) {
       this.state.activeImage = updatedImage
+      this.state.activeItemId = this.getSelectionIdForImage(
+        updatedImage,
+        this.state.activeItemId,
+      )
     }
   }
 
@@ -876,53 +1108,11 @@ export class ImageCtx {
       return
     }
 
-    // Clean up upload queue when image loads successfully, but with a small delay
-    // to prevent preview from disappearing before final image is ready to display
-    if (status === 'loaded') {
-      const replacementUpload = this.state.uploadQueue.find(
-        upload => upload.imageToReplace?.image.id === imageId,
-      )
-
-      const freshUpload = this.state.uploadQueue.find(
-        upload => !upload.imageToReplace && upload.status === 'uploaded',
-      )
-
-      if (replacementUpload?.status === 'uploaded' || freshUpload) {
-        const _uploadType = replacementUpload ? 'replacement' : 'fresh'
-
-        // Small delay to ensure the final image is ready to display before cleaning up preview
-        const delay = 50
-
-        setTimeout(() => {
-          this.state.uploadQueue = this.state.uploadQueue
-            .map(upload => {
-              if (
-                upload.imageToReplace?.image.id === imageId &&
-                upload.status === 'uploaded'
-              ) {
-                URL.revokeObjectURL(upload.preview ?? '')
-                return { ...upload, status: 'invalidated' as UploadStatus }
-              }
-              if (!upload.imageToReplace && upload.status === 'uploaded') {
-                URL.revokeObjectURL(upload.preview ?? '')
-                return { ...upload, status: 'invalidated' as UploadStatus }
-              }
-              return upload
-            })
-            .filter(upload => upload.status !== 'invalidated')
-
-          this.updateActivePreview()
-
-          // Only reset change type after upload cleanup, not during context changes
-          // Context changes should preserve their lastChangeType until explicitly reset
-          if (this.state.lastChangeType !== 'context') {
-            this.state.lastChangeType = null
-          }
-        }, delay)
-      }
-    }
-
     this.state.loadStatus.set(imageId, status)
+
+    if (status === 'loaded') {
+      this.maybeCleanupSettledUpload(imageId)
+    }
   }
 
   getLoadStatuses() {
@@ -963,6 +1153,10 @@ export class ImageCtx {
 
   setThumbnailLoadStatus(imageId: Id, status: LoadStatus) {
     this.state.thumbnailLoadStatus.set(imageId, status)
+
+    if (status === 'loaded') {
+      this.maybeCleanupSettledUpload(imageId)
+    }
   }
 
   getThumbnailLoadStatus(imageId: Id): LoadStatus | undefined {
@@ -1013,12 +1207,86 @@ export class ImageCtx {
     return this.state.activeImage
   }
 
-  setActiveImage(image: ImageCtxEnvelope | null, isLoading: boolean = false) {
+  get activeItemId(): string | null {
+    return this.getActiveItemId()
+  }
+
+  private getUploadByOptimisticKey(itemId: string): ImageUpload | undefined {
+    return this.state.uploadQueue.find(
+      upload => upload.optimisticKey === itemId && upload.status !== 'invalidated',
+    )
+  }
+
+  private getUploadBySavedImageId(imageId: Id): ImageUpload | undefined {
+    return this.state.uploadQueue.find(
+      upload =>
+        !upload.imageToReplace &&
+        upload.savedImage?.image.id === imageId &&
+        upload.status !== 'invalidated',
+    )
+  }
+
+  private getDisplayItemIdForImageId(imageId: Id | null | undefined): string | null {
+    if (!imageId) return null
+
+    const upload = this.getUploadBySavedImageId(imageId)
+    if (upload) {
+      return upload.optimisticKey
+    }
+
+    if (this.state.images.has(imageId)) {
+      return imageId
+    }
+
+    return null
+  }
+
+  private getSelectionIdForImage(
+    image: ImageCtxEnvelope | null,
+    selectionId?: string | null,
+  ): string | null {
+    if (selectionId !== undefined) {
+      return selectionId
+    }
+
+    return this.getDisplayItemIdForImageId(image?.image.id) ?? image?.image.id ?? null
+  }
+
+  getActiveItemId(): string | null {
+    const activeItemId = this.state.activeItemId
+
+    if (activeItemId) {
+      const upload = this.getUploadByOptimisticKey(activeItemId)
+      if (upload) {
+        return upload.optimisticKey
+      }
+
+      const uploadDisplayId = this.getDisplayItemIdForImageId(activeItemId)
+      if (uploadDisplayId) {
+        return uploadDisplayId
+      }
+
+      if (this.state.images.has(activeItemId)) {
+        return activeItemId
+      }
+    }
+
+    return this.getDisplayItemIdForImageId(this.state.activeImage?.image.id) ?? null
+  }
+
+  setActiveImage(
+    image: ImageCtxEnvelope | null,
+    isLoading: boolean = false,
+    selectionId?: string | null,
+  ) {
+    const nextSelectionId = this.getSelectionIdForImage(image, selectionId)
+
     // Prevent redundant calls - if we're trying to set the same image that's already active
     if (
       image &&
       this.state.activeImage &&
-      image.image.id === this.state.activeImage.image.id
+      image.image.id === this.state.activeImage.image.id &&
+      nextSelectionId === this.state.activeItemId
     ) {
       return
     }
@@ -1030,6 +1298,7 @@ export class ImageCtx {
 
     // Set Active Image
     this.state.activeImage = image
+    this.state.activeItemId = nextSelectionId
 
     if (image && isLoading) {
       this.setLoadStatus(image.image.id, 'loading')
@@ -1041,8 +1310,11 @@ export class ImageCtx {
     }
   }
 
-  resetActiveImage() {
+  resetActiveImage(clearSelection: boolean = true) {
     this.state.activeImage = null
+    if (clearSelection) {
+      this.state.activeItemId = null
+    }
   }
 
   get targetImage(): ImageCtxEnvelope | null {
@@ -1098,7 +1370,10 @@ export class ImageCtx {
   }
 
   // Smoothly switch to a new image (preload then switch)
-  async switchToImageSmooth(targetImage: ImageCtxEnvelope) {
+  async switchToImageSmooth(
+    targetImage: ImageCtxEnvelope,
+    selectionId?: string | null,
+  ) {
     // If we're already transitioning to this image, do nothing
     if (this.state.targetImage?.image.id === targetImage.image.id) {
       return
@@ -1112,9 +1387,47 @@ export class ImageCtx {
     await this.preloadImageForTransition(targetImage)
 
     // Now switch to the image
-    this.setActiveImage(targetImage)
+    this.setActiveImage(targetImage, false, selectionId)
     this.resetTargetImage()
     this.state.isTransitioning = false
+  }
+
+  targetItem(itemId: string | null): ImageCtxEnvelope | undefined {
+    if (!itemId) {
+      this.resetTargetImage()
+      this.resetActiveImage()
+      return undefined
+    }
+
+    const upload = this.getUploadByOptimisticKey(itemId)
+    if (upload) {
+      this.state.activeItemId = upload.optimisticKey
+
+      const savedImageId = upload.savedImage?.image.id ?? null
+      const savedEnvelope = savedImageId
+        ? (this.getImage(savedImageId) ?? upload.savedImage ?? null)
+        : null
+
+      if (savedEnvelope) {
+        if (!this.state.activeImage) {
+          this.state.lastChangeType = 'initial'
+          this.setActiveImage(savedEnvelope, false, upload.optimisticKey)
+        } else if (this.state.activeImage.image.id !== savedEnvelope.image.id) {
+          this.state.lastChangeType = 'target'
+          void this.switchToImageSmooth(savedEnvelope, upload.optimisticKey)
+        } else {
+          this.setActiveImage(savedEnvelope, false, upload.optimisticKey)
+        }
+
+        return savedEnvelope
+      }
+
+      this.resetTargetImage()
+      this.resetActiveImage(false)
+      return upload.imageToReplace
+    }
+
+    return this.target(itemId)
   }
 
   setActiveImageToFirst() {
@@ -1138,8 +1451,12 @@ export class ImageCtx {
       const targetImage = this.getImage(this.state.targetImageId)
       if (targetImage) {
         this.setActiveImage(targetImage, true)
+        this.resetTargetImageId()
       }
     } else {
+      if (this.state.activeImage) {
+        return
+      }
       this.setActiveImageToFirst()
     }
   }
@@ -1156,9 +1473,13 @@ export class ImageCtx {
   }
 
   getReplacementUpload(imageId: Id): ImageUpload | undefined {
-    return this.state.uploadQueue.find(
-      upload => upload.imageToReplace?.image.id === imageId,
-    )
+    return [...this.state.uploadQueue]
+      .filter(
+        upload =>
+          upload.imageToReplace?.image.id === imageId &&
+          upload.status !== 'invalidated',
+      )
+      .sort((a, b) => b.queuedAt - a.queuedAt)[0]
   }
 
   isImageHighlighted(imageId: Id): boolean {
@@ -1169,9 +1490,13 @@ export class ImageCtx {
     return this.getImage(imageId)?.isPublished ?? false
   }
 
-  isImageBeingReplaced(imageId: Id): boolean {
+  isImageBeingReplaced(imageId: Id, status?: UploadStatus): boolean {
     return this.state.uploadQueue.some(
-      upload => upload.imageToReplace?.image.id === imageId,
+      upload =>
+        upload.imageToReplace?.image.id === imageId &&
+        upload.status !== 'invalidated' &&
+        upload.status !== 'uploaded' &&
+        (status ? upload.status === status : true),
     )
   }
 
@@ -1191,11 +1516,80 @@ export class ImageCtx {
     this.state.activePreview = null
   }
 
-  private updateActivePreview() {
-    const activeUpload = this.state.uploadQueue.find(
-      upload => upload.status !== 'invalidated',
+  private maybeCleanupSettledUpload(imageId: Id): void {
+    if (this.state.loadStatus.get(imageId) !== 'loaded') {
+      return
+    }
+
+    if (this.state.thumbnailLoadStatus.get(imageId) !== 'loaded') {
+      return
+    }
+
+    const hasSettledUpload = this.state.uploadQueue.some(
+      upload =>
+        (upload.imageToReplace?.image.id === imageId &&
+          (upload.status === 'uploaded' || upload.status === 'finalizing')) ||
+        (!upload.imageToReplace &&
+          upload.savedImage?.image.id === imageId &&
+          (upload.status === 'uploaded' || upload.status === 'finalizing')),
     )
-    this.setActivePreview(activeUpload || null)
+
+    if (!hasSettledUpload) {
+      return
+    }
+
+    // Let the thumbnail finish its preview->final source transition before removing the queue row.
+    const delay = 420
+
+    setTimeout(() => {
+      const selectedUpload = this.state.activeItemId
+        ? this.getUploadByOptimisticKey(this.state.activeItemId)
+        : undefined
+
+      this.state.uploadQueue = this.state.uploadQueue
+        .map(upload => {
+          if (
+            upload.imageToReplace?.image.id === imageId &&
+            (upload.status === 'uploaded' || upload.status === 'finalizing')
+          ) {
+            URL.revokeObjectURL(upload.preview ?? '')
+            return { ...upload, status: 'invalidated' as UploadStatus }
+          }
+          if (
+            !upload.imageToReplace &&
+            upload.savedImage?.image.id === imageId &&
+            (upload.status === 'uploaded' || upload.status === 'finalizing')
+          ) {
+            URL.revokeObjectURL(upload.preview ?? '')
+            return { ...upload, status: 'invalidated' as UploadStatus }
+          }
+          return upload
+        })
+        .filter(upload => upload.status !== 'invalidated')
+
+      if (selectedUpload?.savedImage) {
+        const savedImageId = selectedUpload.savedImage.image.id
+        const nextSelectionId =
+          this.getDisplayItemIdForImageId(savedImageId) ?? savedImageId
+        const savedImage = this.getImage(savedImageId) ?? selectedUpload.savedImage
+
+        this.setActiveImage(savedImage, false, nextSelectionId)
+      }
+
+      this.updateActivePreview()
+
+      if (this.state.lastChangeType !== 'context') {
+        this.state.lastChangeType = null
+      }
+    }, delay)
+  }
+
+  private updateActivePreview() {
+    const activeUpload =
+      this.state.uploadQueue
+        .filter(upload => upload.status !== 'invalidated')
+        .sort((a, b) => b.queuedAt - a.queuedAt)[0] ?? null
+    this.setActivePreview(activeUpload)
   }
 
   // ═══════════════════════
@@ -1526,8 +1920,9 @@ export class ImageCtx {
       this.setActiveImage(image)
     } else if (image) {
       this.state.lastChangeType = 'target'
-      this.switchToImageSmooth(image)
+      void this.switchToImageSmooth(image)
     } else {
+      this.state.activeItemId = imageId
       this.setTargetImageId(imageId)
     }
   }
@@ -1548,19 +1943,22 @@ export class ImageCtx {
       throw new Error('Cannot replace multiple images')
     }
 
+    const initialActiveImageId = this.state.activeImage?.image.id ?? null
+
     // Add to upload queue
-    this.addToUploadQueue(acceptedFiles, imageToReplace)
+    await this.addToUploadQueue(acceptedFiles, imageToReplace)
     this.addToRejected(fileRejections)
 
     if (imageToReplace) {
       this.resetLoadStatus(imageToReplace.image.id)
+      this.resetThumbnailLoadStatus(imageToReplace.image.id)
     }
 
     await this.processUploadQueue(config)
     this.sortImagesInternal() // Calls the private sortImages method
 
-    // Only set active image to first if we're not replacing
-    if (!imageToReplace) {
+    // Only auto-select a fresh image when there wasn't already an active image.
+    if (!imageToReplace && !initialActiveImageId) {
       this.setActiveImageToTargetOrFirst()
     }
     // Invalidate the resource with the new image
@@ -1625,27 +2023,66 @@ export class ImageCtx {
     onSuccess?: (savedImage: ImageCtxEnvelope) => void
     onError?: () => void
   }) {
-    await Promise.all(
-      this.state.uploadQueue
-        .filter(item => item.status === 'uploading')
-        .map(async fileObject => {
-          try {
-            const savedImage = await this.upload({
-              fileObject,
-            })
-
-            if (savedImage) {
-              if (config.onSuccess) {
-                config.onSuccess(savedImage)
-              }
-            }
-          } catch (_error) {
-            if (config.onError) {
-              config.onError()
-            }
-          }
-        }),
+    const pendingUploads = this.state.uploadQueue.filter(
+      item => item.status === 'uploading',
     )
+
+    const preparedUploads = await Promise.all(
+      pendingUploads.map(async fileObject => {
+        try {
+          const uploadCtx = this.getUploadCtx(fileObject.imageToReplace)
+          const preparedUpload = await prepareImageUpload(fileObject.file, uploadCtx)
+          await uploadPreparedImageObject(preparedUpload)
+          this.setUploadStatus(fileObject, 'finalizing')
+
+          return { fileObject, uploadCtx, preparedUpload }
+        } catch (error) {
+          const errorMessage = this.getUploadErrorMessage(error)
+          this.setUploadError(fileObject, errorMessage)
+          this.updateActivePreview()
+
+          if (config.onError) {
+            config.onError()
+          }
+
+          return null
+        }
+      }),
+    )
+
+    // Finalize sequentially to avoid D1 SQLITE_BUSY lock contention during persistence.
+    for (const preparedEntry of preparedUploads) {
+      if (!preparedEntry) continue
+
+      try {
+        const savedImage = await finalizePreparedImageUpload(
+          preparedEntry.preparedUpload,
+        )
+        const savedEnvelope = this.applySuccessfulUploadResult(
+          preparedEntry.fileObject,
+          preparedEntry.uploadCtx,
+          savedImage,
+        )
+
+        if (config.onSuccess) {
+          config.onSuccess(savedEnvelope)
+        }
+      } catch (error) {
+        const errorMessage = this.getUploadErrorMessage(error)
+        console.error('[ImageCtx] upload finalize failed', {
+          optimisticKey: preparedEntry.fileObject.optimisticKey,
+          fileName: preparedEntry.fileObject.file.name,
+          imageToReplaceId: preparedEntry.uploadCtx.imageToReplace?.image.id ?? null,
+          error,
+        })
+        this.setUploadError(preparedEntry.fileObject, errorMessage)
+        this.updateActivePreview()
+
+        if (config.onError) {
+          config.onError()
+        }
+      }
+    }
   }
 
   async upload(args: {
@@ -1668,63 +2105,30 @@ export class ImageCtx {
         uploadCtx,
         extended?.featureImage,
         localFetch,
+        {
+          onObjectUploaded: () => {
+            this.setUploadStatus(fileObject, 'finalizing')
+          },
+        },
       )
-
-      // Handle state updates after successful upload and processing
-      if (savedImage) {
-        if (uploadCtx.imageToReplace) {
-          // Update existing image in map
-          const savedEnvelope = savedImage
-          this.state.images.set(savedEnvelope.image.id, savedEnvelope)
-          // Update active image if it was the one being replaced
-          if (this.state.activeImage?.image.id === uploadCtx.imageToReplace.image.id) {
-            // Set change type to enable smooth transition from replacement preview to final image
-            this.state.lastChangeType = 'target'
-            this.setActiveImage(savedEnvelope)
-          }
-        } else {
-          // Add new image to map
-          const savedEnvelope = savedImage
-          this.state.images.set(savedEnvelope.image.id, savedEnvelope)
-          // For fresh uploads, always set as active image if no active image exists
-          if (!this.state.activeImage) {
-            this.setActiveImage(savedEnvelope)
-          }
-        }
-        this.setUploadStatus(fileObject, 'uploaded')
-        this.setLoadStatus(savedImage.image.id, 'loading')
-        return savedImage
-      }
+      return this.applySuccessfulUploadResult(fileObject, uploadCtx, savedImage)
     } catch (error) {
-      this.setUploadStatus(fileObject, 'error')
-      // Clean up the failed upload
-      this.cleanupFailedUpload(fileObject)
+      const errorMessage = this.getUploadErrorMessage(error)
+      console.error('[ImageCtx] upload failed', {
+        optimisticKey: fileObject.optimisticKey,
+        fileName: fileObject.file.name,
+        imageToReplaceId: fileObject.imageToReplace?.image.id ?? null,
+        error,
+      })
+      this.setUploadError(fileObject, errorMessage)
+      this.updateActivePreview()
       throw error // Re-throw to allow calling code to handle
     }
   }
 
   retryUpload(fileObject: ImageUpload) {
     this.setUploadToRetry(fileObject)
-    this.upload({ fileObject })
-  }
-
-  // Clean up failed uploads by removing them from queue and resetting preview
-  cleanupFailedUpload(fileObject: ImageUpload) {
-    // Remove the failed upload from the queue
-    this.state.uploadQueue = this.state.uploadQueue.filter(
-      upload => upload.file !== fileObject.file,
-    )
-
-    // Revoke the preview URL to free memory
-    if (fileObject.preview) {
-      URL.revokeObjectURL(fileObject.preview)
-    }
-
-    // Update active preview (will set to null if no other uploads)
-    this.updateActivePreview()
-
-    // Reset any transition state
-    this.state.lastChangeType = 'context' // This will trigger a clean reset in PhotoFrame
+    void this.upload({ fileObject }).catch(() => {})
   }
 
   isReplacementStatus(imageId: Id, status: UploadStatus) {
@@ -1735,11 +2139,13 @@ export class ImageCtx {
 
   // Organisation images are stored in
   // - /{organsation.code}/organsation.id
-  // There can be only 1 image per organisation, so replace on upload
+  // There can be only 1 linked image per organisation. Standard uploads create a new
+  // image record and repoint the resource; explicit replacement reuses the existing image.
   //
   // Project images are stored in
   // - {organsation.code}/{project.code}/project.id
-  // There can be only 1 image per project, so replace on upload
+  // There can be only 1 linked image per project. Standard uploads create a new image
+  // record and repoint the resource; explicit replacement reuses the existing image.
 
   // Feature images are stored in
   // - {organsation.code}/{project.code}/{image.image.publicId}
@@ -1882,6 +2288,17 @@ export class ImageCtx {
 
   async delete(imageId: Id, ctx: ImageEditCtx) {
     try {
+      const imagesBeforeDelete = this.getImages()
+      const deletedIndex = imagesBeforeDelete.findIndex(
+        image => image.image.id === imageId,
+      )
+      const nextActiveImage =
+        deletedIndex >= 0
+          ? (imagesBeforeDelete[deletedIndex + 1] ??
+            imagesBeforeDelete[deletedIndex - 1] ??
+            null)
+          : null
+
       // Call the service function for the API call
       await deleteImageRemote({
         id: imageId,
@@ -1892,10 +2309,26 @@ export class ImageCtx {
 
       // State updates remain in the class method
       this.removeImage(imageId)
+      this.setUploadQueue(
+        this.state.uploadQueue.filter(upload => {
+          const isDeletedSavedUpload =
+            !upload.imageToReplace && upload.savedImage?.image.id === imageId
+
+          if (isDeletedSavedUpload && upload.preview) {
+            URL.revokeObjectURL(upload.preview)
+          }
+
+          return !isDeletedSavedUpload
+        }),
+      )
 
       // If we deleted the active image, set a new one
       if (this.state.activeImage?.image.id === imageId) {
-        this.setActiveImageToTargetOrFirst()
+        if (nextActiveImage && this.getImage(nextActiveImage.image.id)) {
+          this.setActiveImage(nextActiveImage)
+        } else {
+          this.setActiveImageToFirst()
+        }
       }
     } catch (error: any) {
       // Extract error message from the server response
