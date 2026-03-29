@@ -1,8 +1,19 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import sharp from 'sharp'
 
-type RasterFormat = 'avif' | 'gif' | 'jpeg' | 'png' | 'tiff' | 'webp'
+type RasterFormat =
+  | 'avif'
+  | 'gif'
+  | 'heic'
+  | 'jpeg'
+  | 'jxl'
+  | 'png'
+  | 'tiff'
+  | 'webp'
 type OutputFormat = RasterFormat | 'svg'
 type DimensionSpec =
   | {
@@ -29,7 +40,21 @@ type OutputRecord = {
   width: number
 }
 
-const OUTPUT_FORMATS: readonly OutputFormat[] = [
+type OutputPlan = {
+  formats: readonly OutputFormat[]
+  notes: string[]
+}
+
+type HeicEncoder = 'magick' | 'sharp'
+
+type SourcePlan = {
+  buffer: Buffer
+  notes: string[]
+}
+
+type JxlEncoder = 'magick'
+
+const ALWAYS_SUPPORTED_OUTPUT_FORMATS: readonly OutputFormat[] = [
   'jpeg',
   'png',
   'webp',
@@ -59,13 +84,16 @@ const DIMENSION_SPECS: readonly DimensionSpec[] = [
 const RASTER_FORMAT_LABELS: Record<RasterFormat, string> = {
   avif: 'AVIF',
   gif: 'GIF',
+  heic: 'HEIC',
   jpeg: 'JPEG',
+  jxl: 'JXL',
   png: 'PNG',
   tiff: 'TIFF',
   webp: 'WEBP',
 }
 
 const SVG_FORMAT_LABEL = 'SVG'
+const execFileAsync = promisify(execFile)
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -76,9 +104,16 @@ const SVG_FORMAT_LABEL = 'SVG'
 //
 // IMAGE
 // - createBasePipeline
+// - createOutputPlan
+// - loadSourcePlan
 // - createTextOverlaySvg
 // - createAnnotatedRasterBuffer
 // - createSvgOutput
+// - detectHeicEncoder
+// - detectJxlEncoder
+// - encodeHeicWithNativeTool
+// - encodeJxlWithNativeTool
+// - decodeImageWithNativeTool
 // - encodeRaster
 // - toExtension
 //
@@ -128,7 +163,7 @@ const parseArgs = (argv: string[]): CliOptions => {
     inputPath: parsedInputPath,
     outputDir: outputDir
       ? path.resolve(outputDir)
-      : path.resolve('tmp', `${baseName}-upload-test-images`),
+      : path.resolve('tmp', baseName),
   }
 }
 
@@ -170,6 +205,89 @@ const createBasePipeline = async (
     }),
     width: spec.size,
     height: spec.size,
+  }
+}
+
+/**
+ * Resolves which output formats the current image toolchain can actually encode.
+ *
+ * @returns Output formats plus manifest notes for any skipped variants.
+ */
+const createOutputPlan = async (): Promise<OutputPlan> => {
+  const notes: string[] = []
+  const formats = [...ALWAYS_SUPPORTED_OUTPUT_FORMATS]
+  const heicEncoder = await detectHeicEncoder()
+  const jxlEncoder = await detectJxlEncoder()
+
+  if (heicEncoder) {
+    formats.push('heic')
+
+    if (heicEncoder === 'magick') {
+      notes.push(
+        'HEIC fixtures were generated via ImageMagick because Sharp HEVC encoding is unavailable in this environment.',
+      )
+    }
+  } else {
+    notes.push(
+      'HEIC/HEIF uploads are accepted by the app upload normalization flow, but this machine cannot encode HEIC fixtures because neither Sharp HEVC output nor an ImageMagick HEIC encoder is available here.',
+    )
+  }
+
+  if (jxlEncoder) {
+    formats.push('jxl')
+    notes.push(
+      'JXL fixtures were generated via ImageMagick because the Bun runtime does not reliably execute the browser-focused @jsquash/jxl encoder in this environment.',
+    )
+  } else {
+    notes.push(
+      'JXL uploads are accepted by the app upload normalization flow, but this machine cannot encode JXL fixtures because no native ImageMagick JXL encoder is available here.',
+    )
+  }
+
+  return {
+    formats,
+    notes,
+  }
+}
+
+/**
+ * Loads the source image bytes, falling back to ImageMagick when Sharp cannot decode them.
+ *
+ * @param inputPath Absolute source image path.
+ * @returns Decodable source bytes plus manifest notes.
+ */
+const loadSourcePlan = async (inputPath: string): Promise<SourcePlan> => {
+  const sourceFile = Bun.file(inputPath)
+
+  if (!(await sourceFile.exists())) {
+    throw new Error(`Input image does not exist: ${inputPath}`)
+  }
+
+  const sourceBuffer = Buffer.from(await sourceFile.arrayBuffer())
+  const ext = path.extname(inputPath).toLowerCase()
+
+  if (ext === '.heic' || ext === '.heif') {
+    return {
+      buffer: await decodeImageWithNativeTool(inputPath),
+      notes: [
+        'The HEIC/HEIF source image was decoded via ImageMagick because Sharp cannot reliably rasterize this format in the current environment.',
+      ],
+    }
+  }
+
+  try {
+    const metadata = await sharp(sourceBuffer, { animated: false }).metadata()
+
+    if (!metadata.width || !metadata.height) {
+      throw new Error('Could not determine input image dimensions')
+    }
+
+    return {
+      buffer: sourceBuffer,
+      notes: [],
+    }
+  } catch {
+    throw new Error(`Could not decode input image: ${inputPath}`)
   }
 }
 
@@ -263,11 +381,13 @@ const createAnnotatedRasterBuffer = async (params: {
   height: number
 }> => {
   const { pipeline, width, height } = await createBasePipeline(params.source, params.spec)
+  const sizeLabel =
+    params.spec.kind === 'original' ? `${width}x${height}` : params.spec.label
   const overlay = createTextOverlaySvg({
     formatLabel: RASTER_FORMAT_LABELS[params.format],
     width,
     height,
-    sizeLabel: params.spec.kind === 'original' ? `${width}x${height}` : params.spec.label,
+    sizeLabel,
   })
 
   const composited = pipeline.composite([
@@ -277,6 +397,22 @@ const createAnnotatedRasterBuffer = async (params: {
       left: 0,
     },
   ])
+
+  if (params.format === 'heic') {
+    return {
+      buffer: await encodeHeicWithNativeTool(await composited.png().toBuffer()),
+      width,
+      height,
+    }
+  }
+
+  if (params.format === 'jxl') {
+    return {
+      buffer: await encodeJxlWithNativeTool(await composited.png().toBuffer()),
+      width,
+      height,
+    }
+  }
 
   return {
     buffer: await encodeRaster(composited, params.format),
@@ -354,8 +490,127 @@ const encodeRaster = async (pipeline: sharp.Sharp, format: RasterFormat): Promis
  * @returns File extension without a leading dot.
  */
 const toExtension = (format: OutputFormat): string => {
+  if (format === 'heic') return 'heic'
   if (format === 'jpeg') return 'jpg'
   return format
+}
+
+/**
+ * Detects which local encoder can write true HEIC output.
+ *
+ * @returns Preferred HEIC encoder, if available.
+ */
+const detectHeicEncoder = async (): Promise<HeicEncoder | null> => {
+  if (!sharp.format.heif.output.buffer) {
+    return await supportsNativeHeicOutput()
+  }
+
+  try {
+    await sharp({
+      create: {
+        width: 4,
+        height: 4,
+        channels: 3,
+        background: {
+          r: 255,
+          g: 255,
+          b: 255,
+        },
+      },
+    })
+      .heif({ compression: 'hevc', quality: 80 })
+      .toBuffer()
+
+    return 'sharp'
+  } catch {
+    return await supportsNativeHeicOutput()
+  }
+}
+
+/**
+ * Detects whether ImageMagick can encode JXL in the current environment.
+ *
+ * @returns Preferred JXL encoder, if available.
+ */
+const detectJxlEncoder = async (): Promise<JxlEncoder | null> => {
+  try {
+    const { stdout } = await execFileAsync('magick', ['-list', 'format'])
+    return /\bJXL\*?\s+JXL\s+rw\+/u.test(stdout) ? 'magick' : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Detects whether ImageMagick can encode HEIC in the current environment.
+ *
+ * @returns True when `magick` exposes writable HEIC output.
+ */
+const supportsNativeHeicOutput = async (): Promise<'magick' | null> => {
+  try {
+    const { stdout } = await execFileAsync('magick', ['-list', 'format'])
+    return /\bHEIC\s+HEIC\s+rw\+/u.test(stdout) ? 'magick' : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Encodes a prepared PNG buffer as HEIC using ImageMagick.
+ *
+ * @param pngBuffer Annotated PNG buffer to convert.
+ * @returns Encoded HEIC bytes.
+ */
+const encodeHeicWithNativeTool = async (pngBuffer: Buffer): Promise<Buffer> => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), 'hype-heic-'))
+  const inputPath = path.join(tempDir, 'input.png')
+  const outputPath = path.join(tempDir, 'output.heic')
+
+  try {
+    await writeFile(inputPath, pngBuffer)
+    await execFileAsync('magick', [inputPath, outputPath])
+    return await readFile(outputPath)
+  } finally {
+    await rm(tempDir, { force: true, recursive: true })
+  }
+}
+
+/**
+ * Encodes a prepared PNG buffer as JXL using ImageMagick.
+ *
+ * @param pngBuffer Annotated PNG buffer to convert.
+ * @returns Encoded JXL bytes.
+ */
+const encodeJxlWithNativeTool = async (pngBuffer: Buffer): Promise<Buffer> => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), 'hype-jxl-'))
+  const inputPath = path.join(tempDir, 'input.png')
+  const outputPath = path.join(tempDir, 'output.jxl')
+
+  try {
+    await writeFile(inputPath, pngBuffer)
+    await execFileAsync('magick', [inputPath, outputPath])
+    return await readFile(outputPath)
+  } finally {
+    await rm(tempDir, { force: true, recursive: true })
+  }
+}
+
+/**
+ * Decodes an image file to PNG bytes using ImageMagick.
+ *
+ * @param inputPath Absolute path to the source image.
+ * @returns PNG bytes suitable for subsequent Sharp processing.
+ */
+const decodeImageWithNativeTool = async (inputPath: string): Promise<Buffer> => {
+  const tempDir = await mkdtemp(path.join(tmpdir(), 'hype-source-'))
+  const outputPath = path.join(tempDir, 'decoded.png')
+
+  try {
+    await execFileAsync('magick', [inputPath, outputPath])
+    return await readFile(outputPath)
+  } finally {
+    await rm(tempDir, { force: true, recursive: true })
+  }
 }
 
 /**
@@ -365,20 +620,16 @@ const toExtension = (format: OutputFormat): string => {
  */
 const main = async (): Promise<void> => {
   const options = parseArgs(process.argv.slice(2))
-  const sourceFile = Bun.file(options.inputPath)
-
-  if (!(await sourceFile.exists())) {
-    throw new Error(`Input image does not exist: ${options.inputPath}`)
-  }
 
   await mkdir(options.outputDir, { recursive: true })
 
-  const sourceBuffer = Buffer.from(await sourceFile.arrayBuffer())
+  const sourcePlan = await loadSourcePlan(options.inputPath)
   const baseName = path.basename(options.inputPath, path.extname(options.inputPath))
+  const outputPlan = await createOutputPlan()
   const outputs: OutputRecord[] = []
 
   for (const spec of DIMENSION_SPECS) {
-    for (const format of OUTPUT_FORMATS) {
+    for (const format of outputPlan.formats) {
       const label =
         spec.kind === 'original' ? 'original' : `${spec.size}x${spec.size}`
       const filename = `${baseName}--${label}--${format}.${toExtension(format)}`
@@ -387,7 +638,7 @@ const main = async (): Promise<void> => {
 
       if (format === 'svg') {
         const result = await createSvgOutput({
-          source: sourceBuffer,
+          source: sourcePlan.buffer,
           spec,
         })
 
@@ -405,7 +656,7 @@ const main = async (): Promise<void> => {
 
       const result = await createAnnotatedRasterBuffer({
         format,
-        source: sourceBuffer,
+        source: sourcePlan.buffer,
         spec,
       })
 
@@ -431,8 +682,9 @@ const main = async (): Promise<void> => {
         generatedAt: new Date().toISOString(),
         notes: [
           'All generated filenames include the size and format for metadata inspection.',
-          'HEIC and HEIF are accepted by the app upload normalization flow but are not emitted here because the local Sharp toolchain in this repo does not encode those formats.',
           'TIFF is included because the upload normalization path explicitly converts TIFF uploads to JPEG.',
+          ...sourcePlan.notes,
+          ...outputPlan.notes,
         ],
         outputs,
       },
@@ -448,6 +700,7 @@ const main = async (): Promise<void> => {
         outputDir: options.outputDir,
         generated: outputs.length,
         manifest: manifestPath,
+        formats: outputPlan.formats,
       },
       null,
       2,
