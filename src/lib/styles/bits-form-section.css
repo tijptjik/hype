@@ -59,7 +59,7 @@
   }
 
   .bits-theme .bits-form__section-header--with-center {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   }
 
   .bits-theme .bits-form__section-header-left {
