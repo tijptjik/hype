@@ -3,6 +3,8 @@
 import { fade, scale } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
+// IMAGE
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
@@ -266,7 +268,7 @@ let pendingCount = $derived(uploadResults.filter(r => r.status === 'pending').le
     <!-- Dropzone -->
     <div class="flex-1">
       <Dropzone
-        accept={['image/*']}
+        accept={SUPPORTED_UPLOAD_IMAGE_ACCEPT}
         on:drop={handleDrop}
         on:select={handleDrop}
         multiple={true}

@@ -3,6 +3,8 @@
 import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
+// IMAGE
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
 // COMPONENTS
 import Header from '$lib/components/forms/extra/Header.svelte'
 import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
@@ -71,7 +73,7 @@ function handleFilesSelect(
   <main class="relative mt-2 w-full grow overflow-hidden rounded-2xl bg-base-300">
     <div class="absolute inset-0 h-full w-full flex-none">
       <Dropzone
-        accept={['image/*']}
+        accept={SUPPORTED_UPLOAD_IMAGE_ACCEPT}
         multiple={false}
         class="{isUploading
           ? ''

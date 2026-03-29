@@ -1,6 +1,8 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n'
+// IMAGE
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
@@ -30,7 +32,7 @@ const handleFiles = async (e: CustomEvent) => {
 </script>
 
 <Dropzone
-  accept={['image/*']}
+  accept={SUPPORTED_UPLOAD_IMAGE_ACCEPT}
   on:drop={handleFiles}
   on:select={handleFiles}
   class="flex h-full w-full flex-col justify-center gap-2 rounded-lg border-2 border-dashed border-base-content/10 bg-base-100/50 text-center align-middle transition-colors hover:border-primary"

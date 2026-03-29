@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import { feature, featureImage, image } from '$lib/db/schema/index'
+// IMAGE
+import { isSupportedUploadImageContentType } from '$lib/images/accept'
 import {
   ImageCDN,
   ImageContextResource,
@@ -320,7 +322,10 @@ export const AuthImageUploadSchema = z.object({
   organisationId: z.string().optional(),
   projectId: z.string().optional(),
   filename: z.string().min(1),
-  contentType: z.string().min(1),
+  contentType: z
+    .string()
+    .min(1)
+    .refine(isSupportedUploadImageContentType, 'Unsupported image content type'),
   size: z.number().int().positive(),
   replaceImageId: z.string().optional(),
   meta: ImageRequestMetaSchema,

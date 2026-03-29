@@ -2,6 +2,8 @@
 import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
+// IMAGE
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
 // SERVICES
 import { getImageCtx } from '$lib/context/image.svelte'
 // BITS
@@ -262,7 +264,7 @@ $effect(() => {
 >
   {#if isDropzone}
     <Dropzone
-      accept={['image/*']}
+      accept={SUPPORTED_UPLOAD_IMAGE_ACCEPT}
       on:drop={handleDrop}
       on:select={handleDrop}
       multiple={false}

@@ -8,7 +8,7 @@
 //    - toImagePrerenderWorkerPaths
 
 const DEFAULT_CROP_MODE = 'c_fit'
-const DEFAULT_RAW_TRANSFORMATION = 'h_2048,w_2048'
+export const IMAGE_RAW_INTERMEDIATE_TRANSFORMATION = 'h_2048,w_2048'
 export const IMAGE_PRERENDER_FORMATS = ['webp', 'jpeg'] as const
 export const IMAGE_PRERENDER_TRANSFORMATIONS = [
   'c_fill,h_256,w_256',
@@ -38,7 +38,7 @@ export const toCloudflareImageWorkerPath = (params: {
   if (params.raw) {
     const rawTransformation =
       params.rawTransformation === undefined
-        ? DEFAULT_RAW_TRANSFORMATION
+        ? IMAGE_RAW_INTERMEDIATE_TRANSFORMATION
         : params.rawTransformation
     const rawTransformationSegment = rawTransformation ? `/${rawTransformation}` : ''
 

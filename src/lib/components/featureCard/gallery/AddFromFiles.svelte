@@ -1,4 +1,6 @@
 <script lang="ts">
+// IMAGE
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
@@ -28,7 +30,7 @@ function handleFileSelect(event: Event) {
 <input
   bind:this={galleryInput}
   type="file"
-  accept="image/*"
+  accept={SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE}
   multiple
   style="display: none"
   onchange={handleFileSelect}

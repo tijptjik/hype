@@ -1,6 +1,8 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n'
+// IMAGE
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
 // SERVICES
 import { checkCameraAvailability } from '$lib/client/services/image'
 // CONTEXT
@@ -43,7 +45,7 @@ function handleFileSelect(event: Event) {
 <input
   bind:this={galleryInput}
   type="file"
-  accept="image/*"
+  accept={SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE}
   multiple
   style="display: none"
   onchange={handleFileSelect}
@@ -53,7 +55,7 @@ function handleFileSelect(event: Event) {
   <input
     bind:this={cameraInput}
     type="file"
-    accept="image/*"
+    accept={SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE}
     capture="environment"
     style="display: none"
     onchange={handleFileSelect}
