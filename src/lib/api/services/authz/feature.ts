@@ -19,6 +19,7 @@ import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
 // 3. AUTHORIZATION
 //    - authorizeFeatureListForContext
 //    - authorizeFeatureReadForProbe
+//    - canCreateFeatureForProject
 //    - authorizeFeatureCreateForSubmission
 //    - authorizeFeatureUpdateForSubmission
 //    - authorizeFeaturePublishForSubmission
@@ -283,6 +284,30 @@ export const authorizeFeatureReadForProbe = (params: {
     },
   })
 }
+
+/**
+ * Evaluates whether the caller can create a feature for a given project target.
+ * Intended for UI-level capability checks before a full submission exists.
+ */
+export const canCreateFeatureForProject = (params: {
+  user: {
+    id?: string | null
+    isAnonymous?: boolean | null
+    superAdmin?: boolean | null
+  }
+  userRoles: UserRoleDisco[]
+  resource: FeatureAuthTarget
+}): boolean =>
+  authorizeFeatureCreateForSubmission({
+    user: params.user,
+    userRoles: params.userRoles,
+    resource: params.resource,
+    submittedData: {
+      organisationId: params.resource.organisationId ?? '',
+      projectId: params.resource.projectId ?? '',
+      layerId: params.resource.layerId ?? '',
+    },
+  }).allowed
 
 /**
  * Evaluates create access for feature submissions.
