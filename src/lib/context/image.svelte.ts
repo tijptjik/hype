@@ -78,6 +78,12 @@ async function createOptimisticPreviewUrl(file: File): Promise<string> {
   }
 }
 
+function isValidImageEnvelope(
+  image: ImageCtxEnvelope | null | undefined,
+): image is ImageCtxEnvelope {
+  return image != null && image.image.id != null
+}
+
 // ═══════════════════════
 // TYPES :: ImageCtx
 // ═══════════════════════
@@ -210,6 +216,9 @@ async function createOptimisticPreviewUrl(file: File): Promise<string> {
 // 11. Internal Helper Methods
 //    - sortImages (private, for internal array sorting)
 
+/**
+ * Central image-viewer state for context-aware image loading, uploads, staging, and mutations.
+ */
 export class ImageCtx {
   isAdminMode: boolean = false
   appCtx = getAppCtx()
@@ -278,6 +287,12 @@ export class ImageCtx {
     }, 100)
   }
 
+  /**
+   * Sets the active resource context and primes local image state for that resource.
+   *
+   * @param options Context payload plus optional preloaded image data.
+   * @returns Resolves after any required image hydration work has completed.
+   */
   async setContext(options: {
     context?: ImageContextConfig | null
     image?: ImageCtxEnvelope | null | undefined
@@ -306,6 +321,7 @@ export class ImageCtx {
     this.currentContextId = newContextId
 
     if (isContextChange) {
+      // Reset context-bound transient state before new async loads can write into it.
       this.resetUploadStatus()
       this.resetPendingConfirmation()
       this.resetDeletionQueue()
@@ -325,7 +341,7 @@ export class ImageCtx {
 
     // CASE 1 : Images preloaded
     if (images && images.length > 0) {
-      const validImages = images.filter((img): img is ImageCtxEnvelope => img != null)
+      const validImages = images.filter(isValidImageEnvelope)
       await this.setImages(validImages)
       // Set active image when we have preloaded images
       this.setActiveImageToTargetOrFirst()
@@ -463,6 +479,11 @@ export class ImageCtx {
   // 3.1 STATE MANAGEMENT :: CONTEXT
   // ═══════════════════════
 
+  /**
+   * Returns the current mutation context for image remote calls.
+   *
+   * @returns The current context type and id.
+   */
   getCtx(): ImageEditCtx {
     if (!this.state.context?.ctxType || !this.state.context?.ctxId) {
       throw new Error('No context type or ID available')
@@ -477,6 +498,12 @@ export class ImageCtx {
   // 3.3 STATE MANAGEMENT :: UPLOAD
   // ═══════════════════════
 
+  /**
+   * Builds the upload context required by image upload services.
+   *
+   * @param imageToReplace Optional image being replaced instead of creating a new record.
+   * @returns The upload context for the current resource.
+   */
   getUploadCtx(imageToReplace?: ImageCtxEnvelope): ImageUploadCtx {
     if (!this.state.context?.ctxType || !this.state.context?.ctxId) {
       throw new Error('No context available for upload')
@@ -701,6 +728,7 @@ export class ImageCtx {
       )
     }
 
+    // Preserve optimistic selection until the final asset has fully replaced the preview.
     if (uploadCtx.imageToReplace) {
       this.state.images.set(savedEnvelope.image.id, savedEnvelope)
       this.setUploadQueue(
@@ -800,6 +828,13 @@ export class ImageCtx {
     )
   }
 
+  /**
+   * Adds selected files as staged preview-only images before they are uploaded.
+   *
+   * @param acceptedFiles Files accepted by the picker.
+   * @param fileRejections Files rejected by validation.
+   * @returns Resolves after staged images and staging queue entries have been created.
+   */
   async handleStagedFilesSelect(acceptedFiles: File[], fileRejections: File[]) {
     const existingImages = this.getImages()
     const hasApiImages = existingImages.some(img => !this.isImageStaged(img))
@@ -1016,35 +1051,21 @@ export class ImageCtx {
     return Array.from(this.state.images.values())
   }
 
+  /**
+   * Replaces the current image collection while preserving staged-image ordering.
+   *
+   * @param images Candidate images for the current context.
+   * @returns Resolves after state and preload bookkeeping are updated.
+   */
   async setImages(images: ImageCtxEnvelope[]) {
-    const validImages = images.filter(
-      (image): image is ImageCtxEnvelope => image != null && image.image.id != null,
-    )
+    const validImages = images.filter(isValidImageEnvelope)
 
     if (validImages.length === 0) {
       this.state.images.clear()
       return
     }
 
-    // Only sort API images, preserve order for staged images
-    const stagedImages = validImages.filter(img => img.image.cdn === 'preview')
-    const apiImages = validImages.filter(img => img.image.cdn !== 'preview')
-
-    const sortableApiImages = apiImages.map(item => ({
-      ...item.image,
-      intent: item.intent ?? undefined,
-      isPublished: item.isPublished ?? undefined,
-      publishedAt: item.publishedAt ?? undefined,
-    }))
-    const sortedApiImages = sortImages(sortableApiImages, this.isAdminMode)
-      .map(sorted => apiImages.find(item => item.image.id === sorted.id))
-      .filter((item): item is ImageCtxEnvelope => Boolean(item))
-    const finalImages = [...sortedApiImages, ...stagedImages]
-
-    const newImages = new SvelteMap<Id, ImageCtxEnvelope>()
-    finalImages.forEach(image => {
-      newImages.set(image.image.id, image)
-    })
+    const { map: newImages, sortedApiImages } = this.createSortedImageState(validImages)
     this.state.images = newImages
 
     if (this.state.activeImage?.image.id) {
@@ -1668,6 +1689,12 @@ export class ImageCtx {
     })) as ImageCtxEnvelope[]
   }
 
+  /**
+   * Refreshes images for the current context and merges any configured secondary resource.
+   *
+   * @param targetImageId Optional image to re-target after refresh completes.
+   * @returns Resolves after refreshed images have been applied to state.
+   */
   async refreshImages(targetImageId?: Id) {
     if (!this.state.context) {
       return
@@ -1688,9 +1715,7 @@ export class ImageCtx {
     }
 
     // Filter out null/undefined images before processing
-    const validImages = images.filter(
-      (image): image is ImageCtxEnvelope => image != null && image.image.id != null,
-    )
+    const validImages = images.filter(isValidImageEnvelope)
     const imageIds = validImages.map((image: ImageCtxEnvelope) => image.image.id)
 
     // Get the images for the secondary resource
@@ -1704,10 +1729,9 @@ export class ImageCtx {
       }
 
       // Filter out null/undefined extended images too
-      const validExtendedImages = extendedImages.filter(
-        (image): image is ImageCtxEnvelope => image != null && image.image.id != null,
-      )
+      const validExtendedImages = extendedImages.filter(isValidImageEnvelope)
 
+      // Merge only secondary-only images so the primary resource remains the canonical ordering source.
       // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
       // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
       validExtendedImages.forEach((image: ImageCtxEnvelope) => {
@@ -1747,6 +1771,11 @@ export class ImageCtx {
     this.state.isFetchingImages = false
   }
 
+  /**
+   * Loads images for the primary context.
+   *
+   * @returns The current context's image envelopes.
+   */
   async imagesQueryFn() {
     if (!this.state.context?.ctxType || !this.state.context?.ctxId) {
       throw new Error('No context type or ID provided')
@@ -1761,6 +1790,11 @@ export class ImageCtx {
     return result
   }
 
+  /**
+   * Loads images for the secondary context, when configured.
+   *
+   * @returns The secondary context's image envelopes.
+   */
   async extendedImagesQueryFn() {
     if (!this.state.context?.ctxTypeSecondary || !this.state.context?.ctxIdSecondary) {
       throw new Error('No secondary context type or ID provided')
@@ -1781,9 +1815,7 @@ export class ImageCtx {
       const images = await this.imagesQueryFn()
       if (images && images.length > 0) {
         // Filter out null/undefined images
-        const validImages = images.filter(
-          (img): img is ImageCtxEnvelope => img != null && img.image.id != null,
-        )
+        const validImages = images.filter(isValidImageEnvelope)
 
         if (validImages.length > 0) {
           await this.setImages(validImages)
@@ -1930,6 +1962,15 @@ export class ImageCtx {
   // ═══════════════════════
   // 6. Upload Handling
   // ═══════════════════════
+  /**
+   * Queues accepted files for upload and processes them against the current context.
+   *
+   * @param acceptedFiles Files accepted by the picker.
+   * @param fileRejections Files rejected by validation.
+   * @param config Optional upload callbacks.
+   * @param imageToReplace Optional existing image being replaced.
+   * @returns Resolves after queued uploads have been processed.
+   */
   async handleFilesSelect(
     acceptedFiles: File[],
     fileRejections: File[],
@@ -2161,13 +2202,23 @@ export class ImageCtx {
   // ═══════════════════════
   // 7. Image Attribute Updates (Patching)
   // ═══════════════════════
+  /**
+   * Updates an image intent and maintains canonical-image exclusivity.
+   *
+   * @param imageId The image being updated.
+   * @param newIntent The new intent value to persist.
+   * @returns Resolves after local state has been refreshed.
+   */
   async handleSetIntent(imageId: Id, newIntent: Intent) {
     const publicIntents = ['canonical', 'closeUp', 'context', 'general'] as const
     const isPublished = publicIntents.includes(
       newIntent as (typeof publicIntents)[number],
     )
+    const ctx = this.getCtx()
+    const featureId = ctx.ctxType === 'feature' ? ctx.ctxId : undefined
 
     try {
+      // Canonical is exclusive, so clear any competing canonical image before applying the new one.
       // If trying to set as canonical, first check if another image is already canonical
       if (newIntent === 'canonical') {
         const images = this.getImages()
@@ -2180,11 +2231,10 @@ export class ImageCtx {
         if (currentCanonical) {
           await setImageIntent({
             id: currentCanonical.image.id,
-            ctxType: this.getCtx().ctxType,
-            ctxId: this.getCtx().ctxId,
+            ctxType: ctx.ctxType,
+            ctxId: ctx.ctxId,
             intent: 'undefined',
-            featureId:
-              this.getCtx().ctxType === 'feature' ? this.getCtx().ctxId : undefined,
+            featureId,
             meta: { isAdminRequest: true },
           })
           this.setForImage(currentCanonical.image.id, 'intent', 'undefined')
@@ -2194,11 +2244,10 @@ export class ImageCtx {
       // Update the intent of the image
       await setImageIntent({
         id: imageId,
-        ctxType: this.getCtx().ctxType,
-        ctxId: this.getCtx().ctxId,
+        ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId,
         intent: newIntent,
-        featureId:
-          this.getCtx().ctxType === 'feature' ? this.getCtx().ctxId : undefined,
+        featureId,
         ...(isPublished !== undefined ? { isPublished } : {}),
         meta: { isAdminRequest: true },
       })
@@ -2211,14 +2260,20 @@ export class ImageCtx {
   }
 
   // NOTE: This is currently only used for Images belonging to a feature.
+  /**
+   * Toggles publish state for the active image and refreshes ordering-sensitive state.
+   *
+   * @returns Resolves after the active image has been updated and refreshed.
+   */
   async handlePublishToggle() {
     if (!this.state.activeImage) return
+    const ctx = this.getCtx()
 
     const updatedImage = await setImagePublished({
       id: this.state.activeImage.image.id,
-      ctxType: this.getCtx().ctxType,
-      ctxId: this.getCtx().ctxId,
-      featureId: this.getCtx().ctxType === 'feature' ? this.getCtx().ctxId : undefined,
+      ctxType: ctx.ctxType,
+      ctxId: ctx.ctxId,
+      featureId: ctx.ctxType === 'feature' ? ctx.ctxId : undefined,
       isPublished: !this.state.activeImage.isPublished,
       meta: { isAdminRequest: true },
     })
@@ -2231,6 +2286,13 @@ export class ImageCtx {
     }
   }
 
+  /**
+   * Rotates an image in the current context and reloads the refreshed asset metadata.
+   *
+   * @param rotation The clockwise rotation to apply.
+   * @param imageId Optional image id; defaults to the active image.
+   * @returns Resolves after the rotation mutation and refresh complete.
+   */
   async handleRotate(
     rotation: 0 | 90 | 180 | 270,
     imageId: Id | null = this.state.activeImage?.image.id ?? null,
@@ -2286,6 +2348,13 @@ export class ImageCtx {
     )
   }
 
+  /**
+   * Deletes an image and reconciles local selection, queues, and thumbnail state.
+   *
+   * @param imageId The image to delete.
+   * @param ctx Mutation context to send to the server.
+   * @returns Resolves after deletion-side effects have settled.
+   */
   async delete(imageId: Id, ctx: ImageEditCtx) {
     try {
       const imagesBeforeDelete = this.getImages()
@@ -2299,6 +2368,7 @@ export class ImageCtx {
             null)
           : null
 
+      // Snapshot the next candidate first so selection remains stable after the map mutates.
       // Call the service function for the API call
       await deleteImageRemote({
         id: imageId,
@@ -2358,6 +2428,13 @@ export class ImageCtx {
   // ═══════════════════════
   // 9. Download Functionality
   // ═══════════════════════
+  /**
+   * Starts a browser download for the provided image's original asset.
+   *
+   * @param _e Click event placeholder for template compatibility.
+   * @param image Optional image to download; defaults to the active image.
+   * @returns Resolves after the browser download has been triggered.
+   */
   async downloadImage(
     _e: MouseEvent,
     image: ImageCtxEnvelope = this.state.activeImage!,
@@ -2475,21 +2552,51 @@ export class ImageCtx {
 
   private sortImagesInternal = () => {
     const images = this.getImages()
-    const sortableImages = images.map(item => ({
-      ...item.image,
-      intent: item.intent ?? undefined,
-      isPublished: item.isPublished ?? undefined,
-      publishedAt: item.publishedAt ?? undefined,
-    }))
-    const sortedImages = sortImages(sortableImages, this.isAdminMode)
-      .map(sorted => images.find(item => item.image.id === sorted.id))
-      .filter((item): item is ImageCtxEnvelope => item != null)
+    const { map } = this.createSortedImageState(images)
+    this.state.images = map
+  }
 
-    // Clear and repopulate the map with sorted images
-    this.state.images.clear()
-    sortedImages.forEach(image => {
-      this.state.images.set(image.image.id, image)
-    })
+  private toSortableImage(image: ImageCtxEnvelope): Image & {
+    intent?: Intent | 'undefined'
+    isPublished?: boolean
+    publishedAt?: string | null
+  } {
+    return {
+      ...image.image,
+      intent: image.intent ?? undefined,
+      isPublished: image.isPublished ?? undefined,
+      publishedAt: image.publishedAt ?? undefined,
+    }
+  }
+
+  private sortImageEnvelopes(images: ImageCtxEnvelope[]): {
+    sortedApiImages: ImageCtxEnvelope[]
+    stagedImages: ImageCtxEnvelope[]
+  } {
+    const stagedImages = images.filter(img => this.isImageStaged(img))
+    const apiImages = images.filter(img => !this.isImageStaged(img))
+    const sortedApiImages = sortImages(
+      apiImages.map(image => this.toSortableImage(image)),
+      this.isAdminMode,
+    )
+      .map(sorted => apiImages.find(item => item.image.id === sorted.id))
+      .filter(isValidImageEnvelope)
+
+    return { sortedApiImages, stagedImages }
+  }
+
+  private createSortedImageState(images: ImageCtxEnvelope[]): {
+    map: SvelteMap<Id, ImageCtxEnvelope>
+    sortedApiImages: ImageCtxEnvelope[]
+  } {
+    const { sortedApiImages, stagedImages } = this.sortImageEnvelopes(images)
+    const map = new SvelteMap<Id, ImageCtxEnvelope>()
+
+    for (const image of [...sortedApiImages, ...stagedImages]) {
+      map.set(image.image.id, image)
+    }
+
+    return { map, sortedApiImages }
   }
 }
 
@@ -2499,9 +2606,20 @@ export class ImageCtx {
 
 const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY')
 
+/**
+ * Creates and registers an `ImageCtx` instance in Svelte context.
+ *
+ * @param options Initial image-context options.
+ * @returns The registered `ImageCtx` instance.
+ */
 export const setImageCtx = (options: ImageCtxConstructorOptions) =>
   setContext(IMAGE_STATE_KEY, new ImageCtx(options))
 
+/**
+ * Reads the current `ImageCtx` from Svelte context.
+ *
+ * @returns The current `ImageCtx`.
+ */
 export const getImageCtx = (): ImageCtx => {
   const ctx = getContext<ImageCtx | undefined>(IMAGE_STATE_KEY)
   if (!ctx) {
