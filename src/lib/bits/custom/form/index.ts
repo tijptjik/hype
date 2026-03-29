@@ -1,6 +1,9 @@
 export { default as SectionHeader } from './SectionHeader.svelte'
 export { default as FormDebug } from './FormDebug.svelte'
-export { FormFeatureVisualSection } from './src/formFeatureVisualSection'
+export {
+  createFeatureVisualSectionController,
+  FormFeatureVisualSection,
+} from './src/formFeatureVisualSection'
 export { default as TextArea } from './TextAreaField.svelte'
 export { default as TextInput } from './TextInputField.svelte'
 export { default as SelectField } from './SelectField.svelte'
