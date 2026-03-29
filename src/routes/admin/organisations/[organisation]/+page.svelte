@@ -94,13 +94,17 @@ import {
   FormUserRolesSection,
   GridSpacer,
   Main,
-  EntityImage,
+  ResourceViewer,
 } from '$lib/bits'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+// ADAPTERS
+import { useImageProviderModel } from '$lib/adapters/image'
 // CLIENT SERVICES
 import { setOrganisationImagePresentationMode } from '$lib/client/services/image'
 // FACTORIES
 import { configureForm } from '$lib/factories.svelte'
+// COMPONENTS
+import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
@@ -680,6 +684,10 @@ const imageProviderProps = $derived.by(() => {
       : undefined,
   }
 })
+const imageProviderModel = useImageProviderModel(
+  () => page,
+  () => imageProviderProps,
+)
 
 // § Auth
 
@@ -1303,25 +1311,24 @@ $effect(() => {
     isVisible={isImagesFacet}
     transition="fade"
     fillHeight={true}
-    navMode="footer"
-    previousAction={buildFacetNavAction('images', 'previous')}
-    nextAction={buildFacetNavAction('images', 'next')}
+    edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    <EntityImage
-      {page}
-      entityId={organisation?.data?.id}
-      {imageProviderProps}
-      currentImage={activeOrganisationImage}
-      ctx={organisation?.data?.id
-        ? {
-            ctxType: ImageContextResource.organisation,
-            ctxId: organisation?.data?.id,
-          }
-        : undefined}
-      canEditPresentationMode={canEditImagePresentationMode}
-      canEditDropzone={canEditImageDropzone}
-      {onPresentationModeCommitted}
-    />
+    {#if imageProviderProps.isValid}
+      <ImageProvider model={imageProviderModel}>
+        <ResourceViewer
+          canEditPresentationMode={canEditImagePresentationMode}
+          canEditDropzone={canEditImageDropzone}
+          {onPresentationModeCommitted}
+        />
+      </ImageProvider>
+    {:else}
+      <div
+        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+      >
+        {m.admin__forms_organisation_image_save_hint()}
+      </div>
+    {/if}
   </Main.Facet>
 </Main.Root>
