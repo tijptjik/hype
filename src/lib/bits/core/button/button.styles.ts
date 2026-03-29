@@ -160,7 +160,7 @@ const COLOR_VAR_MAP = {
   },
   error: {
     '--btn-color': 'var(--color-error)',
-    '--btn-color-content': 'var(--color-error-content)',
+    '--btn-color-content': 'var(--color-white)',
   },
 } as const satisfies Record<ButtonColor, ButtonCssVars>
 

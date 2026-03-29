@@ -7,7 +7,7 @@ import * as AdminStateOverlayPrimitive from './adminStateOverlay'
 import RefreshCwIcon from 'virtual:icons/lucide/refresh-cw'
 import Trash2Icon from 'virtual:icons/lucide/trash-2'
 // TYPES
-import type { AdminStateOverlayProps } from './galleryPrimitives.types'
+import type { AdminStateOverlayProps } from './imagePrimitives.types'
 
 let {
   isUploading = false,
