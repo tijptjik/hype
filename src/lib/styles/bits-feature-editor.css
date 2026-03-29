@@ -540,9 +540,7 @@
     height: 2.5rem;
   }
 
-  .bits-theme .bits-feature-visual__switch--icon-only .bits-swap {
-    --swap-size: 2.5rem;
-    --swap-icon-size: 22px;
+  .bits-theme .bits-feature-visual__switch--icon-only [data-ui="swap"] {
     width: 2.5rem;
     min-width: 2.5rem;
     height: 2.5rem;
@@ -553,16 +551,16 @@
     box-shadow: none;
   }
 
-  .bits-feature-visual__switch--icon-only .bits-swap[data-state="checked"],
-  .bits-feature-visual__switch--icon-only .bits-swap:hover:not(:disabled),
-  .bits-feature-visual__switch--icon-only .bits-swap:focus-visible:not(:disabled),
-  .bits-feature-visual__switch--icon-only .bits-swap:active:not(:disabled) {
+  .bits-feature-visual__switch--icon-only [data-ui="swap"][data-state="checked"],
+  .bits-feature-visual__switch--icon-only [data-ui="swap"]:hover:not(:disabled),
+  .bits-feature-visual__switch--icon-only [data-ui="swap"]:focus-visible:not(:disabled),
+  .bits-feature-visual__switch--icon-only [data-ui="swap"]:active:not(:disabled) {
     border: none;
     background: transparent;
     box-shadow: none;
   }
 
-  .bits-feature-visual__switch--icon-only .bits-swap:disabled {
+  .bits-feature-visual__switch--icon-only [data-ui="swap"]:disabled {
     border: none;
     background: transparent;
     box-shadow: none;
@@ -678,90 +676,152 @@
   }
 
   .bits-feature-attribution-shell {
-    position: relative;
-    display: inline-block;
-    width: max-content;
+    --bits-feature-attribution-avatar-size: 3rem;
+    --bits-feature-attribution-underlap: calc(
+      (var(--bits-feature-attribution-avatar-size) * 0.5) +
+      24px
+    );
+    display: inline-grid;
+    grid-template-columns: var(--bits-feature-attribution-avatar-size) 0fr;
+    align-items: center;
+    gap: 0;
     max-width: 100%;
     min-width: 0;
-    transition: width 180ms ease;
+  }
+
+  .bits-feature-attribution-shell[data-direction="left"] {
+    grid-template-columns: 0fr var(--bits-feature-attribution-avatar-size);
+  }
+
+  .bits-feature-attribution-shell[data-direction="right"]:hover,
+  .bits-feature-attribution-shell[data-direction="right"]:focus-within,
+  .bits-feature-attribution-shell[data-direction="right"][data-open="true"] {
+    grid-template-columns: var(--bits-feature-attribution-avatar-size) 1fr;
+  }
+
+  .bits-feature-attribution-shell[data-direction="left"]:hover,
+  .bits-feature-attribution-shell[data-direction="left"]:focus-within,
+  .bits-feature-attribution-shell[data-direction="left"][data-open="true"] {
+    grid-template-columns: 1fr var(--bits-feature-attribution-avatar-size);
+  }
+
+  .bits-feature-attribution-shell__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    order: 1;
+    position: relative;
+    z-index: 2;
+    width: var(--bits-feature-attribution-avatar-size);
+    height: var(--bits-feature-attribution-avatar-size);
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
   }
 
   .bits-feature-attribution-shell__visible {
-    width: 100%;
+    width: max-content;
     max-width: 100%;
   }
 
-  .bits-feature-attribution-shell__measure {
-    position: absolute;
-    inset: 0;
-    visibility: hidden;
+  .bits-feature-attribution-shell__panel {
+    order: 2;
+    min-width: 0;
+    overflow: visible;
+    opacity: 0;
+    transform: translateX(-0.35rem) scaleX(0.92);
+    transform-origin: left center;
     pointer-events: none;
-    overflow: hidden;
+    z-index: 1;
+    transition:
+      opacity 150ms ease,
+      transform 180ms ease;
   }
 
-  .bits-feature-attribution-shell__measure-group {
-    width: max-content;
-    max-width: none;
-    min-width: 0;
+  .bits-feature-attribution-shell[data-open="true"]
+    .bits-feature-attribution-shell__panel {
+    transition: none;
   }
 
-  .bits-feature-attribution-shell__measure .bits-crossfade-value__item--previous,
-  .bits-feature-attribution-shell__measure .bits-transition-stack__layer--previous {
-    display: none;
+  .bits-feature-attribution-shell[data-direction="left"]
+    .bits-feature-attribution-shell__trigger {
+    order: 2;
   }
 
-  .bits-feature-attribution {
+  .bits-feature-attribution-shell[data-direction="left"]
+    .bits-feature-attribution-shell__panel {
+    order: 1;
+    transform: translateX(0.35rem) scaleX(0.92);
+    transform-origin: right center;
+  }
+
+  .bits-feature-attribution-shell:hover .bits-feature-attribution-shell__panel,
+  .bits-feature-attribution-shell:focus-within .bits-feature-attribution-shell__panel,
+  .bits-feature-attribution-shell[data-open="true"]
+    .bits-feature-attribution-shell__panel {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .bits-feature-attribution__body {
     display: flex;
-    align-items: center;
-    gap: 0.625rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.125rem;
     height: 2.75rem;
-    min-width: 0;
-    padding: 0 1rem 0 3.25rem;
+    width: max-content;
+    min-width: max-content;
+    max-width: none;
+    padding: 0.125rem 1rem 0.125rem
+      calc(0.5rem + var(--bits-feature-attribution-underlap));
+    margin-left: calc(-1 * var(--bits-feature-attribution-underlap));
     border-radius: 999px;
     background: color-mix(in oklab, black 82%, var(--color-glass-result) 18%);
     border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
     backdrop-filter: blur(14px);
   }
 
+  .bits-feature-attribution-shell[data-direction="left"]
+    .bits-feature-attribution__body {
+    padding: 0.125rem calc(1rem + var(--bits-feature-attribution-underlap)) 0.125rem
+      1rem;
+    margin-left: 0;
+    margin-right: calc(-1 * var(--bits-feature-attribution-underlap));
+  }
+
+  .bits-feature-attribution-shell__visible .bits-crossfade-value__item--previous,
+  .bits-feature-attribution-shell__visible .bits-transition-stack__layer--previous {
+    pointer-events: none;
+  }
+
   .bits-feature-attribution__avatar {
-    width: auto;
-    height: 3rem;
+    width: var(--bits-feature-attribution-avatar-size);
+    height: var(--bits-feature-attribution-avatar-size);
     aspect-ratio: 1 / 1;
     border-radius: 999px;
     object-fit: cover;
-    position: absolute;
-    left: -1px;
     background: color-mix(in oklab, var(--color-base-content) 16%, transparent);
     flex: 0 0 auto;
-  }
-
-  .bits-feature-attribution__body {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    gap: 0.125rem;
-    min-width: 0;
-    max-width: 100%;
+    box-shadow: 0 0 0 1px
+      color-mix(in oklab, var(--color-base-content) 12%, transparent);
   }
 
   .bits-feature-attribution__title {
-    overflow: hidden;
     font-weight: 600;
     line-height: 1.1;
     font-size: 0.9375rem;
-    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .bits-feature-attribution__subtitle {
-    display: flex;
     align-items: center;
+    display: flex;
     gap: 0.35rem;
-    min-width: 0;
-    overflow: hidden;
     font-size: 0.8125rem;
     line-height: 1;
-    text-overflow: ellipsis;
     white-space: nowrap;
     color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   }
