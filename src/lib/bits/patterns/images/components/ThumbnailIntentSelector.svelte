@@ -22,8 +22,8 @@ const orderedIntentOptions = $derived([
 ])
 
 async function handleSelect(nextIntent: Intent): Promise<void> {
-  await onIntentChange?.(item, nextIntent)
   open = false
+  await onIntentChange?.(item, nextIntent)
 }
 </script>
 
