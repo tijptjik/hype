@@ -12,6 +12,17 @@ import { error } from '@sveltejs/kit'
 type ImageStage = `${ImageEnv}`
 type ImageBucket = App.Platform['env']['ASSET_RAW_DEV']
 type ImageObjectBody = Awaited<ReturnType<ImageBucket['get']>>
+type R2Method = 'GET' | 'HEAD' | 'PUT'
+type R2RequestParams = {
+  accountId: string
+  bucket: string
+  objectKey: string
+  accessKeyId: string
+  secretAccessKey: string
+}
+type R2FetchParams = R2RequestParams & {
+  fetchFn?: typeof fetch
+}
 
 export type ImageMetadataDocument = ImageMetadataFull
 
@@ -22,6 +33,59 @@ const IMAGE_BUCKET_BY_STAGE = {
   [ImageEnv.preview]: 'hype-assets-raw-preview',
   [ImageEnv.production]: 'hype-assets-raw-prod',
 } as const
+
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 0. TYPES AND CONSTANTS
+// - ImageMetadataDocument
+//
+// 1. STAGE AND KEY HELPERS
+// - toImageStage
+// - getOriginalsBucketForStage
+// - getDerivedBucketForStage
+// - getReadableStages
+// - toMetadataObjectKey
+// - toManifestObjectKey
+// - getOriginalsBucketNameForStage
+// - toPublicAssetBaseUrl
+// - normalizePublicId
+//
+// 2. BINDING READ HELPERS
+// - readJson
+// - safeBucketGet
+// - readJsonViaBindingsOrApi
+//
+// 3. DIRECT R2 API HELPERS
+// - encodeObjectKeyPath
+// - createR2Client
+// - createR2ObjectUrl
+// - signR2Request
+// - executeR2Request
+// - throwR2RequestError
+// - createPresignedR2UploadUrl
+// - headR2ObjectViaApi
+// - putR2ObjectViaApi
+// - readR2JsonViaApi
+// - readR2ObjectViaApi
+//
+// 4. METADATA READS AND SHAPING
+// - readManifestVersion
+// - readMetadataDocument
+// - toMetadataProfilePayload
+//
+// ---
+
+// ---
+/********************
+ *  1. STAGE AND KEY HELPERS
+ ************/
+// +++ Stage And Key Helpers
+
+const normalizePublicId = (publicId: string): string =>
+  publicId.trim().replace(/^\/+/, '')
 
 /**
  * Normalises an unknown environment value into a valid image storage stage.
@@ -59,7 +123,6 @@ export const getOriginalsBucketForStage = (
       return platform.env.ASSET_RAW_PRODUCTION
     case ImageEnv.preview:
       return platform.env.ASSET_RAW_PREVIEW
-    case ImageEnv.local:
     default:
       return platform.env.ASSET_RAW_DEV
   }
@@ -84,7 +147,6 @@ export const getDerivedBucketForStage = (
       return platform.env.ASSET_PUBLIC_PRODUCTION
     case ImageEnv.preview:
       return platform.env.ASSET_PUBLIC_PREVIEW
-    case ImageEnv.local:
     default:
       return platform.env.ASSET_PUBLIC_DEV
   }
@@ -104,7 +166,6 @@ export const getReadableStages = (stage: ImageStage): ImageStage[] => {
       return [ImageEnv.local, ImageEnv.preview, ImageEnv.production]
     case ImageEnv.preview:
       return [ImageEnv.preview, ImageEnv.production]
-    case ImageEnv.production:
     default:
       return [ImageEnv.production]
   }
@@ -119,8 +180,8 @@ export const getReadableStages = (stage: ImageStage): ImageStage[] => {
  */
 export const toMetadataObjectKey = (publicId: string, version?: number): string =>
   version
-    ? `${publicId.trim().replace(/^\/+/, '')}.v${version}${IMAGE_METADATA_SUFFIX}`
-    : `${publicId.trim().replace(/^\/+/, '')}${IMAGE_METADATA_SUFFIX}`
+    ? `${normalizePublicId(publicId)}.v${version}${IMAGE_METADATA_SUFFIX}`
+    : `${normalizePublicId(publicId)}${IMAGE_METADATA_SUFFIX}`
 
 /**
  * Builds the manifest object key for an image metadata manifest.
@@ -129,7 +190,7 @@ export const toMetadataObjectKey = (publicId: string, version?: number): string 
  * @returns Object key used to store the manifest document in R2.
  */
 export const toManifestObjectKey = (publicId: string): string =>
-  `${publicId.trim().replace(/^\/+/, '')}${IMAGE_MANIFEST_SUFFIX}`
+  `${normalizePublicId(publicId)}${IMAGE_MANIFEST_SUFFIX}`
 
 /**
  * Resolves the canonical R2 originals bucket name for a stage.
@@ -147,6 +208,12 @@ export const getOriginalsBucketNameForStage = (stage: ImageStage): string =>
  */
 export const toPublicAssetBaseUrl = (): string =>
   import.meta.env.PUBLIC_ASSET_BASE_URL || ''
+
+// ---
+/********************
+ *  2. BINDING READ HELPERS
+ ************/
+// +++ Binding Read Helpers
 
 /**
  * Parses a JSON object body from R2 when present.
@@ -180,11 +247,105 @@ const safeBucketGet = async (
   }
 }
 
+const readJsonViaBindingsOrApi = async <T>(params: {
+  platform: App.Platform | undefined
+  stage: ImageStage
+  bucket: ImageBucket
+  key: string
+  fetchFn?: typeof fetch
+}): Promise<T | null> => {
+  const bindingObject = await safeBucketGet(params.bucket, params.key)
+  const bindingDocument = await readJson<T>(bindingObject)
+
+  if (bindingDocument) {
+    return bindingDocument
+  }
+
+  const accountId = params.platform?.env.CLOUDFLARE_ACCOUNT_ID
+  const accessKeyId = params.platform?.env.R2_S3_ACCESS_KEY_ID
+  const secretAccessKey = params.platform?.env.R2_S3_SECRET_ACCESS_KEY
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    return null
+  }
+
+  return readR2JsonViaApi<T>({
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucket: getOriginalsBucketNameForStage(params.stage),
+    objectKey: params.key,
+    fetchFn: params.fetchFn,
+  })
+}
+
+// ---
+/********************
+ *  3. DIRECT R2 API HELPERS
+ ************/
+// +++ Direct R2 Api Helpers
+
 const encodeObjectKeyPath = (objectKey: string): string =>
   objectKey
     .split('/')
     .map(segment => encodeURIComponent(segment))
     .join('/')
+
+const createR2Client = (params: R2RequestParams): AwsClient =>
+  new AwsClient({
+    accessKeyId: params.accessKeyId,
+    secretAccessKey: params.secretAccessKey,
+    service: 's3',
+    region: 'auto',
+  })
+
+const createR2ObjectUrl = (
+  params: Pick<R2RequestParams, 'accountId' | 'bucket' | 'objectKey'>,
+): URL =>
+  new URL(
+    `https://${params.accountId}.r2.cloudflarestorage.com/${params.bucket}/${encodeObjectKeyPath(params.objectKey)}`,
+  )
+
+const signR2Request = async (
+  params: R2RequestParams,
+  request: {
+    method: R2Method
+    headers?: HeadersInit
+    signQuery?: boolean
+  },
+): Promise<Request> =>
+  createR2Client(params).sign(createR2ObjectUrl(params), {
+    method: request.method,
+    headers: request.headers,
+    aws: request.signQuery
+      ? {
+          signQuery: true,
+        }
+      : undefined,
+  })
+
+const executeR2Request = async (
+  params: R2FetchParams,
+  request: {
+    method: R2Method
+    headers?: HeadersInit
+    body?: BodyInit
+  },
+): Promise<Response> => {
+  const signedRequest = await signR2Request(params, request)
+
+  return (params.fetchFn ?? fetch)(signedRequest.url, {
+    method: request.method,
+    headers: signedRequest.headers,
+    body: request.body,
+  })
+}
+
+const throwR2RequestError = (operation: string, response: Response): never => {
+  throw new Error(
+    `Remote R2 ${operation} failed: ${response.status} ${response.statusText}`,
+  )
+}
 
 /**
  * Creates a presigned direct-upload URL for an R2 object.
@@ -200,19 +361,11 @@ export const createPresignedR2UploadUrl = async (params: {
   secretAccessKey: string
   expiresInSeconds?: number
 }): Promise<string> => {
-  const aws = new AwsClient({
-    accessKeyId: params.accessKeyId,
-    secretAccessKey: params.secretAccessKey,
-    service: 's3',
-    region: 'auto',
-  })
-  const targetUrl = new URL(
-    `https://${params.accountId}.r2.cloudflarestorage.com/${params.bucket}/${encodeObjectKeyPath(params.objectKey)}`,
-  )
+  const targetUrl = createR2ObjectUrl(params)
   if (params.expiresInSeconds) {
     targetUrl.searchParams.set('X-Amz-Expires', String(params.expiresInSeconds))
   }
-  const signedRequest = await aws.sign(targetUrl, {
+  const signedRequest = await createR2Client(params).sign(targetUrl, {
     method: 'PUT',
     headers: {
       'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
@@ -224,6 +377,129 @@ export const createPresignedR2UploadUrl = async (params: {
 
   return signedRequest.url.toString()
 }
+
+/**
+ * Reads object metadata directly from the R2 S3 API.
+ *
+ * @param params Remote head parameters.
+ * @returns Minimal object metadata when the object exists, otherwise `null`.
+ */
+export const headR2ObjectViaApi = async (params: {
+  accountId: string
+  bucket: string
+  objectKey: string
+  accessKeyId: string
+  secretAccessKey: string
+  fetchFn?: typeof fetch
+}): Promise<{ size: number; contentType: string | null } | null> => {
+  const response = await executeR2Request(params, { method: 'HEAD' })
+
+  if (response.status === 404) {
+    return null
+  }
+
+  if (!response.ok) {
+    throwR2RequestError('head', response)
+  }
+
+  return {
+    size: Number(response.headers.get('content-length') ?? 0),
+    contentType: response.headers.get('content-type'),
+  }
+}
+
+/**
+ * Writes an object directly to the R2 S3 API.
+ *
+ * @param params Remote put parameters.
+ * @returns Nothing.
+ */
+export const putR2ObjectViaApi = async (params: {
+  accountId: string
+  bucket: string
+  objectKey: string
+  accessKeyId: string
+  secretAccessKey: string
+  body: BodyInit
+  contentType: string
+  fetchFn?: typeof fetch
+}): Promise<void> => {
+  const response = await executeR2Request(params, {
+    method: 'PUT',
+    headers: {
+      'content-type': params.contentType,
+      'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+    },
+    body: params.body,
+  })
+
+  if (!response.ok) {
+    throwR2RequestError('put', response)
+  }
+}
+
+/**
+ * Reads a JSON object directly from the R2 S3 API.
+ *
+ * @param params Remote get parameters.
+ * @returns Parsed JSON payload when the object exists, otherwise `null`.
+ */
+export const readR2JsonViaApi = async <T>(params: {
+  accountId: string
+  bucket: string
+  objectKey: string
+  accessKeyId: string
+  secretAccessKey: string
+  fetchFn?: typeof fetch
+}): Promise<T | null> => {
+  const response = await executeR2Request(params, { method: 'GET' })
+
+  if (response.status === 404) {
+    return null
+  }
+
+  if (!response.ok) {
+    throwR2RequestError('get', response)
+  }
+
+  return (await response.json()) as T
+}
+
+/**
+ * Reads a binary object directly from the R2 S3 API.
+ *
+ * @param params Remote get parameters.
+ * @returns Object bytes plus content type when the object exists, otherwise `null`.
+ */
+export const readR2ObjectViaApi = async (params: {
+  accountId: string
+  bucket: string
+  objectKey: string
+  accessKeyId: string
+  secretAccessKey: string
+  fetchFn?: typeof fetch
+}): Promise<{ body: Uint8Array; contentType: string | null } | null> => {
+  const response = await executeR2Request(params, { method: 'GET' })
+
+  if (response.status === 404) {
+    return null
+  }
+
+  if (!response.ok) {
+    throwR2RequestError('get', response)
+  }
+
+  return {
+    body: new Uint8Array(await response.arrayBuffer()),
+    contentType: response.headers.get('content-type'),
+  }
+}
+
+// ---
+/********************
+ *  4. METADATA READS AND SHAPING
+ ************/
+// +++ Metadata Reads And Shaping
 
 /**
  * Reads the latest metadata version from an image manifest.
@@ -259,37 +535,58 @@ export const readMetadataDocument = async ({
   env,
   publicId,
   version,
+  fetchFn,
 }: {
   platform: App.Platform | undefined
   env: ImageStage
   publicId: string
   version?: number
+  fetchFn?: typeof fetch
 }): Promise<{
   document: ImageMetadataDocument | null
   resolvedEnv: ImageStage
   resolvedVersion?: number
 }> => {
-  const normalizedPublicId = publicId.trim().replace(/^\/+/, '')
+  const normalizedPublicId = normalizePublicId(publicId)
 
   for (const readableStage of getReadableStages(env)) {
     const bucket = getOriginalsBucketForStage(platform, readableStage)
     const resolvedVersion =
       typeof version === 'number'
         ? version
-        : await readManifestVersion(bucket, normalizedPublicId)
+        : ((
+            await readJsonViaBindingsOrApi<{ version?: number }>({
+              platform,
+              stage: readableStage,
+              bucket,
+              key: toManifestObjectKey(normalizedPublicId),
+              fetchFn,
+            })
+          )?.version ?? null)
     const versionedKey = toMetadataObjectKey(
       normalizedPublicId,
       resolvedVersion ?? undefined,
     )
     const unversionedKey = toMetadataObjectKey(normalizedPublicId)
-    const object = await safeBucketGet(bucket, versionedKey)
+    const document = await readJsonViaBindingsOrApi<ImageMetadataDocument>({
+      platform,
+      stage: readableStage,
+      bucket,
+      key: versionedKey,
+      fetchFn,
+    })
 
-    if (!object && resolvedVersion !== undefined) {
-      const fallback = await safeBucketGet(bucket, unversionedKey)
-      const document = await readJson<ImageMetadataDocument>(fallback)
-      if (document) {
+    if (!document && resolvedVersion !== undefined) {
+      const fallback = await readJsonViaBindingsOrApi<ImageMetadataDocument>({
+        platform,
+        stage: readableStage,
+        bucket,
+        key: unversionedKey,
+        fetchFn,
+      })
+      if (fallback) {
         return {
-          document,
+          document: fallback,
           resolvedEnv: readableStage,
           resolvedVersion: resolvedVersion ?? undefined,
         }
@@ -297,7 +594,6 @@ export const readMetadataDocument = async ({
       continue
     }
 
-    const document = await readJson<ImageMetadataDocument>(object)
     if (document) {
       return {
         document,
