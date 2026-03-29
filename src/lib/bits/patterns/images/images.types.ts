@@ -54,12 +54,12 @@ export type ViewerRenderableStatus =
       uploadStatus: 'uploaded'
     })
 
+export type GalleryWidgetRail = Snippet<[ViewerRenderable]>
+
 export type GalleryIntentChangeHandler = (
-  imageId: string,
+  item: ViewerRenderable,
   intent: Intent,
 ) => void | Promise<void>
-
-export type GalleryWidgetRail = Snippet<[ViewerRenderable]>
 
 export type ThumbnailProps = {
   item: ViewerRenderable

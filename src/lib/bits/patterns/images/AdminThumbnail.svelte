@@ -21,8 +21,6 @@ let {
 }: AdminThumbnailProps = $props()
 let isConfirmingDelete = $state(false)
 const dimension = $derived(typeof size === 'number' ? `${size}px` : size)
-const isQueueBacked = $derived(Boolean(item.status?.uploadStatus))
-const intentTargetImageId = $derived(item.status?.savedImageId ?? item.id)
 const thumbnailFit = $derived<'cover'>('cover')
 const isUploadError = $derived(item.status?.uploadStatus === 'error')
 const uploadErrorMessage = $derived(
@@ -67,8 +65,7 @@ async function handleDelete(): Promise<void> {
 
     {#if !isDeleteMode && !isConfirmingDelete && !isUploading && !isUploadError}
       <ImagePrimitive.ThumbnailIntentSelector
-        intent={item.intent}
-        imageId={intentTargetImageId}
+        {item}
         {onIntentChange}
         class="bottom-[10px]"
       />

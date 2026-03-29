@@ -58,7 +58,7 @@ type ImageEditorGalleryModel = {
     replaceFiles: (files: FileList | File[]) => Promise<void>
     deleteItem: (item: ViewerRenderable) => Promise<void>
     retryUpload: (item: ViewerRenderable) => void
-    setIntent: (imageId: string, intent: Intent) => Promise<void>
+    setIntent: (item: ViewerRenderable, intent: Intent) => Promise<void>
     rotateLeft: () => Promise<void>
     rotateRight: () => Promise<void>
     togglePublished: () => void
@@ -944,6 +944,19 @@ export function useImageEditorGalleryModel(
     ) as typeof optimisticRotationByImageId
   }
 
+  /**
+   * Resolves a normalized gallery item back to the persisted image id used by
+   * the domain image store.
+   *
+   * @param item Gallery item selected in the viewer/editor layer.
+   * @returns Persisted image id when the item maps to a saved image.
+   */
+  function getIntentTargetImageId(item: ViewerRenderable): string | null {
+    return (
+      getGalleryItemTargetImageId(item.id, items) ?? item.status?.savedImageId ?? null
+    )
+  }
+
   onDestroy(() => {
     metadataRequests.clear()
     for (const timer of rotationTimers.values()) {
@@ -1034,7 +1047,10 @@ export function useImageEditorGalleryModel(
         imageCtx.targetItem(item.id)
         imageCtx.retryUpload(upload)
       },
-      async setIntent(imageId: string, intent: Intent): Promise<void> {
+      async setIntent(item: ViewerRenderable, intent: Intent): Promise<void> {
+        const imageId = getIntentTargetImageId(item)
+        if (!imageId) return
+
         await imageCtx.handleSetIntent(imageId, intent)
       },
       async rotateLeft(): Promise<void> {

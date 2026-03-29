@@ -68,8 +68,7 @@ export type AdminStateOverlayProps = {
 }
 
 export type ThumbnailIntentSelectorProps = {
-  imageId: string
-  intent?: string | null
+  item: ViewerRenderable
   onIntentChange?: GalleryIntentChangeHandler
 }
 

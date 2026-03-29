@@ -8,22 +8,21 @@ import type { Intent } from '$lib/db/zod/schema/image.types'
 import type { ThumbnailIntentSelectorProps } from './imagePrimitives.types'
 
 let {
-  imageId,
-  intent = 'general',
+  item,
   onIntentChange,
   class: className = '',
 }: ThumbnailIntentSelectorProps & {
   class?: string
 } = $props()
 let open = $state(false)
-const currentIntent = $derived((intent ?? 'general') as Intent)
+const currentIntent = $derived((item.intent ?? 'general') as Intent)
 const orderedIntentOptions = $derived([
   ...adminIntentOrder.filter(option => option !== 'undefined'),
   'undefined',
 ])
 
 async function handleSelect(nextIntent: Intent): Promise<void> {
-  await onIntentChange?.(imageId, nextIntent)
+  await onIntentChange?.(item, nextIntent)
   open = false
 }
 </script>
