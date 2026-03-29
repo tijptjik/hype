@@ -2790,9 +2790,7 @@ $effect(() => {
     isVisible={isImagesFacet}
     transition="fade"
     fillHeight={true}
-    navMode="footer"
-    previousAction={buildFacetNavAction('images', 'previous')}
-    nextAction={buildFacetNavAction('images', 'next')}
+    edgeToEdge={true}
     attrs={{ 'data-facet-id': 'images' }}
   >
     {#if imageProviderProps.isValid}
