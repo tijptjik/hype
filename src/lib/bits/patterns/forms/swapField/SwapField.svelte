@@ -16,7 +16,7 @@ let {
   onIcon = null,
   offIcon = null,
   size = 'md',
-  variant = 'default',
+  variant = 'transparent',
   onColor = 'primary',
   offColor = 'neutral',
   label = '',

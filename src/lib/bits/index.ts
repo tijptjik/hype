@@ -20,6 +20,7 @@ export {
   CrossfadeValue,
   CustomHeader,
   FormDebug,
+  FormFeatureVisualSection,
   HeaderBreadcrumbs,
   HeaderPrimitive,
   Icon,

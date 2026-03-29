@@ -38,9 +38,9 @@ const TRANSITION_CLASSES = cx(
 )
 
 const INTERACTION_CLASSES = cx(
-  'data-[hover-suppressed=false]:hover:border-[color:color-mix(in_oklab,var(--swap-color-active-hover)_34%,transparent)]',
-  'data-[hover-suppressed=false]:hover:bg-[color:color-mix(in_oklab,var(--swap-color-active-hover)_16%,rgb(17_17_17_/_0.82))]',
-  'data-[hover-suppressed=false]:hover:text-[var(--swap-color-active-hover)]',
+  'enabled:data-[hover-suppressed=false]:hover:border-[color:color-mix(in_oklab,var(--swap-color-active-hover)_34%,transparent)]',
+  'enabled:data-[hover-suppressed=false]:hover:bg-[color:color-mix(in_oklab,var(--swap-color-active-hover)_16%,rgb(17_17_17_/_0.82))]',
+  'enabled:data-[hover-suppressed=false]:hover:text-[var(--swap-color-active-hover)]',
   'focus-visible:border-[color:color-mix(in_oklab,var(--swap-color-active)_48%,transparent)]',
   'focus-visible:outline-none',
 )
@@ -67,8 +67,8 @@ const VARIANT_CLASS_MAP = {
     'border-none',
     'bg-transparent',
     'shadow-none',
-    'data-[hover-suppressed=false]:hover:border-none',
-    'data-[hover-suppressed=false]:hover:bg-transparent',
+    'enabled:data-[hover-suppressed=false]:hover:border-none',
+    'enabled:data-[hover-suppressed=false]:hover:bg-transparent',
     'focus-visible:border-none',
     'disabled:border-none',
     'disabled:bg-transparent',
