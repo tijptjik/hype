@@ -65,6 +65,7 @@ export type ThumbnailProps = {
   item: ViewerRenderable
   fit?: GalleryObjectFit
   size?: number | string
+  rounded?: string
   isActive?: boolean
   isLoading?: boolean
   onSelect?: (item: ViewerRenderable) => void
@@ -100,11 +101,6 @@ export type ViewerProps = {
   rightRail?: GalleryWidgetRail
   centerAction?: GalleryCenterAction
   centerActionLabel?: string
-  canEditActiveImage?: boolean
-  showViewerEditControls?: boolean
-  isEditBusy?: boolean
-  onRotateLeft?: () => void | Promise<void>
-  onRotateRight?: () => void | Promise<void>
   onCenterAction?: (item: ViewerRenderable) => void | Promise<void>
   onActiveIdChange?: (id: string | null) => void
   onNavigateToItem?: (id: string) => void
@@ -113,6 +109,8 @@ export type ViewerProps = {
 
 export type AdminViewerProps = ViewerProps & {
   isEmptyUploadEnabled?: boolean
+  isEmptyDropzoneEnabled?: boolean
+  isEmptyUploadDisabled?: boolean
   uploadSelectionMode?: GalleryUploadSelectionMode
   onUploadFiles?: (files: FileList | File[]) => void
 }
@@ -125,6 +123,7 @@ export type ThumbnailWrapperProps = {
   items: ViewerRenderable[]
   activeId?: string | null
   followActiveIdRequestKey?: number
+  followActiveIdRequestId?: string | null
   fit?: GalleryObjectFit
   variant?: 'default' | 'admin'
   class?: string

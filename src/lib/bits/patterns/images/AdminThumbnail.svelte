@@ -47,16 +47,19 @@ async function handleDelete(): Promise<void> {
 </script>
 
 <div class="shrink-0">
-  <div class="relative" style={`width: ${dimension}; height: ${dimension};`}>
+  <div
+    class="relative isolate overflow-hidden rounded-xl"
+    style={`width: ${dimension}; height: ${dimension};`}
+  >
     <ImagePrimitive.ThumbnailButton
       {item}
       fit={thumbnailFit}
       {size}
+      rounded="rounded-none"
       {isActive}
       isLoading={isLoading || isUploading}
       {isBlurred}
       {isGreyscale}
-      shimmer={isLoading || isUploading}
       onSelect={handleSelect}
       {onLoad}
       {onError}

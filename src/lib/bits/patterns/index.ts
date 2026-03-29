@@ -1,6 +1,5 @@
 export * from './analytics'
 export * from './bars'
-export * from './gallery'
 export * from './resource'
 export * from './cards'
 export * from './images'

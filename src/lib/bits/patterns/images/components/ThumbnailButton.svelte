@@ -8,11 +8,11 @@ let {
   item,
   fit = 'fit',
   size = 88,
+  rounded = 'rounded-xl',
   isActive = false,
   isLoading = false,
   isBlurred = false,
   isGreyscale = false,
-  shimmer = false,
   onSelect,
   onHover,
   onLoad,
@@ -38,7 +38,8 @@ const thumbnailItem = $derived(
 <button
   type="button"
   class={cx(
-    'group relative shrink-0 rounded-xl p-0 text-left transition duration-240',
+    'group relative shrink-0 overflow-hidden p-0 text-left transition duration-240',
+    rounded,
     isActive ? 'ring-3 ring-primary' : '',
   )}
   style={`width: ${dimension}; height: ${dimension};`}
@@ -54,8 +55,7 @@ const thumbnailItem = $derived(
     {enableSourceTransition}
     {isBlurred}
     {isGreyscale}
-    {shimmer}
-    rounded="rounded-xl"
+    {rounded}
     {onLoad}
     {onError}
   />

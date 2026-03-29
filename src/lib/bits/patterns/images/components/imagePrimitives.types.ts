@@ -14,7 +14,6 @@ export type ImageSurfaceProps = {
   enableSourceTransition?: boolean
   isBlurred?: boolean
   isGreyscale?: boolean
-  shimmer?: boolean
   rounded?: string
   onLoad?: () => void
   onError?: () => void
@@ -24,11 +23,11 @@ export type ThumbnailButtonProps = {
   item: ViewerRenderable
   fit?: GalleryObjectFit
   size?: number | string
+  rounded?: string
   isActive?: boolean
   isLoading?: boolean
   isBlurred?: boolean
   isGreyscale?: boolean
-  shimmer?: boolean
   onSelect?: (item: ViewerRenderable) => void
   onHover?: (item: ViewerRenderable) => void
   onLoad?: () => void
@@ -38,18 +37,22 @@ export type ThumbnailButtonProps = {
 export type ViewerControlsProps = {
   canGoPrev: boolean
   canGoNext: boolean
-  canEdit?: boolean
-  showEditControls?: boolean
-  isEditBusy?: boolean
   onPrev: () => void
   onNext: () => void
-  onRotateLeft?: () => void | Promise<void>
-  onRotateRight?: () => void | Promise<void>
 }
 
 export type EmptyStateProps = {
   title: string
   description?: string
+}
+
+export type FullScreenProps = {
+  currentItem: ViewerRenderable | null
+  activeId?: string | null
+  fit?: GalleryObjectFit
+  viewTransitionName?: string
+  onCurrentItemLoad?: (item: ViewerRenderable) => void
+  onDismiss?: () => void | Promise<void>
 }
 
 export type AdminStateOverlayProps = {

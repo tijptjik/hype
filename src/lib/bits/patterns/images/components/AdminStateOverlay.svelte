@@ -23,10 +23,6 @@ let {
 }: AdminStateOverlayProps = $props()
 </script>
 
-{#if isUploading}
-  <AdminStateOverlayPrimitive.Shimmer />
-{/if}
-
 {#if isUploadError}
   <AdminStateOverlayPrimitive.Root
     class="bg-[linear-gradient(180deg,rgba(57,12,12,0.68)_0%,rgba(32,8,8,0.86)_100%)]"
@@ -52,7 +48,7 @@ let {
 
 {#if isUnpublished && !isDeleteMode && !isConfirmingDelete && !isUploadError}
   <div
-    class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
+    class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center rounded-[inherit]"
   >
     <span class="text-white/50"> <EyeOffIcon class="h-18 w-18 opacity-30" /> </span>
   </div>

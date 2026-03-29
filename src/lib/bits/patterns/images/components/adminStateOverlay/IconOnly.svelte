@@ -15,7 +15,7 @@ let {
 </script>
 
 <div
-  class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center rounded-[inherit] bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.34)_100%)] backdrop-blur-[1.5px]"
+  class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center overflow-hidden rounded-[inherit] bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.34)_100%)] backdrop-blur-[1.5px] [isolation:isolate]"
 >
   <span
     class={cx(

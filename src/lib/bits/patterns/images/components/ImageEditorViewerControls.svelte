@@ -18,6 +18,7 @@ import ReplaceIcon from 'virtual:icons/lucide/replace'
 import DownloadIcon from 'virtual:icons/lucide/cloud-download'
 import ExpandIcon from 'virtual:icons/lucide/expand'
 import ShrinkIcon from 'virtual:icons/lucide/shrink'
+import Trash2Icon from 'virtual:icons/lucide/trash-2'
 
 let {
   isPublished = false,
@@ -26,18 +27,21 @@ let {
   canRotate = false,
   canEdit = false,
   canReplace = false,
+  canDelete = false,
   canDownload = false,
   isEditBusy = false,
   disabled = false,
   showPublishedToggle = true,
   showPresentationModeToggle = true,
   showReplaceButton = true,
+  showDeleteButton = false,
   showDownloadButton = true,
   onRotateLeft,
   onRotateRight,
   onTogglePublished,
   onPresentationModeChange,
   onReplaceFiles,
+  onDelete,
   onDownload,
 }: {
   isPublished?: boolean
@@ -46,18 +50,21 @@ let {
   canRotate?: boolean
   canEdit?: boolean
   canReplace?: boolean
+  canDelete?: boolean
   canDownload?: boolean
   isEditBusy?: boolean
   disabled?: boolean
   showPublishedToggle?: boolean
   showPresentationModeToggle?: boolean
   showReplaceButton?: boolean
+  showDeleteButton?: boolean
   showDownloadButton?: boolean
   onRotateLeft?: () => void | Promise<void>
   onRotateRight?: () => void | Promise<void>
   onTogglePublished?: () => void
   onPresentationModeChange?: (mode: 'cover' | 'contain') => void | Promise<void>
   onReplaceFiles?: (files: FileList | File[]) => void
+  onDelete?: () => void | Promise<void>
   onDownload?: () => void
 } = $props()
 
@@ -204,6 +211,27 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
             ? m.gallery__replace_image()
             : m.gallery__wait_for_image_save()}</span
         >
+      </SimpleTooltip>
+    {/if}
+
+    {#if showDeleteButton}
+      <SimpleTooltip withProvider={false}>
+        {#snippet trigger()}
+          <Button
+            text={m.forms__delete()}
+            style="transparent"
+            modifier="circle"
+            hideLabel={true}
+            class={buttonClass}
+            disabled={disabled || !canDelete}
+            onClick={() => {
+              void onDelete?.()
+            }}
+            iconComponent={Trash2Icon}
+            iconClasses="h-[22px] w-[22px]"
+          />
+        {/snippet}
+        <span>{canDelete ? m.forms__delete() : m.gallery__wait_for_image_save()}</span>
       </SimpleTooltip>
     {/if}
 

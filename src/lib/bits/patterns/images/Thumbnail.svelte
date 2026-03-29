@@ -6,6 +6,7 @@ let {
   item,
   fit = 'fit',
   size = 88,
+  rounded = 'rounded-xl',
   isActive = false,
   isLoading = false,
   onSelect,
@@ -18,6 +19,7 @@ let {
   {item}
   {fit}
   {size}
+  {rounded}
   {isActive}
   {isLoading}
   {onSelect}
