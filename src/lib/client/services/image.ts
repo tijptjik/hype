@@ -4,15 +4,13 @@ import { error } from '@sveltejs/kit'
 import { m } from '$lib/i18n'
 // IMAGE
 import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import {
+  extractImageUploadMetadata,
+  type ExtractedImageUploadMetadata,
+} from '$lib/images/metadata'
 import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
 // UTILS
 import { resolveAppStage } from '$lib'
-import {
-  getCameraFromMetadata,
-  getCapturedAtFromMetadata,
-  getCoordinatesFromMetadata,
-  getCreditFromMetadata,
-} from '$lib/utils/image-metadata'
 // SERVICES
 import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
 // REMOTE
@@ -37,6 +35,11 @@ import type {
   NormalizedImageUploadAsset,
 } from '$lib/types'
 import type {
+  GalleryObjectFit,
+  ViewerRenderable,
+  ViewerRenderableStatus,
+} from '$lib/bits/patterns/images/images.types'
+import type {
   Image,
   ImageContextEnvelope,
   ImageCtxEnvelope,
@@ -45,8 +48,6 @@ import type {
   ImageEditCtx,
   ImageDBFlat,
   ImageDBBasic,
-  Metadata,
-  LngLat,
   ImageNew,
   ImageMetadataBasic,
 } from '$lib/db/zod/schema/image.types'
@@ -101,25 +102,44 @@ type FeatureImageProviderProject = {
 // ═══════════════════════
 
 /**
- * Orchestrates the full image upload process against the current R2-backed image service.
- * This function does NOT handle frontend state updates (e.g., upload queue status, image list updates).
+ * Prepares an upload by normalizing the file, building metadata, and requesting an upload session.
  *
  * @param file The file to upload.
  * @param uploadCtx Context for the upload (resource type, ID, org, project, imageToReplace).
  * @param extendedFeatureInfo Optional info for feature images (publish status, intent).
- * @returns The saved/updated image data from the backend.
+ * @returns Prepared upload payload that can be PUT to R2 and later finalized.
  */
-export async function uploadAndProcessImage(
+export async function prepareImageUpload(
   file: File,
   uploadCtx: ImageUploadCtx,
   extendedFeatureInfo?: {
     isPublished: boolean
     intent: Intent
   },
-  fetchFn: typeof fetch = fetch,
-): Promise<ImageCtxEnvelope> {
+): Promise<{
+  uploadLabel: string
+  uploadStartTime: number
+  authCompletedAt: number
+  normalizedUpload: NormalizedImageUploadAsset
+  metadata: ImageMetadataBasic & { metadata?: Record<string, string> | null }
+  auth: Awaited<ReturnType<typeof authImageUploadRemote>>
+  isAdminRequest: boolean
+  persist: {
+    featureImage?: {
+      featureId: string
+      intent: Intent
+      isPublished: boolean
+    }
+    links?: NonNullable<ImageUploadCtx['links']>
+  }
+}> {
+  const now = (): number =>
+    typeof performance !== 'undefined' ? performance.now() : Date.now()
+  const uploadStartTime = now()
+  const uploadLabel = `${file.name}:${file.size}:${file.lastModified}`
+  const extractedMetadata = await extractImageUploadMetadata(file)
   const normalizedUpload = await normalizeUploadFileForAssetPipeline(file)
-  const metadata = await buildBasicMetadataDocument(normalizedUpload)
+  const metadata = await buildBasicMetadataDocument(normalizedUpload, extractedMetadata)
   const env = toImageEnv()
   const isAdminRequest = uploadCtx.isAdminRequest ?? true
   const featureImage =
@@ -149,32 +169,121 @@ export async function uploadAndProcessImage(
     replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
     meta: { isAdminRequest },
   })
+  const authAt = now()
 
-  const uploadResponse = await fetchFn(auth.uploadUrl, {
-    method: auth.method,
-    headers: auth.headers,
-    body: normalizedUpload.file,
-  })
-
-  if (!uploadResponse.ok) {
-    throw new Error(`Image upload failed: ${uploadResponse.statusText}`)
-  }
-
-  const savedImage = await finalizeImageUploadRemote({
-    token: auth.confirmToken,
+  return {
+    uploadLabel,
+    uploadStartTime,
+    authCompletedAt: authAt,
+    normalizedUpload,
     metadata,
+    auth,
+    isAdminRequest,
     persist: {
+      ...(uploadCtx.imageToReplace?.image.contributorId
+        ? { contributorId: uploadCtx.imageToReplace.image.contributorId }
+        : {}),
       ...(featureImage ? { featureImage } : {}),
       ...(uploadCtx.links?.length ? { links: uploadCtx.links } : {}),
     },
-    meta: { isAdminRequest },
-  })
+  }
+}
 
-  if (!savedImage?.data) {
-    throw new Error('Failed to persist finalized image in backend')
+/**
+ * Uploads a prepared image object to the signed R2 destination.
+ *
+ * @param preparedUpload Prepared upload session returned by `prepareImageUpload`.
+ * @param fetchFn Fetch implementation to use for the signed PUT request.
+ * @returns Resolves when the object upload completes successfully.
+ */
+export async function uploadPreparedImageObject(
+  preparedUpload: Awaited<ReturnType<typeof prepareImageUpload>>,
+  fetchFn: typeof fetch = fetch,
+): Promise<void> {
+  const uploadResponse = await fetchFn(preparedUpload.auth.uploadUrl, {
+    method: preparedUpload.auth.method,
+    headers: preparedUpload.auth.headers,
+    body: preparedUpload.normalizedUpload.file,
+  })
+  if (!uploadResponse.ok) {
+    throw new Error(`Image upload failed: ${uploadResponse.statusText}`)
+  }
+}
+
+/**
+ * Finalizes a prepared upload by persisting image metadata and context links in the backend.
+ *
+ * @param preparedUpload Prepared upload session returned by `prepareImageUpload`.
+ * @returns Persisted image envelope.
+ * @remarks Retries transient local D1 lock failures before surfacing an error.
+ */
+export async function finalizePreparedImageUpload(
+  preparedUpload: Awaited<ReturnType<typeof prepareImageUpload>>,
+): Promise<ImageCtxEnvelope> {
+  const now = (): number =>
+    typeof performance !== 'undefined' ? performance.now() : Date.now()
+  const retryAttempts = 4
+  const retryBaseDelayMs = 180
+
+  for (let attempt = 0; attempt < retryAttempts; attempt += 1) {
+    try {
+      const savedImage = await finalizeImageUploadRemote({
+        token: preparedUpload.auth.confirmToken,
+        metadata: preparedUpload.metadata,
+        persist: preparedUpload.persist,
+        meta: { isAdminRequest: preparedUpload.isAdminRequest },
+      })
+      if (!savedImage?.data) {
+        throw new Error('Failed to persist finalized image in backend')
+      }
+
+      return savedImage.data as ImageCtxEnvelope
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      const isRetryableLockError =
+        message.includes('SQLITE_BUSY') ||
+        message.includes('database is locked') ||
+        message.includes('internal error; reference =')
+
+      if (!isRetryableLockError || attempt === retryAttempts - 1) {
+        throw error
+      }
+
+      const retryDelayMs = retryBaseDelayMs * (attempt + 1)
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs))
+    }
   }
 
-  return savedImage.data as ImageCtxEnvelope
+  throw new Error('Failed to persist finalized image in backend')
+}
+
+/**
+ * Orchestrates the full image upload process against the current R2-backed image service.
+ * This function does NOT handle frontend state updates (e.g., upload queue status, image list updates).
+ *
+ * @param file The file to upload.
+ * @param uploadCtx Context for the upload (resource type, ID, org, project, imageToReplace).
+ * @param extendedFeatureInfo Optional info for feature images (publish status, intent).
+ * @param fetchFn Fetch implementation to use for the signed PUT request.
+ * @param options Lifecycle hooks for object-upload completion.
+ * @returns The saved/updated image data from the backend.
+ */
+export async function uploadAndProcessImage(
+  file: File,
+  uploadCtx: ImageUploadCtx,
+  extendedFeatureInfo?: {
+    isPublished: boolean
+    intent: Intent
+  },
+  fetchFn: typeof fetch = fetch,
+  options: {
+    onObjectUploaded?: () => void
+  } = {},
+): Promise<ImageCtxEnvelope> {
+  const preparedUpload = await prepareImageUpload(file, uploadCtx, extendedFeatureInfo)
+  await uploadPreparedImageObject(preparedUpload, fetchFn)
+  options.onObjectUploaded?.()
+  return finalizePreparedImageUpload(preparedUpload)
 }
 
 // ═══════════════════════
@@ -204,6 +313,7 @@ const toImageEnv = (): 'local' | 'preview' | 'production' =>
 
 export async function buildBasicMetadataDocument(
   normalizedUpload: NormalizedImageUploadAsset,
+  extractedMetadata: ExtractedImageUploadMetadata,
 ): Promise<ImageMetadataBasic & { metadata?: Record<string, string> | null }> {
   const metadataEntries: Record<string, string> = {}
 
@@ -217,6 +327,9 @@ export async function buildBasicMetadataDocument(
     metadataEntries.clientResizeApplied = 'true'
     metadataEntries.clientResizeMaxDimension = '2048'
   }
+  if (extractedMetadata.editorTool) {
+    metadataEntries.editorTool = extractedMetadata.editorTool
+  }
 
   return {
     originalFilename: normalizedUpload.originalFilename,
@@ -224,13 +337,294 @@ export async function buildBasicMetadataDocument(
     originalWidth: normalizedUpload.originalWidth,
     originalHeight: normalizedUpload.originalHeight,
     rotation: 0,
-    cameraModel: null,
-    capturedAt: null,
-    credit: null,
-    latitude: null,
-    longitude: null,
+    cameraModel: extractedMetadata.cameraModel,
+    capturedAt: extractedMetadata.capturedAt,
+    credit: extractedMetadata.credit,
+    latitude: extractedMetadata.latitude,
+    longitude: extractedMetadata.longitude,
     metadata: Object.keys(metadataEntries).length > 0 ? metadataEntries : null,
   }
+}
+
+/**
+ * Preloads an image URL and waits for decode when supported so later swaps paint cleanly.
+ *
+ * @param url Image URL to preload.
+ * @returns Resolves once the URL is paintable, rejects on a real image load failure.
+ */
+export async function preloadImageUrl(url: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.onload = async () => {
+      try {
+        if (typeof image.decode === 'function') {
+          await image.decode()
+        }
+      } catch {
+        // Firefox can reject decode() even when the image is already paintable.
+      }
+      resolve()
+    }
+    image.onerror = event => reject(event)
+    image.src = url
+  })
+}
+
+/**
+ * Waits for the server to confirm that the warmed admin thumbnail is available.
+ *
+ * @param params Image identifier inputs.
+ * @returns `true` when the thumbnail-ready event arrives before timeout, else `false`.
+ */
+export async function waitForThumbnailReadyEvent(params: {
+  publicId: string
+  version?: number | null
+  timeoutMs?: number
+}): Promise<boolean> {
+  if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+    return false
+  }
+
+  const searchParams = new URLSearchParams({ publicId: params.publicId })
+
+  if (typeof params.version === 'number') {
+    searchParams.set('version', String(params.version))
+  }
+
+  const url = `/api/images/thumbnail-ready?${searchParams.toString()}`
+
+  return await new Promise<boolean>(resolve => {
+    const eventSource = new EventSource(url)
+    let settled = false
+
+    const settle = (value: boolean): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeoutId)
+      eventSource.close()
+      resolve(value)
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      settle(false)
+    }, params.timeoutMs ?? 20_000)
+
+    eventSource.addEventListener('thumbnail-ready', () => {
+      settle(true)
+    })
+    eventSource.addEventListener('thumbnail-timeout', () => {
+      settle(false)
+    })
+    eventSource.onerror = () => {
+      settle(false)
+    }
+  })
+}
+
+/**
+ * Sorts gallery items so unpublished/no-intent uploads stay prominent while preserving
+ * the existing editorial intent ordering for persisted images.
+ *
+ * @param itemsToSort Gallery items to sort for the editor rail.
+ * @returns Sorted gallery items.
+ */
+export function sortGalleryItems(itemsToSort: ViewerRenderable[]): ViewerRenderable[] {
+  return [...itemsToSort].sort((a, b) => {
+    const aIsUnpublishedNoIntent =
+      !a.isPublished && (!a.intent || a.intent === 'undefined')
+    const bIsUnpublishedNoIntent =
+      !b.isPublished && (!b.intent || b.intent === 'undefined')
+
+    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
+    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
+
+    if (a.isPublished !== b.isPublished) {
+      return a.isPublished ? -1 : 1
+    }
+
+    const intentOrder = [
+      'undefined',
+      'canonical',
+      'general',
+      'context',
+      'research',
+      'closeUp',
+    ] as const
+    const aIntent = intentOrder.indexOf(
+      (a.intent ?? 'undefined') as (typeof intentOrder)[number],
+    )
+    const bIntent = intentOrder.indexOf(
+      (b.intent ?? 'undefined') as (typeof intentOrder)[number],
+    )
+
+    if (aIntent !== bIntent) {
+      return aIntent - bIntent
+    }
+
+    return (
+      new Date(String(b.status?.sortCreatedAt ?? '')).getTime() -
+      new Date(String(a.status?.sortCreatedAt ?? '')).getTime()
+    )
+  })
+}
+
+function getViewerRenderableStatus(
+  item: ViewerRenderable | null | undefined,
+): ViewerRenderableStatus | null {
+  return item?.status ?? null
+}
+
+/**
+ * Resolves the persisted image id carried on an optimistic gallery row, if one exists.
+ *
+ * @param item Gallery item to inspect.
+ * @returns Saved image id or `null`.
+ */
+export function getGalleryItemSavedImageId(
+  item: ViewerRenderable | null | undefined,
+): string | null {
+  return getViewerRenderableStatus(item)?.savedImageId ?? null
+}
+
+/**
+ * Resolves the image id used for metadata/edit actions when the visible gallery row may still
+ * be the optimistic upload wrapper.
+ *
+ * @param itemId Current gallery item id.
+ * @param items Gallery items available in the editor.
+ * @returns Persisted image id when available, otherwise `null`.
+ */
+export function getGalleryItemTargetImageId(
+  itemId: string | null | undefined,
+  items: ViewerRenderable[],
+): string | null {
+  if (!itemId) return null
+
+  const item = items.find(candidate => candidate.id === itemId)
+  if (!item) return null
+
+  return getGalleryItemSavedImageId(item) ?? item.id
+}
+
+/**
+ * Resolves the thumbnail load-status key for a gallery row, preferring the persisted image id
+ * once an optimistic upload has been promoted.
+ *
+ * @param itemId Current gallery item id.
+ * @param items Gallery items available in the editor.
+ * @returns Image id used for thumbnail load tracking.
+ */
+export function getGalleryItemThumbnailStatusId(
+  itemId: string | null | undefined,
+  items: ViewerRenderable[],
+): string | null {
+  if (!itemId) return null
+
+  const item = items.find(candidate => candidate.id === itemId)
+  if (!item) return itemId
+
+  return getGalleryItemSavedImageId(item) ?? itemId
+}
+
+/**
+ * Builds a stable viewer scene key so optimistic and finalized versions of the same image can
+ * reuse the scene when a render key is available.
+ *
+ * @param item Current viewer item.
+ * @param selectedId Current selection id.
+ * @returns Stable scene key or `null`.
+ */
+export function getGallerySceneKey(
+  item: ViewerRenderable | null,
+  selectedId: string | null,
+): string | null {
+  if (!item) return null
+  return item.renderKey ?? selectedId ?? item.id
+}
+
+/**
+ * Resolves the blurred backdrop source for a viewer/gallery item.
+ *
+ * @param item Current gallery item.
+ * @returns Backdrop image source or `null`.
+ */
+export function getGalleryBackgroundSrc(item: ViewerRenderable | null): string | null {
+  if (!item) return null
+  return item.blurSrc ?? item.sourceFallbackSrc ?? item.src ?? null
+}
+
+/**
+ * Resolves the primary foreground source for a viewer/gallery item.
+ *
+ * @param item Current gallery item.
+ * @returns Foreground source.
+ */
+export function getGalleryForegroundSrc(item: ViewerRenderable | null): string {
+  return (
+    item?.src ??
+    item?.sourceFallbackSrc ??
+    getFeatureIdenticonUrl(item?.fallbackSeed ?? item?.id ?? 'gallery-fallback')
+  )
+}
+
+/**
+ * Builds the inline rotation style used for viewer-stage foreground images.
+ *
+ * @param item Current gallery item.
+ * @returns Inline transform style or `undefined`.
+ */
+export function getGalleryForegroundRotationStyle(
+  item: ViewerRenderable | null,
+): string | undefined {
+  const rotationDegrees = item?.rotationDegrees ?? 0
+  return rotationDegrees !== 0 ? `transform: rotate(${rotationDegrees}deg);` : undefined
+}
+
+/**
+ * Determines whether the viewer can render the scene directly without using the image-surface
+ * source transition layer.
+ *
+ * @param item Current gallery item.
+ * @returns `true` when the direct viewer scene is appropriate.
+ */
+export function shouldUseDirectGalleryScene(item: ViewerRenderable | null): boolean {
+  const hasUploadStatus = Boolean(getViewerRenderableStatus(item)?.uploadStatus)
+  const forceSourceTransition = item?.meta?.forceSourceTransition === true
+
+  return (
+    !forceSourceTransition &&
+    (hasUploadStatus || !item?.sourceFallbackSrc || item.sourceFallbackSrc === item.src)
+  )
+}
+
+/**
+ * Lists the image URLs that must be ready before a viewer scene crossfade can start.
+ *
+ * @param item Current gallery item.
+ * @param fitMode Viewer fit mode.
+ * @returns Unique scene asset URLs.
+ */
+export function buildGallerySceneAssetUrls(
+  item: ViewerRenderable | null,
+  fitMode: GalleryObjectFit,
+): string[] {
+  if (!item) return []
+
+  const urls = new Set<string>()
+  const foregroundSrc = getGalleryForegroundSrc(item)
+  if (foregroundSrc) {
+    urls.add(foregroundSrc)
+  }
+
+  if (fitMode === 'fit') {
+    const backgroundSrc = getGalleryBackgroundSrc(item)
+    if (backgroundSrc) {
+      urls.add(backgroundSrc)
+    }
+  }
+
+  return Array.from(urls)
 }
 
 /**
@@ -696,7 +1090,7 @@ export function setHubImagePresentationMode(
 export async function checkCameraAvailability() {
   try {
     // Check if MediaDevices API is available
-    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    if (!navigator.mediaDevices?.enumerateDevices) {
       return false
     }
 
