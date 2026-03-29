@@ -4,6 +4,7 @@ import { Button } from '$lib/bits/core/button'
 import { m } from '$lib/i18n'
 import * as AdminStateOverlayPrimitive from './adminStateOverlay'
 // ICONS
+import EyeOffIcon from 'virtual:icons/lucide/eye-off'
 import RefreshCwIcon from 'virtual:icons/lucide/refresh-cw'
 import Trash2Icon from 'virtual:icons/lucide/trash-2'
 // TYPES
@@ -13,6 +14,7 @@ let {
   isUploading = false,
   isUploadError = false,
   uploadErrorMessage = null,
+  isUnpublished = false,
   isDeleteMode = false,
   isConfirmingDelete = false,
   onCancelDelete,
@@ -46,6 +48,14 @@ let {
       onClick={() => onRetryUpload?.()}
     />
   </AdminStateOverlayPrimitive.Root>
+{/if}
+
+{#if isUnpublished && !isDeleteMode && !isConfirmingDelete && !isUploadError}
+  <div
+    class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
+  >
+    <span class="text-white/50"> <EyeOffIcon class="h-18 w-18 opacity-30" /> </span>
+  </div>
 {/if}
 
 {#if isDeleteMode && !isConfirmingDelete}
