@@ -1,6 +1,4 @@
 <script lang="ts">
-// ENUMS
-import { FeatureCardMode } from '$lib/enums'
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'

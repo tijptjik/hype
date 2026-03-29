@@ -69,6 +69,7 @@ export {
   AutoHide,
   CompletionFooter,
   CompletionFooterPrimitive,
+  FeatureImageEditor,
   FeatureRow,
   FeatureRowPrimitive,
   FormFacetNav,

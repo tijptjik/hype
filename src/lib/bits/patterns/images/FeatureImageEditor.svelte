@@ -1,10 +1,14 @@
 <script lang="ts">
-import { ImageEditor, UserAttributionCard } from '$lib/bits'
-import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
+// ADAPTERS
 import { useImageEditorGalleryModel } from '$lib/adapters/image'
-import { m } from '$lib/i18n'
-import Icon from '$lib/components/common/Icon.svelte'
+// BITS COMPONENTS
+import { Icon, ImageEditor, UserAttributionCard } from '$lib/bits'
+import ImageMetadataCard from './components/ImageMetadataCard.svelte'
+// CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
+// I18N
+import { m } from '$lib/i18n'
+// ICONS
 import CameraIcon from 'virtual:icons/lucide/camera'
 import LoaderCircle from 'virtual:icons/lucide/loader-circle'
 

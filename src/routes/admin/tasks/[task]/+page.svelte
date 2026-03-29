@@ -13,7 +13,6 @@ import TaskIcon from 'virtual:icons/lucide/inbox'
 // PROVIDERS
 import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // COMPONENTS :: COMMON
-import Gallery from '$lib/components/images/gallery/Gallery.svelte'
 import Viewer from '$lib/components/common/Viewer.svelte'
 // COMPONENTS :: LAYOUT
 import TaskRoot from '$lib/components/tasks/layout/EntityRoot.svelte'
@@ -117,7 +116,9 @@ const imageProviderModel = useImageProviderModel(
         <TaskMain {task}>
           <div class="flex min-h-0 flex-1 flex-col items-stretch gap-4 @container">
             <Viewer isDropzone={!task.isReviewed} />
-            <TaskFooter> <Gallery hasDropzone={false} /> </TaskFooter>
+            <!-- <TaskFooter>  -->
+            <!-- <Gallery hasDropzone={false} /> -->
+            <!-- </TaskFooter> -->
           </div>
           {#if task?.type === 'reportedMissing'}
             <ReportedMissingControls {task} />
