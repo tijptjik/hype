@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
   toCloudflareImageWorkerPath,
   toImageRawIntermediateWorkerPath,
   toImagePrerenderWorkerPaths,
@@ -29,7 +30,9 @@ describe('image delivery helpers', () => {
         version: 3,
         raw: true,
       }),
-    ).toBe('/image/raw/h_2048,w_2048/v3/features/example.jpg')
+    ).toBe(
+      `/image/raw/${IMAGE_RAW_INTERMEDIATE_TRANSFORMATION}/v3/features/example.jpg`,
+    )
   })
 
   it('omits the version segment when no version exists and returns prerender variants', () => {
@@ -46,7 +49,9 @@ describe('image delivery helpers', () => {
         publicId: 'features/example.jpg',
         version: 7,
       }),
-    ).toBe('/image/raw/h_2048,w_2048/v7/features/example.jpg')
+    ).toBe(
+      `/image/raw/${IMAGE_RAW_INTERMEDIATE_TRANSFORMATION}/v7/features/example.jpg`,
+    )
 
     expect(
       toImagePrerenderWorkerPaths({

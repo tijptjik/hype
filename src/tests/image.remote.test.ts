@@ -12,11 +12,11 @@ const {
   mockGetImageByIdsQueryContext,
   mockGetImageEntityQueryContext,
   mockGetImageQueryContext,
+  mockEnqueueDerivedAssetWarmup,
   mockToImageProfile,
   mockToResponseShape,
   mockToResponseShapeProjectOrOrganisation,
   mockUpdateImageForContext,
-  mockWarmImageDerivatives,
   mockCreateFeatureImage,
   mockCreateImageRecord,
   mockLoadImageById,
@@ -43,13 +43,13 @@ const {
   mockGetImageByIdsQueryContext: vi.fn(() => ({ conditions: [] })),
   mockGetImageEntityQueryContext: vi.fn(() => ({ conditions: [] })),
   mockGetImageQueryContext: vi.fn(() => ({ conditions: [] })),
+  mockEnqueueDerivedAssetWarmup: vi.fn(async () => undefined),
   mockToImageProfile: vi.fn((value: unknown, fallback: string) =>
     typeof value === 'string' ? value : fallback,
   ),
   mockToResponseShape: vi.fn(async (image: any) => image),
   mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: any) => image),
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
-  mockWarmImageDerivatives: vi.fn(async () => undefined),
   mockCreateFeatureImage: vi.fn(async () => ({ id: 'fi-1' })),
   mockCreateImageRecord: vi.fn(async () => ({ id: 'img-1', publicId: null })),
   mockLoadImageById: vi.fn(async () => null),
@@ -124,11 +124,11 @@ vi.mock('$lib/api/services/image', () => ({
   getImageByIdsQueryContext: mockGetImageByIdsQueryContext,
   getImageEntityQueryContext: mockGetImageEntityQueryContext,
   getImageQueryContext: mockGetImageQueryContext,
+  enqueueDerivedAssetWarmup: mockEnqueueDerivedAssetWarmup,
   toImageProfile: mockToImageProfile,
   toResponseShape: mockToResponseShape,
   toResponseShapeProjectOrOrganisation: mockToResponseShapeProjectOrOrganisation,
   updateImageForContext: mockUpdateImageForContext,
-  warmImageDerivatives: mockWarmImageDerivatives,
 }))
 
 vi.mock('$lib/db/services/image', () => ({
@@ -481,7 +481,7 @@ describe('image.remote', () => {
     expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
     expect(put).toHaveBeenCalledTimes(3)
     expect(mockWaitUntil).toHaveBeenCalledTimes(1)
-    expect(mockWarmImageDerivatives).toHaveBeenCalledWith({
+    expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
       event: expect.objectContaining({
         request: expect.any(Request),
       }),
@@ -662,7 +662,7 @@ describe('image.remote', () => {
       expect.stringContaining('"rotation":90'),
       expect.any(Object),
     )
-    expect(mockWarmImageDerivatives).toHaveBeenCalledWith({
+    expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
       event: expect.objectContaining({
         request: expect.any(Request),
       }),
