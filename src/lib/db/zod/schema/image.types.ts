@@ -152,6 +152,7 @@ export type UploadStatus =
   | 'idle'
   | 'staged'
   | 'uploading'
+  | 'finalizing'
   | 'uploaded'
   | 'error'
   | 'invalidated'
@@ -160,8 +161,12 @@ export type ImageUpload = {
   file: File
   status: UploadStatus
   retries: number
+  queuedAt: number
+  optimisticKey: string
   imageToReplace?: ImageCtxEnvelope
   preview?: string
+  savedImage?: ImageCtxEnvelope
+  errorMessage?: string | null
 }
 
 export type UploadedPhoto = {
