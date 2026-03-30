@@ -19,6 +19,8 @@ export interface HeaderButtonActionConfig {
   disabled?: boolean
   color?: ButtonColor
   style?: ButtonStyle
+  alwaysHideLabel?: boolean
+  hideLabelInstantly?: boolean
 }
 
 export interface HeaderStatusActionConfig {
@@ -93,6 +95,7 @@ export interface HeaderViewActionsConfig {
   controlsAction?: HeaderButtonActionConfig
   layoutAction?: HeaderButtonActionConfig
   extraActions?: HeaderButtonActionConfig[]
+  content?: HeaderLayoutRegionConfig | null
 }
 
 export interface HeaderFormActionsConfig {

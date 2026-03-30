@@ -153,6 +153,7 @@ const rootClass = $derived(
                 controlsAction={viewActions.controlsAction}
                 layoutAction={viewActions.layoutAction}
                 extraActions={viewActions.extraActions}
+                content={viewActions.content}
                 hideLabel={!showButtonText}
               />
             {/if}

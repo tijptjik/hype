@@ -26,6 +26,7 @@ let {
   canDownloadActiveImage = false,
   isEditBusy = false,
   isReadonly = false,
+  viewerControlsOffsetClass = 'bottom-4',
   getIsHighlighted,
   highlightClass = 'outline outline-2 outline-accent outline-offset-[-2px]',
   getIsBlurred,
@@ -113,7 +114,7 @@ $effect(() => {
             hasItems ? 'pointer-events-auto opacity-100' : 'opacity-0',
           )}
         >
-          <ImagePrimitive.ImageEditorViewerControls
+          <ImagePrimitive.ImageViewerControls
             {isPublished}
             {presentationMode}
             canMutate={canMutateActiveImage}
@@ -122,6 +123,7 @@ $effect(() => {
             canReplace={canReplaceActiveImage}
             canDownload={canDownloadActiveImage}
             {isEditBusy}
+            offsetClass={viewerControlsOffsetClass}
             disabled={!activeId}
             {onRotateLeft}
             {onRotateRight}

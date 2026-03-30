@@ -123,6 +123,7 @@ export {
   ResourceStatusBadge,
   ResourceTaskStatusBadge,
   SwapField,
+  TaskEditor,
   TaskRow,
   TaskRowPrimitive,
   Thumbnail,

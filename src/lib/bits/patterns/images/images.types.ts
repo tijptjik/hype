@@ -172,6 +172,7 @@ export type ImageEditorProps = {
   canDownloadActiveImage?: boolean
   isEditBusy?: boolean
   isReadonly?: boolean
+  viewerControlsOffsetClass?: string
   getIsHighlighted?: (item: ViewerRenderable) => boolean
   highlightClass?: string
   getIsBlurred?: (item: ViewerRenderable) => boolean
