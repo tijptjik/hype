@@ -30,6 +30,7 @@
     "db:restore:latest:prod": "LATEST_FILE=$(ls -t sql/backup/hype-db-prod-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then sqlite3 $(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) < \"$LATEST_FILE\" && echo \"✅ Restored from $LATEST_FILE\"; else echo \"❌ No ordered prod backup files found\"; fi",
     "db:restore:latest:prod:to:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-prod-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then bunx wrangler d1 execute hype-db-preview --remote --file=\"$LATEST_FILE\" && echo \"✅ Restored from $LATEST_FILE\"; else echo \"❌ No ordered prod backup files found\"; fi",
     "db:restore:latest:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-preview-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then sqlite3 $(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) < \"$LATEST_FILE\" && echo \"✅ Restored from $LATEST_FILE\"; else echo \"❌ No ordered preview backup files found\"; fi",
+    "db:seed:eln-test-tasks:local": "bunx wrangler d1 execute hype-db-local --file=sql/routines/reset_eln_test_tasks.sql && echo \"✅ ELN test tasks reset complete\"",
     "db:migration:new": "drizzle-kit generate --name",
     "db:migration:new:empty": "drizzle-kit generate --custom --name",
     "db:migration:run:local": "bunx wrangler d1 migrations apply hype-db-local",
