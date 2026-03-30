@@ -1,10 +1,9 @@
 // I18N
 import { getLocaleKey } from '$lib/i18n'
-// LIB
-import { fetchOrThrow } from '$lib/index'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
 import { getFeatures } from '$lib/api/server/feature.remote'
+import { getTasks } from '$lib/api/server/tasks.remote'
 // SERVICES
 import { toProjectLicenseFilterCache } from '$lib/client/services/licence'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
@@ -13,7 +12,7 @@ import { getContext, setContext, untrack } from 'svelte'
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { AppCtx } from '$lib/context/app.svelte'
 // ENUMS
-import { ResourcePath, FirstClassResource, type HierarchicalResource } from '$lib/enums'
+import { FirstClassResource, type HierarchicalResource } from '$lib/enums'
 // GUARDS
 import { isTask } from '$lib/types'
 // CLIENT SERVICES
@@ -460,61 +459,6 @@ export class AdminCtx {
   }
 
   // ═══════════════════════
-  // ADMIN QUERY URLS
-  // ═══════════════════════
-
-  // Helper method to build API URLs with filters
-  private buildApiUrl(resource: FirstClassResource, includeFilters = true): string {
-    const path = ResourcePath[resource]
-    const params = new URLSearchParams()
-
-    // Add isArchived / isReviewed filter by default
-    if (
-      resource !== FirstClassResource.task &&
-      resource !== FirstClassResource.property
-    ) {
-      // SuperAdmin users should see all archived resources in admin context, so don't force isArchived=false
-      // For everyone else, always filter out archived resources
-      if (!this.appCtx.isSuperAdmin()) {
-        params.append('isArchived', 'false')
-      }
-    } else if (resource === FirstClassResource.task) {
-      const isReviewed =
-        this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed
-      if (isReviewed !== null) {
-        params.append('isReviewed', isReviewed?.toString())
-      }
-    }
-    // Properties have no filters
-
-    if (includeFilters) {
-      // Add prism filters based on resource hierarchy
-      if (resource !== FirstClassResource.organisation) {
-        this.appCtx.state.prisms.organisation.forEach(org =>
-          params.append(FirstClassResource.organisation, org),
-        )
-      }
-
-      if (
-        resource !== FirstClassResource.organisation &&
-        resource !== FirstClassResource.project
-      ) {
-        this.appCtx.state.prisms.project.forEach(proj =>
-          params.append(FirstClassResource.project, proj),
-        )
-      }
-
-      if (resource === FirstClassResource.feature) {
-        this.appCtx.state.prisms.layer.forEach(layer =>
-          params.append(FirstClassResource.layer, layer),
-        )
-      }
-    }
-
-    return `/api/${path}?${params.toString()}`
-  }
-
-  // ═══════════════════════
   // ADMIN QUERY :: FUNCTIONS
   // ═══════════════════════
 
@@ -603,9 +547,18 @@ export class AdminCtx {
   }
 
   tasksQueryFn = async () => {
-    const url = this.buildApiUrl(FirstClassResource.task)
-    const tasks = await fetchOrThrow<Task[]>(url)
-    return [...tasks].reverse()
+    const result = await getTasks({
+      conditions: {
+        isReviewed: this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
+      },
+      prisms: {
+        organisation: this.appCtx.state.prisms.organisation,
+        project: this.appCtx.state.prisms.project,
+      },
+      meta: { isAdminRequest: true },
+    })
+
+    return [...result.data].reverse()
   }
 
   propertiesQueryFn = async () => {
