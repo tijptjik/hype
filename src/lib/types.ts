@@ -2098,8 +2098,8 @@ export const reviewActions = [
   'set-unpublished',
   'set-intangible',
   'set-archived',
-  'add-all-photo',
-  'add-all-photo-with-intent',
+  'added-all-photos',
+  'added-all-photos-with-intent',
   'added-feature',
 ] as const
 export type ReviewAction = (typeof reviewActions)[number]
