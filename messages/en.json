@@ -11,6 +11,7 @@
   "filters__neighbourhoods": "neighbourhoods",
   "filters__categories": "categories",
   "filters__all": "All",
+  "filters__type": "Type",
   "filters__only": "Only",
   "filters__between": "Between {min} and {max} stars",
   "filters__and": "and",

@@ -11,6 +11,7 @@
   "filters__neighbourhoods": "地区",
   "filters__categories": "类别",
   "filters__all": "全部",
+  "filters__type": "类型",
   "filters__only": "仅",
   "filters__between": "在{min}和{max}之间",
   "filters__and": "和",

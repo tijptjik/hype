@@ -39,12 +39,12 @@ const filters = {
     },
     {
       key: 'type',
-      title: 'Report',
+      title: m.away_honest_anaconda_honor(),
       icon: ShapesIcon,
       filters: [
         createSelectFilter('type', {
-          label: 'Type',
-          placeholder: 'All reports',
+          label: m.filters__type(),
+          placeholder: `${m.filters__all()} ${m.away_honest_anaconda_honor().toLowerCase()}`,
           allowDeselect: true,
           refreshResource: FirstClassResource.task,
           options: [
