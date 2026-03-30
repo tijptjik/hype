@@ -60,8 +60,7 @@ let windowHeight = $state(0)
 // Update mobile state when window width changes
 $effect(() => {
   appCtx.isMobile = windowWidth < MOBILE_MAX_WIDTH
-  responsive.window.width = windowWidth
-  responsive.window.height = windowHeight
+  responsive.setWindowDimensions(windowWidth, windowHeight)
 })
 
 // Load maplibre globally

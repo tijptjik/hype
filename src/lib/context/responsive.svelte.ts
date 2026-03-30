@@ -17,6 +17,26 @@ export class ResponsiveCtx {
     width: 0,
     height: 0,
   })
+
+  setWindowDimensions(width: number, height: number): void {
+    if (this.window.width !== width) {
+      this.window.width = width
+    }
+
+    if (this.window.height !== height) {
+      this.window.height = height
+    }
+  }
+
+  setMainDimensions(width: number, height: number): void {
+    if (this.main.width !== width) {
+      this.main.width = width
+    }
+
+    if (this.main.height !== height) {
+      this.main.height = height
+    }
+  }
 }
 
 export function setResponsiveCtx(): ResponsiveCtx {
