@@ -58,7 +58,7 @@ export function getRowRootClass({
   )
 }
 
-export const rowTitleSectionClass = 'min-w-0 w-full'
+export const rowTitleSectionClass = 'bits-resource-row__title min-w-0 w-full'
 
 export const rowTitleClass = 'flex items-center gap-4 text-left'
 

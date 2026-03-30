@@ -4,6 +4,7 @@ import type { RowRootProps } from '../row.types'
 
 let {
   index,
+  entityId,
   isSelected = false,
   variant,
   onclick,
@@ -20,6 +21,7 @@ let {
     tabindex="0"
     role="button"
     data-entity-index={index}
+    data-entity-id={entityId}
     class={getRowRootClass({ variant, isSelected, className })}
   >
     {#if children}

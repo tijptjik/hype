@@ -6,6 +6,7 @@ export type RowVariant = 'feature' | 'task' | 'resource'
 
 export type RowRootProps = {
   index: number
+  entityId?: string
   isSelected?: boolean
   variant?: RowVariant
   onclick: (event: MouseEvent) => void

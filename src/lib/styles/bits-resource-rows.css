@@ -290,13 +290,37 @@
   }
 
   .bits-task-row__review {
-    display: flex;
+    display: none;
     align-items: center;
     white-space: nowrap;
     font-family: "Tilt Neon", sans-serif;
     font-size: 1.75rem;
     line-height: 1;
     text-transform: uppercase;
+  }
+
+  @container bits-main-root (min-width: 900px) {
+    .bits-task-row__review {
+      display: flex;
+    }
+  }
+
+  @container bits-admin-shell-main (min-width: 900px) {
+    .bits-task-row__review {
+      display: flex;
+    }
+  }
+
+  @container bits-main-root (max-width: 1019px) {
+    .bits-theme.bits-resource-row--task > .bits-resource-row__status {
+      grid-column: 4;
+    }
+  }
+
+  @container bits-admin-shell-main (max-width: 1019px) {
+    .bits-theme.bits-resource-row--task > .bits-resource-row__status {
+      grid-column: 4;
+    }
   }
 
   .bits-task-row__review--error {
@@ -334,7 +358,13 @@
     gap: 0;
   }
 
-  @container bits-resource-row (min-width: 50rem) {
+  @container bits-main-root (min-width: 1020px) {
+    .bits-task-row__meta {
+      display: flex;
+    }
+  }
+
+  @container bits-admin-shell-main (min-width: 1020px) {
     .bits-task-row__meta {
       display: flex;
     }
@@ -352,19 +382,37 @@
     display: none;
   }
 
-  @container bits-resource-row (min-width: 50rem) {
-    .bits-task-row__meta-item--created {
-      display: flex;
-    }
-  }
-
-  @container bits-resource-row (min-width: 32rem) {
+  @container bits-main-root (min-width: 1020px) {
     .bits-task-row__meta-item--contributor {
       display: flex;
     }
   }
 
-  @container bits-resource-row (min-width: 79rem) {
+  @container bits-admin-shell-main (min-width: 1020px) {
+    .bits-task-row__meta-item--contributor {
+      display: flex;
+    }
+  }
+
+  @container bits-main-root (min-width: 1200px) {
+    .bits-task-row__meta-item--created {
+      display: flex;
+    }
+  }
+
+  @container bits-admin-shell-main (min-width: 1200px) {
+    .bits-task-row__meta-item--created {
+      display: flex;
+    }
+  }
+
+  @container bits-main-root (min-width: 1400px) {
+    .bits-task-row__meta-item--reviewer {
+      display: flex;
+    }
+  }
+
+  @container bits-admin-shell-main (min-width: 1400px) {
     .bits-task-row__meta-item--reviewer {
       display: flex;
     }

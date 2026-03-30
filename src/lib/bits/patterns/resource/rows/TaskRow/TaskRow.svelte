@@ -44,7 +44,7 @@ const reviewAction = $derived(entity?.reviewAction)
 const reviewActionDisplay = $derived(
   reviewAction
     ? {
-        ignored: 'Ignored',
+        ignored: 'Declined',
         'set-unpublished': 'Unpublished',
         'set-intangible': 'Set Intangible',
         'set-archived': 'Archived',
@@ -86,6 +86,7 @@ function handleTitleClick(): void {
 
 <Row
   {index}
+  entityId={entity.id}
   {isSelected}
   variant="task"
   onclick={handleTitleClick}

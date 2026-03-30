@@ -36,4 +36,5 @@ export type GroupedResourceIndexProps<
   card?: Snippet<[T, number]>
   row?: Snippet<[T, number]>
   listContainer?: HTMLElement | null
+  scrollIndexByEntityId?: Map<string, number>
 }

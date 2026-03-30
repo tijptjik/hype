@@ -4,6 +4,7 @@ import type { RowProps } from './row.types'
 
 let {
   index,
+  entityId,
   isSelected = false,
   variant,
   onclick,
@@ -23,6 +24,7 @@ let {
 
 <RowPrimitive.RowRoot
   {index}
+  {entityId}
   {isSelected}
   {variant}
   {onclick}
