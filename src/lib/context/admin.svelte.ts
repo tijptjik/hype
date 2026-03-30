@@ -448,6 +448,7 @@ export class AdminCtx {
       this.appCtx.state.prisms.organisation,
       this.appCtx.state.prisms.project,
       this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
+      this.appCtx.state.viewFilters[FirstClassResource.task].type,
     ]
   }
 
@@ -551,6 +552,7 @@ export class AdminCtx {
     const result = await getTasks({
       conditions: {
         isReviewed: this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
+        type: this.appCtx.state.viewFilters[FirstClassResource.task].type,
       },
       prisms: {
         organisation: this.appCtx.state.prisms.organisation,
@@ -1688,6 +1690,72 @@ export class AdminCtx {
 
     return true
   }
+
+  /**
+   * Resolves the richest available related entities for task text search.
+   * Prefer embedded task relations and fall back to admin resource stores.
+   */
+  private getTaskSearchRelations = (
+    task: Task,
+  ): {
+    feature: Feature | FeatureFromCollection | null
+    project: Project | null
+    organisation: Organisation | null
+  } => {
+    const feature =
+      task.feature ??
+      this.appCtx.state.resources.feature.find(
+        feature => feature.id === task.featureId,
+      ) ??
+      null
+    const project =
+      task.project ??
+      this.appCtx.state.resources.project.find(
+        project => project.id === task.projectId,
+      ) ??
+      null
+    const organisation =
+      task.organisation ??
+      this.appCtx.state.resources.organisation.find(
+        organisation => organisation.id === task.organisationId,
+      ) ??
+      null
+
+    return {
+      feature,
+      project,
+      organisation,
+    }
+  }
+
+  /**
+   * Matches task free-text queries against task fields and related resource text.
+   */
+  private matchesTaskTextQuery = (task: Task, query: string): boolean => {
+    const normalizedQuery = query.trim().toLowerCase()
+    if (normalizedQuery === '') return true
+
+    const { feature, project, organisation } = this.getTaskSearchRelations(task)
+    const localeKey = getLocaleKey()
+    const localizedFeatureTitle =
+      feature?.i18n?.[localeKey]?.title ?? feature?.i18n?.en?.title ?? ''
+
+    return (
+      (feature &&
+        (this.appCtx.textFilter(FirstClassResource.feature, feature, normalizedQuery) ||
+          localizedFeatureTitle.toLowerCase().includes(normalizedQuery))) ||
+      (project &&
+        this.appCtx.textFilter(FirstClassResource.project, project, normalizedQuery)) ||
+      (organisation &&
+        this.appCtx.textFilter(
+          FirstClassResource.organisation,
+          organisation,
+          normalizedQuery,
+        )) ||
+      task.message?.toLowerCase().includes(normalizedQuery) ||
+      task.contributor?.name?.toLowerCase().includes(normalizedQuery)
+    )
+  }
   // ═══════════════════════
   // HUB VIEW FILTERS
   // ═══════════════════════
@@ -1930,33 +1998,7 @@ export class AdminCtx {
 
     // TEXT FILTER
     if (query) {
-      result = result.filter(entity => {
-        // Get related entities using IDs
-        const feature = this.appCtx.state.resources.feature.find(
-          f => f.id === entity.featureId,
-        )
-        const project = this.appCtx.state.resources.project.find(
-          p => p.id === entity.projectId,
-        )
-        const organisation = this.appCtx.state.resources.organisation.find(
-          o => o.id === entity.organisationId,
-        )
-
-        return (
-          (feature &&
-            this.appCtx.textFilter(FirstClassResource.feature, feature, query)) ||
-          (project &&
-            this.appCtx.textFilter(FirstClassResource.project, project, query)) ||
-          (organisation &&
-            this.appCtx.textFilter(
-              FirstClassResource.organisation,
-              organisation,
-              query,
-            )) ||
-          entity.message?.toLowerCase().includes(query.toLowerCase()) ||
-          entity.contributor?.name?.toLowerCase().includes(query.toLowerCase())
-        )
-      })
+      result = result.filter(task => this.matchesTaskTextQuery(task, query))
     }
 
     return result
