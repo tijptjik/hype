@@ -8,6 +8,7 @@ import type { ImageEditorProps } from './images.types'
 
 let {
   items,
+  class: className = '',
   activeId = $bindable<string | null>(null),
   isFullscreen = $bindable(false),
   fullscreenRequestKey = 0,
@@ -78,7 +79,7 @@ $effect(() => {
 })
 </script>
 
-<div class="h-full w-full select-none bg-black px-0">
+<div class={cx('h-full w-full select-none bg-black px-0', className)}>
   <div class="flex h-full w-full min-h-0 gap-4">
     <div class="relative min-h-0 min-w-0 flex-1 pt-2">
       <AdminViewer
@@ -124,7 +125,7 @@ $effect(() => {
             canDownload={canDownloadActiveImage}
             {isEditBusy}
             offsetClass={viewerControlsOffsetClass}
-            disabled={!activeId}
+            disabled={isReadonly || (!canEditActiveImage && !canDownloadActiveImage)}
             {onRotateLeft}
             {onRotateRight}
             {onTogglePublished}
@@ -139,6 +140,7 @@ $effect(() => {
     <div
       class={cx(
         'relative flex h-full shrink-0 flex-col overflow-hidden bg-base-400 transition-[width,transform,opacity] duration-220 ease-out',
+        'bg-[#121212]',
         railVisibilityClass,
       )}
       style={`width: ${railWidth};`}
