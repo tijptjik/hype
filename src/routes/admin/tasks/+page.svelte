@@ -65,6 +65,7 @@ adminCtx.setFacet(false, false, FirstClassResource.task)
 
 // ELEMENTS
 let listContainer: HTMLElement | null = $state(null)
+let scrollIndexByEntityId = $state.raw<Map<string, number>>(new Map())
 
 let selectedImage = $state<ImageCtxEnvelope | null>(null)
 let selectedTask = $state<Task | null>(null)
@@ -191,16 +192,21 @@ function openModal(image: ImageCtxEnvelope, task: Task) {
 }
 
 function updateRowFocus(index: number) {
+  const targetEntity = entities[index]
+  if (!targetEntity?.id) return
+
+  const scrollIndex = scrollIndexByEntityId.get(targetEntity.id)
+  const rowSelector = `[data-entity-id="${targetEntity.id}"][role="button"]`
+
   // Use the virtual list's scrollToIndex method
   const virtualList = listContainer?.querySelector('svelte-virtual-list-viewport')
 
-  if (virtualList?.scrollToIndex) {
+  if (virtualList?.scrollToIndex && scrollIndex != null) {
     // Scroll to the index using the virtual list's built-in method
-    virtualList.scrollToIndex(index, true, false)
+    virtualList.scrollToIndex(scrollIndex, true, false)
 
     // Focus the row after scrolling
     setTimeout(() => {
-      const rowSelector = `[data-entity-index="${index}"][role="button"]`
       const targetRow = listContainer?.querySelector(rowSelector) as HTMLElement
       if (targetRow) {
         targetRow.focus()
@@ -209,7 +215,6 @@ function updateRowFocus(index: number) {
   } else {
     // Fallback: focus immediately if row is already visible
     setTimeout(() => {
-      const rowSelector = `[data-entity-index="${index}"][role="button"]`
       const targetRow = listContainer?.querySelector(rowSelector) as HTMLElement
       if (targetRow) {
         targetRow.focus()
@@ -226,6 +231,7 @@ function updateRowFocus(index: number) {
     resource={FirstClassResource.task}
     {groupedEntities}
     bind:listContainer
+    bind:scrollIndexByEntityId
   >
     {#snippet row(entity, index)}
       <TaskRow
@@ -233,7 +239,7 @@ function updateRowFocus(index: number) {
         {index}
         {adminCtx}
         onImageClick={openModal}
-        isSelected={selectedTaskIndex === index && selectedImage !== null}
+        isSelected={selectedTask?.id === entity.id && selectedImage !== null}
       />
     {/snippet}
   </GroupedResourceIndex>
