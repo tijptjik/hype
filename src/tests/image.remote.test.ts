@@ -247,6 +247,10 @@ describe('image.remote', () => {
     vi.resetModules()
     remote = await import('$lib/api/server/image.remote')
     vi.clearAllMocks()
+    mockCreateImageRecord.mockReset()
+    mockCreateImageRecord.mockResolvedValue({ id: 'img-1', publicId: null })
+    mockLoadImageById.mockReset()
+    mockLoadImageById.mockResolvedValue(null)
     mockWaitUntil.mockReset()
     mockReadMetadataDocument.mockReset()
     mockReadMetadataDocument.mockResolvedValue({
