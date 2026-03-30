@@ -1491,14 +1491,24 @@ export class AppCtx {
     }
 
     if (task.project) {
-      this.cache.project.set(task.project.id, task.project as Project)
+      // Task payloads can carry a partial project shape, so preserve richer cached fields
+      // such as mapStyle when refreshing the task editor state.
+      const existingProject = this.cache.project.get(task.project.id)
+      this.cache.project.set(task.project.id, {
+        ...existingProject,
+        ...task.project,
+      } as Project)
       if (task.project.code) {
         this.projectCodeToId.set(task.project.code, task.project.id)
       }
     }
 
     if (task.feature) {
-      this.cache.feature.set(task.feature.id, task.feature as Feature)
+      const existingFeature = this.cache.feature.get(task.feature.id)
+      this.cache.feature.set(task.feature.id, {
+        ...existingFeature,
+        ...task.feature,
+      } as Feature)
     }
 
     this.cache.task.set(task.id, task)
