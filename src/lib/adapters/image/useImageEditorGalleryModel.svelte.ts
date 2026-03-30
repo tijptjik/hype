@@ -190,6 +190,7 @@ export function useImageEditorGalleryModel(
     Record<string, { mainSrc?: string; thumbnailSrc?: string }>
   >({})
   let isPresentationModePending = $state(false)
+  let intentErrorByImageId = $state<Record<string, string | null>>({})
   let optimisticRotationByImageId = $state<
     Record<
       string,
@@ -339,8 +340,23 @@ export function useImageEditorGalleryModel(
     }
   }
 
-  const activeImage = $derived(imageCtx.activeImage)
-  const activeId = $derived(imageCtx.getActiveItemId())
+  const activeId = $derived.by(() => imageCtx.getActiveItemId() ?? items[0]?.id ?? null)
+  const activeImage = $derived.by(() => {
+    const directActiveImage = imageCtx.activeImage
+
+    if (
+      directActiveImage &&
+      items.some(item => {
+        const targetImageId = getGalleryItemTargetImageId(item.id, items) ?? item.id
+        return targetImageId === directActiveImage.image.id
+      })
+    ) {
+      return directActiveImage
+    }
+
+    const targetImageId = getGalleryItemTargetImageId(activeId, items) ?? activeId
+    return targetImageId ? (imageCtx.getImage(targetImageId) ?? null) : null
+  })
 
   $effect(() => {
     for (const upload of imageCtx.getUploadQueue()) {
@@ -490,6 +506,9 @@ export function useImageEditorGalleryModel(
                 forceSourceTransition: getShouldForceSourceTransition(
                   resolvedImage.image.id,
                 ),
+                intentError: Boolean(intentErrorByImageId[resolvedImage.image.id]),
+                intentErrorMessage:
+                  intentErrorByImageId[resolvedImage.image.id] ?? null,
               }
             : undefined,
           status: buildUploadStatus({
@@ -558,6 +577,8 @@ export function useImageEditorGalleryModel(
             forceSourceTransition: getShouldForceSourceTransition(
               resolvedImage.image.id,
             ),
+            intentError: Boolean(intentErrorByImageId[resolvedImage.image.id]),
+            intentErrorMessage: intentErrorByImageId[resolvedImage.image.id] ?? null,
           },
           status: isReplacementUploading
             ? buildUploadStatus({
@@ -630,16 +651,26 @@ export function useImageEditorGalleryModel(
     return imageCtx.getImage(activeMetadataImageId)?.isPublished ?? false
   })
   const canMutateActiveImage = $derived.by(() => {
-    if (!activeId || !activeMetadataImageId) return false
+    const resolvedImageId = activeMetadataImageId ?? activeImage?.image.id ?? null
+    if (!resolvedImageId) {
+      return false
+    }
 
-    const activeItem = items.find(item => item.id === activeId) ?? null
-    if (!activeItem) return false
+    const activeItem =
+      (activeId ? items.find(item => item.id === activeId) : null) ??
+      items.find(item => {
+        const targetImageId = getGalleryItemTargetImageId(item.id, items) ?? item.id
+        return targetImageId === resolvedImageId
+      }) ??
+      null
 
     const uploadStatus = activeItem.status?.uploadStatus
     const isBlockedByUpload =
       uploadStatus === 'uploading' || uploadStatus === 'finalizing'
+    const isBeingReplaced = imageCtx.isImageBeingReplaced(resolvedImageId)
+    const isEnabled = !isBlockedByUpload && !isBeingReplaced
 
-    return !isBlockedByUpload && !imageCtx.isImageBeingReplaced(activeMetadataImageId)
+    return isEnabled
   })
   const canRotateActiveImage = $derived.by(() => {
     return canMutateActiveImage
@@ -1051,7 +1082,24 @@ export function useImageEditorGalleryModel(
         const imageId = getIntentTargetImageId(item)
         if (!imageId) return
 
-        await imageCtx.handleSetIntent(imageId, intent)
+        intentErrorByImageId = {
+          ...intentErrorByImageId,
+          [imageId]: null,
+        }
+
+        try {
+          await imageCtx.handleSetIntent(imageId, intent)
+        } catch (error) {
+          const message =
+            error instanceof Error && error.message.trim().length > 0
+              ? error.message
+              : 'Failed to save image intent'
+
+          intentErrorByImageId = {
+            ...intentErrorByImageId,
+            [imageId]: message,
+          }
+        }
       },
       async rotateLeft(): Promise<void> {
         await handleRotate('left')

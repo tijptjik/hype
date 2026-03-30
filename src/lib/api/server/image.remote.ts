@@ -778,10 +778,22 @@ const deleteBucketPrefix = async (
   let cursor: string | undefined
 
   do {
-    const listed = await bucket.list({
-      prefix,
-      ...(cursor ? { cursor } : {}),
-    })
+    let listed: Awaited<ReturnType<typeof bucket.list>>
+
+    try {
+      listed = await bucket.list({
+        prefix,
+        ...(cursor ? { cursor } : {}),
+      })
+    } catch (error) {
+      console.error('[image.remote.deleteBucketPrefix] list failed', {
+        prefix,
+        cursor,
+        error,
+      })
+      return
+    }
+
     const keys = listed.objects.map(object => object.key)
 
     await deleteBucketKeys(bucket, keys)
@@ -846,10 +858,21 @@ const cleanupDetachedResourceImage = async (params: {
   platform: App.Platform | undefined
   image: ImageDBFlat
 }): Promise<void> => {
-  await cleanupImageAssets({
-    platform: params.platform,
-    image: params.image,
-  })
+  try {
+    await cleanupImageAssets({
+      platform: params.platform,
+      image: params.image,
+    })
+  } catch (error) {
+    console.error(
+      '[image.remote.cleanupDetachedResourceImage] storage cleanup failed',
+      {
+        imageId: params.image.id,
+        publicId: params.image.publicId,
+        error,
+      },
+    )
+  }
 
   await params.db.delete(image).where(eq(image.id, params.image.id))
 }

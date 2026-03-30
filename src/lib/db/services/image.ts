@@ -17,6 +17,7 @@ import {
   image,
   organisation,
   project,
+  task,
   taskImage,
   user,
 } from '../schema'
@@ -350,8 +351,15 @@ export const getImagesForTask = async (
       attribution: user.attribution,
     })
     .from(image)
-    .innerJoin(featureImage, eq(image.id, featureImage.imageId))
     .innerJoin(taskImage, eq(image.id, taskImage.imageId))
+    .innerJoin(task, eq(taskImage.taskId, task.id))
+    .leftJoin(
+      featureImage,
+      and(
+        eq(image.id, featureImage.imageId),
+        eq(featureImage.featureId, task.featureId),
+      ),
+    )
     .leftJoin(user, eq(image.contributorId, user.id))
     .where(and(...conditions))
     .orderBy(orderBy)
