@@ -7,8 +7,6 @@ import { m } from '$lib/i18n'
 import { getImageCtx } from '$lib/context/image.svelte'
 import { getURLfromImage } from '$lib/client/services/image'
 // COMPONENTS
-import Picture from '$lib/components/common/Picture.svelte'
-import Loading from '$lib/components/images/gallery/overlays/Loading.svelte'
 // TYPES
 import { type Snippet } from 'svelte'
 import type { Image, ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
@@ -241,58 +239,13 @@ function getImageOpacity(
   style="transition-duration: {transitionDuration}ms;"
 >
   <!-- Base Image -->
-  {#if baseImage && baseImage.src}
-    <Picture
-      src={baseImage?.src || ''}
-      alt={altText}
-      {layout}
-      showLoading={false}
-      {showError}
-      {showBackground}
-      opacity={getImageOpacity(
-        baseImage,
-        isTransitioning && overlayImage ? 1 - overlayOpacity : 1
-      )}
-      onLoad={() => {
-        if (!baseImage?.isPreview && baseImage?.image) {
-          imageCtx.setLoadStatus(baseImage?.image.id, 'loaded');
-        }
-      }}
-      onError={() => {
-        if (!baseImage?.isPreview && baseImage?.image) {
-          imageCtx.setLoadStatus(baseImage?.image.id, 'error');
-        }
-      }}
-    />
-  {/if}
 
   <!-- Overlay Image (during crossfade transition) -->
   {#if overlayImage && overlayImage.src && isTransitioning}
-    <div class="absolute inset-0 overflow-hidden">
-      <Picture
-        src={overlayImage?.src || ''}
-        alt={m.last_born_anaconda_cuddle() + ' ' + overlayImage.id}
-        {layout}
-        showLoading={false}
-        {showError}
-        {showBackground}
-        opacity={getImageOpacity(overlayImage, overlayOpacity)}
-        onLoad={() => {
-          if (!overlayImage?.isPreview && overlayImage?.image) {
-            imageCtx.setLoadStatus(overlayImage?.image.id, 'loaded');
-          }
-        }}
-        onError={() => {
-          if (!overlayImage?.isPreview && overlayImage?.image) {
-            imageCtx.setLoadStatus(overlayImage?.image.id, 'error');
-          }
-        }}
-      />
-    </div>
+    <div class="absolute inset-0 overflow-hidden"></div>
   {/if}
 
   {#if !baseImage && !overlayImage && !isTransitioning && showLoading && imageCtx.viewerState === 'loading'}
-    <Loading />
   {/if}
 
   <!-- Content overlay -->
