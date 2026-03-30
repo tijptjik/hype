@@ -656,6 +656,8 @@ export function useAdminHeaderModel(
       color: 'neutral',
       style: 'ghost',
       icon: isControlBarVisible ? FunnelX : Funnel,
+      alwaysHideLabel: true,
+      hideLabelInstantly: true,
       onClick: handleControlsToggle,
     }
   })
@@ -670,6 +672,8 @@ export function useAdminHeaderModel(
       color: 'neutral',
       style: 'ghost',
       icon: nextLayoutActionMeta.icon,
+      alwaysHideLabel: true,
+      hideLabelInstantly: true,
       onClick: handleAdvanceLayout,
     }
   })
@@ -765,6 +769,16 @@ export function useAdminHeaderModel(
     crumbs: syncCrumbs,
     menuAction: titleMenuAction,
   }))
+  const inlineViewActionContent = $derived.by(() =>
+    headerResourceType === FirstClassResource.task && !isIndex
+      ? headerCtrl.state.layout.controlBar
+      : null,
+  )
+  const renderedControlBar = $derived.by(() =>
+    headerResourceType === FirstClassResource.task && !isIndex
+      ? null
+      : headerCtrl.state.layout.controlBar,
+  )
 
   // ---
   /********************
@@ -798,7 +812,7 @@ export function useAdminHeaderModel(
       controlsAction: controlsAction ?? customViewActions[0],
       layoutAction,
       extraActions: controlsAction ? customViewActions : customViewActions.slice(1),
-      content: headerCtrl.state.layout.controlBar,
+      content: inlineViewActionContent,
     },
     formActions: {
       isVisible: resolvedVisibility.showFormActions,
@@ -815,7 +829,7 @@ export function useAdminHeaderModel(
       transitionDirection: 'right',
       onClick: () => appCtx.togglePanel(Panel.settings),
     },
-    controlBar: null,
+    controlBar: renderedControlBar,
     footer: headerCtrl.state.layout.footer,
   })
 

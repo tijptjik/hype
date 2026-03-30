@@ -137,7 +137,7 @@ Current primitive exports under `components/*` include:
 - `EmptyState`
 - `FullScreen`
 - `ImageMetadataCard`
-- `ImageEditorViewerControls`
+- `ImageViewerControls`
 - `ImageSurface`
 - `ThumbnailButton`
 - `ThumbnailIntentSelector`
@@ -368,7 +368,7 @@ Implemented behavior:
 
 - current richest multi-image composition in the package
 - composes `AdminViewer` and vertical `ThumbnailWrapper`
-- adds bottom viewer controls via `ImageEditorViewerControls`
+- adds bottom viewer controls via `ImageViewerControls`
 - adds footer `ThumbnailControls`
 - supports fullscreen toggling
 - supports hover-preview disable

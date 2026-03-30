@@ -31,6 +31,7 @@ let {
   canDownload = false,
   isEditBusy = false,
   disabled = false,
+  offsetClass = 'bottom-4',
   showPublishedToggle = true,
   showPresentationModeToggle = true,
   showReplaceButton = true,
@@ -54,6 +55,7 @@ let {
   canDownload?: boolean
   isEditBusy?: boolean
   disabled?: boolean
+  offsetClass?: string
   showPublishedToggle?: boolean
   showPresentationModeToggle?: boolean
   showReplaceButton?: boolean
@@ -129,7 +131,10 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
   skipDelayDuration={tooltipSkipDelayDuration}
 >
   <div
-    class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
+    class={cx(
+      'absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]',
+      offsetClass,
+    )}
   >
     {#if showPublishedToggle}
       <SimpleTooltip withProvider={false}>
