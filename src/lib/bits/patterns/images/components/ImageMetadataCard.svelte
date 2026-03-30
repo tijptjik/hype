@@ -89,6 +89,13 @@ function formatCoordinatePair(
   }
 }
 
+function hasFiniteCoordinates(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+): latitude is number {
+  return Number.isFinite(latitude) && Number.isFinite(longitude)
+}
+
 const resolvedMetadata = $derived(metadataProp ?? metadata)
 const resolvedLoading = $derived(loadingProp ?? isLoading)
 const originalMetadataSnapshot = $derived(
@@ -154,7 +161,7 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
           value: formatDate(resolvedMetadata.capturedAt),
         }
       : null,
-    resolvedMetadata.latitude != null && resolvedMetadata.longitude != null
+    hasFiniteCoordinates(resolvedMetadata.latitude, resolvedMetadata.longitude)
       ? {
           icon: MapPinned,
           label: 'Coordinates',
