@@ -6,7 +6,91 @@ import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 // API
 import { updateFeatureState } from '$lib/api/server/feature.remote'
+import {
+  submitMissingReport as submitMissingReportRemote,
+  submitNewFeature as submitNewFeatureRemote,
+  submitNewPhotos as submitNewPhotosRemote,
+  reviewTask as reviewTaskRemote,
+} from '$lib/api/server/tasks.remote'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
+
+/**
+ * TOC
+ * 1. Shared helpers
+ * 2. Task creation client services
+ * 3. Task update client services
+ */
+
+// ═══════════════════════
+// SHARED HELPERS
+// ═══════════════════════
+
+const JSON_RESPONSE_HEADERS = { 'Content-Type': 'application/json' }
+
+/**
+ * Creates a standard JSON response for remote action payloads.
+ * @param data - Payload to serialize in the response body
+ * @returns JSON response wrapping the remote payload
+ */
+const createJsonResponse = (data: unknown): Response =>
+  new Response(JSON.stringify(data), {
+    headers: JSON_RESPONSE_HEADERS,
+  })
+
+/**
+ * Extracts raw files from staged image uploads.
+ * @param photos - Uploaded image descriptors from the client
+ * @returns File array ready for remote submission
+ */
+const mapPhotoFiles = (photos: ImageUpload[]): File[] => photos.map(photo => photo.file)
+
+/**
+ * Ensures at least one uploaded image is present.
+ * @param photos - Uploaded image descriptors from the client
+ * @param errorMessage - Error thrown when no photos are provided
+ */
+const assertPhotosProvided = (photos: ImageUpload[], errorMessage: string): void => {
+  if (photos.length === 0) {
+    throw new Error(errorMessage)
+  }
+}
+
+/**
+ * Resolves the review action string expected by the remote review API.
+ * @param reviewData - Review outcome and action data from the client
+ * @returns Remote action identifier derived from the review state
+ */
+const getReviewAction = (reviewData: {
+  type: string
+  reviewOutcome: string
+  reviewAction: string
+}): string => {
+  if (reviewData.type === 'newFeature') {
+    return reviewData.reviewOutcome === 'rejected' ? 'reject' : 'accept'
+  }
+
+  if (reviewData.type === 'newPhoto') {
+    if (reviewData.reviewAction === 'ignored') {
+      return 'reject'
+    }
+
+    return reviewData.reviewAction === 'added-all-photos'
+      ? 'acceptAll'
+      : 'acceptClassified'
+  }
+
+  if (reviewData.reviewAction === 'ignored') {
+    return 'reject'
+  }
+
+  if (reviewData.reviewAction === 'set-intangible') {
+    return 'setIntangible'
+  }
+
+  return reviewData.reviewAction === 'set-unpublished'
+    ? 'setUnpublished'
+    : 'setArchived'
+}
 
 // ═══════════════════════
 // TASK CREATION CLIENT SERVICES
@@ -20,7 +104,6 @@ import type { Feature } from '$lib/db/zod/schema/feature.types'
  * @param organisation - The organisation containing the project
  * @param reason - The reason for reporting as missing
  * @param photos - Evidence photos
- * @param contributorId - ID of the contributing user
  * @returns Promise resolving to the created task
  */
 export const submitMissingReport = async (
@@ -30,58 +113,31 @@ export const submitMissingReport = async (
   organisation: Organisation,
   reason: string,
   photos: ImageUpload[],
-  contributorId: Id,
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
-  if (photos.length === 0) {
-    throw new Error('At least one image is required as evidence')
-  }
+  assertPhotosProvided(photos, 'At least one image is required as evidence')
 
   // VALIDATION : Minimum reason length
   if (reason.trim().length < 5) {
     throw new Error('Reason must be at least 5 characters long')
   }
 
-  // FORM DATA : Create FormData for file uploads
-  const formData = new FormData()
-
-  // TASK DATA : Structure for reportedMissing task
-  const taskData = {
-    type: 'reportedMissing',
+  const result = await submitMissingReportRemote({
     featureId: feature.id,
     layerId: layer.id,
     projectId: project.id,
     organisationId: organisation.id,
-    contributorId,
-    message: reason.trim(),
-  }
-
-  formData.append('taskData', JSON.stringify(taskData))
-
-  // IMAGES : Add photos to form data
-  photos.forEach((photo, index) => {
-    formData.append(`photo_${index}`, photo.file)
+    reason: reason.trim(),
+    photos: mapPhotoFiles(photos),
   })
 
-  // API : Submit the task
-  const response = await fetch('/api/tasks', {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to submit missing report: ${errorText}`)
-  }
-
-  return response
+  return createJsonResponse(result)
 }
 
 /**
  * Creates a new task for submitting a new feature
  * @param newFeature - The new feature data
  * @param photos - Photos for the new feature
- * @param contributorId - ID of the contributing user
  * @returns Promise resolving to the created task
  */
 export const submitNewFeature = async (
@@ -89,43 +145,22 @@ export const submitNewFeature = async (
   photos: ImageUpload[],
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
-  if (photos.length === 0) {
-    throw new Error('At least one image is required')
-  }
+  assertPhotosProvided(photos, 'At least one image is required')
 
   // VALIDATION : Title required
   if (!newFeature.feature.i18n || Object.keys(newFeature.feature.i18n).length === 0) {
     throw new Error('Title is required')
   }
 
-  // FORM DATA : Create FormData for file uploads
-  const formData = new FormData()
-
-  // TASK DATA : Structure for newFeature task
-  const taskData: NewFeatureTask = {
-    ...newFeature,
-    type: 'newFeature',
-  }
-
-  formData.append('taskData', JSON.stringify(taskData))
-
-  // IMAGES : Add photos to form data
-  photos.forEach((photo, index) => {
-    formData.append(`photo_${index}`, photo.file)
+  const result = await submitNewFeatureRemote({
+    task: {
+      ...newFeature,
+      type: 'newFeature',
+    },
+    photos: mapPhotoFiles(photos),
   })
 
-  // API : Submit the task
-  const response = await fetch('/api/tasks', {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to submit new feature: ${errorText}`)
-  }
-
-  return response
+  return createJsonResponse(result)
 }
 
 /**
@@ -135,7 +170,6 @@ export const submitNewFeature = async (
  * @param project - The project containing the layer
  * @param organisation - The organisation containing the project
  * @param photos - New photos to add
- * @param contributorId - ID of the contributing user
  * @returns Promise resolving to the created task
  */
 export const submitNewPhotos = async (
@@ -144,45 +178,19 @@ export const submitNewPhotos = async (
   project: Project,
   organisation: Organisation,
   photos: ImageUpload[],
-  contributorId: Id,
 ): Promise<Response> => {
   // VALIDATION : At least one photo required
-  if (photos.length === 0) {
-    throw new Error('At least one image is required')
-  }
+  assertPhotosProvided(photos, 'At least one image is required')
 
-  // FORM DATA : Create FormData for file uploads
-  const formData = new FormData()
-
-  // TASK DATA : Structure for newPhoto task
-  const taskData = {
-    type: 'newPhoto',
+  const result = await submitNewPhotosRemote({
     featureId: feature.id,
     layerId: layer.id,
     projectId: project.id,
     organisationId: organisation.id,
-    contributorId,
-  }
-
-  formData.append('taskData', JSON.stringify(taskData))
-
-  // IMAGES : Add photos to form data
-  photos.forEach((photo, index) => {
-    formData.append(`photo_${index}`, photo.file)
+    photos: mapPhotoFiles(photos),
   })
 
-  // API : Submit the task
-  const response = await fetch('/api/tasks', {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to submit new photos: ${errorText}`)
-  }
-
-  return response
+  return createJsonResponse(result)
 }
 
 // ═══════════════════════
@@ -204,18 +212,13 @@ export const updateTaskReview = async (
     reviewReason?: string
   },
 ): Promise<Response> => {
-  const response = await fetch(`/api/tasks/${taskId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(reviewData),
+  const result = await reviewTaskRemote({
+    id: taskId,
+    action: getReviewAction(reviewData),
+    reviewReason: reviewData.reviewReason,
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to update task: ${errorText}`)
-  }
-
-  return response
+  return createJsonResponse(result.data)
 }
 
 /**
@@ -242,7 +245,5 @@ export const updateFeatureFromTask = async (
     },
   })
 
-  return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json' },
-  })
+  return createJsonResponse(result)
 }

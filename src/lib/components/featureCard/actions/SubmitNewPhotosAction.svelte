@@ -53,7 +53,6 @@ async function submitNewPhotos() {
       project,
       organisation,
       imageCtx.getStagedQueue(),
-      appCtx.user.id,
     )
 
     imageCtx.resetImages()

@@ -48,7 +48,6 @@ async function submitMissingReport() {
       organisation,
       cardCtx.userData.missingReason,
       imageCtx.getStagedQueue(),
-      appCtx.user.id,
     )
 
     imageCtx.resetImages()
