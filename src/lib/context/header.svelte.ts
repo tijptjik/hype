@@ -9,6 +9,7 @@ import type {
 } from '$lib/types'
 import type {
   HeaderButtonActionConfig,
+  HeaderCrumb,
   HeaderLayoutRegionConfig,
   HeaderTitleMenuItemConfig,
 } from '$lib/bits/patterns/layout/header/header.types'
@@ -82,11 +83,14 @@ export class HeaderCtrl {
     meta: {
       title: '',
       icon: null,
+      crumbs: [],
       facets: [],
       activeFacet: null,
       onFacetChange: null,
       titleMenuItems: [],
       viewActions: [],
+      taskActions: [],
+      taskActionContent: null,
     },
     formActions: null,
     layout: {
@@ -180,6 +184,44 @@ export class HeaderCtrl {
   }
 
   /**
+   * Set task-detail actions supplied by the current route.
+   * @param actions - Task action buttons rendered in the form/facet cluster.
+   * @returns void
+   */
+  setTaskActions(actions: HeaderButtonActionConfig[]): void {
+    if (untrack(() => isSameViewActions(this.state.meta.taskActions, actions))) return
+    this.state.meta.taskActions = [...actions]
+  }
+
+  /**
+   * Set task-detail inline content rendered with the task action cluster.
+   * @param component - Task-action content component constructor.
+   * @param props - Props passed to the inline content component.
+   * @returns void
+   */
+  setTaskActionContent(
+    component: HeaderLayoutRegionConfig['component'],
+    props: HeaderLayoutRegionConfig['props'] = {},
+  ): void {
+    const next = component ? { component, props } : null
+    if (
+      untrack(() => isSameLayoutRegionConfig(this.state.meta.taskActionContent, next))
+    )
+      return
+    this.state.meta.taskActionContent = next
+  }
+
+  /**
+   * Set an explicit breadcrumb trail supplied by the current route.
+   * @param crumbs - Breadcrumbs rendered ahead of the title.
+   * @returns void
+   */
+  setCrumbs(crumbs: HeaderCrumb[]): void {
+    if (untrack(() => isSameCrumbs(this.state.meta.crumbs, crumbs))) return
+    this.state.meta.crumbs = [...crumbs]
+  }
+
+  /**
    * Set custom title-menu items supplied by the current route.
    * @param items - Menu items rendered ahead of shared header actions.
    * @returns void
@@ -261,11 +303,14 @@ export class HeaderCtrl {
   clearMeta(): void {
     this.state.meta.title = ''
     this.state.meta.icon = null
+    this.state.meta.crumbs = []
     this.state.meta.facets = []
     this.state.meta.activeFacet = null
     this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
     this.state.meta.viewActions = []
+    this.state.meta.taskActions = []
+    this.state.meta.taskActionContent = null
   }
 
   /**
@@ -399,21 +444,27 @@ export class HeaderCtrl {
         () =>
           this.state.meta.title === title &&
           this.state.meta.icon === icon &&
+          this.state.meta.crumbs.length === 0 &&
           this.state.meta.facets.length === 0 &&
           this.state.meta.activeFacet == null &&
           this.state.meta.onFacetChange == null &&
           this.state.meta.titleMenuItems.length === 0 &&
-          this.state.meta.viewActions.length === 0,
+          this.state.meta.viewActions.length === 0 &&
+          this.state.meta.taskActions.length === 0 &&
+          this.state.meta.taskActionContent == null,
       )
     )
       return
     this.state.meta.title = title
     this.state.meta.icon = icon
+    this.state.meta.crumbs = []
     this.state.meta.facets = []
     this.state.meta.activeFacet = null
     this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
     this.state.meta.viewActions = []
+    this.state.meta.taskActions = []
+    this.state.meta.taskActionContent = null
   }
 
   /**
@@ -443,18 +494,28 @@ export class HeaderCtrl {
         () =>
           this.state.meta.title === title &&
           this.state.meta.icon === icon &&
-          isSameFacetItems(this.state.meta.facets, nextFacets),
+          isSameFacetItems(this.state.meta.facets, nextFacets) &&
+          this.state.meta.crumbs.length === 0 &&
+          this.state.meta.activeFacet == null &&
+          this.state.meta.onFacetChange == null &&
+          this.state.meta.titleMenuItems.length === 0 &&
+          this.state.meta.viewActions.length === 0 &&
+          this.state.meta.taskActions.length === 0 &&
+          this.state.meta.taskActionContent == null,
       )
     )
       return
 
     this.state.meta.title = title
     this.state.meta.icon = icon
+    this.state.meta.crumbs = []
     this.state.meta.facets = nextFacets
     this.state.meta.activeFacet = null
     this.state.meta.onFacetChange = null
     this.state.meta.titleMenuItems = []
     this.state.meta.viewActions = []
+    this.state.meta.taskActions = []
+    this.state.meta.taskActionContent = null
   }
 
   /**
@@ -578,6 +639,15 @@ function isSameViewActions(
   if (left.length !== right.length) return false
 
   return left.every((action, index) => isComparableValueEqual(action, right[index]))
+}
+
+function isSameCrumbs(left: HeaderCrumb[], right: HeaderCrumb[]): boolean {
+  if (left.length !== right.length) return false
+
+  return left.every((crumb, index) => {
+    const next = right[index]
+    return crumb?.name === next?.name && crumb?.href === next?.href
+  })
 }
 
 function isSameLayoutRegionConfig(
