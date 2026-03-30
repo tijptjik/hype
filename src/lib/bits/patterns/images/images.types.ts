@@ -67,6 +67,8 @@ export type ThumbnailProps = {
   size?: number | string
   rounded?: string
   isActive?: boolean
+  isHighlighted?: boolean
+  highlightClass?: string
   isLoading?: boolean
   onSelect?: (item: ViewerRenderable) => void
   onLoad?: () => void
@@ -133,6 +135,8 @@ export type ThumbnailWrapperProps = {
   orientation?: 'horizontal' | 'vertical'
   isDeleteMode?: boolean
   flipMode?: boolean
+  getIsHighlighted?: (item: ViewerRenderable) => boolean
+  highlightClass?: string
   getIsBlurred?: (item: ViewerRenderable) => boolean
   getIsGreyscale?: (item: ViewerRenderable) => boolean
   getIsLoading?: (item: ViewerRenderable) => boolean
@@ -167,6 +171,9 @@ export type ImageEditorProps = {
   canReplaceActiveImage?: boolean
   canDownloadActiveImage?: boolean
   isEditBusy?: boolean
+  isReadonly?: boolean
+  getIsHighlighted?: (item: ViewerRenderable) => boolean
+  highlightClass?: string
   getIsBlurred?: (item: ViewerRenderable) => boolean
   getIsGreyscale?: (item: ViewerRenderable) => boolean
   getIsLoading?: (item: ViewerRenderable) => boolean

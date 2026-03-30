@@ -1,5 +1,6 @@
 <script lang="ts">
 import * as ImagePrimitive from './components'
+import BadgeIcon from 'virtual:icons/lucide/bookmark'
 import type { AdminThumbnailProps } from './images.types'
 
 let {
@@ -7,6 +8,8 @@ let {
   fit = 'fit',
   size = 88,
   isActive = false,
+  isHighlighted = false,
+  highlightClass = 'outline outline-2 outline-accent outline-offset-[-2px]',
   isLoading = false,
   isBlurred = false,
   isGreyscale = false,
@@ -55,6 +58,8 @@ async function handleDelete(): Promise<void> {
       {size}
       rounded="rounded-none"
       {isActive}
+      {isHighlighted}
+      {highlightClass}
       isLoading={isLoading || isUploading}
       {isBlurred}
       {isGreyscale}
@@ -69,6 +74,16 @@ async function handleDelete(): Promise<void> {
         {onIntentChange}
         class="bottom-[10px]"
       />
+    {/if}
+
+    {#if isHighlighted}
+      <div
+        class="pointer-events-none absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-full bg-[#2A6FEC] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.32)]"
+        aria-label="Highlighted task image"
+      >
+        <BadgeIcon class="h-3 w-3" />
+        <span>New</span>
+      </div>
     {/if}
 
     <ImagePrimitive.AdminStateOverlay

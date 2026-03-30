@@ -25,6 +25,9 @@ let {
   canReplaceActiveImage = false,
   canDownloadActiveImage = false,
   isEditBusy = false,
+  isReadonly = false,
+  getIsHighlighted,
+  highlightClass = 'outline outline-2 outline-accent outline-offset-[-2px]',
   getIsBlurred,
   getIsGreyscale,
   getIsLoading,
@@ -76,7 +79,7 @@ $effect(() => {
 
 <div class="h-full w-full select-none bg-black px-0">
   <div class="flex h-full w-full min-h-0 gap-4">
-    <div class="relative min-h-0 min-w-0 flex-1 pb-4 pt-2">
+    <div class="relative min-h-0 min-w-0 flex-1 pt-2">
       <AdminViewer
         {items}
         {activeId}
@@ -155,6 +158,8 @@ $effect(() => {
           {fit}
           prefetchFit={viewerFit}
           {isDeleteMode}
+          {getIsHighlighted}
+          {highlightClass}
           {getIsBlurred}
           {getIsGreyscale}
           {getIsLoading}
@@ -180,11 +185,14 @@ $effect(() => {
       >
         <ImagePrimitive.ThumbnailControls
           class={cx(
-            'transition-opacity duration-200 ease-out',
-            hasItems ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
-          )}
+              'transition-opacity duration-200 ease-out',
+              hasItems
+                ? 'pointer-events-auto opacity-100'
+                : 'pointer-events-none opacity-0',
+            )}
           {uploadSelectionMode}
           variant="footer"
+          disabled={isReadonly}
           {isProcessingUploads}
           {isDeleteMode}
           onToggleDeleteMode={() => {

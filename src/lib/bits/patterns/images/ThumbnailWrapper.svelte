@@ -24,6 +24,8 @@ let {
   orientation = 'horizontal',
   isDeleteMode = false,
   flipMode = true,
+  getIsHighlighted,
+  highlightClass = 'outline outline-2 outline-accent outline-offset-[-2px]',
   getIsBlurred,
   getIsGreyscale,
   getIsLoading,
@@ -411,7 +413,7 @@ onDestroy(() => {
           ? 'flex-col overflow-x-hidden overflow-y-auto px-3 pb-3 pt-3 pr-2'
           : 'flex-col overflow-x-hidden overflow-y-auto pr-2'
         : variant === 'admin'
-          ? 'overflow-x-auto overflow-y-hidden px-3 pb-3 pt-3'
+          ? 'overflow-x-auto overflow-y-hidden pb-3 pt-3'
           : 'overflow-x-auto overflow-y-hidden pb-4',
     )}
   >
@@ -429,6 +431,8 @@ onDestroy(() => {
             {fit}
             {size}
             isActive={item.id === activeId}
+            isHighlighted={getIsHighlighted?.(item) ?? false}
+            {highlightClass}
             isLoading={getIsLoading?.(item) ?? false}
             isBlurred={resolveIsBlurred(item)}
             isGreyscale={resolveIsGreyscale(item)}
@@ -447,6 +451,8 @@ onDestroy(() => {
             {fit}
             {size}
             isActive={item.id === activeId}
+            isHighlighted={getIsHighlighted?.(item) ?? false}
+            {highlightClass}
             isLoading={getIsLoading?.(item) ?? false}
             onSelect={handleSelect}
             onLoad={() => onLoad?.(item)}

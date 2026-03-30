@@ -10,6 +10,8 @@ let {
   size = 88,
   rounded = 'rounded-xl',
   isActive = false,
+  isHighlighted = false,
+  highlightClass = 'outline outline-2 outline-accent outline-offset-[-2px]',
   isLoading = false,
   isBlurred = false,
   isGreyscale = false,
@@ -40,6 +42,7 @@ const thumbnailItem = $derived(
   class={cx(
     'group relative shrink-0 overflow-hidden p-0 text-left transition duration-240',
     rounded,
+    isHighlighted ? highlightClass : '',
     isActive ? 'ring-3 ring-primary' : '',
   )}
   style={`width: ${dimension}; height: ${dimension};`}
