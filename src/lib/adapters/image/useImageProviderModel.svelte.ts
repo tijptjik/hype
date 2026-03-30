@@ -180,6 +180,9 @@ export function useImageProviderModel(
           .then(() => {
             initialisingContext = false
           })
+          .catch(() => {
+            initialisingContext = false
+          })
 
         if (options.context?.ctxTypeSecondary) {
           imageCtx.refreshImages(targetImageId)
