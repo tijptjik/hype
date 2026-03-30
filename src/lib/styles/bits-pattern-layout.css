@@ -583,5 +583,7 @@
 
   .bits-theme .bits-admin-shell__main {
     @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
+    container-type: inline-size;
+    container-name: bits-admin-shell-main;
   }
 }

@@ -5,6 +5,11 @@
     background-color: var(--color-glass-100);
   }
 
+  .bits-theme .bits-form__select-trigger:disabled,
+  .bits-theme .bits-form__select-trigger[data-disabled] {
+    cursor: default;
+  }
+
   .bits-theme .bits-form__select-trigger:focus-visible {
     border-color: color-mix(in oklab, var(--color-primary) 60%, transparent);
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 25%, transparent);
