@@ -106,6 +106,7 @@ import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type {
   HeaderButtonActionConfig,
+  HeaderCrumb,
   HeaderLayoutRegionConfig,
   HeaderTitleMenuItemConfig,
 } from './bits/patterns/layout/header/header.types'
@@ -531,11 +532,14 @@ export type HeaderFacetItem = {
 export type HeaderMetaState = {
   title: string
   icon: Component | null
+  crumbs: HeaderCrumb[]
   facets: HeaderFacetItem[]
   activeFacet: string | false | null
   onFacetChange: ((ref: string) => void) | null
   titleMenuItems: HeaderTitleMenuItemConfig[]
   viewActions: HeaderButtonActionConfig[]
+  taskActions: HeaderButtonActionConfig[]
+  taskActionContent: HeaderLayoutRegionConfig | null
 }
 
 export type HeaderFormActionsState = {
@@ -682,6 +686,7 @@ export type LayerViewFilters = {
 export type TaskViewFilters = {
   // Status related
   isReviewed: FilterTriState
+  type: TaskType | null
 }
 
 export type HubViewFilters = {
@@ -814,7 +819,7 @@ export type FeatureImageFilterKey =
   | 'isOneImagePublished'
   | 'isAllImagePublished'
 // Task filter keys
-export type TaskStatusFilterKey = 'isReviewed'
+export type TaskStatusFilterKey = 'isReviewed' | 'type'
 
 // Hub filter keys (only archived status)
 export type HubStatusFilterKey = 'isArchived'
@@ -859,11 +864,30 @@ export type ResourceTranslationFilterConfig<T extends ViewFilterResource> =
     key: ResourceTranslationFilterKey<T>
   }
 
+export type ResourceSelectOption = {
+  value: string
+  label: string
+  disabled?: boolean
+}
+
+export type ResourceSelectFilterConfig<T extends ViewFilterResource> =
+  ResourceFilterConfigBase & {
+    type: 'select'
+    key: ResourceFilterToggleKey<T>
+    placeholder?: string
+    allowDeselect?: boolean
+    options: ResourceSelectOption[]
+  }
+
 export type ResourceFilterSectionConfig<T extends ViewFilterResource> = {
   key: string
   title: string
   icon: Component
-  filters: Array<ResourceToggleFilterConfig<T> | ResourceTranslationFilterConfig<T>>
+  filters: Array<
+    | ResourceToggleFilterConfig<T>
+    | ResourceTranslationFilterConfig<T>
+    | ResourceSelectFilterConfig<T>
+  >
 }
 
 export type ResourcePropertyFilterSectionConfig = {
@@ -880,8 +904,11 @@ export type ResourcePropertyFilterSectionConfig = {
 }
 
 export type ResourceFilterEntryConfig = ResourceFilterConfigBase & {
-  type: 'toggle' | 'translation'
+  type: 'toggle' | 'translation' | 'select'
   key: string
+  placeholder?: string
+  allowDeselect?: boolean
+  options?: ResourceSelectOption[]
 }
 
 export type ResourceFilterSection =
@@ -1227,6 +1254,14 @@ export type FormHeaderController = {
 
 export type HeaderFormActionsController = {
   setFormActions: (formActions: Partial<HeaderFormActionsState>) => void
+}
+
+export type HeaderTaskActionsController = {
+  setTaskActions: (actions: HeaderButtonActionConfig[]) => void
+  setTaskActionContent: (
+    component: HeaderLayoutRegionConfig['component'],
+    props?: HeaderLayoutRegionConfig['props'],
+  ) => void
 }
 
 export type ResourceEditorHeaderController = FormHeaderController &
