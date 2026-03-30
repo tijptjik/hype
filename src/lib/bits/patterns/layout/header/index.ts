@@ -11,6 +11,7 @@ export type {
   HeaderFacetsConfig,
   HeaderLayoutMode,
   HeaderViewActionsConfig,
+  HeaderTaskActionsConfig,
   HeaderFormActionsConfig,
   HeaderAvatarConfig,
 } from './header.types'

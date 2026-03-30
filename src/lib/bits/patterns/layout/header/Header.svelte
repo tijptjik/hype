@@ -17,6 +17,7 @@ let {
   filter = {},
   facets = {},
   viewActions = {},
+  taskActions = {},
   formActions = {},
   avatar = {},
   controlBar = null,
@@ -31,6 +32,12 @@ const showNew = $derived(newAction.isCreatable ?? false)
 const showAvatar = $derived(avatar.isVisible ?? true)
 const showFacets = $derived(facetItems.length > 0)
 const showViewActions = $derived(viewActions.isVisible ?? false)
+const taskActionItems = $derived(taskActions.actions ?? [])
+const taskActionContent = $derived(taskActions.content ?? null)
+const showTaskActions = $derived(
+  (taskActionItems.length > 0 || Boolean(taskActionContent?.component)) &&
+    (taskActions.isVisible ?? true),
+)
 const showFormActions = $derived(formActions.isVisible ?? false)
 const showControlBar = $derived(
   Boolean(controlBar?.component) && (controlBar?.isVisible ?? true),
@@ -107,7 +114,7 @@ const rootClass = $derived(
 
     {#snippet right({ showButtonText })}
       <div class="bits-pattern-header__right-slot">
-        {#if showFacets || showFormActions}
+        {#if showFacets || showTaskActions || showFormActions}
           <div
             class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
             in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
@@ -119,6 +126,14 @@ const rootClass = $derived(
                 active={facets.active}
                 hideLabel={!showButtonText}
                 onFacetChange={facets.onFacetChange}
+              />
+            {/if}
+
+            {#if showTaskActions}
+              <HeaderPrimitive.TaskActions
+                actions={taskActionItems}
+                content={taskActionContent}
+                hideLabel={!showButtonText}
               />
             {/if}
 

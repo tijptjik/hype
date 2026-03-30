@@ -10,6 +10,7 @@ import type {
   HeaderFilterConfig,
   HeaderFormActionsConfig,
   HeaderNewConfig,
+  HeaderTaskActionsConfig,
   HeaderTitleConfig,
   HeaderViewActionsConfig,
 } from '../header.types'
@@ -23,6 +24,11 @@ export interface HeaderFormActionsProps
 
 export interface HeaderViewActionsProps
   extends Omit<HeaderViewActionsConfig, 'isVisible'> {
+  hideLabel?: boolean
+}
+
+export interface HeaderTaskActionsProps
+  extends Omit<HeaderTaskActionsConfig, 'isVisible'> {
   hideLabel?: boolean
 }
 

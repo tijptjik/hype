@@ -5,7 +5,9 @@ export const HEADER_BUTTON_LABEL_CLASSES = 'whitespace-nowrap'
 
 export const HEADER_FORM_ACTIONS_CLASSES = 'ml-2 flex items-center gap-0'
 
-export const HEADER_VIEW_ACTIONS_CLASSES = 'flex ml-2 items-center gap-0'
+export const HEADER_VIEW_ACTIONS_CLASSES = 'flex ml-0 items-center gap-0'
+
+export const HEADER_TASK_ACTIONS_CLASSES = 'ml-2 flex items-center gap-0'
 
 export const HEADER_FACETS_WRAP_CLASSES = 'flex items-center gap-2'
 

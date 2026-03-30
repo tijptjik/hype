@@ -21,6 +21,7 @@ export interface HeaderButtonActionConfig {
   style?: ButtonStyle
   alwaysHideLabel?: boolean
   hideLabelInstantly?: boolean
+  hideLabelBelow?: number
 }
 
 export interface HeaderStatusActionConfig {
@@ -98,6 +99,12 @@ export interface HeaderViewActionsConfig {
   content?: HeaderLayoutRegionConfig | null
 }
 
+export interface HeaderTaskActionsConfig {
+  isVisible?: boolean
+  actions?: HeaderButtonActionConfig[]
+  content?: HeaderLayoutRegionConfig | null
+}
+
 export interface HeaderFormActionsConfig {
   isVisible?: boolean
   primaryAction?: HeaderButtonActionConfig | null
@@ -130,6 +137,7 @@ export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> 
   filter?: HeaderFilterConfig
   facets?: HeaderFacetsConfig
   viewActions?: HeaderViewActionsConfig
+  taskActions?: HeaderTaskActionsConfig
   formActions?: HeaderFormActionsConfig
   avatar?: HeaderAvatarConfig
   controlBar?: HeaderLayoutRegionConfig | null

@@ -273,16 +273,18 @@ export function useAdminHeaderModel(
       const taskResource = resource as {
         organisation?: unknown
         project?: unknown
+        layer?: unknown
         feature?: unknown
       }
       const organisation = taskResource.organisation
       const project = taskResource.project
+      const layer = taskResource.layer
       const feature = taskResource.feature
       const hierarchy = feature ? appCtx.getHierarchySync(feature as never) : null
 
       pushCrumb(crumbs, FirstClassResource.organisation, organisation)
       pushCrumb(crumbs, FirstClassResource.project, project)
-      pushCrumb(crumbs, FirstClassResource.layer, hierarchy?.layer)
+      pushCrumb(crumbs, FirstClassResource.layer, layer ?? hierarchy?.layer)
       pushCrumb(crumbs, FirstClassResource.feature, feature)
 
       return crumbs
@@ -364,6 +366,9 @@ export function useAdminHeaderModel(
   const customActiveFacet = $derived(headerCtrl.state.meta.activeFacet)
   const customFacetChangeHandler = $derived(headerCtrl.state.meta.onFacetChange)
   const customViewActions = $derived(headerCtrl.state.meta.viewActions)
+  const customTaskActions = $derived(headerCtrl.state.meta.taskActions)
+  const customTaskActionContent = $derived(headerCtrl.state.meta.taskActionContent)
+  const customCrumbs = $derived(headerCtrl.state.meta.crumbs)
   const titleMenuMetaItems = $derived(headerCtrl.state.meta.titleMenuItems)
   const layoutMode = $derived(
     headerResourceType ? appCtx.state.ui.layoutMode[headerResourceType] : 'card',
@@ -766,7 +771,7 @@ export function useAdminHeaderModel(
     icon: (headerIcon ?? undefined) as Component | undefined,
     iconHoverColor: headerIconHoverColor,
     href: headerHref,
-    crumbs: syncCrumbs,
+    crumbs: customCrumbs.length > 0 ? customCrumbs : syncCrumbs,
     menuAction: titleMenuAction,
   }))
   const inlineViewActionContent = $derived.by(() =>
@@ -813,6 +818,12 @@ export function useAdminHeaderModel(
       layoutAction,
       extraActions: controlsAction ? customViewActions : customViewActions.slice(1),
       content: inlineViewActionContent,
+    },
+    taskActions: {
+      isVisible:
+        customTaskActions.length > 0 || Boolean(customTaskActionContent?.component),
+      actions: customTaskActions,
+      content: customTaskActionContent,
     },
     formActions: {
       isVisible: resolvedVisibility.showFormActions,
