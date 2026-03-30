@@ -17,6 +17,7 @@ let {
   friendlyDate = true,
   openDirection = 'right',
   isOpen = false,
+  hideDetails = false,
   class: className = '',
 }: UserAttributionCardProps = $props()
 
@@ -116,15 +117,17 @@ const getDisplayName = (user: UserHydrationResult): string => {
   {@const displayName = getDisplayName(resolvedAttribution.user)}
   {#if isOpen}
     <article
-      class={`bits-feature-attribution-shell ${className}`}
+      class={`bits-feature-attribution-shell ${hideDetails ? '[width:var(--bits-feature-attribution-avatar-size)]' : ''} ${className}`}
       data-direction={openDirection}
       data-open="true"
     >
-      <div class="bits-feature-attribution-shell__panel">
-        <div class="bits-feature-attribution-shell__visible">
-          {@render AttributionContent(resolvedAttribution)}
+      {#if !hideDetails}
+        <div class="bits-feature-attribution-shell__panel">
+          <div class="bits-feature-attribution-shell__visible">
+            {@render AttributionContent(resolvedAttribution)}
+          </div>
         </div>
-      </div>
+      {/if}
 
       <div class="bits-feature-attribution-shell__trigger" aria-hidden="true">
         <img
@@ -136,25 +139,27 @@ const getDisplayName = (user: UserHydrationResult): string => {
     </article>
   {:else}
     <article
-      class={`bits-feature-attribution-shell ${className}`}
+      class={`bits-feature-attribution-shell ${hideDetails ? '[width:var(--bits-feature-attribution-avatar-size)]' : ''} ${className}`}
       data-direction={openDirection}
       data-open="false"
     >
-      <div class="bits-feature-attribution-shell__panel">
-        <div class="bits-feature-attribution-shell__visible">
-          <TransitionStack
-            valueKey={resolvedAttribution.key}
-            value={resolvedAttribution}
-            isReady={hasResolvedAttribution}
-            duration={180}
-            {persistenceKey}
-          >
-            {#snippet children(attribution: AttributionCardDisplay)}
-              {@render AttributionContent(attribution)}
-            {/snippet}
-          </TransitionStack>
+      {#if !hideDetails}
+        <div class="bits-feature-attribution-shell__panel">
+          <div class="bits-feature-attribution-shell__visible">
+            <TransitionStack
+              valueKey={resolvedAttribution.key}
+              value={resolvedAttribution}
+              isReady={hasResolvedAttribution}
+              duration={180}
+              {persistenceKey}
+            >
+              {#snippet children(attribution: AttributionCardDisplay)}
+                {@render AttributionContent(attribution)}
+              {/snippet}
+            </TransitionStack>
+          </div>
         </div>
-      </div>
+      {/if}
 
       <button
         type="button"

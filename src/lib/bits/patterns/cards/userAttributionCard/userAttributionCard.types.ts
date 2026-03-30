@@ -5,5 +5,6 @@ export type UserAttributionCardProps = {
   friendlyDate?: boolean
   openDirection?: 'left' | 'right'
   isOpen?: boolean
+  hideDetails?: boolean
   class?: string
 }
