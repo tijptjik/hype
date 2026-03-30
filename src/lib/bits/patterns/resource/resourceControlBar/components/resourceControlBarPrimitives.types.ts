@@ -87,6 +87,25 @@ export type ResourceControlBarToggleProps = {
   class?: string
 }
 
+export type ResourceControlBarSelectItem = {
+  value: string
+  label: string
+  disabled?: boolean
+}
+
+export type ResourceControlBarSelectProps = {
+  label: string
+  tooltip?: string
+  value?: string
+  placeholder?: string
+  allowDeselect?: boolean
+  items: ResourceControlBarSelectItem[]
+  idx?: number
+  transformOffset?: number
+  onValueChange?: (value: string) => void
+  class?: string
+}
+
 export type ResourceControlBarLocaleToggleItem = {
   value: string
   label: string

@@ -239,28 +239,42 @@ $effect(() => {
 
             <div class="bits-resource-filter-bar__carousel-track">
               {#each visibleItems as item, idx (item.id)}
-                <ResourceControlBarPrimitive.FilterToggle
-                  label={item.label}
-                  tooltip={item.tooltip}
-                  currentValue={item.currentValue}
-                  idx={filterCarouselIndex + idx}
-                  transformOffset={item.transformOffset ?? 12}
-                  falseLabel={item.falseLabel ??
-                    getFeatureTaskLabel(
-                      item,
-                      false,
-                      !isPropertySection && item.type === 'translation',
-                    )}
-                  trueLabel={item.trueLabel ??
-                    getFeatureTaskLabel(
-                      item,
-                      true,
-                      !isPropertySection && item.type === 'translation',
-                    )}
-                  onToggleFalse={item.onToggleFalse}
-                  onToggleTrue={item.onToggleTrue}
-                  onToggleChange={item.onToggleChange}
-                />
+                {#if item.type === 'select' && item.options && item.onSelectChange}
+                  <ResourceControlBarPrimitive.FilterSelect
+                    label={item.label}
+                    tooltip={item.tooltip}
+                    value={item.selectValue}
+                    placeholder={item.placeholder}
+                    allowDeselect={item.allowDeselect ?? true}
+                    items={item.options}
+                    idx={filterCarouselIndex + idx}
+                    transformOffset={item.transformOffset ?? 12}
+                    onValueChange={item.onSelectChange}
+                  />
+                {:else}
+                  <ResourceControlBarPrimitive.FilterToggle
+                    label={item.label}
+                    tooltip={item.tooltip}
+                    currentValue={item.currentValue}
+                    idx={filterCarouselIndex + idx}
+                    transformOffset={item.transformOffset ?? 12}
+                    falseLabel={item.falseLabel ??
+                      getFeatureTaskLabel(
+                        item,
+                        false,
+                        !isPropertySection && item.type === 'translation',
+                      )}
+                    trueLabel={item.trueLabel ??
+                      getFeatureTaskLabel(
+                        item,
+                        true,
+                        !isPropertySection && item.type === 'translation',
+                      )}
+                    onToggleFalse={item.onToggleFalse}
+                    onToggleTrue={item.onToggleTrue}
+                    onToggleChange={item.onToggleChange}
+                  />
+                {/if}
               {/each}
             </div>
 

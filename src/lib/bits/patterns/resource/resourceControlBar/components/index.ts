@@ -1,5 +1,6 @@
 export { default as FilterCtrl } from './ResourceControlBarFilterCtrl.svelte'
 export { default as FilterReset } from './ResourceControlBarFilterReset.svelte'
+export { default as FilterSelect } from './ResourceControlBarSelect.svelte'
 export { default as FilterToggle } from './ResourceControlBarToggle.svelte'
 export { default as LocaleToggleGroup } from './ResourceControlBarLocaleToggleGroup.svelte'
 export { default as ResultCount } from './ResourceControlBarResultCount.svelte'
@@ -10,6 +11,8 @@ export { default as TriStateToggle } from './ResourceControlBarTriStateToggle.sv
 export type {
   ResourceControlBarFilterCtrlProps,
   ResourceControlBarFilterResetProps,
+  ResourceControlBarSelectItem,
+  ResourceControlBarSelectProps,
   ResourceControlBarLocaleToggleGroupProps,
   ResourceControlBarLocaleToggleItem,
   ResourceControlBarResultCountProps,
