@@ -269,6 +269,25 @@ export function useAdminHeaderModel(
       return crumbs
     }
 
+    if (resourceType === FirstClassResource.task) {
+      const taskResource = resource as {
+        organisation?: unknown
+        project?: unknown
+        feature?: unknown
+      }
+      const organisation = taskResource.organisation
+      const project = taskResource.project
+      const feature = taskResource.feature
+      const hierarchy = feature ? appCtx.getHierarchySync(feature as never) : null
+
+      pushCrumb(crumbs, FirstClassResource.organisation, organisation)
+      pushCrumb(crumbs, FirstClassResource.project, project)
+      pushCrumb(crumbs, FirstClassResource.layer, hierarchy?.layer)
+      pushCrumb(crumbs, FirstClassResource.feature, feature)
+
+      return crumbs
+    }
+
     return []
   }
 
@@ -779,6 +798,7 @@ export function useAdminHeaderModel(
       controlsAction: controlsAction ?? customViewActions[0],
       layoutAction,
       extraActions: controlsAction ? customViewActions : customViewActions.slice(1),
+      content: headerCtrl.state.layout.controlBar,
     },
     formActions: {
       isVisible: resolvedVisibility.showFormActions,
@@ -795,7 +815,7 @@ export function useAdminHeaderModel(
       transitionDirection: 'right',
       onClick: () => appCtx.togglePanel(Panel.settings),
     },
-    controlBar: headerCtrl.state.layout.controlBar,
+    controlBar: null,
     footer: headerCtrl.state.layout.footer,
   })
 
