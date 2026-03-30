@@ -41,12 +41,14 @@ import { updateProjectById } from '$lib/db/services/project'
 import { getUserById } from '$lib/db/services/user'
 // DB SCHEMA
 import {
+  featureImage,
   feature,
   hub,
   image,
   organisation,
   project,
   task,
+  taskImage,
   user as userTable,
 } from '$lib/db/schema'
 // SCHEMA
@@ -844,6 +846,24 @@ const cleanupDetachedResourceImage = async (params: {
   platform: App.Platform | undefined
   image: ImageDBFlat
 }): Promise<void> => {
+  await cleanupImageAssets({
+    platform: params.platform,
+    image: params.image,
+  })
+
+  await params.db.delete(image).where(eq(image.id, params.image.id))
+}
+
+/**
+ * Removes originals, intermediate objects, metadata, and derived assets for an image.
+ *
+ * @param params Cleanup inputs.
+ * @returns Nothing.
+ */
+const cleanupImageAssets = async (params: {
+  platform: App.Platform | undefined
+  image: ImageDBFlat
+}): Promise<void> => {
   const stage = toImageStage(params.image.env)
   const originalsBucket = getOriginalsBucketForStage(params.platform, stage)
   const derivedBucket = getDerivedBucketForStage(params.platform, stage)
@@ -860,8 +880,6 @@ const cleanupDetachedResourceImage = async (params: {
     deleteBucketPrefix(originalsBucket, `${params.image.publicId}.v`),
     deleteBucketPrefix(derivedBucket, `${params.image.publicId}/`),
   ])
-
-  await params.db.delete(image).where(eq(image.id, params.image.id))
 }
 
 /**
@@ -1963,7 +1981,21 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
     throw error(404, 'Image not found')
   }
 
+  await db.delete(taskImage).where(eq(taskImage.imageId, params.id as Id))
+  await db.delete(featureImage).where(eq(featureImage.imageId, params.id as Id))
   await db.delete(image).where(eq(image.id, params.id as Id))
+
+  event.platform?.context.waitUntil(
+    cleanupImageAssets({
+      platform: event.platform,
+      image: imageToDelete,
+    }).catch(cleanupError => {
+      console.error('[image.remote.deleteImage] storage cleanup failed', {
+        imageId: params.id,
+        error: cleanupError,
+      })
+    }),
+  )
 
   return { type: 'success', message: 'Image deleted successfully' }
 })
