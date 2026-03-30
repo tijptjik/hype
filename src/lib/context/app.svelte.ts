@@ -503,6 +503,7 @@ export class AppCtx {
       task: {
         // Status related
         isReviewed: false,
+        type: null,
       },
       hub: {
         // Status related

@@ -234,6 +234,7 @@ const viewFilters: ViewFilters = {
   task: {
     // Status related
     isReviewed: null,
+    type: null,
   },
   hub: {
     // Status related
@@ -1666,6 +1667,7 @@ export class AdminCtx {
 
     return tasks.filter(task => {
       if (!this.filterTaskByStatus(task, filters)) return false
+      if (!this.filterTaskByType(task, filters)) return false
       return true
     })
   }
@@ -1676,6 +1678,14 @@ export class AdminCtx {
       const taskIsReviewed = Boolean(task.isReviewed)
       if (taskIsReviewed !== filterIsReviewed) return false
     }
+    return true
+  }
+
+  private filterTaskByType = (task: Task, filters: ViewFilters['task']): boolean => {
+    if (filters.type && task.type !== filters.type) {
+      return false
+    }
+
     return true
   }
   // ═══════════════════════
