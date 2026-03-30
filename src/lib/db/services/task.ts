@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, and, type SQL } from 'drizzle-orm'
+import { eq, and, ne, type SQL } from 'drizzle-orm'
 // SCHEMA
 import { task, taskImage, image, featureImage } from '$lib/db/schema/index'
 // CRUD
@@ -146,6 +146,62 @@ export const deleteTask = async (db: Database, ref: Id): Promise<TaskDB> =>
 // ═══════════════════════
 
 /**
+ * Loads task images with feature-image state scoped to the task's owning feature.
+ * @param db - The database instance
+ * @param taskId - The task identifier
+ * @returns Task image review rows
+ */
+const loadTaskImageReviewRows = async (
+  db: Database,
+  taskId: string,
+): Promise<
+  Array<{ imageId: string; intent: string | null; featureId: string | null }>
+> =>
+  await db
+    .select({
+      imageId: taskImage.imageId,
+      intent: featureImage.intent,
+      featureId: task.featureId,
+    })
+    .from(taskImage)
+    .leftJoin(task, eq(taskImage.taskId, task.id))
+    .leftJoin(
+      featureImage,
+      and(
+        eq(taskImage.imageId, featureImage.imageId),
+        eq(featureImage.featureId, task.featureId),
+      ),
+    )
+    .where(eq(taskImage.taskId, taskId))
+
+/**
+ * Demotes any existing canonical image so a new canonical assignment can be published safely.
+ * @param db - The database instance
+ * @param featureId - The feature receiving the canonical image
+ * @param nextCanonicalImageId - The image that should remain canonical
+ * @returns void
+ */
+const clearCompetingCanonicalIntent = async (
+  db: Database,
+  featureId: string,
+  nextCanonicalImageId: string,
+): Promise<void> => {
+  // Canonical intent is exclusive per feature.
+  await db
+    .update(featureImage)
+    .set({
+      intent: 'undefined',
+    })
+    .where(
+      and(
+        eq(featureImage.featureId, featureId),
+        eq(featureImage.intent, 'canonical'),
+        ne(featureImage.imageId, nextCanonicalImageId),
+      ),
+    )
+}
+
+/**
  * Archives images associated with a task, optionally only archiving images with undefined intent. This is used to archive (some) images of a task which was (partially) rejected.
  * @param db - The database instance
  * @param taskId - The ID of the task
@@ -159,15 +215,7 @@ export const archiveImages = async (
   isUndefinedOnly: boolean = false,
 ): Promise<{ success: boolean; processedCount: number }> => {
   try {
-    // Get all task images for this task
-    const taskImages = await db
-      .select({
-        imageId: taskImage.imageId,
-        intent: featureImage.intent,
-      })
-      .from(taskImage)
-      .leftJoin(featureImage, eq(taskImage.imageId, featureImage.imageId))
-      .where(eq(taskImage.taskId, taskId))
+    const taskImages = await loadTaskImageReviewRows(db, taskId)
 
     // Filter images based on isUndefinedOnly parameter
     const imagesToProcess = isUndefinedOnly
@@ -177,7 +225,16 @@ export const archiveImages = async (
     // Process each image
     for (const ti of imagesToProcess) {
       // Delete feature image association
-      await db.delete(featureImage).where(eq(featureImage.imageId, ti.imageId))
+      if (ti.featureId) {
+        await db
+          .delete(featureImage)
+          .where(
+            and(
+              eq(featureImage.imageId, ti.imageId),
+              eq(featureImage.featureId, ti.featureId),
+            ),
+          )
+      }
 
       // Update image record
       await db.update(image).set({ isArchived: true }).where(eq(image.id, ti.imageId))
@@ -205,17 +262,8 @@ export const publishImages = async (
   publisherId: Id,
 ): Promise<{ success: boolean; processedCount: number }> => {
   try {
-    // Get all task images for this task
-    const taskImages = await db
-      .select({
-        imageId: taskImage.imageId,
-        intent: featureImage.intent,
-        featureId: task.featureId,
-      })
-      .from(taskImage)
-      .leftJoin(featureImage, eq(taskImage.imageId, featureImage.imageId))
-      .leftJoin(task, eq(taskImage.taskId, task.id))
-      .where(eq(taskImage.taskId, taskId))
+    const taskImages = await loadTaskImageReviewRows(db, taskId)
+    const publishedAt = new Date().toISOString()
 
     // Filter images based on skipUndefined parameter
     const imagesToProcess = skipUndefined
@@ -229,23 +277,28 @@ export const publishImages = async (
         continue
       }
 
+      if (ti.intent === 'canonical') {
+        await clearCompetingCanonicalIntent(db, ti.featureId, ti.imageId)
+      }
+
       // Update or create feature image association
       await db
         .insert(featureImage)
         .values({
           imageId: ti.imageId,
           featureId: ti.featureId,
-          intent: 'undefined',
+          intent: ti.intent ?? 'undefined',
           isPublished: true,
           publisherId,
-          publishedAt: new Date().toISOString(),
+          publishedAt,
         })
         .onConflictDoUpdate({
           target: [featureImage.imageId, featureImage.featureId],
           set: {
+            intent: ti.intent ?? 'undefined',
             isPublished: true,
             publisherId,
-            publishedAt: new Date().toISOString(),
+            publishedAt,
           },
         })
     }

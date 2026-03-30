@@ -664,11 +664,10 @@ function getCapabilityDisplayLabel(capabilityKey: CapabilityKey): string {
 // IMAGE
 
 const activeOrganisationImage = $derived(
-  ((organisation as OrganisationGetState)?.data?.image ??
-    null) as ImageCtxEnvelope | null,
+  (optimisticOrganisationData?.image ?? null) as ImageCtxEnvelope | null,
 )
 const imageProviderProps = $derived.by(() => {
-  const organisationData = organisation?.data
+  const organisationData = optimisticOrganisationData
   const isValid = isCurrentRefLoaded && Boolean(organisationData?.id)
 
   return {
