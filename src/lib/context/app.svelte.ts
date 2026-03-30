@@ -1478,6 +1478,28 @@ export class AppCtx {
     } else {
       this.state.resources.task = [...this.state.resources.task, task]
     }
+
+    if (task.organisation) {
+      this.cache.organisation.set(
+        task.organisation.id,
+        task.organisation as Organisation,
+      )
+      if (task.organisation.code) {
+        this.organisationCodeToId.set(task.organisation.code, task.organisation.id)
+      }
+    }
+
+    if (task.project) {
+      this.cache.project.set(task.project.id, task.project as Project)
+      if (task.project.code) {
+        this.projectCodeToId.set(task.project.code, task.project.id)
+      }
+    }
+
+    if (task.feature) {
+      this.cache.feature.set(task.feature.id, task.feature as Feature)
+    }
+
     this.cache.task.set(task.id, task)
   }
 
@@ -2220,10 +2242,16 @@ export class AppCtx {
     let layer: Layer | undefined
     let project: Project | undefined
     let organisation: Organisation | undefined
+    const resolvedLayerId =
+      'featureId' in resource && resource.feature?.layerId
+        ? resource.feature.layerId
+        : 'layerId' in resource
+          ? resource.layerId
+          : undefined
 
-    if ('layerId' in resource) {
+    if (resolvedLayerId) {
       // Feature or Task - get its layer, then project, then organisation from cache
-      layer = this.cache.layer.get(resource.layerId)
+      layer = this.cache.layer.get(resolvedLayerId)
       if (layer) {
         project = this.cache.project.get(layer.projectId)
         if (project) {
@@ -2247,7 +2275,12 @@ export class AppCtx {
     }
 
     return {
-      feature: 'layerId' in resource ? (resource as Feature) : undefined,
+      feature:
+        'featureId' in resource
+          ? ((resource.feature as Feature | undefined) ?? undefined)
+          : 'layerId' in resource
+            ? (resource as Feature)
+            : undefined,
       layer,
       project,
       organisation,
