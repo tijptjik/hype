@@ -501,6 +501,129 @@ describe('image.remote', () => {
     dateNowSpy.mockRestore()
   })
 
+  it('finalizeImageUpload keeps detached cleanup best-effort when bucket listing fails', async () => {
+    const waitUntilPromises: Promise<unknown>[] = []
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    const dbDeleteWhere = vi.fn(async () => undefined)
+    const db = {
+      ...buildDbWithContextRow({
+        imageId: 'img-old',
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub-a',
+      }),
+      delete: vi.fn(() => ({
+        where: dbDeleteWhere,
+      })),
+    }
+    const put = vi.fn(async () => undefined)
+    const head = vi.fn(async () => ({
+      size: 1234,
+      httpMetadata: { contentType: 'image/jpeg' },
+    }))
+
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false },
+      userId: 'u-1',
+      userRoles: [],
+      isAdminRequest: true,
+      event: {
+        request: new Request('https://example.test'),
+        fetch: globalThis.fetch,
+        locals: { hub: null },
+        platform: {
+          env: {
+            AUTH_SECRET: 'secret',
+            CLOUDFLARE_ACCOUNT_ID: 'account-id',
+            R2_S3_ACCESS_KEY_ID: 'access-key',
+            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+            ASSET_RAW_DEV: {
+              head,
+              put,
+              delete: vi.fn(async () => undefined),
+              list: vi.fn(async () => {
+                throw new Error('list: Unspecified error (0)')
+              }),
+            },
+            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
+            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
+            ASSET_PUBLIC_DEV: {
+              put,
+              get: vi.fn(),
+              delete: vi.fn(async () => undefined),
+              list: vi.fn(async () => {
+                throw new Error('list: Unspecified error (0)')
+              }),
+            },
+            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+          },
+          context: {
+            waitUntil: vi.fn((promise: Promise<unknown>) => {
+              waitUntilPromises.push(promise)
+            }),
+          },
+        },
+      },
+    })
+    mockVerifyUploadToken.mockResolvedValue({
+      publicId: 'h/projects/project-1/image-a',
+      env: 'local',
+      ctxType: 'project',
+      ctxId: 'project-1',
+      filename: 'image.jpg',
+      contentType: 'image/jpeg',
+      size: 1234,
+      uploaderUserId: 'u-1',
+      exp: Date.now() + 1000,
+    })
+    mockLoadImageById
+      .mockResolvedValueOnce({
+        id: 'img-old',
+        publicId: 'h/projects/project-1/image-old',
+        env: 'local',
+        version: 12,
+      })
+      .mockResolvedValueOnce(null)
+    mockCreateImageRecord.mockResolvedValueOnce({
+      id: 'img-new',
+      publicId: 'h/projects/project-1/image-a',
+    })
+
+    await expect(
+      remote.finalizeImageUpload({
+        token: 'signed-upload-token',
+        metadata: {
+          originalFilename: 'image.jpg',
+          originalExtension: 'jpg',
+          originalWidth: 100,
+          originalHeight: 200,
+          cameraModel: null,
+          capturedAt: null,
+          credit: null,
+          latitude: null,
+          longitude: null,
+          metadata: null,
+        },
+      }),
+    ).resolves.toMatchObject({
+      data: {
+        ctxType: 'project',
+        ctxId: 'project-1',
+      },
+    })
+
+    await expect(Promise.all(waitUntilPromises)).resolves.toBeDefined()
+    expect(db.delete).toHaveBeenCalledTimes(1)
+    expect(dbDeleteWhere).toHaveBeenCalledTimes(1)
+
+    consoleErrorSpy.mockRestore()
+  })
+
   it('getMetadata reads the metadata sidecar for the requested public id and env', async () => {
     mockReadMetadataDocument.mockResolvedValue({
       document: {
