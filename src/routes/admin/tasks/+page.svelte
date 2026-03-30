@@ -3,7 +3,7 @@
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
-import { createToggleFilter } from '$lib/client/services/filters'
+import { createSelectFilter, createToggleFilter } from '$lib/client/services/filters'
 // BITS PATTERNS
 import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '$lib/bits'
 // COMPONENTS
@@ -15,6 +15,7 @@ import { m } from '$lib/i18n'
 // ICONS
 import TaskIcon from 'virtual:icons/lucide/inbox'
 import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
+import ShapesIcon from 'virtual:icons/lucide/shapes'
 // TYPES
 import type { Id, ResourceControlBarConfig, Task } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
@@ -33,6 +34,24 @@ const filters = {
           falseLabel: m.filters__not(),
           trueLabel: m.filters__is(),
           refreshResource: FirstClassResource.task,
+        }),
+      ],
+    },
+    {
+      key: 'type',
+      title: 'Report',
+      icon: ShapesIcon,
+      filters: [
+        createSelectFilter('type', {
+          label: 'Type',
+          placeholder: 'All reports',
+          allowDeselect: true,
+          refreshResource: FirstClassResource.task,
+          options: [
+            { value: 'newFeature', label: m.smart_crazy_cuckoo_play() },
+            { value: 'newPhoto', label: m.aware_sea_goose_nail() },
+            { value: 'reportedMissing', label: m.noble_zany_crow_dance() },
+          ],
         }),
       ],
     },
