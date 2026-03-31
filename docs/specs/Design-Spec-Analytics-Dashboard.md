@@ -25,6 +25,9 @@ host analytics.
 - The asset worker exposes `/analytics/summary`.
 - Window-level failures now degrade partially rather than failing the entire payload.
 - The dashboard can surface partial window warnings.
+- Reusable analytics UI primitives already exist under
+  `src/lib/bits/patterns/analytics/assetAnalyticsDashboard` and
+  `src/lib/bits/custom/analyticsCard`.
 
 ### Not Delivered
 
@@ -109,13 +112,26 @@ Shared concerns should stay in a small common helper module:
 
 ### UI Layer
 
-Add one dashboard component per facet under
-`src/routes/admin/analytics/components`:
+Add one dashboard component per facet, but build them out of shared analytics primitives
+instead of duplicating the current asset layout. The current asset dashboard already gives
+us reusable shells for:
 
-- `AssetAnalyticsDashboard.svelte`
-- `ViewsAnalyticsDashboard.svelte`
-- `AudienceAnalyticsDashboard.svelte`
-- `DataAnalyticsDashboard.svelte`
+- card chrome and section headers
+- partial/empty/error states
+- fixed-window comparison layouts
+- ranked-table sections
+- time-series presentation
+
+Recommended structure:
+
+- keep asset-specific composition in
+  `src/lib/bits/patterns/analytics/assetAnalyticsDashboard`
+- add shared facet-agnostic analytics primitives under
+  `src/lib/bits/patterns/analytics`
+- add facet-specific compositions for:
+  - `ViewsAnalyticsDashboard.svelte`
+  - `AudienceAnalyticsDashboard.svelte`
+  - `DataAnalyticsDashboard.svelte`
 
 The route-level page should only:
 
@@ -123,6 +139,9 @@ The route-level page should only:
 - fetch the selected facet
 - keep refresh behavior
 - render a facet-specific dashboard
+
+The route-level page is currently still asset-specific. Refactoring that page into a small
+facet loader is a prerequisite for shipping `views` cleanly.
 
 ## Workstream 1: Asset Analytics Completion
 
@@ -153,9 +172,12 @@ Make the existing asset analytics dashboard stable and shippable.
 ### Open Questions
 
 - Should local dev always read production asset analytics by default?
+YES
 - Should 1h and 24h windows be hidden automatically when the dataset is sparse?
+NO
 - Should the asset worker return per-query metadata for debugging, or keep the contract
   UI-only?
+UI only
 
 ## Workstream 2: Views Facet
 
@@ -173,15 +195,26 @@ The first version should answer:
 - What is the trend line over time?
 - Which referrers are most important?
 
+### Filtering Requirement
+
+The first live traffic facet should be host-first rather than prism-attributed. We do not
+currently record organisation or project ownership inside the web analytics engine, so
+`views` and `audience` should operate on hostname scope directly:
+
+- select one tracked host at a time
+- report metrics for that host only
+- avoid implying organisation/project attribution that does not exist upstream
+
+This means host selection is the primary filter contract for `views` and, by extension,
+`audience`.
+
 ### Proposed Response Shape
 
 ```ts
 type ViewsAnalyticsSummary = {
   generatedAt: string
   scope: {
-    hostnames: string[]
-    organisationIds: string[]
-    projectIds: string[]
+    hostname: string
   }
   windows: Record<
     '1h' | '24h' | '7d' | '30d',
@@ -204,8 +237,30 @@ type ViewsAnalyticsSummary = {
 - Add `src/lib/api/services/analytics.views.ts`.
 - Add `/api/admin/analytics/views/+server.ts`.
 - Resolve Cloudflare credentials and site selection server-side.
-- Map prism state to host filters.
+- Resolve the selected host into the correct upstream analytics query.
 - Normalize Cloudflare response shapes into one app-owned contract.
+
+### Data Source Decision
+
+We do not need full Cloudflare dashboard parity, but we do need host/domain control. The
+source selection should be evaluated against that requirement first:
+
+- Cloudflare Web Analytics per-site APIs:
+  - likely best fit if each hub/domain can be mapped to a site and queried independently
+  - preserves host-level control cleanly
+  - weaker if we need cross-site aggregation with one query
+- Zone analytics:
+  - useful when metrics are available per hostname inside one zone-level dataset
+  - only acceptable if hostname filtering and hostname dimensions are stable enough for
+    hub-level slicing
+- Mixed strategy:
+  - most realistic fallback
+  - use per-site Web Analytics for host/path/referrer/audience traffic data
+  - keep asset delivery analytics on the existing asset worker path
+
+Recommendation: treat "can query a single hostname/site cleanly" as the gate. If a
+candidate API cannot support host-scoped reads, it is not sufficient for `views` or
+`audience`.
 
 ### UI Work
 
@@ -218,12 +273,31 @@ type ViewsAnalyticsSummary = {
   - timeseries
   - referrers
 
+Recommended reuse:
+
+- keep the same fixed window keys: `1h`, `24h`, `7d`, `30d`
+- reuse the existing card shell and warning/empty/error patterns
+- adapt the ranked-table card pattern for:
+  - top hosts
+  - top paths
+  - top referrers
+- create a traffic-specific time-series card instead of forcing the asset stacked-series
+  component onto incompatible metrics
+- add a host selector above the dashboard as the primary traffic filter
+
 ### Open Questions
 
 - Should `views` use Cloudflare Web Analytics per-site APIs, zone analytics, or a mixed
   strategy?
 - How should host filtering behave when a prism maps to multiple custom domains?
 - Should `localhost` or preview hosts ever appear in the dashboard when developing locally?
+
+Current answer direction:
+
+- default to production hostnames only in local dev
+- exclude `localhost`, preview hosts, and internal test domains unless explicitly requested
+- select a single host at a time instead of attempting organisation/project attribution
+- do not aggregate hosts into prism-owned totals unless we later add a reliable mapping layer
 
 ## Workstream 3: Audience Facet
 
@@ -245,6 +319,14 @@ The first version should show:
 
 - `audience` should reuse the same host and window filters as `views`.
 - Avoid shipping this until `views` proves out the Cloudflare analytics service path.
+- `audience` should reuse the same ranked-table and empty/error primitives as `views`.
+- The first slice should stay distribution-focused:
+  - country
+  - browser
+  - OS
+  - device class
+- Performance slices should only ship if the chosen traffic source exposes them with the
+  same host-level filtering guarantees as the rest of the facet.
 
 ## Workstream 4: Data Facet
 
@@ -359,15 +441,83 @@ Planned additions:
 - `src/routes/api/admin/analytics/views/+server.ts`
 - `src/routes/api/admin/analytics/audience/+server.ts`
 - `src/routes/api/admin/analytics/data/+server.ts`
-- `src/routes/admin/analytics/components/ViewsAnalyticsDashboard.svelte`
-- `src/routes/admin/analytics/components/AudienceAnalyticsDashboard.svelte`
-- `src/routes/admin/analytics/components/DataAnalyticsDashboard.svelte`
+- `src/lib/bits/patterns/analytics/viewsAnalyticsDashboard/ViewsAnalyticsDashboard.svelte`
+- `src/lib/bits/patterns/analytics/audienceAnalyticsDashboard/AudienceAnalyticsDashboard.svelte`
+- `src/lib/bits/patterns/analytics/dataAnalyticsDashboard/DataAnalyticsDashboard.svelte`
 
 Likely refactors:
 
 - slim down `src/routes/admin/analytics/+page.svelte`
 - move shared filter/window logic into local analytics helpers
 - reduce cross-facet coupling in `AssetAnalyticsDashboard.svelte`
+- split shared primitives out of the asset dashboard package instead of cloning its
+  internals into new facet components
+- keep traffic host selection separate from prism-derived asset scope until a trustworthy
+  attribution model exists
+
+## Facet Content Proposal
+
+### Views
+
+Add first:
+
+- total page views per fixed window
+- optional visits/uniques if the upstream API exposes them reliably
+- top hosts or, if the upstream query is already host-scoped, host summary metadata
+- top paths
+- top referrers
+- daily trend line for the selected host
+
+Reuse:
+
+- fixed-window controls
+- analytics card shell
+- ranked-list/table pattern
+- partial-window banner handling
+
+New shared pieces likely needed:
+
+- host selector chip group or select
+- traffic time-series chart
+- generic ranked-dimension card
+
+### Audience
+
+Add first:
+
+- countries
+- browsers
+- operating systems
+- device classes
+
+Reuse:
+
+- the same host selector as `views`
+- the same fixed-window controls
+- the same ranked-dimension card pattern
+
+Add later only if source quality is proven:
+
+- performance buckets
+- CWV-style slices
+
+### Data
+
+Add only after source contracts exist:
+
+- D1 latency/error summaries
+- queue backlog/retry counts
+- image pipeline failures
+- asset worker operational counters
+
+Reuse:
+
+- card shell
+- partial error banner
+- fixed-window summary cards where time-windowed data exists
+
+Do not force the traffic dashboard shape onto `data`. This facet is operational, not
+visitor-behavior analytics.
 
 ## Testing Strategy
 
