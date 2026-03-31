@@ -8,6 +8,7 @@ import { getLayerHubFilter } from './hub'
 import {
   firstOrNull,
   resolveRequiredProbe,
+  transformI18nSafely,
   toOrderByWithLocalizedFields,
   toRelatedRecords,
 } from '..'
@@ -36,6 +37,7 @@ import type {
   LayerPropertyDBRaw,
   LayerPropertyNew,
 } from '$lib/db/zod/schema/layer.types'
+import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -49,6 +51,7 @@ import type {
 // 2.1 CRUD :: READ
 //    - listLayers
 //    - getLayer
+//    - listAssignableTaskLayers
 //
 // 2.2 CRUD :: READ (PROBES)
 //    - probeLayerQuery
@@ -297,6 +300,32 @@ export const getLayer = async (
     where: conditions.length > 0 ? and(...conditions) : undefined,
   })
   return result as LayerDBRaw | undefined
+}
+
+/**
+ * Lists active layers within a project for task reassignment controls.
+ * Used by the task editor to populate same-project layer options.
+ */
+export const listAssignableTaskLayers = async (
+  db: Database,
+  projectId: Id,
+): Promise<TaskEditorLayerOption[]> => {
+  const rows = await db.query.layer.findMany({
+    columns: {
+      id: true,
+    },
+    where: and(eq(layer.projectId, projectId), eq(layer.isArchived, false)),
+    with: {
+      i18n: true,
+    },
+  })
+
+  return rows.map(row => ({
+    id: row.id as Id,
+    code: null,
+    projectId,
+    i18n: transformI18nSafely(row.i18n) ?? {},
+  }))
 }
 
 // ═══════════════════════
