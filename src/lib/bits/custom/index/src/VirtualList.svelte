@@ -159,23 +159,47 @@ async function refresh(
   viewportHeight: number,
   itemHeight?: number,
 ): Promise<void> {
-  if (!viewport || !renderedRows) {
+  const currentViewport = viewport
+  const currentRenderedRows = renderedRows
+
+  if (!currentViewport || !currentRenderedRows) {
     return
   }
 
-  const { scrollTop } = viewport
+  if (items.length === 0) {
+    start = 0
+    end = 0
+    top = 0
+    bottom = 0
+    heightMap = []
+    averageHeight = itemHeight || DEFAULT_ITEM_HEIGHT
+    currentScrollTop = 0
+    return
+  }
+
+  const { scrollTop } = currentViewport
   await tick()
+
+  // The bound elements can disappear during the async tick while routes or portals update.
+  if (viewport !== currentViewport || renderedRows !== currentRenderedRows) {
+    return
+  }
 
   let contentHeight = scrollTop - top
   let index = start
 
   while (contentHeight < viewportHeight && index < items.length) {
-    let row = renderedRows[index - renderStart]
+    let row = currentRenderedRows[index - renderStart]
 
     if (!row) {
       end = index + 1
       await tick()
-      row = renderedRows[index - renderStart]
+
+      if (viewport !== currentViewport || renderedRows !== currentRenderedRows) {
+        return
+      }
+
+      row = currentRenderedRows[index - renderStart]
     }
 
     const rowHeight =
@@ -211,14 +235,14 @@ async function refresh(
     const maxScroll = Math.max(0, totalHeight + bottomOverflow - viewportHeight)
 
     if (scrollTop > maxScroll) {
-      viewport.scrollTo(0, maxScroll)
+      currentViewport.scrollTo(0, maxScroll)
     }
   }
 
-  currentScrollTop = viewport.scrollTop
+  currentScrollTop = currentViewport.scrollTop
 
   if (canResize) {
-    for (const row of renderedRows) {
+    for (const row of currentRenderedRows) {
       if (row) {
         resizeObserver?.observe(row)
       }
