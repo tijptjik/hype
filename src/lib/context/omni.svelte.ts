@@ -126,7 +126,6 @@ export class OmniCtx {
       openCardDelay: 2000,
       ...options,
     }
-    console.log('postModeMutation', mode, optionsWithDefaults)
     if (mode === OmniMode.search) {
       this.closeCard()
     } else {
