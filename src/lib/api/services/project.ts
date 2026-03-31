@@ -848,7 +848,7 @@ const buildVisibilityAndOwnershipConditions = (
   }
 
   const isHubAdmin = isRelevantHubAdmin(userRoles, resourceHubId)
-  if (isHubAdmin) {
+  if (isHubAdmin && isAdminRequest) {
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 

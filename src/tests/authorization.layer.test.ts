@@ -56,6 +56,7 @@ type Actor = {
   isAuthenticated: boolean
   userRoles: UserRoleDisco[]
   isSuperAdmin?: boolean
+  isAdminRequest?: boolean
 }
 
 const ACTORS: Record<string, Actor> = {
@@ -64,18 +65,21 @@ const ACTORS: Record<string, Actor> = {
     userId: 'u-core-admin',
     isAuthenticated: true,
     userRoles: [coreAdminRole()],
+    isAdminRequest: true,
   },
   hubAdminSame: {
     name: 'hub admin same hub',
     userId: 'u-hub-admin-hub-a',
     isAuthenticated: true,
     userRoles: [hubAdminRole('hub-a')],
+    isAdminRequest: true,
   },
   hubAdminOther: {
     name: 'hub admin other hub',
     userId: 'u-hub-admin-hub-b',
     isAuthenticated: true,
     userRoles: [hubAdminRole('hub-b')],
+    isAdminRequest: true,
   },
   orgOwner: {
     name: 'organisation owner',
@@ -140,6 +144,7 @@ const actorBase = (actor: Actor) => ({
     superAdmin: actor.isSuperAdmin ?? false,
   },
   userRoles: actor.userRoles,
+  isAdminRequest: actor.isAdminRequest ?? false,
 })
 
 const resource = {
@@ -241,6 +246,67 @@ describe('layer authorization policy matrix', () => {
         })
       }
     }
+  })
+
+  describe('super admin environment gating', () => {
+    const superAdmin = {
+      user: {
+        id: 'u-super-admin',
+        isAnonymous: false,
+        superAdmin: true,
+      },
+      userRoles: [] as UserRoleDisco[],
+    }
+
+    it('denies unpublished list access outside admin requests', () => {
+      const decision = authorizeLayerListForContext({
+        ...superAdmin,
+        requestedListState: { isPublished: false, isArchived: false },
+        resourceHubId: 'hub-a',
+        isAdminRequest: false,
+      })
+
+      expect(decision).toEqual({ allowed: false, code: 'INSUFFICIENT_ROLE' })
+    })
+
+    it('allows unpublished list access for admin requests', () => {
+      const decision = authorizeLayerListForContext({
+        ...superAdmin,
+        requestedListState: { isPublished: false, isArchived: false },
+        resourceHubId: 'hub-a',
+        isAdminRequest: true,
+      })
+
+      expect(decision).toEqual({ allowed: true })
+    })
+
+    it('denies unpublished reads outside admin requests', () => {
+      const decision = authorizeLayerReadForProbe({
+        ...superAdmin,
+        isAdminRequest: false,
+        probe: {
+          ...resource,
+          isPublished: false,
+          isArchived: false,
+        },
+      })
+
+      expect(decision).toEqual({ allowed: false, code: 'INSUFFICIENT_ROLE' })
+    })
+
+    it('allows unpublished reads for admin requests', () => {
+      const decision = authorizeLayerReadForProbe({
+        ...superAdmin,
+        isAdminRequest: true,
+        probe: {
+          ...resource,
+          isPublished: false,
+          isArchived: false,
+        },
+      })
+
+      expect(decision).toEqual({ allowed: true })
+    })
   })
 
   describe('create/publish/delete', () => {

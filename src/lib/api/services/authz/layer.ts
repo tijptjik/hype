@@ -461,7 +461,9 @@ export const buildLayerVisibilityAndOwnershipConditions = (
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 
-  if (policy.isStrong) {
+  const hasStrongAccess = policy.isStrong && isAdminRequest
+
+  if (hasStrongAccess) {
     const isPublished = toTriStateBoolean(params.isPublished)
     const isArchived = toTriStateBoolean(params.isArchived)
     applyTriStateBooleanCondition(conditions, layer.isPublished, isPublished)
@@ -643,6 +645,7 @@ export const authorizeLayerListForContext = (params: {
   userRoles: UserRoleDisco[]
   requestedListState: { isPublished: boolean; isArchived: boolean }
   resourceHubId?: string | null
+  isAdminRequest?: boolean
 }): AuthorizationDecision => {
   const policy = resolveLayerListReadPolicy({
     user: params.user,
@@ -663,8 +666,9 @@ export const authorizeLayerListForContext = (params: {
     })
   }
 
+  const hasStrongAccess = policy.isStrong && params.isAdminRequest === true
   const hasOwnerScope =
-    policy.isStrong ||
+    hasStrongAccess ||
     policy.owner.organisationIds.length > 0 ||
     policy.owner.projectIds.length > 0
   const hasMaintainerScope = policy.maintainer.projectIds.length > 0
@@ -695,6 +699,7 @@ export const authorizeLayerReadForProbe = (params: {
     superAdmin?: boolean | null
   }
   userRoles: UserRoleDisco[]
+  isAdminRequest?: boolean
   probe: {
     id: string
     organisationId: string
@@ -734,15 +739,20 @@ export const authorizeLayerReadForProbe = (params: {
   })
   if (!resourcePolicy) return { allowed: false, code: 'INSUFFICIENT_ROLE' }
 
+  const effectiveResourcePolicy =
+    policy.isStrong && params.isAdminRequest !== true
+      ? 'published_only'
+      : resourcePolicy
+
   if (params.probe.isArchived) {
-    return resourcePolicy === 'all_states'
+    return effectiveResourcePolicy === 'all_states'
       ? { allowed: true }
       : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }
 
   if (!params.probe.isPublished) {
-    return resourcePolicy === 'all_states' ||
-      resourcePolicy === 'include_unpublished_exclude_archived'
+    return effectiveResourcePolicy === 'all_states' ||
+      effectiveResourcePolicy === 'include_unpublished_exclude_archived'
       ? { allowed: true }
       : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }

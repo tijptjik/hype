@@ -223,6 +223,7 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
     conditions.push(
       hasOrganisationLayersCondition({
         requirePublished: !isAdminRequest,
+        requireNonArchived: !isAdminRequest,
       }),
     )
 

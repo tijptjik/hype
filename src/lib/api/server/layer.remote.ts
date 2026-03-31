@@ -122,6 +122,7 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
     userRoles,
     requestedListState,
     resourceHubId: event.locals.hub.id ?? null,
+    isAdminRequest,
   })
   if (!listDecision.allowed) {
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
@@ -189,6 +190,7 @@ const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => 
   const readDecision = authorizeLayerReadForProbe({
     user,
     userRoles,
+    isAdminRequest,
     probe,
   })
   if (!readDecision.allowed) {

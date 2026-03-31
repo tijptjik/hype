@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { toQueryConditions } from '$lib/api/services/project'
-import type { SessionUser } from '$lib/types'
+import type { SessionUser, UserRoleDisco } from '$lib/types'
 
 describe('project query visibility', () => {
   const superAdminUser = {
@@ -29,6 +29,60 @@ describe('project query visibility', () => {
       true,
       { isPublished: true, isArchived: false },
       [],
+    )
+
+    expect(result.conditions).toHaveLength(0)
+  })
+
+  it('keeps public visibility filters for hub admins outside admin requests', () => {
+    const hubAdminRoles = [
+      {
+        type: 'hub',
+        role: 'admin',
+        hubId: 'hub-a',
+      },
+    ] as unknown as UserRoleDisco[]
+
+    const result = toQueryConditions(
+      {} as never,
+      {
+        id: 'user-2',
+        superAdmin: false,
+        isAnonymous: false,
+        roles: hubAdminRoles,
+      } as unknown as SessionUser,
+      false,
+      { isPublished: true, isArchived: false },
+      hubAdminRoles,
+      undefined,
+      'hub-a',
+    )
+
+    expect(result.conditions.length).toBeGreaterThan(0)
+  })
+
+  it('allows admin-request hub admins to bypass default visibility filters', () => {
+    const hubAdminRoles = [
+      {
+        type: 'hub',
+        role: 'admin',
+        hubId: 'hub-a',
+      },
+    ] as unknown as UserRoleDisco[]
+
+    const result = toQueryConditions(
+      {} as never,
+      {
+        id: 'user-2',
+        superAdmin: false,
+        isAnonymous: false,
+        roles: hubAdminRoles,
+      } as unknown as SessionUser,
+      true,
+      { isPublished: true, isArchived: false },
+      hubAdminRoles,
+      undefined,
+      'hub-a',
     )
 
     expect(result.conditions).toHaveLength(0)

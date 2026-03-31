@@ -944,7 +944,7 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Project remote list function is not configured.')
     }
-    const result = (await remoteList({
+    const requestParams = {
       conditions: {
         isArchived: false,
         isPublished: true,
@@ -952,7 +952,33 @@ export class AppCtx {
       prisms: this.state.prisms,
       sorting: this.state.viewSorting.project,
       meta: { profile: 'card' },
-    })) as ListResponse<Project>
+    }
+
+    console.log('[AppCtx][projectsQueryFn] requesting projects', {
+      isAdmin: this.isAdmin(),
+      pathname: typeof window !== 'undefined' ? window.location.pathname : 'server',
+      prisms: this.state.prisms,
+      sorting: this.state.viewSorting.project,
+      conditions: requestParams.conditions,
+      meta: requestParams.meta,
+    })
+
+    const result = (await remoteList(requestParams)) as ListResponse<Project>
+
+    console.log('[AppCtx][projectsQueryFn] received projects', {
+      isAdmin: this.isAdmin(),
+      pathname: typeof window !== 'undefined' ? window.location.pathname : 'server',
+      count: result.data.length,
+      projects: result.data.map(project => ({
+        id: project.id,
+        code: 'code' in project ? project.code : undefined,
+        isPublished: 'isPublished' in project ? project.isPublished : undefined,
+        isArchived: 'isArchived' in project ? project.isArchived : undefined,
+        organisationId:
+          'organisationId' in project ? project.organisationId : undefined,
+      })),
+    })
+
     this.setListQueryMeta(this.projectsQueryKey(), result)
     return result.data
   }

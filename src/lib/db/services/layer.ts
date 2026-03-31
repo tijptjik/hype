@@ -472,10 +472,12 @@ export const getLayerMap = async (
  */
 export const hasProjectLayersCondition = (options?: {
   requirePublished?: boolean
+  requireNonArchived?: boolean
 }): SQL<unknown> => sql`EXISTS (
   SELECT 1 FROM "layer"
   WHERE "layer"."projectId" = ${project.id}
   ${options?.requirePublished ? sql`AND "layer"."isPublished" = 1` : sql``}
+  ${options?.requireNonArchived ? sql`AND "layer"."isArchived" = 0` : sql``}
 )`
 
 /**
@@ -483,10 +485,12 @@ export const hasProjectLayersCondition = (options?: {
  */
 export const hasOrganisationLayersCondition = (options?: {
   requirePublished?: boolean
+  requireNonArchived?: boolean
 }): SQL<unknown> => sql`EXISTS (
   SELECT 1 FROM "layer"
   WHERE "layer"."organisationId" = ${organisation.id}
   ${options?.requirePublished ? sql`AND "layer"."isPublished" = 1` : sql``}
+  ${options?.requireNonArchived ? sql`AND "layer"."isArchived" = 0` : sql``}
 )`
 
 // ═══════════════════════

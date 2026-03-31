@@ -242,6 +242,7 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
     conditions.push(
       hasProjectLayersCondition({
         requirePublished: !ctx.isAdminRequest,
+        requireNonArchived: !ctx.isAdminRequest,
       }),
     )
 
