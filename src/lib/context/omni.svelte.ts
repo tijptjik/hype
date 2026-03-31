@@ -1,4 +1,5 @@
 // SVELTE
+import { browser } from '$app/environment'
 import { getContext, setContext, tick } from 'svelte'
 // LIB
 import { isMobile } from '$lib'
@@ -78,6 +79,8 @@ export class OmniCtx {
    * Register custom event handlers for omni context operations
    */
   private registerEventHandlers() {
+    if (!browser) return
+
     // Handler for opening card
     const handleOpenCard = (_event: CustomEvent) => {
       this.openCard()
@@ -176,6 +179,8 @@ export class OmniCtx {
   }
 
   focusSearchBar() {
+    if (!browser) return
+
     setTimeout(() => {
       const searchInput = document.getElementById('omni-search-bar') as HTMLElement
       searchInput?.focus()
@@ -279,7 +284,9 @@ export class OmniCtx {
             resourceId: this.appCtx.state.active.feature?.id,
           },
         })
-        window.dispatchEvent(refreshImagesEvent)
+        if (browser) {
+          window.dispatchEvent(refreshImagesEvent)
+        }
         // turn it into display mode
         this.cardCtx?.setMode(FeatureCardMode.Display)
       } else {
