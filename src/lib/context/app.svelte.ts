@@ -628,11 +628,6 @@ export class AppCtx {
       : []),
   ]
 
-  // Deprecated: legacy form context bridge for header form actions.
-  // Prefer headerCtrl.setFormActions(...) in route pages.
-  formCtx = $state(null)
-  responsiveCtx: ResponsiveCtx
-
   // Constructor
   constructor(
     queryClient: QueryClient,
@@ -960,30 +955,7 @@ export class AppCtx {
       meta: { profile: 'card' },
     }
 
-    console.log('[AppCtx][projectsQueryFn] requesting projects', {
-      isAdmin: this.isAdmin(),
-      pathname: typeof window !== 'undefined' ? window.location.pathname : 'server',
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.project,
-      conditions: requestParams.conditions,
-      meta: requestParams.meta,
-    })
-
     const result = (await remoteList(requestParams)) as ListResponse<Project>
-
-    console.log('[AppCtx][projectsQueryFn] received projects', {
-      isAdmin: this.isAdmin(),
-      pathname: typeof window !== 'undefined' ? window.location.pathname : 'server',
-      count: result.data.length,
-      projects: result.data.map(project => ({
-        id: project.id,
-        code: 'code' in project ? project.code : undefined,
-        isPublished: 'isPublished' in project ? project.isPublished : undefined,
-        isArchived: 'isArchived' in project ? project.isArchived : undefined,
-        organisationId:
-          'organisationId' in project ? project.organisationId : undefined,
-      })),
-    })
 
     this.setListQueryMeta(this.projectsQueryKey(), result)
     return result.data
@@ -3787,20 +3759,6 @@ export class AppCtx {
   // Header management methods
   setHeaderState = (headerState: Partial<typeof this.state.header>): void => {
     this.state.header = { ...this.state.header, ...headerState }
-  }
-
-  /**
-   * @deprecated Prefer headerCtrl.setFormActions(...) from route/page form controllers.
-   */
-  setFormContext = (formCtx: any): void => {
-    this.formCtx = formCtx
-  }
-
-  /**
-   * @deprecated Prefer headerCtrl.clearFormActions(...) from route/page cleanup.
-   */
-  clearFormContext = (): void => {
-    this.formCtx = null
   }
 
   // Derived values for header
