@@ -18,8 +18,11 @@ import type {
   ResourceIndexItem,
   ResourceIndexProps,
 } from './resourceIndex.types'
+import {
+  RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX,
+  RESOURCE_INDEX_TOTAL_HORIZONTAL_PADDING_PX,
+} from './resourceIndex.constants'
 
-const GRID_HORIZONTAL_PADDING_PX = 16
 const GRID_COLUMN_GAP_PX = 16
 const GRID_ROW_GAP_PX = 16
 const TABLE_ROW_GAP_PX = 6
@@ -62,7 +65,10 @@ const cardWidth = $derived.by(() => {
     return 0
   }
 
-  const usableWidth = Math.max(0, gridWidth - GRID_HORIZONTAL_PADDING_PX)
+  const usableWidth = Math.max(
+    0,
+    gridWidth - RESOURCE_INDEX_TOTAL_HORIZONTAL_PADDING_PX,
+  )
   const totalGapWidth = Math.max(0, columnCount - 1) * GRID_COLUMN_GAP_PX
 
   return Math.max(0, (usableWidth - totalGapWidth) / Math.max(1, columnCount))
@@ -73,7 +79,10 @@ function getColumnCount(nextGridWidth: number, nextLayoutMode: string): number {
     return 1
   }
 
-  const usableWidth = Math.max(0, nextGridWidth - GRID_HORIZONTAL_PADDING_PX)
+  const usableWidth = Math.max(
+    0,
+    nextGridWidth - RESOURCE_INDEX_TOTAL_HORIZONTAL_PADDING_PX,
+  )
   return Math.max(
     1,
     Math.floor(
@@ -166,7 +175,7 @@ $effect(() => {
           rowGap={isRowLayout ? TABLE_ROW_GAP_PX : GRID_ROW_GAP_PX}
           bufferBefore={8}
           bufferAfter={10}
-          padding={10}
+          padding={RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX}
           {applyBottomOverflow}
         />
       </div>
