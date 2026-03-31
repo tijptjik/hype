@@ -142,6 +142,14 @@ let shouldShowEmptyState = $derived(
   resourcesToDisplay.length === 0 &&
     !['organisation', 'project', 'layer'].includes(props.resourceType),
 )
+
+function getSelectedResourceName(
+  resourceType: Props['resourceType'],
+  resource: { i18n?: Record<string, unknown> | null },
+): string {
+  const field = resourceType === 'neighbourhood' ? 'name' : 'nameShort'
+  return getI18n(resource.i18n ?? undefined, field, appCtx.getUserPreferences())
+}
 </script>
 
 <div
@@ -157,12 +165,11 @@ let shouldShowEmptyState = $derived(
       <div class="bits-panel-selected-resource__wide-list">
         {#each resourcesToDisplay as id (id)}
           {@const resource = props.resources.find((item) => item.id === id)}
-          {@const name = resource
-            ? getI18n(resource.i18n ?? undefined, 'nameShort', appCtx.getUserPreferences())
-            : id}
+          {@const name = resource ? getSelectedResourceName(props.resourceType, resource) : id}
           <button
             type="button"
             class="bits-panel-selected-resource__wide-chip {colorClass} {hoverColorClass}"
+            data-resource-type={props.resourceType}
             onclick={(event) => {
               event.stopPropagation()
               handleToggle(id)

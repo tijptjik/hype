@@ -22,13 +22,13 @@ import type {
   ParsedReverseGeocodeResult,
   ALSResult,
   ALSSuggestedAddressItem,
-  Locale,
+  LocaleKey,
 } from '$lib/types'
 
 // TYPES
 type Neighbourhood = string
 type NeighbourhoodI18n = Record<
-  Locale,
+  LocaleKey,
   {
     name: string
     neighbourhood: string
@@ -115,7 +115,7 @@ function convertFromWebMercator(x: number, y: number): [number, number] {
  */
 function getDistrictFromNeighbourhood(
   neighbourhoodRef: string | null,
-  locale: Locale = 'en',
+  locale: LocaleKey = 'en',
   _neighbourhoodRaw?: string | null,
 ): string | null {
   if (!neighbourhoodRef) return null
@@ -125,7 +125,7 @@ function getDistrictFromNeighbourhood(
     n => n.toLowerCase() === neighbourhoodRef.toLowerCase(),
   )
   return neighbourhood
-    ? neighourhoodsJson[neighbourhoodRef].i18n[locale].district || null
+    ? neighourhoodsJson[neighbourhood].i18n[locale].district || null
     : null
 }
 
@@ -359,7 +359,7 @@ export async function processForwardGeocodeResult(
   const { PremisesAddress: pa } = address.Address
 
   let neighbourhoodZhHant =
-    neighbourhoods[neighbourhood as keyof typeof neighbourhoods]?.i18n['zh-hant']
+    neighbourhoods[neighbourhood as keyof typeof neighbourhoods]?.i18n.zhHant
       ?.neighbourhood || null
   // Attempt with a disambiguated key (district code)
   if (!neighbourhoodZhHant) {
@@ -368,7 +368,7 @@ export async function processForwardGeocodeResult(
       'en',
     )}`
     neighbourhoodZhHant =
-      neighbourhoods[compositeKey as keyof typeof neighbourhoods]?.i18n['zh-hant']
+      neighbourhoods[compositeKey as keyof typeof neighbourhoods]?.i18n.zhHant
         ?.neighbourhood || null
   }
 

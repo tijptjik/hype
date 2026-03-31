@@ -1,10 +1,15 @@
 // I18N
-import { getI18n, getLocale } from '$lib/i18n'
+import { getI18n, getLocaleKey, toLocaleKey } from '$lib/i18n'
 // DATA
 import neighbourhoods from '$lib/map/neighbourhoods.json'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type { NeighbourhoodResource, NeighbourhoodJSON } from '$lib/types'
+import type {
+  Locale,
+  LocaleKey,
+  NeighbourhoodResource,
+  NeighbourhoodJSON,
+} from '$lib/types'
 import type { LngLatLike } from 'maplibre-gl'
 
 // ═══════════════════════
@@ -85,17 +90,17 @@ export function getNeighbourhoodsAsResources(): NeighbourhoodResource[] {
 }
 
 export function buildNeighbourhoodSubdivisionMap(
-  locale?: string,
+  locale?: Locale | LocaleKey,
 ): Map<string, string[]> {
-  if (!locale) {
-    locale = getLocale()
-  }
+  const localeKey = locale ? toLocaleKey(locale) : getLocaleKey()
 
   const subNeighbourhoodsMap = new Map<string, string[]>()
 
   for (const [_key, data] of Object.entries(neighbourhoods)) {
-    const name = data.i18n[locale as keyof typeof data.i18n]?.name
-    const neighbourhood = data.i18n[locale as keyof typeof data.i18n]?.neighbourhood
+    const name = data.i18n[localeKey]?.name
+    const neighbourhood = data.i18n[localeKey]?.neighbourhood
+
+    if (!name || !neighbourhood) continue
 
     // Handle neighbourhood as string or array
     const neighbourhoodKeys = Array.isArray(neighbourhood)

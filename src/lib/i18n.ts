@@ -229,8 +229,8 @@ export function getI18n<T>(
   obj:
     | Resource
     | Neighbourhood
-    | { i18n: Record<Locale, T> | null }
-    | Record<Locale, T>
+    | { i18n: Record<Locale | LocaleKey, T> | null }
+    | Record<Locale | LocaleKey, T>
     | undefined,
   field: string,
   _userPreferences: UserPreferences,
@@ -250,6 +250,7 @@ export function getI18n<T>(
 
   // CONFIG : Locale key only (no locale fallback chain)
   const localeKey = getLocaleKey()
+  const localeCode = toLocaleCode(localeKey)
   const opts = {
     fallback: fallback || defaultFallback,
   }
@@ -258,8 +259,9 @@ export function getI18n<T>(
   const genField = `${field}Gen`
 
   // SWITCH : BEST CASE : The field is available in the preferred locale key.
-  const translation = i18nObj[localeKey]?.[field as keyof T] as string
-  if (translation && (!i18nObj[localeKey]?.[genField as keyof T] || skipGenFieldCheck))
+  const preferredEntry = i18nObj[localeKey] ?? i18nObj[localeCode]
+  const translation = preferredEntry?.[field as keyof T] as string
+  if (translation && (!preferredEntry?.[genField as keyof T] || skipGenFieldCheck))
     return translation
 
   // SWTICH : CATCHALL CASE

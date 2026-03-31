@@ -243,7 +243,17 @@
   }
 
   .bits-theme .bits-panel-selected-resource__wide-chip {
-    @apply inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 rounded-full border border-current/20 bg-transparent px-3 py-1.5 text-left leading-tight;
+    @apply inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 rounded-full border border-current/35 bg-transparent px-3 py-1.5 text-left leading-tight transition-[border-color,box-shadow,background-color,color] duration-150;
+  }
+
+  .bits-theme
+    .bits-panel-selected-resource__wide-chip[data-resource-type="neighbourhood"] {
+    @apply border-emerald-500/60 bg-emerald-500/5 shadow-[0_0_0_1px_rgb(16_185_129_/_0.12),0_0_16px_rgb(16_185_129_/_0.14)];
+  }
+
+  .bits-theme
+    .bits-panel-selected-resource__wide-chip[data-resource-type="neighbourhood"]:hover {
+    @apply border-emerald-400/80 bg-emerald-500/10 shadow-[0_0_0_1px_rgb(52_211_153_/_0.18),0_0_22px_rgb(16_185_129_/_0.2)];
   }
 
   .bits-theme .bits-panel-selected-resource__wide-chip-label {

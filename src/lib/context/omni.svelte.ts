@@ -758,10 +758,10 @@ export class OmniCtx {
       i18n: {
         en: { name: neighbourhood },
         'zh-hant': {
-          name: selectedNeighbourhood?.i18n?.['zh-hant']?.name || neighbourhood,
+          name: selectedNeighbourhood?.i18n?.zhHant?.name || neighbourhood,
         },
         'zh-hans': {
-          name: selectedNeighbourhood?.i18n?.['zh-hans']?.name || neighbourhood,
+          name: selectedNeighbourhood?.i18n?.zhHans?.name || neighbourhood,
         },
       },
       items: features,

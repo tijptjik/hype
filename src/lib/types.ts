@@ -2746,7 +2746,7 @@ export interface ALSResult {
 export type NeighbourhoodJSON = Record<
   Ref,
   {
-    i18n: Record<Locale, NeighbourhoodI18n>
+    i18n: Record<LocaleKey, NeighbourhoodI18n>
   }
 >
 
@@ -2768,7 +2768,7 @@ export type NeighbourhoodI18n = {
 
 export type NeighbourhoodResource = {
   id: Ref
-  i18n: Record<Locale, NeighbourhoodI18n>
+  i18n: Record<LocaleKey, NeighbourhoodI18n>
 }
 
 export type ALSSuggestedAddressItem = NonNullable<ALSResult['SuggestedAddress']>[number]
