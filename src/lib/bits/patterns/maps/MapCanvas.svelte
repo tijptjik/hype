@@ -1,6 +1,6 @@
 <script lang="ts">
 import { page } from '$app/state'
-import { onDestroy, onMount } from 'svelte'
+import { onDestroy, onMount, tick } from 'svelte'
 import { watch } from 'runed'
 // I18N
 import { getLocale, m } from '$lib/i18n'
@@ -26,9 +26,11 @@ import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 import { Panel } from '$lib/enums'
 // TYPES
 import type {
+  EventData,
   GeolocateControl,
   LngLatLike,
   Map as MaplibreMap,
+  MapMouseEvent,
   Point,
   PointLike,
 } from 'maplibre-gl'
@@ -62,6 +64,7 @@ let activeStyleToken = $state<string | null>(null)
 let isTrackingMapUrl = $state(false)
 let detachMapUrlTracking: (() => void) | null = null
 let styleRequestSerial = 0
+let activeMapInstance: MaplibreMap | null = null
 
 const MAP_TRACKING_PARAM = 'mapTracking'
 const MAP_LNG_PARAM = 'lng'
@@ -190,6 +193,13 @@ const queueMapResize = (): void => {
   })
 }
 
+const isMapContainerElement = (value: unknown): value is HTMLDivElement => {
+  return (
+    value instanceof HTMLDivElement ||
+    Boolean(value && typeof value === 'object' && value.nodeType === 1)
+  )
+}
+
 const hideSymbolLayers = (style: StyleSpecification): StyleSpecification => {
   if (!style.layers) {
     return style
@@ -234,10 +244,14 @@ const getCurrentMapStyleVariant = (
   }
 
   const currentStyle = map.getStyle()
+  const styleMetadata =
+    currentStyle?.metadata && typeof currentStyle.metadata === 'object'
+      ? (currentStyle.metadata as Record<string, unknown>)
+      : null
 
   return (
-    (typeof currentStyle?.metadata?.['hype:style-variant'] === 'string'
-      ? currentStyle.metadata['hype:style-variant']
+    (typeof styleMetadata?.['hype:style-variant'] === 'string'
+      ? styleMetadata['hype:style-variant']
       : null) ?? (typeof currentStyle?.name === 'string' ? currentStyle.name : null)
   )
 }
@@ -259,241 +273,269 @@ const activeStyleKey = $derived(
 )
 const resolvedBottomInset = $derived(bottomInset)
 
-$effect(() => {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  console.debug('[MapCanvas] mapStyleCode received', {
-    mapStyleCode,
-    resolvedMapStyleCode,
-    resolvedMapStyleVariant,
-    resolvedMapStyleEndpoint,
-    activeLocale,
-    noLabelsMode: appCtx.user?.experimental?.noLabelsMode ?? false,
-  })
-})
-
 // WATCHERS
 // Watch for changes in features
-onMount(async () => {
-  // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they
-  // are heavy and the max worker size in the free tier is 1 MB
+onMount(() => {
+  let isDisposed = false
 
-  // Wait for maplibre to be loaded globally
-  while (!appCtx.isMaplibreLoaded || !appCtx.maplibre) {
-    await new Promise(resolve => setTimeout(resolve, 10))
-  }
+  const initialiseMap = async (): Promise<void> => {
+    // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they
+    // are heavy and the max worker size in the free tier is 1 MB
 
-  // Wait for the DOM element to be available
-  if (!mapContainer) {
-    console.error('Map container not available')
-    return
-  }
+    // Wait for maplibre to be loaded globally.
+    while (!isDisposed && (!appCtx.isMaplibreLoaded || !appCtx.maplibre)) {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
 
-  const initialMapView = isMapTrackingEnabled(page.url)
-    ? getTrackedMapViewFromUrl(page.url)
-    : DEFAULT_MAP_VIEW
-
-  // MAP : Create the map instance
-  let initialStyle: StyleSpecification
-  try {
-    initialStyle = await resolveRuntimeMapStyle(
-      resolvedMapStyleEndpoint,
-      appCtx.user?.experimental?.noLabelsMode ?? false,
-    )
-  } catch (error) {
-    console.error('Failed to resolve initial map style', error)
-    return
-  }
-
-  appCtx.map = new appCtx.maplibre.Map({
-    container: mapContainer,
-    style: initialStyle,
-    center: initialMapView.center,
-    bearing: initialMapView.bearing,
-    zoom: initialMapView.zoom,
-    minZoom: MIN_MAP_ZOOM,
-    hash: false,
-    pitch: initialMapView.pitch,
-    attributionControl: false,
-    pixelRatio: window.devicePixelRatio,
-    canvasContextAttributes: {
-      antialias: true,
-    },
-  })
-
-  activeStyleToken = activeStyleKey
-  updateMapUrlTracking()
-  queueMapResize()
-
-  appCtx.map.on('load', () => {
-    const map = appCtx.map
-    if (!map) {
+    if (isDisposed) {
       return
     }
 
+    // Wait for `bind:this` to settle before handing the element to MapLibre.
+    await tick()
+
+    if (isDisposed) {
+      return
+    }
+
+    const container = mapContainer
+    if (!isMapContainerElement(container)) {
+      console.error('Map container not available for map initialisation', {
+        container,
+      })
+      return
+    }
+
+    const initialMapView = isMapTrackingEnabled(page.url)
+      ? getTrackedMapViewFromUrl(page.url)
+      : DEFAULT_MAP_VIEW
+
+    let initialStyle: StyleSpecification
+    try {
+      initialStyle = await resolveRuntimeMapStyle(
+        resolvedMapStyleEndpoint,
+        appCtx.user?.experimental?.noLabelsMode ?? false,
+      )
+    } catch (error) {
+      console.error('Failed to resolve initial map style', error)
+      return
+    }
+
+    if (isDisposed) {
+      return
+    }
+
+    const map = new appCtx.maplibre.Map({
+      container,
+      style: initialStyle,
+      center: initialMapView.center,
+      bearing: initialMapView.bearing,
+      zoom: initialMapView.zoom,
+      minZoom: MIN_MAP_ZOOM,
+      hash: false,
+      pitch: initialMapView.pitch,
+      attributionControl: false,
+      pixelRatio: window.devicePixelRatio,
+      canvasContextAttributes: {
+        antialias: true,
+      },
+    })
+
+    if (isDisposed) {
+      map.remove()
+      return
+    }
+
+    activeMapInstance = map
+    appCtx.map = map
+    activeStyleToken = activeStyleKey
+    updateMapUrlTracking()
     queueMapResize()
 
-    // CONTROLS : Add the controls to the map
-    if (appCtx.user) {
-      // Initialize and store the GeolocateControl
-      // See https://github.com/mapbox/mapbox-gl-js/issues/13067#issuecomment-1925291846
-      const geolocateControl = new appCtx.maplibre.GeolocateControl({
-        positionOptions: {
-          timeout: 5000,
-          enableHighAccuracy: true,
-          maximumAge: Infinity,
-        },
-        trackUserLocation: true,
-        showUserHeading: true,
-        showUserLocation: true,
-      }) as GeolocateControlWithPrivateFields
+    map.on('load', () => {
+      const map = appCtx.map
+      if (!map) {
+        return
+      }
 
-      // store the original _updateCamera implementation to restore later
-      const updateCamera = geolocateControl._updateCamera
-      // replace updateCamera method with noop operation, so that we can control
-      // the initial flyTo of the user's location.
-      geolocateControl._updateCamera = () => {}
-      map.addControl(geolocateControl, 'bottom-right')
-      map.on('load', () => {
-        // after first geolocate...
-        geolocateControl.once('geolocate', () => {
-          // restore update camera for future use
-          geolocateControl._updateCamera = updateCamera
+      queueMapResize()
+
+      // CONTROLS : Add the controls to the map
+      if (appCtx.user) {
+        // Initialize and store the GeolocateControl
+        // See https://github.com/mapbox/mapbox-gl-js/issues/13067#issuecomment-1925291846
+        const geolocateControl = new appCtx.maplibre.GeolocateControl({
+          positionOptions: {
+            timeout: 5000,
+            enableHighAccuracy: true,
+            maximumAge: Infinity,
+          },
+          trackUserLocation: true,
+          showUserHeading: true,
+          showUserLocation: true,
+        }) as GeolocateControlWithPrivateFields
+
+        // store the original _updateCamera implementation to restore later
+        const updateCamera = geolocateControl._updateCamera
+        // replace updateCamera method with noop operation, so that we can control
+        // the initial flyTo of the user's location.
+        geolocateControl._updateCamera = () => {}
+        map.addControl(geolocateControl, 'bottom-right')
+        map.on('load', () => {
+          // after first geolocate...
+          geolocateControl.once('geolocate', () => {
+            // restore update camera for future use
+            geolocateControl._updateCamera = updateCamera
+          })
+          // trigger to get the dot on the map
+          geolocateControl.trigger()
         })
-        // trigger to get the dot on the map
-        geolocateControl.trigger()
-      })
 
-      // Programmatically click on the navigation control
-      setTimeout(() => {
-        geolocateControl._geolocateButton.click()
-      }, 200)
+        // Programmatically click on the navigation control
+        setTimeout(() => {
+          geolocateControl._geolocateButton.click()
+        }, 200)
 
-      let hasReceivedFirstFix = false
+        let hasReceivedFirstFix = false
 
-      // WATCHER : Watch for changes in the user's location
-      navigator.geolocation.watchPosition(
-        geoLocation => {
-          const { latitude, longitude } = geoLocation.coords
+        // WATCHER : Watch for changes in the user's location
+        navigator.geolocation.watchPosition(
+          geoLocation => {
+            const { latitude, longitude } = geoLocation.coords
 
-          // Hong Kong bounding box check
-          const HK_BOUNDS = {
-            north: 22.4393278,
-            south: 22.1193278,
-            east: 114.3228131,
-            west: 114.0028131,
-          }
-
-          const isInHongKong =
-            latitude >= HK_BOUNDS.south &&
-            latitude <= HK_BOUNDS.north &&
-            longitude >= HK_BOUNDS.west &&
-            longitude <= HK_BOUNDS.east
-
-          if (!isInHongKong) {
-            // User is outside Hong Kong - disable location tracking
-            console.warn(
-              'User location outside Hong Kong bounds, disabling location tracking',
-            )
-            return
-          }
-
-          appCtx.state.userLocation = geoLocation
-
-          // Fly to user location on first GPS fix if no active feature
-          const isViewingFeature = window.location.pathname.includes('/features/')
-          if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
-            hasReceivedFirstFix = true
-
-            // Calculate horizontal offset for panels already open
-            const currentHorizontalOffset = responsiveCtx.getAppMainOffsetX()
-
-            if (currentHorizontalOffset !== 0) {
-              const originalCenter = { lng: longitude, lat: latitude }
-              const centerInPx = map.project(originalCenter)
-
-              // Apply empirically derived adjustment factor for GPS centering
-              // This accounts for the difference between panel positioning and GPS fix centering
-              const adjustmentFactor = -0.0215
-              const pixelAdjustment = currentHorizontalOffset * adjustmentFactor
-
-              const adjustedPoint = new appCtx.maplibre.Point(
-                centerInPx.x + pixelAdjustment,
-                centerInPx.y,
-              )
-              const adjustedCenter = map.unproject(adjustedPoint)
-
-              map.flyTo({
-                center: [adjustedCenter.lng, adjustedCenter.lat],
-                zoom: 19,
-                duration: 2500,
-              })
-            } else {
-              // No offset needed, center normally
-              map.flyTo({
-                center: [longitude, latitude],
-                zoom: 19,
-                duration: 2500,
-              })
+            // Hong Kong bounding box check
+            const HK_BOUNDS = {
+              north: 22.4393278,
+              south: 22.1193278,
+              east: 114.3228131,
+              west: 114.0028131,
             }
-          }
-        },
-        error => {
-          // TODO: Add a fallback to the default location
-          console.error('Error getting geolocation:', error)
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity },
-      )
 
-      map.addControl(
-        new appCtx.maplibre.NavigationControl({
-          showZoom: false,
-          showCompass: true,
-          showPitch: true,
-          showRotate: true,
-        }),
-        'bottom-right',
-      )
+            const isInHongKong =
+              latitude >= HK_BOUNDS.south &&
+              latitude <= HK_BOUNDS.north &&
+              longitude >= HK_BOUNDS.west &&
+              longitude <= HK_BOUNDS.east
+
+            if (!isInHongKong) {
+              // User is outside Hong Kong - disable location tracking
+              console.warn(
+                'User location outside Hong Kong bounds, disabling location tracking',
+              )
+              return
+            }
+
+            appCtx.state.userLocation = geoLocation
+
+            // Fly to user location on first GPS fix if no active feature
+            const isViewingFeature = window.location.pathname.includes('/features/')
+            if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
+              hasReceivedFirstFix = true
+
+              // Calculate horizontal offset for panels already open
+              const currentHorizontalOffset = appCtx.getHorizontalOffset()
+
+              if (currentHorizontalOffset !== 0) {
+                const originalCenter = { lng: longitude, lat: latitude }
+                const centerInPx = map.project(originalCenter)
+
+                // Apply empirically derived adjustment factor for GPS centering
+                // This accounts for the difference between panel positioning and GPS fix centering
+                const adjustmentFactor = -0.0215
+                const pixelAdjustment = currentHorizontalOffset * adjustmentFactor
+
+                const adjustedPoint = new appCtx.maplibre.Point(
+                  centerInPx.x + pixelAdjustment,
+                  centerInPx.y,
+                )
+                const adjustedCenter = map.unproject(adjustedPoint)
+
+                map.flyTo({
+                  center: [adjustedCenter.lng, adjustedCenter.lat],
+                  zoom: 19,
+                  duration: 2500,
+                })
+              } else {
+                // No offset needed, center normally
+                map.flyTo({
+                  center: [longitude, latitude],
+                  zoom: 19,
+                  duration: 2500,
+                })
+              }
+            }
+          },
+          error => {
+            // TODO: Add a fallback to the default location
+            console.error('Error getting geolocation:', error)
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity },
+        )
+
+        map.addControl(
+          new appCtx.maplibre.NavigationControl({
+            showZoom: false,
+            showCompass: true,
+            showPitch: true,
+            showRotate: true,
+          }),
+          'bottom-right',
+        )
+      }
+    })
+
+    // LISTENERS : Add the listeners to the map
+    map.on('click', (e: MapMouseEvent & EventData) => {
+      e.originalEvent.preventDefault()
+      e.originalEvent.stopPropagation()
+      const target = e.originalEvent.target as HTMLElement
+      if (target.dataset.type === 'marker') {
+        const featureId = target.dataset.featureId
+        if (!featureId) return
+
+        // If card is already open, disable automatic centering to let FeaturePortal handle animation
+        const isCardAlreadyOpen = omniCtx.state.isCardOpen
+        omniCtx.handleFeatureSelection(featureId, {
+          focus: false, // Don't auto-center as card is already open,
+          openCard: true,
+          openCardDelay: 0,
+          navOptions: {
+            paramsToDrop: ['imageId'],
+          },
+        })
+      } else {
+        // Priority 1: Close feature card if open
+        if (omniCtx.state.isCardOpen) {
+          omniCtx.close()
+        }
+        // Priority 2: Close tray if open in search mode
+        else if (omniCtx.state.mode === 'search' && omniCtx.state.isTrayOpen) {
+          omniCtx.closeTray()
+        }
+        // Priority 3: Close panels if open
+        else if (appCtx.isLeftPanelOpen() || appCtx.isRightPanelOpen()) {
+          appCtx.closeAllPanels()
+        }
+      }
+    })
+    // TODO Add Attribution
+  }
+
+  void initialiseMap()
+
+  return () => {
+    isDisposed = true
+    detachMapUrlTracking?.()
+    detachMapUrlTracking = null
+
+    if (activeMapInstance) {
+      activeMapInstance.remove()
+      if (appCtx.map === activeMapInstance) {
+        appCtx.map = undefined
+      }
+      activeMapInstance = null
     }
-  })
-
-  // LISTENERS : Add the listeners to the map
-  appCtx.map?.on('click', e => {
-    e.originalEvent.preventDefault()
-    e.originalEvent.stopPropagation()
-    const target = e.originalEvent.target as HTMLElement
-    if (target.dataset.type === 'marker') {
-      const featureId = target.dataset.featureId
-      if (!featureId) return
-
-      // If card is already open, disable automatic centering to let FeaturePortal handle animation
-      const isCardAlreadyOpen = omniCtx.state.isCardOpen
-      omniCtx.handleFeatureSelection(featureId, {
-        focus: false, // Don't auto-center as card is already open,
-        openCard: true,
-        openCardDelay: 0,
-        navOptions: {
-          paramsToDrop: ['imageId'],
-        },
-      })
-    } else {
-      // Priority 1: Close feature card if open
-      if (omniCtx.state.isCardOpen) {
-        omniCtx.close()
-      }
-      // Priority 2: Close tray if open in search mode
-      else if (omniCtx.state.mode === 'search' && omniCtx.state.isTrayOpen) {
-        omniCtx.closeTray()
-      }
-      // Priority 3: Close panels if open
-      else if (responsiveCtx.isLeftPanelOpen() || responsiveCtx.isRightPanelOpen()) {
-        appCtx.closeAllPanels()
-      }
-    }
-  })
-  // TODO Add Attribution
+  }
 })
 
 onDestroy(() => {
@@ -524,15 +566,6 @@ $effect(() => {
       currentMapStyleVariant !== resolvedMapStyleVariant)
 
   if (!shouldApplyStyle || !map) {
-    if (typeof window !== 'undefined') {
-      console.debug('[MapCanvas] style update skipped', {
-        hasMap: Boolean(map),
-        activeStyleToken,
-        activeStyleKey,
-        currentMapStyleVariant,
-        resolvedMapStyleVariant,
-      })
-    }
     return
   }
 
@@ -549,11 +582,6 @@ $effect(() => {
         return
       }
 
-      console.debug('[MapCanvas] applying map style', {
-        currentMapStyleVariant,
-        nextMapStyleVariant: resolvedMapStyleVariant,
-        resolvedMapStyleEndpoint,
-      })
       map.setStyle(style)
     })
     .catch(error => {

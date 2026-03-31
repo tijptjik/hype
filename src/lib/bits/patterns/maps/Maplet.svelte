@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { fade } from 'svelte/transition'
-import { onMount } from 'svelte'
+import { onDestroy, onMount, tick } from 'svelte'
 // MapLibre
 import { addAddressMarker } from '$lib/map/markers'
 import { getCoordinates } from '$lib/client/services/geospatial'
@@ -15,7 +15,7 @@ import { Icon } from '$lib/bits'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
-import type { Marker, LngLatLike } from 'maplibre-gl'
+import type { LngLatLike, Map as MaplibreMap, Marker } from 'maplibre-gl'
 import type { Id, AddressMeta } from '$lib/types'
 type MapProps = {
   coordinates: number[]
@@ -50,6 +50,7 @@ let isMapLoaded = $state(false)
 let hasSyncedViewport = $state(false)
 let lastCoordinateKey = $state('')
 let activeStyleToken = $state<string | null>(null)
+let activeMapInstance: MaplibreMap | null = null
 
 // STATE : DERIVED
 let markedAddressLngLat: [number, number] | null = $state(null)
@@ -79,41 +80,87 @@ const activeStyleKey = $derived(`${resolvedMapStyleCode}:${activeLocale}`)
 let addressMarker: Marker | null = $state(null)
 let featureMarkerId: Id | null = $state(null)
 
-onMount(async () => {
-  // Wait for maplibre to be loaded globally
-  while (!appCtx.isMaplibreLoaded || !appCtx.maplibre) {
-    await new Promise(resolve => setTimeout(resolve, 10))
+onMount(() => {
+  let isDisposed = false
+
+  const initialiseMap = async (): Promise<void> => {
+    while (!isDisposed && (!appCtx.isMaplibreLoaded || !appCtx.maplibre)) {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+
+    if (isDisposed) {
+      return
+    }
+
+    await tick()
+
+    if (isDisposed || !(mapContainer instanceof HTMLDivElement)) {
+      return
+    }
+
+    const mapInstance = new appCtx.maplibre.Map({
+      container: mapContainer,
+      style: resolvedMapStyle,
+      center: mapProps.initialCenter ?? mapProps.coordinates,
+      zoom: 20,
+      hash: false,
+      attributionControl: false,
+      canvasContextAttributes: {
+        antialias: true,
+      },
+    })
+
+    if (isDisposed) {
+      mapInstance.remove()
+      return
+    }
+
+    activeMapInstance = mapInstance
+    appCtx.map = mapInstance
+
+    mapInstance.on('load', () => {
+      isMapLoaded = true
+    })
+
+    feature = new appCtx.maplibre.Marker({
+      color: '#F04D7F',
+      clickTolerance: 24,
+      draggable: mapProps.draggable ?? true,
+    })
+      .setLngLat(mapProps.coordinates)
+      .addTo(mapInstance)
+
+    // @ts-expect-error
+    feature.on('dragend', handleDragEnd)
+
+    activeStyleToken = activeStyleKey
   }
 
-  appCtx.map = new appCtx.maplibre.Map({
-    container: mapContainer,
-    style: resolvedMapStyle,
-    center: mapProps.initialCenter ?? mapProps.coordinates,
-    zoom: 20,
-    hash: false,
-    attributionControl: false,
-    canvasContextAttributes: {
-      antialias: true,
-    },
-  })
+  void initialiseMap()
 
-  // @ts-expect-error
-  appCtx.map.on('load', () => {
-    isMapLoaded = true
-  })
+  return () => {
+    isDisposed = true
+  }
+})
 
-  feature = new appCtx.maplibre.Marker({
-    color: '#F04D7F',
-    clickTolerance: 24,
-    draggable: mapProps.draggable ?? true,
-  })
-    .setLngLat(mapProps.coordinates)
-    .addTo(appCtx.map)
+onDestroy(() => {
+  if (addressMarker) {
+    addressMarker.remove()
+    addressMarker = null
+  }
 
-  // @ts-expect-error
-  feature.on('dragend', handleDragEnd)
+  if (feature) {
+    feature.remove()
+    feature = null
+  }
 
-  activeStyleToken = activeStyleKey
+  if (activeMapInstance) {
+    activeMapInstance.remove()
+    if (appCtx.map === activeMapInstance) {
+      appCtx.map = undefined
+    }
+    activeMapInstance = null
+  }
 })
 
 // EFFECTS :: ON UPDATE
