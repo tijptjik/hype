@@ -45,6 +45,7 @@ export * from './schema/property'
 // TASK SCHEMAS
 /* -------- */
 export * from './schema/task'
+export * from './schema/task.types'
 
 /* ----------------- */
 // IMAGE SCHEMAS

@@ -1,9 +1,9 @@
 // DRIZZLE
-import { eq, inArray, type SQL, sql } from 'drizzle-orm'
-// LIB
-import { isAdminRequest } from '../index'
+import { eq, type SQL, sql } from 'drizzle-orm'
 // API
 import { applyQueryFilters } from '$lib/api'
+import { toBooleanOrUndefined } from '$lib/api/services'
+import { isRelevantHubAdmin } from '$lib/api/services/authz'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -15,30 +15,39 @@ import {
 
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { getProjectIdforRoles, isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
 import { task } from '$lib/db/schema/index'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 import { toNormalizedImageRecord } from '$lib/db/services/image'
 // ZOD
-import { TaskAPI, TaskCollectionAPI } from '$lib/db/zod/schema/task'
+import {
+  TaskAdminProfileAPI,
+  TaskCardProfileAPI,
+  TaskDetailProfileAPI,
+  TaskListProfileAPI,
+} from '$lib/db/zod/schema/task'
 // ENUMS
 import { HierarchicalResource } from '$lib/enums'
 // TYPES
 import type {
-  UserRoleDisco,
-  Prisms,
   Database,
-  Id,
+  EntityResponse,
+  ListResponse,
+  Prisms,
   QueryParams,
-  TaskDB,
-  TaskDBNew,
-  TaskCollection,
-  Task,
-  TaskDBRaw,
   SessionUser,
+  Id,
+  TaskDB,
+  TaskDBRaw,
+  UserRoleDisco,
 } from '$lib/types'
+import type {
+  TaskEditorLayerOption,
+  TaskEntityByProfile,
+  TaskListByProfile,
+  TaskProfile,
+} from '$lib/db/zod/schema/task.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -48,11 +57,19 @@ import type {
 //    - taskCollectionWithRelations (const)
 //    - taskEntityWithRelations (const)
 //
-// 2. QUERY CONTEXT
-//    - getTaskQueryContext
-//    - getTaskEntityQueryContext
+// 2. PROFILE SHAPING
+//    - toTaskProfile
+//    - getTaskWithRelations
+//    - toListResponseShape
+//    - toEntityResponseShape
+//    - toResponseShape
 //
-// 3. ASSERTIONS
+// 3. QUERY CONTEXT
+//    - toTaskPrisms
+//    - toRequestedListState
+//    - toQueryConditions
+//
+// 4. ASSERTIONS
 //    - assertPermissionsToCreateTask
 //    - assertPermissionsToUpdateTask
 //    - assertPermissionsToDeleteTask
@@ -130,193 +147,59 @@ export const taskEntityWithRelations = {
 }
 
 // ═══════════════════════
-// 2. QUERY CONTEXT
+// 2. PROFILE SHAPING
 // ═══════════════════════
 
-/**
- * Get the query context for the task resource.
- * Tasks are first-class resources that inherit filtering through features → layers → projects → organisations.
- * Filters the query based on user roles, prisms, hub context, and query parameters.
- */
-export const getTaskQueryContext = (
-  db: Database,
-  user: SessionUser,
-  request: Request,
-  params: QueryParams,
-  userRoles: UserRoleDisco[],
-  prisms?: Prisms,
-) => {
-  // SETUP : By default, only show non-archived tasks,
-  // and disable isArchived filters from the query for non-superadmins.
-  let conditions: SQL<unknown>[] = []
-  const excludeColumns = ['isArchived']
+const taskProfiles = ['list', 'card', 'detail', 'admin'] as const
 
-  // NON-SUPERADMIN : Hide tasks which are archived
-  if (!isSuperAdmin(user)) {
-    // Tasks don't have isArchived, but their associated features might
-    // We'll handle this at the feature level if needed
-  }
-
-  // FILTER : Apply prism conditions for organisation, project filtering
-  if (prisms && db) {
-    conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms))
-  }
-
-  // PUBLIC : Tasks are admin-only resources, so public access is not allowed
-  if (!isAdminRequest(request)) {
-    // Tasks should only be accessible from admin interface
-    conditions.push(sql`false`) // Block all public access
-  } else if (!isSuperAdmin(user)) {
-    // ADMIN : List tasks where the user has a role in the task's project
-    const projectIds = getProjectIdforRoles(userRoles)
-    if (projectIds.length > 0) {
-      conditions.push(inArray(task.projectId, projectIds as Id[]))
-    } else {
-      conditions.push(sql`false`) // No access if no project roles
-    }
-  } else {
-    // SUPERADMIN : See all tasks
-    if (!(prisms && db)) {
-      conditions = [] // List all tasks without default filters
-    }
-  }
-
-  // Apply general query filters from params
-  if (Object.keys(params).length > 0) {
-    applyQueryFilters(task, params, conditions)
-  }
-
-  return { params, conditions, excludeColumns }
+type TaskResponseOptions = {
+  assignableLayers?: TaskEditorLayerOption[]
+  canReassignLayer?: boolean
 }
 
-/**
- * Get the query context for a single task.
- * Tasks are admin-only resources, so public access is not allowed.
- */
-export const getTaskEntityQueryContext = (
-  user: SessionUser,
-  request: Request,
-  params: QueryParams,
-  userRoles: UserRoleDisco[],
-) => {
-  const conditions: SQL<unknown>[] = []
-  const excludeColumns = ['isArchived']
+export const toTaskProfile = (
+  value: unknown,
+  fallback: TaskProfile,
+): TaskProfile =>
+  typeof value === 'string' && (taskProfiles as readonly string[]).includes(value)
+    ? (value as TaskProfile)
+    : fallback
 
-  // PUBLIC : Tasks are admin-only resources
-  if (!isAdminRequest(request)) {
-    conditions.push(sql`false`) // Block all public access
-  } else if (!isSuperAdmin(user)) {
-    // ADMIN : Access tasks where user has project role (direct relationship)
-    const projectIds = getProjectIdforRoles(userRoles)
-    if (projectIds.length > 0) {
-      conditions.push(inArray(task.projectId, projectIds as Id[]))
-    } else {
-      conditions.push(sql`false`)
-    }
-  }
-  // SUPERADMIN : No additional restrictions
-
-  // Apply general query filters from params
-  if (Object.keys(params).length > 0) {
-    applyQueryFilters(task, params, conditions)
-  }
-
-  return { params, conditions, excludeColumns }
-}
-
-// ═══════════════════════
-// 3. ASSERTIONS
-// ═══════════════════════
+export const getTaskWithRelations = (profile: TaskProfile) =>
+  profile === 'admin' ? taskEntityWithRelations : taskCollectionWithRelations
 
 /**
- * Asserts permissions to create a task.
- * Any logged in user can create a task.
+ * Shapes a paged task list into the standard list envelope expected by remote callers.
  */
-export const assertPermissionsToCreateTask = async (user: SessionUser) => {
-  const commonAssertions = [() => assertUserLoggedIn({ user })]
+export const toListResponseShape = async <P extends TaskProfile = 'list'>(
+  result: ListResponse<TaskDBRaw>,
+  profile: P = 'list' as P,
+): Promise<ListResponse<TaskListByProfile<P>>> => ({
+  ...result,
+  data: (await Promise.all(
+    result.data.map(taskRow => toResponseShape(taskRow, profile)),
+  )) as TaskListByProfile<P>[],
+})
 
-  const assertionError = runAssertions(...commonAssertions)
-  if (assertionError) return assertionError
-}
-
-/**
- * Asserts permissions to update a task.
- * Tasks can be updated by project maintainers or members who have access to the associated project.
- */
-export const assertPermissionsToUpdateTask = async (
-  db: Database,
-  user: SessionUser,
-  request: Request,
-  params: QueryParams,
-  userRoles: UserRoleDisco[],
-  refId: Id,
-  taskData?: TaskDB,
-) => {
-  const commonAssertions = [
-    () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
-    () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id'),
-  ]
-
-  // Get project ID through feature hierarchy
-  let projectId: Id
-  if (taskData?.projectId) {
-    projectId = taskData.projectId
-  } else {
-    // Fetch task first to get featureId, then get projectId
-    const taskRecord = await db.query.task.findFirst({
-      where: eq(task.id, params.id as Id),
-      columns: { projectId: true },
-    })
-    if (!taskRecord) {
-      throw new Error('Task not found')
-    }
-    projectId = taskRecord.projectId
-  }
-
-  const contextAssertion = () =>
-    assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
-
-  const assertionError = runAssertions(...commonAssertions, contextAssertion)
-  if (assertionError) return assertionError
-}
-
-/**
- * Asserts permissions to delete a task.
- * Uses same permissions as update - project maintainers or members.
- */
-export const assertPermissionsToDeleteTask = async (
-  db: Database,
-  user: SessionUser,
-  request: Request,
-  params: QueryParams,
-  userRoles: UserRoleDisco[],
-  refId: Id,
-  taskData?: TaskDB,
-) => {
-  return assertPermissionsToUpdateTask(
-    db,
-    user,
-    request,
-    params,
-    userRoles,
-    refId,
-    taskData,
-  )
-}
-
-// ═══════════════════════
-// 4. UTILS :: RESPONSE SHAPING
-// ═══════════════════════
+export const toEntityResponseShape = async <P extends TaskProfile = 'detail'>(
+  row: TaskDBRaw | null,
+  profile: P = 'detail' as P,
+  options: TaskResponseOptions = {},
+): Promise<EntityResponse<TaskEntityByProfile<P>>> => ({
+  data: row
+    ? ((await toResponseShape(row, profile, options)) as TaskEntityByProfile<P>)
+    : null,
+})
 
 /**
  * Transform raw task data from database to API response format
  * Converts i18n arrays to locale maps for proper API structure
  */
-export const toResponseShape = async (
+export const toResponseShape = async <P extends TaskProfile = TaskProfile>(
   data: TaskDBRaw,
-  isCollection: boolean = false,
-): Promise<Task | TaskCollection> => {
+  profile: P = 'detail' as P,
+  options: TaskResponseOptions = {},
+): Promise<TaskEntityByProfile<P>> => {
   // Transform feature properties if they exist
   const transformedFeature = data.feature
     ? {
@@ -362,7 +245,199 @@ export const toResponseShape = async (
           ...taskImage,
           image: taskImage.image ? toNormalizedImageRecord(taskImage.image) : null,
         })) || [],
+    ...(profile === 'admin'
+      ? {
+          assignableLayers: options.assignableLayers ?? [],
+          canReassignLayer: options.canReassignLayer ?? false,
+        }
+      : {}),
   }
 
-  return (isCollection ? TaskCollectionAPI : TaskAPI).parse(transformedData)
+  if (profile === 'admin') {
+    return TaskAdminProfileAPI.parse(transformedData) as TaskEntityByProfile<P>
+  }
+  if (profile === 'detail') {
+    return TaskDetailProfileAPI.parse(transformedData) as TaskEntityByProfile<P>
+  }
+  if (profile === 'card') {
+    return TaskCardProfileAPI.parse(transformedData) as TaskEntityByProfile<P>
+  }
+  return TaskListProfileAPI.parse(transformedData) as TaskEntityByProfile<P>
+}
+
+// ═══════════════════════
+// 3. QUERY CONTEXT
+// ═══════════════════════
+
+export const toTaskPrisms = (prisms?: Prisms): Prisms | undefined => {
+  if (!prisms) return undefined
+
+  return {
+    organisation: Array.isArray(prisms.organisation) ? prisms.organisation : [],
+    project: Array.isArray(prisms.project) ? prisms.project : [],
+    layer: [],
+  }
+}
+
+export const toRequestedListState = (params: Partial<TaskDB>) => ({
+  isReviewed: toBooleanOrUndefined(params.isReviewed),
+})
+
+export const toQueryConditions = (
+  db: Database,
+  user: SessionUser,
+  isAdminRequest: boolean,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+  prisms?: Prisms,
+  resourceHubId?: string | null,
+): {
+  filtersToApply: QueryParams
+  conditions: SQL<unknown>[]
+  excludeColumns: string[]
+} => {
+  const conditions: SQL<unknown>[] = []
+  const excludeColumns: string[] = []
+  const organisationIds =
+    prisms?.organisation?.filter(
+      (organisationId): organisationId is Id =>
+        typeof organisationId === 'string' && organisationId.length > 0,
+    ) ?? []
+  const projectIds =
+    prisms?.project?.filter(
+      (projectId): projectId is Id =>
+        typeof projectId === 'string' && projectId.length > 0,
+    ) ?? []
+
+  if (prisms) {
+    conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms))
+  }
+
+  if (!isAdminRequest) {
+    conditions.push(sql`false`)
+  } else if (!user.superAdmin && !isRelevantHubAdmin(userRoles, resourceHubId)) {
+    if (organisationIds.length === 0 && projectIds.length === 0) {
+      conditions.push(sql`false`)
+      return { filtersToApply: params, conditions, excludeColumns }
+    }
+
+    const ownedOrganisationIds = userRoles
+      .filter(
+        (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
+          role.type === 'organisation' &&
+          role.role === 'owner' &&
+          typeof role.organisationId === 'string',
+      )
+      .map(role => role.organisationId as Id)
+    const managedProjectIds = userRoles
+      .filter(
+        (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
+          role.type === 'project' &&
+          typeof role.projectId === 'string' &&
+          (role.role === 'owner' || role.role === 'maintainer'),
+      )
+      .map(role => role.projectId)
+
+    const allowsOwnedOrganisationScope =
+      organisationIds.length > 0 &&
+      organisationIds.every(organisationId =>
+        ownedOrganisationIds.includes(organisationId),
+      )
+    const allowsManagedProjectScope =
+      projectIds.length > 0 &&
+      projectIds.every(projectId => managedProjectIds.includes(projectId))
+
+    if (!allowsOwnedOrganisationScope && !allowsManagedProjectScope) {
+      conditions.push(sql`false`)
+    }
+  }
+
+  if (Object.keys(params).length > 0) {
+    applyQueryFilters(task, params, conditions)
+  }
+
+  return {
+    filtersToApply: params,
+    conditions,
+    excludeColumns,
+  }
+}
+
+// ═══════════════════════
+// 4. ASSERTIONS
+// ═══════════════════════
+
+/**
+ * Asserts permissions to create a task.
+ * Any logged in user can create a task.
+ */
+export const assertPermissionsToCreateTask = async (user: SessionUser) => {
+  const commonAssertions = [() => assertUserLoggedIn(user)]
+
+  const assertionError = runAssertions(...commonAssertions)
+  if (assertionError) return assertionError
+}
+
+/**
+ * Asserts permissions to update a task.
+ * Tasks can be updated by project maintainers or members who have access to the associated project.
+ */
+export const assertPermissionsToUpdateTask = async (
+  db: Database,
+  user: SessionUser,
+  request: Request,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+  refId: Id,
+  taskData?: TaskDB,
+) => {
+  const commonAssertions = [
+    () => assertUserLoggedIn(user),
+    () => assertAdminRequest(request),
+    () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id'),
+  ]
+
+  let projectId: Id
+  if (taskData?.projectId) {
+    projectId = taskData.projectId
+  } else {
+    const taskRecord = await db.query.task.findFirst({
+      where: eq(task.id, params.id as Id),
+      columns: { projectId: true },
+    })
+    if (!taskRecord) {
+      throw new Error('Task not found')
+    }
+    projectId = taskRecord.projectId
+  }
+
+  const contextAssertion = () =>
+    assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId)
+
+  const assertionError = runAssertions(...commonAssertions, contextAssertion)
+  if (assertionError) return assertionError
+}
+
+/**
+ * Asserts permissions to delete a task.
+ * Uses same permissions as update - project maintainers or members.
+ */
+export const assertPermissionsToDeleteTask = async (
+  db: Database,
+  user: SessionUser,
+  request: Request,
+  params: QueryParams,
+  userRoles: UserRoleDisco[],
+  refId: Id,
+  taskData?: TaskDB,
+) => {
+  return assertPermissionsToUpdateTask(
+    db,
+    user,
+    request,
+    params,
+    userRoles,
+    refId,
+    taskData,
+  )
 }

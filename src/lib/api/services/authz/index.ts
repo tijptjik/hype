@@ -154,6 +154,12 @@ export {
   ensureFeatureCommandAllowed,
 } from './feature'
 export {
+  toTaskAuthActor,
+  authorizeTaskListForContext,
+  authorizeTaskReadForProbe,
+  authorizeTaskReassignForProbe,
+} from './task'
+export {
   toLayerAuthActor,
   resolveLayerListReadPolicy,
   resolveLayerListReadScope,

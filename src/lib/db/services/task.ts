@@ -1,7 +1,14 @@
 // DRIZZLE
-import { eq, and, ne, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
-import { task, taskImage, image, featureImage } from '$lib/db/schema/index'
+import {
+  featureI18n,
+  image,
+  featureImage,
+  organisation,
+  task,
+  taskImage,
+} from '$lib/db/schema/index'
 // CRUD
 import { insert, update, del } from '../crud'
 // SERVICES
@@ -12,15 +19,20 @@ import { uploadAndProcessImage } from '$lib/client/services/image'
 // FEATURE
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
+// DB
+import { firstOrNull, toOrderByWithLocalizedFields } from '..'
 // TYPES
 import type {
-  TaskNew,
-  TaskDB,
-  TaskDBPartial,
-  TaskCreation,
-  Id,
   Database,
+  Id,
+  ListResponse,
+  Locale,
+  QueryParams,
+  TaskCreation,
+  TaskDB,
   TaskDBRaw,
+  TaskDBPartial,
+  TaskNew,
 } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
@@ -35,6 +47,7 @@ import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // 1. CRUD :: CORE OPERATIONS
 //    - listTasks
 //    - getTask
+//    - probeTaskQuery
 //    - createTask
 //    - updateTask
 //
@@ -68,17 +81,103 @@ export const listTasks = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-): Promise<TaskDBRaw[]> => {
-  // Apply hub filtering - always needed as some resources are hub-exclusive
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    filtersToApply?: QueryParams
+    locale?: Locale
+  },
+): Promise<ListResponse<TaskDBRaw>> => {
+  const startedAt = Date.now()
+
+  const scopedConditions = [...conditions]
   const hubFilter = getTaskHubFilter(db, opts)
   if (hubFilter) {
-    conditions = [...conditions, hubFilter]
+    scopedConditions.push(hubFilter)
   }
 
-  return await db.query.task.findMany({
+  if (query?.q) {
+    const search = query.q.toLowerCase()
+    const searchConditions: SQL<unknown>[] = [
+      sql`("task"."message" IS NOT NULL AND lower("task"."message") like ${`%${search}%`})`,
+      sql`EXISTS (
+        SELECT 1 FROM "featureI18n"
+        WHERE "featureI18n"."featureId" = "task"."featureId"
+        AND lower("featureI18n"."title") like ${`%${search}%`}
+      )`,
+    ]
+
+    const combinedSearchCondition = or(...searchConditions)
+    if (combinedSearchCondition) {
+      scopedConditions.push(combinedSearchCondition)
+    }
+  }
+
+  const sortBy = sorting?.sortBy || 'modifiedAt'
+  const sortOrder = sorting?.sortOrder || 'desc'
+  const orderBy =
+    sortBy === 'title'
+      ? toOrderByWithLocalizedFields({
+          db,
+          locale: query?.locale,
+          sortBy,
+          sortOrder,
+          fallbackColumn: task.modifiedAt,
+          baseTable: task,
+          localizedSortColumns: {
+            title: featureI18n.title,
+          },
+          i18nTable: featureI18n,
+          parentIdColumn: task.featureId,
+          foreignKeyColumn: featureI18n.featureId,
+          localeColumn: featureI18n.locale,
+        })
+      : [
+          sortOrder === 'asc'
+            ? asc(
+                (task[sortBy as keyof typeof task] as
+                  | typeof task.modifiedAt
+                  | undefined) ?? task.modifiedAt,
+              )
+            : desc(
+                (task[sortBy as keyof typeof task] as
+                  | typeof task.modifiedAt
+                  | undefined) ?? task.modifiedAt,
+              ),
+          desc(task.modifiedAt),
+        ]
+
+  const whereClause = scopedConditions.length > 0 ? and(...scopedConditions) : undefined
+  const data = await db.query.task.findMany({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
+    where: whereClause,
+    limit: pagination?.limit,
+    offset: pagination?.offset,
+    orderBy,
   })
+
+  const countQuery = db.select({ count: sql<number>`count(*)` }).from(task)
+  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
+  const totalCount = Number(totalRows[0]?.count || 0)
+  const offset = pagination?.offset ?? 0
+  const hasMore = offset + data.length < totalCount
+  const nextOffset = hasMore ? offset + data.length : null
+  const durationMs = Date.now() - startedAt
+
+  return {
+    data: data as TaskDBRaw[],
+    limit: pagination?.limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters: query?.filtersToApply,
+    q: query?.q,
+    durationMs,
+  }
 }
 
 /**
@@ -89,7 +188,7 @@ export const listTasks = async (
  * @param opts - Hub filtering options
  * @returns Single task or undefined
  */
-export const getTask = async (
+export const loadTask = async (
   db: Database,
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
@@ -101,11 +200,38 @@ export const getTask = async (
     conditions = [...conditions, hubFilter]
   }
 
-  return await db.query.task.findFirst({
+  return (await db.query.task.findFirst({
     with: withRelations,
     where: conditions.length > 0 ? and(...conditions) : undefined,
-  })
+  })) as TaskDBRaw | undefined
 }
+
+/**
+ * Probes minimal task fields required for read authorization decisions.
+ * Used to evaluate access before hydrating the full task relation graph.
+ */
+export const probeTaskQuery = async (
+  db: Database,
+  params: { ref: string },
+): Promise<{
+  id: string
+  organisationId: string
+  projectId: string
+  resourceHubId: string | null
+} | null> =>
+  firstOrNull(
+    await db
+      .select({
+        id: task.id,
+        organisationId: task.organisationId,
+        projectId: task.projectId,
+        resourceHubId: organisation.hubId,
+      })
+      .from(task)
+      .innerJoin(organisation, eq(task.organisationId, organisation.id))
+      .where(eq(task.id, params.ref))
+      .limit(1),
+  )
 
 /**
  * Creates a new task in the database
@@ -355,7 +481,8 @@ export const createTaskWithDependencies = async (
 
     // Remove the feature object from taskData since we now have featureId
     // and task validation doesn't need the full feature object
-    delete taskData.feature
+    const { feature: _feature, ...taskDataWithoutFeature } = taskData
+    taskData = taskDataWithoutFeature as TaskCreation
   }
 
   // Step 3: Validate that all tasks have valid featureIds
@@ -370,7 +497,7 @@ export const createTaskWithDependencies = async (
   }
 
   // Step 4: Create the task
-  const createdTask = await createTask(db, taskToCreate)
+  const createdTask = await createTask(db, taskToCreate as TaskNew)
 
   // Step 5: Process images if provided
   if (images && images.length > 0) {

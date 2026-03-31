@@ -47,6 +47,7 @@ import type {
   CurrentUser,
   UserPreferences,
 } from '$lib/db/zod/schema/user.types'
+import type { UserRoleDisco } from '$lib/types'
 
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM
@@ -445,10 +446,12 @@ export class AdminCtx {
   get tasksQueryKey() {
     return [
       FirstClassResource.task,
-      this.appCtx.state.prisms.organisation,
-      this.appCtx.state.prisms.project,
+      this.getTaskListPrisms().organisation,
+      this.getTaskListPrisms().project,
       this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
       this.appCtx.state.viewFilters[FirstClassResource.task].type,
+      this.appCtx.state.viewSorting.task.sortBy,
+      this.appCtx.state.viewSorting.task.sortOrder,
     ]
   }
 
@@ -463,6 +466,46 @@ export class AdminCtx {
   // ═══════════════════════
   // ADMIN QUERY :: FUNCTIONS
   // ═══════════════════════
+
+  /**
+   * Builds the effective task prism scope for admin task queries.
+   *
+   * @returns Active prisms, or role-derived fallback prisms when the current admin scope is empty.
+   */
+  private getTaskListPrisms(): { organisation: string[]; project: string[] } {
+    const activeOrganisationPrisms = this.appCtx.state.prisms.organisation
+    const activeProjectPrisms = this.appCtx.state.prisms.project
+
+    if (activeOrganisationPrisms.length > 0 || activeProjectPrisms.length > 0) {
+      return {
+        organisation: activeOrganisationPrisms,
+        project: activeProjectPrisms,
+      }
+    }
+
+    const userRoles = Array.isArray(this.appCtx.user?.roles)
+      ? (this.appCtx.user.roles as UserRoleDisco[])
+      : []
+
+    return {
+      organisation: userRoles
+        .filter(
+          (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
+            role.type === 'organisation' &&
+            role.role === 'owner' &&
+            typeof role.organisationId === 'string',
+        )
+        .map(role => role.organisationId),
+      project: userRoles
+        .filter(
+          (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
+            role.type === 'project' &&
+            typeof role.projectId === 'string' &&
+            (role.role === 'owner' || role.role === 'maintainer'),
+        )
+        .map(role => role.projectId),
+    }
+  }
 
   /**
    * Fetches organisations for the admin view and stores list metadata for later UI decisions.
@@ -549,19 +592,37 @@ export class AdminCtx {
   }
 
   tasksQueryFn = async () => {
-    const result = await getTasks({
-      conditions: {
-        isReviewed: this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
-        type: this.appCtx.state.viewFilters[FirstClassResource.task].type,
-      },
-      prisms: {
-        organisation: this.appCtx.state.prisms.organisation,
-        project: this.appCtx.state.prisms.project,
-      },
-      meta: { isAdminRequest: true },
-    })
+    const taskPrisms = this.getTaskListPrisms()
+    try {
+      const result = await getTasks({
+        conditions: {
+          isReviewed: this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
+          type: this.appCtx.state.viewFilters[FirstClassResource.task].type,
+        },
+        prisms: taskPrisms,
+        sorting: this.appCtx.state.viewSorting.task,
+        meta: { isAdminRequest: true },
+      })
+      this.appCtx.setListQueryMeta(this.tasksQueryKey, result)
+      return result.data
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'status' in error &&
+        error.status === 403
+      ) {
+        this.appCtx.setListQueryMeta(this.tasksQueryKey, {
+          data: [],
+          totalCount: 0,
+          hasMore: false,
+          nextOffset: null,
+        })
+        return []
+      }
 
-    return [...result.data].reverse()
+      throw error
+    }
   }
 
   propertiesQueryFn = async () => {
@@ -1709,13 +1770,13 @@ export class AdminCtx {
       ) ??
       null
     const project =
-      task.project ??
+      (task.project as Project | null | undefined) ??
       this.appCtx.state.resources.project.find(
         project => project.id === task.projectId,
       ) ??
       null
     const organisation =
-      task.organisation ??
+      (task.organisation as unknown as Organisation | null | undefined) ??
       this.appCtx.state.resources.organisation.find(
         organisation => organisation.id === task.organisationId,
       ) ??
@@ -2153,6 +2214,10 @@ export class AdminCtx {
     }
     if (resource === FirstClassResource.feature) {
       await this.appCtx.refreshFeatures(false)
+      return
+    }
+    if (resource === FirstClassResource.task) {
+      await this.appCtx.refreshTasks(false)
       return
     }
     if (resource === FirstClassResource.hub) {

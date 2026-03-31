@@ -370,6 +370,11 @@ export function useAdminHeaderModel(
   const customTaskActionContent = $derived(headerCtrl.state.meta.taskActionContent)
   const customCrumbs = $derived(headerCtrl.state.meta.crumbs)
   const titleMenuMetaItems = $derived(headerCtrl.state.meta.titleMenuItems)
+  const isTaskHeader = $derived.by(
+    () =>
+      headerResourceType === FirstClassResource.task ||
+      adminCtx.activeResourceType === FirstClassResource.task,
+  )
   const layoutMode = $derived(
     headerResourceType ? appCtx.state.ui.layoutMode[headerResourceType] : 'card',
   )
@@ -759,11 +764,12 @@ export function useAdminHeaderModel(
   })
 
   const titleMenuAction = $derived.by(() => ({
-    isVisible: titleMenuItems.length > 0,
+    // Tasks never expose title-menu actions, even if shared header state is stale.
+    isVisible: !isTaskHeader && titleMenuItems.length > 0,
     ariaLabel: resolvedHeaderTitle
       ? `${resolvedHeaderTitle} actions`
       : 'Header actions',
-    items: titleMenuItems,
+    items: isTaskHeader ? [] : titleMenuItems,
   }))
 
   const titleConfig = $derived.by(() => ({
@@ -774,16 +780,8 @@ export function useAdminHeaderModel(
     crumbs: customCrumbs.length > 0 ? customCrumbs : syncCrumbs,
     menuAction: titleMenuAction,
   }))
-  const inlineViewActionContent = $derived.by(() =>
-    headerResourceType === FirstClassResource.task && !isIndex
-      ? headerCtrl.state.layout.controlBar
-      : null,
-  )
-  const renderedControlBar = $derived.by(() =>
-    headerResourceType === FirstClassResource.task && !isIndex
-      ? null
-      : headerCtrl.state.layout.controlBar,
-  )
+  const inlineViewActionContent = $derived.by(() => null)
+  const renderedControlBar = $derived.by(() => headerCtrl.state.layout.controlBar)
 
   // ---
   /********************

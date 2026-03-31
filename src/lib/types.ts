@@ -16,14 +16,14 @@ import {
 } from './enums'
 // ZOD SCHEMAS
 import type {
-  TaskAPI,
-  TaskBase,
-  TaskBaseRaw,
-  TaskCollectionAPI,
-  TaskInsert,
-  TaskInsertAPI,
-  TaskUpdate,
-  TaskUpdateAPI,
+  Task,
+  TaskCollection,
+  TaskDB,
+  TaskDBNew,
+  TaskDBPartial,
+  TaskDBRaw,
+  TaskNew,
+  TaskPartial,
 } from './db/zod'
 import type {
   Hub,
@@ -2164,15 +2164,16 @@ export type ReviewOutcome = `${TaskReviewOutcome}`
 // TASKS :: DB
 /* -------- */
 
-export type TaskDB = z.infer<typeof TaskBase>
-export type TaskDBRaw = z.infer<typeof TaskBaseRaw>
-export type TaskDBNew = z.infer<typeof TaskInsert>
-export type TaskDBPartial = z.infer<typeof TaskUpdate>
-
-export type Task = z.infer<typeof TaskAPI>
-export type TaskCollection = z.infer<typeof TaskCollectionAPI>
-export type TaskNew = z.infer<typeof TaskInsertAPI>
-export type TaskPartial = z.infer<typeof TaskUpdateAPI>
+export type {
+  Task,
+  TaskCollection,
+  TaskDB,
+  TaskDBNew,
+  TaskDBPartial,
+  TaskDBRaw,
+  TaskNew,
+  TaskPartial,
+} from './db/zod/schema/task.types'
 
 /* ----------------- */
 // SVELTE : PROPS

@@ -554,14 +554,36 @@ export class AppCtx {
   // QUERY KEYS
   // ═══════════════════════
 
+  private getRoleScopeQueryKey = (): string => {
+    const userId = this.user?.id ?? 'anonymous'
+    const roles = Array.isArray(this.user?.roles) ? this.user.roles : []
+
+    const roleSignature = roles
+      .map(role => {
+        if (role.type === 'organisation') {
+          return `organisation:${role.organisationId}:${role.role}`
+        }
+        if (role.type === 'project') {
+          return `project:${role.projectId}:${role.role}`
+        }
+        return `hub:${role.hubId}:${role.role}`
+      })
+      .sort((left, right) => left.localeCompare(right))
+      .join('|')
+
+    return `${userId}::${roleSignature}`
+  }
+
   organisationsQueryKey = () => [
     FirstClassResource.organisation,
+    this.getRoleScopeQueryKey(),
     this.isAdmin(),
     this.state.viewSorting.organisation.sortBy,
     this.state.viewSorting.organisation.sortOrder,
   ]
   projectsQueryKey = () => [
     FirstClassResource.project,
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
     this.isAdmin(),
     this.state.viewSorting.project.sortBy,
@@ -569,6 +591,7 @@ export class AppCtx {
   ]
   layersQueryKey = () => [
     FirstClassResource.layer,
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
     this.state.prisms.project,
     this.isAdmin(),
@@ -577,6 +600,7 @@ export class AppCtx {
   ]
   featuresQueryKey = () => [
     FirstClassResource.feature,
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
     this.state.prisms.project,
     this.state.prisms.layer,
@@ -586,6 +610,7 @@ export class AppCtx {
   ]
   propertiesQueryKey = () => [
     'property',
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
     this.state.prisms.project,
   ]
@@ -1250,6 +1275,11 @@ export class AppCtx {
       this.placeCtx.setNeighbourhoodFeatures(
         this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
       )
+      return
+    }
+
+    if (resource === FirstClassResource.task) {
+      this.state.resources.task = entities as Task[]
       return
     }
 

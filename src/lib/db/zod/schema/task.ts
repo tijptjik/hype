@@ -5,6 +5,7 @@ import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'driz
 // SCHEMA
 import { task, taskImage } from '$lib/db/schema/index'
 // ZOD SCHEMAS
+import { ListQueryParamsSchema } from './api'
 import { UserBasic } from './user'
 import { ImageBase } from './image'
 import {
@@ -13,6 +14,7 @@ import {
   FeatureI18nBase,
   FeaturePropertyAPI,
 } from './feature'
+import { LayerI18nRecord } from './layer'
 import { ProjectBase, ProjectI18nBase } from './project'
 import { OrganisationBase, OrganisationI18nBase } from './organisation'
 import {
@@ -40,12 +42,24 @@ import { getLocales } from '..'
 // 2. INTERMEDIATE RAW SCHEMAS
 //    - TaskBaseRaw
 //
-// 3. REMOTE PROFILE / API SCHEMAS
+// 3. LEGACY API SCHEMAS
 //    - TaskCollectionAPI
 //    - TaskAPI
 //    - TaskInsertAPI
 //    - TaskUpdateAPI
 //    - TaskImageUpdateAPI
+//
+// 4. REMOTE TASK SCHEMAS
+//    - TaskRemoteMetaSchema
+//    - GetTaskEditorDataSchema
+//    - GetTasksSchema
+//    - ReviewTaskSchema
+//    - ReassignTaskLayerSchema
+//    - TaskEditorLayerOptionSchema
+//    - TaskEditorDataSchema
+//    - SubmitMissingReportSchema
+//    - SubmitNewFeatureSchema
+//    - SubmitNewPhotosSchema
 
 // ═══════════════════════
 // 1. DB / RELATIONAL PRIMITIVES
@@ -120,10 +134,12 @@ export const TaskBaseRaw = TaskBase.extend({
 })
 
 // ═══════════════════════
-// 3. REMOTE PROFILE / API SCHEMAS
+// 3. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const TaskCollectionAPI = TaskBase.extend({
+export const TaskProfile = z.enum(['list', 'card', 'detail', 'admin'])
+
+export const TaskListProfileAPI = TaskBase.extend({
   organisation: OrganisationBase.extend({
     i18n: getLocales(OrganisationI18nBase),
   }),
@@ -144,7 +160,18 @@ export const TaskCollectionAPI = TaskBase.extend({
   reviewer: UserBasic.optional().nullable(),
 })
 
-export const TaskAPI = TaskBase.extend({
+export const TaskCardProfileAPI = TaskListProfileAPI
+
+export const TaskDetailProfileAPI = TaskListProfileAPI
+
+export const TaskEditorLayerOptionSchema = z.object({
+  id: z.string().min(1),
+  code: z.string().nullable(),
+  projectId: z.string().min(1),
+  i18n: getLocales(LayerI18nRecord),
+})
+
+export const TaskAdminProfileAPI = TaskBase.extend({
   organisation: OrganisationBase.extend({
     i18n: getLocales(OrganisationI18nBase),
   }),
@@ -175,7 +202,13 @@ export const TaskAPI = TaskBase.extend({
     .optional(),
   contributor: UserBasic.optional().nullable(),
   reviewer: UserBasic.optional().nullable(),
+  assignableLayers: z.array(TaskEditorLayerOptionSchema).default([]),
+  canReassignLayer: z.boolean().default(false),
 })
+
+export const TaskCollectionAPI = TaskListProfileAPI
+
+export const TaskAPI = TaskAdminProfileAPI
 
 export const TaskInsertAPI = z.discriminatedUnion('type', [
   // newFeature tasks can have any raw feature data - validation happens during feature creation
@@ -210,4 +243,103 @@ export const TaskUpdateAPI = TaskUpdate.extend({
 export const TaskImageUpdateAPI = TaskImageUpdate.extend({
   task: TaskBase.optional(),
   image: ImageBase.optional(),
+})
+
+// ═══════════════════════
+// 4. REMOTE TASK SCHEMAS
+// ═══════════════════════
+
+const TaskUploadFileSchema = z.custom<File>(value => value instanceof File, {
+  message: 'Expected File',
+})
+
+export const TaskRemoteMetaSchema = z
+  .object({
+    isAdminRequest: z.boolean().optional(),
+    profile: TaskProfile.optional(),
+  })
+  .optional()
+
+export const GetTaskEditorDataSchema = z.object({
+  id: z.string().min(1),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const GetTasksSchema = ListQueryParamsSchema.extend({
+  conditions: z
+    .object({
+      isReviewed: z.boolean().nullable().optional(),
+      type: z
+        .enum(Object.values(TaskType) as [string, ...string[]])
+        .nullable()
+        .optional(),
+    })
+    .optional(),
+  prisms: z
+    .object({
+      organisation: z.array(z.string()).optional(),
+      project: z.array(z.string()).optional(),
+    })
+    .optional(),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const ReviewTaskSchema = z.object({
+  id: z.string().min(1),
+  action: z.enum([
+    'reject',
+    'accept',
+    'acceptAll',
+    'acceptClassified',
+    'setIntangible',
+    'setUnpublished',
+    'setArchived',
+  ]),
+  reviewReason: z.string().trim().optional(),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const ReassignTaskLayerSchema = z.object({
+  id: z.string().min(1),
+  layerId: z.string().min(1),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const TaskEditorDataSchema = z.object({
+  task: TaskAPI,
+  assignableLayers: z.array(TaskEditorLayerOptionSchema),
+  canReassignLayer: z.boolean(),
+})
+
+export const SubmitMissingReportSchema = z.object({
+  featureId: z.string().min(1),
+  layerId: z.string().min(1),
+  projectId: z.string().min(1),
+  organisationId: z.string().min(1),
+  reason: z.string().trim(),
+  photos: z.array(TaskUploadFileSchema),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const SubmitNewFeatureSchema = z.object({
+  task: z.object({
+    layerId: z.string().min(1),
+    organisationId: z.string().min(1),
+    projectId: z.string().min(1),
+    contributorId: z.string().min(1),
+    type: z.literal('newFeature'),
+    feature: z.any(),
+    featureId: z.string().min(1).optional(),
+  }),
+  photos: z.array(TaskUploadFileSchema),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const SubmitNewPhotosSchema = z.object({
+  featureId: z.string().min(1),
+  layerId: z.string().min(1),
+  projectId: z.string().min(1),
+  organisationId: z.string().min(1),
+  photos: z.array(TaskUploadFileSchema),
+  meta: TaskRemoteMetaSchema,
 })

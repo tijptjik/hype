@@ -3,7 +3,12 @@
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
-import { createSelectFilter, createToggleFilter } from '$lib/client/services/filters'
+import {
+  createSelectFilter,
+  createSortable,
+  createSortables,
+  createToggleFilter,
+} from '$lib/client/services/filters'
 // BITS PATTERNS
 import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '$lib/bits'
 // COMPONENTS
@@ -57,6 +62,13 @@ const filters = {
     },
   ],
 } satisfies ResourceControlBarConfig
+
+const sortables = createSortables([
+  createSortable('modifiedAt', m.sort__updated()),
+  createSortable('createdAt', m.sort__age()),
+  createSortable('title', m.field_name()),
+  createSortable('type', m.filters__type()),
+])
 
 // CONTEXT
 const adminCtx = getAdminCtx()
@@ -115,6 +127,7 @@ $effect(() => {
       resource: FirstClassResource.task,
       count: entities.length,
       filters,
+      sortables,
     },
     {
       isVisible: adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.task],

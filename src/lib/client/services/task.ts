@@ -8,10 +8,11 @@ import {
 } from '$lib/api/server/tasks.remote'
 // TYPES
 import type { Id, NewFeatureTask, Task } from '$lib/types'
+import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
 import type {
+  ReviewTaskInput,
   TaskEditorLayerOption,
-  TaskReviewUiAction,
-} from '$lib/bits/patterns/tasks'
+} from '$lib/db/zod/schema/task.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 import type { ImageUpload } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
@@ -90,7 +91,7 @@ const getReviewAction = (reviewData: {
   type: string
   reviewOutcome: string
   reviewAction: string
-}): string => {
+}): ReviewTaskInput['action'] => {
   if (reviewData.type === 'newFeature') {
     return reviewData.reviewOutcome === 'rejected' ? 'reject' : 'accept'
   }
@@ -155,13 +156,9 @@ export const mergeResolvedTaskFeature = (
  * @returns Effective layer ID backing the task editor state
  */
 export const getEffectiveTaskLayerId = (
-  task: Pick<Task, 'feature' | 'layerId'>,
+  task: Pick<Task, 'feature'>,
   resolvedFeature?: Pick<Feature, 'layerId'> | null,
-): Id | null =>
-  (resolvedFeature?.layerId ??
-    task.feature?.layerId ??
-    task.layerId ??
-    null) as Id | null
+): Id | null => (resolvedFeature?.layerId ?? task.feature?.layerId ?? null) as Id | null
 
 /**
  * Resolves the currently selected layer from assignable options first, then cache fallback.
@@ -251,9 +248,9 @@ export const syncAssignedTaskLayerCache = (params: {
     {
       id: params.layerId as Id,
       code: selectedLayer.code,
-      projectId: (selectedLayer.projectId ?? params.task.projectId) as Id,
+      projectId: selectedLayer.projectId as Id,
       i18n: selectedLayer.i18n,
-    } as Layer,
+    } as unknown as Layer,
   )
 }
 

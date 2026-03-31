@@ -36,10 +36,10 @@ export function getRowRootClass({
   className = '',
 }: RowRootClassParams): string {
   return cx(
-    'bits-theme relative grid items-center gap-4 rounded-lg py-1 pl-1.5 caret-transparent shadow-[var(--shadow-mini)] transition-[box-shadow,background,transform] duration-200',
+    'bits-theme overflow-hidden relative grid items-center gap-4 rounded-lg py-1 pl-1.5 caret-transparent shadow-[var(--shadow-mini)] transition-[box-shadow,background,transform] duration-200',
     'cursor-pointer bg-[color-mix(in_oklab,var(--color-base-300)_46%,transparent)]',
     'hover:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
-    'hover:shadow-[0_1rem_2.2rem_color-mix(in_oklab,black_14%,transparent),0_0_0_1px_color-mix(in_oklab,white_2%,transparent)]',
+    'hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-primary)_18%,transparent),0_0_1.1rem_color-mix(in_oklab,var(--color-primary)_16%,transparent),0_0_2.2rem_color-mix(in_oklab,var(--color-primary)_10%,transparent)]',
     'focus-visible:outline-none',
     'focus-visible:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
     'focus-visible:-translate-y-px',

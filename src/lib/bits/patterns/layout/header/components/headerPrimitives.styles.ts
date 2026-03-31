@@ -12,7 +12,7 @@ export const HEADER_TASK_ACTIONS_CLASSES = 'ml-2 flex items-center gap-0'
 export const HEADER_FACETS_WRAP_CLASSES = 'flex items-center gap-2'
 
 export const HEADER_FACETS_LIST_CLASSES =
-  'flex h-11 items-stretch gap-1 overflow-clip rounded-full bg-base-300'
+  'flex h-11 items-stretch gap-1 overflow-clip rounded-full bg-[#181818]'
 
 export const HEADER_FACETS_LIST_STYLE = ''
 

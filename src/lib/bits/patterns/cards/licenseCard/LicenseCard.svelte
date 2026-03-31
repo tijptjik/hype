@@ -28,7 +28,7 @@ const attributionIcon = $derived.by(() => {
 })
 </script>
 
-<Card.Root class={['bits-license-card', className].filter(Boolean).join(' ')}>
+<Card.Root class={className}>
   <SimpleTooltip>
     {#snippet trigger()}
       <Card.Media class="bits-license-card__media" size="md">
