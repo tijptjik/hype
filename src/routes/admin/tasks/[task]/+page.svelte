@@ -51,11 +51,7 @@ import { goToNextTask, navigateOnAdmin } from '$lib/navigation'
 // PROVIDERS
 import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // REMOTE
-import {
-  getTaskEditorData,
-  reassignTaskLayer,
-  reviewTask,
-} from '$lib/api/server/tasks.remote'
+import { getTask, reassignTaskLayer, reviewTask } from '$lib/api/server/tasks.remote'
 // TYPES
 import type { Id, Task, TaskType } from '$lib/types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
@@ -115,28 +111,38 @@ let lastSyncedTaskSignature = $state('')
  * @returns Remote query request for the current task editor state
  */
 function getEditorRequest() {
-  return getTaskEditorData({
-    id: page.params.task,
+  return getTask({
+    id: page.params.task ?? '',
     meta: {
       isAdminRequest: true,
+      profile: 'admin',
     },
   })
 }
 
-const editorResult = $derived(await getEditorRequest())
-const task = $derived(taskState ?? editorResult.data.task)
-const assignableLayers = $derived(editorResult.data.assignableLayers)
-const canReassignLayer = $derived(editorResult.data.canReassignLayer)
-const taskTitle = $derived(typeDisplay[task.type])
+const editorResult = $derived(await getEditorRequest()) as { data: Task | null }
+const task = $derived(taskState ?? editorResult.data) as Task | null
+const assignableLayers = $derived(editorResult.data?.assignableLayers ?? [])
+const canReassignLayer = $derived(editorResult.data?.canReassignLayer ?? false)
+const taskTitle = $derived(task ? typeDisplay[task.type as TaskType] : '')
 const resolvedFeature = $derived.by((): Feature | null =>
-  mergeResolvedTaskFeature(task, adminCtx.appCtx.cache.feature),
+  task
+    ? (mergeResolvedTaskFeature(
+        task as Pick<Task, 'featureId' | 'feature'>,
+        adminCtx.appCtx.cache.feature as Map<Id, Feature>,
+      ) as Feature | null)
+    : null,
 )
-const effectiveLayerId = $derived(getEffectiveTaskLayerId(task, resolvedFeature))
-const taskSyncSignature = $derived(getTaskSyncSignature(task, effectiveLayerId))
+const effectiveLayerId = $derived(
+  task ? getEffectiveTaskLayerId(task, resolvedFeature) : null,
+)
+const taskSyncSignature = $derived(
+  task ? getTaskSyncSignature(task, effectiveLayerId) : '',
+)
 
 // Clone the remote task into local state so review and reassignment updates stay editable.
 $effect(() => {
-  taskState = structuredClone(editorResult.data.task)
+  taskState = structuredClone(editorResult.data) as Task | null
 })
 
 // Keep the admin caches and current facet aligned with the latest task state.
@@ -230,6 +236,10 @@ function createReviewTaskAction(config: {
  * @returns Header review action buttons for the current task type
  */
 function getTaskActionButtons(): HeaderButtonActionConfig[] {
+  if (!task) {
+    return []
+  }
+
   if (task.isReviewed) {
     return []
   }
@@ -301,6 +311,10 @@ function getTaskActionButtons(): HeaderButtonActionConfig[] {
  * @returns Ordered admin breadcrumb list for the current task
  */
 function getTaskBreadcrumbs(): HeaderCrumb[] {
+  if (!task) {
+    return []
+  }
+
   const preferences = adminCtx.appCtx.getUserPreferences()
   const selectedLayer = getSelectedTaskLayer(
     assignableLayers,
@@ -308,20 +322,18 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     adminCtx.appCtx.cache.layer,
   )
   const organisationName =
-    (task.organisation &&
-      adminCtx.appCtx.getContextualOrganisationName(task.organisation, false, false)) ||
-    getI18n(task.organisation, 'nameShort', preferences) ||
-    getI18n(task.organisation, 'name', preferences) ||
+    getI18n(task.organisation as never, 'nameShort', preferences) ||
+    getI18n(task.organisation as never, 'name', preferences) ||
     ''
   const projectName =
-    (task.project &&
-      adminCtx.appCtx.getContextualProjectName(task.project, false, false)) ||
-    getI18n(task.project, 'nameShort', preferences) ||
-    getI18n(task.project, 'name', preferences) ||
+    getI18n(task.project as never, 'nameShort', preferences) ||
+    getI18n(task.project as never, 'name', preferences) ||
     ''
   const featureTitle =
-    getI18n(resolvedFeature, 'title', preferences) ||
-    getI18n(task.feature, 'title', preferences) ||
+    (resolvedFeature
+      ? getI18n(resolvedFeature as never, 'title', preferences)
+      : undefined) ||
+    getI18n(task.feature as never, 'title', preferences) ||
     ''
   const featureId = resolvedFeature?.id ?? task.featureId ?? null
   const layerName =
@@ -332,7 +344,7 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     (selectedLayer && 'id' in selectedLayer && 'projectId' in selectedLayer
       ? adminCtx.appCtx.getContextualLayerName(selectedLayer as Layer, false, false)
       : null) ||
-    selectedLayer?.code ||
+    (selectedLayer && 'code' in selectedLayer ? selectedLayer.code : null) ||
     ''
   const crumbs: HeaderCrumb[] = []
 
@@ -372,8 +384,11 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
  * @param action - Review action that completed successfully
  */
 function showReviewToast(action: TaskReviewUiAction): void {
+  if (!task) return
+
   const featureTitle =
-    getI18n(task.feature, 'title', adminCtx.appCtx.getUserPreferences()) ?? task.id
+    getI18n(task.feature as never, 'title', adminCtx.appCtx.getUserPreferences()) ??
+    task.id
 
   toast.success(`${featureTitle} ${getTaskReviewActionToastLabel(action)}`)
 }
@@ -446,6 +461,8 @@ async function handleReview(
 
     // Apply the reviewed task immediately so cache, toast, and navigation use the same snapshot.
     const updatedTask = structuredClone(result.data)
+    if (!updatedTask) return
+
     taskState = updatedTask
     adminCtx.appCtx.setTaskResourceAndCache(updatedTask)
     showReviewToast(action)
@@ -495,6 +512,8 @@ async function handleReassignLayer(layerId: string): Promise<void> {
 
     // Persist the reassigned task snapshot and mirror the layer into shared cache state.
     const updatedTask = structuredClone(result.data)
+    if (!updatedTask) return
+
     taskState = updatedTask
     syncAssignedTaskLayerCache({
       layerId,
@@ -522,15 +541,17 @@ const imageProviderProps = $derived.by(() => {
     isAdminMode: true,
     isValid,
     image: isValid
-      ? ((task.images?.[0] as ImageCtxEnvelope | undefined) ?? undefined)
+      ? ((task?.images?.[0] as ImageCtxEnvelope | undefined) ?? undefined)
       : undefined,
     images: isValid
-      ? ((task.images as ImageCtxEnvelope[] | undefined) ?? undefined)
+      ? ((task?.images as ImageCtxEnvelope[] | undefined) ?? undefined)
       : undefined,
-    highlightedIds: task.images?.map(taskImage => taskImage.imageId as Id) ?? [],
-    ...(hierarchySource ? adminCtx.appCtx.getHierarchySync(hierarchySource) : {}),
+    highlightedIds: task?.images?.map(taskImage => taskImage.imageId as Id) ?? [],
+    ...(hierarchySource
+      ? adminCtx.appCtx.getHierarchySync(hierarchySource as Feature | Task)
+      : {}),
     context:
-      isValid && task.featureId
+      isValid && task?.featureId
         ? {
             ctxType: ImageContextResource.feature,
             ctxId: task.featureId as Id,
@@ -547,7 +568,7 @@ const imageProviderModel = useImageProviderModel(
 )
 </script>
 
-<TaskInfoDialog bind:open={isInfoOpen} type={task.type} />
+<TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} />
 <TaskRejectDialog
   bind:open={isRejectDialogOpen}
   bind:value={reviewReason}
