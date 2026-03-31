@@ -335,12 +335,14 @@ const toHostname = (originOrHostname: string): string => {
  */
 export const resolveAppStage = (originOrHostname = ''): PreviewStage => {
   const hostname = toHostname(originOrHostname)
+  const hostnameLabels = hostname.split('.').filter(Boolean)
 
   if (!hostname) {
     return 'local'
   }
 
-  if (hostname === 'preview' || hostname.startsWith('preview.')) {
+  // Any hostname with a dedicated `preview` label should write to preview storage.
+  if (hostnameLabels.includes('preview')) {
     return 'preview'
   }
 
