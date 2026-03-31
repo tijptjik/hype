@@ -10,11 +10,7 @@ import { drizzle } from 'drizzle-orm/d1'
 // TYPES
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import type { UserRoleDisco, Locale } from '$lib/types'
-import type {
-  UserExperimental,
-  UserLayer,
-  UserPreferences,
-} from '$lib/db/zod/schema/user.types'
+import type { UserExperimental, UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { user as userSchema } from '$lib/db/schema/user'
 
 // ═══════════════════════════════════════════════════════════════
@@ -145,11 +141,9 @@ function createAuthInstance(
       customSession(async ({ user, session }) => {
         // Import these here to avoid circular dependencies
         const { getUserRoles } = await import('$lib/db/services/user')
-        const { getUserLayers } = await import('./client/services/auth')
 
-        // Get user roles and layers
+        // Roles drive authorization and belong on the session.
         const roles: UserRoleDisco[] = await getUserRoles(db, user.id)
-        const userLayers: UserLayer[] = await getUserLayers(db, user.id)
         const superAdmin = roles.some(role => {
           if (role.type !== 'hub' || role.role !== 'admin') return false
           const hubRole = role as unknown as { hub?: { code?: string } }
@@ -189,7 +183,6 @@ function createAuthInstance(
             preferences,
             experimental,
             roles,
-            userLayers,
             superAdmin,
             // Set in hooks.server.ts
             isHubAdminForActiveHub: false,
@@ -251,6 +244,5 @@ export type SessionUser = Session['user'] & {
   superAdmin: boolean
   isHubAdminForActiveHub: boolean
   roles: UserRoleDisco[]
-  userLayers: UserLayer[]
 }
 export type SessionSession = Session['session']

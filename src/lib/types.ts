@@ -2297,6 +2297,7 @@ export interface ImageProviderSyncTarget {
     image?: ImageCtxEnvelope | null | undefined
     images?: ImageCtxEnvelope[] | null
     highlightedIds?: Id[]
+    clearActiveImageOnContextChange?: boolean
   }) => Promise<void>
   refreshImages: (targetImageId?: string) => Promise<void>
   target: (imageId: Id) => ImageCtxEnvelope | undefined

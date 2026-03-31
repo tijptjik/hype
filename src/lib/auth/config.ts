@@ -79,8 +79,8 @@ export const authConfig = {
         required: true,
         defaultValue: false,
       },
-      // Note: roles and userLayers are added dynamically via customSession plugin
-      // in auth.ts since Better Auth doesn't support array types in additionalFields
+      // Note: roles are added dynamically via customSession in auth.ts.
+      // Layer defaults are loaded separately from the session bootstrap path.
     },
   },
 }

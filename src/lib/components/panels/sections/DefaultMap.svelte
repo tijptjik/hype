@@ -20,15 +20,13 @@ let { ...panelProps }: PanelProps = $props()
 const DESCRIPTION_PREVIEW_THRESHOLD = 180
 
 let expandedLayerIds = $state(new Set<string>())
+let optimisticUserLayerIds = $state<Set<string> | null>(null)
 
-const userLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
+const persistedUserLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
+const userLayerIds = $derived(optimisticUserLayerIds ?? persistedUserLayerIds)
 const canSaveUserLayers = $derived(Boolean(appCtx.hub?.id || appCtx.hub?.code))
 const orderedLayers = $derived.by(() =>
   [...appCtx.state.resources.layer].sort((left, right) => {
-    const leftSelected = userLayerIds.has(left.id)
-    const rightSelected = userLayerIds.has(right.id)
-    if (leftSelected !== rightSelected) return leftSelected ? -1 : 1
-
     const rankDiff =
       (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)
     if (rankDiff !== 0) return rankDiff
@@ -38,6 +36,22 @@ const orderedLayers = $derived.by(() =>
     )
   }),
 )
+
+$effect(() => {
+  const nextPersistedUserLayerIds = persistedUserLayerIds
+
+  if (!optimisticUserLayerIds) {
+    return
+  }
+
+  const isInSync =
+    optimisticUserLayerIds.size === nextPersistedUserLayerIds.size &&
+    [...optimisticUserLayerIds].every(layerId => nextPersistedUserLayerIds.has(layerId))
+
+  if (isInSync) {
+    optimisticUserLayerIds = null
+  }
+})
 
 /**
  * Tracks whether a long layer description is expanded.
@@ -60,6 +74,22 @@ const toggleDescriptionExpanded = (layerId: string): void => {
 
   expandedLayerIds = nextExpandedLayerIds
 }
+
+/**
+ * Optimistically toggles a saved default layer before app context state settles.
+ */
+const toggleUserLayer = (layerId: string, checked: boolean): void => {
+  const nextUserLayerIds = new Set(userLayerIds)
+
+  if (checked) {
+    nextUserLayerIds.add(layerId)
+  } else {
+    nextUserLayerIds.delete(layerId)
+  }
+
+  optimisticUserLayerIds = nextUserLayerIds
+  appCtx.setUserLayer(layerId, checked)
+}
 </script>
 
 <Section
@@ -70,7 +100,7 @@ const toggleDescriptionExpanded = (layerId: string): void => {
   position="right"
 >
   <div class="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3">
-    {#each orderedLayers as layer}
+    {#each orderedLayers as layer (layer.id)}
       {#await appCtx.getHierarchy(layer) then { organisation, project }}
         {@const organisationName = getI18n(
           organisation,
@@ -146,7 +176,7 @@ const toggleDescriptionExpanded = (layerId: string): void => {
             color="primary"
             checked={userLayerIds.has(layer.id)}
             disabled={!canSaveUserLayers}
-            onCheckedChange={(checked) => appCtx.setUserLayer(layer.id, checked === true)}
+            onCheckedChange={(checked) => toggleUserLayer(layer.id, checked === true)}
           />
         </div>
       {:catch error}

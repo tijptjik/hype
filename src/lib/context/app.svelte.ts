@@ -23,7 +23,7 @@ import { getProject, getProjectsWhichHaveLayers } from '$lib/api/server/project.
 import { getLayer, getLayers } from '$lib/api/server/layer.remote'
 import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
 import { getProperties, getProperty } from '$lib/api/server/property.remote'
-import { getUser, getUserFeatures } from '$lib/api/server/user.remote'
+import { getUser, getUserFeatures, getUserLayers } from '$lib/api/server/user.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
@@ -753,6 +753,7 @@ export class AppCtx {
       this.refreshProperties(false),
       this.refreshUserFeatures(false),
       this.refreshUserProfile(false),
+      this.hydrateCurrentUserLayers(),
     ])
     const hierarchyLabels = [
       'organisations',
@@ -761,6 +762,7 @@ export class AppCtx {
       'properties',
       'userFeatures',
       'userProfile',
+      'userLayers',
     ] as const
 
     for (const [index, result] of hierarchyResults.entries()) {
@@ -801,10 +803,39 @@ export class AppCtx {
     if ((!hubId && !hubCode) || !this.user || !('userLayers' in this.user)) {
       return []
     }
-    const hubUserLayers = ((this.user as CurrentUser).userLayers ?? []).filter(layer =>
-      hubId ? layer.hubId === hubId : layer.hubCode === hubCode,
+    const currentHubLayerIds = new Set(
+      this.state.resources.layer.map(layer => layer.id),
+    )
+    const hubUserLayers = ((this.user as CurrentUser).userLayers ?? []).filter(
+      layer => {
+        if (hubId && layer.hubId === hubId) return true
+        if (hubCode && layer.hubCode === hubCode) return true
+
+        // Fallback to the loaded hub-scoped layer list when persisted preferences only
+        // carry one hub identifier and the app has only resolved the other on bootstrap.
+        return currentHubLayerIds.has(layer.layerId)
+      },
     )
     return hubUserLayers
+  }
+
+  // Hydrate persisted layer defaults once during app bootstrap so hub prism setup
+  // can resolve the initial active layers without coupling to profile panel refreshes.
+  private hydrateCurrentUserLayers = async (): Promise<void> => {
+    if (!this.user?.id) {
+      return
+    }
+
+    const userLayersResponse = (await getUserLayers({
+      userId: this.user.id,
+    })) as { data?: UserLayer[] | null }
+
+    this.user = {
+      ...(this.user ?? {}),
+      userLayers: Array.isArray(userLayersResponse.data) ? userLayersResponse.data : [],
+    } as CurrentUser | SessionUser
+
+    this.postUserMutation()
   }
 
   private getHubDefaultLayerIds = (): Id[] => {
@@ -1555,6 +1586,20 @@ export class AppCtx {
       queryKey: this.queryMap.get(FirstClassResource.user)?.queryKey(),
       queryFn: this.queryMap.get(FirstClassResource.user)?.queryFn,
     })
+    const currentUsername = this.user?.username?.trim() || null
+    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
+    const isSelfProfile =
+      !requestedUsername ||
+      (currentUsername !== null && requestedUsername === currentUsername)
+
+    if (isSelfProfile && user) {
+      this.user = {
+        ...(this.user ?? {}),
+        ...(user as CurrentUser),
+      } as CurrentUser | SessionUser
+      this.postUserMutation()
+    }
+
     this.state.panels.profile.ctx!.userData = user
   }
 
