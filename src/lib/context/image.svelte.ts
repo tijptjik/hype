@@ -84,6 +84,11 @@ function isValidImageEnvelope(
   return image != null && image.image.id != null
 }
 
+type SingleImageResourceCacheEntry = {
+  id: Id
+  image?: ImageCtxEnvelope | null
+}
+
 // ═══════════════════════
 // TYPES :: ImageCtx
 // ═══════════════════════
@@ -1062,6 +1067,8 @@ export class ImageCtx {
 
     if (validImages.length === 0) {
       this.state.images.clear()
+      this.resetActiveImage()
+      this.resetTargetImage()
       return
     }
 
@@ -1076,6 +1083,8 @@ export class ImageCtx {
           refreshedActiveImage,
           this.state.activeItemId,
         )
+      } else {
+        this.state.activeImage = null
       }
     }
 
@@ -1093,6 +1102,18 @@ export class ImageCtx {
 
   removeImage(imageId: Id) {
     this.state.images.delete(imageId)
+
+    if (this.state.activeImage?.image.id === imageId) {
+      this.resetActiveImage()
+    } else if (this.state.activeItemId === imageId) {
+      this.state.activeItemId = null
+    }
+
+    if (this.state.targetImage?.image.id === imageId) {
+      this.resetTargetImage()
+    } else if (this.state.targetImageId === imageId) {
+      this.resetTargetImageId()
+    }
   }
 
   setForImage(imageId: Id, key: string, value: unknown) {
@@ -1226,6 +1247,11 @@ export class ImageCtx {
 
   get activeImage(): ImageCtxEnvelope | null {
     return this.state.activeImage
+  }
+
+  private hasResolvedActiveImage(): boolean {
+    const activeImageId = this.state.activeImage?.image.id
+    return activeImageId ? this.state.images.has(activeImageId) : false
   }
 
   get activeItemId(): string | null {
@@ -1739,6 +1765,27 @@ export class ImageCtx {
           validImages.push(image)
         }
       })
+
+      if (
+        this.state.context.ctxTypeSecondary === 'task' &&
+        this.state.highlightedIds.length > 0
+      ) {
+        const secondaryTaskId = this.state.context.ctxIdSecondary
+        const secondaryTask = secondaryTaskId
+          ? await this.appCtx.getTaskById(secondaryTaskId)
+          : undefined
+
+        // Only new-feature review flows should collapse to task-highlighted images.
+        if (secondaryTask?.type === 'newFeature') {
+          const highlightedIds = new Set(this.state.highlightedIds)
+          const taskScopedImages = validImages.filter(image =>
+            highlightedIds.has(image.image.id),
+          )
+
+          validImages.length = 0
+          validImages.push(...taskScopedImages)
+        }
+      }
     }
 
     // Final context validation before applying results
@@ -1750,7 +1797,7 @@ export class ImageCtx {
     await this.setImages(validImages)
 
     // Set active image with loading state immediately to maintain loading display
-    if (validImages.length > 0 && !this.activeImage && !targetImageId) {
+    if (validImages.length > 0 && !this.hasResolvedActiveImage() && !targetImageId) {
       this.setActiveImageToTargetOrFirst()
     } else if (targetImageId) {
       this.target(targetImageId)
@@ -2039,6 +2086,57 @@ export class ImageCtx {
   }
 
   /**
+   * Clears the cached single-image resource envelope before the remote delete
+   * completes so route preload state cannot flash a soon-to-be-deleted image.
+   *
+   * @param imageId Persisted image id being deleted.
+   * @returns Rollback callback when a matching cache entry was updated.
+   */
+  private optimisticallyClearSingleResourceImageCache(
+    imageId: Id,
+  ): (() => void) | null {
+    const context = this.state.context
+    const resourceId = context?.ctxId
+
+    if (!context?.ctxType || !resourceId) {
+      return null
+    }
+
+    const updateCacheEntry = <TResource extends SingleImageResourceCacheEntry>(
+      cache: Map<Id, TResource>,
+    ): (() => void) | null => {
+      const cachedResource = cache.get(resourceId)
+
+      if (!cachedResource?.image || cachedResource.image.image.id !== imageId) {
+        return null
+      }
+
+      cache.set(resourceId, {
+        ...cachedResource,
+        image: null,
+      })
+
+      return () => {
+        cache.set(resourceId, cachedResource)
+      }
+    }
+
+    if (context.ctxType === 'organisation') {
+      return updateCacheEntry(this.appCtx.cache.organisation)
+    }
+
+    if (context.ctxType === 'project') {
+      return updateCacheEntry(this.appCtx.cache.project)
+    }
+
+    if (context.ctxType === 'hub') {
+      return updateCacheEntry(this.appCtx.cache.hub)
+    }
+
+    return null
+  }
+
+  /**
    * Marks cached feature image collections stale after admin image mutations so future
    * feature payloads rehydrate relation fields from the server instead of replaying
    * pre-mutation image arrays.
@@ -2256,7 +2354,14 @@ export class ImageCtx {
       await this.refreshImages(imageId)
       this.sortImagesInternal() // Calls the private sortImages method
       this.invalidateFeatureImageCache()
-    } catch {}
+    } catch (error) {
+      console.error('[ImageCtx.handleSetIntent] failed to persist intent', {
+        imageId,
+        newIntent,
+        error,
+      })
+      throw error
+    }
   }
 
   // NOTE: This is currently only used for Images belonging to a feature.
@@ -2356,28 +2461,23 @@ export class ImageCtx {
    * @returns Resolves after deletion-side effects have settled.
    */
   async delete(imageId: Id, ctx: ImageEditCtx) {
+    const imagesBeforeDelete = this.getImages()
+    const uploadQueueBeforeDelete = [...this.state.uploadQueue]
+    const activeImageBeforeDelete = this.state.activeImage
+    const activeItemIdBeforeDelete = this.state.activeItemId
+    const rollbackSingleResourceImageCache =
+      this.optimisticallyClearSingleResourceImageCache(imageId)
+    const deletedIndex = imagesBeforeDelete.findIndex(
+      image => image.image.id === imageId,
+    )
+    const nextActiveImage =
+      deletedIndex >= 0
+        ? (imagesBeforeDelete[deletedIndex + 1] ??
+          imagesBeforeDelete[deletedIndex - 1] ??
+          null)
+        : null
+
     try {
-      const imagesBeforeDelete = this.getImages()
-      const deletedIndex = imagesBeforeDelete.findIndex(
-        image => image.image.id === imageId,
-      )
-      const nextActiveImage =
-        deletedIndex >= 0
-          ? (imagesBeforeDelete[deletedIndex + 1] ??
-            imagesBeforeDelete[deletedIndex - 1] ??
-            null)
-          : null
-
-      // Snapshot the next candidate first so selection remains stable after the map mutates.
-      // Call the service function for the API call
-      await deleteImageRemote({
-        id: imageId,
-        ctxType: ctx.ctxType,
-        ctxId: ctx.ctxId,
-        meta: { isAdminRequest: true },
-      })
-
-      // State updates remain in the class method
       this.removeImage(imageId)
       this.setUploadQueue(
         this.state.uploadQueue.filter(upload => {
@@ -2392,15 +2492,35 @@ export class ImageCtx {
         }),
       )
 
-      // If we deleted the active image, set a new one
-      if (this.state.activeImage?.image.id === imageId) {
-        if (nextActiveImage && this.getImage(nextActiveImage.image.id)) {
+      if (activeImageBeforeDelete?.image.id === imageId) {
+        if (nextActiveImage) {
           this.setActiveImage(nextActiveImage)
         } else {
-          this.setActiveImageToFirst()
+          this.resetActiveImage()
         }
       }
+
+      await deleteImageRemote({
+        id: imageId,
+        ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId,
+        meta: { isAdminRequest: true },
+      })
     } catch (error: any) {
+      rollbackSingleResourceImageCache?.()
+      await this.setImages(imagesBeforeDelete)
+      this.setUploadQueue(uploadQueueBeforeDelete)
+
+      if (activeImageBeforeDelete) {
+        const restoredActiveImage = this.getImage(activeImageBeforeDelete.image.id)
+
+        if (restoredActiveImage) {
+          this.setActiveImage(restoredActiveImage, false, activeItemIdBeforeDelete)
+        }
+      } else {
+        this.resetActiveImage()
+      }
+
       // Extract error message from the server response
       let errorMessage = 'Failed to delete image'
       if (error?.message) {
