@@ -137,8 +137,8 @@ async function handleFiles(event: CustomEvent): Promise<void> {
           class={cx(
             'rounded-2xl border px-4 py-3 backdrop-blur-md shadow-[0_18px_40px_rgba(0,0,0,0.24)] transition-[background-color,border-color,color,transform] duration-200',
             isDragActive
-              ? 'border-white/16 bg-white/[0.06] text-white/88'
-              : 'border-white/10 bg-white/[0.03] text-white/78 group-hover/gallery-dropzone:border-white/14 group-hover/gallery-dropzone:bg-black/[0.8] group-hover/gallery-dropzone:text-white/88',
+              ? 'border-white/16 bg-white/6 text-white/88'
+              : 'border-white/10 bg-white/3 text-white/78 group-hover/gallery-dropzone:border-white/14 group-hover/gallery-dropzone:bg-black/80 group-hover/gallery-dropzone:text-white/88',
           )}
         >
           <div class="flex items-center gap-3 text-left">
