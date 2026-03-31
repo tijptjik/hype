@@ -3,6 +3,7 @@ import { and, eq, like, sql, or } from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
+  layer,
   organisation,
   organisationI18n,
   organisationRole,

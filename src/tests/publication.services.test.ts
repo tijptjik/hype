@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { SQL } from 'drizzle-orm'
 import { feature, layer, project } from '$lib/db/schema'
 import { cascadeOrganisationPublishedStateToDescendants } from '$lib/db/services/organisation'
 import { cascadeProjectPublishedStateToDescendants } from '$lib/db/services/project'
@@ -30,6 +31,8 @@ const createDbMock = (): {
   return { db, updateCalls }
 }
 
+const isSqlExpression = (value: unknown): value is SQL => value instanceof SQL
+
 describe('publication cascade services', () => {
   it('snapshots organisation descendants into local publish state when unpublishing', async () => {
     const { db, updateCalls } = createDbMock()
@@ -41,12 +44,12 @@ describe('publication cascade services', () => {
 
     expect(updateCalls).toHaveLength(3)
     expect(updateCalls.map(call => call.table)).toEqual([project, layer, feature])
-    expect(updateCalls[0]?.values).toMatchObject({ isPublished: false })
-    expect(updateCalls[1]?.values).toMatchObject({ isPublished: false })
-    expect(updateCalls[2]?.values).toMatchObject({ isPublished: false })
-    expect(updateCalls[0]?.values.localIsPublished).toBeDefined()
-    expect(updateCalls[1]?.values.localIsPublished).toBeDefined()
-    expect(updateCalls[2]?.values.localIsPublished).toBeDefined()
+    expect(isSqlExpression(updateCalls[0]?.values.isPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.isPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[2]?.values.isPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[0]?.values.localIsPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.localIsPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[2]?.values.localIsPublished)).toBe(true)
   })
 
   it('restores organisation descendants from local publish state when republishing', async () => {
@@ -62,9 +65,9 @@ describe('publication cascade services', () => {
     expect(updateCalls[0]?.values.localIsPublished).toBeNull()
     expect(updateCalls[1]?.values.localIsPublished).toBeNull()
     expect(updateCalls[2]?.values.localIsPublished).toBeNull()
-    expect(updateCalls[0]?.values.isPublished).toBeDefined()
-    expect(updateCalls[1]?.values.isPublished).toBeDefined()
-    expect(updateCalls[2]?.values.isPublished).toBeDefined()
+    expect(isSqlExpression(updateCalls[0]?.values.isPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.isPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[2]?.values.isPublished)).toBe(true)
   })
 
   it('cascades project publish changes into layers and features only', async () => {
@@ -77,8 +80,10 @@ describe('publication cascade services', () => {
 
     expect(updateCalls).toHaveLength(2)
     expect(updateCalls.map(call => call.table)).toEqual([layer, feature])
-    expect(updateCalls[0]?.values).toMatchObject({ isPublished: false })
-    expect(updateCalls[1]?.values).toMatchObject({ isPublished: false })
+    expect(isSqlExpression(updateCalls[0]?.values.localIsPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.localIsPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[0]?.values.isPublished)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.isPublished)).toBe(true)
   })
 
   it('cascades layer publish changes into features only', async () => {
@@ -92,6 +97,6 @@ describe('publication cascade services', () => {
     expect(updateCalls).toHaveLength(1)
     expect(updateCalls[0]?.table).toBe(feature)
     expect(updateCalls[0]?.values.localIsPublished).toBeNull()
-    expect(updateCalls[0]?.values.isPublished).toBeDefined()
+    expect(isSqlExpression(updateCalls[0]?.values.isPublished)).toBe(true)
   })
 })
