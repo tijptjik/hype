@@ -47,11 +47,13 @@ vi.mock('$lib/api', () => ({
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
+const mockToPropertyResponseShape = vi.fn((row: unknown) => ({ row }))
+
 vi.mock('$lib/api/services/property', () => ({
   getPropertyQueryContext: mockGetPropertyQueryContext,
   propertyCollectionWithRelations: {},
   toPropertyPrismConditions: mockToPropertyPrismConditions,
-  toPropertyResponseShape: (row: unknown) => ({ row }),
+  toPropertyResponseShape: mockToPropertyResponseShape,
 }))
 
 vi.mock('$lib/api/services/authz', () => ({
@@ -83,6 +85,7 @@ describe('property.remote', () => {
     vi.resetModules()
     remote = await import('$lib/api/server/property.remote')
     vi.clearAllMocks()
+    mockToPropertyResponseShape.mockImplementation((row: unknown) => ({ row }))
     mockGuardedContext.mockResolvedValue({
       db: {},
       user: { id: 'u-1', isAnonymous: false },
@@ -118,6 +121,43 @@ describe('property.remote', () => {
     expect(result).toEqual({
       data: [{ row: { id: 'prop-1', projectId: 'project-1' } }],
     })
+  })
+
+  it('skips malformed property rows instead of failing the whole list', async () => {
+    mockListProperties.mockResolvedValue([
+      { id: 'prop-1', projectId: 'project-1' },
+      { id: 'prop-2', projectId: 'project-1' },
+    ])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockToPropertyResponseShape.mockImplementation((row: any) => {
+      if (row.id === 'prop-2') {
+        throw new Error('bad property payload')
+      }
+      return { row }
+    })
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const result = await remote.getProperties({ conditions: {} })
+
+    expect(result).toEqual({
+      data: [{ row: { id: 'prop-1', projectId: 'project-1' } }],
+    })
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Property list row failed response shaping',
+      expect.objectContaining({
+        propertyId: 'prop-2',
+        projectId: 'project-1',
+      }),
+    )
+
+    consoleErrorSpy.mockRestore()
   })
 
   it('returns null for getProperty when property is missing', async () => {

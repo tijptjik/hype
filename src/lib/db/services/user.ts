@@ -83,11 +83,13 @@ export const getUser = async (
   conditions: SQL<unknown>[] = [],
   columns?: Record<string, boolean>,
 ): Promise<UserDB | undefined> =>
-  await db.query.user.findFirst({
-    with: withRelations,
-    where: and(...conditions),
-    ...(columns ? { columns } : {}),
-  })
+  await retryBusyRead(() =>
+    db.query.user.findFirst({
+      with: withRelations,
+      where: and(...conditions),
+      ...(columns ? { columns } : {}),
+    }),
+  )
 
 /**
  * Loads a single user by id.
@@ -120,17 +122,19 @@ export const getUsersForHydration = async (
 > => {
   if (ids.length === 0) return []
 
-  return await db
-    .select({
-      id: user.id,
-      name: user.name,
-      image: user.image,
-      attribution: user.attribution,
-      username: user.username,
-      isArchived: user.isArchived,
-    })
-    .from(user)
-    .where(inArray(user.id, ids))
+  return await retryBusyRead(() =>
+    db
+      .select({
+        id: user.id,
+        name: user.name,
+        image: user.image,
+        attribution: user.attribution,
+        username: user.username,
+        isArchived: user.isArchived,
+      })
+      .from(user)
+      .where(inArray(user.id, ids)),
+  )
 }
 
 // ═══════════════════════

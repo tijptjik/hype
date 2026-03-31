@@ -13,6 +13,7 @@ import {
   toRelatedRecords,
 } from '..'
 import { insert, insertManyRelated, replaceManyRelated } from '../crud'
+import { retryBusyRead } from './sqlite'
 // TYPES
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 import type {
@@ -249,16 +250,20 @@ export const listLayers = async (
   })
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  const data = await db.query.layer.findMany({
-    with: withRelations,
-    where: whereClause,
-    limit: pagination?.limit,
-    offset: pagination?.offset,
-    orderBy,
-  })
+  const data = await retryBusyRead(() =>
+    db.query.layer.findMany({
+      with: withRelations,
+      where: whereClause,
+      limit: pagination?.limit,
+      offset: pagination?.offset,
+      orderBy,
+    }),
+  )
 
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(layer)
-  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
+  const totalRows = await retryBusyRead(() =>
+    whereClause ? countQuery.where(whereClause) : countQuery,
+  )
   const totalCount = Number(totalRows[0]?.count || 0)
   const offset = pagination?.offset ?? 0
   const hasMore = offset + data.length < totalCount
