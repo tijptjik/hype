@@ -110,6 +110,7 @@ let collapsedOrganisations = $derived(
 <Section
   {resourceType}
   title={m.maps__organisations()}
+  rootClass="pt-0"
   icon={UserGroup}
   iconVerticalPaddingClass="py-2"
   iconColorClass="text-primary"

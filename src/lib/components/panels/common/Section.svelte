@@ -12,6 +12,7 @@ import type { FirstClassResource } from '$lib/enums'
 let {
   resourceType,
   title,
+  rootClass,
   icon,
   iconGraphicClass = '',
   iconVerticalPaddingClass = 'py-3',
@@ -25,6 +26,7 @@ let {
 }: {
   resourceType?: FirstClassResource
   title: string
+  rootClass?: string
   icon: string | Component
   iconGraphicClass?: string
   iconVerticalPaddingClass?: string
@@ -70,7 +72,7 @@ const onNavigate = (e: MouseEvent) => {
     ? 'grow-0'
     : 'shrink-0'} {panelProps.position === 'left' && !panelProps.isNarrow
     ? 'pr-4'
-    : ''}"
+    : ''} {rootClass}"
 >
   <Panel.Section.Header
     {title}

@@ -176,7 +176,7 @@
   }
 
   .bits-theme .bits-pattern-header__search-input {
-    @apply h-9 w-full rounded-full border px-8 text-sm mr-2;
+    @apply h-9 w-full rounded-full border px-8 text-sm;
     background-color: var(--color-base-100);
     color: var(--color-base-content);
     user-select: text;
