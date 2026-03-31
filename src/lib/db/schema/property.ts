@@ -1,14 +1,17 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { project } from './project';
+import { hub } from './hub'
+import { organisation } from './organisation'
+import { project } from './project'
 // ENUM
 import {
   FieldDiscriminator,
   PropertyComponentType,
-  supportedLocales
-} from '../../enums';
+  PropertyScope,
+  supportedLocales,
+} from '../../enums'
 
 /* ============================================================================
  * PROPERTY MANAGEMENT
@@ -28,37 +31,121 @@ export const property = sqliteTable('property', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),
-  projectId: text('projectId')
+  organisationId: text('organisationId').references(() => organisation.id, {
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+  }),
+  hubId: text('hubId').references(() => hub.id, {
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+  }),
+  projectId: text('projectId').references(() => project.id, {
+    onDelete: 'cascade',
+    onUpdate: 'cascade',
+  }),
+  scope: text('scope', {
+    enum: Object.values(PropertyScope) as [string, ...string[]],
+  })
     .notNull()
-    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    .default(PropertyScope.project),
   type: text('type', {
-    enum: Object.values(FieldDiscriminator) as [string, ...string[]]
+    enum: Object.values(FieldDiscriminator) as [string, ...string[]],
   })
     .notNull()
     .default(FieldDiscriminator.classifier),
-  isTranslatable: integer('isTranslatable', { mode: 'boolean' })
-    .notNull()
-    .default(true),
   key: text('key').notNull(),
-  rank: integer('rank').notNull().default(0),
   component: text('component', {
-    enum: Object.values(PropertyComponentType) as [string, ...string[]]
+    enum: Object.values(PropertyComponentType) as [string, ...string[]],
   })
     .notNull()
     .default(PropertyComponentType.SelectField),
   min: integer('min'),
   max: integer('max'),
-  isUserContributed: integer('isUserContributed', { mode: 'boolean' })
+  isTranslatable: integer('isTranslatable', { mode: 'boolean' })
     .notNull()
     .default(true),
+  isUserContributable: integer('isUserContributable', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+  isDefaultEnabled: integer('isDefaultEnabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
+
+/**
+ * Project property assignments
+ * @remarks
+ * Links projects to global properties they have opted into.
+ * `rank` controls the display order of assigned global properties within the project.
+ */
+export const projectProperty = sqliteTable(
+  'projectProperty',
+  {
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    // isEnabled and isDefaultEnabled are used to control the display of the property, but
+    // only for hub and organisational properties, not project properties. For those, we
+    // use the isEnabled and isDefaultEnabled columns in projectProperty. This allows for
+    // users to configure defaults (which are defined here) and project-specific overrides.
+    isEnabled: integer('isEnabled', { mode: 'boolean' }).notNull().default(true),
+    isDefaultEnabled: integer('isDefaultEnabled', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [primaryKey({ columns: [table.projectId, table.propertyId] })],
+)
+
+/**
+ * Hub property assignments
+ * @remarks
+ * Links hubs to their scoped properties and persists rank order across all
+ * property components/types.
+ */
+export const hubProperty = sqliteTable(
+  'hubProperty',
+  {
+    hubId: text('hubId')
+      .notNull()
+      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [primaryKey({ columns: [table.hubId, table.propertyId] })],
+)
+
+/**
+ * Organisation property assignments
+ * @remarks
+ * Links organisations to their scoped properties and persists rank order across
+ * all property components/types.
+ */
+export const organisationProperty = sqliteTable(
+  'organisationProperty',
+  {
+    organisationId: text('organisationId')
+      .notNull()
+      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [primaryKey({ columns: [table.organisationId, table.propertyId] })],
+)
 
 /**
  * Property translations
@@ -75,8 +162,10 @@ export const propertyI18n = sqliteTable('propertyI18n', {
   labelGen: integer('labelGen', { mode: 'boolean' }).notNull().default(true),
   // Placeholder in {locale}
   placeholder: text('placeholder').default('Type here'),
-  placeholderGen: integer('placeholderGen', { mode: 'boolean' }).notNull().default(true)
-});
+  placeholderGen: integer('placeholderGen', { mode: 'boolean' })
+    .notNull()
+    .default(true),
+})
 
 /**
  * Property value definitions
@@ -91,8 +180,10 @@ export const propertyValue = sqliteTable('propertyValue', {
     .notNull()
     .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Priority in the rank order of the property values - lower numbers are shown first
-  rank: integer('rank').notNull().default(0)
-});
+  rank: integer('rank').notNull().default(0),
+  // Canonical value for non-translatable classifier values.
+  value: text('value'),
+})
 
 /**
  * Property value translations
@@ -106,13 +197,11 @@ export const propertyValueI18n = sqliteTable(
       .notNull()
       .references(() => propertyValue.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]]
+      enum: supportedLocales as [string, ...string[]],
     }).notNull(),
     // Value in {locale}
     value: text('value').notNull(),
-    valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(false)
+    valueGen: integer('valueGen', { mode: 'boolean' }).notNull().default(false),
   },
-  (table) => [
-    primaryKey({ columns: [table.propertyValueId, table.locale] })
-  ]
-);
+  table => [primaryKey({ columns: [table.propertyValueId, table.locale] })],
+)

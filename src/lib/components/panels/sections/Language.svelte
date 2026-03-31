@@ -1,25 +1,30 @@
 <script lang="ts">
 // I18N
-import { getLocale } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getLocale } from '$lib/i18n'
+import { m } from '$lib/i18n'
+// BITS
+import { Switch } from '$lib/bits'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Language, ChevronDown, ChevronUp } from '@steeze-ui/heroicons';
-import Section from '$lib/components/panels/common/Section.svelte';
+import Icon from '$lib/components/common/Icon.svelte'
+import Language from 'virtual:icons/lucide/languages'
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import Section from '$lib/components/panels/common/Section.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
-import { supportedLocales, localeNames } from '$lib/enums';
+import { supportedLocales, localeNames } from '$lib/enums'
 // TYPES
-import type { UserPreferences, PanelProps } from '$lib/types';
+import type { PanelProps } from '$lib/types'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
-const { ...panelProps }: PanelProps = $props();
+const { ...panelProps }: PanelProps = $props()
 
 // Ensure user preferences object exists and is reactive
-const userPreferences: UserPreferences = $derived(appCtx.getUserPreferences());
+const userPreferences: UserPreferences = $derived(appCtx.getUserPreferences())
 
 // Advanced section features
 const advancedSettings = $derived([
@@ -27,33 +32,31 @@ const advancedSettings = $derived([
     name: m.settings_language_auto_translate(),
     description: m.settings_language_auto_translate_description(),
     code: 'allowMachineTranslation',
-    currentValue: userPreferences.allowMachineTranslation
+    currentValue: userPreferences.allowMachineTranslation,
   },
   {
     name: m.settings_language_show_translate_button(),
     description: m.settings_language_show_translate_button_description(),
     code: 'isTranslateButtonVisible',
-    currentValue: userPreferences.isTranslateButtonVisible
+    currentValue: userPreferences.isTranslateButtonVisible,
   },
   {
     name: m.settings_language_prefer_placeholders(),
     description: m.settings_language_prefer_placeholders_description(),
     code: 'preferFallbackInCurrentLocale',
-    currentValue: userPreferences.preferFallbackInCurrentLocale
-  }
-]);
+    currentValue: userPreferences.preferFallbackInCurrentLocale,
+  },
+])
 
 // For collapsible sections
-let preferredOpen = $state(true);
-let additionalOpen = $state(true);
-let advancedOpen = $state(false);
+let preferredOpen = $state(true)
+let additionalOpen = $state(true)
+let advancedOpen = $state(false)
 </script>
 
 {#snippet summary(title: string, isOpen: boolean)}
   <summary class="flex cursor-pointer list-none items-center justify-between py-2 pr-3">
-    <h2 class="pl-0.5 text-base-content">
-      {title}
-    </h2>
+    <h2 class="pl-0.5 text-base-content">{title}</h2>
     <Icon src={isOpen ? ChevronUp : ChevronDown} class="h-5 w-5 text-base-content" />
   </summary>
 {/snippet}
@@ -62,8 +65,10 @@ let advancedOpen = $state(false);
   title={m.settings__language()}
   icon="/language.svg"
   position="right"
-  defaultOpen={panelProps.isAdmin ? false : true}
-  iconVerticalPaddingClass="py-3 pr-4.5">
+  iconGraphicClass="scale-125 origin-bottom-left"
+  defaultOpen={!panelProps.isAdmin}
+  iconVerticalPaddingClass="py-3 pr-4.5"
+>
   <div class="flex flex-col gap-4 px-4 caret-transparent">
     <!-- Primary Language Section -->
     <details bind:open={preferredOpen}>
@@ -86,7 +91,8 @@ let advancedOpen = $state(false);
               value={locale}
               class="radio-primary radio radio-sm mr-4 h-5 w-5 cursor-pointer"
               checked={getLocale() === locale}
-              onclick={() => appCtx.setLocale(locale)} />
+              onclick={() => appCtx.setLocale(locale)}
+            >
           </div>
         {/each}
       </div>
@@ -98,22 +104,30 @@ let advancedOpen = $state(false);
       <div class="ml-4 flex flex-col gap-2 pt-2">
         {#each supportedLocales.filter((locale) => locale !== getLocale()) as locale (locale)}
           <div
-            class="flex w-full flex-row items-center justify-between gap-4 py-1 pr-1.5">
-            <label for={`fallback-${locale}`} class="flex cursor-pointer flex-col">
+            class="flex w-full flex-row items-start justify-between gap-3 py-1 pr-1.5"
+          >
+            <label
+              for={`fallback-${locale}`}
+              class="flex min-w-0 grow cursor-pointer flex-col"
+            >
               <span class="font-normal text-base-content"
-                >{localeNames[locale][locale]}</span>
+                >{localeNames[locale][locale]}</span
+              >
               {#if localeNames[getLocale()][locale]}
                 <span class="text-sm text-neutral-content"
-                  >({localeNames[getLocale()][locale]})</span>
+                  >({localeNames[getLocale()][locale]})</span
+                >
               {/if}
             </label>
-            <input
-              type="checkbox"
+            <Switch
               id={`fallback-${locale}`}
-              class="toggle toggle-primary toggle-sm flex-shrink-0"
+              class="mt-0.5 shrink-0"
+              size="sm"
+              color="primary"
               checked={userPreferences.fallbackLocales?.includes(locale) || false}
-              onchange={(e) =>
-                appCtx.setFallbackLocales(locale, e.currentTarget.checked)} />
+              onCheckedChange={(checked) =>
+                appCtx.setFallbackLocales(locale, checked === true)}
+            />
           </div>
         {/each}
       </div>
@@ -125,26 +139,26 @@ let advancedOpen = $state(false);
       <div class="ml-4 flex flex-col gap-2 pt-2">
         {#each advancedSettings as setting (setting.code)}
           <div
-            class="min-h-18 flex w-full flex-row items-center justify-between gap-4 py-2 pr-1.5">
-            <div class="flex flex-col">
-              <p class="font-normal text-base-content">
-                <span class="pr-1.5">{setting.name}</span>
-                {#if setting.description}
-                  <span class="text-sm text-neutral-content"
-                    >{setting.description}</span>
-                {/if}
-              </p>
+            class="flex w-full flex-row items-start justify-between gap-3 py-2 pr-1.5"
+          >
+            <div class="min-w-0 grow flex flex-col gap-0.5">
+              <p class="font-normal text-base-content">{setting.name}</p>
+              {#if setting.description}
+                <p class="text-sm text-neutral-content">{setting.description}</p>
+              {/if}
             </div>
-            <input
+            <Switch
               name={setting.code}
-              type="checkbox"
-              class="toggle toggle-primary toggle-sm flex-shrink-0"
+              class="mt-0.5 shrink-0"
+              size="sm"
+              color="primary"
               checked={setting.currentValue}
-              onchange={(e) =>
+              onCheckedChange={(checked) =>
                 appCtx.setAdvancedFeature(
                   setting.code as keyof UserPreferences,
-                  e.currentTarget.checked
-                )} />
+                  checked === true
+                )}
+            />
           </div>
         {/each}
       </div>

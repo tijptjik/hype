@@ -1,0 +1,72 @@
+@layer components {
+  .bits-theme .bits-crossfade-value {
+    position: relative;
+    display: inline-grid;
+    min-width: 0;
+    max-width: 100%;
+    align-items: start;
+  }
+
+  .bits-theme .bits-crossfade-value--block {
+    display: grid;
+    width: 100%;
+  }
+
+  .bits-theme .bits-transition-stack {
+    position: relative;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-transition-stack__layer {
+    min-width: 0;
+  }
+
+  .bits-theme .bits-transition-stack__layer--current {
+    position: relative;
+    z-index: 1;
+  }
+
+  .bits-theme .bits-transition-stack__layer--previous {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .bits-theme .bits-crossfade-value__item {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    max-width: 100%;
+    transition:
+      opacity var(--bits-crossfade-duration, 140ms) ease,
+      filter var(--bits-crossfade-duration, 140ms) ease;
+    will-change: opacity, filter;
+  }
+
+  .bits-theme .bits-crossfade-value__item--current {
+    position: relative;
+    opacity: 0;
+    filter: blur(0.25rem);
+  }
+
+  .bits-theme .bits-crossfade-value__item--previous {
+    position: absolute;
+    inset: 0;
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: none;
+  }
+
+  .bits-theme
+    .bits-crossfade-value__item--current.bits-crossfade-value__item--transition-active {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  .bits-theme
+    .bits-crossfade-value__item--previous.bits-crossfade-value__item--transition-active {
+    opacity: 0;
+    filter: blur(0.25rem);
+  }
+}

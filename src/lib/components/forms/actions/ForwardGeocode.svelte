@@ -1,154 +1,155 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // SERVICES
 import {
   fetchForwardGeocodeALSResult,
   processForwardGeocodeResult,
-  extractNeighbourhoodFromAddress
-} from '$lib/api/external/geocoding';
-import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocoding';
+  extractNeighbourhoodFromAddress,
+} from '$lib/api/external/geocoding'
+import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocoding'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Language, MagnifyingGlass, MapPin } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import Language from 'virtual:icons/lucide/languages'
+import MagnifyingGlass from 'virtual:icons/lucide/search'
+import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
-import type { Point } from 'geojson';
-import type { FeatureForm } from '$lib/context/form.svelte';
-import type { IconSource } from '@steeze-ui/heroicons';
-import type { Locale } from '$lib/types';
+import type { Point } from 'geojson'
+import type { FeatureForm } from '$lib/context/form.svelte'
+import type { Locale } from '$lib/types'
 
 // CONTEXT
-let appCtx = getAppCtx();
+let appCtx = getAppCtx()
 
 // STATE : PROPS
-let { form }: { form: FeatureForm } = $props();
-let featureForm = form.form;
+let { form }: { form: FeatureForm } = $props()
+let featureForm = form.form
 
 // STATE : UI
-let isGeocodingToEnrich = $state(false);
-let isGeocodingToLocate = $state(false);
-let isGeocoding = $derived(isGeocodingToEnrich || isGeocodingToLocate);
+let isGeocodingToEnrich = $state(false)
+let isGeocodingToLocate = $state(false)
+let isGeocoding = $derived(isGeocodingToEnrich || isGeocodingToLocate)
 
-let sourceLocale: Locale = $state('en');
+let sourceLocale: Locale = $state('en')
 
 // STATE : DERIVED :: GEOMETRY
-let [lng, lat] = $derived(($featureForm.geometry as Point).coordinates);
+let [lng, lat] = $derived(($featureForm.geometry as Point).coordinates)
 
 function getStreetAddressAndNeighbourhood(address: string): {
-  streetAddress: string;
-  neighbourhood: string | null;
+  streetAddress: string
+  neighbourhood: string | null
 } {
   // First remove Hong Kong SAR identifiers
-  let cleaned = removeCountry(address);
+  let cleaned = removeCountry(address)
   // Then remove any region identifiers
-  cleaned = removeRegion(cleaned);
+  cleaned = removeRegion(cleaned)
   // Then remove any district identifiers
-  cleaned = removeDistrict(cleaned);
+  cleaned = removeDistrict(cleaned)
 
   // Extract neighbourhood from address
-  const neighbourhood = extractNeighbourhoodFromAddress(cleaned);
+  const neighbourhood = extractNeighbourhoodFromAddress(cleaned)
 
   // Remove neighbourhood from address
   const streetAddress = neighbourhood
     ? cleaned.replace(neighbourhood, '').replace(/,(\s+)?$/, '')
-    : cleaned;
+    : cleaned
 
-  return { streetAddress, neighbourhood };
+  return { streetAddress, neighbourhood }
 }
 
 // Wrap the geocode action to handle loading state
 async function handleGeocode(e: Event, updateCoords: boolean = false) {
-  e.preventDefault();
+  e.preventDefault()
 
-  appCtx.zoomToMarkerOnly = false;
+  appCtx.zoomToMarkerOnly = false
 
   try {
-    let addressToLookup = $featureForm.i18n?.[sourceLocale]?.displayAddress;
-    if (!addressToLookup) return;
+    let addressToLookup = $featureForm.i18n?.[sourceLocale]?.displayAddress
+    if (!addressToLookup) return
 
     // Clean the address before lookup
     let { streetAddress, neighbourhood } =
-      getStreetAddressAndNeighbourhood(addressToLookup);
+      getStreetAddressAndNeighbourhood(addressToLookup)
 
-    const result = await fetchForwardGeocodeALSResult(streetAddress);
+    const result = await fetchForwardGeocodeALSResult(streetAddress)
     if (result) {
       const processedResult = await processForwardGeocodeResult(
         result,
         neighbourhood,
         true, // generate display addresses
         lng,
-        lat
-      );
+        lat,
+      )
 
       if (processedResult) {
-        featureForm.update(($form) => {
+        featureForm.update($form => {
           $form.addressMeta = {
             ...$form.addressMeta,
-            ...processedResult.addressMeta
-          };
+            ...processedResult.addressMeta,
+          }
           if (updateCoords) {
             if (
               processedResult.addressMeta.longitude &&
               processedResult.addressMeta.latitude
             ) {
-              ($form.geometry as Point).coordinates = [
+              ;($form.geometry as Point).coordinates = [
                 processedResult.addressMeta.longitude,
-                processedResult.addressMeta.latitude
-              ];
+                processedResult.addressMeta.latitude,
+              ]
             }
           }
           // Update i18n
           Object.entries(processedResult.i18n).forEach(([locale, data]) => {
             if ($form.i18n) {
-              $form.i18n[locale as Locale].displayAddress = data.displayAddress;
-              $form.i18n[locale as Locale].displayAddressGen = data.displayAddressGen;
-              $form.i18n[locale as Locale].addressProperties = data.addressProperties;
+              $form.i18n[locale as Locale].displayAddress = data.displayAddress
+              $form.i18n[locale as Locale].displayAddressGen = data.displayAddressGen
+              $form.i18n[locale as Locale].addressProperties = data.addressProperties
             }
-          });
+          })
 
-          return $form;
-        });
+          return $form
+        })
       }
     }
   } finally {
-    isGeocodingToEnrich = false;
-    isGeocodingToLocate = false;
+    isGeocodingToEnrich = false
+    isGeocodingToLocate = false
   }
 }
 
 let handleGeocodeToEnrich = (e: Event) => {
-  isGeocodingToEnrich = true;
-  handleGeocode(e);
-};
+  isGeocodingToEnrich = true
+  handleGeocode(e)
+}
 
 let handleGeocodeToLocate = (e: Event) => {
-  isGeocodingToLocate = true;
-  handleGeocode(e, true);
-};
+  isGeocodingToLocate = true
+  handleGeocode(e, true)
+}
 </script>
 
 {#snippet GeocodeButton(
   isGeocoding: boolean,
   onclick: (e: Event) => void,
   isLoading: boolean,
-  icon: IconSource,
+  icon: Component,
   label: string
 )}
   <button
     class="btn-rounded btn btn-ghost text-sm font-bold transition-colors duration-300 disabled:text-base-content/70"
     class:px-6={isGeocoding}
     {onclick}
-    disabled={isLoading}>
+    disabled={isLoading}
+  >
     {#if isGeocoding}
       <span class="loading loading-ring loading-sm"></span>
       <span class="hidden md:block">{m.admin__geo_forward_geocode_loading()}</span>
     {:else}
       <Icon src={icon} class="h-6 w-6 stroke-[2px]" />
-      <span class="hidden md:block">
-        {label}
-      </span>
+      <span class="hidden md:block"> {label} </span>
     {/if}
   </button>
 {/snippet}
@@ -157,7 +158,8 @@ let handleGeocodeToLocate = (e: Event) => {
   <div class="flex flex-row items-center gap-2">
     <label
       for="sourceLanguage"
-      class="focus:ring-none label flex flex-row items-center gap-2 text-sm font-bold focus:border-none focus:outline-none active:border-none active:outline-none">
+      class="focus:ring-none label flex flex-row items-center gap-2 text-sm font-bold focus:border-none focus:outline-none active:border-none active:outline-none"
+    >
       <Icon src={Language} class="h-6 w-6 stroke-[2px]" />
       {m.admin__geo_source_language()}
     </label>

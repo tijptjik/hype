@@ -5,24 +5,24 @@
 -->
 <script lang="ts">
 // I18N
-import { getI18n, m } from '$lib/i18n';
+import { getI18n, m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-// COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte';
-import Header from '$lib/components/panels/common/Header.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+// BITS
+import { PanelRoot as Panel } from '$lib/bits'
+import Header from '$lib/components/panels/common/Header.svelte'
 // TYPES
-import type { PanelProps, Hub } from '$lib/types';
+import type { PanelProps, Hub } from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 // PROPS
-let { hub } = $props<{ hub: Hub }>();
+let { hub } = $props<{ hub: Hub }>()
 
 // STATE
 // svelte-ignore non_reactive_update
-let panelContainer: HTMLDivElement;
+let panelContainer: HTMLDivElement
 
 let panelProps: PanelProps = $derived({
   panelType: 'hub',
@@ -35,16 +35,17 @@ let panelProps: PanelProps = $derived({
     resourceType: appCtx.getActiveResourceType(),
     resourceRef: appCtx.getActiveResourceRef(),
     resourceId: appCtx.getActiveResourceId(),
-    facet: appCtx.getActiveFacet()
-  }
-});
+    facet: appCtx.getActiveFacet(),
+  },
+})
 </script>
 
 <Panel bind:panelContainer {...panelProps}>
   <Header {...panelProps} title={m.menu_about()} />
   <div
-    class="h-calc(100vh-10rem) flex flex-col items-stretch overflow-y-auto overscroll-none">
-    <h2 class="flex-grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
+    class="h-calc(100vh-10rem) flex flex-col items-stretch overflow-y-auto overscroll-none"
+  >
+    <h2 class="grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
       {getI18n(hub, 'nameShort', appCtx.getUserPreferences(), m.menu_about())}
     </h2>
     <div class="preformatted mb-12">
@@ -56,6 +57,8 @@ let panelProps: PanelProps = $derived({
 </Panel>
 
 <style>
+@reference "../../styles/app.css";
+
 :global(.preformatted) {
   white-space: pre-wrap;
 }
@@ -81,8 +84,8 @@ let panelProps: PanelProps = $derived({
   @apply hover:duration-300;
   @apply border-b-1;
   @apply border-primary;
-  border-bottom: 2px !important;
-  border-color: red !important;
+  border-bottom: 2px;
+  border-color: red;
 }
 :global(.preformatted strong) {
   @apply font-semibold;

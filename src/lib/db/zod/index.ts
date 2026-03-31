@@ -1,124 +1,105 @@
 /* ----------------- */
 // CONSTRAINTS & UTILITIES
 /* -------- */
-export * from './constraints';
+export * from './constraints'
+export * from './form'
+
+/* ----------------- */
+// GENERIC API SCHEMAS
+/* -------- */
+export * from './schema/api'
 
 /* ----------------- */
 // USER SCHEMAS
 /* -------- */
-export * from './schema/user';
+export * from './schema/user'
 
 /* ----------------- */
 // ORGANISATION SCHEMAS
 /* -------- */
-export * from './schema/organisation';
+export * from './schema/organisation'
 
 /* ----------------- */
 // PROJECT SCHEMAS
 /* -------- */
-export * from './schema/project';
+export * from './schema/project'
+export * from './schema/map'
+export * from './schema/map.types'
 
 /* ----------------- */
 // LAYER SCHEMAS
 /* -------- */
-export * from './schema/layer';
+export * from './schema/layer'
 
 /* ----------------- */
 // FEATURE SCHEMAS
 /* -------- */
-export * from './schema/feature';
+export * from './schema/feature'
 
 /* ----------------- */
 // PROPERTY SCHEMAS
 /* -------- */
-export * from './schema/property';
+export * from './schema/property'
 
 /* ----------------- */
 // TASK SCHEMAS
 /* -------- */
-export * from './schema/task';
+export * from './schema/task'
+export * from './schema/task.types'
 
 /* ----------------- */
 // IMAGE SCHEMAS
 /* -------- */
-export * from './schema/image';
+export * from './schema/image'
 
 /* ----------------- */
 // HUB SCHEMAS
 /* -------- */
-export * from './schema/hub';
+export * from './schema/hub'
 
 /* ----------------- */
 // USER API SCHEMAS - AVOID CIRCULAR DEPENDENCIES
 /* -------- */
 
 // ZOD
-import { z } from 'zod';
-import { UserBase, UserUpdate, UserBasic, UserCurrent } from './schema/user';
-import { UserLayerBase, UserLayerUpdate, UserLayerInsert } from './schema/layer';
-import {
-  UserFeatureBase,
-  UserFeatureInsert,
-  UserFeatureUpdate
-} from './schema/feature';
-import { OrganisationRoleBase } from './schema/organisation';
-import { ProjectRoleBase } from './schema/project';
+import { z } from 'zod'
+import { UserBase } from './schema/user'
+import { UserLayerRecord, UserLayerRecordUpdate } from './schema/layer'
+import { UserFeatureBase, UserFeatureUpdate } from './schema/feature'
+import { OrganisationRoleBase } from './schema/organisation'
+import { ProjectRoleBase } from './schema/project'
+import { HubRoleBase } from './schema/hub'
 
-export const UserAPI = UserBasic.extend({
-  userLayers: z.array(UserLayerBase),
-  userFeatures: z.array(UserFeatureBase)
-});
-
-export const UserCollectionAPI = UserBasic.extend({
-  email: z.string().email().nullish()
-});
-
-export const UserCurrentAPI = UserCurrent.extend({
-  userLayers: z.array(UserLayerBase),
-  userFeatures: z.array(UserFeatureBase),
-  roles: z.array(z.union([OrganisationRoleBase, ProjectRoleBase])),
-  superAdmin: z.boolean().nullish(),
-  // Contributor data - arrays of IDs for published content
-  contributedFeatures: z.array(z.string()),
-  contributedImages: z.array(z.string()),
-  reportedMissingCount: z.number(),
-  newPhotoCount: z.number(),
-  newFeatureCount: z.number()
-});
-
-export const UserLayerAPI = UserLayerBase.extend({
+export const UserLayerDetailProfileAPI = UserLayerRecord.extend({
+  hubCode: z.string().nullable().optional(),
   user: UserBase.optional(),
-  layer: UserLayerBase.optional()
-});
+  layer: UserLayerRecord.optional(),
+})
 
 // There is no UserInsertAPI because users are created by AuthJS
 
-export const UserUpdateAPI = UserUpdate.extend({
-  userLayers: z.array(UserLayerInsert).optional(), // Fully specified, but optional.
-  userFeatures: z.array(UserFeatureInsert).optional()
-});
-
-export const UserLayerUpdateAPI = UserLayerUpdate.extend({
+export const SetUserLayerDefaultsItemSchema = UserLayerRecordUpdate.extend({
   // These are required for the upsert operation
   userId: z.string(),
   layerId: z.string(),
   // These are optional for the response shape
   user: UserBase.optional(),
-  layer: UserLayerBase.optional()
-});
+  layer: UserLayerRecord.optional(),
+})
 
 export const UserFeatureUpdateAPI = UserFeatureUpdate.extend({
   // These are required for the upsert operation
   userId: z.string(),
-  featureId: z.string()
+  featureId: z.string(),
   // These are optional for the response shape
   // user: UserBase.optional(),
   // feature: z.lazy(() => FeatureBase).optional()
-});
+})
 
 export const UserBaseRaw = UserBase.extend({
-  userLayers: z.array(UserLayerBase),
+  userLayers: z.array(UserLayerRecord),
   userFeatures: z.array(UserFeatureBase),
-  memberships: z.array(OrganisationRoleBase),
-  projectRoles: z.array(ProjectRoleBase)
-});
+  hubRoles: z.array(HubRoleBase),
+  organisationRoles: z.array(OrganisationRoleBase),
+  projectRoles: z.array(ProjectRoleBase),
+})

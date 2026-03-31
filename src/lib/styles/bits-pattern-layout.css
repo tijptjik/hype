@@ -1,0 +1,589 @@
+@layer components {
+  .bits-theme .bits-app-shell {
+    @apply flex h-lvh min-h-0 w-dvw min-w-0 flex-row overflow-hidden overscroll-contain bg-black;
+  }
+
+  .bits-theme .bits-app-shell--font-hant {
+    font-family: var(--font-hant);
+  }
+
+  .bits-theme .bits-app-shell--font-hans {
+    font-family: var(--font-hans);
+  }
+
+  .bits-theme .bits-overlay-bar {
+    @apply pointer-events-none absolute inset-x-0 bottom-0 z-40 px-3 pt-4 caret-transparent;
+  }
+
+  .bits-theme .bits-overlay-bar__grid {
+    @apply grid grid-cols-3 items-center;
+  }
+
+  .bits-theme .bits-overlay-bar__section {
+    @apply flex items-center gap-2;
+  }
+
+  .bits-theme .bits-overlay-bar__section--center {
+    @apply justify-center;
+  }
+
+  .bits-theme .bits-overlay-bar__section--right {
+    @apply justify-end;
+  }
+
+  .bits-theme .bits-overlay-bar :global(button),
+  .bits-theme .bits-overlay-bar :global(a) {
+    pointer-events: auto;
+  }
+
+  .bits-theme .bits-layout-autohide {
+    @apply h-full;
+  }
+  .bits-theme .bits-min-width-guard__root {
+    @apply relative flex min-h-0 min-w-0 flex-1;
+    width: 100dvw;
+    height: 100dvh;
+  }
+
+  .bits-theme .bits-min-width-guard__content {
+    @apply flex min-h-0 min-w-0 flex-1;
+    width: 100dvw;
+    height: 100dvh;
+  }
+
+  .bits-theme .bits-min-width-guard__content--hidden {
+    @apply pointer-events-none opacity-0;
+  }
+
+  .bits-theme .bits-min-width-guard {
+    @apply absolute z-[100] flex items-center justify-center bg-base-100 p-4 caret-transparent;
+    inset: 0;
+    width: 100dvw;
+    height: 100dvh;
+  }
+
+  .bits-theme .bits-min-width-guard__card {
+    @apply w-full max-w-md rounded-xl border border-base-300 bg-base-200 p-6 text-center shadow-xl;
+  }
+
+  .bits-theme .bits-min-width-guard__icon {
+    @apply mb-4 flex justify-center;
+  }
+
+  .bits-theme .bits-min-width-guard__title {
+    @apply text-2xl font-bold;
+  }
+
+  .bits-theme .bits-min-width-guard__description {
+    @apply mt-3 text-base-content/80;
+  }
+
+  .bits-theme .bits-min-width-guard__width {
+    @apply mt-2 text-sm text-base-content/60;
+  }
+
+  .bits-theme .bits-min-width-guard__progress {
+    @apply progress progress-warning mt-4 w-full;
+  }
+
+  .bits-theme .bits-panel-root {
+    @apply flex h-full select-none flex-col bg-black caret-transparent shadow-xl;
+  }
+
+  .bits-theme .bits-panel-root--inline {
+    @apply shrink-0 transition-all duration-500;
+  }
+
+  .bits-theme .bits-panel-root--overlay {
+    @apply absolute top-0 z-50 h-full w-full md:w-[420px];
+  }
+
+  .bits-theme .bits-panel-root--overlay.bits-panel-root--left {
+    @apply md:left-0;
+  }
+
+  .bits-theme .bits-panel-root--overlay.bits-panel-root--right {
+    @apply md:right-0;
+  }
+
+  .bits-theme .bits-panel-root__content {
+    @apply h-full;
+  }
+
+  .bits-panel-section-header-root {
+    @apply flex w-full shrink-0 items-center justify-between bg-black text-base-content focus:outline-none focus:ring-0;
+  }
+
+  .bits-panel-section-header {
+    @apply flex w-full flex-row items-center justify-between pr-3;
+  }
+
+  .bits-panel-section-header-root--narrow {
+    @apply justify-center;
+  }
+
+  .bits-panel-section-header-root--narrow .bits-panel-section-header {
+    @apply justify-center pr-0;
+  }
+
+  .bits-panel-section-header-title {
+    @apply flex flex-1 items-start;
+  }
+
+  .bits-panel-section-header-title__stack {
+    @apply w-full space-y-0.5;
+  }
+
+  .bits-panel-section-header-title__row {
+    @apply flex w-full items-center;
+  }
+
+  .bits-panel-section-header-title__chevron-button {
+    @apply flex shrink-0 items-center justify-center pl-4 pr-3 focus:outline-none focus:ring-0;
+  }
+
+  .bits-panel-section-header-title__chevron {
+    @apply h-[1.125rem] w-[1.125rem];
+  }
+
+  .bits-panel-section-header-title__action {
+    @apply w-full text-left focus:outline-none focus:ring-0;
+  }
+
+  .bits-panel-section-header-title__heading {
+    @apply text-sm uppercase tracking-widest;
+  }
+
+  .bits-panel-section-header-title__description {
+    @apply text-left text-sm text-base-content/60;
+  }
+
+  .bits-panel-section-header-icon {
+    @apply focus:outline-none focus:ring-0 pr-0.5;
+  }
+
+  .bits-panel-section-header-icon--narrow {
+    @apply px-0 py-2 pr-0;
+  }
+
+  .bits-panel-section-header-icon__graphic {
+    @apply object-contain;
+  }
+
+  .bits-panel-section-header-icon__graphic--icon {
+    @apply h-7 w-7;
+  }
+
+  .bits-panel-section-header-icon__graphic--image {
+    @apply h-12 w-auto max-w-12;
+  }
+
+  .bits-panel-section-content {
+    @apply flex min-h-0 grow flex-col overflow-hidden bg-black caret-white;
+  }
+
+  .bits-panel-section-content--collapsed {
+    @apply shrink-0 overflow-visible;
+  }
+
+  .bits-panel-section-content--managed {
+    @apply shrink-0 overflow-visible;
+  }
+
+  .bits-theme .bits-panel-selected-filter {
+    @apply flex flex-wrap justify-start gap-2 px-8.5 pt-2;
+  }
+
+  .bits-theme .bits-panel-selected-filter__text {
+    @apply pb-2 text-sm text-base-content/60;
+  }
+
+  .bits-theme .bits-panel-selected-resource {
+    @apply px-2 pt-2 pb-4;
+  }
+
+  .bits-theme .bits-panel-selected-resource--narrow {
+    @apply w-full px-0 py-1;
+  }
+
+  .bits-theme .bits-panel-selected-resource__stack {
+    @apply grid;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state {
+    @apply col-start-1 row-start-1 transition-all duration-500 ease-in-out;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state[data-active="false"] {
+    @apply pointer-events-none opacity-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--wide[data-active="true"] {
+    @apply translate-x-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--wide[data-active="false"] {
+    @apply -translate-x-6;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--narrow {
+    @apply flex w-20 justify-center;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--narrow[data-active="true"] {
+    @apply translate-x-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__state--narrow[data-active="false"] {
+    @apply translate-x-6;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-list {
+    @apply mb-0 flex max-h-[33vh] flex-wrap content-start items-start gap-x-0 gap-y-2 overflow-y-auto overscroll-contain px-6 pt-0;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-chip {
+    @apply inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 rounded-full border border-current/20 bg-transparent px-3 py-1.5 text-left leading-tight;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-chip-label {
+    @apply min-w-0 justify-self-start whitespace-normal wrap-break-word leading-tight text-sm;
+  }
+
+  .bits-theme .bits-panel-selected-resource__wide-chip-icon {
+    @apply h-3 w-3 shrink-0 self-center -ml-1;
+  }
+
+  .bits-theme .bits-panel-selected-resource__empty {
+    @apply flex flex-wrap justify-start gap-2 px-[1.625rem];
+  }
+
+  .bits-theme .bits-panel-selected-resource__empty-text {
+    @apply pb-2 text-sm text-base-content/60;
+  }
+
+  .bits-theme .bits-panel-selected-resource__narrow-list {
+    @apply flex w-auto min-w-12 flex-col items-center justify-start gap-[1px];
+  }
+
+  .bits-panel-item-resource {
+    @apply flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 text-base-content caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0;
+  }
+
+  .bits-panel-item-resource--narrow {
+    @apply w-auto justify-center gap-0 py-0;
+  }
+
+  .bits-panel-item-resource:not(.bits-panel-item-resource--narrow) {
+    @apply pl-9 pr-4;
+  }
+
+  .bits-panel-item-resource__main {
+    @apply flex flex-row items-center gap-3;
+  }
+
+  .bits-panel-item-resource__main--narrow {
+    @apply h-6 min-w-12 justify-center px-0;
+  }
+
+  .bits-panel-item-resource__main--wide {
+    @apply -translate-x-5;
+  }
+
+  .bits-panel-item-resource__dot {
+    @apply h-2 w-2 shrink-0 rounded-full bg-base-content/30 transition-all;
+  }
+
+  .bits-panel-item-resource__copy {
+    @apply flex min-w-0 overflow-visible flex-col items-start gap-0;
+  }
+
+  .bits-panel-item-resource__name {
+    @apply min-w-0 whitespace-normal break-words font-light leading-tight;
+  }
+
+  .bits-panel-item-resource__name--active {
+    color: var(--bits-panel-item-tone-text, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource__action {
+    @apply shrink-0 text-sm text-base-content/20 group-hover:text-base-content/40 group-focus-visible:text-base-content/40;
+  }
+
+  .bits-panel-item-resource__action-icon {
+    @apply h-6 w-6;
+  }
+
+  .bits-panel-item-resource__narrow-close {
+    @apply h-6 w-6;
+  }
+
+  .bits-panel-item-resource__narrow-close--active {
+    color: var(--bits-panel-item-tone-text, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource__dot--hidden {
+    @apply opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100;
+  }
+
+  .bits-panel-item-resource__dot--narrow-unselected {
+    @apply outline-2 outline-offset-2;
+  }
+
+  .bits-panel-item-resource__dot--active {
+    @apply outline-white group-hover:scale-[160%] group-hover:outline-1 group-hover:outline-offset-0;
+  }
+
+  .bits-panel-item-resource[data-selected="true"] .bits-panel-item-resource__dot {
+    background-color: var(--bits-panel-item-tone-bg, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource[data-selected="false"]:hover .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-selected="false"]:focus-visible
+    .bits-panel-item-resource__dot {
+    @apply bg-base-content/50;
+  }
+
+  .bits-panel-item-resource[data-selected="true"]:hover .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-selected="true"]:focus-visible
+    .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-active="true"] .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-active="true"]:hover .bits-panel-item-resource__dot,
+  .bits-panel-item-resource[data-active="true"]:focus-visible
+    .bits-panel-item-resource__dot {
+    background-color: var(--bits-panel-item-tone-bg-hover, var(--color-base-content));
+  }
+
+  .bits-panel-item-resource[data-tone="primary"] {
+    --bits-panel-item-tone-bg: var(--color-primary);
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-primary) 75%,
+      transparent
+    );
+    --bits-panel-item-tone-text: var(--color-primary);
+  }
+
+  .bits-panel-item-resource[data-tone="accent"] {
+    --bits-panel-item-tone-bg: var(--color-accent);
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-accent) 75%,
+      transparent
+    );
+    --bits-panel-item-tone-text: var(--color-accent);
+  }
+
+  .bits-panel-item-resource[data-tone="secondary"] {
+    --bits-panel-item-tone-bg: var(--color-secondary);
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-secondary) 75%,
+      transparent
+    );
+    --bits-panel-item-tone-text: var(--color-secondary);
+  }
+
+  .bits-panel-item-resource[data-tone="neutral"] {
+    --bits-panel-item-tone-bg: color-mix(
+      in oklab,
+      var(--color-base-content) 60%,
+      transparent
+    );
+    --bits-panel-item-tone-bg-hover: color-mix(
+      in oklab,
+      var(--color-base-content) 60%,
+      transparent
+    );
+    --bits-panel-item-tone-text: color-mix(
+      in oklab,
+      var(--color-base-content) 60%,
+      transparent
+    );
+  }
+
+  .bits-panel-item-resource__tooltip {
+    @apply pointer-events-auto fixed z-50 min-h-4 min-w-10 whitespace-nowrap rounded-r-md bg-black px-3 py-2 text-center text-sm text-base-content;
+  }
+
+  .bits-panel-header-admin {
+    @apply flex h-18 shrink-0 flex-row items-center justify-between bg-black p-4 pt-6;
+  }
+
+  .bits-panel-header-admin__title {
+    @apply text-lg font-semibold uppercase text-white;
+  }
+
+  .bits-panel-header-admin__actions {
+    @apply flex gap-2;
+  }
+
+  .bits-panel-header-admin__button {
+    @apply m-0;
+  }
+
+  .bits-panel-header-admin__narrow-trigger {
+    @apply m-0 w-full justify-center p-1;
+    --btn-bg: transparent;
+    --btn-border: transparent;
+    --btn-hover-bg: transparent;
+    --btn-active-bg: transparent;
+    --btn-fg: var(--color-primary);
+    --btn-hover-fg: color-mix(in oklab, var(--color-primary) 82%, white);
+    --btn-active-fg: color-mix(in oklab, var(--color-primary) 72%, white);
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-admin-menu {
+    --bits-admin-menu-slot-size: 3.25rem;
+    --bits-admin-menu-slot-gap: 0.75rem;
+    --bits-admin-menu-badge-bleed: 1rem;
+    --bits-admin-menu-page-size: calc(
+      (var(--bits-admin-menu-slot-size) * 5) +
+      (var(--bits-admin-menu-slot-gap) * 4)
+    );
+    --bits-admin-menu-narrow-viewport-size: calc(
+      var(--bits-admin-menu-page-size) +
+      var(--bits-admin-menu-badge-bleed)
+    );
+    @apply flex w-full shrink-0 caret-transparent;
+  }
+
+  .bits-theme .bits-admin-menu--narrow {
+    @apply justify-center px-2 pb-3 pt-4;
+  }
+
+  .bits-theme .bits-admin-menu--wide {
+    @apply justify-center px-4 py-3;
+  }
+
+  .bits-theme .bits-admin-menu__viewport {
+    @apply min-w-0 flex-1;
+  }
+
+  .bits-theme .bits-admin-menu__track {
+    @apply flex w-full;
+  }
+
+  .bits-theme .bits-admin-menu__page {
+    @apply w-full shrink-0;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-admin-menu__list {
+    @apply flex items-center justify-center;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__list {
+    @apply h-full w-full flex-col items-end justify-end;
+    gap: var(--bits-admin-menu-slot-gap);
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__list {
+    @apply flex-row-reverse gap-2;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__viewport {
+    @apply overflow-x-auto overflow-y-hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__track {
+    @apply flex-row;
+  }
+
+  .bits-theme .bits-admin-menu--wide .bits-admin-menu__page {
+    scroll-snap-align: start;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__viewport {
+    overflow-x: visible;
+    overflow-y: auto;
+    block-size: var(--bits-admin-menu-narrow-viewport-size);
+    min-block-size: var(--bits-admin-menu-narrow-viewport-size);
+    padding-block-start: var(--bits-admin-menu-badge-bleed);
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__track {
+    @apply flex-col;
+    margin-block-start: calc(var(--bits-admin-menu-badge-bleed) * -1);
+  }
+
+  .bits-theme .bits-admin-menu--narrow .bits-admin-menu__page {
+    block-size: var(--bits-admin-menu-narrow-viewport-size);
+    min-block-size: var(--bits-admin-menu-narrow-viewport-size);
+    scroll-snap-align: start;
+  }
+
+  .bits-theme .bits-admin-menu__item {
+    @apply relative flex shrink-0 items-center justify-center;
+  }
+
+  .bits-theme .bits-admin-menu__item--placeholder {
+    @apply invisible pointer-events-none shrink-0;
+    block-size: var(--bits-admin-menu-slot-size);
+    inline-size: var(--bits-admin-menu-slot-size);
+  }
+
+  .bits-theme .bits-admin-menu__button {
+    @apply size-12 border-0;
+    --btn-bg: transparent;
+    --btn-border: transparent;
+    --btn-hover-bg: color-mix(in oklab, var(--color-base-300) 42%, transparent);
+    --btn-active-bg: color-mix(in oklab, var(--color-base-300) 58%, transparent);
+    --btn-fg: color-mix(in oklab, var(--color-base-content) 88%, transparent);
+    --btn-hover-fg: var(--color-base-content);
+    --btn-active-fg: var(--color-base-content);
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-admin-menu__item[data-active="true"] .bits-admin-menu__button {
+    --btn-hover-bg: transparent;
+    --btn-active-bg: transparent;
+    --btn-fg: var(--bits-admin-menu-active-color, var(--color-primary));
+    --btn-hover-fg: var(--bits-admin-menu-active-color, var(--color-primary));
+    --btn-active-fg: color-mix(
+      in oklab,
+      var(--bits-admin-menu-active-color, var(--color-primary)) 82%,
+      white
+    );
+  }
+
+  .bits-theme .bits-admin-menu__badge {
+    @apply pointer-events-none absolute right-3 top-1.5 inline-flex size-5 items-center justify-center rounded-full border border-base-100 bg-primary text-[0.7rem] font-semibold leading-none text-primary-content;
+    transform: translate(20%, -12%);
+  }
+
+  .bits-theme .bits-admin-menu__badge--accent {
+    @apply bg-accent text-accent-content;
+  }
+
+  .bits-theme .bits-admin-menu__badge--overflow {
+    @apply pb-px text-[0.85rem];
+  }
+
+  .bits-theme .bits-admin-shell {
+    @apply flex h-full min-h-0 w-full min-w-0 overflow-hidden drag-none;
+    -webkit-user-drag: none;
+  }
+
+  .bits-theme .bits-admin-shell__main {
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
+    container-type: inline-size;
+    container-name: bits-admin-shell-main;
+  }
+}

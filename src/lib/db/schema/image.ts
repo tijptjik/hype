@@ -3,17 +3,14 @@ import {
   primaryKey,
   sqliteTable,
   text,
-  uniqueIndex
-} from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { feature } from './feature';
+import { feature } from './feature'
 // ENUM
-import { ImageCDN, ImageEnv, ImageIntent } from '../../enums';
-// TYPES
-import type { EXIF } from '../../types';
-
+import { ImageCDN, ImageEnv, ImageIntent, ImagePresentationMode } from '../../enums'
 /* ============================================================================
  * IMAGE MANAGEMENT
  * ============================================================================
@@ -36,43 +33,36 @@ export const image = sqliteTable('image', {
   contributorId: text('contributorId'),
   // CDN
   cdn: text('cdn', { enum: Object.values(ImageCDN) as [string, ...string[]] })
-    .default(ImageCDN.cloudinary)
+    .default(ImageCDN.cloudflareR2)
     .notNull(),
-  // Cloudinary Cloud Name
+  // Stage / bucket namespace
   env: text('env', { enum: Object.values(ImageEnv) as [string, ...string[]] })
-    .default(ImageEnv.dg6vtsga1)
+    .default(ImageEnv.local)
     .notNull(),
-  // Cloudinary Asset ID
+  // Optional provider asset id
   cdnId: text('cdnId'),
-  // Cloudinary Public ID
+  // Stable logical path for the asset
   publicId: text('publicId').notNull(),
-  // Cloudinary Version
+  // Cache-busting version
   version: integer('version'),
-
-  originalFilename: text('originalFilename'),
-  originalExtension: text('originalExtension'),
-  originalWidth: integer('originalWidth'),
-  originalHeight: integer('originalHeight'),
-
-  // EXIF Metadata
-  metadata: text('metadata', { mode: 'json' }).$type<EXIF>(),
-  cameraModel: text('cameraModel'),
-  capturedAt: text('capturedAt'),
-  latitude: text('latitude'),
-  longitude: text('longitude'),
-  credit: text('credit'),
-
+  // Preferred presentation policy for UI rendering
+  presentationMode: text('presentationMode', {
+    enum: Object.values(ImagePresentationMode) as [string, ...string[]],
+  })
+    .default(ImagePresentationMode.contain)
+    .notNull(),
   // False : Images may be shown in the Admin Panel
   // True : Image is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+  localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Feature image assignments
@@ -89,18 +79,19 @@ export const featureImage = sqliteTable(
       .notNull()
       .references(() => image.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     intent: text('intent', {
-      enum: Object.values(ImageIntent) as [string, ...string[]]
+      enum: Object.values(ImageIntent) as [string, ...string[]],
     })
       .default(ImageIntent.undefined)
       .notNull(),
     isPublished: integer('isPublished', { mode: 'boolean' }).default(false).notNull(),
+    localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
     publishedAt: text('publishedAt'),
-    publisherId: text('publisherId')
+    publisherId: text('publisherId'),
   },
-  (table) => [
+  table => [
     primaryKey({ columns: [table.featureId, table.imageId] }),
     uniqueIndex('canonical_intent')
       .on(table.featureId)
-      .where(sql`intent = 'canonical'`)
-  ]
-);
+      .where(sql`intent = 'canonical'`),
+  ],
+)

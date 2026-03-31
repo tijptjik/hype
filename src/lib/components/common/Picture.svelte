@@ -1,21 +1,19 @@
 <script lang="ts">
 // COMPONENTS
-import Loading from '$lib/components/images/gallery/overlays/Loading.svelte';
-import LoadError from '$lib/components/images/gallery/overlays/LoadError.svelte';
 
 // TYPES
 type Props = {
-  src: string;
-  alt?: string;
-  class?: string;
-  layout?: 'cover' | 'fill' | 'fit' | 'contain';
-  showLoading?: boolean;
-  showError?: boolean;
-  showBackground?: boolean;
-  opacity?: number;
-  onLoad?: () => void;
-  onError?: () => void;
-};
+  src: string
+  alt?: string
+  class?: string
+  layout?: 'cover' | 'fill' | 'fit' | 'contain'
+  showLoading?: boolean
+  showError?: boolean
+  showBackground?: boolean
+  opacity?: number
+  onLoad?: () => void
+  onError?: () => void
+}
 
 let {
   src,
@@ -27,46 +25,42 @@ let {
   showBackground = true,
   opacity = 1,
   onLoad,
-  onError
-}: Props = $props();
+  onError,
+}: Props = $props()
 
-let loaded = $state(false);
-let error = $state(false);
+let loaded = $state(false)
+let error = $state(false)
 
 // Debug opacity changes
 
 const handleLoad = () => {
-  loaded = true;
-  error = false;
-  onLoad?.();
-};
+  loaded = true
+  error = false
+  onLoad?.()
+}
 
 const handleError = () => {
-  error = true;
-  loaded = true;
-  onError?.();
-};
+  error = true
+  loaded = true
+  onError?.()
+}
 </script>
 
 <figure
-  class="{className.includes('absolute') ? '' : 'relative'} {className
+  class="{className.includes('absolute') ? '' : 'relative'} {layout === 'contain' || layout === 'fit'
+    ? 'flex items-center justify-center overflow-hidden'
+    : 'overflow-hidden'} {className
     ? className
-    : 'h-full w-full'} bg-transparent">
-  {#if showLoading && !loaded && !error}
-    <Loading />
-  {/if}
-
-  {#if showError && error}
-    <LoadError />
-  {/if}
-
+    : 'h-full w-full'} bg-transparent"
+>
   {#if showBackground}
     <!-- Background Image (blurred) -->
     <img
       {src}
       {alt}
       class="absolute inset-0 h-full w-full object-cover text-transparent blur-sm"
-      style="opacity: {(opacity / 10) * 6 * (loaded && !error ? 1 : 0)}" />
+      style="opacity: {(opacity / 10) * 6 * (loaded && !error ? 1 : 0)}"
+    >
   {/if}
   <!-- Foreground Image -->
   <img
@@ -78,8 +72,9 @@ const handleError = () => {
       : layout === 'fill'
         ? 'h-full w-full object-fill'
         : layout === 'fit'
-          ? 'h-full w-full object-scale-down'
-          : 'h-full w-full object-contain'} bg-transparent"
+          ? 'max-h-full max-w-full object-scale-down'
+          : 'max-h-full max-w-full object-contain'} bg-transparent"
     onload={handleLoad}
-    onerror={handleError} />
+    onerror={handleError}
+  >
 </figure>

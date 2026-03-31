@@ -1,22 +1,37 @@
 <script lang="ts">
-import { Icon as SteezeIcon } from '@steeze-ui/svelte-icon';
-import type { IconSource } from '@steeze-ui/svelte-icon';
+import type { Component } from 'svelte'
 
 interface IconProps {
-  src: IconSource;
-  size?: string;
-  theme?: string;
-  title?: string;
-  [key: string]: any;
+  src: Component
+  size?: string
+  theme?: string
+  type?: string
+  title?: string
+  class?: string
+  style?: string
+  [key: string]: any
 }
 
 let {
-  src,
+  src: DynamicIcon,
   size = '24px',
   theme = 'outline',
+  type,
   title,
+  class: className = '',
+  style = '',
   ...restProps
-}: IconProps = $props();
+}: IconProps = $props()
+
+const fillClass = $derived(
+  theme === 'solid' || theme === 'fill' || type === 'solid'
+    ? 'fill-current'
+    : 'fill-none',
+)
+const iconClass = $derived(`${className} ${fillClass}`.trim())
+const iconStyle = $derived(
+  `${style ? `${style};` : ''}width: ${size}; height: ${size};`.trim(),
+)
 </script>
 
-<SteezeIcon {src} {size} {theme} {title} {...restProps} />
+<DynamicIcon class={iconClass} style={iconStyle} {title} {...restProps} />

@@ -132,7 +132,7 @@ jobs:
 
       - name: 'BUILD :: Application (if cache miss)'
         if: steps.cache-build.outputs.cache-hit != 'true'
-        run: bun run build:cf:production
+        run: bun run build:cf:prod
         env:
           CLOUDFLARE_ENV: production
 
@@ -144,13 +144,13 @@ jobs:
           echo "Rebuilt application for production deployment"
 
       - name: 'DB :: Apply migrations'
-        run: bun run db:migration:run:cf:production
+        run: bun run db:migration:run:cf:prod
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: 'DEPLOY :: Cloudflare Worker'
-        run: bun run deploy:production
+        run: bun run deploy:prod
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

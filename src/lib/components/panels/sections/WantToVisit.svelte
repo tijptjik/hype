@@ -1,75 +1,81 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // ANIMATIONS
-import { flip } from 'svelte/animate';
+import { flip } from 'svelte/animate'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
+import { Panel } from '$lib/enums'
 // COMPONENTS
-import Section from '$lib/components/panels/common/Section.svelte';
-import FilterBar from '$lib/components/panels/common/FilterBar.svelte';
-import Icon from '$lib/components/common/Icon.svelte';
-import { Squares2x2 } from '@steeze-ui/heroicons';
+import Section from '$lib/components/panels/common/Section.svelte'
+import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
+import Icon from '$lib/components/common/Icon.svelte'
+import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 // SERVICES
-import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures';
+import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures'
 // NAVIGATION
-import { navigateToStarred } from '$lib/navigation';
+import { navigateToStarred } from '$lib/navigation'
 // TYPES
-import type { UserFeatureWithHierarchy } from '$lib/types';
+import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
 
 // CONTEXT
-const appCtx = getAppCtx();
-const omniCtx = getOmniCtx();
+const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
 
 // STATE
-let searchTerm = $state('');
+let searchTerm = $state('')
 
 // PANEL PROPS
 let panelProps = $derived({
-  panelType: 'stars' as const,
+  panelType: Panel.plan,
   position: 'left' as const,
   scrollable: false,
   inline: appCtx.isAdmin(),
   isNarrow: false,
-  isAdmin: false
-});
+  isAdmin: false,
+})
 
 // Get wishlisted features with hierarchy
 let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
   (async () => {
-    if (!appCtx.state.userFeatures.wishlisted) return [];
-    const results = [];
+    if (!appCtx.state.userFeatures.wishlisted) return []
+    const results = []
     for (const wishlist of appCtx.state.userFeatures.wishlisted) {
       const feature = appCtx.state.resources.feature.find(
-        (f) => f.id === wishlist.featureId
-      );
+        f => f.id === wishlist.featureId,
+      )
 
       // Skip if feature doesn't exist
-      if (!feature) continue;
+      if (!feature) continue
 
       try {
-        const hierarchy = await appCtx.getHierarchy(feature);
+        const hierarchy = await appCtx.getHierarchy(feature)
 
         results.push({
           ...wishlist,
           feature,
-          hierarchy
-        });
+          hierarchy,
+        })
       } catch (error) {
-        console.warn('Failed to get hierarchy for feature:', feature.id, error);
+        console.warn('Failed to get hierarchy for feature:', feature.id, error)
       }
     }
 
-    return results;
-  })()
-);
+    return results
+  })(),
+)
 </script>
 
-<Section title={m.stars__want_to_visit()} icon="/compass.svg" {...panelProps}>
+<Section
+  title={m.stars__want_to_visit()}
+  iconGraphicClass="scale-130 origin-bottom"
+  icon="/compass.svg"
+  {...panelProps}
+>
   {#await wishlistedFeaturesPromise}
-    <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+    <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
       <span class="loading loading-ring loading-md"></span>
     </div>
   {:then wishlistedFeatures}
@@ -82,7 +88,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
     )}
     <div class="flex min-h-0 flex-col">
       {#if filteredFeatures.length === 0}
-        <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+        <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
           <p class="text-sm text-base-content/60">{m.short_watery_marten_race()}</p>
         </div>
       {:else}
@@ -124,9 +130,10 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
                     navigateToStarred(appCtx, omniCtx, wishlist.featureId, features);
                   });
                 }
-              }}>
-              <Icon src={Squares2x2} class="h-5 w-5 flex-shrink-0" theme="fill" />
-              <div class="flex flex-grow flex-col">
+              }}
+            >
+              <Icon src={Squares2x2} class="h-5 w-5 shrink-0" theme="fill" />
+              <div class="flex grow flex-col">
                 <p class="text-xs uppercase tracking-widest">
                   {#if showOrganisation}
                     <span class="text-primary">{organisationName}</span>
@@ -140,9 +147,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
                     <span class="text-secondary">{layerName}</span>
                   {/if}
                 </p>
-                <p class="font-normal text-neutral-300">
-                  {featureName}
-                </p>
+                <p class="font-normal text-neutral-300">{featureName}</p>
               </div>
             </div>
           {/each}
@@ -150,7 +155,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
       {/if}
     </div>
   {:catch error}
-    <div class="flex flex-wrap justify-start gap-2 px-[34px] pt-2">
+    <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
       <p class="text-sm text-red-400">{m.honest_swift_lamb_sew()}</p>
     </div>
   {/await}

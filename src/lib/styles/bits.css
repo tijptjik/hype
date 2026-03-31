@@ -1,0 +1,291 @@
+/*
+  Scoped Bits UI theme layer.
+  Apply by wrapping migrated sections with: <div class="bits-theme">...</div>
+*/
+@import "./bits-card.css";
+@import "./bits-checkbox.css";
+@import "./bits-completion-footer.css";
+@import "./bits-dialog.css";
+@import "./bits-index-card.css";
+@import "./bits-license.css";
+@import "./bits-loading.css";
+@import "./bits-map-style.css";
+@import "./bits-entity-image.css";
+@import "./image-surface.css";
+@import "./bits-featureCard.css";
+@import "./bits-feature-stats.css";
+@import "./bits-feature-editor.css";
+@import "./bits-form.css";
+@import "./bits-header.css";
+@import "./bits-main.css";
+@import "./bits-meter.css";
+@import "./bits-organisation-capabilities.css";
+@import "./bits-icon.css";
+@import "./bits-project-capabilities.css";
+@import "./bits-resource-filter-bar.css";
+@import "./bits-resource-index.css";
+@import "./bits-resource-rows.css";
+@import "./bits-resource-sort-control.css";
+@import "./bits-scrollbar.css";
+@import "./bits-pattern-header.css";
+@import "./bits-pattern-layout.css";
+@import "./bits-search.css";
+@import "./bits-separator.css";
+@import "./bits-switch.css";
+@import "./bits-text.css";
+@import "./bits-toast.css";
+@import "./bits-tooltip.css";
+@import "./bits-transition.css";
+@import "./bits-user-capability-matrix.css";
+
+@layer theme {
+  .bits-theme {
+    /* Local tokens derived from existing app theme */
+    --background: var(--color-transparent);
+    --background-alt: var(--color-base-200);
+    --foreground: var(--color-base-content);
+    --foreground-alt: color-mix(in oklab, var(--color-base-content) 70%, black);
+    --muted: var(--color-base-300);
+    --muted-foreground: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    --border: var(--color-base-content);
+    --border-input: color-mix(in oklab, var(--color-base-content) 17%, transparent);
+    --border-input-hover: color-mix(
+      in oklab,
+      var(--color-base-content) 40%,
+      transparent
+    );
+    --border-card: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+    --dark: var(--color-base-content);
+    --dark-10: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+    --dark-40: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+    --dark-04: color-mix(in oklab, var(--color-base-content) 4%, transparent);
+    --accent: var(--color-accent);
+    --accent-foreground: var(--color-accent-content);
+    --destructive: var(--color-error);
+    --tertiary: var(--color-warning);
+    --line: var(--color-base-300);
+    --light: var(--color-light);
+
+    /* black */
+    --contrast: hsl(0 0% 0%);
+
+    /* Shadows */
+    --shadow-mini: 0px 1px 0px 1px rgba(0, 0, 0, 0.04);
+    --shadow-mini-inset: 0px 1px 0px 0px rgba(0, 0, 0, 0.04) inset;
+    --shadow-popover: 0px 7px 12px 3px var(--dark-10);
+    --shadow-kbd: 0px 2px 0px 0px rgba(0, 0, 0, 0.07);
+    --shadow-btn: 0px 1px 0px 1px rgba(0, 0, 0, 0.03);
+    --shadow-card: 0px 2px 0px 1px rgba(0, 0, 0, 0.04);
+    --shadow-date-field-focus: 0px 0px 0px 3px rgba(24, 24, 27, 0.17);
+  }
+}
+
+@theme inline {
+  /* Colors */
+  --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
+  --color-foreground: var(--foreground);
+  --color-foreground-alt: var(--foreground-alt);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border-card);
+  --color-border-input: var(--border-input);
+  --color-border-input-hover: var(--border-input-hover);
+  --color-border-card: var(--border-card);
+  --color-light: var(--light);
+  --color-dark: var(--contrast);
+  --color-dark-10: var(--dark-10);
+  --color-dark-40: var(--dark-40);
+  --color-dark-04: var(--dark-04);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-tertiary: var(--tertiary);
+  --color-line: var(--line);
+  --color-contrast: var(--contrast);
+
+  /* Sizing */
+  --text-xxs: 10px;
+
+  --radius-card: 16px;
+  --radius-card-lg: 20px;
+  --radius-card-sm: 10px;
+  --radius-input: 9px;
+  --radius-button: 5px;
+  --radius-5px: 5px;
+  --radius-9px: 9px;
+  --radius-10px: 10px;
+  --radius-15px: 15px;
+
+  --spacing-input: 3rem;
+  --spacing-input-sm: 2.5rem;
+
+  --breakpoint-desktop: 1440px;
+
+  /* Animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-caret-blink: caret-blink 1s ease-out infinite;
+  --animate-scale-in: scale-in 0.2s ease;
+  --animate-scale-out: scale-out 0.15s ease;
+  --animate-fade-in: fade-in 0.2s ease;
+  --animate-fade-out: fade-out 0.15s ease;
+  --animate-enter-from-left: enter-from-left 0.2s ease;
+  --animate-enter-from-right: enter-from-right 0.2s ease;
+  --animate-exit-to-left: exit-to-left 0.2s ease;
+  --animate-exit-to-right: exit-to-right 0.2s ease;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--bits-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--bits-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes enter-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(200px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes enter-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-200px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes exit-to-right {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(200px);
+    }
+  }
+
+  @keyframes exit-to-left {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-200px);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: rotateX(-10deg) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: rotateX(0deg) scale(1);
+    }
+  }
+
+  @keyframes scale-out {
+    from {
+      opacity: 1;
+      transform: rotateX(0deg) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: rotateX(-10deg) scale(0.95);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+@layer base {
+  .bits-theme,
+  .bits-theme ::after,
+  .bits-theme ::before,
+  .bits-theme ::backdrop,
+  .bits-theme ::file-selector-button {
+    border-color: var(--color-border-card, currentColor);
+  }
+
+  .bits-theme * {
+    @apply border-border;
+  }
+
+  .bits-theme {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+
+  .bits-theme ::selection {
+    background: #fdffa4;
+    color: black;
+  }
+}
+
+@layer components {
+  .bits-theme *:not(.focus-override) {
+    outline: none;
+  }
+
+  .bits-theme *:not(.focus-override):focus-visible {
+    @apply focus-visible:ring-foreground focus-visible:ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-1;
+  }
+
+  .bits-theme .link {
+    @apply hover:text-foreground/80 focus-visible:ring-foreground focus-visible:ring-offset-background rounded-xs focus-visible:outline-hidden inline-flex items-center gap-1 font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+}

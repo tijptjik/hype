@@ -1,0 +1,72 @@
+@layer components {
+  .bits-theme .bits-tooltip__trigger {
+    display: inline-flex;
+    max-width: 100%;
+  }
+
+  .bits-theme .bits-tooltip__trigger--block {
+    display: flex;
+    width: 100%;
+  }
+
+  .bits-theme.bits-tooltip__content,
+  .bits-theme .bits-tooltip__content {
+    z-index: 80;
+    max-width: 18rem;
+    border-radius: var(--radius-input);
+    background: color-mix(in oklab, black 78%, var(--color-glass-100) 22%);
+    color: color-mix(in oklab, white 92%, var(--color-base-300) 8%);
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.24),
+      0 2px 8px rgba(0, 0, 0, 0.16),
+      0 0 0 1px rgba(255, 255, 255, 0.04);
+    font-size: 0.875rem;
+    line-height: 1.3;
+    padding: 8px;
+    backdrop-filter: blur(14px) saturate(0.9);
+    animation-duration: 160ms;
+    animation-fill-mode: both;
+    transform-origin: var(--bits-tooltip-content-transform-origin);
+  }
+
+  .bits-theme.bits-tooltip__content[data-state="delayed-open"],
+  .bits-theme.bits-tooltip__content[data-state="instant-open"],
+  .bits-theme .bits-tooltip__content[data-state="delayed-open"],
+  .bits-theme .bits-tooltip__content[data-state="instant-open"] {
+    animation-name: bits-tooltip-in;
+  }
+
+  .bits-theme.bits-tooltip__content[data-state="closed"],
+  .bits-theme .bits-tooltip__content[data-state="closed"] {
+    animation-name: bits-tooltip-out;
+  }
+
+  .bits-theme.bits-tooltip__arrow,
+  .bits-theme .bits-tooltip__arrow {
+    fill: color-mix(in oklab, black 78%, var(--color-base-300) 22%);
+  }
+
+  @keyframes bits-tooltip-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes bits-tooltip-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    to {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+}

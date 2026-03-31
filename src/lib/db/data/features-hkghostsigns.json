@@ -3,10 +3,7 @@
     "id": "rMMIBGHfa88V",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189151,
-        22.328725
-      ]
+      "coordinates": [114.189151, 22.328725]
     },
     "addressMeta": {
       "geoAddressCode": "3753121076T20050430",
@@ -32,10 +29,7 @@
     "id": "XPLfi1zgik5S",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192101,
-        22.330166
-      ]
+      "coordinates": [114.192101, 22.330166]
     },
     "addressMeta": {
       "geoAddressCode": "3782521238T20050430",
@@ -61,10 +55,7 @@
     "id": "RqqEn3RsD03y",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192224,
-        22.329502
-      ]
+      "coordinates": [114.192224, 22.329502]
     },
     "addressMeta": {
       "geoAddressCode": "3782221158T20050430",
@@ -90,10 +81,7 @@
     "id": "UrLt8trdls7g",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192234,
-        22.329356
-      ]
+      "coordinates": [114.192234, 22.329356]
     },
     "addressMeta": {
       "geoAddressCode": "3782221144T20050430",
@@ -119,10 +107,7 @@
     "id": "8jMFSq-e94BH",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189328,
-        22.324943
-      ]
+      "coordinates": [114.189328, 22.324943]
     },
     "addressMeta": {
       "geoAddressCode": "3750220691P20060718",
@@ -148,10 +133,7 @@
     "id": "pQiwUDgxmoZL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.011127,
-        22.432091
-      ]
+      "coordinates": [114.011127, 22.432091]
     },
     "addressMeta": {
       "geoAddressCode": "1918432510T20050430",
@@ -177,10 +159,7 @@
     "id": "LqIGZkwk_dI5",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.023515,
-        22.442136
-      ]
+      "coordinates": [114.023515, 22.442136]
     },
     "addressMeta": {
       "geoAddressCode": "2048433660P20070919",
@@ -206,10 +185,7 @@
     "id": "gra3PJsUoOpv",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.025367,
-        22.44242
-      ]
+      "coordinates": [114.025367, 22.44242]
     },
     "addressMeta": {
       "geoAddressCode": "2066833680P20070925",
@@ -235,10 +211,7 @@
     "id": "z4WT9zI08T_a",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.026488,
-        22.442353
-      ]
+      "coordinates": [114.026488, 22.442353]
     },
     "addressMeta": {
       "geoAddressCode": "2078733676T20050430",
@@ -264,10 +237,7 @@
     "id": "yM2tUmV6CKef",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.028781,
-        22.442389
-      ]
+      "coordinates": [114.028781, 22.442389]
     },
     "addressMeta": {
       "geoAddressCode": "2111833517T20050430",
@@ -293,10 +263,7 @@
     "id": "VMxO8Y2sdi_u",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.028838,
-        22.442657
-      ]
+      "coordinates": [114.028838, 22.442657]
     },
     "addressMeta": {
       "geoAddressCode": "2104633713P20070905",
@@ -322,10 +289,7 @@
     "id": "9PmmxM7m7_Uq",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.028838,
-        22.442657
-      ]
+      "coordinates": [114.028838, 22.442657]
     },
     "addressMeta": {
       "geoAddressCode": "2104633713P20070905",
@@ -351,10 +315,7 @@
     "id": "g3hNils4Z6_E",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.028843,
-        22.442334
-      ]
+      "coordinates": [114.028843, 22.442334]
     },
     "addressMeta": {
       "geoAddressCode": "2111833517T20050430",
@@ -380,10 +341,7 @@
     "id": "AA5M6spKyiNS",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.028907,
-        22.444833
-      ]
+      "coordinates": [114.028907, 22.444833]
     },
     "addressMeta": {
       "geoAddressCode": "2104033943T20050430",
@@ -409,10 +367,7 @@
     "id": "58MOsJp8Y5s2",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.028954,
-        22.442025
-      ]
+      "coordinates": [114.028954, 22.442025]
     },
     "addressMeta": {
       "geoAddressCode": "2103333637P20070319",
@@ -438,10 +393,7 @@
     "id": "wYIPOKn5QkGL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029029,
-        22.44189
-      ]
+      "coordinates": [114.029029, 22.44189]
     },
     "addressMeta": {
       "geoAddressCode": "2103333637P20070319",
@@ -467,10 +419,7 @@
     "id": "3ELqYDbL6IJc",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029058,
-        22.444198
-      ]
+      "coordinates": [114.029058, 22.444198]
     },
     "addressMeta": {
       "geoAddressCode": "2105833879T20050430",
@@ -496,10 +445,7 @@
     "id": "HYaFwJ62HT8Q",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029273,
-        22.445902
-      ]
+      "coordinates": [114.029273, 22.445902]
     },
     "addressMeta": {
       "geoAddressCode": "2106834058P20091223",
@@ -525,10 +471,7 @@
     "id": "FofJCGqmqmJi",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.02928,
-        22.444311
-      ]
+      "coordinates": [114.02928, 22.444311]
     },
     "addressMeta": {
       "geoAddressCode": "2106433879T20050430",
@@ -554,10 +497,7 @@
     "id": "xyoHweaunggf",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029423,
-        22.445789
-      ]
+      "coordinates": [114.029423, 22.445789]
     },
     "addressMeta": {
       "geoAddressCode": "2111134053T20050430",
@@ -583,10 +523,7 @@
     "id": "DEtJDM_zVyw1",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029575,
-        22.445353
-      ]
+      "coordinates": [114.029575, 22.445353]
     },
     "addressMeta": {
       "geoAddressCode": "2111633986P20091223",
@@ -612,10 +549,7 @@
     "id": "LkRLlPfL2Hsz",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029612,
-        22.444298
-      ]
+      "coordinates": [114.029612, 22.444298]
     },
     "addressMeta": {
       "geoAddressCode": "2110933878T20050430",
@@ -641,10 +575,7 @@
     "id": "IhCL5zYV1kgw",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029612,
-        22.444298
-      ]
+      "coordinates": [114.029612, 22.444298]
     },
     "addressMeta": {
       "geoAddressCode": "2110933878T20050430",
@@ -670,10 +601,7 @@
     "id": "Yf6yJSaXJF2i",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029649,
-        22.44488
-      ]
+      "coordinates": [114.029649, 22.44488]
     },
     "addressMeta": {
       "geoAddressCode": "2111233946T20050430",
@@ -699,10 +627,7 @@
     "id": "3SfAcnG2tnJt",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029649,
-        22.44488
-      ]
+      "coordinates": [114.029649, 22.44488]
     },
     "addressMeta": {
       "geoAddressCode": "2111233946T20050430",
@@ -728,10 +653,7 @@
     "id": "ZnUt4A_ZaZal",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029649,
-        22.44488
-      ]
+      "coordinates": [114.029649, 22.44488]
     },
     "addressMeta": {
       "geoAddressCode": "2111233946T20050430",
@@ -757,10 +679,7 @@
     "id": "Wf0rhWnTg2ek",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.02983,
-        22.444335
-      ]
+      "coordinates": [114.02983, 22.444335]
     },
     "addressMeta": {
       "geoAddressCode": "2113033878T20050430",
@@ -786,10 +705,7 @@
     "id": "MXIE5JZvVxSU",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.029868,
-        22.445915
-      ]
+      "coordinates": [114.029868, 22.445915]
     },
     "addressMeta": {
       "geoAddressCode": "2113734064P20091223",
@@ -815,10 +731,7 @@
     "id": "Ef656XCeCjs8",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.030292,
-        22.441844
-      ]
+      "coordinates": [114.030292, 22.441844]
     },
     "addressMeta": {
       "geoAddressCode": "2117433583P20070316",
@@ -844,10 +757,7 @@
     "id": "X2Hu0SrFZ8Ft",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.030402,
-        22.442117
-      ]
+      "coordinates": [114.030402, 22.442117]
     },
     "addressMeta": {
       "geoAddressCode": "2119033626P20070316",
@@ -873,10 +783,7 @@
     "id": "up1j7553y3Jc",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.030775,
-        22.208924
-      ]
+      "coordinates": [114.030775, 22.208924]
     },
     "addressMeta": {
       "geoAddressCode": "2118607822T20050430",
@@ -902,10 +809,7 @@
     "id": "fklrF4FvX0j0",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.030829,
-        22.208979
-      ]
+      "coordinates": [114.030829, 22.208979]
     },
     "addressMeta": {
       "geoAddressCode": "2118607822T20050430",
@@ -931,10 +835,7 @@
     "id": "raT4pxs33Kmm",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.031221,
-        22.442343
-      ]
+      "coordinates": [114.031221, 22.442343]
     },
     "addressMeta": {
       "geoAddressCode": "2127833673P20050623",
@@ -960,10 +861,7 @@
     "id": "Ru78cHOipSAu",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.031413,
-        22.442487
-      ]
+      "coordinates": [114.031413, 22.442487]
     },
     "addressMeta": {
       "geoAddressCode": "2129533671T20050430",
@@ -989,10 +887,7 @@
     "id": "glOjwPugPqwL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.031782,
-        22.442122
-      ]
+      "coordinates": [114.031782, 22.442122]
     },
     "addressMeta": {
       "geoAddressCode": "2130633629P20070914",
@@ -1018,10 +913,7 @@
     "id": "_VM2O5aw6ULV",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.032194,
-        22.446705
-      ]
+      "coordinates": [114.032194, 22.446705]
     },
     "addressMeta": {
       "geoAddressCode": "2137734151T20050430",
@@ -1047,10 +939,7 @@
     "id": "8b8gYvVvN24p",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.112363,
-        22.374836
-      ]
+      "coordinates": [114.112363, 22.374836]
     },
     "addressMeta": {
       "geoAddressCode": "2962026181T20050430",
@@ -1076,10 +965,7 @@
     "id": "E5EwDPBoTOHa",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.115411,
-        22.368175
-      ]
+      "coordinates": [114.115411, 22.368175]
     },
     "addressMeta": {
       "geoAddressCode": "2994425458T20050430",
@@ -1105,10 +991,7 @@
     "id": "3ToSUmztzxC7",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.126365,
-        22.281401
-      ]
+      "coordinates": [114.126365, 22.281401]
     },
     "addressMeta": {
       "geoAddressCode": "3107415864T20050430",
@@ -1134,10 +1017,7 @@
     "id": "mZE2eZP2OuPq",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.12668,
-        22.282155
-      ]
+      "coordinates": [114.12668, 22.282155]
     },
     "addressMeta": {
       "geoAddressCode": "3110015926T20050617",
@@ -1163,10 +1043,7 @@
     "id": "Qf7md_MT4Tqz",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.127209,
-        22.282501
-      ]
+      "coordinates": [114.127209, 22.282501]
     },
     "addressMeta": {
       "geoAddressCode": "3115715962T20050430",
@@ -1192,10 +1069,7 @@
     "id": "AXxk-b4N1B6h",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.127521,
-        22.283096
-      ]
+      "coordinates": [114.127521, 22.283096]
     },
     "addressMeta": {
       "geoAddressCode": "3118516025T20050430",
@@ -1221,10 +1095,7 @@
     "id": "SCt6HqJa6z1J",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.129066,
-        22.283592
-      ]
+      "coordinates": [114.129066, 22.283592]
     },
     "addressMeta": {
       "geoAddressCode": "3133416074T20050430",
@@ -1250,10 +1121,7 @@
     "id": "0m5rq24gTjd_",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.129139,
-        22.283546
-      ]
+      "coordinates": [114.129139, 22.283546]
     },
     "addressMeta": {
       "geoAddressCode": "3134616076T20050430",
@@ -1279,10 +1147,7 @@
     "id": "isyNeMYaAqqJ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.130763,
-        22.353952
-      ]
+      "coordinates": [114.130763, 22.353952]
     },
     "addressMeta": {
       "geoAddressCode": "3157023993T20081015",
@@ -1308,10 +1173,7 @@
     "id": "PJKPXTNqTk0I",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.130763,
-        22.353952
-      ]
+      "coordinates": [114.130763, 22.353952]
     },
     "addressMeta": {
       "geoAddressCode": "3157023993T20081015",
@@ -1337,10 +1199,7 @@
     "id": "fYZgCvPoEgX-",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.134549,
-        22.286168
-      ]
+      "coordinates": [114.134549, 22.286168]
     },
     "addressMeta": {
       "geoAddressCode": "3190816360T20050430",
@@ -1366,10 +1225,7 @@
     "id": "74TyK8kNaWF1",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.136574,
-        22.286242
-      ]
+      "coordinates": [114.136574, 22.286242]
     },
     "addressMeta": {
       "geoAddressCode": "3210716381T20050430",
@@ -1395,10 +1251,7 @@
     "id": "9k38fg5jrJzc",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.136787,
-        22.253029
-      ]
+      "coordinates": [114.136787, 22.253029]
     },
     "addressMeta": {
       "geoAddressCode": "3215512710T20050430",
@@ -1424,10 +1277,7 @@
     "id": "HDq3MhtS60Km",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.138549,
-        22.28748
-      ]
+      "coordinates": [114.138549, 22.28748]
     },
     "addressMeta": {
       "geoAddressCode": "3231716513T20050430",
@@ -1453,10 +1303,7 @@
     "id": "cvOm-pdvX26u",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.138686,
-        22.287512
-      ]
+      "coordinates": [114.138686, 22.287512]
     },
     "addressMeta": {
       "geoAddressCode": "3232916516T20050430",
@@ -1482,10 +1329,7 @@
     "id": "LMEjvwaAsa5P",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.139248,
-        22.285748
-      ]
+      "coordinates": [114.139248, 22.285748]
     },
     "addressMeta": {
       "geoAddressCode": "3239016316T20050430",
@@ -1511,10 +1355,7 @@
     "id": "HIp4ziI7-8m3",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.139679,
-        22.286423
-      ]
+      "coordinates": [114.139679, 22.286423]
     },
     "addressMeta": {
       "geoAddressCode": "3243416380T20050430",
@@ -1540,10 +1381,7 @@
     "id": "hbQpOOUKkbo8",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.139711,
-        22.286296
-      ]
+      "coordinates": [114.139711, 22.286296]
     },
     "addressMeta": {
       "geoAddressCode": "3243416380T20050430",
@@ -1569,10 +1407,7 @@
     "id": "AZci-xdRkLa7",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.140383,
-        22.286521
-      ]
+      "coordinates": [114.140383, 22.286521]
     },
     "addressMeta": {
       "geoAddressCode": "3250816402T20050430",
@@ -1598,10 +1433,7 @@
     "id": "u_YCs9EhIzW2",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.140659,
-        22.286148
-      ]
+      "coordinates": [114.140659, 22.286148]
     },
     "addressMeta": {
       "geoAddressCode": "3253516361T20050430",
@@ -1627,10 +1459,7 @@
     "id": "v4FyUjIq0PrV",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.141492,
-        22.286885
-      ]
+      "coordinates": [114.141492, 22.286885]
     },
     "addressMeta": {
       "geoAddressCode": "3262216441T20050430",
@@ -1656,10 +1485,7 @@
     "id": "Q5AC_Md67Suy",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.142098,
-        22.286107
-      ]
+      "coordinates": [114.142098, 22.286107]
     },
     "addressMeta": {
       "geoAddressCode": "3268216356T20050430",
@@ -1685,10 +1511,7 @@
     "id": "l1tFZsddXYFg",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.143476,
-        22.286543
-      ]
+      "coordinates": [114.143476, 22.286543]
     },
     "addressMeta": {
       "geoAddressCode": "3281516406T20050430",
@@ -1714,10 +1537,7 @@
     "id": "OFe9C0k36Zcq",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.143811,
-        22.287325
-      ]
+      "coordinates": [114.143811, 22.287325]
     },
     "addressMeta": {
       "geoAddressCode": "3286516497T20140404",
@@ -1743,10 +1563,7 @@
     "id": "BM1E2ucPflnE",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.144387,
-        22.248296
-      ]
+      "coordinates": [114.144387, 22.248296]
     },
     "addressMeta": {
       "geoAddressCode": "3292012181T20050430",
@@ -1772,10 +1589,7 @@
     "id": "zQadJjHfXcaT",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.141041,
-        22.286881
-      ]
+      "coordinates": [114.141041, 22.286881]
     },
     "addressMeta": {
       "geoAddressCode": "3256316437T20050430",
@@ -1801,10 +1615,7 @@
     "id": "0-k19U_7YwHl",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.145315,
-        22.24849
-      ]
+      "coordinates": [114.145315, 22.24849]
     },
     "addressMeta": {
       "geoAddressCode": "3302312205T20050430",
@@ -1830,10 +1641,7 @@
     "id": "uSJDv8JL9zTB",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.145724,
-        22.288131
-      ]
+      "coordinates": [114.145724, 22.288131]
     },
     "addressMeta": {
       "geoAddressCode": "3305716596T20050430",
@@ -1859,10 +1667,7 @@
     "id": "xyzNInGYfWHR",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.148367,
-        22.248513
-      ]
+      "coordinates": [114.148367, 22.248513]
     },
     "addressMeta": {
       "geoAddressCode": "3332812250T20050430",
@@ -1888,10 +1693,7 @@
     "id": "2QRaLxG7bHgZ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.148804,
-        22.249085
-      ]
+      "coordinates": [114.148804, 22.249085]
     },
     "addressMeta": {
       "geoAddressCode": "3337112250T20050430",
@@ -1917,10 +1719,7 @@
     "id": "EUYajToAnSaB",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.149045,
-        22.2491
-      ]
+      "coordinates": [114.149045, 22.2491]
     },
     "addressMeta": {
       "geoAddressCode": "3339612260T20050430",
@@ -1946,10 +1745,7 @@
     "id": "3SHUxTLaXa_7",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.149045,
-        22.2491
-      ]
+      "coordinates": [114.149045, 22.2491]
     },
     "addressMeta": {
       "geoAddressCode": "3339612260T20050430",
@@ -1975,10 +1771,7 @@
     "id": "NTyTgkb_CPyI",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.14909,
-        22.249376
-      ]
+      "coordinates": [114.14909, 22.249376]
     },
     "addressMeta": {
       "geoAddressCode": "3340612288T20050430",
@@ -2004,10 +1797,7 @@
     "id": "ck7YJzeOf2lY",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.149112,
-        22.2494
-      ]
+      "coordinates": [114.149112, 22.2494]
     },
     "addressMeta": {
       "geoAddressCode": "3340612288T20050430",
@@ -2033,10 +1823,7 @@
     "id": "H9FiDyZ0hGCe",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.14912,
-        22.249055
-      ]
+      "coordinates": [114.14912, 22.249055]
     },
     "addressMeta": {
       "geoAddressCode": "3340412254T20050430",
@@ -2062,10 +1849,7 @@
     "id": "si6MNiZpsR64",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.14913,
-        22.286722
-      ]
+      "coordinates": [114.14913, 22.286722]
     },
     "addressMeta": {
       "geoAddressCode": "3342016445T20050430",
@@ -2091,10 +1875,7 @@
     "id": "5Wz06KA_VusA",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.149318,
-        22.248917
-      ]
+      "coordinates": [114.149318, 22.248917]
     },
     "addressMeta": {
       "geoAddressCode": "3342512238T20050430",
@@ -2120,10 +1901,7 @@
     "id": "RwntOiT4HtIT",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.149532,
-        22.287776
-      ]
+      "coordinates": [114.149532, 22.287776]
     },
     "addressMeta": {
       "geoAddressCode": "3345816527T20150901",
@@ -2149,10 +1927,7 @@
     "id": "3Ab15_tWmSUA",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.150183,
-        22.284638
-      ]
+      "coordinates": [114.150183, 22.284638]
     },
     "addressMeta": {
       "geoAddressCode": "3351516193P20060312",
@@ -2178,10 +1953,7 @@
     "id": "fMlemreoiw59",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.152193,
-        22.282175
-      ]
+      "coordinates": [114.152193, 22.282175]
     },
     "addressMeta": {
       "geoAddressCode": "3372315918T20050430",
@@ -2207,10 +1979,7 @@
     "id": "xWtBnqOQ5O3P",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.15225,
-        22.282217
-      ]
+      "coordinates": [114.15225, 22.282217]
     },
     "addressMeta": {
       "geoAddressCode": "3378415942T20050430",
@@ -2236,10 +2005,7 @@
     "id": "sWz0VXDuf0T7",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.152338,
-        22.286107
-      ]
+      "coordinates": [114.152338, 22.286107]
     },
     "addressMeta": {
       "geoAddressCode": "3373816360P20060312",
@@ -2265,10 +2031,7 @@
     "id": "GHFNfxv2K8d6",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.15236,
-        22.282451
-      ]
+      "coordinates": [114.15236, 22.282451]
     },
     "addressMeta": {
       "geoAddressCode": "3374515958T20080717",
@@ -2294,10 +2057,7 @@
     "id": "iUNwd1PhJd1j",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.15252,
-        22.281813
-      ]
+      "coordinates": [114.15252, 22.281813]
     },
     "addressMeta": {
       "geoAddressCode": "3376315878T20050430",
@@ -2323,10 +2083,7 @@
     "id": "Bjo2exvsFC8y",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.152818,
-        22.28289
-      ]
+      "coordinates": [114.152818, 22.28289]
     },
     "addressMeta": {
       "geoAddressCode": "3378516000T20050430",
@@ -2352,10 +2109,7 @@
     "id": "_3jccjhNTXW3",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.152863,
-        22.281877
-      ]
+      "coordinates": [114.152863, 22.281877]
     },
     "addressMeta": {
       "geoAddressCode": "3379315887T20050430",
@@ -2381,10 +2135,7 @@
     "id": "unvLyhWdWAb6",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.154984,
-        22.282373
-      ]
+      "coordinates": [114.154984, 22.282373]
     },
     "addressMeta": {
       "geoAddressCode": "3409916034T20050430",
@@ -2410,10 +2161,7 @@
     "id": "p8tQZB3yl4Or",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.157561,
-        22.336784
-      ]
+      "coordinates": [114.157561, 22.336784]
     },
     "addressMeta": {
       "geoAddressCode": "3427621981T20050430",
@@ -2439,10 +2187,7 @@
     "id": "9bbQLMJ5UYGi",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.157821,
-        22.336769
-      ]
+      "coordinates": [114.157821, 22.336769]
     },
     "addressMeta": {
       "geoAddressCode": "3430421967T20050430",
@@ -2468,10 +2213,7 @@
     "id": "WMvnBqLi2N9r",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.157932,
-        22.337406
-      ]
+      "coordinates": [114.157932, 22.337406]
     },
     "addressMeta": {
       "geoAddressCode": "3431522040T20050430",
@@ -2497,10 +2239,7 @@
     "id": "uQI-nxLtoUNs",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.157989,
-        22.336296
-      ]
+      "coordinates": [114.157989, 22.336296]
     },
     "addressMeta": {
       "geoAddressCode": "3433721940T20200602",
@@ -2526,10 +2265,7 @@
     "id": "x6DULMYk0QSi",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.158492,
-        22.336907
-      ]
+      "coordinates": [114.158492, 22.336907]
     },
     "addressMeta": {
       "geoAddressCode": "3438421981T20050430",
@@ -2555,10 +2291,7 @@
     "id": "-kDQ2xt5N8_X",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.159199,
-        22.287008
-      ]
+      "coordinates": [114.159199, 22.287008]
     },
     "addressMeta": {
       "geoAddressCode": "3432516207T20050430",
@@ -2584,10 +2317,7 @@
     "id": "SKXfKlViDXfV",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.160231,
-        22.334067
-      ]
+      "coordinates": [114.160231, 22.334067]
     },
     "addressMeta": {
       "geoAddressCode": "3455721670T20050430",
@@ -2613,10 +2343,7 @@
     "id": "d4mhn8CNyTa0",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.160359,
-        22.327797
-      ]
+      "coordinates": [114.160359, 22.327797]
     },
     "addressMeta": {
       "geoAddressCode": "3455620973T20050430",
@@ -2642,10 +2369,7 @@
     "id": "_oF8Wp_0zaFL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.160902,
-        22.319979
-      ]
+      "coordinates": [114.160902, 22.319979]
     },
     "addressMeta": {
       "geoAddressCode": "3462620101T20050430",
@@ -2671,10 +2395,7 @@
     "id": "ZUC1vB55sLiO",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16094,
-        22.319539
-      ]
+      "coordinates": [114.16094, 22.319539]
     },
     "addressMeta": {
       "geoAddressCode": "3462920060T20050430",
@@ -2700,10 +2421,7 @@
     "id": "i6z80z_0y27b",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.161054,
-        22.319926
-      ]
+      "coordinates": [114.161054, 22.319926]
     },
     "addressMeta": {
       "geoAddressCode": "3463820102T20050430",
@@ -2729,10 +2447,7 @@
     "id": "rzA7lg4O5e6E",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.161109,
-        22.319929
-      ]
+      "coordinates": [114.161109, 22.319929]
     },
     "addressMeta": {
       "geoAddressCode": "3464220099T20050430",
@@ -2758,10 +2473,7 @@
     "id": "5p0UZrzYsAlw",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16119,
-        22.31956
-      ]
+      "coordinates": [114.16119, 22.31956]
     },
     "addressMeta": {
       "geoAddressCode": "3465120066T20050430",
@@ -2787,10 +2499,7 @@
     "id": "zdB7OBOw6Mru",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.161783,
-        22.323931
-      ]
+      "coordinates": [114.161783, 22.323931]
     },
     "addressMeta": {
       "geoAddressCode": "3470720542T20050430",
@@ -2816,10 +2525,7 @@
     "id": "pgavMGuQmEqU",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16181,
-        22.32348
-      ]
+      "coordinates": [114.16181, 22.32348]
     },
     "addressMeta": {
       "geoAddressCode": "3470720496T20050430",
@@ -2845,10 +2551,7 @@
     "id": "wPGq1HjGOI9P",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.161824,
-        22.320404
-      ]
+      "coordinates": [114.161824, 22.320404]
     },
     "addressMeta": {
       "geoAddressCode": "3470720165T20050430",
@@ -2874,10 +2577,7 @@
     "id": "z1-X2av36bWb",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.162079,
-        22.331616
-      ]
+      "coordinates": [114.162079, 22.331616]
     },
     "addressMeta": {
       "geoAddressCode": "3474321392T20050430",
@@ -2903,10 +2603,7 @@
     "id": "qZNvCCI3Ci0U",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.162147,
-        22.329855
-      ]
+      "coordinates": [114.162147, 22.329855]
     },
     "addressMeta": {
       "geoAddressCode": "3474421204T20050430",
@@ -2932,10 +2629,7 @@
     "id": "hUUWPFTxgUCr",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.162672,
-        22.323162
-      ]
+      "coordinates": [114.162672, 22.323162]
     },
     "addressMeta": {
       "geoAddressCode": "3479820448T20050430",
@@ -2961,10 +2655,7 @@
     "id": "67ePnWfvKYVd",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.162723,
-        22.32429
-      ]
+      "coordinates": [114.162723, 22.32429]
     },
     "addressMeta": {
       "geoAddressCode": "3479820596T20050430",
@@ -2990,10 +2681,7 @@
     "id": "K22bqphvXIDg",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.162728,
-        22.332278
-      ]
+      "coordinates": [114.162728, 22.332278]
     },
     "addressMeta": {
       "geoAddressCode": "3481121461T20050430",
@@ -3019,10 +2707,7 @@
     "id": "8-mZChewYSUH",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.162794,
-        22.32976
-      ]
+      "coordinates": [114.162794, 22.32976]
     },
     "addressMeta": {
       "geoAddressCode": "3481921194T20050430",
@@ -3048,10 +2733,7 @@
     "id": "7K0tMPb46cCt",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.163046,
-        22.329552
-      ]
+      "coordinates": [114.163046, 22.329552]
     },
     "addressMeta": {
       "geoAddressCode": "3484421171T20050430",
@@ -3077,10 +2759,7 @@
     "id": "4gjD05TR7KLy",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.163234,
-        22.327408
-      ]
+      "coordinates": [114.163234, 22.327408]
     },
     "addressMeta": {
       "geoAddressCode": "3486520933T20050430",
@@ -3106,10 +2785,7 @@
     "id": "uPzERG5_trQN",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.163408,
-        22.327638
-      ]
+      "coordinates": [114.163408, 22.327638]
     },
     "addressMeta": {
       "geoAddressCode": "3488020949T20050430",
@@ -3135,10 +2811,7 @@
     "id": "hMcOgB5ThaII",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.163426,
-        22.327585
-      ]
+      "coordinates": [114.163426, 22.327585]
     },
     "addressMeta": {
       "geoAddressCode": "3488020949T20050430",
@@ -3164,10 +2837,7 @@
     "id": "YMjZrhY1fPHK",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.163544,
-        22.32777
-      ]
+      "coordinates": [114.163544, 22.32777]
     },
     "addressMeta": {
       "geoAddressCode": "3490120978T20050430",
@@ -3193,10 +2863,7 @@
     "id": "bi-mU2exIWXz",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.1636,
-        22.327466
-      ]
+      "coordinates": [114.1636, 22.327466]
     },
     "addressMeta": {
       "geoAddressCode": "3489420932T20050430",
@@ -3222,10 +2889,7 @@
     "id": "xJMKAP2-3pZJ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.163887,
-        22.327255
-      ]
+      "coordinates": [114.163887, 22.327255]
     },
     "addressMeta": {
       "geoAddressCode": "3492520906T20050430",
@@ -3251,10 +2915,7 @@
     "id": "bS9P1X7oVUXu",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.163954,
-        22.328459
-      ]
+      "coordinates": [114.163954, 22.328459]
     },
     "addressMeta": {
       "geoAddressCode": "3492621053T20050430",
@@ -3280,10 +2941,7 @@
     "id": "dJzgv3nFn2Gy",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164034,
-        22.328667
-      ]
+      "coordinates": [114.164034, 22.328667]
     },
     "addressMeta": {
       "geoAddressCode": "3475821244T20050430",
@@ -3309,10 +2967,7 @@
     "id": "cJRT4TSLwx61",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164228,
-        22.327994
-      ]
+      "coordinates": [114.164228, 22.327994]
     },
     "addressMeta": {
       "geoAddressCode": "3496520994T20050430",
@@ -3338,10 +2993,7 @@
     "id": "kH3o7jd9PRm5",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164233,
-        22.330627
-      ]
+      "coordinates": [114.164233, 22.330627]
     },
     "addressMeta": {
       "geoAddressCode": "3496721287T20050430",
@@ -3367,10 +3019,7 @@
     "id": "zj9HYUyUtBRd",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164327,
-        22.326903
-      ]
+      "coordinates": [114.164327, 22.326903]
     },
     "addressMeta": {
       "geoAddressCode": "3497120869P20060311",
@@ -3396,10 +3045,7 @@
     "id": "S87lmZqsbSY-",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164436,
-        22.245024
-      ]
+      "coordinates": [114.164436, 22.245024]
     },
     "addressMeta": {
       "geoAddressCode": "3500911907T20050430",
@@ -3425,10 +3071,7 @@
     "id": "NcNv5ESYfVWo",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164566,
-        22.326961
-      ]
+      "coordinates": [114.164566, 22.326961]
     },
     "addressMeta": {
       "geoAddressCode": "3500620885T20050430",
@@ -3454,10 +3097,7 @@
     "id": "Cyl06PqfzJuw",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164623,
-        22.321321
-      ]
+      "coordinates": [114.164623, 22.321321]
     },
     "addressMeta": {
       "geoAddressCode": "3502520229T20050430",
@@ -3483,10 +3123,7 @@
     "id": "-oKwNF45BBEO",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.164851,
-        22.331314
-      ]
+      "coordinates": [114.164851, 22.331314]
     },
     "addressMeta": {
       "geoAddressCode": "3503121361T20050430",
@@ -3512,10 +3149,7 @@
     "id": "8QLgpT12vtc2",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.165531,
-        22.32855
-      ]
+      "coordinates": [114.165531, 22.32855]
     },
     "addressMeta": {
       "geoAddressCode": "3510021056T20050430",
@@ -3541,10 +3175,7 @@
     "id": "Kg5KXreotisx",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.165715,
-        22.329263
-      ]
+      "coordinates": [114.165715, 22.329263]
     },
     "addressMeta": {
       "geoAddressCode": "3511821133T20050430",
@@ -3570,10 +3201,7 @@
     "id": "f2nCH1m2K3V6",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.166091,
-        22.329243
-      ]
+      "coordinates": [114.166091, 22.329243]
     },
     "addressMeta": {
       "geoAddressCode": "3515921129T20050430",
@@ -3599,10 +3227,7 @@
     "id": "_gKW5FdWSfIA",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.166245,
-        22.329134
-      ]
+      "coordinates": [114.166245, 22.329134]
     },
     "addressMeta": {
       "geoAddressCode": "3516821115T20050430",
@@ -3628,10 +3253,7 @@
     "id": "V6Jgz9QBdF-U",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.1667,
-        22.317032
-      ]
+      "coordinates": [114.1667, 22.317032]
     },
     "addressMeta": {
       "geoAddressCode": "3523319765T20050430",
@@ -3657,10 +3279,7 @@
     "id": "Oh1PSf-L1qJA",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16679,
-        22.317051
-      ]
+      "coordinates": [114.16679, 22.317051]
     },
     "addressMeta": {
       "geoAddressCode": "3523319765T20050430",
@@ -3686,10 +3305,7 @@
     "id": "DujhBcPf09CD",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.166822,
-        22.325196
-      ]
+      "coordinates": [114.166822, 22.325196]
     },
     "addressMeta": {
       "geoAddressCode": "3523820692T20050430",
@@ -3715,10 +3331,7 @@
     "id": "MaLkcOsgvs3e",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.167067,
-        22.319051
-      ]
+      "coordinates": [114.167067, 22.319051]
     },
     "addressMeta": {
       "geoAddressCode": "3524520011T20050430",
@@ -3744,10 +3357,7 @@
     "id": "OQocBkRne7Zs",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16732,
-        22.319345
-      ]
+      "coordinates": [114.16732, 22.319345]
     },
     "addressMeta": {
       "geoAddressCode": "3527720035T20050430",
@@ -3773,10 +3383,7 @@
     "id": "I3ZXxyWDXl0u",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.167349,
-        22.318624
-      ]
+      "coordinates": [114.167349, 22.318624]
     },
     "addressMeta": {
       "geoAddressCode": "3529219955T20050430",
@@ -3802,10 +3409,7 @@
     "id": "E8e9iVbv23tD",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.167472,
-        22.319532
-      ]
+      "coordinates": [114.167472, 22.319532]
     },
     "addressMeta": {
       "geoAddressCode": "3529320057T20050430",
@@ -3831,10 +3435,7 @@
     "id": "pf7g1vWygbXS",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.167531,
-        22.316844
-      ]
+      "coordinates": [114.167531, 22.316844]
     },
     "addressMeta": {
       "geoAddressCode": "3530119761T20050430",
@@ -3860,10 +3461,7 @@
     "id": "Kq9Sf0eD6XKE",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.1676,
-        22.318521
-      ]
+      "coordinates": [114.1676, 22.318521]
     },
     "addressMeta": {
       "geoAddressCode": "3531319948T20050430",
@@ -3889,10 +3487,7 @@
     "id": "vyhgVHULkbT1",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.167793,
-        22.32443
-      ]
+      "coordinates": [114.167793, 22.32443]
     },
     "addressMeta": {
       "geoAddressCode": "3533320607T20060515",
@@ -3918,10 +3513,7 @@
     "id": "Y00M2HDmPMkl",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.167975,
-        22.315489
-      ]
+      "coordinates": [114.167975, 22.315489]
     },
     "addressMeta": {
       "geoAddressCode": "3536019611T20050430",
@@ -3947,10 +3539,7 @@
     "id": "WrUCh2BXm7XR",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.167996,
-        22.318941
-      ]
+      "coordinates": [114.167996, 22.318941]
     },
     "addressMeta": {
       "geoAddressCode": "3535419985T20050430",
@@ -3976,10 +3565,7 @@
     "id": "zbM9wNSjXmIc",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168206,
-        22.319436
-      ]
+      "coordinates": [114.168206, 22.319436]
     },
     "addressMeta": {
       "geoAddressCode": "3538020032T20201125",
@@ -4005,10 +3591,7 @@
     "id": "UZwb-8zkL2ia",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168206,
-        22.319436
-      ]
+      "coordinates": [114.168206, 22.319436]
     },
     "addressMeta": {
       "geoAddressCode": "3538020032T20201125",
@@ -4034,10 +3617,7 @@
     "id": "EXlfjt1ViYS-",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168246,
-        22.31365
-      ]
+      "coordinates": [114.168246, 22.31365]
     },
     "addressMeta": {
       "geoAddressCode": "3537419407T20050430",
@@ -4063,10 +3643,7 @@
     "id": "QZ0-rLJdT2aM",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168305,
-        22.31557
-      ]
+      "coordinates": [114.168305, 22.31557]
     },
     "addressMeta": {
       "geoAddressCode": "3537719620T20050430",
@@ -4092,10 +3669,7 @@
     "id": "HkDivEZOz79J",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168341,
-        22.314929
-      ]
+      "coordinates": [114.168341, 22.314929]
     },
     "addressMeta": {
       "geoAddressCode": "3538919547T20050430",
@@ -4121,10 +3695,7 @@
     "id": "fI1Dew2OS1zy",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168531,
-        22.314387
-      ]
+      "coordinates": [114.168531, 22.314387]
     },
     "addressMeta": {
       "geoAddressCode": "3540219489P20060311",
@@ -4150,10 +3721,7 @@
     "id": "kiWiJ7yuYg8F",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168547,
-        22.314157
-      ]
+      "coordinates": [114.168547, 22.314157]
     },
     "addressMeta": {
       "geoAddressCode": "3540719459T20050430",
@@ -4179,10 +3747,7 @@
     "id": "Dxga5SQc-fX4",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168556,
-        22.276986
-      ]
+      "coordinates": [114.168556, 22.276986]
     },
     "addressMeta": {
       "geoAddressCode": "3540915349T20050430",
@@ -4208,10 +3773,7 @@
     "id": "mDA1w24lfsG2",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168596,
-        22.313464
-      ]
+      "coordinates": [114.168596, 22.313464]
     },
     "addressMeta": {
       "geoAddressCode": "3541919386T20050430",
@@ -4237,10 +3799,7 @@
     "id": "l1a5X1oQ6TBA",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168647,
-        22.304761
-      ]
+      "coordinates": [114.168647, 22.304761]
     },
     "addressMeta": {
       "geoAddressCode": "3542418418T20050430",
@@ -4266,10 +3825,7 @@
     "id": "USsHytPJk6Pn",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168674,
-        22.318212
-      ]
+      "coordinates": [114.168674, 22.318212]
     },
     "addressMeta": {
       "geoAddressCode": "3540319981T20050430",
@@ -4295,10 +3851,7 @@
     "id": "d4ZtKfCKqmkm",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168682,
-        22.304401
-      ]
+      "coordinates": [114.168682, 22.304401]
     },
     "addressMeta": {
       "geoAddressCode": "3542918384T20050430",
@@ -4324,10 +3877,7 @@
     "id": "fUMk9IakrVyp",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168683,
-        22.313485
-      ]
+      "coordinates": [114.168683, 22.313485]
     },
     "addressMeta": {
       "geoAddressCode": "3541919386T20050430",
@@ -4353,10 +3903,7 @@
     "id": "-CPB8EQMld2x",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168697,
-        22.31364
-      ]
+      "coordinates": [114.168697, 22.31364]
     },
     "addressMeta": {
       "geoAddressCode": "3541619406T20050430",
@@ -4382,10 +3929,7 @@
     "id": "SR_Gz4NDVs6H",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.168867,
-        22.313668
-      ]
+      "coordinates": [114.168867, 22.313668]
     },
     "addressMeta": {
       "geoAddressCode": "3544819414T20050430",
@@ -4411,10 +3955,7 @@
     "id": "SIfdP6o1cCDC",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169109,
-        22.304167
-      ]
+      "coordinates": [114.169109, 22.304167]
     },
     "addressMeta": {
       "geoAddressCode": "3545418349T20050430",
@@ -4440,10 +3981,7 @@
     "id": "Ruzc4HlyuNRz",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169195,
-        22.31105
-      ]
+      "coordinates": [114.169195, 22.31105]
     },
     "addressMeta": {
       "geoAddressCode": "3546819119T20050430",
@@ -4469,10 +4007,7 @@
     "id": "UPS0WjtahbvL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169223,
-        22.320292
-      ]
+      "coordinates": [114.169223, 22.320292]
     },
     "addressMeta": {
       "geoAddressCode": "3544720145T20131018",
@@ -4498,10 +4033,7 @@
     "id": "sYztDJhd7GeZ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169335,
-        22.311244
-      ]
+      "coordinates": [114.169335, 22.311244]
     },
     "addressMeta": {
       "geoAddressCode": "3549819144T20050430",
@@ -4527,10 +4059,7 @@
     "id": "esD0FbM0MFzB",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169342,
-        22.311365
-      ]
+      "coordinates": [114.169342, 22.311365]
     },
     "addressMeta": {
       "geoAddressCode": "3549619153T20050430",
@@ -4556,10 +4085,7 @@
     "id": "xkvIkqUEez1S",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169437,
-        22.305793
-      ]
+      "coordinates": [114.169437, 22.305793]
     },
     "addressMeta": {
       "geoAddressCode": "3550518534T20050430",
@@ -4585,10 +4111,7 @@
     "id": "IOcopr2MvXSL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169448,
-        22.312124
-      ]
+      "coordinates": [114.169448, 22.312124]
     },
     "addressMeta": {
       "geoAddressCode": "3549619236T20050430",
@@ -4614,10 +4137,7 @@
     "id": "Cpd9Vkr-x1r5",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16945,
-        22.306733
-      ]
+      "coordinates": [114.16945, 22.306733]
     },
     "addressMeta": {
       "geoAddressCode": "3550018639T20050430",
@@ -4643,10 +4163,7 @@
     "id": "qjex26A0ybmk",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169481,
-        22.305849
-      ]
+      "coordinates": [114.169481, 22.305849]
     },
     "addressMeta": {
       "geoAddressCode": "3550718544T20050430",
@@ -4672,10 +4189,7 @@
     "id": "c0fFdQzPo1Uk",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169497,
-        22.306124
-      ]
+      "coordinates": [114.169497, 22.306124]
     },
     "addressMeta": {
       "geoAddressCode": "3551418569T20050430",
@@ -4701,10 +4215,7 @@
     "id": "47ox3TzIyol4",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16958,
-        22.304339
-      ]
+      "coordinates": [114.16958, 22.304339]
     },
     "addressMeta": {
       "geoAddressCode": "3551118380T20050430",
@@ -4730,10 +4241,7 @@
     "id": "AQKHq5mFOarN",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169603,
-        22.306292
-      ]
+      "coordinates": [114.169603, 22.306292]
     },
     "addressMeta": {
       "geoAddressCode": "3551818591T20050430",
@@ -4759,10 +4267,7 @@
     "id": "c0TNknXBg_U7",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169615,
-        22.306511
-      ]
+      "coordinates": [114.169615, 22.306511]
     },
     "addressMeta": {
       "geoAddressCode": "3552518613T20050430",
@@ -4788,10 +4293,7 @@
     "id": "L-X06oUXMhio",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169644,
-        22.304667
-      ]
+      "coordinates": [114.169644, 22.304667]
     },
     "addressMeta": {
       "geoAddressCode": "3553218413T20050430",
@@ -4817,10 +4319,7 @@
     "id": "8tgaeb0rpUPU",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169645,
-        22.311406
-      ]
+      "coordinates": [114.169645, 22.311406]
     },
     "addressMeta": {
       "geoAddressCode": "3551319156T20050430",
@@ -4846,10 +4345,7 @@
     "id": "oRdPujiEPO51",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169697,
-        22.306651
-      ]
+      "coordinates": [114.169697, 22.306651]
     },
     "addressMeta": {
       "geoAddressCode": "3553018630T20050430",
@@ -4875,10 +4371,7 @@
     "id": "a9dXcPEzcIin",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169742,
-        22.307642
-      ]
+      "coordinates": [114.169742, 22.307642]
     },
     "addressMeta": {
       "geoAddressCode": "3552418745T20050430",
@@ -4904,10 +4397,7 @@
     "id": "Be9bjJqESjJ-",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169755,
-        22.311898
-      ]
+      "coordinates": [114.169755, 22.311898]
     },
     "addressMeta": {
       "geoAddressCode": "3553319213T20050430",
@@ -4933,10 +4423,7 @@
     "id": "rbPeQwBseZXC",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169755,
-        22.311898
-      ]
+      "coordinates": [114.169755, 22.311898]
     },
     "addressMeta": {
       "geoAddressCode": "3553319213T20050430",
@@ -4962,10 +4449,7 @@
     "id": "5iJQSsfq3cXL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169867,
-        22.313013
-      ]
+      "coordinates": [114.169867, 22.313013]
     },
     "addressMeta": {
       "geoAddressCode": "3554519343T20050430",
@@ -4991,10 +4475,7 @@
     "id": "Qv38eJ27LQu0",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169871,
-        22.310943
-      ]
+      "coordinates": [114.169871, 22.310943]
     },
     "addressMeta": {
       "geoAddressCode": "3555219108T20050430",
@@ -5020,10 +4501,7 @@
     "id": "cjBdrWCuSs47",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169885,
-        22.308224
-      ]
+      "coordinates": [114.169885, 22.308224]
     },
     "addressMeta": {
       "geoAddressCode": "3553918807T20050430",
@@ -5049,10 +4527,7 @@
     "id": "xW1tVhx-QGB0",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.16989,
-        22.308272
-      ]
+      "coordinates": [114.16989, 22.308272]
     },
     "addressMeta": {
       "geoAddressCode": "3554018811T20050430",
@@ -5078,10 +4553,7 @@
     "id": "gdMXveYWo4XN",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169952,
-        22.304094
-      ]
+      "coordinates": [114.169952, 22.304094]
     },
     "addressMeta": {
       "geoAddressCode": "3555318352T20050430",
@@ -5107,10 +4579,7 @@
     "id": "0dwg6WdKNKMP",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.169966,
-        22.307653
-      ]
+      "coordinates": [114.169966, 22.307653]
     },
     "addressMeta": {
       "geoAddressCode": "3555718744T20050430",
@@ -5136,10 +4605,7 @@
     "id": "uiekNlRSQyzV",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.170081,
-        22.311365
-      ]
+      "coordinates": [114.170081, 22.311365]
     },
     "addressMeta": {
       "geoAddressCode": "3556419152T20050430",
@@ -5165,10 +4631,7 @@
     "id": "M5XsJOVArtox",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.170142,
-        22.275976
-      ]
+      "coordinates": [114.170142, 22.275976]
     },
     "addressMeta": {
       "geoAddressCode": "3556815231T20050430",
@@ -5194,10 +4657,7 @@
     "id": "u708-RCFc6rq",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.170332,
-        22.31343
-      ]
+      "coordinates": [114.170332, 22.31343]
     },
     "addressMeta": {
       "geoAddressCode": "3559619384T20050430",
@@ -5223,10 +4683,7 @@
     "id": "oG4ps5q3riZV",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.170418,
-        22.310882
-      ]
+      "coordinates": [114.170418, 22.310882]
     },
     "addressMeta": {
       "geoAddressCode": "3560619103T20050430",
@@ -5252,10 +4709,7 @@
     "id": "tEFCLLloacU6",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.170508,
-        22.305037
-      ]
+      "coordinates": [114.170508, 22.305037]
     },
     "addressMeta": {
       "geoAddressCode": "3560918448T20050430",
@@ -5281,10 +4735,7 @@
     "id": "GCIAZBx2FDdl",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.17082,
-        22.303834
-      ]
+      "coordinates": [114.17082, 22.303834]
     },
     "addressMeta": {
       "geoAddressCode": "3561718294T20050430",
@@ -5310,10 +4761,7 @@
     "id": "g8FpUyZZnhs3",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.170999,
-        22.307095
-      ]
+      "coordinates": [114.170999, 22.307095]
     },
     "addressMeta": {
       "geoAddressCode": "3565218680T20050430",
@@ -5339,10 +4787,7 @@
     "id": "oF_WSwh-sSGW",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.17166,
-        22.306075
-      ]
+      "coordinates": [114.17166, 22.306075]
     },
     "addressMeta": {
       "geoAddressCode": "3574518563T20050430",
@@ -5368,10 +4813,7 @@
     "id": "5q-0S3q24f8N",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.171736,
-        22.305811
-      ]
+      "coordinates": [114.171736, 22.305811]
     },
     "addressMeta": {
       "geoAddressCode": "3574218547T20050430",
@@ -5397,10 +4839,7 @@
     "id": "vyyfjF6yPhl9",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.171784,
-        22.306047
-      ]
+      "coordinates": [114.171784, 22.306047]
     },
     "addressMeta": {
       "geoAddressCode": "3574518563T20050430",
@@ -5426,10 +4865,7 @@
     "id": "TWL4eGFgY1ac",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.171912,
-        22.307035
-      ]
+      "coordinates": [114.171912, 22.307035]
     },
     "addressMeta": {
       "geoAddressCode": "3575918661T20050430",
@@ -5455,10 +4891,7 @@
     "id": "MPh1CG2u2ewu",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.172069,
-        22.307844
-      ]
+      "coordinates": [114.172069, 22.307844]
     },
     "addressMeta": {
       "geoAddressCode": "3577418756T20050430",
@@ -5484,10 +4917,7 @@
     "id": "-7dU5oH9HEYk",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.172113,
-        22.307867
-      ]
+      "coordinates": [114.172113, 22.307867]
     },
     "addressMeta": {
       "geoAddressCode": "3577418756T20050430",
@@ -5513,10 +4943,7 @@
     "id": "emqJbsDvxCqX",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.172126,
-        22.306036
-      ]
+      "coordinates": [114.172126, 22.306036]
     },
     "addressMeta": {
       "geoAddressCode": "3578618545T20060327",
@@ -5542,10 +4969,7 @@
     "id": "5NIqTHH_BLHE",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.173154,
-        22.304573
-      ]
+      "coordinates": [114.173154, 22.304573]
     },
     "addressMeta": {
       "geoAddressCode": "3589418437T20050430",
@@ -5571,10 +4995,7 @@
     "id": "GYiZH8H_7hEH",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.17543,
-        22.300718
-      ]
+      "coordinates": [114.17543, 22.300718]
     },
     "addressMeta": {
       "geoAddressCode": "3611617964T20050430",
@@ -5600,10 +5021,7 @@
     "id": "suM2omlbEs9C",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.175627,
-        22.276591
-      ]
+      "coordinates": [114.175627, 22.276591]
     },
     "addressMeta": {
       "geoAddressCode": "3612915314T20050430",
@@ -5629,10 +5047,7 @@
     "id": "gPLYKin9prQG",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.177272,
-        22.27851
-      ]
+      "coordinates": [114.177272, 22.27851]
     },
     "addressMeta": {
       "geoAddressCode": "3631115517T20141030",
@@ -5658,10 +5073,7 @@
     "id": "63hCs3Btbgv3",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.178186,
-        22.279847
-      ]
+      "coordinates": [114.178186, 22.279847]
     },
     "addressMeta": {
       "geoAddressCode": "3639815656T20050430",
@@ -5687,10 +5099,7 @@
     "id": "_Na7YefqT7Lz",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.179313,
-        22.372938
-      ]
+      "coordinates": [114.179313, 22.372938]
     },
     "addressMeta": {
       "geoAddressCode": "3646425945T20230217",
@@ -5716,10 +5125,7 @@
     "id": "Ei_yk5_-l3I_",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.179895,
-        22.279359
-      ]
+      "coordinates": [114.179895, 22.279359]
     },
     "addressMeta": {
       "geoAddressCode": "3658515609T20050430",
@@ -5745,10 +5151,7 @@
     "id": "zRx9cgWfdobU",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.180163,
-        22.276662
-      ]
+      "coordinates": [114.180163, 22.276662]
     },
     "addressMeta": {
       "geoAddressCode": "3660815319T20050430",
@@ -5774,10 +5177,7 @@
     "id": "Ou-JH5FwZcDL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.180475,
-        22.279615
-      ]
+      "coordinates": [114.180475, 22.279615]
     },
     "addressMeta": {
       "geoAddressCode": "3664115631T20050430",
@@ -5803,10 +5203,7 @@
     "id": "hC5uODUWix7B",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.181531,
-        22.279223
-      ]
+      "coordinates": [114.181531, 22.279223]
     },
     "addressMeta": {
       "geoAddressCode": "3674815607T20050430",
@@ -5832,10 +5229,7 @@
     "id": "8lOEhzQs9HVG",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.18236,
-        22.307184
-      ]
+      "coordinates": [114.18236, 22.307184]
     },
     "addressMeta": {
       "geoAddressCode": "3684018695T20220630",
@@ -5861,10 +5255,7 @@
     "id": "WRm6j5UQxdeH",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.182471,
-        22.307324
-      ]
+      "coordinates": [114.182471, 22.307324]
     },
     "addressMeta": {
       "geoAddressCode": "3684018695T20220630",
@@ -5890,10 +5281,7 @@
     "id": "SZtdR8sCkV_Y",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.183952,
-        22.269499
-      ]
+      "coordinates": [114.183952, 22.269499]
     },
     "addressMeta": {
       "geoAddressCode": "3700114522T20050430",
@@ -5919,10 +5307,7 @@
     "id": "FgJg5F2kVnjD",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.184636,
-        22.307927
-      ]
+      "coordinates": [114.184636, 22.307927]
     },
     "addressMeta": {
       "geoAddressCode": "3706618773T20050430",
@@ -5948,10 +5333,7 @@
     "id": "qZCjcroDIdTF",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.185239,
-        22.307623
-      ]
+      "coordinates": [114.185239, 22.307623]
     },
     "addressMeta": {
       "geoAddressCode": "3711818734T20050430",
@@ -5977,10 +5359,7 @@
     "id": "zmyznIbsuSfJ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.185602,
-        22.311466
-      ]
+      "coordinates": [114.185602, 22.311466]
     },
     "addressMeta": {
       "geoAddressCode": "3715319160T20050430",
@@ -6006,10 +5385,7 @@
     "id": "ynT3GKNuGvUc",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.186185,
-        22.278068
-      ]
+      "coordinates": [114.186185, 22.278068]
     },
     "addressMeta": {
       "geoAddressCode": "3723415480T20120524",
@@ -6035,10 +5411,7 @@
     "id": "ITzkQQ7MvI6p",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.186603,
-        22.307035
-      ]
+      "coordinates": [114.186603, 22.307035]
     },
     "addressMeta": {
       "geoAddressCode": "3726518678T20050430",
@@ -6064,10 +5437,7 @@
     "id": "KNvPrnNm7y1z",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.186607,
-        22.306191
-      ]
+      "coordinates": [114.186607, 22.306191]
     },
     "addressMeta": {
       "geoAddressCode": "3726018584T20050430",
@@ -6093,10 +5463,7 @@
     "id": "iLDIK46Qgr5t",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.187356,
-        22.317891
-      ]
+      "coordinates": [114.187356, 22.317891]
     },
     "addressMeta": {
       "geoAddressCode": "3734619870T20050430",
@@ -6122,10 +5489,7 @@
     "id": "KqgkNMerRTbM",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.188078,
-        22.32884
-      ]
+      "coordinates": [114.188078, 22.32884]
     },
     "addressMeta": {
       "geoAddressCode": "3741020981T20050430",
@@ -6151,10 +5515,7 @@
     "id": "woc3NwXdN2jC",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.188139,
-        22.316296
-      ]
+      "coordinates": [114.188139, 22.316296]
     },
     "addressMeta": {
       "geoAddressCode": "3743319697T20050430",
@@ -6180,10 +5541,7 @@
     "id": "KSSH0xS3_BRi",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.188464,
-        22.329021
-      ]
+      "coordinates": [114.188464, 22.329021]
     },
     "addressMeta": {
       "geoAddressCode": "3746721119T20050430",
@@ -6209,10 +5567,7 @@
     "id": "4tkXK1hDJlAI",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.188638,
-        22.32801
-      ]
+      "coordinates": [114.188638, 22.32801]
     },
     "addressMeta": {
       "geoAddressCode": "3747020997T20050430",
@@ -6238,10 +5593,7 @@
     "id": "dyHc05vBSj7L",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.188678,
-        22.327886
-      ]
+      "coordinates": [114.188678, 22.327886]
     },
     "addressMeta": {
       "geoAddressCode": "3749520975T20050430",
@@ -6267,10 +5619,7 @@
     "id": "Qm2xUGoqtdN-",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189168,
-        22.328597
-      ]
+      "coordinates": [114.189168, 22.328597]
     },
     "addressMeta": {
       "geoAddressCode": "3752621060T20050430",
@@ -6296,10 +5645,7 @@
     "id": "jx4kIO7pEqxn",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189171,
-        22.328743
-      ]
+      "coordinates": [114.189171, 22.328743]
     },
     "addressMeta": {
       "geoAddressCode": "3753121076T20050430",
@@ -6325,10 +5671,7 @@
     "id": "-D5XpNB1OIQR",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189202,
-        22.328864
-      ]
+      "coordinates": [114.189202, 22.328864]
     },
     "addressMeta": {
       "geoAddressCode": "3753121076T20050430",
@@ -6354,10 +5697,7 @@
     "id": "hq8qlN2cz3nw",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189245,
-        22.317533
-      ]
+      "coordinates": [114.189245, 22.317533]
     },
     "addressMeta": {
       "geoAddressCode": "3752819842T20050430",
@@ -6383,10 +5723,7 @@
     "id": "hO2kzjimqw3M",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189296,
-        22.328117
-      ]
+      "coordinates": [114.189296, 22.328117]
     },
     "addressMeta": {
       "geoAddressCode": "3756021010T20050430",
@@ -6412,10 +5749,7 @@
     "id": "SAVuq2XdkyNK",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.18933,
-        22.328335
-      ]
+      "coordinates": [114.18933, 22.328335]
     },
     "addressMeta": {
       "geoAddressCode": "3756121030T20050430",
@@ -6441,10 +5775,7 @@
     "id": "u79-N3xA-xSZ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189339,
-        22.328141
-      ]
+      "coordinates": [114.189339, 22.328141]
     },
     "addressMeta": {
       "geoAddressCode": "3756021010T20050430",
@@ -6470,10 +5801,7 @@
     "id": "av1C3ij-NCZZ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189407,
-        22.329065
-      ]
+      "coordinates": [114.189407, 22.329065]
     },
     "addressMeta": {
       "geoAddressCode": "3755821114T20050430",
@@ -6499,10 +5827,7 @@
     "id": "Tv54Yu2Y09pL",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.18954,
-        22.328112
-      ]
+      "coordinates": [114.18954, 22.328112]
     },
     "addressMeta": {
       "geoAddressCode": "3758321007T20050430",
@@ -6528,10 +5853,7 @@
     "id": "KCMFXCEY3MVC",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189662,
-        22.27991
-      ]
+      "coordinates": [114.189662, 22.27991]
     },
     "addressMeta": {
       "geoAddressCode": "3758615670T20050430",
@@ -6557,10 +5879,7 @@
     "id": "zq8Hty3qUFCj",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189729,
-        22.328082
-      ]
+      "coordinates": [114.189729, 22.328082]
     },
     "addressMeta": {
       "geoAddressCode": "3758321007T20050430",
@@ -6586,10 +5905,7 @@
     "id": "nUrprrfKnHTy",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189796,
-        22.328143
-      ]
+      "coordinates": [114.189796, 22.328143]
     },
     "addressMeta": {
       "geoAddressCode": "3758421012T20050430",
@@ -6615,10 +5931,7 @@
     "id": "MrETXHLYsatF",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189908,
-        22.329021
-      ]
+      "coordinates": [114.189908, 22.329021]
     },
     "addressMeta": {
       "geoAddressCode": "3761821114T20050430",
@@ -6644,10 +5957,7 @@
     "id": "DuCGG8wMqxGS",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189926,
-        22.329051
-      ]
+      "coordinates": [114.189926, 22.329051]
     },
     "addressMeta": {
       "geoAddressCode": "3761821114T20050430",
@@ -6673,10 +5983,7 @@
     "id": "7fDyrPUCwBJ0",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189958,
-        22.330013
-      ]
+      "coordinates": [114.189958, 22.330013]
     },
     "addressMeta": {
       "geoAddressCode": "3762321219T20050430",
@@ -6702,10 +6009,7 @@
     "id": "w924LaF6y9h1",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.189972,
-        22.32901
-      ]
+      "coordinates": [114.189972, 22.32901]
     },
     "addressMeta": {
       "geoAddressCode": "3761821114T20050430",
@@ -6731,10 +6035,7 @@
     "id": "XCDnUt-Jq9xp",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.190231,
-        22.329822
-      ]
+      "coordinates": [114.190231, 22.329822]
     },
     "addressMeta": {
       "geoAddressCode": "3764921199T20050430",
@@ -6760,10 +6061,7 @@
     "id": "EbxJmBtC7TiQ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.190289,
-        22.328227
-      ]
+      "coordinates": [114.190289, 22.328227]
     },
     "addressMeta": {
       "geoAddressCode": "3763921020T20050430",
@@ -6789,10 +6087,7 @@
     "id": "xUJ8kgYWpxvG",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.190315,
-        22.329291
-      ]
+      "coordinates": [114.190315, 22.329291]
     },
     "addressMeta": {
       "geoAddressCode": "3764221132T20050430",
@@ -6818,10 +6113,7 @@
     "id": "pyBGiZvyINUJ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.190327,
-        22.329239
-      ]
+      "coordinates": [114.190327, 22.329239]
     },
     "addressMeta": {
       "geoAddressCode": "3764221132T20050430",
@@ -6847,10 +6139,7 @@
     "id": "C_ZHxeZ2Lrfl",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.190828,
-        22.331767
-      ]
+      "coordinates": [114.190828, 22.331767]
     },
     "addressMeta": {
       "geoAddressCode": "3770821267T20050430",
@@ -6876,10 +6165,7 @@
     "id": "fvDO6HK-JPIX",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.190859,
-        22.329232
-      ]
+      "coordinates": [114.190859, 22.329232]
     },
     "addressMeta": {
       "geoAddressCode": "3770121137T20050430",
@@ -6905,10 +6191,7 @@
     "id": "xfI3suGpbpVj",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.191135,
-        22.329118
-      ]
+      "coordinates": [114.191135, 22.329118]
     },
     "addressMeta": {
       "geoAddressCode": "3773421120T20050430",
@@ -6934,10 +6217,7 @@
     "id": "qjOTTvzKX1NF",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.191145,
-        22.330139
-      ]
+      "coordinates": [114.191145, 22.330139]
     },
     "addressMeta": {
       "geoAddressCode": "3773821230T20050430",
@@ -6963,10 +6243,7 @@
     "id": "hCTDr27F_ugh",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.191526,
-        22.285772
-      ]
+      "coordinates": [114.191526, 22.285772]
     },
     "addressMeta": {
       "geoAddressCode": "3777116320T20140210",
@@ -6992,10 +6269,7 @@
     "id": "eeN7NlvywCYK",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.191539,
-        22.285493
-      ]
+      "coordinates": [114.191539, 22.285493]
     },
     "addressMeta": {
       "geoAddressCode": "3777616291T20050430",
@@ -7021,10 +6295,7 @@
     "id": "mS8W1Xv0rksH",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.191603,
-        22.328916
-      ]
+      "coordinates": [114.191603, 22.328916]
     },
     "addressMeta": {
       "geoAddressCode": "3779021108T20050430",
@@ -7050,10 +6321,7 @@
     "id": "XtzlZSF7TmVC",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.19205,
-        22.329432
-      ]
+      "coordinates": [114.19205, 22.329432]
     },
     "addressMeta": {
       "geoAddressCode": "3782221153T20050430",
@@ -7079,10 +6347,7 @@
     "id": "dNSBL25RV_gG",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192069,
-        22.329993
-      ]
+      "coordinates": [114.192069, 22.329993]
     },
     "addressMeta": {
       "geoAddressCode": "3782521218T20050430",
@@ -7108,10 +6373,7 @@
     "id": "mMt9UC43tmwM",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192258,
-        22.329316
-      ]
+      "coordinates": [114.192258, 22.329316]
     },
     "addressMeta": {
       "geoAddressCode": "3782221144T20050430",
@@ -7137,10 +6399,7 @@
     "id": "5vd9LowPeHBb",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192271,
-        22.32957
-      ]
+      "coordinates": [114.192271, 22.32957]
     },
     "addressMeta": {
       "geoAddressCode": "3782321172T20050430",
@@ -7166,10 +6425,7 @@
     "id": "JopWG78vXGC9",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.1923,
-        22.330377
-      ]
+      "coordinates": [114.1923, 22.330377]
     },
     "addressMeta": {
       "geoAddressCode": "3788721255T20150331",
@@ -7195,10 +6451,7 @@
     "id": "SIcW7M3Y9IIj",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192519,
-        22.329562
-      ]
+      "coordinates": [114.192519, 22.329562]
     },
     "addressMeta": {
       "geoAddressCode": "3788321196T20060725",
@@ -7224,10 +6477,7 @@
     "id": "IbzZz45EzHnJ",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192588,
-        22.329723
-      ]
+      "coordinates": [114.192588, 22.329723]
     },
     "addressMeta": {
       "geoAddressCode": "3788321196T20060725",
@@ -7253,10 +6503,7 @@
     "id": "nZMi-y2sOYZh",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192603,
-        22.329688
-      ]
+      "coordinates": [114.192603, 22.329688]
     },
     "addressMeta": {
       "geoAddressCode": "3788321196T20060725",
@@ -7282,10 +6529,7 @@
     "id": "Z1DMoaM12gHb",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192629,
-        22.330163
-      ]
+      "coordinates": [114.192629, 22.330163]
     },
     "addressMeta": {
       "geoAddressCode": "3788721255T20150331",
@@ -7311,10 +6555,7 @@
     "id": "mA-K3fIaoTli",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.192653,
-        22.329379
-      ]
+      "coordinates": [114.192653, 22.329379]
     },
     "addressMeta": {
       "geoAddressCode": "3788321196T20060725",
@@ -7340,10 +6581,7 @@
     "id": "67QSMcWN7Mz4",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.194329,
-        22.335256
-      ]
+      "coordinates": [114.194329, 22.335256]
     },
     "addressMeta": {
       "geoAddressCode": "3807621805T20050430",
@@ -7369,10 +6607,7 @@
     "id": "aCF-A26ki1oR",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.194496,
-        22.334708
-      ]
+      "coordinates": [114.194496, 22.334708]
     },
     "addressMeta": {
       "geoAddressCode": "3808521735T20050430",
@@ -7398,10 +6633,7 @@
     "id": "kDhHcVMKOoDW",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.194883,
-        22.335015
-      ]
+      "coordinates": [114.194883, 22.335015]
     },
     "addressMeta": {
       "geoAddressCode": "3811821761T20050430",
@@ -7427,10 +6659,7 @@
     "id": "k98CblV9_Y-0",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.195197,
-        22.334252
-      ]
+      "coordinates": [114.195197, 22.334252]
     },
     "addressMeta": {
       "geoAddressCode": "3816721671T20050430",
@@ -7456,10 +6685,7 @@
     "id": "tgmPFVnMQgKj",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.195235,
-        22.334738
-      ]
+      "coordinates": [114.195235, 22.334738]
     },
     "addressMeta": {
       "geoAddressCode": "3811821761T20050430",
@@ -7485,10 +6711,7 @@
     "id": "MRsd7KbNtGP5",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.196479,
-        22.33593
-      ]
+      "coordinates": [114.196479, 22.33593]
     },
     "addressMeta": {
       "geoAddressCode": "3827721863T20121123",
@@ -7514,10 +6737,7 @@
     "id": "-hZBqQxWBvaX",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.197596,
-        22.291353
-      ]
+      "coordinates": [114.197596, 22.291353]
     },
     "addressMeta": {
       "geoAddressCode": "3839916952T20050430",
@@ -7543,10 +6763,7 @@
     "id": "nBJYBsY_l_pc",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.199715,
-        22.337931
-      ]
+      "coordinates": [114.199715, 22.337931]
     },
     "addressMeta": {
       "geoAddressCode": "3862122100T20050430",
@@ -7572,10 +6789,7 @@
     "id": "xOIaip-b4ff8",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.21084,
-        22.286529
-      ]
+      "coordinates": [114.21084, 22.286529]
     },
     "addressMeta": {
       "geoAddressCode": "3976616409T20050430",
@@ -7601,10 +6815,7 @@
     "id": "gM-moBVRf-pw",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.211486,
-        22.285438
-      ]
+      "coordinates": [114.211486, 22.285438]
     },
     "addressMeta": {
       "geoAddressCode": "3984116284T20050430",
@@ -7630,10 +6841,7 @@
     "id": "Gi0jZUyylcW4",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.211859,
-        22.284467
-      ]
+      "coordinates": [114.211859, 22.284467]
     },
     "addressMeta": {
       "geoAddressCode": "3986516207T20050430",
@@ -7659,10 +6867,7 @@
     "id": "xumRPYfH9umW",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.212559,
-        22.289543
-      ]
+      "coordinates": [114.212559, 22.289543]
     },
     "addressMeta": {
       "geoAddressCode": "3999316766T20050430",
@@ -7688,10 +6893,7 @@
     "id": "bcXImJXTRzlX",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.215778,
-        22.317059
-      ]
+      "coordinates": [114.215778, 22.317059]
     },
     "addressMeta": {
       "geoAddressCode": "4026419797T20050430",
@@ -7717,10 +6919,7 @@
     "id": "59tHhjke21Nf",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.216008,
-        22.316897
-      ]
+      "coordinates": [114.216008, 22.316897]
     },
     "addressMeta": {
       "geoAddressCode": "4030419796P20060915",
@@ -7746,10 +6945,7 @@
     "id": "TNKl5MUGdJtA",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.217246,
-        22.314401
-      ]
+      "coordinates": [114.217246, 22.314401]
     },
     "addressMeta": {
       "geoAddressCode": "4042519493T20050430",
@@ -7775,10 +6971,7 @@
     "id": "0eECbidPUu_b",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.22095,
-        22.283125
-      ]
+      "coordinates": [114.22095, 22.283125]
     },
     "addressMeta": {
       "geoAddressCode": "4080716027T20050430",
@@ -7804,10 +6997,7 @@
     "id": "EmgMutzKP_8j",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.221079,
-        22.283497
-      ]
+      "coordinates": [114.221079, 22.283497]
     },
     "addressMeta": {
       "geoAddressCode": "4083316049T20050430",
@@ -7833,10 +7023,7 @@
     "id": "zs8aN3Zjwb4r",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.221103,
-        22.283399
-      ]
+      "coordinates": [114.221103, 22.283399]
     },
     "addressMeta": {
       "geoAddressCode": "4083316049T20050430",
@@ -7862,10 +7049,7 @@
     "id": "Gt1XhKErjeSD",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.221139,
-        22.283015
-      ]
+      "coordinates": [114.221139, 22.283015]
     },
     "addressMeta": {
       "geoAddressCode": "4081316018T20050430",
@@ -7891,10 +7075,7 @@
     "id": "zhi_T4vqpUiE",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.22119,
-        22.283279
-      ]
+      "coordinates": [114.22119, 22.283279]
     },
     "addressMeta": {
       "geoAddressCode": "4083316049T20050430",
@@ -7920,10 +7101,7 @@
     "id": "ShcbGUo8LdrI",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.221329,
-        22.283135
-      ]
+      "coordinates": [114.221329, 22.283135]
     },
     "addressMeta": {
       "geoAddressCode": "4083316049T20050430",
@@ -7949,10 +7127,7 @@
     "id": "WJUxZyF23xIO",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.222035,
-        22.28255
-      ]
+      "coordinates": [114.222035, 22.28255]
     },
     "addressMeta": {
       "geoAddressCode": "4092115991P20060312",
@@ -7978,10 +7153,7 @@
     "id": "rPqh_m-dAMKd",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.224063,
-        22.315188
-      ]
+      "coordinates": [114.224063, 22.315188]
     },
     "addressMeta": {
       "geoAddressCode": "4112119590T20050430",
@@ -8007,10 +7179,7 @@
     "id": "pf9vsKqMSk0a",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.224064,
-        22.315465
-      ]
+      "coordinates": [114.224064, 22.315465]
     },
     "addressMeta": {
       "geoAddressCode": "4112119590T20050430",
@@ -8036,10 +7205,7 @@
     "id": "zTtEEnQx7whe",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.225456,
-        22.311535
-      ]
+      "coordinates": [114.225456, 22.311535]
     },
     "addressMeta": {
       "geoAddressCode": "4128919186T20091119",
@@ -8065,10 +7231,7 @@
     "id": "2Gl7W6URFFyW",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.225829,
-        22.317527
-      ]
+      "coordinates": [114.225829, 22.317527]
     },
     "addressMeta": {
       "geoAddressCode": "4130819855P20060311",
@@ -8094,10 +7257,7 @@
     "id": "hVU78hpvUhwK",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.226264,
-        22.279186
-      ]
+      "coordinates": [114.226264, 22.279186]
     },
     "addressMeta": {
       "geoAddressCode": "4135015590T20050430",
@@ -8123,10 +7283,7 @@
     "id": "c0XEw4yP3Wn6",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.226666,
-        22.277881
-      ]
+      "coordinates": [114.226666, 22.277881]
     },
     "addressMeta": {
       "geoAddressCode": "4139615448T20050430",
@@ -8152,10 +7309,7 @@
     "id": "nVfdekscX6KT",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.227015,
-        22.277824
-      ]
+      "coordinates": [114.227015, 22.277824]
     },
     "addressMeta": {
       "geoAddressCode": "4143715457P20140709",
@@ -8181,10 +7335,7 @@
     "id": "UxopdcRkVEff",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.227268,
-        22.27753
-      ]
+      "coordinates": [114.227268, 22.27753]
     },
     "addressMeta": {
       "geoAddressCode": "4146215412T20050430",
@@ -8210,10 +7361,7 @@
     "id": "hQ-a6U3omdKo",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.228624,
-        22.278248
-      ]
+      "coordinates": [114.228624, 22.278248]
     },
     "addressMeta": {
       "geoAddressCode": "4159815483T20050430",
@@ -8239,10 +7387,7 @@
     "id": "xTx647YwngHI",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.229352,
-        22.27812
-      ]
+      "coordinates": [114.229352, 22.27812]
     },
     "addressMeta": {
       "geoAddressCode": "4167515468T20050430",
@@ -8268,10 +7413,7 @@
     "id": "MjdNM1LWU8e4",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.229925,
-        22.277695
-      ]
+      "coordinates": [114.229925, 22.277695]
     },
     "addressMeta": {
       "geoAddressCode": "4172915434T20050430",
@@ -8297,10 +7439,7 @@
     "id": "KUAmI4DQJ2kM",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.229957,
-        22.278063
-      ]
+      "coordinates": [114.229957, 22.278063]
     },
     "addressMeta": {
       "geoAddressCode": "4174915457T20050430",
@@ -8326,10 +7465,7 @@
     "id": "NeYyHdEZFKE1",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.230005,
-        22.279268
-      ]
+      "coordinates": [114.230005, 22.279268]
     },
     "addressMeta": {
       "geoAddressCode": "4182415788T20050430",
@@ -8355,10 +7491,7 @@
     "id": "Mo3RyIYauM9C",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.249702,
-        22.356133
-      ]
+      "coordinates": [114.249702, 22.356133]
     },
     "addressMeta": {
       "geoAddressCode": "4381124188T20050430",
@@ -8384,10 +7517,7 @@
     "id": "aSXCp1LHk-XO",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.262938,
-        22.331114
-      ]
+      "coordinates": [114.262938, 22.331114]
     },
     "addressMeta": {
       "geoAddressCode": "4591420361T20050430",
@@ -8413,10 +7543,7 @@
     "id": "UJlJN5Dj68Th",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.267512,
-        22.379993
-      ]
+      "coordinates": [114.267512, 22.379993]
     },
     "addressMeta": {
       "geoAddressCode": "4561326751T20050430",
@@ -8442,10 +7569,7 @@
     "id": "EM9cq3Rm4m35",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.271499,
-        22.384815
-      ]
+      "coordinates": [114.271499, 22.384815]
     },
     "addressMeta": {
       "geoAddressCode": "4600827289T20050430",
@@ -8471,10 +7595,7 @@
     "id": "VAJhdEaxMvy3",
     "geometry": {
       "type": "Point",
-      "coordinates": [
-        114.271627,
-        22.38107
-      ]
+      "coordinates": [114.271627, 22.38107]
     },
     "addressMeta": {
       "geoAddressCode": "4602926875T20050430",

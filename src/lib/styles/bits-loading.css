@@ -1,0 +1,31 @@
+@layer components {
+  .bits-theme .bits-load-screen {
+    @apply fixed inset-0 z-140;
+  }
+
+  .bits-theme .bits-load-screen--surface-transparent {
+    background: transparent;
+  }
+
+  .bits-theme .bits-load-screen--surface-base {
+    background: var(--color-base-300);
+  }
+
+  .bits-theme .bits-load-screen__center {
+    @apply absolute left-1/2 top-1/2;
+    transform: translate(-50%, -50%);
+  }
+
+  .bits-theme .bits-load-screen__spinner {
+    @apply block;
+    color: var(--bits-load-screen-color, var(--color-primary));
+  }
+
+  .bits-theme .bits-load-screen--color-primary {
+    --bits-load-screen-color: var(--color-primary);
+  }
+
+  .bits-theme .bits-load-screen--color-accent {
+    --bits-load-screen-color: var(--color-accent);
+  }
+}

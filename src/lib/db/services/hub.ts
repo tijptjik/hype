@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, exists, isNull, or, SQL } from 'drizzle-orm';
+import { and, eq, exists, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   organisation,
@@ -7,31 +7,787 @@ import {
   layer,
   feature,
   hub,
+  hubRole,
   hubI18n,
   task,
   featureImage,
-  image
-} from '$lib/db/schema/index';
+  image,
+  hubLayer,
+} from '$lib/db/schema/index'
 // DB
-import { toRelatedRecords } from '..';
-import { insertManyRelated, replaceManyRelated } from '../crud';
+import {
+  firstOrNull,
+  resolveRequiredProbe,
+  toOrderByWithLocalizedFields,
+  toRelatedRecords,
+} from '..'
+import { insertManyRelated, replaceManyRelated } from '../crud'
+import { updateOrganisationById } from './organisation'
 // TYPES
+import type { InferInsertModel } from 'drizzle-orm'
 import type {
   Database,
-  HubDBRaw,
-  HubDB,
-  HubDBPartial,
-  Code,
+  ListResponse,
   Locale,
-  HubOptsExtended,
-  HubI18nNew,
+  LocaleKey,
+  HubProbe,
+  HubUpdateProbe,
+  HubCommandProbe,
+  Id,
+} from '$lib/types'
+import type {
+  HubDB,
+  HubDBNew,
+  HubDBRaw,
   HubI18nDB,
-  HubI18nPartial
-} from '$lib/types';
-import { hubEntityWithRelations } from '$lib/api/services/hub';
+  HubI18nNew,
+  HubI18nPartial,
+  HubOptsExtended,
+} from '$lib/db/zod/schema/hub.types'
+import { hubEntityWithRelations } from '$lib/api/services/hub'
 
 // ═══════════════════════
-// HUB FILTERING FUNCTIONS
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1.1 CRUD :: CREATE
+//    - createHub
+//    - createI18n
+//    - createUserRoles
+//
+// 1.2 CRUD :: CREATE (SHAPING)
+//    - toUserRoles
+//
+// 2.1 CRUD :: READ
+//    - listHubs
+//    - getHub
+//    - getHubByCode
+//    - getHubByDomain
+//
+// 2.2 CRUD :: READ (LOOKUPS)
+//    - getHubCodeForOrganisation
+//    - getHubCodeForProject
+//    - getHubCodeForLayer
+//    - getHubCodeForFeature
+//    - getHubCodeForTask
+//
+// 2.3 CRUD :: READ (PROBES)
+//    - probeHubQuery
+//    - probeExistingHub
+//    - probeHubForUpdate
+//    - probeHubForCommand
+//    - resolveHubCommandProbe
+//
+// 2.4 CRUD :: READ (RELATED)
+//    - listUserRoles
+//    - listOrganisations
+//    - listHubLayerDefaults
+//
+// 3.1 CRUD :: UPDATE
+//    - updateHubByIdWithConcurrency
+//    - updateHubPublishedStateById
+//    - updateHubArchivedStateById
+//    - updateI18n
+//
+// 3.2 CRUD :: UPDATE (SYNC)
+//    - syncUserRoles
+//    - syncOrganisations
+//    - syncHubLayerDefaults
+//
+// 4. CRUD :: DELETE
+//    - No hard delete helpers in this module (intentional)
+//
+// 5. HUB FILTER HELPERS
+//    - getOrganisationHubFilter
+//    - getProjectHubFilter
+//    - getLayerHubFilter
+//    - getFeatureHubFilter
+//    - getImageHubFilter
+//    - getTaskHubFilter
+//
+
+// ═══════════════════════
+// 1.1 CRUD :: CREATE
+// ═══════════════════════
+
+/**
+ * createHub operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const createHub = async (db: Database, data: HubDBNew): Promise<HubDB> => {
+  const [created] = await db.insert(hub).values(data).returning()
+  return created
+}
+
+/**
+ * Creates relational i18n records for a hub
+ * @param db - The database instance
+ * @param i18n - Record of translations for each target locale
+ * @param hubId - The ID of the hub
+ * @returns The created translations
+ */
+export const createI18n = async (
+  db: Database,
+  i18n: Record<LocaleKey, HubI18nNew>,
+  hubId: string,
+): Promise<HubI18nDB[]> => {
+  const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
+  return await insertManyRelated(db, hubI18n, records, 'hubId', hubId)
+}
+
+/**
+ * createUserRoles operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const createUserRoles = async (
+  db: Parameters<typeof createHub>[0],
+  roles: Array<{ userId: string; role: string }>,
+  hubId: string,
+): Promise<void> => {
+  if (roles.length === 0) return
+  await db.insert(hubRole).values(toUserRoles(roles, hubId))
+}
+
+// ═══════════════════════
+// 1.2 CRUD :: CREATE (SHAPING)
+// ═══════════════════════
+
+const toUserRoles = (
+  userRoles: Array<{ userId: string; role: string }>,
+  hubId: string,
+) =>
+  userRoles.map(userRole => ({
+    hubId,
+    userId: userRole.userId,
+    role: userRole.role,
+  }))
+
+/**
+ * Narrows hydrated Drizzle hub rows to the current raw hub contract.
+ * Keeps relation-graph inference drift contained at the DB boundary.
+ */
+const toHubDbRaw = (row: unknown): HubDBRaw => row as HubDBRaw
+
+/**
+ * Narrows hydrated Drizzle hub row collections to the current raw hub contract.
+ */
+const toHubDbRawList = (rows: unknown[]): HubDBRaw[] => rows as HubDBRaw[]
+
+// ═══════════════════════
+// 2.1 CRUD :: READ
+// ═══════════════════════
+
+/**
+ * listHubs operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const listHubs = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = [],
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    filtersToApply?: Record<string, unknown>
+    locale?: Locale
+  },
+): Promise<ListResponse<HubDBRaw>> => {
+  const startedAt = Date.now()
+
+  if (query?.q) {
+    const search = query.q.toLowerCase()
+    const searchColumns = query.searchColumns || [
+      'code',
+      'domain',
+      'name',
+      'description',
+    ]
+    const searchConditions: SQL<unknown>[] = []
+
+    const baseColumns = searchColumns.filter(column =>
+      ['code', 'domain'].includes(column),
+    )
+    for (const column of baseColumns) {
+      const hubColumn = hub[column as keyof typeof hub]
+      if (hubColumn) {
+        searchConditions.push(like(sql`lower(${hubColumn})`, `%${search}%`))
+      }
+    }
+
+    const i18nColumns = searchColumns.filter(column =>
+      ['name', 'nameShort', 'description'].includes(column),
+    )
+    if (i18nColumns.length > 0) {
+      const i18nSearchConditions: SQL<unknown>[] = []
+      for (const column of i18nColumns) {
+        if (column === 'name') {
+          i18nSearchConditions.push(sql`lower("hubI18n"."name") like ${`%${search}%`}`)
+        } else if (column === 'nameShort') {
+          i18nSearchConditions.push(
+            sql`lower("hubI18n"."nameShort") like ${`%${search}%`}`,
+          )
+        } else if (column === 'description') {
+          i18nSearchConditions.push(
+            sql`("hubI18n"."description" IS NOT NULL AND lower("hubI18n"."description") like ${`%${search}%`})`,
+          )
+        }
+      }
+
+      const combinedI18nSearchCondition = or(...i18nSearchConditions)
+      if (combinedI18nSearchCondition) {
+        searchConditions.push(
+          exists(
+            db
+              .select({ hubId: hubI18n.hubId })
+              .from(hubI18n)
+              .where(and(eq(hubI18n.hubId, hub.id), combinedI18nSearchCondition)),
+          ),
+        )
+      }
+    }
+
+    const combinedSearchCondition = or(...searchConditions)
+    if (combinedSearchCondition) {
+      conditions.push(combinedSearchCondition)
+    }
+  }
+
+  const sortBy = sorting?.sortBy || 'modifiedAt'
+  const sortOrder = sorting?.sortOrder || 'desc'
+  const orderBy = toOrderByWithLocalizedFields({
+    db,
+    locale: query?.locale,
+    sortBy,
+    sortOrder,
+    fallbackColumn: hub.modifiedAt,
+    baseTable: hub,
+    localizedSortColumns: {
+      name: hubI18n.name,
+      nameShort: hubI18n.nameShort,
+      description: hubI18n.description,
+    },
+    i18nTable: hubI18n,
+    parentIdColumn: hub.id,
+    foreignKeyColumn: hubI18n.hubId,
+    localeColumn: hubI18n.locale,
+  })
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  const data = await db.query.hub.findMany({
+    with: withRelations,
+    where: whereClause,
+    limit: pagination?.limit,
+    offset: pagination?.offset,
+    orderBy,
+  })
+  const countQuery = db.select({ count: sql<number>`count(*)` }).from(hub)
+  const totalRows = whereClause ? await countQuery.where(whereClause) : await countQuery
+  const totalCount = Number(totalRows[0]?.count || 0)
+  const offset = pagination?.offset ?? 0
+  const hasMore = offset + data.length < totalCount
+  const nextOffset = hasMore ? offset + data.length : null
+
+  return {
+    data: toHubDbRawList(data),
+    limit: pagination?.limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters: query?.filtersToApply,
+    q: query?.q,
+    durationMs: Date.now() - startedAt,
+  }
+}
+
+/**
+ * Loads a single hub using provided conditions and relation graph.
+ * @param db - The database instance.
+ * @param withRelations - Optional relation graph.
+ * @param conditions - Optional SQL predicates.
+ * @returns Matching hub row or `undefined`.
+ */
+export const getHub = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = [],
+): Promise<HubDBRaw | undefined> => {
+  const row = await db.query.hub.findFirst({
+    with: withRelations,
+    where: and(...conditions),
+  })
+  return row ? toHubDbRaw(row) : undefined
+}
+
+/**
+ * getHubByCode operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const getHubByCode = async (
+  db: Database,
+  code: string,
+): Promise<HubDBRaw | undefined> =>
+  await getHub(db, hubEntityWithRelations, [eq(hub.code, code)])
+
+/**
+ * getHubByDomain operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const getHubByDomain = async (
+  db: Database,
+  domain: string,
+): Promise<HubDBRaw | undefined> =>
+  await getHub(db, hubEntityWithRelations, [eq(hub.domain, domain)])
+
+// ═══════════════════════
+// 2.2 CRUD :: READ (LOOKUPS)
+// ═══════════════════════
+
+/**
+ * Get hub code for an organisation by organisation ID
+ */
+export const getHubCodeForOrganisation = async (
+  db: Database,
+  organisationId: string,
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(organisation)
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(organisation.id, organisationId))
+    .limit(1)
+
+  return result[0]?.hubCode || null
+}
+
+/**
+ * Get hub code for a project through its organisation
+ */
+export const getHubCodeForProject = async (
+  db: Database,
+  projectId: string,
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(project)
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(project.id, projectId))
+    .limit(1)
+
+  return result[0]?.hubCode || null
+}
+
+/**
+ * Get hub code for a layer through project → organisation
+ */
+export const getHubCodeForLayer = async (
+  db: Database,
+  layerId: string,
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(layer)
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(layer.id, layerId))
+    .limit(1)
+
+  return result[0]?.hubCode || null
+}
+
+/**
+ * Get hub code for a feature through layer → project → organisation
+ */
+export const getHubCodeForFeature = async (
+  db: Database,
+  featureId: string,
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(feature)
+    .innerJoin(layer, eq(feature.layerId, layer.id))
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(feature.id, featureId))
+    .limit(1)
+
+  return result[0]?.hubCode || null
+}
+
+/**
+ * Get hub code for a task through its organisation (direct relationship)
+ */
+export const getHubCodeForTask = async (
+  db: Database,
+  taskId: string,
+): Promise<string | null> => {
+  const result = await db
+    .select({ hubCode: hub.code })
+    .from(task)
+    .innerJoin(organisation, eq(task.organisationId, organisation.id))
+    .leftJoin(hub, eq(organisation.hubId, hub.id))
+    .where(eq(task.id, taskId))
+    .limit(1)
+
+  return result[0]?.hubCode || null
+}
+
+// ═══════════════════════
+// 2.3 CRUD :: READ (PROBES)
+// ═══════════════════════
+
+/**
+ * probeHubQuery operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const probeHubQuery = async (
+  db: Database,
+  params: { ref: string; refKey?: 'id' | 'code' },
+): Promise<HubProbe | null> => {
+  return firstOrNull(
+    await db
+      .select({
+        id: hub.id,
+        code: hub.code,
+        isPublished: hub.isPublished,
+        isArchived: hub.isArchived,
+      })
+      .from(hub)
+      .where(
+        params.refKey === 'code' ? eq(hub.code, params.ref) : eq(hub.id, params.ref),
+      )
+      .limit(1),
+  )
+}
+
+/**
+ * probeExistingHub operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const probeExistingHub = async (
+  db: Database,
+  code: string,
+): Promise<{ id: string } | null> => {
+  return firstOrNull(
+    await db.select({ id: hub.id }).from(hub).where(eq(hub.code, code)).limit(1),
+  )
+}
+
+/**
+ * probeHubForUpdate operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const probeHubForUpdate = async (
+  db: Database,
+  hubId: Id,
+): Promise<HubUpdateProbe | null> => {
+  return firstOrNull(
+    await db
+      .select({
+        id: hub.id,
+        code: hub.code,
+        modifiedAt: hub.modifiedAt,
+      })
+      .from(hub)
+      .where(eq(hub.id, hubId))
+      .limit(1),
+  )
+}
+
+/**
+ * probeHubForCommand operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const probeHubForCommand = async (
+  db: Database,
+  hubId: Id,
+): Promise<HubCommandProbe | null> => {
+  return firstOrNull(
+    await db.select({ id: hub.id }).from(hub).where(eq(hub.id, hubId)).limit(1),
+  )
+}
+
+/**
+ * resolveHubCommandProbe operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const resolveHubCommandProbe = async (
+  db: Database,
+  hubId: Id,
+  onNotFound: () => never,
+): Promise<HubCommandProbe> => {
+  const probed = await probeHubForCommand(db, hubId)
+  return resolveRequiredProbe(probed, onNotFound)
+}
+
+// ═══════════════════════
+// 2.4 CRUD :: READ (RELATED)
+// ═══════════════════════
+
+/**
+ * listUserRoles operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const listUserRoles = async (
+  db: Database,
+  hubId: string,
+): Promise<Array<{ userId: string; role: string }>> => {
+  return await db
+    .select({
+      userId: hubRole.userId,
+      role: hubRole.role,
+    })
+    .from(hubRole)
+    .where(eq(hubRole.hubId, hubId))
+}
+
+/**
+ * listOrganisations operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const listOrganisations = async (
+  db: Database,
+  organisationIds: string[],
+): Promise<
+  Array<{
+    id: string
+    hubId: string | null
+    isCoreInclusive: boolean
+    isHubExclusive: boolean
+  }>
+> => {
+  if (organisationIds.length === 0) return []
+
+  return await db
+    .select({
+      id: organisation.id,
+      hubId: organisation.hubId,
+      isCoreInclusive: organisation.isCoreInclusive,
+      isHubExclusive: organisation.isHubExclusive,
+    })
+    .from(organisation)
+    .where(inArray(organisation.id, organisationIds))
+}
+
+/**
+ * Lists persisted hub-layer default rows for one hub.
+ */
+export const listHubLayerDefaults = async (
+  db: Database,
+  hubId: string,
+): Promise<Array<{ hubId: string; layerId: string; isDefaultVisible: boolean }>> =>
+  await db
+    .select({
+      hubId: hubLayer.hubId,
+      layerId: hubLayer.layerId,
+      isDefaultVisible: hubLayer.isDefaultVisible,
+    })
+    .from(hubLayer)
+    .where(eq(hubLayer.hubId, hubId))
+
+// ═══════════════════════
+// 3.1 CRUD :: UPDATE
+// ═══════════════════════
+
+/**
+ * Updates hub fields with optimistic concurrency guard on `modifiedAt`.
+ * @param db - The database instance.
+ * @param params - Update payload including expected `updatedAt`.
+ * @returns Updated id/modifiedAt pair or `null` when stale/missing.
+ */
+export const updateHubByIdWithConcurrency = async (
+  db: Database,
+  params: {
+    id: Id
+    updatedAt: string
+    data: { code: string; domain: string | null }
+  },
+): Promise<{ id: string; modifiedAt: string } | null> => {
+  const [updated] = await db
+    .update(hub)
+    .set(params.data)
+    .where(and(eq(hub.id, params.id), eq(hub.modifiedAt, params.updatedAt)))
+    .returning({
+      id: hub.id,
+      modifiedAt: hub.modifiedAt,
+    })
+
+  return updated ?? null
+}
+
+/**
+ * Toggles published state for a hub.
+ * @param db - The database instance.
+ * @param params - Target id and next publish state.
+ * @returns Updated id/state pair or `null`.
+ */
+export const updateHubPublishedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean },
+): Promise<{ id: string; isPublished: boolean } | null> => {
+  const [updated] = await db
+    .update(hub)
+    .set({ isPublished: params.state })
+    .where(eq(hub.id, params.id))
+    .returning({
+      id: hub.id,
+      isPublished: hub.isPublished,
+    })
+
+  return updated ?? null
+}
+
+/**
+ * Toggles archived state for a hub.
+ * @param db - The database instance.
+ * @param params - Target id and next archived state.
+ * @returns Updated id/state pair or `null`.
+ */
+export const updateHubArchivedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean },
+): Promise<{ id: string; isArchived: boolean } | null> => {
+  const [updated] = await db
+    .update(hub)
+    .set({ isArchived: params.state })
+    .where(eq(hub.id, params.id))
+    .returning({
+      id: hub.id,
+      isArchived: hub.isArchived,
+    })
+
+  return updated ?? null
+}
+
+/**
+ * Updates translations for a hub by deleting existing ones and creating new ones
+ * @param db - The database instance
+ * @param i18n - Record of translations for each target locale
+ * @param hubId - The ID of the hub
+ * @returns The updated translations
+ */
+export const updateI18n = async (
+  db: Database,
+  i18n: Record<LocaleKey, HubI18nPartial>,
+  hubId: string,
+): Promise<HubI18nDB[]> => {
+  const records = toRelatedRecords(i18n, 'hubId', hubId, 'locale')
+  return await replaceManyRelated(
+    db,
+    hubI18n,
+    records as InferInsertModel<typeof hubI18n>[],
+    hubI18n.hubId,
+    hubId,
+  )
+}
+
+// ═══════════════════════
+// 3.2 CRUD :: UPDATE (SYNC)
+// ═══════════════════════
+
+/**
+ * syncUserRoles operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const syncUserRoles = async (
+  db: Parameters<typeof createHub>[0],
+  roles: Array<{ userId: string; role: string }>,
+  hubId: string,
+): Promise<void> => {
+  await db.delete(hubRole).where(eq(hubRole.hubId, hubId))
+  if (roles.length === 0) return
+  await db.insert(hubRole).values(toUserRoles(roles, hubId))
+}
+
+/**
+ * syncOrganisations operation.
+ * Used by hub DB workflows to keep persistence behavior centralized.
+ */
+export const syncOrganisations = async (
+  db: Parameters<typeof createHub>[0],
+  hubId: string,
+  nextRows: Array<{
+    organisationId: string
+    isCoreInclusive: boolean
+    isHubExclusive: boolean
+  }>,
+): Promise<void> => {
+  const currentAssignments = await db
+    .select({ id: organisation.id })
+    .from(organisation)
+    .where(eq(organisation.hubId, hubId))
+
+  if (currentAssignments.length > 0) {
+    await Promise.all(
+      currentAssignments.map(row =>
+        updateOrganisationById(
+          db,
+          {
+            hubId: null,
+            isCoreInclusive: true,
+            isHubExclusive: false,
+          },
+          row.id,
+        ),
+      ),
+    )
+  }
+
+  if (nextRows.length === 0) return
+
+  await Promise.all(
+    nextRows.map(row =>
+      updateOrganisationById(
+        db,
+        {
+          hubId,
+          isCoreInclusive: row.isCoreInclusive,
+          isHubExclusive: row.isHubExclusive,
+        },
+        row.organisationId,
+      ),
+    ),
+  )
+}
+
+/**
+ * Replaces persisted hub-layer default rows for one hub.
+ */
+export const syncHubLayerDefaults = async (
+  db: Parameters<typeof createHub>[0],
+  hubId: string,
+  nextRows: Array<{
+    layerId: string
+    isDefaultVisible: boolean
+  }>,
+): Promise<void> => {
+  await db.delete(hubLayer).where(eq(hubLayer.hubId, hubId))
+
+  if (nextRows.length === 0) return
+
+  await db.insert(hubLayer).values(
+    nextRows.map(row => ({
+      hubId,
+      layerId: row.layerId,
+      isDefaultVisible: row.isDefaultVisible,
+    })),
+  )
+}
+
+// ═══════════════════════
+// 4. CRUD :: DELETE
+// ═══════════════════════
+// No hard delete helpers in this module (intentional).
+
+// ═══════════════════════
+// HUB FILTER HELPERS
 // ═══════════════════════
 
 /**
@@ -42,29 +798,29 @@ import { hubEntityWithRelations } from '$lib/api/services/hub';
  */
 export function getOrganisationHubFilter(
   db: Database,
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering on Admin Panel
   if (opts.isSuperAdmin && opts.isAdminRequest) {
-    return undefined;
+    return undefined
   }
 
   if (opts.isCore) {
     // Core shows: no hub assignment OR non-exclusive hub assignments
     return and(
       eq(organisation.isCoreInclusive, true),
-      or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
-    );
+      or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
+    )
   } else {
     // Specific hub shows: assigned to this hub via code OR domain match
-    const hubConditions: SQL<unknown>[] = [];
+    const hubConditions: SQL<unknown>[] = []
 
     if (opts.code) {
-      hubConditions.push(eq(hub.code, opts.code));
+      hubConditions.push(eq(hub.code, opts.code))
     }
 
     if (opts.domain) {
-      hubConditions.push(eq(hub.domain, opts.domain));
+      hubConditions.push(eq(hub.domain, opts.domain))
     }
 
     return exists(
@@ -74,10 +830,10 @@ export function getOrganisationHubFilter(
         .where(
           and(
             eq(hub.id, organisation.hubId),
-            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
-          )
-        )
-    );
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions),
+          ),
+        ),
+    )
   }
 }
 
@@ -86,14 +842,14 @@ export function getOrganisationHubFilter(
  */
 export function getProjectHubFilter(
   db: Database,
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering on Admin Panel
   if (opts.isSuperAdmin && opts.isAdminRequest) {
-    return undefined;
+    return undefined
   }
   if (opts.isCore) {
-    // Core: project's org has no hub OR org is not hub-exclusive
+    // Core: project's org must opt into core and not be exclusive to another hub.
     return exists(
       db
         .select()
@@ -101,20 +857,21 @@ export function getProjectHubFilter(
         .where(
           and(
             eq(organisation.id, project.organisationId),
-            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
-          )
-        )
-    );
+            eq(organisation.isCoreInclusive, true),
+            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
+          ),
+        ),
+    )
   } else {
     // Specific hub: project's org belongs to this hub
-    const hubConditions: SQL<unknown>[] = [];
+    const hubConditions: SQL<unknown>[] = []
 
     if (opts.code) {
-      hubConditions.push(eq(hub.code, opts.code));
+      hubConditions.push(eq(hub.code, opts.code))
     }
 
     if (opts.domain) {
-      hubConditions.push(eq(hub.domain, opts.domain));
+      hubConditions.push(eq(hub.domain, opts.domain))
     }
 
     return exists(
@@ -125,10 +882,10 @@ export function getProjectHubFilter(
         .where(
           and(
             eq(organisation.id, project.organisationId),
-            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
-          )
-        )
-    );
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions),
+          ),
+        ),
+    )
   }
 }
 
@@ -137,14 +894,14 @@ export function getProjectHubFilter(
  */
 export function getLayerHubFilter(
   db: Database,
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering on Admin Panel
   if (opts.isSuperAdmin && opts.isAdminRequest) {
-    return undefined;
+    return undefined
   }
   if (opts.isCore) {
-    // Core: layer's project's org has no hub OR org is not hub-exclusive
+    // Core: layer's org must opt into core and not be exclusive to another hub.
     return exists(
       db
         .select()
@@ -153,20 +910,21 @@ export function getLayerHubFilter(
         .where(
           and(
             eq(project.id, layer.projectId),
-            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
-          )
-        )
-    );
+            eq(organisation.isCoreInclusive, true),
+            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
+          ),
+        ),
+    )
   } else {
     // Specific hub: layer's project's org belongs to this hub
-    const hubConditions: SQL<unknown>[] = [];
+    const hubConditions: SQL<unknown>[] = []
 
     if (opts.code) {
-      hubConditions.push(eq(hub.code, opts.code));
+      hubConditions.push(eq(hub.code, opts.code))
     }
 
     if (opts.domain) {
-      hubConditions.push(eq(hub.domain, opts.domain));
+      hubConditions.push(eq(hub.domain, opts.domain))
     }
 
     return exists(
@@ -178,10 +936,10 @@ export function getLayerHubFilter(
         .where(
           and(
             eq(project.id, layer.projectId),
-            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
-          )
-        )
-    );
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions),
+          ),
+        ),
+    )
   }
 }
 
@@ -190,11 +948,11 @@ export function getLayerHubFilter(
  */
 export function getFeatureHubFilter(
   db: Database,
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering on Admin Panel
   if (opts.isSuperAdmin && opts.isAdminRequest) {
-    return undefined;
+    return undefined
   }
   if (opts.isCore) {
     // Core: feature's layer's project's org has no hub OR org is not hub-exclusive
@@ -207,20 +965,20 @@ export function getFeatureHubFilter(
         .where(
           and(
             eq(layer.id, feature.layerId),
-            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
-          )
-        )
-    );
+            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
+          ),
+        ),
+    )
   } else {
     // Specific hub: feature's layer's project's org belongs to this hub
-    const hubConditions: SQL<unknown>[] = [];
+    const hubConditions: SQL<unknown>[] = []
 
     if (opts.code) {
-      hubConditions.push(eq(hub.code, opts.code));
+      hubConditions.push(eq(hub.code, opts.code))
     }
 
     if (opts.domain) {
-      hubConditions.push(eq(hub.domain, opts.domain));
+      hubConditions.push(eq(hub.domain, opts.domain))
     }
 
     return exists(
@@ -233,10 +991,10 @@ export function getFeatureHubFilter(
         .where(
           and(
             eq(layer.id, feature.layerId),
-            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
-          )
-        )
-    );
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions),
+          ),
+        ),
+    )
   }
 }
 
@@ -245,11 +1003,11 @@ export function getFeatureHubFilter(
  */
 export function getImageHubFilter(
   db: Database,
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering on Admin Panel
   if (opts.isSuperAdmin && opts.isAdminRequest) {
-    return undefined;
+    return undefined
   }
   if (opts.isCore) {
     // Core: image's feature's layer's project's org has no hub OR org is not hub-exclusive
@@ -264,20 +1022,20 @@ export function getImageHubFilter(
         .where(
           and(
             eq(featureImage.imageId, image.id),
-            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
-          )
-        )
-    );
+            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
+          ),
+        ),
+    )
   } else {
     // Specific hub: image's feature's layer's project's org belongs to this hub
-    const hubConditions: SQL<unknown>[] = [];
+    const hubConditions: SQL<unknown>[] = []
 
     if (opts.code) {
-      hubConditions.push(eq(hub.code, opts.code));
+      hubConditions.push(eq(hub.code, opts.code))
     }
 
     if (opts.domain) {
-      hubConditions.push(eq(hub.domain, opts.domain));
+      hubConditions.push(eq(hub.domain, opts.domain))
     }
 
     return exists(
@@ -292,10 +1050,10 @@ export function getImageHubFilter(
         .where(
           and(
             eq(featureImage.imageId, image.id),
-            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
-          )
-        )
-    );
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions),
+          ),
+        ),
+    )
   }
 }
 
@@ -304,11 +1062,11 @@ export function getImageHubFilter(
  */
 export function getTaskHubFilter(
   db: Database,
-  opts: HubOptsExtended
+  opts: HubOptsExtended,
 ): SQL<unknown> | undefined {
   // SuperAdmins bypass all hub filtering on Admin Panel
   if (opts.isSuperAdmin && opts.isAdminRequest) {
-    return undefined;
+    return undefined
   }
   if (opts.isCore) {
     // Core: task's feature's layer's project's org has no hub OR org is not hub-exclusive
@@ -322,20 +1080,25 @@ export function getTaskHubFilter(
         .where(
           and(
             eq(feature.id, task.featureId),
-            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false))
-          )
-        )
-    );
+            or(isNull(organisation.hubId), eq(organisation.isHubExclusive, false)),
+          ),
+        ),
+    )
   } else {
     // Specific hub: task's feature's layer's project's org belongs to this hub
-    const hubConditions: SQL<unknown>[] = [];
+    const hubConditions: SQL<unknown>[] = []
 
     if (opts.code) {
-      hubConditions.push(eq(hub.code, opts.code));
+      hubConditions.push(eq(hub.code, opts.code))
     }
 
     if (opts.domain) {
-      hubConditions.push(eq(hub.domain, opts.domain));
+      hubConditions.push(eq(hub.domain, opts.domain))
+    }
+
+    // Fail closed when request hub context could not be resolved to a stable identifier.
+    if (hubConditions.length === 0) {
+      return sql`false`
     }
 
     return exists(
@@ -349,274 +1112,9 @@ export function getTaskHubFilter(
         .where(
           and(
             eq(feature.id, task.featureId),
-            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions)
-          )
-        )
-    );
+            hubConditions.length === 1 ? hubConditions[0] : or(...hubConditions),
+          ),
+        ),
+    )
   }
 }
-
-// ═══════════════════════
-// CORE HUB OPERATIONS
-// ═══════════════════════
-
-export const listHubs = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<HubDBRaw[]> =>
-  await db.query.hub.findMany({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-
-export const getHub = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<HubDBRaw | undefined> =>
-  await db.query.hub.findFirst({
-    with: withRelations,
-    where: and(...conditions)
-  });
-
-export const createHub = async (db: Database, data: any): Promise<HubDB> => {
-  const [created] = await db.insert(hub).values(data).returning();
-  return created;
-};
-
-export const updateHub = async (
-  db: Database,
-  data: HubDBPartial,
-  code: Code
-): Promise<HubDBRaw> => {
-  const [updated] = await db
-    .update(hub)
-    .set(data)
-    .where(eq(hub.code, code))
-    .returning();
-  return updated;
-};
-
-// ═══════════════════════
-// HUB I18N OPERATIONS
-// ═══════════════════════
-
-/**
- * Creates relational i18n records for a hub
- * @param db - The database instance
- * @param i18n - Record of translations for each target locale
- * @param hubId - The ID of the hub
- * @returns The created translations
- */
-export const createI18n = async (
-  db: Database,
-  i18n: Record<Locale, HubI18nNew>,
-  hubId: string
-): Promise<HubI18nDB[]> => {
-  return await insertManyRelated(
-    db,
-    hubI18n,
-    toRelatedRecords(i18n, 'hubId', hubId, 'locale') as any,
-    'hubId',
-    hubId
-  );
-};
-
-/**
- * Updates translations for a hub by deleting existing ones and creating new ones
- * @param db - The database instance
- * @param i18n - Record of translations for each target locale
- * @param hubId - The ID of the hub
- * @returns The updated translations
- */
-export const updateI18n = async (
-  db: Database,
-  i18n: Record<Locale, HubI18nPartial>,
-  hubId: string
-): Promise<HubI18nDB[]> => {
-  return await replaceManyRelated(
-    db,
-    hubI18n,
-    toRelatedRecords(i18n, 'hubId', hubId, 'locale') as any,
-    hubI18n.hubId,
-    hubId
-  );
-};
-
-// ═══════════════════════
-// HUB ORCHESTRATION
-// ═══════════════════════
-
-/**
- * Creates a new hub with translations
- * @param db - The database instance
- * @param data - The hub data to create
- * @returns The newly created hub with i18n data
- */
-export const createHubWithRelated = async (
-  db: Database,
-  data: any // Using any to avoid complex type issues
-) => {
-  const hub = await createHub(db, data);
-
-  // Create i18n if provided
-  let i18n: HubI18nDB[] = [];
-  if (data.i18n) {
-    i18n = await createI18n(db, data.i18n, hub.id);
-  }
-
-  // Initialize organisations as empty array (will be assigned later if needed)
-  const organisations: any[] = [];
-
-  const result = { ...hub, i18n, organisations };
-
-  return result;
-};
-
-/**
- * Updates a hub with translations
- * @param db - The database instance
- * @param data - The hub data to update
- * @param lookupCode - Optional code to lookup the hub (defaults to data.code)
- * @returns The updated hub with related data
- */
-export const updateHubWithRelated = async (
-  db: Database,
-  data: any, // Using any to avoid complex type issues
-  lookupCode?: string
-) => {
-  const codeToUse = lookupCode || data.code;
-  const hub = await updateHub(db, data, codeToUse);
-
-  // Update i18n if provided
-  if (data.i18n) {
-    await updateI18n(db, data.i18n, hub.id);
-  }
-
-  return hub;
-};
-
-// ═══════════════════════
-// HUB CODE UTILITIES
-// ═══════════════════════
-
-/**
- * Get hub code for an organisation by organisation ID
- */
-export const getHubCodeForOrganisation = async (
-  db: Database,
-  organisationId: string
-): Promise<string | null> => {
-  const result = await db
-    .select({ hubCode: hub.code })
-    .from(organisation)
-    .leftJoin(hub, eq(organisation.hubId, hub.id))
-    .where(eq(organisation.id, organisationId))
-    .limit(1);
-
-  return result[0]?.hubCode || null;
-};
-
-/**
- * Get hub code for a project through its organisation
- */
-export const getHubCodeForProject = async (
-  db: Database,
-  projectId: string
-): Promise<string | null> => {
-  const result = await db
-    .select({ hubCode: hub.code })
-    .from(project)
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .leftJoin(hub, eq(organisation.hubId, hub.id))
-    .where(eq(project.id, projectId))
-    .limit(1);
-
-  return result[0]?.hubCode || null;
-};
-
-/**
- * Get hub code for a layer through project → organisation
- */
-export const getHubCodeForLayer = async (
-  db: Database,
-  layerId: string
-): Promise<string | null> => {
-  const result = await db
-    .select({ hubCode: hub.code })
-    .from(layer)
-    .innerJoin(project, eq(layer.projectId, project.id))
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .leftJoin(hub, eq(organisation.hubId, hub.id))
-    .where(eq(layer.id, layerId))
-    .limit(1);
-
-  return result[0]?.hubCode || null;
-};
-
-/**
- * Get hub code for a feature through layer → project → organisation
- */
-export const getHubCodeForFeature = async (
-  db: Database,
-  featureId: string
-): Promise<string | null> => {
-  const result = await db
-    .select({ hubCode: hub.code })
-    .from(feature)
-    .innerJoin(layer, eq(feature.layerId, layer.id))
-    .innerJoin(project, eq(layer.projectId, project.id))
-    .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .leftJoin(hub, eq(organisation.hubId, hub.id))
-    .where(eq(feature.id, featureId))
-    .limit(1);
-
-  return result[0]?.hubCode || null;
-};
-
-/**
- * Get hub code for a task through its organisation (direct relationship)
- */
-export const getHubCodeForTask = async (
-  db: Database,
-  taskId: string
-): Promise<string | null> => {
-  const result = await db
-    .select({ hubCode: hub.code })
-    .from(task)
-    .innerJoin(organisation, eq(task.organisationId, organisation.id))
-    .leftJoin(hub, eq(organisation.hubId, hub.id))
-    .where(eq(task.id, taskId))
-    .limit(1);
-
-  return result[0]?.hubCode || null;
-};
-
-export const getHubByCode = async (
-  db: Database,
-  code: string
-): Promise<HubDBRaw | undefined> =>
-  await db.query.hub.findFirst({
-    with: hubEntityWithRelations,
-    where: eq(hub.code, code)
-  });
-
-export const getHubByDomain = async (
-  db: Database,
-  domain: string
-): Promise<HubDBRaw | undefined> =>
-  await db.query.hub.findFirst({
-    with: hubEntityWithRelations,
-    where: eq(hub.domain, domain)
-  });
-
-export const getHubs = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = []
-): Promise<HubDBRaw[]> =>
-  await db.query.hub.findMany({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });

@@ -1,0 +1,122 @@
+@layer components {
+  .bits-theme .bits-form__section.bits-form__parent-resource {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 80;
+    overflow: visible;
+  }
+
+  .bits-theme
+    .bits-form__section.bits-form__parent-resource.bits-form__parent-resource--search-open {
+    z-index: 200;
+    isolation: isolate;
+  }
+
+  .bits-theme .bits-form__parent-resource-header {
+    align-items: center;
+  }
+
+  .bits-theme .bits-form__parent-resource-header .bits-form__section-header-right {
+    width: auto;
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__parent-resource-header-actions {
+    width: auto;
+    min-width: 0;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .bits-theme
+    .bits-form__parent-resource-header.bits-form__section-header--with-center
+    .bits-form__section-header-right {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    justify-self: end;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__parent-resource-actions {
+    display: flex;
+    gap: calc(var(--spacing) * 1.5);
+  }
+
+  .bits-theme .bits-form__parent-resource-action,
+  .bits-theme .bits-form__parent-resource-remove-btn {
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-box);
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    transition: background-color 140ms ease;
+  }
+
+  .bits-theme .bits-form__parent-resource-action:disabled,
+  .bits-theme .bits-form__parent-resource-remove-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .bits-theme .bits-form__parent-resource-action:hover:not(:disabled),
+  .bits-theme .bits-form__parent-resource-remove-btn:hover:not(:disabled) {
+    background: var(--color-background-secondary);
+  }
+
+  .bits-theme
+    .bits-form__section.bits-form__parent-resource
+    .bits-form__parent-resource-search {
+    padding-inline: calc(var(--spacing) * 1.5);
+    position: relative;
+    z-index: 60;
+    overflow: visible;
+  }
+
+  .bits-theme
+    .bits-form__section.bits-form__parent-resource
+    .bits-form__parent-resource-search
+    .bits-search {
+    position: relative;
+    z-index: 60;
+  }
+
+  .bits-theme
+    .bits-form__section.bits-form__parent-resource
+    .bits-form__parent-resource-search
+    .bits-search__results {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: calc(var(--spacing) * 1.5);
+    padding-inline: 0;
+    z-index: 170;
+  }
+
+  .bits-theme
+    .bits-form__section.bits-map-style-section
+    .bits-form__parent-resource-search
+    .bits-search__results-wrapper {
+    max-height: 25rem;
+  }
+
+  .bits-theme .bits-form__parent-resource-warning {
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-box);
+    background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+    color: var(--color-warning);
+    padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+  }
+
+  .bits-theme .bits-form__parent-resource-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 1.5);
+  }
+}

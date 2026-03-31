@@ -5,60 +5,57 @@
 -->
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // NAVIGATION
-import { navigate } from '$lib/navigation';
+import { navigate } from '$lib/navigation'
+// BITS
+import { PanelRoot as Panel } from '$lib/bits'
+import * as PanelPattern from '$lib/bits/patterns/panels'
 // COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte';
-import Header from '$lib/components/panels/common/Header.svelte';
-import Info from '$lib/components/panels/info/Maps.svelte';
-import Organisations from '$lib/components/panels/sections/Organisations.svelte';
-import Projects from '$lib/components/panels/sections/Projects.svelte';
-import Layers from '$lib/components/panels/sections/Layers.svelte';
-import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte';
-import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte';
+import Header from '$lib/components/panels/common/Header.svelte'
+import Info from '$lib/components/panels/info/Maps.svelte'
+import Organisations from '$lib/components/panels/sections/Organisations.svelte'
+import Projects from '$lib/components/panels/sections/Projects.svelte'
+import Layers from '$lib/components/panels/sections/Layers.svelte'
+import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte'
+import ProjectPrismItem from '$lib/components/panels/common/variants/ProjectPrismItem.svelte'
 // ENUMS
-import { FirstClassResource, Panel as PanelType, PanelSide } from '$lib/enums';
+import { FirstClassResource, Panel as PanelType, PanelSide } from '$lib/enums'
 // TYPES
-import type {
-  Layer,
-  PanelProps,
-  PanelPosition,
-  Id,
-  ResourceContext,
-  Organisation,
-  Project
-} from '$lib/types';
+import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { PanelProps, PanelPosition, Id, ResourceContext } from '$lib/types'
 // ENUMS
-import { OmniMode } from '$lib/enums';
+import { OmniMode } from '$lib/enums'
 // CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte';
+import { getOmniCtx } from '$lib/context/omni.svelte'
 
 // CONTEXT
-const appCtx = getAppCtx();
-const omniCtx = getOmniCtx();
+const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
 
 // STATE
-let isInfoOpen = $state(false);
+let isInfoOpen = $state(false)
 // svelte-ignore non_reactive_update
-let panelContainer: HTMLDivElement;
+let panelContainer: HTMLDivElement
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
-  e.stopPropagation();
-  isInfoOpen = !isInfoOpen;
+  e.stopPropagation()
+  isInfoOpen = !isInfoOpen
   if (isInfoOpen) {
     setTimeout(() => {
-      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 300);
+      panelContainer?.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 300)
   }
-};
+}
 
 let panelProps: PanelProps = $derived({
   panelType: PanelType.prisms,
   position: PanelSide.left,
-  scrollable: true,
+  scrollable: false,
   inline: appCtx.isAdmin(),
   isNarrow: false,
   isAdmin: false,
@@ -66,90 +63,135 @@ let panelProps: PanelProps = $derived({
     resourceType: appCtx.getActiveResourceType(),
     resourceRef: appCtx.getActiveResourceRef(),
     resourceId: appCtx.getActiveResourceId(),
-    facet: appCtx.getActiveFacet()
-  }
-});
+    facet: appCtx.getActiveFacet(),
+  },
+})
 </script>
 
 <Panel bind:panelContainer {...panelProps}>
-  <Header
-    {...panelProps}
-    title={m.maps__title()}
-    onToggleInfo={(e) => {
-      handleToggleInfo(e);
-    }} />
-  <Info isOpen={isInfoOpen} />
-  <div class="flex flex-col overflow-y-auto overscroll-none">
-    <div class="flex-grow-1 flex min-h-0 flex-col">
-      <Organisations {...panelProps}>
-        {#snippet filteredItem(resource: Organisation, selectedOrganisations: Id[])}
-          <FilteredResource
-            resourceType={FirstClassResource.organisation}
-            {resource}
-            selectedClass="bg-primary"
-            isSelected={selectedOrganisations.includes(resource.id)}
-            onToggle={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              await appCtx.toggleOrganisation(resource.id);
-            }}
-            {...panelProps} />
-        {/snippet}
-      </Organisations>
-    </div>
-    <div class="flex-grow-1 flex min-h-0 flex-col">
-      <Projects {...panelProps}>
-        {#snippet filteredItem(
-          resource: Project,
-          selectedProjects: Id[],
-          hierarchy: ResourceContext
-        )}
-          <FilteredResource
-            resourceType={FirstClassResource.project}
-            {resource}
-            hierarchy={{
-              organisation: hierarchy.organisation
-            }}
-            selectedClass="bg-accent"
-            isSelected={selectedProjects.includes(resource.id)}
-            onToggle={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              appCtx.toggleProject(resource.id);
-            }}
-            {...panelProps} />
-        {/snippet}
-      </Projects>
-    </div>
-    <div class="flex-grow-4 flex min-h-0 flex-col">
-      <Layers {...panelProps}>
-        {#snippet filteredItem(
-          layer: Layer,
-          selectedLayers: Id[],
-          hierarchy: ResourceContext
-        )}
-          <FilteredLayer
-            {layer}
-            {hierarchy}
-            selectedClass="bg-secondary"
-            isSelected={selectedLayers.includes(layer.id)}
-            onclick={(e: MouseEvent | KeyboardEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              appCtx.toggleLayer(layer.id);
-              // Close the card if it belonged to a layer which is no longer active
-              const activeFeature = appCtx.getActiveFeature();
-              if (
-                activeFeature &&
-                !appCtx.state.prisms.layer.includes(activeFeature.layerId)
-              ) {
-                navigate('/');
-                omniCtx.setMode(OmniMode.search);
-              }
-            }}
-            {...panelProps} />
-        {/snippet}
-      </Layers>
+  <div class="flex h-full min-h-0 flex-col">
+    <Header
+      {...panelProps}
+      title={m.maps__title()}
+      onToggleInfo={(e) => {
+        handleToggleInfo(e);
+      }}
+    />
+    <Info isOpen={isInfoOpen} />
+    <div class="prisms-sections">
+      <div class="prisms-sections__section prisms-sections__section--bounded">
+        <Organisations {...panelProps}>
+          {#snippet filteredItem(resource: Organisation, selectedOrganisations: Id[])}
+            <PanelPattern.Item.ItemResource
+              resourceType={FirstClassResource.organisation}
+              {resource}
+              selectedClass="bg-primary"
+              isSelected={selectedOrganisations.includes(resource.id)}
+              onToggle={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                await appCtx.toggleOrganisation(resource.id);
+              }}
+              {...panelProps}
+            />
+          {/snippet}
+        </Organisations>
+      </div>
+      <div class="prisms-sections__section prisms-sections__section--bounded">
+        <Projects {...panelProps}>
+          {#snippet filteredItem(
+            resource: Project,
+            selectedProjects: Id[],
+            hierarchy: ResourceContext
+          )}
+            <ProjectPrismItem
+              {resource}
+              hierarchy={{
+                organisation: hierarchy.organisation
+              }}
+              isSelected={selectedProjects.includes(resource.id)}
+              isReplaceState={appCtx.isProjectReplaceState(resource.id)}
+              onPrimaryAction={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (appCtx.isProjectReplaceState(resource.id)) {
+                  appCtx.replaceWithProjectDefaultLayers(resource.id);
+                } else {
+                  appCtx.addProjectDefaultLayers(resource.id);
+                }
+              }}
+              onToggleFilter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                appCtx.toggleProject(resource.id);
+              }}
+              {...panelProps}
+            />
+          {/snippet}
+        </Projects>
+      </div>
+      <div class="prisms-sections__section prisms-sections__section--layers">
+        <Layers {...panelProps}>
+          {#snippet filteredItem(
+            layer: Layer,
+            selectedLayers: Id[],
+            hierarchy: ResourceContext
+          )}
+            <FilteredLayer
+              {layer}
+              {hierarchy}
+              selectedClass="bg-secondary"
+              isSelected={selectedLayers.includes(layer.id)}
+              onclick={(e: MouseEvent | KeyboardEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                appCtx.toggleLayer(layer.id);
+                // Close the card if it belonged to a layer which is no longer active
+                const activeFeature = appCtx.getActiveFeature();
+                if (
+                  activeFeature &&
+                  !appCtx.state.prisms.layer.includes(activeFeature.layerId)
+                ) {
+                  navigate('/');
+                  omniCtx.setMode(OmniMode.search);
+                }
+              }}
+              {...panelProps}
+            />
+          {/snippet}
+        </Layers>
+      </div>
     </div>
   </div>
 </Panel>
+
+<style>
+.prisms-sections {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.prisms-sections__section {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.prisms-sections__section--bounded {
+  max-height: 33.333%;
+  flex: 0 0 auto;
+}
+
+.prisms-sections__section--layers {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.prisms-sections__section > :global(section) {
+  height: 100%;
+  min-height: 0;
+}
+</style>

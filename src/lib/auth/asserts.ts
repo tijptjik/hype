@@ -1,16 +1,11 @@
 // API
-import { isAdminRequest } from '$lib/api';
+import { isAdminRequest } from '$lib/api'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // TYPES
-import type {
-  Code,
-  Id,
-  OrganisationPartial,
-  SessionUser,
-  UserRoleDisco
-} from '$lib/types';
-import { error } from '@sveltejs/kit';
+import type { Code, Id, SessionUser, UserRoleDisco } from '$lib/types'
+import type { OrganisationPartial } from '$lib/db/zod/schema/organisation.types'
+import { error } from '@sveltejs/kit'
 
 /**
  * Access Control Assertions
@@ -26,10 +21,10 @@ export const runAssertions = (
   ...assertions: (() => void | Response)[]
 ): void | Response => {
   for (const assertion of assertions) {
-    const result = assertion();
-    if (result) return result;
+    const result = assertion()
+    if (result) return result
   }
-};
+}
 
 /**
  * Assert that the user is logged in
@@ -38,9 +33,9 @@ export const runAssertions = (
  */
 export const assertUserLoggedIn = (user: SessionUser): void | Response => {
   if (!user) {
-    return error(401, m.last_front_toucan_type());
+    return error(401, m.last_front_toucan_type())
   }
-};
+}
 
 /**
  * Assert that the request is from the admin dashboard
@@ -49,9 +44,9 @@ export const assertUserLoggedIn = (user: SessionUser): void | Response => {
  */
 export const assertAdminRequest = (request: Request): void | Response => {
   if (!isAdminRequest(request)) {
-    return error(401, m.lucky_dark_larva_express());
+    return error(401, m.lucky_dark_larva_express())
   }
-};
+}
 
 /**
  * Assert that the user has an owner role for the specified organisation
@@ -61,18 +56,18 @@ export const assertAdminRequest = (request: Request): void | Response => {
  */
 export const assertOrganisationOwner = (
   userRoles: UserRoleDisco[],
-  organisationId: string
+  organisationId: string,
 ): void | Response => {
   const hasRole = userRoles.some(
-    (role) =>
+    role =>
       role.type === 'organisation' &&
       role.organisationId === organisationId &&
-      role.role === 'owner'
-  );
+      role.role === 'owner',
+  )
   if (!hasRole) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 /**
  * Assert that the user has a maintainer role for the specified project
@@ -82,18 +77,18 @@ export const assertOrganisationOwner = (
  */
 export const assertProjectMaintainer = (
   userRoles: UserRoleDisco[],
-  projectId: string
+  projectId: string,
 ): void | Response => {
   const hasRole = userRoles.some(
-    (role) =>
+    role =>
       role.type === 'project' &&
       role.projectId === projectId &&
-      role.role === 'maintainer'
-  );
+      role.role === 'maintainer',
+  )
   if (!hasRole) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 /**
  * Assert that the user has a member role for the specified project
@@ -103,16 +98,16 @@ export const assertProjectMaintainer = (
  */
 export const assertProjectMember = (
   userRoles: UserRoleDisco[],
-  projectId: string
+  projectId: string,
 ): void | Response => {
   const hasRole = userRoles.some(
-    (role) =>
-      role.type === 'project' && role.projectId === projectId && role.role === 'member'
-  );
+    role =>
+      role.type === 'project' && role.projectId === projectId && role.role === 'member',
+  )
   if (!hasRole) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 /**
  * Assert that the user is a super admin
  * @param session - The session object
@@ -120,101 +115,101 @@ export const assertProjectMember = (
  */
 export const assertSuperAdmin = (user: SessionUser): void | Response => {
   if (!user?.superAdmin) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 export const assertUserIsSelf = (
   user: SessionUser,
-  userId: string
+  userId: string,
 ): void | Response => {
   if (user.id !== userId) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 export const assertOrganisationOwnerOrSuperAdmin = (
   user: SessionUser,
   userRoles: UserRoleDisco[],
-  organisationId: string
+  organisationId: string,
 ): void | Response => {
-  let isOrgOwner = false;
-  let isSuperAdmin = false;
+  let isOrgOwner = false
+  let isSuperAdmin = false
   try {
-    assertOrganisationOwner(userRoles, organisationId);
-    isOrgOwner = true;
+    assertOrganisationOwner(userRoles, organisationId)
+    isOrgOwner = true
   } catch {}
   try {
-    assertSuperAdmin(user);
-    isSuperAdmin = true;
+    assertSuperAdmin(user)
+    isSuperAdmin = true
   } catch {}
   // Only error if BOTH checks failed
   if (!isOrgOwner && !isSuperAdmin) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 export const assertIsCoreInclusiveModifiedBySuperAdmin = (
   user: SessionUser,
-  newData?: OrganisationPartial
+  newData?: OrganisationPartial,
 ): void | Response => {
-  let isSuperAdmin = false;
+  let isSuperAdmin = false
   try {
-    assertSuperAdmin(user);
-    isSuperAdmin = true;
+    assertSuperAdmin(user)
+    isSuperAdmin = true
   } catch {}
   // Only error if not  SUPERADMIN and newData is not undefined
   if (!isSuperAdmin && newData && 'isCoreInclusive' in newData) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 export const assertProjectMaintainerOrSuperAdmin = (
   user: SessionUser,
   userRoles: UserRoleDisco[],
-  projectId: string
+  projectId: string,
 ): void | Response => {
-  let isProjectMaintainer = false;
-  let isSuperAdmin = false;
+  let isProjectMaintainer = false
+  let isSuperAdmin = false
   try {
-    assertProjectMaintainer(userRoles, projectId);
-    isProjectMaintainer = true;
+    assertProjectMaintainer(userRoles, projectId)
+    isProjectMaintainer = true
   } catch {}
   try {
-    assertSuperAdmin(user);
-    isSuperAdmin = true;
+    assertSuperAdmin(user)
+    isSuperAdmin = true
   } catch {}
   // Only error if BOTH checks failed
   if (!isProjectMaintainer && !isSuperAdmin) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 export const assertProjectMaintainerOrMemberOrSuperAdmin = (
   user: SessionUser,
   userRoles: UserRoleDisco[],
-  projectId: string
+  projectId: string,
 ): void | Response => {
-  let isProjectMaintainer = false;
-  let isSuperAdmin = false;
-  let isProjectMember = false;
+  let isProjectMaintainer = false
+  let isSuperAdmin = false
+  let isProjectMember = false
   try {
-    assertProjectMaintainer(userRoles, projectId);
-    isProjectMaintainer = true;
+    assertProjectMaintainer(userRoles, projectId)
+    isProjectMaintainer = true
   } catch {}
   try {
-    assertProjectMember(userRoles, projectId);
-    isProjectMember = true;
+    assertProjectMember(userRoles, projectId)
+    isProjectMember = true
   } catch {}
   try {
-    assertSuperAdmin(user);
-    isSuperAdmin = true;
+    assertSuperAdmin(user)
+    isSuperAdmin = true
   } catch {}
   // Only error if ALL checks failed
   if (!isProjectMaintainer && !isProjectMember && !isSuperAdmin) {
-    return error(403, m.missing_permissions());
+    return error(403, m.missing_permissions())
   }
-};
+}
 
 /**
  * Assert that the form data has a required ID field
@@ -224,9 +219,9 @@ export const assertProjectMaintainerOrMemberOrSuperAdmin = (
  */
 export const assertId = (formData: any, key: string = 'Id'): void | Response => {
   if (!formData.id) {
-    return error(401, m.brief_jumpy_firefox_bump({ key }));
+    return error(401, m.field_is_required({ field: key }))
   }
-};
+}
 
 /**
  * Assert that the parameter identifier matches the form data identifier
@@ -238,13 +233,13 @@ export const assertId = (formData: any, key: string = 'Id'): void | Response => 
 export const assertParamIdentifierEqualsFormIdentifier = (
   formData: any,
   refId: Id | Code,
-  refType: 'id' | 'code'
+  refType: 'id' | 'code',
 ): void | Response => {
-  const formIdentifier = formData[refType];
+  const formIdentifier = formData[refType]
   if (formIdentifier && formIdentifier !== refId) {
     return error(
       400,
-      `${refType.charAt(0).toUpperCase() + refType.slice(1)} mismatch: URL parameter ${refType} (${refId}) does not match form data ${refType} (${formIdentifier})`
-    );
+      `${refType.charAt(0).toUpperCase() + refType.slice(1)} mismatch: URL parameter ${refType} (${refId}) does not match form data ${refType} (${formIdentifier})`,
+    )
   }
-};
+}

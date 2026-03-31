@@ -1,0 +1,90 @@
+@layer components {
+  .bits-theme .bits-icon {
+    @apply inline-block shrink-0 align-middle;
+  }
+
+  .bits-theme .bits-icon--size-xs {
+    @apply h-3 w-3;
+  }
+
+  .bits-theme .bits-icon--size-sm {
+    @apply h-4 w-4;
+  }
+
+  .bits-theme .bits-icon--size-md {
+    @apply h-5 w-5;
+  }
+
+  .bits-theme .bits-icon--size-lg {
+    @apply h-6 w-6;
+  }
+
+  .bits-theme .bits-icon--size-xl {
+    @apply h-8 w-8;
+  }
+
+  .bits-theme .bits-icon--size-2xl {
+    @apply h-10 w-10;
+  }
+
+  .bits-theme .bits-icon--size-3xl {
+    @apply h-12 w-12;
+  }
+
+  .bits-theme .bits-icon--tone-inherit,
+  .bits-theme .bits-icon--tone-current {
+    color: currentColor;
+  }
+
+  .bits-theme .bits-icon--tone-base {
+    @apply text-base-content;
+  }
+
+  .bits-theme .bits-icon--tone-muted {
+    @apply text-base-content/70;
+  }
+
+  .bits-theme .bits-icon--tone-primary {
+    @apply text-primary;
+  }
+
+  .bits-theme .bits-icon--tone-secondary {
+    @apply text-secondary;
+  }
+
+  .bits-theme .bits-icon--tone-accent {
+    @apply text-accent;
+  }
+
+  .bits-theme .bits-icon--tone-info {
+    @apply text-info;
+  }
+
+  .bits-theme .bits-icon--tone-success {
+    @apply text-success;
+  }
+
+  .bits-theme .bits-icon--tone-warning {
+    @apply text-warning;
+  }
+
+  .bits-theme .bits-icon--tone-error {
+    @apply text-error;
+  }
+
+  .bits-theme .bits-icon--tone-white {
+    @apply text-white;
+  }
+
+  .bits-theme .bits-icon-anchor {
+    @apply relative z-30;
+  }
+
+  .bits-theme .bits-icon-anchor__trigger {
+    @apply inline-flex h-12 w-12 items-center justify-center rounded-full border-none bg-glass-result opacity-70 transition-opacity duration-200 hover:opacity-90;
+  }
+
+  .bits-theme .bits-icon-anchor__content {
+    @apply z-50 max-w-sm rounded-xl border border-base-50 bg-base-100 p-3 shadow-xl;
+  }
+}

@@ -4,7 +4,7 @@ scripts/.venv
 
 # Output
 .output
-/.wrangler
+.wrangler
 /.svelte-kit
 /build
 /build-static
@@ -39,6 +39,10 @@ sql/backup/
 sql/cache/
 scripts/.ipynb_checkpoints/
 .data/
+tmp/test.jpg
 
 # submodules
 /libs
+
+# Dev assets
+static/mapPreviews/

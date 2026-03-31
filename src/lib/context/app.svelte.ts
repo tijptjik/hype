@@ -1,118 +1,151 @@
 // DATA
-import { QueryClient } from '@tanstack/svelte-query';
+import type { QueryClient } from '@tanstack/svelte-query'
 // NAVIGATION
-import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation';
+import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation'
 // GEO
-import { bbox } from '@turf/bbox';
+import { bbox } from '@turf/bbox'
 // I18N
-import { getFallbackLocales, getLocale, setLocale, getI18n } from '$lib/i18n';
+import {
+  getFallbackLocales,
+  getLocale,
+  getLocaleKey,
+  setLocale,
+  getI18n,
+} from '$lib/i18n'
 // LIB
-import { DUAL_PANEL_MIN_WIDTH, fetchOrThrow, isMobile, PANEL_WIDTH } from '$lib/index';
+import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/constants'
+import {
+  getOrganisation,
+  getOrganisationsWhichHaveLayers,
+} from '$lib/api/server/organisation.remote'
+import { getHub, getHubs } from '$lib/api/server/hub.remote'
+import { getProject, getProjectsWhichHaveLayers } from '$lib/api/server/project.remote'
+import { getLayer, getLayers } from '$lib/api/server/layer.remote'
+import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
+import { getProperties, getProperty } from '$lib/api/server/property.remote'
+import { getUser, getUserFeatures, getUserLayers } from '$lib/api/server/user.remote'
 // SERVICES
 import {
   debouncedUpdateUserAttribution,
   debouncedUpdateUserExperimental,
   debouncedUpdateUserLayers,
   debouncedUpdateUserPreferences,
-  updateLocale
-} from '$lib/client/services/user';
+  updateLocale,
+} from '$lib/client/services/user'
 import {
   getFeatureIdsForProperties,
-  sortProperties
-} from '$lib/client/services/property';
-import { primeFeatureStatsCache } from '$lib/client/services/stats';
+  sortProperties,
+} from '$lib/client/services/property'
+import { matchesResourceTextQuery } from '$lib/client/services/filters'
+import { primeFeatureStatsCache } from '$lib/client/services/stats'
 // CONTEXT
-import { getContext, setContext } from 'svelte';
+import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
-import { SvelteMap } from 'svelte/reactivity';
+import { SvelteMap } from 'svelte/reactivity'
 // MARKERS
-import { removeMarkerClass, addMarkerClass } from '$lib/map/markers';
+import { removeMarkerClass, addMarkerClass } from '$lib/map/markers'
 // ENUMS
 import {
   FirstClassResource,
-  HierarchicalResource,
+  type HierarchicalResource,
   Panel,
   PanelLeft,
   PanelRight,
   ResourcePath,
   ResourceRefKey,
-  NewFeatureMode
-} from '$lib/enums';
+  type NewFeatureMode,
+} from '$lib/enums'
 // GUARDS
-import { isFeature, isTask } from '$lib/types';
+import { isTask } from '$lib/types'
 // TYPES
 import type {
   ActiveCollection,
   AppContextState,
   Cache,
   Code,
-  ControlMode,
-  CurrentUser,
   DeepPartial,
   FacetType,
-  Feature,
-  FeatureFromCollection,
-  FeatureI18nFieldKeys,
   FilterState,
   FilteredResources,
   FilterTriState,
-  Hub,
   Id,
-  Image,
-  Layer,
   LayoutMode,
   Locale,
   NavigableResource,
   NewFeatureTask,
-  Organisation,
-  Project,
-  Property,
   Resource,
   ResourceContext,
   ResourceTypeWithChildren,
   SessionUser,
   Task,
+  ListResponse,
+  RemoteMap,
+  RemoteListFn,
+  RemoteGetFn,
+  ResourceSortState,
+} from '$lib/types'
+import type { Image } from '$lib/db/zod/schema/image.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Hub, HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type {
+  CurrentUser,
   UserExperimental,
   UserFeature,
   UserLayer,
   UserPreferences,
-  HubOpts,
   UserProfile,
-  Ref,
-  HubOptsExtended
-} from '$lib/types';
-import type { Map as MaplibreMap } from 'maplibre-gl';
-import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson';
-import type { PlaceCtx } from './place.svelte';
+} from '$lib/db/zod/schema/user.types'
+import type { Map as MaplibreMap } from 'maplibre-gl'
+import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
+import type { PlaceCtx } from './place.svelte'
+import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
 
 export class AppCtx {
-  // Place Context
-  placeCtx: PlaceCtx;
-  // Maplibre Map instance
-  map: MaplibreMap = $state()!;
-  // Maplibre library instance (loaded globally)
-  maplibre: any = $state(null);
-  // Whether maplibre has been loaded
-  isMaplibreLoaded: boolean = $state(false);
   // Tanstack Query Client instance
-  queryClient: QueryClient;
+  queryClient!: QueryClient
+  // Place Context
+  placeCtx!: PlaceCtx
+  // Maplibre Map instance
+  map: MaplibreMap | undefined = $state()
+  // Maplibre library instance (loaded globally)
+  maplibre: any = $state(null)
+  // Whether maplibre has been loaded
+  isMaplibreLoaded: boolean = $state(false)
   // User data (reactive)
-  user: UserProfile | CurrentUser | SessionUser | null = $state(null);
+  user: UserProfile | CurrentUser | SessionUser | null = $state(null)
   // Whether the map has been initialised
-  isInitialised: boolean = $state(false);
+  isInitialised: boolean = $state(false)
   // Whether the app is transitioning between states
-  isTransitioning: boolean = $state(false);
+  isTransitioning: boolean = $state(false)
   // Whether the app is in mobile mode
-  isMobile: boolean = $state(false);
+  isMobile: boolean = $state(false)
 
   // Query map to store different query functions (can be overridden by AdminCtx)
   queryMap = new Map<
     FirstClassResource | 'userFeatures',
     {
-      queryKey: () => any[];
-      queryFn: () => Promise<any>;
+      queryKey: () => any[]
+      queryFn: () => Promise<any>
     }
-  >();
+  >()
+
+  listQueryMeta = new Map<string, Omit<ListResponse<unknown>, 'data'>>()
+
+  // Remote function map for list/get queries (parallel to queryMap).
+  remoteMap: RemoteMap = {
+    [FirstClassResource.organisation]: {},
+    [FirstClassResource.project]: {},
+    [FirstClassResource.layer]: {},
+    [FirstClassResource.feature]: {},
+    [FirstClassResource.task]: {},
+    [FirstClassResource.hub]: {},
+    [FirstClassResource.property]: {},
+    [FirstClassResource.user]: {},
+  }
 
   // Cache for all resources
   cache: Cache = {
@@ -125,16 +158,37 @@ export class AppCtx {
     property: new SvelteMap(),
     image: new SvelteMap(),
     user: new SvelteMap(),
-    stats: new SvelteMap()
-  };
+    stats: new SvelteMap(),
+  }
 
-  hub: HubOptsExtended | null = $state(null);
+  hub: HubOptsExtended | null = $state(null)
 
   // Features map for current state (rebuilt when state.resources.feature changes)
-  private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>();
-  private organisationCodeToId = new Map<Code, Id>();
-  private projectCodeToId = new Map<Code, Id>();
-  private hubCodeToId = new Map<Code, Id>();
+  private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>()
+  private organisationCodeToId = new Map<Code, Id>()
+  private projectCodeToId = new Map<Code, Id>()
+  private hubCodeToId = new Map<Code, Id>()
+
+  private defaultSortState: ResourceSortState = {
+    sortBy: 'modifiedAt',
+    sortOrder: 'desc',
+  }
+
+  private sortableResources: FirstClassResource[] = [
+    FirstClassResource.organisation,
+    FirstClassResource.project,
+    FirstClassResource.layer,
+    FirstClassResource.feature,
+    FirstClassResource.task,
+    FirstClassResource.hub,
+    FirstClassResource.property,
+    FirstClassResource.user,
+  ]
+
+  private defaultViewSorting = (): Record<FirstClassResource, ResourceSortState> =>
+    Object.fromEntries(
+      this.sortableResources.map(resource => [resource, { ...this.defaultSortState }]),
+    ) as Record<FirstClassResource, ResourceSortState>
 
   state: AppContextState = $state({
     // Markers -- Which features are shown on the map
@@ -142,7 +196,7 @@ export class AppCtx {
     // Active -- Which feature or collection is in focus on the map
     active: {
       feature: null,
-      collection: null
+      collection: null,
     },
     // ═══════════════════════
     // 3-TIER FILTER SYSTEM
@@ -159,7 +213,7 @@ export class AppCtx {
       feature: { text: '', properties: {} },
       task: { text: '', properties: {} },
       hub: { text: '', properties: {} },
-      property: { text: '', properties: {} }
+      property: { text: '', properties: {} },
     },
     // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AppCtx.state.viewFilters)
     // Only affect the current route/view they are applied on, not the underlying data or map view
@@ -170,12 +224,12 @@ export class AppCtx {
       layer: [],
       feature: [],
       task: [],
-      hub: []
+      hub: [],
     },
     // User Features -- The user's wishlist and visited features
     userFeatures: {
       wishlisted: [],
-      visited: []
+      visited: [],
     },
     // User Location -- The user's location
     userLocation: null,
@@ -185,12 +239,12 @@ export class AppCtx {
     nav: {
       resourceType: false,
       resourceRef: false,
-      facet: false
+      facet: false,
     },
     panels: {
       admin: {
         isOpen: false,
-        isOpenVisually: false
+        isOpenVisually: false,
       },
       profile: {
         isOpen: false,
@@ -198,29 +252,41 @@ export class AppCtx {
         ctx: {
           username: null,
           userData: null,
-          observePrisms: true
-        }
+          observePrisms: true,
+        },
       },
       filters: {
         isOpen: false,
-        isOpenVisually: false
+        isOpenVisually: false,
       },
       prisms: {
         isOpen: false,
-        isOpenVisually: false
+        isOpenVisually: false,
       },
       stars: {
         isOpen: false,
-        isOpenVisually: false
+        isOpenVisually: false,
+      },
+      plan: {
+        isOpen: false,
+        isOpenVisually: false,
+      },
+      passport: {
+        isOpen: false,
+        isOpenVisually: false,
+      },
+      eventCompanion: {
+        isOpen: false,
+        isOpenVisually: false,
       },
       settings: {
         isOpen: false,
-        isOpenVisually: false
+        isOpenVisually: false,
       },
       hub: {
         isOpen: false,
-        isOpenVisually: false
-      }
+        isOpenVisually: false,
+      },
     },
     // Header state for unified header system
     header: {
@@ -231,20 +297,29 @@ export class AppCtx {
         showAddButton: false,
         showSearch: false,
         showLayoutModes: false,
-        showControlModes: false,
-        showFormActions: false
-      }
+        showControlBarToggle: false,
+        showFormActions: false,
+      },
     },
     // UI state for each resource type
     ui: {
-      controlMode: {
-        organisation: 'hidden',
-        project: 'hidden',
-        layer: 'hidden',
-        feature: 'filter',
-        task: 'filter',
-        hub: 'hidden',
-        user: 'hidden'
+      isControlBarVisible: {
+        organisation: false,
+        project: false,
+        layer: false,
+        feature: true,
+        task: true,
+        hub: false,
+        user: false,
+      },
+      isSearchFocused: {
+        organisation: false,
+        project: false,
+        layer: false,
+        feature: false,
+        task: false,
+        hub: false,
+        user: false,
       },
       layoutMode: {
         organisation: 'card',
@@ -253,8 +328,8 @@ export class AppCtx {
         feature: 'table',
         task: 'table',
         hub: 'card',
-        user: 'table'
-      }
+        user: 'table',
+      },
     },
     // TIER 3: VIEW FILTERS - Only affect current route/view
     viewFilters: {
@@ -274,24 +349,24 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false, // Default: English not selected
-          'zh-hant': true,
-          'zh-hans': true
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
-        }
+          zhHant: null,
+          zhHans: null,
+        },
       },
       project: {
         // Status related
@@ -305,40 +380,34 @@ export class AppCtx {
         hasName: null,
         hasContextualName: null,
         hasDescription: null,
-        hasAttribution: null,
-        hasLicense: null,
+        isAllRightsReserved: null,
+        isPublicDomain: null,
+        hasLicenseBy: null,
+        hasLicenseSa: null,
+        hasLicenseNc: null,
+        hasLicenseNd: null,
 
         // Translation related
         translationLocales: {
           en: false,
-          'zh-hant': true,
-          'zh-hans': true
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
-        isAttributionTranslated: {
-          en: null,
-          'zh-hant': null,
-          'zh-hans': null
-        },
-        isLicenseTranslated: {
-          en: null,
-          'zh-hant': null,
-          'zh-hans': null
-        }
       },
       layer: {
         // Status related
@@ -349,28 +418,34 @@ export class AppCtx {
         hasName: null,
         hasContextualName: null,
         hasDescription: null,
+        isAllRightsReserved: null,
+        isPublicDomain: null,
+        hasLicenseBy: null,
+        hasLicenseSa: null,
+        hasLicenseNc: null,
+        hasLicenseNd: null,
 
         // Translation related
         translationLocales: {
           en: false,
-          'zh-hant': true,
-          'zh-hans': true
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
-        }
+          zhHant: null,
+          zhHans: null,
+        },
       },
       feature: {
         // Status related
@@ -389,39 +464,46 @@ export class AppCtx {
         hasTitle: null,
         hasDescription: null,
         hasDisplayAddress: null,
+        isAllRightsReserved: null,
+        isPublicDomain: null,
+        hasLicenseBy: null,
+        hasLicenseSa: null,
+        hasLicenseNc: null,
+        hasLicenseNd: null,
 
         // Translation related
         translationLocales: {
           en: false, // Default: English not selected
-          'zh-hant': true,
-          'zh-hans': true
+          zhHant: true,
+          zhHans: true,
         },
         isTitleTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isSpecifierTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isAddressTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         // Property related
-        properties: {} as Record<Id, FilterTriState>
+        properties: {} as Record<Id, FilterTriState>,
       },
       task: {
         // Status related
-        isReviewed: false
+        isReviewed: false,
+        type: null,
       },
       hub: {
         // Status related
@@ -438,198 +520,397 @@ export class AppCtx {
         // Translation related
         translationLocales: {
           en: false,
-          'zh-hant': false,
-          'zh-hans': false
+          zhHant: true,
+          zhHans: true,
         },
         isNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isContextualNameTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
+          zhHant: null,
+          zhHans: null,
         },
         isDescriptionTranslated: {
           en: null,
-          'zh-hant': null,
-          'zh-hans': null
-        }
-      }
-    }
-  });
+          zhHant: null,
+          zhHans: null,
+        },
+      },
+    },
+    viewSorting: this.defaultViewSorting(),
+  })
 
   // New Feature -- The new feature to be created
-  newFeature: DeepPartial<NewFeatureTask> | null = $state(null);
-  newFeatureMode: NewFeatureMode | null = $state(null);
+  newFeature: DeepPartial<NewFeatureTask> | null = $state(null)
+  newFeatureMode: NewFeatureMode | null = $state(null)
 
   // Silly state to track if the map has been zoomed to a marker
-  zoomToMarkerOnly: boolean = $state(false);
+  zoomToMarkerOnly: boolean = $state(false)
 
   // ═══════════════════════
   // QUERY KEYS
   // ═══════════════════════
 
+  private getRoleScopeQueryKey = (): string => {
+    const userId = this.user?.id ?? 'anonymous'
+    const roles = Array.isArray(this.user?.roles) ? this.user.roles : []
+
+    const roleSignature = roles
+      .map(role => {
+        if (role.type === 'organisation') {
+          return `organisation:${role.organisationId}:${role.role}`
+        }
+        if (role.type === 'project') {
+          return `project:${role.projectId}:${role.role}`
+        }
+        return `hub:${role.hubId}:${role.role}`
+      })
+      .sort((left, right) => left.localeCompare(right))
+      .join('|')
+
+    return `${userId}::${roleSignature}`
+  }
+
   organisationsQueryKey = () => [
     FirstClassResource.organisation,
-    this.isAdmin()
-  ];
+    this.getRoleScopeQueryKey(),
+    this.isAdmin(),
+    this.state.viewSorting.organisation.sortBy,
+    this.state.viewSorting.organisation.sortOrder,
+  ]
   projectsQueryKey = () => [
     FirstClassResource.project,
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
-    this.isAdmin()
-  ];
+    this.isAdmin(),
+    this.state.viewSorting.project.sortBy,
+    this.state.viewSorting.project.sortOrder,
+  ]
   layersQueryKey = () => [
     FirstClassResource.layer,
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
     this.state.prisms.project,
-    this.isAdmin()
-  ];
+    this.isAdmin(),
+    this.state.viewSorting.layer.sortBy,
+    this.state.viewSorting.layer.sortOrder,
+  ]
   featuresQueryKey = () => [
     FirstClassResource.feature,
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
     this.state.prisms.project,
     this.state.prisms.layer,
-    this.isAdmin()
-  ];
+    this.isAdmin(),
+    this.state.viewSorting.feature.sortBy,
+    this.state.viewSorting.feature.sortOrder,
+  ]
   propertiesQueryKey = () => [
     'property',
+    this.getRoleScopeQueryKey(),
     this.state.prisms.organisation,
-    this.state.prisms.project
-  ];
-  userFeaturesQueryKey = () => ['userFeatures'];
+    this.state.prisms.project,
+  ]
+  userFeaturesQueryKey = () => ['userFeatures']
   userQueryKey = () => [
     FirstClassResource.user,
     this.state.panels.profile.ctx?.username || this.user?.id,
-    ...(this.state.panels.profile.ctx?.observePrisms ? [
+    ...(this.state.panels.profile.ctx?.observePrisms
+      ? [
           this.state.prisms.organisation,
           this.state.prisms.project,
-          this.state.prisms.layer
-        ] : [])
-  ];
+          this.state.prisms.layer,
+        ]
+      : []),
+  ]
 
-  // Form context reference for header form actions
-  formCtx: any = $state(null);
+  // Deprecated: legacy form context bridge for header form actions.
+  // Prefer headerCtrl.setFormActions(...) in route pages.
+  formCtx = $state(null)
 
   // Constructor
   constructor(queryClient: QueryClient, placeCtx: PlaceCtx, user: SessionUser | null) {
-    this.queryClient = queryClient;
-    this.placeCtx = placeCtx;
-    this.setUser(user);
-    this.initializeQueryMap();
+    this.queryClient = queryClient
+    this.placeCtx = placeCtx
+    this.initializeNavigationFromUrl()
+    this.setUser(user)
+    this.initializeRemoteMap()
+    this.initializeQueryMap()
     // Note: keydown handlers are managed dynamically by the root layout
+  }
+
+  private initializeNavigationFromUrl = (): void => {
+    if (typeof window === 'undefined') return
+
+    const url = new URL(window.location.href)
+    const pathParts = url.pathname.split('/').filter(Boolean)
+    if (pathParts[0] !== 'admin') return
+
+    const resourcePath = pathParts[1]
+    const resourceRef = pathParts[2] ?? false
+    const resourceType =
+      Object.entries(ResourcePath).find(
+        ([_resource, path]) => path === resourcePath,
+      )?.[0] ?? false
+
+    this.state.nav.resourceType =
+      typeof resourceType === 'string' ? (resourceType as NavigableResource) : false
+    this.state.nav.resourceRef = typeof resourceRef === 'string' ? resourceRef : false
+    this.state.nav.facet = (url.hash.slice(1) as FacetType) || false
+  }
+
+  private initializeRemoteMap = (): void => {
+    this.remoteMap[FirstClassResource.organisation] = {
+      list: getOrganisationsWhichHaveLayers,
+      get: getOrganisation,
+    }
+    this.remoteMap[FirstClassResource.project] = {
+      list: getProjectsWhichHaveLayers as unknown as RemoteListFn<unknown, unknown>,
+      get: getProject as unknown as RemoteGetFn<unknown, unknown>,
+    }
+    this.remoteMap[FirstClassResource.layer] = {
+      list: getLayers,
+      get: getLayer,
+    }
+    this.remoteMap[FirstClassResource.feature] = {
+      list: getFeatures as unknown as RemoteListFn<unknown, unknown>,
+      get: getFeature as unknown as RemoteGetFn<unknown, unknown>,
+    }
+    this.remoteMap[FirstClassResource.hub] = {
+      list: getHubs,
+      get: getHub,
+    }
+    this.remoteMap[FirstClassResource.property] = {
+      list: getProperties as unknown as RemoteListFn<unknown, unknown>,
+      get: getProperty as unknown as RemoteGetFn<unknown, unknown>,
+    }
+    this.remoteMap[FirstClassResource.user] = {
+      get: getUser as unknown as RemoteGetFn<unknown, unknown>,
+    }
   }
 
   // Initialize default query map (can be overridden by AdminCtx)
   private initializeQueryMap = (): void => {
     this.queryMap.set(FirstClassResource.organisation, {
       queryKey: this.organisationsQueryKey,
-      queryFn: () => this.organisationsQueryFn()
-    });
+      queryFn: () => this.organisationsQueryFn(),
+    })
 
     this.queryMap.set(FirstClassResource.project, {
       queryKey: this.projectsQueryKey,
-      queryFn: () => this.projectsQueryFn()
-    });
+      queryFn: () => this.projectsQueryFn(),
+    })
 
     this.queryMap.set(FirstClassResource.layer, {
       queryKey: this.layersQueryKey,
-      queryFn: () => this.layersQueryFn()
-    });
+      queryFn: () => this.layersQueryFn(),
+    })
 
     this.queryMap.set(FirstClassResource.feature, {
       queryKey: this.featuresQueryKey,
-      queryFn: () => this.featuresQueryFn()
-    });
+      queryFn: () => this.featuresQueryFn(),
+    })
 
     // ADMIN ONLY
     this.queryMap.set(FirstClassResource.task, {
       queryKey: () => [FirstClassResource.task],
-      queryFn: () => Promise.resolve([])
-    });
+      queryFn: () => Promise.resolve([]),
+    })
 
     // ADMIN ONLY
     this.queryMap.set(FirstClassResource.hub, {
       queryKey: () => [FirstClassResource.hub],
-      queryFn: () => Promise.resolve([])
-    });
+      queryFn: () => Promise.resolve([]),
+    })
 
     // APP ONLY
     this.queryMap.set('userFeatures', {
       queryKey: this.userFeaturesQueryKey,
-      queryFn: () => this.userFeaturesQueryFn()
-    });
+      queryFn: () => this.userFeaturesQueryFn(),
+    })
 
     this.queryMap.set(FirstClassResource.user, {
       queryKey: this.userQueryKey,
-      queryFn: () => this.userQueryFn()
-    });
+      queryFn: () => this.userQueryFn(),
+    })
 
     // PROPERTIES
     this.queryMap.set(FirstClassResource.property, {
       queryKey: this.propertiesQueryKey,
-      queryFn: () => this.propertiesQueryFn()
-    });
-  };
+      queryFn: () => this.propertiesQueryFn(),
+    })
+  }
 
   init = async (userId: Id | null): Promise<void> => {
     // Only initialize if user is authenticated
     if (!userId) {
       // Initialize empty data structures for unauthenticated users
-      this.state.resources.organisation = [];
-      this.state.resources.project = [];
-      this.state.resources.layer = [];
-      this.state.resources.feature = [];
-      this.state.resources.task = [];
-      this.state.resources.hub = [];
+      this.state.resources.organisation = []
+      this.state.resources.project = []
+      this.state.resources.layer = []
+      this.state.resources.feature = []
+      this.state.resources.task = []
+      this.state.resources.hub = []
       this.state.userFeatures = {
         wishlisted: [],
-        visited: []
-      };
-      return;
+        visited: [],
+      }
+      this.isInitialised = true
+      return
     }
     // Initialize stats cache
-    this.initStatsCache();
+    this.initStatsCache()
     // Use parallel fetching for initial load
-    await this.initialFetch();
+    await this.initialFetch()
     // Prevent init from running again, unless the user (re)authenticates
     // see reinitializeWithAuth()
-    this.isInitialised = true;
-  };
+    this.isInitialised = true
+  }
 
   initialFetch = async (): Promise<void> => {
-    // Fetch all resources in parallel without cascading
-    await Promise.all([
-      // All resource types in parallel
+    // Bootstrap hierarchy first so layer defaults can be resolved before features load.
+    const hierarchyResults = await Promise.allSettled([
       this.refreshOrganisations(false),
       this.refreshProjects(false),
       this.refreshLayers(false),
       this.refreshProperties(false),
-      this.refreshFeatures(false),
-      this.refreshUserProfile(false),
       this.refreshUserFeatures(false),
-      this.isAdmin() ? this.refreshHubs(false) : Promise.resolve(),
-      this.isAdmin() ? this.refreshTasks(false) : Promise.resolve()
-    ]);
-  };
+      this.refreshUserProfile(false),
+      this.hydrateCurrentUserLayers(),
+    ])
+    const hierarchyLabels = [
+      'organisations',
+      'projects',
+      'layers',
+      'properties',
+      'userFeatures',
+      'userProfile',
+      'userLayers',
+    ] as const
+
+    for (const [index, result] of hierarchyResults.entries()) {
+      if (result.status === 'rejected') {
+        console.error(
+          `[AppCtx][initialFetch] Resource bootstrap failed (${hierarchyLabels[index]}):`,
+          result.reason,
+        )
+      }
+    }
+
+    this.applyInitialLayerPrisms()
+    await this.postLayerMutation(false)
+
+    const featureResults = await Promise.allSettled([
+      this.refreshFeatures(false),
+      this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
+    ])
+    const featureLabels = ['features', 'tasks'] as const
+
+    for (const [index, result] of featureResults.entries()) {
+      if (result.status === 'rejected') {
+        console.error(
+          `[AppCtx][initialFetch] Resource bootstrap failed (${featureLabels[index]}):`,
+          result.reason,
+        )
+      }
+    }
+  }
+
+  private getCurrentHubId = (): Id | null =>
+    this.hub?.id ??
+    (this.hub?.code ? (this.getHubIdByCode(this.hub.code) ?? null) : null)
+
+  private getUserLayersForCurrentHub = (): UserLayer[] => {
+    const hubId = this.getCurrentHubId()
+    const hubCode = this.hub?.code ?? null
+    if ((!hubId && !hubCode) || !this.user || !('userLayers' in this.user)) {
+      return []
+    }
+    const currentHubLayerIds = new Set(
+      this.state.resources.layer.map(layer => layer.id),
+    )
+    const hubUserLayers = ((this.user as CurrentUser).userLayers ?? []).filter(
+      layer => {
+        if (hubId && layer.hubId === hubId) return true
+        if (hubCode && layer.hubCode === hubCode) return true
+
+        // Fallback to the loaded hub-scoped layer list when persisted preferences only
+        // carry one hub identifier and the app has only resolved the other on bootstrap.
+        return currentHubLayerIds.has(layer.layerId)
+      },
+    )
+    return hubUserLayers
+  }
+
+  // Hydrate persisted layer defaults once during app bootstrap so hub prism setup
+  // can resolve the initial active layers without coupling to profile panel refreshes.
+  private hydrateCurrentUserLayers = async (): Promise<void> => {
+    if (!this.user?.id) {
+      return
+    }
+
+    const userLayersResponse = (await getUserLayers({
+      userId: this.user.id,
+    })) as { data?: UserLayer[] | null }
+
+    this.user = {
+      ...(this.user ?? {}),
+      userLayers: Array.isArray(userLayersResponse.data) ? userLayersResponse.data : [],
+    } as CurrentUser | SessionUser
+
+    this.postUserMutation()
+  }
+
+  private getHubDefaultLayerIds = (): Id[] => {
+    const hubDefaults = this.hub?.layerDefaults ?? []
+    return hubDefaults
+      .filter(layerDefault => layerDefault.isDefaultVisible)
+      .map(layerDefault => layerDefault.layerId)
+      .filter(layerId => this.state.resources.layer.some(layer => layer.id === layerId))
+  }
+
+  private applyInitialLayerPrisms = (): void => {
+    const hubId = this.getCurrentHubId()
+    const hubCode = this.hub?.code ?? null
+    if (!hubId && !hubCode) {
+      return
+    }
+
+    const userLayerIds = this.getUserLayersForCurrentHub().map(layer => layer.layerId)
+    const defaultLayerIds = this.getHubDefaultLayerIds()
+    const nextLayerIds = userLayerIds.length > 0 ? userLayerIds : defaultLayerIds
+    const dedupedLayerIds = [...new Set(nextLayerIds)]
+    const currentLayerIds = this.state.prisms.layer
+    const isUnchanged =
+      currentLayerIds.length === dedupedLayerIds.length &&
+      currentLayerIds.every((layerId, index) => layerId === dedupedLayerIds[index])
+
+    if (isUnchanged) return
+
+    this.state.prisms.layer = dedupedLayerIds
+  }
 
   initStatsCache = (): void => {
-    Object.values(FirstClassResource).forEach((resourceType) => {
-      this.cache.stats.set(resourceType, new SvelteMap());
-    });
-  };
+    Object.values(FirstClassResource).forEach(resourceType => {
+      this.cache.stats.set(resourceType, new SvelteMap())
+    })
+  }
 
   reinitializeWithAuth = async (): Promise<void> => {
     if (this.user?.id) {
-      this.isInitialised = false;
-      await this.init(this.user.id);
+      this.isInitialised = false
+      await this.init(this.user.id)
     }
-  };
+  }
 
   // ASSERT :: User is SuperAdmin
   isSuperAdmin(): boolean {
-    return this.user?.superAdmin === true;
+    return Boolean(
+      this.user && 'superAdmin' in this.user && this.user.superAdmin === true,
+    )
   }
 
   // ASSERT :: App is in admin dashboard
@@ -637,106 +918,134 @@ export class AppCtx {
     // Check if we're in admin interface - can be determined by URL path
     return (
       typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-    );
+    )
   }
 
-  // Helper method to build API URLs with filters
-  private buildApiUrl = (
-    resource: FirstClassResource,
-    ref?: Ref,
-    includePrisms: boolean = true,
-    includeFilters: boolean = true
-  ): string => {
-    const path = ResourcePath[resource] + (ref ? `/${ref}` : '');
-    const params = new URLSearchParams();
-
-    // Add isArchived filter by default (except for properties which don't have these fields)
-    if (includeFilters) {
-      params.append('isArchived', 'false');
-      params.append('isPublished', 'true');
-    }
-
-    if (includePrisms) {
-      // Add prism filters based on resource hierarchy
-      if (resource !== FirstClassResource.organisation) {
-        this.state.prisms.organisation.forEach((org) =>
-          params.append(FirstClassResource.organisation, org)
-        );
-      }
-
-      if (
-        resource !== FirstClassResource.organisation &&
-        resource !== FirstClassResource.project
-      ) {
-        this.state.prisms.project.forEach((proj) =>
-          params.append(FirstClassResource.project, proj)
-        );
-      }
-
-      if (
-        resource === FirstClassResource.feature ||
-        resource === FirstClassResource.user
-      ) {
-        this.state.prisms.layer.forEach((layer) =>
-          params.append(FirstClassResource.layer, layer)
-        );
-      }
-    }
-
-    return `/api/${path}?${params.toString()}`;
-  };
-
   organisationsQueryFn = async (): Promise<Organisation[]> => {
-    const url = this.buildApiUrl(FirstClassResource.organisation);
-    return fetchOrThrow<Organisation[]>(url);
-  };
-
+    const remoteList = this.remoteMap[FirstClassResource.organisation].list
+    if (!remoteList) {
+      throw new Error('Organisation remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+      sorting: this.state.viewSorting.organisation,
+    })) as ListResponse<Organisation>
+    this.setListQueryMeta(this.organisationsQueryKey(), result)
+    return result.data
+  }
   projectsQueryFn = async (): Promise<Project[]> => {
-    const url = this.buildApiUrl(FirstClassResource.project);
-    return fetchOrThrow<Project[]>(url);
-  };
+    const remoteList = this.remoteMap[FirstClassResource.project].list
+    if (!remoteList) {
+      throw new Error('Project remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+      sorting: this.state.viewSorting.project,
+      meta: { profile: 'card' },
+    })) as ListResponse<Project>
+    this.setListQueryMeta(this.projectsQueryKey(), result)
+    return result.data
+  }
 
   layersQueryFn = async (): Promise<Layer[]> => {
-    const url = this.buildApiUrl(FirstClassResource.layer);
-    return fetchOrThrow<Layer[]>(url);
-  };
+    const remoteList = this.remoteMap[FirstClassResource.layer].list
+    if (!remoteList) {
+      throw new Error('Layer remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+      sorting: this.state.viewSorting.layer,
+      meta: { profile: 'card' },
+    })) as ListResponse<Layer>
+    this.setListQueryMeta(this.layersQueryKey(), result)
+    return result.data
+  }
 
   featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
-    const url = this.buildApiUrl(FirstClassResource.feature);
-    return fetchOrThrow<FeatureFromCollection[]>(url);
-  };
+    const remoteList = this.remoteMap[FirstClassResource.feature].list
+    if (!remoteList) {
+      throw new Error('Feature remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {
+        isArchived: false,
+        isPublished: true,
+      },
+      prisms: this.state.prisms,
+      sorting: this.state.viewSorting.feature,
+      meta: { profile: 'list' },
+    })) as ListResponse<FeatureFromCollection>
+    this.setListQueryMeta(this.featuresQueryKey(), result)
+    return result.data
+  }
 
   propertiesQueryFn = async (): Promise<Property[]> => {
-    const url = this.buildApiUrl(FirstClassResource.property, undefined, true, false);
-    return fetchOrThrow<Property[]>(url);
-  };
+    const remoteList = this.remoteMap[FirstClassResource.property].list
+    if (!remoteList) {
+      throw new Error('Property remote list function is not configured.')
+    }
+    const result = (await remoteList({
+      conditions: {},
+      prisms: this.state.prisms,
+    })) as ListResponse<Property>
+    return result.data
+  }
 
   userFeaturesQueryFn = async (): Promise<UserFeature[]> => {
     if (!this.user?.id) {
-      return [];
+      return []
     }
-    const response = await fetch(`/api/userFeatures?userId=${this.user.id}`);
-    if (!response.ok) throw new Error('Network response was not ok');
-    const data = await response.json();
-    // Ensure we always return an array, even if API returns null/undefined
-    return Array.isArray(data) ? data : [];
-  };
+    const response = (await getUserFeatures({
+      userId: this.user.id,
+      sorting: {
+        sortBy: 'modifiedAt',
+        sortOrder: 'desc',
+      },
+    })) as unknown as { data?: UserFeature[] | null }
+    return Array.isArray(response.data) ? response.data : []
+  }
 
   userQueryFn = async (): Promise<UserProfile | null> => {
-    const includePrisms = this.state.panels.profile.ctx?.observePrisms;
-    const userRef = this.state.panels.profile.ctx?.username || this.user?.id;
-    const url = this.buildApiUrl(FirstClassResource.user, userRef, includePrisms);
-    return fetchOrThrow<UserProfile>(url);
-  };
+    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
+    const isSelfProfile =
+      !requestedUsername || requestedUsername === (this.user?.username ?? null)
+    const userRef = isSelfProfile ? this.user?.id : requestedUsername
+    if (!userRef) return null
+
+    const refKey = isSelfProfile ? 'id' : 'username'
+    const profile = isSelfProfile ? 'self' : 'detail'
+
+    const response = (await getUser({
+      ref: userRef,
+      refKey,
+      meta: {
+        profile,
+      },
+    })) as { data?: UserProfile | null }
+
+    return response.data ?? null
+  }
 
   invalidateAndRefresh = async (
-    resource: FirstClassResource | 'userFeatures'
+    resource: FirstClassResource | 'userFeatures',
   ): Promise<void> => {
     // Invalidate the query
-    await this.invalidate(resource);
+    await this.invalidate(resource)
     // Refresh the resources
-    await this.refresh(resource);
-  };
+    await this.refresh(resource)
+  }
 
   /**
    * Targeted invalidation for image uploads - only invalidates and refreshes the specific resource
@@ -746,26 +1055,26 @@ export class AppCtx {
    */
   invalidateResourceTargeted = async (
     resource: FirstClassResource,
-    resourceId: Id
+    resourceId: Id,
   ): Promise<void> => {
     // Get the specific query key for this resource
-    const queryKey = this.queryMap.get(resource)?.queryKey();
+    const queryKey = this.queryMap.get(resource)?.queryKey()
 
     if (!queryKey) {
-      console.warn(`No query key found for resource: ${resource}`);
-      return;
+      console.warn(`No query key found for resource: ${resource}`)
+      return
     }
 
     // Invalidate queries for this resource type
     await this.queryClient.invalidateQueries({
       queryKey,
       refetchType: 'active',
-      exact: true
-    });
+      exact: true,
+    })
 
     // Refresh only the specific resource without cascading
-    await this.refreshResourceTargeted(resource, resourceId);
-  };
+    await this.refreshResourceTargeted(resource, resourceId)
+  }
 
   /**
    * Refresh a specific resource without triggering cascades
@@ -774,28 +1083,211 @@ export class AppCtx {
    */
   private refreshResourceTargeted = async (
     resource: FirstClassResource,
-    resourceId: Id
+    resourceId: Id,
   ): Promise<void> => {
     try {
       // Fetch the updated resource data
-      const updatedResource = await this.fetchResourceById(resource, resourceId);
+      const updatedResource = await this.fetchResourceById(resource, resourceId)
 
       if (updatedResource) {
         // Update the cache with the new resource data
-        this.cache[resource].set(resourceId, updatedResource);
+        this.cache[resource].set(resourceId, updatedResource)
 
         // For features, also update the featuresMap
         if (resource === FirstClassResource.feature) {
-          this.addFeatureToMap(updatedResource as Feature);
+          this.addFeatureToMap(updatedResource as Feature)
         }
 
         // Update the resources array if the resource exists there
-        this.updateResourceInArray(resource, updatedResource);
+        this.updateResourceInArray(resource, updatedResource)
       }
     } catch (error) {
-      console.error(`Failed to refresh resource ${resource}:${resourceId}`, error);
+      console.error(`Failed to refresh resource ${resource}:${resourceId}`, error)
     }
-  };
+  }
+
+  /**
+   * Converts a query key into a stable map key for storing list response metadata.
+   *
+   * @param queryKey - TanStack query key for a resource list.
+   * @returns Serialized key suitable for `listQueryMeta`.
+   * @remarks Metadata is tracked separately from cached list data so UI logic can read
+   * pagination and sort state without duplicating full query responses in app state.
+   */
+  private toQueryMetaKey(queryKey: unknown[]): string {
+    return JSON.stringify(queryKey)
+  }
+
+  /**
+   * Stores list response metadata for a query while excluding the entity array payload.
+   *
+   * @param queryKey - TanStack query key for the fetched list.
+   * @param response - Full list response returned by the remote API.
+   * @returns Nothing.
+   * @remarks The data array stays in TanStack Query and resource state; only the metadata is
+   * retained here for pagination-aware admin and collection interactions.
+   */
+  setListQueryMeta<T>(queryKey: unknown[], response: ListResponse<T>): void {
+    const { data: _data, ...meta } = response
+    this.listQueryMeta.set(this.toQueryMetaKey(queryKey), meta)
+  }
+
+  /**
+   * Returns cached list metadata for a previously fetched query key.
+   *
+   * @param queryKey - TanStack query key for the list.
+   * @returns The stored response metadata, or `null` when nothing has been cached yet.
+   */
+  getListQueryMeta(queryKey: unknown[]): Omit<ListResponse<unknown>, 'data'> | null {
+    return this.listQueryMeta.get(this.toQueryMetaKey(queryKey)) ?? null
+  }
+
+  /**
+   * Resolves the comparable value used to sort a resource in memory.
+   *
+   * @param resource - Resource type being sorted.
+   * @param entity - Resource instance to read from.
+   * @param sortBy - Active sort field.
+   * @param userPreferences - I18n preferences used when sorting translated fields.
+   * @returns Normalized string or numeric value suitable for comparison.
+   * @remarks Translated text fields are resolved using the current user locale preferences so
+   * client-side sorting matches the strings users actually see in the UI.
+   */
+  private getResourceSortValue(
+    resource: FirstClassResource,
+    entity: Resource,
+    sortBy: string,
+    userPreferences = this.getUserPreferences(),
+  ): string | number {
+    if (sortBy === 'createdAt' || sortBy === 'modifiedAt') {
+      const rawValue = (entity as Record<string, unknown>)[sortBy]
+      // Convert timestamps once so in-memory sorting behaves like a numeric date sort.
+      return typeof rawValue === 'string' ? Date.parse(rawValue) || 0 : 0
+    }
+
+    if (resource === FirstClassResource.feature) {
+      const feature = entity as FeatureFromCollection
+      const translatedValue =
+        sortBy === 'title' || sortBy === 'description' || sortBy === 'displayAddress'
+          ? getI18n(feature, sortBy, userPreferences, '') || ''
+          : null
+
+      if (typeof translatedValue === 'string') {
+        return translatedValue.toLocaleLowerCase()
+      }
+    }
+
+    if (sortBy === 'name' || sortBy === 'nameShort' || sortBy === 'description') {
+      const translatedValue = getI18n(entity as never, sortBy, userPreferences, '')
+
+      if (typeof translatedValue === 'string') {
+        return translatedValue.toLocaleLowerCase()
+      }
+    }
+
+    const rawValue = (entity as Record<string, unknown>)[sortBy]
+
+    if (typeof rawValue === 'string') {
+      return rawValue.toLocaleLowerCase()
+    }
+
+    if (typeof rawValue === 'number') {
+      return rawValue
+    }
+
+    return ''
+  }
+
+  /**
+   * Sorts an already-loaded resource collection without issuing another server request.
+   *
+   * @param resource - Resource type being sorted.
+   * @param entities - Loaded entities to sort.
+   * @param sorting - Requested sort state.
+   * @returns A new array ordered according to the requested sort.
+   * @remarks The sort falls back to `id` as a stable tiebreaker so repeated renders produce
+   * deterministic ordering when primary sort values are equal.
+   */
+  sortLoadedResources<T extends Resource>(
+    resource: FirstClassResource,
+    entities: T[],
+    sorting: ResourceSortState,
+  ): T[] {
+    const direction = sorting.sortOrder === 'asc' ? 1 : -1
+    const userPreferences = this.getUserPreferences()
+    const sortableEntities = entities.map(entity => ({
+      entity,
+      sortValue: this.getResourceSortValue(
+        resource,
+        entity,
+        sorting.sortBy,
+        userPreferences,
+      ),
+    }))
+
+    sortableEntities.sort((left, right) => {
+      const leftValue = left.sortValue
+      const rightValue = right.sortValue
+
+      if (leftValue < rightValue) return -1 * direction
+      if (leftValue > rightValue) return 1 * direction
+
+      // Use a stable secondary key to avoid order flicker when values are identical.
+      return left.entity.id.localeCompare(right.entity.id)
+    })
+
+    return sortableEntities.map(item => item.entity)
+  }
+
+  /**
+   * Writes a sorted entity list back into the resource state for the matching resource type.
+   *
+   * @param resource - Resource type whose state should be updated.
+   * @param entities - Sorted entity array to persist into app state.
+   * @returns Nothing.
+   * @remarks Feature updates also rebuild dependent caches so map and neighbourhood views stay
+   * aligned with the reordered feature collection.
+   */
+  setSortedResourceState<T extends Resource>(
+    resource: FirstClassResource,
+    entities: T[],
+  ): void {
+    if (resource === FirstClassResource.organisation) {
+      this.state.resources.organisation = entities as Organisation[]
+      return
+    }
+
+    if (resource === FirstClassResource.project) {
+      this.state.resources.project = entities as Project[]
+      return
+    }
+
+    if (resource === FirstClassResource.layer) {
+      this.state.resources.layer = entities as Layer[]
+      return
+    }
+
+    if (resource === FirstClassResource.feature) {
+      const features = entities as FeatureFromCollection[]
+      this.state.resources.feature = features
+      // Rebuild derived feature lookups after replacing the entire feature list.
+      this.rebuildFeaturesMap()
+      // Keep neighbourhood-specific derived state in sync with the sorted feature collection.
+      this.placeCtx.setNeighbourhoodFeatures(
+        this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
+      )
+      return
+    }
+
+    if (resource === FirstClassResource.task) {
+      this.state.resources.task = entities as Task[]
+      return
+    }
+
+    if (resource === FirstClassResource.hub) {
+      this.state.resources.hub = entities as Hub[]
+    }
+  }
 
   /**
    * Update a resource in the appropriate resources array
@@ -804,264 +1296,343 @@ export class AppCtx {
    */
   private updateResourceInArray = (
     resource: FirstClassResource,
-    updatedResource: any
+    updatedResource: any,
   ): void => {
     const resourceArray =
-      this.state.resources[resource as keyof typeof this.state.resources];
+      this.state.resources[resource as keyof typeof this.state.resources]
     if (resourceArray && Array.isArray(resourceArray)) {
-      const index = resourceArray.findIndex((r: any) => r.id === updatedResource.id);
+      const index = resourceArray.findIndex((r: any) => r.id === updatedResource.id)
       if (index !== -1) {
-        resourceArray[index] = updatedResource;
+        resourceArray[index] = updatedResource
       }
     }
-  };
+  }
 
   invalidate = async (
-    resource: FirstClassResource | 'userFeatures' | 'user'
+    resource: FirstClassResource | 'userFeatures' | 'user',
   ): Promise<void> => {
-    const resourcesToInvalidate = [resource];
+    const resourcesToInvalidate = [resource]
     // Clear relevant caches when invalidating (forces fresh data)
     if (resource === FirstClassResource.organisation) {
-      this.cache.organisation.clear();
-      this.organisationCodeToId.clear();
+      this.cache.organisation.clear()
+      this.organisationCodeToId.clear()
     } else if (resource === FirstClassResource.project) {
-      this.cache.project.clear();
-      this.projectCodeToId.clear();
-      this.cache.property.clear();
-      resourcesToInvalidate.push(FirstClassResource.property);
+      this.cache.project.clear()
+      this.projectCodeToId.clear()
+      this.cache.property.clear()
+      resourcesToInvalidate.push(FirstClassResource.property)
     } else if (resource === FirstClassResource.layer) {
-      this.cache.layer.clear();
+      this.cache.layer.clear()
     } else if (resource === FirstClassResource.feature) {
-      this.cache.feature.clear();
-      this.featuresMap.clear();
+      this.cache.feature.clear()
+      this.featuresMap.clear()
     } else if (resource === FirstClassResource.task) {
-      this.cache.task.clear();
+      this.cache.task.clear()
     } else if (resource === FirstClassResource.hub) {
-      this.cache.hub.clear();
-      this.hubCodeToId.clear();
-      this.cache.organisation.clear();
-      resourcesToInvalidate.push(FirstClassResource.organisation);
+      this.cache.hub.clear()
+      this.hubCodeToId.clear()
+      this.cache.organisation.clear()
+      resourcesToInvalidate.push(FirstClassResource.organisation)
     } else if (resource === FirstClassResource.property) {
-      this.cache.property.clear();
+      this.cache.property.clear()
     } else if (resource === 'user') {
       // TODO Should we clear the profile panel too?
-      this.cache.user.clear();
+      this.cache.user.clear()
     }
 
-    resourcesToInvalidate.forEach(async (resource) => {
+    resourcesToInvalidate.forEach(async resource => {
       await this.queryClient.invalidateQueries({
         queryKey:
           resource === 'userFeatures'
             ? this.userFeaturesQueryKey()
             : [FirstClassResource[resource]],
         refetchType: 'all',
-        exact: false
-      });
-    });
-  };
+        exact: false,
+      })
+    })
+  }
 
   togglePrism = async (resource: FirstClassResource, id: Id): Promise<void> => {
-    const prisms = this.state.prisms[resource as ResourceTypeWithChildren];
-    const index = prisms.indexOf(id);
+    const prisms = this.state.prisms[resource as ResourceTypeWithChildren]
+    const index = prisms.indexOf(id)
     if (index === -1) {
-      prisms.push(id);
+      prisms.push(id)
     } else {
-      prisms.splice(index, 1);
+      prisms.splice(index, 1)
     }
     // Refresh all the dependent resources
     if (resource === FirstClassResource.organisation) {
-      await this.refreshProjects();
-      await this.refreshHubs();
+      await this.refreshProjects()
     } else if (resource === FirstClassResource.project) {
-      await this.refreshProperties();
-      await this.refreshLayers();
+      await this.refreshProperties()
+      await this.refreshLayers()
     } else if (resource === FirstClassResource.layer) {
       // Only refresh features if user is authenticated
       if (this.user?.id) {
-        await this.refreshFeatures();
+        await this.refreshFeatures()
         if (this.isAdmin()) {
-          await this.refreshTasks();
+          await this.refreshTasks()
         }
       }
       // Only refresh if we have a username in the profile context
       if (this.state.panels.profile.ctx?.username) {
-        await this.refreshUserProfile();
+        await this.refreshUserProfile()
       }
     }
-  };
+  }
 
   // Toggle methods for hierarchical filters
   toggleOrganisation = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.organisation, id);
-  };
+    await this.togglePrism(FirstClassResource.organisation, id)
+  }
 
   toggleProject = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.project, id);
-  };
+    await this.togglePrism(FirstClassResource.project, id)
+  }
+
+  getProjectDefaultVisibleLayerIds = (projectId: Id): Id[] =>
+    this.state.resources.layer
+      .filter(layer => layer.projectId === projectId && layer.isDefaultVisible)
+      .map(layer => layer.id)
+
+  isProjectReplaceState = (projectId: Id): boolean => {
+    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
+    if (defaultLayerIds.length === 0) return false
+
+    const activeLayerIds = this.state.prisms.layer.filter(layerId =>
+      this.state.resources.layer.some(
+        layer => layer.projectId === projectId && layer.id === layerId,
+      ),
+    )
+
+    if (activeLayerIds.length !== defaultLayerIds.length) return false
+
+    const defaultSet = new Set(defaultLayerIds)
+    return activeLayerIds.every(layerId => defaultSet.has(layerId))
+  }
+
+  addProjectDefaultLayers = async (projectId: Id): Promise<void> => {
+    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
+    if (defaultLayerIds.length === 0) return
+
+    this.state.prisms.layer = Array.from(
+      new Set([...this.state.prisms.layer, ...defaultLayerIds]),
+    )
+    await this.postLayerMutation(true)
+  }
+
+  replaceWithProjectDefaultLayers = async (projectId: Id): Promise<void> => {
+    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
+    this.state.prisms.layer = [...defaultLayerIds]
+    await this.postLayerMutation(true)
+  }
 
   toggleLayer = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.layer, id);
-  };
+    await this.togglePrism(FirstClassResource.layer, id)
+  }
 
   toggleFeature = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.feature, id);
-  };
+    await this.togglePrism(FirstClassResource.feature, id)
+  }
 
   // Cascades refresh to the next resource in the hierarchy
   refresh = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
     // Refresh the resources
     if (resource === 'organisation') {
-      await this.refreshOrganisations();
+      await this.refreshOrganisations()
     } else if (resource === 'project') {
-      await this.refreshProjects();
+      await this.refreshProjects()
     } else if (resource === 'layer') {
-      await this.refreshLayers();
+      await this.refreshLayers()
     } else if (resource === 'feature') {
-      await this.refreshFeatures();
+      await this.refreshFeatures()
     } else if (resource === 'task') {
-      await this.refreshTasks();
-    } else if (resource === 'hub') {
-      await this.refreshHubs();
+      await this.refreshTasks()
     } else if (resource === 'property') {
-      await this.refreshProperties();
+      await this.refreshProperties()
     } else if (resource === 'userFeatures') {
-      await this.refreshUserFeatures();
+      await this.refreshUserFeatures()
     }
-  };
+  }
 
   refreshOrganisations = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.organisation = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.organisation)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.organisation)!.queryFn
-    });
+      queryKey: this.queryMap.get(FirstClassResource.organisation)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.organisation)?.queryFn,
+    })
     // Efficiently sync organization cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.organisation, this.state.resources.organisation);
+    this.syncCacheMap(this.cache.organisation, this.state.resources.organisation)
     // Efficiently sync organisation code-to-ID mapping
-    this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation);
+    this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation)
     // Sync organisation prisms to remove any invalid organisation IDs
-    this.syncOrganisationPrisms();
+    this.syncOrganisationPrisms()
     if (isCascading) {
-      await this.refreshProjects();
-      await this.refreshHubs();
+      await this.refreshProjects()
     }
-  };
+  }
 
   refreshProjects = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.project = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.project)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.project)!.queryFn
-    });
+      queryKey: this.queryMap.get(FirstClassResource.project)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.project)?.queryFn,
+    })
     // Efficiently sync project cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.project, this.state.resources.project);
+    this.syncCacheMap(this.cache.project, this.state.resources.project)
     // Efficiently sync project code-to-ID mapping
-    this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project);
+    this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project)
     // Sync project prisms to remove any invalid project IDs
-    this.syncProjectPrisms();
+    this.syncProjectPrisms()
     if (isCascading) {
-      await this.refreshProperties();
-      await this.refreshLayers();
+      await this.refreshProperties()
+      await this.refreshLayers()
     }
-  };
+  }
 
   refreshLayers = async (isCascading: boolean = true): Promise<void> => {
     this.state.resources.layer = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.layer)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.layer)!.queryFn
-    });
+      queryKey: this.queryMap.get(FirstClassResource.layer)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.layer)?.queryFn,
+    })
     // Efficiently sync layer cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.layer, this.state.resources.layer);
+    this.syncCacheMap(this.cache.layer, this.state.resources.layer)
     // Sync layer prisms to remove any layerIds which are no londer valid resources given the parent prism selection.
-    this.syncLayerPrisms();
+    this.syncLayerPrisms()
     // Also calls this.refreshFeatures()
-    await this.postLayerMutation(isCascading);
-  };
+    await this.postLayerMutation(isCascading)
+  }
 
-  refreshFeatures = async (isCascading: boolean = true): Promise<void> => {
+  refreshFeatures = async (_isCascading: boolean = true): Promise<void> => {
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.feature)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.feature)!.queryFn
-    });
-    this.state.resources.feature = features;
-    this.syncCacheMap(this.cache.feature, features);
+      queryKey: this.queryMap.get(FirstClassResource.feature)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.feature)?.queryFn,
+    })
+    this.state.resources.feature = features
+    this.syncCacheMap(this.cache.feature, features)
 
     // Pre-populate stats cache for this feature
-    features.forEach((feature) => {
-      primeFeatureStatsCache(this, feature);
-    });
+    features.forEach(feature => {
+      primeFeatureStatsCache(this, feature)
+    })
 
     // Rebuild the featureId to feature map
-    this.rebuildFeaturesMap();
+    this.rebuildFeaturesMap()
 
     // Rebuild the neighbourhoodRef to featureIds map
     this.placeCtx.setNeighbourhoodFeatures(
-      this.getPrism(FirstClassResource.layer).length > 0 ? features : []
-    );
-  };
+      this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
+    )
+  }
 
-  refreshTasks = async (isCascading: boolean = true): Promise<void> => {
+  refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
     this.state.resources.task = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.task)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.task)!.queryFn
-    });
+      queryKey: this.queryMap.get(FirstClassResource.task)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.task)?.queryFn,
+    })
     // Efficiently sync task cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.task, this.state.resources.task);
-  };
+    this.syncCacheMap(this.cache.task, this.state.resources.task)
+  }
 
   setTaskResourceAndCache = (task: Task): void => {
-    const existingTask = this.state.resources.task.find((t) => t.id === task.id);
+    const existingTask = this.state.resources.task.find(t => t.id === task.id)
     if (existingTask) {
-      this.state.resources.task = this.state.resources.task.map((t) =>
-        t.id === task.id ? task : t
-      );
+      this.state.resources.task = this.state.resources.task.map(t =>
+        t.id === task.id ? task : t,
+      )
     } else {
-      this.state.resources.task = [...this.state.resources.task, task];
+      this.state.resources.task = [...this.state.resources.task, task]
     }
-    this.cache.task.set(task.id, task);
-  };
 
-  refreshHubs = async (isCascading: boolean = true): Promise<void> => {
-    if (!this.isSuperAdmin()) return;
+    if (task.organisation) {
+      this.cache.organisation.set(
+        task.organisation.id,
+        task.organisation as Organisation,
+      )
+      if (task.organisation.code) {
+        this.organisationCodeToId.set(task.organisation.code, task.organisation.id)
+      }
+    }
+
+    if (task.project) {
+      // Task payloads can carry a partial project shape, so preserve richer cached fields
+      // such as mapStyle when refreshing the task editor state.
+      const existingProject = this.cache.project.get(task.project.id)
+      this.cache.project.set(task.project.id, {
+        ...existingProject,
+        ...task.project,
+      } as Project)
+      if (task.project.code) {
+        this.projectCodeToId.set(task.project.code, task.project.id)
+      }
+    }
+
+    if (task.feature) {
+      const existingFeature = this.cache.feature.get(task.feature.id)
+      this.cache.feature.set(task.feature.id, {
+        ...existingFeature,
+        ...task.feature,
+      } as Feature)
+    }
+
+    this.cache.task.set(task.id, task)
+  }
+
+  refreshHubs = async (_isCascading: boolean = true): Promise<void> => {
+    if (!this.isAdmin()) return
     this.state.resources.hub = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.hub)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.hub)!.queryFn
-    });
+      queryKey: this.queryMap.get(FirstClassResource.hub)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.hub)?.queryFn,
+    })
     // Efficiently sync hub cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.hub, this.state.resources.hub);
+    this.syncCacheMap(this.cache.hub, this.state.resources.hub)
     // Efficiently sync hub code-to-ID mapping
-    this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub);
-  };
+    this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub)
+  }
 
-  refreshProperties = async (isCascading: boolean = true): Promise<void> => {
+  refreshProperties = async (_isCascading: boolean = true): Promise<void> => {
     const properties = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.property)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.property)!.queryFn
-    });
+      queryKey: this.queryMap.get(FirstClassResource.property)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.property)?.queryFn,
+    })
     // Efficiently sync property cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.property, properties);
-  };
+    this.syncCacheMap(this.cache.property, properties)
+  }
 
-  refreshUserFeatures = async (isCascading: boolean = true): Promise<void> => {
+  refreshUserFeatures = async (_isCascading: boolean = true): Promise<void> => {
     this.state.userFeatures = await this.queryClient
       .fetchQuery({
-        queryKey: this.queryMap.get('userFeatures')!.queryKey(),
-        queryFn: this.queryMap.get('userFeatures')!.queryFn
+        queryKey: this.queryMap.get('userFeatures')?.queryKey(),
+        queryFn: this.queryMap.get('userFeatures')?.queryFn,
       })
-      .then((uf) => ({
+      .then(uf => ({
         wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
-        visited: (uf || []).filter((f: UserFeature) => f.isVisited)
-      }));
+        visited: (uf || []).filter((f: UserFeature) => f.isVisited),
+      }))
 
     // If active collection is a walk, refresh it and handle navigation
-    this.postUserFeaturesMutation();
-  };
+    this.postUserFeaturesMutation()
+  }
 
-  refreshUserProfile = async (isCascading: boolean = true): Promise<void> => {
+  refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
     const user = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.user)!.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.user)!.queryFn
-    });
-    this.state.panels.profile.ctx!.userData = user;
-  };
+      queryKey: this.queryMap.get(FirstClassResource.user)?.queryKey(),
+      queryFn: this.queryMap.get(FirstClassResource.user)?.queryFn,
+    })
+    const currentUsername = this.user?.username?.trim() || null
+    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
+    const isSelfProfile =
+      !requestedUsername ||
+      (currentUsername !== null && requestedUsername === currentUsername)
+
+    if (isSelfProfile && user) {
+      this.user = {
+        ...(this.user ?? {}),
+        ...(user as CurrentUser),
+      } as CurrentUser | SessionUser
+      this.postUserMutation()
+    }
+
+    this.state.panels.profile.ctx!.userData = user
+  }
 
   /*
    * Handles user features mutation and refreshes the active walk collection
@@ -1070,69 +1641,69 @@ export class AppCtx {
    * the next item on the list, or returns home if the list is empty.
    */
   postUserFeaturesMutation = (): void => {
-    const activeCollection = this.getActiveCollection();
+    const activeCollection = this.getActiveCollection()
     if (!activeCollection || activeCollection.type !== 'walk') {
-      return;
+      return
     }
 
-    const currentActiveFeature = this.getActiveFeature();
-    let updatedItems: (FeatureFromCollection | Feature)[] = [];
+    const currentActiveFeature = this.getActiveFeature()
+    let updatedItems: (FeatureFromCollection | Feature)[] = []
 
     // Get updated items based on walk type
     if (activeCollection.id === 'stars') {
-      updatedItems = this.getWishlistedFeatures();
+      updatedItems = this.getWishlistedFeatures()
     } else if (activeCollection.id === 'visited') {
-      updatedItems = this.getVisitedFeatures();
+      updatedItems = this.getVisitedFeatures()
     }
     // TODO: Add other walk types when implemented
 
     // If the collection is now empty, reset and navigate to home
     if (updatedItems.length === 0) {
-      this.resetActiveCollection();
-      navigate('/');
-      return;
+      this.resetActiveCollection()
+      navigate('/')
+      return
     }
 
     // Update the collection with new items
     this.setActiveCollection(
       {
         ...activeCollection,
-        items: updatedItems
+        items: updatedItems,
       },
       {
         highlight: false,
-        focus: false
-      }
-    );
+        focus: false,
+      },
+    )
 
     // Handle navigation if current feature is no longer in the collection
     if (currentActiveFeature) {
       const isCurrentFeatureStillInCollection = updatedItems.some(
-        (f) => f.id === currentActiveFeature.id
-      );
+        f => f.id === currentActiveFeature.id,
+      )
 
       if (!isCurrentFeatureStillInCollection) {
         // Find the next feature to navigate to
         const currentIndex = activeCollection.items.findIndex(
-          (f) => f.id === currentActiveFeature.id
-        );
+          f => f.id === currentActiveFeature.id,
+        )
 
-        let nextFeature: FeatureFromCollection | Feature | null = null;
+        let nextFeature: FeatureFromCollection | Feature | null = null
 
         // Try to get the next feature in the original list
         if (currentIndex >= 0 && currentIndex < updatedItems.length) {
-          nextFeature = updatedItems[currentIndex];
+          nextFeature = updatedItems[currentIndex]
         } else if (updatedItems.length > 0) {
           // If current index is out of bounds, get the last item
-          nextFeature = updatedItems[updatedItems.length - 1];
+          nextFeature = updatedItems[updatedItems.length - 1]
         }
 
         if (nextFeature) {
-          this.setActiveFeature(nextFeature.id, { focus: true, openCard: true });
+          this.setActiveFeature(nextFeature.id, { focus: true, openCard: true })
         }
       }
     }
-  };
+  }
 
   // ═══════════════════════
   // PRISMS
@@ -1142,63 +1713,63 @@ export class AppCtx {
   // This should rarely happen as we always fetch all organisations. But it could happen in cases where an organisation is unpublished or deleted.
   syncOrganisationPrisms = () => {
     const filteredOrganisations = this.state.prisms.organisation.filter(
-      (organisation) => {
-        return this.state.resources.organisation.some((o) => o.id === organisation);
-      }
-    );
+      organisation => {
+        return this.state.resources.organisation.some(o => o.id === organisation)
+      },
+    )
 
     // Only update if the array actually changed
     if (
       filteredOrganisations.length !== this.state.prisms.organisation.length ||
       !filteredOrganisations.every(
-        (id, index) => id === this.state.prisms.organisation[index]
+        (id, index) => id === this.state.prisms.organisation[index],
       )
     ) {
-      this.state.prisms.organisation = filteredOrganisations;
+      this.state.prisms.organisation = filteredOrganisations
     }
-  };
+  }
 
   //* Removes project from prisms if they are no longer in the resources.
   // This typically is required when an organisation prism is set, and a
   // previously active prism is no longer valid given that the related
   // organisation is not selected as a prism.
   syncProjectPrisms = () => {
-    const filteredProjects = this.state.prisms.project.filter((project) => {
-      return this.state.resources.project.some((p) => p.id === project);
-    });
+    const filteredProjects = this.state.prisms.project.filter(project => {
+      return this.state.resources.project.some(p => p.id === project)
+    })
 
     // Only update if the array actually changed
     if (
       filteredProjects.length !== this.state.prisms.project.length ||
       !filteredProjects.every((id, index) => id === this.state.prisms.project[index])
     ) {
-      this.state.prisms.project = filteredProjects;
+      this.state.prisms.project = filteredProjects
     }
-  };
+  }
 
   //* Removes layer from prisms if they are no longer in the resources.
   // This typically is required when a organisation or project prism is set,
   // and a previously active prism is no longer valid given that the related
   // project or organisation is not selected as a prism.
   syncLayerPrisms = () => {
-    const filteredLayers = this.state.prisms.layer.filter((layer) => {
-      return this.state.resources.layer.some((l) => l.id === layer);
-    });
+    const filteredLayers = this.state.prisms.layer.filter(layer => {
+      return this.state.resources.layer.some(l => l.id === layer)
+    })
 
     // Use Set comparison for proper array equality check
-    const currentSet = new Set(this.state.prisms.layer);
-    const filteredSet = new Set(filteredLayers);
+    const currentSet = new Set(this.state.prisms.layer)
+    const filteredSet = new Set(filteredLayers)
 
     // Check if sets are different (different lengths or different contents)
     const shouldUpdate =
       currentSet.size !== filteredSet.size ||
-      !Array.from(currentSet).every((id) => filteredSet.has(id));
+      !Array.from(currentSet).every(id => filteredSet.has(id))
 
     // Only update if the array actually changed
     if (shouldUpdate) {
-      this.state.prisms.layer = filteredLayers;
+      this.state.prisms.layer = filteredLayers
     }
-  };
+  }
 
   postLayerMutation = async (isCascading: boolean = true): Promise<void> => {
     // Auto-select single layer if there's only one available and none selected
@@ -1206,77 +1777,73 @@ export class AppCtx {
       this.state.resources.layer.length === 1 &&
       this.state.prisms.layer.length === 0
     ) {
-      this.toggleLayer(this.state.resources.layer[0].id);
+      this.toggleLayer(this.state.resources.layer[0].id)
     }
 
-    const currentLayerIds = new Set(this.state.prisms.layer);
+    const currentLayerIds = new Set(this.state.prisms.layer)
     const existingFilterLayerIds = new Set(
-      Object.keys(this.state.filters.feature.properties || {})
-    );
+      Object.keys(this.state.filters.feature.properties || {}),
+    )
 
     // Initialise filters for newly added layers
-    currentLayerIds.forEach((layerId) => {
+    currentLayerIds.forEach(layerId => {
       if (!existingFilterLayerIds.has(layerId)) {
         // Call initialization functions for the new layer
-        this.initialiseCategoricalPropertyFilters(layerId);
-        this.initialiseRangePropertyFilter(layerId);
+        this.initialiseCategoricalPropertyFilters(layerId)
+        this.initialiseRangePropertyFilter(layerId)
       }
-    });
+    })
 
     // Remove filters for layers that are no longer active
-    existingFilterLayerIds.forEach((layerId) => {
+    existingFilterLayerIds.forEach(layerId => {
       if (!currentLayerIds.has(layerId)) {
-        delete this.state.filters.feature.properties![layerId];
+        delete this.state.filters.feature.properties?.[layerId]
       }
-    });
+    })
 
     if (isCascading) {
       // Only refresh features if user is authenticated
       if (this.user?.id) {
-        await this.refreshFeatures();
+        await this.refreshFeatures()
         if (this.isAdmin()) {
-          await this.refreshTasks();
+          await this.refreshTasks()
         }
       }
       // Only refresh if we have a username in the profile context
       if (this.state.panels.profile.ctx?.username) {
-        await this.refreshUserProfile();
+        await this.refreshUserProfile()
       }
     }
-  };
+  }
 
   postUserMutation = (): void => {
-    if (this.user && 'userLayers' in this.user) {
-      // Set default layers if user has userLayers
-      this.state.prisms.layer =
-        this.user.userLayers?.map((layer: UserLayer) => layer.layerId) ?? [];
-    }
+    this.applyInitialLayerPrisms()
 
     // Set admin panel state based on user preferences
     if (this.isAdmin() && this.user && 'preferences' in this.user) {
       const isPrimaryPanelCollapsed =
-        (this.user as CurrentUser).preferences?.admin?.isPrimaryPanelCollapsed ?? false;
+        (this.user as CurrentUser).preferences?.admin?.isPrimaryPanelCollapsed ?? false
       if (!isPrimaryPanelCollapsed) {
-        this.openPanel(Panel.admin, false);
+        this.openPanel(Panel.admin, false)
       }
     }
-  };
+  }
 
   // ═══════════════════════
   // CODE TO ID MAPPINGS
   // ═══════════════════════
 
   getOrganisationIdByCode = (code: Code): Id | undefined => {
-    return this.organisationCodeToId.get(code);
-  };
+    return this.organisationCodeToId.get(code)
+  }
 
   getProjectIdByCode = (code: Code): Id | undefined => {
-    return this.projectCodeToId.get(code);
-  };
+    return this.projectCodeToId.get(code)
+  }
 
   getHubIdByCode = (code: Code): Id | undefined => {
-    return this.hubCodeToId.get(code);
-  };
+    return this.hubCodeToId.get(code)
+  }
 
   // ═══════════════════════
   // CODE TO ID MAPPINGS
@@ -1286,31 +1853,31 @@ export class AppCtx {
     // Reverse lookup: find the code for a given ID
     for (const [code, orgId] of this.organisationCodeToId) {
       if (orgId === id) {
-        return code;
+        return code
       }
     }
-    return undefined;
-  };
+    return undefined
+  }
 
   getProjectCodeById = (id: Id): Code | undefined => {
     // Reverse lookup: find the code for a given ID
     for (const [code, projectId] of this.projectCodeToId) {
       if (projectId === id) {
-        return code;
+        return code
       }
     }
-    return undefined;
-  };
+    return undefined
+  }
 
   getHubCodeById = (id: Id): Code | undefined => {
     // Reverse lookup: find the code for a given ID
     for (const [code, hubId] of this.hubCodeToId) {
       if (hubId === id) {
-        return code;
+        return code
       }
     }
-    return undefined;
-  };
+    return undefined
+  }
 
   // FILTERS
 
@@ -1337,14 +1904,14 @@ export class AppCtx {
                   'globalMin' in values &&
                   'globalMax' in values &&
                   (values.rangeMin !== values.globalMin ||
-                    values.rangeMax !== values.globalMax))
+                    values.rangeMax !== values.globalMax)),
             ).length
-          );
+          )
         },
-        0
-      )
-    };
-  };
+        0,
+      ),
+    }
+  }
 
   resetFilters = (): void => {
     this.state.filters = {
@@ -1354,189 +1921,187 @@ export class AppCtx {
       feature: { text: '', properties: {} },
       task: { text: '', properties: {} },
       hub: { text: '', properties: {} },
-      property: { text: '', properties: {} }
-    };
-    this.placeCtx.resetNeighbourhoods();
+      property: { text: '', properties: {} },
+    }
+    this.placeCtx.resetNeighbourhoods()
     // Re-initialize property filters for active layers
-    this.state.prisms.layer.forEach((layerId) => {
-      this.initialiseCategoricalPropertyFilters(layerId);
-      this.initialiseRangePropertyFilter(layerId);
-    });
-  };
+    this.state.prisms.layer.forEach(layerId => {
+      this.initialiseCategoricalPropertyFilters(layerId)
+      this.initialiseRangePropertyFilter(layerId)
+    })
+  }
 
   getFilteredResource = <
-    T extends Organisation | Project | Layer | Feature | Hub | Task
+    T extends Organisation | Project | Layer | Feature | Hub | Task,
   >(
     resource: FirstClassResource | HierarchicalResource,
-    filters = { text: true, state: true }
+    filters = { text: true, state: true },
   ): T[] => {
-    let query = this.state.filters[resource as keyof FilterState].text || '';
+    const query = this.state.filters[resource as keyof FilterState].text || ''
     // FULL SET
-    let result = this.state.resources[resource as keyof FilteredResources] as T[];
+    let result = this.state.resources[resource as keyof FilteredResources] as T[]
     // TIER 2 FILTERS :: Boolean State :: (App Wide)
     // TODO Implement these filters if the data responses get too large.
     // TIER 2 FILTERS :: Text :: (App Wide)
     if (filters.text && resource !== FirstClassResource.hub) {
       result = result.filter((entity: T) => {
         if (!isTask(entity)) {
-          return this.textFilter(resource as FirstClassResource, entity, query);
+          return this.textFilter(resource as FirstClassResource, entity, query)
         }
-        return true;
-      });
+        return true
+      })
     }
 
-    return result;
-  };
+    return result
+  }
 
   textFilter = <
-    T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection
+    T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection,
   >(
-    resource: FirstClassResource,
+    _resource: FirstClassResource,
     entity: T,
-    query: string
+    query: string,
   ) => {
-    const textObject = entity.i18n?.[getLocale()];
-    const contributor = isFeature(entity) ? entity.contributor?.name : '';
-    if (!textObject) return false;
-    return (
-      query === '' ||
-      textObject.name?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.title?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.nameShort?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.description?.toLowerCase().includes(query.toLowerCase()) ||
-      textObject.displayAddress?.toLowerCase().includes(query.toLowerCase()) ||
-      contributor?.toLowerCase().includes(query.toLowerCase())
-    );
-  };
+    return matchesResourceTextQuery(entity, query, getLocaleKey())
+  }
 
   // Filtered Helpers
   filteredOrganisations = $derived.by(() => {
     // Explicitly access reactive dependencies so Svelte tracks them
-    this.state.resources.organisation;
-    this.state.filters.organisation;
-    return this.getFilteredResource<Organisation>(FirstClassResource.organisation);
-  });
+    this.state.resources.organisation
+    this.state.filters.organisation
+    return this.getFilteredResource<Organisation>(FirstClassResource.organisation)
+  })
   filteredProjects = $derived.by(() => {
-    this.state.resources.project;
-    this.state.filters.project;
-    return this.getFilteredResource<Project>(FirstClassResource.project);
-  });
+    this.state.resources.project
+    this.state.filters.project
+    return this.getFilteredResource<Project>(FirstClassResource.project)
+  })
   filteredLayers = $derived.by(() => {
-    this.state.resources.layer;
-    this.state.filters.layer;
-    return this.getFilteredResource<Layer>(FirstClassResource.layer);
-  }) as Layer[];
+    this.state.resources.layer
+    this.state.filters.layer
+    return this.getFilteredResource<Layer>(FirstClassResource.layer)
+  }) as Layer[]
   filteredFeatures = $derived.by(() => {
-    this.state.resources.feature;
-    this.state.filters.feature;
-    return this.getFilteredResource<Feature>(FirstClassResource.feature);
-  });
+    this.state.resources.feature
+    this.state.filters.feature
+    return this.getFilteredResource<Feature>(FirstClassResource.feature)
+  })
 
   // PRISM RELATIONS
 
   getPrism = (resource: FirstClassResource): Id[] => {
-    return this.state.prisms[resource as ResourceTypeWithChildren];
-  };
+    return this.state.prisms[resource as ResourceTypeWithChildren]
+  }
 
   isPrism = (resource: FirstClassResource, id: Id): boolean => {
-    return this.state.prisms[resource as ResourceTypeWithChildren]?.includes(id);
-  };
+    return this.state.prisms[resource as ResourceTypeWithChildren]?.includes(id)
+  }
 
   // Helper method to fetch resource by ID with cache miss handling
   private fetchResourceById = async (resource: FirstClassResource, ref: Id) => {
     if (!ref || ref === 'undefined') {
-      return undefined;
+      return undefined
     }
 
-    let refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey];
+    const remoteGet = this.remoteMap[resource]?.get
 
     try {
+      if (remoteGet) {
+        const response = (await remoteGet({
+          ref,
+          refKey: 'id',
+        })) as { data?: unknown }
+        return response?.data
+      }
+
+      const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
       const response = await fetch(
-        `/api/${ResourcePath[resource]}/${ref}${refKey === 'code' ? '?byId=true' : ''}`
-      );
-      if (!response.ok) return undefined;
-      return await response.json();
+        `/api/${ResourcePath[resource]}/${ref}${refKey === 'code' ? '?byId=true' : ''}`,
+      )
+      if (!response.ok) return undefined
+      return await response.json()
     } catch {
-      return undefined;
+      return undefined
     }
-  };
+  }
 
   getOrganisationById = async (
     id: Id,
-    fetchOnCacheMiss: boolean = true
+    fetchOnCacheMiss: boolean = true,
   ): Promise<Organisation | undefined> => {
     // Check cache first
-    let org = this.cache.organisation.get(id);
-    if (org) return org;
+    let org = this.cache.organisation.get(id)
+    if (org) return org
 
     if (fetchOnCacheMiss) {
-      org = await this.fetchResourceById(FirstClassResource.organisation, id);
+      org = await this.fetchResourceById(FirstClassResource.organisation, id)
       if (org) {
-        this.cache.organisation.set(id, org);
-        return org;
+        this.cache.organisation.set(id, org)
+        return org
       }
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   getProjectById = async (
     id: Id,
-    fetchOnCacheMiss: boolean = true
+    fetchOnCacheMiss: boolean = true,
   ): Promise<Project | undefined> => {
     // Check cache first
-    let project = this.cache.project.get(id);
-    if (project) return project;
+    let project = this.cache.project.get(id)
+    if (project) return project
 
     if (fetchOnCacheMiss) {
-      project = await this.fetchResourceById(FirstClassResource.project, id);
+      project = await this.fetchResourceById(FirstClassResource.project, id)
       if (project) {
-        this.cache.project.set(id, project);
-        return project;
+        this.cache.project.set(id, project)
+        return project
       }
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   getLayerById = async (
     id: Id,
-    fetchOnCacheMiss: boolean = true
+    fetchOnCacheMiss: boolean = true,
   ): Promise<Layer | undefined> => {
     // Check cache first
-    let layer = this.cache.layer.get(id);
-    if (layer) return layer;
+    let layer = this.cache.layer.get(id)
+    if (layer) return layer
 
     if (fetchOnCacheMiss) {
-      layer = await this.fetchResourceById(FirstClassResource.layer, id);
+      layer = await this.fetchResourceById(FirstClassResource.layer, id)
       if (layer) {
-        this.cache.layer.set(id, layer);
-        return layer;
+        this.cache.layer.set(id, layer)
+        return layer
       }
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   getFeatureById = async (
     id: Id,
-    fetchOnCacheMiss: boolean = true
+    fetchOnCacheMiss: boolean = true,
   ): Promise<FeatureFromCollection | Feature | undefined> => {
     // Check cache first
-    let feature = this.cache.feature.get(id);
-    if (feature) return feature;
+    let feature = this.cache.feature.get(id)
+    if (feature) return feature
 
     if (fetchOnCacheMiss) {
-      feature = await this.fetchResourceById(FirstClassResource.feature, id);
+      feature = await this.fetchResourceById(FirstClassResource.feature, id)
       if (feature) {
-        this.cache.feature.set(id, feature);
-        this.addFeatureToMap(feature as Feature);
-        return feature;
+        this.cache.feature.set(id, feature)
+        this.addFeatureToMap(feature as Feature)
+        return feature
       }
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   /**
    * Sets a feature in the cache and adds it to the Feature SvelteMap.
@@ -1545,214 +2110,269 @@ export class AppCtx {
    * @param feature - The feature to set in the cache
    */
   setFeatureById = (feature: Feature) => {
-    this.cache.feature.set(feature.id, feature);
-    this.addFeatureToMap(feature);
-  };
+    this.cache.feature.set(feature.id, feature)
+    this.addFeatureToMap(feature)
+  }
 
   getTaskById = async (
     id: Id,
-    fetchOnCacheMiss: boolean = true
+    fetchOnCacheMiss: boolean = true,
   ): Promise<Task | undefined> => {
     // Check cache first
-    let task = this.cache.task.get(id);
-    if (task) return task;
+    let task = this.cache.task.get(id)
+    if (task) return task
 
     if (fetchOnCacheMiss) {
-      task = await this.fetchResourceById(FirstClassResource.task, id);
+      task = await this.fetchResourceById(FirstClassResource.task, id)
       if (task) {
-        this.cache.task.set(id, task);
-        return task;
+        this.cache.task.set(id, task)
+        return task
       }
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   getHubById = async (
     id: Id,
-    fetchOnCacheMiss: boolean = true
+    fetchOnCacheMiss: boolean = true,
   ): Promise<Hub | undefined> => {
     // Check cache first
-    let hub = this.cache.hub.get(id);
-    if (hub) return hub;
+    let hub = this.cache.hub.get(id)
+    if (hub) return hub
 
     if (fetchOnCacheMiss) {
-      hub = await this.fetchResourceById(FirstClassResource.hub, id);
+      hub = await this.fetchResourceById(FirstClassResource.hub, id)
       if (hub) {
-        this.cache.hub.set(id, hub);
-        return hub;
+        this.cache.hub.set(id, hub)
+        return hub
       }
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   getPropertyById = async (
     id: Id,
-    fetchOnCacheMiss: boolean = true
+    fetchOnCacheMiss: boolean = true,
   ): Promise<Property | undefined> => {
     // Check cache first
-    let property = this.cache.property.get(id);
-    if (property) return property;
+    const property = this.cache.property.get(id)
+    if (property) return property
 
     if (fetchOnCacheMiss) {
       // Properties don't have their own API endpoint, they come with projects
       // For now, return undefined if not cached
-      return undefined;
+      return undefined
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   getUserByUsername = async (username: string): Promise<UserProfile | undefined> => {
-    const user = this.cache.user.get(username);
-    if (user) return user;
+    const user = this.cache.user.get(username)
+    if (user) return user
 
-    const response = await this.fetchResourceById(FirstClassResource.user, username);
+    const response = await this.fetchResourceById(FirstClassResource.user, username)
     if (response) {
-      this.cache.user.set(username, response);
-      return response;
+      this.cache.user.set(username, response)
+      return response
     }
 
-    return undefined;
-  };
+    return undefined
+  }
 
   // Helper method to get visible classifier properties for a layer
   getClassifierPropertiesForLayer = async (layer: Layer): Promise<Property[]> => {
-    if (!layer.properties) return [];
+    if (!layer.properties) return []
 
     // Get Properties associated with LayerProperties
     const properties = layer.properties
-      .filter((lp) => lp.isVisible !== false)
-      .map((lp) => this.cache.property.get(lp.propertyId!));
+      .filter(lp => lp.isVisible !== false)
+      .map(lp => this.cache.property.get(lp.propertyId!))
 
     // Filter classifiers then sort by rank
     return sortProperties(
       properties
         .filter(
-          (prop): prop is Property => prop !== undefined && prop.type === 'classifier'
+          (prop): prop is Property => prop !== undefined && prop.type === 'classifier',
         )
-        .map((p) => ({ property: p }))
-    ).map((item) => item.property!);
-  };
+        .map(p => ({ property: p })),
+    ).map(item => item.property!)
+  }
 
   getResourceById = async (
     resource: FirstClassResource,
-    id: Id
+    id: Id,
   ): Promise<Resource | undefined> => {
     switch (resource) {
       case FirstClassResource.organisation:
-        return await this.getOrganisationById(id);
+        return await this.getOrganisationById(id)
       case FirstClassResource.project:
-        return await this.getProjectById(id);
+        return await this.getProjectById(id)
       case FirstClassResource.layer:
-        return await this.getLayerById(id);
+        return await this.getLayerById(id)
       case FirstClassResource.feature:
-        return await this.getFeatureById(id);
+        return await this.getFeatureById(id)
       case FirstClassResource.task:
-        return await this.getTaskById(id);
+        return await this.getTaskById(id)
       case FirstClassResource.hub:
-        return await this.getHubById(id);
+        return await this.getHubById(id)
     }
-  };
+  }
 
   getResourceByRef = async (
     resource: FirstClassResource,
-    ref: Id | Code
+    ref: Id | Code,
   ): Promise<Resource | undefined> => {
     switch (resource) {
-      case FirstClassResource.organisation:
-        return await this.getOrganisationById(
-          this.getOrganisationIdByCode(ref as Code)! as Id
-        );
+      case FirstClassResource.organisation: {
+        const code = ref as Code
+        const cachedId = this.getOrganisationIdByCode(code)
+        if (cachedId) {
+          const cached = await this.getOrganisationById(cachedId, false)
+          if (cached) return cached
+        }
+
+        const remote = (await getOrganisation({
+          ref: String(ref),
+          refKey: 'code',
+        })) as { data?: Organisation | null }
+
+        if (!remote?.data) return undefined
+
+        this.cache.organisation.set(remote.data.id, remote.data)
+        this.organisationCodeToId.set(remote.data.code, remote.data.id)
+        return remote.data
+      }
       case FirstClassResource.project:
-        return await this.getProjectById(this.getProjectIdByCode(ref as Code)! as Id);
+        return await this.getProjectById(this.getProjectIdByCode(ref as Code)! as Id)
       case FirstClassResource.layer:
-        return await this.getLayerById(ref as Id);
+        return await this.getLayerById(ref as Id)
       case FirstClassResource.feature:
-        return await this.getFeatureById(ref as Id);
+        return await this.getFeatureById(ref as Id)
       case FirstClassResource.task:
-        return await this.getTaskById(ref as Id);
-      case FirstClassResource.hub:
-        return await this.getHubById(this.getHubIdByCode(ref as Code)! as Id);
+        return await this.getTaskById(ref as Id)
+      case FirstClassResource.hub: {
+        const code = ref as Code
+        const cachedId = this.getHubIdByCode(code)
+        if (cachedId) {
+          const cached = await this.getHubById(cachedId, false)
+          if (cached) return cached
+        }
+
+        const remote = (await getHub({
+          ref: String(ref),
+          refKey: 'code',
+        })) as { data?: Hub | null }
+        if (!remote?.data) return undefined
+
+        this.cache.hub.set(remote.data.id, remote.data)
+        this.hubCodeToId.set(remote.data.code, remote.data.id)
+        return remote.data
+      }
     }
-  };
+  }
 
   // ================================================
   // MODE METHODS
   // ================================================
 
   setLayoutMode = (mode: LayoutMode) => {
-    const resourceType = this.getActiveResourceType();
+    const resourceType = this.getActiveResourceType()
     if (resourceType) {
-      this.state.ui.layoutMode[resourceType] = mode;
+      this.state.ui.layoutMode[resourceType] = mode
     }
-  };
+  }
 
-  setControlMode = (mode: ControlMode) => {
-    const resourceType = this.getActiveResourceType();
+  setControlBarVisible = (isVisible: boolean) => {
+    const resourceType = this.getActiveResourceType()
     if (resourceType) {
-      this.state.ui.controlMode[resourceType] = mode;
+      this.state.ui.isControlBarVisible[resourceType] = isVisible
     }
-  };
+  }
+
+  /**
+   * Stores whether the search UI is focused for the current active resource view.
+   *
+   * @param isFocused - Focus state to persist.
+   * @returns Nothing.
+   */
+  setSearchFocused = (isFocused: boolean) => {
+    const resourceType = this.getActiveResourceType()
+    if (resourceType) {
+      this.state.ui.isSearchFocused[resourceType] = isFocused
+    }
+  }
 
   // ================================================
   // HIERARCHY METHODS
   // ================================================
 
   getHierarchyForTask = async (task: Task): Promise<ResourceContext> => {
-    const feature = await this.getFeatureById(task.featureId as Id);
+    const feature = await this.getFeatureById(task.featureId as Id)
     if (!feature)
       return {
         feature: undefined,
         layer: undefined,
         project: undefined,
-        organisation: undefined
-      };
-    return await this.getHierarchy(feature);
-  };
+        organisation: undefined,
+      }
+    return await this.getHierarchy(feature)
+  }
 
   // Synchronous version that uses cache only (for UI components)
   getHierarchySync = (
-    resource: Feature | Layer | Project | Organisation | Task
+    resource: Feature | Layer | Project | Organisation | Task,
   ): ResourceContext => {
     // Determine what type of resource we have and build hierarchy accordingly
-    let layer: Layer | undefined;
-    let project: Project | undefined;
-    let organisation: Organisation | undefined;
+    let layer: Layer | undefined
+    let project: Project | undefined
+    let organisation: Organisation | undefined
+    const resolvedLayerId =
+      'featureId' in resource && resource.feature?.layerId
+        ? resource.feature.layerId
+        : 'layerId' in resource
+          ? resource.layerId
+          : undefined
 
-    if ('layerId' in resource) {
+    if (resolvedLayerId) {
       // Feature or Task - get its layer, then project, then organisation from cache
-      layer = this.cache.layer.get(resource.layerId);
+      layer = this.cache.layer.get(resolvedLayerId)
       if (layer) {
-        project = this.cache.project.get(layer.projectId);
+        project = this.cache.project.get(layer.projectId)
         if (project) {
-          organisation = this.cache.organisation.get(project.organisationId);
+          organisation = this.cache.organisation.get(project.organisationId)
         }
       }
     } else if ('projectId' in resource) {
       // Layer - use itself, get its project, then organisation from cache
-      layer = resource as Layer;
-      project = this.cache.project.get(layer.projectId);
+      layer = resource as Layer
+      project = this.cache.project.get(layer.projectId)
       if (project) {
-        organisation = this.cache.organisation.get(project.organisationId);
+        organisation = this.cache.organisation.get(project.organisationId)
       }
     } else if ('organisationId' in resource) {
       // Project - use itself, get its organisation from cache
-      project = resource as Project;
-      organisation = this.cache.organisation.get(project.organisationId);
+      project = resource as Project
+      organisation = this.cache.organisation.get(project.organisationId)
     } else {
       // Organisation - use itself
-      organisation = resource as Organisation;
+      organisation = resource as Organisation
     }
 
     return {
-      feature: 'layerId' in resource ? (resource as Feature) : undefined,
+      feature:
+        'featureId' in resource
+          ? ((resource.feature as Feature | undefined) ?? undefined)
+          : 'layerId' in resource
+            ? (resource as Feature)
+            : undefined,
       layer,
       project,
-      organisation
-    };
-  };
+      organisation,
+    }
+  }
 
   getHierarchy = async (
     resource:
@@ -1762,32 +2382,28 @@ export class AppCtx {
       | Project
       | Organisation
       | Task
-      | Image
+      | Image,
   ): Promise<ResourceContext> => {
     const featurePromise =
       'featureId' in resource && resource.featureId
-        ? this.getFeatureById(resource.featureId).then(
-            (f) => f as FeatureFromCollection
-          )
+        ? this.getFeatureById(resource.featureId).then(f => f as FeatureFromCollection)
         : 'layerId' in resource
           ? Promise.resolve(resource as FeatureFromCollection)
-          : Promise.resolve(undefined);
+          : Promise.resolve(undefined)
 
     const layerPromise =
       'layerId' in resource && resource.layerId
         ? this.getLayerById(resource.layerId)
         : 'projectId' in resource
           ? Promise.resolve(resource as Layer)
-          : featurePromise.then((f) => (f ? this.getLayerById(f.layerId) : undefined));
+          : featurePromise.then(f => (f ? this.getLayerById(f.layerId) : undefined))
 
     const projectPromise =
       'projectId' in resource && resource.projectId
         ? this.getProjectById(resource.projectId)
         : 'organisationId' in resource
           ? Promise.resolve(resource as Project)
-          : layerPromise.then((l) =>
-              l ? this.getProjectById(l.projectId) : undefined
-            );
+          : layerPromise.then(l => (l ? this.getProjectById(l.projectId) : undefined))
 
     const organisationPromise =
       'organisationId' in resource && resource.organisationId
@@ -1797,147 +2413,162 @@ export class AppCtx {
             !('projectId' in resource) &&
             !('organisationId' in resource)
           ? Promise.resolve(resource as Organisation)
-          : projectPromise.then((p) =>
-              p ? this.getOrganisationById(p.organisationId) : undefined
-            );
+          : projectPromise.then(p =>
+              p ? this.getOrganisationById(p.organisationId) : undefined,
+            )
 
     const [feature, layer, project, organisation] = await Promise.all([
       featurePromise,
       layerPromise,
       projectPromise,
-      organisationPromise
-    ]);
+      organisationPromise,
+    ])
 
     return {
       feature,
       layer,
       project,
-      organisation
-    };
-  };
+      organisation,
+    }
+  }
 
   // ================================================
   // COUNT METHODS
   // ================================================
 
   // COUNT METHODS
-  getOrganisationCount = (): number => this.state.resources.organisation.length;
+  getOrganisationCount = (): number => this.state.resources.organisation.length
 
   getOrganisationProjectCount = (organisationId: Id): number =>
-    this.state.resources.project.filter((p) => p.organisationId === organisationId)
-      .length;
+    this.state.resources.project.filter(p => p.organisationId === organisationId).length
 
   getProjectLayerCount = (projectId: Id): number =>
-    this.state.resources.layer.filter((l) => l.projectId === projectId).length;
+    this.state.resources.layer.filter(l => l.projectId === projectId).length
 
   // CONTEXTUAL NAME METHODS
   getContextualOrganisationName = (
     organisation: Organisation,
-    hideIfOnly: boolean = true
+    hideIfOnly: boolean = true,
+    useFallbacks: boolean = true,
   ): string | null => {
-    const projectCount = this.getOrganisationProjectCount(organisation.id);
+    const projectCount = this.getOrganisationProjectCount(organisation.id)
     if (hideIfOnly && projectCount === 1) {
-      return null;
+      return null
     }
-    return getI18n(organisation, 'nameShort', this.getUserPreferences());
-  };
+    const preferences = this.getUserPreferences()
+    const i18nPrefs = useFallbacks
+      ? preferences
+      : { ...preferences, fallbackLocales: [] }
+    const shortName =
+      getI18n(organisation, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const name = getI18n(organisation, 'name', i18nPrefs, '', !useFallbacks) || ''
+    return shortName || name || '-'
+  }
 
   getContextualProjectName = (
     project?: Project,
-    hideIfOnly: boolean = true
+    hideIfOnly: boolean = true,
+    useFallbacks: boolean = true,
   ): string | null => {
-    if (!project?.organisationId) return null;
+    if (!project?.organisationId) return null
     const organisationProjectCount = this.getOrganisationProjectCount(
-      project.organisationId
-    );
+      project.organisationId,
+    )
     if (hideIfOnly && organisationProjectCount === 1) {
-      return null;
+      return null
     }
-    return (
-      getI18n(project, 'nameShort', this.getUserPreferences()) ||
-      getI18n(project, 'name', this.getUserPreferences())
-    );
-  };
+    const preferences = this.getUserPreferences()
+    const i18nPrefs = useFallbacks
+      ? preferences
+      : { ...preferences, fallbackLocales: [] }
+    const shortName = getI18n(project, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const name = getI18n(project, 'name', i18nPrefs, '', !useFallbacks) || ''
+    return shortName || name || '-'
+  }
 
   getContextualLayerName = (
     layer: Layer,
-    hideIfOnly: boolean = true
+    hideIfOnly: boolean = true,
+    useFallbacks: boolean = true,
   ): string | null => {
-    const projectLayerCount = this.getProjectLayerCount(layer.projectId);
+    const projectLayerCount = this.getProjectLayerCount(layer.projectId)
     if (hideIfOnly && projectLayerCount === 1) {
-      return null;
+      return null
     }
-    return (
-      getI18n(layer, 'nameShort', this.getUserPreferences()) ||
-      getI18n(layer, 'name', this.getUserPreferences())
-    );
-  };
+    const preferences = this.getUserPreferences()
+    const i18nPrefs = useFallbacks
+      ? preferences
+      : { ...preferences, fallbackLocales: [] }
+    const shortName = getI18n(layer, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
+    const name = getI18n(layer, 'name', i18nPrefs, '', !useFallbacks) || ''
+    return shortName || name || '-'
+  }
 
   getContextualFeatureName = (feature: FeatureFromCollection): string | null => {
-    return getI18n(feature, 'title', this.getUserPreferences());
-  };
+    return getI18n(feature, 'title', this.getUserPreferences())
+  }
 
   // FEATURE COLLECTIONS
 
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
     if (this.placeCtx.neighbourhoodFilterCount === 0) {
-      return Array.from(this.features.keys());
+      return Array.from(this.features.keys())
     }
-    return this.placeCtx.getFeaturesForFilteredNeighbourhoods();
-  };
+    return this.placeCtx.getFeaturesForFilteredNeighbourhoods()
+  }
 
   getFeatureIdsForProperties = (): Id[] => {
-    return getFeatureIdsForProperties(this);
-  };
+    return getFeatureIdsForProperties(this)
+  }
 
   // Features, given the selected Neighbourhoods and Properties
   getVisibleFeatureIds = (): Id[] => {
     // If no layers are selects, return none.
     if (this.state.prisms.layer.length === 0) {
-      return [];
+      return []
     }
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
-        new Set(this.featuresForProperties)
-      )
-    );
-  };
+        new Set(this.featuresForProperties),
+      ),
+    )
+  }
 
   // Features (for Active Layers) that are on the user's wishlist
   getWishlistedFeatureIds = (): Id[] => {
-    return this.state.userFeatures?.wishlisted?.map((wl) => wl.featureId!) || [];
-  };
+    return this.state.userFeatures?.wishlisted?.map(wl => wl.featureId!) || []
+  }
 
   // Features (for Active Layers) that the user has visited
   getVisitedFeatureIds = (): Id[] => {
-    return this.state.userFeatures?.visited?.map((wl) => wl.featureId!) || [];
-  };
+    return this.state.userFeatures?.visited?.map(wl => wl.featureId!) || []
+  }
 
   getWishlistUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures?.wishlisted || [];
-  };
+    return this.state.userFeatures?.wishlisted || []
+  }
 
   getVisitedUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures?.visited || [];
-  };
+    return this.state.userFeatures?.visited || []
+  }
 
   // Features Collection -- Subsets
 
-  getActiveCollection = (): ActiveCollection => this.state.active.collection;
+  getActiveCollection = (): ActiveCollection => this.state.active.collection
 
   setActiveCollection = (
     collection: ActiveCollection,
     options: {
-      activeFeatureId?: string;
-      focus?: boolean;
-      focusFeature?: boolean;
-      highlight?: boolean;
-      openCard?: boolean;
-      openCardDelay?: number;
-      isCardOpen?: boolean;
-      navOptions?: Record<string, any>;
-    }
+      activeFeatureId?: string
+      focus?: boolean
+      focusFeature?: boolean
+      highlight?: boolean
+      openCard?: boolean
+      openCardDelay?: number
+      isCardOpen?: boolean
+      navOptions?: Record<string, any>
+    },
   ) => {
     const optionsWithDefaults = {
       highlight: true,
@@ -1945,23 +2576,23 @@ export class AppCtx {
       focusFeature: true,
       openCard: true,
       openCardDelay: 0,
-      ...options
-    };
-    this.state.active.collection = collection;
+      ...options,
+    }
+    this.state.active.collection = collection
 
     // Handle feature activation
-    this.postActiveCollectionMutation(optionsWithDefaults);
-  };
+    this.postActiveCollectionMutation(optionsWithDefaults)
+  }
 
   private postActiveCollectionMutation = (options: {
-    activeFeatureId?: string;
-    highlight?: boolean;
-    focus?: boolean;
-    focusFeature?: boolean;
-    openCard?: boolean;
-    openCardDelay?: number;
-    isCardOpen?: boolean;
-    navOptions?: Record<string, any>;
+    activeFeatureId?: string
+    highlight?: boolean
+    focus?: boolean
+    focusFeature?: boolean
+    openCard?: boolean
+    openCardDelay?: number
+    isCardOpen?: boolean
+    navOptions?: Record<string, any>
   }) => {
     const optionsWithDefaults = {
       highlight: true,
@@ -1969,30 +2600,30 @@ export class AppCtx {
       focusFeature: true,
       openCard: true,
       openCardDelay: 0,
-      ...options
-    };
-    const collection = this.state.active.collection;
-    if (!collection?.items.length) return;
+      ...options,
+    }
+    const collection = this.state.active.collection
+    if (!collection?.items.length) return
 
     if (options.highlight) {
-      this.highlightActiveCollection({ focus: optionsWithDefaults.focus });
+      this.highlightActiveCollection({ focus: optionsWithDefaults.focus })
     }
 
     // Determine which feature to activate, default to first
-    let featureIdToActivate: string | null = collection.items[0].id;
+    let featureIdToActivate: string | null = collection.items[0].id
 
     if (options.activeFeatureId) {
       // Check if the specific feature exists in the collection
       const featureExists = collection.items.some(
-        (item) => item.id === optionsWithDefaults.activeFeatureId
-      );
+        item => item.id === optionsWithDefaults.activeFeatureId,
+      )
       if (featureExists) {
-        featureIdToActivate = optionsWithDefaults.activeFeatureId || null;
+        featureIdToActivate = optionsWithDefaults.activeFeatureId || null
       } else {
         console.error(
           'Feature not found in collection',
-          optionsWithDefaults.activeFeatureId
-        );
+          optionsWithDefaults.activeFeatureId,
+        )
       }
     }
 
@@ -2002,262 +2633,260 @@ export class AppCtx {
         openCard: optionsWithDefaults.openCard,
         openCardDelay: optionsWithDefaults.openCardDelay,
         isCardOpen: optionsWithDefaults.isCardOpen,
-        navOptions: optionsWithDefaults.navOptions
-      });
+        navOptions: optionsWithDefaults.navOptions,
+      })
     }
-  };
+  }
 
   resetActiveCollection = (): void => {
     // Remove "highlighted" class from all features
-    this.unhighlightAllFeatures();
+    this.unhighlightAllFeatures()
     // Reset active collection
-    this.state.active.collection = null;
+    this.state.active.collection = null
     // Remove 'active' class from the active feature
     this.state.active.feature?.id &&
-      removeMarkerClass(this, this.state.active.feature.id);
+      removeMarkerClass(this, this.state.active.feature.id)
     // Reset active feature
-    this.state.active.feature = null;
-  };
+    this.state.active.feature = null
+  }
 
   getActiveFeature = (): FeatureFromCollection | Feature | null =>
-    this.state.active.feature;
+    this.state.active.feature
 
   setActiveFeature = (
     featureId: Id,
     options: {
-      focus?: boolean;
-      openCard?: boolean | null;
-      openCardDelay?: number;
-      isCardOpen?: boolean;
-      navOptions?: Record<string, any>;
-    }
+      focus?: boolean
+      openCard?: boolean | null
+      openCardDelay?: number
+      isCardOpen?: boolean
+      navOptions?: Record<string, any>
+    },
   ) => {
     const optionsWithDefaults = {
       focus: true,
       openCard: true,
       openCardDelay: 0,
-      ...options
-    };
+      ...options,
+    }
     // Pre-mutation: cleanup from previous feature
-    this.preActiveFeatureMutation();
+    this.preActiveFeatureMutation()
 
     // Set active state to new feature
-    this.state.active.feature = this.features.get(featureId)!;
+    this.state.active.feature = this.features.get(featureId)!
 
     // Post-mutation: setup new feature
-    this.postActiveFeatureMutation(featureId, optionsWithDefaults);
-  };
+    this.postActiveFeatureMutation(featureId, optionsWithDefaults)
+  }
 
   private preActiveFeatureMutation = () => {
     // Remove active state from previous feature
-    this.isTransitioning = true;
+    this.isTransitioning = true
     if (this.state.active.feature) {
-      removeMarkerClass(this, this.state.active.feature.id);
+      removeMarkerClass(this, this.state.active.feature.id)
     }
-  };
+  }
 
   private postActiveFeatureMutation = (
     featureId: Id,
     options: {
-      focus?: boolean;
-      openCard?: boolean | null;
-      openCardDelay?: number;
-      isCardOpen?: boolean;
-      navOptions?: Record<string, any>;
-    }
+      focus?: boolean
+      openCard?: boolean | null
+      openCardDelay?: number
+      isCardOpen?: boolean
+      navOptions?: Record<string, any>
+    },
   ) => {
     const optionsWithDefaults = {
       focus: true,
       openCard: true,
       openCardDelay: 0,
-      ...options
-    };
+      ...options,
+    }
     // TODO : Add "active" class to the feature on the map
-    addMarkerClass(this, featureId);
+    addMarkerClass(this, featureId)
 
     if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
       if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('OmniCtx.openCard'));
-        }, optionsWithDefaults.openCardDelay);
+          window.dispatchEvent(new CustomEvent('OmniCtx.openCard'))
+        }, optionsWithDefaults.openCardDelay)
       }
-      navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions);
+      navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
     }
     // Reset transition state
     setTimeout(() => {
-      this.isTransitioning = false;
-    }, 2000);
-  };
+      this.isTransitioning = false
+    }, 2000)
+  }
 
   highlightActiveCollection = (options: { focus: boolean } = { focus: false }) => {
     // Remove "highlighted" class from all features
-    this.unhighlightAllFeatures();
+    this.unhighlightAllFeatures()
     // Add "highlighted" class to all features in the active collection
-    const features = this.getActiveCollection()?.items || [];
+    const features = this.getActiveCollection()?.items || []
     if (features.length > 0) {
-      features.forEach((f) => {
-        addMarkerClass(this, f.id, 'highlighted');
-      });
+      features.forEach(f => {
+        addMarkerClass(this, f.id, 'highlighted')
+      })
     }
     if (options.focus) {
-      this.zoomToActiveCollection();
+      this.zoomToActiveCollection()
     }
-  };
+  }
 
   unhighlightAllFeatures = (): void => {
     // Remove "highlighted" class from all features
-    this.state.resources.feature.forEach((f) => {
-      removeMarkerClass(this, f.id, 'highlighted');
-    });
-  };
+    this.state.resources.feature.forEach(f => {
+      removeMarkerClass(this, f.id, 'highlighted')
+    })
+  }
 
   // NAVIGATION METHODS
 
   getHorizontalOffset = (): number => {
     // Return 0 on mobile
     if (isMobile()) {
-      return 0;
+      return 0
     }
 
     // Check if any left panels are open using PanelLeft enum
-    const leftPanelOpen = this.isLeftPanelOpen();
+    const leftPanelOpen = this.isLeftPanelOpen()
 
     // Check if any right panels are open using PanelRight enum
-    const rightPanelOpen = this.isRightPanelOpen();
+    const rightPanelOpen = this.isRightPanelOpen()
 
     // Calculate offset based on panel state
     if (leftPanelOpen && rightPanelOpen) {
-      return 0; // Both panels open, center the content
+      return 0 // Both panels open, center the content
     } else if (leftPanelOpen) {
-      return PANEL_WIDTH / 2; // Left panel open, shift right
+      return PANEL_WIDTH / 2 // Left panel open, shift right
     } else if (rightPanelOpen) {
-      return -PANEL_WIDTH / 2; // Right panel open, shift left
+      return -PANEL_WIDTH / 2 // Right panel open, shift left
     } else {
-      return 0; // No panels open
+      return 0 // No panels open
     }
-  };
+  }
 
   // Helper methods for panel state
   isLeftPanelOpen = (): boolean => {
-    return Object.values(PanelLeft).some((panel) =>
-      this.isPanelOpen(panel as unknown as Panel)
-    );
-  };
+    return Object.values(PanelLeft).some(panel =>
+      this.isPanelOpen(panel as unknown as Panel),
+    )
+  }
 
   isRightPanelOpen = (): boolean => {
-    return Object.values(PanelRight).some((panel) =>
-      this.isPanelOpen(panel as unknown as Panel)
-    );
-  };
+    return Object.values(PanelRight).some(panel =>
+      this.isPanelOpen(panel as unknown as Panel),
+    )
+  }
 
   getOpenLeftPanels = (): PanelLeft[] => {
-    return Object.values(PanelLeft).filter((panel) =>
-      this.isPanelOpen(panel as unknown as Panel)
-    );
-  };
+    return Object.values(PanelLeft).filter(panel =>
+      this.isPanelOpen(panel as unknown as Panel),
+    )
+  }
 
   getOpenRightPanels = (): PanelRight[] => {
-    return Object.values(PanelRight).filter((panel) =>
-      this.isPanelOpen(panel as unknown as Panel)
-    );
-  };
+    return Object.values(PanelRight).filter(panel =>
+      this.isPanelOpen(panel as unknown as Panel),
+    )
+  }
 
   isPanelOnLeft = (panel: Panel): boolean => {
-    return Object.values(PanelLeft).includes(panel as unknown as PanelLeft);
-  };
+    return Object.values(PanelLeft).includes(panel as unknown as PanelLeft)
+  }
 
   isPanelOnRight = (panel: Panel): boolean => {
-    return Object.values(PanelRight).includes(panel as unknown as PanelRight);
-  };
+    return Object.values(PanelRight).includes(panel as unknown as PanelRight)
+  }
 
   // MAP OPERATIONS -- REBOUNDING
 
   zoomToActiveCollection = (): void => {
-    const features = this.getActiveCollection()?.items || [];
-    this.zoomToFeatures(features);
-  };
+    const features = this.getActiveCollection()?.items || []
+    this.zoomToFeatures(features)
+  }
 
   zoomToActiveFeature = (): void => {
-    const feature = this.getActiveFeature();
-    if (!feature) return;
-    this.zoomToFeatures([feature]);
-  };
+    const feature = this.getActiveFeature()
+    if (!feature) return
+    this.zoomToFeatures([feature])
+  }
 
   zoomToFeatures = (features?: (FeatureFromCollection | Feature)[]): void => {
-    if (!this.map) return;
+    if (!this.map) return
 
     // Use provided features or current state features
-    const featuresToZoom = features || this.getFeaturesByIds(this.featuresVisible);
-    if (!featuresToZoom.length) return;
+    const featuresToZoom = features || this.getFeaturesByIds(this.featuresVisible)
+    if (!featuresToZoom.length) return
 
     // Create a FeatureCollection
     const featureCollection: FeatureCollection = {
       type: 'FeatureCollection',
-      features: featuresToZoom.map((f) => ({
+      features: featuresToZoom.map(f => ({
         type: 'Feature',
         geometry: f.geometry,
-        properties: f.properties
-      })) as GeoJSONFeature[]
-    };
+        properties: f.properties,
+      })) as GeoJSONFeature[],
+    }
     const padding = isMobile()
       ? {
           top: 48,
           bottom: 50,
           right: 50,
-          left: 50
+          left: 50,
         }
       : {
           top: 150,
           bottom: 50,
           right: 50 + (this.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
-          left: 50 + (this.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0)
-        };
+          left: 50 + (this.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
+        }
     try {
       // Convert to WGS84 and get bounds
-      const bounds = bbox(featureCollection);
+      const bounds = bbox(featureCollection)
 
-      // @ts-ignore
       this.map.cachedFitBounds(
         [
           [bounds[0], bounds[1]], // southwestern corner
-          [bounds[2], bounds[3]] // northeastern corner
+          [bounds[2], bounds[3]], // northeastern corner
         ],
         {
           center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
           padding,
           maxZoom: 18,
           duration: 2500,
-          run: true
-        }
-      );
+          run: true,
+        },
+      )
     } catch (error) {
-      console.error('Error zooming to features:', error);
+      console.error('Error zooming to features:', error)
     }
-  };
+  }
 
   zoomToCoordinates = (coordinates: [number, number][]): void => {
-    if (!this.map) return;
+    if (!this.map) return
 
     // Create a FeatureCollection
     const featureCollection: FeatureCollection = {
       type: 'FeatureCollection',
-      features: coordinates.map((c) => ({
+      features: coordinates.map(c => ({
         type: 'Feature',
         geometry: {
           type: 'Point',
-          coordinates: c
+          coordinates: c,
         },
-        properties: {}
-      })) as GeoJSONFeature[]
-    };
+        properties: {},
+      })) as GeoJSONFeature[],
+    }
 
-    const bounds = bbox(featureCollection);
+    const bounds = bbox(featureCollection)
 
-    // @ts-ignore
     this.map.cachedFitBounds(
       [
         [bounds[0], bounds[1]], // southwestern corner
-        [bounds[2], bounds[3]] // northeastern corner
+        [bounds[2], bounds[3]], // northeastern corner
       ],
       {
         center: { lon: (bounds[0] + bounds[2]) / 2, lat: (bounds[1] + bounds[3]) / 2 },
@@ -2265,14 +2894,14 @@ export class AppCtx {
           top: 150,
           bottom: 150,
           right: 50,
-          left: 50
+          left: 50,
         },
         maxZoom: 20,
         duration: 2500,
-        run: true
-      }
-    );
-  };
+        run: true,
+      },
+    )
+  }
 
   // ═══════════════════════
   // REACTIVE FEATURE COLLECTIONS
@@ -2280,29 +2909,29 @@ export class AppCtx {
 
   // Efficiently update features map from current state.resources.feature
   private rebuildFeaturesMap = () => {
-    const newFeatures = this.state.resources.feature;
-    const newFeatureIds = new Set(newFeatures.map((f) => f.id));
+    const newFeatures = this.state.resources.feature
+    const newFeatureIds = new Set(newFeatures.map(f => f.id))
 
     // Remove features that are no longer in the result set
     for (const [id] of this.featuresMap) {
       if (!newFeatureIds.has(id)) {
-        this.featuresMap.delete(id);
+        this.featuresMap.delete(id)
       }
     }
 
     // Add new features or update existing ones
-    newFeatures.forEach((feature) => {
-      this.featuresMap.set(feature.id, feature);
-    });
-  };
+    newFeatures.forEach(feature => {
+      this.featuresMap.set(feature.id, feature)
+    })
+  }
 
   addFeatureToMap = (feature: FeatureFromCollection | Feature) => {
-    this.featuresMap.set(feature.id, feature);
-  };
+    this.featuresMap.set(feature.id, feature)
+  }
 
   // Public getter for features map
   get features(): SvelteMap<Id, FeatureFromCollection | Feature> {
-    return this.featuresMap;
+    return this.featuresMap
   }
 
   // FEATURE COLLECTIONS -- FeatureIds
@@ -2312,127 +2941,154 @@ export class AppCtx {
     (this.placeCtx.state.contains.feature.neighbourhood &&
       this.placeCtx.state.filters.feature.neighbourhood.include &&
       this.getFeatureIdsForNeighbourhoods()) ||
-      []
-  ) as Id[];
+      [],
+  ) as Id[]
 
   // FeatureIds for Selected Properties
   featuresForProperties: Id[] = $derived(
-    (this.featuresMap.size && this.getFeatureIdsForProperties()) || []
-  ) as Id[];
+    (this.featuresMap.size && this.getFeatureIdsForProperties()) || [],
+  ) as Id[]
 
   // Intersection of Neighbourhoods and Properties featureIds
-  featuresVisible: Id[] = $derived(this.getVisibleFeatureIds());
+  featuresVisible: Id[] = $derived(this.getVisibleFeatureIds())
   // FeatureIds for Wishlisted Features
-  featuresWishlisted: Id[] = $derived(this.getWishlistedFeatureIds()) as Id[];
+  featuresWishlisted: Id[] = $derived(this.getWishlistedFeatureIds()) as Id[]
   // FeatureIds for Visited Features
-  featuresVisited: Id[] = $derived(this.getVisitedFeatureIds()) as Id[];
+  featuresVisited: Id[] = $derived(this.getVisitedFeatureIds()) as Id[]
 
   // FEATURE COLLECTIONS -- Utils
 
   getFeaturesByIds = (ids: Id[]): (FeatureFromCollection | Feature)[] =>
-    ids.map((id) => this.features.get(id)).filter((f) => f !== undefined);
+    ids.map(id => this.features.get(id)).filter(f => f !== undefined)
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
   getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
-    return this.getFeaturesByIds(this.featuresVisible);
-  };
+    return this.getFeaturesByIds(this.featuresVisible)
+  }
 
   getWishlistedFeatures = (): (FeatureFromCollection | Feature)[] => {
-    return this.getFeaturesByIds(this.featuresWishlisted);
-  };
+    return this.getFeaturesByIds(this.featuresWishlisted)
+  }
 
   getVisitedFeatures = (): (FeatureFromCollection | Feature)[] => {
-    return this.getFeaturesByIds(this.featuresVisited);
-  };
+    return this.getFeaturesByIds(this.featuresVisited)
+  }
 
   // Active Navigation State Methods
 
+  /**
+   * Sets the active navigable resource type.
+   *
+   * @param resourceType - Resource type to activate, or `false` to clear it.
+   * @returns Nothing.
+   */
   setActiveResourceType = (resourceType: NavigableResource | false): void => {
-    this.state.nav.resourceType = resourceType;
-  };
+    // Avoid redundant writes so reactive consumers do not re-run on no-op navigation changes.
+    if (untrack(() => this.state.nav.resourceType) === resourceType) return
+    this.state.nav.resourceType = resourceType
+  }
 
+  /**
+   * Sets the active resource reference and optionally updates the active resource type.
+   *
+   * @param resourceRef - Active resource identifier, or `false` to clear it.
+   * @param resourceType - Optional resource type to activate alongside the ref.
+   * @returns Nothing.
+   */
   setActiveResourceRef = (
     resourceRef: Id | false,
-    resourceType?: NavigableResource | false
+    resourceType?: NavigableResource | false,
   ): void => {
-    if (resourceType) {
-      this.setActiveResourceType(resourceType);
+    if (resourceType !== undefined) {
+      this.setActiveResourceType(resourceType)
     }
-    this.state.nav.resourceRef = resourceRef;
-  };
+    // Skip no-op ref updates to prevent extra navigation-driven effects.
+    if (untrack(() => this.state.nav.resourceRef) === resourceRef) return
+    this.state.nav.resourceRef = resourceRef
+  }
 
+  /**
+   * Sets the active facet and optionally updates the active resource ref and type first.
+   *
+   * @param facet - Facet to activate, or `false` to clear it.
+   * @param resourceRef - Optional resource ref to set before the facet.
+   * @param resourceType - Optional resource type to set before the facet.
+   * @returns Nothing.
+   */
   setActiveFacet = (
     facet: FacetType | false,
     resourceRef?: Id | false,
-    resourceType?: NavigableResource | false
+    resourceType?: NavigableResource | false,
   ): void => {
-    if (resourceRef) {
-      this.setActiveResourceRef(resourceRef, resourceType);
+    if (resourceRef !== undefined) {
+      this.setActiveResourceRef(resourceRef, resourceType)
     }
-    this.state.nav.facet = facet;
-  };
+    // Keep facet writes idempotent for callers that repeatedly sync URL and state.
+    if (untrack(() => this.state.nav.facet) === facet) return
+    this.state.nav.facet = facet
+  }
 
   getActiveResourceType = (): NavigableResource | false => {
-    return this.state.nav.resourceType;
-  };
+    return this.state.nav.resourceType
+  }
   getActiveResourceRef = (): Id | false => {
-    return this.state.nav.resourceRef;
-  };
+    return this.state.nav.resourceRef
+  }
   getActiveResourceId = (): Id | null => {
-    const activeResourceType = this.getActiveResourceType();
-    const resourceRef = this.getActiveResourceRef();
+    const activeResourceType = this.getActiveResourceType()
+    const resourceRef = this.getActiveResourceRef()
     if (typeof resourceRef === 'string') {
-      if (activeResourceType == FirstClassResource.organisation) {
-        return this.getOrganisationIdByCode(resourceRef as Code) ?? null;
-      } else if (activeResourceType == FirstClassResource.project) {
-        return this.getProjectIdByCode(resourceRef as Code) ?? null;
-      } else if (activeResourceType == FirstClassResource.hub) {
-        return this.getHubIdByCode(resourceRef as Code) ?? null;
+      if (activeResourceType === FirstClassResource.organisation) {
+        return this.getOrganisationIdByCode(resourceRef as Code) ?? null
+      } else if (activeResourceType === FirstClassResource.project) {
+        return this.getProjectIdByCode(resourceRef as Code) ?? null
+      } else if (activeResourceType === FirstClassResource.hub) {
+        return this.getHubIdByCode(resourceRef as Code) ?? null
       } else {
-        return resourceRef;
+        return resourceRef
       }
     }
-    return null;
-  };
+    return null
+  }
   getActiveFacet = (): FacetType | false => {
-    return this.state.nav.facet;
-  };
+    return this.state.nav.facet
+  }
 
   // Panel methods
   togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    const currentState = this.isPanelOpen(panel);
+    const currentState = this.isPanelOpen(panel)
 
     // Close other panels on the same side first (without updating URL individually)
     if (this.isPanelOnLeft(panel)) {
       this.getOpenLeftPanels()
-        .filter((p) => p !== (panel as unknown as PanelLeft))
-        .forEach((p) => this.closePanel(p as unknown as Panel, false));
+        .filter(p => p !== (panel as unknown as PanelLeft))
+        .forEach(p => this.closePanel(p as unknown as Panel, false))
     } else if (this.isPanelOnRight(panel)) {
       this.getOpenRightPanels()
-        .filter((p) => p !== (panel as unknown as PanelRight))
-        .forEach((p) => this.closePanel(p as unknown as Panel, false));
+        .filter(p => p !== (panel as unknown as PanelRight))
+        .forEach(p => this.closePanel(p as unknown as Panel, false))
     }
 
     if (window.innerWidth < DUAL_PANEL_MIN_WIDTH) {
       // Close all panels first, then toggle the target panel based on original state
-      this.closeAllPanels(false);
+      this.closeAllPanels(false)
       if (!currentState) {
         // Panel was closed, so open it
-        this.openPanel(panel, false);
+        this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right');
+          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
       // If panel was open, leave it closed (toggle behavior)
     } else {
       // Toggle the current panel
       if (currentState) {
-        this.closePanel(panel, false);
+        this.closePanel(panel, false)
       } else {
-        this.openPanel(panel, false);
+        this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right');
+          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
     }
@@ -2440,124 +3096,124 @@ export class AppCtx {
     // Update URL once at the end with the final panel state (only if updateUrl is true)
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
-      );
-      updatePanelUrlParams(panelState, this);
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+      )
+      updatePanelUrlParams(panelState, this)
     }
-  };
+  }
 
   focusPanel = (position: 'left' | 'right'): void => {
-    let panelElement = null;
+    let panelElement = null
     setTimeout(() => {
-      panelElement = document.getElementById(`${position}-panel`);
-      const inputElement = panelElement?.querySelector('input');
+      panelElement = document.getElementById(`${position}-panel`)
+      const inputElement = panelElement?.querySelector('input')
       if (inputElement) {
-        inputElement.focus();
+        inputElement.focus()
       } else {
-        panelElement?.focus();
+        panelElement?.focus()
       }
-    }, 250);
-  };
+    }, 250)
+  }
 
   closeLeftPanel = (): void => {
     this.getOpenLeftPanels().forEach((panel: PanelLeft) => {
-      this.closePanel(panel as unknown as Panel, false);
-    });
-  };
+      this.closePanel(panel as unknown as Panel, false)
+    })
+  }
 
   closeRightPanel = (): void => {
     this.getOpenRightPanels().forEach((panel: PanelRight) => {
-      this.closePanel(panel as unknown as Panel, false);
-    });
-  };
+      this.closePanel(panel as unknown as Panel, false)
+    })
+  }
 
   closeAllPanels = (updateUrl: boolean = true): void => {
-    Object.keys(this.state.panels).forEach((panel) => {
-      this.closePanel(panel as unknown as Panel, false);
-    });
+    Object.keys(this.state.panels).forEach(panel => {
+      this.closePanel(panel as unknown as Panel, false)
+    })
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
-      );
-      updatePanelUrlParams(panelState, this);
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+      )
+      updatePanelUrlParams(panelState, this)
     }
-  };
+  }
 
   openPanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.state.panels[panel].isOpen = true;
+    this.state.panels[panel].isOpen = true
 
     // Handle stateful parameters for specific panels
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
-      );
-      updatePanelUrlParams(panelState, this);
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+      )
+      updatePanelUrlParams(panelState, this)
     }
-  };
+  }
 
   closePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.state.panels[panel].isOpen = false;
+    this.state.panels[panel].isOpen = false
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen])
-      );
-      updatePanelUrlParams(panelState, this);
+        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+      )
+      updatePanelUrlParams(panelState, this)
     }
-  };
+  }
 
   isPanelOpen = (panel: Panel): boolean => {
-    return this.state.panels[panel].isOpen ?? false;
-  };
+    return this.state.panels[panel].isOpen ?? false
+  }
 
   isPanelNarrow = (panel: Panel): boolean => {
-    return (!this.isPanelOpenOrVisual(Panel.admin) && panel === Panel.admin) || false;
-  };
+    return (!this.isPanelOpenOrVisual(Panel.admin) && panel === Panel.admin) || false
+  }
 
   // Visual-only panel methods for auto-hide behavior
   openPanelVisually = (panel: Panel): void => {
-    this.state.panels[panel].isOpenVisually = true;
-  };
+    this.state.panels[panel].isOpenVisually = true
+  }
 
   closePanelVisually = (panel: Panel): void => {
-    this.state.panels[panel].isOpenVisually = false;
-  };
+    this.state.panels[panel].isOpenVisually = false
+  }
 
   isPanelOpenVisually = (panel: Panel): boolean => {
-    return this.state.panels[panel].isOpenVisually ?? false;
-  };
+    return this.state.panels[panel].isOpenVisually ?? false
+  }
 
   isPanelOpenOrVisual = (panel: Panel): boolean => {
-    return this.isPanelOpen(panel) || this.isPanelOpenVisually(panel);
-  };
+    return this.isPanelOpen(panel) || this.isPanelOpenVisually(panel)
+  }
 
   // Helper method to open profile panel with username context
   setPanelCtx = (panel: Panel, key: string, value: string | undefined | null): void => {
     // Set username context if provided
     if (value && this.state.panels[panel].ctx) {
-      (this.state.panels[panel].ctx as any)[key] = value;
+      this.state.panels[panel].ctx[key] = value
     }
-  };
+  }
 
   // Refocus map on currently visible features
   zoomToAllVisibleFeatures = (): void => {
-    const visibleFeatures = this.getVisibleFeatures();
+    const visibleFeatures = this.getVisibleFeatures()
     if (visibleFeatures.length > 0) {
-      this.zoomToFeatures(visibleFeatures);
+      this.zoomToFeatures(visibleFeatures)
     }
-  };
+  }
 
   // KEYDOWN HANDLERS
   registerKeydownHandlers = (): void => {
-    document.addEventListener('keydown', this.handleKeydown);
-  };
+    document.addEventListener('keydown', this.handleKeydown)
+  }
 
   unregisterKeydownHandlers = (): void => {
-    document.removeEventListener('keydown', this.handleKeydown);
-  };
+    document.removeEventListener('keydown', this.handleKeydown)
+  }
 
   handleKeydown = (event: KeyboardEvent): void => {
     // Skip global keyboard shortcuts when any input element is focused
-    const activeElement = document.activeElement;
+    const activeElement = document.activeElement
     if (
       activeElement &&
       (activeElement.tagName === 'INPUT' ||
@@ -2565,83 +3221,83 @@ export class AppCtx {
         activeElement.tagName === 'SELECT' ||
         activeElement.getAttribute('contenteditable') === 'true')
     ) {
-      return;
+      return
     }
 
-    let keyMatched = false;
+    let keyMatched = false
 
     if (event.key === '1') {
       if (this.isAdmin()) {
-        this.togglePanel(Panel.admin);
+        this.togglePanel(Panel.admin)
       } else {
         if (this.hub?.isCore) {
-          this.togglePanel(Panel.prisms);
+          this.togglePanel(Panel.prisms)
         } else {
-          this.togglePanel(Panel.hub);
+          this.togglePanel(Panel.hub)
         }
       }
-      keyMatched = true;
+      keyMatched = true
     } else if (event.key === '2') {
       if (this.isAdmin()) {
-        this.togglePanel(Panel.settings);
+        this.togglePanel(Panel.settings)
       } else {
-        this.togglePanel(Panel.filters);
+        this.togglePanel(Panel.filters)
       }
-      keyMatched = true;
+      keyMatched = true
     } else if (event.key === '3') {
-      this.togglePanel(Panel.stars);
-      keyMatched = true;
+      this.togglePanel(Panel.stars)
+      keyMatched = true
     } else if (event.key === '4') {
-      this.togglePanel(Panel.settings);
-      keyMatched = true;
+      this.togglePanel(Panel.settings)
+      keyMatched = true
     } else if (event.key === '5') {
       // If no username param is set, use the user's username
       this.setPanelCtx(
         Panel.profile,
         'username',
-        getUrlParam('username') || this.getUser()?.username
-      );
-      this.togglePanel(Panel.profile);
-      keyMatched = true;
+        getUrlParam('username') || this.getUser()?.username,
+      )
+      this.togglePanel(Panel.profile)
+      keyMatched = true
     }
 
     if (keyMatched) {
-      event.preventDefault();
-      event.stopPropagation();
+      event.preventDefault()
+      event.stopPropagation()
     }
-  };
+  }
 
   // NEW FEATURE
 
   setNewFeatureMode = (mode: NewFeatureMode | null): void => {
-    this.newFeatureMode = mode;
-  };
+    this.newFeatureMode = mode
+  }
 
   resetNewFeatureMode = (): void => {
-    this.newFeatureMode = null;
-  };
+    this.newFeatureMode = null
+  }
 
   getNewFeatureMode = (): NewFeatureMode | null => {
-    return this.newFeatureMode;
-  };
+    return this.newFeatureMode
+  }
 
   setNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
     // Initialize with proper locale structure for all required locales
     if (newFeature.feature && !newFeature.feature.i18n) {
-      const requiredLocales = ['en', 'zh-hant', 'zh-hans'];
+      const requiredLocales = ['en', 'zh-hant', 'zh-hans']
 
-      newFeature.feature.i18n = {};
-      requiredLocales.forEach((locale) => {
+      newFeature.feature.i18n = {}
+      requiredLocales.forEach(locale => {
         newFeature.feature!.i18n![locale as Locale] = {
           ...newFeature.feature!.i18n![locale as Locale],
           locale: locale,
           title: undefined,
-          description: undefined
-        } as any;
-      });
+          description: undefined,
+        }
+      })
     }
-    this.newFeature = newFeature;
-  };
+    this.newFeature = newFeature
+  }
 
   updateNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
     this.newFeature = {
@@ -2649,22 +3305,22 @@ export class AppCtx {
       ...newFeature,
       feature: {
         ...this.newFeature?.feature,
-        ...newFeature.feature
-      }
-    };
-  };
+        ...newFeature.feature,
+      },
+    }
+  }
 
   updateNewFeatureValue = (key: keyof NewFeatureTask['feature'], value: any): void => {
     this.newFeature = {
       ...this.newFeature,
-      feature: { ...this.newFeature?.feature, [key]: value }
-    };
-  };
+      feature: { ...this.newFeature?.feature, [key]: value },
+    }
+  }
 
   updateNewFeatureValueI18n = (
     key: FeatureI18nFieldKeys,
     value: any,
-    locale: Locale = getLocale()
+    locale: Locale = getLocale(),
   ): void => {
     this.newFeature = {
       ...this.newFeature,
@@ -2674,34 +3330,34 @@ export class AppCtx {
           ...this.newFeature?.feature?.i18n,
           [locale]: {
             ...this.newFeature?.feature?.i18n?.[locale],
-            [key]: value
-          }
-        } as any
-      }
-    };
-  };
+            [key]: value,
+          },
+        },
+      },
+    }
+  }
 
   getNewFeature = (): DeepPartial<NewFeatureTask> | null => {
-    return this.newFeature;
-  };
+    return this.newFeature
+  }
 
   resetNewFeature = () => {
-    this.newFeature = null;
-  };
+    this.newFeature = null
+  }
 
   // USER DATA
   setUser = async (user: CurrentUser | SessionUser | null) => {
-    this.user = user;
-    this.postUserMutation();
-  };
+    this.user = user
+    this.postUserMutation()
+  }
 
   getUser = (): UserProfile | CurrentUser | SessionUser | null => {
-    return this.user;
-  };
+    return this.user
+  }
 
   resetUser = () => {
-    this.user = null;
-  };
+    this.user = null
+  }
 
   getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
     // If no user, return default preferences
@@ -2714,9 +3370,9 @@ export class AppCtx {
         admin: {
           isAdminMapCollapsed: false,
           isPrimaryPanelCollapsed: false,
-          isPrimaryPanelAutoHide: false
-        }
-      };
+          isPrimaryPanelAutoHide: false,
+        },
+      }
     }
 
     return withDefaults
@@ -2740,321 +3396,309 @@ export class AppCtx {
               false,
             isPrimaryPanelAutoHide:
               (this.user as CurrentUser).preferences.admin?.isPrimaryPanelAutoHide ??
-              false
-          }
+              false,
+          },
         }
-      : ((this.user as CurrentUser).preferences as UserPreferences);
-  };
+      : ((this.user as CurrentUser).preferences as UserPreferences)
+  }
 
   updateUserPreferences = (preferences: UserPreferences) => {
-    (this.user as CurrentUser).preferences = {
+    ;(this.user as CurrentUser).preferences = {
       ...(this.user as CurrentUser).preferences,
       ...preferences,
       admin: {
         ...(this.user as CurrentUser).preferences.admin,
-        ...preferences.admin
-      }
-    };
-  };
+        ...preferences.admin,
+      },
+    }
+  }
 
   setLocale = async (locale: Locale) => {
-    (this.user as CurrentUser).locale = locale;
-    await updateLocale((this.user as CurrentUser).id, locale);
+    ;(this.user as CurrentUser).locale = locale
+    await updateLocale((this.user as CurrentUser).id, locale)
     // I18N : Update Paraglide's locale, triggers a page reload
-    setLocale(locale);
-  };
+    setLocale(locale)
+  }
 
   setFallbackLocales = (localeCode: Locale, checked: boolean) => {
     const currentFallbacks =
-      (this.user as CurrentUser).preferences.fallbackLocales || [];
+      (this.user as CurrentUser).preferences.fallbackLocales || []
     if (checked) {
       if (!currentFallbacks.includes(localeCode)) {
-        (this.user as CurrentUser).preferences.fallbackLocales = [
+        ;(this.user as CurrentUser).preferences.fallbackLocales = [
           ...currentFallbacks,
-          localeCode
-        ];
+          localeCode,
+        ]
       }
     } else {
-      (this.user as CurrentUser).preferences.fallbackLocales = currentFallbacks.filter(
-        (lc) => lc !== localeCode
-      );
+      ;(this.user as CurrentUser).preferences.fallbackLocales = currentFallbacks.filter(
+        lc => lc !== localeCode,
+      )
     }
     debouncedUpdateUserPreferences(
       (this.user as CurrentUser).id,
-      (this.user as CurrentUser).preferences as UserPreferences
-    );
-  };
+      (this.user as CurrentUser).preferences as UserPreferences,
+    )
+  }
 
   setAdvancedFeature = (code: keyof UserPreferences, value: boolean) => {
-    ((this.user as CurrentUser).preferences[code] as boolean) = value;
+    ;((this.user as CurrentUser).preferences[code] as boolean) = value
     debouncedUpdateUserPreferences(
       (this.user as CurrentUser).id,
-      (this.user as CurrentUser).preferences as UserPreferences
-    );
-  };
+      (this.user as CurrentUser).preferences as UserPreferences,
+    )
+  }
 
   setUserAttribution = async (
     attribution: string,
     onSuccess?: (attribution: string) => void,
-    onError?: (error: any) => void
+    onError?: (error: any) => void,
   ) => {
-    (this.user as CurrentUser).attribution = attribution;
+    ;(this.user as CurrentUser).attribution = attribution
     await debouncedUpdateUserAttribution(
       (this.user as CurrentUser).id,
       attribution,
       onSuccess,
-      onError
-    );
-  };
-
-  setUserDisplayUsername = async (
-    displayUsername: string,
-    onSuccess?: (displayUsername: string) => void,
-    onError?: (error: any) => void
-  ) => {
-    if (!this.user) return;
-
-    // Import validation and conversion functions
-    const { validateDisplayUsername, makeUrlSafeUsername } = await import(
-      '$lib/utils/username'
-    );
-
-    // Validate before proceeding
-    if (!validateDisplayUsername(displayUsername)) {
-      onError?.(
-        new Error(
-          'Invalid display username: spaces and special characters are not allowed'
-        )
-      );
-      return;
-    }
-
-    // Create URL-safe username (matching server logic)
-    const urlSafeUsername = makeUrlSafeUsername(displayUsername);
-
-    // Update user state immediately for optimistic updates (match what server will return)
-    this.setUser({
-      ...this.user,
-      displayUsername,
-      username: urlSafeUsername
-    } as CurrentUser);
-
-    // Use generic debounced update function directly
-    const { debouncedUpdateUser } = await import('$lib/client/services/user');
-
-    await debouncedUpdateUser(
-      (this.user as CurrentUser).id,
-      { displayUsername },
-      {
-        delay: 300,
-        timerKey: 'displayUsername',
-        onSuccess: () => onSuccess?.(displayUsername),
-        onError
-      }
-    );
-  };
+      onError,
+    )
+  }
 
   getUserLayers = (): UserLayer[] => {
-    return (this.user as CurrentUser).userLayers;
-  };
+    return this.getUserLayersForCurrentHub()
+  }
 
   getUserLayerIds = (): string[] => {
-    return (this.user as CurrentUser).userLayers.map(
-      (layer: UserLayer) => layer.layerId
-    );
-  };
+    return this.getUserLayersForCurrentHub().map((layer: UserLayer) => layer.layerId)
+  }
 
   setUserLayer = (layerId: string, checked: boolean) => {
-    const currentUserLayers = (this.user as CurrentUser).userLayers || [];
-    if (checked) {
-      if (!currentUserLayers.some((ul) => ul.layerId === layerId)) {
-        (this.user as CurrentUser).userLayers = [
-          ...currentUserLayers,
-          {
-            userId: (this.user as CurrentUser).id,
-            layerId,
-            isVisibleOnLoad: true
-          }
-        ];
-      }
-    } else {
-      (this.user as CurrentUser).userLayers = currentUserLayers.filter(
-        (ul) => ul.layerId !== layerId
-      );
-    }
+    const hubId = this.getCurrentHubId()
+    const hubCode = this.hub?.code ?? null
+    if (!hubId && !hubCode) return
+    const currentUserLayers = (this.user as CurrentUser).userLayers || []
+    const isCurrentHubLayer = (layer: UserLayer): boolean =>
+      hubId ? layer.hubId === hubId : layer.hubCode === hubCode
+    const currentHubLayers = currentUserLayers.filter(isCurrentHubLayer)
+    const otherHubLayers = currentUserLayers.filter(layer => !isCurrentHubLayer(layer))
+
+    const nextCurrentHubLayers = checked
+      ? currentHubLayers.some(layer => layer.layerId === layerId)
+        ? currentHubLayers
+        : [
+            ...currentHubLayers,
+            {
+              userId: (this.user as CurrentUser).id,
+              hubId: hubId ?? null,
+              hubCode: hubCode ?? undefined,
+              layerId,
+              isDefaultVisible: true,
+            },
+          ]
+      : currentHubLayers.filter(layer => layer.layerId !== layerId)
+
+    ;(this.user as CurrentUser).userLayers = [
+      ...otherHubLayers,
+      ...nextCurrentHubLayers,
+    ]
+
+    this.setLayers(nextCurrentHubLayers.map(layer => layer.layerId))
+
     debouncedUpdateUserLayers(
       (this.user as CurrentUser).id,
-      (this.user as CurrentUser).userLayers
-    );
-  };
+      {
+        id: hubId,
+        code: hubCode,
+      },
+      nextCurrentHubLayers,
+      {
+        onSuccess: layers => {
+          const resolvedHubId = layers[0]?.hubId ?? hubId
+          if (resolvedHubId && this.hub?.code) {
+            this.hubCodeToId.set(this.hub.code, resolvedHubId)
+          }
+
+          if (resolvedHubId && this.hub && !this.hub.id) {
+            this.hub = {
+              ...this.hub,
+              id: resolvedHubId,
+            }
+          }
+
+          if (!resolvedHubId) return
+
+          const retainedLayers = ((this.user as CurrentUser).userLayers || []).filter(
+            layer => layer.hubId !== resolvedHubId,
+          )
+
+          ;(this.user as CurrentUser).userLayers = [...retainedLayers, ...layers]
+        },
+      },
+    )
+  }
 
   setExperimental = (featureCode: keyof UserExperimental, checked: boolean) => {
-    const currentExperimental = (this.user as CurrentUser).experimental || {};
-    (this.user as CurrentUser).experimental = {
+    const currentExperimental = (this.user as CurrentUser).experimental || {}
+    ;(this.user as CurrentUser).experimental = {
       ...currentExperimental,
-      [featureCode]: checked
-    };
+      [featureCode]: checked,
+    }
     debouncedUpdateUserExperimental(
       (this.user as CurrentUser).id,
-      (this.user as CurrentUser).experimental as UserExperimental
-    );
-  };
+      (this.user as CurrentUser).experimental as UserExperimental,
+    )
+  }
 
   /**
    * Clears all images arrays from the feature cache
    * This forces fresh API calls for image data
    */
   clearFeatureCacheImages = (): void => {
-    for (const [featureId, feature] of this.cache.feature) {
+    for (const [_featureId, feature] of this.cache.feature) {
       if (feature && typeof feature === 'object' && 'images' in feature) {
         // Set images to undefined to force fresh API fetch
-        (feature as any).images = undefined;
+        feature.images = undefined
       }
     }
-  };
+  }
 
   // Clear all cache maps (for actual data reset scenarios)
   clearAllCaches = (): void => {
-    this.cache.organisation.clear();
-    this.cache.project.clear();
-    this.cache.layer.clear();
-    this.cache.feature.clear();
-    this.cache.task.clear();
-    this.cache.hub.clear();
-    this.cache.property.clear();
-    this.cache.image.clear();
-    this.cache.user.clear();
-    this.featuresMap.clear();
-    this.organisationCodeToId.clear();
-    this.projectCodeToId.clear();
-    this.hubCodeToId.clear();
-  };
+    this.cache.organisation.clear()
+    this.cache.project.clear()
+    this.cache.layer.clear()
+    this.cache.feature.clear()
+    this.cache.task.clear()
+    this.cache.hub.clear()
+    this.cache.property.clear()
+    this.cache.image.clear()
+    this.cache.user.clear()
+    this.featuresMap.clear()
+    this.organisationCodeToId.clear()
+    this.projectCodeToId.clear()
+    this.hubCodeToId.clear()
+  }
 
   // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
   resetOrganisations = async () => {
-    this.state.prisms.organisation = [];
-    await this.refreshOrganisations();
-  };
+    this.state.prisms.organisation = []
+    await this.refreshOrganisations()
+  }
 
   // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
   resetProjects = async () => {
-    this.state.prisms.project = [];
-    await this.refreshProjects();
-  };
+    this.state.prisms.project = []
+    await this.refreshProjects()
+  }
 
   // Force refresh methods for when you actually need to invalidate and fetch fresh data
   forceRefreshOrganisations = async () => {
-    this.state.prisms.organisation = [];
-    await this.invalidateAndRefresh(FirstClassResource.organisation);
-  };
+    this.state.prisms.organisation = []
+    await this.invalidateAndRefresh(FirstClassResource.organisation)
+  }
 
   forceRefreshProjects = async () => {
-    this.state.prisms.project = [];
-    await this.invalidateAndRefresh(FirstClassResource.project);
-  };
+    this.state.prisms.project = []
+    await this.invalidateAndRefresh(FirstClassResource.project)
+  }
 
   // TODO : Clear the Omnibar when a layer is toggled
   addLayer = (id: Id) => {
-    this.state.prisms.layer.push(id);
-    this.postLayerMutation();
-  };
+    this.state.prisms.layer.push(id)
+    this.postLayerMutation()
+  }
 
   removeLayer = (id: Id) => {
-    this.state.prisms.layer = this.state.prisms.layer.filter((l) => l !== id);
-    this.postLayerMutation();
-  };
+    this.state.prisms.layer = this.state.prisms.layer.filter(l => l !== id)
+    this.postLayerMutation()
+  }
 
   setLayers = (layers: Id[]) => {
-    this.state.prisms.layer = layers;
-    this.postLayerMutation();
-  };
+    this.state.prisms.layer = layers
+    this.postLayerMutation()
+  }
 
   resetLayers = () => {
-    this.state.prisms.layer = [];
-    this.postLayerMutation();
-  };
+    this.state.prisms.layer = []
+    this.postLayerMutation()
+  }
 
   initialiseCategoricalPropertyFilters = (layerId: Id) => {
-    const layer = this.state.resources.layer.find((l) => l.id === layerId);
+    const layer = this.state.resources.layer.find(l => l.id === layerId)
     if (!layer) {
-      return;
+      return
     }
 
-    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
+    const project = this.state.resources.project.find(p => p.id === layer.projectId)
     if (!project) {
-      return;
+      return
     }
 
     // Filter properties based on visibility in layer (similar logic to Categories.svelte)
     const classifierProperties =
       project.properties
-        ?.filter((p) => p.type === 'classifier')
-        .filter((prop) => {
-          const layerProperty = layer.properties?.find(
-            (lp) => lp.propertyId === prop.id
-          );
+        ?.filter(p => p.type === 'classifier')
+        .filter(prop => {
+          const layerProperty = layer.properties?.find(lp => lp.propertyId === prop.id)
           // Only consider properties visible in the layer AND not range fields
-          return layerProperty?.isVisible !== false && prop.component !== 'RangeField';
+          return layerProperty?.isVisible !== false && prop.component !== 'RangeField'
         })
         // Ensure uniqueness by key within the project's properties relevant to this layer
         .filter(
-          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
-        ) || [];
+          (prop, index, self) => index === self.findIndex(p => p.key === prop.key),
+        ) || []
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties![layerId]) {
-      this.state.filters.feature.properties![layerId] = {};
+    if (!this.state.filters.feature.properties?.[layerId]) {
+      this.state.filters.feature.properties![layerId] = {}
     }
 
-    const layerFilters = this.state.filters.feature.properties![layerId];
+    const layerFilters = this.state.filters.feature.properties?.[layerId]
 
     // Initialize each classifier property with an empty array if not already set
     classifierProperties.forEach((property: Property) => {
       if (!(property.key in layerFilters)) {
-        (layerFilters as any)[property.key] = [];
+        layerFilters[property.key] = []
       }
-    });
-  };
+    })
+  }
 
   initialiseRangePropertyFilter = (layerId: Id) => {
-    const layer = this.state.resources.layer.find((l) => l.id === layerId);
+    const layer = this.state.resources.layer.find(l => l.id === layerId)
     if (!layer) {
-      return;
+      return
     }
 
-    const project = this.state.resources.project.find((p) => p.id === layer.projectId);
+    const project = this.state.resources.project.find(p => p.id === layer.projectId)
     if (!project) {
-      return;
+      return
     }
 
     // Find properties that are RangeFields and visible for this layer
     const rangeProperties =
       project.properties
-        ?.filter((p) => p.component === 'RangeField') // Identify range properties
-        .filter((prop) => {
-          const layerProperty = layer.properties?.find(
-            (lp) => lp.propertyId === prop.id
-          );
+        ?.filter(p => p.component === 'RangeField') // Identify range properties
+        .filter(prop => {
+          const layerProperty = layer.properties?.find(lp => lp.propertyId === prop.id)
           // Only consider properties visible in the layer
-          return layerProperty?.isVisible !== false;
+          return layerProperty?.isVisible !== false
         })
         // Ensure uniqueness by key
         .filter(
-          (prop, index, self) => index === self.findIndex((p) => p.key === prop.key)
-        ) || [];
+          (prop, index, self) => index === self.findIndex(p => p.key === prop.key),
+        ) || []
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties![layerId]) {
-      this.state.filters.feature.properties![layerId] = {};
+    if (!this.state.filters.feature.properties?.[layerId]) {
+      this.state.filters.feature.properties![layerId] = {}
     }
 
-    const layerFilters = this.state.filters.feature.properties![layerId];
+    const layerFilters = this.state.filters.feature.properties?.[layerId]
 
     // Initialize each range property using its min/max if not already set
     rangeProperties.forEach((property: Property) => {
       // Validate that min and max exist and are numbers
-      const min = property.min;
-      const max = property.max;
+      const min = property.min
+      const max = property.max
 
       if (
         !(property.key in layerFilters) &&
@@ -3065,24 +3709,46 @@ export class AppCtx {
           globalMin: min,
           globalMax: max,
           rangeMin: min, // Default rangeMin to globalMin
-          rangeMax: max // Default rangeMax to globalMax
-        };
+          rangeMax: max, // Default rangeMax to globalMax
+        }
 
-        (layerFilters as any)[property.key] = filterConfig;
+        layerFilters[property.key] = filterConfig
       }
-    });
-  };
+    })
+  }
 
   // ═══════════════════════
   //
   // ═══════════════════════
   setHub = (hub: HubOptsExtended) => {
-    this.hub = hub;
-  };
+    if (hub.code && hub.id) {
+      this.hubCodeToId.set(hub.code, hub.id)
+    }
+
+    const currentHub = this.hub
+    const isSameHub =
+      Boolean(currentHub) &&
+      ((hub.id && currentHub.id === hub.id) ||
+        (!hub.id && currentHub?.code && currentHub.code === hub.code))
+
+    if (!isSameHub) {
+      this.hub = hub
+      this.applyInitialLayerPrisms()
+      return
+    }
+
+    if (currentHub && !currentHub.id && hub.id) {
+      this.hub = {
+        ...currentHub,
+        ...hub,
+      }
+      this.applyInitialLayerPrisms()
+    }
+  }
 
   resetHub = () => {
-    this.hub = null;
-  };
+    this.hub = null
+  }
 
   // ═══════════════════════
   // CACHE UPDATE UTILITIES
@@ -3093,118 +3759,141 @@ export class AppCtx {
     map: Map<K, V>,
     newItems: T[],
     getKey: (item: T) => K,
-    getValue?: (item: T) => V
+    getValue?: (item: T) => V,
   ): void => {
-    const newKeys = new Set(newItems.map(getKey));
+    const newKeys = new Set(newItems.map(getKey))
 
     // Remove entries that are no longer in the result set
     for (const [key] of map) {
       if (!newKeys.has(key)) {
-        map.delete(key);
+        map.delete(key)
       }
     }
 
     // Only add entries that aren't already present
-    newItems.forEach((item) => {
-      const key = getKey(item);
+    newItems.forEach(item => {
+      const key = getKey(item)
       if (!map.has(key)) {
-        map.set(key, getValue ? getValue(item) : (item as unknown as V));
+        map.set(key, getValue ? getValue(item) : (item as unknown as V))
       }
-    });
-  };
+    })
+  }
 
   // Convenience methods using the generic syncMap
   private syncCacheMap = <T extends { id: Id }>(
     cache: Map<Id, T>,
-    newItems: T[]
+    newItems: T[],
   ): void => {
-    this.syncMap(cache, newItems, (item) => item.id);
-  };
+    this.syncMap(cache, newItems, item => item.id)
+  }
 
   private syncCodeToIdMap = <T extends { id: Id; code: Code }>(
     codeMap: Map<Code, Id>,
-    newItems: T[]
+    newItems: T[],
   ): void => {
     this.syncMap(
       codeMap,
       newItems,
-      (item) => item.code,
-      (item) => item.id
-    );
-  };
+      item => item.code,
+      item => item.id,
+    )
+  }
 
   addToCache = (resource: FirstClassResource, id: Id, item: any): void => {
-    this.cache[resource].set(id, item);
-  };
+    this.cache[resource].set(id, item)
+  }
 
   // Header management methods
   setHeaderState = (headerState: Partial<typeof this.state.header>): void => {
-    this.state.header = { ...this.state.header, ...headerState };
-  };
+    this.state.header = { ...this.state.header, ...headerState }
+  }
 
+  /**
+   * @deprecated Prefer headerCtrl.setFormActions(...) from route/page form controllers.
+   */
   setFormContext = (formCtx: any): void => {
-    this.formCtx = formCtx;
-  };
+    this.formCtx = formCtx
+  }
 
+  /**
+   * @deprecated Prefer headerCtrl.clearFormActions(...) from route/page cleanup.
+   */
   clearFormContext = (): void => {
-    this.formCtx = null;
-  };
+    this.formCtx = null
+  }
 
   // Derived values for header
-  isIndex = $derived(this.state.nav.resourceRef === false);
-  headerResourceType = $derived(this.state.nav.resourceType);
-  headerResourceRef = $derived(this.state.nav.resourceRef);
+  isIndex = $derived(this.state.nav.resourceRef === false)
+  headerResourceType = $derived(this.state.nav.resourceType)
+  headerResourceRef = $derived(this.state.nav.resourceRef)
 
   getResourceByIdSync = (
     resource: FirstClassResource,
-    id: Id
+    id: Id,
   ): Resource | undefined => {
     switch (resource) {
       case FirstClassResource.organisation:
-        return this.cache.organisation.get(id);
+        return this.cache.organisation.get(id)
       case FirstClassResource.project:
-        return this.cache.project.get(id);
+        return this.cache.project.get(id)
       case FirstClassResource.layer:
-        return this.cache.layer.get(id);
+        return this.cache.layer.get(id)
       case FirstClassResource.feature:
-        return this.features.get(id);
+        return this.features.get(id)
       case FirstClassResource.task:
-        return this.cache.task.get(id);
+        return this.cache.task.get(id)
       case FirstClassResource.hub:
-        return this.cache.hub.get(id);
+        return this.cache.hub.get(id)
     }
-  };
+  }
 
   getResourceByRefSync = (
     resource: FirstClassResource,
-    ref: Id | Code
+    ref: Id | Code,
   ): Resource | undefined => {
     switch (resource) {
       case FirstClassResource.organisation:
         return this.cache.organisation.get(
-          this.getOrganisationIdByCode(ref as Code) ?? (ref as Id)
-        );
+          this.getOrganisationIdByCode(ref as Code) ?? (ref as Id),
+        )
       case FirstClassResource.project:
         return this.cache.project.get(
-          this.getProjectIdByCode(ref as Code) ?? (ref as Id)
-        );
+          this.getProjectIdByCode(ref as Code) ?? (ref as Id),
+        )
       case FirstClassResource.layer:
-        return this.cache.layer.get(ref as Id);
+        return this.cache.layer.get(ref as Id)
       case FirstClassResource.feature:
-        return this.features.get(ref as Id);
+        return this.features.get(ref as Id)
       case FirstClassResource.task:
-        return this.cache.task.get(ref as Id);
+        return this.cache.task.get(ref as Id)
       case FirstClassResource.hub:
-        return this.cache.hub.get(this.getHubIdByCode(ref as Code) ?? (ref as Id));
+        return this.cache.hub.get(this.getHubIdByCode(ref as Code) ?? (ref as Id))
     }
-  };
+  }
 }
-export const APPCTX_KEY = Symbol('mapContext');
+export const APPCTX_KEY = Symbol('mapContext')
+let appCtxSingleton: AppCtx | null = null
 
-export const setAppCtx = (queryClient: QueryClient, user: SessionUser | null) => {
-  const context = new AppCtx(queryClient, user);
+export const setAppCtx = (
+  queryClient: QueryClient,
+  placeCtx: PlaceCtx,
+  user: SessionUser | null,
+) => {
+  const context = new AppCtx(queryClient, placeCtx, user)
+  appCtxSingleton = context
   // Don't initialize immediately - let the session watcher handle it after mount
-  return setContext(APPCTX_KEY, context);
-};
+  return setContext(APPCTX_KEY, context)
+}
 
-export const getAppCtx = (): ReturnType<typeof setAppCtx> => getContext(APPCTX_KEY);
+export const getAppCtx = (): ReturnType<typeof setAppCtx> => {
+  const ctx = getContext<ReturnType<typeof setAppCtx> | undefined>(APPCTX_KEY)
+  if (ctx) return ctx
+
+  if (appCtxSingleton) {
+    return appCtxSingleton as ReturnType<typeof setAppCtx>
+  }
+
+  throw new Error(
+    'AppCtx context is missing. Ensure setAppCtx() is called in the root layout before using getAppCtx().',
+  )
+}

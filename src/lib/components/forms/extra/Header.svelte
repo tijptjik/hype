@@ -1,24 +1,23 @@
 <script lang="ts">
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { ExclamationTriangle } from '@steeze-ui/heroicons';
-import Info from '$lib/components/forms/extra/Info.svelte';
-import { fade } from 'svelte/transition';
+import Icon from '$lib/components/common/Icon.svelte'
+import Info from '$lib/components/forms/extra/Info.svelte'
+import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
+import { fade } from 'svelte/transition'
 // TYPES
-import type { Snippet } from 'svelte';
-import type { FormField, FormFieldArray, Form } from '$lib/types';
+import type { Snippet } from 'svelte'
+import type { Form, FormField, FormFieldArray } from '$lib/types'
 
 type HeaderProps = {
-  title?: string;
-  subtitle?: string;
-  form: unknown;
-  fields: FormField | FormFieldArray;
-  children?: Snippet;
-  actionContent?: Snippet;
-  infoContent?: Snippet;
-};
+  title?: string
+  subtitle?: string
+  form: unknown
+  fields: FormField | FormFieldArray
+  children?: Snippet
+  actionContent?: Snippet
+  infoContent?: Snippet
+}
 
-// STATE : PROPS
 let {
   title,
   subtitle,
@@ -26,18 +25,20 @@ let {
   fields,
   children,
   actionContent,
-  infoContent
-}: HeaderProps = $props();
+  infoContent,
+}: HeaderProps = $props()
 
-const { errors } = form as Form;
+const { errors } = form as Form
 </script>
 
 {#snippet renderErrorMessages(messages: string[])}
   <div
-    class="flex-grow-2 flex flex-row items-center justify-center gap-2 caret-transparent">
+    class="flex-grow-2 flex flex-row items-center justify-center gap-2 caret-transparent"
+  >
     {#each messages as message}
       <div
-        class="badge badge-lg flex items-center justify-center gap-2 truncate border-1 border-error p-4 font-mono text-base-content">
+        class="badge badge-lg flex items-center justify-center gap-2 truncate border-1 border-error p-4 font-mono text-base-content"
+      >
         <Icon src={ExclamationTriangle} class="h-4 w-4 shrink-0 stroke-current" />
         <p class="text-sm">{message}</p>
       </div>
@@ -46,7 +47,8 @@ const { errors } = form as Form;
 {/snippet}
 
 <div
-  class="relative flex h-14 w-full flex-row items-center justify-between gap-4 rounded-2xl bg-transparent pl-1 @container">
+  class="relative flex h-14 w-full flex-row items-center justify-between gap-4 rounded-2xl bg-transparent pl-1 @container"
+>
   <div class="flex items-center gap-4">
     <h3 class=" text-xl font-bold uppercase">
       {title}
@@ -54,18 +56,18 @@ const { errors } = form as Form;
         class="case hidden select-text {subtitle
           ? 'pb-2'
           : ''} pr-3 text-sm normal-case text-base-content/70 @sm:block"
-        >{@html subtitle}</small>
+        >{@html subtitle}</small
+      >
     </h3>
   </div>
   {#if $errors}
-    {#each Object.entries($errors) as [key, messagesContainer]}
+    {#each Object.entries($errors) as [ key, messagesContainer ]}
       {#if messagesContainer}
         {#if key === '_errors' && Array.isArray(messagesContainer) && messagesContainer.length > 0}
           {@render renderErrorMessages(messagesContainer)}
         {:else if key in fields && Array.isArray(messagesContainer) && messagesContainer.length > 0}
           {@render renderErrorMessages(messagesContainer)}
         {:else if key in fields && typeof messagesContainer === 'object' && messagesContainer !== null}
-          <!-- Handle nested field errors like userRoles._errors -->
           {#if '_errors' in messagesContainer && Array.isArray(messagesContainer._errors) && messagesContainer._errors.length > 0}
             {@render renderErrorMessages(messagesContainer._errors)}
           {/if}
@@ -76,15 +78,14 @@ const { errors } = form as Form;
   {@render children?.()}
   {#if actionContent || infoContent}
     <div
-      class="flex h-full flex-shrink-0 flex-row items-center justify-between gap-4"
-      transition:fade>
+      class="flex h-full shrink-0 flex-row items-center justify-between gap-4"
+      transition:fade
+    >
       {#if actionContent}
         {@render actionContent?.()}
       {/if}
       {#if infoContent}
-        <Info>
-          {@render infoContent?.()}
-        </Info>
+        <Info> {@render infoContent?.()} </Info>
       {/if}
     </div>
   {/if}

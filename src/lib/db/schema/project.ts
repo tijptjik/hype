@@ -1,12 +1,18 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { organisation } from './organisation';
-import { image } from './image';
-import { user } from './user';
+import { organisation } from './organisation'
+import { image } from './image'
+import { user } from './user'
 // ENUM
-import { ProjectRoleType, supportedLocales } from '../../enums';
+import { ProjectRoleType, supportedLocales } from '../../enums'
+import type { ProjectLicense } from '../../types'
+import type {
+  ProjectCapabilities,
+  ProjectRoleCapabilities,
+} from '../zod/schema/project.types'
+import { createDefaultProjectLicense } from '$lib/db/services/licence'
 
 /* ============================================================================
  * PROJECT MANAGEMENT
@@ -34,26 +40,48 @@ export const project = sqliteTable('project', {
   code: text('code').unique().notNull(),
   imageId: text('imageId').references(() => image.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
+  // Project-level capability availability map.
+  // Keys set to true are available for assignment in projectRole.capabilities.
+  capabilities: text('capabilities', {
+    mode: 'json',
+  })
+    .$type<ProjectCapabilities>()
+    .notNull()
+    .default({
+      manageBakeries: false,
+      manageVolunteers: false,
+      manageDropOffs: false,
+    } as ProjectCapabilities),
+  // Project-level copyright / reuse policy and attribution settings.
+  // Stored as JSON so Drizzle serializes/deserializes the license matrix consistently.
+  license: text('license', {
+    mode: 'json',
+  })
+    .$type<ProjectLicense>()
+    .notNull()
+    .default(createDefaultProjectLicense()),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // False : Project may be shown in the Admin Panel
   // True : Project is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+  localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Project translations
@@ -67,7 +95,7 @@ export const projectI18n = sqliteTable(
       .notNull()
       .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]]
+      enum: supportedLocales as [string, ...string[]],
     }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
@@ -80,25 +108,18 @@ export const projectI18n = sqliteTable(
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
       .default(true),
-    // License in {locale}
-    license: text('license').default('Copyright').notNull(),
-    licenseGen: integer('licenseGen', { mode: 'boolean' }).notNull().default(true),
-    // Attribution in {locale}
-    attribution: text('attribution').notNull(),
-    attributionGen: integer('attributionGen', { mode: 'boolean' })
-      .notNull()
-      .default(true)
   },
-  (table) => [
-    primaryKey({ columns: [table.projectId, table.locale] })
-  ]
-);
+  table => [primaryKey({ columns: [table.projectId, table.locale] })],
+)
 
 /**
  * Project role assignments
  * @remarks
  * Links users to projects with maintainer roles
+ * - capabilities: JSON object mapping capability types to boolean values
+ *   Allows for fine-grained permission control beyond the base role
  */
+
 export const projectRole = sqliteTable(
   'projectRole',
   {
@@ -109,12 +130,14 @@ export const projectRole = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     role: text('role', {
-      enum: Object.values(ProjectRoleType) as [string, ...string[]]
+      enum: Object.values(ProjectRoleType) as [string, ...string[]],
     })
       .notNull()
-      .default(ProjectRoleType.maintainer)
+      .default(ProjectRoleType.user),
+    // JSON object for fine-grained capability control: { capabilityType: boolean }
+    capabilities: text('capabilities', {
+      mode: 'json',
+    }).$type<ProjectRoleCapabilities>(),
   },
-  (table) => [
-    primaryKey({ columns: [table.projectId, table.userId] })
-  ]
-);
+  table => [primaryKey({ columns: [table.projectId, table.userId] })],
+)

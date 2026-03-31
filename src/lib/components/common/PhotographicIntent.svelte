@@ -1,32 +1,37 @@
 <script lang="ts">
-import { intentDisplay } from '$lib/client/services/image';
+import { intentDisplay } from '$lib/client/services/image'
+import { setImageIntent } from '$lib/api/server/image.remote'
+import { ImageContextResource } from '$lib/enums'
 // TYPES
-import type { Intent } from '$lib/types';
+import type { Intent } from '$lib/db/zod/schema/image.types'
 
-let { intent, imageId }: { intent: Intent; imageId: string } = $props();
+let {
+  intent,
+  imageId,
+  featureId,
+}: { intent: Intent; imageId: string; featureId: string } = $props()
 
 // TODO Replace this with the intention widget from Gallery
-const updateIntent = async (newIntent: string) => {
+const updateIntent = async (newIntent: Intent) => {
   try {
-    const response = await fetch(`/api/images/${imageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ featureImage: { intent: newIntent } })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update intent');
-    }
-
-    intent = newIntent as Intent;
+    await setImageIntent({
+      id: imageId,
+      ctxType: ImageContextResource.feature,
+      ctxId: featureId,
+      featureId,
+      intent: newIntent,
+      meta: { isAdminRequest: true },
+    })
+    intent = newIntent
   } catch (error) {
-    console.error('Error updating intent:', error);
+    console.error('Error updating intent:', error)
   }
-};
+}
 </script>
 
 <div
   class="cursor-pointer rounded-full bg-base-300 px-3 py-1 text-sm font-medium"
-  onclick={() => updateIntent(intent === 'context' ? 'general' : 'context')}>
+  onclick={() => updateIntent(intent === 'context' ? 'general' : 'context')}
+>
   {intentDisplay[intent]}
 </div>

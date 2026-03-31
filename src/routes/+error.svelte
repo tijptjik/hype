@@ -1,8 +1,8 @@
 <script lang="ts">
 // SVELTE
-import { page } from '$app/state';
+import { page } from '$app/state'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 </script>
 
 <div class="flex h-screen w-full flex-col items-center justify-center">
@@ -13,7 +13,8 @@ import { m } from '$lib/i18n';
   <a
     draggable="false"
     href="/"
-    class="text-s btn btn-neutral btn-sm mt-4 select-none font-light">
+    class="text-s btn btn-neutral btn-sm mt-4 select-none font-light"
+  >
     {m.http_404__go_home()}
   </a>
 </div>

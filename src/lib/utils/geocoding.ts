@@ -1,65 +1,58 @@
-import proj from 'proj4';
-import type { Locale } from '$lib/types';
+import proj from 'proj4'
+import type { Locale } from '$lib/types'
 
 // Coordinate system definitions
-proj.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+proj.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs')
 proj.defs(
   'EPSG:2326',
-  '+proj=tmerc +lat_0=22.31213333333334 +lon_0=114.1785555555556 +k=1 +x_0=836694.05 +y_0=819069.8 +ellps=intl +datum=HK80 +units=m +no_defs'
-);
+  '+proj=tmerc +lat_0=22.31213333333334 +lon_0=114.1785555555556 +k=1 +x_0=836694.05 +y_0=819069.8 +ellps=intl +datum=HK80 +units=m +no_defs',
+)
 
 // Country mappings
 export const countryNormalised: Record<string, Record<Locale, string>> = {
-  'Hong Kong': { en: 'HKSAR', 'zh-hant': '香港特區', 'zh-hans': '香港特区' }
-};
+  'Hong Kong': { en: 'HKSAR', 'zh-hant': '香港特區', 'zh-hans': '香港特区' },
+}
 
 export const getNormalisedCountry = (
   country: keyof typeof countryNormalised,
-  locale: Locale = 'en'
+  locale: Locale = 'en',
 ): string | null => {
-  return countryNormalised[country]?.[locale] || null;
-};
+  return countryNormalised[country]?.[locale] || null
+}
 
 // Region mappings
 const regionNormalised: Record<string, Record<Locale, string>> = {
   'Hong Kong Island': { en: 'HK', 'zh-hant': '香港島', 'zh-hans': '香港岛' },
   Kowloon: { en: 'KL', 'zh-hant': '九龍', 'zh-hans': '九龙' },
-  'New Territories': { en: 'NT', 'zh-hant': '新界', 'zh-hans': '新界' }
-};
+  'New Territories': { en: 'NT', 'zh-hant': '新界', 'zh-hans': '新界' },
+}
 
 const regionIdentifiers = {
-  HK: [
-    'hk',
-    'hki',
-    'hongkongisland',
-    'hongkong',
-    '港島',
-    '香港岛'
-  ],
+  HK: ['hk', 'hki', 'hongkongisland', 'hongkong', '港島', '香港岛'],
   KL: ['kl', 'kln', 'kwln', 'kowloon', '九龍', '九龙'],
-  NT: ['nt', 'ntr', 'newterritories', '新界']
-};
+  NT: ['nt', 'ntr', 'newterritories', '新界'],
+}
 
 const getNormalisedRegionKey = (region: string): keyof typeof regionNormalised => {
   if (!Object.keys(regionNormalised).includes(region)) {
-    region = region.toLowerCase().replace(/ /g, '');
+    region = region.toLowerCase().replace(/ /g, '')
     if (regionIdentifiers.HK.includes(region)) {
-      return 'Hong Kong Island';
+      return 'Hong Kong Island'
     } else if (regionIdentifiers.KL.includes(region)) {
-      return 'Kowloon';
+      return 'Kowloon'
     } else if (regionIdentifiers.NT.includes(region)) {
-      return 'New Territories';
+      return 'New Territories'
     }
   }
-  return region as keyof typeof regionNormalised;
-};
+  return region as keyof typeof regionNormalised
+}
 
 export const getNormalisedRegion = (
   region: keyof typeof regionNormalised,
-  locale: Locale = 'en'
+  locale: Locale = 'en',
 ): string | null => {
-  return regionNormalised[getNormalisedRegionKey(region)]?.[locale] || null;
-};
+  return regionNormalised[getNormalisedRegionKey(region)]?.[locale] || null
+}
 
 // District mappings
 const districtNormalised: Record<string, Record<Locale, string>> = {
@@ -80,8 +73,8 @@ const districtNormalised: Record<string, Record<Locale, string>> = {
   'Wan Chai': { en: 'WC', 'zh-hant': '灣仔區', 'zh-hans': '湾仔区' },
   'Wong Tai Sin': { en: 'WTS', 'zh-hant': '黃大仙區', 'zh-hans': '黄大仙区' },
   'Yau Tsim Mong': { en: 'YTM', 'zh-hant': '油尖旺區', 'zh-hans': '油尖旺区' },
-  'Yuen Long': { en: 'YL', 'zh-hant': '元朗區', 'zh-hans': '元朗区' }
-};
+  'Yuen Long': { en: 'YL', 'zh-hant': '元朗區', 'zh-hans': '元朗区' },
+}
 
 const districtIdentifiers = {
   CW: [
@@ -91,7 +84,7 @@ const districtIdentifiers = {
     'centralandwestnerndistrict',
     'central&westnerndistrict',
     '中西區',
-    '中西区'
+    '中西区',
   ],
   EST: ['est', 'eastern', 'eastern', 'easterndistrict', 'eastdistrict', '東區', '东区'],
   ILD: ['ild', 'islands', 'island', 'islandsdistrict', '離島區', '离岛区'],
@@ -109,7 +102,7 @@ const districtIdentifiers = {
     'southdistrict',
     'southerndistrict',
     '南區',
-    '南区'
+    '南区',
   ],
   TP: ['tp', 'taipo', 'taipodistrict', '大埔區', '大浦区'],
   TW: ['tw', 'tsuenwan', 'tsuenwandistrict', '荃灣區', '荃湾区'],
@@ -117,8 +110,8 @@ const districtIdentifiers = {
   WC: ['wc', 'wanchai', 'wanchaidistrict', '灣仔區', '湾仔区'],
   WTS: ['wts', 'wongtaisin', 'wongtaitsindistrict', '黃大仙區', '黄大仙区'],
   YTM: ['ytm', 'yautsimmong', 'yautsimmongdistrict', '油尖旺區', '油尖旺区'],
-  YL: ['yl', 'yuenlong', 'yuenlongdistrict', '元朗區', '元朗区']
-};
+  YL: ['yl', 'yuenlong', 'yuenlongdistrict', '元朗區', '元朗区'],
+}
 export const districtCodeToName = {
   CW: 'Central & Western',
   EST: 'Eastern',
@@ -137,33 +130,32 @@ export const districtCodeToName = {
   WC: 'Wan Chai',
   WTS: 'Wong Tai Sin',
   YTM: 'Yau Tsim Mong',
-  YL: 'Yuen Long'
-};
+  YL: 'Yuen Long',
+}
 
 const getNormalisedDistrictKey = (
-  district: string
+  district: string,
 ): keyof typeof districtNormalised => {
   if (!Object.keys(districtNormalised).includes(district)) {
-    district = district.toLowerCase().replace(/ /g, '');
+    district = district.toLowerCase().replace(/ /g, '')
     Object.entries(districtIdentifiers).forEach(([key, values]) => {
       if (values.includes(district)) {
-        const dCode = districtCodeToName[key as keyof typeof districtCodeToName];
-        district = dCode;
+        const dCode = districtCodeToName[key as keyof typeof districtCodeToName]
+        district = dCode
       }
-    });
+    })
   }
-  return district as keyof typeof districtNormalised;
-};
+  return district as keyof typeof districtNormalised
+}
 
 export const getNormalisedDistrict = (
   district: keyof typeof districtNormalised,
-  locale: Locale = 'en'
+  locale: Locale = 'en',
 ): string | null => {
-  const normalisedDistrictKey = getNormalisedDistrictKey(district);
-  const normalisedDistrict =
-    districtNormalised[normalisedDistrictKey]?.[locale] || null;
-  return normalisedDistrict;
-};
+  const normalisedDistrictKey = getNormalisedDistrictKey(district)
+  const normalisedDistrict = districtNormalised[normalisedDistrictKey]?.[locale] || null
+  return normalisedDistrict
+}
 
 // Common address abbreviations
 const addressAbbreviations = {
@@ -194,47 +186,47 @@ const addressAbbreviations = {
   Unit: 'Unit',
   Flat: 'Flat',
   Shop: 'Shop',
-  Suite: 'St'
-};
+  Suite: 'St',
+}
 
 export function convertWGS84ToHK1980(lng: number, lat: number): [number, number] {
-  return proj('EPSG:4326', 'EPSG:2326', [lng, lat]);
+  return proj('EPSG:4326', 'EPSG:2326', [lng, lat])
 }
 
 export function convertHK1980ToWGS84(
   easting: number,
-  northing: number
+  northing: number,
 ): [number, number] {
-  return proj('EPSG:2326', 'EPSG:4326', [easting, northing]);
+  return proj('EPSG:2326', 'EPSG:4326', [easting, northing])
 }
 
 export function calculateDistance(
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const R = 6371e3 // Earth's radius in meters
+  const φ1 = (lat1 * Math.PI) / 180
+  const φ2 = (lat2 * Math.PI) / 180
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180
 
   const a =
     Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
-  return parseInt((R * c).toFixed(0)); // Distance in meters
+  return parseInt((R * c).toFixed(0), 10) // Distance in meters
 }
 
 export function applyAddressAbbreviations(address: string): string {
   // Apply abbreviations
   Object.entries(addressAbbreviations).forEach(([full, abbrev]) => {
-    const regex = new RegExp(`\\b${full}\\b`, 'gi');
-    address = address.replace(regex, abbrev);
-  });
-  return address;
+    const regex = new RegExp(`\\b${full}\\b`, 'gi')
+    address = address.replace(regex, abbrev)
+  })
+  return address
 }
 
 // export function parseToDisplayAddressEn(address: string, name?: string): string {
@@ -268,35 +260,35 @@ export function applyAddressAbbreviations(address: string): string {
 // }
 
 export function capitalizeFirstLetter(str: string): string {
-  if (!str) return str;
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  if (!str) return str
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
 
 export function titleCase(str: string | null | undefined): string {
-  if (!str) return '';
-  return str.split(' ').map(capitalizeFirstLetter).join(' ');
+  if (!str) return ''
+  return str.split(' ').map(capitalizeFirstLetter).join(' ')
 }
 
 export function getFirstLocation(locations: string): string {
-  if (!locations) return '';
-  return locations.split(',')[0].trim();
+  if (!locations) return ''
+  return locations.split(',')[0].trim()
 }
 
 export function removeCountry(str: string): string {
-  const parts = str.split(',');
-  const lastPart = parts.pop();
+  const parts = str.split(',')
+  const lastPart = parts.pop()
   if (lastPart && countryNormalised[lastPart.toLowerCase().trim()]) {
-    return parts.join(',').trim();
+    return parts.join(',').trim()
   }
-  return str;
+  return str
 }
 
 export function removeRegion(str: string): string {
-  const parts = str.split(',');
-  const lastPart = parts.pop()?.trim();
+  const parts = str.split(',')
+  const lastPart = parts.pop()?.trim()
 
   if (lastPart) {
-    const lastPartLower = lastPart.toLowerCase().replace(/\s+/g, '');
+    const lastPartLower = lastPart.toLowerCase().replace(/\s+/g, '')
 
     // Check against region identifiers (removing spaces for comparison)
     if (
@@ -304,24 +296,24 @@ export function removeRegion(str: string): string {
       regionIdentifiers.KL.includes(lastPartLower) ||
       regionIdentifiers.NT.includes(lastPartLower)
     ) {
-      return parts.join(',').trim();
+      return parts.join(',').trim()
     }
   }
 
-  return str;
+  return str
 }
 
 export function removeDistrict(str: string): string {
-  const parts = str.split(',');
-  const lastPart = parts[parts.length - 1]?.trim().toLowerCase();
+  const parts = str.split(',')
+  const lastPart = parts[parts.length - 1]?.trim().toLowerCase()
   // Check if the last part is a district identifier
   if (
     lastPart &&
-    Object.values(districtIdentifiers).some((identifiers) =>
-      identifiers.includes(lastPart.replace(/ /g, ''))
+    Object.values(districtIdentifiers).some(identifiers =>
+      identifiers.includes(lastPart.replace(/ /g, '')),
     )
   ) {
-    return parts.slice(0, -1).join(',').trim();
+    return parts.slice(0, -1).join(',').trim()
   }
-  return str;
+  return str
 }

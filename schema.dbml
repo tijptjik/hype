@@ -23,10 +23,12 @@ table feature {
   geometry text [not null]
   addressMeta text [default: `{}`]
   isPublished integer [not null, default: 0]
+  localIsPublished integer
   publisherId text
   publishedAt text
   isPendingReview integer [not null, default: 0]
   isArchived integer [not null, default: 0]
+  localIsArchived integer
   isIntangible integer [not null, default: 0]
   isVisitable integer [not null, default: 1]
   visitableAsOf text [default: `(CURRENT_DATE)`]
@@ -55,6 +57,7 @@ table featureImage {
   imageId text [not null]
   intent text [not null, default: 'undefined']
   isPublished integer [not null, default: 0]
+  localIsPublished integer
   publishedAt text
   publisherId text
 
@@ -84,7 +87,7 @@ table featurePropertyI18n {
 
   indexes {
     (featureId, propertyId, locale) [pk]
-    
+
   }
 }
 
@@ -92,6 +95,8 @@ table hub {
   id text [pk, not null]
   code text [not null, unique]
   domain text [unique]
+  imageId text
+  isPublished integer [not null, default: 1]
   isArchived integer [not null, default: 0]
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
@@ -112,11 +117,41 @@ table hubI18n {
   }
 }
 
+table hubLayer {
+  hubId text [not null]
+  layerId text [not null]
+  isDefaultVisible integer [not null, default: 0]
+
+  indexes {
+    (hubId, layerId) [pk]
+  }
+}
+
+table hubProperty {
+  hubId text [not null]
+  propertyId text [not null]
+  rank integer [not null, default: 0]
+
+  indexes {
+    (hubId, propertyId) [pk]
+  }
+}
+
+table hubRole {
+  hubId text [not null]
+  userId text [not null]
+  role text [not null, default: 'admin']
+
+  indexes {
+    (hubId, userId) [pk]
+  }
+}
+
 table image {
   id text [pk, not null]
   contributorId text
-  cdn text [not null, default: 'cloudinary']
-  env text [not null, default: 'dg6vtsga1']
+  cdn text [not null, default: 'cloudflareR2']
+  env text [not null, default: 'local']
   cdnId text
   publicId text [not null]
   version integer
@@ -130,7 +165,9 @@ table image {
   latitude text
   longitude text
   credit text
+  presentationMode text [not null, default: 'contain']
   isArchived integer [not null, default: 0]
+  localIsArchived integer
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
 }
@@ -140,11 +177,14 @@ table layer {
   organisationId text [not null]
   projectId text [not null]
   metadata text
+  rank integer [not null, default: 0]
   isDefaultVisible integer [not null, default: 0]
   isPublished integer [not null, default: 0]
+  localIsPublished integer
   publishedAt text
   publisherId text
   isArchived integer [not null, default: 0]
+  localIsArchived integer
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
 }
@@ -169,6 +209,34 @@ table layerProperty {
   propertyId text [not null]
   isVisible integer [not null, default: 1]
   isUserContributed integer [not null, default: 1]
+  isUserContributable integer [not null, default: 1]
+
+  indexes {
+    (layerId, propertyId) [name: 'layerProperty_layerId_propertyId_idx', unique]
+  }
+}
+
+table mapStyleI18n {
+  mapStyleId text [not null]
+  locale text [not null]
+  name text [not null]
+  nameGen integer [not null, default: 0]
+  description text
+  descriptionGen integer [not null, default: 0]
+
+  indexes {
+    (mapStyleId, locale) [pk]
+  }
+}
+
+table mapStyles {
+  id text [pk, not null]
+  code text [not null, unique]
+  organisationId text
+  hubId text
+  previewImagePath text
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
 }
 
 table organisation {
@@ -179,6 +247,7 @@ table organisation {
   hubId text
   isHubExclusive integer [not null, default: 0]
   isCoreInclusive integer [not null, default: 1]
+  capabilities text [not null, default: `{}`]
   isPublished integer [not null, default: 1]
   publishedAt text
   publisherId text
@@ -202,6 +271,16 @@ table organisationI18n {
   }
 }
 
+table organisationProperty {
+  organisationId text [not null]
+  propertyId text [not null]
+  rank integer [not null, default: 0]
+
+  indexes {
+    (organisationId, propertyId) [pk]
+  }
+}
+
 table organisationRole {
   organisationId text [not null]
   userId text [not null]
@@ -217,10 +296,14 @@ table project {
   organisationId text [not null]
   code text [not null, unique]
   imageId text
+  capabilities text [not null, default: `{"manageBakeries":false,"manageVolunteers":false,"manageDropOffs":false}`]
+  license text [not null, default: `{"meta":{"allMediaSameRights":true,"attribution":"","isAllRightsReserved":false,"isPublicDomain":false,"history":[]},"media":{"all":{"license":"CC BY-SA / ODC-ODbL","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false},"image":{"license":"CC BY-SA","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false},"text":{"license":"CC BY-SA","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false},"data":{"license":"ODC-ODbL","isPublicDomain":false,"isAllRightsReserved":false,"BY":true,"SA":true,"NC":false,"ND":false}}}`]
   isPublished integer [not null, default: 0]
+  localIsPublished integer
   publishedAt text
   publisherId text
   isArchived integer [not null, default: 0]
+  localIsArchived integer
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
 }
@@ -244,10 +327,34 @@ table projectI18n {
   }
 }
 
+table projectMapStyles {
+  projectId text [not null]
+  mapStyleId text [not null]
+  createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+  modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
+
+  indexes {
+    projectId [pk]
+  }
+}
+
+table projectProperty {
+  projectId text [not null]
+  propertyId text [not null]
+  isEnabled integer [not null, default: 1]
+  isDefaultEnabled integer [not null, default: 0]
+  rank integer [not null, default: 0]
+
+  indexes {
+    (projectId, propertyId) [pk]
+  }
+}
+
 table projectRole {
   projectId text [not null]
   userId text [not null]
-  role text [not null, default: 'maintainer']
+  role text [not null, default: 'user']
+  capabilities text
 
   indexes {
     (projectId, userId) [pk]
@@ -256,15 +363,20 @@ table projectRole {
 
 table property {
   id text [pk, not null]
-  projectId text [not null]
+  organisationId text
+  hubId text
+  projectId text
+  scope text [not null, default: 'project']
   type text [not null, default: 'classifier']
-  isTranslatable integer [not null, default: 1]
   key text [not null]
   rank integer [not null, default: 0]
   component text [not null, default: 'SelectField']
   min integer
   max integer
   isUserContributed integer [not null, default: 1]
+  isTranslatable integer [not null, default: 1]
+  isUserContributable integer [not null, default: 1]
+  isDefaultEnabled integer [not null, default: 0]
   createdAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
   modifiedAt text [not null, default: `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`]
 }
@@ -282,6 +394,7 @@ table propertyValue {
   id text [pk, not null]
   propertyId text [not null]
   rank integer [not null, default: 0]
+  value text
 }
 
 table propertyValueI18n {
@@ -374,9 +487,12 @@ table userLayer {
   layerId text [not null]
   userId text [not null]
   isVisibleOnLoad integer [not null, default: 0]
+  hubId text [not null]
+  isDefaultVisible integer [not null, default: 0]
 
   indexes {
     (layerId, userId) [pk]
+    (layerId, userId, hubId) [pk]
   }
 }
 
@@ -415,6 +531,20 @@ ref: feature.publisherId - user.id
 
 ref: hubI18n.hubId > hub.id
 
+ref: hubLayer.hubId > hub.id
+
+ref: hubLayer.layerId > layer.id
+
+ref: hubProperty.hubId > hub.id
+
+ref: hubProperty.propertyId > property.id
+
+ref: hub.imageId - image.id
+
+ref: hubRole.hubId > hub.id
+
+ref: hubRole.userId > user.id
+
 ref: image.contributorId > user.id
 
 ref: layerI18n.layerId > layer.id
@@ -429,7 +559,13 @@ ref: layer.projectId > project.id
 
 ref: layer.publisherId - user.id
 
+ref: mapStyleI18n.mapStyleId > mapStyles.id
+
 ref: organisationI18n.organisationId > organisation.id
+
+ref: organisationProperty.organisationId > organisation.id
+
+ref: organisationProperty.propertyId > property.id
 
 ref: organisation.imageId - image.id
 
@@ -442,6 +578,14 @@ ref: organisationRole.userId > user.id
 ref: organisationRole.organisationId > organisation.id
 
 ref: projectI18n.projectId > project.id
+
+ref: project.id - projectMapStyles.projectId
+
+ref: projectMapStyles.mapStyleId > mapStyles.id
+
+ref: projectProperty.projectId > project.id
+
+ref: projectProperty.propertyId > property.id
 
 ref: project.organisationId > organisation.id
 
@@ -456,6 +600,10 @@ ref: projectRole.userId > user.id
 ref: propertyI18n.propertyId > property.id
 
 ref: property.projectId > project.id
+
+ref: property.organisationId > organisation.id
+
+ref: property.hubId > hub.id
 
 ref: propertyValueI18n.propertyValueId > propertyValue.id
 
@@ -482,3 +630,5 @@ ref: userFeature.featureId > feature.id
 ref: userLayer.userId > user.id
 
 ref: userLayer.layerId - layer.id
+
+ref: userLayer.hubId - hub.id

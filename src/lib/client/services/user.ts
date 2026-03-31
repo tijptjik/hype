@@ -1,5 +1,10 @@
+import { setUserLayerDefaults, updateUserProfile } from '$lib/api/server/user.remote'
+import { m } from '$lib/i18n'
+import { normalizeUsername, validateUsername } from '$lib/utils/username'
 // TYPES
-import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types';
+import type { Id, Locale } from '$lib/types'
+import type { UserLayer, UserPreferences } from '$lib/db/zod/schema/user.types'
+import type { RemoteFormIssue } from '@sveltejs/kit'
 
 /**
  * Update the user's preferred locale on the server and in Paraglide's locale store. This triggers a page reload so the user can see the new locale immediately.
@@ -7,33 +12,51 @@ import type { Id, Locale, UserPreferences, UserLayer } from '$lib/types';
  * @param locale - The new locale
  */
 export const updateLocale = async (userId: Id, locale: Locale) => {
-  if (!userId) return;
+  if (!userId) return
 
   // API : Update user's preferred locale
   try {
-    await fetch(`/api/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale })
-    });
+    await updateUserProfile({
+      id: userId,
+      data: { locale },
+    })
 
     // AUTH : Signal to client that it should refresh its session
-    const { authClient } = await import('$lib/auth/client');
+    const { authClient } = await import('$lib/auth/client')
     try {
       // Force session refresh by calling getSession with disableCookieCache
       await authClient.getSession({
-        query: { disableCookieCache: true }
-      });
+        query: { disableCookieCache: true },
+      })
     } catch (error) {
-      console.warn('⚠️ Failed to refresh session after locale update:', error);
+      console.warn('⚠️ Failed to refresh session after locale update:', error)
     }
   } catch (error) {
-    console.error('Failed to update preferred language:', error);
+    console.error('Failed to update preferred language:', error)
   }
-};
+}
 
 // Generic debounced timers
-const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+export const validateUsernameIssues = (
+  username: string,
+): { normalizedUsername: string; issues: RemoteFormIssue[] } => {
+  const normalizedUsername = normalizeUsername(username)
+  const issues = validateUsername(normalizedUsername)
+    ? []
+    : [
+        {
+          message: m.validation__username_invalid(),
+          path: ['username'],
+        } satisfies RemoteFormIssue,
+      ]
+
+  return {
+    normalizedUsername,
+    issues,
+  }
+}
 
 /**
  * Generic debounced user update function
@@ -43,77 +66,76 @@ const debouncedTimers = new Map<string, ReturnType<typeof setTimeout>>();
  */
 export const debouncedUpdateUser = async (
   userId: Id,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   options: {
-    delay?: number;
-    timerKey?: string;
-    onSuccess?: (data: any) => void;
-    onError?: (error: any) => void;
-  } = {}
+    delay?: number
+    timerKey?: string
+    onSuccess?: (data: Record<string, unknown>) => void
+    onError?: (error: unknown) => void
+  } = {},
 ) => {
-  const { delay = 750, timerKey = 'default', onSuccess, onError } = options;
+  const { delay = 750, timerKey = 'default', onSuccess, onError } = options
 
   // ASSERT : We have a userId
   if (!userId) {
-    console.warn('User session not found. Cannot update user data.');
-    return;
+    console.warn('User session not found. Cannot update user data.')
+    return
   }
 
   // TIMER : Clear previous timeout for this key
-  const existingTimer = debouncedTimers.get(timerKey);
+  const existingTimer = debouncedTimers.get(timerKey)
   if (existingTimer) {
-    clearTimeout(existingTimer);
+    clearTimeout(existingTimer)
   }
 
   // TIMER : Set new timeout
   const timer = setTimeout(async () => {
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      const response = await updateUserProfile({
+        id: userId,
+        data,
+      })
 
-      if (response.ok) {
-        onSuccess?.(data);
+      if (response?.data) {
+        onSuccess?.(data)
       } else {
-        const errorText = await response.text();
-        console.error('Failed to update user data:', errorText);
-        onError?.(new Error(errorText));
+        const errorText = 'Failed to update user data'
+        console.error(errorText)
+        onError?.(new Error(errorText))
       }
     } catch (error) {
-      console.error('Error updating user data:', error);
-      onError?.(error);
+      console.error('Error updating user data:', error)
+      onError?.(error)
     } finally {
-      debouncedTimers.delete(timerKey);
+      debouncedTimers.delete(timerKey)
     }
-  }, delay);
+  }, delay)
 
-  debouncedTimers.set(timerKey, timer);
-};
+  debouncedTimers.set(timerKey, timer)
+}
 
 export const debouncedUpdateUserPreferences = (
   userId: Id,
-  userPreferences: UserPreferences
+  userPreferences: UserPreferences,
 ) => {
   // ASSERT : We have userPreferences
-  if (!userPreferences) return;
+  if (!userPreferences) return
 
   debouncedUpdateUser(
     userId,
     { preferences: JSON.stringify(userPreferences) },
     {
       delay: 750,
-      timerKey: 'preferences'
-    }
-  );
-};
+      timerKey: 'preferences',
+    },
+  )
+}
 
 export const debouncedUpdateUserAttribution = async (
   userId: Id,
   attribution: string,
   onSuccess?: (attribution: string) => void,
-  onError?: (error: any) => void
+  onError?: (error: unknown) => void,
 ) => {
   await debouncedUpdateUser(
     userId,
@@ -122,42 +144,104 @@ export const debouncedUpdateUserAttribution = async (
       delay: 800,
       timerKey: 'attribution',
       onSuccess: () => onSuccess?.(attribution),
-      onError
-    }
-  );
-};
+      onError,
+    },
+  )
+}
 
-export const debouncedUpdateUserLayers = (userId: Id, userLayers: UserLayer[]) => {
-  // ASSERT : We have userLayers
-  if (!userLayers) return;
+export const debouncedUpdateUsername = async (
+  userId: Id,
+  username: string,
+  options: {
+    onSuccess?: (username: string) => void
+    onInvalid?: (issues: RemoteFormIssue[]) => void
+    onError?: (error: unknown) => void
+  } = {},
+) => {
+  const { normalizedUsername, issues } = validateUsernameIssues(username)
+  if (issues.length > 0) {
+    options.onInvalid?.(issues)
+    return { normalizedUsername, issues }
+  }
 
-  debouncedUpdateUser(
+  await debouncedUpdateUser(
     userId,
-    { userLayers },
+    { username: normalizedUsername },
     {
-      delay: 750,
-      timerKey: 'userLayers'
+      delay: 300,
+      timerKey: 'username',
+      onSuccess: () => options.onSuccess?.(normalizedUsername),
+      onError: options.onError,
+    },
+  )
+
+  return {
+    normalizedUsername,
+    issues,
+  }
+}
+
+export const debouncedUpdateUserLayers = (
+  userId: Id,
+  hub: {
+    id?: Id | null
+    code?: string | null
+  },
+  userLayers: Array<{
+    layerId: Id
+    hubId?: Id | null
+    isDefaultVisible: boolean
+  }>,
+  options: {
+    onSuccess?: (layers: UserLayer[]) => void
+  } = {},
+) => {
+  // ASSERT : We have hub identity so the server can resolve where to persist defaults.
+  if (!userLayers || (!hub.id && !hub.code)) return
+
+  const existingTimer = debouncedTimers.get('userLayers')
+  if (existingTimer) {
+    clearTimeout(existingTimer)
+  }
+
+  const timer = setTimeout(async () => {
+    try {
+      const response = await setUserLayerDefaults({
+        userId,
+        hubId: hub.id ?? undefined,
+        hubCode: hub.code ?? undefined,
+        layers: userLayers.map(layer => ({
+          layerId: layer.layerId,
+          hubId: layer.hubId ?? undefined,
+          isDefaultVisible: Boolean(layer.isDefaultVisible),
+        })),
+      })
+      options.onSuccess?.((response?.data ?? []) as UserLayer[])
+    } finally {
+      debouncedTimers.delete('userLayers')
     }
-  );
-};
+  }, 750)
+
+  debouncedTimers.set('userLayers', timer)
+}
 
 export const debouncedUpdateUserExperimental = (
   userId: Id,
   experimental: {
-    contributorMode?: boolean;
-    noLabelsMode?: boolean;
-    [key: string]: boolean | undefined;
-  }
+    contributorMode?: boolean
+    noLabelsMode?: boolean
+    [key: string]: boolean | undefined
+  },
 ) => {
   // ASSERT : We have experimental features
-  if (!experimental) return;
+  if (!experimental) return
 
   debouncedUpdateUser(
     userId,
     { experimental: JSON.stringify(experimental) },
     {
       delay: 750,
-      timerKey: 'experimental'
-    }
-  );
-};
+      timerKey: 'experimental',
+    },
+  )
+}

@@ -1,44 +1,101 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // UTILS
-import { formatDate } from '$lib';
+import { formatDate } from '$lib'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte';
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getImageCtx } from '$lib/context/image.svelte'
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getMetadata } from '$lib/api/server/image.remote'
+import { getUserForAttribution } from '$lib/api/server/user.remote'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Camera, MapPin } from '@steeze-ui/heroicons';
+import Icon from '$lib/components/common/Icon.svelte'
+import Camera from 'virtual:icons/lucide/camera'
+import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
-import type { Image, Feature } from '$lib/types';
-import type { IconSource } from '@steeze-ui/heroicons';
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 // CONTEXT
-const imageCtx = getImageCtx();
-const appCtx = getAppCtx();
+const imageCtx = getImageCtx()
+const appCtx = getAppCtx()
 
-let { currentImage }: { currentImage: Image } = $props();
+let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()
 
-let showContributor = $state(false);
+let showContributor = $state(false)
 
 let toggleAttribution = () => {
-  showContributor = !showContributor;
-};
+  showContributor = !showContributor
+}
 
 // Get feature data with proper null checking
-const contextId = $derived(imageCtx.state.context?.ctxId);
-const feature = $derived(contextId ? appCtx.features.get(contextId) : undefined);
-// Note: Using simple fallbacks since user cache and createdAt may not be available
+const contextId = $derived(imageCtx.state.context?.ctxId)
+const feature = $derived(contextId ? appCtx.features.get(contextId) : undefined)
+let contributorAttribution = $state<string | null>(null)
+let imageMetadata = $state<{
+  credit?: string | null
+  capturedAt?: string | null
+} | null>(null)
 const contributorName = $derived(
-  (feature as Feature)?.contributor?.attribution || m.anonymous()
-);
+  contributorAttribution ||
+    (feature as Feature)?.contributor?.attribution ||
+    m.anonymous(),
+)
 const createdAt = $derived(
-  'createdAt' in (feature || {}) ? (feature as any).createdAt : undefined
-);
+  'createdAt' in (feature || {}) ? feature.createdAt : undefined,
+)
+
+$effect(() => {
+  const contributorId = currentImage?.image.contributorId
+  if (!contributorId) {
+    contributorAttribution = null
+    return
+  }
+
+  const profile = appCtx.isAdmin() ? 'card' : 'attribution'
+  void getUserForAttribution({
+    id: contributorId,
+    meta: {
+      profile,
+      ...(appCtx.isAdmin() ? { isAdminRequest: true } : {}),
+    },
+  })
+    .then(user => {
+      contributorAttribution = user?.attribution ?? null
+    })
+    .catch(() => {
+      contributorAttribution = null
+    })
+})
+
+$effect(() => {
+  const publicId = currentImage?.image.publicId
+  const env = currentImage?.image.env
+  if (!publicId) {
+    imageMetadata = null
+    return
+  }
+
+  void getMetadata({
+    publicId,
+    env: env ?? undefined,
+    profile: 'basic',
+    meta: {
+      ...(appCtx.isAdmin() ? { isAdminRequest: true } : {}),
+    },
+  })
+    .then(response => {
+      imageMetadata = response?.data ?? null
+    })
+    .catch(() => {
+      imageMetadata = null
+    })
+})
 </script>
 
 {#snippet metadataItem(
-  icon: IconSource,
+  icon: Component,
   contributorName: string | null,
   contributedAt: string | null,
   row: number
@@ -50,7 +107,8 @@ const createdAt = $derived(
         : '-translate-y-[60px] opacity-100 delay-0'
       : row == 1
         ? '-translate-y-6 opacity-0 delay-100'
-        : '-translate-y-6 opacity-0 delay-0'} flex font-mono text-xs text-white transition-all duration-300">
+        : '-translate-y-6 opacity-0 delay-0'} flex font-mono text-xs text-white transition-all duration-300"
+  >
     <div class="flex h-6 gap-2 rounded-l bg-base-300/80 px-2 py-1">
       <Icon src={icon} class="h-4 w-4" />
       {@html m.clear_patchy_bobcat_wish({
@@ -58,9 +116,7 @@ const createdAt = $derived(
       })}
     </div>
     <div class="h-6 rounded-r bg-base-300/70 px-2 py-1 font-normal">
-      <span class="font-bold">
-        {formatDate(contributedAt ?? '')}
-      </span>
+      <span class="font-bold"> {formatDate(contributedAt ?? '')} </span>
     </div>
   </div>
 {/snippet}
@@ -69,8 +125,8 @@ const createdAt = $derived(
   {@render metadataItem(MapPin, contributorName, createdAt, 1)}
   {@render metadataItem(
     Camera,
-    currentImage.attribution || currentImage.credit,
-    currentImage.capturedAt || currentImage.createdAt,
+    currentImage.image.attribution || imageMetadata?.credit || null,
+    imageMetadata?.capturedAt || currentImage.image.createdAt,
     2
   )}
 </div>
@@ -79,6 +135,7 @@ const createdAt = $derived(
   onmouseenter={toggleAttribution}
   onmouseleave={toggleAttribution}
   ontouchstart={toggleAttribution}
-  onkeydown={toggleAttribution}>
+  onkeydown={toggleAttribution}
+>
   ⓘ
 </div>

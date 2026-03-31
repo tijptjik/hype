@@ -1,0 +1,181 @@
+@layer components {
+  .bits-theme .bits-form__capabilities-header {
+    align-items: center;
+    min-height: calc(var(--spacing) * 20);
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__capabilities-search {
+    @apply flex w-full items-center;
+    min-width: 0;
+    height: auto;
+    padding-inline: 0;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__capabilities-search .bits-search {
+    width: 100%;
+  }
+
+  .bits-theme .bits-form__capabilities-search .bits-search-bar {
+    width: 100%;
+  }
+
+  .bits-theme .bits-form__capabilities-search .bits-search-bar {
+    margin-bottom: 0;
+  }
+
+  .bits-theme .bits-form__capabilities-header .bits-form__section-header-right {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    align-items: center;
+    overflow: visible;
+  }
+
+  .bits-theme .bits-form__capabilities-section {
+    container-type: inline-size;
+    container-name: bits-capability-section;
+  }
+
+  .bits-theme .bits-form__capabilities-section--initial {
+    height: 100%;
+    min-height: max(16rem, 100%);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-form__capabilities-header--initial {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 4);
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    margin-inline: auto;
+  }
+
+  .bits-theme .bits-form__capabilities-header--initial .bits-form__section-header-left {
+    width: min(50%, 720px);
+    max-width: 100%;
+    justify-content: center;
+    padding-left: 0;
+  }
+
+  .bits-theme
+    .bits-form__capabilities-header--initial
+    .bits-form__section-header-heading {
+    text-align: center;
+  }
+
+  .bits-theme .bits-form__capabilities-header--initial .bits-header {
+    align-items: center;
+  }
+
+  .bits-theme .bits-form__capabilities-search-row {
+    width: 100%;
+  }
+
+  .bits-theme .bits-form__capabilities-search-row .bits-form__capabilities-search {
+    width: min(50%, 720px);
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .bits-theme
+    .bits-form__capabilities-search-row
+    .bits-form__capabilities-search
+    .bits-search {
+    width: 100%;
+  }
+
+  .bits-theme
+    .bits-form__capabilities-search-row
+    .bits-form__capabilities-search
+    .bits-search__results {
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding-inline: 0;
+  }
+
+  .bits-theme
+    .bits-form__capabilities-section--initial
+    .bits-form__capabilities-search-row {
+    width: 100%;
+  }
+
+  .bits-theme .bits-form__capabilities-list {
+    --bits-capability-grid-gap: calc(var(--spacing) * 3);
+    display: grid;
+    gap: var(--bits-capability-grid-gap);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  @container bits-capability-section (min-width: 48rem) {
+    .bits-theme .bits-form__capabilities-list {
+      grid-template-columns: repeat(
+          2,
+          minmax(0, calc((100% - var(--bits-capability-grid-gap)) / 2))
+        );
+    }
+  }
+
+  @container bits-capability-section (min-width: 72rem) {
+    .bits-theme .bits-form__capabilities-list {
+      grid-template-columns: repeat(
+          3,
+          minmax(0, calc((100% - (var(--bits-capability-grid-gap) * 2)) / 3))
+        );
+    }
+  }
+
+  .bits-theme .bits-form__capabilities-card-root {
+    width: 100%;
+  }
+
+  .bits-theme .bits-form__capabilities-card-icon-wrap {
+    background: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+  }
+
+  .bits-theme .bits-form__capabilities-card-icon-shell {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bits-theme .bits-form__capabilities-card-icon {
+    @apply h-6 w-6 text-primary;
+  }
+
+  .bits-theme .bits-form__capabilities-card-actions {
+    min-width: max-content;
+  }
+
+  .bits-theme .bits-form__capabilities-remove-button {
+    @apply h-10 w-10;
+  }
+
+  .bits-theme .bits-form__capabilities-remove-toggle {
+    @apply h-10 whitespace-nowrap;
+    min-width: max-content;
+  }
+
+  .bits-theme .bits-form__capabilities-empty {
+  }
+
+  .bits-theme .bits-form__capabilities-empty-title {
+  }
+
+  .bits-theme .bits-form__capabilities-empty-description {
+  }
+
+  .bits-theme .bits-form__capabilities-empty-cta {
+  }
+}

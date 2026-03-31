@@ -1,15 +1,16 @@
 // DRIZZLE
-import { eq, SQL } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm'
 // API
 
-import type { Id, SessionUser, UserFeature } from '$lib/types';
+import type { Id, SessionUser } from '$lib/types'
+import type { UserFeature } from '$lib/db/zod/schema/user.types'
 
-import type { QueryParams } from '$lib/types';
+import type { QueryParams } from '$lib/types'
 
-import { applyQueryFilters, removeExcludedColumns } from '..';
+import { applyQueryFilters, removeExcludedColumns } from '..'
 
-import { userFeature } from '$lib/db/schema/index';
-import { assertUserIsSelf, assertUserLoggedIn, runAssertions } from '$lib/auth/asserts';
+import { userFeature } from '$lib/db/schema/index'
+import { assertUserIsSelf, assertUserLoggedIn, runAssertions } from '$lib/auth/asserts'
 
 /**
  * Get the query context for the userFeature resource - filters the query based on the user's Id -- they should only ever obtain their own features, along with any other query parameters to filter on.
@@ -23,20 +24,20 @@ import { assertUserIsSelf, assertUserLoggedIn, runAssertions } from '$lib/auth/a
 export const getUserFeatureQueryContext = (params: QueryParams, userId: Id) => {
   // SETUP : By default, only show non-archived projects,
   // and exclude isArchived and isPublished filters from the query.
-  const conditions: SQL<unknown>[] = [];
-  const excludeColumns = ['userId'];
-  params = removeExcludedColumns(params, excludeColumns);
+  const conditions: SQL<unknown>[] = []
+  const excludeColumns = ['userId']
+  params = removeExcludedColumns(params, excludeColumns)
 
   // USER : Only show features for the user
-  conditions.push(eq(userFeature.userId, userId));
+  conditions.push(eq(userFeature.userId, userId))
 
   // CONTEXT : Apply query filters to the conditions
   if (Object.keys(params).length > 0) {
-    applyQueryFilters(userFeature, params, conditions);
+    applyQueryFilters(userFeature, params, conditions)
   }
 
-  return { params, conditions, excludeColumns };
-};
+  return { params, conditions, excludeColumns }
+}
 
 /**
  * Get the context for listing user features
@@ -48,11 +49,11 @@ export const assertPermissionsToListUserFeature = (user: SessionUser, userId: Id
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user),
-    () => assertUserIsSelf(user, userId)
-  );
+    () => assertUserIsSelf(user, userId),
+  )
 
-  if (assertionError) return assertionError;
-};
+  if (assertionError) return assertionError
+}
 
 /**
  * Get the context for updating a project
@@ -65,11 +66,11 @@ export const assertPermissionsToUpdateUserFeature = (user: SessionUser, userId: 
   // Run all access control assertions
   const assertionError = runAssertions(
     () => assertUserLoggedIn(user),
-    () => assertUserIsSelf(user, userId)
-  );
+    () => assertUserIsSelf(user, userId),
+  )
 
-  if (assertionError) return assertionError;
-};
+  if (assertionError) return assertionError
+}
 
 /**
  * Builds response data from database entities
@@ -77,5 +78,5 @@ export const assertPermissionsToUpdateUserFeature = (user: SessionUser, userId: 
  * @returns A parsed response shape
  */
 export const toResponseShape = (userFeatures: UserFeature[]) => {
-  return userFeatures;
-};
+  return userFeatures
+}

@@ -1,0 +1,25 @@
+@layer components {
+  .bits-theme .bits-separator {
+    @apply bg-border my-4 shrink-0;
+  }
+
+  .bits-theme .bits-separator[data-orientation="horizontal"] {
+    @apply h-px w-full;
+  }
+
+  .bits-theme .bits-separator[data-orientation="vertical"] {
+    @apply h-full w-px;
+  }
+
+  .bits-theme .bits-separator.bits-separator--variant-dot {
+    @apply my-0 mx-2 inline-flex h-9 w-9 items-center justify-center;
+    align-self: center;
+    background-color: transparent;
+    color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
+  }
+
+  .bits-theme .bits-separator__dot-icon {
+    @apply h-full w-full;
+    display: block;
+  }
+}

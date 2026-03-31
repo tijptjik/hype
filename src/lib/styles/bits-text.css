@@ -1,0 +1,76 @@
+@layer components {
+  .bits-theme .bits-scrollable-text {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bits-theme .bits-scrollable-text[data-overflow="true"] {
+    cursor: grab;
+  }
+
+  .bits-theme .bits-scrollable-text[data-overflow="true"][data-dragging="true"] {
+    cursor: grabbing;
+  }
+
+  .bits-theme
+    .bits-scrollable-text[data-leading-fade="true"][data-trailing-fade="true"] {
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      black 12px,
+      black calc(100% - 12px),
+      transparent 100%
+    );
+  }
+
+  .bits-theme
+    .bits-scrollable-text[data-leading-fade="false"][data-trailing-fade="true"] {
+    mask-image: linear-gradient(
+      90deg,
+      black 0,
+      black calc(100% - 12px),
+      transparent 100%
+    );
+  }
+
+  .bits-theme
+    .bits-scrollable-text[data-leading-fade="false"][data-trailing-fade="false"] {
+    mask-image: none;
+  }
+
+  .bits-theme .bits-scrollable-text__viewport {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .bits-theme .bits-scrollable-text__track {
+    display: inline-flex;
+    min-width: max-content;
+    align-items: center;
+    gap: var(--bits-scrollable-text-gap, 24px);
+    will-change: transform;
+  }
+
+  .bits-theme .bits-scrollable-text__content {
+    display: inline-block;
+    min-width: max-content;
+  }
+
+  .bits-theme .bits-scrollable-text__separator {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
+    min-width: max-content;
+  }
+
+  .bits-theme
+    .bits-scrollable-text[data-dragging="true"]
+    .bits-scrollable-text__content {
+    user-select: none;
+  }
+}

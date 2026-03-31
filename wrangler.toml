@@ -47,11 +47,48 @@ database_id = "6757bbf2-ac2c-4323-b73a-0a48f0c41d62"
 # Ensure migrations_dir points to the correct folder
 migrations_dir = "migrations"
 
+[[queues.producers]]
+binding = "MAP_RENDER_QUEUE"
+queue = "hype-map-render-jobs-local"
+
+[[queues.producers]]
+binding = "ASSET_RENDER_QUEUE"
+queue = "hype-asset-render-jobs-local"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+remote = true
+
 [vars]
 ENVIRONMENT = "local"
 
 PUBLIC_DRIZZLE_LOGGER = false
-PUBLIC_SVELTE_QUERY_DEVTOOLS = false
 
 PUBLIC_HUB_CODE = "core"
 
@@ -61,6 +98,9 @@ PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
+PUBLIC_ORIGIN = "http://localhost:5173"
+PUBLIC_ASSET_BASE_URL = ""
+PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
 
 ########
 # PRODUCTION ENVIRONMENT
@@ -73,7 +113,6 @@ name = "hype-prod"
 ENVIRONMENT = "production"
 
 PUBLIC_DRIZZLE_LOGGER = false
-PUBLIC_SVELTE_QUERY_DEVTOOLS = false
 
 PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
 PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
@@ -82,11 +121,46 @@ PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
 PUBLIC_HUB_CODE = "core"
+PUBLIC_ORIGIN = "https://hype.hk"
+PUBLIC_ASSET_BASE_URL = "https://assets.hype.hk"
+PUBLIC_PREVIEW_ASSET_BASE_URL = "https://assets.hype.hk"
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "hype-db-prod"
 database_id = "7786af0e-3782-47f8-b70d-de645ba836ad"
+
+[[env.production.queues.producers]]
+binding = "MAP_RENDER_QUEUE"
+queue = "hype-map-render-jobs-prod"
+
+[[env.production.queues.producers]]
+binding = "ASSET_RENDER_QUEUE"
+queue = "hype-asset-render-jobs-prod"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
 
 [[env.production.routes]]
 pattern = "hype.hk"
@@ -100,6 +174,14 @@ custom_domain = true
 pattern = "hkghostsigns.hype.hk"
 custom_domain = true
 
+[[env.production.routes]]
+pattern = "breadline.hk"
+custom_domain = true
+
+[[env.production.routes]]
+pattern = "breadline.hype.hk"
+custom_domain = true
+
 ########
 # PREVIEW ENVIRONMENT
 ###
@@ -111,7 +193,6 @@ name = "hype-preview"
 ENVIRONMENT = "preview"
 
 PUBLIC_DRIZZLE_LOGGER = false
-PUBLIC_SVELTE_QUERY_DEVTOOLS = false
 
 PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
 PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
@@ -120,11 +201,46 @@ PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
 PUBLIC_HUB_CODE = "core"
+PUBLIC_ORIGIN = "https://preview.hype.hk"
+PUBLIC_ASSET_BASE_URL = "https://assets.preview.hype.hk"
+PUBLIC_PREVIEW_ASSET_BASE_URL = "https://assets.preview.hype.hk"
 
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "hype-db-preview"
 database_id = "f6bae0f9-c072-4ef0-9b75-efcc792d40fb"
+
+[[env.preview.queues.producers]]
+binding = "MAP_RENDER_QUEUE"
+queue = "hype-map-render-jobs-preview"
+
+[[env.preview.queues.producers]]
+binding = "ASSET_RENDER_QUEUE"
+queue = "hype-asset-render-jobs-preview"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
 
 [[env.preview.routes]]
 pattern = "preview.hype.hk"
@@ -132,6 +248,18 @@ custom_domain = true
 
 [[env.preview.routes]]
 pattern = "preview.hkghostsigns.com"
+custom_domain = true
+
+[[env.preview.routes]]
+pattern = "preview.breadline.hk"
+custom_domain = true
+
+[[env.preview.routes]]
+pattern = "breadline.preview.hype.hk"
+custom_domain = true
+
+[[env.preview.routes]]
+pattern = "hkghostsigns.preview.hype.hk"
 custom_domain = true
 
 ########

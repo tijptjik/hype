@@ -1,0 +1,5 @@
+export { default as Icon } from './Icon.svelte'
+export { default as IconAnchor } from './IconAnchor.svelte'
+export { default as LazyIconAnchor } from './LazyIconAnchor.svelte'
+export type { IconProps, IconSize, IconTone } from './icon.types'
+export type { IconAnchorProps, LazyIconAnchorProps } from './iconAnchor.types'

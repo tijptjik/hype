@@ -1,25 +1,25 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
-import type { FacetType } from '$lib/types';
+import type { FacetType } from '$lib/types'
 
 // STATE : CONTEXT
-const adminCtx = getAdminCtx();
+const adminCtx = getAdminCtx()
 
 let {
   facet,
-  isActive = false
+  isActive = false,
 }: {
-  facet: { label: string; ref: FacetType };
-  isActive?: boolean;
-} = $props();
+  facet: { label: string; ref: FacetType }
+  isActive?: boolean
+} = $props()
 
 // UTILS
 const onclick = (e: MouseEvent) => {
-  e.preventDefault();
-  adminCtx.setFacet(facet.ref);
-};
+  e.preventDefault()
+  adminCtx.setFacet(facet.ref)
+}
 </script>
 
 <li>
@@ -28,7 +28,8 @@ const onclick = (e: MouseEvent) => {
     class="btn btn-sm {isActive
       ? 'btn-primary'
       : 'btn-ghost'} text-white hover:btn-primary"
-    {onclick}>
+    {onclick}
+  >
     {facet.label}
   </a>
 </li>

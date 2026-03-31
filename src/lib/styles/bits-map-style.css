@@ -1,0 +1,70 @@
+@layer components {
+  .bits-theme .bits-map-style-card {
+    min-height: calc(var(--spacing) * 16);
+  }
+
+  .bits-theme .bits-map-style-card__preview {
+    @apply relative overflow-hidden;
+    width: 128px;
+    height: 128px;
+    align-self: stretch;
+    border-top-left-radius: calc(1rem - 4px);
+    border-bottom-left-radius: calc(1rem - 4px);
+    background: color-mix(in oklab, var(--color-base-200) 80%, transparent);
+    background-clip: padding-box;
+    isolation: isolate;
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    transform: translateZ(0);
+  }
+
+  .bits-theme .bits-map-style-card__preview-image {
+    @apply block h-full w-full object-cover;
+    border-radius: 0;
+    background-clip: border-box;
+    background-color: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+  }
+
+  .bits-theme .bits-map-style-card__preview-fallback {
+    @apply flex h-full w-full items-center justify-center text-sm font-semibold uppercase;
+    border: 1px dashed color-mix(in oklab, var(--color-base-content) 16%, transparent);
+    background: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+    color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+    border-radius: 0;
+  }
+
+  .bits-theme .bits-map-style-card__preview-status {
+    @apply absolute inset-0 flex items-center justify-center bg-black/45 backdrop-blur-[1px];
+  }
+
+  .bits-theme .bits-map-style-card__preview-spinner {
+    @apply h-7 w-7 animate-spin text-neutral-content/85;
+  }
+
+  .bits-theme .bits-map-style-warning-bar {
+    @apply mx-2 flex w-full items-center gap-3 pb-4;
+  }
+
+  .bits-theme .bits-map-style-warning-bar__icon {
+    @apply h-10 w-10 shrink-0 text-error;
+  }
+
+  .bits-theme .bits-map-style-warning-bar__title {
+    @apply text-xl font-bold text-error;
+  }
+
+  .bits-theme .bits-map-style-warning-bar__copy {
+    @apply pl-2 text-sm text-neutral-content/82;
+  }
+
+  @media (max-width: 960px) {
+    .bits-theme .bits-map-style-card {
+      flex-wrap: wrap;
+    }
+
+    .bits-theme .bits-map-style-card .bits-card__actions {
+      width: 100%;
+      justify-content: flex-end;
+      padding-block: 0 1rem;
+    }
+  }
+}

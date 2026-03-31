@@ -1,0 +1,159 @@
+#:schema ../../node_modules/wrangler/config-schema.json
+name = "hype-asset-service"
+main = "src/index.ts"
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
+send_metrics = false
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+ENVIRONMENT = "local"
+ASSET_DEBUG_MEMORY = "0"
+ASSET_DEBUG_MEMORY_MATCH = ""
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
+
+[[analytics_engine_datasets]]
+binding = "ASSET_ANALYTICS"
+dataset = "hype_asset_delivery"
+
+[[analytics_engine_datasets]]
+binding = "ASSET_WARMUP_ANALYTICS"
+dataset = "hype_asset_warmup"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+remote = true
+
+[[queues.consumers]]
+queue = "hype-asset-render-jobs-local"
+max_batch_size = 4
+max_batch_timeout = 5
+
+[env.preview]
+name = "hype-asset-service-preview"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+ASSET_DEBUG_MEMORY = "0"
+ASSET_DEBUG_MEMORY_MATCH = ""
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
+
+[[env.preview.analytics_engine_datasets]]
+binding = "ASSET_ANALYTICS"
+dataset = "hype_asset_delivery"
+
+[[env.preview.analytics_engine_datasets]]
+binding = "ASSET_WARMUP_ANALYTICS"
+dataset = "hype_asset_warmup"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+
+[[env.preview.r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+
+[[env.preview.queues.consumers]]
+queue = "hype-asset-render-jobs-preview"
+max_batch_size = 4
+max_batch_timeout = 5
+
+[[env.preview.routes]]
+pattern = "assets.preview.hype.hk"
+custom_domain = true
+
+[env.production]
+name = "hype-asset-service-prod"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+ASSET_DEBUG_MEMORY = "1"
+ASSET_DEBUG_MEMORY_MATCH = "lix6swwj3bbky2hmp1s2"
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
+
+[[env.production.analytics_engine_datasets]]
+binding = "ASSET_ANALYTICS"
+dataset = "hype_asset_delivery"
+
+[[env.production.analytics_engine_datasets]]
+binding = "ASSET_WARMUP_ANALYTICS"
+dataset = "hype_asset_warmup"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+
+[[env.production.queues.consumers]]
+queue = "hype-asset-render-jobs-prod"
+max_batch_size = 4
+max_batch_timeout = 5
+
+[[env.production.routes]]
+pattern = "assets.hype.hk"
+custom_domain = true

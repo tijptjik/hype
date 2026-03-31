@@ -1,15 +1,15 @@
 <script lang="ts">
-import { fly, slide } from 'svelte/transition';
-import { cubicInOut } from 'svelte/easing';
+import { fly, slide } from 'svelte/transition'
+import { cubicInOut } from 'svelte/easing'
 // CONSTANTS
-import { PANEL_WIDTH } from '$lib/index';
+import { PANEL_WIDTH } from '$lib/constants'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 
 // TYPES
-import type { PanelProps } from '$lib/types';
+import type { PanelProps } from '$lib/types'
 
 let {
   children,
@@ -21,29 +21,29 @@ let {
   isNarrow = false,
   ...panelProps
 }: PanelProps & {
-  children: any;
-  panelContainer?: HTMLDivElement;
-} & PanelProps = $props();
+  children: any
+  panelContainer?: HTMLDivElement
+} & PanelProps = $props()
 
 // Panel visibility logic
 let shouldShowInline = $derived(
   inline &&
     (appCtx.isPanelOpen(panelProps.panelType) ||
       appCtx.isPanelOpenVisually(panelProps.panelType) ||
-      isNarrow)
-);
+      isNarrow),
+)
 
 let shouldShowOverlay = $derived(
   !inline &&
     (appCtx.isPanelOpen(panelProps.panelType) ||
-      appCtx.isPanelOpenVisually(panelProps.panelType))
-);
+      appCtx.isPanelOpenVisually(panelProps.panelType)),
+)
 </script>
 
 {#if shouldShowInline}
   <div
     id="{position}-panel"
-    class="flex h-full flex-shrink-0 select-none flex-col bg-black caret-transparent shadow-xl transition-all duration-500"
+    class="flex h-full shrink-0 select-none flex-col bg-black caret-transparent shadow-xl transition-all duration-500"
     style:width={isNarrow ? '80px' : isAdmin ? '380px' : `420px`}
     class:overflow-y-hidden={!scrollable}
     class:overflow-y-auto={scrollable}
@@ -51,7 +51,8 @@ let shouldShowOverlay = $derived(
       duration: 500,
       easing: cubicInOut,
       axis: 'x'
-    }}>
+    }}
+  >
     <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>
       {@render children()}
     </div>
@@ -59,7 +60,7 @@ let shouldShowOverlay = $derived(
 {:else if shouldShowOverlay}
   <div
     id="{position}-panel"
-    class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black caret-transparent shadow-xl [@media(min-width:920px)]:w-[420px]"
+    class="absolute top-0 z-50 flex h-full w-full select-none flex-col bg-black caret-transparent shadow-xl [@media(min-width:920px)]:w-105"
     class:overflow-y-hidden={!scrollable}
     class:overflow-y-auto={scrollable}
     class:md:left-0={position === 'left'}
@@ -68,7 +69,8 @@ let shouldShowOverlay = $derived(
       duration: 150,
       easing: cubicInOut,
       x: position === 'left' ? -PANEL_WIDTH : PANEL_WIDTH
-    }}>
+    }}
+  >
     <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>
       {@render children()}
     </div>

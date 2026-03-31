@@ -1,342 +1,402 @@
+// I18N
+import { m } from '$lib/i18n'
 // ZOD
-import { z } from 'zod';
+import { z } from 'zod'
 // DRIZZLE
-import {
-  createSelectSchema,
-  createInsertSchema,
-  createUpdateSchema
-} from 'drizzle-zod';
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import {
   feature,
   featureI18n,
-  featureImage,
   featureProperty,
   featurePropertyI18n,
-  image,
-  userFeature
-} from '$lib/db/schema/index';
+  userFeature,
+} from '$lib/db/schema/index'
 // CONSTRAINTS
-import { getDefaultConstraints, getLocales } from '../constraints';
+import { getLocales } from '../constraints'
+import { FormBoolean } from '../form'
 // ZOD SCHEMAS
 import {
-  PropertyAPI,
-  PropertyBase,
-  PropertyI18nBase,
-  PropertyInsertAPI,
-  PropertyUpdateAPI,
-  PropertyValueI18nBase,
-  PropertyValueBase,
-  PropertyValueAPI,
-  PropertyValueInsertAPI,
-  PropertyValueUpdateAPI
-} from './property';
-import { UserBasic } from './user';
+  PropertyAdminProfileAPI,
+  PropertyDetailProfileAPI,
+  PropertyValueAdminProfileAPI,
+  PropertyValueDetailProfileAPI,
+} from './property'
+import { ImageContextEnvelopeAPI } from './image'
+import { UserBasic } from './user'
 // ENUMS
-import { ImageIntent, supportedLocales } from '$lib/enums';
+import { supportedLocales } from '$lib/enums'
 // TYPES
-import type { AddressMeta, AddressProperties, EXIF } from '$lib/types';
-import type { GeometryObject } from 'geojson';
+import type { AddressMeta, AddressProperties } from '$lib/types'
+import type { GeometryObject } from 'geojson'
 
-/* ----------------- */
-// LOCAL SCHEMAS (Private - not exported to avoid circular dependencies)
-/* -------- */
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. DB / RELATIONAL PRIMITIVES
+//    - FeatureBase
+//    - FeatureInsert
+//    - FeatureUpdate
+//    - FeatureI18nBase
+//    - FeatureI18nInsert
+//    - FeatureI18nUpdate
+//    - FeaturePropertyBase
+//    - FeaturePropertyInsert
+//    - FeaturePropertyUpdate
+//    - FeaturePropertyI18nBase
+//    - FeaturePropertyI18nInsert
+//    - FeaturePropertyI18nUpdate
+//    - UserFeatureBase
+//    - UserFeatureInsert
+//    - UserFeatureUpdate
+//    - FeatureListRow
+//    - FeatureCardRow
+//    - FeatureAdminRow
+//
+// 2. REMOTE FORM SCHEMAS
+//    - FeatureI18nFormData
+//    - FeaturePropertyI18nFormData
+//    - FeaturePropertyI18nByLocaleFormData
+//    - FeaturePropertyFormData
+//    - FeatureI18nByLocaleFormData
+//    - FeatureEntityFormData
+//    - FeatureFormMeta
+//    - FeatureFormData
+//    - FeaturePreflightFormData
+//
+// 3. REMOTE COMMAND SCHEMAS
+//    - PublishFeatureSchema
+//    - RemoveFeatureSchema
+//
+// 4. REMOTE PROFILE SCHEMAS
+//    - FeatureProfile
+//    - FeaturePropertyCollectionAPI
+//    - FeaturePropertyAPI
+//    - FeatureListProfileAPI
+//    - FeatureCardProfileAPI
+//    - FeatureDetailProfileAPI
+//    - FeatureAdminProfileAPI
 
-const EXIFBasic = z.object({
-  Copyright: z.string().nullish(),
-  CopyrightNotice: z.string().nullish(),
-  Credit: z.string().nullish(),
-  DateTimeOriginal: z.string().nullish(),
-  CreateDate: z.string().nullish(),
-  ModifyDate: z.string().nullish(),
-  GPSLatitude: z.string().nullish(),
-  GPSLongitude: z.string().nullish(),
-  'By-line': z.string().nullish(),
-  Keywords: z.string().nullish(),
-  ImageWidth: z.string().nullish(),
-  ImageHeight: z.string().nullish(),
-  Make: z.string().nullish(),
-  Model: z.string().nullish(),
-  LensModel: z.string().nullish(),
-  LensInfo: z.string().nullish(),
-  RawFileName: z.string().nullish()
-});
+// ═══════════════════════
+// 1. DB / RELATIONAL PRIMITIVES
+// ═══════════════════════
 
-const ImageBase = createSelectSchema(image).extend({
-  metadata: EXIFBasic.nullish()
-});
+export const FeatureBase = createSelectSchema(feature).extend({
+  geometry: z.custom<GeometryObject>(),
+  addressMeta: z.custom<AddressMeta>().default({}),
+})
 
-const ImageAPI = ImageBase.extend({
-  altText: z.string().nullish(),
-  featureId: z.string().nullish(),
-  attribution: z.string().nullish(),
-  intent: z
-    .enum(Object.values(ImageIntent) as [string, ...string[]])
-    .default(ImageIntent.undefined)
-    .optional(),
-  isPublished: z.boolean().default(false).optional(),
-  publishedAt: z.string().nullish(),
-  preview: z.string().optional()
-});
-
-const ImageFlatBase = createSelectSchema(image).extend({
-  metadata: EXIFBasic.nullish(),
-  attribution: z.string().nullish(),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).optional(),
-  isPublished: z.boolean().nullish(),
-  publishedAt: z.string().nullish()
-});
-
-const ImageBasicFlat = ImageFlatBase.pick({
-  id: true,
-  cdn: true,
-  env: true,
-  cdnId: true,
-  publicId: true,
-  version: true,
-  attribution: true,
-  intent: true,
-  isPublished: true,
-  publishedAt: true,
-  capturedAt: true,
-  createdAt: true
-}).nullish();
-
-/* ----------------- */
-// FEATURE CORE
-/* -------- */
-
-export const FeatureBase = createSelectSchema(feature);
 export const FeatureInsert = createInsertSchema(feature).extend({
-  ...getDefaultConstraints(feature),
-  // HACK - Zod is not picking up the default values from the model
-  isVisitable: z.boolean().default(true),
-  geometry: z.custom<GeometryObject>().default({
+  geometry: z.custom<GeometryObject>().prefault({
     type: 'Point',
-    coordinates: [114.1693671540923, 22.319307515052614]
+    coordinates: [114.1693671540923, 22.319307515052614],
   }),
-  addressMeta: z.custom<AddressMeta>().default({})
-});
-export const FeatureUpdate = createUpdateSchema(feature).extend({
-  ...getDefaultConstraints(feature)
-});
+  addressMeta: z.custom<AddressMeta>().prefault({}),
+  isPublished: FormBoolean.default(false),
+  isPendingReview: FormBoolean.default(false),
+  isArchived: FormBoolean.default(false),
+  isIntangible: FormBoolean.default(false),
+  isVisitable: FormBoolean.default(true),
+})
 
-/* ----------------- */
-// FEATURE RELATIONAL :: I18N
-/* -------- */
+export const FeatureUpdate = createUpdateSchema(feature).extend({
+  geometry: z.custom<GeometryObject>().optional(),
+  addressMeta: z.custom<AddressMeta>().optional(),
+  isPublished: FormBoolean.optional(),
+  isPendingReview: FormBoolean.optional(),
+  isArchived: FormBoolean.optional(),
+  isIntangible: FormBoolean.optional(),
+  isVisitable: FormBoolean.optional(),
+})
 
 export const FeatureI18nBase = createSelectSchema(featureI18n).extend({
-  ...getDefaultConstraints(featureI18n),
-  addressProperties: z.custom<AddressProperties>().default({}).nullish(),
-  locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]).nullish()
-});
+  locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]),
+  addressProperties: z.custom<AddressProperties>().nullish(),
+})
 
 export const FeatureI18nInsert = createInsertSchema(featureI18n)
   .omit({
-    featureId: true
+    featureId: true,
+    locale: true,
   })
   .extend({
-    ...getDefaultConstraints(featureI18n),
-    addressProperties: z.custom<AddressProperties>().default({}).nullish()
-  });
+    addressProperties: z.custom<AddressProperties>().prefault({}).nullish(),
+    titleGen: FormBoolean.default(false),
+    descriptionGen: FormBoolean.default(false),
+    displayAddressGen: FormBoolean.default(false),
+  })
 
-export const FeatureI18nUpdate = createUpdateSchema(featureI18n).extend({
-  ...getDefaultConstraints(featureI18n),
-  addressProperties: z.custom<AddressProperties>().nullish()
-});
+export const FeatureI18nUpdate = createUpdateSchema(featureI18n)
+  .omit({
+    featureId: true,
+    locale: true,
+  })
+  .extend({
+    addressProperties: z.custom<AddressProperties>().nullish(),
+    titleGen: FormBoolean.optional(),
+    descriptionGen: FormBoolean.optional(),
+    displayAddressGen: FormBoolean.optional(),
+  })
 
-// TYPE HELPER: Extract the available i18n field keys
-export type FeatureI18nFieldKeys = keyof z.infer<typeof FeatureI18nInsert>;
-
-/* ----------------- */
-// FEATURE RELATIONAL SCHEMAS :: PROPERTY CORE SCHEMAS
-/* -------- */
+export type FeatureI18nFieldKeys = keyof z.infer<typeof FeatureI18nInsert>
 
 export const FeaturePropertyBase = createSelectSchema(featureProperty).extend({
   // value can be string, number, boolean, or null. Zod schema should reflect this.
   // For simplicity, keeping as string().nullable() but this might need to be z.any() or a union for more flexibility if type is not always string.
-  // For simplicity, keeping as string().nullable() but this might need to be z.any() or a union for more flexibility if type is not always string.
-  value: z.string().nullish(),
-  propertyValueId: z.string().nullish()
-});
-
-export const FeaturePropertyInsert = createInsertSchema(featureProperty).extend({
-  value: z.string().nullable().optional(),
-  propertyValueId: z.string().nullable().optional()
-});
-
-export const FeaturePropertyUpdate = createUpdateSchema(featureProperty).extend({
   value: z.string().nullish(),
   propertyValueId: z.string().nullish(),
-  featureId: z.string().optional()
-});
+})
 
-/* ----------------- */
-// FEATURE RELATIONAL SCHEMAS :: PROPERTY I18N
-/* -------- */
-
-export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n);
-export const FeaturePropertyI18nInsert = createInsertSchema(featurePropertyI18n).omit({
-  featureId: true,
-  propertyId: true
-});
-export const FeaturePropertyI18nUpdate = createUpdateSchema(featurePropertyI18n);
-
-/* ----------------- */
-// FEATURE API SCHEMAS :: PROPERTY
-/* -------- */
-
-export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
-  property: PropertyAPI.optional(),
-  i18n: getLocales(FeaturePropertyI18nBase).nullish(),
-  propertyValue: PropertyValueAPI.nullish()
-});
-
-export const FeaturePropertyAPI = FeaturePropertyBase.extend({
-  // Assuming a nested 'property' (the definition) and its i18n
-  property: PropertyAPI.optional(), // The actual Property definition (e.g., name, type)
-  // If FeatureProperty itself has direct translations (e.g. for its 'value' if it's translatable text)
-  i18n: getLocales(FeaturePropertyI18nBase).nullish(), // Optional if not all feature properties have i18n
-  // If the value points to a PropertyValue entity - used for categorical properties
-  propertyValue: PropertyValueAPI.nullish()
-});
-
-export const FeaturePropertyInsertAPI = FeaturePropertyInsert.extend({
-  property: PropertyInsertAPI.optional(),
-  i18n: getLocales(FeaturePropertyI18nInsert).nullish(),
-  propertyValue: PropertyValueInsertAPI.nullish()
-});
-
-export const FeaturePropertyUpdateAPI = FeaturePropertyUpdate.extend({
-  property: PropertyUpdateAPI.optional(),
-  i18n: getLocales(FeaturePropertyI18nUpdate).nullish(),
-  propertyValue: PropertyValueUpdateAPI.optional()
-});
-
-export const FeaturePropertyToMerge = FeaturePropertyCollectionAPI.extend({
-  id: z.string().optional(),
-  i18n: getLocales(FeaturePropertyI18nBase).nullish()
-});
-
-/* ----------------- */
-// FEATURE RELATIONAL SCHEMAS :: USER
-/* -------- */
-
-export const UserFeatureBase = createSelectSchema(userFeature);
-export const UserFeatureInsert = createInsertSchema(userFeature).extend({
-  // TODO - Check if tis is necessary to extend -- isn't it already provided by model?
-  // isVisited: z.boolean().default(false),
-  // isWishlisted: z.boolean().default(false)
-});
-export const UserFeatureUpdate = createUpdateSchema(userFeature);
-export const UserFeatureUpdateExtended = UserFeatureUpdate.extend({});
-
-/* ----------------- */
-// FEATURE API
-/* -------- */
-
-// Basic feature collection schema - optimized for performance
-export const FeatureCollectionAPI = FeatureBase.omit({
-  addressMeta: true,
-  publisherId: true,
-  publishedAt: true,
-  visitableAsOf: true,
-  modifiedAt: true
-}).extend({
-  i18n: getLocales(
-    FeatureI18nBase.extend({
-      addressProperties: z
-        .object({
-          neighbourhood: z.string().nullish()
-        })
-        .nullish()
-    })
-  ),
-  properties: z.array(
-    FeaturePropertyBase.extend({
-      i18n: getLocales(FeaturePropertyI18nBase).nullish()
-    })
-  ),
-  image: ImageBasicFlat,
-  imageCount: z.number(),
-  imagePublishedCount: z.number()
-});
-
-// Full feature entity schema
-export const FeatureAPI = FeatureBase.extend({
-  i18n: getLocales(FeatureI18nBase),
-  properties: z.array(FeaturePropertyAPI),
-  contributor: UserBasic.nullish(),
-  publisher: UserBasic.nullish(),
-  image: ImageAPI.nullish(),
-  images: z.lazy(() => z.array(ImageAPI).nullish())
-});
-
-export const FeatureInsertAPI = FeatureInsert.extend({
-  i18n: getLocales(FeatureI18nInsert),
-  properties: z.array(FeaturePropertyInsertAPI),
-  isVisitable: z.boolean().default(true),
-  addressMeta: z.custom<AddressMeta>().default({}).nullish()
-});
-
-export const FeatureUpdateAPI = FeatureUpdate.extend({
-  i18n: getLocales(FeatureI18nUpdate),
-  properties: z.array(FeaturePropertyUpdateAPI)
-});
-
-/* ----------------- */
-// FEATURE RELATIONAL API :: USER FEATURE
-/* -------- */
-
-export const UserFeatureAPI = UserFeatureBase;
-export const UserFeatureInsertAPI = UserFeatureInsert;
-// UserFeatureUpdateAPI defined in index.ts
-
-// Extended on the client side to include hierarchy information
-export const FeatureClientExt = FeatureCollectionAPI.extend({
-  hierarchy: z.object({
-    organisation: z.string().nullable(),
-    project: z.string().nullable(),
-    layer: z.string().nullable(),
-    feature: z.string().nullable()
+export const FeaturePropertyInsert = createInsertSchema(featureProperty)
+  .omit({
+    featureId: true,
   })
-});
+  .extend({
+    value: z.string().nullish(),
+    propertyValueId: z.string().nullish(),
+  })
 
-/* ----------------- */
-// FEATURE INTERMEDIATE SCHEMAS
-/* -------- */
+export const FeaturePropertyUpdate = createUpdateSchema(featureProperty)
+  .omit({
+    featureId: true,
+  })
+  .extend({
+    value: z.string().nullish(),
+    propertyValueId: z.string().nullish(),
+  })
 
-export const FeatureRaw = FeatureBase.extend({
-  images: z
-    .lazy(() =>
-      z.array(
-        createSelectSchema(featureImage)
-          .extend({
-            image: createSelectSchema(image)
-              .extend({
-                contributor: UserBasic.nullish()
-              })
-              .nullish()
-          })
-          .nullish()
-      )
-    )
-    .nullish(),
-  i18n: z.array(FeatureI18nBase).optional(),
+export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n).extend({
+  locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]),
+  valueGen: FormBoolean.optional(),
+})
+
+export const FeaturePropertyI18nInsert = createInsertSchema(featurePropertyI18n)
+  .omit({
+    featureId: true,
+    propertyId: true,
+    locale: true,
+  })
+  .extend({
+    valueGen: FormBoolean.default(false),
+  })
+
+export const FeaturePropertyI18nUpdate = createUpdateSchema(featurePropertyI18n)
+  .omit({
+    featureId: true,
+    propertyId: true,
+    locale: true,
+  })
+  .extend({
+    valueGen: FormBoolean.optional(),
+  })
+
+export const UserFeatureBase = createSelectSchema(userFeature)
+export const UserFeatureInsert = createInsertSchema(userFeature)
+export const UserFeatureUpdate = createUpdateSchema(userFeature)
+
+export const FeatureListRow = FeatureBase.extend({
+  i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
       FeaturePropertyBase.extend({
-        property: PropertyBase.extend({
-          i18n: z.array(PropertyI18nBase).optional(),
-          values: z
-            .array(
-              PropertyValueBase.extend({
-                i18n: z.array(PropertyValueI18nBase).optional()
-              })
-            )
-            .optional()
-        }).optional()
-      })
+        i18n: z.array(FeaturePropertyI18nBase).nullish(),
+        property: PropertyDetailProfileAPI.optional(),
+        propertyValue: PropertyValueDetailProfileAPI.nullish(),
+      }),
     )
-    .optional()
-});
+    .nullish(),
+  image: z.unknown().nullish(),
+  imageCount: z.number().int().default(0),
+  imagePublishedCount: z.number().int().default(0),
+})
+
+export const FeatureCardRow = FeatureListRow.extend({
+  contributor: UserBasic.nullish(),
+  publisher: UserBasic.nullish(),
+  images: z.array(z.unknown()).nullish(),
+})
+
+export const FeatureAdminRow = FeatureBase.extend({
+  i18n: z.array(FeatureI18nBase).nullish(),
+  properties: z
+    .array(
+      FeaturePropertyBase.extend({
+        i18n: z.array(FeaturePropertyI18nBase).nullish(),
+        property: PropertyAdminProfileAPI.optional(),
+        propertyValue: PropertyValueAdminProfileAPI.nullish(),
+      }),
+    )
+    .nullish(),
+  contributor: UserBasic.nullish(),
+  publisher: UserBasic.nullish(),
+  image: z.unknown().nullish(),
+  images: z.array(z.unknown()).nullish(),
+})
+
+// ═══════════════════════
+// 2. REMOTE FORM SCHEMAS
+// ═══════════════════════
+
+export const FeatureI18nFormData = z.object({
+  title: z
+    .string()
+    .min(1, { message: m.field_is_required({ field: m.feature__title() }) })
+    .max(128, { message: m.admin__validation_lte_128_chars() }),
+  titleGen: FormBoolean.default(false),
+  description: z
+    .string()
+    .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
+    .optional(),
+  descriptionGen: FormBoolean.default(false),
+  displayAddress: z
+    .string()
+    .max(512, { message: m.admin__validation_lte_128_chars() })
+    .optional(),
+  displayAddressGen: FormBoolean.default(false),
+  addressProperties: z.custom<AddressProperties>().prefault({}).nullish(),
+})
+
+export const FeaturePropertyI18nFormData = z.object({
+  value: z.string().optional(),
+  valueGen: FormBoolean.default(false),
+})
+
+export const FeaturePropertyI18nByLocaleFormData = z.object({
+  en: FeaturePropertyI18nFormData.optional().default({ valueGen: false }),
+  zhHans: FeaturePropertyI18nFormData.optional().default({ valueGen: false }),
+  zhHant: FeaturePropertyI18nFormData.optional().default({ valueGen: false }),
+})
+
+export const FeaturePropertyFormData = z.object({
+  propertyId: z.string().min(1),
+  value: z.string().optional().nullable(),
+  propertyValueId: z.string().optional().nullable(),
+  i18n: FeaturePropertyI18nByLocaleFormData.optional(),
+  property: PropertyAdminProfileAPI.optional(),
+  propertyValue: PropertyValueAdminProfileAPI.nullish(),
+})
+
+export const FeatureI18nByLocaleFormData = z.object({
+  en: FeatureI18nFormData,
+  zhHans: FeatureI18nFormData,
+  zhHant: FeatureI18nFormData,
+})
+
+export const FeatureEntityFormData = z.object({
+  organisationId: z
+    .string({ message: m.field_is_required({ field: m.field_organisation() }) })
+    .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
+  projectId: z
+    .string({ message: m.field_is_required({ field: 'Project' }) })
+    .min(1, { message: m.field_is_required({ field: 'Project' }) }),
+  layerId: z
+    .string({ message: m.field_is_required({ field: 'Layer' }) })
+    .min(1, { message: m.field_is_required({ field: 'Layer' }) }),
+  contributorId: z.string().optional().nullable(),
+  geometry: z.custom<GeometryObject>(),
+  addressMeta: z.custom<AddressMeta>().prefault({}).nullish(),
+  isIntangible: FormBoolean.default(false),
+  isVisitable: FormBoolean.default(true),
+  isPendingReview: FormBoolean.default(false),
+  i18n: FeatureI18nByLocaleFormData,
+  properties: z.array(FeaturePropertyFormData).default([]),
+})
+
+export const FeatureFormMeta = z.object({
+  id: z.string().optional(),
+  updatedAt: z.string().min(1).optional(),
+  mode: z.enum(['create', 'replace', 'update']).optional(),
+  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+})
+
+export const FeatureFormData = z.object({
+  meta: FeatureFormMeta.optional(),
+  data: FeatureEntityFormData,
+})
+
+export const FeaturePreflightFormData = FeatureFormData
+
+// ═══════════════════════
+// 3. REMOTE COMMAND SCHEMAS
+// ═══════════════════════
+
+export const PublishFeatureSchema = z.object({
+  id: z.string().min(1),
+  state: z.coerce.boolean<boolean>(),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+export const RemoveFeatureSchema = z.object({
+  id: z.string().min(1),
+  state: z.coerce.boolean<boolean>(),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+// ═══════════════════════
+// 4. REMOTE PROFILE SCHEMAS
+// ═══════════════════════
+
+export const FeatureProfile = z.enum(['list', 'card', 'detail', 'admin'])
+
+export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
+  i18n: getLocales(FeaturePropertyI18nBase).nullish(),
+  property: PropertyDetailProfileAPI.optional(),
+  propertyValue: PropertyValueDetailProfileAPI.nullish(),
+})
+
+export const FeaturePropertyAPI = FeaturePropertyBase.extend({
+  i18n: getLocales(FeaturePropertyI18nBase).nullish(),
+  property: PropertyAdminProfileAPI.optional(),
+  propertyValue: PropertyValueAdminProfileAPI.nullish(),
+})
+
+const FeatureListFields = FeatureBase.pick({
+  id: true,
+  organisationId: true,
+  projectId: true,
+  layerId: true,
+  geometry: true,
+  addressMeta: true,
+  isPublished: true,
+  isPendingReview: true,
+  isArchived: true,
+  isIntangible: true,
+  isVisitable: true,
+  createdAt: true,
+  modifiedAt: true,
+})
+
+export const FeatureListProfileAPI = FeatureListFields.extend({
+  i18n: getLocales(FeatureI18nBase),
+  properties: z.array(FeaturePropertyCollectionAPI).default([]),
+  image: ImageContextEnvelopeAPI.nullish(),
+  imageCount: z.number().int().default(0),
+  imagePublishedCount: z.number().int().default(0),
+})
+
+export const FeatureCardProfileAPI = FeatureListProfileAPI.extend({
+  contributor: UserBasic.nullish(),
+  publisher: UserBasic.nullish(),
+})
+
+export const FeatureDetailProfileAPI = FeatureCardProfileAPI.extend({
+  images: z.array(ImageContextEnvelopeAPI).nullish(),
+})
+
+export const FeatureAdminProfileAPI = FeatureBase.extend({
+  i18n: getLocales(FeatureI18nBase),
+  properties: z.array(FeaturePropertyAPI).default([]),
+  contributor: UserBasic.nullish(),
+  publisher: UserBasic.nullish(),
+  image: ImageContextEnvelopeAPI.nullish(),
+  images: z.array(ImageContextEnvelopeAPI).nullish(),
+})
