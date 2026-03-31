@@ -1,11 +1,15 @@
 <script lang="ts">
 import type { Component } from 'svelte'
+import type { Snippet } from 'svelte'
 // TRANSITIONS
 import { slide } from 'svelte/transition'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronRight from 'virtual:icons/lucide/chevron-right'
 import Icon from '$lib/components/common/Icon.svelte'
-import type { Snippet } from 'svelte'
+// CONTEXT
+import { getAppCtx } from '$lib/context/app.svelte'
+
+const appCtx = getAppCtx()
 
 const toggle = () => {
   isOpen = !isOpen
@@ -17,7 +21,7 @@ type Props = {
   icon: string | Component
   iconVerticalPaddingClass: string
   iconColorClass: string
-  collapsedContent: Snippet<[string, any]>
+  collapsedContent: Snippet<[string, Record<string, unknown>]>
   isOpen: boolean
   hierarchy: {
     organisation?: string | null
@@ -25,7 +29,7 @@ type Props = {
     layer?: string | null
     layerId: string
   }
-  properties: Record<string, any>
+  properties: Record<string, unknown>
 }
 
 let {
@@ -39,15 +43,19 @@ let {
   hierarchy,
   properties,
 }: Props = $props()
+
+const filterCount = $derived(appCtx.getFilterCount())
+const hasActiveFilters = $derived(
+  filterCount.neighbourhoods > 0 || filterCount.properties > 0,
+)
 </script>
 
 <div
-  class="mt-4 flex min-h-0 shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen
-    ? 'flex-grow'
-    : ''}"
+  class="mt-4 flex min-h-0 shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen ? 'flex-grow' : ''} {hasActiveFilters ? 'pb-[80px]' : ''}"
   transition:slide
 >
   <button
+    type="button"
     class="flex w-full shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black pb-2 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={toggle}
   >
@@ -56,14 +64,14 @@ let {
       <!-- Hierarchy path -->
       <div class="flex flex-col space-y-1">
         <div class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
-          {#if hierarchy && hierarchy.organisation}
+          {#if hierarchy?.organisation}
             <span class="px-0 text-primary">{hierarchy.organisation}</span>
           {/if}
-          {#if hierarchy && hierarchy.project}
+          {#if hierarchy?.project}
             <span class="px-0">›</span>
             <span class="text-accent">{hierarchy.project.replaceAll('_', '')}</span>
           {/if}
-          {#if hierarchy && hierarchy.layer}
+          {#if hierarchy?.layer}
             <span class="px-0">›</span>
             <span class="text-secondary">{hierarchy.layer.replaceAll(' ', '')}</span>
           {/if}

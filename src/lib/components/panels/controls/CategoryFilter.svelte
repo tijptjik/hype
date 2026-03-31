@@ -1,4 +1,6 @@
 <script lang="ts">
+// BITS COMPONENTS
+import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'
@@ -58,6 +60,7 @@ let displayText = $derived(
 
 <div class="ml-4 min-h-10 shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
+    type="button"
     class="flex w-full shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-sky-600"
     onclick={() => (isOpen = !isOpen)}
   >
@@ -72,22 +75,23 @@ let displayText = $derived(
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-65 flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300"
+      class="flex max-h-65 flex-col overflow-y-auto gap-3 overscroll-contain rounded-l-md bg-base-300"
       tabindex="-1"
     >
       {#each propertyValues as value (value.id)}
+        {@const optionLabel = localisedOptions.get(value.id) || '?'}
         <label
-          class="group label cursor-pointer justify-start gap-3 px-6 pr-2 first:pt-4 last:pb-4 focus:outline-none focus:ring-0"
+          class="group label flex w-full cursor-pointer items-center justify-start gap-3 px-6 pr-2 first:pt-4 last:pb-4 focus:outline-none focus:ring-0"
           tabindex="0"
           onkeydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              toggleValue(value);
+              e.preventDefault()
+              toggleValue(value)
             }
           }}
         >
           <div
-            class="flex h-2 w-2 items-center gap-2 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selectedPropertyValueIds.includes(
+            class="h-2 w-2 shrink-0 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selectedPropertyValueIds.includes(
               value.id
             )
               ? 'bg-sky-600 group-hover:bg-sky-600/60 group-focus-visible:bg-sky-600/60'
@@ -99,9 +103,12 @@ let displayText = $derived(
             class="checkbox checkbox-sm hidden"
             onchange={() => toggleValue(value)}
           >
-          <span class="label-text text-sm font-medium"
-            >{localisedOptions.get(value.id) || '?'}</span
-          >
+          <ScrollableText
+            text={optionLabel}
+            class="min-w-0 flex-1"
+            containerClass="label-text block w-full"
+            textClass="text-md font-medium"
+          />
         </label>
       {/each}
     </div>

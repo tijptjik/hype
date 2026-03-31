@@ -1,4 +1,6 @@
 <script lang="ts">
+// BITS COMPONENTS
+import Button from '$lib/bits/core/button/Button.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 import XCircle from 'virtual:icons/lucide/circle-x'
@@ -27,24 +29,24 @@ const appCtx = getAppCtx()
   </div>
   <div class="flex flex-row items-center gap-4">
     {#if onToggleInfo}
-      <button
-        type="button"
-        class="m-0 h-auto flex-none p-0 text-base-50 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
-        onclick={(e) => {
-          onToggleInfo?.(e);
-        }}
-      >
-        <span class="text-xl">?</span>
-      </button>
+      <Button
+        text="?"
+        style="transparent"
+        class="m-0 h-auto flex-none border-transparent p-0 text-base-50 shadow-none [--btn-size:auto] [--btn-padding-x:0]"
+        labelClasses="text-2xl"
+        onClick={onToggleInfo}
+      />
     {/if}
-    <button
-      type="button"
-      class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
-      onclick={() => {
-        appCtx.closePanel(panelType);
+    <Button
+      text="Close panel"
+      iconComponent={XCircle}
+      size="xl"
+      hideLabel={true}
+      style="transparent"
+      class="m-0 h-auto flex-none border-transparent p-0 shadow-none [--btn-size:auto] [--btn-padding-x:0]"
+      onClick={() => {
+        appCtx.closePanel(panelType)
       }}
-    >
-      <Icon src={XCircle} class="h-10 w-10 transition-transform duration-300" />
-    </button>
+    />
   </div>
 </header>
