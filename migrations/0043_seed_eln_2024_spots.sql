@@ -5,8 +5,6 @@ PRAGMA foreign_keys=ON;
 -- Coordinates were derived from OSM/Nominatim by stripping the leading venue
 -- text from displayAddress up to the first street number.
 
-BEGIN TRANSACTION;
-
 INSERT INTO "property" (
   "id",
   "projectId",
@@ -256,5 +254,3 @@ VALUES
 ON CONFLICT("featureId", "propertyId") DO UPDATE SET
   "propertyValueId" = excluded."propertyValueId",
   "value" = excluded."value";
-
-COMMIT;

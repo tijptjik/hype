@@ -9,8 +9,6 @@ PRAGMA foreign_keys=ON;
 -- - PMQ -> 35 Aberdeen Street, Central, Hong Kong
 -- - Tai Kwun -> 10 Hollywood Rd, Central, Hong Kong
 
-BEGIN TRANSACTION;
-
 INSERT INTO "propertyValue" (
   "id",
   "propertyId",
@@ -360,5 +358,3 @@ VALUES
 ON CONFLICT("featureId", "propertyId") DO UPDATE SET
   "propertyValueId" = excluded."propertyValueId",
   "value" = excluded."value";
-
-COMMIT;

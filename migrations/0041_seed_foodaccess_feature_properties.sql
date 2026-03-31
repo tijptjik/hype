@@ -2,8 +2,6 @@ PRAGMA foreign_keys=ON;
 
 -- Seed Food Access feature property values.
 
-BEGIN TRANSACTION;
-
 INSERT INTO "featureProperty" ("featureId", "propertyId", "propertyValueId", "value")
 VALUES ('--iWLVseAzpJ', '6H3OZ41x64bB', NULL, 'TRUE')
 ON CONFLICT("featureId", "propertyId") DO UPDATE SET
@@ -30441,5 +30439,3 @@ VALUES ('zslN2xbFnShL', 'z8FdPeJrY7e5', NULL, '9')
 ON CONFLICT("featureId", "propertyId") DO UPDATE SET
   "propertyValueId" = excluded."propertyValueId",
   "value" = excluded."value";
-
-COMMIT;

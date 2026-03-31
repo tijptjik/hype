@@ -4,8 +4,6 @@ PRAGMA foreign_keys=ON;
 -- pair from being inserted again. Duplicate layer-property assignments surface as
 -- duplicate feature field definitions in admin forms.
 
-BEGIN TRANSACTION;
-
 DELETE FROM "layerProperty"
 WHERE rowid IN (
   SELECT duplicate_rowid
@@ -23,5 +21,3 @@ WHERE rowid IN (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "layerProperty_layerId_propertyId_idx"
 ON "layerProperty" ("layerId", "propertyId");
-
-COMMIT;

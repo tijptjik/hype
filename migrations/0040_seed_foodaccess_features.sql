@@ -1,9 +1,6 @@
 PRAGMA foreign_keys=ON;
 
 -- Seed Food Access features and localized feature content.
-
-BEGIN TRANSACTION;
-
 INSERT INTO "feature" (
   "id", "organisationId", "projectId", "layerId", "contributorId", "geometry", "addressMeta",
   "isPublished", "publisherId", "publishedAt", "isPendingReview", "isArchived",
@@ -41253,5 +41250,3 @@ ON CONFLICT("featureId", "locale") DO UPDATE SET
   "displayAddress" = excluded."displayAddress",
   "displayAddressGen" = excluded."displayAddressGen",
   "addressProperties" = excluded."addressProperties";
-
-COMMIT;

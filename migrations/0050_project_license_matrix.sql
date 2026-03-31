@@ -1,7 +1,5 @@
 PRAGMA foreign_keys=OFF;
 
-BEGIN TRANSACTION;
-
 ALTER TABLE "project"
 ADD COLUMN "license" TEXT NOT NULL DEFAULT '{"meta":{"allMediaSameRights":true,"attribution":"","isAllRightsReserved":false,"isPublicDomain":false},"media":{"all":{"license":"CC BY-SA / ODC-ODbL","BY":true,"SA":true,"NC":false,"ND":false},"image":{"license":"CC BY-SA","BY":true,"SA":true,"NC":false,"ND":false},"text":{"license":"CC BY-SA","BY":true,"SA":true,"NC":false,"ND":false},"data":{"license":"ODC-ODbL","BY":true,"SA":true,"NC":false,"ND":false}}}';
 
@@ -327,7 +325,5 @@ FROM "projectI18n";
 DROP TABLE "projectI18n";
 
 ALTER TABLE "projectI18n_new" RENAME TO "projectI18n";
-
-COMMIT;
 
 PRAGMA foreign_keys=ON;

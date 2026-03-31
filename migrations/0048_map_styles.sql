@@ -1,7 +1,5 @@
 PRAGMA foreign_keys=ON;
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS "mapStyles" (
   "key" TEXT PRIMARY KEY NOT NULL,
   "label" TEXT NOT NULL,
@@ -28,5 +26,3 @@ ON CONFLICT("key") DO UPDATE SET
   "label" = excluded."label",
   "description" = excluded."description",
   "modifiedAt" = strftime('%Y-%m-%dT%H:%M:%fZ', 'now');
-
-COMMIT;

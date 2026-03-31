@@ -1,7 +1,5 @@
 PRAGMA foreign_keys=OFF;
 
-BEGIN TRANSACTION;
-
 CREATE TABLE "mapStyles_new" (
   "id" TEXT PRIMARY KEY NOT NULL,
   "code" TEXT NOT NULL,
@@ -125,7 +123,5 @@ DROP TABLE "mapStyles";
 
 ALTER TABLE "mapStyles_new" RENAME TO "mapStyles";
 ALTER TABLE "projectMapStyles_new" RENAME TO "projectMapStyles";
-
-COMMIT;
 
 PRAGMA foreign_keys=ON;

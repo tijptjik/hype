@@ -6,8 +6,6 @@
 -- Final DB env in this SQL patch: production
 PRAGMA foreign_keys=OFF;
 
-BEGIN TRANSACTION;
-
 UPDATE image
 SET cdn = 'cloudflareR2',
     env = 'production',
@@ -4098,7 +4096,5 @@ SET cdn = 'cloudflareR2',
     env = 'production',
     cdnId = NULL
 WHERE id = 'KB4Y53OkRfCT';
-
-COMMIT;
 
 PRAGMA foreign_keys=ON;

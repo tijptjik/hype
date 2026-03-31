@@ -7,8 +7,6 @@
 --
 -- Source extracted from local admin data on 2026-03-08.
 
-BEGIN TRANSACTION;
-
 INSERT INTO "property" (
   "id",
   "projectId",
@@ -275,5 +273,3 @@ VALUES
   ('kin0shUTfrUi', 'gPropMtrSt01', 1, 0),
   ('kin0shUTfrUi', 'gPropPhNum01', 0, 0),
   ('kin0shUTfrUi', 'gPropWaNum01', 0, 0);
-
-COMMIT;

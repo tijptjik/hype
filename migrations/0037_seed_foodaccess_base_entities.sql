@@ -2,8 +2,6 @@ PRAGMA foreign_keys=ON;
 
 -- Seed Farm The City and the Food Access project base entities.
 
-BEGIN TRANSACTION;
-
 INSERT INTO "image" (
   "id", "contributorId", "cdn", "env", "cdnId", "publicId", "version",
   "originalFilename", "originalExtension", "originalWidth", "originalHeight",
@@ -176,5 +174,3 @@ ON CONFLICT("projectId", "locale") DO UPDATE SET
   "licenseGen" = excluded."licenseGen",
   "attribution" = excluded."attribution",
   "attributionGen" = excluded."attributionGen";
-
-COMMIT;

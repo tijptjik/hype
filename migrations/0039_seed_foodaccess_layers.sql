@@ -1,9 +1,6 @@
 PRAGMA foreign_keys=ON;
 
 -- Seed Food Access layers and their property visibility assignments.
-
-BEGIN TRANSACTION;
-
 INSERT INTO "layer" (
   "id", "organisationId", "projectId", "metadata", "isDefaultVisible", "isPublished",
   "publishedAt", "publisherId", "isArchived", "createdAt", "modifiedAt"
@@ -393,5 +390,3 @@ VALUES ('ch5xRfst-5Pl', 'yjiegt5TvcPP', 1, 1);
 
 INSERT INTO "layerProperty" ("layerId", "propertyId", "isVisible", "isUserContributable")
 VALUES ('ch5xRfst-5Pl', 'z8FdPeJrY7e5', 1, 1);
-
-COMMIT;

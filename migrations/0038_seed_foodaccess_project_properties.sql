@@ -1,9 +1,6 @@
 PRAGMA foreign_keys=ON;
 
 -- Seed Food Access project-scoped properties and their value catalogs.
-
-BEGIN TRANSACTION;
-
 INSERT INTO "property" (
   "id", "projectId", "scope", "type", "key", "component", "isTranslatable",
   "isUserContributable", "isDefaultEnabled", "createdAt", "modifiedAt"
@@ -1185,5 +1182,3 @@ VALUES ('z9ea1F98AHXh', 'zh-hant', 'DFI零售集團（Diary Farm）', 1)
 ON CONFLICT("propertyValueId", "locale") DO UPDATE SET
   "value" = excluded."value",
   "valueGen" = excluded."valueGen";
-
-COMMIT;

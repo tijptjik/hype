@@ -5,8 +5,6 @@ PRAGMA foreign_keys=ON;
 -- Keep the lowest-rank / earliest row per (projectId, propertyId), then
 -- normalize ranks per project to a dense 0-based sequence.
 
-BEGIN TRANSACTION;
-
 DELETE FROM "projectProperty"
 WHERE rowid IN (
   SELECT duplicate_rowid
@@ -39,4 +37,3 @@ SET "rank" = (
 )
 WHERE rowid IN (SELECT rowid FROM ranked);
 
-COMMIT;
