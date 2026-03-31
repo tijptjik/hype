@@ -126,8 +126,22 @@ const getPropertiesQuery = guardedQuery(ListQueryParamsSchema, async (params, ct
     if (decision?.allowed) filteredRows.push(row)
   }
 
+  // Skip malformed property rows so one bad record does not fail app bootstrap.
+  const data = filteredRows.flatMap(row => {
+    try {
+      return [toPropertyResponseShape(row)]
+    } catch (cause) {
+      console.error('Property list row failed response shaping', {
+        propertyId: row.id,
+        projectId: row.projectId,
+        cause,
+      })
+      return []
+    }
+  })
+
   return {
-    data: filteredRows.map(row => toPropertyResponseShape(row)),
+    data,
   }
 })
 
