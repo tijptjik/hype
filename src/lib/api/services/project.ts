@@ -843,7 +843,7 @@ const buildVisibilityAndOwnershipConditions = (
     )
   }
 
-  if (isSuperAdmin(user)) {
+  if (isSuperAdmin(user) && isAdminRequest) {
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 

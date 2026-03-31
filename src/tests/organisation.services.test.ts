@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { toQueryConditions } from '$lib/api/services/organisation'
 import { overrideOrganisationEntityFromFormInput } from '$lib/client/services/organisation'
 import type { OrganisationFormInput } from '$lib/db/zod/schema/organisation.types'
+import type { SessionUser } from '$lib/types'
 
 describe('organisation service overrides', () => {
   it('does not overwrite i18n/code/url when role-only submit payload omits them', () => {
@@ -93,5 +95,37 @@ describe('organisation service overrides', () => {
     expect(en.descriptionGen).toBe(true)
     // Unrelated locales remain intact.
     expect(zhHans).toEqual(current.data.i18n['zh-hans'])
+  })
+})
+
+describe('organisation query visibility', () => {
+  const superAdminUser = {
+    id: 'user-1',
+    superAdmin: true,
+    isAnonymous: false,
+    isHubAdminForActiveHub: false,
+    roles: [],
+  } as unknown as SessionUser
+
+  it('keeps public visibility filters for super admins outside admin requests', () => {
+    const result = toQueryConditions(
+      superAdminUser,
+      false,
+      { isPublished: true, isArchived: false },
+      [],
+    )
+
+    expect(result.conditions.length).toBeGreaterThan(0)
+  })
+
+  it('allows admin-request super admins to bypass default visibility filters', () => {
+    const result = toQueryConditions(
+      superAdminUser,
+      true,
+      { isPublished: true, isArchived: false },
+      [],
+    )
+
+    expect(result.conditions).toHaveLength(0)
   })
 })

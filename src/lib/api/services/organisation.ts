@@ -351,8 +351,8 @@ const buildVisibilityAndOwnershipConditions = (
   const excludeColumns = [...VISIBILITY_COLUMNS]
   const filteredParams = removeExcludedColumns(params, excludeColumns)
 
-  // Full bypass for super admins and hub admins.
-  if (isSuperAdmin(user) || user.isHubAdminForActiveHub) {
+  // Full bypass for super admins and hub admins only within the admin environment.
+  if ((isSuperAdmin(user) || user.isHubAdminForActiveHub) && isAdminRequest) {
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 
