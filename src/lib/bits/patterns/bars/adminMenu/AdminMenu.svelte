@@ -6,7 +6,7 @@ import { Button } from '$lib/bits/core'
 // LIB
 import { ADMIN_PATH } from '$lib/index'
 // AUTH
-import { hasControlPanelAccess } from '$lib/client/services/auth'
+import { canViewAnalytics, hasControlPanelAccess } from '$lib/client/services/auth'
 // NAVIGATION
 import { navigateOnAdmin } from '$lib/navigation'
 // ENUMS
@@ -62,12 +62,15 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.task),
       notificationCount,
     },
-    {
+  ]
+
+  if (canViewAnalytics(adminCtx.appCtx.user as SessionUser)) {
+    items.push({
       href: `${ADMIN_PATH}/analytics`,
       label: 'Analytics',
       icon: ChartColumnIncreasing,
-    },
-  ]
+    })
+  }
 
   if (adminCtx.appCtx.isSuperAdmin()) {
     items.push({

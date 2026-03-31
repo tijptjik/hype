@@ -17,7 +17,7 @@ type UserUpdateActor = {
 }
 
 /**
- * Search-users endpoint access policy.
+ * Shared elevated access policy used by analytics and user-search admin surfaces.
  *
  * Allowed:
  * - super admins
@@ -25,7 +25,7 @@ type UserUpdateActor = {
  * - organisation owners
  * - project owners
  */
-export const canSearchUsers = (actor: UserSearchActor): boolean => {
+export const canAccessAnalytics = (actor: UserSearchActor): boolean => {
   if (actor.superAdmin) return true
 
   return actor.userRoles.some(role => {
@@ -35,6 +35,18 @@ export const canSearchUsers = (actor: UserSearchActor): boolean => {
     return false
   })
 }
+
+/**
+ * Search-users endpoint access policy.
+ *
+ * Allowed:
+ * - super admins
+ * - hub admins
+ * - organisation owners
+ * - project owners
+ */
+export const canSearchUsers = (actor: UserSearchActor): boolean =>
+  canAccessAnalytics(actor)
 
 /**
  * Archived visibility override policy for user search.

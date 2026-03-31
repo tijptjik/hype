@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { hub, userLayer } from '$lib/db/schema/index'
+import { canAccessAnalytics } from '$lib/api/services/authz/user'
 // TYPES
 import type { Database, UserRoleDisco, SessionUser, Id } from '$lib/types'
 import type { UserLayer } from '$lib/db/zod/schema/user.types'
@@ -56,6 +57,18 @@ export function hasControlPanelAccess(user: SessionUser | null): boolean {
 
 export function isSuperAdmin(user: SessionUser): boolean {
   return user.superAdmin || false
+}
+
+/**
+ * Checks whether the user should see the admin analytics surface.
+ */
+export function canViewAnalytics(user: SessionUser | null): boolean {
+  if (!user) return false
+
+  return canAccessAnalytics({
+    superAdmin: user.superAdmin,
+    userRoles: user.roles ?? [],
+  })
 }
 
 export const getOrganisationIdforRoles = (userRoles: UserRoleDisco[]) => {
