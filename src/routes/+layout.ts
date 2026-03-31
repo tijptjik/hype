@@ -4,7 +4,7 @@ import { QueryClient } from '@tanstack/svelte-query'
 // TYPES
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 
-export const ssr = false
+export const ssr = true
 export const prerender = false
 // See https://khromov.se/the-missing-guide-to-understanding-adapter-static-in-sveltekit/
 export const trailingSlash = 'never'
