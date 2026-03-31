@@ -1,5 +1,5 @@
 import { supportedLocales } from '../../enums'
-import * as m from '../../paraglide/messages'
+import * as m from '../../paraglide/messages.js'
 
 import type { Locale } from '../../types'
 import type { MapStyleCatalogKey } from './catalog'
