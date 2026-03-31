@@ -86,7 +86,7 @@ async function handleFiles(event: CustomEvent): Promise<void> {
   {#if !disabled || showEmptyState}
     <div
       class={cx(
-        'pointer-events-none absolute inset-4 z-[70] border-2 border-dashed transition-[background-color,border-color] duration-200',
+        'pointer-events-none absolute inset-4 z-70 border-2 border-dashed transition-[background-color,border-color] duration-200',
         rounded,
         disabled
           ? 'border-black/10 bg-transparent'
@@ -99,7 +99,7 @@ async function handleFiles(event: CustomEvent): Promise<void> {
     {#if showEmptyState}
       <div
         class={cx(
-          'pointer-events-none absolute inset-4 z-[70] flex items-center justify-center px-6 text-center',
+          'pointer-events-none absolute inset-4 z-70 flex items-center justify-center px-6 text-center',
           rounded,
         )}
       >
@@ -127,7 +127,7 @@ async function handleFiles(event: CustomEvent): Promise<void> {
     {:else if showPrompt}
       <div
         class={cx(
-          'pointer-events-none absolute inset-0 z-[70] flex items-center justify-center px-6 transition-all duration-200',
+          'pointer-events-none absolute inset-0 z-70 flex items-center justify-center px-6 transition-all duration-200',
           isDragActive
             ? 'translate-y-0 opacity-100'
             : 'translate-y-2 opacity-0 group-hover/gallery-dropzone:translate-y-0 group-hover/gallery-dropzone:opacity-100',

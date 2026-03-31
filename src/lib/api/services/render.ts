@@ -1,7 +1,6 @@
 import { error, json, redirect } from '@sveltejs/kit'
 
 import { buildMapRenderJob } from '$lib/map/renders/jobs.server'
-import { generateRenderJobsLocally } from '$lib/map/renders/local.server'
 import { enqueueMapRenderJob } from '$lib/map/renders/queue.server'
 import { resolveMapRenderAssetUrl } from '$lib/map/renders/storage.shared'
 import type {
@@ -18,6 +17,9 @@ type MapRenderPayloadSource = {
   layers: unknown
   selectedLayerIds: string[]
 }
+
+const loadLocalMapRenderRuntime = async () =>
+  await import('$lib/map/renders/local.server')
 
 /**
  * Returns the R2 credentials used to persist local and remote map renders.
@@ -166,6 +168,7 @@ export const runSingleMapRenderRefresh = async (params: {
     })
   }
 
+  const { generateRenderJobsLocally } = await loadLocalMapRenderRuntime()
   const entries = await generateRenderJobsLocally([job], {
     baseUrl: params.publicOrigin,
     stage: 'local',

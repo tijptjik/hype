@@ -4,7 +4,6 @@ import { json, type RequestHandler } from '@sveltejs/kit'
 import { getDatabaseWithoutAuth } from '$lib/api'
 // HELPERS
 import { requireMapRefreshAccess } from '$lib/map/renders/auth.server'
-import { generateRenderJobsLocally } from '$lib/map/renders/local.server'
 import { enqueueMapRenderJob } from '$lib/map/renders/queue.server'
 import {
   planLayerMapRenderRefreshJobs,
@@ -25,6 +24,9 @@ import { getMapRenderQueue, getMapRenderRemoteConfig } from '$lib/api/services/r
 //    - POST
 
 type RefreshMode = 'plan' | 'enqueue' | 'local-generate'
+
+const loadLocalMapRenderRuntime = async () =>
+  await import('$lib/map/renders/local.server')
 
 const parseKinds = (url: URL): Array<'layers' | 'projects'> => {
   const rawKinds = url.searchParams.get('kinds') ?? 'layers,projects'
@@ -127,6 +129,7 @@ export const POST: RequestHandler = async ({ platform, request, url }) => {
 
   if (mode === 'local-generate') {
     const startedAt = Date.now()
+    const { generateRenderJobsLocally } = await loadLocalMapRenderRuntime()
     const entries = await generateRenderJobsLocally(jobs, {
       baseUrl: publicOrigin,
       stage: 'local',

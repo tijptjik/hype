@@ -5,7 +5,6 @@ import process from 'node:process'
 import { setTimeout as delay } from 'node:timers/promises'
 
 import { AwsClient } from 'aws4fetch'
-import { chromium } from '@playwright/test'
 import sharp from 'sharp'
 
 import type {
@@ -41,6 +40,15 @@ import {
 //    - doesMapStyleRenderExistLocally
 //    - generateAllMapStyleRendersLocally
 
+const loadChromium = async () => {
+  const loadModule = new Function('moduleId', 'return import(moduleId)') as (
+    moduleId: string,
+  ) => Promise<{ chromium: unknown }>
+  const playwright = await loadModule(['@play', 'wright/test'].join(''))
+
+  return playwright.chromium
+}
+
 const SERVER_START_TIMEOUT_MS = 45_000
 const PREVIEW_READY_TIMEOUT_MS = 45_000
 const PREVIEW_NAVIGATION_TIMEOUT_MS = 45_000
@@ -57,7 +65,7 @@ type RenderMapStyleOptions = {
   baseUrl?: string
   ensureArtifacts?: boolean
   manageServer?: boolean
-  browser?: Awaited<ReturnType<typeof chromium.launch>>
+  browser?: Awaited<ReturnType<Awaited<ReturnType<typeof loadChromium>>['launch']>>
   force?: boolean
   storage?: 'local' | 'remote'
   stage?: PreviewStage
@@ -218,6 +226,7 @@ const renderMapStyleRender = async (
   styleCode: string,
   options: RenderMapStyleOptions = {},
 ): Promise<MapRenderManifestEntry> => {
+  const chromium = await loadChromium()
   const baseUrl =
     options.baseUrl ??
     process.env.MAP_STYLE_RENDER_BASE_URL ??
@@ -474,6 +483,7 @@ export const generateAllMapStyleRendersLocally = async (
   styleCodes: string[],
   options: RenderMapStyleOptions = {},
 ): Promise<Record<string, MapRenderManifestEntry>> => {
+  const chromium = await loadChromium()
   const force = options.force ?? false
   const stage = options.stage ?? 'local'
   const baseUrl =
