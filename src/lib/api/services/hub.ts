@@ -384,6 +384,12 @@ export function getHubFromDomain(
     return coreConfig
   }
 
+  if (domain.endsWith('.preview.hype.hk')) {
+    return {
+      code: domain.slice(0, -'.preview.hype.hk'.length),
+    }
+  }
+
   if (domain.endsWith('.hype.hk')) {
     const subdomain = domain.replace('.hype.hk', '')
     return { code: subdomain }
