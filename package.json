@@ -120,10 +120,11 @@
     "jsdom": "^29.0.1",
     "svelte-check": "^4.4.6",
     "tsx": "^4.21.0",
+    "unplugin-icons": "^23.0.1",
     "vite-node": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.26.0",
     "vitest": "^4.1.2",
-    "wrangler": "^4.78.0"
+    "wrangler": "^4.79.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -137,7 +138,7 @@
     "workerd"
   ],
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.30.2",
+    "@cloudflare/vite-plugin": "^1.30.3",
     "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "^2.15.1",
     "@jsquash/avif": "^2.1.1",
