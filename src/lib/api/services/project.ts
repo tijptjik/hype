@@ -912,6 +912,20 @@ const buildVisibilityAndOwnershipConditions = (
       return parts.length === 1 ? parts[0] : and(...parts)
     }
 
+    // Admin list requests with `isPublished` omitted should still stay inside the
+    // actor's scoped membership rather than widening to globally published projects.
+    if (isAdminRequest && requestedIsPublished === undefined) {
+      if (!nonUserMembershipScopeCondition) return undefined
+
+      const parts: SQL<unknown>[] = [nonUserMembershipScopeCondition]
+
+      if (requestedIsArchived === false || requestedIsArchived === undefined) {
+        parts.push(eq(project.isArchived, false))
+      }
+
+      return parts.length === 1 ? parts[0] : and(...parts)
+    }
+
     const publishedBranch = and(
       eq(project.isPublished, true),
       eq(project.isArchived, false),
