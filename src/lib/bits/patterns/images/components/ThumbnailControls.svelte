@@ -16,6 +16,8 @@ let {
   isProcessingUploads = false,
   isDeleteMode = false,
   disabled = false,
+  disableDeleteMode = disabled,
+  disableUpload = disabled,
   variant = 'floating',
   uploadSelectionMode = 'multiple',
   onToggleDeleteMode,
@@ -25,6 +27,8 @@ let {
   isProcessingUploads?: boolean
   isDeleteMode?: boolean
   disabled?: boolean
+  disableDeleteMode?: boolean
+  disableUpload?: boolean
   variant?: 'floating' | 'footer'
   uploadSelectionMode?: 'single' | 'multiple'
   onToggleDeleteMode?: () => void
@@ -87,7 +91,7 @@ const deleteModeButtonLabel = $derived(
               modifier="circle"
               hideLabel={true}
               hideLabelInstantly={true}
-              disabled={disabled || isDeleteMode}
+              disabled={disableUpload || isDeleteMode}
               iconComponent={isProcessingUploads ? LoaderCircleIcon : CloudUploadIcon}
               class={iconButtonClass}
               onClick={() => inputEl?.click()}
@@ -104,7 +108,7 @@ const deleteModeButtonLabel = $derived(
               modifier="circle"
               hideLabel={true}
               hideLabelInstantly={true}
-              {disabled}
+              disabled={disableDeleteMode}
               class={cx(
                   'bits-admin-menu__button',
                   iconButtonClass,

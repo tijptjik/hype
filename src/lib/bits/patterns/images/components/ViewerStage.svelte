@@ -25,6 +25,36 @@ type SceneSnapshot = {
   fit: 'fit' | 'cover'
 }
 
+/**
+ * Clones a renderable so crossfade layers keep the exact scene payload they
+ * started with, even if live viewer state mutates during the transition.
+ *
+ * @param item - Renderable being frozen into a scene snapshot.
+ * @returns Detached renderable copy for transition-safe rendering.
+ */
+function cloneViewerRenderable(item: ViewerRenderable): ViewerRenderable {
+  return {
+    ...item,
+    status: item.status ? { ...item.status } : item.status,
+    meta: item.meta ? { ...item.meta } : item.meta,
+  }
+}
+
+/**
+ * Freezes a scene snapshot so outgoing/incoming layers retain their original
+ * fit mode and render payload for the full crossfade lifecycle.
+ *
+ * @param scene - Scene to clone.
+ * @returns Detached scene snapshot.
+ */
+function cloneSceneSnapshot(scene: SceneSnapshot): SceneSnapshot {
+  return {
+    key: scene.key,
+    fit: scene.fit,
+    item: cloneViewerRenderable(scene.item),
+  }
+}
+
 let {
   currentItem,
   activeId = null,
@@ -140,8 +170,8 @@ function markSceneAssetReady(url: string): void {
  */
 function startCrossfade(nextScene: SceneSnapshot): void {
   clearTransitionTimers()
-  previousScene = displayedScene
-  incomingScene = nextScene
+  previousScene = displayedScene ? cloneSceneSnapshot(displayedScene) : null
+  incomingScene = cloneSceneSnapshot(nextScene)
   crossfadeActive = false
   clearPendingScene()
 
@@ -155,7 +185,7 @@ function startCrossfade(nextScene: SceneSnapshot): void {
 
   // Retire the outgoing layer once the configured crossfade duration completes.
   cleanupTimer = setTimeout(() => {
-    displayedScene = incomingScene
+    displayedScene = incomingScene ? cloneSceneSnapshot(incomingScene) : null
     previousScene = null
     incomingScene = null
     crossfadeActive = false
@@ -183,7 +213,7 @@ $effect(() => {
 
   const nextScene: SceneSnapshot = {
     key: nextKey,
-    item: currentItem,
+    item: cloneViewerRenderable(currentItem),
     fit,
   }
 

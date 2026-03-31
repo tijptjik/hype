@@ -26,10 +26,13 @@ let {
   flipMode = true,
   getIsHighlighted,
   highlightClass = 'outline outline-2 outline-accent outline-offset-[-2px]',
+  getBadgeLabel,
+  getBadgeClass,
   getIsBlurred,
   getIsGreyscale,
   getIsLoading,
   getIsUploading,
+  isIntentDisabled = false,
   onIntentChange,
   onDelete,
   onRetryUpload,
@@ -52,6 +55,7 @@ let uploadBatchScrollTimeout: ReturnType<typeof setTimeout> | null = null
 let isWaitingForUploadBatchScroll = false
 let prefetchedSceneAssetUrls = $state<string[]>([])
 let visiblePrefetchFrame: number | null = null
+let suppressTrackClick = $state(false)
 
 const HOVER_TARGET_DEBOUNCE_MS = 80
 const UPLOAD_BATCH_SCROLL_SETTLE_MS = 160
@@ -118,6 +122,28 @@ function handleTrackPointerMove(): void {
   if (pendingHoverItem) {
     scheduleHoverDebounce()
   }
+}
+function handleTrackWheel(event: WheelEvent): void {
+  if (!trackEl || orientation !== 'horizontal') return
+
+  const hasHorizontalOverflow = trackEl.scrollWidth > trackEl.clientWidth
+  if (!hasHorizontalOverflow) return
+
+  const scrollDelta =
+    Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX
+
+  if (scrollDelta === 0) return
+
+  event.preventDefault()
+  trackEl.scrollLeft += scrollDelta
+}
+
+function handleTrackClickCapture(event: MouseEvent): void {
+  if (!suppressTrackClick) return
+
+  event.preventDefault()
+  event.stopPropagation()
+  suppressTrackClick = false
 }
 
 function handleTrackScroll(): void {
@@ -390,7 +416,9 @@ onDestroy(() => {
 })
 </script>
 
-<div class={cx('flex h-full w-full min-h-0 flex-col overflow-hidden', className)}>
+<div
+  class={cx('flex h-full w-full min-h-0 flex-col overflow-hidden select-none', className)}
+>
   {#each prefetchedSceneAssetUrls as url (url)}
     <img
       src={url}
@@ -404,16 +432,19 @@ onDestroy(() => {
     bind:this={trackEl}
     onmouseenter={handleTrackPointerEnter}
     onmousemove={handleTrackPointerMove}
+    onwheel={handleTrackWheel}
+    onclickcapture={handleTrackClickCapture}
     onmouseleave={handleTrackPointerLeave}
     onscroll={handleTrackScroll}
     class={cx(
-      'flex min-h-0 w-full min-w-0 flex-1 gap-2',
+      'flex min-h-0 w-full min-w-0 flex-1 gap-2 select-none',
+      'overscroll-contain',
       orientation === 'vertical'
         ? variant === 'admin'
-          ? 'flex-col overflow-x-hidden overflow-y-auto px-3 pb-3 pt-3 pr-2'
+          ? 'flex-col overflow-x-hidden overflow-y-auto px-4 pb-3 pt-3 pr-2'
           : 'flex-col overflow-x-hidden overflow-y-auto pr-2'
         : variant === 'admin'
-          ? 'overflow-x-auto overflow-y-hidden pb-3 pt-3'
+          ? 'overflow-x-auto overflow-y-hidden bg-[#121212] p-3 mt-3 mr-3'
           : 'overflow-x-auto overflow-y-hidden pb-4',
     )}
   >
@@ -433,13 +464,18 @@ onDestroy(() => {
             isActive={item.id === activeId}
             isHighlighted={getIsHighlighted?.(item) ?? false}
             {highlightClass}
+            badgeLabel={getBadgeLabel?.(item) ?? null}
+            badgeClass={getBadgeClass?.(item) ?? ''}
             isLoading={getIsLoading?.(item) ?? false}
             isBlurred={resolveIsBlurred(item)}
             isGreyscale={resolveIsGreyscale(item)}
             isUploading={getIsUploading?.(item) ?? false}
             {isDeleteMode}
+            {isIntentDisabled}
+            intentPopoverSide={orientation === 'horizontal' ? 'top' : 'left'}
             {onIntentChange}
             onSelect={handleSelect}
+            onHover={handleItemHover}
             onLoad={() => onLoad?.(item)}
             onError={() => onError?.(item)}
             {onDelete}

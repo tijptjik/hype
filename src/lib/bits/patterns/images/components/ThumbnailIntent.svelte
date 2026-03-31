@@ -10,18 +10,27 @@ import type { ThumbnailIntentSelectorProps } from './imagePrimitives.types'
 let {
   item,
   onIntentChange,
+  contentSide = 'left',
+  disabled = false,
   class: className = '',
 }: ThumbnailIntentSelectorProps & {
   class?: string
 } = $props()
 let open = $state(false)
 const currentIntent = $derived((item.intent ?? 'general') as Intent)
+const hasIntentError = $derived(Boolean(item.meta?.intentError))
+const intentErrorMessage = $derived(
+  typeof item.meta?.intentErrorMessage === 'string'
+    ? item.meta.intentErrorMessage
+    : null,
+)
 const orderedIntentOptions = $derived([
   ...adminIntentOrder.filter(option => option !== 'undefined'),
   'undefined',
 ])
 
 async function handleSelect(nextIntent: Intent): Promise<void> {
+  if (disabled) return
   open = false
   await onIntentChange?.(item, nextIntent)
 }
@@ -30,20 +39,24 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
 <div class={cx('absolute inset-x-0 bottom-3.5 z-30 flex justify-center', className)}>
   <Popover.Root bind:open>
     <Popover.Trigger
+      {disabled}
       class={cx(
-        'inline-flex h-[26px] max-w-[6.25rem] items-center rounded-md px-2 text-[10px] font-medium uppercase tracking-[0.14em] transition',
-        currentIntent === 'canonical'
-          ? 'bg-primary/70 text-white hover:bg-primary/85'
-          : 'bg-black/70 text-white hover:bg-black/85',
+        'inline-flex h-[26px] max-w-[6.25rem] items-center rounded-md px-2 text-[10px] font-medium uppercase tracking-[0.14em] transition disabled:cursor-not-allowed',
+        hasIntentError
+          ? 'bg-error text-white hover:bg-error'
+          : currentIntent === 'canonical'
+            ? 'bg-primary/70 text-white hover:bg-primary/85'
+            : 'bg-black/70 text-white hover:bg-black/85',
       )}
       aria-label={m.gallery__change_image_intent()}
+      title={intentErrorMessage ?? undefined}
     >
       <span class="truncate">{intentDisplay[currentIntent]}</span>
     </Popover.Trigger>
 
     <Popover.Portal>
       <Popover.Content
-        side="left"
+        side={contentSide}
         align="center"
         sideOffset={10}
         class="bits-theme z-[200] flex w-40 flex-col gap-1 overflow-hidden rounded-xl border border-white/10 bg-black/95 p-1.5 shadow-xl backdrop-blur-sm"

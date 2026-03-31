@@ -80,7 +80,7 @@ The main remaining gaps are orchestration and legacy overlap:
 ### Partially Implemented
 
 - The package uses normalized items and status variants, but collection state is still projected out of `ImageCtx`.
-- `ThumbnailIntentSelector` is now context-agnostic at the component layer, but intent persistence still flows through adapter actions that call `ImageCtx.handleSetIntent(...)`.
+- `ThumbnailIntent` is now context-agnostic at the component layer, but intent persistence still flows through adapter actions that call `ImageCtx.handleSetIntent(...)`.
 - Full upload and replacement flows are normalized for current feature/resource consumers, but not yet packaged as a general gallery store API.
 - Metadata loading is handled in adapters rather than in package-owned orchestration.
 - `CameraViewer` reuses the capture-button path, but robust mobile camera capability/session handling is still outside this package.
@@ -131,18 +131,18 @@ The package lives at `src/lib/bits/patterns/images`.
 
 Current primitive exports under `components/*` include:
 
-- `AdminStateOverlay`
+- `ThumbnailOverlays`
 - `CameraCaptureButton`
 - `Dropzone`
-- `EmptyState`
+- `ViewerEmpty`
 - `FullScreen`
 - `ImageMetadataCard`
-- `ImageViewerControls`
+- `ViewerControls`
 - `ImageSurface`
 - `ThumbnailButton`
-- `ThumbnailIntentSelector`
+- `ThumbnailIntent`
 - `ThumbnailControls`
-- `ViewerControls`
+- `ViewerNav`
 - `ViewerStage`
 
 ## Current Normalized Item Model
@@ -282,7 +282,7 @@ Implemented behavior:
 
 - composes `ThumbnailButton`
 - supports `isBlurred`, `isGreyscale`, `isLoading`, `isUploading`, and `isDeleteMode`
-- shows `ThumbnailIntentSelector` when not deleting or uploading
+- shows `ThumbnailIntent` when not deleting or uploading
 - shows unpublished-state overlay when `isPublished === false`
 - supports retry for failed uploads
 - uses a local confirmation step before delete
@@ -368,7 +368,7 @@ Implemented behavior:
 
 - current richest multi-image composition in the package
 - composes `AdminViewer` and vertical `ThumbnailWrapper`
-- adds bottom viewer controls via `ImageViewerControls`
+- adds bottom viewer controls via `ViewerControls`
 - adds footer `ThumbnailControls`
 - supports fullscreen toggling
 - supports hover-preview disable

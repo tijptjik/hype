@@ -70,6 +70,8 @@ export type AdminStateOverlayProps = {
 export type ThumbnailIntentSelectorProps = {
   item: ViewerRenderable
   onIntentChange?: GalleryIntentChangeHandler
+  contentSide?: 'top' | 'right' | 'bottom' | 'left'
+  disabled?: boolean
 }
 
 export type ViewerStageProps = {

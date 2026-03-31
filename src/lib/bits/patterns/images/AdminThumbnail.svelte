@@ -16,8 +16,13 @@ let {
   isGreyscale = false,
   isUploading = false,
   isDeleteMode = false,
+  isIntentDisabled = false,
+  badgeLabel = null,
+  badgeClass = '',
+  intentPopoverSide = 'left',
   onIntentChange,
   onSelect,
+  onHover,
   onDelete,
   onRetryUpload,
   onLoad,
@@ -65,28 +70,31 @@ async function handleDelete(): Promise<void> {
       {isBlurred}
       {isGreyscale}
       onSelect={handleSelect}
+      {onHover}
       {onLoad}
       {onError}
     />
 
-    {#if !isDeleteMode && !isConfirmingDelete && !isUploading && !isUploadError}
-      <ImagePrimitive.ThumbnailIntentSelector
+    {#if onIntentChange && !isDeleteMode && !isConfirmingDelete && !isUploading && !isUploadError}
+      <ImagePrimitive.ThumbnailIntent
         {item}
+        disabled={isIntentDisabled}
         {onIntentChange}
+        contentSide={intentPopoverSide}
         class="bottom-[10px]"
       />
     {/if}
 
-    {#if isHighlighted}
+    {#if badgeLabel || isHighlighted}
       <div
-        class="pointer-events-none absolute right-2 top-2 z-20 inline-flex items-center rounded-full bg-[#2A6FEC] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.32)]"
-        aria-label={m.gallery__highlighted_task_image()}
+        class={`pointer-events-none absolute right-2 top-2 z-20 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.32)] ${badgeClass || 'bg-[#2A6FEC]'}`}
+        aria-label={badgeLabel ?? m.gallery__highlighted_task_image()}
       >
-        <span>{m.gallery__new_badge()}</span>
+        <span>{badgeLabel ?? m.gallery__new_badge()}</span>
       </div>
     {/if}
 
-    <ImagePrimitive.AdminStateOverlay
+    <ImagePrimitive.ThumbnailOverlays
       {isUploading}
       {isUploadError}
       {uploadErrorMessage}

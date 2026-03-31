@@ -24,12 +24,16 @@ let {
   canRotateActiveImage = false,
   canEditActiveImage = false,
   canReplaceActiveImage = false,
+  canDeleteActiveImage = false,
   canDownloadActiveImage = false,
   isEditBusy = false,
   isReadonly = false,
+  isIntentDisabled = false,
   viewerControlsOffsetClass = 'bottom-4',
   getIsHighlighted,
   highlightClass = 'outline outline-2 outline-accent outline-offset-[-2px]',
+  getBadgeLabel,
+  getBadgeClass,
   getIsBlurred,
   getIsGreyscale,
   getIsLoading,
@@ -57,8 +61,8 @@ let thumbnailFollowActiveRequestKey = $state(0)
 let thumbnailFollowActiveRequestId = $state<string | null>(null)
 const hasItems = $derived(items.length > 0)
 const adminThumbnailSize = 192
-const verticalRailPaddingLeftPx = 12
-const verticalRailPaddingRightPx = 12
+const verticalRailPaddingLeftPx = 16
+const verticalRailPaddingRightPx = 16
 const verticalRailBottomBarHeightPx = 79
 const verticalRailWidthPx =
   adminThumbnailSize + verticalRailPaddingLeftPx + verticalRailPaddingRightPx
@@ -71,6 +75,9 @@ const railVisibilityClass = $derived(
     ? 'translate-x-0 opacity-100'
     : 'pointer-events-none translate-x-6 opacity-0',
 )
+const controlsDisabled = $derived(
+  isReadonly || (!canEditActiveImage && !canDownloadActiveImage),
+)
 
 $effect(() => {
   if (!items.length) {
@@ -79,9 +86,9 @@ $effect(() => {
 })
 </script>
 
-<div class={cx('h-full w-full select-none bg-black px-0', className)}>
-  <div class="flex h-full w-full min-h-0 gap-4">
-    <div class="relative min-h-0 min-w-0 flex-1 pt-2">
+<div class={cx('h-full w-full select-none bg-black px-0')}>
+  <div class="flex h-full w-full min-h-0">
+    <div class={cx('relative min-h-0 min-w-0 flex-1 pt-2', className)}>
       <AdminViewer
         {items}
         {activeId}
@@ -115,17 +122,19 @@ $effect(() => {
             hasItems ? 'pointer-events-auto opacity-100' : 'opacity-0',
           )}
         >
-          <ImagePrimitive.ImageViewerControls
+          <ImagePrimitive.ViewerControls
             {isPublished}
             {presentationMode}
             canMutate={canMutateActiveImage}
             canRotate={canRotateActiveImage}
             canEdit={canEditActiveImage}
             canReplace={canReplaceActiveImage}
+            canDelete={canDeleteActiveImage}
             canDownload={canDownloadActiveImage}
+            showEditButton={canEditActiveImage || canRotateActiveImage}
             {isEditBusy}
             offsetClass={viewerControlsOffsetClass}
-            disabled={isReadonly || (!canEditActiveImage && !canDownloadActiveImage)}
+            disabled={controlsDisabled}
             {onRotateLeft}
             {onRotateRight}
             {onTogglePublished}
@@ -164,10 +173,13 @@ $effect(() => {
           {isDeleteMode}
           {getIsHighlighted}
           {highlightClass}
+          {getBadgeLabel}
+          {getBadgeClass}
           {getIsBlurred}
           {getIsGreyscale}
           {getIsLoading}
           {getIsUploading}
+          {isIntentDisabled}
           {onIntentChange}
           {onDelete}
           {onRetryUpload}
@@ -189,14 +201,16 @@ $effect(() => {
       >
         <ImagePrimitive.ThumbnailControls
           class={cx(
-              'transition-opacity duration-200 ease-out',
-              hasItems
-                ? 'pointer-events-auto opacity-100'
-                : 'pointer-events-none opacity-0',
-            )}
+            'transition-opacity duration-200 ease-out',
+            hasItems
+              ? 'pointer-events-auto opacity-100'
+              : 'pointer-events-none opacity-0',
+          )}
           {uploadSelectionMode}
           variant="footer"
-          disabled={isReadonly}
+          disabled={isReadonly && !canDeleteActiveImage}
+          disableUpload={isReadonly}
+          disableDeleteMode={!canDeleteActiveImage}
           {isProcessingUploads}
           {isDeleteMode}
           onToggleDeleteMode={() => {

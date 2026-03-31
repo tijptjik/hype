@@ -71,6 +71,7 @@ export type ThumbnailProps = {
   highlightClass?: string
   isLoading?: boolean
   onSelect?: (item: ViewerRenderable) => void
+  onHover?: (item: ViewerRenderable) => void
   onLoad?: () => void
   onError?: () => void
 }
@@ -80,6 +81,10 @@ export type AdminThumbnailProps = ThumbnailProps & {
   isGreyscale?: boolean
   isUploading?: boolean
   isDeleteMode?: boolean
+  isIntentDisabled?: boolean
+  badgeLabel?: string | null
+  badgeClass?: string
+  intentPopoverSide?: 'top' | 'right' | 'bottom' | 'left'
   onIntentChange?: GalleryIntentChangeHandler
   onDelete?: (item: ViewerRenderable) => void | Promise<void>
   onRetryUpload?: (item: ViewerRenderable) => void | Promise<void>
@@ -137,10 +142,13 @@ export type ThumbnailWrapperProps = {
   flipMode?: boolean
   getIsHighlighted?: (item: ViewerRenderable) => boolean
   highlightClass?: string
+  getBadgeLabel?: (item: ViewerRenderable) => string | null
+  getBadgeClass?: (item: ViewerRenderable) => string | undefined
   getIsBlurred?: (item: ViewerRenderable) => boolean
   getIsGreyscale?: (item: ViewerRenderable) => boolean
   getIsLoading?: (item: ViewerRenderable) => boolean
   getIsUploading?: (item: ViewerRenderable) => boolean
+  isIntentDisabled?: boolean
   onIntentChange?: GalleryIntentChangeHandler
   onDelete?: (item: ViewerRenderable) => void | Promise<void>
   onRetryUpload?: (item: ViewerRenderable) => void | Promise<void>
@@ -153,6 +161,7 @@ export type ThumbnailWrapperProps = {
 
 export type ImageEditorProps = {
   items: ViewerRenderable[]
+  class?: string
   activeId?: string | null
   isFullscreen?: boolean
   fullscreenRequestKey?: number
@@ -169,12 +178,16 @@ export type ImageEditorProps = {
   canRotateActiveImage?: boolean
   canEditActiveImage?: boolean
   canReplaceActiveImage?: boolean
+  canDeleteActiveImage?: boolean
   canDownloadActiveImage?: boolean
   isEditBusy?: boolean
   isReadonly?: boolean
+  isIntentDisabled?: boolean
   viewerControlsOffsetClass?: string
   getIsHighlighted?: (item: ViewerRenderable) => boolean
   highlightClass?: string
+  getBadgeLabel?: (item: ViewerRenderable) => string | null
+  getBadgeClass?: (item: ViewerRenderable) => string | undefined
   getIsBlurred?: (item: ViewerRenderable) => boolean
   getIsGreyscale?: (item: ViewerRenderable) => boolean
   getIsLoading?: (item: ViewerRenderable) => boolean

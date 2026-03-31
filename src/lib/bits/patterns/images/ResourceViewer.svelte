@@ -64,14 +64,14 @@ function setRetainedViewerSnapshot(snapshot: ResourceViewerSnapshot | null): voi
 </script>
 
 <script lang="ts">
-import { onDestroy } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 // ADAPTERS
 import { useEntityImageViewerModel } from '$lib/adapters/image'
 // BITS COMPONENTS
 import { UserAttributionCard } from '$lib/bits'
 import { AdminViewer, Dropzone } from '$lib/bits/patterns/images'
 import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
-import ImageEditorViewerControls from '$lib/bits/patterns/images/components/ImageEditorViewerControls.svelte'
+import ViewerControls from '$lib/bits/patterns/images/components/ViewerControls.svelte'
 // COMPONENTS
 import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
@@ -85,33 +85,40 @@ import { m } from '$lib/i18n'
 let {
   canEditPresentationMode = true,
   canEditDropzone = false,
+  hasBottomPadding = false,
+  isReadonly = false,
+  prefetchMetadata = false,
   onPresentationModeCommitted,
 }: {
   canEditPresentationMode?: boolean
   canEditDropzone?: boolean
+  hasBottomPadding?: boolean
+  isReadonly?: boolean
+  prefetchMetadata?: boolean
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
 } = $props()
 
 const imageCtx = getImageCtx()
 const model = useEntityImageViewerModel(imageCtx, {
-  onPresentationModeCommitted,
+  onPresentationModeCommitted: mode => onPresentationModeCommitted?.(mode),
 })
 const adminCtx = getAdminCtx()
 const hasActiveImage = $derived(Boolean(model.state.activeImage))
 const hasItems = $derived(model.state.items.length > 0)
 const canUseEditFacility = $derived(canEditPresentationMode || canEditDropzone)
 const canDeleteImage = $derived(
-  adminCtx.appCtx.isSuperAdmin() && model.state.canDeleteActiveImage,
+  !isReadonly && adminCtx.appCtx.isSuperAdmin() && model.state.canDeleteActiveImage,
 )
 const canChangePresentationMode = $derived(
-  canEditPresentationMode && model.state.canMutateActiveImage,
+  !isReadonly && canEditPresentationMode && hasActiveImage,
 )
-const canReplaceImage = $derived(canEditDropzone && model.state.canReplaceActiveImage)
 const isDropzoneDisabled = $derived(
-  !canEditDropzone ||
+  isReadonly ||
+    !canEditDropzone ||
     model.state.isUploadBusy ||
     (hasActiveImage && !model.state.canReplaceActiveImage),
 )
+let isMetadataOpen = $state(false)
 let retainedSnapshot = $state<ResourceViewerSnapshot | null>(
   getRetainedViewerSnapshot(),
 )
@@ -166,15 +173,15 @@ const displayedCanMutateActiveImage = $derived(
     : model.state.canMutateActiveImage,
 )
 const displayedCanChangePresentationMode = $derived(
-  canEditPresentationMode && displayedCanMutateActiveImage,
+  !isReadonly && canEditPresentationMode && Boolean(displayedActiveImage),
 )
 const displayedCanReplaceImage = $derived(
-  canEditDropzone && displayedCanReplaceActiveImage,
+  !isReadonly && canEditDropzone && displayedCanReplaceActiveImage,
 )
 const displayedCanDeleteImage = $derived(
   shouldShowRetainedSnapshot
     ? (retainedSnapshot?.canDeleteImage ?? false)
-    : adminCtx.appCtx.isSuperAdmin() && displayedCanDeleteActiveImage,
+    : !isReadonly && adminCtx.appCtx.isSuperAdmin() && displayedCanDeleteActiveImage,
 )
 const displayedIsEditBusy = $derived(
   shouldShowRetainedSnapshot
@@ -199,26 +206,48 @@ const displayedMetadata = $derived(
 
 $effect(() => {
   if (
-    !retainedSnapshot &&
-    latestStableSnapshot?.item &&
-    imageCtx.state.lastChangeType === 'context' &&
-    (imageCtx.state.isFetchingImages || !currentViewerItem)
+    !prefetchMetadata ||
+    shouldShowRetainedSnapshot ||
+    !displayedActiveImage?.image.id ||
+    displayedHasLoadedMetadata ||
+    displayedIsMetadataLoading
   ) {
-    retainedSnapshot = latestStableSnapshot
+    return
   }
+
+  void model.actions.ensureMetadataLoaded()
 })
 
 $effect(() => {
-  if (!retainedSnapshot?.item) return
-
-  if (!currentViewerItem) {
-    // Once the destination resource has finished loading and still has no image,
-    // drop the optimistic snapshot so the empty state and disabled chrome can
-    // resolve to the real destination state.
-    if (!imageCtx.state.isFetchingImages) {
-      retainedSnapshot = null
-    }
+  if (
+    !latestStableSnapshot?.item ||
+    imageCtx.state.lastChangeType !== 'context' ||
+    !imageCtx.state.isFetchingImages
+  ) {
+    return
   }
+
+  // Avoid re-subscribing this effect to the state it updates.
+  if (untrack(() => retainedSnapshot)) return
+
+  retainedSnapshot = latestStableSnapshot
+})
+
+$effect(() => {
+  if (!retainedSnapshot || !currentViewerItem || imageCtx.state.isFetchingImages) return
+
+  retainedSnapshot = null
+})
+
+$effect(() => {
+  if (currentViewerItem || imageCtx.state.isFetchingImages) return
+
+  // Once the current resource has settled into a real empty state, clear both
+  // the in-memory and module-retained snapshots so deleted images cannot
+  // reappear during the next route mount.
+  latestStableSnapshot = null
+  retainedSnapshot = null
+  setRetainedViewerSnapshot(null)
 })
 
 $effect(() => {
@@ -254,6 +283,12 @@ async function handleDeleteActive(): Promise<void> {
     return
   }
 
+  // Clear any retained handoff state before deleting so a removed image cannot
+  // be resurrected during the next resource mount.
+  latestStableSnapshot = null
+  retainedSnapshot = null
+  setRetainedViewerSnapshot(null)
+
   await model.actions.deleteActive()
 }
 
@@ -263,17 +298,24 @@ function handleCurrentItemLoad(item: ViewerRenderable): void {
   const isDestinationItem =
     model.state.items.find(candidate => candidate.id === item.id) != null
 
-  if (!isDestinationItem) return
+  if (!isDestinationItem || imageCtx.state.isFetchingImages) return
 
   retainedSnapshot = null
 }
 
 onDestroy(() => {
-  setRetainedViewerSnapshot(latestStableSnapshot)
+  const snapshotToRetain =
+    currentViewerItem && model.state.activeImage ? latestStableSnapshot : null
+
+  setRetainedViewerSnapshot(snapshotToRetain)
 })
 </script>
 
-<div class="h-full w-full bg-black pr-4 pb-4 pt-1">
+<div
+  class={hasBottomPadding
+    ? 'h-full w-full select-none bg-black pb-4 pr-4 pt-1'
+    : 'h-full w-full select-none bg-black pr-4 pt-1'}
+>
   <Dropzone
     disabled={!hasItems || isDropzoneDisabled}
     {hasItems}
@@ -288,10 +330,10 @@ onDestroy(() => {
       fit="fit"
       viewerFit={displayedPresentationMode === 'cover' ? 'cover' : 'fit'}
       isEmptyUploadEnabled={true}
-      isEmptyDropzoneEnabled={canEditDropzone}
-      isEmptyUploadDisabled={!canEditDropzone}
+      isEmptyDropzoneEnabled={!isReadonly && canEditDropzone}
+      isEmptyUploadDisabled={isReadonly || !canEditDropzone}
       uploadSelectionMode="single"
-      onUploadFiles={canEditDropzone
+      onUploadFiles={!isReadonly && canEditDropzone
         ? files => {
             void model.actions.addFiles(files)
           }
@@ -307,12 +349,13 @@ onDestroy(() => {
             type="imageContributor"
             openDirection="right"
             isOpen={true}
+            class="[&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9"
           />
         {/if}
       {/snippet}
 
       {#snippet centerRail(_item)}
-        <ImageEditorViewerControls
+        <ViewerControls
           presentationMode={displayedPresentationMode}
           canMutate={displayedCanChangePresentationMode}
           canEdit={canUseEditFacility && displayedCanEditActiveImage}
@@ -321,9 +364,9 @@ onDestroy(() => {
           canDelete={displayedCanDeleteImage}
           canDownload={displayedCanDownloadActiveImage}
           isEditBusy={displayedIsEditBusy}
-          disabled={shouldShowRetainedSnapshot ||
-            !displayedActiveImage ||
-            (!canUseEditFacility && !displayedCanDeleteImage)}
+          disabled={!displayedActiveImage}
+          freezeInteractions={shouldShowRetainedSnapshot}
+          offsetClass="bottom-4"
           onPresentationModeChange={displayedCanChangePresentationMode
             ? model.actions.setPresentationMode
             : undefined}
@@ -336,7 +379,7 @@ onDestroy(() => {
           onRotateRight={model.actions.rotateRight}
           showPublishedToggle={false}
           showDeleteButton={displayedCanDeleteImage}
-          showReplaceButton={canEditDropzone || shouldShowRetainedSnapshot}
+          showReplaceButton={displayedCanReplaceImage || shouldShowRetainedSnapshot}
         />
       {/snippet}
 
@@ -344,13 +387,21 @@ onDestroy(() => {
         {#if displayedActiveImage}
           <div
             class="group/metadata relative"
+            onmouseleave={() => {
+              isMetadataOpen = false
+            }}
             onmouseenter={() => {
               if (shouldShowRetainedSnapshot) return
+              isMetadataOpen = true
               void model.actions.ensureMetadataLoaded()
             }}
             onfocusin={() => {
               if (shouldShowRetainedSnapshot) return
+              isMetadataOpen = true
               void model.actions.ensureMetadataLoaded()
+            }}
+            onfocusout={() => {
+              isMetadataOpen = false
             }}
           >
             <button
@@ -358,6 +409,13 @@ onDestroy(() => {
               class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/85 disabled:cursor-default disabled:opacity-45"
               disabled={shouldShowRetainedSnapshot}
               aria-label="Open image metadata"
+              onclick={() => {
+                if (shouldShowRetainedSnapshot) return
+                isMetadataOpen = !isMetadataOpen
+                if (isMetadataOpen) {
+                  void model.actions.ensureMetadataLoaded()
+                }
+              }}
             >
               {#if displayedIsMetadataLoading}
                 <Icon src={LoaderCircle} class="h-[22px] w-[22px] animate-spin" />
@@ -367,14 +425,16 @@ onDestroy(() => {
             </button>
 
             <div
-              class="pointer-events-none absolute bottom-0 right-0 origin-bottom-right opacity-0 transition-opacity duration-150 group-hover/metadata:opacity-100 group-focus-within/metadata:opacity-100"
+              class="pointer-events-none absolute bottom-0 right-0 origin-bottom-right transition-opacity duration-150"
+              class:opacity-0={!isMetadataOpen}
+              class:opacity-100={isMetadataOpen}
             >
               <div class="pointer-events-auto">
-                {#if displayedHasLoadedMetadata && !displayedIsMetadataLoading}
+                {#if displayedIsMetadataLoading || displayedHasLoadedMetadata}
                   <ImageMetadataCard
                     image={displayedActiveImage.image}
                     metadata={displayedMetadata}
-                    loading={false}
+                    loading={displayedIsMetadataLoading}
                   />
                 {/if}
               </div>

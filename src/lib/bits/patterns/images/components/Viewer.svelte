@@ -1,9 +1,9 @@
 <script lang="ts">
 import { onDestroy, tick } from 'svelte'
 import { m } from '$lib/i18n'
-import EmptyState from './EmptyState.svelte'
-import FullScreen from './FullScreen.svelte'
-import ViewerControls from './ViewerControls.svelte'
+import ViewerEmpty from './ViewerEmpty.svelte'
+import ViewerFullScreen from './ViewerFullScreen.svelte'
+import ViewerNav from './ViewerNav.svelte'
 import ViewerStage from './ViewerStage.svelte'
 import type { ViewerProps, ViewerRenderable } from '../images.types'
 
@@ -235,7 +235,7 @@ onDestroy(() => {
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
-<div class="flex h-full w-full min-h-0 flex-col gap-3">
+<div class="flex h-full w-full min-h-0 flex-col gap-3 select-none">
   {#if currentItem}
     <div class="group/viewer relative min-h-0 flex-1 overflow-hidden">
       <ViewerStage
@@ -281,7 +281,7 @@ onDestroy(() => {
 
       {#if items.length > 1}
         {#key currentItem.id}
-          <ViewerControls
+          <ViewerNav
             {canGoPrev}
             {canGoNext}
             onPrev={() => moveToIndex(resolvedActiveIndex - 1)}
@@ -313,7 +313,7 @@ onDestroy(() => {
       {/if}
     </div>
   {:else}
-    <EmptyState
+    <ViewerEmpty
       title={m.gallery__empty_state_title()}
       description={m.gallery__empty_state_description()}
     />
@@ -321,7 +321,7 @@ onDestroy(() => {
 </div>
 
 {#if currentItem && isFullscreen}
-  <FullScreen
+  <ViewerFullScreen
     {currentItem}
     activeId={currentSceneActiveId}
     fit={viewerFit}
