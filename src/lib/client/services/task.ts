@@ -9,6 +9,7 @@ import {
 // TYPES
 import type { Id, NewFeatureTask, Task } from '$lib/types'
 import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
+import type { ViewerRenderable } from '$lib/bits/patterns/images/images.types'
 import type {
   ReviewTaskInput,
   TaskEditorLayerOption,
@@ -18,6 +19,8 @@ import type { ImageUpload } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
+// IMAGE
+import { getGalleryItemTargetImageId } from '$lib/client/services/image'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -35,6 +38,9 @@ import type { Project } from '$lib/db/zod/schema/project.types'
 // - getEffectiveTaskLayerId
 // - getSelectedTaskLayer
 // - getTaskSyncSignature
+// - isTaskImage
+// - getTaskImageBadgeLabel
+// - getTaskImageBadgeClass
 // - getTaskReviewActionToastLabel
 // - syncAssignedTaskLayerCache
 //
@@ -202,6 +208,78 @@ export const getTaskSyncSignature = (
     task.reviewAction ?? '',
     effectiveLayerId ?? '',
   ].join(':')
+
+/**
+ * Resolves whether a gallery item is linked to the currently highlighted task image set.
+ * @param item - Gallery item being rendered in the task image editor
+ * @param items - Current gallery item collection used to resolve persisted image IDs
+ * @param isImageHighlighted - Predicate backed by the image context highlight state
+ * @returns True when the gallery item maps to a highlighted persisted task image
+ */
+export const isTaskImage = (
+  item: ViewerRenderable,
+  items: ViewerRenderable[],
+  isImageHighlighted: (imageId: string) => boolean,
+): boolean => {
+  const persistedImageId =
+    getGalleryItemTargetImageId(item.id, items) ?? item.status?.savedImageId ?? null
+
+  return persistedImageId ? isImageHighlighted(persistedImageId) : false
+}
+
+/**
+ * Resolves the admin badge label for a task image in review and pre-review states.
+ * @param item - Gallery item being rendered
+ * @param items - Current gallery item collection used to resolve persisted image IDs
+ * @param isReviewed - Whether the parent task has already been reviewed
+ * @param isImageHighlighted - Predicate backed by the image context highlight state
+ * @returns Badge label when the item should show task review state, otherwise null
+ */
+export const getTaskImageBadgeLabel = (
+  item: ViewerRenderable,
+  items: ViewerRenderable[],
+  isReviewed: boolean,
+  isImageHighlighted: (imageId: string) => boolean,
+): string | null => {
+  const isLinkedToTask = isTaskImage(item, items, isImageHighlighted)
+
+  if (!isReviewed) {
+    return isLinkedToTask ? m.gallery__new_badge() : null
+  }
+
+  if (!isLinkedToTask) {
+    return null
+  }
+
+  return item.isPublished === true ? 'ACCEPTED' : 'REJECTED'
+}
+
+/**
+ * Resolves the admin badge class for a task image in review and pre-review states.
+ * @param item - Gallery item being rendered
+ * @param items - Current gallery item collection used to resolve persisted image IDs
+ * @param isReviewed - Whether the parent task has already been reviewed
+ * @param isImageHighlighted - Predicate backed by the image context highlight state
+ * @returns Badge class name when the item should show task review state
+ */
+export const getTaskImageBadgeClass = (
+  item: ViewerRenderable,
+  items: ViewerRenderable[],
+  isReviewed: boolean,
+  isImageHighlighted: (imageId: string) => boolean,
+): string | undefined => {
+  const isLinkedToTask = isTaskImage(item, items, isImageHighlighted)
+
+  if (!isReviewed) {
+    return isLinkedToTask ? 'bg-[#2A6FEC]' : undefined
+  }
+
+  if (!isLinkedToTask) {
+    return undefined
+  }
+
+  return item.isPublished === true ? 'bg-emerald-600' : 'bg-rose-600'
+}
 
 /**
  * Maps a review UI action to the success label used in admin toasts.
