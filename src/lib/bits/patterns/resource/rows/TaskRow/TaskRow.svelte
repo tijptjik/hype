@@ -1,6 +1,8 @@
 <script lang="ts">
 // I18N
 import { getI18n, m } from '$lib/i18n'
+// SERVICES
+import { getTaskReviewActionLabel } from '$lib/client/services/task'
 // BITS
 import { Row } from '$lib/bits/custom'
 import * as TaskRowPrimitive from './components'
@@ -41,19 +43,7 @@ const colorSuffix = $derived<'error' | 'info' | 'ok' | 'base'>(
   type ? (taskTypeColors[type] ?? 'base') : 'base',
 )
 const reviewAction = $derived(entity?.reviewAction)
-const reviewActionDisplay = $derived(
-  reviewAction
-    ? {
-        ignored: 'Declined',
-        'set-unpublished': 'Unpublished',
-        'set-intangible': 'Set Intangible',
-        'set-archived': 'Archived',
-        'added-all-photos': '+ Photos',
-        'added-all-photos-with-intent': '+ Some Photos',
-        'added-feature': '+ Feature',
-      }[reviewAction]
-    : '',
-)
+const reviewActionDisplay = $derived(getTaskReviewActionLabel(reviewAction))
 
 function handleRowKeyDown(event: KeyboardEvent): void {
   if (isSelected || !entity?.id) return

@@ -13,6 +13,7 @@ let {
   filterLabel,
   filterIcon,
   hasActiveSection = false,
+  disableMenuToggle = false,
   showSort = true,
   count,
   resetDisabled = false,
@@ -116,6 +117,8 @@ async function resolveFilterCollisionAgainstSort(): Promise<void> {
 }
 
 async function handleFilterAnchorHover(): Promise<void> {
+  if (disableMenuToggle) return
+
   if (isFilterSuppressedByCollision) {
     isFilterSuppressedByCollision = false
     void resolveFilterCollisionAgainstSort()
@@ -134,6 +137,8 @@ async function handleFilterAnchorHover(): Promise<void> {
 }
 
 async function handleFilterAnchorClick(_event: MouseEvent): Promise<void> {
+  if (disableMenuToggle) return
+
   if (isFilterSuppressedByCollision) {
     isFilterSuppressedByCollision = false
     void resolveFilterCollisionAgainstSort()

@@ -235,6 +235,8 @@ const viewFilters: ViewFilters = {
   task: {
     // Status related
     isReviewed: null,
+    reviewOutcome: null,
+    reviewAction: null,
     type: null,
   },
   hub: {
@@ -1741,6 +1743,16 @@ export class AdminCtx {
       const taskIsReviewed = Boolean(task.isReviewed)
       if (taskIsReviewed !== filterIsReviewed) return false
     }
+
+    if (filters.reviewOutcome !== null) {
+      const expectedOutcome = filters.reviewOutcome ? 'accepted' : 'rejected'
+      if (task.reviewOutcome !== expectedOutcome) return false
+    }
+
+    if (filters.reviewAction && task.reviewAction !== filters.reviewAction) {
+      return false
+    }
+
     return true
   }
 

@@ -686,6 +686,8 @@ export type LayerViewFilters = {
 export type TaskViewFilters = {
   // Status related
   isReviewed: FilterTriState
+  reviewOutcome: FilterTriState
+  reviewAction: ReviewAction | null
   type: TaskType | null
 }
 
@@ -819,7 +821,11 @@ export type FeatureImageFilterKey =
   | 'isOneImagePublished'
   | 'isAllImagePublished'
 // Task filter keys
-export type TaskStatusFilterKey = 'isReviewed' | 'type'
+export type TaskStatusFilterKey =
+  | 'isReviewed'
+  | 'reviewOutcome'
+  | 'reviewAction'
+  | 'type'
 
 // Hub filter keys (only archived status)
 export type HubStatusFilterKey = 'isArchived'

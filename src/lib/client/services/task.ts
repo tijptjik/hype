@@ -6,6 +6,8 @@ import {
   submitNewFeature as submitNewFeatureRemote,
   submitNewPhotos as submitNewPhotosRemote,
 } from '$lib/api/server/tasks.remote'
+// I18N
+import { m } from '$lib/i18n'
 // TYPES
 import type { Id, NewFeatureTask, Task } from '$lib/types'
 import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
@@ -32,6 +34,7 @@ import { getGalleryItemTargetImageId } from '$lib/client/services/image'
 // - mapPhotoFiles
 // - assertPhotosProvided
 // - getReviewAction
+// - getTaskReviewActionLabel
 //
 // 1. TASK STATE HELPERS
 // - mergeResolvedTaskFeature
@@ -123,6 +126,32 @@ const getReviewAction = (reviewData: {
   return reviewData.reviewAction === 'set-unpublished'
     ? 'setUnpublished'
     : 'setArchived'
+}
+
+/**
+ * Resolves the display label for a persisted task review action.
+ * @param reviewAction - Stored review action identifier from the task record
+ * @returns Localized action label for task UI and filters
+ */
+export const getTaskReviewActionLabel = (reviewAction?: string | null): string => {
+  switch (reviewAction) {
+    case 'ignored':
+      return m.task__review_action_declined()
+    case 'set-unpublished':
+      return m.forms__unpublished()
+    case 'set-intangible':
+      return m.feature__intangible()
+    case 'set-archived':
+      return m.bad_swift_cheetah_surge()
+    case 'added-all-photos':
+      return m.task__review_action_added_photos()
+    case 'added-all-photos-with-intent':
+      return m.task__review_action_added_selected_photos()
+    case 'added-feature':
+      return m.task__review_action_added_feature()
+    default:
+      return reviewAction ? reviewAction.replaceAll('-', ' ') : ''
+  }
 }
 
 // ---

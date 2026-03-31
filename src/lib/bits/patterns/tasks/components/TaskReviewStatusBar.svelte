@@ -2,6 +2,7 @@
 import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 import { UserAttributionCard } from '$lib/bits'
 import { cx } from '$lib/bits/utils'
+import { getTaskReviewActionLabel } from '$lib/client/services/task'
 import { m } from '$lib/i18n'
 import CheckIcon from 'virtual:icons/lucide/circle-check'
 import XIcon from 'virtual:icons/lucide/circle-x'
@@ -27,15 +28,7 @@ let {
 
 const outcomeLabel = $derived(
   reviewAction
-    ? ({
-        ignored: 'Declined',
-        'set-unpublished': 'Unpublished',
-        'set-intangible': 'Set Intangible',
-        'set-archived': 'Archived',
-        'added-all-photos': '+ Photos',
-        'added-all-photos-with-intent': '+ Some Photos',
-        'added-feature': '+ Feature',
-      }[reviewAction] ?? reviewAction.replaceAll('-', ' '))
+    ? getTaskReviewActionLabel(reviewAction)
     : reviewOutcome === 'accepted'
       ? m.lazy_super_gecko_bend()
       : reviewOutcome === 'rejected'
@@ -48,7 +41,7 @@ const outcomeToneClass = $derived(
     ? 'border-success/30 bg-success/12 text-success'
     : reviewOutcome === 'rejected'
       ? 'border-error/30 bg-error/12 text-error'
-      : 'border-white/12 bg-white/[0.04] text-white/75',
+      : 'border-white/12 bg-white/4 text-white/75',
 )
 
 const outcomeIcon = $derived(reviewOutcome === 'accepted' ? CheckIcon : XIcon)

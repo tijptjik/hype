@@ -70,6 +70,9 @@ const FILTER_SECTION_BUTTON_CLASSES = cx(
 let isControlBarVisible = $derived(
   adminCtx.appCtx.state.ui.isControlBarVisible[resource],
 )
+let singleSectionConfig = $derived(
+  filters.sections.length === 1 ? filters.sections[0] : null,
+)
 let isSuperAdmin = $derived(
   Boolean(
     adminCtx.appCtx.user &&
@@ -80,8 +83,9 @@ let isSuperAdmin = $derived(
 let activeSectionConfig = $derived(
   filters.sections.find(section => section.key === activeSection) ?? null,
 )
+let effectiveSectionConfig = $derived(singleSectionConfig ?? activeSectionConfig)
 let isPropertySection = $derived(
-  Boolean(activeSectionConfig && 'type' in activeSectionConfig),
+  Boolean(effectiveSectionConfig && 'type' in effectiveSectionConfig),
 )
 let totalFilterCount = $derived(
   filters.sections.reduce(
@@ -141,9 +145,18 @@ $effect(() => {
 
 {#if isControlBarVisible}
   <ResourceControlBarPrimitive.Root
-    filterLabel={activeSectionConfig ? activeSectionConfig.title : m.filters__filter_by()}
-    filterIcon={activeSectionConfig ? activeSectionConfig.icon : FunnelIcon}
-    hasActiveSection={Boolean(activeSectionConfig)}
+    filterLabel={singleSectionConfig
+      ? m.filters__filter_by()
+      : effectiveSectionConfig
+        ? effectiveSectionConfig.title
+        : m.filters__filter_by()}
+    filterIcon={singleSectionConfig
+      ? FunnelIcon
+      : effectiveSectionConfig
+        ? effectiveSectionConfig.icon
+        : FunnelIcon}
+    hasActiveSection={Boolean(effectiveSectionConfig)}
+    disableMenuToggle={Boolean(singleSectionConfig)}
     showSort={Boolean(sortables)}
     {count}
     resetDisabled={totalFilterCount === 0}
@@ -164,44 +177,46 @@ $effect(() => {
     {/snippet}
 
     {#snippet filterMenuContent({ notifyLayoutChange, closeMenu })}
-      {#each filters.sections as section, idx (section.key)}
-        {#if activeSection !== section.key}
-          {@const SectionIcon = section.icon}
-          {@const sectionCount = getFilterSectionCount(
-            adminCtx,
-            filters,
-            section,
-            isSuperAdmin,
-          )}
-          <Button
-            text={section.title}
-            iconComponent={SectionIcon}
-            style="transparent"
-            size="sm"
-            transition={fade}
-            transitionOpts={{ duration: 220, delay: 50 * idx }}
-            iconClasses="h-5 w-5"
-            class={FILTER_SECTION_BUTTON_CLASSES}
-            attrs={{
-              'data-has-indicator': sectionCount > 0 ? 'true' : 'false',
-            }}
-            onClick={() => {
-              selectSection(section.key)
-              closeMenu()
-              notifyLayoutChange()
-            }}
-          />
-        {/if}
-      {/each}
+      {#if !singleSectionConfig}
+        {#each filters.sections as section, idx (section.key)}
+          {#if activeSection !== section.key}
+            {@const SectionIcon = section.icon}
+            {@const sectionCount = getFilterSectionCount(
+              adminCtx,
+              filters,
+              section,
+              isSuperAdmin,
+            )}
+            <Button
+              text={section.title}
+              iconComponent={SectionIcon}
+              style="transparent"
+              size="sm"
+              transition={fade}
+              transitionOpts={{ duration: 220, delay: 50 * idx }}
+              iconClasses="h-5 w-5"
+              class={FILTER_SECTION_BUTTON_CLASSES}
+              attrs={{
+                'data-has-indicator': sectionCount > 0 ? 'true' : 'false',
+              }}
+              onClick={() => {
+                selectSection(section.key)
+                closeMenu()
+                notifyLayoutChange()
+              }}
+            />
+          {/if}
+        {/each}
+      {/if}
     {/snippet}
 
     {#snippet filterActiveContent()}
-      {#if activeSectionConfig}
-        {#key activeSectionConfig.key}
+      {#if effectiveSectionConfig}
+        {#key effectiveSectionConfig.key}
           {@const activeItems = getFilterRenderItems(
             adminCtx,
             filters,
-            activeSectionConfig,
+            effectiveSectionConfig,
             isSuperAdmin,
           )}
           {@const isCarouselActive =
@@ -213,8 +228,8 @@ $effect(() => {
               )
             : activeItems}
           {@const activeSectionHasTranslations =
-            !('type' in activeSectionConfig) &&
-            activeSectionConfig.filters.some(filter => filter.type === 'translation')}
+            !('type' in effectiveSectionConfig) &&
+            effectiveSectionConfig.filters.some(filter => filter.type === 'translation')}
 
           <div class="bits-resource-filter-bar__active-strip">
             {#if activeSectionHasTranslations}

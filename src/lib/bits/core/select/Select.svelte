@@ -53,7 +53,7 @@ function handleValueChange(nextValue: string): void {
     {name}
     {disabled}
     {allowDeselect}
-    value={value || undefined}
+    {value}
     onValueChange={handleValueChange}
   >
     <SelectPrimitive.Trigger

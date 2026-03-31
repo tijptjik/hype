@@ -9,6 +9,7 @@ import {
   createSortables,
   createToggleFilter,
 } from '$lib/client/services/filters'
+import { getTaskReviewActionLabel } from '$lib/client/services/task'
 // BITS PATTERNS
 import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '$lib/bits'
 // COMPONENTS
@@ -18,10 +19,10 @@ import { FirstClassResource } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
+import FunnelIcon from 'virtual:icons/lucide/funnel'
 import TaskIcon from 'virtual:icons/lucide/inbox'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import ShapesIcon from 'virtual:icons/lucide/shapes'
 // TYPES
+import { reviewActions } from '$lib/types'
 import type { Id, ResourceControlBarConfig, Task } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
@@ -30,26 +31,13 @@ const filters = {
   resource: FirstClassResource.task,
   sections: [
     {
-      key: 'status',
-      title: m.filters__status(),
-      icon: StatusIcon,
-      filters: [
-        createToggleFilter('isReviewed', {
-          label: m.plain_broad_shell_dart(),
-          falseLabel: m.filters__not(),
-          trueLabel: m.filters__is(),
-          refreshResource: FirstClassResource.task,
-        }),
-      ],
-    },
-    {
-      key: 'type',
-      title: m.away_honest_anaconda_honor(),
-      icon: ShapesIcon,
+      key: 'filters',
+      title: m.filters__filter_by(),
+      icon: FunnelIcon,
       filters: [
         createSelectFilter('type', {
           label: m.filters__type(),
-          placeholder: `${m.filters__all()} ${m.away_honest_anaconda_honor().toLowerCase()}`,
+          placeholder: `${m.filters__all()} ${m.filters__type().toLowerCase()}`,
           allowDeselect: true,
           refreshResource: FirstClassResource.task,
           options: [
@@ -57,6 +45,28 @@ const filters = {
             { value: 'newPhoto', label: m.aware_sea_goose_nail() },
             { value: 'reportedMissing', label: m.noble_zany_crow_dance() },
           ],
+        }),
+        createSelectFilter('reviewAction', {
+          label: m.filters__action(),
+          placeholder: `${m.filters__all()} ${m.filters__action().toLowerCase()}`,
+          allowDeselect: true,
+          refreshResource: FirstClassResource.task,
+          options: reviewActions.map(action => ({
+            value: action,
+            label: getTaskReviewActionLabel(action),
+          })),
+        }),
+        createToggleFilter('reviewOutcome', {
+          label: m.filters__result(),
+          falseLabel: m.alive_north_albatross_lead(),
+          trueLabel: m.admin__project_license_accept(),
+          refreshResource: FirstClassResource.task,
+        }),
+        createToggleFilter('isReviewed', {
+          label: m.plain_broad_shell_dart(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
+          refreshResource: FirstClassResource.task,
         }),
       ],
     },

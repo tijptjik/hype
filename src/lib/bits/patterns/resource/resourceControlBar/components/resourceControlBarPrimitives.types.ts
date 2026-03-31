@@ -4,6 +4,7 @@ export type ResourceControlBarRootProps = {
   filterLabel: string
   filterIcon?: Component
   hasActiveSection?: boolean
+  disableMenuToggle?: boolean
   showSort?: boolean
   count: number
   resetDisabled?: boolean
