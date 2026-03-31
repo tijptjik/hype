@@ -17,6 +17,18 @@ type UserUpdateActor = {
 }
 
 /**
+ * Admin panel visibility policy for the app-level menu.
+ *
+ * Allowed:
+ * - super admins
+ * - any user with at least one role that is not the baseline `user` role
+ */
+export const canAccessAdminPanel = (actor: UserSearchActor): boolean => {
+  if (actor.superAdmin) return true
+  return actor.userRoles.some(role => role.role !== 'user')
+}
+
+/**
  * Shared elevated access policy used by analytics and user-search admin surfaces.
  *
  * Allowed:

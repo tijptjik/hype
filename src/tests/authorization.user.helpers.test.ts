@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canAccessAnalytics } from '$lib/api/services/authz/user'
+import { canAccessAdminPanel, canAccessAnalytics } from '$lib/api/services/authz/user'
 import type { UserRoleDisco } from '$lib/types'
 
 const coreAdminRole = (): UserRoleDisco =>
@@ -38,6 +38,60 @@ const projectMaintainerRole = (): UserRoleDisco =>
     role: 'maintainer',
     projectId: 'project-1',
   }) as UserRoleDisco
+
+const projectMemberRole = (): UserRoleDisco =>
+  ({
+    type: 'project',
+    role: 'member',
+    projectId: 'project-1',
+  }) as UserRoleDisco
+
+const projectUserRole = (): UserRoleDisco =>
+  ({
+    type: 'project',
+    role: 'user',
+    projectId: 'project-1',
+  }) as UserRoleDisco
+
+const organisationMemberRole = (): UserRoleDisco =>
+  ({
+    type: 'organisation',
+    role: 'member',
+    organisationId: 'org-1',
+  }) as UserRoleDisco
+
+describe('canAccessAdminPanel', () => {
+  it('allows super admins', () => {
+    expect(canAccessAdminPanel({ superAdmin: true, userRoles: [] })).toBe(true)
+  })
+
+  it('allows organisation members because their role is not the baseline user role', () => {
+    expect(
+      canAccessAdminPanel({
+        superAdmin: false,
+        userRoles: [organisationMemberRole()],
+      }),
+    ).toBe(true)
+  })
+
+  it('allows project members because their role is not the baseline user role', () => {
+    expect(
+      canAccessAdminPanel({
+        superAdmin: false,
+        userRoles: [projectMemberRole()],
+      }),
+    ).toBe(true)
+  })
+
+  it('denies users whose only role is the baseline user role', () => {
+    expect(
+      canAccessAdminPanel({
+        superAdmin: false,
+        userRoles: [projectUserRole()],
+      }),
+    ).toBe(false)
+  })
+})
 
 describe('canAccessAnalytics', () => {
   it('allows super admins', () => {

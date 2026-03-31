@@ -176,6 +176,7 @@ export {
 } from './layer'
 export { authorizeImageList, authorizeImageRead } from './image'
 export {
+  canAccessAdminPanel,
   canSearchUsers,
   canOverrideUserSearchArchivedFilter,
   canUpdateUserProfile,

@@ -7,7 +7,7 @@ import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 import { handlePanelParams } from '$lib/navigation'
 // AUTH
-import { authorizeHubList, toHubAuthActor } from '$lib/api/services/authz'
+import { canAccessAdminPanel } from '$lib/api/services/authz'
 import { useSession } from '$lib/auth/client'
 // I18N
 import { m } from '$lib/i18n'
@@ -95,12 +95,11 @@ beforeNavigate(({ from, to }) => {
 
 // CIRCULAR FLIGHT ANIMATION STATE
 let stopCircularFlight: (() => void) | null = $state(null)
-let showAdminMenu = $derived.by(
-  () =>
-    Boolean($session?.data?.user?.superAdmin) ||
-    authorizeHubList(toHubAuthActor($session?.data?.user), {
-      resourceHubId: hub?.id,
-    }).allowed,
+let showAdminMenu = $derived.by(() =>
+  canAccessAdminPanel({
+    superAdmin: $session?.data?.user?.superAdmin,
+    userRoles: $session?.data?.user?.roles ?? [],
+  }),
 )
 let menuItems = $derived(
   hub.isCore
