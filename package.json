@@ -121,7 +121,7 @@
     "@playwright/test": "^1.58.2",
     "@protomaps/basemaps": "^5.7.2",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@tanstack/svelte-query-devtools": "^6.1.10",
+    "@tanstack/svelte-query-devtools": "^6.1.11",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/geojson": "^7946.0.16",
