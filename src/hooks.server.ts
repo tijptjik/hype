@@ -7,6 +7,7 @@ import { paraglideMiddleware } from '$lib/paraglide/server'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 import * as schema from '$lib/db/schema/index'
+import { retryBusyRead } from '$lib/db/services/sqlite'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
@@ -102,13 +103,15 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   })
 
   if (db && event.locals && hubOpts.code) {
-    const hubDb = await db.query.hub.findFirst({
-      with: {
-        i18n: true,
-        image: true,
-      },
-      where: eq(schema.hub.code, hubOpts.code),
-    })
+    const hubDb = await retryBusyRead(() =>
+      db.query.hub.findFirst({
+        with: {
+          i18n: true,
+          image: true,
+        },
+        where: eq(schema.hub.code, hubOpts.code),
+      }),
+    )
     if (hubDb) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,
@@ -117,13 +120,15 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else if (db && event.locals && hubOpts.domain) {
-    const hubDb = await db.query.hub.findFirst({
-      with: {
-        i18n: true,
-        image: true,
-      },
-      where: eq(schema.hub.domain, hubOpts.domain),
-    })
+    const hubDb = await retryBusyRead(() =>
+      db.query.hub.findFirst({
+        with: {
+          i18n: true,
+          image: true,
+        },
+        where: eq(schema.hub.domain, hubOpts.domain),
+      }),
+    )
     if (hubDb) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,

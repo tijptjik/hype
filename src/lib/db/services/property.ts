@@ -49,6 +49,7 @@ import type {
   ProjectPropertyForm,
 } from '$lib/db/zod/schema/property.types'
 import { syncProperties } from './layer'
+import { retryBusyRead } from './sqlite'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -192,10 +193,12 @@ export const listProperties = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
 ): Promise<PropertyDBRaw[]> =>
-  await db.query.property.findMany({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
-  })
+  await retryBusyRead(() =>
+    db.query.property.findMany({
+      with: withRelations,
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+    }),
+  )
 
 /**
  * Loads a single property row using caller-provided predicates.
@@ -210,10 +213,12 @@ export const getProperty = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
 ): Promise<PropertyDBRaw | undefined> => {
-  const result = await db.query.property.findFirst({
-    with: withRelations,
-    where: and(...conditions),
-  })
+  const result = await retryBusyRead(() =>
+    db.query.property.findFirst({
+      with: withRelations,
+      where: and(...conditions),
+    }),
+  )
   return result
 }
 
@@ -229,15 +234,17 @@ export const listHubScopedProperties = async (
   db: Database,
   hubId: string,
 ): Promise<Property[]> => {
-  const assignedRows = await db.query.hubProperty.findMany({
-    where: eq(hubProperty.hubId, hubId),
-    with: {
-      property: {
-        with: propertyWithRelations,
+  const assignedRows = await retryBusyRead(() =>
+    db.query.hubProperty.findMany({
+      where: eq(hubProperty.hubId, hubId),
+      with: {
+        property: {
+          with: propertyWithRelations,
+        },
       },
-    },
-    orderBy: [asc(hubProperty.rank)],
-  })
+      orderBy: [asc(hubProperty.rank)],
+    }),
+  )
 
   const assignedProperties = assignedRows
     .map((row, index) => {
@@ -247,11 +254,13 @@ export const listHubScopedProperties = async (
     .filter((row): row is Property => Boolean(row))
 
   const assignedIds = new Set(assignedProperties.map(item => item.id))
-  const allRows = await db.query.property.findMany({
-    with: propertyWithRelations,
-    where: and(eq(property.scope, 'hub'), eq(property.hubId, hubId)),
-    orderBy: [asc(property.key)],
-  })
+  const allRows = await retryBusyRead(() =>
+    db.query.property.findMany({
+      with: propertyWithRelations,
+      where: and(eq(property.scope, 'hub'), eq(property.hubId, hubId)),
+      orderBy: [asc(property.key)],
+    }),
+  )
   const scopedRows = allRows.filter(row => !assignedIds.has(row.id))
 
   const rankedUnassigned = scopedRows
@@ -275,15 +284,17 @@ export const listOrganisationScopedProperties = async (
   db: Database,
   organisationId: string,
 ): Promise<Property[]> => {
-  const assignedRows = await db.query.organisationProperty.findMany({
-    where: eq(organisationProperty.organisationId, organisationId),
-    with: {
-      property: {
-        with: propertyWithRelations,
+  const assignedRows = await retryBusyRead(() =>
+    db.query.organisationProperty.findMany({
+      where: eq(organisationProperty.organisationId, organisationId),
+      with: {
+        property: {
+          with: propertyWithRelations,
+        },
       },
-    },
-    orderBy: [asc(organisationProperty.rank)],
-  })
+      orderBy: [asc(organisationProperty.rank)],
+    }),
+  )
 
   const assignedProperties = assignedRows
     .map((row, index) => {
@@ -293,14 +304,16 @@ export const listOrganisationScopedProperties = async (
     .filter((row): row is Property => Boolean(row))
 
   const assignedIds = new Set(assignedProperties.map(item => item.id))
-  const allRows = await db.query.property.findMany({
-    with: propertyWithRelations,
-    where: and(
-      eq(property.scope, 'organisation'),
-      eq(property.organisationId, organisationId),
-    ),
-    orderBy: [asc(property.key)],
-  })
+  const allRows = await retryBusyRead(() =>
+    db.query.property.findMany({
+      with: propertyWithRelations,
+      where: and(
+        eq(property.scope, 'organisation'),
+        eq(property.organisationId, organisationId),
+      ),
+      orderBy: [asc(property.key)],
+    }),
+  )
 
   const unassignedRows = allRows.filter(row => !assignedIds.has(row.id))
   const rankedUnassigned = unassignedRows.map((row, index) =>
@@ -357,11 +370,13 @@ export const listResolvedProjectProperties = async (
         },
         orderBy: [asc(projectProperty.rank)],
       }),
-      db.query.property.findMany({
-        with: propertyWithRelations,
-        where: and(eq(property.scope, 'project'), eq(property.projectId, projectId)),
-        orderBy: [asc(property.key)],
-      }),
+      retryBusyRead(() =>
+        db.query.property.findMany({
+          with: propertyWithRelations,
+          where: and(eq(property.scope, 'project'), eq(property.projectId, projectId)),
+          orderBy: [asc(property.key)],
+        }),
+      ),
       organisationId ? listOrganisationScopedProperties(db, organisationId) : [],
       scopedHubIds.length > 0
         ? Promise.all(
