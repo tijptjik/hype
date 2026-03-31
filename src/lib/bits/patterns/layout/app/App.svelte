@@ -6,13 +6,14 @@ import type { AppProps } from './app.types'
 let {
   queryClient,
   localeKey,
+  isReady,
   title,
   siteName,
   siteDescription,
   socialImage,
   windowWidth = $bindable(0),
-  pendingColor = 'primary',
-  pendingSurface = 'base',
+  pendingColor = 'accent',
+  pendingSurface = 'transparent',
   children,
 }: AppProps = $props()
 </script>
@@ -26,6 +27,12 @@ let {
   {localeKey}
 />
 
-<AppPrimitive.AppShell {queryClient} {localeKey} {pendingColor} {pendingSurface}>
+<AppPrimitive.AppShell
+  {queryClient}
+  {localeKey}
+  {isReady}
+  {pendingColor}
+  {pendingSurface}
+>
   {@render children()}
 </AppPrimitive.AppShell>

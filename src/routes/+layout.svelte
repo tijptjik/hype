@@ -151,6 +151,7 @@ watch(
 <App
   bind:windowWidth
   {queryClient}
+  isReady={appCtx.isInitialised}
   localeKey={getLocaleKey()}
   {title}
   siteName={site_name}

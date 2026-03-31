@@ -9,6 +9,7 @@ import type { AppShellProps } from '../app.types'
 let {
   queryClient,
   localeKey,
+  isReady,
   pendingColor = 'primary',
   pendingSurface = 'base',
   children,
@@ -29,11 +30,10 @@ const classes = $derived(
 <QueryClientProvider client={queryClient}>
   <div class={classes}>
     <Toaster />
-    <svelte:boundary>
-      {#snippet pending()}
-        <LoadScreen color={pendingColor} surface={pendingSurface} />
-      {/snippet}
+    {#if isReady}
       {@render children()}
-    </svelte:boundary>
+    {:else}
+      <LoadScreen color="accent" />
+    {/if}
   </div>
 </QueryClientProvider>

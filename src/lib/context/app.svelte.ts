@@ -758,6 +758,7 @@ export class AppCtx {
         wishlisted: [],
         visited: [],
       }
+      this.isInitialised = true
       return
     }
     // Initialize stats cache

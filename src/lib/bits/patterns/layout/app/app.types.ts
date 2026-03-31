@@ -33,6 +33,7 @@ export interface AppHeadRootProps extends AppHeadMetaProps, AppHeadFontsProps {
 export interface AppShellProps {
   queryClient: QueryClient
   localeKey: LocaleKey
+  isReady: boolean
   pendingColor?: LoadScreenColor
   pendingSurface?: LoadScreenSurface
   children: Snippet
