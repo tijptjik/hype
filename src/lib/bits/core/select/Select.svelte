@@ -24,6 +24,11 @@ let {
   onValueChange,
 }: SelectProps = $props()
 
+const itemsWithEmptyOption = $derived.by(() => {
+  if (!allowDeselect) return items
+  return [{ value: '', label: placeholder }, ...items]
+})
+
 const selectedLabel = $derived(
   value
     ? (items.find(item => item.value === value)?.label ?? placeholder)
@@ -49,7 +54,7 @@ function handleValueChange(nextValue: string): void {
 {:else}
   <SelectPrimitive.Root
     type="single"
-    {items}
+    items={itemsWithEmptyOption}
     {name}
     {disabled}
     {allowDeselect}
@@ -70,7 +75,7 @@ function handleValueChange(nextValue: string): void {
         sideOffset={8}
       >
         <SelectPrimitive.Viewport class="bits-form__select-viewport">
-          {#each items as item (item.value)}
+          {#each itemsWithEmptyOption as item (item.value)}
             <SelectPrimitive.Item
               value={item.value}
               label={item.label}
