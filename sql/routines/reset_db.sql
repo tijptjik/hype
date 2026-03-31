@@ -55,5 +55,5 @@ DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS verification;
 DROP TABLE IF EXISTS d1_migrations;
 
-PRAGMA foreign_keys = ON;
 PRAGMA defer_foreign_keys = OFF;
+PRAGMA foreign_keys = ON;

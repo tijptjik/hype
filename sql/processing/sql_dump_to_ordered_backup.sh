@@ -28,29 +28,29 @@ fi
 TABLES=(
     # Level 0: Independent tables
     "d1_migrations"
-    "hub"
+    "hub" 
     "user"
     "image"
     "verification"
-
+    
     # Level 1: Depends on user/hub
     "account"
     "session"
     "userActivity"
     "hubI18n"
     "organisation"
-
+    
     # Level 2: Depends on organisation
     "organisationI18n"
     "organisationRole"
     "project"
-
+    
     # Level 3: Depends on project
     "projectI18n"
     "projectRole"
     "property"
     "layer"
-
+    
     # Level 4: Depends on property/layer
     "propertyI18n"
     "propertyValue"
@@ -58,7 +58,7 @@ TABLES=(
     "layerProperty"
     "userLayer"
     "feature"
-
+    
     # Level 5: Depends on propertyValue/feature
     "propertyValueI18n"
     "featureI18n"
@@ -66,7 +66,7 @@ TABLES=(
     "featureProperty"
     "userFeature"
     "task"
-
+    
     # Level 6: Depends on featureProperty/task
     "featurePropertyI18n"
     "taskImage"
@@ -80,66 +80,52 @@ echo "Parsing input file..."
 
 # First, inline all statements but handle quoted semicolons properly
 echo "Inlining statements..."
-# Create Python script in temp file
-cat > "$TEMP_DIR/sql_parser.py" << 'PYEOF'
+python3 << EOF > "$TEMP_DIR/inlined.sql"
 import sys
 import re
 
 def split_sql_statements(content):
     """Split SQL content into statements, respecting quoted strings"""
     statements = []
-    current_statement = []
+    current_statement = ""
     in_single_quote = False
     in_double_quote = False
-    in_backtick = False
     i = 0
-    content_len = len(content)
-
-    while i < content_len:
+    
+    while i < len(content):
         char = content[i]
-
-        # Handle backtick quotes (MySQL/SQLite identifiers)
-        if char == '`' and not in_single_quote and not in_double_quote:
-            in_backtick = not in_backtick
-            current_statement.append(char)
-            i += 1
-        # Handle single quotes (SQL string literals)
-        elif char == "'" and not in_double_quote and not in_backtick:
-            # Check for escaped single quote (SQL uses '' to escape ')
-            if i + 1 < content_len and content[i + 1] == "'":
-                current_statement.append("''")
+        
+        if char == "'" and not in_double_quote:
+            if i + 1 < len(content) and content[i + 1] == "'":
+                # Escaped single quote
+                current_statement += "''"
                 i += 2
+                continue
             else:
                 in_single_quote = not in_single_quote
-                current_statement.append(char)
-                i += 1
-        # Handle double quotes
-        elif char == '"' and not in_single_quote and not in_backtick:
+        elif char == '"' and not in_single_quote:
             in_double_quote = not in_double_quote
-            current_statement.append(char)
-            i += 1
-        # Statement terminator
-        elif char == ';' and not in_single_quote and not in_double_quote and not in_backtick:
-            stmt = ''.join(current_statement).strip()
+        elif char == ';' and not in_single_quote and not in_double_quote:
+            # End of statement
+            stmt = current_statement.strip()
             if stmt and not stmt.startswith('PRAGMA defer_foreign_keys'):
                 statements.append(stmt)
-            current_statement = []
+            current_statement = ""
             i += 1
-        else:
-            current_statement.append(char)
-            i += 1
-
+            continue
+        
+        current_statement += char
+        i += 1
+    
     # Handle last statement if it doesn't end with semicolon
-    if current_statement:
-        stmt = ''.join(current_statement).strip()
-        if stmt and not stmt.startswith('PRAGMA defer_foreign_keys'):
-            statements.append(stmt)
-
+    stmt = current_statement.strip()
+    if stmt and not stmt.startswith('PRAGMA defer_foreign_keys'):
+        statements.append(stmt)
+    
     return statements
 
-# Get input file from command line argument
-input_file = sys.argv[1]
-with open(input_file, 'r', encoding='utf-8') as f:
+# Read the input file
+with open("$INPUT_FILE", 'r', encoding='utf-8') as f:
     content = f.read()
 
 statements = split_sql_statements(content)
@@ -153,9 +139,7 @@ for stmt in statements:
         if cleaned.startswith('CREATE TABLE ') and 'IF NOT EXISTS' not in cleaned:
             cleaned = cleaned.replace('CREATE TABLE ', 'CREATE TABLE IF NOT EXISTS ', 1)
         print(cleaned + ';')
-PYEOF
-
-python3 "$TEMP_DIR/sql_parser.py" "$INPUT_FILE" > "$TEMP_DIR/inlined.sql"
+EOF
 
 echo "Extracting statements..."
 
@@ -174,9 +158,8 @@ done
 grep "^INSERT INTO" "$TEMP_DIR/inlined.sql" | while read -r line; do
     if [[ $line =~ INSERT\ INTO\ (\`?[^\`[:space:]]+\`?) ]]; then
         table_name="${BASH_REMATCH[1]}"
-        # Remove backticks and quotes for consistent naming
+        # Remove backticks for consistent naming
         table_name="${table_name//\`/}"
-        table_name="${table_name//\"/}"
         echo "$table_name:$line" >> "$TEMP_DIR/inserts.sql"
     fi
 done
@@ -191,10 +174,9 @@ grep -v -E "^(CREATE TABLE|INSERT INTO|ALTER TABLE|CREATE INDEX|CREATE UNIQUE IN
 echo "Generating reordered output..."
 
 {
-    echo "PRAGMA defer_foreign_keys = ON;"
-    echo "PRAGMA foreign_keys = OFF;"
+    echo "PRAGMA defer_foreign_keys=TRUE;"
     echo ""
-
+    
     # Add any other initial statements (excluding creates, inserts, constraints)
     if [ -s "$TEMP_DIR/other.sql" ]; then
         echo "-- ═══════════════════════════════════════════════════════════════════════════════"
@@ -203,15 +185,15 @@ echo "Generating reordered output..."
         cat "$TEMP_DIR/other.sql"
         echo ""
     fi
-
+    
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- TABLE STRUCTURES (DEPENDENCY ORDER)"
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo ""
-
+    
     # Track processed tables to avoid duplication
     declare -A processed_tables
-
+    
     # Level 0: Independent tables
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 0: INDEPENDENT TABLES"
@@ -225,7 +207,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-
+    
     # Level 1: Depends on Level 0
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 1: DEPENDS ON LEVEL 0"
@@ -239,7 +221,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-
+    
     # Level 2: Depends on Level 1
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 2: DEPENDS ON LEVEL 1"
@@ -253,7 +235,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-
+    
     # Level 3: Depends on Level 2
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 3: DEPENDS ON LEVEL 2"
@@ -267,7 +249,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-
+    
     # Level 4: Depends on Level 3
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- LEVEL 4: DEPENDS ON LEVEL 3"
@@ -281,7 +263,7 @@ echo "Generating reordered output..."
             echo ""
         fi
     done
-
+    
     # Any remaining tables not in our predefined order
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- REMAINING TABLES"
@@ -295,29 +277,30 @@ echo "Generating reordered output..."
             fi
         done < "$TEMP_DIR/creates.sql"
     fi
-
+    
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo "-- TABLE DATA (DEPENDENCY ORDER)"
     echo "-- ═══════════════════════════════════════════════════════════════════════════════"
     echo ""
-
+    
     # Insert data in the same dependency order
     all_tables=("${level0_tables[@]}" "${level1_tables[@]}" "${level2_tables[@]}" "${level3_tables[@]}" "${level4_tables[@]}")
-
+    
     for table in "${all_tables[@]}"; do
         if grep -q "^$table:" "$TEMP_DIR/inserts.sql" 2>/dev/null; then
-            insert_stmts=$(grep "^$table:" "$TEMP_DIR/inserts.sql" | cut -d: -f2-)
-            printf -- "-- %s data\n%s\n\n" "$table" "$insert_stmts"
+            echo "-- $table data"
+            grep "^$table:" "$TEMP_DIR/inserts.sql" | cut -d: -f2-
+            echo ""
         fi
     done
-
+    
     # Insert data for any remaining tables
     if [ -s "$TEMP_DIR/inserts.sql" ]; then
         declare -A processed_inserts
         for table in "${all_tables[@]}"; do
             processed_inserts["$table"]=1
         done
-
+        
         while IFS=: read -r table_name insert_stmt; do
             if [[ -z "${processed_inserts[$table_name]}" ]]; then
                 if [[ -z "${processed_inserts[$table_name]}" ]]; then
@@ -328,7 +311,7 @@ echo "Generating reordered output..."
             fi
         done < "$TEMP_DIR/inserts.sql"
     fi
-
+    
     # Add constraints and indexes at the end
     if [ -s "$TEMP_DIR/constraints.sql" ]; then
         echo ""
@@ -337,11 +320,11 @@ echo "Generating reordered output..."
         echo "-- ═══════════════════════════════════════════════════════════════════════════════"
         cat "$TEMP_DIR/constraints.sql"
     fi
-
+    
 } > "$OUTPUT_FILE"
 
 # Cleanup
 rm -rf "$TEMP_DIR"
 
 echo "Reordering completed: $OUTPUT_FILE"
-echo "File size: $(du -h "$OUTPUT_FILE" | cut -f1)"
+echo "File size: $(du -h "$OUTPUT_FILE" | cut -f1)" 
