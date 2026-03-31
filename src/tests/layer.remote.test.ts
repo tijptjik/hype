@@ -33,6 +33,7 @@ const {
   mockToEntityResponseShape,
   mockToComparableLayerProperties,
   mockToStableSignature,
+  mockCascadeLayerPublishedStateToDescendants,
   mockGuardedContext,
 } = vi.hoisted(() => ({
   mockAuthorizeLayerListForContext: vi.fn(() => ({ allowed: true })),
@@ -74,6 +75,7 @@ const {
   mockToEntityResponseShape: vi.fn(async (value: unknown) => ({ data: value })),
   mockToComparableLayerProperties: vi.fn((value: unknown) => value),
   mockToStableSignature: vi.fn((value: unknown) => JSON.stringify(value ?? null)),
+  mockCascadeLayerPublishedStateToDescendants: vi.fn(async () => undefined),
   mockGuardedContext: vi.fn(),
 }))
 
@@ -221,6 +223,7 @@ vi.mock('$lib/db/services/layer', () => ({
   updateI18n: mockUpdateI18n,
   updateLayerArchivedStateById: mockUpdateLayerArchivedStateById,
   updateLayerByIdWithConcurrency: mockUpdateLayerByIdWithConcurrency,
+  cascadeLayerPublishedStateToDescendants: mockCascadeLayerPublishedStateToDescendants,
   updateLayerPublishedStateById: mockUpdateLayerPublishedStateById,
 }))
 
@@ -521,6 +524,13 @@ describe('layer.remote authz matrix', () => {
         state: true,
         publisherId: 'u-1',
       }),
+    )
+    expect(mockCascadeLayerPublishedStateToDescendants).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        layerId: 'layer-1',
+        state: true,
+      },
     )
     expect(result).toEqual({
       data: {

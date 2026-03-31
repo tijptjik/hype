@@ -73,6 +73,7 @@ import {
   updateProjectArchivedStateById,
   updateProjectByIdWithConcurrency,
   updateProjectPublishedStateById,
+  cascadeProjectPublishedStateToDescendants,
 } from '$lib/db/services/project'
 import { hasProjectLayersCondition } from '$lib/db/services/layer'
 import { syncProjectLayerPresentation } from '$lib/db/services/layer'
@@ -988,6 +989,10 @@ export const publishProject = guardedCommand(
         throw error(404, 'PROJECT_NOT_FOUND')
       },
     )
+    await cascadeProjectPublishedStateToDescendants(db, {
+      projectId,
+      state: params.state,
+    })
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
   },

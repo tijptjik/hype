@@ -30,6 +30,7 @@ const {
   mockUpdateProjectPublishedStateById,
   mockUpdateProjectArchivedStateById,
   mockSetProjectMapStyleByCode,
+  mockCascadeProjectPublishedStateToDescendants,
   mockGuardedContext,
 } = vi.hoisted(() => ({
   mockProjectFormDataParse: vi.fn((input: unknown) => input),
@@ -65,6 +66,7 @@ const {
   mockUpdateProjectPublishedStateById: vi.fn(async () => null),
   mockUpdateProjectArchivedStateById: vi.fn(async () => null),
   mockSetProjectMapStyleByCode: vi.fn(async () => undefined),
+  mockCascadeProjectPublishedStateToDescendants: vi.fn(async () => undefined),
   mockGuardedContext: vi.fn(),
 }))
 
@@ -347,6 +349,8 @@ vi.mock('$lib/db/services/project', () => ({
   toListResponseShape: vi.fn((value: unknown) => value),
   updateI18n: mockUpdateI18n,
   cascadeOrganisationToDescendants: mockCascadeProjectOrganisationToDescendants,
+  cascadeProjectPublishedStateToDescendants:
+    mockCascadeProjectPublishedStateToDescendants,
   updateProjectArchivedStateById: mockUpdateProjectArchivedStateById,
   updateProjectByIdWithConcurrency: mockUpdateProjectByIdWithConcurrency,
   updateProjectPublishedStateById: mockUpdateProjectPublishedStateById,
@@ -872,5 +876,17 @@ describe('project.remote form organisation move authz', () => {
       actual: 'Deny (403 + authz code)',
       code: 'INSUFFICIENT_ROLE',
     })
+  })
+
+  it('cascades descendant publish state after a successful publish command', async () => {
+    await remote.publishProject({ id: 'project-1', state: true })
+
+    expect(mockCascadeProjectPublishedStateToDescendants).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        projectId: 'project-1',
+        state: true,
+      },
+    )
   })
 })

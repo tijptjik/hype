@@ -78,6 +78,7 @@ import type {
 //    - updateOrganisationById
 //    - updateOrganisationByIdWithConcurrency
 //    - updateOrganisationPublishedStateById
+//    - cascadeOrganisationPublishedStateToDescendants
 //    - updateOrganisationArchivedStateById
 //    - updateI18n
 //
@@ -620,6 +621,57 @@ export const updateOrganisationPublishedStateById = async (
     })
 
   return updated ?? null
+}
+
+/**
+ * Cascades an organisation publish-state change into descendant projects, layers, and features.
+ * Existing local publish snapshots are preserved while an ancestor remains unpublished.
+ * @param db - The database instance.
+ * @param params - The parent organisation id and next publish state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeOrganisationPublishedStateToDescendants = async (
+  db: Database,
+  params: {
+    organisationId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(project)
+    .set({
+      localIsPublished: params.state
+        ? null
+        : sql`coalesce(${project.localIsPublished}, ${project.isPublished})`,
+      isPublished: params.state
+        ? sql`coalesce(${project.localIsPublished}, ${project.isPublished})`
+        : sql`0`,
+    })
+    .where(eq(project.organisationId, params.organisationId))
+
+  await db
+    .update(layer)
+    .set({
+      localIsPublished: params.state
+        ? null
+        : sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`,
+      isPublished: params.state
+        ? sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`
+        : sql`0`,
+    })
+    .where(eq(layer.organisationId, params.organisationId))
+
+  await db
+    .update(feature)
+    .set({
+      localIsPublished: params.state
+        ? null
+        : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
+      isPublished: params.state
+        ? sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+        : sql`0`,
+    })
+    .where(eq(feature.organisationId, params.organisationId))
 }
 
 /**

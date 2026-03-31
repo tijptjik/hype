@@ -55,6 +55,7 @@ import {
   updateOrganisationByIdWithConcurrency,
   updateOrganisationPublishedStateById,
   updateOrganisationArchivedStateById,
+  cascadeOrganisationPublishedStateToDescendants,
   syncUserRoles,
   toUserRoles,
 } from '$lib/db/services/organisation'
@@ -616,6 +617,10 @@ export const publishOrganisation = guardedCommand(
         throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
+    await cascadeOrganisationPublishedStateToDescendants(db, {
+      organisationId: commandOrganisationId,
+      state: params.state,
+    })
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
   },

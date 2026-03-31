@@ -51,6 +51,7 @@ import {
   updateLayerArchivedStateById,
   updateLayerByIdWithConcurrency,
   updateLayerPublishedStateById,
+  cascadeLayerPublishedStateToDescendants,
 } from '$lib/db/services/layer'
 import { probeProjectForUpdate } from '$lib/db/services/project'
 // SCHEMA
@@ -453,6 +454,10 @@ export const publishLayer = guardedCommand(PublishLayerSchema, async (params, ct
       throw error(404, 'LAYER_NOT_FOUND')
     },
   )
+  await cascadeLayerPublishedStateToDescendants(db, {
+    layerId,
+    state: params.state,
+  })
 
   return toBooleanStateResponseShape(persisted, 'isPublished')
 })

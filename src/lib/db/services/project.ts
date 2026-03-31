@@ -88,6 +88,7 @@ import type {
 //    - updateProjectById
 //    - updateProjectByIdWithConcurrency
 //    - updateProjectPublishedStateById
+//    - cascadeProjectPublishedStateToDescendants
 //    - updateProjectArchivedStateById
 //    - updateI18n
 //
@@ -726,6 +727,45 @@ export const updateProjectPublishedStateById = async (
     })
 
   return updated ?? null
+}
+
+/**
+ * Cascades a project publish-state change into descendant layers and features.
+ * Existing local publish snapshots are preserved while an ancestor remains unpublished.
+ * @param db - The database instance.
+ * @param params - The parent project id and next publish state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeProjectPublishedStateToDescendants = async (
+  db: Database,
+  params: {
+    projectId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(layer)
+    .set({
+      localIsPublished: params.state
+        ? null
+        : sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`,
+      isPublished: params.state
+        ? sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`
+        : sql`0`,
+    })
+    .where(eq(layer.projectId, params.projectId))
+
+  await db
+    .update(feature)
+    .set({
+      localIsPublished: params.state
+        ? null
+        : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
+      isPublished: params.state
+        ? sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+        : sql`0`,
+    })
+    .where(eq(feature.projectId, params.projectId))
 }
 
 /**

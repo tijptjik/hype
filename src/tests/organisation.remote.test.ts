@@ -28,6 +28,7 @@ const {
   mockLoadOrganisation,
   mockListOrganisations,
   mockCascadeOrganisationCapabilitiesToProjects,
+  mockCascadeOrganisationPublishedStateToDescendants,
 } = vi.hoisted(() => ({
   mockGetRequestEvent: vi.fn(),
   mockSetupRequestHandler: vi.fn(),
@@ -55,6 +56,7 @@ const {
   mockLoadOrganisation: vi.fn(),
   mockListOrganisations: vi.fn(),
   mockCascadeOrganisationCapabilitiesToProjects: vi.fn(async () => undefined),
+  mockCascadeOrganisationPublishedStateToDescendants: vi.fn(async () => undefined),
 }))
 
 vi.mock(
@@ -217,6 +219,8 @@ vi.mock('$lib/db/services/organisation', () => ({
   updateOrganisationByIdWithConcurrency: vi.fn(async () => null),
   updateOrganisationPublishedStateById: mockUpdateOrganisationPublishedStateById,
   updateOrganisationArchivedStateById: mockUpdateOrganisationArchivedStateById,
+  cascadeOrganisationPublishedStateToDescendants:
+    mockCascadeOrganisationPublishedStateToDescendants,
   syncUserRoles: vi.fn(),
   syncOrganisationUserRoles: vi.fn(),
   toUserRoles: vi.fn((roles: unknown[]) => roles),
@@ -422,6 +426,13 @@ describe('organisation.remote authz', () => {
         state: true,
         publisherId: 'u-1',
       }),
+    )
+    expect(mockCascadeOrganisationPublishedStateToDescendants).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        organisationId: 'org-1',
+        state: true,
+      },
     )
     expect(result).toEqual({
       data: {

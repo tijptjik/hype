@@ -1,7 +1,7 @@
 // DRIZZLE
 import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
-import { layer, layerI18n, layerProperty, organisation, project } from '../schema'
+import { feature, layer, layerI18n, layerProperty, organisation, project } from '../schema'
 // SERVICES
 import { getLayerHubFilter } from './hub'
 // DB
@@ -68,6 +68,7 @@ import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
 // 3.1 CRUD :: UPDATE (CONCURRENCY/STATE)
 //    - updateLayerByIdWithConcurrency
 //    - updateLayerPublishedStateById
+//    - cascadeLayerPublishedStateToDescendants
 //    - updateLayerArchivedStateById
 //    - updateI18n
 //    - updateProperties
@@ -582,6 +583,33 @@ export const updateLayerPublishedStateById = async (
     })
 
   return updated ?? null
+}
+
+/**
+ * Cascades a layer publish-state change into descendant features.
+ * Existing local publish snapshots are preserved while an ancestor remains unpublished.
+ * @param db - The database instance.
+ * @param params - The parent layer id and next publish state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeLayerPublishedStateToDescendants = async (
+  db: Database,
+  params: {
+    layerId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(feature)
+    .set({
+      localIsPublished: params.state
+        ? null
+        : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
+      isPublished: params.state
+        ? sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+        : sql`0`,
+    })
+    .where(eq(feature.layerId, params.layerId))
 }
 
 /**
