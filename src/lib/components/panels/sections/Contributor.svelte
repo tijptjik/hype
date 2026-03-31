@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { onDestroy } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
@@ -22,6 +23,10 @@ let { ...panelProps }: PanelProps = $props()
 // STATE
 let showSuccessIndicator = $state(false)
 let successTimer: ReturnType<typeof setTimeout>
+
+onDestroy(() => {
+  clearTimeout(successTimer)
+})
 
 // HANDLERS
 const handleAttributionChange = (target: HTMLInputElement) => {
@@ -70,20 +75,24 @@ const handleKeydown = () => {
       oninput={({ target }) => handleAttributionChange(target as HTMLInputElement)}
       onkeydown={handleKeydown}
     >
-    <div class="relative mr-8">
-      <!-- Success indicator -->
-      <label
-        class="swap swap-rotate absolute right-0 h-6 w-6 -translate-y-1/2 stroke-1 text-base-content/60 {showSuccessIndicator
-          ? 'swap-active'
-          : ''}"
-      >
-        <div transition:fade={{ duration: 800 }} class="swap-off">
-          <Icon src={Trophy} class="h-6 w-6" />
-        </div>
-        <div transition:fade={{ duration: 300 }} class="swap-on">
+    <div class="relative mr-8 grid h-6 w-6 place-items-center stroke-1">
+      {#if showSuccessIndicator}
+        <div
+          class="col-start-1 row-start-1 text-success"
+          in:fade={{ duration: 300 }}
+          out:fade={{ duration: 300 }}
+        >
           <Icon src={CheckCircle} class="h-6 w-6" />
         </div>
-      </label>
+      {:else}
+        <div
+          class="col-start-1 row-start-1 text-base-content/60"
+          in:fade={{ duration: 800 }}
+          out:fade={{ duration: 300 }}
+        >
+          <Icon src={Trophy} class="h-6 w-6" />
+        </div>
+      {/if}
     </div>
   </div>
 </Section>

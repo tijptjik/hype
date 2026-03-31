@@ -99,7 +99,9 @@ const toggleUserLayer = (layerId: string, checked: boolean): void => {
   icon="/globe.svg"
   position="right"
 >
-  <div class="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3">
+  <div
+    class="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3 pb-[60px]"
+  >
     {#each orderedLayers as layer (layer.id)}
       {#await appCtx.getHierarchy(layer) then { organisation, project }}
         {@const organisationName = getI18n(

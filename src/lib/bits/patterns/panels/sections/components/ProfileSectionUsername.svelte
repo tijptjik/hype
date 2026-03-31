@@ -46,7 +46,7 @@ let {
 let usernameInput: HTMLInputElement | undefined
 let wasEditingUsername = $state(false)
 let usernameValue = $state('')
-const size = 4
+const usernameActionIconSize = 'sm'
 const MIN_USERNAME_INPUT_WIDTH_CH = 8
 
 $effect(() => {
@@ -120,15 +120,15 @@ function handleUsernameAction(): void {
 {#snippet usernameActionIcon()}
   {#key usernameActionState}
     {#if usernameActionState === 'loading'}
-      <Icon src={ArrowPath} {size} animation="spin" />
+      <Icon src={ArrowPath} size={usernameActionIconSize} animation="spin" />
     {:else if usernameActionState === 'error'}
-      <Icon src={XMark} {size} tone="error" />
+      <Icon src={XMark} size={usernameActionIconSize} tone="error" />
     {:else if usernameActionState === 'success'}
-      <Icon src={Check} {size} tone="success" />
+      <Icon src={Check} size={usernameActionIconSize} tone="success" />
     {:else if usernameActionState === 'editing'}
-      <Icon src={Check} {size} />
+      <Icon src={Check} size={usernameActionIconSize} />
     {:else}
-      <Icon src={PencilSquare} {size} />
+      <Icon src={PencilSquare} size={usernameActionIconSize} />
     {/if}
   {/key}
 {/snippet}
@@ -170,7 +170,7 @@ function handleUsernameAction(): void {
         onClick={handleUsernameAction}
         type="button"
         style="ghost"
-        size="xs"
+        size="sm"
         modifier="square"
         hideLabel={true}
         hideLabelInstantly={true}
