@@ -152,7 +152,6 @@ export enum ImageContextResourceExtended {
 }
 
 export enum ImageCDN {
-  cloudinary = 'cloudinary',
   cloudflareR2 = 'cloudflareR2',
 }
 

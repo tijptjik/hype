@@ -65,7 +65,7 @@ declare global {
       env: {
         ENVIRONMENT: string
         NODE_ENV: string
-        // Cloudflare Bindings
+        // CLOUDFLARE BINDINGS
         DB: MiniflareD1Database
         ASSETS: Fetcher
         MAP_RENDER_QUEUE: Queue<MapRenderJob>
@@ -76,15 +76,17 @@ declare global {
         ASSET_PUBLIC_DEV: R2Bucket
         ASSET_PUBLIC_PREVIEW: R2Bucket
         ASSET_PUBLIC_PRODUCTION: R2Bucket
+        // CLOUDFLARE
+        CLOUDFLARE_ACCOUNT_ID: string
+        R2_S3_ACCESS_KEY_ID: string
+        R2_S3_SECRET_ACCESS_KEY: string
+        MAP_REFRESH_TOKEN: string
+        MAP_RENDER_TOKEN: string
+        ASSET_ANALYTICS_READ_TOKEN: string
         // AUTH
         AUTH_SECRET: string
         AUTH_GOOGLE_ID: string
         AUTH_GOOGLE_SECRET: string
-        // CLOUDINARY
-        CLOUDINARY_API_KEY: string
-        CLOUDINARY_API_SECRET: string
-        PUBLIC_CLOUDINARY_CLOUD_NAME: string
-        PUBLIC_CLOUDINARY_UPLOAD_PRESET: string
         // AZURE
         AZURE_TRANSLATION_KEY: string
         PUBLIC_AZURE_TRANSLATION_REGION: string
@@ -95,12 +97,6 @@ declare global {
         PUBLIC_ORIGIN: string
         PUBLIC_ASSET_BASE_URL: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string
-        ASSET_ANALYTICS_READ_TOKEN: string
-        CLOUDFLARE_ACCOUNT_ID: string
-        R2_S3_ACCESS_KEY_ID: string
-        R2_S3_SECRET_ACCESS_KEY: string
-        MAP_REFRESH_TOKEN: string
-        MAP_RENDER_TOKEN: string
       }
       context: ExecutionContext
       caches: CacheStorage & { default: Cache }

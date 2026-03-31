@@ -15,11 +15,11 @@ account_id = "a6eeace4b6d9f8e07ab307964e74d801"
 compatibility_date = "2025-04-02"
 # A list of flags that enable features from upcoming features of the Workers runtime
 compatibility_flags = ["nodejs_compat_v2"]
-# Enables use of *.workers.dev subdomain to deploy your Worker. 
+# Enables use of *.workers.dev subdomain to deploy your Worker.
 workers_dev = false
-#Enables use of Preview URLs to test your Worker. 
+#Enables use of Preview URLs to test your Worker.
 preview_urls = false
-# Whether Wrangler should keep variables configured in the dashboard on deploy. 
+# Whether Wrangler should keep variables configured in the dashboard on deploy.
 keep_vars = false
 
 
@@ -30,7 +30,7 @@ keep_vars = false
 [placement]
 mode = "smart"
 
-# Configures automatic observability settings for telemetry data emitted from your Worker. 
+# Configures automatic observability settings for telemetry data emitted from your Worker.
 [observability]
 enabled = true
 
@@ -92,9 +92,6 @@ PUBLIC_DRIZZLE_LOGGER = false
 
 PUBLIC_HUB_CODE = "core"
 
-PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
-PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
-
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
@@ -113,9 +110,6 @@ name = "hype-prod"
 ENVIRONMENT = "production"
 
 PUBLIC_DRIZZLE_LOGGER = false
-
-PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
-PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
 
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
@@ -193,9 +187,6 @@ name = "hype-preview"
 ENVIRONMENT = "preview"
 
 PUBLIC_DRIZZLE_LOGGER = false
-
-PUBLIC_CLOUDINARY_CLOUD_NAME = "dg6vtsga1"
-PUBLIC_CLOUDINARY_UPLOAD_PRESET = "ml_default"
 
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 

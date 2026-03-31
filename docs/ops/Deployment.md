@@ -77,7 +77,6 @@ Stored in `wrangler.toml` and accessible in both server and client contexts:
 
 ```toml
 [vars]
-PUBLIC_CLOUDINARY_CLOUD_NAME="dg6vtsga1"
 
 [env.preview.vars]
 
@@ -88,8 +87,6 @@ PUBLIC_CLOUDINARY_CLOUD_NAME="dg6vtsga1"
 
 - `PUBLIC_DRIZZLE_LOGGER` - Enable/disable database logging
 - `PUBLIC_HUB_CODE` - Hub override for development
-- `PUBLIC_CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name
-- `PUBLIC_CLOUDINARY_UPLOAD_PRESET` - Cloudinary upload preset
 - `PUBLIC_AZURE_TRANSLATION_REGION` - Azure translation region
 - `PUBLIC_GIPHY_KEY` - Giphy API key
 
@@ -109,7 +106,6 @@ wrangler secret put AUTH_SECRET --env production
 
 - `AUTH_SECRET` - Authentication secret
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` - Google OAuth credentials
-- `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` - Cloudinary API credentials
 - `AZURE_TRANSLATION_KEY` - Azure translation API key
 - `SUPERADMIN_USERID` - Super admin user ID
 
@@ -120,7 +116,6 @@ Uses `.dev.vars` for secrets and `wrangler.toml` for public vars:
 ```bash
 # .dev.vars (gitignored)
 AUTH_SECRET=local-dev-secret
-CLOUDINARY_API_KEY=local-dev-key
 ```
 
 #### **Configuration Files**
