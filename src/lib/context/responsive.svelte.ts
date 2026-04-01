@@ -1,7 +1,10 @@
 // SVELTE
 import { getContext, hasContext, setContext } from 'svelte'
 // LIB
-import { getMenuClearanceHeight } from '$lib/bits/patterns/bars/appMenu/appMenu.constants'
+import {
+  getMenuClearanceHeight,
+  getMenuReservedHeight,
+} from '$lib/bits/patterns/bars/appMenu/appMenu.constants'
 
 const RESPONSIVE_CONTEXT_KEY = Symbol('responsive-context')
 
@@ -33,6 +36,10 @@ export class ResponsiveCtx {
 
   get menuClearanceHeight(): number {
     return getMenuClearanceHeight(this.window.width, this.window.height)
+  }
+
+  get menuReservedHeight(): number {
+    return getMenuReservedHeight(this.window.width, this.window.height)
   }
 
   get visibleWindowHeight(): number {
