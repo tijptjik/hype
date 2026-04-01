@@ -36,6 +36,7 @@ import type { StyleSpecification } from 'maplibre-gl'
 
 type MapCanvasProps = {
   mapStyleCode?: string | null
+  bottomInset?: number
 }
 
 type GeolocateControlWithPrivateFields = GeolocateControl & {
@@ -43,7 +44,7 @@ type GeolocateControlWithPrivateFields = GeolocateControl & {
   _geolocateButton: HTMLButtonElement
 }
 
-let { mapStyleCode = null }: MapCanvasProps = $props()
+let { mapStyleCode = null, bottomInset = 0 }: MapCanvasProps = $props()
 
 // ELEMENTS
 let mapContainer: HTMLDivElement
@@ -254,6 +255,7 @@ const resolvedMapStyleVariant = $derived(
 const activeStyleKey = $derived(
   `${resolvedMapStyleCode}:${activeLocale}:${appCtx.user?.experimental?.noLabelsMode ?? false}`,
 )
+const resolvedBottomInset = $derived(bottomInset)
 
 $effect(() => {
   if (typeof window === 'undefined') {
@@ -606,7 +608,8 @@ $effect(() => {
 
 <div
   id="map"
-  class="map absolute! inset-0! overflow-hidden caret-transparent"
+  class="map absolute! inset-x-0! top-0! overflow-hidden caret-transparent"
+  style={`bottom: ${resolvedBottomInset}px;`}
   data-testid="map"
   bind:this={mapContainer}
 >

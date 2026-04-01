@@ -25,6 +25,28 @@ export function getMenuClearanceHeight(
 }
 
 /**
+ * Returns the flow height reserved exclusively for the mobile app menu.
+ *
+ * @param availableWidth Current viewport width in pixels.
+ * @param availableHeight Current viewport height in pixels.
+ * @returns Reserved menu height in pixels, or 0 when the desktop menu overlays content.
+ */
+export function getMenuReservedHeight(
+  availableWidth: number,
+  availableHeight: number,
+): number {
+  const viewportState = getAppMenuViewportState(availableWidth, availableHeight)
+
+  if (!viewportState.isMobileMenu) {
+    return 0
+  }
+
+  return viewportState.shouldUseCompactVisualMenu
+    ? APP_MENU_COMPACT_EFFECTIVE_BOTTOM_OFFSET
+    : APP_MENU_DEFAULT_EFFECTIVE_BOTTOM_OFFSET
+}
+
+/**
  * Returns the responsive layout state needed to render the app menu.
  *
  * @param availableWidth Current viewport width in pixels.
