@@ -19,7 +19,7 @@ export type IconTone =
 
 export type IconAnimation = 'inherit' | 'spin'
 
-export type IconTransitionFn = (node: Element, params?: unknown) => TransitionConfig
+export type IconTransitionFn = (node: Element, params?: any) => TransitionConfig
 export type IconTransition = 'none' | 'fade' | IconTransitionFn
 
 export interface IconProps {
@@ -28,7 +28,7 @@ export interface IconProps {
   tone?: IconTone
   animation?: IconAnimation
   transition?: IconTransition
-  transitionOpts?: unknown
+  transitionOpts?: any
   filled?: boolean
   strokeWidth?: number | string
   title?: string
