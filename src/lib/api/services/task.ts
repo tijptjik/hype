@@ -157,10 +157,7 @@ type TaskResponseOptions = {
   canReassignLayer?: boolean
 }
 
-export const toTaskProfile = (
-  value: unknown,
-  fallback: TaskProfile,
-): TaskProfile =>
+export const toTaskProfile = (value: unknown, fallback: TaskProfile): TaskProfile =>
   typeof value === 'string' && (taskProfiles as readonly string[]).includes(value)
     ? (value as TaskProfile)
     : fallback

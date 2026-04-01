@@ -1,7 +1,14 @@
 // DRIZZLE
 import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
-import { feature, layer, layerI18n, layerProperty, organisation, project } from '../schema'
+import {
+  feature,
+  layer,
+  layerI18n,
+  layerProperty,
+  organisation,
+  project,
+} from '../schema'
 // SERVICES
 import { getLayerHubFilter } from './hub'
 // DB
