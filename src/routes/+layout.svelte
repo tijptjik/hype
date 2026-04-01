@@ -65,6 +65,26 @@ $effect(() => {
 
 // Load maplibre globally
 onMount(async () => {
+  const updateVisualViewportDimensions = (): void => {
+    const visualViewport = window.visualViewport
+
+    if (!visualViewport) {
+      responsive.setViewportDimensions(window.innerWidth, window.innerHeight)
+      return
+    }
+
+    responsive.setViewportDimensions(
+      visualViewport.width,
+      visualViewport.height,
+      visualViewport.offsetTop,
+      visualViewport.offsetLeft,
+    )
+  }
+
+  updateVisualViewportDimensions()
+  window.visualViewport?.addEventListener('resize', updateVisualViewportDimensions)
+  window.visualViewport?.addEventListener('scroll', updateVisualViewportDimensions)
+
   try {
     // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
     // and the max worker size in the free tier is 1 MB
@@ -80,6 +100,11 @@ onMount(async () => {
     appCtx.isMaplibreLoaded = true
   } catch (error) {
     console.error('Failed to load maplibre', error)
+  }
+
+  return () => {
+    window.visualViewport?.removeEventListener('resize', updateVisualViewportDimensions)
+    window.visualViewport?.removeEventListener('scroll', updateVisualViewportDimensions)
   }
 })
 

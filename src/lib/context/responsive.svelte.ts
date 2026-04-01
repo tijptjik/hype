@@ -10,10 +10,21 @@ export type ResponsiveDimensions = {
   height: number
 }
 
+export type ResponsiveViewport = ResponsiveDimensions & {
+  offsetTop: number
+  offsetLeft: number
+}
+
 export class ResponsiveCtx {
   window = $state({
     width: 0,
     height: 0,
+  })
+  viewport = $state<ResponsiveViewport>({
+    width: 0,
+    height: 0,
+    offsetTop: 0,
+    offsetLeft: 0,
   })
   main = $state({
     width: 0,
@@ -24,6 +35,21 @@ export class ResponsiveCtx {
     return getMenuClearanceHeight(this.window.width, this.window.height)
   }
 
+  get visibleWindowHeight(): number {
+    return this.viewport.height || this.window.height
+  }
+
+  get visibleWindowWidth(): number {
+    return this.viewport.width || this.window.width
+  }
+
+  get keyboardInsetHeight(): number {
+    return Math.max(
+      0,
+      this.window.height - this.visibleWindowHeight - this.viewport.offsetTop,
+    )
+  }
+
   setWindowDimensions(width: number, height: number): void {
     if (this.window.width !== width) {
       this.window.width = width
@@ -31,6 +57,29 @@ export class ResponsiveCtx {
 
     if (this.window.height !== height) {
       this.window.height = height
+    }
+  }
+
+  setViewportDimensions(
+    width: number,
+    height: number,
+    offsetTop: number = 0,
+    offsetLeft: number = 0,
+  ): void {
+    if (this.viewport.width !== width) {
+      this.viewport.width = width
+    }
+
+    if (this.viewport.height !== height) {
+      this.viewport.height = height
+    }
+
+    if (this.viewport.offsetTop !== offsetTop) {
+      this.viewport.offsetTop = offsetTop
+    }
+
+    if (this.viewport.offsetLeft !== offsetLeft) {
+      this.viewport.offsetLeft = offsetLeft
     }
   }
 
