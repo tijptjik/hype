@@ -11,7 +11,6 @@ import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // Components
 import FeatureCard from '$lib/components/featureCard/Root.svelte'
 import NewFeatureInfoBar from '$lib/components/featureCard/NewFeatureInfoBar.svelte'
-import FeatureGallery from '$lib/components/featureCard/FeatureGallery.svelte'
 import FeatureBreadcrumbs from '$lib/components/featureCard/FeatureBreadcrumbs.svelte'
 import FeatureTitle from '$lib/components/featureCard/FeatureTitle.svelte'
 import FeatureDescriptionEditable from '$lib/components/featureCard/FeatureDescriptionEditable.svelte'
@@ -93,7 +92,6 @@ const imageProviderModel = useImageProviderModel(
   <FeatureCard>
     <ImageProvider model={imageProviderModel}>
       <Container bind:viewport>
-        <FeatureGallery />
         <NewFeatureInfoBar {viewport} />
         <FeatureBreadcrumbs {feature} />
         <FeatureTitle {feature} />

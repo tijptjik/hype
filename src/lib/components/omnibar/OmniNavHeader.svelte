@@ -137,7 +137,8 @@ let fullCollectionText = $derived(
   >
     <Icon
       src={XCircle}
-      class="h-10 w-10 transition-transform duration-300 {omniCtx.state.isCardOpen
+      size="xl"
+      class="transition-transform duration-300 {omniCtx.state.isCardOpen
         ? 'rotate-90'
         : 'rotate-0'}"
     />
