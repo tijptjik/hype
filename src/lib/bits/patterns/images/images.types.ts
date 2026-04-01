@@ -112,9 +112,13 @@ export type ViewerProps = {
   fullscreenRequestKey?: number
   fit?: GalleryObjectFit
   viewerFit?: GalleryObjectFit
+  wrapNavigation?: boolean
+  showNavButtons?: boolean
+  railPadding?: number
   leftRail?: GalleryWidgetRail
   centerRail?: GalleryWidgetRail
   rightRail?: GalleryWidgetRail
+  emptyState?: Snippet
   centerAction?: GalleryCenterAction
   centerActionLabel?: string
   onCenterAction?: (item: ViewerRenderable) => void | Promise<void>

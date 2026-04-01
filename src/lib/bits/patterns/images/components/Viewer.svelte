@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onDestroy, tick } from 'svelte'
+import { cx } from '$lib/bits/utils'
 import { m } from '$lib/i18n'
 import ViewerEmpty from './ViewerEmpty.svelte'
 import ViewerFullScreen from './ViewerFullScreen.svelte'
@@ -21,9 +22,13 @@ let {
   fullscreenRequestKey = 0,
   fit = 'fit',
   viewerFit = fit,
+  wrapNavigation = true,
+  showNavButtons = true,
+  railPadding = 6,
   leftRail,
   centerRail,
   rightRail,
+  emptyState,
   centerAction = 'none',
   centerActionLabel,
   onCenterAction,
@@ -33,6 +38,19 @@ let {
 }: ViewerProps = $props()
 
 const EMPTY_STATE_CLEAR_DELAY_MS = 320
+const SWIPE_MIN_DISTANCE_PX = 48
+const SWIPE_MAX_DURATION_MS = 360
+const RAIL_PADDING_CLASSES = [
+  'p-0',
+  'p-1',
+  'p-2',
+  'p-3',
+  'p-4',
+  'p-5',
+  'p-6',
+  'p-7',
+  'p-8',
+] as const
 
 const activeIndex = $derived.by(() => {
   if (!items.length) return -1
@@ -54,17 +72,23 @@ const rawCurrentItem = $derived.by(() => {
   if (resolvedActiveIndex < 0) return null
   return items[resolvedActiveIndex] ?? null
 })
-let currentItem = $state<ViewerRenderable | null>(retainedItem)
+let currentItem = $state<ViewerRenderable | null>(null)
 let lastHandledFullscreenRequestKey = $state<number | null>(null)
 let emptyStateTimer: ReturnType<typeof setTimeout> | null = null
+let touchStartX = 0
+let touchStartY = 0
+let touchStartAt = 0
 const isFirefox = $derived.by(() => {
   if (typeof navigator === 'undefined') return false
   return navigator.userAgent.includes('Firefox/')
 })
 
-const canGoPrev = $derived(resolvedActiveIndex > 0)
+const canWrapNavigation = $derived(wrapNavigation && items.length > 1)
+const canGoPrev = $derived(
+  items.length > 1 && (canWrapNavigation || resolvedActiveIndex > 0),
+)
 const canGoNext = $derived(
-  resolvedActiveIndex >= 0 && resolvedActiveIndex < items.length - 1,
+  items.length > 1 && (canWrapNavigation || resolvedActiveIndex < items.length - 1),
 )
 const hasCenterAction = $derived(
   centerAction === 'fullscreen' ||
@@ -93,6 +117,13 @@ const fullscreenViewTransitionName = $derived(
     : undefined,
 )
 const currentSceneActiveId = $derived(currentItem?.id ?? resolvedActiveId)
+const railPaddingClass = $derived.by(() => {
+  const normalizedRailPadding = Math.min(
+    RAIL_PADDING_CLASSES.length - 1,
+    Math.max(0, Math.round(railPadding)),
+  )
+  return RAIL_PADDING_CLASSES[normalizedRailPadding] ?? 'p-6'
+})
 
 function shouldReuseCurrentItem(
   previous: ViewerRenderable | null,
@@ -119,6 +150,12 @@ function clearEmptyStateTimer(): void {
   clearTimeout(emptyStateTimer)
   emptyStateTimer = null
 }
+
+$effect(() => {
+  if (!currentItem && retainedItem) {
+    currentItem = retainedItem
+  }
+})
 
 $effect(() => {
   const nextItem = rawCurrentItem
@@ -190,14 +227,65 @@ async function runViewTransition(update: () => void | Promise<void>): Promise<vo
 }
 
 function moveToIndex(nextIndex: number): void {
-  if (nextIndex < 0 || nextIndex >= items.length) return
+  if (items.length === 0) return
 
-  const nextItem = items[nextIndex]
+  const resolvedNextIndex = canWrapNavigation
+    ? ((nextIndex % items.length) + items.length) % items.length
+    : nextIndex
+
+  if (resolvedNextIndex < 0 || resolvedNextIndex >= items.length) return
+
+  const nextItem = items[resolvedNextIndex]
 
   if (!nextItem || nextItem.id === currentItem?.id) return
 
   onActiveIdChange?.(nextItem.id)
   onNavigateToItem?.(nextItem.id)
+}
+
+function handleSwipeDirection(direction: 'left' | 'right'): void {
+  if (items.length <= 1) return
+
+  if (direction === 'left') {
+    moveToIndex(resolvedActiveIndex + 1)
+    return
+  }
+
+  if (direction === 'right') {
+    moveToIndex(resolvedActiveIndex - 1)
+  }
+}
+
+function handleTouchStart(event: TouchEvent): void {
+  const touch = event.touches[0]
+
+  if (!touch) return
+
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+  touchStartAt = Date.now()
+}
+
+function handleTouchEnd(event: TouchEvent): void {
+  const touch = event.changedTouches[0]
+
+  if (!touch || touchStartAt === 0) return
+
+  const deltaX = touch.clientX - touchStartX
+  const deltaY = touch.clientY - touchStartY
+  const duration = Date.now() - touchStartAt
+
+  touchStartAt = 0
+
+  if (
+    duration > SWIPE_MAX_DURATION_MS ||
+    Math.abs(deltaX) < SWIPE_MIN_DISTANCE_PX ||
+    Math.abs(deltaX) <= Math.abs(deltaY)
+  ) {
+    return
+  }
+
+  handleSwipeDirection(deltaX < 0 ? 'left' : 'right')
 }
 
 async function toggleFullscreen(nextState?: boolean): Promise<void> {
@@ -237,7 +325,11 @@ onDestroy(() => {
 
 <div class="flex h-full w-full min-h-0 flex-col gap-3 select-none">
   {#if currentItem}
-    <div class="group/viewer relative min-h-0 flex-1 overflow-hidden">
+    <div
+      class="group/viewer relative min-h-0 flex-1 overflow-hidden"
+      ontouchstart={handleTouchStart}
+      ontouchend={handleTouchEnd}
+    >
       <ViewerStage
         {currentItem}
         activeId={currentSceneActiveId}
@@ -279,7 +371,7 @@ onDestroy(() => {
         </div>
       {/if}
 
-      {#if items.length > 1}
+      {#if items.length > 1 && showNavButtons}
         {#key currentItem.id}
           <ViewerNav
             {canGoPrev}
@@ -292,7 +384,10 @@ onDestroy(() => {
 
       {#if leftRail || centerRail || rightRail}
         <div
-          class="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-3 p-6 px-8"
+          class={cx(
+            'pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-3 px-8',
+            railPaddingClass,
+          )}
         >
           <div class="pointer-events-auto flex min-w-0 flex-1 justify-start">
             {#if leftRail}
@@ -313,10 +408,14 @@ onDestroy(() => {
       {/if}
     </div>
   {:else}
-    <ViewerEmpty
-      title={m.gallery__empty_state_title()}
-      description={m.gallery__empty_state_description()}
-    />
+    {#if emptyState}
+      {@render emptyState()}
+    {:else}
+      <ViewerEmpty
+        title={m.gallery__empty_state_title()}
+        description={m.gallery__empty_state_description()}
+      />
+    {/if}
   {/if}
 </div>
 
