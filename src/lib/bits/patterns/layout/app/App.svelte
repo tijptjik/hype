@@ -27,7 +27,7 @@ let {
   {localeKey}
 />
 
-<AppPrimitive.AppShell
+<AppPrimitive.RootShell
   {queryClient}
   {localeKey}
   {isReady}
@@ -35,4 +35,4 @@ let {
   {pendingSurface}
 >
   {@render children()}
-</AppPrimitive.AppShell>
+</AppPrimitive.RootShell>
