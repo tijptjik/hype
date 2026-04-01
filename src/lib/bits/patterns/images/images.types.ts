@@ -90,10 +90,18 @@ export type AdminThumbnailProps = ThumbnailProps & {
   onRetryUpload?: (item: ViewerRenderable) => void | Promise<void>
 }
 
-export type ImageProps = {
+export type RenderableImageProps = {
   item: ViewerRenderable | null
   fit?: GalleryObjectFit
   isLoading?: boolean
+}
+
+export type ImageProps = {
+  src: string | null
+  alt: string
+  fit?: GalleryObjectFit
+  isLoading?: boolean
+  class?: string
 }
 
 export type ViewerProps = {
