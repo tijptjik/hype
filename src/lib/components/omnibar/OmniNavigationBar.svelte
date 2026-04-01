@@ -1,12 +1,12 @@
 <script lang="ts">
-// TRANSITIONS
-import { fade, slide } from 'svelte/transition'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
 import OmniNavHeader from './OmniNavHeader.svelte'
 import OmniNavArrow from './OmniNavArrow.svelte'
 import OmniCollection from './OmniCollection.svelte'
+// STYLES
+import { OMNIBAR_NAV_BAR_CLASSES } from './omnibar.styles'
 // TYPES
 import { getOmniCtx } from '$lib/context/omni.svelte'
 
@@ -19,10 +19,7 @@ let isNotFeatureMode = $derived(collectionMode !== 'feature')
 let isNewFeature = $derived(omniCtx.isNewFeatureMode)
 </script>
 
-<div
-  id="omni-nav-bar"
-  class="relative z-30 col-start-1 row-start-1 flex min-h-16 w-full items-center border-b-3 border-base-300 bg-black transition-[height] w-120:rounded-lg w-120:border-3 w-192:min-h-14"
->
+<div id="omni-nav-bar" class={OMNIBAR_NAV_BAR_CLASSES}>
   {#if isNotFeatureMode && !isNewFeature && appCtx.state.active.collection}
     <div class="flex h-full w-full items-center">
       <div class="h-full shrink-0"><OmniNavArrow direction="left" /></div>
