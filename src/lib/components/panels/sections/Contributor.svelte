@@ -7,7 +7,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Trophy from 'virtual:icons/lucide/trophy'
 import CheckCircle from 'virtual:icons/lucide/circle-check'
 import Section from '$lib/components/panels/common/Section.svelte'

@@ -9,7 +9,7 @@ import { getI18n } from '$lib/i18n'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import { Scrollbar } from '$lib/bits/custom/scrollbar'
 // REMOTE

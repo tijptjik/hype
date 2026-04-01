@@ -6,7 +6,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Heart from 'virtual:icons/lucide/heart'
 import InformationCircle from 'virtual:icons/lucide/info'
 
@@ -118,7 +118,7 @@ function handleSlideStart() {
   >
     <Icon src={InformationCircle} class="h-6 w-6 stroke-[2px] opacity-0" />
     <p class="flex gap-2 text-center font-bold uppercase tracking-wider">
-      <Icon src={Heart} theme="solid" class="h-6 w-6 stroke-[2px] text-primary" />
+      <Icon src={Heart} filled class="h-6 w-6 stroke-[2px] text-primary" />
       {m.report_missing__preface()}
     </p>
     <Icon src={InformationCircle} class="h-6 w-6 stroke-[2px] hover:text-white/70" />

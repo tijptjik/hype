@@ -8,7 +8,7 @@ import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { updateUserProfile } from '$lib/api/server/user.remote'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import PencilSquare from 'virtual:icons/lucide/square-pen'
 import InformationCircle from 'virtual:icons/lucide/info'
 import Check from 'virtual:icons/lucide/check'
@@ -234,7 +234,7 @@ $effect(() => {
 >
   <Icon src={InformationCircle} class="h-6 w-6 stroke-[2px] opacity-0" />
   <p class="flex gap-2 text-center font-bold uppercase tracking-wider">
-    <Icon src={Heart} theme="solid" class="h-6 w-6 stroke-[2px] text-primary" />
+    <Icon src={Heart} filled class="h-6 w-6 stroke-[2px] text-primary" />
     {m.add_photos__thank_you()}
   </p>
   <Icon src={InformationCircle} class="h-6 w-6 stroke-[2px] text-neutral-400" />

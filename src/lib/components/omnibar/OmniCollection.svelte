@@ -8,7 +8,7 @@ import { getOmniCtx } from '$lib/context/omni.svelte'
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import XMark from 'virtual:icons/lucide/x'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 

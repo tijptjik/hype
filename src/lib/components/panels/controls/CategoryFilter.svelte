@@ -4,7 +4,7 @@ import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 // SERVICES
 import {
   toggleCategoricalPropertyValue,

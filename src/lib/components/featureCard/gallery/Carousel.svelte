@@ -11,7 +11,7 @@ import Metadata from '$lib/components/featureCard/gallery/Metadata.svelte'
 import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
 import StageActions from '$lib/components/featureCard/gallery/StageActions.svelte'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import ChevronLeft from 'virtual:icons/lucide/chevron-left'
 import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // TYPES

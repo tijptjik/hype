@@ -4,7 +4,7 @@ import { m } from '$lib/i18n'
 // SVELTE
 import { slide } from 'svelte/transition'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 // ICONS
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronRight from 'virtual:icons/lucide/chevron-right'

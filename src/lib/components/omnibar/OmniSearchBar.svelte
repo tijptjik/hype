@@ -4,7 +4,7 @@ import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import MagnifyingGlass from 'virtual:icons/lucide/search'
 // TRANSITIONS
 import { fade } from 'svelte/transition'

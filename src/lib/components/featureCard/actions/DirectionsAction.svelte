@@ -1,7 +1,7 @@
 <script lang="ts">
 import Button from '$lib/bits/core/button/Button.svelte'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import MapIcon from 'virtual:icons/lucide/map'
 // I18N
 import { m } from '$lib/i18n'

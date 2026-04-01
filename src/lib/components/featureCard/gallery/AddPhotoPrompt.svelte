@@ -11,7 +11,7 @@ import { checkCameraAvailability } from '$lib/client/services/image'
 // BITS
 import { Button } from '$lib/bits/core/button'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Camera from 'virtual:icons/lucide/camera'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'

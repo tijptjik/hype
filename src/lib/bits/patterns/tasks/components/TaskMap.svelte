@@ -1,7 +1,7 @@
 <script lang="ts">
 import { tick } from 'svelte'
 import { cx } from '$lib/bits/utils'
-import Maplet from '$lib/components/common/Maplet.svelte'
+import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 import type { TaskMapProps } from '../task.types'
 import ExpandIcon from 'virtual:icons/lucide/expand'

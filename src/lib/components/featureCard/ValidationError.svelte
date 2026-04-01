@@ -7,7 +7,7 @@ import { m } from '$lib/i18n'
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
 
 // CONTEXT
@@ -29,7 +29,7 @@ $effect(() => {
     transition:slide={{ duration: 300 }}
     class="flex justify-center gap-2 bg-black px-3 pt-2 text-[1rem] font-medium text-warning w-100:px-4"
   >
-    <Icon type="solid" src={ExclamationTriangle} class="h-6 w-6" />
+    <Icon src={ExclamationTriangle} class="h-6 w-6" filled />
     <span class="flex items-center gap-1"> {cardCtx.validationError} </span>
   </div>
 {/if}

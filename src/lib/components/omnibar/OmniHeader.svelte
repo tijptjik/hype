@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 // ICONS
 import MapIcon from 'virtual:icons/lucide/map'
 import Building from 'virtual:icons/lucide/landmark'

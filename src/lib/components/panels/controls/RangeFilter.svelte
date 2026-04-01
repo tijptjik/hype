@@ -1,7 +1,7 @@
 <script lang="ts">
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import RangeSlider from 'svelte-range-slider-pips'
 // I18N
 import { getI18n } from '$lib/i18n'

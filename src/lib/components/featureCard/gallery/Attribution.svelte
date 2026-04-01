@@ -10,7 +10,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { getMetadata } from '$lib/api/server/image.remote'
 import { getUserForAttribution } from '$lib/api/server/user.remote'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Camera from 'virtual:icons/lucide/camera'
 import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES

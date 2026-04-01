@@ -1,6 +1,6 @@
 <script lang="ts">
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import ChevronLeft from 'virtual:icons/lucide/chevron-left'
 import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // CONTEXT

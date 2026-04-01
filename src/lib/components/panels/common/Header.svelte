@@ -2,7 +2,7 @@
 // BITS COMPONENTS
 import Button from '$lib/bits/core/button/Button.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import XCircle from 'virtual:icons/lucide/circle-x'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'

@@ -4,7 +4,7 @@
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import XCircle from 'virtual:icons/lucide/circle-x'
 import QueueList from 'virtual:icons/lucide/panel-top-bottom-dashed'
 // COMPONENTS

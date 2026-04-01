@@ -10,7 +10,7 @@ import { PANEL_WIDTH } from '$lib/constants'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import XMark from 'virtual:icons/lucide/x'
 import PencilSquare from 'virtual:icons/lucide/square-pen'
 import Check from 'virtual:icons/lucide/check'

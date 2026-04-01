@@ -1,7 +1,7 @@
 <script lang="ts">
 import { goto } from '$app/navigation'
 import type { Component } from 'svelte'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 
 type Props = {
   icon: string | Component

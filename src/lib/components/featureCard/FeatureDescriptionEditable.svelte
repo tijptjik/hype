@@ -2,7 +2,7 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Check from 'virtual:icons/lucide/check'
 import PencilSquare from 'virtual:icons/lucide/square-pen'
 // I18N

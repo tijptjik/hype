@@ -9,7 +9,7 @@ import { m } from '$lib/i18n'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import XMark from 'virtual:icons/lucide/x'
 import UserGroup from 'virtual:icons/lucide/users'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'

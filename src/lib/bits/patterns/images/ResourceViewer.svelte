@@ -73,7 +73,7 @@ import { AdminViewer, Dropzone } from '$lib/bits/patterns/images'
 import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
 import ViewerControls from '$lib/bits/patterns/images/components/ViewerControls.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'

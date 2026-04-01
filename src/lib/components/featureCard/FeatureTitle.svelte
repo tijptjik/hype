@@ -1,6 +1,6 @@
 <script lang="ts">
 // Icons
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Star from 'virtual:icons/lucide/star'
 import Check from 'virtual:icons/lucide/check'
 import PencilSquare from 'virtual:icons/lucide/square-pen'
@@ -200,13 +200,13 @@ const hasGradeProperty = $derived(
         {/each}
       </div>
     {:else if !cardCtx.isNewMode && grade}
-      <Icon src={Star} class="h-6 w-6" theme="solid" />
+      <Icon src={Star} class="h-6 w-6" filled />
       <span>{grade}/5</span>
     {:else}
       <span class="translate-x-7 rounded-full bg-black text-[8px] text-white"
         >{m.misty_quiet_sheep_push()}</span
       >
-      <Icon src={Star} class="h-6 w-6" theme="solid" />
+      <Icon src={Star} class="h-6 w-6" filled />
     {/if}
   </div>
 </div>

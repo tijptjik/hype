@@ -4,7 +4,7 @@ import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // Icons
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 import EllipsisVertical from 'virtual:icons/lucide/ellipsis-vertical'
 import PencilSquare from 'virtual:icons/lucide/square-pen'
@@ -147,7 +147,7 @@ const onMissingReport = () => {
                 class="btn btn-ghost btn-sm h-auto w-full justify-start gap-2 rounded-t-none rounded-br-none p-2 pl-3 font-mono font-thin text-neutral-content hover:bg-base-300 active:scale-100 active:bg-base-200"
                 onclick={onAddPhoto}
               >
-                <Icon src={Camera} class="h-5 w-5 text-primary" theme="solid" />
+                <Icon src={Camera} class="h-5 w-5 text-primary" filled />
                 {m.honest_fluffy_falcon_enjoy()}
               </button>
             </div>

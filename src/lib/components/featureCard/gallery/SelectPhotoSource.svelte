@@ -8,7 +8,7 @@ import { checkCameraAvailability } from '$lib/client/services/image'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Camera from 'virtual:icons/lucide/camera'
 import FolderOpen from 'virtual:icons/lucide/folder-open'
 

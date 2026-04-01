@@ -5,11 +5,8 @@ import type { Snippet } from 'svelte'
 import { slide } from 'svelte/transition'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronRight from 'virtual:icons/lucide/chevron-right'
-import Icon from '$lib/components/common/Icon.svelte'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-
-const appCtx = getAppCtx()
+import { Icon } from '$lib/bits'
+import type { Snippet } from 'svelte'
 
 const toggle = () => {
   isOpen = !isOpen

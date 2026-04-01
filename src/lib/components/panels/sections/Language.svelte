@@ -5,7 +5,7 @@ import { m } from '$lib/i18n'
 // BITS
 import { Switch } from '$lib/bits'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Language from 'virtual:icons/lucide/languages'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'

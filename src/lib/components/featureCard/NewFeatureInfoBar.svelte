@@ -7,7 +7,7 @@ import { m } from '$lib/i18n'
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import InformationCircle from 'virtual:icons/lucide/info'
 import Heart from 'virtual:icons/lucide/heart'
 
@@ -115,7 +115,7 @@ function handleSlideStart() {
 >
   <Icon src={InformationCircle} class="h-6 w-6 stroke-[2px] opacity-0" />
   <p class="flex gap-2 text-center font-bold uppercase tracking-wider">
-    <Icon src={Heart} theme="solid" class="h-6 w-6 stroke-[2px] text-primary" />
+    <Icon src={Heart} filled class="h-6 w-6 stroke-[2px] text-primary" />
     {m.new_feature__thank_you()}
   </p>
   <Icon src={InformationCircle} class="h-6 w-6 stroke-[2px] text-neutral-400" />

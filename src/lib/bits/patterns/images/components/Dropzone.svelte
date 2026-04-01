@@ -2,7 +2,7 @@
 import { cx } from '$lib/bits/utils'
 import { m } from '$lib/i18n'
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import PhotoIcon from 'virtual:icons/lucide/image'
 import UploadIcon from 'virtual:icons/lucide/upload'
 import DropzonePrimitive from 'svelte-file-dropzone'
