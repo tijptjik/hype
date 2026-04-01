@@ -5,6 +5,7 @@
     "": {
       "name": "hype",
       "dependencies": {
+        "@chenglou/pretext": "^0.0.3",
         "@cloudflare/vite-plugin": "^1.30.3",
         "@emeraldpay/hashicon": "^0.5.2",
         "@inlang/paraglide-js": "^2.15.1",
@@ -201,6 +202,8 @@
     "@changesets/types": ["@changesets/types@6.1.0", "", {}, "sha512-rKQcJ+o1nKNgeoYRHKOS07tAMNd3YSN0uHaJOZYjBAgxfV7TUE7JE+z4BzZdQwb5hKaYbayKN5KrYV7ODb2rAA=="],
 
     "@changesets/write": ["@changesets/write@0.4.0", "", { "dependencies": { "@changesets/types": "^6.1.0", "fs-extra": "^7.0.1", "human-id": "^4.1.1", "prettier": "^2.7.1" } }, "sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q=="],
+
+    "@chenglou/pretext": ["@chenglou/pretext@0.0.3", "", {}, "sha512-RQmqMqUAPRCyv4R3LlRi/ao6KbNWYclqLA+V1HS7sWgyUUbjn3JmmlfXZSY/BjM4rbmIaMSyIVisYocYGYftiQ=="],
 
     "@cloudflare/kv-asset-handler": ["@cloudflare/kv-asset-handler@0.4.2", "", {}, "sha512-SIOD2DxrRRwQ+jgzlXCqoEFiKOFqaPjhnNTGKXSRLvp1HiOvapLaFG2kEr9dYQTYe8rKrd9uvDUzmAITeNyaHQ=="],
 

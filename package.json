@@ -138,6 +138,7 @@
     "workerd"
   ],
   "dependencies": {
+    "@chenglou/pretext": "^0.0.3",
     "@cloudflare/vite-plugin": "^1.30.3",
     "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "^2.15.1",
