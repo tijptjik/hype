@@ -1,3 +1,4 @@
+import { goto } from '$app/navigation'
 import type { Point } from 'geojson'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
@@ -82,6 +83,8 @@ export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Eve
     // If multiple layers are active, dispatch event to show the layer selection modal.
     appCtx.setNewFeatureMode(NewFeatureMode.parents)
   }
+
+  await goto('/features/new')
 }
 
 // ---
