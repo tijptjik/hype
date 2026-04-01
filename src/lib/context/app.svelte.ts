@@ -49,8 +49,6 @@ import {
   FirstClassResource,
   type HierarchicalResource,
   Panel,
-  PanelLeft,
-  PanelRight,
   ResourcePath,
   ResourceRefKey,
   type NewFeatureMode,
@@ -101,6 +99,7 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { PlaceCtx } from './place.svelte'
+import type { ResponsiveCtx } from './responsive.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
 
@@ -632,11 +631,18 @@ export class AppCtx {
   // Deprecated: legacy form context bridge for header form actions.
   // Prefer headerCtrl.setFormActions(...) in route pages.
   formCtx = $state(null)
+  responsiveCtx: ResponsiveCtx
 
   // Constructor
-  constructor(queryClient: QueryClient, placeCtx: PlaceCtx, user: SessionUser | null) {
+  constructor(
+    queryClient: QueryClient,
+    placeCtx: PlaceCtx,
+    user: SessionUser | null,
+    responsiveCtx: ResponsiveCtx,
+  ) {
     this.queryClient = queryClient
     this.placeCtx = placeCtx
+    this.responsiveCtx = responsiveCtx
     this.initializeNavigationFromUrl()
     this.setUser(user)
     this.initializeRemoteMap()
@@ -2770,65 +2776,6 @@ export class AppCtx {
     })
   }
 
-  // NAVIGATION METHODS
-
-  getHorizontalOffset = (): number => {
-    // Return 0 on mobile
-    if (isMobile()) {
-      return 0
-    }
-
-    // Check if any left panels are open using PanelLeft enum
-    const leftPanelOpen = this.isLeftPanelOpen()
-
-    // Check if any right panels are open using PanelRight enum
-    const rightPanelOpen = this.isRightPanelOpen()
-
-    // Calculate offset based on panel state
-    if (leftPanelOpen && rightPanelOpen) {
-      return 0 // Both panels open, center the content
-    } else if (leftPanelOpen) {
-      return PANEL_WIDTH / 2 // Left panel open, shift right
-    } else if (rightPanelOpen) {
-      return -PANEL_WIDTH / 2 // Right panel open, shift left
-    } else {
-      return 0 // No panels open
-    }
-  }
-
-  // Helper methods for panel state
-  isLeftPanelOpen = (): boolean => {
-    return Object.values(PanelLeft).some(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  isRightPanelOpen = (): boolean => {
-    return Object.values(PanelRight).some(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  getOpenLeftPanels = (): PanelLeft[] => {
-    return Object.values(PanelLeft).filter(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  getOpenRightPanels = (): PanelRight[] => {
-    return Object.values(PanelRight).filter(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  isPanelOnLeft = (panel: Panel): boolean => {
-    return Object.values(PanelLeft).includes(panel as unknown as PanelLeft)
-  }
-
-  isPanelOnRight = (panel: Panel): boolean => {
-    return Object.values(PanelRight).includes(panel as unknown as PanelRight)
-  }
-
   // MAP OPERATIONS -- REBOUNDING
 
   zoomToActiveCollection = (): void => {
@@ -2868,8 +2815,8 @@ export class AppCtx {
       : {
           top: 150,
           bottom: 50,
-          right: 50 + (this.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
-          left: 50 + (this.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          right: 50 + (this.responsiveCtx.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          left: 50 + (this.responsiveCtx.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
         }
     try {
       // Convert to WGS84 and get bounds
@@ -3085,16 +3032,18 @@ export class AppCtx {
 
   // Panel methods
   togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    const currentState = this.isPanelOpen(panel)
+    const currentState = this.responsiveCtx.isPanelOpen(panel)
 
     // Close other panels on the same side first (without updating URL individually)
-    if (this.isPanelOnLeft(panel)) {
-      this.getOpenLeftPanels()
-        .filter(p => p !== (panel as unknown as PanelLeft))
+    if (this.responsiveCtx.isPanelOnLeft(panel)) {
+      this.responsiveCtx
+        .getOpenLeftPanels()
+        .filter(p => (p as unknown as Panel) !== panel)
         .forEach(p => this.closePanel(p as unknown as Panel, false))
-    } else if (this.isPanelOnRight(panel)) {
-      this.getOpenRightPanels()
-        .filter(p => p !== (panel as unknown as PanelRight))
+    } else if (this.responsiveCtx.isPanelOnRight(panel)) {
+      this.responsiveCtx
+        .getOpenRightPanels()
+        .filter(p => (p as unknown as Panel) !== panel)
         .forEach(p => this.closePanel(p as unknown as Panel, false))
     }
 
@@ -3105,7 +3054,7 @@ export class AppCtx {
         // Panel was closed, so open it
         this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
+          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
       // If panel was open, leave it closed (toggle behavior)
@@ -3116,7 +3065,7 @@ export class AppCtx {
       } else {
         this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
+          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
     }
@@ -3144,13 +3093,13 @@ export class AppCtx {
   }
 
   closeLeftPanel = (): void => {
-    this.getOpenLeftPanels().forEach((panel: PanelLeft) => {
+    this.responsiveCtx.getOpenLeftPanels().forEach(panel => {
       this.closePanel(panel as unknown as Panel, false)
     })
   }
 
   closeRightPanel = (): void => {
-    this.getOpenRightPanels().forEach((panel: PanelRight) => {
+    this.responsiveCtx.getOpenRightPanels().forEach(panel => {
       this.closePanel(panel as unknown as Panel, false)
     })
   }
@@ -3169,6 +3118,7 @@ export class AppCtx {
 
   openPanel = (panel: Panel, updateUrl: boolean = true): void => {
     this.state.panels[panel].isOpen = true
+    this.responsiveCtx.setPanelOpen(panel, true)
 
     // Handle stateful parameters for specific panels
     if (updateUrl && typeof window !== 'undefined') {
@@ -3181,6 +3131,7 @@ export class AppCtx {
 
   closePanel = (panel: Panel, updateUrl: boolean = true): void => {
     this.state.panels[panel].isOpen = false
+    this.responsiveCtx.setPanelOpen(panel, false)
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
         Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
@@ -3190,28 +3141,30 @@ export class AppCtx {
   }
 
   isPanelOpen = (panel: Panel): boolean => {
-    return this.state.panels[panel].isOpen ?? false
+    return this.responsiveCtx.isPanelOpen(panel)
   }
 
   isPanelNarrow = (panel: Panel): boolean => {
-    return (!this.isPanelOpenOrVisual(Panel.admin) && panel === Panel.admin) || false
+    return this.responsiveCtx.isPanelNarrow(panel)
   }
 
   // Visual-only panel methods for auto-hide behavior
   openPanelVisually = (panel: Panel): void => {
     this.state.panels[panel].isOpenVisually = true
+    this.responsiveCtx.setPanelOpenVisually(panel, true)
   }
 
   closePanelVisually = (panel: Panel): void => {
     this.state.panels[panel].isOpenVisually = false
+    this.responsiveCtx.setPanelOpenVisually(panel, false)
   }
 
   isPanelOpenVisually = (panel: Panel): boolean => {
-    return this.state.panels[panel].isOpenVisually ?? false
+    return this.responsiveCtx.isPanelOpenVisually(panel)
   }
 
   isPanelOpenOrVisual = (panel: Panel): boolean => {
-    return this.isPanelOpen(panel) || this.isPanelOpenVisually(panel)
+    return this.responsiveCtx.isPanelOpenOrVisual(panel)
   }
 
   // Helper method to open profile panel with username context
@@ -3906,8 +3859,9 @@ export const setAppCtx = (
   queryClient: QueryClient,
   placeCtx: PlaceCtx,
   user: SessionUser | null,
+  responsiveCtx: ResponsiveCtx,
 ) => {
-  const context = new AppCtx(queryClient, placeCtx, user)
+  const context = new AppCtx(queryClient, placeCtx, user, responsiveCtx)
   appCtxSingleton = context
   // Don't initialize immediately - let the session watcher handle it after mount
   return setContext(APPCTX_KEY, context)

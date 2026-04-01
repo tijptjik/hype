@@ -13,6 +13,7 @@ import SwatchIcon from 'virtual:icons/lucide/swatch-book'
 
 type MapOverlayBarProps = {
   offsetX?: number
+  bottomOffset?: number
   isAddButtonVisible?: boolean
   isCardToggleVisible?: boolean
   onAddFeature?: (event: Event) => void | Promise<void>
@@ -21,6 +22,7 @@ type MapOverlayBarProps = {
 
 let {
   offsetX = 0,
+  bottomOffset = 0,
   isAddButtonVisible = false,
   isCardToggleVisible = false,
   onAddFeature,
@@ -28,7 +30,9 @@ let {
 }: MapOverlayBarProps = $props()
 
 const responsiveCtx = getResponsiveCtx()
-const centerBottomOffset = $derived(responsiveCtx.menuClearanceHeight + 24)
+const centerBottomOffset = $derived(
+  Math.max(24, responsiveCtx.menuClearanceHeight - bottomOffset + 24),
+)
 </script>
 
 {#snippet addFeatureIcon()}
@@ -46,7 +50,7 @@ const centerBottomOffset = $derived(responsiveCtx.menuClearanceHeight + 24)
 
 <OverlayBar
   class="transition-transform duration-500 ease-in-out"
-  style={`transform: translateX(${offsetX}px);`}
+  style={`transform: translateX(${offsetX}px); bottom: ${bottomOffset}px;`}
   centerStyle={`transform: translateY(-${centerBottomOffset}px);`}
 >
   {#snippet left()}

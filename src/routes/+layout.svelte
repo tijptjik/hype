@@ -43,6 +43,7 @@ const appCtx = setAppCtx(
   queryClient,
   setPlaceCtx(),
   $session.data?.user as SessionUser | null,
+  responsive,
 )
 
 // Keep hub context available for both app and admin route trees.
