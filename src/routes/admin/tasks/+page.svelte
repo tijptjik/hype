@@ -12,8 +12,6 @@ import {
 import { getTaskReviewActionLabel } from '$lib/client/services/task'
 // BITS PATTERNS
 import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '$lib/bits'
-// COMPONENTS
-import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // I18N
@@ -267,18 +265,3 @@ function updateRowFocus(index: number) {
     {/snippet}
   </GroupedResourceIndex>
 </div>
-
-<!-- MODAL -->
-{#if selectedImage && selectedTask}
-  <FullScreenViewer
-    appCtx={adminCtx.appCtx}
-    {adminCtx}
-    image={selectedImage}
-    feature={selectedTask.feature}
-    canNavigatePrevious={canNavigatePrevious()}
-    canNavigateNext={canNavigateNext()}
-    onClose={closeModal}
-    onNavigateNext={navigateToNextTask}
-    onNavigatePrevious={navigateToPreviousTask}
-  />
-{/if}

@@ -20,8 +20,6 @@ import {
   createToggleFilter,
   createTranslationFilter,
 } from '$lib/client/services/filters'
-// COMPONENTS
-import FullScreenViewer from '$lib/components/modals/FullScreenViewer.svelte'
 // BITS PATTERNS
 import {
   CompletionFooter,
@@ -736,18 +734,3 @@ function updateRowFocus(index: number) {
     />
   {/snippet}
 </ResourceIndex>
-
-<!-- MODAL -->
-{#if selectedImage && selectedFeature}
-  <FullScreenViewer
-    appCtx={adminCtx.appCtx}
-    {adminCtx}
-    image={selectedImage}
-    feature={selectedFeature}
-    canNavigatePrevious={canNavigatePrevious()}
-    canNavigateNext={canNavigateNext()}
-    onClose={closeModal}
-    onNavigateNext={navigateToNextFeature}
-    onNavigatePrevious={navigateToPreviousFeature}
-  />
-{/if}
