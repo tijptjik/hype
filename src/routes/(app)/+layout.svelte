@@ -310,7 +310,7 @@ function handleMenuSelect(item: { value: Panel }): void {
             src={PlusCircleIcon}
             size="3xl"
             strokeWidth={1.5}
-            class="transition-transform duration-300 group-hover:rotate-90"
+            class="transition-transform bg-black rounded-full duration-300 group-hover:rotate-90"
           />
         {/snippet}
 
@@ -332,7 +332,7 @@ function handleMenuSelect(item: { value: Panel }): void {
                 size="xl"
                 transition={fade}
                 transitionOpts={{ duration: 300, delay: 150 }}
-                class="group z-30 shadow-lg"
+                class="group z-30 text-white shadow-lg"
                 attrs={{ title: m.whole_house_cougar_hurl() }}
                 onClick={handleAddFeature}
               />
