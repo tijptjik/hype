@@ -14,5 +14,6 @@ export interface AppMenuProps<T = string> {
   trailingItems?: AppMenuItem<T>[]
   onSelect?: (item: AppMenuItem<T>) => void
   offsetX?: number
+  effectiveBottomOffset?: number
   class?: string
 }

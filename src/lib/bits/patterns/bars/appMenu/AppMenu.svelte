@@ -15,11 +15,7 @@ import {
 } from './appMenu.styles'
 // TYPES
 import type { AppMenuItem, AppMenuProps } from './appMenu.types'
-import {
-  getAppMenuHideLabelBelow,
-  isCompactAppMenuViewport,
-  isMobile,
-} from './appMenu.constants'
+import { getAppMenuViewportState } from './appMenu.constants'
 
 let {
   items,
@@ -35,16 +31,16 @@ const responsiveCtx = getResponsiveCtx()
 // RESPONSIVENESS
 const availableWidth = $derived(responsiveCtx.window.width)
 const availableHeight = $derived(responsiveCtx.window.height)
-const hideLabelBelow = $derived(getAppMenuHideLabelBelow(availableWidth))
-const isMobileMenu = $derived(isMobile(availableWidth))
-const isCompactMobileMenu = $derived(
-  isCompactAppMenuViewport(availableWidth, availableHeight),
-)
+const viewportState = $derived(getAppMenuViewportState(availableWidth, availableHeight))
 
 // STYLES
-const menuButtonClasses = $derived(getAppMenuButtonClasses(isCompactMobileMenu))
-const navClasses = $derived(getAppMenuNavClasses(isCompactMobileMenu, className))
+const navClasses = $derived(
+  getAppMenuNavClasses(viewportState.shouldUseCompactVisualMenu, className),
+)
 const navStyles = $derived(getAppMenuNavStyles(items.length, offsetX))
+const menuButtonClasses = $derived(
+  getAppMenuButtonClasses(viewportState.isIconOnlyMenu),
+)
 
 // HANDLERS
 function handleSelect(item: AppMenuItem<T>): void {
@@ -62,12 +58,10 @@ function handleSelect(item: AppMenuItem<T>): void {
     style="transparent"
     color={item.tone === 'secondary' ? 'secondary' : 'neutral'}
     size="md"
-    hideLabel={isCompactMobileMenu}
-    {hideLabelBelow}
-    {availableWidth}
+    hideLabel={viewportState.isIconOnlyMenu}
     class={menuButtonClasses}
-    labelClasses="text-xs uppercase tracking-wider"
-    iconClasses={isMobileMenu ? 'text-primary' : ''}
+    labelClasses="min-w-0 truncate text-xs uppercase tracking-wider"
+    iconClasses={viewportState.isMobileMenu ? 'text-primary' : ''}
     attrs={{ title: item.label }}
     onClick={() => handleSelect(item)}
   />

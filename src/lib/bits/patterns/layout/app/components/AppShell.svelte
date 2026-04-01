@@ -12,7 +12,7 @@ let { children, class: className = '', style = '' }: AppShellProps = $props()
 </script>
 
 <div
-  class={cx('flex h-dvh flex-col justify-around overflow-hidden', className)}
+  class={cx('flex h-full w-full flex-col justify-around overflow-hidden', className)}
   {style}
 >
   {@render children()}

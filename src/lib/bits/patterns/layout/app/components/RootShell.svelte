@@ -12,7 +12,7 @@ let { queryClient, localeKey, isReady, children }: AppShellProps = $props()
 const classes = $derived(
   cx(
     'bits-theme',
-    'flex h-lvh min-h-0 w-dvw min-w-0 flex-row overflow-hidden overscroll-contain bg-black',
+    'flex h-lvh min-h-0 w-lvw min-w-0 flex-row overflow-hidden overscroll-contain bg-black',
     localeKey === 'zhHant' ? 'font-(--font-hant)' : '',
     localeKey === 'zhHans' ? 'font-(--font-hans)' : '',
   ),

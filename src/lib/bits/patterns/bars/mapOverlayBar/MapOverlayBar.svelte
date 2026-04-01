@@ -3,14 +3,16 @@
 import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
+// CONTEXT
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
 import { Button, Icon, OverlayBar } from '$lib/bits'
+// ICONS
 import PlusCircleIcon from 'virtual:icons/lucide/circle-plus'
 import SwatchIcon from 'virtual:icons/lucide/swatch-book'
 
 type MapOverlayBarProps = {
   offsetX?: number
-  centerBottomOffset?: number
   isAddButtonVisible?: boolean
   isCardToggleVisible?: boolean
   onAddFeature?: (event: Event) => void | Promise<void>
@@ -19,12 +21,14 @@ type MapOverlayBarProps = {
 
 let {
   offsetX = 0,
-  centerBottomOffset = 0,
   isAddButtonVisible = false,
   isCardToggleVisible = false,
   onAddFeature,
   onOpenCard,
 }: MapOverlayBarProps = $props()
+
+const responsiveCtx = getResponsiveCtx()
+const centerBottomOffset = $derived(responsiveCtx.menuClearanceHeight + 24)
 </script>
 
 {#snippet addFeatureIcon()}

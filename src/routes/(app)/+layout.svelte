@@ -13,7 +13,6 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { setOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // SERVICES
@@ -40,7 +39,6 @@ import {
   AppSurface,
   MapOverlayBar,
 } from '$lib/bits'
-import { isCompactAppMenuViewport } from '$lib/bits/patterns/bars/appMenu/appMenu.constants'
 import FunnelIcon from 'virtual:icons/lucide/filter'
 import InformationCircleIcon from 'virtual:icons/lucide/info'
 import MapIcon from 'virtual:icons/lucide/map'
@@ -82,7 +80,6 @@ $effect(() => {
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx)
-const responsiveCtx = getResponsiveCtx()
 
 // NAVIGATION :: Clear feature cache images when switching between admin/user apps
 beforeNavigate(({ from, to }) => {
@@ -150,12 +147,7 @@ const isCardToggleVisible = $derived(
       !omniCtx.isNewFeatureMode,
   ),
 )
-const isCompactAppMenu = $derived(
-  isCompactAppMenuViewport(responsiveCtx.window.width, responsiveCtx.window.height),
-)
 const offsetDueToPanels = $derived(appCtx.getHorizontalOffset())
-let appMenuEffectiveBottomOffset = $state(0)
-const overlayBarCenterBottomOffset = $derived(appMenuEffectiveBottomOffset + 24)
 
 // PROFILE PANEL SCROLL POSITION
 let profilePanelContainer: HTMLDivElement | undefined = $state()
@@ -295,7 +287,8 @@ function handleMenuSelect(item: { value: Panel }): void {
 
 <AppShell>
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
-    <AppMain {isCompactAppMenu}>
+    <AppSurface>
+      <MapCanvas mapStyleCode={activeMapStyleCode} />
       <!-- Panels -->
       <Prisms />
       <Stars />
@@ -306,28 +299,24 @@ function handleMenuSelect(item: { value: Panel }): void {
       <!-- <EventCompanion /> -->
       <Settings />
       <Profile bind:panelContainer={profilePanelContainer} />
-      <!-- Map Container -->
-      <AppSurface>
+      <AppMain>
         <Omnibar />
-        <MapCanvas mapStyleCode={activeMapStyleCode} />
-        {@render children()}
         <MapOverlayBar
           offsetX={offsetDueToPanels}
-          centerBottomOffset={overlayBarCenterBottomOffset}
           {isAddButtonVisible}
           {isCardToggleVisible}
           onAddFeature={handleAddFeature}
           onOpenCard={handleOpenCard}
         />
-      </AppSurface>
-    </AppMain>
-    <AppMenu
-      items={menuItems}
-      trailingItems={trailingMenuItems}
-      offsetX={offsetDueToPanels}
-      bind:effectiveBottomOffset={appMenuEffectiveBottomOffset}
-      onSelect={handleMenuSelect}
-    />
+        {@render children()}
+        <AppMenu
+          items={menuItems}
+          trailingItems={trailingMenuItems}
+          offsetX={offsetDueToPanels}
+          onSelect={handleMenuSelect}
+        />
+      </AppMain>
+    </AppSurface>
   {:else if !$session.isPending && !$session.data}
     <AppLanding> {@render children()} </AppLanding>
   {/if}

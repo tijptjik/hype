@@ -11,6 +11,12 @@ type AppSurfaceProps = {
 let { children, class: className = '', style = '' }: AppSurfaceProps = $props()
 </script>
 
-<div class={cx('relative flex h-full flex-1 flex-col', className)} {style}>
+<div
+  class={cx(
+    'relative isolate flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden',
+    className,
+  )}
+  {style}
+>
   {@render children()}
 </div>
