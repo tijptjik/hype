@@ -9,6 +9,7 @@ import { useSession } from '$lib/auth/client'
 import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // COMPONENTS
@@ -30,6 +31,7 @@ type AppNavProps = {
 let { hub }: AppNavProps = $props()
 
 const appCtx = getAppCtx()
+const responsiveCtx = getResponsiveCtx()
 const session = useSession()
 
 const showAdminMenu = $derived.by(() =>
@@ -65,7 +67,7 @@ const trailingItems = $derived<AppMenuItem<Panel>[]>(
       ]
     : [],
 )
-const offsetX = $derived(appCtx.getHorizontalOffset())
+const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
 
 function handleSelect(item: AppMenuItem<Panel>): void {
   if (item.value === Panel.admin) {

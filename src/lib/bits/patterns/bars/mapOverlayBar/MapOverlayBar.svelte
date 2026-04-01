@@ -33,6 +33,7 @@ const responsiveCtx = getResponsiveCtx()
 const centerBottomOffset = $derived(
   Math.max(24, responsiveCtx.menuClearanceHeight - bottomOffset + 24),
 )
+const hasVisibleControls = $derived(isAddButtonVisible || isCardToggleVisible)
 </script>
 
 {#snippet addFeatureIcon()}
@@ -40,7 +41,7 @@ const centerBottomOffset = $derived(
     src={PlusCircleIcon}
     size="3xl"
     strokeWidth={1.5}
-    class="rounded-full bg-black transition-transform duration-300 group-hover:rotate-90"
+    class="rounded-full bg-base-300 transition-transform duration-300 group-hover:rotate-90"
   />
 {/snippet}
 
@@ -49,24 +50,24 @@ const centerBottomOffset = $derived(
 {/snippet}
 
 <OverlayBar
-  class="transition-transform duration-500 ease-in-out"
+  class={hasVisibleControls ? 'transition-transform duration-500 ease-in-out' : ''}
   style={`transform: translateX(${offsetX}px); bottom: ${bottomOffset}px;`}
   centerStyle={`transform: translateY(-${centerBottomOffset}px);`}
 >
   {#snippet left()}
     {#if isAddButtonVisible}
-      <Button
-        text={m.whole_house_cougar_hurl()}
-        icon={addFeatureIcon}
-        modifier="circle"
-        style="ghost"
-        size="xl"
-        transition={fade}
-        transitionOpts={{ duration: 300, delay: 150 }}
-        class="group z-30 text-white shadow-lg"
-        attrs={{ title: m.whole_house_cougar_hurl() }}
-        onClick={onAddFeature}
-      />
+      <div in:fade={{ duration: 300, delay: 150 }}>
+        <Button
+          text={m.whole_house_cougar_hurl()}
+          icon={addFeatureIcon}
+          modifier="circle"
+          style="transparent"
+          size="xl"
+          class="group z-30 text-white shadow-lg"
+          attrs={{ title: m.whole_house_cougar_hurl() }}
+          onClick={onAddFeature}
+        />
+      </div>
     {/if}
   {/snippet}
 

@@ -19,7 +19,7 @@ const APP_MENU_ITEM_GRID_SHARED_CLASSES =
   'mx-auto flex min-w-0 max-w-180 grow items-center gap-1'
 
 const APP_MENU_ITEM_GRID_DESKTOP_CLASSES =
-  'md:mx-0 md:flex md:w-auto md:flex-[0_1_auto] md:justify-center md:gap-0.5'
+  'md:mx-0 md:flex md:w-auto md:flex-[0_1_auto] md:justify-center md:gap-1.5'
 
 export const APP_MENU_ITEM_GRID_CLASSES = cx(
   APP_MENU_ITEM_GRID_SHARED_CLASSES,

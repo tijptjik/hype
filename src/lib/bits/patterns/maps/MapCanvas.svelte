@@ -21,6 +21,7 @@ import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
@@ -52,6 +53,7 @@ let mapContainer: HTMLDivElement
 // CONTEXT
 const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()
+const responsiveCtx = getResponsiveCtx()
 
 // STATE
 let lastHorizontalOffset = $state(0)
@@ -406,7 +408,7 @@ onMount(async () => {
             hasReceivedFirstFix = true
 
             // Calculate horizontal offset for panels already open
-            const currentHorizontalOffset = appCtx.getHorizontalOffset()
+            const currentHorizontalOffset = responsiveCtx.getAppMainOffsetX()
 
             if (currentHorizontalOffset !== 0) {
               const originalCenter = { lng: longitude, lat: latitude }
@@ -486,7 +488,7 @@ onMount(async () => {
         omniCtx.closeTray()
       }
       // Priority 3: Close panels if open
-      else if (appCtx.isLeftPanelOpen() || appCtx.isRightPanelOpen()) {
+      else if (responsiveCtx.isLeftPanelOpen() || responsiveCtx.isRightPanelOpen()) {
         appCtx.closeAllPanels()
       }
     }
@@ -564,7 +566,7 @@ $effect(() => {
 })
 
 // STATE : DERIVED
-let horizontalOffset = $derived(appCtx.getHorizontalOffset())
+let horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
 
 // Ensure that the center of the map is in the center of the viewport,
 // even after a panel is triggered.
