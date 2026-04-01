@@ -37,6 +37,7 @@ import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte'
 import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte'
 // BITS
 import { AppMenu, Button, Icon, OverlayBar } from '$lib/bits'
+import { isCompactAppMenuViewport } from '$lib/bits/patterns/bars/appMenu/appMenu.constants'
 import FunnelIcon from 'virtual:icons/lucide/filter'
 import InformationCircleIcon from 'virtual:icons/lucide/info'
 import MapIcon from 'virtual:icons/lucide/map'
@@ -143,8 +144,7 @@ const isCardToggleVisible = $derived(
     !omniCtx.isNewFeatureMode,
 )
 const isCompactAppMenu = $derived(
-  (responsiveCtx.window.width > 0 && responsiveCtx.window.width < 520) ||
-    (responsiveCtx.window.height > 0 && responsiveCtx.window.height < 560),
+  isCompactAppMenuViewport(responsiveCtx.window.width, responsiveCtx.window.height),
 )
 const offsetDueToPanels = $derived(appCtx.getHorizontalOffset())
 
@@ -284,7 +284,7 @@ function handleMenuSelect(item: { value: Panel }): void {
     <main
       class={[
         'relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden transition-[padding] duration-260 ease-[ease]',
-        isCompactAppMenu ? 'pb-12' : 'pb-17',
+        isCompactAppMenu ? 'pb-14' : 'pb-19',
         'md:pb-0',
       ]
         .filter(Boolean)
@@ -372,13 +372,6 @@ function handleMenuSelect(item: { value: Panel }): void {
     <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
       {@render children()}
       <MapCanvas mapStyleCode={"ghostery"} />
-    </main>
-  {:else}
-    <!-- Loading state while session is pending -->
-    <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
-      <div class="flex h-full items-center justify-center">
-        <div class="loading loading-ring loading-lg text-primary"></div>
-      </div>
     </main>
   {/if}
 </div>
