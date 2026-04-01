@@ -12,7 +12,7 @@ import { setPlaceCtx } from '$lib/context/place.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // COMPONENTS
-import MapCanvas from '$lib/components/common/MapCanvas.svelte'
+import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
 // MAP
 import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'

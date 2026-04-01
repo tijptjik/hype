@@ -10,7 +10,7 @@ import { listMapStyleCatalog } from '$lib/map/styles'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/lucide/shrink'
 import ArrowsPointingOut from 'virtual:icons/lucide/expand'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'

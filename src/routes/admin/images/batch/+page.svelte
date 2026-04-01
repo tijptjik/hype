@@ -12,7 +12,7 @@ import { getHeaderCtrl } from '$lib/context/header.svelte'
 // SERVICES
 import { uploadAndProcessImage } from '$lib/client/services/image'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Photo from 'virtual:icons/lucide/image'
 import CheckCircle from 'virtual:icons/lucide/circle-check'
 import XCircle from 'virtual:icons/lucide/circle-x'
