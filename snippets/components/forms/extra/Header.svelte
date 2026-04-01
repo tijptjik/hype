@@ -1,6 +1,6 @@
 <script lang="ts">
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Info from '$lib/components/forms/extra/Info.svelte'
 import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
 import { fade } from 'svelte/transition'

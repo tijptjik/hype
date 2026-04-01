@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import MagnifyingGlass from 'virtual:icons/lucide/search'
 import GlobeAsiaAustralia from 'virtual:icons/lucide/globe-2'
 // TYPES

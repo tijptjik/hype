@@ -4,7 +4,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // SERVICES
 import { calculateDistance } from '$lib/utils/geocoding'
 // COMPONENTS
-import Maplet from '$lib/components/common/Maplet.svelte'
+import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
 // MAP
 import { getCoordinates } from '$lib/client/services/geospatial'
 // TYPES

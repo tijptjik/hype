@@ -14,7 +14,7 @@ import { UserAttributionCard } from '$lib/bits'
 import Viewer from '../common/Viewer.svelte'
 import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Camera from 'virtual:icons/lucide/camera'
 // UTILS
 import { PANEL_WIDTH } from '$lib/constants'

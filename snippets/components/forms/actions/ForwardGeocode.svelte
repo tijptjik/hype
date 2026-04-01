@@ -12,7 +12,7 @@ import {
 } from '$lib/api/external/geocoding'
 import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocoding'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Language from 'virtual:icons/lucide/languages'
 import MagnifyingGlass from 'virtual:icons/lucide/search'
 import MapPin from 'virtual:icons/lucide/map-pin'
