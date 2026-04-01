@@ -147,6 +147,8 @@ const isCompactAppMenu = $derived(
   isCompactAppMenuViewport(responsiveCtx.window.width, responsiveCtx.window.height),
 )
 const offsetDueToPanels = $derived(appCtx.getHorizontalOffset())
+let appMenuEffectiveBottomOffset = $state(0)
+const overlayBarCenterBottomOffset = $derived(appMenuEffectiveBottomOffset + 24)
 
 // PROFILE PANEL SCROLL POSITION
 let profilePanelContainer: HTMLDivElement | undefined = $state()
@@ -321,6 +323,7 @@ function handleMenuSelect(item: { value: Panel }): void {
         <OverlayBar
           class="transition-transform duration-500 ease-in-out"
           style={`transform: translateX(${offsetDueToPanels}px);`}
+          centerStyle={`transform: translateY(-${overlayBarCenterBottomOffset}px);`}
         >
           {#snippet left()}
             {#if isAddButtonVisible}
@@ -366,6 +369,7 @@ function handleMenuSelect(item: { value: Panel }): void {
       items={menuItems}
       trailingItems={trailingMenuItems}
       offsetX={offsetDueToPanels}
+      bind:effectiveBottomOffset={appMenuEffectiveBottomOffset}
       onSelect={handleMenuSelect}
     />
   {:else if !$session.isPending && !$session.data}
