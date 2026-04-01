@@ -11,23 +11,24 @@ let {
 }: OverlayBarProps = $props()
 
 const classes = $derived(
-  ['bits-theme', 'bits-overlay-bar', className].filter(Boolean).join(' '),
+  [
+    'bits-theme absolute inset-x-0 bottom-0 z-40 px-3 pt-4 caret-transparent pointer-events-none [&_a]:pointer-events-auto [&_button]:pointer-events-auto',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' '),
 )
 </script>
 
 <div class={classes} {style}>
-  <div class="bits-overlay-bar__grid">
-    <div class="bits-overlay-bar__section bits-overlay-bar__section--left">
-      {@render left?.()}
-    </div>
+  <div class="grid grid-cols-3 items-center">
+    <div class="flex items-center gap-2">{@render left?.()}</div>
     <div
-      class="bits-overlay-bar__section bits-overlay-bar__section--center transition-transform duration-260 ease-[ease]"
+      class="flex items-center justify-center gap-2 transition-transform duration-260 ease-[ease]"
       style={centerStyle}
     >
       {@render center?.()}
     </div>
-    <div class="bits-overlay-bar__section bits-overlay-bar__section--right">
-      {@render right?.()}
-    </div>
+    <div class="flex items-center justify-end gap-2">{@render right?.()}</div>
   </div>
 </div>

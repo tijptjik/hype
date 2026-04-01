@@ -430,6 +430,12 @@
   }
 }
 
+@utility progress-accent {
+  @layer hype.l1.l2 {
+    color: var(--color-accent) /* #7042f0 */;
+  }
+}
+
 @utility progress-warning {
   @layer hype.l1.l2 {
     color: var(--color-warning) /* #f7e1a0 */;
