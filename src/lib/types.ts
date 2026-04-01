@@ -2366,6 +2366,17 @@ export type PanelProps = {
 
 export type PanelPosition = 'left' | 'right'
 
+export type FeatureCardPortalObstacle = {
+  top: number
+  left: number
+  right: number
+  bottom: number
+  diameter: number
+  radius: number
+  centerX: number
+  centerY: number
+}
+
 export type PlanScheduleStop = {
   time: string
   featureId: Id
