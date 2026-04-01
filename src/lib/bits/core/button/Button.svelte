@@ -49,9 +49,14 @@ const shouldAutoHideLabel = $derived(
     responsiveWidth < hideLabelBelow,
 )
 const shouldHideLabel = $derived(hideLabel || isIconOnly || shouldAutoHideLabel)
+const hasVisibleLabel = $derived(Boolean(text) && !shouldHideLabel)
+const hasIcon = $derived(Boolean(icon || IconComponent))
 
 const classes = $derived(
-  cx(getButtonRootClasses({ style, modifier, className }), shouldHideLabel && 'gap-0'),
+  cx(
+    getButtonRootClasses({ style, modifier, className }),
+    !hasVisibleLabel && hasIcon && 'gap-0 justify-center',
+  ),
 )
 
 const buttonStyles = $derived(getButtonRootVars({ color, style, size }))
@@ -83,7 +88,7 @@ function resolveTransition(
 </script>
 
 {#snippet buttonContent()}
-  {#if icon || IconComponent}
+  {#if hasIcon}
     <span class={cx(BUTTON_ICON_CLASSES, iconClasses)} aria-hidden="true">
       {#if icon}
         {@render icon()}
@@ -92,18 +97,18 @@ function resolveTransition(
       {/if}
     </span>
   {/if}
-  <span
-    class={cx(
-      BUTTON_LABEL_CLASSES,
-      labelClasses,
-      shouldHideLabel &&
-        '!max-h-0 !max-w-0 !overflow-hidden !leading-none !-translate-x-0.5 !opacity-0',
-      shouldHideLabel && hideLabelInstantly && 'transition-none',
-      style === 'link' && 'underline underline-offset-4',
-    )}
-  >
-    {text}
-  </span>
+  {#if hasVisibleLabel}
+    <span
+      class={cx(
+        BUTTON_LABEL_CLASSES,
+        labelClasses,
+        hideLabelInstantly && 'transition-none',
+        style === 'link' && 'underline underline-offset-4',
+      )}
+    >
+      {text}
+    </span>
+  {/if}
 {/snippet}
 
 {#snippet buttonRoot()}
