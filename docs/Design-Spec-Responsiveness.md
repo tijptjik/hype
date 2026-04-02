@@ -51,7 +51,7 @@ This spec defines the current responsive contract for the feature card shell and
 
 - Card width caps at `736px`.
 - Card gains `16px` horizontal inset.
-- Top offset is `24px`.
+- Top offset is `16px`.
 - Elevated chrome and wide rounding are enabled.
 
 ### Wide Desktop
@@ -63,7 +63,7 @@ This spec defines the current responsive contract for the feature card shell and
 
 - Labels are hidden when:
   - `height < 800px`
-  - `width < 352px`
+  - `width < 520px`
   - `768px < width < 1280px`
 - Desktop pill positioning reserves `80px` total bottom clearance.
 
@@ -79,7 +79,7 @@ These are exposed as CSS custom properties by `FeatureCardRoot`.
 Current values:
 
 - Viewer padding: `0px` on `tiny`, `6px` otherwise
-- Breadcrumbs x padding: `12px`
+- Breadcrumbs x padding: `6px` on `tiny`, `12px` otherwise
 - Content x padding: `6px`
 - Content gap: `8px`
 
