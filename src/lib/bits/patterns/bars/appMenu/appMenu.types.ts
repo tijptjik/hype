@@ -1,4 +1,5 @@
 import type { Component } from 'svelte'
+import type { ButtonColor } from '$lib/bits/core/button'
 
 export type AppMenuTone = 'primary' | 'secondary'
 
@@ -6,6 +7,10 @@ export interface AppMenuItem<T = string> {
   value: T
   label: string
   icon: Component<Record<string, unknown>>
+  color?: ButtonColor
+  hideLabel?: boolean
+  iconClasses?: string
+  isMobileVisible?: boolean
   tone?: AppMenuTone
 }
 

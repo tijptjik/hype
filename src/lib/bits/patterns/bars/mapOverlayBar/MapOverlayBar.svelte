@@ -8,24 +8,19 @@ import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
 import { Button, Icon, OverlayBar } from '$lib/bits'
 // ICONS
-import PlusCircleIcon from 'virtual:icons/lucide/circle-plus'
 import SwatchIcon from 'virtual:icons/lucide/swatch-book'
 
 type MapOverlayBarProps = {
   offsetX?: number
   bottomOffset?: number
-  isAddButtonVisible?: boolean
   isCardToggleVisible?: boolean
-  onAddFeature?: (event: Event) => void | Promise<void>
   onOpenCard?: (event: Event) => void
 }
 
 let {
   offsetX = 0,
   bottomOffset = 0,
-  isAddButtonVisible = false,
   isCardToggleVisible = false,
-  onAddFeature,
   onOpenCard,
 }: MapOverlayBarProps = $props()
 
@@ -33,17 +28,8 @@ const responsiveCtx = getResponsiveCtx()
 const centerBottomOffset = $derived(
   Math.max(24, responsiveCtx.menuClearanceHeight - bottomOffset + 24),
 )
-const hasVisibleControls = $derived(isAddButtonVisible || isCardToggleVisible)
+const hasVisibleControls = $derived(isCardToggleVisible)
 </script>
-
-{#snippet addFeatureIcon()}
-  <Icon
-    src={PlusCircleIcon}
-    size="3xl"
-    strokeWidth={1.5}
-    class="rounded-full bg-base-300 transition-transform duration-300 group-hover:rotate-90"
-  />
-{/snippet}
 
 {#snippet openCardIcon()}
   <Icon src={SwatchIcon} size="lg" strokeWidth={2} />
@@ -54,23 +40,6 @@ const hasVisibleControls = $derived(isAddButtonVisible || isCardToggleVisible)
   style={`transform: translateX(${offsetX}px); bottom: ${bottomOffset}px;`}
   centerStyle={`transform: translateY(-${centerBottomOffset}px);`}
 >
-  {#snippet left()}
-    {#if isAddButtonVisible}
-      <div in:fade={{ duration: 300, delay: 150 }}>
-        <Button
-          text={m.whole_house_cougar_hurl()}
-          icon={addFeatureIcon}
-          modifier="circle"
-          style="transparent"
-          size="xl"
-          class="group z-30 text-white shadow-lg"
-          attrs={{ title: m.whole_house_cougar_hurl() }}
-          onClick={onAddFeature}
-        />
-      </div>
-    {/if}
-  {/snippet}
-
   {#snippet center()}
     {#if isCardToggleVisible}
       <Button

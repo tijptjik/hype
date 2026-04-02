@@ -49,6 +49,7 @@ const shouldAutoHideLabel = $derived(
     responsiveWidth < hideLabelBelow,
 )
 const shouldHideLabel = $derived(hideLabel || isIconOnly || shouldAutoHideLabel)
+const hasLabelText = $derived(Boolean(text))
 const hasVisibleLabel = $derived(Boolean(text) && !shouldHideLabel)
 const hasIcon = $derived(Boolean(icon || IconComponent))
 
@@ -97,14 +98,16 @@ function resolveTransition(
       {/if}
     </span>
   {/if}
-  {#if hasVisibleLabel}
+  {#if hasLabelText}
     <span
       class={cx(
         BUTTON_LABEL_CLASSES,
         labelClasses,
+        shouldHideLabel && 'max-w-0 translate-x-1 opacity-0',
         hideLabelInstantly && 'transition-none',
         style === 'link' && 'underline underline-offset-4',
       )}
+      aria-hidden={shouldHideLabel}
     >
       {text}
     </span>

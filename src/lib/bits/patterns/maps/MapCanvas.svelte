@@ -271,7 +271,6 @@ const resolvedMapStyleVariant = $derived(
 const activeStyleKey = $derived(
   `${resolvedMapStyleCode}:${activeLocale}:${appCtx.user?.experimental?.noLabelsMode ?? false}`,
 )
-const resolvedBottomInset = $derived(bottomInset)
 
 // WATCHERS
 // Watch for changes in features
@@ -433,7 +432,7 @@ onMount(() => {
               hasReceivedFirstFix = true
 
               // Calculate horizontal offset for panels already open
-              const currentHorizontalOffset = appCtx.getHorizontalOffset()
+              const currentHorizontalOffset = responsiveCtx.getAppMainOffsetX()
 
               if (currentHorizontalOffset !== 0) {
                 const originalCenter = { lng: longitude, lat: latitude }
@@ -638,8 +637,7 @@ $effect(() => {
 
 <div
   id="map"
-  class="map absolute! inset-x-0! top-0! overflow-hidden caret-transparent"
-  style={`bottom: ${resolvedBottomInset}px;`}
+  class="map absolute! inset-0 overflow-hidden caret-transparent"
   data-testid="map"
   bind:this={mapContainer}
 >

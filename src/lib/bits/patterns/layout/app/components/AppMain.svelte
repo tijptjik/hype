@@ -28,7 +28,7 @@ $effect(() => {
   bind:clientHeight={mainHeight}
   style={`--app-main-menu-reserved-height: ${menuReservedHeight}px;${style}`}
   class={cx(
-    'relative z-40 flex h-full min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden',
+    'relative z-40 flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden',
     'pb-(--app-main-menu-reserved-height)',
     'pointer-events-none',
     'transition-[padding] duration-260 ease-[ease]',

@@ -5,15 +5,19 @@ import { page } from '$app/state'
 // AUTH
 import { canAccessAdminPanel } from '$lib/api/services/authz'
 import { useSession } from '$lib/auth/client'
+// SERVICES
+import { initAddNewFeature } from '$lib/client/services/feature'
 // I18N
 import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
 import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // COMPONENTS
 import { AppMenu } from '$lib/bits/patterns/bars/appMenu'
+import PlusCircleIcon from 'virtual:icons/lucide/circle-plus'
 import FunnelIcon from 'virtual:icons/lucide/filter'
 import InformationCircleIcon from 'virtual:icons/lucide/info'
 import MapIcon from 'virtual:icons/lucide/map'
@@ -31,15 +35,12 @@ type AppNavProps = {
 let { hub }: AppNavProps = $props()
 
 const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
 const session = useSession()
+const ADD_FEATURE_MENU_VALUE = 'addFeature'
+type AppNavMenuValue = Panel | typeof ADD_FEATURE_MENU_VALUE
 
-const showAdminMenu = $derived.by(() =>
-  canAccessAdminPanel({
-    superAdmin: $session?.data?.user?.superAdmin,
-    userRoles: $session?.data?.user?.roles ?? [],
-  }),
-)
 const items = $derived<AppMenuItem<Panel>[]>(
   hub.isCore
     ? [
@@ -55,21 +56,50 @@ const items = $derived<AppMenuItem<Panel>[]>(
         { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
       ],
 )
-const trailingItems = $derived<AppMenuItem<Panel>[]>(
-  showAdminMenu
+const showAdminMenu = $derived.by(
+  () =>
+    !responsiveCtx.isMobile &&
+    canAccessAdminPanel({
+      superAdmin: $session?.data?.user?.superAdmin,
+      userRoles: $session?.data?.user?.roles ?? [],
+    }),
+)
+const isContributorAddVisible = $derived(
+  Boolean(
+    responsiveCtx.isMobile && $session?.data?.user?.experimental?.contributorMode,
+  ),
+)
+const trailingItems = $derived<AppMenuItem<AppNavMenuValue>[]>([
+  ...(isContributorAddVisible
+    ? [
+        {
+          value: ADD_FEATURE_MENU_VALUE,
+          color: 'accent',
+          icon: PlusCircleIcon,
+          isMobileVisible: true,
+          label: m.whole_house_cougar_hurl_menu(),
+        } satisfies AppMenuItem<AppNavMenuValue>,
+      ]
+    : []),
+  ...(showAdminMenu
     ? [
         {
           value: Panel.admin,
           icon: MonitorIcon,
           label: m.menu_admin(),
           tone: 'secondary',
-        },
+        } satisfies AppMenuItem<AppNavMenuValue>,
       ]
-    : [],
-)
+    : []),
+])
 const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
 
-function handleSelect(item: AppMenuItem<Panel>): void {
+async function handleSelect(item: AppMenuItem<AppNavMenuValue>): Promise<void> {
+  if (item.value === ADD_FEATURE_MENU_VALUE) {
+    await initAddNewFeature(appCtx, omniCtx, new Event('click'))
+    return
+  }
+
   if (item.value === Panel.admin) {
     const currentPath = page.url.pathname
 

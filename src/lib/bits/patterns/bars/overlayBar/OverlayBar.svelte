@@ -12,7 +12,7 @@ let {
 
 const classes = $derived(
   [
-    'bits-theme absolute inset-x-0 bottom-0 z-40 px-3 pt-4 caret-transparent pointer-events-none [&_a]:pointer-events-auto [&_button]:pointer-events-auto',
+    'bits-theme absolute inset-x-0 bottom-0 z-40 pt-4 caret-transparent pointer-events-none [&_a]:pointer-events-auto [&_button]:pointer-events-auto',
     className,
   ]
     .filter(Boolean)

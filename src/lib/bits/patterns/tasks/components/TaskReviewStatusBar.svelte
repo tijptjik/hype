@@ -96,7 +96,7 @@ const connectorClass =
         <ScrollableText
           text={reviewReason}
           padding={16}
-          separator=" "
+          separator="•"
           class="block max-w-[20rem]"
           textClass="whitespace-nowrap"
         />
