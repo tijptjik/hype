@@ -75,7 +75,7 @@ let displayText = $derived(
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-65 flex-col overflow-y-auto gap-3 overscroll-contain rounded-l-md bg-base-300"
+      class="flex max-h-65 flex-col overflow-y-auto gap-3 overscroll-auto rounded-l-md bg-base-300"
       tabindex="-1"
     >
       {#each propertyValues as value (value.id)}

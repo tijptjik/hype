@@ -7,7 +7,7 @@ import type { ViewerRenderable } from '$lib/bits/patterns/images'
 
 const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)
-const FEATURE_CARD_VIEWER_MIN_HEIGHT_PX = 320
+const FEATURE_CARD_VIEWER_MIN_HEIGHT_PX = 300
 
 let loadedActiveId = $state<string | null>(null)
 let lockedViewerHeight = $state<number | null>(null)
@@ -85,7 +85,7 @@ function stopViewerEvent(event: Event): void {
 
 <div
   bind:this={viewerRoot}
-  class="pointer-events-auto min-h-[320px] w-full flex-[1_1_auto] select-none bg-black/95 px-2 pb-2 pt-0 [touch-action:manipulation]"
+  class="pointer-events-auto min-h-300 w-full flex-[1_1_auto] select-none bg-black/95 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-0 [touch-action:manipulation]"
   style={lockedViewerHeight ? `flex-basis: ${lockedViewerHeight}px;` : undefined}
   onclick={stopViewerEvent}
   onpointerdown={stopViewerEvent}

@@ -4,10 +4,10 @@ import { cssVars } from '$lib/bits/utils'
 const APP_MENU_TRANSITION_CLASSES = 'transition-[padding] duration-260 ease-[ease]'
 
 const APP_MENU_NAV_PANEL_SHARED_CLASSES =
-  'relative flex w-full items-center justify-between px-3!'
+  'pointer-events-auto relative flex w-full items-center justify-between px-3!'
 
 const APP_MENU_NAV_PANEL_DESKTOP_CLASSES =
-  'md:pointer-events-auto md:inline-flex md:h-14 md:w-auto md:max-w-full md:items-center md:justify-center md:gap-1 md:rounded-full md:border md:border-[color-mix(in_oklab,var(--color-base-content)_12%,transparent)] md:bg-[color-mix(in_oklab,black_84%,var(--color-glass-result)_16%)] md:px-1.5 md:shadow-[0_18px_48px_rgb(0_0_0_/_0.34)] md:backdrop-blur-[14px]'
+  'md:inline-flex md:h-14 md:w-auto md:max-w-full md:items-center md:justify-center md:gap-1 md:rounded-full md:border md:border-[color-mix(in_oklab,var(--color-base-content)_12%,transparent)] md:bg-[color-mix(in_oklab,black_84%,var(--color-glass-result)_16%)] md:px-1.5 md:shadow-[0_18px_48px_rgb(0_0_0_/_0.34)] md:backdrop-blur-[14px]'
 
 export const APP_MENU_NAV_PANEL_CLASSES = cx(
   APP_MENU_NAV_PANEL_SHARED_CLASSES,

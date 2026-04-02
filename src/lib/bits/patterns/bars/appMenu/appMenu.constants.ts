@@ -78,6 +78,7 @@ export function getAppMenuViewportState(
   const shouldUseCompactVisualMenu =
     isCompactMobileMenu ||
     (hideLabels && availableWidth > 0 && availableWidth < APP_MENU_COMPACT_MAX_WIDTH)
+  const isIconOnlyMenu = isCompactMobileMenu || hideLabels
   const effectiveBottomOffset = shouldUseCompactVisualMenu
     ? APP_MENU_COMPACT_EFFECTIVE_BOTTOM_OFFSET
     : APP_MENU_DEFAULT_EFFECTIVE_BOTTOM_OFFSET
@@ -85,7 +86,7 @@ export function getAppMenuViewportState(
   return {
     effectiveBottomOffset,
     isCompactMobileMenu,
-    isIconOnlyMenu: isCompactMobileMenu || hideLabels,
+    isIconOnlyMenu,
     isMobileMenu,
     shouldUseCompactVisualMenu,
   }
