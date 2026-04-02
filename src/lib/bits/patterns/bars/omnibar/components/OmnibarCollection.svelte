@@ -51,6 +51,7 @@ const panelSlideDelay = $derived(
 )
 
 let listContainer: HTMLUListElement | null = $state(null)
+let scrollArea: HTMLDivElement | null = $state(null)
 let hasSyncedOpenScrollPosition = $state(false)
 
 function handleItemClick(event: Event, index: number): void {
@@ -81,22 +82,42 @@ function getIndicatorOpacities(distance: number): {
   }
 }
 
+// Keep the active item in view without triggering browser-managed scroll behavior.
+function syncScrollPosition(behavior: ScrollBehavior): void {
+  if (!scrollArea || !listContainer || currentIndex < 0) return
+
+  const currentItem = listContainer.children[currentIndex]
+  if (!(currentItem instanceof HTMLElement)) return
+
+  const itemTop = currentItem.offsetTop
+  const itemBottom = itemTop + currentItem.offsetHeight
+  const viewTop = scrollArea.scrollTop
+  const viewBottom = viewTop + scrollArea.clientHeight
+
+  let nextScrollTop: number | null = null
+
+  if (itemTop < viewTop) {
+    nextScrollTop = itemTop
+  } else if (itemBottom > viewBottom) {
+    nextScrollTop = itemBottom - scrollArea.clientHeight
+  }
+
+  if (nextScrollTop === null) return
+
+  scrollArea.scrollTo({
+    top: nextScrollTop,
+    behavior,
+  })
+}
+
 $effect(() => {
   if (!isNavigationMode || !omniCtx.state.isTrayOpen) {
     hasSyncedOpenScrollPosition = false
     return
   }
 
-  if (!listContainer || currentIndex < 0) return
-
-  const currentItem = listContainer.children[currentIndex]
-  if (currentItem instanceof HTMLElement) {
-    currentItem.scrollIntoView({
-      behavior: hasSyncedOpenScrollPosition ? 'smooth' : 'auto',
-      block: 'nearest',
-    })
-    hasSyncedOpenScrollPosition = true
-  }
+  syncScrollPosition(hasSyncedOpenScrollPosition ? 'smooth' : 'auto')
+  hasSyncedOpenScrollPosition = true
 })
 </script>
 
@@ -109,6 +130,7 @@ $effect(() => {
   }}
 >
   <div
+    bind:this={scrollArea}
     class={OMNIBAR_COLLECTION_SCROLL_AREA_CLASSES}
     style="max-height: {scrollAreaMaxHeight};"
   >
