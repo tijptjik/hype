@@ -25,39 +25,42 @@ Run all commands with Bun:
 - `bun run db:migration:run:local`: apply local D1 migrations.
 
 ## Documentation
-- Authorisation Dsign is defined in `docs/Authorization-Design.md`
-- Authorisation Roles are defined in `docs/Roles.md`
-- Refactor roadmap is tracked in `docs/refactor-roadmap.md`
-- Refactor checklist/TODOs are tracked in `docs/refactor-todo.md`
-- Component architecture and boundary rules are defined in `docs/Component Architecture.md`
-- Deferred/intentional-later DB migrations are tracked in `docs/Deferred-Migrations.md`
+- Authorisation Design is defined in `docs/specs/Design-Spec-Authorization.md`
+- Authorisation Roles are defined in `docs/auth/Roles.md`
+- Authorisation Function order is defined in `docs/refactor-guides/Refactor-Guide-Authz-Function-Ordering.md`
+- Component architecture and boundary rules are defined in `docs/Components.md`
 
-## Coding Style & Naming Conventions
+## Coding Style
 - Formatter/linter: Biome (`biome.json`).
 - Indentation: 2 spaces; line width: 88; LF endings.
 - JavaScript/TypeScript style: single quotes, only use semicolons when needed.
-- Svelte components:
-  - Bits Components : `PascalCase.svelte` in `src/lib/bits/...`.
-  - Legacy : `PascalCase.svelte` in `src/lib/components/...`.
+
+### Naming and Path Conventions
+- Svelte components: `PascalCase.svelte` in `src/lib/bits/...` - see `docs/Components.md` for rules.
+    - `core/`: wrappers over `bits-ui` primitives.
+    - `custom/`: app-owned components with Bits-compatible APIs.
+    - `patterns/`: composed components built from `core` and `custom`.
 - Route files follow SvelteKit conventions (`+page.svelte`, `+server.ts`).
   - `+page.ts` are dropped in favour of svelte remote functions.
   - Remote functions are stored in `src/api/server/<resourceType>.remote.ts`
 - Keep domain service modules grouped by entity (`src/lib/db/services/feature.ts`, etc.).
+
+### Comments
+- ALWAYS preserve existing comments when editing code; update wording if behavior changes instead of deleting useful context.
+- ALWAYS use standard JSDoc for exported functions and remote APIs: include `@param`, `@returns`, and `@remarks` where behavior constraints matter.
+- For service modules and route modules:
+  - ALWAYS add JSDoc to exported functions and non-trivial file-local helpers.
+  - ALWAYS add a concise one-line comment immediately above the block of a complex operation so the intent is scannable before reading the implementation.
+  - WHEN they are multiple logical sections, add a file-level TOC comment that follows the repository TOC convention in `docs/Components.md`.
 - Imports:
   - Keep import blocks grouped by section comments such as `// SVELTE`, `// I18N`, `// BITS COMPONENTS`, `// COMPONENTS`, `// TYPES`, `// DB`, `// API`, `// DRIZZLE`.
   - Order imports by: framework first, then third-party, then project/library imports, then type imports.
-- Comments:
-  - Use standard JSDoc for exported functions and remote APIs: include `@param`, `@returns`, and `@remarks` where behavior constraints matter.
-  - For service modules and route modules, always add JSDoc to exported functions and non-trivial file-local helpers.
-  - For service modules and route modules with multiple logical sections, add a file-level TOC comment that follows the repository TOC convention in `docs/Component Architecture.md`.
-  - For complex operations in service modules and route modules, add a concise one-line comment immediately above the block so the intent is scannable before reading the implementation.
-  - Preserve existing comments when editing code; update wording if behavior changes instead of deleting useful context.
-- Styling:
-  - Prefer inline Tailwind utility classes directly in Svelte markup for component and pattern styling.
-  - Do not add semantic wrapper classes by default when they only restate a local group of utility classes.
-  - Use shared CSS in `src/lib/styles/*.css` under `@layer components` only for genuinely reusable theme tokens, CSS variables, cross-component states, or styling that cannot be expressed cleanly inline.
-  - Treat semantic classes as the exception, not the default.
-  - When a core/custom/pattern component accumulates large class maps or CSS variable maps, extract them into a colocated `component.styles.ts` module (for example `button.styles.ts`) instead of crowding the `.svelte` file.
+
+### Styling
+- Use inline Tailwind utility classes for light styling.
+- Use a colocated `{component}.styles.ts` when the styling becomes heavy. Break the styles up into readable, logical chunks based on their domain and combine them with `cx()`
+- NEVER add semantic wrapper classes.
+- Use shared CSS in `src/lib/styles/*.css` under `@layer components` only for genuinely reusable theme tokens, CSS variables, cross-component states, or styling that cannot be expressed cleanly inline.
 
 ## Testing Guidelines
 - Framework: Vitest with `jsdom` and `@testing-library/jest-dom`.
@@ -89,22 +92,14 @@ Run all commands with Bun:
   - Supported locales are `en`, `zh-hans`, and `zh-hant`.
   - Write messages using Inlang Message Syntax.
 - `unplugin-icons` - icon usage:
-  - Use Lucide icons via unplugin-icons for new work; do not add new Heroicons usage.
+  - Use Lucide icons via unplugin-icons.
   - Import icons with `import IconName from 'virtual:icons/lucide/<icon-name>'`.
 
-## Agent-Specific Notes
+## Agentic Behaviour
 - For Svelte/SvelteKit questions and implementation work, consult Context7 docs first, especially for experimental or cutting-edge APIs.
 - Treat framework docs as authoritative over memory; verify behavior against the current docs before coding.
 - Whenever you touch a component, make a brief refactoring pass on that component and its immediately related local pieces so the codebase improves incrementally over time.
 - During that refactoring pass, prefer simplifying toward inline Tailwind, reducing unnecessary semantic wrapper classes, and splitting obvious subcomponents when it materially improves clarity.
-- New UI and form migration rules:
-  - Prefer SvelteKit remote functions `form` calls over `sveltekit-superforms` for new work and refactors.
-  - Prefer Bits UI primitives over DaisyUI for new UI development.
-  - Keep Bits UI work under `src/lib/bits` with this structure:
-    - `core/`: wrappers over `bits-ui` primitives.
-    - `custom/`: app-owned components with Bits-compatible APIs.
-    - `patterns/`: composed components built from `core` and `custom`.
-  - In route/page Svelte files, import from `$lib/bits` instead of importing from `bits-ui` directly.
 
 ## Commit & Pull Request Guidelines
 
