@@ -10,6 +10,8 @@ import { MOBILE_MAX_WIDTH, PANEL_WIDTH } from '$lib/constants'
 import { Panel, PanelLeft, PanelRight } from '$lib/enums'
 
 const RESPONSIVE_CONTEXT_KEY = Symbol('responsive-context')
+const ELEVATED_CHROME_MIN_WIDTH_PX = 480
+const ELEVATED_CHROME_MIN_HEIGHT_PX = 800
 
 export type ResponsiveDimensions = {
   width: number
@@ -27,6 +29,12 @@ const createPanelOpenState = (): PanelOpenState =>
   Object.fromEntries(
     Object.values(Panel).map(panel => [panel, false]),
   ) as PanelOpenState
+
+export function hasElevatedChrome(width: number, height: number): boolean {
+  return (
+    width >= ELEVATED_CHROME_MIN_WIDTH_PX && height >= ELEVATED_CHROME_MIN_HEIGHT_PX
+  )
+}
 
 export class ResponsiveCtx {
   window = $state({
@@ -64,6 +72,10 @@ export class ResponsiveCtx {
 
   get visibleWindowWidth(): number {
     return this.viewport.width || this.window.width
+  }
+
+  get hasElevatedChrome(): boolean {
+    return hasElevatedChrome(this.visibleWindowWidth, this.visibleWindowHeight)
   }
 
   get keyboardInsetHeight(): number {
