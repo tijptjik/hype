@@ -1,36 +1,29 @@
 <script lang="ts">
-// TRANSITIONS
 import { slide } from 'svelte/transition'
-// I18N
-import { m } from '$lib/i18n'
-import { getAppMenuViewportState } from '$lib/bits/patterns/bars/appMenu/appMenu.constants'
-// ICONS
-import { Icon } from '$lib/bits'
-import MagnifyingGlass from 'virtual:icons/lucide/search'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // ACTIONS
 import { clickOutside, focusOnSlash, handleEscape, selectOnEnter } from '$lib/actions'
+// BITS
+import { Icon } from '$lib/bits'
 // COMPONENTS
-import OmniResults from '$lib/components/omnibar/OmniResults.svelte'
-import OmniNewFeature from '$lib/components/omnibar/OmniNewFeature.svelte'
-// STYLES
-import { getOmnibarResultsClasses, getOmnibarSearchBarClasses } from './omnibar.styles'
+import OmnibarNewFeature from './OmnibarNewFeature.svelte'
+import OmnibarResults from './OmnibarResults.svelte'
 // CONTEXT
+import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+// I18N
+import { m } from '$lib/i18n'
+// ICONS
+import MagnifyingGlass from 'virtual:icons/lucide/search'
+// STYLES
+import { getOmnibarResultsClasses, getOmnibarSearchBarClasses } from '../omnibar.styles'
+
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
-const viewportState = $derived(
-  getAppMenuViewportState(responsiveCtx.window.width, responsiveCtx.window.height),
-)
-const shouldFloatMobile = $derived(
-  viewportState.isMobileMenu && !viewportState.isIconOnlyMenu,
-)
-const searchBarClasses = $derived(getOmnibarSearchBarClasses(shouldFloatMobile))
-const resultsClasses = $derived(getOmnibarResultsClasses(shouldFloatMobile))
 
-// EFFECTS
+const hasElevatedChrome = $derived(responsiveCtx.hasElevatedChrome)
+const searchBarClasses = $derived(getOmnibarSearchBarClasses(hasElevatedChrome))
+const resultsClasses = $derived(getOmnibarResultsClasses(hasElevatedChrome))
 
-// Reopen the tray if user starts typing while the tray is closed
 $effect(() => {
   if (omniCtx.state.searchTerm !== '' && !omniCtx.state.isTrayOpen) {
     omniCtx.openTray()
@@ -66,9 +59,10 @@ $effect(() => {
   <div
     class={resultsClasses}
     style="max-height: calc(var(--omni-available-height, 100dvh) - 4rem);"
-    transition:slide={{ duration: 200 }}
+    in:slide={{ duration: 200 }}
+    out:slide={{ duration: 160 }}
   >
-    <div class="min-h-0 flex-1 overflow-y-auto"><OmniResults /></div>
-    <OmniNewFeature />
+    <div class="min-h-0 flex-1 overflow-y-auto"><OmnibarResults /></div>
+    <OmnibarNewFeature />
   </div>
 {/if}

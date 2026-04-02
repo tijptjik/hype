@@ -76,7 +76,7 @@ const hasVisibleControls = $derived(isAddButtonVisible || isCardToggleVisible)
       <Button
         text={m.mapbar__show_card()}
         icon={openCardIcon}
-        color="dark"
+        color="light"
         style="soft"
         transition={fade}
         transitionOpts={{ duration: 150, delay: 150 }}

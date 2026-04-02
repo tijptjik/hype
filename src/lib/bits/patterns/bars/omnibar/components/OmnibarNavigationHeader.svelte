@@ -1,26 +1,22 @@
 <script lang="ts">
-// SVELTE
-// I18n
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
-// ICONS
-import { Icon } from '$lib/bits'
-import XCircle from 'virtual:icons/lucide/circle-x'
-import QueueList from 'virtual:icons/lucide/panel-top-bottom-dashed'
-// COMPONENTS
-import { ScrollableText } from '$lib/bits'
+// BITS
+import { Icon, ScrollableText } from '$lib/bits'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
+// I18N
+import { getI18n, m } from '$lib/i18n'
+// ICONS
+import XCircle from 'virtual:icons/lucide/circle-x'
+import QueueList from 'virtual:icons/lucide/panel-top-bottom-dashed'
 // TYPES
+import type { Locale, LocaleKey } from '$lib/types'
 
-// CONTEXT
 const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()
 
-// DERIVED -- Titles
-let collectionTitle = $derived(
+const collectionTitle = $derived(
   omniCtx.isFeatureMode
     ? (() => {
         const feature = appCtx.getActiveFeature()
@@ -34,23 +30,27 @@ let collectionTitle = $derived(
     : (() => {
         const collection = appCtx.getActiveCollection()
         return collection
-          ? getI18n(collection, 'name', appCtx.getUserPreferences(), m.place())
+          ? getI18n(
+              collection.i18n as Record<Locale | LocaleKey, { name: string }>,
+              'name',
+              appCtx.getUserPreferences(),
+              m.place(),
+            )
           : ''
       })(),
 )
-let featureTitle = $derived(
+const featureTitle = $derived(
   (() => {
     const activeFeature = appCtx.getActiveFeature()
     return getI18n(
-      activeFeature,
+      activeFeature ?? undefined,
       'title',
       appCtx.getUserPreferences(),
       m.deft_dry_chipmunk_blink(),
     )
   })(),
 )
-
-let newFeatureTitle = $derived(
+const newFeatureTitle = $derived(
   getI18n(
     appCtx.getNewFeature() as Feature,
     'title',
@@ -58,23 +58,37 @@ let newFeatureTitle = $derived(
     m.red_arable_herring_trust(),
   ),
 )
-
-// DERIVED -- Collection Index and Size
-let index = $derived(omniCtx.navIndex + 1)
-let collectionSize = $derived(appCtx.getActiveCollection()?.items.length)
-
-// DERIVED -- Mode
-let collectionMode = $derived(omniCtx.state.mode)
-let isNotFeatureMode = $derived(collectionMode !== 'feature')
-let isNewFeatureMode = $derived(collectionMode === 'new-feature')
-
-let fullCollectionText = $derived(
+const collectionMode = $derived(omniCtx.state.mode)
+const isNotFeatureMode = $derived(collectionMode !== 'feature')
+const isNewFeatureMode = $derived(collectionMode === 'new-feature')
+const collectionIndex = $derived(omniCtx.navIndex + 1)
+const collectionSize = $derived(appCtx.getActiveCollection()?.items.length)
+const fullCollectionText = $derived(
   isNewFeatureMode
     ? m.smart_crazy_cuckoo_play()
     : isNotFeatureMode
-      ? `${collectionTitle} (${index} of ${collectionSize})`
+      ? `${collectionTitle} (${collectionIndex} of ${collectionSize})`
       : collectionTitle,
 )
+
+function handleTitleClick(event: MouseEvent): void {
+  event.preventDefault()
+  event.stopPropagation()
+  omniCtx.closeTray()
+  omniCtx.toggleCard()
+}
+
+function handleToggleTray(event: MouseEvent): void {
+  event.preventDefault()
+  event.stopPropagation()
+  omniCtx.toggleTray(event)
+}
+
+function handleClose(event: MouseEvent): void {
+  event.preventDefault()
+  event.stopPropagation()
+  omniCtx.close()
+}
 </script>
 
 <div
@@ -85,23 +99,14 @@ let fullCollectionText = $derived(
 >
   <div
     class="min-w-0 flex-1 overflow-hidden transition-[height]"
-    onclick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      omniCtx.closeTray();
-      omniCtx.toggleCard();
-    }}
+    onclick={handleTitleClick}
   >
     <div class="flex items-start gap-3">
       {#if isNotFeatureMode && !isNewFeatureMode}
         <button
           type="button"
           class="btn btn-ghost btn-sm m-0 h-auto p-0 pt-2 hover:bg-transparent hover:text-base-content/80 focus:outline-none"
-          onclick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            omniCtx.toggleTray(e);
-          }}
+          onclick={handleToggleTray}
         >
           <Icon src={QueueList} class="h-6 w-6 stroke-2" />
         </button>
@@ -109,21 +114,18 @@ let fullCollectionText = $derived(
       <div
         class="flex min-w-0 flex-1 -translate-y-0.5 flex-col overflow-hidden transition-[height] duration-300"
       >
-        <!-- Collection Title -->
         <ScrollableText
           text={fullCollectionText}
           containerClass="h-5.5"
           textClass="text-xs text-base-content/60"
-          separator="~"
+          separator="•"
           padding={20}
         />
-
-        <!-- Feature Title -->
         <ScrollableText
           text={isNewFeatureMode ? newFeatureTitle : featureTitle}
           containerClass="h-6"
           textClass="font-medium"
-          separator="~"
+          separator="•"
           padding={20}
         />
       </div>
@@ -133,11 +135,7 @@ let fullCollectionText = $derived(
   <button
     type="button"
     class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80"
-    onclick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      omniCtx.close();
-    }}
+    onclick={handleClose}
   >
     <Icon
       src={XCircle}
@@ -148,6 +146,3 @@ let fullCollectionText = $derived(
     />
   </button>
 </div>
-
-<style>
-</style>
