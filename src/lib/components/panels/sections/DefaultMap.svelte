@@ -25,14 +25,15 @@ let optimisticUserLayerIds = $state<Set<string> | null>(null)
 const persistedUserLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
 const userLayerIds = $derived(optimisticUserLayerIds ?? persistedUserLayerIds)
 const canSaveUserLayers = $derived(Boolean(appCtx.hub?.id || appCtx.hub?.code))
+const userPreferences = $derived(appCtx.getUserPreferences())
 const orderedLayers = $derived.by(() =>
   [...appCtx.state.resources.layer].sort((left, right) => {
     const rankDiff =
       (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)
     if (rankDiff !== 0) return rankDiff
 
-    return getI18n(left, 'name', appCtx.getUserPreferences()).localeCompare(
-      getI18n(right, 'name', appCtx.getUserPreferences()),
+    return getI18n(left, 'name', userPreferences).localeCompare(
+      getI18n(right, 'name', userPreferences),
     )
   }),
 )
@@ -103,87 +104,82 @@ const toggleUserLayer = (layerId: string, checked: boolean): void => {
     class="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3 pb-[60px]"
   >
     {#each orderedLayers as layer (layer.id)}
-      {#await appCtx.getHierarchy(layer) then { organisation, project }}
-        {@const organisationName = getI18n(
+      {@const { organisation, project } = appCtx.getHierarchySync(layer)}
+      {@const organisationName = getI18n(
           organisation,
           'nameShort',
-          appCtx.getUserPreferences()
+          userPreferences
         )}
-        {@const projectName = appCtx.getContextualProjectName(project, false)}
-        {@const description = getI18n(
+      {@const projectName = appCtx.getContextualProjectName(project, false)}
+      {@const description = getI18n(
           layer,
           'description',
-          appCtx.getUserPreferences()
+          userPreferences
         )}
-        {@const hasLongDescription =
+      {@const hasLongDescription =
           Boolean(description && description !== '-') &&
           description.length > DESCRIPTION_PREVIEW_THRESHOLD}
-        {@const isExpanded = isDescriptionExpanded(layer.id)}
-        <div
-          class="flex w-full flex-row items-start justify-between gap-3 px-4 py-2 pl-2"
-        >
-          <div class="flex min-w-0 grow flex-col gap-0.5">
-            {#if organisation && project}
-              <div class="flex flex-row items-center gap-3">
-                <div class="flex min-w-0 flex-col items-start gap-0">
-                  <p
-                    class="flex min-w-0 space-x-0.5 font-mono text-xs uppercase tracking-widest"
-                  >
-                    {#if organisationName}
-                      <span class="text-primary">{organisationName}</span>
-                    {/if}
-                    {#if projectName}
-                      <span class="px-0">›</span>
-                      <span class="text-accent">{projectName}</span>
-                    {/if}
-                  </p>
-                  <div class="min-w-0 font-light">
-                    <p class="block">
-                      {getI18n(layer, 'name', appCtx.getUserPreferences())}
-                    </p>
-                    {#if description && description !== '-'}
-                      <p
-                        class={cx(
+      {@const isExpanded = isDescriptionExpanded(layer.id)}
+      <div
+        class="flex w-full flex-row items-start justify-between gap-3 px-4 py-2 pl-2"
+      >
+        <div class="flex min-w-0 grow flex-col gap-0.5">
+          {#if organisation && project}
+            <div class="flex flex-row items-center gap-3">
+              <div class="flex min-w-0 flex-col items-start gap-0">
+                <p
+                  class="flex min-w-0 space-x-0.5 font-mono text-xs uppercase tracking-widest"
+                >
+                  {#if organisationName}
+                    <span class="text-primary">{organisationName}</span>
+                  {/if}
+                  {#if projectName}
+                    <span class="px-0">›</span>
+                    <span class="text-accent">{projectName}</span>
+                  {/if}
+                </p>
+                <div class="min-w-0 font-light">
+                  <p class="block">{getI18n(layer, 'name', userPreferences)}</p>
+                  {#if description && description !== '-'}
+                    <p
+                      class={cx(
                           'mt-0.5 block max-h-96 overflow-hidden text-sm leading-5 text-neutral-content transition-[max-height] duration-300 ease-in-out',
                           !isExpanded && 'max-h-15',
                         )}
+                    >
+                      {description}
+                    </p>
+                    {#if hasLongDescription}
+                      <button
+                        type="button"
+                        class="mt-1 text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
+                        onclick={() => toggleDescriptionExpanded(layer.id)}
                       >
-                        {description}
-                      </p>
-                      {#if hasLongDescription}
-                        <button
-                          type="button"
-                          class="mt-1 text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
-                          onclick={() => toggleDescriptionExpanded(layer.id)}
-                        >
-                          {isExpanded ? m.common__read_less() : m.common__read_more()}
-                        </button>
-                      {/if}
+                        {isExpanded ? m.common__read_less() : m.common__read_more()}
+                      </button>
                     {/if}
-                  </div>
+                  {/if}
                 </div>
               </div>
-            {:else}
-              <div class="flex flex-row items-center gap-3">
-                <p class="min-w-0 font-light">
-                  {getI18n(layer, 'name', appCtx.getUserPreferences())}
-                </p>
-              </div>
-            {/if}
-          </div>
-          <Switch
-            name={layer.id}
-            class="mt-0.5 shrink-0"
-            size="sm"
-            color="primary"
-            checked={userLayerIds.has(layer.id)}
-            disabled={!canSaveUserLayers}
-            onCheckedChange={(checked) => toggleUserLayer(layer.id, checked === true)}
-          />
+            </div>
+          {:else}
+            <div class="flex flex-row items-center gap-3">
+              <p class="min-w-0 font-light">
+                {getI18n(layer, 'name', userPreferences)}
+              </p>
+            </div>
+          {/if}
         </div>
-      {:catch error}
-        <p>{m.proof_grand_gadfly_dash()}</p>
-      {/await}
+        <Switch
+          name={layer.id}
+          class="mt-0.5 shrink-0"
+          size="sm"
+          color="primary"
+          checked={userLayerIds.has(layer.id)}
+          disabled={!canSaveUserLayers}
+          onCheckedChange={(checked) => toggleUserLayer(layer.id, checked === true)}
+        />
+      </div>
     {/each}
   </div>
 </Section>
