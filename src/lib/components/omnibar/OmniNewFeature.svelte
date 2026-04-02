@@ -12,9 +12,10 @@ const appCtx = getAppCtx()
 </script>
 
 <div
-  class="flex select-none flex-col divide-y divide-neutral-800 overscroll-none bg-neutral-900 caret-transparent"
+  class="flex select-none flex-col divide-y divide-neutral-800 overscroll-contain bg-neutral-900 caret-transparent"
 >
   <button
+    type="button"
     onclick={(e) => initAddNewFeature(appCtx, omniCtx, e)}
     class="btn rounded-t-none bg-transparent p-4 text-center uppercase text-base-content/60 hover:bg-base-200 focus:outline-none focus-visible:bg-base-200 active:scale-100 active:bg-base-200/80"
   >

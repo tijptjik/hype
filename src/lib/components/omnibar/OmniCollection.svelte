@@ -1,6 +1,6 @@
 <script lang="ts">
 // TRANSITIONS
-import { slide, fade } from 'svelte/transition'
+import { slide } from 'svelte/transition'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
@@ -8,143 +8,155 @@ import { getOmniCtx } from '$lib/context/omni.svelte'
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
-import { Icon } from '$lib/bits'
+import { Button } from '$lib/bits'
 import XMark from 'virtual:icons/lucide/x'
+// STYLES
+import {
+  OMNI_COLLECTION_FOOTER_CLASSES,
+  OMNI_COLLECTION_ITEM_CLASSES,
+  OMNI_COLLECTION_ITEM_TITLE_CLASSES,
+  OMNI_COLLECTION_LIST_CLASSES,
+  OMNI_COLLECTION_SCROLL_AREA_CLASSES,
+  getOmniCollectionPanelClasses,
+} from './OmniCollection.styles'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
-// TYPES
+const COLLECTION_OPEN_DELAY_MS = 2000
+const COLLECTION_SLIDE_DURATION_MS = 300
 
 type OmniCollectionProps = {
   mode: 'results' | 'navigation'
   items: (FeatureFromCollection | Feature)[]
+  shouldFloatMobile?: boolean
 }
 
 // PROPS
 let {
   mode = 'results', // 'results' | 'navigation'
   items = [],
+  shouldFloatMobile = false,
 }: OmniCollectionProps = $props()
 
 // CONTEXT
 const omniCtx = getOmniCtx()
 const appCtx = getAppCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
+const isNavigationMode = $derived(mode === 'navigation')
+const panelClasses = $derived(getOmniCollectionPanelClasses(shouldFloatMobile))
 
 // STATE
 let currentIndex = $derived(
   appCtx.state.active.collection?.items.findIndex(
     item => item.id === appCtx.state.active.feature?.id,
-  ) || -1,
+  ) ?? -1,
 )
 let listContainer: HTMLUListElement | null = $state(null)
+let scrollAreaMaxHeight = $derived(
+  mode === 'navigation'
+    ? 'calc(var(--omni-available-height, 100dvh) - 7rem)'
+    : 'calc(var(--omni-available-height, 100dvh) - 4rem)',
+)
+let panelSlideDelay = $derived(
+  omniCtx.state.isCardOpen ? COLLECTION_SLIDE_DURATION_MS : 0,
+)
 
-// HANDLERS
-// function handleKeydown(event: KeyboardEvent) {
-//   if (mode !== 'navigation') return;
-
-//   if (event.key === 'ArrowUp') {
-//     event.preventDefault();
-//     currentIndex = Math.max(0, currentIndex - 1);
-//   } else if (event.key === 'ArrowDown') {
-//     event.preventDefault();
-//     currentIndex = Math.min(items.length - 1, currentIndex + 1);
-//   }
-// }
-
-function handleItemClick(event: Event, index: number) {
-  if (mode === 'navigation') {
+function handleItemClick(event: Event, index: number): void {
+  if (isNavigationMode) {
     omniCtx.toggleTray(event)
   }
   omniCtx.navToIndex(index)
   setTimeout(() => {
     omniCtx.openCard()
-  }, 2000)
+  }, COLLECTION_OPEN_DELAY_MS)
 }
 
-// GLOW COLOR HELPER
-const getGlowColor = (): string => {
-  return 'rgba(240, 77, 127, 0.15)' // primary: '#F04D7F'
+function handleCloseTray(event: Event): void {
+  omniCtx.toggleTray(event)
 }
 
-// EFFECTS
+function getIndicatorOpacities(distance: number): {
+  primaryOpacity: number
+  whiteOpacity: number
+} {
+  const primaryOpacity = Math.max(0, Math.min(100, (6 - distance) * 20))
+
+  return {
+    primaryOpacity,
+    whiteOpacity: 100 - primaryOpacity,
+  }
+}
+
 $effect(() => {
-  if (mode === 'navigation' && listContainer) {
-    const items = listContainer.children
-    if (items[currentIndex]) {
-      ;(items[currentIndex] as HTMLElement).scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      })
-    }
+  if (!isNavigationMode || !listContainer || currentIndex < 0) return
+
+  const currentItem = listContainer.children[currentIndex]
+  if (currentItem instanceof HTMLElement) {
+    currentItem.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+    })
   }
 })
 </script>
 
 <div
-  class="absolute left-3 right-3 top-0 z-50 flex w-auto select-none flex-col rounded-b-lg border-2 border-t-0 border-primary bg-black p-0 shadow shadow-base-100/50"
-  style="box-shadow: 
-    -8px 0 8px {getGlowColor()},
-    8px 0 8px {getGlowColor()},
-    0 8px 16px {getGlowColor()}, 
-    0 12px 24px {getGlowColor()},
-    0 4px 8px rgba(0, 0, 0, 0.3);"
+  class={panelClasses}
   transition:slide={{
-    duration: 300,
+    duration: COLLECTION_SLIDE_DURATION_MS,
     axis: 'y',
-    delay: omniCtx.state.isCardOpen ? 300 : 0
+    delay: panelSlideDelay
   }}
 >
-  <div class="max-h-65 overflow-y-auto px-4 pb-2 pt-1.5">
+  <div
+    class={OMNI_COLLECTION_SCROLL_AREA_CLASSES}
+    style="max-height: {scrollAreaMaxHeight};"
+  >
     {#if items.length === 0}
       <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
     {:else}
-      <ul class="space-y-2 overscroll-none" bind:this={listContainer}>
+      <ul class={OMNI_COLLECTION_LIST_CLASSES} bind:this={listContainer}>
         {#each items as itemId, i}
-          {@const isVisible =
-            mode === 'navigation'
-              ? i >= Math.max(0, currentIndex - 3) &&
-                i <= Math.min(items.length - 1, currentIndex + 3)
-              : true}
-          {@const distance = Math.abs(currentIndex - i)}
-          {@const primaryOpacity = Math.max(0, Math.min(100, (6 - distance) * 20))}
-          {@const whiteOpacity = 100 - primaryOpacity}
+          {@const indicatorOpacities = getIndicatorOpacities(Math.abs(currentIndex - i))}
           <li
-            class="group flex cursor-pointer items-center space-x-2"
+            class={OMNI_COLLECTION_ITEM_CLASSES}
             onclick={(e) => handleItemClick(e, i)}
           >
-            {#if mode === 'navigation'}
+            {#if isNavigationMode}
               <div class="relative h-2 w-2 rounded-full">
                 <div
-                  class="absolute left-0 top-0 h-2 w-2 rounded-full bg-primary group-hover:bg-primary group-hover:opacity-100"
-                  style="opacity: {primaryOpacity}%"
+                  class="absolute left-0 top-0 h-2 w-2 rounded-full bg-primary group-hover:opacity-100"
+                  style="opacity: {indicatorOpacities.primaryOpacity}%"
                 ></div>
                 <div
-                  class="absolute right-0 top-0 h-2 w-2 rounded-full bg-white group-hover:bg-primary group-hover:opacity-100"
-                  style="opacity: {whiteOpacity}%"
+                  class="absolute right-0 top-0 h-2 w-2 rounded-full bg-white/90 group-hover:opacity-100"
+                  style="opacity: {indicatorOpacities.whiteOpacity}%"
                 ></div>
               </div>
             {/if}
-            <span
-              class="select-none pl-2 text-[0.92rem] font-medium text-base-content/80"
-              style="font-weight: 300;"
-              >{getI18n(itemId, 'title', userPreferences)}</span
-            >
+            <span class={OMNI_COLLECTION_ITEM_TITLE_CLASSES}>
+              {getI18n(itemId, 'title', userPreferences)}
+            </span>
           </li>
         {/each}
       </ul>
     {/if}
   </div>
-  {#if mode === 'navigation'}
-    <div
-      class="flex h-12 items-center justify-between rounded-b-lg border-t-2 border-primary bg-black px-4"
-      style="box-shadow: 
-        inset 0 2px 4px {getGlowColor()},
-        inset 0 1px 2px {getGlowColor()};"
-    >
+  {#if isNavigationMode}
+    <div class={OMNI_COLLECTION_FOOTER_CLASSES}>
       <span class="text-xs uppercase tracking-wider text-base-content/60">
         {omniCtx.navTitle}
       </span>
-      <Icon src={XMark} class="h-5 w-5" onclick={(e: Event) => omniCtx.toggleTray(e)} />
+      <Button
+        text={m.admin__project_license_close()}
+        style="transparent"
+        modifier="circle"
+        hideLabel={true}
+        iconComponent={XMark}
+        iconClasses="h-5 w-5"
+        class="text-base-content/70"
+        attrs={{ title: m.admin__project_license_close() }}
+        onClick={handleCloseTray}
+      />
     </div>
   {/if}
 </div>

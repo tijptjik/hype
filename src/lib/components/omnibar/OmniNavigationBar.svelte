@@ -1,25 +1,35 @@
 <script lang="ts">
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getAppMenuViewportState } from '$lib/bits/patterns/bars/appMenu/appMenu.constants'
 // COMPONENTS
 import OmniNavHeader from './OmniNavHeader.svelte'
 import OmniNavArrow from './OmniNavArrow.svelte'
 import OmniCollection from './OmniCollection.svelte'
 // STYLES
-import { OMNIBAR_NAV_BAR_CLASSES } from './omnibar.styles'
+import { getOmnibarNavBarClasses } from './omnibar.styles'
 // TYPES
 import { getOmniCtx } from '$lib/context/omni.svelte'
 
 // CONTEXT
 const omniCtx = getOmniCtx()
 const appCtx = getAppCtx()
+const responsiveCtx = getResponsiveCtx()
 
 let collectionMode = $derived(omniCtx.state.mode)
 let isNotFeatureMode = $derived(collectionMode !== 'feature')
 let isNewFeature = $derived(omniCtx.isNewFeatureMode)
+let viewportState = $derived(
+  getAppMenuViewportState(responsiveCtx.window.width, responsiveCtx.window.height),
+)
+let shouldFloatMobile = $derived(
+  viewportState.isMobileMenu && !viewportState.isIconOnlyMenu,
+)
+let navBarClasses = $derived(getOmnibarNavBarClasses(shouldFloatMobile))
 </script>
 
-<div id="omni-nav-bar" class={OMNIBAR_NAV_BAR_CLASSES}>
+<div id="omni-nav-bar" class={navBarClasses}>
   {#if isNotFeatureMode && !isNewFeature && appCtx.state.active.collection}
     <div class="flex h-full w-full items-center">
       <div class="h-full shrink-0"><OmniNavArrow direction="left" /></div>
@@ -36,6 +46,7 @@ let isNewFeature = $derived(omniCtx.isNewFeatureMode)
     <OmniCollection
       mode="navigation"
       items={appCtx.state.active.collection?.items || []}
+      {shouldFloatMobile}
     />
   </div>
 {/if}

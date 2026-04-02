@@ -39,12 +39,15 @@ let collectionTitle = $derived(
       })(),
 )
 let featureTitle = $derived(
-  getI18n(
-    appCtx.state.active.feature!,
-    'title',
-    appCtx.getUserPreferences(),
-    m.deft_dry_chipmunk_blink(),
-  ),
+  (() => {
+    const activeFeature = appCtx.getActiveFeature()
+    return getI18n(
+      activeFeature,
+      'title',
+      appCtx.getUserPreferences(),
+      m.deft_dry_chipmunk_blink(),
+    )
+  })(),
 )
 
 let newFeatureTitle = $derived(
@@ -92,11 +95,11 @@ let fullCollectionText = $derived(
     <div class="flex items-start gap-3">
       {#if isNotFeatureMode && !isNewFeatureMode}
         <button
+          type="button"
           class="btn btn-ghost btn-sm m-0 h-auto p-0 pt-2 hover:bg-transparent hover:text-base-content/80 focus:outline-none"
           onclick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            omniCtx.closeCard();
             omniCtx.toggleTray(e);
           }}
         >
@@ -128,6 +131,7 @@ let fullCollectionText = $derived(
   </div>
 
   <button
+    type="button"
     class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80"
     onclick={(e) => {
       e.preventDefault();

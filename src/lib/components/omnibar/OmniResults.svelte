@@ -1,6 +1,4 @@
 <script lang="ts">
-// TRANSITIONS
-import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
@@ -15,8 +13,7 @@ const omniCtx = getOmniCtx()
 </script>
 
 <div
-  class="flex select-none flex-col divide-y divide-neutral-800 overscroll-none bg-neutral-900 caret-transparent"
-  transition:slide={{ duration: 200 }}
+  class="flex select-none flex-col divide-y divide-neutral-800 overscroll-contain bg-neutral-900 caret-transparent"
   role="listbox"
   tabindex="-1"
 >
