@@ -985,7 +985,9 @@ export class AppCtx {
       meta: { profile: 'card' },
     }
 
-    const result = (await runRemoteQuery(remoteList(requestParams))) as ListResponse<Project>
+    const result = (await runRemoteQuery(
+      remoteList(requestParams),
+    )) as ListResponse<Project>
 
     this.setListQueryMeta(this.projectsQueryKey(), result)
     return result.data
@@ -2705,6 +2707,29 @@ export class AppCtx {
   getActiveFeature = (): FeatureFromCollection | Feature | null =>
     this.state.active.feature
 
+  pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Cancels any deferred feature-card open scheduled from active-feature mutations.
+   */
+  cancelPendingOpenCard = (): void => {
+    if (this.pendingOpenCardTimeout !== null) {
+      clearTimeout(this.pendingOpenCardTimeout)
+      this.pendingOpenCardTimeout = null
+    }
+  }
+
+  /**
+   * Clears the active feature while preserving the active collection context.
+   */
+  resetActiveFeature = (): void => {
+    if (this.state.active.feature) {
+      removeMarkerClass(this, this.state.active.feature.id)
+    }
+
+    this.state.active.feature = null
+  }
+
   setActiveFeature = (
     featureId: Id,
     options: {
@@ -2761,9 +2786,13 @@ export class AppCtx {
 
     if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
       if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
-        setTimeout(() => {
+        this.cancelPendingOpenCard()
+        this.pendingOpenCardTimeout = setTimeout(() => {
           window.dispatchEvent(new CustomEvent('OmniCtx.openCard'))
+          this.pendingOpenCardTimeout = null
         }, optionsWithDefaults.openCardDelay)
+      } else {
+        this.cancelPendingOpenCard()
       }
       navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
     }
@@ -3214,13 +3243,17 @@ export class AppCtx {
   handleKeydown = (event: KeyboardEvent): void => {
     // Skip global keyboard shortcuts when any input element is focused
     const activeElement = document.activeElement
+    if (shouldSkipGlobalKeydown(activeElement)) {
+      return
+    }
+
     if (
-      activeElement &&
-      (activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.tagName === 'SELECT' ||
-        activeElement.getAttribute('contenteditable') === 'true')
+      consumeEscapeForOpenPanels(
+        event,
+        Object.values(this.state.panels).some(panel => panel.isOpen),
+      )
     ) {
+      this.closeAllPanels()
       return
     }
 
