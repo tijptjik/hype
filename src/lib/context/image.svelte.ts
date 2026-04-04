@@ -21,6 +21,7 @@ import {
   setImageIntent,
   setImagePublished,
 } from '$lib/api/server/image.remote'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/server'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -43,13 +44,6 @@ import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
 import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 import { addParamToUrl } from '$lib/navigation'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
-
-type ImperativeRemoteQuery<T> = Promise<T> & {
-  run?: () => Promise<T>
-}
-
-const runRemoteQuery = async <T>(query: ImperativeRemoteQuery<T>): Promise<T> =>
-  typeof query.run === 'function' ? query.run() : query
 
 function isAbortedImageLoadError(error: unknown): boolean {
   if (typeof DOMException !== 'undefined' && error instanceof DOMException) {

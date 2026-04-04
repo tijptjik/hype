@@ -42,6 +42,7 @@ import {
 } from '$lib/client/services/property'
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/server'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
@@ -106,13 +107,6 @@ import type { PlaceCtx } from './place.svelte'
 import type { ResponsiveCtx } from './responsive.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
-
-type ImperativeRemoteQuery<T> = Promise<T> & {
-  run?: () => Promise<T>
-}
-
-const runRemoteQuery = async <T>(query: ImperativeRemoteQuery<T>): Promise<T> =>
-  typeof query.run === 'function' ? query.run() : query
 
 export class AppCtx {
   // Tanstack Query Client instance

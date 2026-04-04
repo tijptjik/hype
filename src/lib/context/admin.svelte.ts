@@ -4,6 +4,7 @@ import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
 import { getFeatures } from '$lib/api/server/feature.remote'
 import { getTasks } from '$lib/api/server/tasks.remote'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/server'
 // SERVICES
 import { toProjectLicenseFilterCache } from '$lib/client/services/licence'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
@@ -48,13 +49,6 @@ import type {
   UserPreferences,
 } from '$lib/db/zod/schema/user.types'
 import type { UserRoleDisco } from '$lib/types'
-
-type ImperativeRemoteQuery<T> = Promise<T> & {
-  run?: () => Promise<T>
-}
-
-const runRemoteQuery = async <T>(query: ImperativeRemoteQuery<T>): Promise<T> =>
-  typeof query.run === 'function' ? query.run() : query
 
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM
@@ -614,7 +608,8 @@ export class AdminCtx {
       const result = await runRemoteQuery(
         getTasks({
           conditions: {
-            isReviewed: this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
+            isReviewed:
+              this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
             type: this.appCtx.state.viewFilters[FirstClassResource.task].type,
           },
           prisms: taskPrisms,
