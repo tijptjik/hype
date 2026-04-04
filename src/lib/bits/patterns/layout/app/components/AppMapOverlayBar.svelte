@@ -18,12 +18,17 @@ const isCardToggleVisible = $derived(
       !omniCtx.isNewFeatureMode,
   ),
 )
+const hasCardToggleTarget = $derived(
+  Boolean(appCtx.getActiveFeature() && !omniCtx.isNewFeatureMode),
+)
 const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
 const bottomOffset = 0
 
 function handleOpenCard(event: Event): void {
   event.preventDefault()
   event.stopPropagation()
+  const toggleElement = event.currentTarget as HTMLElement | null
+  omniCtx.prepareCardTransitionFromToggle(toggleElement)
   omniCtx.openCard()
 }
 </script>
@@ -31,6 +36,7 @@ function handleOpenCard(event: Event): void {
 <MapOverlayBar
   {offsetX}
   {bottomOffset}
+  {hasCardToggleTarget}
   {isCardToggleVisible}
   onOpenCard={handleOpenCard}
 />
