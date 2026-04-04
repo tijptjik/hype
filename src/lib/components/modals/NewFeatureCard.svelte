@@ -9,6 +9,7 @@ import { useImageProviderModel } from '$lib/adapters/image'
 // BITS
 import {
   FeatureCardActions,
+  FeatureCardActionPrimitive,
   FeatureCardBreadcrumbs,
   FeatureCardContainer,
   FeatureCardRoot,
@@ -22,8 +23,6 @@ import FeatureDescriptionEditable from '$lib/components/featureCard/FeatureDescr
 import FeaturePropertiesEditable from '$lib/components/featureCard/FeaturePropertiesEditable.svelte'
 import FeatureGeoLocation from '$lib/components/featureCard/FeatureGeoLocation.svelte'
 import ContributorCredit from '$lib/components/featureCard/ContributorCredit.svelte'
-import NewFeatureLabel from '$lib/components/featureCard/actions/labels/NewFeatureLabel.svelte'
-import SubmitNewFeatureAction from '$lib/components/featureCard/actions/SubmitNewFeatureAction.svelte'
 import ValidationError from '$lib/components/featureCard/ValidationError.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
@@ -106,10 +105,10 @@ const imageProviderModel = useImageProviderModel(
       <ValidationError />
       <FeatureCardActions>
         {#snippet leftActions()}
-          <NewFeatureLabel />
+          <FeatureCardActionPrimitive.FeatureCardActionLabelPrimitive.NewFeatureLabel />
         {/snippet}
         {#snippet rightActions()}
-          <SubmitNewFeatureAction />
+          <FeatureCardActionPrimitive.SubmitNewFeatureAction />
         {/snippet}
       </FeatureCardActions>
     </ImageProvider>

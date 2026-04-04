@@ -27,7 +27,7 @@ $effect(() => {
 {#if cardCtx.validationError}
   <div
     transition:slide={{ duration: 300 }}
-    class="flex justify-center gap-2 bg-black px-3 pt-2 text-[1rem] font-medium text-warning w-100:px-4"
+    class="flex justify-center gap-2 bg-black px-3 pt-2 text-[1rem] font-medium text-warning w-full w-100:px-4"
   >
     <Icon src={ExclamationTriangle} class="h-6 w-6" filled />
     <span class="flex items-center gap-1"> {cardCtx.validationError} </span>
