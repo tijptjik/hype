@@ -13,12 +13,6 @@ import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
 import { resolveAppStage } from '$lib'
 // SERVICES
 import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
-// REMOTE
-import {
-  authImageUpload as authImageUploadRemote,
-  finalizeImageUpload as finalizeImageUploadRemote,
-  updateImage as updateImageRemote,
-} from '$lib/api/server/image.remote'
 // NAVIGATION
 import { getUrlForResource } from '$lib/navigation'
 import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
@@ -122,7 +116,9 @@ export async function prepareImageUpload(
   authCompletedAt: number
   normalizedUpload: NormalizedImageUploadAsset
   metadata: ImageMetadataBasic & { metadata?: Record<string, string> | null }
-  auth: Awaited<ReturnType<typeof authImageUploadRemote>>
+  auth: Awaited<
+    ReturnType<typeof import('$lib/api/server/image.remote')['authImageUpload']>
+  >
   isAdminRequest: boolean
   persist: {
     featureImage?: {
@@ -142,6 +138,7 @@ export async function prepareImageUpload(
   const metadata = await buildBasicMetadataDocument(normalizedUpload, extractedMetadata)
   const env = toImageEnv()
   const isAdminRequest = uploadCtx.isAdminRequest ?? true
+  const { authImageUpload: authImageUploadRemote } = await loadImageRemotes()
   const featureImage =
     uploadCtx.ctxType === 'feature'
       ? {
@@ -224,6 +221,7 @@ export async function finalizePreparedImageUpload(
     typeof performance !== 'undefined' ? performance.now() : Date.now()
   const retryAttempts = 4
   const retryBaseDelayMs = 180
+  const { finalizeImageUpload: finalizeImageUploadRemote } = await loadImageRemotes()
 
   for (let attempt = 0; attempt < retryAttempts; attempt += 1) {
     try {
@@ -310,6 +308,14 @@ const resolvePublicAssetBaseUrl = (): string => {
 
 const toImageEnv = (): 'local' | 'preview' | 'production' =>
   resolveAppStage(resolvePublicAssetBaseUrl())
+
+/**
+ * Lazily loads image remotes so utility-only imports of this module do not
+ * eagerly initialize the SvelteKit remote runtime in test and browser contexts.
+ */
+const loadImageRemotes = async (): Promise<
+  typeof import('$lib/api/server/image.remote')
+> => await import('$lib/api/server/image.remote')
 
 export async function buildBasicMetadataDocument(
   normalizedUpload: NormalizedImageUploadAsset,
@@ -1016,6 +1022,7 @@ export async function updateImagePresentationMode(options: {
   if (!ctx?.ctxType || !ctx?.ctxId) return false
 
   try {
+    const { updateImage: updateImageRemote } = await loadImageRemotes()
     await updateImageRemote({
       id: currentImage.id,
       ctxType: ctx.ctxType,

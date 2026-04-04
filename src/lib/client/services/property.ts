@@ -1,7 +1,5 @@
 import { customAlphabet } from 'nanoid'
 import { tick } from 'svelte'
-// REMOTE
-import { translateText as translateTextRemote } from '$lib/api/server/translation.remote'
 // I18N
 import { m } from '$lib/i18n'
 import { ensureLocaleEntryForWrite } from '$lib/i18n'
@@ -603,6 +601,9 @@ async function requestPropertyTranslations(
   texts: string[],
 ): Promise<string[] | null> {
   try {
+    const { translateText: translateTextRemote } = await import(
+      '$lib/api/server/translation.remote'
+    )
     const translatedTexts = await translateTextRemote({
       source: sourceLocale,
       target: targetLocale,
