@@ -1581,7 +1581,6 @@ $effect(() => {
   if (nextKey === lastLicenseEditorSyncKey) return
   lastLicenseEditorSyncKey = nextKey
   syncLicenseEditorStateFromForm()
-  console.log('Loaded project license', formProjectLicense)
 })
 
 // IMAGE
