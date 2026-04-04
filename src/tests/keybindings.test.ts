@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   consumeEscapeForOpenPanels,
   shouldSkipGlobalKeydown,
-} from '$lib/context/appKeydown'
+} from '$lib/client/keybindings'
 import { dismissActiveFeatureNavigation } from '$lib/context/omniNavigation'
 
 describe('shouldSkipGlobalKeydown', () => {
