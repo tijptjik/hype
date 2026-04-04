@@ -62,6 +62,7 @@ export {
 export {
   FeatureCard,
   FeatureCardActions,
+  FeatureCardActionPrimitive,
   FeatureCardBreadcrumbs,
   FeatureCardContent,
   FeatureCardContainer,
