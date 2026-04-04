@@ -34,6 +34,7 @@ import type {
   Point,
   PointLike,
 } from 'maplibre-gl'
+import type { Point as GeoJSONPoint } from 'geojson'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { StyleSpecification } from 'maplibre-gl'
 
@@ -65,6 +66,11 @@ let isTrackingMapUrl = $state(false)
 let detachMapUrlTracking: (() => void) | null = null
 let styleRequestSerial = 0
 let activeMapInstance: MaplibreMap | null = null
+let portalRecenterTimeout = 0
+let mapResizeFrame = 0
+let portalRecenterFrame = 0
+let geolocationWatchId: number | null = null
+let featureCardDescriptionExpanded = $state(false)
 
 const MAP_TRACKING_PARAM = 'mapTracking'
 const MAP_LNG_PARAM = 'lng'
@@ -80,6 +86,9 @@ const DEFAULT_MAP_VIEW = {
   pitch: 45,
 }
 const MIN_MAP_ZOOM = 9
+const FEATURE_PORTAL_FLY_TO_DELAY_MS = 300
+const FEATURE_PORTAL_FLY_TO_DURATION_MS = 2000
+const FEATURE_PORTAL_TARGET_ZOOM = 16
 
 const parseNumericSearchParam = (value: string | null): number | null => {
   if (!value) return null
@@ -184,12 +193,24 @@ const updateMapUrlTracking = (): void => {
 }
 
 const queueMapResize = (): void => {
-  if (!appCtx.map) {
+  if (!appCtx.map || mapResizeFrame !== 0) {
     return
   }
 
-  requestAnimationFrame(() => {
+  mapResizeFrame = requestAnimationFrame(() => {
+    mapResizeFrame = 0
     appCtx.map?.resize()
+  })
+}
+
+const schedulePortalRecenter = (): void => {
+  if (portalRecenterFrame !== 0) {
+    return
+  }
+
+  portalRecenterFrame = requestAnimationFrame(() => {
+    portalRecenterFrame = 0
+    recenterActiveFeatureToPortal()
   })
 }
 
@@ -198,6 +219,98 @@ const isMapContainerElement = (value: unknown): value is HTMLDivElement => {
     value instanceof HTMLDivElement ||
     Boolean(value && typeof value === 'object' && value.nodeType === 1)
   )
+}
+
+function isPointGeometry(
+  geometry: FeatureFromCollection['geometry'] | undefined,
+): geometry is GeoJSONPoint {
+  return geometry?.type === 'Point' && Array.isArray(geometry.coordinates)
+}
+
+/**
+ * Projects the portal center to where it will land once the card viewport is fully scrolled.
+ */
+function getProjectedPortalCenter(): { x: number; y: number } | null {
+  const portalElement = document.getElementById('feature-card-portal')
+  const viewportElement = document.getElementById('feature-card-viewport')
+
+  if (!portalElement) {
+    return null
+  }
+
+  const portalRect = portalElement.getBoundingClientRect()
+  const remainingScrollTop = viewportElement
+    ? Math.max(
+        viewportElement.scrollHeight -
+          viewportElement.clientHeight -
+          viewportElement.scrollTop,
+        0,
+      )
+    : 0
+
+  return {
+    x: portalRect.left + portalRect.width / 2,
+    y: portalRect.top + portalRect.height / 2 - remainingScrollTop,
+  }
+}
+
+/**
+ * Resolves the map offset required to place the active feature under the portal.
+ */
+function getFeaturePortalOffset(): { xOffset: number; yOffset: number } | null {
+  const mapElement = document.getElementById('map')
+  const portalCenter = getProjectedPortalCenter()
+
+  if (!mapElement || !portalCenter) {
+    return null
+  }
+
+  const mapRect = mapElement.getBoundingClientRect()
+
+  return {
+    xOffset: portalCenter.x - (mapRect.left + mapRect.width / 2),
+    yOffset: portalCenter.y - (mapRect.top + mapRect.height / 2),
+  }
+}
+
+/**
+ * Recenters the active point feature under the feature-card portal.
+ *
+ * @param duration MapLibre animation duration in milliseconds.
+ * @param delay Delay before measuring the settled portal position.
+ */
+function recenterActiveFeatureToPortal(
+  duration: number = FEATURE_PORTAL_FLY_TO_DURATION_MS,
+  delay: number = FEATURE_PORTAL_FLY_TO_DELAY_MS,
+): void {
+  window.clearTimeout(portalRecenterTimeout)
+
+  portalRecenterTimeout = window.setTimeout(() => {
+    const map = appCtx.map
+    const activeFeature = appCtx.getActiveFeature()
+    const offset = getFeaturePortalOffset()
+
+    if (
+      !map ||
+      !omniCtx.state.isCardOpen ||
+      featureCardDescriptionExpanded ||
+      !activeFeature ||
+      !isPointGeometry(activeFeature.geometry) ||
+      !offset
+    ) {
+      return
+    }
+
+    map.easeTo({
+      center: [
+        activeFeature.geometry.coordinates[0],
+        activeFeature.geometry.coordinates[1],
+      ],
+      offset: [offset.xOffset, offset.yOffset],
+      zoom: Math.max(map.getZoom(), FEATURE_PORTAL_TARGET_ZOOM),
+      duration,
+    })
+  }, delay)
 }
 
 const hideSymbolLayers = (style: StyleSpecification): StyleSpecification => {
@@ -398,7 +511,7 @@ onMount(() => {
         let hasReceivedFirstFix = false
 
         // WATCHER : Watch for changes in the user's location
-        navigator.geolocation.watchPosition(
+        geolocationWatchId = navigator.geolocation.watchPosition(
           geoLocation => {
             const { latitude, longitude } = geoLocation.coords
 
@@ -494,6 +607,12 @@ onMount(() => {
 
         // If card is already open, disable automatic centering to let FeaturePortal handle animation
         const isCardAlreadyOpen = omniCtx.state.isCardOpen
+        if (!isCardAlreadyOpen) {
+          const markerElement = target.closest(
+            '[data-feature-id]',
+          ) as HTMLElement | null
+          omniCtx.prepareCardTransitionFromMarker(featureId, markerElement)
+        }
         omniCtx.handleFeatureSelection(featureId, {
           focus: false, // Don't auto-center as card is already open,
           openCard: true,
@@ -512,7 +631,7 @@ onMount(() => {
           omniCtx.closeTray()
         }
         // Priority 3: Close panels if open
-        else if (appCtx.isLeftPanelOpen() || appCtx.isRightPanelOpen()) {
+        else if (responsiveCtx.isLeftPanelOpen() || responsiveCtx.isRightPanelOpen()) {
           appCtx.closeAllPanels()
         }
       }
@@ -534,12 +653,52 @@ onMount(() => {
       }
       activeMapInstance = null
     }
+
+    if (geolocationWatchId !== null) {
+      navigator.geolocation.clearWatch(geolocationWatchId)
+      geolocationWatchId = null
+    }
   }
 })
 
 onDestroy(() => {
   detachMapUrlTracking?.()
   detachMapUrlTracking = null
+  if (mapResizeFrame !== 0) {
+    cancelAnimationFrame(mapResizeFrame)
+    mapResizeFrame = 0
+  }
+  if (portalRecenterFrame !== 0) {
+    cancelAnimationFrame(portalRecenterFrame)
+    portalRecenterFrame = 0
+  }
+  window.clearTimeout(portalRecenterTimeout)
+})
+
+$effect(() => {
+  const handleDescriptionExpandedChange = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ expanded?: boolean }>
+    featureCardDescriptionExpanded = Boolean(customEvent.detail?.expanded)
+
+    if (featureCardDescriptionExpanded) {
+      window.clearTimeout(portalRecenterTimeout)
+      return
+    }
+
+    recenterActiveFeatureToPortal()
+  }
+
+  window.addEventListener(
+    'FeatureCard.descriptionExpandedChange',
+    handleDescriptionExpandedChange as EventListener,
+  )
+
+  return () => {
+    window.removeEventListener(
+      'FeatureCard.descriptionExpandedChange',
+      handleDescriptionExpandedChange as EventListener,
+    )
+  }
 })
 
 watch(
@@ -590,6 +749,46 @@ $effect(() => {
 
 $effect(() => {
   updateMapUrlTracking()
+})
+
+$effect(() => {
+  const map = appCtx.map
+  const activeFeatureId = appCtx.getActiveFeature()?.id ?? null
+  const isCardOpen = omniCtx.state.isCardOpen
+
+  if (!map || !activeFeatureId || !isCardOpen || featureCardDescriptionExpanded) {
+    return
+  }
+
+  const featureCardElement = document.getElementById('feature-card')
+  const featureCardViewport = document.getElementById('feature-card-viewport')
+  const featureCardPortal = document.getElementById('feature-card-portal')
+
+  if (!featureCardElement) {
+    schedulePortalRecenter()
+    return
+  }
+
+  const observer = new ResizeObserver(() => {
+    schedulePortalRecenter()
+  })
+
+  observer.observe(featureCardElement)
+  if (featureCardViewport) observer.observe(featureCardViewport)
+  if (featureCardPortal) observer.observe(featureCardPortal)
+
+  const handleScrollEnd = (): void => {
+    schedulePortalRecenter()
+  }
+
+  document.addEventListener('containerscrollend', handleScrollEnd)
+
+  schedulePortalRecenter()
+
+  return () => {
+    observer.disconnect()
+    document.removeEventListener('containerscrollend', handleScrollEnd)
+  }
 })
 
 // STATE : DERIVED
