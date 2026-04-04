@@ -28,6 +28,10 @@ export function dismissActiveFeatureNavigation(
   options.setIntentionallyClosing?.(true)
   options.resetActiveFeature()
   options.resetToSearch()
+  // Hold the dismiss guard through the synchronous reset, then release it.
+  setTimeout(() => {
+    options.setIntentionallyClosing?.(false)
+  }, 0)
   return true
 }
 
