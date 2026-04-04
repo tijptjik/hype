@@ -34,8 +34,8 @@ describe('omnibar styles', () => {
       effectiveAppMainWidth: 479,
     })
 
-    expect(rootClasses).toContain('mx-6')
-    expect(rootClasses).not.toContain('mx-4')
+    expect(rootClasses).toContain('mx-4')
+    expect(rootClasses).not.toContain('mx-6')
     expect(surfaceClasses).not.toContain('mx-[1.75rem]')
   })
 })

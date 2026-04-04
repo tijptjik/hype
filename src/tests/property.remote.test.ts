@@ -12,6 +12,7 @@ const {
   mockProbeProjectQuery,
   mockAuthorizeProjectReadForProbe,
   mockGuardedContext,
+  mockProjectProbeRows,
 } = vi.hoisted(() => ({
   mockGetPrisms: vi.fn(() => ({ organisation: [], project: [], layer: [] })),
   mockGetPropertyQueryContext: vi.fn(() => ({ conditions: [] })),
@@ -22,6 +23,7 @@ const {
   mockProbeProjectQuery: vi.fn(async () => null),
   mockAuthorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
   mockGuardedContext: vi.fn(),
+  mockProjectProbeRows: vi.fn(async () => []),
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
@@ -87,7 +89,15 @@ describe('property.remote', () => {
     vi.clearAllMocks()
     mockToPropertyResponseShape.mockImplementation((row: unknown) => ({ row }))
     mockGuardedContext.mockResolvedValue({
-      db: {},
+      db: {
+        select: vi.fn(() => ({
+          from: vi.fn(() => ({
+            innerJoin: vi.fn(() => ({
+              where: mockProjectProbeRows,
+            })),
+          })),
+        })),
+      },
       user: { id: 'u-1', isAnonymous: false },
       userRoles: [],
       isAdminRequest: true,
@@ -105,13 +115,22 @@ describe('property.remote', () => {
       { id: 'prop-2', projectId: 'project-2' },
       { id: 'prop-3', projectId: null },
     ])
-    mockProbeProjectQuery.mockImplementation(async (_db: unknown, params: any) => ({
-      id: params.ref,
-      organisationId: 'org-1',
-      hubId: 'hub-a',
-      isPublished: true,
-      isArchived: false,
-    }))
+    mockProjectProbeRows.mockResolvedValue([
+      {
+        id: 'project-1',
+        organisationId: 'org-1',
+        hubId: 'hub-a',
+        isPublished: true,
+        isArchived: false,
+      },
+      {
+        id: 'project-2',
+        organisationId: 'org-1',
+        hubId: 'hub-a',
+        isPublished: true,
+        isArchived: false,
+      },
+    ])
     mockAuthorizeProjectReadForProbe.mockImplementation(({ probe }: any) =>
       probe.id === 'project-1' ? { allowed: true } : { allowed: false },
     )
@@ -128,13 +147,15 @@ describe('property.remote', () => {
       { id: 'prop-1', projectId: 'project-1' },
       { id: 'prop-2', projectId: 'project-1' },
     ])
-    mockProbeProjectQuery.mockResolvedValue({
-      id: 'project-1',
-      organisationId: 'org-1',
-      hubId: 'hub-a',
-      isPublished: true,
-      isArchived: false,
-    })
+    mockProjectProbeRows.mockResolvedValue([
+      {
+        id: 'project-1',
+        organisationId: 'org-1',
+        hubId: 'hub-a',
+        isPublished: true,
+        isArchived: false,
+      },
+    ])
     mockToPropertyResponseShape.mockImplementation((row: any) => {
       if (row.id === 'prop-2') {
         throw new Error('bad property payload')
