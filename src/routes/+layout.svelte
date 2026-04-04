@@ -31,12 +31,16 @@ import { MOBILE_MAX_WIDTH } from '$lib/constants'
 let { children, data }: LayoutProps = $props()
 
 // CONTEXT
-const { queryClient } = data as LayoutData & {
-  queryClient: QueryClient
-}
+const queryClient = (
+  data as LayoutData & {
+    queryClient: QueryClient
+  }
+).queryClient
 
 const session = useSession()
 const responsive = setResponsiveCtx()
+let hasMounted = false
+let pendingAuthReinit: ReturnType<typeof setTimeout> | null = null
 
 // Set AppCtx in context
 const appCtx = setAppCtx(
@@ -45,6 +49,24 @@ const appCtx = setAppCtx(
   $session.data?.user as SessionUser | null,
   responsive,
 )
+
+function clearPendingAuthReinit(): void {
+  if (pendingAuthReinit !== null) {
+    clearTimeout(pendingAuthReinit)
+    pendingAuthReinit = null
+  }
+}
+
+// Reinitialize the app context after an auth identity change, including logout.
+function scheduleAuthReinit(user: SessionUser | null): void {
+  clearPendingAuthReinit()
+
+  pendingAuthReinit = window.setTimeout(() => {
+    pendingAuthReinit = null
+    appCtx.setUser(user)
+    void appCtx.init(user?.id ?? null)
+  }, 0)
+}
 
 // Keep hub context available for both app and admin route trees.
 $effect(() => {
@@ -57,17 +79,20 @@ $effect(() => {
 // Reactive window width binding
 let windowWidth = $state(0)
 let windowHeight = $state(0)
+let responsiveSyncFrame = 0
 
-// Update mobile state when window width changes
-$effect(() => {
-  appCtx.isMobile = windowWidth < MOBILE_MAX_WIDTH
-  responsive.setWindowDimensions(windowWidth, windowHeight)
-})
+// Coalesce viewport and window measurements so resize bursts only fan out once per frame.
+const scheduleResponsiveSync = (): void => {
+  if (responsiveSyncFrame !== 0) {
+    return
+  }
 
-// Load maplibre globally
-onMount(async () => {
-  const updateVisualViewportDimensions = (): void => {
+  responsiveSyncFrame = window.requestAnimationFrame(() => {
+    responsiveSyncFrame = 0
+
     const visualViewport = window.visualViewport
+
+    responsive.setWindowDimensions(windowWidth, windowHeight)
 
     if (!visualViewport) {
       responsive.setViewportDimensions(window.innerWidth, window.innerHeight)
@@ -80,11 +105,37 @@ onMount(async () => {
       visualViewport.offsetTop,
       visualViewport.offsetLeft,
     )
+  })
+}
+
+// Update mobile state when window width changes
+$effect(() => {
+  appCtx.isMobile = windowWidth < MOBILE_MAX_WIDTH
+
+  if (typeof window === 'undefined') {
+    return
   }
 
-  updateVisualViewportDimensions()
-  window.visualViewport?.addEventListener('resize', updateVisualViewportDimensions)
-  window.visualViewport?.addEventListener('scroll', updateVisualViewportDimensions)
+  scheduleResponsiveSync()
+})
+
+// Load maplibre globally
+onMount(async () => {
+  hasMounted = true
+
+  if (!appCtx.isInitialised) {
+    const currentUser = $session.data?.user
+    if (currentUser) {
+      appCtx.setUser(currentUser as SessionUser)
+      await appCtx.init(currentUser.id)
+    } else {
+      await appCtx.init(null)
+    }
+  }
+
+  scheduleResponsiveSync()
+  window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
+  window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
 
   try {
     // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
@@ -104,21 +155,17 @@ onMount(async () => {
   }
 
   return () => {
-    window.visualViewport?.removeEventListener('resize', updateVisualViewportDimensions)
-    window.visualViewport?.removeEventListener('scroll', updateVisualViewportDimensions)
+    clearPendingAuthReinit()
+
+    if (responsiveSyncFrame !== 0) {
+      window.cancelAnimationFrame(responsiveSyncFrame)
+      responsiveSyncFrame = 0
+    }
+
+    window.visualViewport?.removeEventListener('resize', scheduleResponsiveSync)
+    window.visualViewport?.removeEventListener('scroll', scheduleResponsiveSync)
   }
 })
-
-// Initialize AppCtx if not already initialized
-if (!appCtx.isInitialised) {
-  const currentUser = $session.data?.user
-  if (currentUser) {
-    appCtx.setUser(currentUser as SessionUser)
-    appCtx.init(currentUser.id)
-  } else {
-    appCtx.init(null)
-  }
-}
 
 // Determine if we're in admin mode based on the route
 const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false)
@@ -137,17 +184,20 @@ watch(
 watch(
   () => $session.data?.user,
   newUser => {
+    if (!hasMounted) {
+      return
+    }
+
     // Only reinitialize if user actually changed (not just session refresh)
     const currentUserId = appCtx.user?.id
     const newUserId = newUser?.id
 
     if (newUser && newUserId !== currentUserId) {
       // User login or user changed
-      appCtx.setUser(newUser as unknown as SessionUser)
-      appCtx.reinitializeWithAuth()
+      scheduleAuthReinit(newUser as SessionUser)
     } else if (!newUser && currentUserId) {
       // User logout
-      appCtx.setUser(null)
+      scheduleAuthReinit(null)
     }
   },
 )
@@ -172,10 +222,9 @@ watch(
 )
 </script>
 
-<svelte:window bind:innerHeight={windowHeight} />
+<svelte:window bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
 
 <App
-  bind:windowWidth
   {queryClient}
   isReady={appCtx.isInitialised}
   localeKey={getLocaleKey()}
