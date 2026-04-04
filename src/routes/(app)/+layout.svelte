@@ -4,23 +4,21 @@ import { browser } from '$app/environment'
 // NAVIGATION
 import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
-import { handlePanelParams } from '$lib/navigation'
-// AUTH
-import { canAccessAdminPanel } from '$lib/api/services/authz'
+import { dismissActiveFeatureNavigation, handlePanelParams } from '$lib/navigation'
 import { useSession } from '$lib/auth/client'
+import { useOmnibarModel } from '$lib/adapters/bars'
+import { shouldSkipGlobalKeydown } from '$lib/client/keybindings'
 // I18N
-import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 import { setOmniCtx } from '$lib/context/omni.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // SERVICES
-import { initAddNewFeature } from '$lib/client/services/feature'
 import { startCircularFlight } from '$lib/client/services/geospatial'
 import { getActiveMapStyleCode } from '$lib/client/services/map'
 import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
-import Omnibar from '$lib/components/omnibar/Omnibar.svelte'
 import Filters from '$lib/components/panels/Filters.svelte'
 import Prisms from '$lib/components/panels/Prisms.svelte'
 import Stars from '$lib/components/panels/Stars.svelte'
@@ -33,18 +31,13 @@ import Profile from '$lib/components/panels/Profile.svelte'
 // BITS
 import {
   AppLanding,
+  AppMapOverlayBar,
   AppMain,
-  AppMenu,
+  AppNav,
   AppShell,
   AppSurface,
-  MapOverlayBar,
+  Omnibar,
 } from '$lib/bits'
-import FunnelIcon from 'virtual:icons/lucide/filter'
-import InformationCircleIcon from 'virtual:icons/lucide/info'
-import MapIcon from 'virtual:icons/lucide/map'
-import MonitorIcon from 'virtual:icons/lucide/monitor'
-import SettingsIcon from 'virtual:icons/lucide/settings'
-import StarIcon from 'virtual:icons/lucide/star'
 // ENUMS
 import { PageState } from '$lib/enums'
 // TYPES
@@ -73,6 +66,7 @@ let navDest = $state('')
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx()
+const responsiveCtx = getResponsiveCtx()
 // Set Hub context in AppCtx
 $effect(() => {
   appCtx.setHub(hub)
@@ -80,6 +74,8 @@ $effect(() => {
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx)
+const omnibarModel = useOmnibarModel(appCtx, omniCtx, responsiveCtx)
+const omnibarProps = $derived(omnibarModel.getOmnibarProps())
 
 // NAVIGATION :: Clear feature cache images when switching between admin/user apps
 beforeNavigate(({ from, to }) => {
@@ -96,58 +92,8 @@ beforeNavigate(({ from, to }) => {
 
 // CIRCULAR FLIGHT ANIMATION STATE
 let stopCircularFlight: (() => void) | null = $state(null)
-let showAdminMenu = $derived.by(() =>
-  canAccessAdminPanel({
-    superAdmin: $session?.data?.user?.superAdmin,
-    userRoles: $session?.data?.user?.roles ?? [],
-  }),
-)
-let menuItems = $derived(
-  hub.isCore
-    ? [
-        { value: Panel.prisms, icon: MapIcon, label: m.maps__title() },
-        { value: Panel.filters, icon: FunnelIcon, label: m.menu_filters() },
-        { value: Panel.stars, icon: StarIcon, label: m.menu_stars() },
-        { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
-      ]
-    : [
-        { value: Panel.hub, icon: InformationCircleIcon, label: m.menu_about() },
-        { value: Panel.filters, icon: FunnelIcon, label: m.menu_filters() },
-        { value: Panel.stars, icon: StarIcon, label: m.menu_stars() },
-        { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
-      ],
-)
-let trailingMenuItems = $derived(
-  showAdminMenu
-    ? [
-        {
-          value: Panel.admin,
-          icon: MonitorIcon,
-          label: m.menu_admin(),
-          tone: 'secondary' as const,
-        },
-      ]
-    : [],
-)
 const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
-const isAddButtonVisible = $derived(
-  Boolean(
-    !omniCtx.state.isTrayOpen &&
-      !appCtx.isTransitioning &&
-      !appCtx.getActiveFeature() &&
-      !omniCtx.isNewFeatureMode &&
-      appCtx.isMobile,
-  ),
-)
-const isCardToggleVisible = $derived(
-  Boolean(
-    !omniCtx.isCardOpen &&
-      !appCtx.isTransitioning &&
-      appCtx.getActiveFeature() &&
-      !omniCtx.isNewFeatureMode,
-  ),
-)
-const offsetDueToPanels = $derived(appCtx.getHorizontalOffset())
+const menuReservedHeight = $derived(responsiveCtx.menuReservedHeight)
 
 // PROFILE PANEL SCROLL POSITION
 let profilePanelContainer: HTMLDivElement | undefined = $state()
@@ -256,39 +202,45 @@ $effect(() => {
   }
 })
 
-async function handleAddFeature(event: Event): Promise<void> {
-  event.preventDefault()
-  event.stopPropagation()
-  await initAddNewFeature(appCtx, omniCtx, event)
-}
-
-function handleOpenCard(event: Event): void {
-  event.preventDefault()
-  event.stopPropagation()
-  omniCtx.openCard()
-}
-
-function handleMenuSelect(item: { value: Panel }): void {
-  if (item.value === Panel.admin) {
-    const currentPath = page.url.pathname
-
-    if (currentPath.startsWith('/features/')) {
-      goto(`/admin${currentPath}`)
-      return
-    }
-
-    goto('/admin/tasks')
+function handleWindowKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' || event.defaultPrevented) {
     return
   }
 
-  appCtx.togglePanel(item.value)
+  if (shouldSkipGlobalKeydown(document.activeElement)) {
+    return
+  }
+
+  if (Object.values(appCtx.state.panels).some(panel => panel.isOpen)) {
+    return
+  }
+
+  const didDismiss = dismissActiveFeatureNavigation({
+    hasActiveFeature: Boolean(appCtx.getActiveFeature()),
+    isCardOpen: omniCtx.state.isCardOpen,
+    closeCard: () => omniCtx.closeCard(),
+    resetActiveFeature: () => appCtx.resetActiveFeature(),
+    resetToSearch: () => omniCtx.resetToSearch(),
+    setIntentionallyClosing: value => {
+      omniCtx.isIntentionallyClosing = value
+    },
+  })
+
+  if (!didDismiss) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
 }
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <AppShell>
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
     <AppSurface>
-      <MapCanvas mapStyleCode={activeMapStyleCode} />
+      <MapCanvas mapStyleCode={activeMapStyleCode} bottomInset={menuReservedHeight} />
       <!-- Panels -->
       <Prisms />
       <Stars />
@@ -300,21 +252,10 @@ function handleMenuSelect(item: { value: Panel }): void {
       <Settings />
       <Profile bind:panelContainer={profilePanelContainer} />
       <AppMain>
-        <Omnibar />
-        <MapOverlayBar
-          offsetX={offsetDueToPanels}
-          {isAddButtonVisible}
-          {isCardToggleVisible}
-          onAddFeature={handleAddFeature}
-          onOpenCard={handleOpenCard}
-        />
+        <Omnibar {...omnibarProps} />
         {@render children()}
-        <AppMenu
-          items={menuItems}
-          trailingItems={trailingMenuItems}
-          offsetX={offsetDueToPanels}
-          onSelect={handleMenuSelect}
-        />
+        <AppMapOverlayBar />
+        <AppNav {hub} />
       </AppMain>
     </AppSurface>
   {:else if !$session.isPending && !$session.data}
