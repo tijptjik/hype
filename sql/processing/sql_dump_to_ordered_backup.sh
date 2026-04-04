@@ -154,12 +154,18 @@ grep -E "^CREATE TABLE( IF NOT EXISTS)?" "$TEMP_DIR/inlined.sql" | while read -r
     fi
 done
 
-# Extract all INSERT statements
+# Extract all INSERT statements.
+# Cloudflare D1 exports use double-quoted identifiers, while local sqlite dumps
+# may use bare or backticked identifiers.
 grep "^INSERT INTO" "$TEMP_DIR/inlined.sql" | while read -r line; do
-    if [[ $line =~ INSERT\ INTO\ (\`?[^\`[:space:]]+\`?) ]]; then
+    if [[ $line =~ INSERT\ INTO\ ([\`\"]?[^\`\"[:space:]]+[\`\"]?) ]]; then
         table_name="${BASH_REMATCH[1]}"
-        # Remove backticks for consistent naming
+        # Remove identifier quoting for consistent naming
         table_name="${table_name//\`/}"
+        table_name="${table_name//\"/}"
+        if [[ "$table_name" == "sqlite_sequence" ]]; then
+            continue
+        fi
         echo "$table_name:$line" >> "$TEMP_DIR/inserts.sql"
     fi
 done
@@ -168,7 +174,7 @@ done
 grep -E "^(ALTER TABLE|CREATE INDEX|CREATE UNIQUE INDEX)" "$TEMP_DIR/inlined.sql" > "$TEMP_DIR/constraints.sql"
 
 # Extract other statements (excluding PRAGMA defer_foreign_keys and the main statement types)
-grep -v -E "^(CREATE TABLE|INSERT INTO|ALTER TABLE|CREATE INDEX|CREATE UNIQUE INDEX|PRAGMA defer_foreign_keys)" "$TEMP_DIR/inlined.sql" > "$TEMP_DIR/other.sql"
+grep -v -E "^(CREATE TABLE|INSERT INTO|ALTER TABLE|CREATE INDEX|CREATE UNIQUE INDEX|PRAGMA defer_foreign_keys|DELETE FROM sqlite_sequence)" "$TEMP_DIR/inlined.sql" > "$TEMP_DIR/other.sql"
 
 # Generate the output file
 echo "Generating reordered output..."
