@@ -2,22 +2,22 @@
 // COMPONENTS
 import Button from '$lib/bits/core/button/Button.svelte'
 import { Icon } from '$lib/bits/custom/icon'
-// BITS
 import { cx } from '$lib/bits/utils'
 // CONTEXT
 import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // STYLES
 import {
-  APP_MENU_ITEM_GRID_CLASSES,
-  APP_MENU_NAV_PANEL_CLASSES,
-  getAppMenuButtonClasses,
+  getAppMenuItemButtonClasses,
+  getAppMenuItemGridClasses,
   getAppMenuNavClasses,
+  getAppMenuNavPanelClasses,
   getAppMenuNavStyles,
   getAppMenuTrailingItemsClasses,
 } from './appMenu.styles'
 // TYPES
 import type { AppMenuItem, AppMenuProps } from './appMenu.types'
-import { getAppMenuViewportState } from './appMenu.constants'
+import { getAppMenuBottomGutter, getAppMenuViewportState } from './appMenu.layout'
+import { getElevatedChromeXGutter } from '$lib/bits/patterns/bars/omnibar'
 
 let {
   items,
@@ -31,35 +31,50 @@ let {
 const responsiveCtx = getResponsiveCtx()
 
 // RESPONSIVENESS
-const availableWidth = $derived(responsiveCtx.window.width)
-const availableHeight = $derived(responsiveCtx.window.height)
+const availableWidth = $derived(responsiveCtx.visibleWindowWidth)
+const availableHeight = $derived(responsiveCtx.visibleWindowHeight)
 const viewportState = $derived(getAppMenuViewportState(availableWidth, availableHeight))
+const isShortMenu = $derived(viewportState.menuMode === 'shortMenu')
+const isTallMenu = $derived(viewportState.menuMode === 'tallMenu')
+const isNarrowPillMenu = $derived(viewportState.menuMode === 'narrowPillMenu')
+const isWidePillMenu = $derived(viewportState.menuMode === 'widePillMenu')
+const isPillMenu = $derived(isNarrowPillMenu || isWidePillMenu)
+const defaultButtonColor = $derived(isPillMenu ? 'neutral' : 'primary')
 
 // STYLES
 const navClasses = $derived(
   getAppMenuNavClasses(
     viewportState.isIconOnlyMenu,
+    isPillMenu,
     viewportState.shouldUseCompactVisualMenu,
     className,
   ),
 )
+const navPanelClasses = $derived(getAppMenuNavPanelClasses(isPillMenu))
 const menuButtonClasses = $derived(
-  getAppMenuButtonClasses(viewportState.isIconOnlyMenu),
+  getAppMenuItemButtonClasses(viewportState.isIconOnlyMenu, isPillMenu),
 )
+const itemGridClasses = $derived(getAppMenuItemGridClasses(isPillMenu))
 const visibleTrailingItems = $derived(
-  trailingItems.filter(
-    item => !viewportState.isMobileMenu || item.isMobileVisible === true,
-  ),
+  trailingItems.filter(item => isPillMenu || item.isMobileVisible === true),
 )
-const mobileItems = $derived(
-  viewportState.isMobileMenu ? [...items, ...visibleTrailingItems] : items,
+const mobileItems = $derived(isPillMenu ? items : [...items, ...visibleTrailingItems])
+const navItemCount = $derived(isPillMenu ? items.length : mobileItems.length)
+const xGutterPx = $derived(isPillMenu ? getElevatedChromeXGutter(availableWidth) : 0)
+const bottomGutterPx = $derived(
+  isPillMenu ? getAppMenuBottomGutter(availableWidth, availableHeight) : 0,
 )
-const navItemCount = $derived(
-  viewportState.isMobileMenu ? mobileItems.length : items.length,
+const navStyles = $derived(
+  getAppMenuNavStyles({
+    itemCount: navItemCount,
+    offsetX,
+    xGutterPx,
+    bottomGutterPx,
+  }),
 )
-const navStyles = $derived(getAppMenuNavStyles(navItemCount, offsetX))
 const trailingItemsClasses = $derived(
   getAppMenuTrailingItemsClasses(
+    isPillMenu,
     visibleTrailingItems.some(item => item.isMobileVisible === true),
   ),
 )
@@ -68,6 +83,40 @@ const trailingItemsClasses = $derived(
 function handleSelect(item: AppMenuItem<T>): void {
   onSelect?.(item)
 }
+
+function getItemIconTone(item: AppMenuItem<T>): 'primary' | 'white' | 'secondary' {
+  if (!isPillMenu) return 'primary'
+  return trailingItems.includes(item) ? 'secondary' : 'white'
+}
+
+function getItemIconClasses(item: AppMenuItem<T>): string {
+  const baseIconClass =
+    isPillMenu && trailingItems.includes(item) ? 'text-secondary' : 'text-white'
+  return `${isPillMenu ? `${baseIconClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)]` : 'text-primary'} ${item.iconClasses ?? ''}`.trim()
+}
+
+function getItemButtonClasses(): string {
+  return cx(
+    menuButtonClasses,
+    isPillMenu && 'group/app-menu-pill',
+    isPillMenu && 'hover:[--btn-transparent-hover-fg:var(--color-white)]',
+    isPillMenu && 'focus-visible:[--btn-transparent-hover-fg:var(--color-white)]',
+  )
+}
+
+function getItemLabelClasses(item: AppMenuItem<T>): string {
+  if (item.hideLabel || viewportState.isIconOnlyMenu) {
+    return 'min-w-0 max-h-0 overflow-hidden leading-none'
+  }
+
+  if (!isPillMenu) {
+    return 'min-w-0 truncate text-xs uppercase tracking-wider text-white'
+  }
+
+  const toneClass = trailingItems.includes(item) ? 'text-secondary' : 'text-white'
+
+  return `min-w-0 truncate text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)]`
+}
 </script>
 
 {#snippet menuButton(item: AppMenuItem<T>)}
@@ -75,7 +124,7 @@ function handleSelect(item: AppMenuItem<T>): void {
     <Icon
       src={item.icon}
       size="lg"
-      tone="inherit"
+      tone={getItemIconTone(item)}
       strokeWidth={2}
       class="block self-center"
     />
@@ -84,31 +133,26 @@ function handleSelect(item: AppMenuItem<T>): void {
     text={item.label}
     icon={itemIcon}
     style="transparent"
-    color={item.color ?? (item.tone === 'secondary' ? 'secondary' : 'neutral')}
+    color={item.color ?? (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
     size="md"
     hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
-    class={menuButtonClasses}
-    labelClasses={item.hideLabel || viewportState.isIconOnlyMenu
-        ? 'min-w-0 max-h-0 overflow-hidden leading-none'
-        : 'min-w-0 truncate text-xs uppercase tracking-wider'}
-    iconClasses={cx(
-      viewportState.isMobileMenu && !item.color && 'text-primary',
-      item.iconClasses,
-    )}
+    class={getItemButtonClasses()}
+    labelClasses={getItemLabelClasses(item)}
+    iconClasses={getItemIconClasses(item)}
     attrs={{ title: item.label }}
     onClick={() => handleSelect(item)}
   />
 {/snippet}
 
 <nav class={navClasses} style={navStyles}>
-  <div class={APP_MENU_NAV_PANEL_CLASSES}>
-    <div class={APP_MENU_ITEM_GRID_CLASSES}>
+  <div class={navPanelClasses}>
+    <div class={itemGridClasses}>
       {#each mobileItems as item (item.label)}
         {@render menuButton(item)}
       {/each}
     </div>
 
-    {#if !viewportState.isMobileMenu && visibleTrailingItems.length > 0}
+    {#if isPillMenu && visibleTrailingItems.length > 0}
       <div class={trailingItemsClasses}>
         {#each visibleTrailingItems as item (item.label)}
           {@render menuButton(item)}

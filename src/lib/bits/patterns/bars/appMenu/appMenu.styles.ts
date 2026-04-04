@@ -9,11 +9,13 @@ const APP_MENU_NAV_PANEL_SHARED_CLASSES =
 const APP_MENU_NAV_PANEL_DESKTOP_CLASSES =
   'md:inline-flex md:h-14 md:w-auto md:max-w-full md:items-center md:justify-center md:gap-1 md:rounded-full md:border md:border-[color-mix(in_oklab,var(--color-base-content)_12%,transparent)] md:bg-[color-mix(in_oklab,black_84%,var(--color-glass-result)_16%)] md:px-1.5 md:shadow-[0_18px_48px_rgb(0_0_0_/_0.34)] md:backdrop-blur-[14px] md:px-4'
 
-export const APP_MENU_NAV_PANEL_CLASSES = cx(
-  APP_MENU_NAV_PANEL_SHARED_CLASSES,
-  APP_MENU_TRANSITION_CLASSES,
-  APP_MENU_NAV_PANEL_DESKTOP_CLASSES,
-)
+export function getAppMenuNavPanelClasses(hasElevatedChrome: boolean): string {
+  return cx(
+    APP_MENU_NAV_PANEL_SHARED_CLASSES,
+    APP_MENU_TRANSITION_CLASSES,
+    hasElevatedChrome && APP_MENU_NAV_PANEL_DESKTOP_CLASSES,
+  )
+}
 
 const APP_MENU_ITEM_GRID_SHARED_CLASSES =
   'mx-auto grid min-w-0 max-w-180 grow grid-cols-[repeat(var(--app-menu-item-count),minmax(0,1fr))] items-center gap-0.5'
@@ -21,10 +23,12 @@ const APP_MENU_ITEM_GRID_SHARED_CLASSES =
 const APP_MENU_ITEM_GRID_DESKTOP_CLASSES =
   'md:mx-0 md:flex md:w-auto md:flex-[0_1_auto] md:grid-cols-none md:justify-center md:gap-1.5'
 
-export const APP_MENU_ITEM_GRID_CLASSES = cx(
-  APP_MENU_ITEM_GRID_SHARED_CLASSES,
-  APP_MENU_ITEM_GRID_DESKTOP_CLASSES,
-)
+export function getAppMenuItemGridClasses(hasElevatedChrome: boolean): string {
+  return cx(
+    APP_MENU_ITEM_GRID_SHARED_CLASSES,
+    hasElevatedChrome && APP_MENU_ITEM_GRID_DESKTOP_CLASSES,
+  )
+}
 
 const APP_MENU_TRAILING_ITEMS_SHARED_CLASSES =
   'hidden flex-none items-center gap-1 pl-1'
@@ -41,12 +45,13 @@ const APP_MENU_TRAILING_ITEMS_MOBILE_VISIBLE_CLASSES = 'flex'
  * @returns Tailwind classes for the trailing items container.
  */
 export function getAppMenuTrailingItemsClasses(
+  hasElevatedChrome: boolean,
   hasMobileVisibleTrailingItems: boolean,
 ): string {
   return cx(
     APP_MENU_TRAILING_ITEMS_SHARED_CLASSES,
     hasMobileVisibleTrailingItems && APP_MENU_TRAILING_ITEMS_MOBILE_VISIBLE_CLASSES,
-    APP_MENU_TRAILING_ITEMS_DESKTOP_CLASSES,
+    hasElevatedChrome && APP_MENU_TRAILING_ITEMS_DESKTOP_CLASSES,
   )
 }
 
@@ -65,15 +70,19 @@ const APP_MENU_BUTTON_ICON_ONLY_CLASSES =
 const APP_MENU_BUTTON_LABELLED_CLASSES = '[--btn-size:3rem] md:[--btn-size:2.25rem]'
 
 /**
- * Builds button classes for app menu items based on icon-only mode.
+ * Builds button classes for app menu items.
  *
  * @param isIconOnlyMenu Whether the menu is rendering icon-only buttons.
+ * @param hasElevatedChrome Whether the menu should render as floating elevated chrome.
  * @returns Tailwind classes for each app menu button.
  */
-export function getAppMenuButtonClasses(isIconOnlyMenu: boolean): string {
+export function getAppMenuItemButtonClasses(
+  isIconOnlyMenu: boolean,
+  hasElevatedChrome: boolean,
+): string {
   return cx(
     APP_MENU_BUTTON_SHARED_CLASSES,
-    APP_MENU_BUTTON_DESKTOP_CLASSES,
+    hasElevatedChrome && APP_MENU_BUTTON_DESKTOP_CLASSES,
     APP_MENU_BUTTON_TRANSITION_CLASSES,
     isIconOnlyMenu
       ? APP_MENU_BUTTON_ICON_ONLY_CLASSES
@@ -95,7 +104,7 @@ const APP_MENU_NAV_DEFAULT_CLASSES = 'py-4'
 const APP_MENU_NAV_COMPACT_ICON_ONLY_CLASSES = 'px-2'
 
 const APP_MENU_NAV_DESKTOP_CLASSES =
-  'md:left-1/2 md:right-auto md:bottom-6 md:w-auto md:min-h-0 md:max-w-[calc(100vw-2rem)] md:border-0 md:bg-transparent md:px-0 md:py-0 md:pb-[env(safe-area-inset-bottom)] md:pointer-events-none md:transform-[translateX(calc(-50%+var(--app-menu-offset-x)))]'
+  'md:left-1/2 md:right-auto md:bottom-[var(--app-menu-bottom-gutter)] md:w-auto md:min-h-0 md:max-w-[calc(100vw-(var(--app-menu-x-gutter)*2))] md:border-0 md:bg-transparent md:px-0 md:py-0 md:pb-[env(safe-area-inset-bottom)] md:pointer-events-none md:transform-[translateX(calc(-50%+var(--app-menu-offset-x)))]'
 
 /**
  * Builds root nav classes for the app menu.
@@ -107,6 +116,7 @@ const APP_MENU_NAV_DESKTOP_CLASSES =
  */
 export function getAppMenuNavClasses(
   isIconOnlyMenu: boolean,
+  hasElevatedChrome: boolean,
   shouldUseCompactVisualMenu: boolean,
   className?: string,
 ): string {
@@ -116,13 +126,13 @@ export function getAppMenuNavClasses(
     isIconOnlyMenu
       ? APP_MENU_NAV_ICON_ONLY_MAX_WIDTH_CLASSES
       : APP_MENU_NAV_LABELLED_MAX_WIDTH_CLASSES,
-    shouldUseCompactVisualMenu &&
+    (shouldUseCompactVisualMenu || (!hasElevatedChrome && isIconOnlyMenu)) &&
       isIconOnlyMenu &&
       APP_MENU_NAV_COMPACT_ICON_ONLY_CLASSES,
-    shouldUseCompactVisualMenu
+    shouldUseCompactVisualMenu || (!hasElevatedChrome && isIconOnlyMenu)
       ? APP_MENU_NAV_COMPACT_CLASSES
       : APP_MENU_NAV_DEFAULT_CLASSES,
-    APP_MENU_NAV_DESKTOP_CLASSES,
+    hasElevatedChrome && APP_MENU_NAV_DESKTOP_CLASSES,
     className,
   )
 }
@@ -134,9 +144,17 @@ export function getAppMenuNavClasses(
  * @param offsetX Horizontal offset in pixels.
  * @returns Inline CSS variable declarations.
  */
-export function getAppMenuNavStyles(itemCount: number, offsetX: number): string {
+export function getAppMenuNavStyles(params: {
+  itemCount: number
+  offsetX: number
+  xGutterPx: number
+  bottomGutterPx: number
+}): string {
+  const { itemCount, offsetX, xGutterPx, bottomGutterPx } = params
   return cssVars(
     { '--app-menu-item-count': String(itemCount) },
     { '--app-menu-offset-x': `${offsetX}px` },
+    { '--app-menu-x-gutter': `${xGutterPx}px` },
+    { '--app-menu-bottom-gutter': `${bottomGutterPx}px` },
   )
 }
