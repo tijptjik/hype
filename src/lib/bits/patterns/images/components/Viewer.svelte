@@ -22,6 +22,7 @@ let {
   fullscreenRequestKey = 0,
   fit = 'fit',
   viewerFit = fit,
+  enableStageViewTransitions = true,
   wrapNavigation = true,
   showNavButtons = true,
   railPadding = 6,
@@ -107,12 +108,12 @@ const effectiveCenterActionLabel = $derived.by(() => {
   return m.gallery__image_action_unavailable()
 })
 const inlineViewTransitionName = $derived(
-  currentItem && !isFullscreen && !isFirefox
+  enableStageViewTransitions && currentItem && !isFullscreen && !isFirefox
     ? `gallery-viewer-image-${currentItem.id}`
     : undefined,
 )
 const fullscreenViewTransitionName = $derived(
-  currentItem && isFullscreen && !isFirefox
+  enableStageViewTransitions && currentItem && isFullscreen && !isFirefox
     ? `gallery-viewer-image-${currentItem.id}`
     : undefined,
 )

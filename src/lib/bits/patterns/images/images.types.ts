@@ -112,6 +112,7 @@ export type ViewerProps = {
   fullscreenRequestKey?: number
   fit?: GalleryObjectFit
   viewerFit?: GalleryObjectFit
+  enableStageViewTransitions?: boolean
   wrapNavigation?: boolean
   showNavButtons?: boolean
   railPadding?: number
