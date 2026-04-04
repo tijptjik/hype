@@ -3,14 +3,95 @@
 import { fly } from 'svelte/transition'
 // TYPES
 let {
-  lines,
+  addressText,
   featureKey,
 }: {
-  lines: string[]
+  addressText: string
   featureKey: string
 } = $props()
 
 const addressLineRightPadding = [24, 12, 0, 12, 24] as const
+
+function measureTextWidth(text: string): number {
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  if (!context) return 0
+
+  context.font = '0.875rem/1.25rem sans-serif'
+  return context.measureText(text).width
+}
+
+function wordWrap(text: string, maxWidth: number): string[] {
+  const words = text.split(' ')
+  const lines: string[] = []
+  let currentLine = words[0] ?? ''
+
+  for (let index = 1; index < words.length; index += 1) {
+    const word = words[index]
+    const candidate = `${currentLine} ${word}`
+
+    if (measureTextWidth(candidate) <= maxWidth) currentLine = candidate
+    else {
+      lines.push(currentLine)
+      currentLine = word
+    }
+  }
+
+  if (currentLine) lines.push(currentLine)
+
+  return lines
+}
+
+function wrapText(text: string, maxWidth: number = 170): string[] {
+  const address = text.replace(', Hong Kong', '').replace('Hong Kong, ', '')
+  const lastCommaIndex = address.lastIndexOf(',')
+
+  if (lastCommaIndex > -1) {
+    const parts = [
+      address.slice(0, lastCommaIndex),
+      address.slice(lastCommaIndex + 1).trim(),
+    ]
+    if (parts.every((part, index) => measureTextWidth(part) <= maxWidth - index * 40)) {
+      return parts
+    }
+  }
+
+  const firstCommaIndex = address.indexOf(',')
+
+  if (firstCommaIndex > -1 && firstCommaIndex !== lastCommaIndex) {
+    const parts = [
+      address.slice(0, firstCommaIndex),
+      address.slice(firstCommaIndex + 1).trim(),
+    ]
+    if (parts.every(part => measureTextWidth(part) <= maxWidth)) {
+      return parts
+    }
+  }
+
+  if (
+    firstCommaIndex > -1 &&
+    lastCommaIndex > -1 &&
+    firstCommaIndex !== lastCommaIndex
+  ) {
+    const parts = [
+      address.slice(0, firstCommaIndex),
+      address.slice(firstCommaIndex + 1, lastCommaIndex).trim(),
+      address.slice(lastCommaIndex + 1).trim(),
+    ]
+    if (parts.every(part => measureTextWidth(part) <= maxWidth)) return parts
+  }
+
+  return wordWrap(address, maxWidth)
+}
+
+const addressLines = $derived(wrapText(addressText))
+
+// Keep the address renderer responsible for line splitting and line count padding.
+const lines = $derived(
+  Array(4)
+    .fill('')
+    .map((_, index) => addressLines[index] || ''),
+)
 </script>
 
 <div
