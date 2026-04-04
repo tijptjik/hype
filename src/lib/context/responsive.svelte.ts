@@ -4,14 +4,18 @@ import { getContext, hasContext, setContext } from 'svelte'
 import {
   getMenuClearanceHeight,
   getMenuReservedHeight,
-} from '$lib/bits/patterns/bars/appMenu/appMenu.constants'
+} from '$lib/bits/patterns/bars/appMenu/appMenu.layout'
 import { MOBILE_MAX_WIDTH, PANEL_WIDTH } from '$lib/constants'
 // ENUMS
 import { Panel, PanelLeft, PanelRight } from '$lib/enums'
 
 const RESPONSIVE_CONTEXT_KEY = Symbol('responsive-context')
 const ELEVATED_CHROME_MIN_WIDTH_PX = 480
+const ELEVATED_CHROME_WIDE_VIEWPORT_MIN_WIDTH_PX = 768
 const ELEVATED_CHROME_MIN_HEIGHT_PX = 800
+const ELEVATED_CHROME_EXTRA_REQUIRED_HEIGHT_PX = 40
+const ELEVATED_CHROME_DESKTOP_WIDE_EXTRA_REQUIRED_HEIGHT_PX = 48
+const ELEVATED_CHROME_DESKTOP_WIDE_MIN_WIDTH_PX = 1280
 
 export type ResponsiveDimensions = {
   width: number
@@ -30,9 +34,24 @@ const createPanelOpenState = (): PanelOpenState =>
     Object.values(Panel).map(panel => [panel, false]),
   ) as PanelOpenState
 
+/**
+ * Returns the minimum viewport height required before elevated chrome is safe.
+ *
+ * @param width Current viewport width in pixels.
+ * @returns Minimum height in pixels needed for elevated chrome.
+ */
+export function getElevatedChromeMinHeight(width: number): number {
+  return width >= ELEVATED_CHROME_DESKTOP_WIDE_MIN_WIDTH_PX
+    ? ELEVATED_CHROME_MIN_HEIGHT_PX +
+        ELEVATED_CHROME_DESKTOP_WIDE_EXTRA_REQUIRED_HEIGHT_PX
+    : ELEVATED_CHROME_MIN_HEIGHT_PX + ELEVATED_CHROME_EXTRA_REQUIRED_HEIGHT_PX
+}
+
 export function hasElevatedChrome(width: number, height: number): boolean {
   return (
-    width >= ELEVATED_CHROME_MIN_WIDTH_PX && height >= ELEVATED_CHROME_MIN_HEIGHT_PX
+    width >= ELEVATED_CHROME_WIDE_VIEWPORT_MIN_WIDTH_PX ||
+    (width >= ELEVATED_CHROME_MIN_WIDTH_PX &&
+      height >= getElevatedChromeMinHeight(width))
   )
 }
 
