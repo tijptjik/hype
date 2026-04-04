@@ -26,9 +26,7 @@ export interface AppHeadFontsProps {
   localeKey: LocaleKey
 }
 
-export interface AppHeadRootProps extends AppHeadMetaProps, AppHeadFontsProps {
-  windowWidth?: number
-}
+export interface AppHeadRootProps extends AppHeadMetaProps, AppHeadFontsProps {}
 
 export interface AppShellProps {
   queryClient: QueryClient

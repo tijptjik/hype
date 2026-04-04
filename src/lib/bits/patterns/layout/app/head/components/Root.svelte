@@ -3,17 +3,9 @@ import Fonts from './Fonts.svelte'
 import Meta from './Meta.svelte'
 import type { AppHeadRootProps } from '../../app.types'
 
-let {
-  title,
-  siteName,
-  siteDescription,
-  socialImage,
-  localeKey,
-  windowWidth = $bindable(0),
-}: AppHeadRootProps = $props()
+let { title, siteName, siteDescription, socialImage, localeKey }: AppHeadRootProps =
+  $props()
 </script>
-
-<svelte:window bind:innerWidth={windowWidth} />
 
 <svelte:head> <title>{title}</title> </svelte:head>
 
