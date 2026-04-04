@@ -1,14 +1,12 @@
 <script lang="ts">
 // COMPONENTS
 import OmnibarSection from './OmnibarSection.svelte'
-// CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte'
-// ENUMS
-import { OmniCollection } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
+// TYPES
+import type { OmnibarResultsProps } from './omnibarPrimitives.types'
 
-const omniCtx = getOmniCtx()
+let { sections }: OmnibarResultsProps = $props()
 </script>
 
 <div
@@ -16,17 +14,18 @@ const omniCtx = getOmniCtx()
   role="listbox"
   tabindex="-1"
 >
-  {#if Object.values(omniCtx.searchResults).every(group => group.length === 0)}
+  {#if sections.every(section => section.results.length === 0)}
     <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
   {:else}
-    {#if omniCtx.searchResults.feature.length > 0}
-      <OmnibarSection collectionType={OmniCollection.feature} />
-    {/if}
-    {#if omniCtx.searchResults.neighbourhood.length > 0}
-      <OmnibarSection collectionType={OmniCollection.neighbourhood} />
-    {/if}
-    {#if omniCtx.searchResults.walk.length > 0}
-      <OmnibarSection collectionType={OmniCollection.walk} />
-    {/if}
+    {#each sections as section (section.collectionType)}
+      {#if section.results.length > 0}
+        <OmnibarSection
+          collectionType={section.collectionType}
+          results={section.results}
+          limit={section.limit}
+          onSelection={section.onSelection}
+        />
+      {/if}
+    {/each}
   {/if}
 </div>

@@ -2,11 +2,8 @@
 import { slide } from 'svelte/transition'
 // BITS
 import { Button } from '$lib/bits'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // ICONS
 import XMark from 'virtual:icons/lucide/x'
 // STYLES
@@ -21,53 +18,40 @@ import {
 // TYPES
 import type { OmnibarCollectionProps } from './omnibarPrimitives.types'
 
-const COLLECTION_OPEN_DELAY_MS = 2000
 const COLLECTION_SLIDE_DURATION_MS = 300
-
-const omniCtx = getOmniCtx()
-const appCtx = getAppCtx()
 
 let {
   mode = 'results',
   items = [],
   hasElevatedChrome = false,
+  effectiveAppMainWidth = 0,
+  currentIndex = -1,
+  navTitle = '',
+  onSelectIndex,
+  onCloseTray,
 }: OmnibarCollectionProps = $props()
 
-const userPreferences = $derived(appCtx.getUserPreferences())
 const isNavigationMode = $derived(mode === 'navigation')
-const panelClasses = $derived(getOmnibarCollectionPanelClasses(hasElevatedChrome))
-const currentIndex = $derived(
-  appCtx.state.active.collection?.items.findIndex(
-    item => item.id === appCtx.state.active.feature?.id,
-  ) ?? -1,
+const panelClasses = $derived(
+  getOmnibarCollectionPanelClasses({ hasElevatedChrome, effectiveAppMainWidth }),
 )
 const scrollAreaMaxHeight = $derived(
   mode === 'navigation'
     ? 'calc(var(--omni-available-height, 100dvh) - 7rem)'
     : 'calc(var(--omni-available-height, 100dvh) - 4rem)',
 )
-const panelSlideDelay = $derived(
-  omniCtx.state.isCardOpen ? COLLECTION_SLIDE_DURATION_MS : 0,
-)
+const panelSlideDelay = 0
 
 let listContainer: HTMLUListElement | null = $state(null)
 let scrollArea: HTMLDivElement | null = $state(null)
 let hasSyncedOpenScrollPosition = $state(false)
 
-function handleItemClick(event: Event, index: number): void {
-  if (isNavigationMode) {
-    omniCtx.toggleTray(event)
-  }
-
-  omniCtx.navToIndex(index)
-
-  setTimeout(() => {
-    omniCtx.openCard()
-  }, COLLECTION_OPEN_DELAY_MS)
+function handleItemClick(index: number): void {
+  onSelectIndex?.(index)
 }
 
-function handleCloseTray(event: Event): void {
-  omniCtx.toggleTray(event)
+function handleCloseTrayClick(): void {
+  onCloseTray?.()
 }
 
 function getIndicatorOpacities(distance: number): {
@@ -111,7 +95,7 @@ function syncScrollPosition(behavior: ScrollBehavior): void {
 }
 
 $effect(() => {
-  if (!isNavigationMode || !omniCtx.state.isTrayOpen) {
+  if (!isNavigationMode) {
     hasSyncedOpenScrollPosition = false
     return
   }
@@ -142,7 +126,7 @@ $effect(() => {
           {@const indicatorOpacities = getIndicatorOpacities(Math.abs(currentIndex - index))}
           <li
             class={OMNIBAR_COLLECTION_ITEM_CLASSES}
-            onclick={event => handleItemClick(event, index)}
+            onclick={() => handleItemClick(index)}
           >
             {#if isNavigationMode}
               <div class="relative h-2 w-2 rounded-full">
@@ -157,7 +141,7 @@ $effect(() => {
               </div>
             {/if}
             <span class={OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES}>
-              {getI18n(item, 'title', userPreferences)}
+              {'label' in item ? item.label : ''}
             </span>
           </li>
         {/each}
@@ -167,7 +151,7 @@ $effect(() => {
   {#if isNavigationMode}
     <div class={OMNIBAR_COLLECTION_FOOTER_CLASSES}>
       <span class="text-xs uppercase tracking-wider text-base-content/60">
-        {omniCtx.navTitle}
+        {navTitle}
       </span>
       <Button
         text={m.admin__project_license_close()}
@@ -178,7 +162,7 @@ $effect(() => {
         iconClasses="h-5 w-5"
         class="text-base-content/70"
         attrs={{ title: m.admin__project_license_close() }}
-        onClick={handleCloseTray}
+        onClick={handleCloseTrayClick}
       />
     </div>
   {/if}

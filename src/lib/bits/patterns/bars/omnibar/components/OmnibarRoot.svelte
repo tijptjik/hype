@@ -1,15 +1,20 @@
 <script lang="ts">
-import { OMNIBAR_WIDTH_CONTAINER_CLASSES } from '../omnibar.styles'
+import { getOmnibarWidthContainerClasses } from '../omnibar.styles'
 import type { OmnibarRootProps } from './omnibarPrimitives.types'
 
 let {
   children,
   class: className = '',
+  hasElevatedChrome = false,
   style = '',
   onkeydown,
 }: OmnibarRootProps = $props()
+
+const widthContainerClasses = $derived(
+  getOmnibarWidthContainerClasses(hasElevatedChrome),
+)
 </script>
 
 <div class={className} {style} {onkeydown}>
-  <div class={OMNIBAR_WIDTH_CONTAINER_CLASSES}>{@render children?.()}</div>
+  <div class={widthContainerClasses}>{@render children?.()}</div>
 </div>

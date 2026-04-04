@@ -1,48 +1,60 @@
 <script lang="ts">
 // COMPONENTS
 import * as OmnibarPrimitive from './components'
-// CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+// ENUMS
+import { OmniMode } from '$lib/enums'
 // STYLES
-import { getOmnibarRootClasses, getOmnibarSurfaceClasses } from './omnibar.styles'
-import { getOmnibarAvailableViewportHeight } from './omnibar.utils'
+import { getOmnibarRootClasses } from './omnibar.styles'
+// TYPES
+import type { OmnibarProps } from './omnibar.types'
 
-const omniCtx = getOmniCtx()
-const responsiveCtx = getResponsiveCtx()
+let {
+  mode,
+  hasElevatedChrome,
+  horizontalOffset,
+  effectiveAppMainWidth,
+  availableViewportHeight,
+  search,
+  navigation,
+  onDismiss,
+}: OmnibarProps = $props()
 
-const showSearch = $derived(omniCtx.state.mode === 'search')
-const hasElevatedChrome = $derived(responsiveCtx.hasElevatedChrome)
-const availableViewportHeight = $derived(
-  getOmnibarAvailableViewportHeight(
-    responsiveCtx.visibleWindowHeight,
-    responsiveCtx.menuClearanceHeight,
-  ),
+const showSearch = $derived(mode === OmniMode.search)
+const rootClasses = $derived(
+  getOmnibarRootClasses({
+    availableViewportHeight,
+    hasElevatedChrome,
+    effectiveAppMainWidth,
+  }),
 )
-const horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
-const effectiveAppMainWidth = $derived(responsiveCtx.getEffectiveAppMainWidth())
-const rootClasses = $derived(getOmnibarRootClasses(hasElevatedChrome))
-const surfaceClasses = $derived(getOmnibarSurfaceClasses(hasElevatedChrome))
 
 function handleEscape(event: KeyboardEvent): void {
   if (event.key === 'Escape') {
-    omniCtx.close()
+    onDismiss()
   }
 }
 </script>
 
 <OmnibarPrimitive.Root
   class={rootClasses}
+  {hasElevatedChrome}
   style="transform: translateX({horizontalOffset}px); --omni-available-height: {availableViewportHeight}px; --omni-effective-main-width: {effectiveAppMainWidth}px;"
   onkeydown={handleEscape}
 >
   {#snippet children()}
-    <OmnibarPrimitive.Surface class={surfaceClasses}>
-      {#if showSearch}
-        <OmnibarPrimitive.SearchBar />
-      {:else}
-        <OmnibarPrimitive.NavigationBar />
-      {/if}
-    </OmnibarPrimitive.Surface>
+    {#if showSearch}
+      <OmnibarPrimitive.SearchBar
+        {search}
+        {hasElevatedChrome}
+        {effectiveAppMainWidth}
+      />
+    {:else}
+      <OmnibarPrimitive.NavigationBar
+        {mode}
+        {navigation}
+        {hasElevatedChrome}
+        {effectiveAppMainWidth}
+      />
+    {/if}
   {/snippet}
 </OmnibarPrimitive.Root>

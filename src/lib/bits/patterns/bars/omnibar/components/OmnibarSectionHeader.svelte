@@ -10,9 +10,9 @@ import Building from 'virtual:icons/lucide/landmark'
 import MapIcon from 'virtual:icons/lucide/map'
 import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
-import type { OmnibarSectionProps } from './omnibarPrimitives.types'
+import type { OmnibarSectionHeaderProps } from './omnibarPrimitives.types'
 
-let { collectionType }: OmnibarSectionProps = $props()
+let { collectionType }: OmnibarSectionHeaderProps = $props()
 
 const collectionIcons = {
   walk: MapIcon,
