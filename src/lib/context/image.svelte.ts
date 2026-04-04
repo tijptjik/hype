@@ -44,6 +44,13 @@ import type { ProjectDB } from '$lib/db/zod/schema/project.types'
 import { addParamToUrl } from '$lib/navigation'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 
+type ImperativeRemoteQuery<T> = Promise<T> & {
+  run?: () => Promise<T>
+}
+
+const runRemoteQuery = async <T>(query: ImperativeRemoteQuery<T>): Promise<T> =>
+  typeof query.run === 'function' ? query.run() : query
+
 function isAbortedImageLoadError(error: unknown): boolean {
   if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
     return error.name === 'AbortError'
@@ -1703,11 +1710,13 @@ export class ImageCtx {
     ctxId: Id,
     _includeSingleImage = true,
   ): Promise<ImageCtxEnvelope[]> {
-    const result = await getImagesForContext({
-      ctxType,
-      ctxId,
-      meta: { isAdminRequest: true },
-    })
+    const result = await runRemoteQuery(
+      getImagesForContext({
+        ctxType,
+        ctxId,
+        meta: { isAdminRequest: true },
+      }),
+    )
 
     return (result?.data ?? []).map(item => ({
       ...item,

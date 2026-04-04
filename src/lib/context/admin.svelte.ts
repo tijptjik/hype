@@ -49,6 +49,13 @@ import type {
 } from '$lib/db/zod/schema/user.types'
 import type { UserRoleDisco } from '$lib/types'
 
+type ImperativeRemoteQuery<T> = Promise<T> & {
+  run?: () => Promise<T>
+}
+
+const runRemoteQuery = async <T>(query: ImperativeRemoteQuery<T>): Promise<T> =>
+  typeof query.run === 'function' ? query.run() : query
+
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM
 // ═══════════════════════
@@ -515,14 +522,16 @@ export class AdminCtx {
    * @returns Organisation cards for the current admin prism and sort state.
    */
   organisationsQueryFn = async () => {
-    const result = (await getOrganisations({
-      conditions: this.appCtx.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      prisms: this.appCtx.state.prisms,
-      sorting: this.appCtx.state.viewSorting.organisation,
-      meta: { isAdminRequest: true, profile: 'card' },
-    })) as ListResponse<Organisation>
+    const result = (await runRemoteQuery(
+      getOrganisations({
+        conditions: this.appCtx.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: this.appCtx.state.prisms,
+        sorting: this.appCtx.state.viewSorting.organisation,
+        meta: { isAdminRequest: true, profile: 'card' },
+      }),
+    )) as ListResponse<Organisation>
     // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.organisationsQueryKey(), result)
     return result.data
@@ -538,14 +547,16 @@ export class AdminCtx {
     if (!remoteList) {
       throw new Error('Project remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: this.appCtx.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      prisms: this.appCtx.state.prisms,
-      sorting: this.appCtx.state.viewSorting.project,
-      meta: { isAdminRequest: true, profile: 'card' },
-    })) as ListResponse<Project>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: this.appCtx.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: this.appCtx.state.prisms,
+        sorting: this.appCtx.state.viewSorting.project,
+        meta: { isAdminRequest: true, profile: 'card' },
+      }),
+    )) as ListResponse<Project>
     // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.projectsQueryKey(), result)
     return result.data
@@ -561,14 +572,16 @@ export class AdminCtx {
     if (!remoteList) {
       throw new Error('Layer remote list function is not configured.')
     }
-    const result = await remoteList({
-      conditions: this.appCtx.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      prisms: this.appCtx.state.prisms,
-      sorting: this.appCtx.state.viewSorting.layer,
-      meta: { isAdminRequest: true, profile: 'card' },
-    })
+    const result = await runRemoteQuery(
+      remoteList({
+        conditions: this.appCtx.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: this.appCtx.state.prisms,
+        sorting: this.appCtx.state.viewSorting.layer,
+        meta: { isAdminRequest: true, profile: 'card' },
+      }),
+    )
     // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.layersQueryKey(), result)
     return result.data
@@ -580,14 +593,16 @@ export class AdminCtx {
    * @returns Feature cards for the current admin prism and sort state.
    */
   featuresQueryFn = async () => {
-    const result = await getFeatures({
-      conditions: this.appCtx.isSuperAdmin()
-        ? { isArchived: null, isPublished: null }
-        : { isArchived: false, isPublished: null },
-      prisms: this.appCtx.state.prisms,
-      sorting: this.appCtx.state.viewSorting.feature,
-      meta: { isAdminRequest: true, profile: 'card' },
-    })
+    const result = await runRemoteQuery(
+      getFeatures({
+        conditions: this.appCtx.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: this.appCtx.state.prisms,
+        sorting: this.appCtx.state.viewSorting.feature,
+        meta: { isAdminRequest: true, profile: 'card' },
+      }),
+    )
     // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.featuresQueryKey(), result)
     return result.data
@@ -596,15 +611,17 @@ export class AdminCtx {
   tasksQueryFn = async () => {
     const taskPrisms = this.getTaskListPrisms()
     try {
-      const result = await getTasks({
-        conditions: {
-          isReviewed: this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
-          type: this.appCtx.state.viewFilters[FirstClassResource.task].type,
-        },
-        prisms: taskPrisms,
-        sorting: this.appCtx.state.viewSorting.task,
-        meta: { isAdminRequest: true },
-      })
+      const result = await runRemoteQuery(
+        getTasks({
+          conditions: {
+            isReviewed: this.appCtx.state.viewFilters[FirstClassResource.task].isReviewed,
+            type: this.appCtx.state.viewFilters[FirstClassResource.task].type,
+          },
+          prisms: taskPrisms,
+          sorting: this.appCtx.state.viewSorting.task,
+          meta: { isAdminRequest: true },
+        }),
+      )
       this.appCtx.setListQueryMeta(this.tasksQueryKey, result)
       return result.data
     } catch (error) {
@@ -632,11 +649,13 @@ export class AdminCtx {
     if (!remoteList) {
       throw new Error('Property remote list function is not configured.')
     }
-    const result = await remoteList({
-      conditions: {},
-      prisms: this.appCtx.state.prisms,
-      meta: { isAdminRequest: true },
-    })
+    const result = await runRemoteQuery(
+      remoteList({
+        conditions: {},
+        prisms: this.appCtx.state.prisms,
+        meta: { isAdminRequest: true },
+      }),
+    )
     return result.data
   }
 
@@ -648,13 +667,15 @@ export class AdminCtx {
   hubsQueryFn = async () => {
     if (!this.appCtx.isAdmin()) return []
     try {
-      const result = (await getHubs({
-        conditions: this.appCtx.isSuperAdmin()
-          ? { isArchived: null, isPublished: null }
-          : { isArchived: false, isPublished: null },
-        sorting: this.appCtx.state.viewSorting.hub,
-        meta: { isAdminRequest: true, profile: 'card' },
-      })) as ListResponse<Hub>
+      const result = (await runRemoteQuery(
+        getHubs({
+          conditions: this.appCtx.isSuperAdmin()
+            ? { isArchived: null, isPublished: null }
+            : { isArchived: false, isPublished: null },
+          sorting: this.appCtx.state.viewSorting.hub,
+          meta: { isAdminRequest: true, profile: 'card' },
+        }),
+      )) as ListResponse<Hub>
       // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
       this.appCtx.setListQueryMeta(this.hubsQueryKey, result)
       return result.data

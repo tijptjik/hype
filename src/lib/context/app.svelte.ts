@@ -33,6 +33,10 @@ import {
   updateLocale,
 } from '$lib/client/services/user'
 import {
+  consumeEscapeForOpenPanels,
+  shouldSkipGlobalKeydown,
+} from '$lib/client/keybindings'
+import {
   getFeatureIdsForProperties,
   sortProperties,
 } from '$lib/client/services/property'
@@ -102,6 +106,13 @@ import type { PlaceCtx } from './place.svelte'
 import type { ResponsiveCtx } from './responsive.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
+
+type ImperativeRemoteQuery<T> = Promise<T> & {
+  run?: () => Promise<T>
+}
+
+const runRemoteQuery = async <T>(query: ImperativeRemoteQuery<T>): Promise<T> =>
+  typeof query.run === 'function' ? query.run() : query
 
 export class AppCtx {
   // Tanstack Query Client instance
@@ -774,30 +785,44 @@ export class AppCtx {
   }
 
   initialFetch = async (): Promise<void> => {
-    // Bootstrap hierarchy first so layer defaults can be resolved before features load.
-    const hierarchyResults = await Promise.allSettled([
-      this.refreshOrganisations(false),
-      this.refreshProjects(false),
-      this.refreshLayers(false),
-      this.refreshProperties(false),
-      this.refreshUserFeatures(false),
-      this.refreshUserProfile(false),
-      this.hydrateCurrentUserLayers(),
-    ])
-    const hierarchyLabels = [
-      'organisations',
-      'projects',
-      'layers',
-      'properties',
-      'userFeatures',
-      'userProfile',
-      'userLayers',
+    // Bootstrap lightweight user-scoped reads first so session-dependent UI can hydrate
+    // without immediately fanning out into the heavier resource tree.
+    const lightSteps = [
+      ['userProfile', () => this.refreshUserProfile(false)],
+      ['userFeatures', () => this.refreshUserFeatures(false)],
+      ['userLayers', () => this.hydrateCurrentUserLayers()],
     ] as const
 
-    for (const [index, result] of hierarchyResults.entries()) {
-      if (result.status === 'rejected') {
+    const lightResults = await Promise.allSettled(lightSteps.map(([, load]) => load()))
+    for (const [index, result] of lightResults.entries()) {
+      if (result.status === 'fulfilled') continue
+
+      console.error(
+        `[AppCtx][initialFetch] Resource bootstrap failed (${lightSteps[index][0]}):`,
+        result.reason,
+      )
+    }
+
+    // Bootstrap hierarchy second. Keep this stage narrower than the old fan-out because
+    // local workerd D1 is sensitive to bursts of concurrent reads during app startup.
+    const hierarchyPhases = [
+      [
+        ['organisations', () => this.refreshOrganisations(false)],
+        ['projects', () => this.refreshProjects(false)],
+      ],
+      [
+        ['layers', () => this.refreshLayers(false)],
+        ['properties', () => this.refreshProperties(false)],
+      ],
+    ] as const
+
+    for (const phase of hierarchyPhases) {
+      const phaseResults = await Promise.allSettled(phase.map(([, load]) => load()))
+      for (const [index, result] of phaseResults.entries()) {
+        if (result.status === 'fulfilled') continue
+
         console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${hierarchyLabels[index]}):`,
+          `[AppCtx][initialFetch] Resource bootstrap failed (${phase[index][0]}):`,
           result.reason,
         )
       }
@@ -806,17 +831,18 @@ export class AppCtx {
     this.applyInitialLayerPrisms()
     await this.postLayerMutation(false)
 
-    const featureResults = await Promise.allSettled([
-      this.refreshFeatures(false),
-      this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
-    ])
-    const featureLabels = ['features', 'tasks'] as const
+    const featureSteps = [
+      ['features', () => this.refreshFeatures(false)],
+      ['tasks', () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve())],
+    ] as const
 
-    for (const [index, result] of featureResults.entries()) {
-      if (result.status === 'rejected') {
+    for (const [label, load] of featureSteps) {
+      try {
+        await load()
+      } catch (error) {
         console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${featureLabels[index]}):`,
-          result.reason,
+          `[AppCtx][initialFetch] Resource bootstrap failed (${label}):`,
+          error,
         )
       }
     }
@@ -855,9 +881,11 @@ export class AppCtx {
       return
     }
 
-    const userLayersResponse = (await getUserLayers({
-      userId: this.user.id,
-    })) as { data?: UserLayer[] | null }
+    const userLayersResponse = (await runRemoteQuery(
+      getUserLayers({
+        userId: this.user.id,
+      }),
+    )) as { data?: UserLayer[] | null }
 
     this.user = {
       ...(this.user ?? {}),
@@ -929,14 +957,16 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Organisation remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.organisation,
-    })) as ListResponse<Organisation>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {
+          isArchived: false,
+          isPublished: true,
+        },
+        prisms: this.state.prisms,
+        sorting: this.state.viewSorting.organisation,
+      }),
+    )) as ListResponse<Organisation>
     this.setListQueryMeta(this.organisationsQueryKey(), result)
     return result.data
   }
@@ -955,7 +985,7 @@ export class AppCtx {
       meta: { profile: 'card' },
     }
 
-    const result = (await remoteList(requestParams)) as ListResponse<Project>
+    const result = (await runRemoteQuery(remoteList(requestParams))) as ListResponse<Project>
 
     this.setListQueryMeta(this.projectsQueryKey(), result)
     return result.data
@@ -966,15 +996,17 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Layer remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.layer,
-      meta: { profile: 'card' },
-    })) as ListResponse<Layer>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {
+          isArchived: false,
+          isPublished: true,
+        },
+        prisms: this.state.prisms,
+        sorting: this.state.viewSorting.layer,
+        meta: { profile: 'card' },
+      }),
+    )) as ListResponse<Layer>
     this.setListQueryMeta(this.layersQueryKey(), result)
     return result.data
   }
@@ -984,15 +1016,17 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Feature remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.feature,
-      meta: { profile: 'list' },
-    })) as ListResponse<FeatureFromCollection>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {
+          isArchived: false,
+          isPublished: true,
+        },
+        prisms: this.state.prisms,
+        sorting: this.state.viewSorting.feature,
+        meta: { profile: 'list' },
+      }),
+    )) as ListResponse<FeatureFromCollection>
     this.setListQueryMeta(this.featuresQueryKey(), result)
     return result.data
   }
@@ -1002,10 +1036,12 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Property remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {},
-      prisms: this.state.prisms,
-    })) as ListResponse<Property>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {},
+        prisms: this.state.prisms,
+      }),
+    )) as ListResponse<Property>
     return result.data
   }
 
@@ -1013,13 +1049,15 @@ export class AppCtx {
     if (!this.user?.id) {
       return []
     }
-    const response = (await getUserFeatures({
-      userId: this.user.id,
-      sorting: {
-        sortBy: 'modifiedAt',
-        sortOrder: 'desc',
-      },
-    })) as unknown as { data?: UserFeature[] | null }
+    const response = (await runRemoteQuery(
+      getUserFeatures({
+        userId: this.user.id,
+        sorting: {
+          sortBy: 'modifiedAt',
+          sortOrder: 'desc',
+        },
+      }),
+    )) as unknown as { data?: UserFeature[] | null }
     return Array.isArray(response.data) ? response.data : []
   }
 
@@ -1033,13 +1071,15 @@ export class AppCtx {
     const refKey = isSelfProfile ? 'id' : 'username'
     const profile = isSelfProfile ? 'self' : 'detail'
 
-    const response = (await getUser({
-      ref: userRef,
-      refKey,
-      meta: {
-        profile,
-      },
-    })) as { data?: UserProfile | null }
+    const response = (await runRemoteQuery(
+      getUser({
+        ref: userRef,
+        refKey,
+        meta: {
+          profile,
+        },
+      }),
+    )) as { data?: UserProfile | null }
 
     return response.data ?? null
   }
@@ -2014,10 +2054,12 @@ export class AppCtx {
 
     try {
       if (remoteGet) {
-        const response = (await remoteGet({
-          ref,
-          refKey: 'id',
-        })) as { data?: unknown }
+        const response = (await runRemoteQuery(
+          remoteGet({
+            ref,
+            refKey: 'id',
+          }),
+        )) as { data?: unknown }
         return response?.data
       }
 
@@ -2240,10 +2282,12 @@ export class AppCtx {
           if (cached) return cached
         }
 
-        const remote = (await getOrganisation({
-          ref: String(ref),
-          refKey: 'code',
-        })) as { data?: Organisation | null }
+        const remote = (await runRemoteQuery(
+          getOrganisation({
+            ref: String(ref),
+            refKey: 'code',
+          }),
+        )) as { data?: Organisation | null }
 
         if (!remote?.data) return undefined
 
@@ -2267,10 +2311,12 @@ export class AppCtx {
           if (cached) return cached
         }
 
-        const remote = (await getHub({
-          ref: String(ref),
-          refKey: 'code',
-        })) as { data?: Hub | null }
+        const remote = (await runRemoteQuery(
+          getHub({
+            ref: String(ref),
+            refKey: 'code',
+          }),
+        )) as { data?: Hub | null }
         if (!remote?.data) return undefined
 
         this.cache.hub.set(remote.data.id, remote.data)
@@ -2675,6 +2721,7 @@ export class AppCtx {
       openCardDelay: 0,
       ...options,
     }
+
     // Pre-mutation: cleanup from previous feature
     this.preActiveFeatureMutation()
 
