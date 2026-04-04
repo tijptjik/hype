@@ -42,7 +42,7 @@ import {
 } from '$lib/client/services/property'
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
-import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/server'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/remote'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE

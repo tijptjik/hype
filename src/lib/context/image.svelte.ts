@@ -21,7 +21,7 @@ import {
   setImageIntent,
   setImagePublished,
 } from '$lib/api/server/image.remote'
-import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/server'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/remote'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS

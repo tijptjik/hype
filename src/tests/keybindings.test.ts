@@ -5,7 +5,7 @@ import {
   consumeEscapeForOpenPanels,
   shouldSkipGlobalKeydown,
 } from '$lib/client/keybindings'
-import { dismissActiveFeatureNavigation } from '$lib/context/omniNavigation'
+import { dismissActiveFeatureNavigation } from '$lib/navigation'
 
 describe('shouldSkipGlobalKeydown', () => {
   it('returns true for focused form controls', () => {

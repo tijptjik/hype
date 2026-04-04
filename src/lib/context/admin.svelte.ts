@@ -4,7 +4,7 @@ import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
 import { getFeatures } from '$lib/api/server/feature.remote'
 import { getTasks } from '$lib/api/server/tasks.remote'
-import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/server'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/remote'
 // SERVICES
 import { toProjectLicenseFilterCache } from '$lib/client/services/licence'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
