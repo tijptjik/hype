@@ -2,8 +2,6 @@
 import { m } from '$lib/i18n'
 // SVELTE
 import { goto, pushState, replaceState } from '$app/navigation'
-// SERVICES
-import { getImageById } from '$lib/api/server/image.remote'
 // LIB
 import { isMobile } from '$lib/constants'
 // ENUMS
@@ -24,10 +22,15 @@ import type {
   Id,
   NavigableResource,
   Locale,
+  OmniCollectionDescriptor,
 } from '$lib/types'
 import type { Image } from '$lib/db/zod/schema/image.types'
 import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+
+const loadImageRemote = async (): Promise<
+  Pick<typeof import('$lib/api/server/image.remote'), 'getImageById'>
+> => await import('$lib/api/server/image.remote')
 
 // ═══════════════════════
 // 1. CORE NAVIGATION
@@ -114,6 +117,8 @@ export const navigate = (
 // 2. URL UTILITIES
 // ═══════════════════════
 
+export const COLLECTION_QUERY_PARAM = 'collection'
+
 export const reversePath = new Map<string, FirstClassResource>()
 
 if (ResourcePath) {
@@ -141,6 +146,59 @@ export const getActiveResourceAndRefFromUrl = (): {
     resourceRef,
     facet: urlObj.hash.slice(1) || false,
   }
+}
+
+/**
+ * Serializes collection context into the canonical `kind:ref` query-param format.
+ *
+ * @param descriptor - Collection identity to encode.
+ * @returns Encoded query-param value.
+ */
+export const serializeCollectionDescriptor = (
+  descriptor: OmniCollectionDescriptor,
+): string => {
+  return `${descriptor.kind}:${descriptor.ref}`
+}
+
+/**
+ * Parses the canonical `kind:ref` collection query-param value.
+ *
+ * @param value - Raw query-param value.
+ * @returns Parsed descriptor or `null` when the value is invalid.
+ */
+export const parseCollectionDescriptor = (
+  value: string | null | undefined,
+): OmniCollectionDescriptor | null => {
+  if (!value) return null
+
+  const separatorIndex = value.indexOf(':')
+  if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
+    return null
+  }
+
+  const kind = value.slice(0, separatorIndex).trim()
+  const ref = value.slice(separatorIndex + 1).trim()
+
+  if (!kind || !ref) {
+    return null
+  }
+
+  return {
+    kind: kind as OmniCollectionDescriptor['kind'],
+    ref,
+  }
+}
+
+/**
+ * Reads collection context from the current URL search params.
+ *
+ * @param searchParams - URL search params to inspect.
+ * @returns Parsed collection descriptor or `null`.
+ */
+export const getCollectionDescriptorFromSearchParams = (
+  searchParams: URLSearchParams,
+): OmniCollectionDescriptor | null => {
+  return parseCollectionDescriptor(searchParams.get(COLLECTION_QUERY_PARAM))
 }
 
 // ═══════════════════════
@@ -382,6 +440,7 @@ export const handleImageParams = async (
   }
 
   try {
+    const { getImageById } = await loadImageRemote()
     const target = await getImageById({
       id: imageId,
       meta: { isAdminRequest: true },
