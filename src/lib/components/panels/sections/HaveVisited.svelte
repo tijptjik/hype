@@ -12,7 +12,7 @@ import { Panel } from '$lib/enums'
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 // UTILS
 import { formatDistanceToNow } from 'date-fns'
@@ -131,7 +131,7 @@ let visitedFeaturesPromise = $derived(
                 }
               }}
             >
-              <Icon src={Squares2x2} class="h-5 w-5 shrink-0" theme="fill" />
+              <Icon src={Squares2x2} class="h-5 w-5 shrink-0" filled />
               <div class="flex grow flex-col">
                 <div class="flex flex-wrap justify-between pb-1">
                   <div>

@@ -38,6 +38,48 @@ export const isSqliteBusyError = (error: unknown): boolean => {
 }
 
 /**
+ * Returns whether an unknown database error represents a missing SQLite schema object.
+ *
+ * @param error - Unknown error thrown by D1/Drizzle.
+ * @param relationName - Optional table or column identifier expected in the error message.
+ * @returns `true` when the error indicates a missing table or column.
+ * @remarks
+ * This is used for staged rollouts where a read path must degrade safely if a local or
+ * remote SQLite schema is behind the current application code.
+ */
+export const isSqliteMissingSchemaError = (
+  error: unknown,
+  relationName?: string,
+): boolean => {
+  const visited = new Set<unknown>()
+  const queue: unknown[] = [error]
+  const normalizedRelationName = relationName?.toUpperCase()
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (!current || visited.has(current)) continue
+    visited.add(current)
+
+    if (current instanceof Error) {
+      const message = current.message.toUpperCase()
+      const isMissingSchemaObject =
+        message.includes('NO SUCH TABLE') || message.includes('NO SUCH COLUMN')
+
+      if (
+        isMissingSchemaObject &&
+        (!normalizedRelationName || message.includes(normalizedRelationName))
+      ) {
+        return true
+      }
+
+      queue.push(current.cause)
+    }
+  }
+
+  return false
+}
+
+/**
  * Retries a D1 read operation when local Miniflare/workerd hits transient SQLite locks.
  *
  * @param operation - Async DB read to execute.

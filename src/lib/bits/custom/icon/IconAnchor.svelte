@@ -1,5 +1,8 @@
 <script lang="ts">
 import { Popover } from 'bits-ui'
+
+import { cx } from '$lib/bits/utils'
+
 import Icon from './Icon.svelte'
 import type { IconAnchorProps } from './iconAnchor.types'
 
@@ -15,14 +18,18 @@ let {
   sideOffset = 12,
 }: IconAnchorProps = $props()
 
-const rootClasses = $derived(
-  ['bits-theme', 'bits-icon-anchor', className].join(' ').trim(),
-)
+const rootClasses = $derived(cx('bits-theme relative z-30', className))
 const triggerClasses = $derived(
-  ['bits-icon-anchor__trigger', triggerClass].filter(Boolean).join(' '),
+  cx(
+    'inline-flex h-12 w-12 items-center justify-center rounded-full border-none bg-glass-result opacity-70 transition-opacity duration-200 hover:opacity-90',
+    triggerClass,
+  ),
 )
 const contentClasses = $derived(
-  ['bits-icon-anchor__content', contentClass].filter(Boolean).join(' '),
+  cx(
+    'z-50 max-w-sm rounded-xl border border-base-50 bg-base-100 p-3 shadow-xl',
+    contentClass,
+  ),
 )
 const align = $derived(position === 'left' ? 'start' : 'end')
 </script>

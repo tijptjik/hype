@@ -1,0 +1,92 @@
+<script lang="ts">
+// COMPONENTS
+import { Icon } from '$lib/bits'
+import Info from '$lib/components/forms/extra/Info.svelte'
+import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
+import { fade } from 'svelte/transition'
+// TYPES
+import type { Snippet } from 'svelte'
+import type { Form, FormField, FormFieldArray } from '$lib/types'
+
+type HeaderProps = {
+  title?: string
+  subtitle?: string
+  form: unknown
+  fields: FormField | FormFieldArray
+  children?: Snippet
+  actionContent?: Snippet
+  infoContent?: Snippet
+}
+
+let {
+  title,
+  subtitle,
+  form,
+  fields,
+  children,
+  actionContent,
+  infoContent,
+}: HeaderProps = $props()
+
+const { errors } = form as Form
+</script>
+
+{#snippet renderErrorMessages(messages: string[])}
+  <div
+    class="flex-grow-2 flex flex-row items-center justify-center gap-2 caret-transparent"
+  >
+    {#each messages as message}
+      <div
+        class="badge badge-lg flex items-center justify-center gap-2 truncate border-1 border-error p-4 font-mono text-base-content"
+      >
+        <Icon src={ExclamationTriangle} class="h-4 w-4 shrink-0 stroke-current" />
+        <p class="text-sm">{message}</p>
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
+<div
+  class="relative flex h-14 w-full flex-row items-center justify-between gap-4 rounded-2xl bg-transparent pl-1 @container"
+>
+  <div class="flex items-center gap-4">
+    <h3 class=" text-xl font-bold uppercase">
+      {title}
+      <small
+        class="case hidden select-text {subtitle
+          ? 'pb-2'
+          : ''} pr-3 text-sm normal-case text-base-content/70 @sm:block"
+        >{@html subtitle}</small
+      >
+    </h3>
+  </div>
+  {#if $errors}
+    {#each Object.entries($errors) as [ key, messagesContainer ]}
+      {#if messagesContainer}
+        {#if key === '_errors' && Array.isArray(messagesContainer) && messagesContainer.length > 0}
+          {@render renderErrorMessages(messagesContainer)}
+        {:else if key in fields && Array.isArray(messagesContainer) && messagesContainer.length > 0}
+          {@render renderErrorMessages(messagesContainer)}
+        {:else if key in fields && typeof messagesContainer === 'object' && messagesContainer !== null}
+          {#if '_errors' in messagesContainer && Array.isArray(messagesContainer._errors) && messagesContainer._errors.length > 0}
+            {@render renderErrorMessages(messagesContainer._errors)}
+          {/if}
+        {/if}
+      {/if}
+    {/each}
+  {/if}
+  {@render children?.()}
+  {#if actionContent || infoContent}
+    <div
+      class="flex h-full shrink-0 flex-row items-center justify-between gap-4"
+      transition:fade
+    >
+      {#if actionContent}
+        {@render actionContent?.()}
+      {/if}
+      {#if infoContent}
+        <Info> {@render infoContent?.()} </Info>
+      {/if}
+    </div>
+  {/if}
+</div>

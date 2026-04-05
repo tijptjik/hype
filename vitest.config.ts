@@ -6,6 +6,11 @@ const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run'
 
 export default defineConfig({
   plugins: [sveltekit()],
+  define: {
+    __SVELTEKIT_PATHS_BASE__: '""',
+    __SVELTEKIT_PATHS_ASSETS__: '""',
+    __SVELTEKIT_PATHS_RELATIVE__: 'true',
+  },
   resolve: {
     conditions: ['browser'],
     alias: [
@@ -24,6 +29,13 @@ export default defineConfig({
       {
         find: '$app/navigation',
         replacement: resolve(__dirname, 'src/tests/mocks/app-navigation.ts'),
+      },
+      {
+        find: '@sveltejs/kit/src/runtime/app/paths/internal/server.js',
+        replacement: resolve(
+          __dirname,
+          'src/tests/mocks/sveltekit-paths-internal-server.ts',
+        ),
       },
       {
         find: '$env/static/public',

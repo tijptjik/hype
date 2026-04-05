@@ -21,6 +21,7 @@ import {
   setImageIntent,
   setImagePublished,
 } from '$lib/api/server/image.remote'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/remote'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -1703,11 +1704,13 @@ export class ImageCtx {
     ctxId: Id,
     _includeSingleImage = true,
   ): Promise<ImageCtxEnvelope[]> {
-    const result = await getImagesForContext({
-      ctxType,
-      ctxId,
-      meta: { isAdminRequest: true },
-    })
+    const result = await runRemoteQuery(
+      getImagesForContext({
+        ctxType,
+        ctxId,
+        meta: { isAdminRequest: true },
+      }),
+    )
 
     return (result?.data ?? []).map(item => ({
       ...item,

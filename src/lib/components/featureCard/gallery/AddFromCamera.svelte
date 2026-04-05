@@ -4,7 +4,7 @@ import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Camera from 'virtual:icons/lucide/camera'
 
 // CONTEXT

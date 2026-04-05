@@ -11,9 +11,12 @@ let {
   fullscreenRequestKey = 0,
   fit = 'fit',
   viewerFit = fit,
+  wrapNavigation = true,
+  showNavButtons = true,
   leftRail,
   centerRail,
   rightRail,
+  emptyState,
   centerAction = 'none',
   centerActionLabel,
   isEmptyUploadEnabled = true,
@@ -47,9 +50,12 @@ let {
       {fullscreenRequestKey}
       {fit}
       {viewerFit}
+      {wrapNavigation}
+      {showNavButtons}
       {leftRail}
       {centerRail}
       {rightRail}
+      {emptyState}
       {centerAction}
       {centerActionLabel}
       {onCenterAction}

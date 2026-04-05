@@ -172,7 +172,7 @@ let panelProps: PanelProps = $derived({
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  overscroll-behavior: none;
+  overscroll-behavior: contain;
 }
 
 .prisms-sections__section {

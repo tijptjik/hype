@@ -2,7 +2,7 @@
 import { guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 // API
 import { getPrisms, getValidQueryParams as validateQueryParams } from '$lib/api'
 import {
@@ -13,13 +13,14 @@ import {
 } from '$lib/api/services/property'
 import { authorizeProjectReadForProbe, toAuthMessage } from '$lib/api/services/authz'
 // DB
-import { property } from '$lib/db/schema'
+import { organisation, project, property } from '$lib/db/schema'
 import {
   listProperties,
   listResolvedProjectProperties,
   getProperty as loadProperty,
 } from '$lib/db/services/property'
 import { probeProjectQuery } from '$lib/db/services/project'
+import { retryBusyRead } from '$lib/db/services/sqlite'
 // SCHEMA
 import { ListQueryParamsSchema, ProjectPropertiesQuery } from '$lib/db/zod'
 // ZOD
@@ -75,6 +76,67 @@ const toProjectReadDecision = async (params: {
 }
 
 /**
+ * Resolves project read decisions for a property list in one batched probe query.
+ *
+ * @param params - DB handle, candidate property rows, and caller auth context.
+ * @returns Project read decisions keyed by project id.
+ * @remarks
+ * Property reads inherit project readability, so list calls only need the minimal
+ * project probe shape used by `authorizeProjectReadForProbe`. Batch-loading those
+ * probes avoids one extra D1 query per distinct project during app bootstrap.
+ */
+const toProjectReadDecisionsByProjectId = async (params: {
+  db: Parameters<typeof probeProjectQuery>[0]
+  rows: Array<{ projectId: string | null }>
+  user: Parameters<typeof authorizeProjectReadForProbe>[0]['user']
+  userRoles: Parameters<typeof authorizeProjectReadForProbe>[0]['userRoles']
+}) => {
+  const projectIds = Array.from(
+    new Set(
+      params.rows
+        .map(row => row.projectId)
+        .filter((projectId): projectId is string => typeof projectId === 'string'),
+    ),
+  )
+
+  const decisionsByProjectId = new Map<
+    string,
+    ReturnType<typeof authorizeProjectReadForProbe>
+  >()
+
+  if (projectIds.length === 0) {
+    return decisionsByProjectId
+  }
+
+  const probes = await retryBusyRead(() =>
+    params.db
+      .select({
+        id: project.id,
+        organisationId: project.organisationId,
+        hubId: organisation.hubId,
+        isPublished: project.isPublished,
+        isArchived: project.isArchived,
+      })
+      .from(project)
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(inArray(project.id, projectIds)),
+  )
+
+  for (const probe of probes) {
+    decisionsByProjectId.set(
+      probe.id,
+      authorizeProjectReadForProbe({
+        user: params.user,
+        userRoles: params.userRoles,
+        probe,
+      }),
+    )
+  }
+
+  return decisionsByProjectId
+}
+
+/**
  * Returns a role-aware property collection for guarded remote callers.
  */
 const getPropertiesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
@@ -105,23 +167,16 @@ const getPropertiesQuery = guardedQuery(ListQueryParamsSchema, async (params, ct
     scopedConditions,
   )
 
-  const decisionByProjectId = new Map<
-    string,
-    Awaited<ReturnType<typeof toProjectReadDecision>>
-  >()
+  const decisionByProjectId = await toProjectReadDecisionsByProjectId({
+    db,
+    rows,
+    user,
+    userRoles,
+  })
   const filteredRows: typeof rows = []
   for (const row of rows) {
     const projectId = row.projectId
     if (!projectId) continue
-    if (!decisionByProjectId.has(projectId)) {
-      const decision = await toProjectReadDecision({
-        db,
-        projectId,
-        user,
-        userRoles,
-      })
-      decisionByProjectId.set(projectId, decision)
-    }
     const decision = decisionByProjectId.get(projectId)
     if (decision?.allowed) filteredRows.push(row)
   }

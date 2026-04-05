@@ -1,6 +1,8 @@
 // I18N
 import { describe, it, expect } from 'vitest'
 import { supportedLocales, SupportedLocales } from '$lib/enums'
+import { getI18n, setLocale } from '$lib/i18n'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 // MESSAGE FILES
 import enMessages from '../../messages/en.json'
 import zhHantMessages from '../../messages/zh-hant.json'
@@ -185,5 +187,55 @@ describe('I18N Message Validation', () => {
     diagnostics.forEach(({ locale, emptyKeys }) => {
       expect(emptyKeys, `${locale} should have no empty keys`).toBe(0)
     })
+  })
+})
+
+describe('getI18n', () => {
+  const userPreferences: UserPreferences = {
+    fallbackLocales: [],
+    allowMachineTranslation: false,
+    preferFallbackInCurrentLocale: false,
+    isTranslateButtonVisible: true,
+  }
+
+  it('hides generated values by default', () => {
+    setLocale('en')
+
+    const value = getI18n(
+      {
+        i18n: {
+          en: {
+            displayAddress: '123 Test Street',
+            displayAddressGen: true,
+          },
+        },
+      },
+      'displayAddress',
+      userPreferences,
+      'No address',
+    )
+
+    expect(value).toBe('No address')
+  })
+
+  it('returns generated values when the gen-field check is skipped', () => {
+    setLocale('en')
+
+    const value = getI18n(
+      {
+        i18n: {
+          en: {
+            displayAddress: '123 Test Street',
+            displayAddressGen: true,
+          },
+        },
+      },
+      'displayAddress',
+      userPreferences,
+      'No address',
+      true,
+    )
+
+    expect(value).toBe('123 Test Street')
   })
 })

@@ -1,13 +1,15 @@
 <script lang="ts">
-import type { Component } from 'svelte'
-import type { Snippet } from 'svelte'
 // TRANSITIONS
 import { slide } from 'svelte/transition'
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
-import Icon from '$lib/components/common/Icon.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+// ICONS
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
+import { Icon } from '$lib/bits'
+// TYPES
+import type { Component } from 'svelte'
+import type { Snippet } from 'svelte'
 
 const appCtx = getAppCtx()
 

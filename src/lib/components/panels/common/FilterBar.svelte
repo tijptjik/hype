@@ -1,5 +1,5 @@
 <script lang="ts">
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import MagnifyingGlass from 'virtual:icons/lucide/search'
 import XMark from 'virtual:icons/lucide/x'
 import { slide } from 'svelte/transition'

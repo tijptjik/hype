@@ -7,12 +7,10 @@ import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
-// MAP
-import { mapStyleArtifactsPlugin } from './src/lib/map/styles/build'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
-import type { PluginOption } from 'vite'
+import type { Plugin } from 'vite'
 
 // Load env file based on `mode` in the current working directory.
 // Set the third parameter to '' to load all env regardless of the
@@ -37,29 +35,31 @@ import type { PluginOption } from 'vite'
 //   }
 // };
 
-const getLocalCloudflarePlugins = (): PluginOption[] => {
-  // Keep default local dev on native Vite. Cloudflare-local dev is opt-in because
-  // the adapter output path is not reliably available in the standard dev flow.
+const localCloudflare = async (): Promise<Plugin[]> => {
+  // Only load Cloudflare plugin in dev mode, skip in CI/build/test environments
+  const isDev = process.env.NODE_ENV === 'dev' || process.env.DEV
   const isCI = process.env.CI === 'true'
   const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
-  const isDisabled = process.env.DISABLE_LOCAL_CLOUDFLARE === '1'
 
-  if (isCI || isTest || isDisabled) {
+  if (isDev && !isCI && !isTest) {
+    return cloudflare({
+      configPath: './wrangler.toml',
+    })
+  } else {
     return [
       {
         name: 'skip-cloudflare-plugin',
-        apply: 'serve',
+        apply: 'build',
+        buildStart() {
+          console.log('🚀 Skipping Cloudflare plugin in CI/build environment')
+        },
       },
     ]
   }
-
-  return cloudflare({
-    configPath: './wrangler.toml',
-  })
 }
 
 // CONFIG
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   envPrefix: ['VITE_', 'PUBLIC_'],
   environments: {
     hype_prod: {},
@@ -72,17 +72,25 @@ export default defineConfig(({ command }) => ({
       strategy: ['cookie', 'preferredLanguage', 'baseLocale'],
       cookieName: 'lang',
     }),
-    mapStyleArtifactsPlugin(),
     // seedDrizzle(),
     sveltekit(),
     Icons({
       compiler: 'svelte',
     }),
     tailwindcss(),
-    ...(command === 'serve' ? getLocalCloudflarePlugins() : []),
+    localCloudflare(),
   ],
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext',
+      sourcemap: true,
+    },
+  },
   build: {
-    target: 'baseline-widely-available',
+    target: 'es2020',
+    rollupOptions: {
+      cache: true,
+    },
   },
   // Enable build caching for CI environments
   cacheDir: '.svelte-kit/vite',
@@ -102,4 +110,4 @@ export default defineConfig(({ command }) => ({
       'timri-58-153-118-141.a.free.pinggy.link',
     ],
   },
-}))
+})

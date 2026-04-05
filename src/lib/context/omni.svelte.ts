@@ -10,7 +10,11 @@ import { m } from '$lib/i18n'
 // NEIGHBOURHOODS
 import neighbourhoods from '$lib/map/neighbourhoods.json'
 // NAVIGATION
-import { navigate } from '$lib/navigation'
+import {
+  COLLECTION_QUERY_PARAM,
+  navigate,
+  serializeCollectionDescriptor,
+} from '$lib/navigation'
 // ENUMS
 import {
   FeatureCardMode,
@@ -20,7 +24,17 @@ import {
   PageState,
 } from '$lib/enums'
 // TYPES
-import type { SearchResult, Id, ActiveCollection, OmniState, Locale } from '$lib/types'
+import type {
+  SearchResult,
+  Id,
+  ActiveCollection,
+  FeatureCardTransitionRect,
+  FeatureCardTransitionState,
+  OmniState,
+  Locale,
+  LocaleKey,
+  OmniCollectionDescriptor,
+} from '$lib/types'
 import type { AppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { CardCtx } from './card.svelte'
@@ -28,6 +42,24 @@ import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.
 
 // CONSTANTS
 const MAX_RESULTS = 9
+
+type OmniNavOptions = {
+  paramsToDrop?: string[]
+  paramsToAdd?: Record<string, string>
+}
+
+type OmniSelectionOptions = {
+  activeFeatureId?: string
+  openCard?: boolean
+  openCardDelay?: number
+  isCardOpen?: boolean
+  focus?: boolean
+  focusFeature?: boolean
+  highlight?: boolean
+  navOptions?: OmniNavOptions
+}
+
+type CollectionI18n = NonNullable<ActiveCollection>['i18n']
 
 export class OmniCtx {
   // STATE must be initialized first
@@ -41,15 +73,26 @@ export class OmniCtx {
 
   appCtx!: AppCtx
   cardCtx: CardCtx | null = null
+  eventCleanup?: () => void
+  pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
 
   pageState: PageState = $state(PageState.NoTransition)
   isIntentionallyClosing: boolean = $state(false)
+  activeCollectionDescriptor: OmniCollectionDescriptor | null = $state(null)
+  cardTransition: FeatureCardTransitionState = $state({
+    phase: 'idle',
+    sourceRect: null,
+    targetRect: null,
+    sourceRadiusPx: 0,
+    targetRadiusPx: 0,
+    sourceKind: 'none',
+  })
 
   // Search results state (updated asynchronously)
   searchResults: Record<string, SearchResult[]> = $state({
-    features: [],
-    neighbourhoods: [],
-    walks: [],
+    feature: [],
+    neighbourhood: [],
+    walk: [],
   })
 
   // Constructor with appCtx
@@ -126,15 +169,18 @@ export class OmniCtx {
       openCardDelay: 2000,
       ...options,
     }
-    console.log('postModeMutation', mode, optionsWithDefaults)
     if (mode === OmniMode.search) {
       this.closeCard()
     } else {
       this.closeTray()
       if (optionsWithDefaults.openCard) {
-        setTimeout(() => {
+        this.cancelPendingOpenCard()
+        this.pendingOpenCardTimeout = setTimeout(() => {
           this.openCard()
+          this.pendingOpenCardTimeout = null
         }, optionsWithDefaults.openCardDelay)
+      } else {
+        this.cancelPendingOpenCard()
       }
     }
   }
@@ -148,7 +194,9 @@ export class OmniCtx {
     this.resetToSearch(false)
     this.appCtx.resetNewFeature()
     this.appCtx.resetActiveCollection()
-    navigate('/')
+    navigate('/', undefined, {
+      paramsToDrop: [COLLECTION_QUERY_PARAM],
+    })
   }
 
   // ═══════════════════════
@@ -189,10 +237,13 @@ export class OmniCtx {
 
   resetToSearch(navigateToRoot: boolean = true) {
     this.setMode(OmniMode.search)
+    this.clearActiveCollectionDescriptor()
     this.appCtx.resetActiveCollection()
     this.clearSearch()
     if (navigateToRoot) {
-      navigate('/')
+      navigate('/', undefined, {
+        paramsToDrop: [COLLECTION_QUERY_PARAM],
+      })
     }
   }
 
@@ -203,7 +254,7 @@ export class OmniCtx {
       this.searchResults = this.toGroups(results)
     } catch (error) {
       console.error('Error updating search results:', error)
-      this.searchResults = { features: [], neighbourhoods: [], walks: [] }
+      this.searchResults = { feature: [], neighbourhood: [], walk: [] }
     }
   }
 
@@ -212,11 +263,27 @@ export class OmniCtx {
       this.handleFeatureSelection(featureId, getStandardNavOptions()),
     neighbourhood: (neighbourhood: string) =>
       this.handleNeighbourhoodSelection(neighbourhood, {
-        ...getStandardNavOptions(),
+        ...getStandardNavOptions(
+          {},
+          {
+            kind: 'neighbourhood',
+            ref: neighbourhood,
+          },
+        ),
         focusFeature: false,
         isCardOpen: true,
       }),
-    walk: (walkId: string) => this.handleWalkSelection(walkId, getStandardNavOptions()),
+    walk: (walkId: string) =>
+      this.handleWalkSelection(
+        walkId,
+        getStandardNavOptions(
+          {},
+          {
+            kind: 'walk',
+            ref: walkId,
+          },
+        ),
+      ),
   }
 
   // ═══════════════════════
@@ -292,15 +359,20 @@ export class OmniCtx {
       } else {
         this.closeCard()
       }
+    } else if (this.state.mode === OmniMode.navigation) {
+      // In collection mode, the second close clears the selected feature but keeps the collection.
+      if (this.appCtx.getActiveFeature()) {
+        this.closeTray()
+        this.appCtx.resetActiveFeature()
+        navigate('/', undefined, {
+          paramsToDrop: [COLLECTION_QUERY_PARAM],
+        })
+        return
+      }
 
-      // If there is no card, but the tray is open, close the tray
-    } else if (this.state.mode === OmniMode.navigation && this.state.isTrayOpen) {
-      this.closeTray()
-      // If we are in navigation mode, reset the results and go back to search
-    } else if (
-      this.state.mode === OmniMode.navigation ||
-      this.state.mode === OmniMode.feature
-    ) {
+      // A subsequent close exits collection mode entirely.
+      this.resetToSearch()
+    } else if (this.state.mode === OmniMode.feature) {
       this.resetToSearch()
       // We can be in new-feature mode if we are still pre-FeatureCard,
       // i.e. if we are showing the LayerSelctionModal or GeoLocationModal.
@@ -319,22 +391,14 @@ export class OmniCtx {
       this.handleFeatureSelection(this.searchResults.feature[0].ref)
     } else if (this.searchResults.neighbourhood.length > 0) {
       this.handleNeighbourhoodSelection(this.searchResults.neighbourhood[0].ref)
-    } else if (this.searchResults.walks.length > 0) {
+    } else if (this.searchResults.walk.length > 0) {
       this.handleWalkSelection(this.searchResults.walk[0].ref)
     }
   }
 
-  async handleFeatureSelection(
-    featureId: Id,
-    options?: {
-      openCard?: boolean
-      openCardDelay?: number
-      focus?: boolean
-      focusFeature?: boolean
-      highlight?: boolean
-      navOptions?: Record<string, any>
-    },
-  ) {
+  async handleFeatureSelection(featureId: Id, options?: OmniSelectionOptions) {
+    this.isIntentionallyClosing = false
+
     const optionsWithDefaults = {
       openCard: true,
       focus: false,
@@ -353,21 +417,17 @@ export class OmniCtx {
 
   handleWalkSelection(
     walkId: string,
-    options?: {
-      navOptions?: Record<string, any>
-    },
+    options?: Pick<OmniSelectionOptions, 'navOptions'>,
   ) {
+    this.isIntentionallyClosing = false
     this.initWalk(walkId, options)
   }
 
   handleNeighbourhoodSelection(
     neighbourhood: string,
-    options?: {
-      focusFeature?: boolean
-      isCardOpen?: boolean
-      navOptions?: Record<string, any>
-    },
+    options?: Pick<OmniSelectionOptions, 'focusFeature' | 'isCardOpen' | 'navOptions'>,
   ) {
+    this.isIntentionallyClosing = false
     this.initNeighbourhood(neighbourhood, options)
   }
 
@@ -402,16 +462,192 @@ export class OmniCtx {
   // CARD
   // ═══════════════════════
 
+  cancelPendingOpenCard() {
+    if (this.pendingOpenCardTimeout !== null) {
+      clearTimeout(this.pendingOpenCardTimeout)
+      this.pendingOpenCardTimeout = null
+    }
+
+    this.appCtx.cancelPendingOpenCard?.()
+  }
+
+  /**
+   * Reads a stable viewport rect for one transition endpoint.
+   *
+   * @param element DOM node to measure.
+   * @returns Serializable viewport rect or `null` when measurement is unavailable.
+   */
+  private getCardTransitionRect(
+    element: HTMLElement | null,
+  ): FeatureCardTransitionRect | null {
+    if (!browser || !element) {
+      return null
+    }
+
+    const rect = element.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) {
+      return null
+    }
+
+    return {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+    }
+  }
+
+  /**
+   * Measures the source radius so the FLIP animation can interpolate corners cleanly.
+   *
+   * @param element DOM node to inspect.
+   * @returns Pixel border radius for the element's top-left corner.
+   */
+  private getCardTransitionRadiusPx(element: HTMLElement | null): number {
+    if (!browser || !element) {
+      return 0
+    }
+
+    const radiusPx = Number.parseFloat(getComputedStyle(element).borderTopLeftRadius)
+    return Number.isFinite(radiusPx) ? radiusPx : 0
+  }
+
+  /**
+   * Resolves the hidden map-overlay toggle so close animations always have a destination rect.
+   *
+   * @returns Toggle wrapper element or `null` when unavailable.
+   */
+  private getCardToggleElement(): HTMLElement | null {
+    if (!browser) {
+      return null
+    }
+
+    return document.getElementById('map-overlay-card-toggle')
+  }
+
+  /**
+   * Resets the transient card FLIP animation state.
+   *
+   * @returns Nothing.
+   */
+  resetCardTransition(): void {
+    this.cardTransition.phase = 'idle'
+    this.cardTransition.sourceRect = null
+    this.cardTransition.targetRect = null
+    this.cardTransition.sourceRadiusPx = 0
+    this.cardTransition.targetRadiusPx = 0
+    this.cardTransition.sourceKind = 'none'
+  }
+
+  /**
+   * Records the map-overlay toggle as the next card-open origin.
+   *
+   * @param element Button or wrapper element that launched the card.
+   * @returns Nothing.
+   */
+  prepareCardTransitionFromToggle(element?: HTMLElement | null): void {
+    const sourceElement = element ?? this.getCardToggleElement()
+
+    this.cardTransition.phase = 'idle'
+    this.cardTransition.sourceRect = this.getCardTransitionRect(sourceElement)
+    this.cardTransition.targetRect = null
+    this.cardTransition.sourceRadiusPx = this.getCardTransitionRadiusPx(sourceElement)
+    this.cardTransition.targetRadiusPx = 0
+    this.cardTransition.sourceKind = 'toggle'
+  }
+
+  /**
+   * Records a feature marker as the next card-open origin.
+   *
+   * @param featureId Active feature id associated with the marker.
+   * @param element Marker element captured from the click target, when available.
+   * @returns Nothing.
+   */
+  prepareCardTransitionFromMarker(featureId: Id, element?: HTMLElement | null): void {
+    const sourceElement =
+      element ??
+      (this.appCtx.state.markers.get(featureId)?.getElement() as HTMLElement | null)
+
+    this.cardTransition.phase = 'idle'
+    this.cardTransition.sourceRect = this.getCardTransitionRect(sourceElement)
+    this.cardTransition.targetRect = null
+    this.cardTransition.sourceRadiusPx = this.getCardTransitionRadiusPx(sourceElement)
+    this.cardTransition.targetRadiusPx = 0
+    this.cardTransition.sourceKind = 'marker'
+  }
+
+  /**
+   * Finalizes an opening FLIP transition once the card shell reaches its resting geometry.
+   *
+   * @returns Nothing.
+   */
+  finishCardOpenTransition(): void {
+    this.cardTransition.phase = 'idle'
+    this.cardTransition.targetRect = null
+    this.cardTransition.targetRadiusPx = 0
+  }
+
+  /**
+   * Finalizes a close transition and advances deferred navigation when needed.
+   *
+   * @returns Nothing.
+   */
+  finishCardCloseTransition(): void {
+    this.state.isCardOpen = false
+
+    if (
+      this.pageState === PageState.Transitioning ||
+      this.pageState === PageState.NeedTransition
+    ) {
+      this.pageState = PageState.ReadyToNav
+      this.resetToSearch(false)
+    }
+
+    this.resetCardTransition()
+  }
+
   openCard() {
+    if (this.state.isCardOpen) {
+      return
+    }
+
+    this.cardTransition.phase = this.cardTransition.sourceRect ? 'opening' : 'idle'
     this.state.isCardOpen = true
   }
 
   closeCard() {
-    this.state.isCardOpen = false
+    this.cancelPendingOpenCard()
+
+    if (!this.state.isCardOpen) {
+      this.finishCardCloseTransition()
+      return
+    }
+
+    const targetElement = this.getCardToggleElement()
+    const targetRect = this.getCardTransitionRect(targetElement)
+
+    if (!targetRect) {
+      this.finishCardCloseTransition()
+      return
+    }
+
+    if (this.pageState === PageState.NeedTransition) {
+      this.pageState = PageState.Transitioning
+    }
+
+    this.cardTransition.phase = 'closing'
+    this.cardTransition.targetRect = targetRect
+    this.cardTransition.targetRadiusPx = this.getCardTransitionRadiusPx(targetElement)
   }
 
   toggleCard() {
-    this.state.isCardOpen = !this.state.isCardOpen
+    if (this.state.isCardOpen) {
+      this.closeCard()
+      return
+    }
+
+    this.cancelPendingOpenCard()
+    this.openCard()
   }
 
   setCardCtx(cardCtx: CardCtx) {
@@ -435,7 +671,10 @@ export class OmniCtx {
       ? `Search Results: ${this.state.searchTerm}`
       : this.appCtx.state.active.collection
         ? getI18n(
-            this.appCtx.state.active.collection,
+            this.appCtx.state.active.collection.i18n as Record<
+              Locale | LocaleKey,
+              { name: string }
+            >,
             'name',
             this.appCtx.getUserPreferences(),
           )
@@ -469,20 +708,20 @@ export class OmniCtx {
     }
   }
 
-  initNeighbourhood(
-    neighbourhoodRef: string,
-    options?: {
-      activeFeatureId?: string
-      openCard?: boolean
-      openCardDelay?: number
-      isCardOpen?: boolean
-      focus?: boolean
-      focusFeature?: boolean
-      highlight?: boolean
-      navOptions?: Record<string, any>
-    },
-  ): void {
+  initNeighbourhood(neighbourhoodRef: string, options?: OmniSelectionOptions): void {
+    this.setActiveCollectionDescriptor({
+      kind: 'neighbourhood',
+      ref: neighbourhoodRef,
+    })
+
     const optionsWithDefaults = getCollectionInitDefaults({
+      ...getStandardNavOptions(
+        {},
+        {
+          kind: 'neighbourhood',
+          ref: neighbourhoodRef,
+        },
+      ),
       isCardOpen: this.state.isCardOpen,
       ...options,
     })
@@ -499,19 +738,23 @@ export class OmniCtx {
 
   initWalk(
     walkRef: string,
-    options?: {
-      activeFeatureId?: string
-      openCard?: boolean
-      openCardDelay?: number
-      focus?: boolean
-      focusFeature?: boolean
-      highlight?: boolean
-      navOptions?: Record<string, any>
-    },
+    options?: OmniSelectionOptions,
     items?: (FeatureFromCollection | Feature)[],
     customI18n?: Record<Locale, string>,
   ): void {
+    this.setActiveCollectionDescriptor({
+      kind: 'walk',
+      ref: walkRef,
+    })
+
     const optionsWithDefaults = {
+      ...getStandardNavOptions(
+        {},
+        {
+          kind: 'walk',
+          ref: walkRef,
+        },
+      ),
       openCard: true,
       openCardDelay: 3000,
       isCardOpen: this.state.isCardOpen,
@@ -539,22 +782,38 @@ export class OmniCtx {
   }
 
   /**
+   * Initializes a collection from a serializable descriptor.
+   *
+   * @param descriptor - URL-backed collection identity.
+   * @param options - Initialization options to merge into the collection flow.
+   * @returns Whether the descriptor could be resolved.
+   */
+  initCollectionFromDescriptor(
+    descriptor: OmniCollectionDescriptor,
+    options?: OmniSelectionOptions,
+  ): boolean {
+    if (descriptor.kind === 'neighbourhood') {
+      this.initNeighbourhood(descriptor.ref, options)
+      return true
+    }
+
+    if (descriptor.kind === 'walk') {
+      this.initWalk(descriptor.ref, options)
+      return true
+    }
+
+    return false
+  }
+
+  /**
    * Initialize a single feature - sets active feature and mode to 'feature'
    * Adds layer to the prisms if not yet selected
    */
-  async initFeature(
-    featureId: Id,
-    options?: {
-      activeFeatureId?: string
-      openCard?: boolean
-      openCardDelay?: number
-      isCardOpen?: boolean
-      focus?: boolean
-      focusFeature?: boolean
-      highlight?: boolean
-      navOptions?: Record<string, any>
-    },
-  ): Promise<void> {
+  async initFeature(featureId: Id, options?: OmniSelectionOptions): Promise<void> {
+    this.clearActiveCollectionDescriptor()
+
+    const standaloneNavOptions = getStandardNavOptions().navOptions
+
     const optionsWithDefaults = {
       openCard: true,
       openCardDelay: 0,
@@ -563,6 +822,16 @@ export class OmniCtx {
       focusFeature: true,
       highlight: true,
       ...options,
+      navOptions: {
+        ...standaloneNavOptions,
+        ...(options?.navOptions ?? {}),
+        paramsToDrop: Array.from(
+          new Set([
+            ...(standaloneNavOptions?.paramsToDrop ?? []),
+            ...(options?.navOptions?.paramsToDrop ?? []),
+          ]),
+        ),
+      },
     }
     // Run the default selection initialization
     this.initSelection()
@@ -593,12 +862,10 @@ export class OmniCtx {
    */
   switchToFeatureInCollection(
     featureId: Id,
-    options: {
-      openCard?: boolean
-      openCardDelay?: number
-      focus?: boolean
-      navOptions?: Record<string, any>
-    },
+    options: Pick<
+      OmniSelectionOptions,
+      'openCard' | 'openCardDelay' | 'focus' | 'navOptions'
+    >,
   ): boolean {
     const optionsWithDefaults = {
       isCardOpen: this.state.isCardOpen,
@@ -701,11 +968,11 @@ export class OmniCtx {
    */
   toWalkCollection(
     walkRef: string,
-    items: any[],
+    items: (FeatureFromCollection | Feature)[],
     customI18n?: Record<Locale, string>,
   ): ActiveCollection {
     // Default i18n for special walks
-    let i18nConfig
+    let i18nConfig: CollectionI18n
 
     if (walkRef === 'stars') {
       i18nConfig = {
@@ -785,6 +1052,14 @@ export class OmniCtx {
       items: features as (FeatureFromCollection | Feature)[],
     }
   }
+
+  setActiveCollectionDescriptor(descriptor: OmniCollectionDescriptor | null): void {
+    this.activeCollectionDescriptor = descriptor
+  }
+
+  clearActiveCollectionDescriptor(): void {
+    this.activeCollectionDescriptor = null
+  }
 }
 
 // ═══════════════════════
@@ -797,7 +1072,7 @@ export class OmniCtx {
  * @param defaults - Default values
  * @returns Merged options
  */
-const mergeOmniOptions = <T extends Record<string, any>>(
+const mergeOmniOptions = <T extends Record<string, unknown>>(
   options: Partial<T> = {},
   defaults: T,
 ): T => {
@@ -808,36 +1083,76 @@ const mergeOmniOptions = <T extends Record<string, any>>(
 }
 
 /**
- * Standard navigation options with image parameter drop
- * @param additionalOptions - Additional options to merge
- * @returns Navigation options object
+ * Resolves the query-param descriptor for a collection-backed navigation context.
+ *
+ * @param descriptor - Explicit collection descriptor when already known.
+ * @returns Query-param payload or `null` for standalone feature navigation.
  */
-const getStandardNavOptions = (
-  additionalOptions: Record<string, any> = {},
-): Record<string, any> => {
-  return {
-    navOptions: {
-      paramsToDrop: ['imageId'],
-      ...additionalOptions,
-    },
+const getCollectionParamValue = (
+  descriptor: OmniCollectionDescriptor | null,
+): string | null => {
+  if (!descriptor) {
+    return null
   }
+
+  return serializeCollectionDescriptor(descriptor)
 }
 
 /**
- * Standard feature selection options
- * @param customOptions - Custom options to override defaults
- * @returns Feature selection options
+ * Extracts a serializable descriptor from the active collection when possible.
+ *
+ * @param collection - Active collection to inspect.
+ * @returns Collection descriptor or `null` for standalone collections.
  */
-const _getFeatureSelectionDefaults = (
-  customOptions: Record<string, any> = {},
-): Record<string, any> => {
-  return mergeOmniOptions(customOptions, {
-    openCard: true,
-    openCardDelay: 2000,
-    focus: false,
-    focusFeature: true,
-    highlight: true,
-  })
+const getCollectionDescriptorFromActiveCollection = (
+  collection: ActiveCollection,
+): OmniCollectionDescriptor | null => {
+  if (!collection) {
+    return null
+  }
+
+  if (collection.type === 'neighbourhood' || collection.type === 'walk') {
+    return {
+      kind: collection.type,
+      ref: collection.id,
+    }
+  }
+
+  return null
+}
+
+/**
+ * Standard navigation options with image parameter drop and collection context sync.
+ *
+ * @param additionalOptions - Additional options to merge
+ * @param descriptor - Collection descriptor to preserve in the URL.
+ * @returns Navigation options object
+ */
+const getStandardNavOptions = (
+  additionalOptions: OmniNavOptions = {},
+  descriptor: OmniCollectionDescriptor | null = null,
+): Pick<OmniSelectionOptions, 'navOptions'> => {
+  const paramsToDrop = Array.from(
+    new Set([
+      'imageId',
+      ...(descriptor ? [] : [COLLECTION_QUERY_PARAM]),
+      ...(additionalOptions.paramsToDrop ?? []),
+    ]),
+  )
+  const paramsToAdd = { ...(additionalOptions.paramsToAdd ?? {}) }
+  const collectionParamValue = getCollectionParamValue(descriptor)
+
+  if (collectionParamValue) {
+    paramsToAdd[COLLECTION_QUERY_PARAM] = collectionParamValue
+  }
+
+  return {
+    navOptions: {
+      ...additionalOptions,
+      paramsToDrop,
+      paramsToAdd,
+    },
+  }
 }
 
 /**
@@ -846,8 +1161,8 @@ const _getFeatureSelectionDefaults = (
  * @returns Collection initialization options
  */
 const getCollectionInitDefaults = (
-  customOptions: Record<string, any> = {},
-): Record<string, any> => {
+  customOptions: Partial<OmniSelectionOptions> = {},
+): OmniSelectionOptions => {
   return mergeOmniOptions(customOptions, {
     openCard: true,
     openCardDelay: 2500,
@@ -914,6 +1229,9 @@ const navigateCollection = (
 ): boolean => {
   const collection = omniCtx.appCtx.state.active.collection
   if (!collection) return false
+  const collectionDescriptor =
+    omniCtx.activeCollectionDescriptor ??
+    getCollectionDescriptorFromActiveCollection(collection)
 
   const currentIndex = omniCtx.navIndex
   let targetIndex: number
@@ -930,12 +1248,12 @@ const navigateCollection = (
     targetIndex = direction
   }
 
+  omniCtx.setMode(OmniMode.navigation, { openCard: false })
+  omniCtx.closeTray()
   omniCtx.appCtx.setActiveFeature(collection.items[targetIndex].id, {
     focus: true,
     isCardOpen: omniCtx.state.isCardOpen,
-    navOptions: {
-      paramsToDrop: ['imageId'],
-    },
+    ...getStandardNavOptions({}, collectionDescriptor),
   })
 
   return true
@@ -952,7 +1270,7 @@ const initializeCollection = (
   omniCtx: OmniCtx,
   collection: ActiveCollection,
   mode: OmniMode,
-  options: Record<string, any> = {},
+  options: OmniSelectionOptions = {},
 ): void => {
   // Run the default selection initialization
   omniCtx.initSelection(false)
@@ -970,7 +1288,7 @@ export const setOmniCtx = (appCtx: AppCtx) =>
   setContext(OMNI_CONTEXT_KEY, new OmniCtx(appCtx))
 
 export const getOmniCtx = (): OmniCtx => {
-  const ctx = getContext(OMNI_CONTEXT_KEY)
+  const ctx = getContext<OmniCtx | undefined>(OMNI_CONTEXT_KEY)
   if (!ctx) {
     // Return a safe fallback object when OmniContext isn't ready
     return {
@@ -982,16 +1300,25 @@ export const getOmniCtx = (): OmniCtx => {
         focusedIndex: -1,
       },
       searchResults: {
-        features: [],
-        neighbourhoods: [],
-        walks: [],
+        feature: [],
+        neighbourhood: [],
+        walk: [],
       },
       pageState: PageState.NoTransition,
       isIntentionallyClosing: false,
+      activeCollectionDescriptor: null,
+      cardTransition: {
+        phase: 'idle',
+        sourceRect: null,
+        targetRect: null,
+        sourceRadiusPx: 0,
+        targetRadiusPx: 0,
+        sourceKind: 'none',
+      },
       cardCtx: null,
       appCtx: null,
       eventCleanup: undefined,
-      limits: { features: 5, neighbourhoods: 3, walks: 1 },
+      limits: { feature: 5, neighbourhood: 3, walk: 1 },
       isFeatureMode: false,
       isNewFeatureMode: false,
       isSearchMode: true,
@@ -1009,9 +1336,11 @@ export const getOmniCtx = (): OmniCtx => {
       clearSearch: () => {},
       focusSearchBar: () => {},
       resetToSearch: () => {},
+      setActiveCollectionDescriptor: () => {},
+      clearActiveCollectionDescriptor: () => {},
       searchHandlers: {} as Record<OmniCollection, (ref: string) => void>,
-      toGroups: () => ({ features: [], neighbourhoods: [], walks: [] }),
-      getLimits: () => ({ features: 5, neighbourhoods: 3, walks: 1 }),
+      toGroups: () => ({ feature: [], neighbourhood: [], walk: [] }),
+      getLimits: () => ({ feature: 5, neighbourhood: 3, walk: 1 }),
       close: () => {},
       selectFirstResult: () => {},
       handleFeatureSelection: () => Promise.resolve(),
@@ -1021,6 +1350,11 @@ export const getOmniCtx = (): OmniCtx => {
       closeTray: () => {},
       toggleTray: () => {},
       clearSearchOrCloseTray: () => {},
+      resetCardTransition: () => {},
+      prepareCardTransitionFromToggle: () => {},
+      prepareCardTransitionFromMarker: () => {},
+      finishCardOpenTransition: () => {},
+      finishCardCloseTransition: () => {},
       openCard: () => {},
       closeCard: () => {},
       toggleCard: () => {},

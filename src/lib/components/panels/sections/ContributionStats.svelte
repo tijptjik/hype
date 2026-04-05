@@ -11,7 +11,7 @@ const isSingleOrg = $derived((appCtx.hub as Hub)?.organisations?.length === 1)
 appCtx.state.panels.profile.ctx!.observePrisms = !isSingleOrg
 
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Camera from 'virtual:icons/lucide/camera'
 import MapPin from 'virtual:icons/lucide/map-pin'
 import CubeTransparent from 'virtual:icons/lucide/ghost'

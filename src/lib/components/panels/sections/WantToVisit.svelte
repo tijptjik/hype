@@ -11,7 +11,7 @@ import { Panel } from '$lib/enums'
 // COMPONENTS
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 // SERVICES
 import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures'
@@ -132,7 +132,7 @@ let wishlistedFeaturesPromise: Promise<UserFeatureWithHierarchy[]> = $derived(
                 }
               }}
             >
-              <Icon src={Squares2x2} class="h-5 w-5 shrink-0" theme="fill" />
+              <Icon src={Squares2x2} class="h-5 w-5 shrink-0" filled />
               <div class="flex grow flex-col">
                 <p class="text-xs uppercase tracking-widest">
                   {#if showOrganisation}

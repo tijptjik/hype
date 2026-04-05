@@ -204,15 +204,10 @@ const getTaskQuery = guardedQuery(GetTaskEditorDataSchema, async (params, ctx) =
     event.locals.hub.id ?? null,
   )
 
-  const rawTask = await loadTask(
-    db,
-    getTaskWithRelations(profile),
-    conditions,
-    {
-      ...event.locals.hub,
-      isSuperAdmin: Boolean(user.superAdmin),
-    },
-  )
+  const rawTask = await loadTask(db, getTaskWithRelations(profile), conditions, {
+    ...event.locals.hub,
+    isSuperAdmin: Boolean(user.superAdmin),
+  })
   if (!rawTask) {
     return toEntityResponseShape(null, profile)
   }

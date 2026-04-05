@@ -7,7 +7,7 @@ import { m } from '$lib/i18n'
 import XMark from 'virtual:icons/lucide/x'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
-import { slide } from 'svelte/transition'
+import { fade } from 'svelte/transition'
 
 const appCtx = getAppCtx()
 
@@ -47,7 +47,7 @@ const resetText = $derived(getResetText())
 <!-- TODO : Move to the bottom of the panel as an absolute bottom element -->
 
 {#if hasActiveFilters}
-  <div class="absolute bottom-4 z-10 h-auto w-full px-4 pb-17 md:pb-4">
+  <div class="absolute bottom-4 z-10 h-auto w-full px-4 pb-2">
     <Button
       text={resetText}
       iconComponent={XMark}
@@ -55,10 +55,10 @@ const resetText = $derived(getResetText())
       color="dark"
       style="ghost"
       modifier="block"
-      class="h-auto justify-start rounded-none rounded-l-lg border-3 border-base-300 bg-black px-4 py-4 font-mono font-normal hover:text-white"
-      labelClasses="min-w-0 flex-1 !max-w-none truncate text-left leading-tight"
+      class="h-auto justify-start rounded-lg border-3 border-base-300 bg-black px-4 py-4 font-mono font-normal hover:text-white"
+      labelClasses="min-w-0 flex-1 max-w-none truncate text-left leading-tight"
       onClick={() => appCtx.resetFilters()}
-      transition={slide}
+      transition={fade}
       transitionOpts={{ duration: 200 }}
     />
   </div>

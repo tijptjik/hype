@@ -1,8 +1,6 @@
 // I18N
 import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'
-// REMOTE
-import { translateText as translateTextRemote } from '$lib/api/server/translation.remote'
 import type { Locale, LocaleKey, Neighbourhood } from '$lib/types'
 import type { Resource } from '$lib/types'
 import type {
@@ -337,11 +335,23 @@ export { m, runtime }
 // 7. TRANSLATION API HELPERS
 // ═══════════════════════
 
+/**
+ * Lazily loads the translation remote so test and browser-only imports of this
+ * module do not eagerly initialize the SvelteKit remote runtime.
+ */
+async function loadTranslateTextRemote(): Promise<
+  typeof import('$lib/api/server/translation.remote').translateText
+> {
+  const { translateText } = await import('$lib/api/server/translation.remote')
+  return translateText
+}
+
 export async function translateText(
   sourceLang: Locale,
   targetLang: Locale,
   texts: string[],
 ): Promise<string[]> {
+  const translateTextRemote = await loadTranslateTextRemote()
   return translateTextRemote({
     source: sourceLang,
     target: targetLang,

@@ -9,7 +9,7 @@ import {
   userFeature,
   userLayer,
 } from '../schema'
-import { retryBusyRead } from './sqlite'
+import { isSqliteMissingSchemaError, retryBusyRead } from './sqlite'
 // TYPES
 import type { Id, UserRoleDisco, Database } from '$lib/types'
 import type {
@@ -354,23 +354,37 @@ export const getUserFeaturesByUserId = async (
         ? userFeature.createdAt
         : userFeature.modifiedAt
   const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn)
+  const whereClause = and(...conditions)
 
-  const data = await db
-    .select()
-    .from(userFeature)
-    .where(and(...conditions))
-    .orderBy(orderBy)
-    .limit(limit)
-    .offset(offset)
+  try {
+    // Keep the home/profile list-state reads resilient during staged schema rollouts.
+    const data = await retryBusyRead(() =>
+      db
+        .select()
+        .from(userFeature)
+        .where(whereClause)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset),
+    )
 
-  const [countRow] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(userFeature)
-    .where(and(...conditions))
+    const [countRow] = await retryBusyRead(() =>
+      db.select({ count: sql<number>`count(*)` }).from(userFeature).where(whereClause),
+    )
 
-  return {
-    data,
-    totalCount: Number(countRow?.count ?? 0),
+    return {
+      data,
+      totalCount: Number(countRow?.count ?? 0),
+    }
+  } catch (error) {
+    if (isSqliteMissingSchemaError(error, 'userFeature')) {
+      return {
+        data: [],
+        totalCount: 0,
+      }
+    }
+
+    throw error
   }
 }
 

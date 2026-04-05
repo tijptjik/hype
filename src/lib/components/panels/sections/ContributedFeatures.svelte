@@ -15,7 +15,7 @@ import { navigateToContributedFeature } from '$lib/navigation'
 import { Scrollbar } from '$lib/bits/custom/scrollbar'
 import { ScrollableText } from '$lib/bits'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import MapPin from 'virtual:icons/lucide/map-pin'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 // TYPES

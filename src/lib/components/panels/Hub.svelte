@@ -43,7 +43,7 @@ let panelProps: PanelProps = $derived({
 <Panel bind:panelContainer {...panelProps}>
   <Header {...panelProps} title={m.menu_about()} />
   <div
-    class="h-calc(100vh-10rem) flex flex-col items-stretch overflow-y-auto overscroll-none"
+    class="h-calc(100vh-10rem) flex flex-col items-stretch overflow-y-auto overscroll-contain"
   >
     <h2 class="grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
       {getI18n(hub, 'nameShort', appCtx.getUserPreferences(), m.menu_about())}

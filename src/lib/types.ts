@@ -2366,6 +2366,37 @@ export type PanelProps = {
 
 export type PanelPosition = 'left' | 'right'
 
+export type FeatureCardPortalObstacle = {
+  top: number
+  left: number
+  right: number
+  bottom: number
+  diameter: number
+  radius: number
+  centerX: number
+  centerY: number
+}
+
+export type FeatureCardTransitionRect = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+export type FeatureCardTransitionSourceKind = 'marker' | 'toggle' | 'none'
+
+export type FeatureCardTransitionPhase = 'idle' | 'opening' | 'closing'
+
+export type FeatureCardTransitionState = {
+  phase: FeatureCardTransitionPhase
+  sourceRect: FeatureCardTransitionRect | null
+  targetRect: FeatureCardTransitionRect | null
+  sourceRadiusPx: number
+  targetRadiusPx: number
+  sourceKind: FeatureCardTransitionSourceKind
+}
+
 export type PlanScheduleStop = {
   time: string
   featureId: Id
@@ -2439,6 +2470,11 @@ export type SearchResult = {
   name: string
   count: number
   collectionType: OmniCollection
+  ref: string
+}
+
+export type OmniCollectionDescriptor = {
+  kind: 'neighbourhood' | 'walk' | (string & {})
   ref: string
 }
 

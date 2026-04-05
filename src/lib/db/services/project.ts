@@ -26,6 +26,7 @@ import {
   toRelatedRecords,
 } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
+import { retryBusyRead } from './sqlite'
 // ZOD
 import { getProjectHubFilter } from './hub'
 // TYPES
@@ -417,22 +418,24 @@ export const probeProjectQuery = async (
   isArchived: boolean
 } | null> => {
   return firstOrNull(
-    await db
-      .select({
-        id: project.id,
-        organisationId: project.organisationId,
-        hubId: organisation.hubId,
-        isPublished: project.isPublished,
-        isArchived: project.isArchived,
-      })
-      .from(project)
-      .innerJoin(organisation, eq(project.organisationId, organisation.id))
-      .where(
-        params.refKey === 'code'
-          ? eq(project.code, params.ref)
-          : eq(project.id, params.ref),
-      )
-      .limit(1),
+    await retryBusyRead(() =>
+      db
+        .select({
+          id: project.id,
+          organisationId: project.organisationId,
+          hubId: organisation.hubId,
+          isPublished: project.isPublished,
+          isArchived: project.isArchived,
+        })
+        .from(project)
+        .innerJoin(organisation, eq(project.organisationId, organisation.id))
+        .where(
+          params.refKey === 'code'
+            ? eq(project.code, params.ref)
+            : eq(project.id, params.ref),
+        )
+        .limit(1),
+    ),
   )
 }
 

@@ -88,7 +88,6 @@ import {
   listMapStylesForProject,
   listMapStylesForScope,
   setProjectMapStyleByCode,
-  syncMapStyleCatalog,
 } from '$lib/db/services/map'
 import {
   appendProjectLicenseHistory,
@@ -286,7 +285,6 @@ export const getProjectsWhichHaveLayers = getProjectsWhichHaveLayersQuery
  */
 const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
-  await syncMapStyleCatalog(db)
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'admin')
 

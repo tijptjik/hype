@@ -4,7 +4,7 @@ import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 // SERVICES
 import {
   toggleCategoricalPropertyValue,
@@ -75,7 +75,7 @@ let displayText = $derived(
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-65 flex-col overflow-y-auto gap-3 overscroll-contain rounded-l-md bg-base-300"
+      class="flex max-h-65 flex-col overflow-y-auto gap-3 overscroll-auto rounded-l-md bg-base-300"
       tabindex="-1"
     >
       {#each propertyValues as value (value.id)}

@@ -2,10 +2,26 @@
 import * as ImagePrimitive from './components'
 import type { ImageProps } from './images.types'
 
-let { item, fit = 'fit', isLoading = false }: ImageProps = $props()
+let {
+  src,
+  alt,
+  fit = 'fit',
+  isLoading = false,
+  class: className = '',
+}: ImageProps = $props()
+
+const item = $derived(
+  src
+    ? {
+        id: src,
+        src,
+        alt,
+      }
+    : null,
+)
 </script>
 
-<div class="h-full w-full">
+<div class={`h-full w-full ${className}`.trim()}>
   <ImagePrimitive.ImageSurface
     {item}
     {fit}

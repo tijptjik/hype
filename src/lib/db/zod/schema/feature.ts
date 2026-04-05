@@ -364,6 +364,7 @@ const FeatureListFields = FeatureBase.pick({
   organisationId: true,
   projectId: true,
   layerId: true,
+  contributorId: true,
   geometry: true,
   addressMeta: true,
   isPublished: true,

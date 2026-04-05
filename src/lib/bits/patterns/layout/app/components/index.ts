@@ -1,2 +1,8 @@
 export { default as AdminShell } from './AdminShell.svelte'
+export { default as AppLanding } from './AppLanding.svelte'
+export { default as AppMapOverlayBar } from './AppMapOverlayBar.svelte'
+export { default as AppMain } from './AppMain.svelte'
+export { default as AppNav } from './AppNav.svelte'
 export { default as AppShell } from './AppShell.svelte'
+export { default as AppSurface } from './AppSurface.svelte'
+export { default as RootShell } from './RootShell.svelte'

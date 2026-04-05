@@ -8,7 +8,7 @@ import { updateUserProfile } from '$lib/api/server/user.remote'
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import PencilSquare from 'virtual:icons/lucide/square-pen'
 import Check from 'virtual:icons/lucide/check'
 

@@ -11,23 +11,15 @@ let {
   siteName,
   siteDescription,
   socialImage,
-  windowWidth = $bindable(0),
   pendingColor = 'accent',
   pendingSurface = 'transparent',
   children,
 }: AppProps = $props()
 </script>
 
-<Head.Root
-  bind:windowWidth
-  {title}
-  {siteName}
-  {siteDescription}
-  {socialImage}
-  {localeKey}
-/>
+<Head.Root {title} {siteName} {siteDescription} {socialImage} {localeKey} />
 
-<AppPrimitive.AppShell
+<AppPrimitive.RootShell
   {queryClient}
   {localeKey}
   {isReady}
@@ -35,4 +27,4 @@ let {
   {pendingSurface}
 >
   {@render children()}
-</AppPrimitive.AppShell>
+</AppPrimitive.RootShell>

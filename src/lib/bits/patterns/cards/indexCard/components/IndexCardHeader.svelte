@@ -1,6 +1,6 @@
 <script lang="ts">
 // COMPONENTS
-import Image from '$lib/components/common/Image.svelte'
+import Image from '$lib/bits/patterns/images/Image.svelte'
 // TYPES
 import type { IndexCardHeaderProps } from '../indexCard.types'
 
@@ -16,6 +16,6 @@ let { imageSrc, imageAlt, imageLayout, onImageClick }: IndexCardHeaderProps = $p
     src={imageSrc}
     alt={imageAlt}
     class="bits-index-card__header-image"
-    layout={imageLayout}
+    fit={imageLayout === 'cover' ? 'cover' : 'fit'}
   />
 </div>

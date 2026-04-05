@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, inArray, isNull, or } from 'drizzle-orm'
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm'
 // UTILS
 import { nanoid } from 'nanoid'
 // DB
@@ -118,23 +118,56 @@ export const syncMapStyleCatalog = async (db: Database): Promise<void> => {
 
     if (!existing) {
       const id = nanoid(12)
-      await db.insert(mapStyles).values({
-        id,
-        code: entry.key,
-        organisationId: nextOrganisationId,
-        hubId: nextHubId,
-        previewImagePath: null,
-      })
-      await db.insert(mapStyleI18n).values(
-        Object.entries(localizedCopy).map(([locale, copy]) => ({
-          mapStyleId: id,
-          locale,
-          name: copy.name,
-          nameGen: false,
-          description: copy.description,
-          descriptionGen: false,
-        })),
+      await db
+        .insert(mapStyles)
+        .values({
+          id,
+          code: entry.key,
+          organisationId: nextOrganisationId,
+          hubId: nextHubId,
+          previewImagePath: null,
+        })
+        .onConflictDoNothing({ target: mapStyles.code })
+
+      // Resolve the persisted row again so concurrent syncs converge on the same id.
+      const persisted = firstOrNull(
+        await db
+          .select({
+            id: mapStyles.id,
+            organisationId: mapStyles.organisationId,
+            hubId: mapStyles.hubId,
+            previewImagePath: mapStyles.previewImagePath,
+          })
+          .from(mapStyles)
+          .where(eq(mapStyles.code, entry.key))
+          .limit(1),
       )
+
+      if (!persisted) {
+        throw new Error(`Failed to persist map style catalog entry: ${entry.key}`)
+      }
+
+      await db
+        .insert(mapStyleI18n)
+        .values(
+          Object.entries(localizedCopy).map(([locale, copy]) => ({
+            mapStyleId: persisted.id,
+            locale,
+            name: copy.name,
+            nameGen: false,
+            description: copy.description,
+            descriptionGen: false,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [mapStyleI18n.mapStyleId, mapStyleI18n.locale],
+          set: {
+            name: sql.raw('excluded.name'),
+            nameGen: false,
+            description: sql.raw('excluded.description'),
+            descriptionGen: false,
+          },
+        })
       continue
     }
 
@@ -157,14 +190,25 @@ export const syncMapStyleCatalog = async (db: Database): Promise<void> => {
       const existingLocale = existing.i18n?.find(row => row.locale === locale)
 
       if (!existingLocale) {
-        await db.insert(mapStyleI18n).values({
-          mapStyleId: existing.id,
-          locale,
-          name: copy.name,
-          nameGen: false,
-          description: copy.description,
-          descriptionGen: false,
-        })
+        await db
+          .insert(mapStyleI18n)
+          .values({
+            mapStyleId: existing.id,
+            locale,
+            name: copy.name,
+            nameGen: false,
+            description: copy.description,
+            descriptionGen: false,
+          })
+          .onConflictDoUpdate({
+            target: [mapStyleI18n.mapStyleId, mapStyleI18n.locale],
+            set: {
+              name: copy.name,
+              nameGen: false,
+              description: copy.description,
+              descriptionGen: false,
+            },
+          })
         continue
       }
 
@@ -250,14 +294,12 @@ export const setProjectMapStyleByCode = async (
  ************/
 
 /**
- * Lists every persisted map style after syncing the catalog.
+ * Lists every persisted map style.
  *
  * @param db - Database handle.
  * @returns All map styles ordered by catalog code.
  */
 export const listMapStyles = async (db: Database): Promise<MapStyleResolvedDB[]> => {
-  await syncMapStyleCatalog(db)
-
   const rows = await db.query.mapStyles.findMany({
     with: {
       i18n: true,
@@ -279,8 +321,6 @@ export const listMapStylesForScope = async (
   db: Database,
   scope: ProjectScope,
 ): Promise<MapStyleResolvedDB[]> => {
-  await syncMapStyleCatalog(db)
-
   const rows = await db.query.mapStyles.findMany({
     where: isVisibleToScope(scope),
     with: {
@@ -432,8 +472,6 @@ export const resolveVisibleMapStyleIdForScope = async (
   scope: ProjectScope,
   mapStyleCode: string,
 ): Promise<string | null> => {
-  await syncMapStyleCatalog(db)
-
   const row = firstOrNull(
     await db
       .select({

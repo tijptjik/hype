@@ -6,7 +6,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // BITS
 import { Button } from '$lib/bits/core/button'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import UserCircle from 'virtual:icons/lucide/circle-user'
 // ENUMS
 import { Panel, FirstClassResource } from '$lib/enums'

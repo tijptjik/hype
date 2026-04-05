@@ -90,10 +90,18 @@ export type AdminThumbnailProps = ThumbnailProps & {
   onRetryUpload?: (item: ViewerRenderable) => void | Promise<void>
 }
 
-export type ImageProps = {
+export type RenderableImageProps = {
   item: ViewerRenderable | null
   fit?: GalleryObjectFit
   isLoading?: boolean
+}
+
+export type ImageProps = {
+  src: string | null
+  alt: string
+  fit?: GalleryObjectFit
+  isLoading?: boolean
+  class?: string
 }
 
 export type ViewerProps = {
@@ -104,9 +112,14 @@ export type ViewerProps = {
   fullscreenRequestKey?: number
   fit?: GalleryObjectFit
   viewerFit?: GalleryObjectFit
+  enableStageViewTransitions?: boolean
+  wrapNavigation?: boolean
+  showNavButtons?: boolean
+  railPadding?: number
   leftRail?: GalleryWidgetRail
   centerRail?: GalleryWidgetRail
   rightRail?: GalleryWidgetRail
+  emptyState?: Snippet
   centerAction?: GalleryCenterAction
   centerActionLabel?: string
   onCenterAction?: (item: ViewerRenderable) => void | Promise<void>

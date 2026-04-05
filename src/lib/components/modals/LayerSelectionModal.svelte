@@ -8,8 +8,9 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte'
+import { Icon } from '$lib/bits'
 import XMark from 'virtual:icons/lucide/x'
 import UserGroup from 'virtual:icons/lucide/users'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
@@ -32,6 +33,7 @@ import type { Point } from 'geojson'
 // CONTEXT
 const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()
+const responsiveCtx = getResponsiveCtx()
 
 // STATE : SESSION
 const userPreferences = $derived(appCtx.getUserPreferences())
@@ -56,7 +58,7 @@ let selectedLayer = $derived(
 )
 
 // PANEL STATE
-let horizontalOffset = $derived(appCtx.getHorizontalOffset())
+let horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
 
 // FILTERED STATE
 let filteredOrganisations: Organisation[] = $derived(

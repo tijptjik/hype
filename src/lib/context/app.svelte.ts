@@ -33,11 +33,16 @@ import {
   updateLocale,
 } from '$lib/client/services/user'
 import {
+  consumeEscapeForOpenPanels,
+  shouldSkipGlobalKeydown,
+} from '$lib/client/keybindings'
+import {
   getFeatureIdsForProperties,
   sortProperties,
 } from '$lib/client/services/property'
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
+import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/remote'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
@@ -49,8 +54,6 @@ import {
   FirstClassResource,
   type HierarchicalResource,
   Panel,
-  PanelLeft,
-  PanelRight,
   ResourcePath,
   ResourceRefKey,
   type NewFeatureMode,
@@ -101,6 +104,7 @@ import type {
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { PlaceCtx } from './place.svelte'
+import type { ResponsiveCtx } from './responsive.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
 
@@ -629,14 +633,16 @@ export class AppCtx {
       : []),
   ]
 
-  // Deprecated: legacy form context bridge for header form actions.
-  // Prefer headerCtrl.setFormActions(...) in route pages.
-  formCtx = $state(null)
-
   // Constructor
-  constructor(queryClient: QueryClient, placeCtx: PlaceCtx, user: SessionUser | null) {
+  constructor(
+    queryClient: QueryClient,
+    placeCtx: PlaceCtx,
+    user: SessionUser | null,
+    responsiveCtx: ResponsiveCtx,
+  ) {
     this.queryClient = queryClient
     this.placeCtx = placeCtx
+    this.responsiveCtx = responsiveCtx
     this.initializeNavigationFromUrl()
     this.setUser(user)
     this.initializeRemoteMap()
@@ -773,30 +779,44 @@ export class AppCtx {
   }
 
   initialFetch = async (): Promise<void> => {
-    // Bootstrap hierarchy first so layer defaults can be resolved before features load.
-    const hierarchyResults = await Promise.allSettled([
-      this.refreshOrganisations(false),
-      this.refreshProjects(false),
-      this.refreshLayers(false),
-      this.refreshProperties(false),
-      this.refreshUserFeatures(false),
-      this.refreshUserProfile(false),
-      this.hydrateCurrentUserLayers(),
-    ])
-    const hierarchyLabels = [
-      'organisations',
-      'projects',
-      'layers',
-      'properties',
-      'userFeatures',
-      'userProfile',
-      'userLayers',
+    // Bootstrap lightweight user-scoped reads first so session-dependent UI can hydrate
+    // without immediately fanning out into the heavier resource tree.
+    const lightSteps = [
+      ['userProfile', () => this.refreshUserProfile(false)],
+      ['userFeatures', () => this.refreshUserFeatures(false)],
+      ['userLayers', () => this.hydrateCurrentUserLayers()],
     ] as const
 
-    for (const [index, result] of hierarchyResults.entries()) {
-      if (result.status === 'rejected') {
+    const lightResults = await Promise.allSettled(lightSteps.map(([, load]) => load()))
+    for (const [index, result] of lightResults.entries()) {
+      if (result.status === 'fulfilled') continue
+
+      console.error(
+        `[AppCtx][initialFetch] Resource bootstrap failed (${lightSteps[index][0]}):`,
+        result.reason,
+      )
+    }
+
+    // Bootstrap hierarchy second. Keep this stage narrower than the old fan-out because
+    // local workerd D1 is sensitive to bursts of concurrent reads during app startup.
+    const hierarchyPhases = [
+      [
+        ['organisations', () => this.refreshOrganisations(false)],
+        ['projects', () => this.refreshProjects(false)],
+      ],
+      [
+        ['layers', () => this.refreshLayers(false)],
+        ['properties', () => this.refreshProperties(false)],
+      ],
+    ] as const
+
+    for (const phase of hierarchyPhases) {
+      const phaseResults = await Promise.allSettled(phase.map(([, load]) => load()))
+      for (const [index, result] of phaseResults.entries()) {
+        if (result.status === 'fulfilled') continue
+
         console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${hierarchyLabels[index]}):`,
+          `[AppCtx][initialFetch] Resource bootstrap failed (${phase[index][0]}):`,
           result.reason,
         )
       }
@@ -805,17 +825,18 @@ export class AppCtx {
     this.applyInitialLayerPrisms()
     await this.postLayerMutation(false)
 
-    const featureResults = await Promise.allSettled([
-      this.refreshFeatures(false),
-      this.isAdmin() ? this.refreshTasks(false) : Promise.resolve(),
-    ])
-    const featureLabels = ['features', 'tasks'] as const
+    const featureSteps = [
+      ['features', () => this.refreshFeatures(false)],
+      ['tasks', () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve())],
+    ] as const
 
-    for (const [index, result] of featureResults.entries()) {
-      if (result.status === 'rejected') {
+    for (const [label, load] of featureSteps) {
+      try {
+        await load()
+      } catch (error) {
         console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${featureLabels[index]}):`,
-          result.reason,
+          `[AppCtx][initialFetch] Resource bootstrap failed (${label}):`,
+          error,
         )
       }
     }
@@ -854,9 +875,11 @@ export class AppCtx {
       return
     }
 
-    const userLayersResponse = (await getUserLayers({
-      userId: this.user.id,
-    })) as { data?: UserLayer[] | null }
+    const userLayersResponse = (await runRemoteQuery(
+      getUserLayers({
+        userId: this.user.id,
+      }),
+    )) as { data?: UserLayer[] | null }
 
     this.user = {
       ...(this.user ?? {}),
@@ -928,14 +951,16 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Organisation remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.organisation,
-    })) as ListResponse<Organisation>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {
+          isArchived: false,
+          isPublished: true,
+        },
+        prisms: this.state.prisms,
+        sorting: this.state.viewSorting.organisation,
+      }),
+    )) as ListResponse<Organisation>
     this.setListQueryMeta(this.organisationsQueryKey(), result)
     return result.data
   }
@@ -954,30 +979,9 @@ export class AppCtx {
       meta: { profile: 'card' },
     }
 
-    console.log('[AppCtx][projectsQueryFn] requesting projects', {
-      isAdmin: this.isAdmin(),
-      pathname: typeof window !== 'undefined' ? window.location.pathname : 'server',
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.project,
-      conditions: requestParams.conditions,
-      meta: requestParams.meta,
-    })
-
-    const result = (await remoteList(requestParams)) as ListResponse<Project>
-
-    console.log('[AppCtx][projectsQueryFn] received projects', {
-      isAdmin: this.isAdmin(),
-      pathname: typeof window !== 'undefined' ? window.location.pathname : 'server',
-      count: result.data.length,
-      projects: result.data.map(project => ({
-        id: project.id,
-        code: 'code' in project ? project.code : undefined,
-        isPublished: 'isPublished' in project ? project.isPublished : undefined,
-        isArchived: 'isArchived' in project ? project.isArchived : undefined,
-        organisationId:
-          'organisationId' in project ? project.organisationId : undefined,
-      })),
-    })
+    const result = (await runRemoteQuery(
+      remoteList(requestParams),
+    )) as ListResponse<Project>
 
     this.setListQueryMeta(this.projectsQueryKey(), result)
     return result.data
@@ -988,15 +992,17 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Layer remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.layer,
-      meta: { profile: 'card' },
-    })) as ListResponse<Layer>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {
+          isArchived: false,
+          isPublished: true,
+        },
+        prisms: this.state.prisms,
+        sorting: this.state.viewSorting.layer,
+        meta: { profile: 'card' },
+      }),
+    )) as ListResponse<Layer>
     this.setListQueryMeta(this.layersQueryKey(), result)
     return result.data
   }
@@ -1006,15 +1012,17 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Feature remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.feature,
-      meta: { profile: 'list' },
-    })) as ListResponse<FeatureFromCollection>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {
+          isArchived: false,
+          isPublished: true,
+        },
+        prisms: this.state.prisms,
+        sorting: this.state.viewSorting.feature,
+        meta: { profile: 'list' },
+      }),
+    )) as ListResponse<FeatureFromCollection>
     this.setListQueryMeta(this.featuresQueryKey(), result)
     return result.data
   }
@@ -1024,10 +1032,12 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Property remote list function is not configured.')
     }
-    const result = (await remoteList({
-      conditions: {},
-      prisms: this.state.prisms,
-    })) as ListResponse<Property>
+    const result = (await runRemoteQuery(
+      remoteList({
+        conditions: {},
+        prisms: this.state.prisms,
+      }),
+    )) as ListResponse<Property>
     return result.data
   }
 
@@ -1035,13 +1045,15 @@ export class AppCtx {
     if (!this.user?.id) {
       return []
     }
-    const response = (await getUserFeatures({
-      userId: this.user.id,
-      sorting: {
-        sortBy: 'modifiedAt',
-        sortOrder: 'desc',
-      },
-    })) as unknown as { data?: UserFeature[] | null }
+    const response = (await runRemoteQuery(
+      getUserFeatures({
+        userId: this.user.id,
+        sorting: {
+          sortBy: 'modifiedAt',
+          sortOrder: 'desc',
+        },
+      }),
+    )) as unknown as { data?: UserFeature[] | null }
     return Array.isArray(response.data) ? response.data : []
   }
 
@@ -1055,13 +1067,15 @@ export class AppCtx {
     const refKey = isSelfProfile ? 'id' : 'username'
     const profile = isSelfProfile ? 'self' : 'detail'
 
-    const response = (await getUser({
-      ref: userRef,
-      refKey,
-      meta: {
-        profile,
-      },
-    })) as { data?: UserProfile | null }
+    const response = (await runRemoteQuery(
+      getUser({
+        ref: userRef,
+        refKey,
+        meta: {
+          profile,
+        },
+      }),
+    )) as { data?: UserProfile | null }
 
     return response.data ?? null
   }
@@ -2036,10 +2050,12 @@ export class AppCtx {
 
     try {
       if (remoteGet) {
-        const response = (await remoteGet({
-          ref,
-          refKey: 'id',
-        })) as { data?: unknown }
+        const response = (await runRemoteQuery(
+          remoteGet({
+            ref,
+            refKey: 'id',
+          }),
+        )) as { data?: unknown }
         return response?.data
       }
 
@@ -2262,10 +2278,12 @@ export class AppCtx {
           if (cached) return cached
         }
 
-        const remote = (await getOrganisation({
-          ref: String(ref),
-          refKey: 'code',
-        })) as { data?: Organisation | null }
+        const remote = (await runRemoteQuery(
+          getOrganisation({
+            ref: String(ref),
+            refKey: 'code',
+          }),
+        )) as { data?: Organisation | null }
 
         if (!remote?.data) return undefined
 
@@ -2289,10 +2307,12 @@ export class AppCtx {
           if (cached) return cached
         }
 
-        const remote = (await getHub({
-          ref: String(ref),
-          refKey: 'code',
-        })) as { data?: Hub | null }
+        const remote = (await runRemoteQuery(
+          getHub({
+            ref: String(ref),
+            refKey: 'code',
+          }),
+        )) as { data?: Hub | null }
         if (!remote?.data) return undefined
 
         this.cache.hub.set(remote.data.id, remote.data)
@@ -2681,6 +2701,29 @@ export class AppCtx {
   getActiveFeature = (): FeatureFromCollection | Feature | null =>
     this.state.active.feature
 
+  pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Cancels any deferred feature-card open scheduled from active-feature mutations.
+   */
+  cancelPendingOpenCard = (): void => {
+    if (this.pendingOpenCardTimeout !== null) {
+      clearTimeout(this.pendingOpenCardTimeout)
+      this.pendingOpenCardTimeout = null
+    }
+  }
+
+  /**
+   * Clears the active feature while preserving the active collection context.
+   */
+  resetActiveFeature = (): void => {
+    if (this.state.active.feature) {
+      removeMarkerClass(this, this.state.active.feature.id)
+    }
+
+    this.state.active.feature = null
+  }
+
   setActiveFeature = (
     featureId: Id,
     options: {
@@ -2697,6 +2740,7 @@ export class AppCtx {
       openCardDelay: 0,
       ...options,
     }
+
     // Pre-mutation: cleanup from previous feature
     this.preActiveFeatureMutation()
 
@@ -2736,9 +2780,13 @@ export class AppCtx {
 
     if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
       if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
-        setTimeout(() => {
+        this.cancelPendingOpenCard()
+        this.pendingOpenCardTimeout = setTimeout(() => {
           window.dispatchEvent(new CustomEvent('OmniCtx.openCard'))
+          this.pendingOpenCardTimeout = null
         }, optionsWithDefaults.openCardDelay)
+      } else {
+        this.cancelPendingOpenCard()
       }
       navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
     }
@@ -2768,65 +2816,6 @@ export class AppCtx {
     this.state.resources.feature.forEach(f => {
       removeMarkerClass(this, f.id, 'highlighted')
     })
-  }
-
-  // NAVIGATION METHODS
-
-  getHorizontalOffset = (): number => {
-    // Return 0 on mobile
-    if (isMobile()) {
-      return 0
-    }
-
-    // Check if any left panels are open using PanelLeft enum
-    const leftPanelOpen = this.isLeftPanelOpen()
-
-    // Check if any right panels are open using PanelRight enum
-    const rightPanelOpen = this.isRightPanelOpen()
-
-    // Calculate offset based on panel state
-    if (leftPanelOpen && rightPanelOpen) {
-      return 0 // Both panels open, center the content
-    } else if (leftPanelOpen) {
-      return PANEL_WIDTH / 2 // Left panel open, shift right
-    } else if (rightPanelOpen) {
-      return -PANEL_WIDTH / 2 // Right panel open, shift left
-    } else {
-      return 0 // No panels open
-    }
-  }
-
-  // Helper methods for panel state
-  isLeftPanelOpen = (): boolean => {
-    return Object.values(PanelLeft).some(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  isRightPanelOpen = (): boolean => {
-    return Object.values(PanelRight).some(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  getOpenLeftPanels = (): PanelLeft[] => {
-    return Object.values(PanelLeft).filter(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  getOpenRightPanels = (): PanelRight[] => {
-    return Object.values(PanelRight).filter(panel =>
-      this.isPanelOpen(panel as unknown as Panel),
-    )
-  }
-
-  isPanelOnLeft = (panel: Panel): boolean => {
-    return Object.values(PanelLeft).includes(panel as unknown as PanelLeft)
-  }
-
-  isPanelOnRight = (panel: Panel): boolean => {
-    return Object.values(PanelRight).includes(panel as unknown as PanelRight)
   }
 
   // MAP OPERATIONS -- REBOUNDING
@@ -2868,8 +2857,8 @@ export class AppCtx {
       : {
           top: 150,
           bottom: 50,
-          right: 50 + (this.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
-          left: 50 + (this.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          right: 50 + (this.responsiveCtx.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          left: 50 + (this.responsiveCtx.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
         }
     try {
       // Convert to WGS84 and get bounds
@@ -3085,16 +3074,18 @@ export class AppCtx {
 
   // Panel methods
   togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    const currentState = this.isPanelOpen(panel)
+    const currentState = this.responsiveCtx.isPanelOpen(panel)
 
     // Close other panels on the same side first (without updating URL individually)
-    if (this.isPanelOnLeft(panel)) {
-      this.getOpenLeftPanels()
-        .filter(p => p !== (panel as unknown as PanelLeft))
+    if (this.responsiveCtx.isPanelOnLeft(panel)) {
+      this.responsiveCtx
+        .getOpenLeftPanels()
+        .filter(p => (p as unknown as Panel) !== panel)
         .forEach(p => this.closePanel(p as unknown as Panel, false))
-    } else if (this.isPanelOnRight(panel)) {
-      this.getOpenRightPanels()
-        .filter(p => p !== (panel as unknown as PanelRight))
+    } else if (this.responsiveCtx.isPanelOnRight(panel)) {
+      this.responsiveCtx
+        .getOpenRightPanels()
+        .filter(p => (p as unknown as Panel) !== panel)
         .forEach(p => this.closePanel(p as unknown as Panel, false))
     }
 
@@ -3105,7 +3096,7 @@ export class AppCtx {
         // Panel was closed, so open it
         this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
+          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
       // If panel was open, leave it closed (toggle behavior)
@@ -3116,7 +3107,7 @@ export class AppCtx {
       } else {
         this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
+          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
     }
@@ -3144,13 +3135,13 @@ export class AppCtx {
   }
 
   closeLeftPanel = (): void => {
-    this.getOpenLeftPanels().forEach((panel: PanelLeft) => {
+    this.responsiveCtx.getOpenLeftPanels().forEach(panel => {
       this.closePanel(panel as unknown as Panel, false)
     })
   }
 
   closeRightPanel = (): void => {
-    this.getOpenRightPanels().forEach((panel: PanelRight) => {
+    this.responsiveCtx.getOpenRightPanels().forEach(panel => {
       this.closePanel(panel as unknown as Panel, false)
     })
   }
@@ -3169,6 +3160,7 @@ export class AppCtx {
 
   openPanel = (panel: Panel, updateUrl: boolean = true): void => {
     this.state.panels[panel].isOpen = true
+    this.responsiveCtx.setPanelOpen(panel, true)
 
     // Handle stateful parameters for specific panels
     if (updateUrl && typeof window !== 'undefined') {
@@ -3181,6 +3173,7 @@ export class AppCtx {
 
   closePanel = (panel: Panel, updateUrl: boolean = true): void => {
     this.state.panels[panel].isOpen = false
+    this.responsiveCtx.setPanelOpen(panel, false)
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
         Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
@@ -3190,28 +3183,30 @@ export class AppCtx {
   }
 
   isPanelOpen = (panel: Panel): boolean => {
-    return this.state.panels[panel].isOpen ?? false
+    return this.responsiveCtx.isPanelOpen(panel)
   }
 
   isPanelNarrow = (panel: Panel): boolean => {
-    return (!this.isPanelOpenOrVisual(Panel.admin) && panel === Panel.admin) || false
+    return this.responsiveCtx.isPanelNarrow(panel)
   }
 
   // Visual-only panel methods for auto-hide behavior
   openPanelVisually = (panel: Panel): void => {
     this.state.panels[panel].isOpenVisually = true
+    this.responsiveCtx.setPanelOpenVisually(panel, true)
   }
 
   closePanelVisually = (panel: Panel): void => {
     this.state.panels[panel].isOpenVisually = false
+    this.responsiveCtx.setPanelOpenVisually(panel, false)
   }
 
   isPanelOpenVisually = (panel: Panel): boolean => {
-    return this.state.panels[panel].isOpenVisually ?? false
+    return this.responsiveCtx.isPanelOpenVisually(panel)
   }
 
   isPanelOpenOrVisual = (panel: Panel): boolean => {
-    return this.isPanelOpen(panel) || this.isPanelOpenVisually(panel)
+    return this.responsiveCtx.isPanelOpenOrVisual(panel)
   }
 
   // Helper method to open profile panel with username context
@@ -3242,13 +3237,17 @@ export class AppCtx {
   handleKeydown = (event: KeyboardEvent): void => {
     // Skip global keyboard shortcuts when any input element is focused
     const activeElement = document.activeElement
+    if (shouldSkipGlobalKeydown(activeElement)) {
+      return
+    }
+
     if (
-      activeElement &&
-      (activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.tagName === 'SELECT' ||
-        activeElement.getAttribute('contenteditable') === 'true')
+      consumeEscapeForOpenPanels(
+        event,
+        Object.values(this.state.panels).some(panel => panel.isOpen),
+      )
     ) {
+      this.closeAllPanels()
       return
     }
 
@@ -3836,20 +3835,6 @@ export class AppCtx {
     this.state.header = { ...this.state.header, ...headerState }
   }
 
-  /**
-   * @deprecated Prefer headerCtrl.setFormActions(...) from route/page form controllers.
-   */
-  setFormContext = (formCtx: any): void => {
-    this.formCtx = formCtx
-  }
-
-  /**
-   * @deprecated Prefer headerCtrl.clearFormActions(...) from route/page cleanup.
-   */
-  clearFormContext = (): void => {
-    this.formCtx = null
-  }
-
   // Derived values for header
   isIndex = $derived(this.state.nav.resourceRef === false)
   headerResourceType = $derived(this.state.nav.resourceType)
@@ -3906,8 +3891,9 @@ export const setAppCtx = (
   queryClient: QueryClient,
   placeCtx: PlaceCtx,
   user: SessionUser | null,
+  responsiveCtx: ResponsiveCtx,
 ) => {
-  const context = new AppCtx(queryClient, placeCtx, user)
+  const context = new AppCtx(queryClient, placeCtx, user, responsiveCtx)
   appCtxSingleton = context
   // Don't initialize immediately - let the session watcher handle it after mount
   return setContext(APPCTX_KEY, context)
