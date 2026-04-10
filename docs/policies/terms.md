@@ -1,6 +1,7 @@
 # **{{hub.name | "HYPE"}} Terms of Service**
 
 **Last Updated:** {{ date.today() }}
+<br>**Version:** 1.0
 
 ## 1. Welcome
 By using {{hub.name | "HYPE"}} ("we", "our", "us"), you agree to these Terms. If you don't agree, please don't use our service. We may update these Terms; we'll notify you of material changes via email or through the platform.

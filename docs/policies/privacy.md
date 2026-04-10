@@ -1,7 +1,7 @@
 # **{{hub.name | "HYPE"}} Privacy Policy**
 
 **Last Updated:** {{ date.today() }}
-**Version:** 1.0
+<br>**Version:** 1.0
 
 ---
 
@@ -186,9 +186,9 @@ Continued use after changes constitutes acceptance.
 | **HYPE** | [privacy@hype.hk] | Account data, ecosystem-wide activity, attribution, security |
 
 **Data Protection Officer (HYPE):**
-Mart van de Ven
-14/F, 8 Hennessy Rd, 
-Wan Chai, Hong Kong
+<br>Mart van de Ven
+<br>14/F, 8 Hennessy Rd,   
+<br>Wan Chai, Hong Kong
 
 ---
 
