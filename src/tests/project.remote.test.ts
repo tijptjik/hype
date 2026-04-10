@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -426,9 +426,11 @@ const throwingInvalid = (message: string): never => {
 }
 
 describe('project.remote form organisation move authz', () => {
-  beforeEach(async () => {
-    vi.resetModules()
+  beforeAll(async () => {
     remote = await import('$lib/api/server/project.remote')
+  })
+
+  beforeEach(async () => {
     vi.clearAllMocks()
 
     mockProbeProjectForUpdate.mockResolvedValue({
