@@ -12,7 +12,7 @@ const OMNIBAR_TALL_WIDE_DESKTOP_TOP_GUTTER_PX = 48
 /**
  * Returns the shared elevated chrome horizontal gutter.
  *
- * @param width Current viewport width in pixels.
+ * @param width Current effective layout width in pixels.
  * @returns Elevated chrome horizontal gutter in pixels.
  */
 export function getElevatedChromeXGutter(width: number): number {
@@ -26,17 +26,25 @@ export function getElevatedChromeXGutter(width: number): number {
  *
  * @param width Current viewport width in pixels.
  * @param height Current viewport height in pixels.
+ * @param responsiveWidth Optional effective content width in pixels used for
+ * width-based layout decisions when surrounding panels shrink the main area.
  * @returns Omnibar top gutter in pixels.
  */
-export function getOmnibarTopGutter(width: number, height: number): number {
+export function getOmnibarTopGutter(
+  width: number,
+  height: number,
+  responsiveWidth?: number | null,
+): number {
+  const effectiveWidth = responsiveWidth ?? width
+
   if (
-    width >= OMNIBAR_WIDE_DESKTOP_LAYOUT_MIN_WIDTH_PX &&
+    effectiveWidth >= OMNIBAR_WIDE_DESKTOP_LAYOUT_MIN_WIDTH_PX &&
     height > OMNIBAR_TALL_WIDE_DESKTOP_MIN_HEIGHT_PX
   ) {
     return OMNIBAR_TALL_WIDE_DESKTOP_TOP_GUTTER_PX
   }
 
-  return getElevatedChromeXGutter(width)
+  return getElevatedChromeXGutter(effectiveWidth)
 }
 
 /**
@@ -44,16 +52,24 @@ export function getOmnibarTopGutter(width: number, height: number): number {
  *
  * @param width Current viewport width in pixels.
  * @param height Current viewport height in pixels.
+ * @param responsiveWidth Optional effective content width in pixels used for
+ * width-based layout decisions when surrounding panels shrink the main area.
  * @returns Omnibar clearance height in pixels.
  */
-export function getOmnibarClearanceHeight(width: number, height: number): number {
-  if (!hasElevatedChrome(width, height)) {
+export function getOmnibarClearanceHeight(
+  width: number,
+  height: number,
+  responsiveWidth?: number | null,
+): number {
+  const effectiveWidth = responsiveWidth ?? width
+
+  if (!hasElevatedChrome(effectiveWidth, height)) {
     return OMNIBAR_STANDARD_BAR_HEIGHT_PX
   }
 
   return (
     OMNIBAR_STANDARD_BAR_HEIGHT_PX +
-    getOmnibarTopGutter(width, height) +
-    getElevatedChromeXGutter(width)
+    getOmnibarTopGutter(width, height, responsiveWidth) +
+    getElevatedChromeXGutter(effectiveWidth)
   )
 }

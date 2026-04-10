@@ -78,11 +78,19 @@ export class ResponsiveCtx {
   }
 
   get menuClearanceHeight(): number {
-    return getMenuClearanceHeight(this.window.width, this.window.height)
+    return getMenuClearanceHeight(
+      this.window.width,
+      this.window.height,
+      this.getEffectiveAppMainWidth(),
+    )
   }
 
   get menuReservedHeight(): number {
-    return getMenuReservedHeight(this.window.width, this.window.height)
+    return getMenuReservedHeight(
+      this.window.width,
+      this.window.height,
+      this.getEffectiveAppMainWidth(),
+    )
   }
 
   get visibleWindowHeight(): number {

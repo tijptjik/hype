@@ -3,11 +3,14 @@ import { layout, prepare, prepareWithSegments } from '@chenglou/pretext'
 // BITS
 import { cssVars } from '$lib/bits/utils'
 // BARS
-import { getMenuClearanceHeight } from '$lib/bits/patterns/bars/appMenu/appMenu.layout'
+import {
+  getMenuClearanceHeight,
+  getMenuReservedHeight,
+} from '$lib/bits/patterns/bars/appMenu/appMenu.layout'
 import {
   getElevatedChromeXGutter,
   getOmnibarClearanceHeight,
-} from '$lib/bits/patterns/bars/omnibar'
+} from '$lib/bits/patterns/bars/omnibar/Omnibar.layout'
 // CONTEXT
 import { hasElevatedChrome } from '$lib/context/responsive.svelte'
 // TYPES
@@ -81,24 +84,33 @@ export function getFeatureCardResponsiveMode(
  * @param params Layout inputs derived from viewport state.
  * @param params.width Current viewport width in pixels.
  * @param params.height Current viewport height in pixels.
+ * @param params.responsiveWidth Optional effective content width in pixels used for
+ * breakpoint selection when surrounding panels shrink the available main area.
  * @param params.heightBudgetPx Optional maximum height budget in pixels.
  * @returns Resolved layout metrics and behavior flags.
  */
 export function getFeatureCardLayout(params: {
   width: number
   height: number
+  responsiveWidth?: number | null
   heightBudgetPx?: number | null
 }): FeatureCardLayout {
   // Viewport dimensions and optional height budget
-  const { width, height, heightBudgetPx = null } = params
+  const { width, height, responsiveWidth = null, heightBudgetPx = null } = params
+  const effectiveWidth = responsiveWidth ?? width
   // Get 'tiny', 'small', 'smallWide', 'desktop', or 'desktopWide' responsive modes
-  const mode = getFeatureCardResponsiveMode(width, height)
-  // Elevated Chrome requires spacing around Omnibar, the card and the viewport edges
+  const mode = getFeatureCardResponsiveMode(effectiveWidth, height)
+  // Elevated chrome follows the viewport shell, even when side panels narrow the card.
   const elevatedChrome = hasElevatedChrome(width, height)
   // Reserve the app-menu footprint so the card clears the bottom chrome when floated
-  const menuClearanceHeightPx = getMenuClearanceHeight(width, height)
+  const menuClearanceHeightPx = getMenuClearanceHeight(width, height, responsiveWidth)
+  const menuReservedHeightPx = getMenuReservedHeight(width, height, responsiveWidth)
   // Reserve the omnibar footprint from the shared omnibar layout rules
-  const omnibarClearanceHeightPx = getOmnibarClearanceHeight(width, height)
+  const omnibarClearanceHeightPx = getOmnibarClearanceHeight(
+    width,
+    height,
+    responsiveWidth,
+  )
   const elevatedChromeXGutterPx = elevatedChrome ? getElevatedChromeXGutter(width) : 0
   // The omnibar already participates in document flow; only the floating card
   // height budget needs to account for that clearance, not the shell padding.
@@ -106,7 +118,9 @@ export function getFeatureCardLayout(params: {
   // Elevated layouts reserve the menu footprint; the outer margin supplies the
   // visible 24px breathing room above the menu.
   const bottomOffsetPx = elevatedChrome ? menuClearanceHeightPx : 0
-  const bottomSpacerPx = elevatedChrome ? 0 : FEATURE_CARD_APPMENU_SPACER_PX
+  const bottomSpacerPx = elevatedChrome
+    ? 0
+    : Math.max(menuReservedHeightPx, FEATURE_CARD_APPMENU_SPACER_PX)
   // Elevated chrome clearance already includes the gutter below the omnibar.
   const outerMarginTopPx = 0
   const outerMarginBottomPx =

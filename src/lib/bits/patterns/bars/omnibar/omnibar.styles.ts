@@ -66,9 +66,11 @@ export function getOmnibarRootClasses({
   )
 }
 
-const OMNIBAR_WIDTH_CONTAINER_SHARED_CLASSES = 'min-w-0 w-full'
+const OMNIBAR_WIDTH_CONTAINER_SHARED_CLASSES =
+  'mx-auto min-w-0 w-full max-w-[var(--omni-effective-main-width)]'
 
-const OMNIBAR_WIDTH_CONTAINER_FLOATING_CLASSES = 'mx-auto max-w-[32.375rem]'
+const OMNIBAR_WIDTH_CONTAINER_FLOATING_CLASSES =
+  'mx-auto max-w-[min(32.375rem,calc(var(--omni-effective-main-width)-(var(--omni-x-gutter)*2)))]'
 
 export function getOmnibarWidthContainerClasses(hasElevatedChrome: boolean): string {
   return cx(

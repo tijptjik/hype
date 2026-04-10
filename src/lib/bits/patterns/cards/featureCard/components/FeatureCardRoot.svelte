@@ -10,6 +10,7 @@ import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 import { getFeatureCardLayout, getFeatureCardLayoutVars } from '../featureCard.layout'
 import { getFeatureCardRootVars } from '../featureCard.styles'
 import type { FeatureCardLayout } from '../featureCard.types'
+import { getFeatureCardResponsiveWidth } from '../featureCard.utils'
 
 const CARD_CONTENT_REVEAL_DELAY_MS = 120
 const CARD_SHELL_TRANSITION_MS = 260
@@ -26,10 +27,12 @@ const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
 
 const horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
+const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
     height: responsiveCtx.visibleWindowHeight,
+    responsiveWidth,
     heightBudgetPx,
   }),
 )
@@ -38,6 +41,7 @@ const shellStyle = $derived.by(() =>
     getFeatureCardRootVars({
       layout,
       horizontalOffsetPx: horizontalOffset,
+      availableWidthPx: responsiveWidth,
     }),
     `transform: translateX(var(--feature-card-horizontal-offset))`,
     `padding-inline: var(--feature-card-inline-padding)`,

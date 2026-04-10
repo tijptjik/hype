@@ -29,6 +29,7 @@ import {
   resolveFeaturePropertyLayout,
   stripRichTextToPlainText,
 } from '../featureCard.layout'
+import { getFeatureCardResponsiveWidth } from '../featureCard.utils'
 import type {
   CollapsedContentPlan,
   FeaturePropertyItem,
@@ -82,10 +83,12 @@ let {
 const appCtx = getAppCtx()
 const responsiveCtx = getResponsiveCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
+const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
     height: responsiveCtx.visibleWindowHeight,
+    responsiveWidth,
   }),
 )
 const contentSidePaddingPx = $derived(layout.contentPaddingXPx)

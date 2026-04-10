@@ -65,11 +65,6 @@ export const authConfig = {
         required: true,
         defaultValue: '{"contributorMode":false, "noLabelsMode":false}',
       },
-      superAdmin: {
-        type: 'boolean' as const,
-        required: true,
-        defaultValue: false,
-      },
       username: {
         type: 'string' as const,
         required: false,

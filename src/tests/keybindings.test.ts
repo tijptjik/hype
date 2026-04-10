@@ -77,6 +77,8 @@ describe('dismissActiveFeatureNavigation', () => {
   })
 
   it('clears the active feature after the card is already closed', () => {
+    vi.useFakeTimers()
+
     const closeCard = vi.fn()
     const resetActiveFeature = vi.fn()
     const resetToSearch = vi.fn()
@@ -97,6 +99,12 @@ describe('dismissActiveFeatureNavigation', () => {
     expect(setIntentionallyClosing).toHaveBeenCalledWith(true)
     expect(resetActiveFeature).toHaveBeenCalledTimes(1)
     expect(resetToSearch).toHaveBeenCalledTimes(1)
+
+    vi.runAllTimers()
+
+    expect(setIntentionallyClosing).toHaveBeenLastCalledWith(false)
+
+    vi.useRealTimers()
   })
 
   it('does nothing when there is no active feature', () => {

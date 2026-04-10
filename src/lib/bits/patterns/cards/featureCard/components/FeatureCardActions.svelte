@@ -5,6 +5,7 @@ import { cx } from '$lib/bits/utils'
 import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // LOCAL
 import { getFeatureCardLayout } from '../featureCard.layout'
+import { getFeatureCardResponsiveWidth } from '../featureCard.utils'
 
 interface Props {
   leftActions?: import('svelte').Snippet
@@ -15,10 +16,12 @@ interface Props {
 let { leftActions, rightActions, heightBudgetPx = null }: Props = $props()
 
 const responsiveCtx = getResponsiveCtx()
+const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
     height: responsiveCtx.visibleWindowHeight,
+    responsiveWidth,
     heightBudgetPx,
   }),
 )

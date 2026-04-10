@@ -7,6 +7,8 @@ import type { OmniCtx } from '$lib/context/omni.svelte'
 import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { OmniCollection, OmniMode } from '$lib/enums'
+// CONTEXT
+import { hasElevatedChrome } from '$lib/context/responsive.svelte'
 // I18N
 import { getI18n, getLocaleKey, getLocaleOrder, m, toLocaleCode } from '$lib/i18n'
 // TYPES
@@ -217,7 +219,10 @@ export function useOmnibarModel(
 
       return {
         mode: omniCtx.state.mode,
-        hasElevatedChrome: responsiveCtx.hasElevatedChrome,
+        hasElevatedChrome: hasElevatedChrome(
+          responsiveCtx.getEffectiveAppMainWidth(),
+          responsiveCtx.visibleWindowHeight,
+        ),
         horizontalOffset: responsiveCtx.getAppMainOffsetX(),
         effectiveAppMainWidth: responsiveCtx.getEffectiveAppMainWidth(),
         availableViewportHeight: getOmnibarAvailableViewportHeight(

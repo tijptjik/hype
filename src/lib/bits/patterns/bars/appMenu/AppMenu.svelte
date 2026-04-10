@@ -23,7 +23,7 @@ let {
   items,
   trailingItems = [],
   onSelect,
-  offsetX = 0,
+  offsetX,
   class: className = '',
 }: AppMenuProps<T> = $props()
 
@@ -33,7 +33,13 @@ const responsiveCtx = getResponsiveCtx()
 // RESPONSIVENESS
 const availableWidth = $derived(responsiveCtx.visibleWindowWidth)
 const availableHeight = $derived(responsiveCtx.visibleWindowHeight)
-const viewportState = $derived(getAppMenuViewportState(availableWidth, availableHeight))
+const responsiveWidth = $derived(
+  responsiveCtx.getEffectiveAppMainWidth() || availableWidth,
+)
+const resolvedOffsetX = $derived(offsetX ?? responsiveCtx.getAppMainOffsetX())
+const viewportState = $derived(
+  getAppMenuViewportState(availableWidth, availableHeight, responsiveWidth),
+)
 const isShortMenu = $derived(viewportState.menuMode === 'shortMenu')
 const isTallMenu = $derived(viewportState.menuMode === 'tallMenu')
 const isNarrowPillMenu = $derived(viewportState.menuMode === 'narrowPillMenu')
@@ -60,14 +66,17 @@ const visibleTrailingItems = $derived(
 )
 const mobileItems = $derived(isPillMenu ? items : [...items, ...visibleTrailingItems])
 const navItemCount = $derived(isPillMenu ? items.length : mobileItems.length)
-const xGutterPx = $derived(isPillMenu ? getElevatedChromeXGutter(availableWidth) : 0)
+const xGutterPx = $derived(isPillMenu ? getElevatedChromeXGutter(responsiveWidth) : 0)
 const bottomGutterPx = $derived(
-  isPillMenu ? getAppMenuBottomGutter(availableWidth, availableHeight) : 0,
+  isPillMenu
+    ? getAppMenuBottomGutter(availableWidth, availableHeight, responsiveWidth)
+    : 0,
 )
 const navStyles = $derived(
   getAppMenuNavStyles({
     itemCount: navItemCount,
-    offsetX,
+    offsetX: resolvedOffsetX,
+    effectiveWidthPx: responsiveWidth,
     xGutterPx,
     bottomGutterPx,
   }),

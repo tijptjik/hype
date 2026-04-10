@@ -74,8 +74,7 @@ async function toggleWishlisted(): Promise<void> {
   text={isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
   icon={wishlistIcon}
   variant="ghost"
-  labelClasses="hidden min-[34rem]:inline-block"
-  expandFromClasses="min-[34rem]:w-auto min-[34rem]:px-[calc(var(--btn-padding-x)-0.25rem)]"
+  hideLabelBelow={544}
   onClick={() => {
     void toggleWishlisted()
   }}

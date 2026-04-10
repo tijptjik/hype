@@ -15,12 +15,20 @@ const FEATURE_CARD_WIDE_SHADOW =
 export function getFeatureCardRootVars(params: {
   layout: FeatureCardLayout
   horizontalOffsetPx: number
+  availableWidthPx: number
 }): string {
-  const { layout, horizontalOffsetPx } = params
+  const { layout, horizontalOffsetPx, availableWidthPx } = params
   const chromeInnerRadiusPx = Math.max(
     0,
     layout.chromeRadiusPx - layout.chromeBorderWidthPx,
   )
+  const availableCardWidthPx = Math.max(
+    availableWidthPx - layout.inlinePaddingPx * 2,
+    0,
+  )
+  const resolvedCardMaxWidthPx = layout.cardMaxWidthPx
+    ? Math.min(layout.cardMaxWidthPx, availableCardWidthPx)
+    : availableCardWidthPx
 
   return cssVars({
     '--feature-card-horizontal-offset': `${horizontalOffsetPx}px`,
@@ -29,9 +37,7 @@ export function getFeatureCardRootVars(params: {
       (layout.hasElevatedChrome ? layout.topOffsetPx : 0) + layout.outerMarginTopPx
     }px`,
     '--feature-card-shell-bottom-padding': `${layout.outerMarginBottomPx}px`,
-    '--feature-card-max-width': layout.cardMaxWidthPx
-      ? `${layout.cardMaxWidthPx}px`
-      : '100%',
+    '--feature-card-max-width': `${resolvedCardMaxWidthPx}px`,
     '--feature-card-max-height': `${layout.heightBudgetPx}px`,
     '--feature-card-chrome-radius': `${layout.chromeRadiusPx}px`,
     '--feature-card-chrome-inner-radius': `${chromeInnerRadiusPx}px`,

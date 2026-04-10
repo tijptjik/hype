@@ -24,6 +24,14 @@ describe('omnibar styles', () => {
     expect(classes).toContain('rounded-full')
   })
 
+  it('caps the floating width container against the effective app width', () => {
+    const classes = getOmnibarWidthContainerClasses(true)
+
+    expect(classes).toContain(
+      'max-w-[min(32.375rem,calc(var(--omni-effective-main-width)-(var(--omni-x-gutter)*2)))]',
+    )
+  })
+
   it('drops wide-layout classes when the effective main width falls below the threshold', () => {
     const rootClasses = getOmnibarRootClasses({
       hasElevatedChrome: true,
