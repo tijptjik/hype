@@ -10,7 +10,7 @@ import {
 import {
   getElevatedChromeXGutter,
   getOmnibarClearanceHeight,
-} from '$lib/bits/patterns/bars/omnibar'
+} from '$lib/bits/patterns/bars/omnibar/Omnibar.layout'
 // CONTEXT
 import { hasElevatedChrome } from '$lib/context/responsive.svelte'
 // TYPES
@@ -100,8 +100,8 @@ export function getFeatureCardLayout(params: {
   const effectiveWidth = responsiveWidth ?? width
   // Get 'tiny', 'small', 'smallWide', 'desktop', or 'desktopWide' responsive modes
   const mode = getFeatureCardResponsiveMode(effectiveWidth, height)
-  // Elevated Chrome requires spacing around Omnibar, the card and the viewport edges
-  const elevatedChrome = hasElevatedChrome(effectiveWidth, height)
+  // Elevated chrome follows the viewport shell, even when side panels narrow the card.
+  const elevatedChrome = hasElevatedChrome(width, height)
   // Reserve the app-menu footprint so the card clears the bottom chrome when floated
   const menuClearanceHeightPx = getMenuClearanceHeight(width, height, responsiveWidth)
   const menuReservedHeightPx = getMenuReservedHeight(width, height, responsiveWidth)
@@ -111,9 +111,7 @@ export function getFeatureCardLayout(params: {
     height,
     responsiveWidth,
   )
-  const elevatedChromeXGutterPx = elevatedChrome
-    ? getElevatedChromeXGutter(effectiveWidth)
-    : 0
+  const elevatedChromeXGutterPx = elevatedChrome ? getElevatedChromeXGutter(width) : 0
   // The omnibar already participates in document flow; only the floating card
   // height budget needs to account for that clearance, not the shell padding.
   const topOffsetPx = 0
