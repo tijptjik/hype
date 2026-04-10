@@ -13,6 +13,7 @@ import {
   getFeatureCardLayout,
   resolveFeaturePropertyLayout,
 } from '../../featureCard.layout'
+import { getFeatureCardResponsiveWidth } from '../../featureCard.utils'
 
 let {
   feature,
@@ -25,10 +26,12 @@ let {
 const appCtx = getAppCtx()
 const responsiveCtx = getResponsiveCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
+const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
     height: responsiveCtx.visibleWindowHeight,
+    responsiveWidth,
   }),
 )
 

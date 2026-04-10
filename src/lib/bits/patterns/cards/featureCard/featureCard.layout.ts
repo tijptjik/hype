@@ -81,18 +81,21 @@ export function getFeatureCardResponsiveMode(
  * @param params Layout inputs derived from viewport state.
  * @param params.width Current viewport width in pixels.
  * @param params.height Current viewport height in pixels.
+ * @param params.responsiveWidth Optional effective content width in pixels used for
+ * breakpoint selection when surrounding panels shrink the available main area.
  * @param params.heightBudgetPx Optional maximum height budget in pixels.
  * @returns Resolved layout metrics and behavior flags.
  */
 export function getFeatureCardLayout(params: {
   width: number
   height: number
+  responsiveWidth?: number | null
   heightBudgetPx?: number | null
 }): FeatureCardLayout {
   // Viewport dimensions and optional height budget
-  const { width, height, heightBudgetPx = null } = params
+  const { width, height, responsiveWidth = null, heightBudgetPx = null } = params
   // Get 'tiny', 'small', 'smallWide', 'desktop', or 'desktopWide' responsive modes
-  const mode = getFeatureCardResponsiveMode(width, height)
+  const mode = getFeatureCardResponsiveMode(responsiveWidth ?? width, height)
   // Elevated Chrome requires spacing around Omnibar, the card and the viewport edges
   const elevatedChrome = hasElevatedChrome(width, height)
   // Reserve the app-menu footprint so the card clears the bottom chrome when floated

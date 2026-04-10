@@ -21,6 +21,7 @@ import { FeatureCardMode } from '$lib/enums'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 // LOCAL
 import { getFeatureCardLayout } from './featureCard.layout'
+import { getFeatureCardResponsiveWidth } from './featureCard.utils'
 
 type FeatureCardProps = {
   feature: Feature
@@ -39,10 +40,12 @@ const responsiveCtx = (() => {
   }
 })()
 const mode = $derived(cardCtx.state.mode)
+const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
     height: responsiveCtx.visibleWindowHeight,
+    responsiveWidth,
   }),
 )
 
