@@ -1133,8 +1133,25 @@ export const Facets = [
   'images',
   'fields',
   'layers',
+  'policies',
 ] as const
 export type FacetType = (typeof Facets)[number]
+
+/* ----------------- */
+// HUB
+/* -------- */
+
+export type HubSubscriptionPlacement = {
+  hubPanel: boolean
+  topBar: boolean
+  menu: boolean
+}
+
+export type HubUserStateFlags = {
+  subscriptionPromptDismissed?: boolean
+  subscriptionMember?: boolean
+  hasAgreedToTerms?: boolean
+}
 
 /* ----------------- */
 // I18N
