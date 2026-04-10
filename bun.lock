@@ -46,6 +46,7 @@
         "runed": "^0.37.1",
         "sharp": "^0.34.5",
         "smartcrop": "^2.0.5",
+        "substack-subscriber": "^1.0.0",
         "svelte": "^5.55.1",
         "svelte-auto-animate": "^0.0.1",
         "svelte-fa": "^4.0.4",
@@ -1878,6 +1879,8 @@
     "strip-json-comments": ["strip-json-comments@3.1.1", "", {}, "sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig=="],
 
     "style-to-object": ["style-to-object@1.0.14", "", { "dependencies": { "inline-style-parser": "0.2.7" } }, "sha512-LIN7rULI0jBscWQYaSswptyderlarFkjQ+t79nzty8tcIAceVomEVlLzH5VP4Cmsv6MtKhs7qaAiwlcp+Mgaxw=="],
+
+    "substack-subscriber": ["substack-subscriber@1.0.0", "", { "dependencies": { "playwright": "^1.49.1" } }, "sha512-vkU7tSgo7zMJnrk7HQOfvQQzN6Vqc0IoRA+VEwK/WzlG3VVOrp8WyAPsWR84wTsORZvTE8qw6ZPvGUdw/sgH6A=="],
 
     "supercluster": ["supercluster@8.0.1", "", { "dependencies": { "kdbush": "^4.0.2" } }, "sha512-IiOea5kJ9iqzD2t7QJq/cREyLHTtSmUT6gQsweojg9WH2sYJqZK9SswTu6jrscO6D1G5v5vYZ9ru/eq85lXeZQ=="],
 
