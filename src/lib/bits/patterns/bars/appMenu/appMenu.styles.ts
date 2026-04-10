@@ -91,7 +91,7 @@ export function getAppMenuItemButtonClasses(
 }
 
 const APP_MENU_NAV_SHARED_CLASSES =
-  'fixed inset-x-0 bottom-0 z-100 mx-auto w-[calc(100%-6rem)] rounded-t-3xl border-2 border-b-0 border-base-300 bg-black px-4 caret-transparent'
+  'fixed left-1/2 right-auto bottom-0 z-100 w-[calc(var(--app-menu-effective-width)-6rem)] max-w-[calc(var(--app-menu-effective-width)-6rem)] rounded-t-3xl border-2 border-b-0 border-base-300 bg-black px-4 caret-transparent transform-[translateX(calc(-50%+var(--app-menu-offset-x)))]'
 
 const APP_MENU_NAV_ICON_ONLY_MAX_WIDTH_CLASSES = 'max-w-80'
 
@@ -104,7 +104,7 @@ const APP_MENU_NAV_DEFAULT_CLASSES = 'py-4'
 const APP_MENU_NAV_COMPACT_ICON_ONLY_CLASSES = 'px-2'
 
 const APP_MENU_NAV_DESKTOP_CLASSES =
-  'md:left-1/2 md:right-auto md:bottom-[var(--app-menu-bottom-gutter)] md:w-auto md:min-h-0 md:max-w-[calc(100vw-(var(--app-menu-x-gutter)*2))] md:border-0 md:bg-transparent md:px-0 md:py-0 md:pb-[env(safe-area-inset-bottom)] md:pointer-events-none md:transform-[translateX(calc(-50%+var(--app-menu-offset-x)))]'
+  'md:bottom-[var(--app-menu-bottom-gutter)] md:w-auto md:min-h-0 md:max-w-[calc(var(--app-menu-effective-width)-(var(--app-menu-x-gutter)*2))] md:border-0 md:bg-transparent md:px-0 md:py-0 md:pb-[env(safe-area-inset-bottom)] md:pointer-events-none'
 
 /**
  * Builds root nav classes for the app menu.
@@ -147,13 +147,15 @@ export function getAppMenuNavClasses(
 export function getAppMenuNavStyles(params: {
   itemCount: number
   offsetX: number
+  effectiveWidthPx: number
   xGutterPx: number
   bottomGutterPx: number
 }): string {
-  const { itemCount, offsetX, xGutterPx, bottomGutterPx } = params
+  const { itemCount, offsetX, effectiveWidthPx, xGutterPx, bottomGutterPx } = params
   return cssVars(
     { '--app-menu-item-count': String(itemCount) },
     { '--app-menu-offset-x': `${offsetX}px` },
+    { '--app-menu-effective-width': `${effectiveWidthPx}px` },
     { '--app-menu-x-gutter': `${xGutterPx}px` },
     { '--app-menu-bottom-gutter': `${bottomGutterPx}px` },
   )

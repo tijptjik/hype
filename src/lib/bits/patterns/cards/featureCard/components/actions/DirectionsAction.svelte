@@ -28,8 +28,7 @@ function getDirections(): void {
   text={m.alive_large_hawk_hunt()}
   icon={directionsIcon}
   variant="primary"
-  labelClasses="hidden min-[16rem]:inline-block"
-  expandFromClasses="min-[16rem]:w-auto min-[16rem]:px-[calc(var(--btn-padding-x)-0.25rem)]"
-  class="w-[11.5rem] min-w-[11.5rem] max-w-[11.5rem]"
+  hideLabelBelow={256}
+  expandedClass="min-w-[11.5rem] max-w-[11.5rem]"
   onClick={getDirections}
 />

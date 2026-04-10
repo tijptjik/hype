@@ -5,6 +5,8 @@ import * as OmnibarPrimitive from './components'
 import { OmniMode } from '$lib/enums'
 // STYLES
 import { getOmnibarRootClasses } from './omnibar.styles'
+// LAYOUT
+import { getElevatedChromeXGutter } from './Omnibar.layout'
 // TYPES
 import type { OmnibarProps } from './omnibar.types'
 
@@ -27,6 +29,7 @@ const rootClasses = $derived(
     effectiveAppMainWidth,
   }),
 )
+const xGutterPx = $derived(getElevatedChromeXGutter(effectiveAppMainWidth))
 
 function handleEscape(event: KeyboardEvent): void {
   if (event.key === 'Escape') {
@@ -38,7 +41,7 @@ function handleEscape(event: KeyboardEvent): void {
 <OmnibarPrimitive.Root
   class={rootClasses}
   {hasElevatedChrome}
-  style="transform: translateX({horizontalOffset}px); --omni-available-height: {availableViewportHeight}px; --omni-effective-main-width: {effectiveAppMainWidth}px;"
+  style="transform: translateX({horizontalOffset}px); --omni-available-height: {availableViewportHeight}px; --omni-effective-main-width: {effectiveAppMainWidth}px; --omni-x-gutter: {xGutterPx}px;"
   onkeydown={handleEscape}
 >
   {#snippet children()}

@@ -3,8 +3,15 @@
 import Button from '$lib/bits/core/button/Button.svelte'
 // BITS
 import { cx } from '$lib/bits/utils'
+// CONTEXT
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // TYPES
 import type { Snippet } from 'svelte'
+// LOCAL
+import {
+  getFeatureCardResponsiveWidth,
+  shouldCollapseFeatureCardAction,
+} from '../../featureCard.utils'
 
 type FeatureCardActionVariant = 'default' | 'ghost' | 'secondary' | 'primary'
 
@@ -15,8 +22,10 @@ interface Props {
   onClick?: (event: MouseEvent) => void
   disabled?: boolean
   variant?: FeatureCardActionVariant
+  hideLabelBelow?: number
   labelClasses?: string
-  expandFromClasses?: string
+  expandedClass?: string
+  collapsedClass?: string
   class?: string
 }
 
@@ -27,10 +36,18 @@ let {
   onClick,
   disabled = false,
   variant = 'default',
+  hideLabelBelow = undefined,
   labelClasses = '',
-  expandFromClasses = '',
+  expandedClass = '',
+  collapsedClass = '',
   class: className = '',
 }: Props = $props()
+
+const responsiveCtx = getResponsiveCtx()
+const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const isCollapsed = $derived(
+  shouldCollapseFeatureCardAction(responsiveWidth, hideLabelBelow),
+)
 
 function getVariantClasses(resolvedVariant: FeatureCardActionVariant): string {
   if (resolvedVariant === 'ghost') {
@@ -86,11 +103,18 @@ function getVariantClasses(resolvedVariant: FeatureCardActionVariant): string {
 
 const rootClasses = $derived(
   cx(
-    'w-11 min-w-11 shrink-0 rounded-full px-0 uppercase font-medium tracking-[0.16em] shadow-none backdrop-blur-[10px]',
-    '[--btn-size:2.75rem] [--btn-padding-x:1.3125rem] [--btn-base-label-size:0.8125rem] [--btn-label-multiplier:0]',
+    'shrink-0 rounded-full uppercase font-medium tracking-[0.16em] shadow-none backdrop-blur-[10px]',
+    '[--btn-size:2.75rem] [--btn-padding-x:1.3125rem] [--btn-base-label-size:0.8125rem]',
+    hideLabelBelow !== undefined
+      ? isCollapsed
+        ? cx('w-11 min-w-11 px-0 [--btn-label-multiplier:0]', collapsedClass)
+        : cx(
+            'w-auto min-w-max px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]',
+            expandedClass,
+          )
+      : 'w-11 min-w-11 px-0 [--btn-label-multiplier:0]',
     'disabled:opacity-40',
     getVariantClasses(variant),
-    expandFromClasses,
     className,
   ),
 )
@@ -104,6 +128,8 @@ const resolvedLabelClasses = $derived(cx('leading-none text-inherit', labelClass
   color="neutral"
   style="transparent"
   size="md"
+  availableWidth={responsiveWidth}
+  {hideLabelBelow}
   class={rootClasses}
   labelClasses={resolvedLabelClasses}
   attrs={{ title: title ?? text }}

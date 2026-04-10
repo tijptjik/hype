@@ -9,6 +9,7 @@ import { toast } from 'svelte-sonner'
 import { getLocale, m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // SERVICES
 import { toggleVisitedStatus } from '$lib/client/services/userFeatures'
 // TYPES
@@ -16,11 +17,17 @@ import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature
 // ICONS
 import Check from 'virtual:icons/lucide/check'
 // LOCAL
+import {
+  getFeatureCardResponsiveWidth,
+  shouldCollapseFeatureCardAction,
+} from '../../featureCard.utils'
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 
 let { feature }: { feature: Feature | UserContributedFeature } = $props()
 
 const appCtx = getAppCtx()
+const responsiveCtx = getResponsiveCtx()
+const VISIT_ACTION_COLLAPSE_WIDTH = 544
 
 let isSubmitting = $state(false)
 
@@ -36,6 +43,11 @@ const visitedFeature = $derived(
     : undefined,
 )
 const isVisited = $derived(Boolean(visitedFeature))
+const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const shouldShowCompactVisitedButton = $derived(
+  isVisited &&
+    shouldCollapseFeatureCardAction(responsiveWidth, VISIT_ACTION_COLLAPSE_WIDTH),
+)
 
 async function toggleVisited(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
@@ -79,7 +91,7 @@ function getVisitedLocale() {
   {/if}
 {/snippet}
 
-{#if isVisited && visitedFeature?.visitedAt}
+{#if isVisited && visitedFeature?.visitedAt && !shouldShowCompactVisitedButton}
   <div
     class="flex h-full flex-col items-start justify-center pl-2 text-sm text-neutral-content"
   >
@@ -96,8 +108,7 @@ function getVisitedLocale() {
     text={isVisited ? 'Forget' : m.noble_fine_ibex_pinch()}
     icon={visitIcon}
     variant="secondary"
-    labelClasses="hidden min-[34rem]:inline-block"
-    expandFromClasses="min-[34rem]:w-auto min-[34rem]:px-[calc(var(--btn-padding-x)-0.25rem)]"
+    hideLabelBelow={VISIT_ACTION_COLLAPSE_WIDTH}
     onClick={() => {
       void toggleVisited()
     }}

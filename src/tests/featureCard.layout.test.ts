@@ -1,5 +1,6 @@
 import { getFeatureCardLayout } from '$lib/bits/patterns/cards/featureCard/featureCard.layout'
 import { getFeatureCardRootVars } from '$lib/bits/patterns/cards/featureCard/featureCard.styles'
+import { shouldCollapseFeatureCardAction } from '$lib/bits/patterns/cards/featureCard/featureCard.utils'
 import { describe, expect, it } from 'vitest'
 
 describe('feature card layout', () => {
@@ -37,5 +38,10 @@ describe('feature card layout', () => {
     })
 
     expect(vars).toContain('--feature-card-max-width: 392px')
+  })
+
+  it('collapses action labels using the effective app width', () => {
+    expect(shouldCollapseFeatureCardAction(440, 544)).toBe(true)
+    expect(shouldCollapseFeatureCardAction(560, 544)).toBe(false)
   })
 })

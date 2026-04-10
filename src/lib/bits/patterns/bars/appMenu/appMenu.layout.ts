@@ -21,15 +21,24 @@ export const APP_MENU_DEFAULT_EFFECTIVE_BOTTOM_OFFSET = 80
  *
  * @param availableWidth Current viewport width in pixels.
  * @param availableHeight Current viewport height in pixels.
+ * @param responsiveWidth Optional effective content width in pixels used for
+ * width-based layout decisions when surrounding panels shrink the main area.
  * @returns Bottom gutter under the pill menu in pixels.
  */
 export function getAppMenuBottomGutter(
   availableWidth: number,
   availableHeight: number,
+  responsiveWidth?: number | null,
 ): number {
-  const viewportState = getAppMenuViewportState(availableWidth, availableHeight)
+  const viewportState = getAppMenuViewportState(
+    availableWidth,
+    availableHeight,
+    responsiveWidth,
+  )
 
-  return viewportState.hasElevatedChrome ? getElevatedChromeXGutter(availableWidth) : 0
+  return viewportState.hasElevatedChrome
+    ? getElevatedChromeXGutter(responsiveWidth ?? availableWidth)
+    : 0
 }
 
 /**
@@ -37,13 +46,17 @@ export function getAppMenuBottomGutter(
  *
  * @param availableWidth Current viewport width in pixels.
  * @param availableHeight Current viewport height in pixels.
+ * @param responsiveWidth Optional effective content width in pixels used for
+ * width-based layout decisions when surrounding panels shrink the main area.
  * @returns Menu clearance height in pixels.
  */
 export function getMenuClearanceHeight(
   availableWidth: number,
   availableHeight: number,
+  responsiveWidth?: number | null,
 ): number {
-  return getAppMenuViewportState(availableWidth, availableHeight).effectiveBottomOffset
+  return getAppMenuViewportState(availableWidth, availableHeight, responsiveWidth)
+    .effectiveBottomOffset
 }
 
 /**
@@ -51,13 +64,20 @@ export function getMenuClearanceHeight(
  *
  * @param availableWidth Current viewport width in pixels.
  * @param availableHeight Current viewport height in pixels.
+ * @param responsiveWidth Optional effective content width in pixels used for
+ * width-based layout decisions when surrounding panels shrink the main area.
  * @returns Reserved menu height in pixels, or 0 when the desktop menu overlays content.
  */
 export function getMenuReservedHeight(
   availableWidth: number,
   availableHeight: number,
+  responsiveWidth?: number | null,
 ): number {
-  const viewportState = getAppMenuViewportState(availableWidth, availableHeight)
+  const viewportState = getAppMenuViewportState(
+    availableWidth,
+    availableHeight,
+    responsiveWidth,
+  )
 
   if (!viewportState.isMobileMenu) {
     return 0
@@ -73,11 +93,14 @@ export function getMenuReservedHeight(
  *
  * @param availableWidth Current viewport width in pixels.
  * @param availableHeight Current viewport height in pixels.
+ * @param responsiveWidth Optional effective content width in pixels used for
+ * width-based layout decisions when surrounding panels shrink the main area.
  * @returns Derived menu state for label visibility, compact layout, and offsets.
  */
 export function getAppMenuViewportState(
   availableWidth: number,
   availableHeight: number,
+  responsiveWidth?: number | null,
 ): {
   effectiveBottomOffset: number
   hasElevatedChrome: boolean
@@ -87,19 +110,20 @@ export function getAppMenuViewportState(
   menuMode: AppMenuLayoutMode
   shouldUseCompactVisualMenu: boolean
 } {
-  const hasElevatedChrome = getHasElevatedChrome(availableWidth, availableHeight)
-  const isMobileMenu = availableWidth < MOBILE_MAX_WIDTH
+  const effectiveWidth = responsiveWidth ?? availableWidth
+  const hasElevatedChrome = getHasElevatedChrome(effectiveWidth, availableHeight)
+  const isMobileMenu = effectiveWidth < MOBILE_MAX_WIDTH
   let menuMode: AppMenuLayoutMode = 'shortMenu'
 
-  if (availableWidth < APP_MENU_LAYOUT_COMPACT_MAX_WIDTH) {
+  if (effectiveWidth < APP_MENU_LAYOUT_COMPACT_MAX_WIDTH) {
     menuMode =
       availableHeight >= APP_MENU_LAYOUT_COMPACT_TALL_MIN_HEIGHT
         ? 'tallMenu'
         : 'shortMenu'
-  } else if (availableWidth < APP_MENU_LAYOUT_MEDIUM_MIN_WIDTH) {
+  } else if (effectiveWidth < APP_MENU_LAYOUT_MEDIUM_MIN_WIDTH) {
     menuMode =
       availableHeight >= APP_MENU_LAYOUT_TALL_MIN_HEIGHT ? 'tallMenu' : 'shortMenu'
-  } else if (availableWidth < APP_MENU_LAYOUT_WIDE_MIN_WIDTH) {
+  } else if (effectiveWidth < APP_MENU_LAYOUT_WIDE_MIN_WIDTH) {
     menuMode =
       availableHeight >= APP_MENU_LAYOUT_TALL_MIN_HEIGHT
         ? 'narrowPillMenu'
