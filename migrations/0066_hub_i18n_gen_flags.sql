@@ -1,8 +1,4 @@
-ALTER TABLE `hubI18n`
-ADD `subscriptionBenefitsGen` integer NOT NULL DEFAULT 0;
-
-ALTER TABLE `hubI18n`
-ADD `privacyPolicyGen` integer NOT NULL DEFAULT 0;
-
-ALTER TABLE `hubI18n`
-ADD `termsOfServiceGen` integer NOT NULL DEFAULT 0;
+-- 0064_hub_subscription_benefits_i18n.sql already added these columns.
+-- Keep this migration as an intentional no-op so databases that have 0064
+-- applied can continue through the migration chain without duplicate-column
+-- failures on preview/prod.
