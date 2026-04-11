@@ -71,7 +71,7 @@ import { useEntityImageViewerModel } from '$lib/adapters/image'
 import { UserAttributionCard } from '$lib/bits'
 import { AdminViewer, Dropzone } from '$lib/bits/patterns/images'
 import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
-import ViewerControls from '$lib/bits/patterns/images/components/ViewerControls.svelte'
+import ViewerControls from '$lib/bits/patterns/images/components/controls/ViewerControls.svelte'
 // COMPONENTS
 import { Icon } from '$lib/bits'
 // CONTEXT

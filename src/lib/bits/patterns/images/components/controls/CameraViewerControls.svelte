@@ -12,7 +12,7 @@ import CameraIcon from 'virtual:icons/lucide/camera'
 import FolderOpenIcon from 'virtual:icons/lucide/folder-open'
 import Trash2Icon from 'virtual:icons/lucide/trash-2'
 // LOCAL
-import { detectCameraAccess, requestCameraAccess } from './cameraAccess'
+import { detectCameraAccess, requestCameraAccess } from '../cameraAccess'
 
 let {
   uploadSelectionMode = 'multiple',
