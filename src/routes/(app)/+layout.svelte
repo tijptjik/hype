@@ -1,14 +1,24 @@
 <script lang="ts">
 // SVELTE
 import { browser } from '$app/environment'
+import type { Snippet } from 'svelte'
 // NAVIGATION
 import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 import { dismissActiveFeatureNavigation, handlePanelParams } from '$lib/navigation'
 import { useSession } from '$lib/auth/client'
 import { useOmnibarModel } from '$lib/adapters/bars'
+import {
+  createHubSubscriptionModelParams,
+  toHubUserStateFlags,
+  useHubSubscriptionModel,
+} from '$lib/adapters/hub'
+import {
+  dismissHubSubscriptionPrompt,
+  joinHubSubscription,
+} from '$lib/client/services/hubSubscription'
 import { shouldSkipGlobalKeydown } from '$lib/client/keybindings'
-// I18N
+import { toast } from 'svelte-sonner'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getResponsiveCtx } from '$lib/context/responsive.svelte'
@@ -30,6 +40,7 @@ import Settings from '$lib/components/panels/Settings.svelte'
 import Profile from '$lib/components/panels/Profile.svelte'
 // BITS
 import {
+  AppHubSubscriptionOverlay,
   AppLanding,
   AppMapOverlayBar,
   AppMain,
@@ -43,9 +54,10 @@ import { PageState } from '$lib/enums'
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types'
 import type { QueryClient } from '@tanstack/svelte-query'
+import type { HubUserStateFlags } from '$lib/types'
 
 type AppRootProps = LayoutProps & {
-  children: any
+  children: Snippet
   data: LayoutData & {
     queryClient: QueryClient
   }
@@ -54,9 +66,20 @@ type AppRootProps = LayoutProps & {
 // PROPS
 let { children, data }: AppRootProps = $props()
 const hub = $derived(data.hub)
+const hubI18n = $derived(
+  (hub?.i18n ?? {}) as Record<string, Record<string, string | null | undefined>>,
+)
 
 // AUTH
 const session = useSession()
+const initialHubUserState = $derived(data.hubUserState ?? null)
+const isHubSubscriptionConfigured = $derived(
+  Boolean(
+    hub?.isSubscriptionAvailable &&
+      hub?.subscriptionId?.trim() &&
+      hub?.subscriptionService,
+  ),
+)
 
 // NAVIGATION STATE
 let navDest = $state('')
@@ -75,7 +98,57 @@ $effect(() => {
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx)
 const omnibarModel = useOmnibarModel(appCtx, omniCtx, responsiveCtx)
+const subscriptionOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
+
+let hubUserState = $state<HubUserStateFlags>({
+  subscriptionPromptDismissed: false,
+  subscriptionMember: false,
+  hasAgreedToTerms: false,
+})
+let isSubscriptionBusy = $state(false)
+let isHubSubscriptionOverlayOpen = $state(false)
+
+$effect(() => {
+  hubUserState = toHubUserStateFlags(initialHubUserState)
+})
+
+$effect(() => {
+  if (!isHubSubscriptionConfigured || hubUserState.subscriptionMember) {
+    isHubSubscriptionOverlayOpen = false
+  }
+})
+
+const subscriptionModel = useHubSubscriptionModel(() => ({
+  ...createHubSubscriptionModelParams({
+    hubI18n,
+    isSubscriptionConfigured: isHubSubscriptionConfigured,
+    subscriptionPlacement: hub?.subscriptionPlacement,
+    userState: hubUserState,
+    features: appCtx.getVisibleFeatures(),
+    userPreferences: appCtx.getUserPreferences(),
+    isLoading: isSubscriptionBusy,
+    onSelect: handleOpenHubSubscriptionOverlay,
+    onJoin: handleJoinSubscription,
+    onDismiss: handleDismissSubscriptionPrompt,
+  }),
+}))
+const subscriptionVisibility = $derived(subscriptionModel.getVisibility())
 const omnibarProps = $derived(omnibarModel.getOmnibarProps())
+const hubPanelSubscriptionProps = $derived(
+  subscriptionModel.getHubPanelSubscriptionProps(),
+)
+const hubSubscriptionOverlayProps = $derived(
+  subscriptionModel.getHubSubscriptionOverlayProps(),
+)
+const appMenuSubscriptionItemProps = $derived(
+  subscriptionModel.getAppMenuSubscriptionItemProps(),
+)
+const privacyPolicyDialogProps = $derived(
+  subscriptionModel.getPrivacyPolicyDialogProps(),
+)
+const termsOfServiceDialogProps = $derived(
+  subscriptionModel.getTermsOfServiceDialogProps(),
+)
 
 // NAVIGATION :: Clear feature cache images when switching between admin/user apps
 beforeNavigate(({ from, to }) => {
@@ -233,6 +306,86 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   event.preventDefault()
   event.stopPropagation()
 }
+
+/**
+ * Attempts to subscribe the current user to the active hub updates.
+ *
+ * @returns Nothing.
+ */
+async function handleJoinSubscription(): Promise<void> {
+  if (!hub?.id || isSubscriptionBusy) return
+
+  isSubscriptionBusy = true
+
+  try {
+    const result = await joinHubSubscription({
+      hubId: hub.id,
+      hasAgreedToTerms: true,
+    })
+
+    if (result?.data?.subscriptionMember) {
+      hubUserState = {
+        ...hubUserState,
+        subscriptionMember: true,
+        subscriptionPromptDismissed: true,
+        hasAgreedToTerms: true,
+      }
+      isHubSubscriptionOverlayOpen = false
+      toast.success('Subscription confirmed')
+      return
+    }
+
+    if (result?.data?.redirectUrl && browser) {
+      window.location.assign(result.data.redirectUrl)
+      return
+    }
+
+    toast.error('Subscription could not be completed')
+  } catch (error) {
+    toast.error(
+      error instanceof Error && error.message.length
+        ? error.message
+        : 'Something went wrong',
+    )
+  } finally {
+    isSubscriptionBusy = false
+  }
+}
+
+/**
+ * Persists dismissal of the active hub subscription prompt for the current user.
+ *
+ * @returns Nothing.
+ */
+async function handleDismissSubscriptionPrompt(): Promise<void> {
+  if (!hub?.id || isSubscriptionBusy) return
+
+  isSubscriptionBusy = true
+
+  try {
+    await dismissHubSubscriptionPrompt({
+      hubId: hub.id,
+    })
+
+    hubUserState = {
+      ...hubUserState,
+      subscriptionPromptDismissed: true,
+    }
+    isHubSubscriptionOverlayOpen = false
+  } catch (error) {
+    toast.error(
+      error instanceof Error && error.message.length
+        ? error.message
+        : 'Something went wrong',
+    )
+  } finally {
+    isSubscriptionBusy = false
+  }
+}
+
+function handleOpenHubSubscriptionOverlay(): void {
+  isHubSubscriptionOverlayOpen = true
+}
 </script>
 
 <svelte:window onkeydown={handleWindowKeydown} />
@@ -244,7 +397,13 @@ function handleWindowKeydown(event: KeyboardEvent): void {
       <!-- Panels -->
       <Prisms />
       <Stars />
-      <Hub {hub} />
+      <Hub
+        {hub}
+        showSubscription={subscriptionVisibility.showHubPanelSubscription}
+        subscriptionProps={hubPanelSubscriptionProps}
+        {privacyPolicyDialogProps}
+        {termsOfServiceDialogProps}
+      />
       <Filters />
       <!-- <Plan /> -->
       <!-- <Passport /> -->
@@ -252,10 +411,26 @@ function handleWindowKeydown(event: KeyboardEvent): void {
       <Settings />
       <Profile bind:panelContainer={profilePanelContainer} />
       <AppMain>
+        <AppHubSubscriptionOverlay
+          class="z-50"
+          isVisible={subscriptionVisibility.showHubSubscriptionOverlay ||
+            isHubSubscriptionOverlayOpen}
+          offsetX={subscriptionOffsetX}
+          subscriptionOverlayProps={hubSubscriptionOverlayProps}
+          {privacyPolicyDialogProps}
+          {termsOfServiceDialogProps}
+        />
         <Omnibar {...omnibarProps} />
         {@render children()}
         <AppMapOverlayBar />
-        <AppNav {hub} />
+        <AppNav
+          {hub}
+          subscriptionItem={{
+            isVisible: subscriptionVisibility.showAppMenuSubscriptionItem,
+            label: appMenuSubscriptionItemProps.label ?? 'Subscribe',
+            onSelect: appMenuSubscriptionItemProps.onSelect ?? handleOpenHubSubscriptionOverlay,
+          }}
+        />
       </AppMain>
     </AppSurface>
   {:else if !$session.isPending && !$session.data}
