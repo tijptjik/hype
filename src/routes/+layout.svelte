@@ -6,6 +6,8 @@ import { onMount } from 'svelte'
 import { page } from '$app/state'
 // QUERY
 import type { QueryClient } from '@tanstack/svelte-query'
+// BITS
+import { cx } from '$lib/bits/utils'
 // AUTH
 import { useSession } from '$lib/auth/client'
 // I18N
@@ -169,6 +171,15 @@ onMount(async () => {
 
 // Determine if we're in admin mode based on the route
 const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false)
+const localeKey = $derived(getLocaleKey())
+const isShelllessRoute = $derived(page.route.id?.startsWith('/policy') ?? false)
+const shelllessClass = $derived(
+  cx(
+    'bits-theme min-h-screen w-full overflow-y-auto bg-black',
+    localeKey === 'zhHant' ? 'font-(--font-hant)' : '',
+    localeKey === 'zhHans' ? 'font-(--font-hans)' : '',
+  ),
+)
 
 // Handle keydown listeners based on admin mode
 watch(
@@ -224,14 +235,18 @@ watch(
 
 <svelte:window bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
 
-<App
-  {queryClient}
-  isReady={appCtx.isInitialised}
-  localeKey={getLocaleKey()}
-  {title}
-  siteName={site_name}
-  siteDescription={site_description}
-  {socialImage}
->
-  {@render children()}
-</App>
+{#if isShelllessRoute}
+  <div class={shelllessClass}>{@render children()}</div>
+{:else}
+  <App
+    {queryClient}
+    isReady={appCtx.isInitialised}
+    {localeKey}
+    {title}
+    siteName={site_name}
+    siteDescription={site_description}
+    {socialImage}
+  >
+    {@render children()}
+  </App>
+{/if}
