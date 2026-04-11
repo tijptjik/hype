@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n'
 // COMPONENTS
 import HubSubscriptionOverlayActions from './HubSubscriptionOverlayActions.svelte'
 import HubSubscriptionOverlayLegalLinks from './HubSubscriptionOverlayLegalLinks.svelte'
@@ -8,6 +10,9 @@ import { getCardSurfaceStyle } from '../hubSubscriptionOverlay.styles'
 type Props = {
   title?: string
   description?: string
+  hubCode?: string
+  hubNameShort?: string
+  subscriptionBenefits?: string
   ctaText?: string
   dismissText?: string
   isLoading?: boolean
@@ -22,8 +27,13 @@ type Props = {
 }
 
 let {
-  title = 'Stay in the loop',
-  description = 'Subscribe for this hub news and releases.',
+  title = m.hub__subscription_title(),
+  description = m.hub__subscription_bar_description({
+    hubName: 'this hub',
+  }),
+  hubCode,
+  hubNameShort,
+  subscriptionBenefits = '',
   ctaText,
   dismissText,
   isLoading = false,
@@ -36,6 +46,10 @@ let {
   onPrivacyClick,
   onTermsClick,
 }: Props = $props()
+
+const subscriptionLabel = $derived(
+  hubCode === 'hkghostsigns' ? 'Ghosty' : (hubNameShort?.trim() ?? ''),
+)
 </script>
 
 <div
@@ -47,11 +61,13 @@ let {
   >
     <div class="relative pt-12">
       <div class="min-w-0 px-4">
-        <p
-          class="mb-3 text-center font-mono text-[14px] uppercase tracking-[0.3em] text-white/62"
-        >
-          Ghosty updates
-        </p>
+        {#if subscriptionLabel}
+          <p
+            class="mb-3 text-center font-mono text-[14px] uppercase tracking-[0.3em] text-white/62"
+          >
+            {subscriptionLabel}
+          </p>
+        {/if}
         <h3
           class="text-center font-mono text-[2.4rem] leading-[0.92] font-semibold tracking-[-0.06em]"
         >
@@ -71,10 +87,10 @@ let {
         class="max-w-sm rounded-[1.8rem] border bg-[color-mix(in_oklab,var(--color-map-base)_34%,white_10%)] px-4 py-3"
       >
         <p class="text-[11px] uppercase tracking-[0.32em] text-white/72">
-          Subscribers Get
+          {m.hub__subscription_cta()}
         </p>
         <p class="mt-0.5 px-3 text-sm leading-6 text-white/92">
-          Deep dives, neighborhood highlights, and special announcements
+          {subscriptionBenefits}
         </p>
       </div>
 

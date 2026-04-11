@@ -25,7 +25,7 @@ let {
 
 <div class="flex shrink-0 items-center gap-1.5">
   <Button
-    text="Maybe later"
+    text={dismissText}
     color="light"
     style="ghost"
     class="h-11 px-4 text-base text-white/72 hover:text-white"
@@ -33,7 +33,7 @@ let {
     onClick={() => onDismiss?.()}
   />
   <Button
-    text={isLoading ? 'Joining…' : ctaText}
+    text={`${ctaText}${isLoading ? '…' : ''}`}
     color="primary"
     class="h-11 min-w-36 px-6 text-base"
     disabled={isDisabled || isLoading}

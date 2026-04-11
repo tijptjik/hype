@@ -15,6 +15,8 @@ type HubSubscriptionCopy = {
   title?: string
   panelDescription?: string
   overlayDescription?: string
+  hubNameShort?: string
+  subscriptionBenefits?: string
   ctaText?: string
   dismissText?: string
   privacyText?: string
@@ -24,6 +26,7 @@ type HubSubscriptionCopy = {
 export type HubSubscriptionModelParams = {
   isSubscriptionAvailable: boolean
   subscriptionPlacement: HubSubscriptionPlacement
+  hubCode?: string
   userState?: HubUserStateFlags | null
   featureImages?: ImageCtxEnvelope[]
   privacyPolicyTitle?: string
@@ -141,6 +144,9 @@ export function useHubSubscriptionModel(
       return {
         title: params.copy?.title,
         description: params.copy?.overlayDescription,
+        hubCode: params.hubCode,
+        hubNameShort: params.copy?.hubNameShort,
+        subscriptionBenefits: params.copy?.subscriptionBenefits,
         featureImages: params.featureImages,
         ctaText: params.copy?.ctaText,
         dismissText: params.copy?.dismissText,

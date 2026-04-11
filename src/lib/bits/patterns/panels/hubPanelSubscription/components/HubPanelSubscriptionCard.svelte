@@ -22,8 +22,10 @@ type Props = {
 }
 
 let {
-  title = 'Stay in the loop',
-  description = 'Subscribe for updates from this hub.',
+  title = m.hub__subscription_title(),
+  description = m.hub__subscription_panel_description({
+    hubName: 'this hub',
+  }),
   ctaText = m.hub__subscription_cta(),
   memberText = m.hub__subscription_member(),
   isMember = false,
@@ -47,7 +49,7 @@ let {
     </div>
 
     <Button
-      text={isLoading ? 'Joining…' : isMember ? memberText : ctaText}
+      text={isMember ? memberText : `${ctaText}${isLoading ? '…' : ''}`}
       color={isMember ? 'success' : 'primary'}
       style={isMember ? 'soft' : 'solid'}
       modifier="block"

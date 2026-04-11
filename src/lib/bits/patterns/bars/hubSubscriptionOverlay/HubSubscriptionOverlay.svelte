@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n'
 // CONTEXT
 import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // COMPONENTS
@@ -16,8 +18,13 @@ import { getDecorativeFeatureImages } from './hubSubscriptionOverlay.utils'
 import type { HubSubscriptionOverlayProps } from './hubSubscriptionOverlay.types'
 
 let {
-  title = 'Stay in the loop',
-  description = 'Subscribe for this hub news and releases.',
+  title = m.hub__subscription_title(),
+  description = m.hub__subscription_bar_description({
+    hubName: 'this hub',
+  }),
+  hubCode,
+  hubNameShort,
+  subscriptionBenefits,
   featureImages = [],
   ctaText,
   dismissText,
@@ -137,6 +144,9 @@ function handleDecorativeOrbitReady(): void {
           <HubSubscriptionOverlayPrimitive.HubSubscriptionOverlayCard
             {title}
             {description}
+            {hubCode}
+            {hubNameShort}
+            {subscriptionBenefits}
             {ctaText}
             {dismissText}
             {isLoading}

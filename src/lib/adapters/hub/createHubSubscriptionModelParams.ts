@@ -9,6 +9,7 @@ import type { HubSubscriptionPlacement, HubUserStateFlags } from '$lib/types'
 type HubSubscriptionI18n = Record<string, Record<string, string | null | undefined>>
 
 type HubSubscriptionModelParamsInput = {
+  hubCode?: string
   hubI18n: HubSubscriptionI18n
   isSubscriptionConfigured: boolean
   subscriptionPlacement?: Partial<HubSubscriptionPlacement> | null
@@ -106,8 +107,16 @@ export function createHubSubscriptionModelParams(
   input: HubSubscriptionModelParamsInput,
 ): HubSubscriptionModelParams {
   const hubName = getI18n(input.hubI18n, 'nameShort', input.userPreferences, 'this hub')
+  const subscriptionBenefits = getI18n(
+    input.hubI18n,
+    'subscriptionBenefits',
+    input.userPreferences,
+    '',
+    true,
+  )
 
   return {
+    hubCode: input.hubCode,
     isSubscriptionAvailable: input.isSubscriptionConfigured,
     subscriptionPlacement: {
       hubPanel: input.subscriptionPlacement?.hubPanel ?? false,
@@ -140,6 +149,8 @@ export function createHubSubscriptionModelParams(
       overlayDescription: m.hub__subscription_bar_description({
         hubName,
       }),
+      hubNameShort: hubName,
+      subscriptionBenefits,
       ctaText: m.hub__subscription_cta(),
       dismissText: m.hub__subscription_dismiss(),
       privacyText: m.hub__subscription_privacy_policy(),

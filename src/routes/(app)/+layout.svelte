@@ -120,6 +120,7 @@ $effect(() => {
 
 const subscriptionModel = useHubSubscriptionModel(() => ({
   ...createHubSubscriptionModelParams({
+    hubCode: hub?.code,
     hubI18n,
     isSubscriptionConfigured: isHubSubscriptionConfigured,
     subscriptionPlacement: hub?.subscriptionPlacement,
