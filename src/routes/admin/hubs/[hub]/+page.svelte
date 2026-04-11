@@ -16,6 +16,7 @@ import {
   createFacetNavActionBuilder,
   createResourceFormConfig,
   focusFacetFromHash,
+  getGenAiState,
   getEditorCtrl,
   guardRefDesync,
   getUserRoleHiddenInputAttrs,
@@ -28,6 +29,7 @@ import {
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   syncAdminFacetFromHash,
+  toggleGenAiField,
   toIssueMessage,
   translateLocaleIntoEmptyFields,
   updateFormData,
@@ -42,6 +44,10 @@ import {
   overrideHubListItemBoolean,
   toHubFormInput,
 } from '$lib/client/services/hub'
+import {
+  createDefaultHubPrivacyPolicy,
+  createDefaultHubTermsOfService,
+} from '$lib/services/policy'
 import {
   normalizePropertiesForSubmit,
   toStableSignature,
@@ -89,6 +95,7 @@ import {
   FormFieldsSection,
   FormHubLayersSection,
   FormHubSpecifiersFields,
+  FormHubSubscriptionSection,
   FormOrganisationsSection,
   FormI18nDescriptorFields,
   FormI18nSection,
@@ -96,8 +103,10 @@ import {
   GridSpacer,
   Main,
   ResourceViewer,
+  TextArea,
 } from '$lib/bits'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import type { HubOrganisationItem } from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types'
 // ADAPTERS
 import { useImageProviderModel } from '$lib/adapters/image'
 // FACTORIES
@@ -116,12 +125,14 @@ import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
 import Blend from 'virtual:icons/lucide/blend'
 import HubIcon from 'virtual:icons/lucide/building-2'
+import RefreshCw from 'virtual:icons/lucide/refresh-cw'
 import Type from 'virtual:icons/lucide/type'
 // ENUMS
 import {
   classifierComponentTypes,
   FirstClassResource,
   HubRoleType,
+  HubSubscriptionService,
   ImageContextResource,
   specifierComponentTypes,
 } from '$lib/enums'
@@ -135,10 +146,16 @@ import type {
   HubOrganisationFieldNameResolverForm,
   FormDataUpdaterForm,
   HeaderTransitionSnapshot,
+  HubSubscriptionPlacement,
 } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
-import type { Hub, HubGetState, HubRoleUser } from '$lib/db/zod/schema/hub.types'
+import type {
+  Hub,
+  HubFormInput,
+  HubGetState,
+  HubRoleUser,
+} from '$lib/db/zod/schema/hub.types'
 import type { LayerCardProfile } from '$lib/db/zod/schema/layer.types'
 
 // § Context
@@ -191,7 +208,7 @@ let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let fieldsLayoutMutationVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
-let selectedOrganisationsById = $state<Record<string, any>>({})
+let selectedOrganisationsById = $state<Record<string, HubOrganisationItem>>({})
 let hasAutoEnteredEditForNew = $state(false)
 let settledHubRef = $state<string | null>(null)
 let availableHubLayers = $state<LayerCardProfile[]>([])
@@ -227,6 +244,7 @@ const commitSettledHubState = (value: HubGetState): void => {
 const isCoreFacet = $derived(activeFacet === 'core')
 const isLayersFacet = $derived(activeFacet === 'layers')
 const isFieldsFacet = $derived(activeFacet === 'fields')
+const isPoliciesFacet = $derived(activeFacet === 'policies')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewHubRef = $derived(hubRef === NEW_REF)
@@ -243,10 +261,20 @@ const optimisticHubData = $derived.by(() =>
 
 // § Form
 
-const translatableI18nFields = ['name', 'nameShort', 'description'] as const
-const configuredHubForm = configureForm<any>(() => ({
+const translatableI18nFieldsBySection = {
+  descriptors: ['name', 'nameShort', 'description'],
+  policies: ['privacyPolicy', 'termsOfService'],
+} as const
+type HubOrganisationSelection = NonNullable<
+  HubFormInput['data']['organisations']
+>[number]
+type HubLayerDefaultSelection = NonNullable<
+  HubFormInput['data']['layerDefaults']
+>[number]
+
+const configuredHubForm = configureForm<HubFormInput>(() => ({
   form: hubForm,
-  onsubmit: (({ data }: { data: any }) => {
+  onsubmit: (({ data }: { data: HubFormInput }) => {
     const submittedPayload = prepareSubmitPayloadMeta(data, {
       defaultMode: isNewHubRef ? 'create' : 'update',
       resolveUpdateId: () => hub?.data?.id ?? committedHub?.data?.id ?? '',
@@ -258,12 +286,7 @@ const configuredHubForm = configureForm<any>(() => ({
     }
 
     const baselineFormInput = toHubFormInput(committedHub?.data)
-    const currentFormSnapshot = formCtx.form.fields.value() as {
-      data?: {
-        properties?: Array<Record<string, unknown>>
-        layerDefaults?: Array<Record<string, unknown>>
-      }
-    }
+    const currentFormSnapshot = formCtx.form.fields.value() as HubFormInput
 
     applyChangedRelationField({
       data: submittedPayload.data,
@@ -316,18 +339,18 @@ const configuredHubForm = configureForm<any>(() => ({
 
     return submittedPayload as typeof data
   }) as never,
-  ...createResourceFormConfig<any>({
+  ...createResourceFormConfig<HubFormInput>({
     formEl: contentsElement,
     key: hubRef,
     schema: HubPreflightFormData,
     data: toHubFormInput(committedHub?.data),
-    submitUpdates: async ({ data }) =>
+    submitUpdates: async () =>
       getHubSubmitUpdates({
         hubId: hub?.data?.id,
         entityQuery: getHub({
           ref: hubRef,
           refKey: 'code',
-          meta: { isAdminRequest: true, profile: 'detail' },
+          meta: { isAdminRequest: true, profile: 'admin' },
         }),
         listQuery: getHubs({
           conditions: adminCtx.appCtx.isSuperAdmin()
@@ -415,6 +438,9 @@ const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues
 
 // GLOBAL PROPERTIES
 
+const hubEntityUpdaterForm = $derived(
+  formCtx.form as unknown as FormDataUpdaterForm<HubFormInput['data']>,
+)
 const hubPropertyFormAdapter = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
 )
@@ -639,6 +665,7 @@ const userRoleUpdaterForm = $derived(
     userRoles?: Array<{ userId: string; role: string }>
   }>,
 )
+const roleFieldNameByUserId = $derived(getRoleFieldNameByUserId(userRoleResolverForm))
 const hiddenUserIdInputAttrs = $derived(
   getUserRoleHiddenInputAttrs(userRoleResolverForm, formUserRoleValues),
 )
@@ -690,6 +717,13 @@ const formLayerDefaultValues = $derived(
     isDefaultVisible: boolean
   }>,
 )
+const formSubscriptionPlacement = $derived(
+  (formCtx.form.fields.value().data?.subscriptionPlacement ?? {
+    hubPanel: false,
+    topBar: false,
+    menu: true,
+  }) as HubSubscriptionPlacement,
+)
 const organisationResolverForm = $derived(
   formCtx.form as unknown as HubOrganisationFieldNameResolverForm,
 )
@@ -709,7 +743,7 @@ const hiddenLayerDefaultInputAttrs = $derived(
 
 const hubOrganisations = $derived.by(() => {
   const baseById = new Map(
-    (hub?.data?.organisations ?? []).map((org: any) => [org.id, org]),
+    (hub?.data?.organisations ?? []).map(org => [org.id, org] as const),
   )
 
   return formOrganisationValues.flatMap(selection => {
@@ -899,6 +933,35 @@ const allowedOrganisationIdSet = $derived(new Set(allowedOrganisationIds ?? []))
 
 // § Handlers
 
+function getPolicyFields(locale: Locale) {
+  return formCtx.form.fields.data.i18n[locale]
+}
+
+function getPolicyTextareaAttrs(
+  locale: Locale,
+  field: 'privacyPolicy' | 'termsOfService',
+): Record<string, unknown> {
+  return getPolicyFields(locale)[field].as('textarea') as Record<string, unknown>
+}
+
+function getPolicyGenValue(
+  locale: Locale,
+  field: 'privacyPolicy' | 'termsOfService',
+): boolean {
+  return getGenAiState(formCtx.form, locale, field)
+}
+
+function getPolicyGenAttrs(
+  locale: Locale,
+  field: 'privacyPolicyGen' | 'termsOfServiceGen',
+  value: boolean,
+): Record<string, unknown> {
+  return getPolicyFields(locale)[field].as(
+    'hidden',
+    value ? 'true' : 'false',
+  ) as Record<string, unknown>
+}
+
 function revalidateAfterProgrammaticChange(): void {
   revalidateAfterSubmitAttempt({
     wasSubmitAttempted: formCtx.wasSubmitAttempted,
@@ -909,22 +972,137 @@ function revalidateAfterProgrammaticChange(): void {
 async function onTranslate(
   sourceLocale: Locale,
   targetLocale: Locale,
+  sectionKey?: string,
 ): Promise<boolean> {
+  const fields =
+    sectionKey === 'policies'
+      ? translatableI18nFieldsBySection.policies
+      : translatableI18nFieldsBySection.descriptors
   const translated = await translateLocaleIntoEmptyFields({
     form: formCtx.form,
     sourceLocale,
     targetLocale,
-    fields: [...translatableI18nFields],
+    fields: [...fields],
   })
   if (translated) revalidateAfterProgrammaticChange()
   return translated
 }
 
-function onResetLocale(targetLocale: Locale): void {
+function onResetLocale(targetLocale: Locale, sectionKey?: string): void {
+  const fields =
+    sectionKey === 'policies'
+      ? translatableI18nFieldsBySection.policies
+      : translatableI18nFieldsBySection.descriptors
   resetLocaleFields({
     form: formCtx.form,
     targetLocale,
-    fields: [...translatableI18nFields],
+    fields: [...fields],
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onRegeneratePolicies(): void {
+  updateFormData(hubEntityUpdaterForm, data => {
+    const legalContactAddress = data.legalContactAddress ?? ''
+    const localesToUpdate: Array<'en' | 'zhHans' | 'zhHant'> = [
+      'en',
+      'zhHans',
+      'zhHant',
+    ]
+
+    for (const localeKey of localesToUpdate) {
+      const locale = data.i18n?.[localeKey]
+      if (!locale) continue
+
+      locale.privacyPolicy = createDefaultHubPrivacyPolicy(
+        localeKey,
+        locale.name,
+        locale.nameShort,
+        legalContactAddress,
+      )
+      locale.privacyPolicyGen = true
+      locale.termsOfService = createDefaultHubTermsOfService(
+        localeKey,
+        locale.name,
+        locale.nameShort,
+        legalContactAddress,
+      )
+      locale.termsOfServiceGen = true
+    }
+
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onToggleSubscriptionAvailability(nextValue: boolean): void {
+  updateFormData(hubEntityUpdaterForm, data => {
+    data.isSubscriptionAvailable = nextValue
+    if (!data.subscriptionService) {
+      data.subscriptionService = HubSubscriptionService.substack
+    }
+    if (!data.subscriptionPlacement) {
+      data.subscriptionPlacement = {
+        hubPanel: false,
+        topBar: false,
+        menu: true,
+      }
+    }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onSubscriptionServiceChange(nextValue: HubSubscriptionService): void {
+  updateFormData(hubEntityUpdaterForm, data => {
+    data.subscriptionService = nextValue
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onSubscriptionIdChange(nextValue: string): void {
+  updateFormData(hubEntityUpdaterForm, data => {
+    data.subscriptionId = nextValue
+    return data
+  })
+}
+
+function onSubscriptionSessionCookieChange(nextValue: string): void {
+  updateFormData(hubEntityUpdaterForm, data => {
+    data.subscriptionSessionCookie = nextValue
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onSubscriptionBenefitsChange(
+  localeKey: 'en' | 'zhHans' | 'zhHant',
+  nextValue: string,
+): void {
+  updateFormData(hubEntityUpdaterForm, data => {
+    if (!data.i18n?.[localeKey]) return data
+    data.i18n[localeKey].subscriptionBenefits = nextValue
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+function onToggleSubscriptionPlacement(
+  key: keyof HubSubscriptionPlacement,
+  nextValue: boolean,
+): void {
+  updateFormData(hubEntityUpdaterForm, data => {
+    data.subscriptionPlacement = {
+      hubPanel: Boolean(data.subscriptionPlacement?.hubPanel),
+      topBar: Boolean(data.subscriptionPlacement?.topBar),
+      menu:
+        typeof data.subscriptionPlacement?.menu === 'boolean'
+          ? data.subscriptionPlacement.menu
+          : true,
+      [key]: nextValue,
+    }
+    return data
   })
   revalidateAfterProgrammaticChange()
 }
@@ -962,12 +1140,16 @@ function onRoleChange(userId: string, role: HubRoleType): void {
   revalidateAfterProgrammaticChange()
 }
 
-function onAddOrganisation(organisation: any): void {
+function onAddOrganisation(organisation: HubOrganisationItem): void {
   if (allowedOrganisationIds && !allowedOrganisationIdSet.has(organisation.id)) return
   selectedOrganisationsById[organisation.id] = organisation
-  updateFormData(formCtx.form, (data: any) => {
+  updateFormData(hubEntityUpdaterForm, data => {
     const existing = data.organisations ?? []
-    if (existing.some((item: any) => item.organisationId === organisation.id))
+    if (
+      existing.some(
+        (item: HubOrganisationSelection) => item.organisationId === organisation.id,
+      )
+    )
       return data
     data.organisations = [
       ...existing,
@@ -985,20 +1167,22 @@ function onAddOrganisation(organisation: any): void {
 function onRemoveOrganisation(organisationId: string): void {
   const { [organisationId]: _removed, ...rest } = selectedOrganisationsById
   selectedOrganisationsById = rest
-  updateFormData(formCtx.form, (data: any) => {
+  updateFormData(hubEntityUpdaterForm, data => {
     data.organisations = (data.organisations ?? []).filter(
-      (item: any) => item.organisationId !== organisationId,
+      (item: HubOrganisationSelection) => item.organisationId !== organisationId,
     )
     const remainingOrganisationIds = new Set(
-      data.organisations.map((item: any) => item.organisationId),
+      data.organisations.map((item: HubOrganisationSelection) => item.organisationId),
     )
-    data.layerDefaults = (data.layerDefaults ?? []).filter((item: any) => {
-      const layer = adminCtx.appCtx.getResourceByIdSync(
-        FirstClassResource.layer,
-        item.layerId,
-      )
-      return layer ? remainingOrganisationIds.has(layer.organisationId) : false
-    })
+    data.layerDefaults = (data.layerDefaults ?? []).filter(
+      (item: HubLayerDefaultSelection) => {
+        const layer = adminCtx.appCtx.getResourceByIdSync(
+          FirstClassResource.layer,
+          item.layerId,
+        )
+        return layer ? remainingOrganisationIds.has(layer.organisationId) : false
+      },
+    )
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -1006,11 +1190,12 @@ function onRemoveOrganisation(organisationId: string): void {
 
 function onToggleCoreInclusive(organisationId: string, nextValue: boolean): void {
   if (!canSetCoreInclusive) return
-  updateFormData(formCtx.form, (data: any) => {
-    data.organisations = (data.organisations ?? []).map((item: any) =>
-      item.organisationId === organisationId
-        ? { ...item, isCoreInclusive: nextValue }
-        : item,
+  updateFormData(hubEntityUpdaterForm, data => {
+    data.organisations = (data.organisations ?? []).map(
+      (item: HubOrganisationSelection) =>
+        item.organisationId === organisationId
+          ? { ...item, isCoreInclusive: nextValue }
+          : item,
     )
     return data
   })
@@ -1018,11 +1203,12 @@ function onToggleCoreInclusive(organisationId: string, nextValue: boolean): void
 }
 
 function onToggleHubExclusive(organisationId: string, nextValue: boolean): void {
-  updateFormData(formCtx.form, (data: any) => {
-    data.organisations = (data.organisations ?? []).map((item: any) =>
-      item.organisationId === organisationId
-        ? { ...item, isHubExclusive: nextValue }
-        : item,
+  updateFormData(hubEntityUpdaterForm, data => {
+    data.organisations = (data.organisations ?? []).map(
+      (item: HubOrganisationSelection) =>
+        item.organisationId === organisationId
+          ? { ...item, isHubExclusive: nextValue }
+          : item,
     )
     return data
   })
@@ -1030,12 +1216,14 @@ function onToggleHubExclusive(organisationId: string, nextValue: boolean): void 
 }
 
 function onToggleLayerDefault(layerId: string, nextValue: boolean): void {
-  updateFormData(formCtx.form, (data: any) => {
+  updateFormData(hubEntityUpdaterForm, data => {
     const currentHubId = hub?.data?.id ?? committedHub?.data?.id
     if (!currentHubId) return data
 
     const existing = data.layerDefaults ?? []
-    const index = existing.findIndex((item: any) => item.layerId === layerId)
+    const index = existing.findIndex(
+      (item: HubLayerDefaultSelection) => item.layerId === layerId,
+    )
 
     if (index === -1) {
       data.layerDefaults = [
@@ -1049,7 +1237,7 @@ function onToggleLayerDefault(layerId: string, nextValue: boolean): void {
       return data
     }
 
-    data.layerDefaults = existing.map((item: any) =>
+    data.layerDefaults = existing.map((item: HubLayerDefaultSelection) =>
       item.layerId === layerId
         ? { ...item, hubId: currentHubId, isDefaultVisible: nextValue }
         : item,
@@ -1097,7 +1285,7 @@ bindAdminFacetHistorySync({
   getResourceRef: () => hubRef,
 })
 
-async function onSearchOrganisations(query: string): Promise<any[]> {
+async function onSearchOrganisations(query: string): Promise<HubOrganisationItem[]> {
   if (Array.isArray(allowedOrganisationIds) && allowedOrganisationIds.length === 0) {
     return []
   }
@@ -1136,7 +1324,7 @@ async function refreshHub(ref: string = hubRef): Promise<HubGetState> {
     return await getHub({
       ref,
       refKey: 'code',
-      meta: { isAdminRequest: true, profile: 'detail' },
+      meta: { isAdminRequest: true, profile: 'admin' },
     })
   } catch {
     return hub ?? committedHub ?? null
@@ -1446,8 +1634,7 @@ $effect(() => {
       </FormI18nSection>
 
       <GridSpacer cols={3} leftCols={1} centerCols={1} rightCols={1}>
-        {#snippet left()}
-          {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
+        {#snippet right()}
           <FormUserRolesSection
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
@@ -1464,8 +1651,8 @@ $effect(() => {
             startInAddingMode={isNewHubRef}
             availableRoles={[{ value: HubRoleType.admin, label: 'Admin' }]}
             userQueryParams={{
-              conditions: { isArchived: false },
-            }}
+                conditions: { isArchived: false },
+              }}
             {onAddUser}
             {onRemoveUser}
             {onRoleChange}
@@ -1473,6 +1660,43 @@ $effect(() => {
         {/snippet}
 
         {#snippet center()}
+          <FormHubSubscriptionSection
+            form={formCtx.form}
+            {isEditing}
+            isSubscriptionAvailable={Boolean(
+                formCtx.form.fields.value().data?.isSubscriptionAvailable,
+              )}
+            subscriptionService={(formCtx.form.fields.value().data
+                ?.subscriptionService ??
+                HubSubscriptionService.substack) as HubSubscriptionService}
+            subscriptionId={String(formCtx.form.fields.value().data?.subscriptionId ?? '')}
+            subscriptionSessionCookie={String(
+                formCtx.form.fields.value().data?.subscriptionSessionCookie ?? '',
+              )}
+            subscriptionBenefitsByLocale={{
+                en: String(
+                  formCtx.form.fields.value().data?.i18n?.en?.subscriptionBenefits ?? '',
+                ),
+                zhHans: String(
+                  formCtx.form.fields.value().data?.i18n?.zhHans?.subscriptionBenefits ??
+                    '',
+                ),
+                zhHant: String(
+                  formCtx.form.fields.value().data?.i18n?.zhHant?.subscriptionBenefits ??
+                    '',
+                ),
+              }}
+            subscriptionPlacement={formSubscriptionPlacement}
+            onAvailabilityChange={onToggleSubscriptionAvailability}
+            onServiceChange={onSubscriptionServiceChange}
+            {onSubscriptionIdChange}
+            {onSubscriptionSessionCookieChange}
+            {onSubscriptionBenefitsChange}
+            onPlacementChange={onToggleSubscriptionPlacement}
+          />
+        {/snippet}
+
+        {#snippet left()}
           {#if !isCoreHub}
             <FormOrganisationsSection
               title={m.maps__organisations()}
@@ -1493,9 +1717,6 @@ $effect(() => {
               {onToggleHubExclusive}
             />
           {/if}
-        {/snippet}
-
-        {#snippet right()}
           <FormHubSpecifiersFields
             form={formCtx.form}
             {isEditing}
@@ -1581,6 +1802,84 @@ $effect(() => {
             resolveSourceTag: resolveHubPropertyTypeTag,
           }}
       />
+    </Main.Facet>
+
+    <Main.Facet
+      isVisible={isPoliciesFacet}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('policies', 'previous')}
+      nextAction={buildFacetNavAction('policies', 'next')}
+      attrs={{ 'data-facet-id': 'policies' }}
+    >
+      <FormI18nSection
+        title="Policies"
+        subtitle="Configure the privacy policy and terms of service shown for this hub."
+        {locales}
+        {onTranslate}
+        {onResetLocale}
+        actions={[
+          {
+            text: 'Regenerate',
+            iconComponent: RefreshCw,
+            hideLabel: false,
+            hideLabelBelow: 0,
+            size: 'sm',
+            style: 'ghost',
+            onClick: () => {
+              onRegeneratePolicies()
+            },
+            disabled: !isEditing,
+          },
+        ]}
+        sectionKey="policies"
+        {isEditing}
+      >
+        {#snippet children(locale)}
+          <input
+            {...getPolicyGenAttrs(
+              locale,
+              'privacyPolicyGen',
+              getPolicyGenValue(locale, 'privacyPolicy'),
+            )}
+          >
+          <input
+            {...getPolicyGenAttrs(
+              locale,
+              'termsOfServiceGen',
+              getPolicyGenValue(locale, 'termsOfService'),
+            )}
+          >
+
+          <TextArea
+            label="Privacy Policy"
+            {locale}
+            isTranslated={true}
+            {isEditing}
+            isGenAI={getPolicyGenValue(locale, 'privacyPolicy')}
+            onToggleGenAI={() => toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
+            value={(getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }).value ?? ''}
+            issues={getPolicyFields(locale).privacyPolicy.issues()}
+            rows={24}
+            textareaAttrs={getPolicyTextareaAttrs(locale, 'privacyPolicy')}
+          />
+
+          <TextArea
+            label="Terms Of Service"
+            {locale}
+            isTranslated={true}
+            {isEditing}
+            isGenAI={getPolicyGenValue(locale, 'termsOfService')}
+            onToggleGenAI={() =>
+              toggleGenAiField(formCtx.form, locale, 'termsOfService')}
+            value={(getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string })
+                .value ?? ''}
+            issues={getPolicyFields(locale).termsOfService.issues()}
+            rows={20}
+            textareaAttrs={getPolicyTextareaAttrs(locale, 'termsOfService')}
+          />
+        {/snippet}
+      </FormI18nSection>
     </Main.Facet>
   </Main.Form>
 
