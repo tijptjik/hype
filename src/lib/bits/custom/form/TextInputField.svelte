@@ -50,8 +50,9 @@ const controlWrapClass = $derived(
 const resolvedInputAttrs = $derived(
   isEditing ? inputAttrs : { ...inputAttrs, tabindex: -1 },
 )
-const resolvedDisabled = $derived(isEditing ? disabled : false)
-const resolvedReadonly = $derived(isEditing ? readonly : true)
+const resolvedPlaceholder = $derived(disabled ? '-' : placeholder)
+const resolvedDisabled = $derived(disabled)
+const resolvedReadonly = $derived(disabled ? false : isEditing ? readonly : true)
 const isGenAiDisabled = $derived(!isEditing || disabled)
 const showGenAiToggle = $derived(
   locale !== 'core' && (typeof onToggleGenAI === 'function' || isGenAI),
@@ -81,7 +82,7 @@ function handleValueChange(nextValue: string): void {
       class={inputClass}
       type={inputType}
       bind:value
-      {placeholder}
+      placeholder={resolvedPlaceholder}
       {locale}
       {isTranslated}
       disabled={resolvedDisabled}

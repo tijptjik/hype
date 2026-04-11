@@ -49,9 +49,11 @@ const controlWrapClass = $derived(
 const resolvedTextareaAttrs = $derived(
   isEditing ? textareaAttrs : { ...textareaAttrs, tabindex: -1 },
 )
-const resolvedPlaceholder = $derived(isEditing ? placeholder : placeholder || ' ')
-const resolvedDisabled = $derived(isEditing ? disabled : false)
-const resolvedReadonly = $derived(isEditing ? readonly : true)
+const resolvedPlaceholder = $derived(
+  disabled ? '-' : isEditing ? placeholder : placeholder || ' ',
+)
+const resolvedDisabled = $derived(disabled)
+const resolvedReadonly = $derived(disabled ? false : isEditing ? readonly : true)
 const isGenAiDisabled = $derived(!isEditing || disabled)
 const showGenAiToggle = $derived(
   locale !== 'core' && (typeof onToggleGenAI === 'function' || isGenAI),
