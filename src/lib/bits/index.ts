@@ -77,7 +77,6 @@ export {
   AppHubSubscriptionOverlay,
   AppLanding,
   AppMapOverlayBar,
-  AppMenuSubscriptionItem,
   AppMain,
   AppNav,
   AppMenu,
