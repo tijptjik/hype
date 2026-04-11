@@ -27,6 +27,8 @@ const {
   mockUpdateHubPublishedStateById,
   mockUpdateHubArchivedStateById,
   mockHasInvalidHubOrganisationAssignmentsForSubmission,
+  mockGetHubSubscriptionTarget,
+  mockUpsertHubUserState,
   mockGuardedContext,
 } = vi.hoisted(() => ({
   mockHubFormDataParse: vi.fn((input: unknown) => input),
@@ -56,6 +58,8 @@ const {
   mockUpdateHubPublishedStateById: vi.fn(async () => null),
   mockUpdateHubArchivedStateById: vi.fn(async () => null),
   mockHasInvalidHubOrganisationAssignmentsForSubmission: vi.fn(async () => false),
+  mockGetHubSubscriptionTarget: vi.fn(async () => null),
+  mockUpsertHubUserState: vi.fn(async () => undefined),
   mockGuardedContext: vi.fn(),
 }))
 
@@ -106,6 +110,8 @@ vi.mock('$lib/db/zod', () => ({
   GetQueryParamsSchema: {},
   PublishHubSchema: {},
   RemoveHubSchema: {},
+  DismissHubSubscriptionPromptSchema: {},
+  JoinHubSubscriptionSchema: {},
   HubFormData: {
     parse: mockHubFormDataParse,
   },
@@ -186,6 +192,8 @@ vi.mock('$lib/db/services/hub', () => ({
   syncUserRoles: mockSyncHubUserRoles,
   syncHubUserRoles: mockSyncHubUserRoles,
   syncOrganisations: mockSyncHubOrganisations,
+  getHubSubscriptionTarget: mockGetHubSubscriptionTarget,
+  upsertHubUserState: mockUpsertHubUserState,
   listUserRoles: mockListHubRoleAssignments,
   listHubRoleAssignments: mockListHubRoleAssignments,
   listHubOrganisationLookups: vi.fn(async () => []),
@@ -193,6 +201,12 @@ vi.mock('$lib/db/services/hub', () => ({
   getHub: vi.fn(),
   syncHubOrganisations: mockSyncHubOrganisations,
   syncHubLayerDefaults: mockSyncHubLayerDefaults,
+}))
+
+const mockSubscribeToSubstack = vi.fn(async () => ({ ok: true }))
+
+vi.mock('$lib/api/external/substack', () => ({
+  subscribeToSubstack: mockSubscribeToSubstack,
 }))
 
 vi.mock('$lib/api/services', () => ({
@@ -308,6 +322,9 @@ describe('hub.remote form image handling', () => {
       isArchived: true,
     })
     mockHasInvalidHubOrganisationAssignmentsForSubmission.mockResolvedValue(false)
+    mockGetHubSubscriptionTarget.mockResolvedValue(null)
+    mockUpsertHubUserState.mockResolvedValue(undefined)
+    mockSubscribeToSubstack.mockResolvedValue({ ok: true })
     mockProbeExistingHub.mockResolvedValue(null)
     mockListHubRoleAssignments.mockResolvedValue([])
   })
@@ -330,8 +347,15 @@ describe('hub.remote form image handling', () => {
         data: {
           code: 'new-hub',
           domain: '',
+          legalContactAddress: 'legal@new-hub.hk',
+          subscriptionSessionCookie:
+            'substack.sid=substack-session; Path=/; HttpOnly; Secure',
           imageId: 'img-123',
-          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          i18n: {
+            en: { subscriptionBenefits: 'Subscriber-only updates' },
+            zhHans: {},
+            zhHant: {},
+          },
           userRoles: [{ userId: 'u-1', role: 'admin' }],
           organisations: [],
         },
@@ -342,6 +366,20 @@ describe('hub.remote form image handling', () => {
     expect(mockCreateHub).toHaveBeenCalledTimes(1)
     const createPayload = mockCreateHub.mock.calls[0]?.[1] as Record<string, unknown>
     expect(createPayload).not.toHaveProperty('imageId')
+    expect(createPayload.legalContactAddress).toBe('legal@new-hub.hk')
+    expect(createPayload.subscriptionSessionCookie).toBe(
+      'substack.sid=substack-session',
+    )
+    expect(createPayload).not.toHaveProperty('subscriptionBenefits')
+    expect(mockCreateI18n).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        en: expect.objectContaining({
+          subscriptionBenefits: 'Subscriber-only updates',
+        }),
+      }),
+      expect.any(String),
+    )
   })
 
   it('update mode ignores imageId from incoming form payload', async () => {
@@ -375,6 +413,7 @@ describe('hub.remote form image handling', () => {
         data: {
           code: 'core',
           domain: 'example.org',
+          legalContactAddress: 'legal@example.org',
           imageId: 'img-999',
           i18n: { en: {}, zhHans: {}, zhHant: {} },
           userRoles: [{ userId: 'u-1', role: 'admin' }],
@@ -387,15 +426,133 @@ describe('hub.remote form image handling', () => {
     expect(mockUpdateHubByIdWithConcurrency).toHaveBeenCalledWith(
       db,
       expect.objectContaining({
-        data: {
+        data: expect.objectContaining({
           code: 'core',
           domain: 'example.org',
-        },
+          legalContactAddress: 'legal@example.org',
+        }),
       }),
     )
     expect(
       mockUpdateHubByIdWithConcurrency.mock.calls[0]?.[1]?.data,
     ).not.toHaveProperty('imageId')
+  })
+
+  it('update mode normalizes substack session tokens before persistence', async () => {
+    const { db } = buildDbForUpdate({
+      existingRoles: [{ userId: 'u-1', role: 'admin' }],
+    })
+    mockListHubRoleAssignments.mockResolvedValue([{ userId: 'u-1', role: 'admin' }])
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: '2026-02-23T00:00:00.000Z',
+    })
+    mockUpdateHubByIdWithConcurrency.mockResolvedValue({
+      id: 'hub-1',
+      modifiedAt: '2026-02-23T01:00:00.000Z',
+    })
+
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+
+    await remote.hubForm(
+      {
+        meta: {
+          id: 'hub-1',
+          mode: 'update',
+          updatedAt: '2026-02-23T00:00:00.000Z',
+        },
+        data: {
+          code: 'core',
+          domain: 'example.org',
+          legalContactAddress: 'legal@example.org',
+          subscriptionSessionCookie:
+            'substack.sid=normalized-session-token; Path=/; HttpOnly',
+          i18n: {
+            en: { subscriptionBenefits: 'Subscriber-only invites' },
+            zhHans: {},
+            zhHant: {},
+          },
+          userRoles: [{ userId: 'u-1', role: 'admin' }],
+          organisations: [],
+        },
+      },
+      () => undefined,
+    )
+
+    expect(mockUpdateHubByIdWithConcurrency).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          subscriptionSessionCookie: 'substack.sid=normalized-session-token',
+        }),
+      }),
+    )
+    expect(
+      mockUpdateHubByIdWithConcurrency.mock.calls[0]?.[1]?.data,
+    ).not.toHaveProperty('subscriptionBenefits')
+    expect(mockUpdateI18n).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        en: expect.objectContaining({
+          subscriptionBenefits: 'Subscriber-only invites',
+        }),
+      }),
+      'hub-1',
+    )
+  })
+
+  it('update mode tolerates submissions that omit legalContactAddress', async () => {
+    const { db } = buildDbForUpdate({
+      existingRoles: [{ userId: 'u-1', role: 'admin' }],
+    })
+    mockListHubRoleAssignments.mockResolvedValue([{ userId: 'u-1', role: 'admin' }])
+    mockProbeHubForUpdate.mockResolvedValue({
+      id: 'hub-1',
+      code: 'core',
+      modifiedAt: '2026-02-23T00:00:00.000Z',
+    })
+    mockUpdateHubByIdWithConcurrency.mockResolvedValue({
+      id: 'hub-1',
+      modifiedAt: '2026-02-23T01:00:00.000Z',
+    })
+
+    mockGuardedContext.mockResolvedValue({
+      db,
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+
+    await remote.hubForm(
+      {
+        meta: {
+          id: 'hub-1',
+          mode: 'update',
+          updatedAt: '2026-02-23T00:00:00.000Z',
+        },
+        data: {
+          code: 'core',
+          domain: 'hype.hk',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'admin' }],
+          organisations: [],
+        },
+      },
+      () => undefined,
+    )
+
+    expect(mockUpdateHubByIdWithConcurrency).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          legalContactAddress: null,
+        }),
+      }),
+    )
   })
 
   it('rejects empty userRoles', async () => {
@@ -628,5 +785,114 @@ describe('hub.remote form image handling', () => {
       actual: 'Deny (403 + authz code)',
       code: 'INSUFFICIENT_ROLE',
     })
+  })
+
+  it('passes the stored session cookie to the Substack subscriber adapter', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', email: 'person@example.com', isAnonymous: false },
+      userRoles: [],
+    })
+    mockGetHubSubscriptionTarget.mockResolvedValue({
+      id: 'hub-1',
+      isSubscriptionAvailable: true,
+      subscriptionService: 'substack',
+      subscriptionId: 'example',
+      subscriptionSessionCookie: 'substack.sid=normalized-session-token',
+    })
+
+    const result = await remote.joinSubscription({
+      hubId: 'hub-1',
+      hasAgreedToTerms: true,
+    })
+
+    expect(mockSubscribeToSubstack).toHaveBeenCalledWith(
+      'person@example.com',
+      'example',
+      'substack.sid=normalized-session-token',
+    )
+    expect(mockUpsertHubUserState).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({
+        hubId: 'hub-1',
+        userId: 'u-1',
+        subscriptionMember: true,
+      }),
+    )
+    expect(result).toEqual({
+      data: expect.objectContaining({
+        hubId: 'hub-1',
+        provider: 'substack',
+        subscriptionMember: true,
+      }),
+    })
+  })
+
+  it('returns a Substack redirect URL when the provider API rejects the join request', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', email: 'person@example.com', isAnonymous: false },
+      userRoles: [],
+    })
+    mockGetHubSubscriptionTarget.mockResolvedValue({
+      id: 'hub-1',
+      isSubscriptionAvailable: true,
+      subscriptionService: 'substack',
+      subscriptionId: 'example',
+      subscriptionSessionCookie: 'substack.sid=normalized-session-token',
+    })
+    mockSubscribeToSubstack.mockResolvedValueOnce({
+      error: 'Error 403',
+      details: 'forbidden',
+      status: 403,
+    })
+
+    const result = await remote.joinSubscription({
+      hubId: 'hub-1',
+      hasAgreedToTerms: true,
+    })
+
+    expect(mockUpsertHubUserState).not.toHaveBeenCalled()
+    expect(result).toEqual({
+      data: {
+        hubId: 'hub-1',
+        subscriptionMember: false,
+        subscriptionPromptDismissed: false,
+        hasAgreedToTerms: true,
+        provider: 'substack',
+        providerResponse: {
+          error: 'Error 403',
+          details: 'forbidden',
+          status: 403,
+        },
+        redirectUrl: 'https://example.substack.com/',
+      },
+    })
+  })
+
+  it('rejects subscription joins when the Substack session cookie is missing', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', email: 'person@example.com', isAnonymous: false },
+      userRoles: [],
+    })
+    mockGetHubSubscriptionTarget.mockResolvedValue({
+      id: 'hub-1',
+      isSubscriptionAvailable: true,
+      subscriptionService: 'substack',
+      subscriptionId: 'example',
+      subscriptionSessionCookie: null,
+    })
+
+    await expect(
+      remote.joinSubscription({
+        hubId: 'hub-1',
+        hasAgreedToTerms: true,
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'SUBSCRIPTION_PROVIDER_MISCONFIGURED' },
+    })
+    expect(mockSubscribeToSubstack).not.toHaveBeenCalled()
   })
 })
