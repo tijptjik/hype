@@ -1,6 +1,13 @@
 // I18N
 import { toLocaleCode, toLocaleKey } from '$lib/i18n'
 import { toFormLocaleRecord } from '$lib/i18n'
+// ENUMS
+import { HubSubscriptionService } from '$lib/enums'
+// SERVICES
+import {
+  createDefaultHubPrivacyPolicy,
+  createDefaultHubTermsOfService,
+} from '$lib/services/policy'
 // SERVICES
 import {
   overrideResourceEntityBoolean,
@@ -22,15 +29,37 @@ import type {
 } from '$lib/db/zod/schema/hub.types'
 
 function normalizeHubFormLocale(
+  root: Pick<HubFormInput['data'], 'legalContactAddress'> | null | undefined,
   locale: Partial<HubFormInput['data']['i18n']['en']> | null | undefined,
+  localeKey: 'en' | 'zhHans' | 'zhHant',
 ): HubFormInput['data']['i18n']['en'] {
   return {
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
     description: locale?.description ?? '',
+    subscriptionBenefits: locale?.subscriptionBenefits ?? '',
     nameGen: locale?.nameGen ?? false,
     nameShortGen: locale?.nameShortGen ?? false,
     descriptionGen: locale?.descriptionGen ?? false,
+    subscriptionBenefitsGen: locale?.subscriptionBenefitsGen ?? false,
+    privacyPolicy:
+      locale?.privacyPolicy ??
+      createDefaultHubPrivacyPolicy(
+        localeKey,
+        locale?.name,
+        locale?.nameShort,
+        root?.legalContactAddress,
+      ),
+    privacyPolicyGen: locale?.privacyPolicyGen ?? false,
+    termsOfService:
+      locale?.termsOfService ??
+      createDefaultHubTermsOfService(
+        localeKey,
+        locale?.name,
+        locale?.nameShort,
+        root?.legalContactAddress,
+      ),
+    termsOfServiceGen: locale?.termsOfServiceGen ?? false,
   }
 }
 
@@ -52,15 +81,39 @@ function cloneHubProperties(
 
 export function toHubFormInput(data?: Hub | null): HubFormInput {
   if (!data) {
+    const defaultData = {
+      code: '',
+      domain: '',
+      legalContactAddress: '',
+      isSubscriptionAvailable: false,
+      subscriptionService: HubSubscriptionService.substack,
+      subscriptionId: '',
+      subscriptionSessionCookie: '',
+      subscriptionPlacement: {
+        hubPanel: false,
+        topBar: false,
+        menu: true,
+      },
+    } satisfies Pick<
+      HubFormInput['data'],
+      | 'code'
+      | 'domain'
+      | 'legalContactAddress'
+      | 'isSubscriptionAvailable'
+      | 'subscriptionService'
+      | 'subscriptionId'
+      | 'subscriptionSessionCookie'
+      | 'subscriptionPlacement'
+    >
+
     return {
       meta: { mode: 'create', isAdminRequest: true },
       data: {
-        code: '',
-        domain: '',
+        ...defaultData,
         i18n: {
-          en: normalizeHubFormLocale(undefined),
-          zhHans: normalizeHubFormLocale(undefined),
-          zhHant: normalizeHubFormLocale(undefined),
+          en: normalizeHubFormLocale(defaultData, undefined, 'en'),
+          zhHans: normalizeHubFormLocale(defaultData, undefined, 'zhHans'),
+          zhHant: normalizeHubFormLocale(defaultData, undefined, 'zhHant'),
         },
         userRoles: [],
         organisations: [],
@@ -70,6 +123,34 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
     }
   }
 
+  const normalizedData = {
+    code: data.code,
+    domain: data.domain ?? '',
+    legalContactAddress: data.legalContactAddress ?? '',
+    isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
+    subscriptionService: data.subscriptionService ?? HubSubscriptionService.substack,
+    subscriptionId: data.subscriptionId ?? '',
+    subscriptionSessionCookie: data.subscriptionSessionCookie ?? '',
+    subscriptionPlacement: {
+      hubPanel: Boolean(data.subscriptionPlacement?.hubPanel),
+      topBar: Boolean(data.subscriptionPlacement?.topBar),
+      menu:
+        typeof data.subscriptionPlacement?.menu === 'boolean'
+          ? data.subscriptionPlacement.menu
+          : true,
+    },
+  } satisfies Pick<
+    HubFormInput['data'],
+    | 'code'
+    | 'domain'
+    | 'legalContactAddress'
+    | 'isSubscriptionAvailable'
+    | 'subscriptionService'
+    | 'subscriptionId'
+    | 'subscriptionSessionCookie'
+    | 'subscriptionPlacement'
+  >
+
   return {
     meta: {
       id: data.id,
@@ -78,12 +159,11 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
       isAdminRequest: true,
     },
     data: {
-      code: data.code,
-      domain: data.domain ?? '',
+      ...normalizedData,
       i18n: {
-        en: normalizeHubFormLocale(data.i18n?.en),
-        zhHans: normalizeHubFormLocale(data.i18n?.zhHans),
-        zhHant: normalizeHubFormLocale(data.i18n?.zhHant),
+        en: normalizeHubFormLocale(normalizedData, data.i18n?.en, 'en'),
+        zhHans: normalizeHubFormLocale(normalizedData, data.i18n?.zhHans, 'zhHans'),
+        zhHant: normalizeHubFormLocale(normalizedData, data.i18n?.zhHant, 'zhHant'),
       },
       userRoles: (data.userRoles ?? []).map(userRole => ({
         userId: userRole.userId,
