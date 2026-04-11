@@ -149,12 +149,14 @@ const syncMetaHiddenInputs = (
 }
 
 const logValidationIssues = (
-  stage: 'preflight' | 'submit',
+  stage: 'preflight' | 'submit' | 'validate',
   issues: RemoteFormIssue[],
   currentValue?: unknown,
+  context?: Record<string, unknown>,
 ): void => {
   if (issues.length === 0) return
   console.error(`[remote-form] ${stage} validation issues`, {
+    ...context,
     issues: issues.map(issue => ({
       path: issue.path,
       pathString: toIssuePathString(issue.path),
@@ -548,12 +550,19 @@ export function configureForm<Input = RemoteFormInput>(
     const preflightIssues = preflightOnly
       ? nextIssues.filter(issue => !isServerIssue(issue))
       : nextIssues
-    if (
-      preflightOnly &&
-      (wasSubmitAttempted || isSubmitRequested) &&
-      preflightIssues.length
-    ) {
-      logValidationIssues('preflight', preflightIssues, form.fields.value())
+    const issuesToLog = preflightOnly ? preflightIssues : nextIssues
+    if (issuesToLog.length > 0) {
+      logValidationIssues(
+        preflightOnly ? 'preflight' : 'validate',
+        issuesToLog,
+        form.fields.value(),
+        {
+          preflightOnly,
+          wasSubmitAttempted,
+          isSubmitRequested,
+          submitting,
+        },
+      )
     }
     if (onissues && !deepEqual(lastIssues ?? [], nextIssues)) {
       onissues({ issues: nextIssues })
