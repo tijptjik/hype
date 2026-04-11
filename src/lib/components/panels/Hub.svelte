@@ -9,24 +9,44 @@ import { getI18n, m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // BITS
-import { PanelRoot as Panel } from '$lib/bits'
+import { HubPanelSubscription, HubPolicyDialog, PanelRoot as Panel } from '$lib/bits'
 import Header from '$lib/components/panels/common/Header.svelte'
+// ENUMS
+import { Panel as PanelEnum, PanelSide } from '$lib/enums'
 // TYPES
-import type { PanelProps, Hub } from '$lib/types'
+import type { HubPolicyDialogProps } from '$lib/bits/patterns/policies'
+import type { HubPanelSubscriptionProps } from '$lib/bits/patterns/panels/hubPanelSubscription'
+import type { PanelProps } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 
 // CONTEXT
 const appCtx = getAppCtx()
 
 // PROPS
-let { hub } = $props<{ hub: Hub }>()
+let {
+  hub,
+  subscriptionProps,
+  showSubscription = false,
+  privacyPolicyDialogProps,
+  termsOfServiceDialogProps,
+}: {
+  hub: HubOptsExtended
+  subscriptionProps?: HubPanelSubscriptionProps
+  showSubscription?: boolean
+  privacyPolicyDialogProps?: HubPolicyDialogProps
+  termsOfServiceDialogProps?: HubPolicyDialogProps
+} = $props()
+const hubI18n = $derived(
+  (hub?.i18n ?? {}) as Record<string, Record<string, string | null | undefined>>,
+)
 
 // STATE
 // svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement
 
 let panelProps: PanelProps = $derived({
-  panelType: 'hub',
-  position: 'left',
+  panelType: PanelEnum.hub,
+  position: PanelSide.left,
   scrollable: true,
   inline: appCtx.isAdmin(),
   isNarrow: false,
@@ -38,6 +58,9 @@ let panelProps: PanelProps = $derived({
     facet: appCtx.getActiveFacet(),
   },
 })
+
+let isPrivacyPolicyOpen = $state(false)
+let isTermsOfServiceOpen = $state(false)
 </script>
 
 <Panel bind:panelContainer {...panelProps}>
@@ -46,14 +69,46 @@ let panelProps: PanelProps = $derived({
     class="h-calc(100vh-10rem) flex flex-col items-stretch overflow-y-auto overscroll-contain"
   >
     <h2 class="grow-0 p-6 text-lg font-semibold uppercase tracking-widest">
-      {getI18n(hub, 'nameShort', appCtx.getUserPreferences(), m.menu_about())}
+      {getI18n(hubI18n, 'nameShort', appCtx.getUserPreferences(), m.menu_about())}
     </h2>
     <div class="preformatted mb-12">
       <p class="mb-12">
-        {@html getI18n(hub, 'description', appCtx.getUserPreferences(), m.menu_about())}
+        {@html getI18n(
+          hubI18n,
+          'description',
+          appCtx.getUserPreferences(),
+          m.menu_about(),
+        )}
       </p>
     </div>
+    {#if showSubscription && subscriptionProps}
+      <HubPanelSubscription
+        {...subscriptionProps}
+        onPrivacyClick={() => {
+          isPrivacyPolicyOpen = true
+        }}
+        onTermsClick={() => {
+          isTermsOfServiceOpen = true
+        }}
+      />
+    {/if}
   </div>
+
+  {#if privacyPolicyDialogProps}
+    <HubPolicyDialog
+      {...privacyPolicyDialogProps}
+      bind:open={isPrivacyPolicyOpen}
+      hideTrigger={true}
+    />
+  {/if}
+
+  {#if termsOfServiceDialogProps}
+    <HubPolicyDialog
+      {...termsOfServiceDialogProps}
+      bind:open={isTermsOfServiceOpen}
+      hideTrigger={true}
+    />
+  {/if}
 </Panel>
 
 <style>
