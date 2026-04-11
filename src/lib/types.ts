@@ -1133,8 +1133,25 @@ export const Facets = [
   'images',
   'fields',
   'layers',
+  'policies',
 ] as const
 export type FacetType = (typeof Facets)[number]
+
+/* ----------------- */
+// HUB
+/* -------- */
+
+export type HubSubscriptionPlacement = {
+  hubPanel: boolean
+  topBar: boolean
+  menu: boolean
+}
+
+export type HubUserStateFlags = {
+  subscriptionPromptDismissed?: boolean
+  subscriptionMember?: boolean
+  hasAgreedToTerms?: boolean
+}
 
 /* ----------------- */
 // I18N
@@ -1464,8 +1481,21 @@ export type HubLayerDefaultFieldNameResolverForm = {
 
 export type HubLayerDefaultHiddenInputAttrs = Record<string, unknown>
 
-export type GenAiField = 'title' | 'name' | 'nameShort' | 'description'
-export type I18nTranslatableField = 'name' | 'nameShort' | 'description'
+export type GenAiField =
+  | 'title'
+  | 'name'
+  | 'nameShort'
+  | 'description'
+  | 'subscriptionBenefits'
+  | 'privacyPolicy'
+  | 'termsOfService'
+export type I18nTranslatableField =
+  | 'name'
+  | 'nameShort'
+  | 'description'
+  | 'subscriptionBenefits'
+  | 'privacyPolicy'
+  | 'termsOfService'
 export type FormBooleanValue = boolean | 'true' | 'false'
 
 export type GenAiStateResolverForm = {
@@ -1479,6 +1509,9 @@ export type GenAiStateResolverForm = {
             nameGen?: FormBooleanValue
             nameShortGen?: FormBooleanValue
             descriptionGen?: FormBooleanValue
+            subscriptionBenefitsGen?: FormBooleanValue
+            privacyPolicyGen?: FormBooleanValue
+            termsOfServiceGen?: FormBooleanValue
           }
         >
       }

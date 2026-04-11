@@ -11,6 +11,7 @@ export const trailingSlash = 'never'
 
 export async function load({ data }) {
   const hub = data.hub as HubOptsExtended
+  const hubUserState = data.hubUserState ?? null
   const localeKey = getLocaleKey()
   const localizedHubI18n = hub.i18n?.[localeKey]
   const fallbackHubI18n = hub.i18n?.en ?? Object.values(hub.i18n ?? {})[0]
@@ -34,6 +35,7 @@ export async function load({ data }) {
   return {
     queryClient,
     hub,
+    hubUserState,
     title: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',
     site_name: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',
     site_description:

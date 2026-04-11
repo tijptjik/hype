@@ -22,6 +22,13 @@
     gap: 0.85rem;
   }
 
+  .bits-dialog__content--policy {
+    width: min(48rem, calc(100vw - 2rem));
+    border: 0;
+    box-shadow: 0 20px 55px color-mix(in oklab, #0b070d 68%, transparent);
+    background: #000;
+  }
+
   .bits-dialog__title {
     @apply m-0 text-2xl font-mono font-bold;
     line-height: 1.3;

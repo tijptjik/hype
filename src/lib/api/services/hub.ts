@@ -7,6 +7,7 @@ import { transformI18nSafely } from '$lib/db'
 import { toImageEnvelope } from '$lib/db/services/image'
 // ZOD
 import {
+  HubAdminProfileAPI,
   HubCardProfileAPI,
   HubDetailProfileAPI,
   HubListProfileAPI,
@@ -257,6 +258,9 @@ const toProfileResponseShape = <P extends HubProfileType>(
   }
   if (profile === 'card') {
     return HubCardProfileAPI.parse(shaped) as HubEntityByProfile<P>
+  }
+  if (profile === 'admin') {
+    return HubAdminProfileAPI.parse(shaped) as HubEntityByProfile<P>
   }
   return HubDetailProfileAPI.parse(shaped) as HubEntityByProfile<P>
 }

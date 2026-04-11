@@ -34,7 +34,9 @@ export function useOmnibarModel(
   appCtx: AppCtx,
   omniCtx: OmniCtx,
   responsiveCtx: ResponsiveCtx,
-): { getOmnibarProps: () => OmnibarProps } {
+): {
+  getOmnibarProps: () => OmnibarProps
+} {
   /**
    * Resolve feature text for navigation chrome across locale fallbacks.
    * The header should still identify the current feature even when only generated

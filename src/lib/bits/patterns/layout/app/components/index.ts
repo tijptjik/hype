@@ -1,4 +1,5 @@
 export { default as AdminShell } from './AdminShell.svelte'
+export { default as AppHubSubscriptionOverlay } from './AppHubSubscriptionOverlay.svelte'
 export { default as AppLanding } from './AppLanding.svelte'
 export { default as AppMapOverlayBar } from './AppMapOverlayBar.svelte'
 export { default as AppMain } from './AppMain.svelte'

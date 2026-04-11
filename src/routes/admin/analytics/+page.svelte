@@ -4,6 +4,8 @@ import { fade } from 'svelte/transition'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
+// REMOTE
+import { runRemoteQuery } from '$lib/remote'
 // API
 import { getAssetAnalyticsSummary } from '$lib/api/server/analytics.remote'
 // I18N
@@ -57,6 +59,11 @@ let analyticsPreviewState = $state<AssetAnalyticsSummaryResult | null>(null)
 let isRefreshing = $state(false)
 let analyticsRequestVersion = 0
 
+/**
+ * Resolves asset path prefixes from the active prism filters.
+ *
+ * @returns Scoped asset prefixes keyed by organisation and project codes.
+ */
 async function resolvePrismScopePrefixes(): Promise<string[]> {
   const prefixes = new Set<string>()
 
@@ -85,6 +92,11 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
   return [...prefixes]
 }
 
+/**
+ * Builds the admin analytics remote query payload from the current prism state.
+ *
+ * @returns Remote query parameters including explicit admin intent metadata.
+ */
 async function buildAnalyticsQueryParams(): Promise<{
   scopePrefixes: string[]
   organisationIds: string[]
@@ -110,9 +122,14 @@ async function buildAnalyticsQueryParams(): Promise<{
   }
 }
 
+/**
+ * Loads the current asset analytics snapshot for the active prism scope.
+ *
+ * @returns A normalized analytics summary result from the remote query.
+ */
 async function loadAnalytics(): Promise<AssetAnalyticsSummaryResult> {
   const params = await buildAnalyticsQueryParams()
-  const result = await getAssetAnalyticsSummary(params)
+  const result = await runRemoteQuery(getAssetAnalyticsSummary(params))
   console.debug('Asset analytics response summary', {
     params,
     status: result.status,
@@ -178,6 +195,12 @@ async function loadAnalytics(): Promise<AssetAnalyticsSummaryResult> {
   return result
 }
 
+/**
+ * Refreshes analytics state while preventing stale responses from winning races.
+ *
+ * @param options - Controls whether the previous preview snapshot remains visible.
+ * @returns Resolves when the in-flight refresh has settled.
+ */
 async function runAnalyticsLoad(options?: {
   preservePreview?: boolean
 }): Promise<void> {

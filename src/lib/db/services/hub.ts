@@ -8,6 +8,7 @@ import {
   feature,
   hub,
   hubRole,
+  hubUserState,
   hubI18n,
   task,
   featureImage,
@@ -70,6 +71,7 @@ import { hubEntityWithRelations } from '$lib/api/services/hub'
 //    - getHubCodeForLayer
 //    - getHubCodeForFeature
 //    - getHubCodeForTask
+//    - getHubUserSubscriptionState
 //
 // 2.3 CRUD :: READ (PROBES)
 //    - probeHubQuery
@@ -80,6 +82,7 @@ import { hubEntityWithRelations } from '$lib/api/services/hub'
 //
 // 2.4 CRUD :: READ (RELATED)
 //    - listUserRoles
+//    - getHubSubscriptionTarget
 //    - listOrganisations
 //    - listHubLayerDefaults
 //
@@ -91,6 +94,7 @@ import { hubEntityWithRelations } from '$lib/api/services/hub'
 //
 // 3.2 CRUD :: UPDATE (SYNC)
 //    - syncUserRoles
+//    - upsertHubUserState
 //    - syncOrganisations
 //    - syncHubLayerDefaults
 //
@@ -549,6 +553,63 @@ export const listUserRoles = async (
 }
 
 /**
+ * Returns the minimal hub subscription config required for user subscription commands.
+ */
+export const getHubSubscriptionTarget = async (
+  db: Database,
+  hubId: string,
+): Promise<{
+  id: string
+  isSubscriptionAvailable: boolean
+  subscriptionService: string | null
+  subscriptionId: string | null
+  subscriptionSessionCookie: string | null
+} | null> => {
+  const [row] = await db
+    .select({
+      id: hub.id,
+      isSubscriptionAvailable: hub.isSubscriptionAvailable,
+      subscriptionService: hub.subscriptionService,
+      subscriptionId: hub.subscriptionId,
+      subscriptionSessionCookie: hub.subscriptionSessionCookie,
+    })
+    .from(hub)
+    .where(eq(hub.id, hubId))
+
+  return row ?? null
+}
+
+/**
+ * Returns persisted per-user subscription prompt and membership state for a hub.
+ *
+ * @param db - Active database handle.
+ * @param params - Hub and user identifiers for the lookup.
+ * @returns The stored hub-user state row, or `null` when no record exists yet.
+ */
+export const getHubUserSubscriptionState = async (
+  db: Database,
+  params: { hubId: string; userId: string },
+): Promise<{
+  subscriptionPromptDismissed: boolean
+  subscriptionMember: boolean
+  hasAgreedToTerms: boolean
+} | null> => {
+  const [row] = await db
+    .select({
+      subscriptionPromptDismissed: hubUserState.subscriptionPromptDismissed,
+      subscriptionMember: hubUserState.subscriptionMember,
+      hasAgreedToTerms: hubUserState.hasAgreedToTerms,
+    })
+    .from(hubUserState)
+    .where(
+      and(eq(hubUserState.hubId, params.hubId), eq(hubUserState.userId, params.userId)),
+    )
+    .limit(1)
+
+  return row ?? null
+}
+
+/**
  * listOrganisations operation.
  * Used by hub DB workflows to keep persistence behavior centralized.
  */
@@ -607,7 +668,17 @@ export const updateHubByIdWithConcurrency = async (
   params: {
     id: Id
     updatedAt: string
-    data: { code: string; domain: string | null }
+    data: Partial<
+      Pick<HubDB, 'code' | 'domain' | 'legalContactAddress' | 'isSubscriptionAvailable'>
+    > & {
+      code: string
+      domain: string | null
+      legalContactAddress: string | null
+      subscriptionService: HubDB['subscriptionService']
+      subscriptionId: string | null
+      subscriptionSessionCookie: string | null
+      subscriptionPlacement: HubDB['subscriptionPlacement']
+    }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
   const [updated] = await db
@@ -704,6 +775,58 @@ export const syncUserRoles = async (
   await db.delete(hubRole).where(eq(hubRole.hubId, hubId))
   if (roles.length === 0) return
   await db.insert(hubRole).values(toUserRoles(roles, hubId))
+}
+
+/**
+ * Upserts per-user hub subscription and prompt state.
+ */
+export const upsertHubUserState = async (
+  db: Parameters<typeof createHub>[0],
+  params: {
+    hubId: string
+    userId: string
+    subscriptionPromptDismissed?: boolean
+    subscriptionMember?: boolean
+    hasAgreedToTerms?: boolean
+  },
+): Promise<void> => {
+  // Build the SQLite upsert directly because D1 rejects Drizzle's generated
+  // composite conflict target syntax for this table.
+  const updateAssignments: SQL[] = []
+
+  if (params.subscriptionPromptDismissed !== undefined) {
+    updateAssignments.push(
+      sql`"subscriptionPromptDismissed" = ${params.subscriptionPromptDismissed}`,
+    )
+  }
+
+  if (params.subscriptionMember !== undefined) {
+    updateAssignments.push(sql`"subscriptionMember" = ${params.subscriptionMember}`)
+  }
+
+  if (params.hasAgreedToTerms !== undefined) {
+    updateAssignments.push(sql`"hasAgreedToTerms" = ${params.hasAgreedToTerms}`)
+  }
+
+  updateAssignments.push(sql`"modifiedAt" = ${new Date().toISOString()}`)
+
+  await db.run(sql`
+    insert into "hubUserState" (
+      "hubId",
+      "userId",
+      "subscriptionPromptDismissed",
+      "subscriptionMember",
+      "hasAgreedToTerms"
+    ) values (
+      ${params.hubId},
+      ${params.userId},
+      ${params.subscriptionPromptDismissed ?? false},
+      ${params.subscriptionMember ?? false},
+      ${params.hasAgreedToTerms ?? false}
+    )
+    on conflict ("hubId", "userId") do update set
+    ${sql.join(updateAssignments, sql`, `)}
+  `)
 }
 
 /**

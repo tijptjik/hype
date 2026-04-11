@@ -117,6 +117,10 @@ export enum HubRoleType {
   admin = 'admin',
 }
 
+export enum HubSubscriptionService {
+  substack = 'substack',
+}
+
 /* ----------------- */
 // ORGANISATION
 /* -------- */

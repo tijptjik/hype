@@ -22,6 +22,7 @@ import FunnelIcon from 'virtual:icons/lucide/filter'
 import InformationCircleIcon from 'virtual:icons/lucide/info'
 import MapIcon from 'virtual:icons/lucide/map'
 import MonitorIcon from 'virtual:icons/lucide/monitor'
+import NewspaperIcon from 'virtual:icons/lucide/newspaper'
 import SettingsIcon from 'virtual:icons/lucide/settings'
 import StarIcon from 'virtual:icons/lucide/star'
 // TYPES
@@ -30,16 +31,25 @@ import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 
 type AppNavProps = {
   hub: HubOptsExtended
+  subscriptionItem?: {
+    isVisible: boolean
+    label: string
+    onSelect: () => void | Promise<void>
+  }
 }
 
-let { hub }: AppNavProps = $props()
+let { hub, subscriptionItem }: AppNavProps = $props()
 
 const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
 const session = useSession()
 const ADD_FEATURE_MENU_VALUE = 'addFeature'
-type AppNavMenuValue = Panel | typeof ADD_FEATURE_MENU_VALUE
+const SUBSCRIPTION_MENU_VALUE = 'subscribe'
+type AppNavMenuValue =
+  | Panel
+  | typeof ADD_FEATURE_MENU_VALUE
+  | typeof SUBSCRIPTION_MENU_VALUE
 
 const items = $derived<AppMenuItem<Panel>[]>(
   hub.isCore
@@ -91,6 +101,17 @@ const trailingItems = $derived<AppMenuItem<AppNavMenuValue>[]>([
         } satisfies AppMenuItem<AppNavMenuValue>,
       ]
     : []),
+  ...(subscriptionItem?.isVisible
+    ? [
+        {
+          value: SUBSCRIPTION_MENU_VALUE,
+          icon: NewspaperIcon,
+          label: subscriptionItem.label,
+          tone: 'secondary',
+          isMobileVisible: true,
+        } satisfies AppMenuItem<AppNavMenuValue>,
+      ]
+    : []),
 ])
 const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
 
@@ -109,6 +130,11 @@ async function handleSelect(item: AppMenuItem<AppNavMenuValue>): Promise<void> {
     }
 
     goto('/admin/tasks')
+    return
+  }
+
+  if (item.value === SUBSCRIPTION_MENU_VALUE) {
+    await subscriptionItem?.onSelect?.()
     return
   }
 

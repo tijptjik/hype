@@ -107,6 +107,13 @@
     outline: none;
   }
 
+  .bits-theme .bits-form__control:disabled,
+  .bits-theme .bits-form__control[readonly] {
+    cursor: default;
+    caret-color: transparent;
+    -webkit-text-fill-color: currentColor;
+  }
+
   .bits-theme .bits-form__control--input {
     @apply h-12 px-2 py-2;
   }

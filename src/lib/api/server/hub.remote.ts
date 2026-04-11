@@ -46,6 +46,7 @@ import {
   createHub,
   createI18n,
   createUserRoles,
+  getHubSubscriptionTarget,
   probeExistingHub,
   probeHubForUpdate,
   resolveHubCommandProbe,
@@ -55,6 +56,7 @@ import {
   probeHubQuery,
   updateI18n,
   syncUserRoles,
+  upsertHubUserState,
   listUserRoles,
   listOrganisations,
   listHubs,
@@ -63,6 +65,11 @@ import {
   syncHubLayerDefaults,
 } from '$lib/db/services/hub'
 import { syncHubProperties } from '$lib/db/services/property'
+import {
+  normalizeSubstackSessionCookie,
+  normalizeSubstackSubscriptionId,
+  toSubstackSubscribeUrl,
+} from '$lib/api/external/substack.shared'
 // API UTILS
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // SCHEMA
@@ -72,6 +79,8 @@ import {
   ListQueryParamsSchema,
   GetQueryParamsSchema,
   HubFormData,
+  DismissHubSubscriptionPromptSchema,
+  JoinHubSubscriptionSchema,
   PublishHubSchema,
   RemoveHubSchema,
 } from '$lib/db/zod'
@@ -101,6 +110,8 @@ import type {
 // COMMAND
 // - publishHub
 // - archiveHub
+// - dismissSubscriptionPrompt
+// - joinSubscription
 
 /* ----------------- */
 // REMOTE QUERIES
@@ -265,6 +276,13 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   }
   const normalizedCode = data.code.trim()
   const normalizedDomain = data.domain.trim()
+  const normalizedLegalContactAddress = (data.legalContactAddress ?? '').trim()
+  const normalizedSubscriptionId = normalizeSubstackSubscriptionId(
+    data.subscriptionId ?? '',
+  )
+  const normalizedSubscriptionSessionCookie = normalizeSubstackSessionCookie(
+    data.subscriptionSessionCookie ?? '',
+  )
   const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
   const submittedOrganisations = Array.isArray(data.organisations)
     ? data.organisations
@@ -327,6 +345,16 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
       id: nanoid(12),
       code: normalizedCode,
       domain: normalizedDomain === '' ? null : normalizedDomain,
+      legalContactAddress:
+        normalizedLegalContactAddress === '' ? null : normalizedLegalContactAddress,
+      isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
+      subscriptionService: data.subscriptionService,
+      subscriptionId: normalizedSubscriptionId === '' ? null : normalizedSubscriptionId,
+      subscriptionSessionCookie:
+        normalizedSubscriptionSessionCookie === ''
+          ? null
+          : normalizedSubscriptionSessionCookie,
+      subscriptionPlacement: data.subscriptionPlacement,
       isPublished: true,
       isArchived: false,
     })
@@ -418,6 +446,16 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     data: {
       code: normalizedCode,
       domain: normalizedDomain === '' ? null : normalizedDomain,
+      legalContactAddress:
+        normalizedLegalContactAddress === '' ? null : normalizedLegalContactAddress,
+      isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
+      subscriptionService: data.subscriptionService,
+      subscriptionId: normalizedSubscriptionId === '' ? null : normalizedSubscriptionId,
+      subscriptionSessionCookie:
+        normalizedSubscriptionSessionCookie === ''
+          ? null
+          : normalizedSubscriptionSessionCookie,
+      subscriptionPlacement: data.subscriptionPlacement,
     },
   })
 
@@ -526,6 +564,132 @@ export const archiveHub = guardedCommand(RemoveHubSchema, async (params, ctx) =>
 
   return toBooleanStateResponseShape(persisted, 'isArchived')
 })
+
+/**
+ * Marks the subscription prompt as dismissed for the current user in the target hub.
+ *
+ * @param params - Command payload validated by `DismissHubSubscriptionPromptSchema`.
+ * @param params.hubId - Target hub id.
+ * @returns A promise resolving to `{ data: { hubId, dismissed } }`.
+ */
+export const dismissSubscriptionPrompt = guardedCommand(
+  DismissHubSubscriptionPromptSchema,
+  async (params, ctx) => {
+    const { db, user } = ctx
+    if (!user || user.isAnonymous) {
+      throw error(401, 'AUTH_REQUIRED')
+    }
+
+    const target = await getHubSubscriptionTarget(db, params.hubId)
+    if (!target) {
+      throw error(404, 'HUB_NOT_FOUND')
+    }
+
+    await upsertHubUserState(db, {
+      hubId: target.id,
+      userId: user.id,
+      subscriptionPromptDismissed: true,
+    })
+
+    return {
+      data: {
+        hubId: target.id,
+        dismissed: true,
+      },
+    }
+  },
+)
+
+/**
+ * Subscribes the current authenticated user to the hub newsletter and persists membership state.
+ *
+ * @param params - Command payload validated by `JoinHubSubscriptionSchema`.
+ * @param params.hubId - Target hub id.
+ * @param params.hasAgreedToTerms - Whether the user accepted the hub terms prompt.
+ * @returns A promise resolving to `{ data: { hubId, subscriptionMember, provider } }`.
+ */
+export const joinSubscription = guardedCommand(
+  JoinHubSubscriptionSchema,
+  async (params, ctx) => {
+    const { db, user } = ctx
+    if (!user || user.isAnonymous) {
+      throw error(401, 'AUTH_REQUIRED')
+    }
+
+    if (!params.hasAgreedToTerms) {
+      throw error(400, 'TERMS_ACCEPTANCE_REQUIRED')
+    }
+
+    if (!user.email?.trim()) {
+      throw error(400, 'EMAIL_REQUIRED')
+    }
+
+    const target = await getHubSubscriptionTarget(db, params.hubId)
+    if (!target) {
+      throw error(404, 'HUB_NOT_FOUND')
+    }
+
+    if (!target.isSubscriptionAvailable || !target.subscriptionId) {
+      throw error(400, 'SUBSCRIPTION_UNAVAILABLE')
+    }
+
+    if (target.subscriptionService !== 'substack') {
+      throw error(400, 'SUBSCRIPTION_PROVIDER_UNSUPPORTED')
+    }
+
+    if (!target.subscriptionSessionCookie?.trim()) {
+      throw error(400, 'SUBSCRIPTION_PROVIDER_MISCONFIGURED')
+    }
+
+    // Load the provider adapter only for the live subscription action.
+    const { subscribeToSubstack } = await import('$lib/api/external/substack')
+    const providerResponse = await subscribeToSubstack(
+      user.email,
+      target.subscriptionId,
+      target.subscriptionSessionCookie,
+    )
+    const providerError =
+      providerResponse &&
+      typeof providerResponse === 'object' &&
+      'error' in providerResponse &&
+      typeof providerResponse.error === 'string'
+        ? providerResponse.error
+        : null
+
+    if (providerError) {
+      return {
+        data: {
+          hubId: target.id,
+          subscriptionMember: false,
+          subscriptionPromptDismissed: false,
+          hasAgreedToTerms: true,
+          provider: 'substack',
+          providerResponse,
+          redirectUrl: toSubstackSubscribeUrl(target.subscriptionId),
+        },
+      }
+    }
+
+    await upsertHubUserState(db, {
+      hubId: target.id,
+      userId: user.id,
+      subscriptionPromptDismissed: true,
+      subscriptionMember: true,
+      hasAgreedToTerms: true,
+    })
+
+    return {
+      data: {
+        hubId: target.id,
+        subscriptionMember: true,
+        subscriptionPromptDismissed: true,
+        hasAgreedToTerms: true,
+        provider: 'substack',
+        providerResponse,
+      },
+    }
+  },
+)
 
 /* ----------------- */
 // ORGANISATION LOOKUP (HUB FORM)

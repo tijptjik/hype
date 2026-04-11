@@ -38,8 +38,6 @@ const OMNIBAR_TRAY_INSET_CLASSES = 'mx-[1.75rem]'
 const OMNIBAR_ROOT_SHARED_CLASSES =
   'relative z-50 mt-0 min-w-0 shrink-0 grow-0 select-none overscroll-auto px-0 caret-transparent'
 
-const OMNIBAR_ROOT_NARROW_GUTTER_CLASSES = 'mt-4 mb-4 mx-4'
-const OMNIBAR_ROOT_WIDE_GUTTER_CLASSES = 'mt-6 mb-6 mx-6'
 const OMNIBAR_ROOT_TALL_WIDE_DESKTOP_GUTTER_CLASSES = 'mt-12 mb-6 mx-6'
 
 export function getOmnibarRootClasses({
@@ -52,12 +50,13 @@ export function getOmnibarRootClasses({
     effectiveAppMainWidth,
     availableViewportHeight,
   )
+  const rootTopGutterClasses =
+    topGutterPx === 48 ? 'mt-12' : xGutterPx === 16 ? 'mt-4' : 'mt-6'
+  const rootSideAndBottomGutterClasses = xGutterPx === 16 ? 'mb-4 mx-4' : 'mb-6 mx-6'
   const rootGutterClasses =
     topGutterPx === 48
       ? OMNIBAR_ROOT_TALL_WIDE_DESKTOP_GUTTER_CLASSES
-      : xGutterPx === 16
-        ? OMNIBAR_ROOT_NARROW_GUTTER_CLASSES
-        : OMNIBAR_ROOT_WIDE_GUTTER_CLASSES
+      : `${rootTopGutterClasses} ${rootSideAndBottomGutterClasses}`
 
   return cx(
     OMNIBAR_ROOT_SHARED_CLASSES,

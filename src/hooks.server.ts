@@ -29,7 +29,12 @@ const EMPTY_HUB_I18N: Record<LocaleKey, Record<string, never>> = {
 const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtended => ({
   code: hub?.code,
   domain: hub?.domain ?? null,
+  legalContactAddress: hub?.legalContactAddress ?? null,
   id: hub?.id,
+  isSubscriptionAvailable: hub?.isSubscriptionAvailable ?? false,
+  subscriptionService: hub?.subscriptionService ?? null,
+  subscriptionId: hub?.subscriptionId ?? null,
+  subscriptionPlacement: hub?.subscriptionPlacement ?? null,
   i18n: hub?.i18n ?? EMPTY_HUB_I18N,
   isSuperAdmin: hub?.isSuperAdmin ?? false,
   isAdminRequest: hub?.isAdminRequest ?? false,
@@ -115,7 +120,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     if (hubDb) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,
-        'list',
+        'card',
       )) as HubShapeResult
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
@@ -132,7 +137,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     if (hubDb) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,
-        'list',
+        'card',
       )) as HubShapeResult
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }

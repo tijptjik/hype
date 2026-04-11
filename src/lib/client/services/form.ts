@@ -1393,6 +1393,11 @@ export function getGenAiState(
   if (field === 'title') return Boolean(localeData.titleGen)
   if (field === 'name') return Boolean(localeData.nameGen)
   if (field === 'nameShort') return Boolean(localeData.nameShortGen)
+  if (field === 'subscriptionBenefits') {
+    return Boolean(localeData.subscriptionBenefitsGen)
+  }
+  if (field === 'privacyPolicy') return Boolean(localeData.privacyPolicyGen)
+  if (field === 'termsOfService') return Boolean(localeData.termsOfServiceGen)
   return Boolean(localeData.descriptionGen)
 }
 
@@ -1413,6 +1418,9 @@ export function toggleGenAiField<
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
+        subscriptionBenefitsGen?: FormBooleanValue
+        privacyPolicyGen?: FormBooleanValue
+        termsOfServiceGen?: FormBooleanValue
       }
     >
   },
@@ -1425,6 +1433,9 @@ export function toggleGenAiField<
       | 'nameGen'
       | 'nameShortGen'
       | 'descriptionGen'
+      | 'subscriptionBenefitsGen'
+      | 'privacyPolicyGen'
+      | 'termsOfServiceGen'
     const nextValue = !data.i18n[localeKey][fieldName]
     data.i18n[localeKey][fieldName] = nextValue
     return data
@@ -1468,6 +1479,12 @@ export async function translateLocaleIntoEmptyFields<
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
+        subscriptionBenefits?: string
+        subscriptionBenefitsGen?: FormBooleanValue
+        privacyPolicy?: string
+        privacyPolicyGen?: FormBooleanValue
+        termsOfService?: string
+        termsOfServiceGen?: FormBooleanValue
       }
     >
   },
@@ -1561,6 +1578,12 @@ export function resetLocaleFields<
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
+        subscriptionBenefits?: string
+        subscriptionBenefitsGen?: FormBooleanValue
+        privacyPolicy?: string
+        privacyPolicyGen?: FormBooleanValue
+        termsOfService?: string
+        termsOfServiceGen?: FormBooleanValue
       }
     >
   },
