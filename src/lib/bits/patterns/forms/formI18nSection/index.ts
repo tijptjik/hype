@@ -4,4 +4,5 @@ export { default as FormI18nDescriptorFields } from './components/FormI18nDescri
 export { default as FormI18nCapabilities } from './components/FormI18nCapabilities.svelte'
 export { default as FormSpecifiersFields } from './components/FormSpecifiersFields.svelte'
 export { default as FormHubSpecifiersFields } from './components/FormHubSpecifiersFields.svelte'
+export { default as FormHubSubscriptionSection } from './components/FormHubSubscriptionSection.svelte'
 export type { FormI18nSectionProps, FormSectionProps } from './formI18nSection.types'

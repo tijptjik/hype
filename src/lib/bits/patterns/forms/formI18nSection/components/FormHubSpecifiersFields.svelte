@@ -13,6 +13,7 @@ type HubSpecifiersForm = {
     data: {
       code: HubSpecifiersField
       domain: HubSpecifiersField
+      legalContactAddress: HubSpecifiersField
     }
   }
 }
@@ -34,6 +35,16 @@ const codeIssues = $derived(form.fields.data.code.issues())
 const domainInputAttrs = $derived(form.fields.data.domain.as('text'))
 const domainRequired = $derived(isRequiredInPreflight(['data', 'domain']))
 const domainIssues = $derived(form.fields.data.domain.issues())
+
+const legalContactAddressInputAttrs = $derived(
+  form.fields.data.legalContactAddress.as('text'),
+)
+const legalContactAddressRequired = $derived(
+  isRequiredInPreflight(['data', 'legalContactAddress']),
+)
+const legalContactAddressIssues = $derived(
+  form.fields.data.legalContactAddress.issues(),
+)
 </script>
 
 <section class="bits-form__section">
@@ -58,6 +69,16 @@ const domainIssues = $derived(form.fields.data.domain.issues())
       value={(domainInputAttrs as { value?: string }).value ?? ''}
       issues={domainIssues}
       inputAttrs={domainInputAttrs as Record<string, unknown>}
+    />
+
+    <TextInput
+      label={m.admin__forms_hub_legal_contact_address_label()}
+      required={legalContactAddressRequired}
+      {isEditing}
+      disabled={!isEditing}
+      value={(legalContactAddressInputAttrs as { value?: string }).value ?? ''}
+      issues={legalContactAddressIssues}
+      inputAttrs={legalContactAddressInputAttrs as Record<string, unknown>}
     />
   </FormSection>
 </section>
