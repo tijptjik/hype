@@ -1,5 +1,12 @@
 // I18N
 import { m } from '$lib/i18n'
+// ENUMS
+import { HubSubscriptionService } from '$lib/enums'
+// API
+import {
+  normalizeSubstackSessionCookie,
+  normalizeSubstackSubscriptionId,
+} from '$lib/api/external/substack.shared'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -10,6 +17,7 @@ import {
   hubLayer,
   hubI18n,
   hubRole,
+  hubUserState,
   layer,
   layerI18n,
   organisation,
@@ -41,6 +49,7 @@ import { UserBasic } from './user'
 //    - HubRoleWithUser
 //    - HubRoleInsert
 //    - HubRoleUpdate
+//    - HubUserStateBase
 //    - HubLayerBase
 //    - HubLayerWithLayer
 //    - HubRaw
@@ -102,6 +111,8 @@ export const HubRoleInsert = createInsertSchema(hubRole).omit({
 
 export const HubRoleUpdate = createUpdateSchema(hubRole)
 
+export const HubUserStateBase = createSelectSchema(hubUserState)
+
 export const HubLayerBase = createSelectSchema(hubLayer)
 
 const HubLayerLayer = createSelectSchema(layer).extend({
@@ -156,9 +167,24 @@ export const HubI18nFormData = z.object({
     .string()
     .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
     .optional(),
+  subscriptionBenefits: z
+    .union([z.literal(''), z.string().max(8000), z.null()])
+    .optional()
+    .transform(value => (typeof value === 'string' ? value.trim() : '')),
   nameGen: FormBoolean.default(false),
   nameShortGen: FormBoolean.default(false),
   descriptionGen: FormBoolean.optional(),
+  subscriptionBenefitsGen: FormBoolean.default(false),
+  privacyPolicy: z
+    .string()
+    .max(16000, { message: 'Privacy policy must be 16,000 characters or fewer.' })
+    .optional(),
+  privacyPolicyGen: FormBoolean.default(false),
+  termsOfService: z
+    .string()
+    .max(16000, { message: 'Terms of service must be 16,000 characters or fewer.' })
+    .optional(),
+  termsOfServiceGen: FormBoolean.default(false),
 })
 
 export const HubRoleFormData = z.object({
@@ -193,22 +219,68 @@ export const HubLayerFormData = z.object({
   isDefaultVisible: FormBoolean.default(false),
 })
 
-export const HubEntityFormData = z.object({
-  code: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_code() }) })
-    .min(2, { message: m.admin__validation_code_is_required() })
-    .max(24, { message: m.admin__validation_code_lte_24_chars() })
-    .regex(/^[a-zA-Z0-9_$]*$/, {
-      message: m.admin__validation_key_valid_characters(),
-    }),
-  domain: z.union([z.literal(''), z.string().min(3).max(255)]),
-  i18n: HubI18nByLocaleFormData,
-  userRoles: HubUserRolesFormData,
-  organisations: z.array(HubOrganisationFormData).default([]),
-  layerDefaults: z.array(HubLayerFormData).default([]),
-  properties: z.array(ProjectPropertyFormData).default([]),
+export const HubSubscriptionPlacementFormData = z.object({
+  hubPanel: FormBoolean.default(false),
+  topBar: FormBoolean.default(false),
+  menu: FormBoolean.default(true),
 })
+
+export const HubEntityFormData = z
+  .object({
+    code: z
+      .string()
+      .min(1, { message: m.field_is_required({ field: m.field_code() }) })
+      .min(2, { message: m.admin__validation_code_is_required() })
+      .max(24, { message: m.admin__validation_code_lte_24_chars() })
+      .regex(/^[a-zA-Z0-9_$]*$/, {
+        message: m.admin__validation_key_valid_characters(),
+      }),
+    domain: z.union([z.literal(''), z.string().min(3).max(255)]),
+    legalContactAddress: z
+      .preprocess(
+        value => (typeof value === 'string' ? value.trim() : value),
+        z.union([z.literal(''), z.string().email().max(512)]),
+      )
+      .optional()
+      .default('')
+      .transform(value => value ?? ''),
+    isSubscriptionAvailable: FormBoolean.default(false),
+    subscriptionService: z
+      .union([z.nativeEnum(HubSubscriptionService), z.null()])
+      .optional()
+      .transform(value => value ?? null),
+    subscriptionId: z
+      .union([z.literal(''), z.string().max(255), z.null()])
+      .optional()
+      .transform(value =>
+        typeof value === 'string' ? normalizeSubstackSubscriptionId(value) : '',
+      ),
+    subscriptionSessionCookie: z
+      .union([z.literal(''), z.string().max(4096), z.null()])
+      .optional()
+      .transform(value =>
+        typeof value === 'string' ? normalizeSubstackSessionCookie(value) : '',
+      ),
+    subscriptionPlacement: HubSubscriptionPlacementFormData.default({
+      hubPanel: false,
+      topBar: false,
+      menu: true,
+    }),
+    i18n: HubI18nByLocaleFormData,
+    userRoles: HubUserRolesFormData,
+    organisations: z.array(HubOrganisationFormData).default([]),
+    layerDefaults: z.array(HubLayerFormData).default([]),
+    properties: z.array(ProjectPropertyFormData).default([]),
+  })
+  .superRefine((data, ctx) => {
+    if (data.isSubscriptionAvailable && data.subscriptionService === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['subscriptionService'],
+        message: m.field_is_required({ field: m.field_subscription_service() }),
+      })
+    }
+  })
 
 export const HubFormMeta = z.object({
   id: z.string().optional(),
@@ -248,6 +320,25 @@ export const RemoveHubSchema = z.object({
     .optional(),
 })
 
+export const JoinHubSubscriptionSchema = z.object({
+  hubId: z.string().min(1),
+  hasAgreedToTerms: z.coerce.boolean<boolean>(),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
+export const DismissHubSubscriptionPromptSchema = z.object({
+  hubId: z.string().min(1),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+})
+
 // ═══════════════════════
 // 4. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
@@ -258,6 +349,7 @@ const HubListFields = HubBase.pick({
   id: true,
   code: true,
   domain: true,
+  legalContactAddress: true,
   createdAt: true,
   modifiedAt: true,
 })
@@ -267,6 +359,13 @@ const HubCardFields = HubBase.pick({
   isArchived: true,
 })
 
+const HubSubscriptionFields = HubBase.pick({
+  isSubscriptionAvailable: true,
+  subscriptionService: true,
+  subscriptionId: true,
+  subscriptionPlacement: true,
+})
+
 export const HubListProfileAPI = HubListFields.extend({
   i18n: getLocales(HubI18nBase),
   image: ImageContextEnvelopeAPI.nullish(),
@@ -274,6 +373,7 @@ export const HubListProfileAPI = HubListFields.extend({
 
 export const HubCardProfileAPI = HubListProfileAPI.extend({
   ...HubCardFields.shape,
+  ...HubSubscriptionFields.shape,
 })
 
 export const HubDetailProfileAPI = HubCardProfileAPI.extend({
@@ -283,4 +383,6 @@ export const HubDetailProfileAPI = HubCardProfileAPI.extend({
   properties: z.array(PropertyAdminProfileAPI).default([]),
 })
 
-export const HubAdminProfileAPI = HubDetailProfileAPI
+export const HubAdminProfileAPI = HubDetailProfileAPI.extend({
+  subscriptionSessionCookie: HubBase.shape.subscriptionSessionCookie,
+})

@@ -28,7 +28,10 @@ import type {
   HubRoleInsert,
   HubRoleUpdate,
   HubRoleWithUser,
+  HubUserStateBase,
   HubUpdate,
+  DismissHubSubscriptionPromptSchema,
+  JoinHubSubscriptionSchema,
   PublishHubSchema,
   RemoveHubSchema,
 } from '$lib/db/zod/schema/hub'
@@ -91,6 +94,7 @@ export type HubRoleDB = z.infer<typeof HubRoleBase>
 export type HubRoleNew = z.infer<typeof HubRoleInsert>
 export type HubRolePartial = z.infer<typeof HubRoleUpdate>
 export type HubRoleUser = z.infer<typeof HubRoleWithUser>
+export type HubUserState = z.infer<typeof HubUserStateBase>
 export type HubLayer = z.infer<typeof HubLayerBase>
 export type HubLayerWithLayerRecord = z.infer<typeof HubLayerWithLayer>
 
@@ -101,6 +105,10 @@ export type HubPreflightInput = z.input<typeof HubPreflightFormData>
 export type HubBooleanField = 'isPublished' | 'isArchived'
 export type HubPublishInput = z.input<typeof PublishHubSchema>
 export type HubArchiveInput = z.input<typeof RemoveHubSchema>
+export type JoinHubSubscriptionInput = z.input<typeof JoinHubSubscriptionSchema>
+export type DismissHubSubscriptionPromptInput = z.input<
+  typeof DismissHubSubscriptionPromptSchema
+>
 export type HubIdentityPatch = {
   code: string
   locale: Locale
@@ -113,6 +121,7 @@ export type HubGetState = HubGetResponse | null
 export interface HubOpts {
   code?: string
   domain?: string | null
+  legalContactAddress?: string | null
   isCore: boolean
   i18n: Record<LocaleKey, Partial<HubI18nDB>>
   isSuperAdmin?: boolean
@@ -123,6 +132,7 @@ export interface HubOptsExtended extends Partial<Hub> {
   id?: string
   code?: string
   domain?: string | null
+  legalContactAddress?: string | null
   i18n: Record<LocaleKey, Partial<HubI18nDB>>
   isSuperAdmin: boolean
   isAdminRequest: boolean
