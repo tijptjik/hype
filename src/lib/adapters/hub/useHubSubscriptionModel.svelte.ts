@@ -1,12 +1,15 @@
 // TYPES
-import type {
-  AppMenuSubscriptionItemProps,
-  HubSubscriptionOverlayProps,
-} from '$lib/bits/patterns/bars'
+import type { HubSubscriptionOverlayProps } from '$lib/bits/patterns/bars'
 import type { HubPanelSubscriptionProps } from '$lib/bits/patterns/panels/hubPanelSubscription'
 import type { HubPolicyDialogProps } from '$lib/bits/patterns/policies'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { HubSubscriptionPlacement, HubUserStateFlags } from '$lib/types'
+
+export interface AppMenuSubscriptionItemProps {
+  label?: string
+  isDisabled?: boolean
+  onSelect?: () => void | Promise<void>
+}
 
 type HubSubscriptionCopy = {
   title?: string
