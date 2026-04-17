@@ -91,20 +91,22 @@ onMount(() => {
 >
 
 <div
-  class="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/58 px-2 py-2 text-white shadow-[0_12px_32px_rgba(0,0,0,0.28)] backdrop-blur-md"
+  class="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black px-2 py-2 text-white shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
 >
   <Button
     text={m.forms__delete()}
     style="transparent"
     modifier="circle"
     hideLabel={true}
-    class="h-10 w-10 rounded-full border border-white/12 bg-white/8 text-white hover:bg-white/14"
+    class="h-10 w-10 rounded-full border border-white/12 bg-black text-white hover:bg-white/10"
     onClick={() => {
       void onDelete?.()
     }}
     iconComponent={Trash2Icon}
     iconClasses="h-[18px] w-[18px]"
   />
+
+  <div class="h-6 w-px bg-white/18" aria-hidden="true"></div>
 
   <div class="px-1.5 font-mono text-[11px] uppercase tracking-[0.28em] text-white/58">
     {m.wacky_home_sawfish_accept()}
@@ -118,7 +120,7 @@ onMount(() => {
       style="transparent"
       modifier="circle"
       hideLabel={true}
-      class="h-10 w-10 rounded-full border border-white/12 bg-white/8 text-white hover:bg-white/14"
+      class="h-10 w-10 rounded-full border border-white/12 bg-black text-white hover:bg-white/10"
       onClick={() => {
         void handleCameraClick()
       }}
@@ -132,7 +134,7 @@ onMount(() => {
     style="transparent"
     modifier="circle"
     hideLabel={true}
-    class="h-10 w-10 rounded-full border border-white/12 bg-white/8 text-white hover:bg-white/14"
+    class="h-10 w-10 rounded-full border border-white/12 bg-black text-white hover:bg-white/10"
     onClick={() => galleryInput?.click()}
     iconComponent={FolderOpenIcon}
     iconClasses="h-[18px] w-[18px]"
