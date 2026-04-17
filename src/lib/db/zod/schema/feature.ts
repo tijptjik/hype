@@ -96,6 +96,7 @@ export const FeatureInsert = createInsertSchema(feature).extend({
   isPublished: FormBoolean.default(false),
   isPendingReview: FormBoolean.default(false),
   isArchived: FormBoolean.default(false),
+  isDraft: FormBoolean.default(false),
   isIntangible: FormBoolean.default(false),
   isVisitable: FormBoolean.default(true),
 })
@@ -106,6 +107,7 @@ export const FeatureUpdate = createUpdateSchema(feature).extend({
   isPublished: FormBoolean.optional(),
   isPendingReview: FormBoolean.optional(),
   isArchived: FormBoolean.optional(),
+  isDraft: FormBoolean.optional(),
   isIntangible: FormBoolean.optional(),
   isVisitable: FormBoolean.optional(),
 })
@@ -299,6 +301,7 @@ export const FeatureEntityFormData = z.object({
   isIntangible: FormBoolean.default(false),
   isVisitable: FormBoolean.default(true),
   isPendingReview: FormBoolean.default(false),
+  isDraft: FormBoolean.default(false),
   i18n: FeatureI18nByLocaleFormData,
   properties: z.array(FeaturePropertyFormData).default([]),
 })

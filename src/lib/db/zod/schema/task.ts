@@ -328,6 +328,7 @@ export const BeginMissingReportDraftSchema = z.object({
 
 export const BeginNewFeatureDraftSchema = z.object({
   task: z.object({
+    taskId: z.string().min(1).optional(),
     layerId: z.string().min(1),
     organisationId: z.string().min(1),
     projectId: z.string().min(1),

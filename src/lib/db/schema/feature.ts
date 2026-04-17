@@ -91,6 +91,9 @@ export const feature = sqliteTable('feature', {
   // False : Feature may be shown in the Admin Panel
   // True : Feature is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+  // False : Feature is visible to regular feature queries.
+  // True : Feature remains hidden until its contribution draft is finalized.
+  isDraft: integer('isDraft', { mode: 'boolean' }).notNull().default(false),
   localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
   isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
   isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(true),
