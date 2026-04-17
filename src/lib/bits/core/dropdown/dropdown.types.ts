@@ -18,6 +18,7 @@ export type DropdownProps = {
   contentSide?: 'top' | 'right' | 'bottom' | 'left'
   contentSideOffset?: number
   contentAlign?: 'start' | 'center' | 'end'
+  contentAlignOffset?: number
   itemClass?: string
   items?: DropdownItem[]
 }

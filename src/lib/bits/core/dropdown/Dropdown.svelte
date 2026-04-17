@@ -15,6 +15,7 @@ let {
   contentSide = 'bottom',
   contentSideOffset = 8,
   contentAlign = 'center',
+  contentAlignOffset = 0,
   itemClass = '',
   items = [],
 }: DropdownProps = $props()
@@ -54,6 +55,7 @@ const resolvedItemClass = $derived(
       side={contentSide}
       sideOffset={contentSideOffset}
       align={contentAlign}
+      alignOffset={contentAlignOffset}
     >
       {#each items as item, index (`${item.label}-${index}`)}
         <DropdownMenu.Item
