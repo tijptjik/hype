@@ -10,15 +10,18 @@ import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
 // ICONS
 import CameraIcon from 'virtual:icons/lucide/camera'
 import FolderOpenIcon from 'virtual:icons/lucide/folder-open'
+import ImageIcon from 'virtual:icons/lucide/image'
 // LOCAL
 import { detectCameraAccess, requestCameraAccess } from './cameraAccess'
 
 let {
   uploadSelectionMode = 'multiple',
+  emptyDescription = m.viewer__no_image_note(),
   onUploadFiles,
   onCaptureFiles,
 }: {
   uploadSelectionMode?: 'single' | 'multiple'
+  emptyDescription?: string | null
   onUploadFiles?: (files: FileList | File[]) => void
   onCaptureFiles?: (files: FileList | File[]) => void
 } = $props()
@@ -103,15 +106,15 @@ onMount(() => {
   class="flex h-full w-full flex-col items-center justify-center gap-5 rounded-[1.75rem] border border-dashed border-white/15 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),rgba(0,0,0,0.04)_48%),linear-gradient(180deg,rgba(16,17,20,0.84),rgba(8,9,11,0.94))] px-6 py-8 text-center text-white"
 >
   <div class="space-y-2">
-    <p class="font-mono text-[11px] uppercase tracking-[0.32em] text-white/55">
-      {m.wacky_home_sawfish_accept()}
-    </p>
-    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-white">
+    <div class="flex justify-center"><ImageIcon class="h-6 w-6 text-white/55" /></div>
+    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-white pb-2">
       {m.honest_fluffy_falcon_enjoy()}
     </h3>
-    <p class="max-w-[24rem] text-sm leading-6 text-white/68">
-      {cameraHelperText ?? m.viewer__no_image_note()}
-    </p>
+    {#if cameraHelperText ?? emptyDescription}
+      <p class="max-w-[24rem] text-sm leading-6 text-white/68">
+        {cameraHelperText ?? emptyDescription}
+      </p>
+    {/if}
   </div>
 
   <div class="flex flex-wrap items-center justify-center gap-3">
