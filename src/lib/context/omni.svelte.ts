@@ -342,7 +342,7 @@ export class OmniCtx {
           })
         }) // Small delay to allow DOM cleanup
       } else if (!this.cardCtx?.isDisplayMode) {
-        // If the card is in newPhoto reportMissing modes, reset the featureCard
+        // If the card is in newPhoto modes, reset the featureCard
 
         // EMIT EVENT: Signal to Image Context to refresh images if record was published
         const refreshImagesEvent = new CustomEvent('refreshImages', {
@@ -655,6 +655,10 @@ export class OmniCtx {
   }
 
   isCardOpen = $derived(this.state.isCardOpen)
+  isCardOpeningPending = $derived(
+    this.cardTransition.sourceKind === 'marker' &&
+      (!this.state.isCardOpen || this.cardTransition.phase === 'opening'),
+  )
 
   // ═══════════════════════
   // NAVIGATION
@@ -1306,6 +1310,7 @@ export const getOmniCtx = (): OmniCtx => {
       },
       pageState: PageState.NoTransition,
       isIntentionallyClosing: false,
+      isCardOpeningPending: false,
       activeCollectionDescriptor: null,
       cardTransition: {
         phase: 'idle',
