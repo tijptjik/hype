@@ -8,11 +8,13 @@ let {
   loadedIndex,
   pendingIndex,
   totalCount,
+  showTotalCount = true,
 }: {
   requestedIndex: number
   loadedIndex: number
   pendingIndex: number
   totalCount: number
+  showTotalCount?: boolean
 } = $props()
 
 let settledNumber = $state(1)
@@ -119,10 +121,12 @@ onDestroy(() => {
         {/each}
       </div>
     </div>
-    <span class="flex h-[1rem] items-center text-white/55">/</span>
-    <span class="flex h-[1rem] items-center tabular-nums text-white/88"
-      >{totalCount}</span
-    >
+    {#if showTotalCount}
+      <span class="flex h-[1rem] items-center text-white/55">/</span>
+      <span class="flex h-[1rem] items-center tabular-nums text-white/88"
+        >{totalCount}</span
+      >
+    {/if}
   </div>
 {/if}
 

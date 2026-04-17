@@ -1,6 +1,10 @@
 <script lang="ts">
+// COMPONENTS
 import * as ImagePrimitive from './components'
 import Viewer from './components/Viewer.svelte'
+// CONTEXT
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+// TYPES
 import type { CameraViewerProps, ViewerRenderable } from './images.types'
 
 let {
@@ -21,6 +25,7 @@ let {
   rightRail,
   emptyState,
   isEmptyUploadEnabled = true,
+  emptyDescription,
   centerAction = 'none',
   centerActionLabel,
   onCenterAction,
@@ -33,6 +38,8 @@ let {
 }: CameraViewerProps = $props()
 
 let loadedActiveId = $state<string | null>(null)
+
+const responsiveCtx = getResponsiveCtx()
 
 const activeIndex = $derived.by(() => {
   if (!items.length) return -1
@@ -56,6 +63,7 @@ const pendingIndex = $derived.by(() => {
   if (activeIndex < 0 || loadedIndex === activeIndex) return -1
   return activeIndex
 })
+const showCounterTotal = $derived(!responsiveCtx.hasCompactImageViewerCounter)
 
 $effect(() => {
   if (!activeId) {
@@ -81,6 +89,7 @@ function handleCurrentItemLoad(item: ViewerRenderable): void {
   {#if items.length === 0 && isEmptyUploadEnabled && !emptyState}
     <ImagePrimitive.CaptureOptions
       {uploadSelectionMode}
+      {emptyDescription}
       {onUploadFiles}
       {onCaptureFiles}
     />
@@ -132,6 +141,7 @@ function handleCurrentItemLoad(item: ViewerRenderable): void {
             {loadedIndex}
             {pendingIndex}
             totalCount={items.length}
+            showTotalCount={showCounterTotal}
           />
         </div>
       </div>
