@@ -2,7 +2,7 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { getLocale, m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getCardCtx } from '$lib/context/card.svelte'
@@ -21,8 +21,10 @@ let { feature }: { feature: Feature } = $props()
 const appCtx = getAppCtx()
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
+const featureTitle =
+  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id
 
-async function submitMissingReport(): Promise<void> {
+async function handleSubmitMissingReport(): Promise<void> {
   if (imageCtx.getStagedQueue().length === 0) {
     cardCtx.setError(m.validation__at_least_one_image())
     return
@@ -34,9 +36,13 @@ async function submitMissingReport(): Promise<void> {
   }
 
   try {
+    cardCtx.resetError()
     cardCtx.isSubmitting = true
 
     const { layer, project, organisation } = await appCtx.getHierarchy(feature)
+    if (!layer || !project || !organisation) {
+      throw new Error('Unable to resolve submission hierarchy')
+    }
 
     await submitMissingReportAPI(
       feature,
@@ -45,20 +51,32 @@ async function submitMissingReport(): Promise<void> {
       organisation,
       cardCtx.userData.missingReason,
       imageCtx.getStagedQueue(),
+      {
+        onStatusChange: label => {
+          cardCtx.setSubmissionLabel(label)
+        },
+      },
     )
 
     imageCtx.resetImages()
+    await imageCtx.refreshImages()
     cardCtx.userData.missingReason = ''
-    cardCtx.state.mode = FeatureCardMode.SubmissionSuccess
-    cardCtx.validationError = ''
+    cardCtx.setMode(FeatureCardMode.Display)
+    cardCtx.resetError()
+    toast.success(m.report_missing__success(), {
+      description: m.report_missing__submitted_description({
+        featureTitle,
+      }),
+    })
   } catch (error) {
     console.error('Error submitting missing report:', error)
     toast.error(m.long_crazy_peacock_care())
     cardCtx.validationError = m.long_crazy_peacock_care()
   } finally {
     cardCtx.isSubmitting = false
+    cardCtx.resetSubmissionState()
   }
 }
 </script>
 
-<FeatureCardSubmitButton onSubmit={submitMissingReport} />
+<FeatureCardSubmitButton onSubmit={handleSubmitMissingReport} variant="secondary" />

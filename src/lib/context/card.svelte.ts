@@ -8,6 +8,7 @@ import type { UploadedPhoto } from '$lib/db/zod/schema/image.types'
 export class CardCtx {
   state = $state({
     mode: FeatureCardMode.Display,
+    submissionLabel: '',
   })
   userData = $state({
     missingReason: '',
@@ -23,6 +24,18 @@ export class CardCtx {
 
   getMode() {
     return this.state.mode
+  }
+
+  setSubmissionLabel(label: string) {
+    this.state.submissionLabel = label
+  }
+
+  getSubmissionLabel() {
+    return this.state.submissionLabel
+  }
+
+  resetSubmissionState() {
+    this.state.submissionLabel = ''
   }
 
   isDisplayMode = $derived(this.state.mode === FeatureCardMode.Display)

@@ -2,7 +2,7 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { getLocale, m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getCardCtx } from '$lib/context/card.svelte'
@@ -22,7 +22,9 @@ const appCtx = getAppCtx()
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
 
-const attribution = $derived(appCtx.getUser().attribution || m.anonymous())
+const attribution = $derived(appCtx.getUser()?.attribution || m.anonymous())
+const featureTitle =
+  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id
 
 async function submitNewPhotos(): Promise<void> {
   if (imageCtx.getStagedImages().length === 0) {
@@ -39,9 +41,13 @@ async function submitNewPhotos(): Promise<void> {
   }
 
   try {
+    cardCtx.resetError()
     cardCtx.isSubmitting = true
 
     const { layer, project, organisation } = await appCtx.getHierarchy(feature)
+    if (!layer || !project || !organisation) {
+      throw new Error('Unable to resolve submission hierarchy')
+    }
 
     await submitNewPhotosAPI(
       feature,
@@ -49,17 +55,29 @@ async function submitNewPhotos(): Promise<void> {
       project,
       organisation,
       imageCtx.getStagedQueue(),
+      {
+        onStatusChange: label => {
+          cardCtx.setSubmissionLabel(label)
+        },
+      },
     )
 
     imageCtx.resetImages()
-    cardCtx.state.mode = FeatureCardMode.SubmissionSuccess
-    cardCtx.validationError = ''
+    await imageCtx.refreshImages()
+    cardCtx.setMode(FeatureCardMode.Display)
+    cardCtx.resetError()
+    toast.success(m.add_photos__success(), {
+      description: m.add_photos__submitted_description({
+        featureTitle,
+      }),
+    })
   } catch (error) {
     console.error('Error submitting new photos:', error)
     toast.error(m.long_crazy_peacock_care())
     cardCtx.validationError = m.long_crazy_peacock_care()
   } finally {
     cardCtx.isSubmitting = false
+    cardCtx.resetSubmissionState()
   }
 }
 </script>
