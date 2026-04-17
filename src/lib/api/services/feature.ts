@@ -54,6 +54,7 @@ import type {
 import type { ImageDB } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type {
+  Feature,
   FeatureAdminDBRaw,
   FeatureDB,
   FeatureNew,
@@ -70,7 +71,7 @@ const requiredLocaleKeys = supportedLocales.map(locale =>
 
 type PreparedUserContributedFeatureDraft = {
   validatedFeature: FeatureNew
-  layerScope: Awaited<ReturnType<typeof probeLayerForUpdate>>
+  layerScope: NonNullable<Awaited<ReturnType<typeof probeLayerForUpdate>>>
 }
 
 const stripFeaturePropertyI18n = <T extends { properties?: unknown }>(input: T): T => ({
@@ -347,7 +348,7 @@ export const normalizeFeaturePropertiesForLayer = (
     {
       id: featureId,
       properties: [...(properties ?? [])],
-    },
+    } as Feature,
     layerData,
   ).properties as NonNullable<FeatureResponseRow['properties']>
 }
@@ -797,6 +798,10 @@ const prepareUserContributedFeatureDraft = async (
       }
     }
   } else {
+    if (!sourceTextObj) {
+      throw new Error('Source locale must have content')
+    }
+
     for (const locale of supportedLocales) {
       const localeKey = toLocaleKey(locale)
       const isSourceLocale = locale === sourceLocale
@@ -934,7 +939,7 @@ const prepareUserContributedFeatureDraft = async (
 
   return {
     validatedFeature,
-    layerScope,
+    layerScope: layerScope!,
   }
 }
 
