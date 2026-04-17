@@ -1,5 +1,5 @@
 // REMOTE
-import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
+import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
 // I18N
 import { getLocale } from '$lib/i18n'
@@ -15,6 +15,10 @@ import {
 } from '$lib/api/services/authz'
 import { task as taskTable } from '$lib/db/schema'
 import {
+  BeginMissingReportDraftSchema,
+  BeginNewFeatureDraftSchema,
+  BeginNewPhotosDraftSchema,
+  FinalizeTaskDraftSchema,
   GetTaskEditorDataSchema,
   GetTasksSchema,
   ReassignTaskLayerSchema,
@@ -24,6 +28,7 @@ import {
   SubmitNewPhotosSchema,
 } from '$lib/db/zod/schema/task'
 import {
+  createTask,
   loadTask,
   listTasks,
   probeTaskQuery,
@@ -37,6 +42,10 @@ import {
   updateFeatureByIdWithConcurrency,
 } from '$lib/db/services/feature'
 import { listAssignableTaskLayers, probeLayerForUpdate } from '$lib/db/services/layer'
+import {
+  createUserContributedFeature,
+  updateUserContributedFeatureDraft,
+} from '$lib/api/services/feature'
 // API SERVICES
 import {
   getTaskWithRelations,
@@ -50,6 +59,7 @@ import {
 import type {
   EntityResponse,
   GuardedCommandContext,
+  GuardedFormContext,
   Id,
   ListResponse,
   TaskDB,
@@ -57,6 +67,9 @@ import type {
   ReviewOutcome,
 } from '$lib/types'
 import type {
+  BeginMissingReportDraftInput,
+  BeginNewFeatureDraftInput,
+  BeginNewPhotosDraftInput,
   SubmitMissingReportInput,
   SubmitNewFeatureInput,
   SubmitNewPhotosInput,
@@ -78,6 +91,10 @@ import type {
 // - getTask
 //
 // COMMAND
+// - beginMissingReportDraft
+// - beginNewFeatureDraft
+// - beginNewPhotosDraft
+// - finalizeTaskDraft
 // - submitMissingReport
 // - submitNewFeature
 // - submitNewPhotos
@@ -239,24 +256,258 @@ export const getTask = getTaskQuery as typeof getTaskQuery &
   ) => Promise<EntityResponse<TaskEntityByProfile<P>>>)
 
 /**
+ * Creates a draft reported-missing task and returns its server-minted ID.
+ *
+ * @param input Draft task payload.
+ * @param ctx Guarded remote context.
+ * @returns Draft task row.
+ */
+export const beginMissingReportDraft = guardedCommand(
+  BeginMissingReportDraftSchema,
+  async (
+    input: BeginMissingReportDraftInput,
+    ctx: GuardedCommandContext,
+  ): Promise<{ data: unknown }> => {
+    if (input.reason.trim().length < 5) {
+      throw error(400, 'TASK_REASON_TOO_SHORT')
+    }
+
+    const createdTask = await createTask(ctx.db, {
+      type: 'reportedMissing',
+      featureId: input.featureId,
+      projectId: input.projectId,
+      organisationId: input.organisationId,
+      contributorId: ctx.userId,
+      message: input.reason.trim(),
+      isDraft: true,
+      isReviewed: false,
+    })
+
+    return { data: createdTask }
+  },
+)
+
+/**
+ * Creates a draft new-feature task and its backing feature record.
+ *
+ * @param input Draft task payload.
+ * @param ctx Guarded remote context.
+ * @returns Draft task row and created feature identifiers.
+ */
+export const beginNewFeatureDraft = guardedCommand(
+  BeginNewFeatureDraftSchema,
+  async (
+    input: BeginNewFeatureDraftInput,
+    ctx: GuardedCommandContext,
+  ): Promise<{ data: unknown }> => {
+    const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
+    const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
+    const draftFeature = {
+      ...input.task.feature,
+      contributorId: ctx.userId,
+    }
+
+    if (input.task.taskId) {
+      const existingTask = await ctx.db.query.task.findFirst({
+        where: eq(taskTable.id, input.task.taskId as Id),
+      })
+
+      if (!existingTask) {
+        throw error(404, 'TASK_NOT_FOUND')
+      }
+
+      if (existingTask.contributorId !== ctx.userId) {
+        throw error(403, 'TASK_DRAFT_FORBIDDEN')
+      }
+
+      if (existingTask.type !== 'newFeature') {
+        throw error(400, 'TASK_TYPE_MISMATCH')
+      }
+
+      if (!existingTask.featureId) {
+        throw error(400, 'TASK_FEATURE_REQUIRED')
+      }
+
+      const updatedFeature = await updateUserContributedFeatureDraft(
+        ctx.db,
+        existingTask.featureId as Id,
+        draftFeature,
+        region,
+        subscriptionKey,
+      )
+
+      const updatedTask = await updateTask(
+        ctx.db,
+        {
+          organisationId: updatedFeature.organisationId,
+          projectId: updatedFeature.projectId,
+          layerId: updatedFeature.layerId,
+        },
+        existingTask.id as Id,
+      )
+
+      return {
+        data: {
+          task: updatedTask,
+          featureId: updatedFeature.id,
+          layerId: updatedFeature.layerId,
+          projectId: updatedFeature.projectId,
+          organisationId: updatedFeature.organisationId,
+        },
+      }
+    }
+
+    const createdFeature = await createUserContributedFeature(
+      ctx.db,
+      draftFeature,
+      region,
+      subscriptionKey,
+    )
+
+    const createdTask = await createTask(ctx.db, {
+      type: 'newFeature',
+      featureId: createdFeature.id,
+      projectId: createdFeature.projectId,
+      organisationId: createdFeature.organisationId,
+      layerId: createdFeature.layerId,
+      contributorId: ctx.userId,
+      isDraft: true,
+      isReviewed: false,
+    })
+
+    return {
+      data: {
+        task: createdTask,
+        featureId: createdFeature.id,
+        layerId: createdFeature.layerId,
+        projectId: createdFeature.projectId,
+        organisationId: createdFeature.organisationId,
+      },
+    }
+  },
+)
+
+/**
+ * Creates a draft new-photo task and returns its server-minted ID.
+ *
+ * @param input Draft task payload.
+ * @param ctx Guarded remote context.
+ * @returns Draft task row.
+ */
+export const beginNewPhotosDraft = guardedCommand(
+  BeginNewPhotosDraftSchema,
+  async (
+    input: BeginNewPhotosDraftInput,
+    ctx: GuardedCommandContext,
+  ): Promise<{ data: unknown }> => {
+    const createdTask = await createTask(ctx.db, {
+      type: 'newPhoto',
+      featureId: input.featureId,
+      projectId: input.projectId,
+      organisationId: input.organisationId,
+      contributorId: ctx.userId,
+      isDraft: true,
+      isReviewed: false,
+    })
+
+    return { data: createdTask }
+  },
+)
+
+/**
+ * Marks a draft task as finalized after direct image uploads complete.
+ *
+ * @param params Draft task identifier.
+ * @param ctx Guarded remote context.
+ * @returns Updated task row.
+ */
+export const finalizeTaskDraft = guardedCommand(
+  FinalizeTaskDraftSchema,
+  async (params, ctx): Promise<{ data: unknown }> => {
+    const draftTask = await ctx.db.query.task.findFirst({
+      with: {
+        images: true,
+      },
+      where: eq(taskTable.id, params.id as Id),
+    })
+
+    if (!draftTask) {
+      throw error(404, 'TASK_NOT_FOUND')
+    }
+
+    if (draftTask.contributorId !== ctx.userId) {
+      throw error(403, 'TASK_DRAFT_FORBIDDEN')
+    }
+
+    if (!draftTask.isDraft) {
+      return { data: draftTask }
+    }
+
+    if (!draftTask.images || draftTask.images.length === 0) {
+      throw error(400, 'TASK_IMAGE_REQUIRED')
+    }
+
+    if (
+      draftTask.type === 'reportedMissing' &&
+      (!draftTask.message || draftTask.message.trim().length < 5)
+    ) {
+      throw error(400, 'TASK_REASON_TOO_SHORT')
+    }
+
+    const finalizedTask = await updateTask(
+      ctx.db,
+      {
+        isDraft: false,
+      },
+      params.id as Id,
+    )
+
+    if (draftTask.type === 'newFeature' && draftTask.featureId) {
+      const featureProbe = await probeFeatureForUpdate(
+        ctx.db,
+        draftTask.featureId as Id,
+      )
+
+      if (!featureProbe) {
+        throw error(404, 'FEATURE_NOT_FOUND')
+      }
+
+      const finalizedFeature = await updateFeatureByIdWithConcurrency(ctx.db, {
+        id: featureProbe.id as Id,
+        updatedAt: featureProbe.modifiedAt,
+        data: {
+          isDraft: false,
+        },
+      })
+
+      if (!finalizedFeature) {
+        throw error(409, 'STALE_FEATURE_WRITE')
+      }
+    }
+
+    return { data: finalizedTask }
+  },
+)
+
+/**
  * Creates a reported-missing task without routing through the legacy REST endpoint.
  *
  * @param input Missing-report payload.
  * @param ctx Guarded remote context.
  * @returns Created task row.
  */
-export const submitMissingReport = guardedCommand(
+export const submitMissingReport = guardedForm(
   SubmitMissingReportSchema,
   async (
     input: SubmitMissingReportInput,
-    ctx: GuardedCommandContext,
+    ctx: GuardedFormContext,
   ): Promise<{ data: unknown }> => {
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
-      throw error(400, 'TASK_IMAGE_REQUIRED')
+      ctx.invalid(ctx.issue('At least one image is required as evidence'))
     }
 
     if (input.reason.trim().length < 5) {
-      throw error(400, 'TASK_REASON_TOO_SHORT')
+      ctx.invalid(ctx.issue('Reason must be at least 5 characters long'))
     }
 
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
