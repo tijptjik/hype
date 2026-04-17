@@ -820,7 +820,7 @@ export class ImageCtx {
             presentationMode: 'contain',
             createdAt: new Date().toISOString(),
             contributorId: null,
-            cdn: 'cloudflareR2',
+            cdn: 'preview',
             env: 'local',
             cdnId: null,
             publicId: tempId,
