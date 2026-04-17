@@ -1,6 +1,10 @@
 import type { z } from 'zod'
 import type { EntityResponse, ListQueryParams } from '$lib/types'
 import type {
+  BeginMissingReportDraftSchema,
+  BeginNewFeatureDraftSchema,
+  BeginNewPhotosDraftSchema,
+  FinalizeTaskDraftSchema,
   GetTaskEditorDataSchema,
   GetTasksSchema,
   ReassignTaskLayerSchema,
@@ -78,6 +82,10 @@ export type GetTaskEditorDataInput = z.input<typeof GetTaskEditorDataSchema>
 export type GetTasksInput = z.input<typeof GetTasksSchema>
 export type ReviewTaskInput = z.input<typeof ReviewTaskSchema>
 export type ReassignTaskLayerInput = z.input<typeof ReassignTaskLayerSchema>
+export type BeginMissingReportDraftInput = z.input<typeof BeginMissingReportDraftSchema>
+export type BeginNewFeatureDraftInput = z.input<typeof BeginNewFeatureDraftSchema>
+export type BeginNewPhotosDraftInput = z.input<typeof BeginNewPhotosDraftSchema>
+export type FinalizeTaskDraftInput = z.input<typeof FinalizeTaskDraftSchema>
 export type SubmitMissingReportInput = z.input<typeof SubmitMissingReportSchema>
 export type SubmitNewFeatureInput = z.input<typeof SubmitNewFeatureSchema>
 export type SubmitNewPhotosInput = z.input<typeof SubmitNewPhotosSchema>

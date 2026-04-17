@@ -217,6 +217,7 @@ export const probeTaskQuery = async (
   id: string
   organisationId: string
   projectId: string
+  isReviewed: boolean
   resourceHubId: string | null
 } | null> =>
   firstOrNull(
@@ -225,6 +226,7 @@ export const probeTaskQuery = async (
         id: task.id,
         organisationId: task.organisationId,
         projectId: task.projectId,
+        isReviewed: task.isReviewed,
         resourceHubId: organisation.hubId,
       })
       .from(task)
@@ -493,6 +495,7 @@ export const createTaskWithDependencies = async (
   // Add default isReviewed state before casting for createTask
   const taskToCreate = {
     ...taskData,
+    isDraft: false, // Current task creation endpoints finalize submissions immediately.
     isReviewed: false, // Default for new tasks
   }
 

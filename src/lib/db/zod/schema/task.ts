@@ -57,6 +57,10 @@ import { getLocales } from '..'
 //    - ReassignTaskLayerSchema
 //    - TaskEditorLayerOptionSchema
 //    - TaskEditorDataSchema
+//    - BeginMissingReportDraftSchema
+//    - BeginNewFeatureDraftSchema
+//    - BeginNewPhotosDraftSchema
+//    - FinalizeTaskDraftSchema
 //    - SubmitMissingReportSchema
 //    - SubmitNewFeatureSchema
 //    - SubmitNewPhotosSchema
@@ -70,6 +74,7 @@ export const TaskBase = createSelectSchema(task).extend({
 })
 export const TaskInsert = createInsertSchema(task).extend({
   type: z.enum(Object.values(TaskType) as [string, ...string[]]),
+  isDraft: z.boolean().prefault(true),
   isReviewed: z.boolean().prefault(false),
   reviewOutcome: z
     .enum(Object.values(TaskReviewOutcome) as [string, ...string[]])
@@ -80,6 +85,7 @@ export const TaskInsert = createInsertSchema(task).extend({
 })
 export const TaskUpdate = createUpdateSchema(task).extend({
   type: z.enum(Object.values(TaskType) as [string, ...string[]]).optional(),
+  isDraft: z.boolean().optional(),
   reviewOutcome: z
     .enum(Object.values(TaskReviewOutcome) as [string, ...string[]])
     .optional(),
@@ -309,6 +315,41 @@ export const TaskEditorDataSchema = z.object({
   task: TaskAPI,
   assignableLayers: z.array(TaskEditorLayerOptionSchema),
   canReassignLayer: z.boolean(),
+})
+
+export const BeginMissingReportDraftSchema = z.object({
+  featureId: z.string().min(1),
+  layerId: z.string().min(1),
+  projectId: z.string().min(1),
+  organisationId: z.string().min(1),
+  reason: z.string().trim(),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const BeginNewFeatureDraftSchema = z.object({
+  task: z.object({
+    layerId: z.string().min(1),
+    organisationId: z.string().min(1),
+    projectId: z.string().min(1),
+    contributorId: z.string().min(1).optional(),
+    type: z.literal('newFeature'),
+    feature: z.any(),
+    featureId: z.string().min(1).optional(),
+  }),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const BeginNewPhotosDraftSchema = z.object({
+  featureId: z.string().min(1),
+  layerId: z.string().min(1),
+  projectId: z.string().min(1),
+  organisationId: z.string().min(1),
+  meta: TaskRemoteMetaSchema,
+})
+
+export const FinalizeTaskDraftSchema = z.object({
+  id: z.string().min(1),
+  meta: TaskRemoteMetaSchema,
 })
 
 export const SubmitMissingReportSchema = z.object({

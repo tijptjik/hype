@@ -45,6 +45,7 @@ export const task = sqliteTable('task', {
     onDelete: 'set null',
     onUpdate: 'cascade',
   }),
+  isDraft: integer('isDraft', { mode: 'boolean' }).default(true).notNull(),
   type: text('type', {
     enum: Object.values(TaskType) as [string, ...string[]],
   }).notNull(),
