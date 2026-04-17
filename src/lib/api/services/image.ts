@@ -18,7 +18,14 @@ import {
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
 // SCHEMA
-import { image, featureImage, project, organisation, hub } from '$lib/db/schema/index'
+import {
+  image,
+  featureImage,
+  project,
+  organisation,
+  hub,
+  task,
+} from '$lib/db/schema/index'
 import {
   getImageById as loadImageById,
   toImageEntityResponseShape,
@@ -41,6 +48,7 @@ import type {
   ImageContextEnvelope,
   ImageContextType,
   ImageDBFlat,
+  FinalizeImageUploadLink,
   ImageProfile,
 } from '$lib/db/zod/schema/image.types'
 import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
@@ -307,7 +315,28 @@ export const assertPermissionsToCreateImage = async (
   userRoles: UserRoleDisco[],
   ctxType: ImageContextResource,
   ctxId: Id,
+  links?: FinalizeImageUploadLink[],
 ) => {
+  const taskDraftLink = links?.find(
+    (link): link is Extract<FinalizeImageUploadLink, { type: 'taskImage' }> =>
+      link.type === 'taskImage',
+  )
+
+  if (taskDraftLink) {
+    const draftTask = await db.query.task.findFirst({
+      where: eq(task.id, taskDraftLink.taskId as Id),
+    })
+
+    if (
+      draftTask &&
+      draftTask.isDraft &&
+      draftTask.contributorId === user.id &&
+      draftTask.featureId === ctxId
+    ) {
+      return
+    }
+  }
+
   const commonAssertions = [
     () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
