@@ -715,26 +715,17 @@ export class AdminCtx {
     this.isInitializing = true
 
     try {
-      // Bootstrap admin resources independently so a single network failure does not
-      // keep the entire admin shell stuck in an uninitialised retry loop.
-      const initSteps = [
-        ['organisations', () => this.appCtx.refreshOrganisations()],
-        ['hubs', () => this.refreshHubs(false)],
-        ['tasks', () => this.invalidateAndRefresh(FirstClassResource.task)],
-      ] as const
+      // Use AppCtx's cascading refresh logic but with admin query functions.
+      await this.appCtx.refreshOrganisations()
+      await this.refreshHubs(false)
 
-      const results = await Promise.allSettled(initSteps.map(([, load]) => load()))
-      for (const [index, result] of results.entries()) {
-        if (result.status === 'fulfilled') continue
+      // Always refresh tasks when admin initializes to ensure fresh task data.
+      // This is especially important when navigating from app to admin.
+      await this.invalidateAndRefresh(FirstClassResource.task)
 
-        console.error(
-          `[AdminCtx][init] Resource bootstrap failed (${initSteps[index][0]}):`,
-          result.reason,
-        )
-      }
+      this.isInitialised = true
     } finally {
       this.isInitializing = false
-      this.isInitialised = true
     }
   }
 
