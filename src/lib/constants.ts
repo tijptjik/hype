@@ -1,0 +1,17 @@
+// TYPES
+import type { Locale } from '$lib/types'
+
+// CONFIG
+export const targetLanguageTags: Locale[] = ['zh-hant', 'zh-hans']
+export const NEW_TITLE = 'New'
+export const NEW_REF = NEW_TITLE.toLowerCase()
+export const ADMIN_PATH = '/admin'
+export const API_PATH = '/api'
+
+export const ADMIN_MIN_WIDTH = 1200
+export const MOBILE_MAX_WIDTH = 768
+export const PANEL_WIDTH = 420
+export const DUAL_PANEL_MIN_WIDTH = 1320
+
+export const isMobile = (): boolean =>
+  typeof window !== 'undefined' && window.innerWidth < MOBILE_MAX_WIDTH

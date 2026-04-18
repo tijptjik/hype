@@ -45,7 +45,7 @@ jobs:
       - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.2.18'
+          bun-version: '1.3.11'
 
       - name: 'CACHE :: Restore Dependencies'
         uses: actions/cache@v3

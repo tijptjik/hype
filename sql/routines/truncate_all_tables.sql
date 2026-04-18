@@ -10,6 +10,7 @@ DELETE FROM featureImage;
 DELETE FROM layerProperty;
 DELETE FROM userFeature;
 DELETE FROM userLayer;
+DELETE FROM hubLayer;
 DELETE FROM taskImage;
 DELETE FROM organisationRole;
 DELETE FROM projectRole;

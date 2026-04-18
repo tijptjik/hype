@@ -1,163 +1,256 @@
 <script lang="ts">
 // SVELTE
-import { browser } from '$app/environment';
+import { browser } from '$app/environment'
+import type { Snippet } from 'svelte'
 // NAVIGATION
-import { goto, beforeNavigate } from '$app/navigation';
-import { page } from '$app/state';
-import { handlePanelParams } from '$lib/navigation';
-// AUTH
-import { useSession } from '$lib/auth/client';
+import { goto, beforeNavigate } from '$app/navigation'
+import { page } from '$app/state'
+import { dismissActiveFeatureNavigation, handlePanelParams } from '$lib/navigation'
+import { useSession } from '$lib/auth/client'
+import { useOmnibarModel } from '$lib/adapters/bars'
+import {
+  createHubSubscriptionModelParams,
+  toHubUserStateFlags,
+  useHubSubscriptionModel,
+} from '$lib/adapters/hub'
+import {
+  dismissHubSubscriptionPrompt,
+  joinHubSubscription,
+} from '$lib/client/services/hubSubscription'
+import { shouldSkipGlobalKeydown } from '$lib/client/keybindings'
+import { toast } from 'svelte-sonner'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { setOmniCtx } from '$lib/context/omni.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { setOmniCtx } from '$lib/context/omni.svelte'
 // ENUMS
-import { Panel } from '$lib/enums';
+import { Panel } from '$lib/enums'
 // SERVICES
-import { startCircularFlight } from '$lib/client/services/geospatial';
-// COMPONENTS
-import Menu from '$lib/components/layout/Menu.svelte';
-import Map from '$lib/components/common/StandaloneMap.svelte';
-import Mapbar from '$lib/components/mapbar/Root.svelte';
-import Omnibar from '$lib/components/omnibar/Omnibar.svelte';
-import Filters from '$lib/components/panels/Filters.svelte';
-import Prisms from '$lib/components/panels/Prisms.svelte';
-import Hub from '$lib/components/panels/Hub.svelte';
-import Stars from '$lib/components/panels/Stars.svelte';
-import Settings from '$lib/components/panels/Settings.svelte';
-import Profile from '$lib/components/panels/Profile.svelte';
-import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte';
-import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte';
-import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte';
+import { startCircularFlight } from '$lib/client/services/geospatial'
+import { getActiveMapStyleCode } from '$lib/client/services/map'
+import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
+import Filters from '$lib/components/panels/Filters.svelte'
+import Prisms from '$lib/components/panels/Prisms.svelte'
+import Stars from '$lib/components/panels/Stars.svelte'
+import Hub from '$lib/components/panels/Hub.svelte'
+// import Plan from '$lib/components/panels/Plan.svelte'
+// import Passport from '$lib/components/panels/Passport.svelte'
+// import EventCompanion from '$lib/components/panels/EventCompanion.svelte'
+import Settings from '$lib/components/panels/Settings.svelte'
+import Profile from '$lib/components/panels/Profile.svelte'
+// BITS
+import {
+  AppHubSubscriptionOverlay,
+  AppLanding,
+  AppMapOverlayBar,
+  AppMain,
+  AppNav,
+  AppShell,
+  AppSurface,
+  Omnibar,
+} from '$lib/bits'
 // ENUMS
-import { PageState } from '$lib/enums';
+import { PageState } from '$lib/enums'
 // TYPES
-import type { LayoutData, LayoutProps } from '../(app)/$types';
-import type { QueryClient } from '@tanstack/svelte-query';
-// STYLES
-import '$lib/styles/scrollbar.css';
+import type { LayoutData, LayoutProps } from '../(app)/$types'
+import type { QueryClient } from '@tanstack/svelte-query'
+import type { HubUserStateFlags } from '$lib/types'
 
 type AppRootProps = LayoutProps & {
-  children: any;
+  children: Snippet
   data: LayoutData & {
-    queryClient: QueryClient;
-  };
-};
+    queryClient: QueryClient
+  }
+}
 
 // PROPS
-let { children, data }: AppRootProps = $props();
-let { hub } = data;
+let { children, data }: AppRootProps = $props()
+const hub = $derived(data.hub)
+const hubI18n = $derived(
+  (hub?.i18n ?? {}) as Record<string, Record<string, string | null | undefined>>,
+)
 
 // AUTH
-const session = useSession();
+const session = useSession()
+const initialHubUserState = $derived(data.hubUserState ?? null)
+const isHubSubscriptionConfigured = $derived(
+  Boolean(
+    hub?.isSubscriptionAvailable &&
+      hub?.subscriptionId?.trim() &&
+      hub?.subscriptionService,
+  ),
+)
 
 // NAVIGATION STATE
-let navDest = $state('');
+let navDest = $state('')
 
 // CONTEXT
 
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
+const responsiveCtx = getResponsiveCtx()
 // Set Hub context in AppCtx
-appCtx.setHub(hub);
+$effect(() => {
+  appCtx.setHub(hub)
+})
 
 // CONTEXT :: OMNI
-const omniCtx = setOmniCtx(appCtx);
+const omniCtx = setOmniCtx(appCtx)
+const omnibarModel = useOmnibarModel(appCtx, omniCtx, responsiveCtx)
+const subscriptionOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
+
+let hubUserState = $state<HubUserStateFlags>({
+  subscriptionPromptDismissed: false,
+  subscriptionMember: false,
+  hasAgreedToTerms: false,
+})
+let isSubscriptionBusy = $state(false)
+let isHubSubscriptionOverlayOpen = $state(false)
+
+$effect(() => {
+  hubUserState = toHubUserStateFlags(initialHubUserState)
+})
+
+$effect(() => {
+  if (!isHubSubscriptionConfigured || hubUserState.subscriptionMember) {
+    isHubSubscriptionOverlayOpen = false
+  }
+})
+
+const subscriptionModel = useHubSubscriptionModel(() => ({
+  ...createHubSubscriptionModelParams({
+    hubCode: hub?.code,
+    hubI18n,
+    isSubscriptionConfigured: isHubSubscriptionConfigured,
+    subscriptionPlacement: hub?.subscriptionPlacement,
+    userState: hubUserState,
+    features: appCtx.getVisibleFeatures(),
+    userPreferences: appCtx.getUserPreferences(),
+    isLoading: isSubscriptionBusy,
+    onSelect: handleOpenHubSubscriptionOverlay,
+    onJoin: handleJoinSubscription,
+    onDismiss: handleDismissSubscriptionPrompt,
+  }),
+}))
+const subscriptionVisibility = $derived(subscriptionModel.getVisibility())
+const omnibarProps = $derived(omnibarModel.getOmnibarProps())
+const hubPanelSubscriptionProps = $derived(
+  subscriptionModel.getHubPanelSubscriptionProps(),
+)
+const hubSubscriptionOverlayProps = $derived(
+  subscriptionModel.getHubSubscriptionOverlayProps(),
+)
+const appMenuSubscriptionItemProps = $derived(
+  subscriptionModel.getAppMenuSubscriptionItemProps(),
+)
+const privacyPolicyDialogProps = $derived(
+  subscriptionModel.getPrivacyPolicyDialogProps(),
+)
+const termsOfServiceDialogProps = $derived(
+  subscriptionModel.getTermsOfServiceDialogProps(),
+)
 
 // NAVIGATION :: Clear feature cache images when switching between admin/user apps
 beforeNavigate(({ from, to }) => {
-  if (!from || !to) return;
+  if (!from || !to) return
 
-  const fromIsAdmin = from.route.id?.startsWith('/admin');
-  const toIsAdmin = to.route.id?.startsWith('/admin');
+  const fromIsAdmin = from.route.id?.startsWith('/admin')
+  const toIsAdmin = to.route.id?.startsWith('/admin')
 
   // Clear feature cache images when switching between admin and user apps
   if (fromIsAdmin !== toIsAdmin) {
-    appCtx.clearFeatureCacheImages();
+    appCtx.clearFeatureCacheImages()
   }
-});
+})
 
 // CIRCULAR FLIGHT ANIMATION STATE
-let stopCircularFlight: (() => void) | null = $state(null);
+let stopCircularFlight: (() => void) | null = $state(null)
+const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
+const menuReservedHeight = $derived(responsiveCtx.menuReservedHeight)
 
 // PROFILE PANEL SCROLL POSITION
-let profilePanelContainer: HTMLDivElement | undefined = $state();
+let profilePanelContainer: HTMLDivElement | undefined = $state()
 
 // EFFECT: Store scroll position when profile panel closes, restore when it opens
 $effect(() => {
-  const isProfileOpen = appCtx.isPanelOpen(Panel.profile);
+  const isProfileOpen = appCtx.isPanelOpen(Panel.profile)
+  const profileCtx = appCtx.state.panels.profile.ctx as
+    | ({ savedScrollPosition?: number } & typeof appCtx.state.panels.profile.ctx)
+    | undefined
 
   if (!isProfileOpen && profilePanelContainer) {
     // Panel is closing - store scroll position
-    const scrollTop = profilePanelContainer.scrollTop;
+    const scrollTop = profilePanelContainer.scrollTop
     if (scrollTop > 0) {
       // Store in app context for this specific user
-      const username = appCtx.state.panels.profile.ctx?.username;
+      const username = profileCtx?.username
       if (username) {
-        (appCtx.state.panels.profile.ctx as any).savedScrollPosition = scrollTop;
+        profileCtx.savedScrollPosition = scrollTop
       }
     }
   } else if (isProfileOpen && profilePanelContainer) {
     // Panel is opening - restore scroll position
-    const savedScrollPosition = (appCtx.state.panels.profile.ctx as any)
-      ?.savedScrollPosition;
+    const savedScrollPosition = profileCtx?.savedScrollPosition ?? 0
     if (savedScrollPosition > 0) {
       // Small delay to ensure content is rendered
       setTimeout(() => {
         if (profilePanelContainer) {
-          profilePanelContainer.scrollTop = savedScrollPosition;
+          profilePanelContainer.scrollTop = savedScrollPosition
           // Clear the saved position
-          (appCtx.state.panels.profile.ctx as any).savedScrollPosition = 0;
+          if (profileCtx) {
+            profileCtx.savedScrollPosition = 0
+          }
         }
-      }, 250);
+      }, 250)
     }
   }
-});
+})
 
 // NAVIGATION HANDLING -- State Change Effect
 $effect(() => {
   if (browser && omniCtx && omniCtx.pageState === PageState.ReadyToNav && navDest) {
     goto(navDest.replace('(app)', '')).then(() => {
-      omniCtx.pageState = PageState.NoTransition;
-    });
+      omniCtx.pageState = PageState.NoTransition
+    })
   }
-});
+})
 
 // INITIAL URL SYNC - Only run once on page load
-let hasRunInitialSync = $state(false);
+let hasRunInitialSync = $state(false)
 
 $effect(() => {
   if (!browser || !appCtx.isInitialised || hasRunInitialSync) {
-    return;
+    return
   }
 
   // Handle panel parameters from initial URL
-  handlePanelParams(appCtx, page.url.searchParams);
-  hasRunInitialSync = true; // Prevent future runs
-});
+  handlePanelParams(appCtx, page.url.searchParams)
+  hasRunInitialSync = true // Prevent future runs
+})
 
 // BROWSER NAVIGATION HANDLING - Listen for popstate events
 $effect(() => {
-  if (!browser) return;
+  if (!browser) return
 
   const handleBrowserNavigation = () => {
     // Parse current URL and sync panel state
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = new URLSearchParams(window.location.search)
 
     // Close all current panels first (don't update URL - we're responding to URL change)
-    appCtx.closeAllPanels(false);
+    appCtx.closeAllPanels(false)
 
     // Handle panel parameters from URL
-    handlePanelParams(appCtx, searchParams);
-  };
+    handlePanelParams(appCtx, searchParams)
+  }
 
   // Listen specifically for browser back/forward navigation
-  window.addEventListener('popstate', handleBrowserNavigation);
+  window.addEventListener('popstate', handleBrowserNavigation)
 
   return () => {
-    window.removeEventListener('popstate', handleBrowserNavigation);
-  };
-});
+    window.removeEventListener('popstate', handleBrowserNavigation)
+  }
+})
 
 // TODO sync map center and flight starting position.
 // CIRCULAR FLIGHT ANIMATION
@@ -167,59 +260,181 @@ $effect(() => {
       // User is not authenticated - start circular flight animation
       if (!stopCircularFlight) {
         setTimeout(() => {
-          const cleanup = startCircularFlight(appCtx, [114.17276, 22.29191], 5);
+          const cleanup = startCircularFlight(appCtx, [114.17276, 22.29191], 5)
           if (cleanup) {
-            stopCircularFlight = cleanup;
+            stopCircularFlight = cleanup
           }
-        }, 1000);
+        }, 1000)
       }
     } else {
       // User is authenticated - stop circular flight animation
       if (stopCircularFlight) {
-        stopCircularFlight();
-        stopCircularFlight = null;
+        stopCircularFlight()
+        stopCircularFlight = null
       }
     }
   }
-});
+})
+
+function handleWindowKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' || event.defaultPrevented) {
+    return
+  }
+
+  if (shouldSkipGlobalKeydown(document.activeElement)) {
+    return
+  }
+
+  if (Object.values(appCtx.state.panels).some(panel => panel.isOpen)) {
+    return
+  }
+
+  const didDismiss = dismissActiveFeatureNavigation({
+    hasActiveFeature: Boolean(appCtx.getActiveFeature()),
+    isCardOpen: omniCtx.state.isCardOpen,
+    closeCard: () => omniCtx.closeCard(),
+    resetActiveFeature: () => appCtx.resetActiveFeature(),
+    resetToSearch: () => omniCtx.resetToSearch(),
+    setIntentionallyClosing: value => {
+      omniCtx.isIntentionallyClosing = value
+    },
+  })
+
+  if (!didDismiss) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+/**
+ * Attempts to subscribe the current user to the active hub updates.
+ *
+ * @returns Nothing.
+ */
+async function handleJoinSubscription(): Promise<void> {
+  if (!hub?.id || isSubscriptionBusy) return
+
+  isSubscriptionBusy = true
+
+  try {
+    const result = await joinHubSubscription({
+      hubId: hub.id,
+      hasAgreedToTerms: true,
+    })
+
+    if (result?.data?.subscriptionMember) {
+      hubUserState = {
+        ...hubUserState,
+        subscriptionMember: true,
+        subscriptionPromptDismissed: true,
+        hasAgreedToTerms: true,
+      }
+      isHubSubscriptionOverlayOpen = false
+      toast.success('Subscription confirmed')
+      return
+    }
+
+    if (result?.data?.redirectUrl && browser) {
+      window.location.assign(result.data.redirectUrl)
+      return
+    }
+
+    toast.error('Subscription could not be completed')
+  } catch (error) {
+    toast.error(
+      error instanceof Error && error.message.length
+        ? error.message
+        : 'Something went wrong',
+    )
+  } finally {
+    isSubscriptionBusy = false
+  }
+}
+
+/**
+ * Persists dismissal of the active hub subscription prompt for the current user.
+ *
+ * @returns Nothing.
+ */
+async function handleDismissSubscriptionPrompt(): Promise<void> {
+  if (!hub?.id || isSubscriptionBusy) return
+
+  isSubscriptionBusy = true
+
+  try {
+    await dismissHubSubscriptionPrompt({
+      hubId: hub.id,
+    })
+
+    hubUserState = {
+      ...hubUserState,
+      subscriptionPromptDismissed: true,
+    }
+    isHubSubscriptionOverlayOpen = false
+  } catch (error) {
+    toast.error(
+      error instanceof Error && error.message.length
+        ? error.message
+        : 'Something went wrong',
+    )
+  } finally {
+    isSubscriptionBusy = false
+  }
+}
+
+function handleOpenHubSubscriptionOverlay(): void {
+  isHubSubscriptionOverlayOpen = true
+}
 </script>
 
-<div class="flex h-dvh flex-col justify-around overflow-hidden">
+<svelte:window onkeydown={handleWindowKeydown} />
+
+<AppShell>
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
-    <main
-      class="relative top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
+    <AppSurface>
+      <MapCanvas mapStyleCode={activeMapStyleCode} bottomInset={menuReservedHeight} />
       <!-- Panels -->
       <Prisms />
-      <Hub {hub} />
-      <Filters />
       <Stars />
+      <Hub
+        {hub}
+        showSubscription={subscriptionVisibility.showHubPanelSubscription}
+        subscriptionProps={hubPanelSubscriptionProps}
+        {privacyPolicyDialogProps}
+        {termsOfServiceDialogProps}
+      />
+      <Filters />
+      <!-- <Plan /> -->
+      <!-- <Passport /> -->
+      <!-- <EventCompanion /> -->
       <Settings />
       <Profile bind:panelContainer={profilePanelContainer} />
-      <!-- Map Container -->
-      <div class="relative flex h-full flex-1 flex-col">
-        <Omnibar />
-        <Map />
+      <AppMain>
+        <AppHubSubscriptionOverlay
+          class="z-50"
+          isVisible={subscriptionVisibility.showHubSubscriptionOverlay ||
+            isHubSubscriptionOverlayOpen}
+          offsetX={subscriptionOffsetX}
+          subscriptionOverlayProps={hubSubscriptionOverlayProps}
+          {privacyPolicyDialogProps}
+          {termsOfServiceDialogProps}
+        />
+        <Omnibar {...omnibarProps} />
         {@render children()}
-        <Mapbar />
-        {#if omniCtx.isNewFeatureMode}
-          <LayerSelectionModal />
-          <GeoLocationModal />
-          <NewFeatureCard />
-        {/if}
-      </div>
-    </main>
-    <Menu {hub} />
+        <AppMapOverlayBar />
+        <AppNav
+          {hub}
+          subscriptionItem={{
+            isVisible: subscriptionVisibility.showAppMenuSubscriptionItem,
+            label: appMenuSubscriptionItemProps.label ?? 'Subscribe',
+            onSelect: appMenuSubscriptionItemProps.onSelect ?? handleOpenHubSubscriptionOverlay,
+          }}
+        />
+      </AppMain>
+    </AppSurface>
   {:else if !$session.isPending && !$session.data}
-    <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
-      {@render children()}
-      <Map />
-    </main>
-  {:else}
-    <!-- Loading state while session is pending -->
-    <main class="top-0 flex h-full w-dvw flex-1 flex-col gap-4 overflow-hidden">
-      <div class="flex h-full items-center justify-center">
-        <div class="loading loading-ring loading-lg text-primary"></div>
-      </div>
-    </main>
+    <AppLanding> {@render children()} </AppLanding>
   {/if}
-</div>
+</AppShell>

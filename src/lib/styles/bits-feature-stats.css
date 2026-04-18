@@ -1,0 +1,65 @@
+@layer components {
+  .bits-theme .bits-feature-stat {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+  }
+
+  .bits-theme .bits-feature-stat__title {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  }
+
+  .bits-theme .bits-feature-stat__title-text {
+    display: none;
+    text-transform: uppercase;
+  }
+
+  @container main (min-width: 78rem) {
+    .bits-theme .bits-feature-stat__title-text {
+      display: inline;
+    }
+
+    .bits-theme .bits-feature-stat__title-icon {
+      display: none;
+    }
+  }
+
+  @container main (max-width: 77.999rem) {
+    .bits-theme .bits-feature-stat__title-icon {
+      display: inline-flex;
+    }
+  }
+
+  .bits-theme .bits-feature-stat__icon-svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .bits-theme .bits-feature-stat__pips {
+    display: flex;
+    gap: 0.375rem;
+  }
+
+  .bits-theme .bits-feature-stat__pip {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+  }
+
+  .bits-theme .bits-feature-stat__pip--ok {
+    background-color: var(--color-success);
+  }
+
+  .bits-theme .bits-feature-stat__pip--error {
+    background-color: color-mix(in oklab, var(--color-error) 50%, transparent);
+  }
+
+  .bits-theme .bits-feature-stat__pip--pending {
+    background-color: var(--color-warning);
+  }
+}

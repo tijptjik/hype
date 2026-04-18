@@ -1,31 +1,38 @@
 <script lang="ts">
 // TRANSITIONS
-import { slide } from 'svelte/transition';
-import { ChevronDown, ChevronRight } from '@steeze-ui/heroicons';
-import Icon from '$lib/components/common/Icon.svelte';
-import type { Snippet } from 'svelte';
-import type { IconSource } from '@steeze-ui/svelte-icon';
+import { slide } from 'svelte/transition'
+// CONTEXT
+import { getAppCtx } from '$lib/context/app.svelte'
+// ICONS
+import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
+import { Icon } from '$lib/bits'
+// TYPES
+import type { Component } from 'svelte'
+import type { Snippet } from 'svelte'
+
+const appCtx = getAppCtx()
 
 const toggle = () => {
-  isOpen = !isOpen;
-};
+  isOpen = !isOpen
+}
 
 type Props = {
-  children: Snippet;
-  title: string;
-  icon: string | IconSource;
-  iconVerticalPaddingClass: string;
-  iconColorClass: string;
-  collapsedContent: Snippet<[string, any]>;
-  isOpen: boolean;
+  children: Snippet
+  title: string
+  icon: string | Component
+  iconVerticalPaddingClass: string
+  iconColorClass: string
+  collapsedContent: Snippet<[string, Record<string, unknown>]>
+  isOpen: boolean
   hierarchy: {
-    organisation?: string | null;
-    project?: string | null;
-    layer?: string | null;
-    layerId: string;
-  };
-  properties: Record<string, any>;
-};
+    organisation?: string | null
+    project?: string | null
+    layer?: string | null
+    layerId: string
+  }
+  properties: Record<string, unknown>
+}
 
 let {
   children,
@@ -36,40 +43,44 @@ let {
   collapsedContent = () => null,
   isOpen = false,
   hierarchy,
-  properties
-}: Props = $props();
+  properties,
+}: Props = $props()
+
+const filterCount = $derived(appCtx.getFilterCount())
+const hasActiveFilters = $derived(
+  filterCount.neighbourhoods > 0 || filterCount.properties > 0,
+)
 </script>
 
 <div
-  class="mt-4 flex min-h-0 flex-shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen
-    ? 'flex-grow'
-    : ''}"
-  transition:slide>
+  class="mt-4 flex min-h-0 shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen ? 'flex-grow' : ''} {hasActiveFilters ? 'pb-[80px]' : ''}"
+  transition:slide
+>
   <button
-    class="flex w-full flex-shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black pb-2 focus:outline-none focus:ring-0 focus-visible:text-primary"
-    onclick={toggle}>
+    type="button"
+    class="flex w-full shrink-0 items-center justify-between px-4 {iconVerticalPaddingClass} bg-black pb-2 focus:outline-none focus:ring-0 focus-visible:text-primary"
+    onclick={toggle}
+  >
     <div class="flex items-center gap-3">
-      <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-[18px] w-[18px]" />
+      <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-4.5 w-4.5" />
       <!-- Hierarchy path -->
       <div class="flex flex-col space-y-1">
         <div class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
-          {#if hierarchy && hierarchy.organisation}
+          {#if hierarchy?.organisation}
             <span class="px-0 text-primary">{hierarchy.organisation}</span>
           {/if}
-          {#if hierarchy && hierarchy.project}
+          {#if hierarchy?.project}
             <span class="px-0">›</span>
             <span class="text-accent">{hierarchy.project.replaceAll('_', '')}</span>
           {/if}
-          {#if hierarchy && hierarchy.layer}
+          {#if hierarchy?.layer}
             <span class="px-0">›</span>
             <span class="text-secondary">{hierarchy.layer.replaceAll(' ', '')}</span>
           {/if}
         </div>
         <!-- Title row -->
         <div class="flex items-center gap-2">
-          <h3 class="text-sm uppercase tracking-widest">
-            {title}
-          </h3>
+          <h3 class="text-sm uppercase tracking-widest">{title}</h3>
         </div>
       </div>
     </div>
@@ -78,12 +89,14 @@ let {
         src={icon}
         alt=""
         class="h-12 -translate-x-0.5 translate-y-2 text-base-content/60"
-        aria-hidden="true" />
+        aria-hidden="true"
+      >
     {:else}
       <Icon
         src={icon}
         class="h-12 w-8 {iconColorClass} translate-y-4"
-        aria-hidden="true" />
+        aria-hidden="true"
+      />
     {/if}
   </button>
 

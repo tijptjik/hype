@@ -1,74 +1,76 @@
 <script lang="ts">
 // SVELTE
-import { fade } from 'svelte/transition';
+import { fade } from 'svelte/transition'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Check, PencilSquare } from '@steeze-ui/heroicons';
+import { Icon } from '$lib/bits'
+import Check from 'virtual:icons/lucide/check'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
 // I18N
-import { getI18n } from '$lib/i18n';
-import { m } from '$lib/i18n';
+import { getI18n } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte';
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '$lib/context/app.svelte'
+import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types';
 
 // STATE : PROPS
-let { feature }: { feature: Feature | UserContributedFeature } = $props();
+let { feature }: { feature: Feature | UserContributedFeature } = $props()
 
 // CONTEXT
-const cardCtx = getCardCtx();
-const appCtx = getAppCtx();
+const cardCtx = getCardCtx()
+const appCtx = getAppCtx()
 
 // STATE : SESSION
-const userPreferences = $derived(appCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences())
 
 // STATE : LOCAL
-let isEditing = $state(false);
+let isEditing = $state(false)
 let description = $derived(
   getI18n(
     feature as Feature,
     'description',
     userPreferences,
-    m.zany_merry_seahorse_treasure()
-  )
-);
-let originalDescription = $state('');
-let textAreaEl: HTMLTextAreaElement = $state()!;
+    m.zany_merry_seahorse_treasure(),
+  ),
+)
+let originalDescription = $state('')
+let textAreaEl: HTMLTextAreaElement = $state()!
 
 // ═══════════════════════
 // 1 HANDLERS :: EDIT MODE
 // ═══════════════════════
 
 function handleEditMode(e: Event) {
-  e.preventDefault();
-  e.stopPropagation();
-  originalDescription = description;
+  e.preventDefault()
+  e.stopPropagation()
+  originalDescription = description
   // Clear description if it's the placeholder value
   if (description === m.zany_merry_seahorse_treasure()) {
-    description = '';
+    description = ''
   }
-  isEditing = true;
+  isEditing = true
   // Focus the description textarea
   setTimeout(() => {
-    textAreaEl.focus();
-  }, 0);
+    textAreaEl.focus()
+  }, 0)
 }
 
 function handleDescriptionSubmit() {
-  isEditing = false;
+  isEditing = false
   // Update the feature description in the context
-  appCtx.updateNewFeatureValueI18n('description', description);
+  appCtx.updateNewFeatureValueI18n('description', description)
 }
 
 function handleDescriptionCancel() {
-  description = originalDescription;
-  isEditing = false;
+  description = originalDescription
+  isEditing = false
 }
 </script>
 
 <div
-  class="relative z-10 my-0 flex min-h-12 flex-shrink-0 flex-col bg-black caret-transparent">
+  class="relative z-10 my-0 flex min-h-12 shrink-0 flex-col bg-black caret-transparent"
+>
   <div class="overflow-y-auto">
     <div class="mb-2 bg-black py-0 pl-2">
       {#if isEditing}
@@ -90,7 +92,8 @@ function handleDescriptionCancel() {
                 [&>textarea]:overflow-hidden
                 [&>textarea]:text-inherit
                 [&>textarea]:[grid-area:1/1/2/2]
-            ">
+            "
+          >
             <textarea
               class="text-md textarea input-bordered w-full resize-y rounded-lg bg-black px-3.5 py-2.5 caret-white outline-none"
               bind:this={textAreaEl}
@@ -127,27 +130,32 @@ function handleDescriptionCancel() {
               }}
               onblur={handleDescriptionSubmit}
               placeholder={m.zany_merry_seahorse_treasure()}
-              rows="1"></textarea>
+              rows="1"
+            ></textarea>
           </div>
           <button
             class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
             onclick={handleDescriptionSubmit}
-            disabled={!description.trim()}>
+            disabled={!description.trim()}
+          >
             <Icon src={Check} class="h-5 w-5" />
           </button>
         </div>
       {:else}
         <div
           class="pointer-events-auto mb-2 flex items-center justify-between pt-2"
-          onclick={handleEditMode}>
+          onclick={handleEditMode}
+        >
           <p
             class="pl-2 text-sm font-thin tracking-tight text-gray-300 w-100:pl-4"
             class:text-gray-500={!description.trim()}
-            class:font-bold={!description.trim()}>
+            class:font-bold={!description.trim()}
+          >
             {description}
           </p>
           <button
-            class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200">
+            class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
+          >
             <Icon src={PencilSquare} class="h-5 w-5" />
           </button>
         </div>

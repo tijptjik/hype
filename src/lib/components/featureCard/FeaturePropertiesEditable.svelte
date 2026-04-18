@@ -1,11 +1,13 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte';
-import { Check, PencilSquare } from '@steeze-ui/heroicons';
+import { Icon } from '$lib/bits'
+import Check from 'virtual:icons/lucide/check'
+import PencilSquare from 'virtual:icons/lucide/square-pen'
 // I18N
-import { getI18n, getLocale } from '$lib/i18n';
+import { getI18n, getLocale } from '$lib/i18n'
 // SERVICES
 import {
   getFeatureCardEditableProperties,
@@ -14,105 +16,108 @@ import {
   getI18nSpecifierValue,
   getClassifierValueId,
   handleCategoricalChange,
-  handleSpecifierChange
-} from '$lib/client/services/property';
+  handleSpecifierChange,
+} from '$lib/client/services/property'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getCardCtx } from '$lib/context/card.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getCardCtx } from '$lib/context/card.svelte'
+import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/types';
 
 // STATE : PROPS
-let { feature }: { feature: Feature | UserContributedFeature } = $props();
+let { feature }: { feature: Feature | UserContributedFeature } = $props()
 
 // STATE : CONTEXT
-const appCtx = getAppCtx();
-const cardCtx = getCardCtx();
+const appCtx = getAppCtx()
+const cardCtx = getCardCtx()
 
 // STATE : SESSION
-const userPreferences = $derived(appCtx.getUserPreferences());
+const userPreferences = $derived(appCtx.getUserPreferences())
 
 // STATE : LOCAL EDITING
-let editingStates = $state<Record<string, boolean>>({});
-let originalValues = $state<Record<string, string>>({});
-let currentValues = $state<Record<string, string>>({});
-let inputElements = $state<Record<string, HTMLInputElement>>({});
-let textareaElements = $state<Record<string, HTMLTextAreaElement>>({});
+let editingStates = $state<Record<string, boolean>>({})
+let originalValues = $state<Record<string, string>>({})
+let currentValues = $state<Record<string, string>>({})
+let inputElements = $state<Record<string, HTMLInputElement>>({})
+let textareaElements = $state<Record<string, HTMLTextAreaElement>>({})
 
 // FUNCTIONS
 // Available properties that could be added to the feature
 const availableFeatureProperties = $derived(
-  feature?.layerId ? getFeatureCardEditableProperties(appCtx, feature.layerId) : []
-);
+  feature?.layerId ? getFeatureCardEditableProperties(appCtx, feature.layerId) : [],
+)
 
 // EDIT MODE HANDLERS
 function getCurrentValue(propertyId: string, prop: any): string {
-  const translatable = prop.isTranslatable;
-  const i18nValue = getI18nSpecifierValue(appCtx, propertyId);
-  const universalValue = getUniversalSpecifierValue(appCtx, propertyId);
-  const result = translatable ? i18nValue || '' : universalValue || '';
+  const translatable = prop.isTranslatable
+  const i18nValue = getI18nSpecifierValue(appCtx, propertyId)
+  const universalValue = getUniversalSpecifierValue(appCtx, propertyId)
+  const result = translatable ? i18nValue || '' : universalValue || ''
 
-  return result;
+  return result
 }
 
 function handleInputEditMode(propertyId: string, prop: any) {
-  const value = getCurrentValue(propertyId, prop);
-  originalValues[propertyId] = value;
-  currentValues[propertyId] = value;
-  editingStates[propertyId] = true;
+  const value = getCurrentValue(propertyId, prop)
+  originalValues[propertyId] = value
+  currentValues[propertyId] = value
+  editingStates[propertyId] = true
   setTimeout(() => {
-    inputElements[propertyId]?.focus();
-  }, 0);
+    inputElements[propertyId]?.focus()
+  }, 0)
 }
 
 function handleTextareaEditMode(propertyId: string, prop: any) {
-  const value = getCurrentValue(propertyId, prop);
-  originalValues[propertyId] = value;
-  currentValues[propertyId] = value;
-  editingStates[propertyId] = true;
+  const value = getCurrentValue(propertyId, prop)
+  originalValues[propertyId] = value
+  currentValues[propertyId] = value
+  editingStates[propertyId] = true
   setTimeout(() => {
-    textareaElements[propertyId]?.focus();
-  }, 0);
+    textareaElements[propertyId]?.focus()
+  }, 0)
 }
 
 function handleInputSubmit(propertyId: string, prop: any) {
-  editingStates[propertyId] = false;
+  editingStates[propertyId] = false
   handleSpecifierChange(
     appCtx,
     propertyId,
     prop.isTranslatable ? getLocale() : 'core',
-    currentValues[propertyId] || ''
-  );
+    currentValues[propertyId] || '',
+  )
 }
 
 function handleTextareaSubmit(propertyId: string, prop: any) {
-  editingStates[propertyId] = false;
+  editingStates[propertyId] = false
   handleSpecifierChange(
     appCtx,
     propertyId,
     prop.isTranslatable ? getLocale() : 'core',
-    currentValues[propertyId] || ''
-  );
+    currentValues[propertyId] || '',
+  )
 }
 
 function handleEditCancel(propertyId: string) {
-  editingStates[propertyId] = false;
+  editingStates[propertyId] = false
   // Reset to original value would need to be handled in the parent component
 }
 </script>
 
 {#if cardCtx.isNewMode && availableFeatureProperties.length > 0}
-  <div
-    class="flex-grow-1 flex min-h-8 w-full flex-shrink-0 flex-col bg-black caret-transparent">
+  <div class="grow flex min-h-8 w-full shrink-0 flex-col bg-black caret-transparent">
     <div
-      class="justify-flex-start dir-rtl pointer-events-auto mt-2 grid grid-cols-1 gap-2 pl-3 pr-3 w-100:grid-cols-2 w-100:pl-6 w-100:pr-6 w-120:gap-4">
+      class="justify-flex-start dir-rtl pointer-events-auto mt-2 grid grid-cols-1 gap-2 pl-3 pr-3 w-100:grid-cols-2 w-100:pl-6 w-100:pr-6 w-120:gap-4"
+    >
       {#if cardCtx.isNewMode}
-        {#each availableFeatureProperties as { property: prop, propertyId, value, i18n } (propertyId)}
+        {#each availableFeatureProperties as availableProperty (availableProperty.propertyId)}
+          {@const prop = availableProperty.property}
+          {@const propertyId = availableProperty.propertyId}
           {#if prop}
             {@const propertyValues = getLocalisedPropertyValues(appCtx, propertyId)}
             <div class="dir-ltr flex flex-col justify-evenly gap-1">
               <span
-                class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400">
+                class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400"
+              >
                 {getI18n(prop, 'label', userPreferences)}
               </span>
               <!-- Error message placeholder (for future use) -->
@@ -123,10 +128,12 @@ function handleEditCancel(propertyId: string) {
                   class="select select-sm w-full border-none bg-black pl-0 focus:border-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 active:outline-none active:ring-0"
                   value={getClassifierValueId(appCtx, propertyId)}
                   onchange={(e) =>
-                    handleCategoricalChange(appCtx, propertyId, e.currentTarget.value)}>
-                  <option value=""
-                    >{getI18n(prop, 'placeholder', userPreferences)}</option>
-                  {#each propertyValues.entries() as [id, localisedValue]}
+                    handleCategoricalChange(appCtx, propertyId, e.currentTarget.value)}
+                >
+                  <option value="">
+                    {getI18n(prop, 'placeholder', userPreferences)}
+                  </option>
+                  {#each propertyValues.entries() as [ id, localisedValue ]}
                     <option value={id}>{localisedValue}</option>
                   {/each}
                 </select>
@@ -152,7 +159,8 @@ function handleEditCancel(propertyId: string) {
                         [&>textarea]:overflow-hidden
                         [&>textarea]:text-inherit
                         [&>textarea]:[grid-area:1/1/2/2]
-                    ">
+                    "
+                    >
                       <textarea
                         class="text-md textarea textarea-bordered -ml-3 mt-1.5 w-full resize-y rounded-lg bg-black px-3.5 py-2.5 caret-white outline-none"
                         bind:this={textareaElements[propertyId]}
@@ -188,20 +196,23 @@ function handleEditCancel(propertyId: string) {
                     <button
                       class="btn btn-ghost btn-sm -mr-1 rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
                       onclick={() => handleTextareaSubmit(propertyId, prop)}
-                      disabled={!(currentValues[propertyId] || '').trim()}>
+                      disabled={!(currentValues[propertyId] || '').trim()}
+                    >
                       <Icon src={Check} class="h-5 w-5" />
                     </button>
                   </div>
                 {:else}
                   <div
                     class="pointer-events-auto flex min-h-14 cursor-pointer items-center justify-between rounded py-1 hover:bg-base-100/5"
-                    onclick={() => handleTextareaEditMode(propertyId, prop)}>
+                    onclick={() => handleTextareaEditMode(propertyId, prop)}
+                  >
                     <p class="flex-1 text-sm">
                       {displayValue ||
                         `Enter ${getI18n(prop, 'label', userPreferences)}`}
                     </p>
                     <button
-                      class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:bg-base-200">
+                      class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:bg-base-200"
+                    >
                       <Icon src={PencilSquare} class="h-5 w-5" />
                     </button>
                   </div>
@@ -227,24 +238,28 @@ function handleEditCancel(propertyId: string) {
                           handleInputSubmit(propertyId, prop);
                         }
                       }}
-                      onblur={() => handleInputSubmit(propertyId, prop)} />
+                      onblur={() => handleInputSubmit(propertyId, prop)}
+                    >
                     <button
                       class="btn btn-ghost btn-sm -mr-1 rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
                       onclick={() => handleInputSubmit(propertyId, prop)}
-                      disabled={!(currentValues[propertyId] || '').trim()}>
+                      disabled={!(currentValues[propertyId] || '').trim()}
+                    >
                       <Icon src={Check} class="h-5 w-5" />
                     </button>
                   </div>
                 {:else}
                   <div
                     class="pointer-events-auto flex cursor-pointer items-center justify-between rounded py-1 hover:bg-base-100/5"
-                    onclick={() => handleInputEditMode(propertyId, prop)}>
+                    onclick={() => handleInputEditMode(propertyId, prop)}
+                  >
                     <span class="flex-1 text-sm text-white">
                       {displayValue ||
                         `Enter ${getI18n(prop, 'label', userPreferences)}`}
                     </span>
                     <button
-                      class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200">
+                      class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-2 py-1 hover:bg-base-300 focus:text-primary focus:outline-none active:scale-100 active:bg-base-200"
+                    >
                       <Icon src={PencilSquare} class="h-5 w-5" />
                     </button>
                   </div>
@@ -261,7 +276,8 @@ function handleEditCancel(propertyId: string) {
                       appCtx,
                       propertyId,
                       e.currentTarget.value
-                    )} />
+                    )}
+                >
               {/if}
             </div>
           {/if}

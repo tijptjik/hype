@@ -1,0 +1,77 @@
+@layer components {
+  .gallery-image-breathe {
+    opacity: 0.28;
+    transform: scale(1.016);
+    transform-origin: 50% 50%;
+    will-change: opacity, transform;
+    animation-name: gallery-image-breathe;
+    animation-duration: 8.4s;
+    animation-timing-function: cubic-bezier(0.37, 0, 0.22, 1);
+    animation-iteration-count: infinite;
+    animation-fill-mode: both;
+  }
+
+  .gallery-skeleton {
+    opacity: 0;
+    animation:
+      gallery-skeleton-fade 100ms ease-out forwards,
+      gallery-skeleton-pulse 1.9s ease-in-out infinite 100ms;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.18) 48%,
+        rgba(255, 255, 255, 0.06) 100%
+      ),
+      rgba(15, 23, 42, 0.1);
+    background-size:
+      200% 100%,
+      100% 100%;
+  }
+}
+
+@keyframes gallery-image-breathe {
+  0% {
+    opacity: 0.18;
+    transform: scale(1.022);
+  }
+  22% {
+    opacity: 0.28;
+    transform: scale(1.018);
+  }
+  48% {
+    opacity: 0.41;
+    transform: scale(1.011);
+  }
+  62% {
+    opacity: 0.45;
+    transform: scale(1.008);
+  }
+  78% {
+    opacity: 0.33;
+    transform: scale(1.014);
+  }
+  100% {
+    opacity: 0.18;
+    transform: scale(1.022);
+  }
+}
+
+@keyframes gallery-skeleton-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.38;
+  }
+}
+
+@keyframes gallery-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.26;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}

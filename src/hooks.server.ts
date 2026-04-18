@@ -1,23 +1,45 @@
 // SVELTE
-import { sequence } from '@sveltejs/kit/hooks';
-import type { Handle } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks'
+import type { Handle } from '@sveltejs/kit'
 // I18N
-import { paraglideMiddleware } from '$lib/paraglide/server';
+import { paraglideMiddleware } from '$lib/paraglide/server'
 // DB
-import { drizzle } from 'drizzle-orm/d1';
-import * as schema from '$lib/db/schema/index';
-import { getHubByCode, getHubByDomain } from '$lib/db/services/hub';
+import { drizzle } from 'drizzle-orm/d1'
+import { eq } from 'drizzle-orm'
+import * as schema from '$lib/db/schema/index'
+import { retryBusyRead } from '$lib/db/services/sqlite'
 // AUTH
-import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { createAuth } from '$lib/auth';
-// SERVICES
-import { toResponseShape } from '$lib/api/services/hub';
+import { svelteKitHandler } from 'better-auth/svelte-kit'
+import { getAuthForRequest } from '$lib/auth'
 // TYPES
-import type { HubOptsExtended, Session, SessionUser } from '$lib/types';
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1';
-import { isAdminRequest } from '$lib/api';
+import type { LocaleKey, Session, SessionUser } from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import { isAdminRequest } from '$lib/api'
 
-let handle: Handle;
+type HubShapeResult = { data: unknown }
+type HubServiceModule = typeof import('$lib/api/services/hub')
+
+const EMPTY_HUB_I18N: Record<LocaleKey, Record<string, never>> = {
+  en: {},
+  zhHans: {},
+  zhHant: {},
+}
+
+const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtended => ({
+  code: hub?.code,
+  domain: hub?.domain ?? null,
+  legalContactAddress: hub?.legalContactAddress ?? null,
+  id: hub?.id,
+  isSubscriptionAvailable: hub?.isSubscriptionAvailable ?? false,
+  subscriptionService: hub?.subscriptionService ?? null,
+  subscriptionId: hub?.subscriptionId ?? null,
+  subscriptionPlacement: hub?.subscriptionPlacement ?? null,
+  i18n: hub?.i18n ?? EMPTY_HUB_I18N,
+  isSuperAdmin: hub?.isSuperAdmin ?? false,
+  isAdminRequest: hub?.isAdminRequest ?? false,
+  isCore: hub?.isCore ?? hub?.code === 'core',
+})
 
 // ═══════════════════════
 // CORS HOOK
@@ -29,17 +51,21 @@ let handle: Handle;
 const handle_cors = (async ({ event, resolve }) => {
   // Only add CORS headers in development mode
   if (import.meta.env.DEV) {
-    const response = await resolve(event);
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set(
+    const response = await resolve(event)
+
+    // Redirect responses can expose immutable headers, so clone before mutation.
+    const mutableResponse = new Response(response.body, response)
+
+    mutableResponse.headers.set('Access-Control-Allow-Origin', '*')
+    mutableResponse.headers.set(
       'Access-Control-Allow-Methods',
-      'GET, POST, PUT, DELETE, OPTIONS'
-    );
-    response.headers.set('Access-Control-Allow-Headers', '*');
-    return response;
+      'GET, POST, PUT, DELETE, OPTIONS',
+    )
+    mutableResponse.headers.set('Access-Control-Allow-Headers', '*')
+    return mutableResponse
   }
-  return resolve(event);
-}) satisfies Handle;
+  return resolve(event)
+}) satisfies Handle
 
 // ═══════════════════════
 // HUB HOOK
@@ -49,46 +75,79 @@ const handle_cors = (async ({ event, resolve }) => {
  * It is used to filter the data in the database.
  */
 const handle_hub: Handle = async ({ event, resolve }) => {
+  const hubServices: HubServiceModule = await import('$lib/api/services/hub')
+  const { getHubFromDomain } = hubServices
+
   // Get host from headers
-  const host = event.request.headers.get('host');
+  const host = event.request.headers.get('host')
+
+  // Allow a dev-only URL override so local hub switching does not depend on host setup.
+  const devHubCodeOverride = import.meta.env.DEV
+    ? (event.url.searchParams.get('hub') ?? undefined)
+    : undefined
 
   // Get hub code from platform env for development override
-  const hubCode = event.platform?.env?.PUBLIC_HUB_CODE;
+  const hubCode = devHubCodeOverride || event.platform?.env?.PUBLIC_HUB_CODE
 
   // Parse hub info from domain without DB lookup
-  const { getHubFromDomain } = await import('$lib/api/services/hub');
-  const hubOpts = getHubFromDomain(host, hubCode);
+  const hubOpts = getHubFromDomain(host, hubCode) as Partial<HubOptsExtended> & {
+    code?: string
+    domain?: string | null
+    isCore?: boolean
+  }
 
   // If on Core hub, don't lookup the hub in the database
   if (hubOpts.isCore) {
-    event.locals.hub = hubOpts as HubOptsExtended;
-    return resolve(event);
+    event.locals.hub = toHubLocalsShape(hubOpts)
+    return resolve(event)
   }
 
   // DB
   const db = drizzle(event.platform?.env?.DB as unknown as MiniflareD1Database, {
-    schema
-  });
+    schema,
+  })
 
   if (db && event.locals && hubOpts.code) {
-    const hubDb = await getHubByCode(db, hubOpts.code);
+    const hubDb = await retryBusyRead(() =>
+      db.query.hub.findFirst({
+        with: {
+          i18n: true,
+          image: true,
+        },
+        where: eq(schema.hub.code, hubOpts.code),
+      }),
+    )
     if (hubDb) {
-      const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended;
-      event.locals.hub = hub;
+      const hub = (await hubServices.toEntityResponseShape(
+        hubDb,
+        'card',
+      )) as HubShapeResult
+      event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else if (db && event.locals && hubOpts.domain) {
-    const hubDb = await getHubByDomain(db, hubOpts.domain);
+    const hubDb = await retryBusyRead(() =>
+      db.query.hub.findFirst({
+        with: {
+          i18n: true,
+          image: true,
+        },
+        where: eq(schema.hub.domain, hubOpts.domain),
+      }),
+    )
     if (hubDb) {
-      const hub = (await toResponseShape(hubDb, false)) as HubOptsExtended;
-      event.locals.hub = hub;
+      const hub = (await hubServices.toEntityResponseShape(
+        hubDb,
+        'card',
+      )) as HubShapeResult
+      event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else {
     // Default to Core
-    event.locals.hub = hubOpts as HubOptsExtended;
+    event.locals.hub = toHubLocalsShape(hubOpts)
   }
 
-  return resolve(event);
-};
+  return resolve(event)
+}
 
 // ═══════════════════════
 // BETTER-AUTH HOOK
@@ -100,57 +159,58 @@ const handle_hub: Handle = async ({ event, resolve }) => {
 const handle_auth: Handle = async ({ event, resolve }) => {
   try {
     if (!event.platform?.env?.DB) {
-      console.error('🔴 Auth: No DB available for:', event.url.pathname);
-      return resolve(event);
+      console.error('🔴 Auth: No DB available for:', event.url.pathname)
+      return resolve(event)
     }
 
-    // DB
-    const db = drizzle(event.platform.env.DB as unknown as MiniflareD1Database, {
-      schema
-    });
-
-    // AUTH
-    const auth = createAuth(db, {
+    // AUTH - Get auth instance for this request's base URL
+    const auth = getAuthForRequest(event.request.headers, {
+      DB: event.platform.env.DB,
       AUTH_SECRET: event.platform.env.AUTH_SECRET,
       AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
       AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
-      SUPERADMIN_USERID: event.platform.env.SUPERADMIN_USERID
-    });
+    })
 
     // SET LOCALS
-    event.locals.auth = auth;
+    event.locals.auth = auth
 
-    return svelteKitHandler({ event, resolve, auth });
+    return svelteKitHandler({ event, resolve, auth, building: false })
   } catch (error) {
-    console.error('🔴 Auth setup error:', error);
-    return resolve(event);
+    console.error('🔴 Auth setup error:', error)
+    return resolve(event)
   }
-};
+}
 
 /**
  * Workaround to set session and user locals
  */
 const handle_session_auth: Handle = async ({ event, resolve }) => {
   try {
+    // if auth was not initialized for this request, don't try to fetch a session.
+    // This is used for scripted requests that don't need auth.
+    if (!event.locals.auth) {
+      return resolve(event)
+    }
+
     // LOCALS
     const sessionData = await event.locals.auth.api.getSession({
-      headers: event.request.headers
-    });
+      headers: event.request.headers,
+    })
 
     // Safely assign session and user data
-    if (sessionData && sessionData.session && sessionData.user) {
-      event.locals.session = sessionData.session as Session;
-      event.locals.user = sessionData.user as SessionUser;
+    if (sessionData?.session && sessionData.user) {
+      event.locals.session = sessionData.session as Session
+      event.locals.user = sessionData.user as SessionUser
     }
   } catch (error) {
-    console.error('🔴 Session auth error:', error);
+    console.error('🔴 Session auth error:', error)
     // Don't fail the request, just leave session/user undefined
-    event.locals.session = undefined;
-    event.locals.user = undefined;
+    event.locals.session = undefined
+    event.locals.user = undefined
   }
 
-  return resolve(event);
-};
+  return resolve(event)
+}
 
 // ═══════════════════════
 // AUTH REDIRECT HOOK
@@ -161,34 +221,36 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
  */
 const handle_auth_redirect: Handle = async ({ event, resolve }) => {
   // Get the pathname, handling null/undefined cases
-  const pathname = event.url.pathname || '';
+  const pathname = event.url.pathname || ''
 
   // Skip redirect for API routes, static assets, home page, and empty paths
   if (
     pathname.startsWith('/api/') ||
+    pathname.startsWith('/headless/') ||
+    pathname.startsWith('/proxy/') ||
     pathname.startsWith('/static/') ||
     pathname === '/' ||
     pathname === '' ||
     pathname === '/manifest.webmanifest'
   ) {
-    return resolve(event);
+    return resolve(event)
   }
 
   // Check if user is authenticated
-  const isAuthenticated = event.locals.session && event.locals.user;
+  const isAuthenticated = event.locals.session && event.locals.user
 
   // Redirect unauthenticated users to home page
   if (!isAuthenticated) {
     return new Response(null, {
       status: 302,
       headers: {
-        location: '/'
-      }
-    });
+        location: '/',
+      },
+    })
   }
 
-  return resolve(event);
-};
+  return resolve(event)
+}
 
 // ═══════════════════════
 // HUB ENRICHMENT HOOK
@@ -203,21 +265,39 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
   // LOCALS
   if (event.locals.hub) {
     // Cast user to SessionUser to access superAdmin property from custom session
-    const { isCore } = await import('$lib/api/services/hub');
-    const sessionUser = event.locals.user as SessionUser;
-    (event.locals.hub as HubOptsExtended).isSuperAdmin =
-      sessionUser?.superAdmin || false;
+    const { isCore } = await import('$lib/api/services/hub')
+    const sessionUser = event.locals.user as SessionUser | undefined
+    const hub = event.locals.hub as HubOptsExtended
+    const CORE_HUB_CODE = 'core'
+
+    let isHubAdminForActiveHub = false
+    let isSuperAdmin = false
+
+    if (sessionUser?.roles && hub?.code) {
+      const adminHubCodes = new Set(
+        sessionUser.roles
+          .filter(role => role.type === 'hub' && role.role === 'admin')
+          .map(role => (role as unknown as { hub?: { code?: string } }).hub?.code)
+          .filter((code): code is string => Boolean(code)),
+      )
+
+      isHubAdminForActiveHub = adminHubCodes.has(hub.code)
+      // Super admin = hub admin on the core hub.
+      isSuperAdmin = adminHubCodes.has(CORE_HUB_CODE)
+    }
+
+    if (sessionUser) {
+      sessionUser.isHubAdminForActiveHub = isHubAdminForActiveHub
+      sessionUser.superAdmin = isSuperAdmin
+    }
+    hub.isSuperAdmin = isSuperAdmin
     // Admin Panel of App
-    (event.locals.hub as HubOptsExtended).isAdminRequest = isAdminRequest(
-      event.request
-    );
+    hub.isAdminRequest = isAdminRequest(event.request)
     // isCore Convenience property
-    (event.locals.hub as HubOptsExtended).isCore = isCore(
-      event.locals.hub as HubOptsExtended
-    );
+    hub.isCore = isCore(hub)
   }
-  return resolve(event);
-};
+  return resolve(event)
+}
 
 // ═══════════════════════
 // TRANSLATION HOOK
@@ -228,13 +308,13 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
  */
 const translation: Handle = ({ event, resolve }) =>
   paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
-    event.request = localizedRequest;
+    event.request = localizedRequest
     return resolve(event, {
       transformPageChunk: ({ html }) => {
-        return html.replace('%lang%', event.locals.user?.locale || locale);
-      }
-    });
-  });
+        return html.replace('%lang%', event.locals.user?.locale || locale)
+      },
+    })
+  })
 
 // ═══════════════════════
 // MAIN HOOK
@@ -243,14 +323,14 @@ const translation: Handle = ({ event, resolve }) =>
  * This is the main hook that is used to sequence the other hooks.
  */
 
-handle = sequence(
+const handle = sequence(
   handle_cors,
   handle_hub,
   handle_auth,
   handle_session_auth,
   handle_auth_redirect,
   handle_hub_enrichment,
-  translation
-);
+  translation,
+)
 
-export { handle };
+export { handle }

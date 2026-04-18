@@ -1,15 +1,24 @@
-import { browser } from '$app/environment';
-import { getLocale } from '$lib/i18n';
-import { QueryClient } from '@tanstack/svelte-query';
+import { browser } from '$app/environment'
+import { getLocaleKey } from '$lib/i18n'
+import { QueryClient } from '@tanstack/svelte-query'
 // TYPES
-import type { HubOpts } from '$lib/types';
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 
-export const ssr = false;
-export const prerender = false;
+export const ssr = true
+export const prerender = false
 // See https://khromov.se/the-missing-guide-to-understanding-adapter-static-in-sveltekit/
-export const trailingSlash = 'never';
+export const trailingSlash = 'never'
 
 export async function load({ data }) {
+  const hub = data.hub as HubOptsExtended
+  const hubUserState = data.hubUserState ?? null
+  const localeKey = getLocaleKey()
+  const localizedHubI18n = hub.i18n?.[localeKey]
+  const fallbackHubI18n = hub.i18n?.en ?? Object.values(hub.i18n ?? {})[0]
+
+  /**
+   * @deprecated Remove once we have fully moved to svelte remote functions
+   */
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -18,23 +27,18 @@ export async function load({ data }) {
         gcTime: 1000 * 60 * 30, // 30 minutes
         refetchOnWindowFocus: true,
         refetchOnMount: true,
-        refetchOnReconnect: true
-      }
-    }
-  });
+        refetchOnReconnect: true,
+      },
+    },
+  })
 
   return {
     queryClient,
-    PUBLIC_SVELTE_QUERY_DEVTOOLS: data.PUBLIC_SVELTE_QUERY_DEVTOOLS,
-    hub: data.hub as HubOpts,
-    title:
-      (data.hub as HubOpts).i18n?.[getLocale()]?.name ??
-      (data.hub as HubOpts).i18n?.en.name,
-    site_name:
-      (data.hub as HubOpts).i18n?.[getLocale()]?.name ??
-      (data.hub as HubOpts).i18n?.en.name,
+    hub,
+    hubUserState,
+    title: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',
+    site_name: localizedHubI18n?.name ?? fallbackHubI18n?.name ?? '',
     site_description:
-      (data.hub as HubOpts).i18n?.[getLocale()]?.description ??
-      (data.hub as HubOpts).i18n?.en.description
-  };
+      localizedHubI18n?.description ?? fallbackHubI18n?.description ?? '',
+  }
 }

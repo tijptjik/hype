@@ -1,0 +1,52 @@
+{
+  "hyper": {
+    "fileName": "hyper.e0abb60cbc18.json",
+    "publicPath": "/mapStyles/hyper.e0abb60cbc18.json",
+    "hash": "e0abb60cbc188dfdf52c3a72daba7e44852a528086b8f6d243542157a5591818"
+  },
+  "hyperLight": {
+    "fileName": "hyperLight.1eb792e1dc99.json",
+    "publicPath": "/mapStyles/hyperLight.1eb792e1dc99.json",
+    "hash": "1eb792e1dc990270b639b9ce876061a725adeea52a2534cbb6bb1ef8a48ac4cc"
+  },
+  "ghostery": {
+    "fileName": "ghostery.835bfc399a3d.json",
+    "publicPath": "/mapStyles/ghostery.835bfc399a3d.json",
+    "hash": "835bfc399a3d22272d47a1e4740c387408ba740e1e624c6cc8877c96b511f569"
+  },
+  "ghostery-legacy": {
+    "fileName": "ghostery-legacy.1818f6f4257d.json",
+    "publicPath": "/mapStyles/ghostery-legacy.1818f6f4257d.json",
+    "hash": "1818f6f4257d837288ea34d9308169fbf3a2fa37fbbcfe11b33380f95eae80be"
+  },
+  "breadline": {
+    "fileName": "breadline.96e06a94beff.json",
+    "publicPath": "/mapStyles/breadline.96e06a94beff.json",
+    "hash": "96e06a94beffd49fc8caf6befb80fc5e2324561555a25e41600c6ab40f4fe542"
+  },
+  "protomaps-light": {
+    "fileName": "protomaps-light.e63d0b58e07b.json",
+    "publicPath": "/mapStyles/protomaps-light.e63d0b58e07b.json",
+    "hash": "e63d0b58e07bec1256c256308d794ee764629bd8831a23a5b679e339bd0d3dc0"
+  },
+  "protomaps-dark": {
+    "fileName": "protomaps-dark.df91ac64b526.json",
+    "publicPath": "/mapStyles/protomaps-dark.df91ac64b526.json",
+    "hash": "df91ac64b5260dcb5d76a29298b918c7b5aa16e6efb5b7d492db5c4436930d0d"
+  },
+  "protomaps-white": {
+    "fileName": "protomaps-white.5680bb2b0b9d.json",
+    "publicPath": "/mapStyles/protomaps-white.5680bb2b0b9d.json",
+    "hash": "5680bb2b0b9d884a348b71283afb8c313258147b9ee1675d092a0346be82f1a4"
+  },
+  "protomaps-grayscale": {
+    "fileName": "protomaps-grayscale.3ea860593cdf.json",
+    "publicPath": "/mapStyles/protomaps-grayscale.3ea860593cdf.json",
+    "hash": "3ea860593cdf7fa91c1850e205dec5852631fd4eec4f4a6ba502159e68b5ca13"
+  },
+  "protomaps-black": {
+    "fileName": "protomaps-black.108422fa25fc.json",
+    "publicPath": "/mapStyles/protomaps-black.108422fa25fc.json",
+    "hash": "108422fa25fc556110e69115a10ed02ccdb52c3eebe125147aa327a898e0c09f"
+  }
+}

@@ -1,13 +1,12 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { feature } from './feature';
-import { layer } from './layer';
+import { feature } from './feature'
+import { layer } from './layer'
+import { hub } from './hub'
 // ENUM
-import { SupportedLocales, supportedLocales } from '../../enums';
-// TYPES
-import type { UserExperimental, UserPreferences } from '../../types';
+import { SupportedLocales } from '../../enums'
 
 /* ============================================================================
  * USER MANAGEMENT
@@ -28,7 +27,6 @@ export const user = sqliteTable('user', {
     .$defaultFn(() => nanoid(12)),
   name: text('name'),
   username: text('username').unique(),
-  displayUsername: text('displayUsername').unique(),
   email: text('email').unique(),
   emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
   image: text('image'),
@@ -45,7 +43,7 @@ export const user = sqliteTable('user', {
   preferences: text('preferences')
     .$type<string>()
     .default(
-      sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`
+      sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`,
     )
     .notNull(),
   // Experimental features
@@ -59,8 +57,8 @@ export const user = sqliteTable('user', {
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     .notNull()
     .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date())
-});
+    .$onUpdateFn(() => new Date()),
+})
 
 /**
  * User activity tracking
@@ -76,8 +74,8 @@ export const userActivity = sqliteTable('userActivity', {
     .$onUpdateFn(() => sql`login_count + 1`),
   lastLogin: text('lastLogin')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-});
+    .$onUpdate(() => new Date().toISOString()),
+})
 
 /* ============================================================================
  * AUTHENTICATION
@@ -102,10 +100,10 @@ export const account = sqliteTable('account', {
   accessToken: text('accessToken'),
   refreshToken: text('refreshToken'),
   accessTokenExpiresAt: integer('accessTokenExpiresAt', {
-    mode: 'timestamp_ms'
+    mode: 'timestamp_ms',
   }).$type<Date>(),
   refreshTokenExpiresAt: integer('refreshTokenExpiresAt', {
-    mode: 'timestamp_ms'
+    mode: 'timestamp_ms',
   }).$type<Date>(),
   scope: text('scope'),
   idToken: text('idToken'),
@@ -116,8 +114,8 @@ export const account = sqliteTable('account', {
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     .notNull()
     .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date())
-});
+    .$onUpdateFn(() => new Date()),
+})
 
 /**
  * User sessions. Compatible with Better-Auth.
@@ -139,8 +137,8 @@ export const session = sqliteTable('session', {
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     .notNull()
     .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date())
-});
+    .$onUpdateFn(() => new Date()),
+})
 
 /**
  * Verification table for Better-Auth
@@ -160,8 +158,8 @@ export const verification = sqliteTable('verification', {
   updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
     .notNull()
     .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date())
-});
+    .$onUpdateFn(() => new Date()),
+})
 
 /* ============================================================================
  * USER INTERACTION
@@ -192,12 +190,10 @@ export const userFeature = sqliteTable(
     modifiedAt: text('modifiedAt')
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
       .$onUpdate(() => new Date().toISOString())
-      .notNull()
+      .notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.userId, table.featureId] })
-  ]
-);
+  table => [primaryKey({ columns: [table.userId, table.featureId] })],
+)
 
 /**
  * User layer preferences
@@ -213,11 +209,12 @@ export const userLayer = sqliteTable(
     userId: text('userId')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    isVisibleOnLoad: integer('isVisibleOnLoad', { mode: 'boolean' })
+    hubId: text('hubId')
       .notNull()
-      .default(false)
+      .references(() => hub.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
+      .notNull()
+      .default(false),
   },
-  (table) => [
-    primaryKey({ columns: [table.layerId, table.userId] })
-  ]
-);
+  table => [primaryKey({ columns: [table.layerId, table.userId, table.hubId] })],
+)

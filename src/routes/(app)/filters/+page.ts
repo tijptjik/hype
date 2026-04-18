@@ -1,9 +1,9 @@
 // SVELTEKIT
-import { redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit'
 // TYPES
-import type { PageLoad } from './$types';
+import type { PageLoad } from './$types'
 
 export const load: PageLoad = async () => {
   // Redirect to home page with filters panel open
-  throw redirect(302, '/?panel=filters');
-};
+  throw redirect(302, '/?panel=filters')
+}

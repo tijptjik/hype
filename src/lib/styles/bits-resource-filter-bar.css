@@ -1,0 +1,248 @@
+@layer components {
+  .bits-resource-filter-bar {
+    @apply relative flex h-16 w-full flex-row items-center justify-between gap-4 bg-base-200;
+  }
+
+  .bits-resource-filter-bar__left {
+    @apply flex min-w-0 items-center;
+  }
+
+  .bits-resource-filter-bar__right {
+    @apply flex items-center gap-4 pr-8 text-base-content/60;
+    white-space: nowrap;
+  }
+
+  .bits-resource-filter-bar__filter {
+    @apply mx-4 flex h-16 items-center gap-4;
+    white-space: nowrap;
+  }
+
+  .bits-resource-filter-bar__filter-anchor {
+    @apply flex items-center justify-center opacity-70 transition-opacity duration-300 hover:opacity-100;
+  }
+
+  .bits-resource-filter-bar__filter-trigger {
+    @apply text-sm font-medium;
+    border-color: var(--color-base-300);
+    background-color: transparent;
+  }
+
+  .bits-resource-filter-bar__filter-trigger:hover:not(:disabled):not(
+      [aria-disabled="true"]
+    ) {
+    background-color: color-mix(in oklab, var(--color-base-300) 10%, transparent);
+  }
+
+  .bits-resource-filter-bar__filter-content {
+    @apply relative flex flex-row items-center;
+  }
+
+  .bits-resource-filter-bar__filter-menu {
+    @apply absolute z-30 flex h-16 items-center gap-2 bg-base-200;
+    white-space: nowrap;
+  }
+
+  .bits-resource-filter-bar__filter-active {
+    @apply absolute z-20 flex w-auto flex-row justify-center gap-2 transition-opacity duration-300;
+    white-space: nowrap;
+  }
+
+  .bits-resource-filter-bar__filter-active--hidden {
+    @apply opacity-0;
+  }
+
+  .bits-resource-filter-bar__active-strip {
+    @apply flex h-16 flex-row items-center justify-center gap-4;
+  }
+
+  .bits-resource-filter-bar__carousel-track {
+    @apply flex min-w-0 flex-row items-center justify-center gap-4 overflow-hidden;
+  }
+
+  .bits-resource-filter-bar__carousel-nav {
+    @apply h-9 w-9 min-w-9 rounded-full p-0;
+    border-color: transparent;
+    background-color: color-mix(in oklab, var(--color-base-300) 12%, transparent);
+  }
+
+  .bits-resource-filter-bar__carousel-nav:hover:not(:disabled):not(
+      [aria-disabled="true"]
+    ) {
+    background-color: color-mix(in oklab, var(--color-base-300) 20%, transparent);
+  }
+
+  .bits-resource-filter-bar__carousel-nav:disabled,
+  .bits-resource-filter-bar__carousel-nav[aria-disabled="true"] {
+    opacity: 0.35;
+  }
+
+  .bits-resource-filter-bar__sort {
+    @apply flex items-center;
+  }
+
+  .bits-resource-filter-bar__result-count {
+    @apply inline-flex items-center whitespace-nowrap;
+  }
+
+  .bits-resource-filter-bar__result-count-value {
+    @apply inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-sm;
+    /*background-color: color-mix(in oklab, var(--color-base-300) 60%, transparent);*/
+    /*border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);*/
+    color: color-mix(in oklab, var(--color-base-content) 96%, transparent);
+    font-family: var(--font-family-mono, monospace);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .bits-resource-filter-bar__reset {
+    @apply opacity-80 transition-opacity duration-300 hover:opacity-100;
+    white-space: nowrap;
+    background-color: color-mix(in oklab, var(--color-base-300) 14%, transparent);
+    border-color: transparent;
+    color: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+  }
+
+  .bits-resource-filter-bar__reset:hover:not(:disabled):not([aria-disabled="true"]),
+  .bits-resource-filter-bar__reset:focus-visible:not(:disabled):not(
+      [aria-disabled="true"]
+    ) {
+    background-color: color-mix(in oklab, var(--color-base-300) 20%, transparent);
+    border-color: transparent;
+    color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
+  }
+
+  .bits-resource-filter-bar__tri-toggle {
+    @apply relative select-none tracking-widest;
+    display: inline-grid;
+    justify-items: center;
+    row-gap: 0.5rem;
+    padding-top: 1rem;
+    transform: translateX(var(--bits-resource-filter-bar-tri-toggle-offset, 0px));
+  }
+
+  .bits-resource-filter-bar__tri-toggle-label {
+    @apply text-center text-xs uppercase leading-none text-base-content/70;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    max-width: calc(100% + 1.5rem);
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control {
+    display: grid;
+    grid-template-columns: max-content auto max-content;
+    align-items: center;
+    column-gap: 0.6rem;
+    width: max-content;
+  }
+
+  .bits-resource-filter-bar__tri-toggle-side-label {
+    @apply text-sm uppercase;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: transparent;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .bits-resource-filter-bar__tri-toggle:hover
+    .bits-resource-filter-bar__tri-toggle-side-label {
+    color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  }
+
+  .bits-resource-filter-bar__tri-toggle-side-label--left {
+    justify-self: end;
+    text-align: right;
+  }
+
+  .bits-resource-filter-bar__tri-toggle-side-label--right {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control .bits-switch-field {
+    @apply contents;
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control .bits-switch-row {
+    @apply contents;
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control .bits-switch {
+    justify-self: center;
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="unchecked"] {
+    --switch-current-color: var(--color-error);
+    background-color: color-mix(in oklab, var(--color-error) 18%, #313131cc);
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="checked"] {
+    --switch-current-color: var(--color-success);
+    background-color: color-mix(in oklab, var(--color-success) 24%, #313131cc);
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control
+    .bits-switch__thumb[data-state="unchecked"] {
+    border-color: var(--color-error);
+    background-color: var(--color-error);
+  }
+
+  .bits-resource-filter-bar__tri-toggle-control
+    .bits-switch__thumb[data-state="checked"] {
+    border-color: var(--color-success);
+    background-color: var(--color-success);
+  }
+
+  .bits-resource-filter-bar__locale-group {
+    @apply flex items-center gap-4;
+  }
+
+  .bits-resource-filter-bar__locale-group-divider.bits-separator {
+    @apply h-7;
+    background-color: color-mix(in oklab, var(--color-base-content) 18%, transparent);
+  }
+
+  .bits-resource-filter-bar__locale-group-items {
+    @apply flex flex-row gap-2;
+  }
+
+  .bits-resource-filter-bar__locale-group-button {
+    @apply min-w-0 rounded-md px-2.5;
+    border-color: transparent;
+    color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+  }
+
+  .bits-resource-filter-bar__locale-group-button:hover:not(:disabled):not(
+      [aria-disabled="true"]
+    ),
+  .bits-resource-filter-bar__locale-group-button:focus-visible:not(:disabled):not(
+      [aria-disabled="true"]
+    ) {
+    color: color-mix(in oklab, var(--color-base-content) 92%, transparent);
+  }
+
+  .bits-resource-filter-bar__locale-group-button--active {
+    background-color: var(--color-secondary);
+    border-color: transparent;
+    color: white;
+    font-weight: 700;
+    box-shadow: none;
+  }
+
+  .bits-resource-filter-bar__locale-group-button--active:hover:not(:disabled):not(
+      [aria-disabled="true"]
+    ),
+  .bits-resource-filter-bar__locale-group-button--active:focus-visible:not(
+      :disabled
+    ):not([aria-disabled="true"]) {
+    background-color: color-mix(in oklab, var(--color-secondary) 90%, white);
+    border-color: transparent;
+    color: white;
+  }
+}

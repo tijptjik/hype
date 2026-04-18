@@ -5,30 +5,31 @@ module.exports = {
     { value: 'docs', name: 'docs: Documentation only changes' },
     {
       value: 'style',
-      name: 'style: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)'
+      name: 'style: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)',
     },
     {
       value: 'refactor',
-      name: 'refactor: A code change that neither fixes a bug nor adds a feature'
+      name: 'refactor: A code change that neither fixes a bug nor adds a feature',
     },
     {
       value: 'perf',
-      name: 'perf: A code change that improves performance'
+      name: 'perf: A code change that improves performance',
     },
     { value: 'test', name: 'test: Adding missing tests' },
     {
       value: 'chore',
-      name: 'chore: Changes to the build process or auxiliary tools and libraries such as documentation generation'
+      name: 'chore: Changes to the build process or auxiliary tools and libraries such as documentation generation',
     },
     { value: 'revert', name: 'revert: Revert to a commit' },
-    { value: 'WIP', name: 'WIP: Work in progress' }
+    { value: 'WIP', name: 'WIP: Work in progress' },
   ],
 
   scopes: [
     { name: 'accounts' },
     { name: 'admin' },
     { name: 'exampleScope' },
-    { name: 'changeMe' }],
+    { name: 'changeMe' },
+  ],
 
   usePreparedCommit: false, // to re-use commit from ./.git/COMMIT_EDITMSG
   allowTicketNumber: false,
@@ -58,7 +59,7 @@ module.exports = {
     body: 'Provide a LONGER description of the change (optional). Use "|" to break new line:\n',
     breaking: 'List any BREAKING CHANGES (optional):\n',
     footer: 'List any ISSUES CLOSED by this change (optional). E.g.: #31, #34:\n',
-    confirmCommit: 'Are you sure you want to proceed with the commit above?'
+    confirmCommit: 'Are you sure you want to proceed with the commit above?',
   },
 
   allowCustomScopes: true,
@@ -69,6 +70,6 @@ module.exports = {
   // limit subject length
   subjectLimit: 100,
   // breaklineChar: '|', // It is supported for fields body and footer.
-  footerPrefix: 'ISSUES CLOSED:'
+  footerPrefix: 'ISSUES CLOSED:',
   // askForBreakingChangeFirst : true, // default is false
-};
+}

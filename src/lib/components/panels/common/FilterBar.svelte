@@ -1,29 +1,31 @@
 <script lang="ts">
-import Icon from '$lib/components/common/Icon.svelte';
-import { MagnifyingGlass, XMark } from '@steeze-ui/heroicons';
-import { slide } from 'svelte/transition';
-import { m } from '$lib/i18n';
+import { Icon } from '$lib/bits'
+import MagnifyingGlass from 'virtual:icons/lucide/search'
+import XMark from 'virtual:icons/lucide/x'
+import { slide } from 'svelte/transition'
+import { m } from '$lib/i18n'
 let {
   searchTerm = $bindable(''),
   position = 'left',
-  onReset
+  onReset,
 }: {
-  searchTerm: string;
-  position?: 'left' | 'right';
-  onReset?: () => void;
-} = $props();
+  searchTerm: string
+  position?: 'left' | 'right'
+  onReset?: () => void
+} = $props()
 
 // Reset input and clear filter
 const resetInput = async (e: Event) => {
-  e.preventDefault();
-  searchTerm = '';
-  document.getElementById(`search`)?.focus();
-};
+  e.preventDefault()
+  searchTerm = ''
+  document.getElementById(`search`)?.focus()
+}
 </script>
 
 <div
-  class="relative flex-shrink-0 flex-grow-0 py-1 {position == 'right' ? 'pl-4' : ''} "
-  transition:slide={{ duration: 200 }}>
+  class="relative shrink-0 grow-0 py-1 {position == 'right' ? 'pl-4' : ''} "
+  transition:slide={{ duration: 200 }}
+>
   <input
     id="search"
     type="text"
@@ -44,11 +46,13 @@ const resetInput = async (e: Event) => {
     placeholder={m.legal_clear_panther_soar()}
     class="input m-0 h-12 w-full rounded-none bg-base-200 {position === 'right'
       ? 'rounded-l-md pl-[26px] pr-10'
-      : 'rounded-r-md pl-10 pr-[26px]'} text-sm focus:border-none focus:outline-none" />
+      : 'rounded-r-md pl-10 pr-[26px]'} text-sm focus:border-none focus:outline-none"
+  >
   <div
     class="absolute inset-y-0 {position === 'left'
       ? 'right-1.5'
-      : 'right-[22px]'} flex items-center pr-3">
+      : 'right-[22px]'} flex items-center pr-3"
+  >
     {#if !searchTerm}
       <Icon src={MagnifyingGlass} class="h-6 w-6 text-base-content/60" />
     {:else}

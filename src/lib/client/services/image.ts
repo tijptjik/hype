@@ -1,33 +1,64 @@
 // SVELTE
-import { error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit'
 // I18N
-import { m } from '$lib/i18n';
-// COORDINATES
-import Coordinates from 'coordinate-parser';
+import { m } from '$lib/i18n'
+// IMAGE
+import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import {
+  extractImageUploadMetadata,
+  type ExtractedImageUploadMetadata,
+} from '$lib/images/metadata'
+import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
 // UTILS
-import { capitalizeFirstLetter } from '$lib';
+import { resolveAppStage } from '$lib'
 // SERVICES
-import { adminIntentOrder, intentOrder } from '$lib/api/services/image';
+import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
+// NAVIGATION
+import { getUrlForResource } from '$lib/navigation'
+import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
+import type { ProjectGetState } from '$lib/db/zod/schema/project.types'
+import type { HubGetState } from '$lib/db/zod/schema/hub.types'
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 // ENUMS
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums';
+import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
+import type { AdminCtx } from '$lib/context/admin.svelte'
 import type {
-  ImageNew,
-  Image,
-  ParamsToSign,
-  ImageUploadCtx,
   Id,
+  ImageCtxConstructorOptions,
+  NormalizedImageUploadAsset,
+} from '$lib/types'
+import type {
+  GalleryObjectFit,
+  ViewerRenderable,
+  ViewerRenderableStatus,
+} from '$lib/bits/patterns/images/images.types'
+import type {
+  Image,
+  ImageContextEnvelope,
+  ImageCtxEnvelope,
+  ImageUploadCtx,
   Intent,
   ImageEditCtx,
-  ImageDB,
   ImageDBFlat,
   ImageDBBasic,
-  ImagePartial,
-  Metadata,
-  LngLat,
-  SignData
-} from '$lib/types';
-import { hashicon } from '@emeraldpay/hashicon';
+  ImageNew,
+  ImageMetadataBasic,
+} from '$lib/db/zod/schema/image.types'
+// CONTEXT
+import type { ImageCtx } from '$lib/context/image.svelte'
+import { hashicon } from '@emeraldpay/hashicon'
+
+type FeatureImageProviderOrganisation = {
+  id?: string | null
+  code?: string | null
+}
+
+type FeatureImageProviderProject = {
+  id?: string | null
+  organisationId?: string | null
+  code?: string | null
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -36,38 +67,28 @@ import { hashicon } from '@emeraldpay/hashicon';
 // 1. ORCHESTRATION
 //    - uploadAndProcessImage
 //
-// 2. INTERNAL :: API
-//    - createImage
-//    - getImages
-//    - updateImage
-//    - updateImageIntent
-//    - updateImageIsPublished
-//    - deleteImage
-//
-// 3. CLOUDINARY :: API
-//    - createCloudinaryImage
-//
-// 4. CLOUDINARY :: UTILS
-//    - getCloudinaryUploadEndpoint
+// 3. DELIVERY
 //    - getURLfromImage
-//    - getImageFromCloudinaryResponse
-//    - getCloudinarySignature
-//    - getPublicPathCloudinaryImage
 //
-// 5. EXTENSIONS
+// 4. EXTENSIONS
 //    - extendFeatureImage
 //    - extendImageWithResource
 //
-// 6. METADATA
+// 5. METADATA
 //    - getCoordinatesFromMetadata
 //    - getCapturedAtFromMetadata
 //    - getCameraFromMetadata
 //    - getCreditFromMetadata
 //
-// 7. UTILS
+// 6. UTILS
 //    - sortImages
-//    - addCtxToUrl
 //    - getHashiconUrl
+//    - getImageSrcOrHashicon
+//    - getFeatureImagesFacetHref
+//    - getSafeImageUrl
+//    - getFeatureImageProviderOptions
+//    - updateImagePresentationMode
+//    - setOrganisationImagePresentationMode
 //
 
 // ═══════════════════════
@@ -75,366 +96,546 @@ import { hashicon } from '@emeraldpay/hashicon';
 // ═══════════════════════
 
 /**
- * Orchestrates the full image upload process: gets path, signs, uploads to Cloudinary,
- * processes response, extends metadata, and saves/updates the image record in the backend.
+ * Prepares an upload by normalizing the file, building metadata, and requesting an upload session.
+ *
+ * @param file The file to upload.
+ * @param uploadCtx Context for the upload (resource type, ID, org, project, imageToReplace).
+ * @param extendedFeatureInfo Optional info for feature images (publish status, intent).
+ * @returns Prepared upload payload that can be PUT to R2 and later finalized.
+ */
+export async function prepareImageUpload(
+  file: File,
+  uploadCtx: ImageUploadCtx,
+  extendedFeatureInfo?: {
+    isPublished: boolean
+    intent: Intent
+  },
+): Promise<{
+  uploadLabel: string
+  uploadStartTime: number
+  authCompletedAt: number
+  normalizedUpload: NormalizedImageUploadAsset
+  metadata: ImageMetadataBasic & { metadata?: Record<string, string> | null }
+  auth: Awaited<
+    ReturnType<typeof import('$lib/api/server/image.remote')['authImageUpload']>
+  >
+  isAdminRequest: boolean
+  persist: {
+    featureImage?: {
+      featureId: string
+      intent: Intent
+      isPublished: boolean
+    }
+    links?: NonNullable<ImageUploadCtx['links']>
+  }
+}> {
+  const now = (): number =>
+    typeof performance !== 'undefined' ? performance.now() : Date.now()
+  const uploadStartTime = now()
+  const uploadLabel = `${file.name}:${file.size}:${file.lastModified}`
+  const extractedMetadata = await extractImageUploadMetadata(file)
+  const normalizedUpload = await normalizeUploadFileForAssetPipeline(file)
+  const metadata = await buildBasicMetadataDocument(normalizedUpload, extractedMetadata)
+  const env = toImageEnv()
+  const isAdminRequest = uploadCtx.isAdminRequest ?? true
+  const { authImageUpload: authImageUploadRemote } = await loadImageRemotes()
+  const featureImage =
+    uploadCtx.ctxType === 'feature'
+      ? {
+          featureId: uploadCtx.imageToReplace?.ctxId ?? uploadCtx.ctxId,
+          intent:
+            uploadCtx.imageToReplace?.intent ??
+            extendedFeatureInfo?.intent ??
+            'undefined',
+          isPublished:
+            uploadCtx.imageToReplace?.isPublished ??
+            extendedFeatureInfo?.isPublished ??
+            false,
+        }
+      : undefined
+  const auth = await authImageUploadRemote({
+    cdn: 'cloudflareR2',
+    env,
+    ctxType: uploadCtx.ctxType,
+    ctxId: uploadCtx.ctxId,
+    organisationId: uploadCtx.organisation?.id ?? undefined,
+    projectId: uploadCtx.project?.id ?? undefined,
+    filename: normalizedUpload.file.name,
+    contentType: normalizedUpload.file.type || 'application/octet-stream',
+    size: normalizedUpload.file.size,
+    replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
+    links: uploadCtx.links,
+    meta: { isAdminRequest },
+  })
+  const authAt = now()
+
+  return {
+    uploadLabel,
+    uploadStartTime,
+    authCompletedAt: authAt,
+    normalizedUpload,
+    metadata,
+    auth,
+    isAdminRequest,
+    persist: {
+      ...(uploadCtx.imageToReplace?.image.contributorId
+        ? { contributorId: uploadCtx.imageToReplace.image.contributorId }
+        : {}),
+      ...(featureImage ? { featureImage } : {}),
+      ...(uploadCtx.links?.length ? { links: uploadCtx.links } : {}),
+    },
+  }
+}
+
+/**
+ * Uploads a prepared image object to the signed R2 destination.
+ *
+ * @param preparedUpload Prepared upload session returned by `prepareImageUpload`.
+ * @param fetchFn Fetch implementation to use for the signed PUT request.
+ * @returns Resolves when the object upload completes successfully.
+ */
+export async function uploadPreparedImageObject(
+  preparedUpload: Awaited<ReturnType<typeof prepareImageUpload>>,
+  fetchFn: typeof fetch = fetch,
+): Promise<void> {
+  const uploadResponse = await fetchFn(preparedUpload.auth.uploadUrl, {
+    method: preparedUpload.auth.method,
+    headers: preparedUpload.auth.headers,
+    body: preparedUpload.normalizedUpload.file,
+  })
+  if (!uploadResponse.ok) {
+    throw new Error(`Image upload failed: ${uploadResponse.statusText}`)
+  }
+}
+
+/**
+ * Finalizes a prepared upload by persisting image metadata and context links in the backend.
+ *
+ * @param preparedUpload Prepared upload session returned by `prepareImageUpload`.
+ * @returns Persisted image envelope.
+ * @remarks Retries transient local D1 lock failures before surfacing an error.
+ */
+export async function finalizePreparedImageUpload(
+  preparedUpload: Awaited<ReturnType<typeof prepareImageUpload>>,
+): Promise<ImageCtxEnvelope> {
+  const now = (): number =>
+    typeof performance !== 'undefined' ? performance.now() : Date.now()
+  const retryAttempts = 4
+  const retryBaseDelayMs = 180
+  const { finalizeImageUpload: finalizeImageUploadRemote } = await loadImageRemotes()
+
+  for (let attempt = 0; attempt < retryAttempts; attempt += 1) {
+    try {
+      const savedImage = await finalizeImageUploadRemote({
+        token: preparedUpload.auth.confirmToken,
+        metadata: preparedUpload.metadata,
+        persist: preparedUpload.persist,
+        meta: { isAdminRequest: preparedUpload.isAdminRequest },
+      })
+      if (!savedImage?.data) {
+        throw new Error('Failed to persist finalized image in backend')
+      }
+
+      return savedImage.data as ImageCtxEnvelope
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      const isRetryableLockError =
+        message.includes('SQLITE_BUSY') ||
+        message.includes('database is locked') ||
+        message.includes('internal error; reference =')
+
+      if (!isRetryableLockError || attempt === retryAttempts - 1) {
+        throw error
+      }
+
+      const retryDelayMs = retryBaseDelayMs * (attempt + 1)
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs))
+    }
+  }
+
+  throw new Error('Failed to persist finalized image in backend')
+}
+
+/**
+ * Orchestrates the full image upload process against the current R2-backed image service.
  * This function does NOT handle frontend state updates (e.g., upload queue status, image list updates).
  *
  * @param file The file to upload.
  * @param uploadCtx Context for the upload (resource type, ID, org, project, imageToReplace).
  * @param extendedFeatureInfo Optional info for feature images (publish status, intent).
- * @param fetchFn Optional fetch function, defaults to global fetch.
+ * @param fetchFn Fetch implementation to use for the signed PUT request.
+ * @param options Lifecycle hooks for object-upload completion.
  * @returns The saved/updated image data from the backend.
  */
 export async function uploadAndProcessImage(
   file: File,
   uploadCtx: ImageUploadCtx,
   extendedFeatureInfo?: {
-    isPublished: boolean;
-    intent: Intent;
+    isPublished: boolean
+    intent: Intent
   },
-  fetchFn: typeof fetch = fetch
-): Promise<Image> {
-  // 1. Determine public path for Cloudinary
-  const { folder, public_id } = getPublicPathCloudinaryImage(uploadCtx);
-  const paramsToSign: ParamsToSign = uploadCtx.imageToReplace
-    ? { folder, public_id: public_id! } // public_id will exist if imageToReplace is true and path is valid
-    : { folder };
-
-  // 2. Fetch Cloudinary signature
-  const signData = await getCloudinarySignature(paramsToSign, fetchFn);
-
-  // 3. Upload file to Cloudinary
-  const cloudinaryResponse = await createCloudinaryImage(
-    file,
-    paramsToSign,
-    signData,
-    fetchFn
-  );
-
-  // 4. Process Cloudinary response into our image format
-  const imageData = getImageFromCloudinaryResponse(cloudinaryResponse);
-
-  // 5. Extend image data with feature/hierarchical info
-  extendFeatureImage(
-    imageData,
-    uploadCtx,
-    extendedFeatureInfo ? { featureImage: extendedFeatureInfo } : undefined
-  );
-  extendImageWithResource(imageData, uploadCtx);
-
-  // 6. Upsert image in the backend
-  let savedImage: Image;
-  if (uploadCtx.imageToReplace) {
-    savedImage = await updateImage(
-      uploadCtx.imageToReplace.id,
-      imageData as ImagePartial,
-      uploadCtx,
-      fetchFn
-    );
-  } else {
-    savedImage = await createImage(imageData as ImageNew, fetchFn);
-  }
-
-  return savedImage;
+  fetchFn: typeof fetch = fetch,
+  options: {
+    onObjectUploaded?: () => void
+  } = {},
+): Promise<ImageCtxEnvelope> {
+  const preparedUpload = await prepareImageUpload(file, uploadCtx, extendedFeatureInfo)
+  await uploadPreparedImageObject(preparedUpload, fetchFn)
+  options.onObjectUploaded?.()
+  return finalizePreparedImageUpload(preparedUpload)
 }
 
 // ═══════════════════════
-// 2. INTERNAL :: API
+// 3. UPLOAD / URL UTILS
 // ═══════════════════════
 
+const DEFAULT_PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
+
+const resolveConfiguredPublicAssetBaseUrl = (): string =>
+  import.meta.env.PUBLIC_ASSET_BASE_URL || ''
+
+const resolvePublicAssetBaseUrl = (): string => {
+  const configuredBaseUrl = resolveConfiguredPublicAssetBaseUrl()
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
+  }
+
+  if (typeof window === 'undefined') {
+    return DEFAULT_PUBLIC_ASSET_BASE_URL
+  }
+
+  return DEFAULT_PUBLIC_ASSET_BASE_URL
+}
+
+const toImageEnv = (): 'local' | 'preview' | 'production' =>
+  resolveAppStage(resolvePublicAssetBaseUrl())
+
 /**
- * Creates a new image record in the backend.
- * @param imageData - The image data to save.
- * @param fetchFn - The fetch function to use for the API call.
- * @returns The saved image data from the backend.
+ * Lazily loads image remotes so utility-only imports of this module do not
+ * eagerly initialize the SvelteKit remote runtime in test and browser contexts.
  */
-export async function createImage(
-  imageData: ImageNew,
-  fetchFn: typeof fetch = fetch
-): Promise<Image> {
-  const response = await fetchFn('/api/images', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(imageData)
-  });
-  if (!response.ok) {
-    throw new Error('Failed to create new image in backend');
+const loadImageRemotes = async (): Promise<
+  typeof import('$lib/api/server/image.remote')
+> => await import('$lib/api/server/image.remote')
+
+export async function buildBasicMetadataDocument(
+  normalizedUpload: NormalizedImageUploadAsset,
+  extractedMetadata: ExtractedImageUploadMetadata,
+): Promise<ImageMetadataBasic & { metadata?: Record<string, string> | null }> {
+  const metadataEntries: Record<string, string> = {}
+
+  if (normalizedUpload.uploadedWidth !== null) {
+    metadataEntries.uploadedWidth = String(normalizedUpload.uploadedWidth)
   }
-  return response.json(); // Assumes API returns the full Image object
+  if (normalizedUpload.uploadedHeight !== null) {
+    metadataEntries.uploadedHeight = String(normalizedUpload.uploadedHeight)
+  }
+  if (normalizedUpload.wasResized) {
+    metadataEntries.clientResizeApplied = 'true'
+    metadataEntries.clientResizeMaxDimension = '2048'
+  }
+  if (extractedMetadata.editorTool) {
+    metadataEntries.editorTool = extractedMetadata.editorTool
+  }
+
+  return {
+    originalFilename: normalizedUpload.originalFilename,
+    originalExtension: normalizedUpload.originalExtension,
+    originalWidth: normalizedUpload.originalWidth,
+    originalHeight: normalizedUpload.originalHeight,
+    rotation: 0,
+    cameraModel: extractedMetadata.cameraModel,
+    capturedAt: extractedMetadata.capturedAt,
+    credit: extractedMetadata.credit,
+    latitude: extractedMetadata.latitude,
+    longitude: extractedMetadata.longitude,
+    metadata: Object.keys(metadataEntries).length > 0 ? metadataEntries : null,
+  }
 }
 
 /**
- * Fetches images from the API based on provided parameters.
+ * Preloads an image URL and waits for decode when supported so later swaps paint cleanly.
  *
- * @param ctxType The resourceType the image is associated with (e.g., feature, project).
- * @param ctxId The ID of the resource the image is associated with.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with an array of images.
+ * @param url Image URL to preload.
+ * @returns Resolves once the URL is paintable, rejects on a real image load failure.
  */
-export async function getImages(
-  ctxType: ImageContextResource | ImageContextResourceExtended,
-  ctxId: Id,
-  fetchFn: typeof fetch = fetch
-): Promise<(Image & { preview?: string })[]> {
-  const basePath = '/api/images'; // Centralized base path
-  const params = new URLSearchParams();
-
-  if (ctxType === ImageContextResource.feature && ctxId) {
-    params.append('featureId', ctxId);
-  } else if (ctxType === ImageContextResource.project && ctxId) {
-    params.append('projectId', ctxId);
-  } else if (ctxType === ImageContextResource.organisation && ctxId) {
-    params.append('organisationId', ctxId);
-  } else if (ctxType === ImageContextResourceExtended.task && ctxId) {
-    params.append('taskId', ctxId);
-  }
-
-  const apiUrl = `${basePath}?${params.toString()}`;
-
-  const response = await fetchFn(apiUrl);
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('Failed to fetch images via API:', apiUrl, errorBody);
-    throw new Error(
-      `Network response was not ok for fetching images: ${response.statusText}`
-    );
-  }
-  return response.json() as Promise<(Image & { preview?: string })[]>;
+export async function preloadImageUrl(url: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.onload = async () => {
+      try {
+        if (typeof image.decode === 'function') {
+          await image.decode()
+        }
+      } catch {
+        // Firefox can reject decode() even when the image is already paintable.
+      }
+      resolve()
+    }
+    image.onerror = event => reject(event)
+    image.src = url
+  })
 }
 
 /**
- * Fetches images by their IDs.
+ * Waits for the server to confirm that the warmed admin thumbnail is available.
  *
- * @param imageIds Array of image IDs to fetch.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with an array of images.
+ * @param params Image identifier inputs.
+ * @returns `true` when the thumbnail-ready event arrives before timeout, else `false`.
  */
-export async function getImagesByIds(
-  imageIds: string[],
-  fetchFn: typeof fetch = fetch
-): Promise<(Image & { preview?: string })[]> {
-  if (imageIds.length === 0) return [];
-
-  const basePath = '/api/images';
-  const params = new URLSearchParams();
-  params.append('ids', imageIds.join(','));
-
-  const apiUrl = `${basePath}?${params.toString()}`;
-
-  const response = await fetchFn(apiUrl);
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('Failed to fetch images by IDs via API:', apiUrl, errorBody);
-    throw new Error(
-      `Network response was not ok for fetching images by IDs: ${response.statusText}`
-    );
+export async function waitForThumbnailReadyEvent(params: {
+  publicId: string
+  version?: number | null
+  timeoutMs?: number
+}): Promise<boolean> {
+  if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+    return false
   }
-  return response.json() as Promise<(Image & { preview?: string })[]>;
-}
 
-/**
- * Updates an existing image record in the backend.
- * @param imageId - The ID of the image to update.
- * @param imageData - The new image data.
- * @param ctx - The context for the update (used for URL query params).
- * @param fetchFn - The fetch function to use for the API call.
- * @returns The updated image data from the backend.
- */
-export async function updateImage(
-  imageId: string,
-  imageData: ImagePartial,
-  ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch
-): Promise<Image> {
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
-  const response = await fetchFn(apiUrl, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(imageData)
-  });
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to update existing image in backend: ${errorBody}`);
+  const searchParams = new URLSearchParams({ publicId: params.publicId })
+
+  if (typeof params.version === 'number') {
+    searchParams.set('version', String(params.version))
   }
-  // Assuming PATCH also returns the full Image object (or relevant parts to merge)
-  const result = await response.json();
-  return result.data || result; // API returns { type: 'success', data: responseData }
-}
 
-/**
- * Updates the intent of an image via the API.
- * @param imageId The ID of the image to update.
- * @param intent The new intent for the image.
- * @param ctx Context (ctxType, ctxId) for the API call.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving when the update is complete.
- */
-export async function updateImageIntent(
-  imageId: string,
-  intent: Intent,
-  ctx: ImageEditCtx,
-  isPublished?: boolean
-): Promise<Image> {
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
-  const response = await fetch(apiUrl, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      intent,
-      imageId,
-      featureId: ctx.ctxId,
-      ...(isPublished !== undefined && { isPublished })
+  const url = `/api/images/thumbnail-ready?${searchParams.toString()}`
+
+  return await new Promise<boolean>(resolve => {
+    const eventSource = new EventSource(url)
+    let settled = false
+
+    const settle = (value: boolean): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeoutId)
+      eventSource.close()
+      resolve(value)
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      settle(false)
+    }, params.timeoutMs ?? 20_000)
+
+    eventSource.addEventListener('thumbnail-ready', () => {
+      settle(true)
     })
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to update intent: ${errorBody}`);
-  }
-  const result = await response.json();
-  return result.data || result;
-}
-
-/**
- * Updates the publish status of an image via the API.
- * @param imageId The ID of the image to update.
- * @param isPublished The new publish status for the image.
- * @param ctx Context (ctxType, ctxId) for the API call.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with the JSON response from the API.
- */
-export async function updateImageIsPublished(
-  imageId: string,
-  isPublished: boolean,
-  ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch
-): Promise<Image> {
-  // Expecting the updated image back
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
-  const response = await fetchFn(apiUrl, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      isPublished,
-      imageId,
-      featureId: ctx.ctxId
+    eventSource.addEventListener('thumbnail-timeout', () => {
+      settle(false)
     })
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to update publish status: ${errorBody}`);
-  }
-  const result = await response.json();
-  return result.data || result;
+    eventSource.onerror = () => {
+      settle(false)
+    }
+  })
 }
 
 /**
- * Deletes an image via the API.
- * @param imageId The ID of the image to delete.
- * @param ctx Context (ctxType, ctxId) for the API call.
- * @param fetchFn Optional fetch function, defaults to global fetch.
- * @returns Promise resolving with the JSON response from the API.
+ * Sorts gallery items so unpublished/no-intent uploads stay prominent while preserving
+ * the existing editorial intent ordering for persisted images.
+ *
+ * @param itemsToSort Gallery items to sort for the editor rail.
+ * @returns Sorted gallery items.
  */
-export async function deleteImage(
-  imageId: string,
-  ctx: ImageEditCtx,
-  fetchFn: typeof fetch = fetch
-): Promise<any> {
-  // DELETE might not return the image, just a success message
-  const apiUrl = addCtxToUrl(`/api/images/${imageId}`, ctx);
-  const response = await fetchFn(apiUrl, {
-    method: 'DELETE'
-  });
+export function sortGalleryItems(itemsToSort: ViewerRenderable[]): ViewerRenderable[] {
+  return [...itemsToSort].sort((a, b) => {
+    const aIsUnpublishedNoIntent =
+      !a.isPublished && (!a.intent || a.intent === 'undefined')
+    const bIsUnpublishedNoIntent =
+      !b.isPublished && (!b.intent || b.intent === 'undefined')
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to delete image: ${errorBody}`);
-  }
-  return response.json();
+    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
+    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
+
+    if (a.isPublished !== b.isPublished) {
+      return a.isPublished ? -1 : 1
+    }
+
+    const intentOrder = [
+      'undefined',
+      'canonical',
+      'general',
+      'context',
+      'research',
+      'closeUp',
+    ] as const
+    const aIntent = intentOrder.indexOf(
+      (a.intent ?? 'undefined') as (typeof intentOrder)[number],
+    )
+    const bIntent = intentOrder.indexOf(
+      (b.intent ?? 'undefined') as (typeof intentOrder)[number],
+    )
+
+    if (aIntent !== bIntent) {
+      return aIntent - bIntent
+    }
+
+    return (
+      new Date(String(b.status?.sortCreatedAt ?? '')).getTime() -
+      new Date(String(a.status?.sortCreatedAt ?? '')).getTime()
+    )
+  })
+}
+
+function getViewerRenderableStatus(
+  item: ViewerRenderable | null | undefined,
+): ViewerRenderableStatus | null {
+  return item?.status ?? null
 }
 
 /**
- * Loads an image from the URL parameter.
- * @returns The image data from the API.
+ * Resolves the persisted image id carried on an optimistic gallery row, if one exists.
+ *
+ * @param item Gallery item to inspect.
+ * @returns Saved image id or `null`.
  */
-export async function getImageById(imageId: Id) {
-  // Skip API calls for staged images - they only exist locally
-  if (imageId.startsWith('staged-')) {
-    return null;
-  }
-
-  // Fetch the specific image from the API
-  const response = await fetch(`/api/images/${imageId}`);
-  if (!response.ok) {
-    console.error('Failed to fetch image:', response.statusText);
-    return null;
-  }
-
-  const result = await response.json();
-  return result.data || result; // Handle both wrapped and direct responses
+export function getGalleryItemSavedImageId(
+  item: ViewerRenderable | null | undefined,
+): string | null {
+  return getViewerRenderableStatus(item)?.savedImageId ?? null
 }
 
-// ═══════════════════════
-// 3. CLOUDINARY :: API
-// ═══════════════════════
-
 /**
- * Uploads a file directly to Cloudinary.
- * @param file - The file to upload.
- * @param paramsToSign - Original parameters that were signed (folder, public_id if replacing).
- * @param signData - The signature data obtained from `serviceFetchCloudinarySignature`.
- * @param fetchFn - The fetch function to use for the API call.
- * @returns The Cloudinary API response.
+ * Resolves the image id used for metadata/edit actions when the visible gallery row may still
+ * be the optimistic upload wrapper.
+ *
+ * @param itemId Current gallery item id.
+ * @param items Gallery items available in the editor.
+ * @returns Persisted image id when available, otherwise `null`.
  */
-export async function createCloudinaryImage(
-  file: File,
-  paramsToSign: ParamsToSign, // folder, public_id (if any)
-  signData: SignData,
-  fetchFn: typeof fetch = fetch
-): Promise<any> {
-  const url = getCloudinaryUploadEndpoint(signData.cloudname);
-  const formData = new FormData();
+export function getGalleryItemTargetImageId(
+  itemId: string | null | undefined,
+  items: ViewerRenderable[],
+): string | null {
+  if (!itemId) return null
 
-  formData.append('file', file);
-  formData.append('folder', paramsToSign.folder);
-  formData.append('api_key', signData.apikey);
-  formData.append('timestamp', signData.timestamp);
-  formData.append('signature', signData.signature);
-  formData.append('media_metadata', 'true');
+  const item = items.find(candidate => candidate.id === itemId)
+  if (!item) return null
 
-  if (paramsToSign.public_id) {
-    formData.append('public_id', paramsToSign.public_id);
-  }
-
-  const response = await fetchFn(url, {
-    method: 'POST',
-    body: formData
-  });
-
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('Cloudinary upload failed:', errorData);
-    throw new Error(`Cloudinary upload failed: ${response.statusText}`);
-  }
-  return response.json();
+  return getGalleryItemSavedImageId(item) ?? item.id
 }
 
-// ═══════════════════════
-// 4. CLOUDINARY :: UTILS
-// ═══════════════════════
-
 /**
- * Generates the Cloudinary upload endpoint URL.
- * @param cloudname - The Cloudinary cloud name.
- * @returns The upload URL string.
+ * Resolves the thumbnail load-status key for a gallery row, preferring the persisted image id
+ * once an optimistic upload has been promoted.
+ *
+ * @param itemId Current gallery item id.
+ * @param items Gallery items available in the editor.
+ * @returns Image id used for thumbnail load tracking.
  */
-export function getCloudinaryUploadEndpoint(cloudname: string): string {
-  return `https://api.cloudinary.com/v1_1/${cloudname}/auto/upload`;
+export function getGalleryItemThumbnailStatusId(
+  itemId: string | null | undefined,
+  items: ViewerRenderable[],
+): string | null {
+  if (!itemId) return null
+
+  const item = items.find(candidate => candidate.id === itemId)
+  if (!item) return itemId
+
+  return getGalleryItemSavedImageId(item) ?? itemId
 }
 
 /**
- * Generates a URL for a Cloudinary image based on the image data.
+ * Builds a stable viewer scene key so optimistic and finalized versions of the same image can
+ * reuse the scene when a render key is available.
+ *
+ * @param item Current viewer item.
+ * @param selectedId Current selection id.
+ * @returns Stable scene key or `null`.
+ */
+export function getGallerySceneKey(
+  item: ViewerRenderable | null,
+  selectedId: string | null,
+): string | null {
+  if (!item) return null
+  return item.renderKey ?? selectedId ?? item.id
+}
+
+/**
+ * Resolves the blurred backdrop source for a viewer/gallery item.
+ *
+ * @param item Current gallery item.
+ * @returns Backdrop image source or `null`.
+ */
+export function getGalleryBackgroundSrc(item: ViewerRenderable | null): string | null {
+  if (!item) return null
+  return item.blurSrc ?? item.sourceFallbackSrc ?? item.src ?? null
+}
+
+/**
+ * Resolves the primary foreground source for a viewer/gallery item.
+ *
+ * @param item Current gallery item.
+ * @returns Foreground source.
+ */
+export function getGalleryForegroundSrc(item: ViewerRenderable | null): string {
+  return (
+    item?.src ??
+    item?.sourceFallbackSrc ??
+    getFeatureIdenticonUrl(item?.fallbackSeed ?? item?.id ?? 'gallery-fallback')
+  )
+}
+
+/**
+ * Builds the inline rotation style used for viewer-stage foreground images.
+ *
+ * @param item Current gallery item.
+ * @returns Inline transform style or `undefined`.
+ */
+export function getGalleryForegroundRotationStyle(
+  item: ViewerRenderable | null,
+): string | undefined {
+  const rotationDegrees = item?.rotationDegrees ?? 0
+  return rotationDegrees !== 0 ? `transform: rotate(${rotationDegrees}deg);` : undefined
+}
+
+/**
+ * Determines whether the viewer can render the scene directly without using the image-surface
+ * source transition layer.
+ *
+ * @param item Current gallery item.
+ * @returns `true` when the direct viewer scene is appropriate.
+ */
+export function shouldUseDirectGalleryScene(item: ViewerRenderable | null): boolean {
+  const hasUploadStatus = Boolean(getViewerRenderableStatus(item)?.uploadStatus)
+  const forceSourceTransition = item?.meta?.forceSourceTransition === true
+
+  return (
+    !forceSourceTransition &&
+    (hasUploadStatus || !item?.sourceFallbackSrc || item.sourceFallbackSrc === item.src)
+  )
+}
+
+/**
+ * Lists the image URLs that must be ready before a viewer scene crossfade can start.
+ *
+ * @param item Current gallery item.
+ * @param fitMode Viewer fit mode.
+ * @returns Unique scene asset URLs.
+ */
+export function buildGallerySceneAssetUrls(
+  item: ViewerRenderable | null,
+  fitMode: GalleryObjectFit,
+): string[] {
+  if (!item) return []
+
+  const urls = new Set<string>()
+  const foregroundSrc = getGalleryForegroundSrc(item)
+  if (foregroundSrc) {
+    urls.add(foregroundSrc)
+  }
+
+  if (fitMode === 'fit') {
+    const backgroundSrc = getGalleryBackgroundSrc(item)
+    if (backgroundSrc) {
+      urls.add(backgroundSrc)
+    }
+  }
+
+  return Array.from(urls)
+}
+
+/**
+ * Generates a URL for an image backed by the current image service.
  * @remarks
  * - If the image has a preview URL, return the preview URL.
  * - If the image has a CDN, return the URL from the CDN.
@@ -442,140 +643,181 @@ export function getCloudinaryUploadEndpoint(cloudname: string): string {
  * @param opts - Options for generating the URL.
  * @param opts.image - The image data.
  * @param opts.transformation - The transformation to apply to the image.
- * @param opts.raw - Whether to return the raw image URL.
+ * @param opts.raw - Whether to return the normalized intermediate image URL.
  * @returns The generated URL string.
  */
 export function getURLfromImage(opts: {
-  image: ImageDB | ImageDBBasic;
-  transformation?: string;
-  raw?: boolean;
-  gravity?: string;
-  quality?: string;
-  format?: string;
+  image: ImageContextEnvelope | ImageCtxEnvelope
+  transformation?: string
+  raw?: boolean
+  rawTransformation?: string | null
+  gravity?: string
+  quality?: string
+  format?: string
 }): string {
   const {
-    image,
-    transformation = 'c_fit,h_1000,w_1000',
+    image: inputImage,
+    transformation = 'c_fit,h_1024,w_1024',
+    rawTransformation,
     gravity = 'auto',
     format = 'auto',
     quality = 'auto',
-    raw = false
-  } = opts;
+    raw = false,
+  } = opts
+
+  if (!inputImage || typeof inputImage !== 'object' || !('image' in inputImage)) {
+    throw error(404, 'Deprecated image payload: expected image envelope')
+  }
+
+  const image = inputImage.image
 
   // Handle staged images with preview URLs
-  if ((image as any).preview) {
-    return (image as any).preview;
+  if ('preview' in image && typeof image.preview === 'string' && image.preview) {
+    return image.preview
   }
 
-  const finalTransformation = `${transformation}/g_${gravity}/f_${format}/q_${quality}`;
+  if (image.cdn === 'cloudflareR2') {
+    const imageBaseUrl = resolvePublicAssetBaseUrl()
 
-  if (image.cdn === 'cloudinary') {
-    return raw
-      ? `https://res.cloudinary.com/${image.env}/image/upload/fl_attachment/${image.publicId}`
-      : `https://res.cloudinary.com/${image.env}/image/upload/${finalTransformation}/v${image.version}/${image.publicId}`;
-  } else {
-    throw error(404, `Image CDN <code>${image.cdn}</code> not supported`);
+    return `${imageBaseUrl}${toCloudflareImageWorkerPath({
+      publicId: image.publicId,
+      version: image.version,
+      raw,
+      rawTransformation,
+      transformation,
+      gravity,
+      quality,
+      format,
+    })}`
   }
+
+  throw error(404, `Image CDN <code>${image.cdn}</code> not supported`)
 }
 
 /**
- * Transforms a Cloudinary API response into a partial NewImageAPI object.
- * @param response - The raw Cloudinary API response.
- * @returns A partial NewImageAPI object.
+ * Safely resolves a display URL from mixed image payload shapes.
+ * Accepts plain URL strings, image envelopes, or bare image objects.
  */
-export function getImageFromCloudinaryResponse(response: any): Partial<ImageNew> {
-  const metadata = response.image_metadata || {}; // Ensure metadata is an object
-  return {
-    cdn: 'cloudinary' as const,
-    env: response.env,
-    cdnId: response.asset_id,
-    publicId: response.public_id,
-    version: response.version,
-    originalFilename: response.original_filename,
-    originalExtension: response.format,
-    originalWidth: response.width,
-    originalHeight: response.height,
-    metadata: metadata,
-    cameraModel: getCameraFromMetadata(metadata),
-    capturedAt: getCapturedAtFromMetadata(metadata),
-    credit: getCreditFromMetadata(metadata),
-    ...getCoordinatesFromMetadata(metadata)
-  };
-}
+export function getImageSrc(
+  input: unknown,
+  options: { transformation?: string } = {},
+): string | null {
+  if (!input) return null
+  if (typeof input === 'string') return input
 
-/**
- * Fetches the signature required for Cloudinary upload from the backend.
- * @param paramsToSign - Parameters to be signed for the Cloudinary upload.
- * @param fetchFn - The fetch function to use for the API call.
- * @returns The signature data from the backend.
- */
-export async function getCloudinarySignature(
-  paramsToSign: ParamsToSign,
-  fetchFn: typeof fetch = fetch
-): Promise<SignData> {
-  const response = await fetchFn('/api/cloudinary', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      paramsToSign: {
-        ...paramsToSign,
-        media_metadata: 'true'
-      }
+  const transformation = options.transformation ?? 'c_fill,h_256,w_256'
+
+  try {
+    const imageEnvelope =
+      input && typeof input === 'object' && 'image' in input
+        ? (input as ImageContextEnvelope | ImageCtxEnvelope)
+        : ({
+            image: input,
+          } as ImageContextEnvelope)
+
+    return getURLfromImage({
+      image: imageEnvelope,
+      transformation,
     })
-  });
-  if (!response.ok) {
-    throw new Error('Failed to fetch Cloudinary signature');
+  } catch {
+    return null
   }
-  return response.json();
+}
+
+export function getImageSrcOrHashicon(
+  input: unknown,
+  fallbackId: string,
+  options: { transformation?: string; hashiconSize?: number } = {},
+): string | null {
+  const imageSrc = getImageSrc(input, {
+    transformation: options.transformation,
+  })
+  if (imageSrc) return imageSrc
+  if (!fallbackId) return null
+  return getHashiconUrl(fallbackId, options.hashiconSize)
 }
 
 /**
- * Determines the public path for Cloudinary upload based on resource type.
- * @param ctx - The upload context containing resource type, entity, organisation, project, and imageToReplace.
- * @returns An object with folder and public_id (which can be null).
- * @throws Error if ctx are invalid for determining path.
+ * Resolves the admin images facet URL for a feature when the feature id is known.
+ *
+ * @param adminCtx Admin context used to resolve resource URLs.
+ * @param featureId Feature id to target.
+ * @returns The images facet URL or `undefined` when the feature id is unavailable.
  */
-export function getPublicPathCloudinaryImage(ctx: ImageUploadCtx): {
-  folder: string;
-  public_id: string | null;
-} {
-  if (ctx.ctxType === ImageContextResource.organisation && ctx.organisation) {
-    return {
-      folder: `/${ctx.organisation.code}`,
-      public_id: ctx.ctxId
-    };
-  } else if (
-    ctx.ctxType === ImageContextResource.project &&
-    ctx.project &&
-    ctx.organisation
-  ) {
-    return {
-      folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: ctx.ctxId
-    };
-  } else if (
-    ctx.ctxType === ImageContextResource.feature &&
-    ctx.project &&
-    ctx.organisation &&
-    ctx.imageToReplace
-  ) {
-    return {
-      folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: ctx.imageToReplace.publicId.split('/').pop()!
-    };
-  } else if (
-    ctx.ctxType === ImageContextResource.feature &&
-    ctx.project &&
-    ctx.organisation
-  ) {
-    // New feature image, no public_id for replacement
-    return {
-      folder: `/${ctx.organisation.code}/${ctx.project.code}`,
-      public_id: null
-    };
+export function getFeatureImagesFacetHref(
+  adminCtx: AdminCtx,
+  featureId?: Id | null,
+): string | undefined {
+  if (!featureId) return undefined
+
+  return (
+    getUrlForResource(adminCtx, FirstClassResource.feature, featureId, 'images') ??
+    undefined
+  )
+}
+
+/**
+ * Safely resolves a display URL for an image envelope.
+ *
+ * @param image Image envelope to resolve.
+ * @returns The resolved URL or `null` when no image is available or URL generation fails.
+ */
+export function getSafeImageUrl(
+  image: ImageCtxEnvelope | null | undefined,
+): string | null {
+  if (!image) return null
+
+  try {
+    return getURLfromImage({ image })
+  } catch {
+    return null
   }
-  console.error('Invalid ctx for getPublicPath:', ctx);
-  throw new Error('Invalid ctx for getPublicPath');
+}
+
+/**
+ * Builds image-provider options for the admin feature editor.
+ *
+ * @param params Feature image provider inputs.
+ * @returns Normalized image-provider options for the feature editor provider.
+ */
+export function getFeatureImageProviderOptions(params: {
+  featureRef: string
+  isNewFeatureRef: boolean
+  feature: Feature | null | undefined
+  organisation: FeatureImageProviderOrganisation | null
+  project: FeatureImageProviderProject | null
+}): ImageCtxConstructorOptions {
+  const { featureRef, isNewFeatureRef, feature, organisation, project } = params
+  const isValid =
+    !isNewFeatureRef &&
+    feature?.id === featureRef &&
+    Boolean(organisation?.id) &&
+    Boolean(project?.id)
+
+  return {
+    isAdminMode: true,
+    isValid,
+    image: isValid ? ((feature?.image as ImageCtxEnvelope | null) ?? null) : undefined,
+    images: isValid
+      ? ((feature?.images as ImageCtxEnvelope[] | null) ?? null)
+      : undefined,
+    context:
+      isValid && feature && organisation && project
+        ? ({
+            ctxType: ImageContextResource.feature,
+            ctxId: feature.id as Id,
+            organisation: {
+              id: organisation.id,
+              code: organisation.code,
+            },
+            project: {
+              id: project.id,
+              organisationId: project.organisationId,
+              code: project.code,
+            },
+          } as never)
+        : undefined,
+  }
 }
 
 // ═══════════════════════
@@ -594,23 +836,23 @@ export function extendFeatureImage(
   ctx: ImageUploadCtx,
   extended?: {
     featureImage?: {
-      isPublished: boolean;
-      intent: string;
-    };
-  }
+      isPublished: boolean
+      intent: string
+    }
+  },
 ) {
   if (ctx.ctxType === 'feature') {
-    image.featureImage = ctx.imageToReplace
-      ? {
-          featureId: ctx.imageToReplace.featureId,
-          intent: ctx.imageToReplace.intent,
-          isPublished: ctx.imageToReplace.isPublished
-        }
-      : ({
-          featureId: ctx.ctxId,
-          intent: extended?.featureImage?.intent || 'undefined',
-          isPublished: extended?.featureImage?.isPublished
-        } as any); // Cast as any to match NewFeatureImages if necessary
+    image.featureImage = {
+      featureId: ctx.imageToReplace ? ctx.imageToReplace.ctxId : ctx.ctxId,
+      intent: ctx.imageToReplace
+        ? (ctx.imageToReplace.intent ?? extended?.featureImage?.intent ?? 'undefined')
+        : (extended?.featureImage?.intent ?? 'undefined'),
+      isPublished: ctx.imageToReplace
+        ? (ctx.imageToReplace.isPublished ??
+          extended?.featureImage?.isPublished ??
+          false)
+        : (extended?.featureImage?.isPublished ?? false),
+    }
   }
 }
 
@@ -624,8 +866,8 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
   if (
     Object.values(ImageContextResource).includes(ctx.ctxType as ImageContextResource)
   ) {
-    image.ctxType = ctx.ctxType as ImageContextResource;
-    image.ctxId = ctx.ctxId;
+    image.ctxType = ctx.ctxType as ImageContextResource
+    image.ctxId = ctx.ctxId
   }
 }
 
@@ -633,127 +875,35 @@ export function extendImageWithResource(image: Partial<ImageNew>, ctx: ImageUplo
 // 6. METADATA
 // ═══════════════════════
 
-/**
- * Converts GPS metadata to latitude and longitude.
- * @param metadata - The image metadata object.
- * @returns An object containing latitude and longitude strings, or undefined if parsing fails.
- */
-export function getCoordinatesFromMetadata(metadata: Metadata): LngLat {
-  try {
-    const coordinates = new Coordinates(
-      `${metadata.GPSLatitude.replace(' deg', '°')} ${metadata.GPSLongitude.replace(' deg', '°')}`
-    );
-    return {
-      latitude: coordinates.getLatitude().toString(),
-      longitude: coordinates.getLongitude().toString()
-    };
-  } catch (error) {
-    console.warn('Failed to parse coordinates with coordinate-parser');
-    // Fallback or simplified parsing if direct fields are available
-    if (metadata.GPSLatitude && metadata.GPSLongitude) {
-      return {
-        latitude: String(metadata.GPSLatitude),
-        longitude: String(metadata.GPSLongitude)
-      };
-    }
-    return { latitude: undefined, longitude: undefined };
-  }
-}
-
-/**
- * Extracts and parses the capture date from metadata.
- * @param metadata - The image metadata object.
- * @returns An ISO string of the capture date, or the current date as a fallback.
- */
-export function getCapturedAtFromMetadata(metadata: Metadata): string {
-  const parseExifDate = (dateStr: string): string => {
-    const normalized = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
-    return new Date(normalized).toISOString();
-  };
-
-  const possibleFields = ['DateTimeOriginal', 'CreateDate', 'ModifyDate'];
-  for (const field of possibleFields) {
-    if (metadata[field]) {
-      try {
-        return parseExifDate(metadata[field]);
-      } catch (e) {
-        console.warn(`Failed to parse ${field}:`, metadata[field]);
-        continue;
-      }
-    }
-  }
-
-  if (metadata.DateCreated && metadata.TimeCreated) {
-    try {
-      return parseExifDate(`${metadata.DateCreated} ${metadata.TimeCreated}`);
-    } catch (e) {
-      console.warn(
-        'Failed to parse DateCreated/TimeCreated:',
-        metadata.DateCreated,
-        metadata.TimeCreated
-      );
-    }
-  }
-
-  return new Date().toISOString();
-}
-
-/**
- * Extracts and formats the camera model from metadata.
- * @param metadata - The image metadata object.
- * @returns The camera model string, or undefined.
- */
-export function getCameraFromMetadata(metadata: Metadata): string | undefined {
-  const make = capitalizeFirstLetter(metadata.Make) ?? '';
-  const model = capitalizeFirstLetter(metadata.Model) ?? '';
-  const hasCamera = model.includes(make);
-  return hasCamera ? model.trim() : `${make} ${model}`.trim() || undefined;
-}
-
-/**
- * Extracts credit/copyright information from metadata.
- * @param metadata - The image metadata object.
- * @returns The credit string, or undefined.
- */
-export function getCreditFromMetadata(metadata: Metadata): string | undefined {
-  const possibleFields = ['CopyrightNotice', 'Credit', 'By-line'];
-  for (const field of possibleFields) {
-    if (metadata[field]) {
-      return metadata[field];
-    }
-  }
-  return undefined;
-}
-
 // ═══════════════════════
 // 7. UTILS
 // ═══════════════════════
 
 export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = false) {
-  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder;
+  const intentOrderToUse = isAdmin ? adminIntentOrder : intentOrder
   const sortedImages = images.sort((a, b) => {
     if (isAdmin) {
       // Priority 1: Unpublished with no intent (undefined) come first
       const aIsUnpublishedNoIntent =
-        !a.isPublished && (!a.intent || a.intent === 'undefined');
+        !a.isPublished && (!a.intent || a.intent === 'undefined')
       const bIsUnpublishedNoIntent =
-        !b.isPublished && (!b.intent || b.intent === 'undefined');
+        !b.isPublished && (!b.intent || b.intent === 'undefined')
 
-      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
-      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
+      if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
+      if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
 
       // Priority 2: Published vs unpublished (published first among remaining)
       if (a.isPublished !== b.isPublished) {
-        return a.isPublished ? -1 : 1;
+        return a.isPublished ? -1 : 1
       }
     }
     // Priority 3: Intent order within same publish status
     if (a.intent && b.intent) {
       const intentCompare =
         intentOrderToUse.indexOf(a.intent as Intent) -
-        intentOrderToUse.indexOf(b.intent as Intent);
+        intentOrderToUse.indexOf(b.intent as Intent)
       if (intentCompare !== 0) {
-        return intentCompare;
+        return intentCompare
       }
     }
 
@@ -761,56 +911,185 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
     return (
       new Date(b.createdAt as string).getTime() -
       new Date(a.createdAt as string).getTime()
-    );
-  });
+    )
+  })
 
-  return sortedImages;
-}
-
-/**
- * Adds context information as query parameters to a URL.
- * @param baseUrl The base URL string.
- * @param ctx The image edit context.
- * @returns The URL string with context query parameters.
- */
-function addCtxToUrl(baseUrl: string, ctx: ImageEditCtx): string {
-  const url = new URL(baseUrl, window.location.origin);
-  if (ctx.ctxId && ctx.ctxType) {
-    if (
-      ctx.ctxType === ImageContextResource.organisation ||
-      ctx.ctxType === ImageContextResource.project ||
-      ctx.ctxType === ImageContextResource.feature
-    ) {
-      // ctx.ctxType is definitely ImageContextResource here
-      switch (ctx.ctxType) {
-        case ImageContextResource.organisation:
-          url.searchParams.append('organisationId', ctx.ctxId);
-          break;
-        case ImageContextResource.project:
-          url.searchParams.append('projectId', ctx.ctxId);
-          break;
-        case ImageContextResource.feature:
-          url.searchParams.append('featureId', ctx.ctxId);
-          break;
-      }
-    } else if (ctx.ctxType === ImageContextResourceExtended.task) {
-      url.searchParams.append('taskId', ctx.ctxId);
-    } else {
-      // Handle cases where ctx.ctxType might be a string not matching any enum value
-      // Or if there are other values in ImageContextResourceExtended not handled above
-      console.warn(`Unsupported context type for URL: ${ctx.ctxType}`);
-    }
-  }
-  return url.pathname + url.search;
+  return sortedImages
 }
 
 // Generate hashicon URL for fallback
-export function getHashiconUrl(id: string) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
-  hashicon(id, { size: 64, createCanvas: () => canvas });
-  return canvas.toDataURL();
+export function getHashiconUrl(id: string, size: number = 256): string {
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  hashicon(id, { size, createCanvas: () => canvas })
+  return canvas.toDataURL()
+}
+
+function hashString(value: string): number {
+  let hash = 2166136261
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+
+  return hash >>> 0
+}
+
+export function getFeatureIdenticonUrl(seed: string): string {
+  const hash = hashString(seed)
+  const palette = ['#1f6b5f', '#2e6fbb', '#b86b2b', '#7f4fa5', '#c44d5d']
+  const backgroundPalette = ['#f4efe6', '#ecf4f2', '#eef3f8', '#f5eef8', '#f8eeef']
+  const foreground = palette[hash % palette.length]
+  const background = backgroundPalette[(hash >>> 3) % backgroundPalette.length]
+  const gridSize = 5
+  const cellSize = 10
+  const offset = 7
+  const cells: string[] = []
+
+  for (let row = 0; row < gridSize; row += 1) {
+    for (let column = 0; column < Math.ceil(gridSize / 2); column += 1) {
+      const bitIndex = row * Math.ceil(gridSize / 2) + column
+      const isFilled = ((hash >>> (bitIndex % 24)) & 1) === 1
+      if (!isFilled) continue
+
+      const mirroredColumn = gridSize - 1 - column
+      const x = offset + column * cellSize
+      const y = offset + row * cellSize
+      cells.push(
+        `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="3" fill="${foreground}"/>`,
+      )
+
+      if (mirroredColumn !== column) {
+        cells.push(
+          `<rect x="${offset + mirroredColumn * cellSize}" y="${y}" width="${cellSize}" height="${cellSize}" rx="3" fill="${foreground}"/>`,
+        )
+      }
+    }
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="12" fill="${background}"/><rect x="4" y="4" width="56" height="56" rx="10" fill="rgba(255,255,255,0.38)"/>${cells.join('')}</svg>`
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
+
+/**
+ * Updates an image presentation mode with optional context inference from `imageCtx`.
+ *
+ * @param options.currentImage Explicit image target. Falls back to `imageCtx.activeImage`.
+ * @param options.nextChecked Switch-like checked value. Used only when `nextMode` is not provided.
+ * @param options.nextMode Explicit target mode (`cover` or `contain`).
+ * @param options.ctx Explicit image edit context. Falls back to `imageCtx.getCtx()`.
+ * @param options.imageCtx Image context used to infer `currentImage` and `ctx` when omitted.
+ * @param options.onSuccess Callback invoked after a successful update.
+ * @param options.onFailure Callback invoked when the update request fails.
+ * @returns `true` when a backend update ran successfully, otherwise `false`.
+ * @remarks If required inputs are missing, or the target mode matches current mode, the function no-ops and returns `false`.
+ */
+export async function updateImagePresentationMode(options: {
+  currentImage?: Pick<Image, 'id' | 'presentationMode'> | ImageDBBasic | null
+  nextChecked?: boolean | null
+  nextMode?: 'cover' | 'contain'
+  ctx?: ImageEditCtx
+  imageCtx?: ImageCtx | null
+  onSuccess?: (nextMode: 'cover' | 'contain') => void
+  onFailure?: (error: unknown) => void
+}): Promise<boolean> {
+  const currentImageFromCtx = options.imageCtx?.activeImage?.image ?? null
+  const currentImage = options.currentImage ?? currentImageFromCtx ?? null
+  if (!currentImage?.id) return false
+
+  const nextMode =
+    options.nextMode ??
+    (options.nextChecked === null || options.nextChecked === undefined
+      ? undefined
+      : options.nextChecked
+        ? 'cover'
+        : 'contain')
+
+  const currentMode = currentImage.presentationMode ?? 'contain'
+  if (!nextMode) return false
+  if (nextMode === currentMode) return false
+
+  let ctx = options.ctx
+  if (!ctx && options.imageCtx) {
+    try {
+      ctx = options.imageCtx.getCtx()
+    } catch {
+      ctx = undefined
+    }
+  }
+  if (!ctx?.ctxType || !ctx?.ctxId) return false
+
+  try {
+    const { updateImage: updateImageRemote } = await loadImageRemotes()
+    await updateImageRemote({
+      id: currentImage.id,
+      ctxType: ctx.ctxType,
+      ctxId: ctx.ctxId,
+      data: { presentationMode: nextMode },
+      meta: { isAdminRequest: true },
+    })
+    options.onSuccess?.(nextMode)
+    return true
+  } catch (error) {
+    options.onFailure?.(error)
+    return false
+  }
+}
+
+/**
+ * Mutates an organisation response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
+export function setEntityImagePresentationMode<
+  TState extends {
+    data?: {
+      image?: {
+        image?: {
+          presentationMode?: 'cover' | 'contain'
+        } | null
+      } | null
+    } | null
+  } | null,
+>(state: TState, mode: 'cover' | 'contain'): boolean {
+  if (!state?.data?.image?.image) return false
+  state.data.image.image.presentationMode = mode
+  return true
+}
+
+/**
+ * Mutates an organisation response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
+export function setOrganisationImagePresentationMode(
+  state: OrganisationGetState,
+  mode: 'cover' | 'contain',
+): boolean {
+  return setEntityImagePresentationMode(state, mode)
+}
+
+/**
+ * Mutates a project response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
+export function setProjectImagePresentationMode(
+  state: ProjectGetState,
+  mode: 'cover' | 'contain',
+): boolean {
+  return setEntityImagePresentationMode(state, mode)
+}
+
+/**
+ * Mutates a hub response state in place to update image presentation mode.
+ * Returns `true` when an image exists and was updated.
+ */
+export function setHubImagePresentationMode(
+  state: HubGetState,
+  mode: 'cover' | 'contain',
+): boolean {
+  return setEntityImagePresentationMode(state, mode)
 }
 
 /**
@@ -819,29 +1098,31 @@ export function getHashiconUrl(id: string) {
 export async function checkCameraAvailability() {
   try {
     // Check if MediaDevices API is available
-    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-      return false;
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      return false
     }
 
     // Check for video input devices
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const hasVideoInput = devices.some((device) => device.kind === 'videoinput');
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const hasVideoInput = devices.some(device => device.kind === 'videoinput')
 
     if (!hasVideoInput) {
-      return false;
+      return false
     }
 
     // Test camera access (will prompt user for permission if needed)
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
+      video: { facingMode: 'environment' },
+    })
 
     // If we get here, camera access is available
-    stream.getTracks().forEach((track) => track.stop()); // Clean up
-    return true;
-  } catch (error) {
+    stream.getTracks().forEach(track => {
+      track.stop()
+    }) // Clean up
+    return true
+  } catch {
     // Camera access denied or not available
-    return false;
+    return false
   }
 }
 
@@ -851,5 +1132,5 @@ export const intentDisplay: Record<Intent, string> = {
   context: m.intent__context(),
   general: m.intent__general(),
   research: m.intent__research(),
-  undefined: m.intent__undefined()
-};
+  undefined: m.intent__undefined(),
+}

@@ -50,6 +50,146 @@
       "when": 1751549859742,
       "tag": "0006_extend user",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1770636842501,
+      "tag": "0007_capabilities",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1770637642365,
+      "tag": "0008_init_hub_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1770645487173,
+      "tag": "0009_add_local_is_published_is_archived",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1771595172492,
+      "tag": "0010_add_image_resize_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1771654921191,
+      "tag": "0011_hub_with_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1771896079116,
+      "tag": "0012_capabilities_scope_overrides",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1772600000000,
+      "tag": "0013_normalize_camel_locale_values",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1772864910451,
+      "tag": "0014_drop_user_display_username",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1772864950000,
+      "tag": "0015_global_properties",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1772864980000,
+      "tag": "0016_property_project_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1772865000288,
+      "tag": "0017_seed_core_global_properties",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1772866164422,
+      "tag": "0018_mtr_exit_global_property",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1772873056203,
+      "tag": "0019_property_value_direct_values",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1772875200000,
+      "tag": "0020_property_organisation_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1772893055633,
+      "tag": "0021_hkfoodworks_capabilities",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1772893596255,
+      "tag": "0022_breadline_project_capabilities",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1772928235324,
+      "tag": "0023_breadline_hub_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1772932140000,
+      "tag": "0024_merge_project_grade_into_global_grade",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1772934000000,
+      "tag": "0025_property_scope_hub_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1772935200000,
+      "tag": "0026_backfill_hub_property_default_enabled",
+      "breakpoints": true
     }
   ]
 }

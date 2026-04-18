@@ -1,0 +1,15 @@
+@layer components {
+  .bits-theme .bits-form__debug-output {
+    margin-top: calc(var(--spacing) * 4);
+    max-height: 24rem;
+    overflow: auto;
+    border-radius: var(--radius-box);
+    background: oklch(21% 0.034 264.665);
+    padding: calc(var(--spacing) * 4);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: oklch(79.2% 0.209 151.711);
+  }
+}

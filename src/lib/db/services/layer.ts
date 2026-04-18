@@ -1,213 +1,143 @@
 // DRIZZLE
-import { and, eq, SQL, inArray } from 'drizzle-orm';
-// FORMS
-import { superValidate } from 'sveltekit-superforms';
-import { zod } from 'sveltekit-superforms/adapters';
-import type { SuperValidated } from 'sveltekit-superforms';
+import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
+  feature,
   layer,
   layerI18n,
   layerProperty,
-  property as propertySchema,
-  project
-} from '../schema';
-// API
-import { layerMergeWithRelations } from '$lib/api/services/layer';
+  organisation,
+  project,
+} from '../schema'
 // SERVICES
-import { getLayerHubFilter } from './hub';
+import { getLayerHubFilter } from './hub'
 // DB
-import { toRelatedRecords, transformI18nSafely } from '..';
-import { insert, update, insertManyRelated, replaceManyRelated } from '../crud';
+import {
+  firstOrNull,
+  resolveRequiredProbe,
+  transformI18nSafely,
+  toOrderByWithLocalizedFields,
+  toRelatedRecords,
+} from '..'
+import { insert, insertManyRelated, replaceManyRelated } from '../crud'
+import { retryBusyRead } from './sqlite'
 // TYPES
-import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core';
+import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 import type {
-  Layer,
-  LayerNew,
+  Database,
+  Id,
+  LocaleKey,
+  Locale,
+  LayerMetadata,
+  ListResponse,
+  QueryParams,
+} from '$lib/types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { Property } from '$lib/db/zod/schema/property.types'
+import type {
+  LayerCommandProbe,
+  LayerDB,
+  LayerDBNew,
   LayerDBRaw,
   LayerI18nDB,
-  Locale,
-  Database,
-  LayerDBNew,
-  LayerDBPartial,
-  LayerI18nPartial,
   LayerI18nNew,
-  ProjectDBRaw,
-  LayerPartial,
+  LayerI18nPartial,
   LayerPropertyDBRaw,
-  Property,
   LayerPropertyNew,
-  Id,
-  HubOptsExtended
-} from '$lib/types';
-// ZOD
-import { LayerAPI } from '../zod';
+} from '$lib/db/zod/schema/layer.types'
+import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
 //
-// 1. CRUD :: CORE OPERATIONS
+// 1.1 CRUD :: CREATE
+//    - createLayer
+//    - createI18n
+//    - createProperties
+//
+// 2.1 CRUD :: READ
 //    - listLayers
 //    - getLayer
-//    - createLayer
-//    - updateLayer
+//    - listAssignableTaskLayers
 //
-// 2.1. CRUD :: RELATIONAL OPERATIONS (LayerI18n)
-//    - createI18n
-//    - updateI18n
+// 2.2 CRUD :: READ (PROBES)
+//    - probeLayerQuery
+//    - probeLayerForUpdate
+//    - probeLayerForCommand
+//    - resolveLayerCommandProbe
 //
-// 2.2. CRUD :: RELATIONAL OPERATIONS (LayerProperty)
-//    - createLayerProperties
-//    - updateLayerProperties
-//    - upsertLayerProperties
-//    - syncLayerProperties
-//
-// 3. CRUD :: ORCHESTRATION
-//    - createLayerWithRelated
-//    - updateLayerWithRelated
-//
-// 4. UTILS :: SHAPING
-//    - toFormShape
-//    - toResponseShape
-//
-// 5. UTILS :: LOOKUPS
+// 2.3 CRUD :: READ (LOOKUPS)
 //    - getLayerMap
+//    - hasProjectLayersCondition
+//    - hasOrganisationLayersCondition
 //
+// 3.1 CRUD :: UPDATE (CONCURRENCY/STATE)
+//    - updateLayerByIdWithConcurrency
+//    - updateLayerPublishedStateById
+//    - cascadeLayerPublishedStateToDescendants
+//    - updateLayerArchivedStateById
+//    - updateI18n
+//    - updateProperties
+//
+// 3.2 CRUD :: UPDATE (SYNC)
+//    - upsertLayerProperties (internal)
+//    - syncProperties
+//
+// 4. CRUD :: DELETE
+//    - No hard delete helpers in this module (intentional)
 
 // ═══════════════════════
-// 1. CRUD :: CORE OPERATIONS
+// 1.1 CRUD :: CREATE
 // ═══════════════════════
 
 /**
- * List layers with filtering and access control
+ * Inserts a new layer row with persisted defaults.
+ * Used as the base write primitive for layer creation.
  */
-export const listLayers = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended
-): Promise<LayerDBRaw[]> => {
-  // Apply hub filtering if opts is provided
-  const hubFilter = getLayerHubFilter(db, opts);
-  if (hubFilter) {
-    conditions.push(hubFilter);
-  }
-
-  return await db.query.layer.findMany({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-};
-
-export const getLayer = async (
-  db: Database,
-  withRelations: Record<string, boolean | object> = {},
-  conditions: SQL<unknown>[] = [],
-  opts: HubOptsExtended
-): Promise<LayerDBRaw | undefined> => {
-  // Apply hub filtering if opts is provided
-  const hubFilter = getLayerHubFilter(db, opts);
-  if (hubFilter) {
-    conditions.push(hubFilter);
-  }
-
-  const result = await db.query.layer.findFirst({
-    with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined
-  });
-  return result;
-};
+export const createLayer = async (db: Database, data: LayerDBNew): Promise<LayerDB> =>
+  await insert(db, layer, {
+    ...data,
+    isPublished: data.isPublished ?? false,
+  })
 
 /**
- * Creates a new layer in the database
- * @param db - The database instance
- * @param data - The layer data to insert
- * @returns The newly created layer
- * @throws {Error} If the layer creation fails
- */
-export const createLayer = async (db: Database, data: LayerDBNew) =>
-  await insert(db, layer, data);
-
-/**
- * Updates an existing layer in the database
- * @param db - The database instance
- * @param data - The updated layer data
- * @param ref - The layer id
- * @returns The updated layer
- * @throws {Error} If the layer update fails or layer is not found
- */
-export const updateLayer = async (db: Database, data: LayerDBPartial, ref: string) =>
-  await update(db, layer, data, layer.id, ref);
-
-// ═══════════════════════
-// 2.1. CRUD :: RELATIONAL OPERATIONS (LayerI18n)
-// ═══════════════════════
-
-/**
- * Creates relational i18n records for a layer
- * @param db - The database instance
- * @param i18n - Record of translations for each target locale
- * @param layerId - The ID of the layer
- * @returns The created translations
+ * Creates layer i18n rows from locale-keyed payload.
+ * Used by create orchestration after base layer insert.
  */
 export const createI18n = async (
   db: Database,
-  i18n: Record<Locale, LayerI18nNew>,
-  layerId: string
-) => {
+  i18n: Record<LocaleKey, LayerI18nNew>,
+  layerId: string,
+): Promise<LayerI18nDB[]> => {
   return await insertManyRelated(
     db,
     layerI18n,
-    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as any,
+    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as never,
     'layerId',
-    layerId
-  );
-};
+    layerId,
+  )
+}
 
 /**
- * Updates translations for a layer by deleting existing ones and creating new ones
- * @param db - The database instance
- * @param i18n - Record of translations for each target locale
- * @param layerId - The ID of the layer
- * @returns The updated translations
+ * Creates layer-property link rows and returns hydrated link records.
+ * Used when establishing property visibility/contributable configuration for a layer.
  */
-export const updateI18n = async (
-  db: Database,
-  i18n: Record<Locale, LayerI18nPartial>,
-  layerId: string
-) => {
-  return await replaceManyRelated(
-    db,
-    layerI18n,
-    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as any,
-    layerI18n.layerId,
-    layerId
-  );
-};
-
-// ═══════════════════════
-// 2.2. CRUD :: RELATIONAL OPERATIONS (LayerProperty)
-// ═══════════════════════
-
-/**
- * Create layer property associations
- */
-export const createLayerProperties = async (
+export const createProperties = async (
   db: Database,
   layerId: string,
-  properties: LayerPropertyNew[]
-) => {
-  if (properties && properties.length > 0) {
+  properties: LayerPropertyNew[],
+): Promise<LayerPropertyDBRaw[]> => {
+  if (properties.length > 0) {
     await db.insert(layerProperty).values(
-      properties.map((prop) => ({
+      properties.map(prop => ({
         layerId,
-        ...prop
-      }))
-    );
+        ...prop,
+      })),
+    )
   }
 
-  return await db.query.layerProperty.findMany({
+  const rows = await db.query.layerProperty.findMany({
     where: eq(layerProperty.layerId, layerId),
     with: {
       property: {
@@ -215,314 +145,705 @@ export const createLayerProperties = async (
           i18n: true,
           values: {
             with: {
-              i18n: true
-            }
-          }
+              i18n: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  return rows as LayerPropertyDBRaw[]
+}
+
+// ═══════════════════════
+// 2.1 CRUD :: READ
+// ═══════════════════════
+
+/**
+ * Lists layers with optional role/hub filters, search, sorting, and pagination.
+ * Used by admin/public list endpoints to return hydrated list envelopes plus metadata.
+ */
+export const listLayers = async (
+  db: Database,
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = [],
+  opts: HubOptsExtended,
+  pagination?: { limit?: number; offset?: number },
+  sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  query?: {
+    q?: string
+    searchColumns?: string[]
+    ignoreHubFilter?: boolean
+    filtersToApply?: QueryParams
+    locale?: Locale
+  },
+): Promise<ListResponse<LayerDBRaw>> => {
+  const startedAt = Date.now()
+
+  if (!query?.ignoreHubFilter) {
+    const hubFilter = getLayerHubFilter(db, opts)
+    if (hubFilter) {
+      conditions.push(hubFilter)
+    }
+  }
+
+  if (query?.q) {
+    const search = query.q.toLowerCase()
+    const searchColumns = query.searchColumns || ['name', 'description']
+    const searchConditions: SQL<unknown>[] = []
+
+    const i18nColumns = searchColumns.filter(column =>
+      ['name', 'description'].includes(column),
+    )
+    if (i18nColumns.length > 0) {
+      const i18nSearchConditions: SQL<unknown>[] = []
+      for (const column of i18nColumns) {
+        if (column === 'name') {
+          i18nSearchConditions.push(
+            sql`lower("layerI18n"."name") like ${`%${search}%`}`,
+          )
+        } else if (column === 'description') {
+          i18nSearchConditions.push(
+            sql`("layerI18n"."description" IS NOT NULL AND lower("layerI18n"."description") like ${`%${search}%`})`,
+          )
+        }
+      }
+
+      if (i18nSearchConditions.length > 0) {
+        const combinedConditions =
+          i18nSearchConditions.length === 1
+            ? i18nSearchConditions[0]
+            : sql`(${sql.join(i18nSearchConditions, sql` OR `)})`
+        searchConditions.push(
+          sql`EXISTS (
+            SELECT 1 FROM "layerI18n"
+            WHERE "layerI18n"."layerId" = ${layer.id}
+            AND ${combinedConditions}
+          )`,
+        )
+      }
+    }
+
+    if (searchConditions.length > 0) {
+      if (searchConditions.length === 1) {
+        conditions.push(searchConditions[0])
+      } else {
+        const combinedSearchCondition = or(...searchConditions)
+        if (combinedSearchCondition) {
+          conditions.push(combinedSearchCondition)
         }
       }
     }
-  });
-};
+  }
+
+  const sortBy = sorting?.sortBy || 'modifiedAt'
+  const sortOrder = sorting?.sortOrder || 'desc'
+  const orderBy = toOrderByWithLocalizedFields({
+    db,
+    locale: query?.locale,
+    sortBy,
+    sortOrder,
+    fallbackColumn: layer.modifiedAt,
+    baseTable: layer,
+    localizedSortColumns: {
+      name: layerI18n.name,
+      nameShort: layerI18n.nameShort,
+      description: layerI18n.description,
+    },
+    i18nTable: layerI18n,
+    parentIdColumn: layer.id,
+    foreignKeyColumn: layerI18n.layerId,
+    localeColumn: layerI18n.locale,
+  })
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+  const data = await retryBusyRead(() =>
+    db.query.layer.findMany({
+      with: withRelations,
+      where: whereClause,
+      limit: pagination?.limit,
+      offset: pagination?.offset,
+      orderBy,
+    }),
+  )
+
+  const countQuery = db.select({ count: sql<number>`count(*)` }).from(layer)
+  const totalRows = await retryBusyRead(() =>
+    whereClause ? countQuery.where(whereClause) : countQuery,
+  )
+  const totalCount = Number(totalRows[0]?.count || 0)
+  const offset = pagination?.offset ?? 0
+  const hasMore = offset + data.length < totalCount
+  const nextOffset = hasMore ? offset + data.length : null
+  const durationMs = Date.now() - startedAt
+
+  return {
+    data: data as LayerDBRaw[],
+    limit: pagination?.limit,
+    offset,
+    totalCount,
+    hasMore,
+    nextOffset,
+    sortBy,
+    sortOrder,
+    appliedFilters: query?.filtersToApply,
+    q: query?.q,
+    durationMs,
+  }
+}
 
 /**
- * Update layer property associations (replace all)
+ * Loads a single layer with optional relation graph and hub scoping.
+ * Used by read/update flows that need one hydrated layer record.
  */
-export const updateLayerProperties = async (
+export const getLayer = async (
   db: Database,
-  layerId: string,
-  properties: LayerPropertyNew[]
-) => {
-  // First delete existing properties
-  await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId));
-  // Then insert new ones
-  return await createLayerProperties(db, layerId, properties);
-};
+  withRelations: Record<string, boolean | object> = {},
+  conditions: SQL<unknown>[] = [],
+  opts: HubOptsExtended,
+): Promise<LayerDBRaw | undefined> => {
+  const hubFilter = getLayerHubFilter(db, opts)
+  if (hubFilter) {
+    conditions.push(hubFilter)
+  }
+
+  const result = await db.query.layer.findFirst({
+    with: withRelations,
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  })
+  return result as LayerDBRaw | undefined
+}
 
 /**
- * Upserts (inserts or updates) property links for a single layer.
- * - Deletes links not in the provided `propertyLinks`.
- * - Inserts new links from `propertyLinks` if they don't exist for the layer.
- * - Updates the `isVisible` flag for existing links if it differs.
- *
- * @param db The Drizzle database instance.
- * @param layerId The ID of the layer whose properties are to be upserted.
- * @param propertyLinks An array of objects, each specifying a `propertyId` and an optional `isVisible` flag.
- *                      If `isVisible` is not provided for a new link, it defaults to `true`.
- *                      If `isVisible` is not provided for an existing link, its visibility remains unchanged unless
- *                      the link itself is being newly created or explicitly updated.
+ * Lists active layers within a project for task reassignment controls.
+ * Used by the task editor to populate same-project layer options.
  */
-export const upsertLayerProperties = async (
+export const listAssignableTaskLayers = async (
   db: Database,
-  layerId: string,
-  propertyLinks: Array<{ propertyId: string; isVisible?: boolean }>
+  projectId: Id,
+): Promise<TaskEditorLayerOption[]> => {
+  const rows = await db.query.layer.findMany({
+    columns: {
+      id: true,
+    },
+    where: and(eq(layer.projectId, projectId), eq(layer.isArchived, false)),
+    with: {
+      i18n: true,
+    },
+  })
+
+  return rows.map(row => ({
+    id: row.id as Id,
+    code: null,
+    projectId,
+    i18n: transformI18nSafely(row.i18n) ?? {},
+  }))
+}
+
+// ═══════════════════════
+// 2.2 CRUD :: READ (PROBES)
+// ═══════════════════════
+
+/**
+ * Probes minimal layer fields required for read authorization decisions.
+ * Used to run authz before paying full entity hydration cost.
+ */
+export const probeLayerQuery = async (
+  db: Database,
+  params: { ref: string; refKey?: 'id' },
+): Promise<{
+  id: string
+  organisationId: string
+  projectId: string
+  hubId: string | null
+  isPublished: boolean
+  isArchived: boolean
+} | null> => {
+  return firstOrNull(
+    await db
+      .select({
+        id: layer.id,
+        organisationId: layer.organisationId,
+        projectId: layer.projectId,
+        hubId: organisation.hubId,
+        isPublished: layer.isPublished,
+        isArchived: layer.isArchived,
+      })
+      .from(layer)
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(layer.id, params.ref))
+      .limit(1),
+  )
+}
+
+/**
+ * Probes mutable-layer state for optimistic concurrency and update auth checks.
+ * Used by update commands before applying persistence writes.
+ */
+export const probeLayerForUpdate = async (
+  db: Database,
+  layerId: Id,
+): Promise<{
+  id: string
+  organisationId: string
+  projectId: string
+  metadata: LayerMetadata | null
+  hubId: string | null
+  modifiedAt: string
+} | null> => {
+  return firstOrNull(
+    await db
+      .select({
+        id: layer.id,
+        organisationId: layer.organisationId,
+        projectId: layer.projectId,
+        metadata: layer.metadata,
+        hubId: organisation.hubId,
+        modifiedAt: layer.modifiedAt,
+      })
+      .from(layer)
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(layer.id, layerId))
+      .limit(1),
+  )
+}
+
+/**
+ * Probes minimal layer command context for publish/archive/delete style actions.
+ * Used by command handlers that require hub/org/project scope ids.
+ */
+const probeLayerForCommand = async (
+  db: Database,
+  layerId: Id,
+): Promise<LayerCommandProbe | null> => {
+  return firstOrNull(
+    await db
+      .select({
+        id: layer.id,
+        organisationId: layer.organisationId,
+        projectId: layer.projectId,
+        hubId: organisation.hubId,
+      })
+      .from(layer)
+      .innerJoin(project, eq(layer.projectId, project.id))
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(eq(layer.id, layerId))
+      .limit(1),
+  )
+}
+
+/**
+ * Resolves a required layer command probe or delegates to not-found handler.
+ * Used to keep command codepaths consistent with explicit not-found behavior.
+ */
+export const resolveLayerCommandProbe = async (
+  db: Database,
+  layerId: Id,
+  onNotFound: () => never,
+): Promise<LayerCommandProbe> => {
+  const probed = await probeLayerForCommand(db, layerId)
+  return resolveRequiredProbe(probed, onNotFound)
+}
+
+// ═══════════════════════
+// 2.3 CRUD :: READ (LOOKUPS)
+// ═══════════════════════
+
+/**
+ * Loads multiple layers and returns them keyed by id.
+ * Used by batch/hydration flows that need O(1) id lookups.
+ */
+export const getLayerMap = async (
+  db: Database,
+  layerIds: Id[],
+  opts: HubOptsExtended,
+): Promise<Map<Id, LayerDBRaw>> => {
+  const layersMap = new Map<Id, LayerDBRaw>()
+
+  for (const layerId of layerIds) {
+    const conditions = [eq(layer.id, layerId)]
+    const layerData = await getLayer(db, {}, conditions, opts)
+    if (layerData) {
+      layersMap.set(layerId, layerData)
+    }
+  }
+
+  return layersMap
+}
+
+/**
+ * Builds a predicate that matches projects with at least one qualifying layer.
+ */
+export const hasProjectLayersCondition = (options?: {
+  requirePublished?: boolean
+  requireNonArchived?: boolean
+}): SQL<unknown> => sql`EXISTS (
+  SELECT 1 FROM "layer"
+  WHERE "layer"."projectId" = ${project.id}
+  ${options?.requirePublished ? sql`AND "layer"."isPublished" = 1` : sql``}
+  ${options?.requireNonArchived ? sql`AND "layer"."isArchived" = 0` : sql``}
+)`
+
+/**
+ * Builds a predicate that matches organisations with at least one qualifying layer.
+ */
+export const hasOrganisationLayersCondition = (options?: {
+  requirePublished?: boolean
+  requireNonArchived?: boolean
+}): SQL<unknown> => sql`EXISTS (
+  SELECT 1 FROM "layer"
+  WHERE "layer"."organisationId" = ${organisation.id}
+  ${options?.requirePublished ? sql`AND "layer"."isPublished" = 1` : sql``}
+  ${options?.requireNonArchived ? sql`AND "layer"."isArchived" = 0` : sql``}
+)`
+
+// ═══════════════════════
+// 3.1 CRUD :: UPDATE (CONCURRENCY/STATE)
+// ═══════════════════════
+
+/**
+ * Syncs persisted rank/default-visible presentation fields for one project's layers.
+ */
+export const syncProjectLayerPresentation = async (
+  db: Database,
+  projectId: Id,
+  rows: Array<{ id: Id; rank: number; isDefaultVisible: boolean }>,
 ): Promise<void> => {
-  // 1. Fetch current layerProperty entries for this layer
+  if (rows.length === 0) return
+
+  const existingRows = await db.query.layer.findMany({
+    where: and(
+      eq(layer.projectId, projectId),
+      inArray(
+        layer.id,
+        rows.map(row => row.id),
+      ),
+    ),
+    columns: {
+      id: true,
+    },
+  })
+  const existingIds = new Set(existingRows.map(row => row.id))
+
+  await Promise.all(
+    rows
+      .filter(row => existingIds.has(row.id))
+      .map(row =>
+        db
+          .update(layer)
+          .set({
+            rank: row.rank,
+            isDefaultVisible: row.isDefaultVisible,
+          })
+          .where(and(eq(layer.projectId, projectId), eq(layer.id, row.id))),
+      ),
+  )
+}
+
+/**
+ * Updates a layer with modified-at match for optimistic concurrency control.
+ * Used to prevent stale writes in remote form submissions.
+ */
+export const updateLayerByIdWithConcurrency = async (
+  db: Database,
+  params: {
+    id: Id
+    updatedAt: string
+    data: {
+      organisationId: string
+      projectId: string
+      metadata?: LayerMetadata
+      isDefaultVisible?: boolean
+    }
+  },
+): Promise<{ id: string; modifiedAt: string } | null> => {
+  const [updated] = await db
+    .update(layer)
+    .set(params.data)
+    .where(and(eq(layer.id, params.id), eq(layer.modifiedAt, params.updatedAt)))
+    .returning({
+      id: layer.id,
+      modifiedAt: layer.modifiedAt,
+    })
+
+  return updated ?? null
+}
+
+/**
+ * Toggles published state and publication metadata for a layer.
+ * Used by publish/unpublish command handlers.
+ */
+export const updateLayerPublishedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean; publisherId: string | null },
+): Promise<{ id: string; isPublished: boolean } | null> => {
+  const [updated] = await db
+    .update(layer)
+    .set({
+      isPublished: params.state,
+      publishedAt: params.state ? new Date().toISOString() : null,
+      publisherId: params.state ? params.publisherId : null,
+    })
+    .where(eq(layer.id, params.id))
+    .returning({
+      id: layer.id,
+      isPublished: layer.isPublished,
+    })
+
+  return updated ?? null
+}
+
+/**
+ * Cascades a layer publish-state change into descendant features.
+ * Existing local publish snapshots are preserved while an ancestor remains unpublished.
+ * @param db - The database instance.
+ * @param params - The parent layer id and next publish state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeLayerPublishedStateToDescendants = async (
+  db: Database,
+  params: {
+    layerId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(feature)
+    .set({
+      localIsPublished: params.state
+        ? null
+        : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
+      isPublished: params.state
+        ? sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+        : sql`0`,
+    })
+    .where(eq(feature.layerId, params.layerId))
+}
+
+/**
+ * Toggles archived state for a layer.
+ * Used by archive/unarchive command handlers.
+ */
+export const updateLayerArchivedStateById = async (
+  db: Database,
+  params: { id: Id; state: boolean },
+): Promise<{ id: string; isArchived: boolean } | null> => {
+  const [updated] = await db
+    .update(layer)
+    .set({ isArchived: params.state })
+    .where(eq(layer.id, params.id))
+    .returning({
+      id: layer.id,
+      isArchived: layer.isArchived,
+    })
+
+  return updated ?? null
+}
+
+/**
+ * Replaces layer i18n rows from locale-keyed payload.
+ * Used by update orchestration to persist submitted translations.
+ */
+export const updateI18n = async (
+  db: Database,
+  i18n: Record<LocaleKey, LayerI18nPartial>,
+  layerId: string,
+): Promise<LayerI18nDB[]> => {
+  return await replaceManyRelated(
+    db,
+    layerI18n,
+    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as never,
+    layerI18n.layerId,
+    layerId,
+  )
+}
+
+/**
+ * Replaces all layer-property links for a layer.
+ * Used by full replacement update flows.
+ */
+export const updateProperties = async (
+  db: Database,
+  layerId: string,
+  properties: LayerPropertyNew[],
+): Promise<LayerPropertyDBRaw[]> => {
+  await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId))
+  return await createProperties(db, layerId, properties)
+}
+
+// ═══════════════════════
+// 3.2 CRUD :: UPDATE (SYNC)
+// ═══════════════════════
+
+/**
+ * Diffs and upserts layer-property links with minimal DB operations.
+ * Used by sync flows to avoid destructive full rewrites.
+ */
+const upsertLayerProperties = async (
+  db: Database,
+  layerId: string,
+  propertyLinks: Array<{
+    propertyId: string
+    isVisible?: boolean
+    isUserContributable?: boolean
+  }>,
+): Promise<void> => {
   const currentLinks = await db.query.layerProperty.findMany({
     where: eq(layerProperty.layerId, layerId),
     columns: {
       propertyId: true,
-      isVisible: true
-    }
-  });
+      isVisible: true,
+      isUserContributable: true,
+    },
+  })
 
   const currentLinkMap = new Map(
-    currentLinks.map((link) => [link.propertyId, link.isVisible])
-  );
+    currentLinks.map(link => [
+      link.propertyId,
+      {
+        isVisible: link.isVisible,
+        isUserContributable: link.isUserContributable,
+      },
+    ]),
+  )
   const newLinkMap = new Map(
-    propertyLinks.map((link) => [link.propertyId, link.isVisible])
-  );
+    propertyLinks.map(link => [
+      link.propertyId,
+      {
+        isVisible: link.isVisible,
+        isUserContributable: link.isUserContributable,
+      },
+    ]),
+  )
 
-  const toDelete: string[] = [];
-  const toInsert: SQLiteInsertValue<typeof layerProperty>[] = [];
-  const toUpdate: Array<{ propertyId: string; isVisible: boolean }> = [];
+  const toDelete: string[] = []
+  const toInsert: SQLiteInsertValue<typeof layerProperty>[] = []
+  const toUpdate: Array<{
+    propertyId: string
+    isVisible?: boolean
+    isUserContributable?: boolean
+  }> = []
 
-  // 2. Identify links to delete
   for (const currentPropertyId of currentLinkMap.keys()) {
     if (!newLinkMap.has(currentPropertyId)) {
-      toDelete.push(currentPropertyId);
+      toDelete.push(currentPropertyId)
     }
   }
 
-  // 3. Identify links to insert or update
-  for (const [newPropertyId, newIsVisible] of newLinkMap.entries()) {
-    if (currentLinkMap.has(newPropertyId)) {
-      // We currently have no props that we want to sync down on update
-    } else {
-      // Insert new link
+  for (const [newPropertyId, newState] of newLinkMap.entries()) {
+    const currentState = currentLinkMap.get(newPropertyId)
+    if (!currentState) {
       toInsert.push({
         layerId,
         propertyId: newPropertyId,
-        isVisible: newIsVisible === undefined ? false : newIsVisible
-      });
+        isVisible: newState.isVisible ?? false,
+        isUserContributable: newState.isUserContributable ?? false,
+      })
+      continue
+    }
+
+    if (
+      (newState.isVisible !== undefined &&
+        newState.isVisible !== currentState.isVisible) ||
+      (newState.isUserContributable !== undefined &&
+        newState.isUserContributable !== currentState.isUserContributable)
+    ) {
+      toUpdate.push({
+        propertyId: newPropertyId,
+        isVisible: newState.isVisible,
+        isUserContributable: newState.isUserContributable,
+      })
     }
   }
 
-  // 4. Perform database operations
-  // DB :: DELETE
   if (toDelete.length > 0) {
     await db
       .delete(layerProperty)
       .where(
         and(
           eq(layerProperty.layerId, layerId),
-          inArray(layerProperty.propertyId, toDelete)
-        )
-      );
+          inArray(layerProperty.propertyId, toDelete),
+        ),
+      )
   }
 
-  // DB :: INSERT
   if (toInsert.length > 0) {
-    await db.insert(layerProperty).values(toInsert);
+    await db.insert(layerProperty).values(toInsert)
   }
 
-  // DB :: UPDATE
   for (const updateOp of toUpdate) {
+    const payload: Partial<typeof layerProperty.$inferInsert> = {}
+    if (updateOp.isVisible !== undefined) payload.isVisible = updateOp.isVisible
+    if (updateOp.isUserContributable !== undefined) {
+      payload.isUserContributable = updateOp.isUserContributable
+    }
+
     await db
       .update(layerProperty)
-      .set({ isVisible: updateOp.isVisible })
+      .set(payload)
       .where(
         and(
           eq(layerProperty.layerId, layerId),
-          eq(layerProperty.propertyId, updateOp.propertyId)
-        )
-      );
+          eq(layerProperty.propertyId, updateOp.propertyId),
+        ),
+      )
   }
-};
+}
 
 /**
- * Synchronizes properties for ALL layers associated with a given projectId.
- * For each layer, it ensures that its linked properties match the newProjectProperties list.
- * - Deletes layer-property links if the property is no longer in newProjectProperties.
- * - Adds layer-property links if a property in newProjectProperties is not yet linked to the layer.
- * - Updates existing links (e.g., isVisible flag) based on newProjectProperties.
- *
- * @param db The Drizzle database instance.
- * @param projectId The ID of the project whose layers' properties are to be synchronized.
- * @param newProjectProperties An array of Property objects representing the desired state of properties
- *                             that ALL layers in this project should be linkable to.
- *                             The `isVisible` flag on these Property objects is NOT directly used here;
- *                             the link to layerProperty will default to true for new links or be updated
- *                             if `upsertLayerProperties` receives specific visibility data for the link.
+ * Synchronizes each layer's property links against current project property state.
+ * Used when project property assignments change and child layers must follow.
  */
-export const syncLayerProperties = async (
+export const syncProperties = async (
   db: Database,
   projectId: string,
-  newProjectProperties: Property[]
+  newProjectProperties: Property[],
 ): Promise<void> => {
-  // 1. Fetch all Layer IDs for the given Project ID
   const projectLayers = await db.query.layer.findMany({
     where: eq(layer.projectId, projectId),
     columns: {
-      id: true // We only need the layer IDs
-    }
-  });
+      id: true,
+    },
+  })
 
-  if (projectLayers.length === 0) return;
+  if (projectLayers.length === 0) return
 
-  // Prepare the property links structure that upsertLayerProperties expects
-  // This will be the same list of target properties for every layer in the project.
-  const targetPropertyLinks = newProjectProperties.map((prop) => ({
-    propertyId: prop.id,
-    isVisible: false // Default to not visible for new properties
-  }));
-
-  // 2. For each layer in the project, synchronize its properties using upsertLayerProperties
-  for (const l of projectLayers) {
-    await upsertLayerProperties(db, l.id, targetPropertyLinks);
-  }
-};
-
-// ═══════════════════════
-// 3. CRUD :: ORCHESTRATION
-// ═══════════════════════
-
-/**
- * Creates a new layer with translations and properties
- * @param db - The database instance
- * @param data - The layer data to insert
- * @returns The newly created layer with related data
- */
-export const createLayerWithRelated = async (db: Database, data: LayerNew) => {
-  const layer = await createLayer(db, data);
-  const i18n = await createI18n(db, data.i18n!, layer.id);
-  const properties = await createLayerProperties(db, layer.id, data.properties || []);
-
-  // Get project with relations using proper function signature
-  const projectNested = await db.query.project.findFirst({
-    where: eq(project.id, layer.projectId),
-    with: {
-      i18n: true,
-      organisation: {
-        with: {
-          i18n: true
-        }
-      }
-    }
-  });
-
-  return {
-    ...layer,
-    i18n,
-    properties,
-    project: projectNested
-  };
-};
-
-/**
- * Updates a layer with translations and properties
- * @param db - The database instance
- * @param layerId - The ID of the layer to update
- * @param data - The layer data to update
- * @returns The updated layer with related data
- */
-export const updateLayerWithRelated = async (
-  db: Database,
-  data: LayerPartial,
-  layerId?: string
-) => {
-  const IdToUse = layerId || (data.id as string);
-  const layer = await updateLayer(db, data, IdToUse);
-  const i18n = await updateI18n(
-    db,
-    data.i18n as Record<Locale, LayerI18nPartial>,
-    IdToUse
-  );
-  const properties = await updateLayerProperties(
-    db,
-    IdToUse,
-    (data.properties || []) as LayerPropertyNew[]
-  );
-  // Get project with relations using proper function signature
-  const projectData = await db.query.project.findFirst({
-    where: eq(project.id, layer.projectId),
-    with: {
-      i18n: true,
-      organisation: {
-        with: {
-          i18n: true
-        }
-      }
-    }
-  });
-  return {
-    ...layer,
-    i18n,
-    properties,
-    project: projectData
-  };
-};
-
-// ═══════════════════════
-// 4. UTILS :: SHAPING
-// ═══════════════════════
-
-/**
- * Convert layer data to form shape for validation
- * @param data - The layer database entity
- * @param i18n - Array of layer translations
- * @param properties - Array of layer properties
- * @returns Validated form data
- */
-export const toFormShape = async (
-  data: LayerDBRaw, // Use any since this may come with relations loaded
-  i18n: LayerI18nDB[],
-  properties: LayerPropertyDBRaw[]
-) => {
-  const formData = {
-    ...data,
-    i18n: transformI18nSafely(i18n, {}),
-    properties
-  };
-
-  // @ts-ignore TODO - Fix Zod type error
-  const form = await superValidate(formData, zod(LayerAPI) as any);
-  return form as SuperValidated<Layer>;
-};
-
-/**
- * Builds response data from database entities
- * @param layer - The layer database entity with relations
- * @param i18n - Array of layer translations
- * @param properties - Array of layer properties
- * @returns A parsed response shape
- */
-export const toResponseShape = async (
-  layer: any, // Use any since this comes with relations loaded
-  i18n: LayerI18nDB[],
-  properties: any[] // Use any for the complex nested structure from DB relations
-) => {
-  const data = {
-    ...layer,
-    i18n: transformI18nSafely(i18n, {}),
-    properties
-  };
-  return LayerAPI.parse(data);
-};
-
-// ═══════════════════════
-// 5. UTILS :: LOOKUPS
-// ═══════════════════════
-
-/**
- * Gets a map of layer data with properties for multiple layer IDs
- * @param db - The database instance
- * @param layerIds - Array of layer IDs to fetch
- * @returns Map of layer ID to layer data with properties
- */
-export const getLayerMap = async (
-  db: Database,
-  layerIds: Id[],
-  opts: HubOptsExtended
-): Promise<Map<Id, LayerDBRaw>> => {
-  const layersMap = new Map<Id, LayerDBRaw>();
-
-  for (const layerId of layerIds) {
-    const conditions = [eq(layer.id, layerId)];
-    const layerData = await getLayer(db, layerMergeWithRelations, conditions, opts);
-    if (layerData) {
-      layersMap.set(layerId, layerData);
-    }
+  const isProjectPropertyEnabled = (propertyRow: Property): boolean => {
+    if (propertyRow.scope === 'project') return true
+    return typeof (propertyRow as Property & { isEnabled?: boolean }).isEnabled ===
+      'boolean'
+      ? Boolean((propertyRow as Property & { isEnabled?: boolean }).isEnabled)
+      : Boolean(propertyRow.isDefaultEnabled)
   }
 
-  return layersMap;
-};
+  const targetProperties = newProjectProperties.filter(propertyRow => {
+    if (!propertyRow?.id || typeof propertyRow.id !== 'string') return false
+    return isProjectPropertyEnabled(propertyRow)
+  })
+
+  for (const row of projectLayers) {
+    const currentLinks = await db.query.layerProperty.findMany({
+      where: eq(layerProperty.layerId, row.id),
+      columns: { propertyId: true },
+    })
+    const currentIds = new Set(currentLinks.map(link => link.propertyId))
+    const targetPropertyLinks = targetProperties.map(propertyRow => ({
+      propertyId: propertyRow.id,
+      isVisible: currentIds.has(propertyRow.id)
+        ? undefined
+        : Boolean(propertyRow.isDefaultEnabled),
+      isUserContributable: currentIds.has(propertyRow.id)
+        ? undefined
+        : Boolean(propertyRow.isDefaultEnabled),
+    }))
+    await upsertLayerProperties(db, row.id, targetPropertyLinks)
+  }
+}
+
+// ═══════════════════════
+// 4. CRUD :: DELETE
+// ═══════════════════════
+// No hard delete helpers in this module by design.

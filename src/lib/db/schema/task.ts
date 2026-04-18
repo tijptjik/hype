@@ -1,14 +1,14 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { organisation } from './organisation';
-import { project } from './project';
-import { feature } from './feature';
-import { user } from './user';
-import { image } from './image';
+import { organisation } from './organisation'
+import { project } from './project'
+import { feature } from './feature'
+import { user } from './user'
+import { image } from './image'
 // ENUM
-import { TaskType, TaskReviewOutcome, TaskReviewAction } from '../../enums';
+import { TaskType, TaskReviewOutcome, TaskReviewAction } from '../../enums'
 
 /* ============================================================================
  * TASK MANAGEMENT
@@ -43,18 +43,19 @@ export const task = sqliteTable('task', {
     .references(() => user.id, { onDelete: 'set null', onUpdate: 'cascade' }),
   reviewerId: text('reviewerId').references(() => user.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
+  isDraft: integer('isDraft', { mode: 'boolean' }).default(true).notNull(),
   type: text('type', {
-    enum: Object.values(TaskType) as [string, ...string[]]
+    enum: Object.values(TaskType) as [string, ...string[]],
   }).notNull(),
   message: text('message'),
   isReviewed: integer('isReviewed', { mode: 'boolean' }).default(false).notNull(),
   reviewOutcome: text('reviewOutcome', {
-    enum: Object.values(TaskReviewOutcome) as [string, ...string[]]
+    enum: Object.values(TaskReviewOutcome) as [string, ...string[]],
   }),
   reviewAction: text('reviewAction', {
-    enum: Object.values(TaskReviewAction) as [string, ...string[]]
+    enum: Object.values(TaskReviewAction) as [string, ...string[]],
   }),
   reviewReason: text('reviewReason'),
   createdAt: text('createdAt')
@@ -63,8 +64,8 @@ export const task = sqliteTable('task', {
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Task image assignments
@@ -79,9 +80,7 @@ export const taskImage = sqliteTable(
       .references(() => task.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     imageId: text('imageId')
       .notNull()
-      .references(() => image.id, { onDelete: 'set null', onUpdate: 'cascade' })
+      .references(() => image.id, { onDelete: 'set null', onUpdate: 'cascade' }),
   },
-  (table) => [
-    primaryKey({ columns: [table.taskId, table.imageId] })
-  ]
-);
+  table => [primaryKey({ columns: [table.taskId, table.imageId] })],
+)

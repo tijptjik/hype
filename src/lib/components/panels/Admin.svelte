@@ -1,38 +1,35 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n';
+import { m } from '$lib/i18n'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
-import { getAdminCtx } from '$lib/context/admin.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getAdminCtx } from '$lib/context/admin.svelte'
 // COMPONENTS
-import Panel from '$lib/components/layout/Panel.svelte';
-import AdminHeader from '$lib/components/panels/common/variants/AdminHeader.svelte';
-import Organisations from '$lib/components/panels/sections/Organisations.svelte';
-import Projects from '$lib/components/panels/sections/Projects.svelte';
-import Layers from '$lib/components/panels/sections/Layers.svelte';
-import FilteredResource from '$lib/components/panels/common/FilteredResource.svelte';
-import AdminFooter from '$lib/components/panels/common/variants/AdminFooter.svelte';
+import Organisations from '$lib/components/panels/sections/Organisations.svelte'
+import Projects from '$lib/components/panels/sections/Projects.svelte'
+import Layers from '$lib/components/panels/sections/Layers.svelte'
+// BITS
+import { AdminMenu, PanelRoot as Panel } from '$lib/bits'
+import * as PanelPattern from '$lib/bits/patterns/panels'
 // SERVICES
-import { navigateOnAdminById } from '$lib/navigation';
+import { getSupportedFacetForResource, navigateOnAdminById } from '$lib/navigation'
+// STYLES
+import '$lib/styles/admin-panel.css'
 // ENUMS
-import { Panel as PanelEnum, FirstClassResource } from '$lib/enums';
+import { Panel as PanelEnum, FirstClassResource } from '$lib/enums'
 // TYPES
-import type {
-  Id,
-  Organisation,
-  Project,
-  Layer,
-  ResourceContext,
-  PanelProps
-} from '$lib/types';
+import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Id, ResourceContext, PanelProps } from '$lib/types'
 
 // CONTEXT
-const appCtx = getAppCtx();
-const adminCtx = getAdminCtx();
+const appCtx = getAppCtx()
+const adminCtx = getAdminCtx()
 
 // ELEMENTS
 // svelte-ignore non_reactive_update
-let panelContainer: HTMLDivElement;
+let panelContainer: HTMLDivElement
 
 let panelProps: PanelProps = $derived({
   panelType: PanelEnum.admin,
@@ -45,24 +42,33 @@ let panelProps: PanelProps = $derived({
     resourceType: appCtx.getActiveResourceType(),
     resourceRef: appCtx.getActiveResourceRef(),
     resourceId: appCtx.getActiveResourceId(),
-    facet: appCtx.getActiveFacet()
+    facet: appCtx.getActiveFacet(),
   },
-  adminCtx
-});
+  adminCtx,
+})
+
+const handleToggleAdminPanel = (): void => {
+  appCtx.closePanelVisually(PanelEnum.admin)
+  appCtx.togglePanel(PanelEnum.admin)
+}
 </script>
 
 <Panel {...panelProps} bind:panelContainer>
-  <div class="flex h-full flex-col">
-    <AdminHeader title={m.menu_admin()} {...panelProps} />
-    <div class="flex-grow-1 flex h-full flex-col justify-between">
-      <div class="flex-grow-1 flex h-full flex-col overflow-hidden overscroll-none">
-        <div class="flex-grow-1 flex min-h-0 flex-col">
+  <div class="flex h-full min-h-0 flex-col">
+    <PanelPattern.PanelHeader.AdminPanel
+      title={m.menu_admin()}
+      isNarrow={panelProps.isNarrow}
+      onTogglePanel={handleToggleAdminPanel}
+    />
+    <div class="grow flex min-h-0 flex-col">
+      <div class="admin-sections">
+        <div class="admin-sections__section admin-sections__section--bounded">
           <Organisations {...panelProps}>
             {#snippet filteredItem(
               organisation: Organisation,
               selectedOrganisations: Id[]
             )}
-              <FilteredResource
+              <PanelPattern.Item.ItemResource
                 resource={organisation}
                 selectedClass="bg-primary"
                 isSelected={selectedOrganisations.includes(organisation.id)}
@@ -70,16 +76,17 @@ let panelProps: PanelProps = $derived({
                   e.stopPropagation();
                   e.preventDefault();
                   if (
-                    panelProps.active?.resourceType ==
+                    panelProps.active?.resourceType ===
                       FirstClassResource.organisation &&
-                    panelProps.active?.resourceId == organisation.id
+                    panelProps.active?.resourceId === organisation.id
                   ) {
                     await appCtx.toggleOrganisation(organisation.id);
                   } else {
                     await navigateOnAdminById(
                       adminCtx,
                       FirstClassResource.organisation,
-                      organisation.id
+                      organisation.id,
+                       getSupportedFacetForResource(FirstClassResource.organisation, panelProps.active?.facet)
                     );
                   }
                 }}
@@ -88,18 +95,19 @@ let panelProps: PanelProps = $derived({
                   await appCtx.toggleOrganisation(organisation.id);
                 }}
                 resourceType={FirstClassResource.organisation}
-                {...panelProps} />
+                {...panelProps}
+              />
             {/snippet}
           </Organisations>
         </div>
-        <div class="flex-grow-1 flex min-h-0 flex-col">
+        <div class="admin-sections__section admin-sections__section--bounded">
           <Projects {...panelProps}>
             {#snippet filteredItem(
               project: Project,
               selectedProjects: Id[],
               hierarchy: ResourceContext
             )}
-              <FilteredResource
+              <PanelPattern.Item.ItemResource
                 resource={project}
                 hierarchy={{
                   organisation: hierarchy.organisation
@@ -110,15 +118,16 @@ let panelProps: PanelProps = $derived({
                   e.stopPropagation();
                   e.preventDefault();
                   if (
-                    panelProps.active?.resourceType == FirstClassResource.project &&
-                    panelProps.active?.resourceId == project.id
+                    panelProps.active?.resourceType === FirstClassResource.project &&
+                    panelProps.active?.resourceId === project.id
                   ) {
                     appCtx.toggleProject(project.id);
                   } else {
                     navigateOnAdminById(
                       adminCtx,
                       FirstClassResource.project,
-                      project.id
+                      project.id,
+                      getSupportedFacetForResource(FirstClassResource.project, panelProps.active?.facet)
                     );
                   }
                 }}
@@ -127,49 +136,60 @@ let panelProps: PanelProps = $derived({
                   appCtx.toggleProject(project.id);
                 }}
                 resourceType={FirstClassResource.project}
-                {...panelProps} />
+                {...panelProps}
+              />
             {/snippet}
           </Projects>
         </div>
-        <div class="flex-grow-4 flex min-h-0 flex-col">
-          <Layers {...panelProps}>
-            {#snippet filteredItem(
-              layer: Layer,
-              selectedLayers: Id[],
-              hierarchy: ResourceContext
-            )}
-              <FilteredResource
-                resource={layer}
-                hierarchy={{
-                  organisation: hierarchy.organisation,
-                  project: hierarchy.project
-                }}
-                selectedClass="bg-secondary"
-                isSelected={selectedLayers.includes(layer.id)}
-                onNavigate={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (
-                    panelProps.active?.resourceType == FirstClassResource.layer &&
-                    panelProps.active?.resourceId == layer.id
-                  ) {
+        <div
+          class="admin-sections__section-shell admin-sections__section-shell--layers"
+        >
+          <div class="admin-sections__section admin-sections__section--layers">
+            <Layers {...panelProps}>
+              {#snippet filteredItem(
+                layer: Layer,
+                selectedLayers: Id[],
+                hierarchy: ResourceContext
+              )}
+                <PanelPattern.Item.ItemResource
+                  resource={layer}
+                  hierarchy={{
+                    organisation: hierarchy.organisation,
+                    project: hierarchy.project
+                  }}
+                  selectedClass="bg-secondary"
+                  isSelected={selectedLayers.includes(layer.id)}
+                  onNavigate={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (
+                      panelProps.active?.resourceType === FirstClassResource.layer &&
+                      panelProps.active?.resourceId === layer.id
+                    ) {
+                      appCtx.toggleLayer(layer.id);
+                    } else {
+                      navigateOnAdminById(
+                        adminCtx,
+                        FirstClassResource.layer,
+                        layer.id,
+                        getSupportedFacetForResource(FirstClassResource.layer, panelProps.active?.facet)
+                      );
+                    }
+                  }}
+                  onToggle={(e) => {
+                    e.stopPropagation();
                     appCtx.toggleLayer(layer.id);
-                  } else {
-                    navigateOnAdminById(adminCtx, FirstClassResource.layer, layer.id);
-                  }
-                }}
-                onToggle={(e) => {
-                  e.stopPropagation();
-                  appCtx.toggleLayer(layer.id);
-                }}
-                resourceType={FirstClassResource.layer}
-                {...panelProps} />
-            {/snippet}
-          </Layers>
+                  }}
+                  resourceType={FirstClassResource.layer}
+                  {...panelProps}
+                />
+              {/snippet}
+            </Layers>
+          </div>
         </div>
       </div>
-      <div class="flex-grow-1 flex min-h-0 flex-shrink-0 flex-col items-end">
-        <AdminFooter {...panelProps} />
+      <div class="flex w-full shrink-0 flex-col items-end">
+        <AdminMenu isNarrow={panelProps.isNarrow} />
       </div>
     </div>
   </div>

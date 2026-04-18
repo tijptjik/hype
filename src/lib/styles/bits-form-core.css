@@ -1,0 +1,239 @@
+@layer components {
+  /* ----------------- */
+  /* Field Shell */
+  /* --------- */
+  .bits-theme .bits-form__field {
+    @apply flex w-full flex-col gap-1.5;
+  }
+
+  .bits-theme .bits-form__field--disabled {
+    opacity: 0.7;
+  }
+
+  .bits-theme .bits-form__field--error .bits-form__control-wrap {
+    border-color: color-mix(in oklab, var(--color-error) 80%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-error) 20%, transparent);
+  }
+
+  /* ----------------- */
+  /* Labels */
+  /* --------- */
+  .bits-theme .bits-form__label {
+    @apply flex flex-col gap-0.5;
+  }
+
+  .bits-theme .bits-form__label-row {
+    @apply flex items-start gap-1;
+  }
+
+  .bits-theme .bits-form__label-title {
+    @apply inline-flex items-start gap-0.5;
+  }
+
+  .bits-theme .bits-form__label-text {
+    @apply text-sm font-bold;
+    color: color-mix(in oklab, #fcc 66%, transparent);
+  }
+
+  .bits-theme .bits-form__label-required {
+    color: var(--color-error);
+    margin-left: 0;
+    min-height: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    vertical-align: super;
+    transform: translateY(-0.08rem);
+  }
+
+  .bits-theme .bits-form__label-required-slot {
+    margin-left: 2px;
+    width: 0.7rem;
+    height: 1em;
+    position: relative;
+    display: inline-block;
+    flex: 0 0 0.7rem;
+  }
+
+  .bits-theme .bits-form__label-required-floating {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .bits-theme .bits-form__error {
+    @apply text-xs;
+    color: var(--color-error);
+  }
+
+  .bits-theme .bits-form__input-error-label {
+    @apply text-lg font-bold uppercase;
+    color: var(--color-base-100);
+  }
+
+  /* ----------------- */
+  /* Controls */
+  /* --------- */
+  .bits-theme .bits-form__control-wrap {
+    @apply relative rounded-lg px-2;
+    border: 1px solid color-mix(in oklab, var(--color-border-input) 90%, transparent);
+    background-color: color-mix(in oklab, var(--color-background-alt) 50%, transparent);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .bits-theme .bits-form__control-wrap--editing {
+    background-color: var(--color-glass-100);
+  }
+
+  .bits-theme .bits-form__control-wrap--textarea {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .bits-theme .bits-form__control-wrap:focus-within {
+    border-color: color-mix(in oklab, var(--color-primary) 60%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 25%, transparent);
+  }
+
+  .bits-theme .bits-form__control {
+    @apply w-full border-none bg-transparent text-sm selection:bg-primary/60 selection:text-base-content;
+    color: var(--color-foreground);
+  }
+
+  .bits-theme .bits-form__control:focus {
+    outline: none;
+  }
+
+  .bits-theme .bits-form__control:disabled,
+  .bits-theme .bits-form__control[readonly] {
+    cursor: default;
+    caret-color: transparent;
+    -webkit-text-fill-color: currentColor;
+  }
+
+  .bits-theme .bits-form__control--input {
+    @apply h-12 px-2 py-2;
+  }
+
+  .bits-theme .bits-form__control--input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  .bits-theme .bits-form__control--input[type="number"]::-webkit-outer-spin-button,
+  .bits-theme .bits-form__control--input[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    margin: 0;
+  }
+
+  .bits-theme .bits-form__control--textarea {
+    @apply min-h-32 max-h-128 resize-none px-2 py-3.5;
+    box-sizing: border-box;
+    display: block;
+    field-sizing: content;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /*.bits-theme textarea.bits-form__control--textarea {*/
+  /*max-height: calc(32rem - 10px);*/
+  /*}*/
+
+  .bits-theme .bits-form__control--placeholder::placeholder {
+    color: color-mix(in oklab, var(--color-foreground) 55%, transparent);
+    font-style: italic;
+  }
+
+  .bits-theme .bits-form__control--filled {
+    @apply font-medium;
+  }
+
+  .bits-theme .bits-form__control--translated {
+    @apply pr-8;
+  }
+
+  .bits-theme .bits-form__control--display {
+    @apply cursor-default;
+  }
+
+  .bits-theme .bits-form__control-wrap--skeleton {
+    min-height: 3rem;
+    display: flex;
+    margin-top: calc(1.25rem + 0.375rem + 3px);
+    align-items: center;
+    padding: 0 0.75rem;
+    background-color: oklab(0.340019 0.0468577 -0.00637265 / 0.2);
+    /*border-color: color-mix(in oklab, #b08aa8 18%, transparent);*/
+    /*box-shadow: inset 0 0 0 1px color-mix(in oklab, #6f4a68 16%, transparent);*/
+  }
+
+  .bits-theme .bits-form__control-wrap--skeleton-label-covered {
+    min-height: calc(3rem + 1.25rem + 0.375rem + 1px);
+    margin-top: 0;
+  }
+
+  .bits-theme .bits-form__control--input.bits-form__control--display {
+    @apply flex items-center;
+    line-height: 1.2rem;
+  }
+
+  .bits-theme .bits-form__control.bits-form__control--textarea {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* ----------------- */
+  /* GenAI Control */
+  /* --------- */
+  .bits-theme .bits-form__gen-ai-wrap {
+    @apply absolute right-2 top-2;
+    z-index: 2;
+    pointer-events: auto;
+  }
+
+  .bits-theme .bits-form__gen-ai {
+    @apply pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent;
+    cursor: pointer;
+    color: color-mix(in oklab, var(--color-foreground) 78%, transparent);
+    background-color: color-mix(in oklab, var(--color-background-alt) 60%, transparent);
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .bits-theme .bits-form__gen-ai:hover:not(:disabled):not([aria-disabled="true"]) {
+    color: color-mix(in oklab, var(--color-primary) 80%, white);
+    border-color: transparent;
+    background-color: color-mix(in oklab, var(--color-background-alt) 78%, black);
+  }
+
+  .bits-theme
+    .bits-form__gen-ai:focus-visible:not(:disabled):not([aria-disabled="true"]) {
+    color: color-mix(in oklab, var(--color-primary) 80%, white);
+    border-color: transparent;
+    outline: none;
+    box-shadow: none;
+  }
+
+  .bits-theme .bits-form__gen-ai:active:not(:disabled) {
+    background-color: color-mix(in oklab, var(--color-background-alt) 70%, black);
+  }
+
+  .bits-theme .bits-form__gen-ai-icon {
+    @apply mt-1 h-6 w-6;
+  }
+
+  .bits-theme .bits-form__gen-ai:disabled {
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.45;
+    border-color: transparent;
+    background-color: color-mix(in oklab, var(--color-background-alt) 42%, transparent);
+  }
+}

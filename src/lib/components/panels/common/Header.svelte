@@ -1,24 +1,27 @@
 <script lang="ts">
+// BITS COMPONENTS
+import Button from '$lib/bits/core/button/Button.svelte'
 // COMPONENTS
-import Icon from '$lib/components/common/Icon.svelte';
-import { XCircle } from '@steeze-ui/heroicons';
+import { Icon } from '$lib/bits'
+import XCircle from 'virtual:icons/lucide/circle-x'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte';
+import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
-import { Panel } from '$lib/enums';
+import { Panel } from '$lib/enums'
 // TYPES
 
 let { panelType, title, onToggleInfo } = $props<{
-  panelType: Panel;
-  title: string;
-  onToggleInfo?: (e: MouseEvent | TouchEvent) => void;
-}>();
+  panelType: Panel
+  title: string
+  onToggleInfo?: (e: MouseEvent | TouchEvent) => void
+}>()
 
-const appCtx = getAppCtx();
+const appCtx = getAppCtx()
 </script>
 
 <header
-  class="sticky top-0 z-30 flex h-16 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black px-6 py-2 caret-transparent focus:outline-none">
+  class="sticky top-0 z-30 flex h-18.75 shrink-0 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-black px-4 py-2 caret-transparent focus:outline-none"
+>
   <div class="flex flex-row items-center gap-2">
     <h2 class="text-lg font-semibold uppercase tracking-widest text-primary">
       {title}
@@ -26,20 +29,24 @@ const appCtx = getAppCtx();
   </div>
   <div class="flex flex-row items-center gap-4">
     {#if onToggleInfo}
-      <button
-        class="m-0 h-auto flex-none p-0 text-base-50 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
-        onclick={(e) => {
-          onToggleInfo?.(e);
-        }}>
-        <span class="text-xl">?</span>
-      </button>
+      <Button
+        text="?"
+        style="transparent"
+        class="m-0 h-auto flex-none border-transparent p-0 text-base-50 shadow-none [--btn-size:auto] [--btn-padding-x:0]"
+        labelClasses="text-2xl"
+        onClick={onToggleInfo}
+      />
     {/if}
-    <button
-      class="btn btn-ghost btn-sm m-0 h-auto flex-none p-0 hover:bg-transparent hover:text-base-content/80 focus:outline-none focus:ring-0 focus-visible:text-primary"
-      onclick={() => {
-        appCtx.closePanel(panelType);
-      }}>
-      <Icon src={XCircle} class="h-10 w-10 transition-transform duration-300" />
-    </button>
+    <Button
+      text="Close panel"
+      iconComponent={XCircle}
+      size="xl"
+      hideLabel={true}
+      style="transparent"
+      class="m-0 h-auto flex-none border-transparent p-0 shadow-none [--btn-size:auto] [--btn-padding-x:0]"
+      onClick={() => {
+        appCtx.closePanel(panelType)
+      }}
+    />
   </div>
 </header>

@@ -1,0 +1,16 @@
+@layer components {
+  .bits-meter {
+    position: relative;
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: var(--color-dark-10);
+  }
+
+  .bits-meter__indicator {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--color-foreground);
+  }
+}

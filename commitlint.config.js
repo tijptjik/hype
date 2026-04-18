@@ -4,17 +4,7 @@ export default {
     'type-enum': [
       2,
       'always',
-      [
-        'chore',
-        'docs',
-        'feat',
-        'fix',
-        'perf',
-        'refactor',
-        'style',
-        'test',
-        'revert'
-      ]
-    ]
-  }
-};
+      ['chore', 'docs', 'feat', 'fix', 'perf', 'refactor', 'style', 'test', 'revert'],
+    ],
+  },
+}

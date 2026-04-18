@@ -1,15 +1,21 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
 // SCHEMA
-import { organisation } from './organisation';
-import { project } from './project';
-import { user } from './user';
-import { property } from './property';
+import { organisation } from './organisation'
+import { project } from './project'
+import { user } from './user'
+import { property } from './property'
 // ENUM
-import { supportedLocales } from '../../enums';
+import { supportedLocales } from '../../enums'
 // TYPES
-import type { LayerMetadata } from '../../types';
+import type { LayerMetadata } from '../../types'
 
 /* ============================================================================
  * LAYER MANAGEMENT
@@ -38,28 +44,31 @@ export const layer = sqliteTable('layer', {
     .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
   // Additional Information
   metadata: text('metadata', { mode: 'json' }).$type<LayerMetadata>(),
+  rank: integer('rank').notNull().default(0),
   // Is this layer enabled for new users by default?
   isDefaultVisible: integer('isDefaultVisible', { mode: 'boolean' })
     .notNull()
     .default(false),
   // Accessible to the public in the app
   isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+  localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
   publishedAt: text('publishedAt'),
   publisherId: text('publisherId').references(() => user.id, {
     onDelete: 'set null',
-    onUpdate: 'cascade'
+    onUpdate: 'cascade',
   }),
   // False : Layer may be shown in the Admin Panel
   // True : Layer is considered deleted
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+  localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
   createdAt: text('createdAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .notNull(),
   modifiedAt: text('modifiedAt')
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
     .$onUpdate(() => new Date().toISOString())
-    .notNull()
-});
+    .notNull(),
+})
 
 /**
  * Layer translations
@@ -73,7 +82,7 @@ export const layerI18n = sqliteTable(
       .notNull()
       .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
     locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]]
+      enum: supportedLocales as [string, ...string[]],
     }).notNull(),
     // Full Name in {locale}
     name: text('name').notNull(),
@@ -85,27 +94,34 @@ export const layerI18n = sqliteTable(
     description: text('description'),
     descriptionGen: integer('descriptionGen', { mode: 'boolean' })
       .notNull()
-      .default(true)
+      .default(true),
   },
-  (table) => [
-    primaryKey({ columns: [table.layerId, table.locale] })
-  ]
-);
+  table => [primaryKey({ columns: [table.layerId, table.locale] })],
+)
 
 /**
  * Layer property assignments
  * @remarks
  * Links properties to layers with visibility settings
  */
-export const layerProperty = sqliteTable('layerProperty', {
-  layerId: text('layerId')
-    .notNull()
-    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  propertyId: text('propertyId')
-    .notNull()
-    .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true),
-  isUserContributed: integer('isUserContributed', { mode: 'boolean' })
-    .notNull()
-    .default(true)
-});
+export const layerProperty = sqliteTable(
+  'layerProperty',
+  {
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    isVisible: integer('isVisible', { mode: 'boolean' }).notNull().default(true),
+    isUserContributable: integer('isUserContributable', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+  },
+  table => [
+    uniqueIndex('layerProperty_layerId_propertyId_idx').on(
+      table.layerId,
+      table.propertyId,
+    ),
+  ],
+)
