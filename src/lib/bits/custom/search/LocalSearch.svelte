@@ -62,13 +62,6 @@ function resolveResults(nextQuery: string): T[] {
 
 function openResults(): void {
   if (!isOpen) {
-    console.log('[LocalSearch] opening results', {
-      query,
-      optionCount: resolvedOptions.length,
-      excludeIds: resolvedExcludeIds,
-      localExcludedIds,
-      resultCount: resolveResults(query).length,
-    })
     isOpen = true
   }
 }
@@ -146,19 +139,6 @@ $effect(() => {
   if (excludeIdsChanged) {
     previousExcludeIds = [...resolvedExcludeIds]
   }
-})
-
-$effect(() => {
-  if (!isOpen) return
-  console.log('[LocalSearch] state', {
-    query,
-    isOpen,
-    optionCount: resolvedOptions.length,
-    excludeIds: resolvedExcludeIds,
-    localExcludedIds,
-    resultCount: results.length,
-    sampleTitles: results.slice(0, 5).map(item => resultMap.title(item)),
-  })
 })
 </script>
 

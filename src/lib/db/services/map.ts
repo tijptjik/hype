@@ -108,13 +108,6 @@ export const syncMapStyleCatalog = async (db: Database): Promise<void> => {
   const organisationIdByCode = new Map(organisationRows.map(row => [row.code, row.id]))
   const existingByCode = new Map(existingRows.map(row => [row.code, row]))
 
-  console.log('[map service] syncMapStyleCatalog start', {
-    hubCodes,
-    organisationCodes,
-    existingCount: existingRows.length,
-    existingCodes: existingRows.map(row => row.code).slice(0, 20),
-  })
-
   for (const entry of REGISTERED_MAP_STYLE_CATALOG) {
     const existing = existingByCode.get(entry.key)
     const nextHubId = entry.hubCode ? (hubIdByCode.get(entry.hubCode) ?? null) : null
@@ -242,20 +235,6 @@ export const syncMapStyleCatalog = async (db: Database): Promise<void> => {
       }
     }
   }
-
-  const persistedRows = await db
-    .select({
-      code: mapStyles.code,
-      organisationId: mapStyles.organisationId,
-      hubId: mapStyles.hubId,
-    })
-    .from(mapStyles)
-    .orderBy(mapStyles.code)
-
-  console.log('[map service] syncMapStyleCatalog complete', {
-    persistedCount: persistedRows.length,
-    persistedCodes: persistedRows.map(row => row.code).slice(0, 20),
-  })
 }
 
 /********************
@@ -342,31 +321,12 @@ export const listMapStylesForScope = async (
   db: Database,
   scope: ProjectScope,
 ): Promise<MapStyleResolvedDB[]> => {
-  const rawRows = await db
-    .select({
-      id: mapStyles.id,
-      code: mapStyles.code,
-      organisationId: mapStyles.organisationId,
-      hubId: mapStyles.hubId,
-    })
-    .from(mapStyles)
-    .where(isVisibleToScope(scope))
-    .orderBy(mapStyles.code)
-
   const rows = await db.query.mapStyles.findMany({
     where: isVisibleToScope(scope),
     with: {
       i18n: true,
     },
     orderBy: (mapStyles, { asc }) => [asc(mapStyles.code)],
-  })
-
-  console.log('[map service] listMapStylesForScope', {
-    scope,
-    rawCount: rawRows.length,
-    rawCodes: rawRows.map(row => row.code),
-    relationCount: rows.length,
-    relationCodes: rows.map(row => row.code),
   })
 
   return rows.map(row => toResolvedMapStyle(row as MapStyleRowDB))
@@ -489,7 +449,7 @@ export const getOrganisationMapStyleScope = async (
   db: Database,
   organisationId: string,
 ): Promise<ProjectScope | null> => {
-  const scope = firstOrNull(
+  return firstOrNull(
     await db
       .select({
         organisationId: organisation.id,
@@ -498,13 +458,6 @@ export const getOrganisationMapStyleScope = async (
       .from(organisation)
       .where(eq(organisation.id, organisationId)),
   )
-
-  console.log('[map service] getOrganisationMapStyleScope', {
-    organisationId,
-    scope,
-  })
-
-  return scope
 }
 
 /**
