@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { tick } from 'svelte'
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
@@ -62,9 +64,13 @@ async function submitNewPhotos(): Promise<void> {
       },
     )
 
-    imageCtx.resetImages()
-    await imageCtx.refreshImages()
     cardCtx.setMode(FeatureCardMode.Display)
+    await tick()
+    await imageCtx.refreshImages()
+    imageCtx.cleanupStagedImages()
+    imageCtx.resetUploadQueue()
+    imageCtx.resetTargetImage()
+    imageCtx.resetActivePreview()
     cardCtx.resetError()
     toast.success(m.add_photos__success(), {
       description: m.add_photos__submitted_description({

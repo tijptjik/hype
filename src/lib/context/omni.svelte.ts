@@ -192,6 +192,7 @@ export class OmniCtx {
   // Cancel new-feature mode with full reset
   cancelNewFeature() {
     this.resetToSearch(false)
+    this.appCtx.resetNewFeatureMode()
     this.appCtx.resetNewFeature()
     this.appCtx.resetActiveCollection()
     navigate('/', undefined, {

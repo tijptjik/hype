@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { tick } from 'svelte'
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
@@ -57,12 +59,15 @@ async function handleSubmitMissingReport(): Promise<void> {
         },
       },
     )
-
-    imageCtx.resetImages()
-    await imageCtx.refreshImages()
-    cardCtx.userData.missingReason = ''
     cardCtx.setMode(FeatureCardMode.Display)
+    cardCtx.userData.missingReason = ''
     cardCtx.resetError()
+    await tick()
+    await imageCtx.refreshImages()
+    imageCtx.cleanupStagedImages()
+    imageCtx.resetUploadQueue()
+    imageCtx.resetTargetImage()
+    imageCtx.resetActivePreview()
     toast.success(m.report_missing__success(), {
       description: m.report_missing__submitted_description({
         featureTitle,

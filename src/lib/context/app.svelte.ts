@@ -2535,10 +2535,13 @@ export class AppCtx {
   }
 
   getContextualLayerName = (
-    layer: Layer,
+    layer: Layer | undefined,
     hideIfOnly: boolean = true,
     useFallbacks: boolean = true,
   ): string | null => {
+    if (!layer) {
+      return null
+    }
     const projectLayerCount = this.getProjectLayerCount(layer.projectId)
     if (hideIfOnly && projectLayerCount === 1) {
       return null
