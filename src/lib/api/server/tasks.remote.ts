@@ -43,6 +43,7 @@ import {
 } from '$lib/db/services/feature'
 import { listAssignableTaskLayers, probeLayerForUpdate } from '$lib/db/services/layer'
 import {
+  assertUserContributedFeatureDraftIsSubmittable,
   createUserContributedFeature,
   updateUserContributedFeatureDraft,
 } from '$lib/api/services/feature'
@@ -331,7 +332,10 @@ export const beginNewFeatureDraft = guardedCommand(
       const updatedFeature = await updateUserContributedFeatureDraft(
         ctx.db,
         existingTask.featureId as Id,
-        draftFeature,
+        {
+          ...draftFeature,
+          isDraft: true,
+        },
         region,
         subscriptionKey,
       )
@@ -341,7 +345,6 @@ export const beginNewFeatureDraft = guardedCommand(
         {
           organisationId: updatedFeature.organisationId,
           projectId: updatedFeature.projectId,
-          layerId: updatedFeature.layerId,
         },
         existingTask.id as Id,
       )
@@ -359,7 +362,10 @@ export const beginNewFeatureDraft = guardedCommand(
 
     const createdFeature = await createUserContributedFeature(
       ctx.db,
-      draftFeature,
+      {
+        ...draftFeature,
+        isDraft: true,
+      },
       region,
       subscriptionKey,
     )
@@ -369,7 +375,6 @@ export const beginNewFeatureDraft = guardedCommand(
       featureId: createdFeature.id,
       projectId: createdFeature.projectId,
       organisationId: createdFeature.organisationId,
-      layerId: createdFeature.layerId,
       contributorId: ctx.userId,
       isDraft: true,
       isReviewed: false,
@@ -452,6 +457,13 @@ export const finalizeTaskDraft = guardedCommand(
       (!draftTask.message || draftTask.message.trim().length < 5)
     ) {
       throw error(400, 'TASK_REASON_TOO_SHORT')
+    }
+
+    if (draftTask.type === 'newFeature' && draftTask.featureId) {
+      await assertUserContributedFeatureDraftIsSubmittable(
+        ctx.db,
+        draftTask.featureId as Id,
+      )
     }
 
     const finalizedTask = await updateTask(
