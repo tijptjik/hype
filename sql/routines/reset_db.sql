@@ -8,6 +8,7 @@ PRAGMA defer_foreign_keys = ON;
 DROP TABLE IF EXISTS userFeature;
 DROP TABLE IF EXISTS userLayer;
 DROP TABLE IF EXISTS hubLayer;
+DROP TABLE IF EXISTS hubUserState;
 DROP TABLE IF EXISTS taskImage;
 DROP TABLE IF EXISTS task;
 
