@@ -27,6 +27,10 @@ import type {
 
 // TYPES
 type Neighbourhood = string
+type PlatformEnv = {
+  PUBLIC_AZURE_TRANSLATION_REGION?: string
+  AZURE_TRANSLATION_KEY?: string
+}
 type NeighbourhoodI18n = Record<
   LocaleKey,
   {
@@ -39,6 +43,20 @@ type NeighbourhoodI18n = Record<
 type Neighbourhoods = Record<Neighbourhood, Record<'i18n', NeighbourhoodI18n>>
 
 const neighourhoodsJson: Neighbourhoods = neighbourhoods
+
+function getPlatformEnv(): PlatformEnv | null {
+  if (!('platform' in globalThis)) return null
+
+  return (
+    (
+      globalThis as typeof globalThis & {
+        platform?: {
+          env?: PlatformEnv
+        }
+      }
+    ).platform?.env ?? null
+  )
+}
 
 /************
  * LOOKUPS
@@ -283,7 +301,7 @@ function processReverseGeocodeResult(
   const distance = calculateDistance(lng, lat, resultLng, resultLat)
 
   // Get district from neighbourhood (handle null neighbourhood)
-  const { neighbourhood, discriminant: superNeighbourhood } =
+  const { neighbourhood } =
     parseReverseGeocodeNeighbourhood(result.address.Neighborhood) ||
     result.address.City ||
     result.address.Subregion
@@ -406,24 +424,33 @@ export async function processForwardGeocodeResult(
   let addressPropsZhHans: Partial<AddressProperties> = {}
   if ('ChiPremisesAddress' in pa) {
     try {
-      const propsToTranslate = Object.values(addressPropsZhHant).filter(Boolean)
-      const [translatedDisplayAddress, ...translatedProps] = await translateText(
-        [displayAddressZhHant, ...propsToTranslate],
-        'zh-hant',
-        'zh-hans',
-        platform.env.PUBLIC_AZURE_TRANSLATION_REGION,
-        platform.env.AZURE_TRANSLATION_KEY,
-      )
-      displayAddressZhHans = translatedDisplayAddress
+      const platformEnv = getPlatformEnv()
+      if (
+        !platformEnv?.PUBLIC_AZURE_TRANSLATION_REGION ||
+        !platformEnv?.AZURE_TRANSLATION_KEY
+      ) {
+        displayAddressZhHans = displayAddressZhHant
+        addressPropsZhHans = { ...addressPropsZhHant }
+      } else {
+        const propsToTranslate = Object.values(addressPropsZhHant).filter(Boolean)
+        const [translatedDisplayAddress, ...translatedProps] = await translateText(
+          [displayAddressZhHant, ...propsToTranslate],
+          'zh-hant',
+          'zh-hans',
+          platformEnv.PUBLIC_AZURE_TRANSLATION_REGION,
+          platformEnv.AZURE_TRANSLATION_KEY,
+        )
+        displayAddressZhHans = translatedDisplayAddress
 
-      // Map translated properties back to their keys
-      let propIndex = 0
-      addressPropsZhHans = Object.fromEntries(
-        Object.entries(addressPropsZhHant).map(([key, value]) => [
-          key,
-          value ? translatedProps[propIndex++] : value,
-        ]),
-      )
+        // Map translated properties back to their keys
+        let propIndex = 0
+        addressPropsZhHans = Object.fromEntries(
+          Object.entries(addressPropsZhHant).map(([key, value]) => [
+            key,
+            value ? translatedProps[propIndex++] : value,
+          ]),
+        )
+      }
     } catch (error) {
       console.error('Translation failed:', error)
     }
