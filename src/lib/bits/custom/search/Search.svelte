@@ -37,16 +37,26 @@ let isLoading = $state(false)
 let requestId = $state(0)
 let rootEl = $state<HTMLDivElement | null>(null)
 let isOpen = $state(false)
-let cachedEmptyQueryResults = $state<T[]>(initialResults)
+let cachedEmptyQueryResults = $state<T[]>([])
 let lastPrefetchKey = $state<unknown>(Symbol('search-prefetch-init'))
 let lastVisibility = $state<boolean | null>(null)
 let openEpoch = $state(0)
 let localExcludedIds = $state<string[]>([])
-let previousExcludeIds = excludeIds
+let previousExcludeIds = $state<string[]>([])
+const resolvedInitialResults = $derived(normalizeItems(initialResults))
+const resolvedExcludeIds = $derived(normalizeStringArray(excludeIds))
 const emptyQueryResults = $derived(filterExcludedItems(cachedEmptyQueryResults))
 const results = $derived(filterExcludedItems(rawResults))
 const areResultsVisible = $derived(isOpen && results.length > 0)
 const shouldShowEmptyState = $derived(isOpen && results.length === 0 && !isLoading)
+
+function normalizeItems(items: T[] | undefined | null): T[] {
+  return Array.isArray(items) ? items : []
+}
+
+function normalizeStringArray(items: string[] | undefined | null): string[] {
+  return Array.isArray(items) ? items : []
+}
 
 function toItemId(item: T): string {
   if (getItemId) return getItemId(item)
@@ -55,7 +65,7 @@ function toItemId(item: T): string {
 }
 
 function getExcludedIds(): Set<string> {
-  return new Set([...excludeIds, ...localExcludedIds])
+  return new Set([...resolvedExcludeIds, ...localExcludedIds])
 }
 
 function filterExcludedItems(items: T[]): T[] {
@@ -104,10 +114,11 @@ async function handleQuery(
           )
         ).data as T[])
     if (currentRequestId !== requestId) return
+    const nextResults = normalizeItems(response)
     if (trimmedQuery.length === 0) {
-      cachedEmptyQueryResults = response
+      cachedEmptyQueryResults = nextResults
     }
-    rawResults = response
+    rawResults = nextResults
   } catch {
     if (currentRequestId !== requestId) return
     rawResults = []
@@ -190,18 +201,20 @@ $effect(() => {
 
 $effect(() => {
   initialResults
-  cachedEmptyQueryResults = initialResults
+  cachedEmptyQueryResults = resolvedInitialResults
   if (untrack(() => query.trim().length > 0)) return
-  rawResults = initialResults
+  rawResults = resolvedInitialResults
 })
 
 $effect(() => {
-  const removedExcludeIds = previousExcludeIds.filter(id => !excludeIds.includes(id))
+  const removedExcludeIds = previousExcludeIds.filter(
+    id => !resolvedExcludeIds.includes(id),
+  )
   if (removedExcludeIds.length > 0) {
     const removedExcludeIdSet = new Set(removedExcludeIds)
     localExcludedIds = localExcludedIds.filter(id => !removedExcludeIdSet.has(id))
   }
-  previousExcludeIds = [...excludeIds]
+  previousExcludeIds = [...resolvedExcludeIds]
 })
 
 $effect(() => {

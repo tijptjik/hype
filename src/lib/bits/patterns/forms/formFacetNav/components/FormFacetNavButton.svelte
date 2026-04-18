@@ -12,6 +12,7 @@ let { direction, action }: FormFacetNavButtonProps = $props()
 
 const isNext = $derived(direction === 'next')
 const iconComponent = $derived(isNext ? ChevronRightIcon : ChevronLeftIcon)
+const resolvedAction = $derived(action ?? null)
 const buttonClass = $derived(
   cx(
     '[--btn-soft-fg:color-mix(in_oklab,white_70%,transparent)]',
@@ -24,12 +25,12 @@ const buttonClass = $derived(
 </script>
 
 <Button
-  text={action.text}
+  text={resolvedAction?.text ?? ''}
   {iconComponent}
   color="primary"
   style="soft"
   size="sm"
   class={buttonClass}
-  disabled={action.disabled ?? false}
-  onClick={action.onClick}
+  disabled={resolvedAction?.disabled ?? false}
+  onClick={resolvedAction?.onClick}
 />

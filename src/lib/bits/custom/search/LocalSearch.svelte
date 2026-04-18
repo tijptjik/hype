@@ -7,7 +7,7 @@ import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.ut
 import * as SearchPrimitive from './src/components'
 
 let {
-  options,
+  options = [],
   placeholder = m.forms__search_placeholder(),
   focusOnMount = false,
   mountTransitionDuration = 0,
@@ -29,7 +29,9 @@ let results = $state<T[]>([])
 let isOpen = $state(false)
 let rootEl = $state<HTMLDivElement | null>(null)
 let localExcludedIds = $state<string[]>([])
-let previousExcludeIds = excludeIds
+let previousExcludeIds = $state<string[]>([])
+const resolvedOptions = $derived(Array.isArray(options) ? options : [])
+const resolvedExcludeIds = $derived(Array.isArray(excludeIds) ? excludeIds : [])
 const shouldShowEmptyState = $derived(isOpen && results.length === 0)
 
 function toItemId(item: T): string {
@@ -44,13 +46,13 @@ function toSearchText(item: T): string {
 }
 
 function getExcludedIds(): Set<string> {
-  return new Set([...excludeIds, ...localExcludedIds])
+  return new Set([...resolvedExcludeIds, ...localExcludedIds])
 }
 
 function resolveResults(nextQuery: string): T[] {
   const needle = nextQuery.trim().toLowerCase()
   const excludedIds = getExcludedIds()
-  const filtered = options.filter(item => {
+  const filtered = resolvedOptions.filter(item => {
     if (excludedIds.has(toItemId(item))) return false
     if (needle.length === 0) return true
     return toSearchText(item).toLowerCase().includes(needle)
@@ -128,12 +130,14 @@ $effect(() => {
 })
 
 $effect(() => {
-  const removedExcludeIds = previousExcludeIds.filter(id => !excludeIds.includes(id))
+  const removedExcludeIds = previousExcludeIds.filter(
+    id => !resolvedExcludeIds.includes(id),
+  )
   if (removedExcludeIds.length > 0) {
     const removedExcludeIdSet = new Set(removedExcludeIds)
     localExcludedIds = localExcludedIds.filter(id => !removedExcludeIdSet.has(id))
   }
-  previousExcludeIds = [...excludeIds]
+  previousExcludeIds = [...resolvedExcludeIds]
 })
 </script>
 
