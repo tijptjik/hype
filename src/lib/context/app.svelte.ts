@@ -42,7 +42,11 @@ import {
 } from '$lib/client/services/property'
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
-import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/remote'
+import {
+  runRemoteQuery,
+  toSafeListResponse,
+  type ImperativeRemoteQuery,
+} from '$lib/remote'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
@@ -951,16 +955,18 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Organisation remote list function is not configured.')
     }
-    const result = (await runRemoteQuery(
-      remoteList({
-        conditions: {
-          isArchived: false,
-          isPublished: true,
-        },
-        prisms: this.state.prisms,
-        sorting: this.state.viewSorting.organisation,
-      }),
-    )) as ListResponse<Organisation>
+    const result = toSafeListResponse<Organisation>(
+      (await runRemoteQuery(
+        remoteList({
+          conditions: {
+            isArchived: false,
+            isPublished: true,
+          },
+          prisms: this.state.prisms,
+          sorting: this.state.viewSorting.organisation,
+        }),
+      )) as ListResponse<Organisation> | undefined,
+    )
     this.setListQueryMeta(this.organisationsQueryKey(), result)
     return result.data
   }
@@ -979,9 +985,11 @@ export class AppCtx {
       meta: { profile: 'card' },
     }
 
-    const result = (await runRemoteQuery(
-      remoteList(requestParams),
-    )) as ListResponse<Project>
+    const result = toSafeListResponse<Project>(
+      (await runRemoteQuery(remoteList(requestParams))) as
+        | ListResponse<Project>
+        | undefined,
+    )
 
     this.setListQueryMeta(this.projectsQueryKey(), result)
     return result.data
@@ -992,17 +1000,19 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Layer remote list function is not configured.')
     }
-    const result = (await runRemoteQuery(
-      remoteList({
-        conditions: {
-          isArchived: false,
-          isPublished: true,
-        },
-        prisms: this.state.prisms,
-        sorting: this.state.viewSorting.layer,
-        meta: { profile: 'card' },
-      }),
-    )) as ListResponse<Layer>
+    const result = toSafeListResponse<Layer>(
+      (await runRemoteQuery(
+        remoteList({
+          conditions: {
+            isArchived: false,
+            isPublished: true,
+          },
+          prisms: this.state.prisms,
+          sorting: this.state.viewSorting.layer,
+          meta: { profile: 'card' },
+        }),
+      )) as ListResponse<Layer> | undefined,
+    )
     this.setListQueryMeta(this.layersQueryKey(), result)
     return result.data
   }
@@ -1012,17 +1022,19 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Feature remote list function is not configured.')
     }
-    const result = (await runRemoteQuery(
-      remoteList({
-        conditions: {
-          isArchived: false,
-          isPublished: true,
-        },
-        prisms: this.state.prisms,
-        sorting: this.state.viewSorting.feature,
-        meta: { profile: 'list' },
-      }),
-    )) as ListResponse<FeatureFromCollection>
+    const result = toSafeListResponse<FeatureFromCollection>(
+      (await runRemoteQuery(
+        remoteList({
+          conditions: {
+            isArchived: false,
+            isPublished: true,
+          },
+          prisms: this.state.prisms,
+          sorting: this.state.viewSorting.feature,
+          meta: { profile: 'list' },
+        }),
+      )) as ListResponse<FeatureFromCollection> | undefined,
+    )
     this.setListQueryMeta(this.featuresQueryKey(), result)
     return result.data
   }
@@ -1032,12 +1044,14 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Property remote list function is not configured.')
     }
-    const result = (await runRemoteQuery(
-      remoteList({
-        conditions: {},
-        prisms: this.state.prisms,
-      }),
-    )) as ListResponse<Property>
+    const result = toSafeListResponse<Property>(
+      (await runRemoteQuery(
+        remoteList({
+          conditions: {},
+          prisms: this.state.prisms,
+        }),
+      )) as ListResponse<Property> | undefined,
+    )
     return result.data
   }
 
