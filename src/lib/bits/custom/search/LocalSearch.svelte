@@ -25,13 +25,13 @@ let {
 }: LocalSearchProps<T> = $props()
 
 let query = $state('')
-let results = $state<T[]>([])
 let isOpen = $state(false)
 let rootEl = $state<HTMLDivElement | null>(null)
 let localExcludedIds = $state<string[]>([])
-let previousExcludeIds = $state<string[]>([])
+let previousExcludeIds: string[] = []
 const resolvedOptions = $derived(Array.isArray(options) ? options : [])
 const resolvedExcludeIds = $derived(Array.isArray(excludeIds) ? excludeIds : [])
+const results = $derived(isOpen ? resolveResults(query) : [])
 const shouldShowEmptyState = $derived(isOpen && results.length === 0)
 
 function toItemId(item: T): string {
@@ -60,23 +60,31 @@ function resolveResults(nextQuery: string): T[] {
   return filtered.slice(0, Math.max(1, maxResults))
 }
 
-function openResults(nextQuery: string): void {
-  results = resolveResults(nextQuery)
-  isOpen = true
+function openResults(): void {
+  if (!isOpen) {
+    console.log('[LocalSearch] opening results', {
+      query,
+      optionCount: resolvedOptions.length,
+      excludeIds: resolvedExcludeIds,
+      localExcludedIds,
+      resultCount: resolveResults(query).length,
+    })
+    isOpen = true
+  }
 }
 
 function handleQuery(nextQuery: string): void {
   query = nextQuery
-  openResults(nextQuery)
+  openResults()
 }
 
 function handleClear(): void {
   query = ''
-  openResults('')
+  openResults()
 }
 
 function handleFocusIn(): void {
-  openResults(query)
+  openResults()
 }
 
 function handleIntroEnd(): void {
@@ -115,7 +123,6 @@ function selectItem(item: T): void {
   }
   onSelect(item)
   query = ''
-  results = []
   isOpen = false
 
   void tick().then(() => {
@@ -125,11 +132,6 @@ function selectItem(item: T): void {
 }
 
 $effect(() => {
-  if (!isOpen) return
-  results = resolveResults(query)
-})
-
-$effect(() => {
   const removedExcludeIds = previousExcludeIds.filter(
     id => !resolvedExcludeIds.includes(id),
   )
@@ -137,7 +139,26 @@ $effect(() => {
     const removedExcludeIdSet = new Set(removedExcludeIds)
     localExcludedIds = localExcludedIds.filter(id => !removedExcludeIdSet.has(id))
   }
-  previousExcludeIds = [...resolvedExcludeIds]
+  const excludeIdsChanged =
+    previousExcludeIds.length !== resolvedExcludeIds.length ||
+    previousExcludeIds.some((id, index) => id !== resolvedExcludeIds[index])
+
+  if (excludeIdsChanged) {
+    previousExcludeIds = [...resolvedExcludeIds]
+  }
+})
+
+$effect(() => {
+  if (!isOpen) return
+  console.log('[LocalSearch] state', {
+    query,
+    isOpen,
+    optionCount: resolvedOptions.length,
+    excludeIds: resolvedExcludeIds,
+    localExcludedIds,
+    resultCount: results.length,
+    sampleTitles: results.slice(0, 5).map(item => resultMap.title(item)),
+  })
 })
 </script>
 

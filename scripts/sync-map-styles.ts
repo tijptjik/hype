@@ -99,7 +99,7 @@ ON CONFLICT("mapStyleId", "locale") DO UPDATE SET
   "descriptionGen" = 0;`.trim())
     }
   }
-cd 
+
   if (shouldWrapInTransaction(target)) {
     statements.push('COMMIT;')
   }

@@ -42,7 +42,7 @@ let lastPrefetchKey = $state<unknown>(Symbol('search-prefetch-init'))
 let lastVisibility = $state<boolean | null>(null)
 let openEpoch = $state(0)
 let localExcludedIds = $state<string[]>([])
-let previousExcludeIds = $state<string[]>([])
+let previousExcludeIds: string[] = []
 const resolvedInitialResults = $derived(normalizeItems(initialResults))
 const resolvedExcludeIds = $derived(normalizeStringArray(excludeIds))
 const emptyQueryResults = $derived(filterExcludedItems(cachedEmptyQueryResults))
@@ -214,7 +214,13 @@ $effect(() => {
     const removedExcludeIdSet = new Set(removedExcludeIds)
     localExcludedIds = localExcludedIds.filter(id => !removedExcludeIdSet.has(id))
   }
-  previousExcludeIds = [...resolvedExcludeIds]
+  const excludeIdsChanged =
+    previousExcludeIds.length !== resolvedExcludeIds.length ||
+    previousExcludeIds.some((id, index) => id !== resolvedExcludeIds[index])
+
+  if (excludeIdsChanged) {
+    previousExcludeIds = [...resolvedExcludeIds]
+  }
 })
 
 $effect(() => {

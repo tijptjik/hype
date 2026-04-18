@@ -87,6 +87,7 @@ import {
   getOrganisationMapStyleScope,
   listMapStylesForProject,
   listMapStylesForScope,
+  syncMapStyleCatalog,
   setProjectMapStyleByCode,
 } from '$lib/db/services/map'
 import {
@@ -368,6 +369,8 @@ export const getProjectMapStylesQuery = guardedQuery(
   async (params, ctx): Promise<{ data: MapStyleResolvedDB[] }> => {
     const { db, event } = ctx
     const environment = event.platform?.env?.ENVIRONMENT
+
+    await syncMapStyleCatalog(db)
 
     const withResolvedPreviewPath = async (
       rows: MapStyleResolvedDB[],
