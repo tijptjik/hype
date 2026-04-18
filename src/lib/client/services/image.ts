@@ -164,6 +164,7 @@ export async function prepareImageUpload(
     contentType: normalizedUpload.file.type || 'application/octet-stream',
     size: normalizedUpload.file.size,
     replaceImageId: uploadCtx.imageToReplace?.image.id ?? undefined,
+    links: uploadCtx.links,
     meta: { isAdminRequest },
   })
   const authAt = now()
