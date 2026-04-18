@@ -11,6 +11,7 @@ import { retryBusyRead } from '$lib/db/services/sqlite'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
+import { isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
 // TYPES
 import type { LocaleKey, Session, SessionUser } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -220,19 +221,8 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
  * when they try to access protected routes.
  */
 const handle_auth_redirect: Handle = async ({ event, resolve }) => {
-  // Get the pathname, handling null/undefined cases
-  const pathname = event.url.pathname || ''
-
-  // Skip redirect for API routes, static assets, home page, and empty paths
-  if (
-    pathname.startsWith('/api/') ||
-    pathname.startsWith('/headless/') ||
-    pathname.startsWith('/proxy/') ||
-    pathname.startsWith('/static/') ||
-    pathname === '/' ||
-    pathname === '' ||
-    pathname === '/manifest.webmanifest'
-  ) {
+  // Allow public endpoints and legal policy documents to remain reachable when logged out.
+  if (isPublicUnauthenticatedPath(event.url.pathname)) {
     return resolve(event)
   }
 
