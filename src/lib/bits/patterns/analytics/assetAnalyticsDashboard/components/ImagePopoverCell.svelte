@@ -3,6 +3,7 @@ import type { Component } from 'svelte'
 import { onDestroy } from 'svelte'
 import { formatDate } from '$lib'
 import { m } from '$lib/i18n'
+import { runRemoteQuery } from '$lib/remote'
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import Popover from '$lib/bits/core/popover/Popover.svelte'
 // LOCAL
@@ -111,14 +112,16 @@ async function loadMetadata(): Promise<void> {
 
   try {
     const { getMetadata } = await import('$lib/api/server/image.remote')
-    const response = await getMetadata({
-      publicId,
-      env: environment ?? undefined,
-      profile: 'basic',
-      meta: {
-        isAdminRequest: true,
-      },
-    })
+    const response = await runRemoteQuery(
+      getMetadata({
+        publicId,
+        env: environment ?? undefined,
+        profile: 'basic',
+        meta: {
+          isAdminRequest: true,
+        },
+      }),
+    )
 
     metadata = response?.data ?? null
   } catch {

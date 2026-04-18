@@ -137,7 +137,9 @@ export type AdminViewerProps = ViewerProps & {
 }
 
 export type CameraViewerProps = AdminViewerProps & {
+  emptyDescription?: string | null
   onCaptureFiles?: (files: FileList | File[]) => void
+  onDeleteItem?: (item: ViewerRenderable) => void | Promise<void>
 }
 
 export type ThumbnailWrapperProps = {

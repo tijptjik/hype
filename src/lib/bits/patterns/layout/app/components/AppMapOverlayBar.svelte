@@ -19,7 +19,9 @@ const isCardToggleVisible = $derived(
   ),
 )
 const hasCardToggleTarget = $derived(
-  Boolean(appCtx.getActiveFeature() && !omniCtx.isNewFeatureMode),
+  Boolean(
+    !omniCtx.isCardOpen && appCtx.getActiveFeature() && !omniCtx.isNewFeatureMode,
+  ),
 )
 const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
 const bottomOffset = 0

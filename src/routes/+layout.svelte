@@ -17,7 +17,7 @@ import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
 import { setResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
-import { App } from '$lib/bits'
+import App from '$lib/bits/patterns/layout/app/App.svelte'
 // MAPLIBRE
 import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
@@ -33,11 +33,13 @@ import { MOBILE_MAX_WIDTH } from '$lib/constants'
 let { children, data }: LayoutProps = $props()
 
 // CONTEXT
-const queryClient = (
-  data as LayoutData & {
-    queryClient: QueryClient
-  }
-).queryClient
+const queryClient = $derived(
+  (
+    data as LayoutData & {
+      queryClient: QueryClient
+    }
+  ).queryClient,
+)
 
 const session = useSession()
 const responsive = setResponsiveCtx()

@@ -25,6 +25,14 @@ const imageCtx = getImageCtx()
 
 async function submitNewFeature(): Promise<void> {
   const newFeature = appCtx.getNewFeature() as NewFeatureTask
+  const title =
+    newFeature?.feature?.i18n?.[getLocale()]?.title ??
+    newFeature?.feature?.i18n?.en?.title ??
+    'Untitled feature'
+  const layer = newFeature?.layerId ? appCtx.cache.layer.get(newFeature.layerId) : null
+  const layerName = layer
+    ? appCtx.getContextualLayerName(layer, false, false) || 'this layer'
+    : 'this layer'
 
   if (imageCtx.getStagedImages().length === 0) {
     cardCtx.setError(m.validation__at_least_one_image())
@@ -37,25 +45,34 @@ async function submitNewFeature(): Promise<void> {
   }
 
   try {
+    cardCtx.resetError()
     cardCtx.isSubmitting = true
 
     if (!newFeature) return
 
-    await submitNewFeatureAPI(newFeature, imageCtx.getStagedQueue() as ImageUpload[])
+    await submitNewFeatureAPI(newFeature, imageCtx.getStagedQueue() as ImageUpload[], {
+      onStatusChange: label => {
+        cardCtx.setSubmissionLabel(label)
+      },
+    })
 
-    toast.success(m.new_feature__success())
+    toast.success('Submission Success', {
+      description: `${title} was suggested for addition to ${layerName}.`,
+    })
 
     omniCtx.close()
     cardCtx.setMode(FeatureCardMode.Display)
+    imageCtx.resetImages()
     cardCtx.userData.photos = []
     appCtx.resetNewFeature()
-    cardCtx.validationError = ''
+    cardCtx.resetError()
   } catch (error) {
     console.error('Error submitting new feature:', error)
     toast.error(m.long_crazy_peacock_care())
     cardCtx.validationError = m.long_crazy_peacock_care()
   } finally {
     cardCtx.isSubmitting = false
+    cardCtx.resetSubmissionState()
   }
 }
 </script>

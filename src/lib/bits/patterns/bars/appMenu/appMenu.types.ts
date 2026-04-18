@@ -17,7 +17,7 @@ export interface AppMenuItem<T = string> {
 export interface AppMenuProps<T = string> {
   items: AppMenuItem<T>[]
   trailingItems?: AppMenuItem<T>[]
-  onSelect?: (item: AppMenuItem<T>) => void
+  onSelect?: (item: AppMenuItem<T>, event: MouseEvent) => void | Promise<void>
   offsetX?: number
   effectiveBottomOffset?: number
   class?: string

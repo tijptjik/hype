@@ -3,6 +3,7 @@ import { onDestroy } from 'svelte'
 import { toast } from 'svelte-sonner'
 // REMOTE
 import { getMetadata } from '$lib/api/server/image.remote'
+import { runRemoteQuery } from '$lib/remote'
 // I18N
 import { m } from '$lib/i18n'
 // IMAGE
@@ -747,13 +748,15 @@ export function useImageEditorGalleryModel(
       [imageId]: 'loading',
     }
 
-    const request = getMetadata({
-      publicId: currentImage.publicId,
-      env: currentImage.env ?? undefined,
-      version: currentImage.version ?? undefined,
-      profile: 'admin',
-      meta: imageCtx.appCtx.isAdmin() ? { isAdminRequest: true } : undefined,
-    }).then(response => (response?.data as ImageMetadataFull | null) ?? null)
+    const request = runRemoteQuery(
+      getMetadata({
+        publicId: currentImage.publicId,
+        env: currentImage.env ?? undefined,
+        version: currentImage.version ?? undefined,
+        profile: 'admin',
+        meta: imageCtx.appCtx.isAdmin() ? { isAdminRequest: true } : undefined,
+      }),
+    ).then(response => (response?.data as ImageMetadataFull | null) ?? null)
     metadataRequests.set(imageId, request)
 
     try {

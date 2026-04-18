@@ -89,8 +89,8 @@ const trailingItemsClasses = $derived(
 )
 
 // HANDLERS
-function handleSelect(item: AppMenuItem<T>): void {
-  onSelect?.(item)
+function handleSelect(item: AppMenuItem<T>, event: MouseEvent): void {
+  void onSelect?.(item, event)
 }
 
 function getItemIconTone(item: AppMenuItem<T>): 'primary' | 'white' | 'secondary' {
@@ -149,7 +149,7 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
     labelClasses={getItemLabelClasses(item)}
     iconClasses={getItemIconClasses(item)}
     attrs={{ title: item.label }}
-    onClick={() => handleSelect(item)}
+    onClick={event => handleSelect(item, event)}
   />
 {/snippet}
 

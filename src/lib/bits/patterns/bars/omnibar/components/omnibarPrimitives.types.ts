@@ -71,6 +71,7 @@ export type OmnibarNavigationHeaderProps = Pick<
   | 'featureTitle'
   | 'hasElevatedChrome'
   | 'isCardOpen'
+  | 'isCardOpeningPending'
   | 'showCollectionSwitcher'
   | 'onToggleTray'
   | 'onToggleCard'

@@ -4,6 +4,7 @@ import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
 import type { FeatureFieldSectionItem } from '$lib/bits/patterns/forms/formFeatureFieldsSection'
 import { sortFeatureProperties } from '$lib/client/services/property'
+import { upsertNewFeatureDraft } from '$lib/client/services/task'
 import { NewFeatureMode, OmniMode } from '$lib/enums'
 import type {
   Feature,
@@ -41,6 +42,10 @@ export const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
   114.1693671540923, 22.319307515052614,
 ]
 
+type InitAddNewFeatureOptions = {
+  navigateToRoute?: boolean
+}
+
 // ---
 /********************
  *  0. NEW FEATURE FLOW
@@ -48,20 +53,71 @@ export const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
 // +++ New Feature Flow
 
 /**
+ * Stops the originating UI event so the shared new-feature flow can take over
+ * without triggering any competing click navigation.
+ * @param event Optional trigger event from the originating UI control.
+ * @returns Nothing.
+ */
+function stopNewFeatureTriggerEvent(event?: Event | null): void {
+  event?.preventDefault()
+  event?.stopPropagation()
+}
+
+/**
+ * Resolves the next visible step for an in-progress new-feature draft.
+ * @param newFeature Current in-memory draft payload.
+ * @returns The modal or card state that should be shown next.
+ */
+function getNewFeatureEntryMode(newFeature: AppCtx['newFeature']): NewFeatureMode {
+  if (!newFeature?.layerId) {
+    return NewFeatureMode.parents
+  }
+
+  const coordinates = (newFeature.feature?.geometry as Point | undefined)?.coordinates
+  if (!coordinates) {
+    return NewFeatureMode.location
+  }
+
+  const hasDisplayAddress = Object.values(newFeature.feature?.i18n ?? {}).some(locale =>
+    Boolean(locale?.displayAddress?.trim()),
+  )
+
+  return hasDisplayAddress ? NewFeatureMode.card : NewFeatureMode.location
+}
+
+/**
  * Initializes the admin add-feature flow from the current active layer selection.
  * @param appCtx App context containing active layer state and new-feature setters.
  * @param omniCtx Omni context controlling the global creation mode.
- * @param e Triggering UI event.
+ * @param event Optional triggering UI event.
+ * @param options Flow bootstrap options.
  * @returns Nothing.
  */
-export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Event) => {
+export const initAddNewFeature = async (
+  appCtx: AppCtx,
+  omniCtx: OmniCtx,
+  event?: Event | null,
+  options: InitAddNewFeatureOptions = {},
+): Promise<void> => {
   const activeLayers = appCtx.state.prisms.layer
   const singleActiveLayer =
     activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null
+  const { navigateToRoute = true } = options
 
-  e.preventDefault()
-  e.stopPropagation()
+  stopNewFeatureTriggerEvent(event)
   omniCtx.setMode(OmniMode.newFeature)
+
+  if (appCtx.getNewFeature()) {
+    if (!appCtx.getNewFeatureMode()) {
+      appCtx.setNewFeatureMode(getNewFeatureEntryMode(appCtx.getNewFeature()))
+    }
+
+    if (navigateToRoute) {
+      await goto('/features/new')
+    }
+
+    return
+  }
 
   if (activeLayers.length === 1) {
     if (singleActiveLayer) {
@@ -74,6 +130,25 @@ export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Eve
           organisationId: hierarchy.organisation?.id,
           projectId: hierarchy.project?.id,
           layerId: hierarchy.layer?.id,
+          geometry: {
+            type: 'Point',
+            coordinates: appCtx.map
+              ? [appCtx.map.getCenter().lng, appCtx.map.getCenter().lat]
+              : DEFAULT_NEW_FEATURE_COORDINATES,
+          },
+        },
+      })
+      const draft = await upsertNewFeatureDraft(appCtx.getNewFeature() ?? {})
+      appCtx.updateNewFeature({
+        taskId: draft.task.id,
+        featureId: draft.featureId,
+        organisationId: draft.organisationId,
+        projectId: draft.projectId,
+        layerId: draft.layerId,
+        feature: {
+          organisationId: draft.organisationId,
+          projectId: draft.projectId,
+          layerId: draft.layerId,
         },
       })
       // Trigger the GeoLocation modal directly.
@@ -84,7 +159,9 @@ export const initAddNewFeature = async (appCtx: AppCtx, omniCtx: OmniCtx, e: Eve
     appCtx.setNewFeatureMode(NewFeatureMode.parents)
   }
 
-  await goto('/features/new')
+  if (navigateToRoute) {
+    await goto('/features/new')
+  }
 }
 
 // ---

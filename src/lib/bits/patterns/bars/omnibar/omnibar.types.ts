@@ -28,6 +28,7 @@ export type OmnibarSearchProps = {
 export type OmnibarNavigationProps = {
   isTrayOpen: boolean
   isCardOpen: boolean
+  isCardOpeningPending: boolean
   showArrows: boolean
   showCollectionSwitcher: boolean
   leftDisabled: boolean

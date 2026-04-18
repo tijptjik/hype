@@ -754,6 +754,44 @@ const persistOriginalMetadataSidecars = async (params: {
   }
 }
 
+/**
+ * Defers metadata sidecar persistence so direct-upload finalization can return
+ * as soon as the database state is durable.
+ *
+ * @param params Metadata persistence parameters.
+ * @returns Nothing.
+ */
+const enqueueMetadataSidecarPersistence = (params: {
+  bucket: ReturnType<typeof getOriginalsBucketForStage>
+  publicId: string
+  version: number
+  metadataDocument: ImageMetadataDocument
+  manifestDocument: { publicId: string; version: number; updatedAt: string }
+  stage: ReturnType<typeof toImageStage>
+  event: {
+    platform: App.Platform | undefined
+    fetch: typeof fetch
+  }
+}): void => {
+  const persistenceTask = persistOriginalMetadataSidecars(params).catch(error => {
+    console.error(
+      '[image.remote.finalizeImageUpload] metadata sidecar persistence failed',
+      {
+        publicId: params.publicId,
+        version: params.version,
+        error,
+      },
+    )
+  })
+
+  if (params.event.platform?.context) {
+    params.event.platform.context.waitUntil(persistenceTask)
+    return
+  }
+
+  void persistenceTask
+}
+
 const deleteBucketKeys = async (
   bucket: ReturnType<typeof getOriginalsBucketForStage>,
   keys: string[],
@@ -1460,6 +1498,7 @@ export const authImageUpload = guardedCommand(
       userRoles,
       params.ctxType as ImageContextResource,
       params.ctxId as Id,
+      params.links,
     )
 
     const stage = toImageStage(params.env)
@@ -1559,6 +1598,7 @@ export const finalizeImageUpload = guardedCommand(
       userRoles,
       payload.ctxType as ImageContextResource,
       payload.ctxId as Id,
+      params.persist?.links,
     )
 
     const previousResourceImage =
@@ -1647,8 +1687,9 @@ export const finalizeImageUpload = guardedCommand(
       })
     }
 
-    // Keep metadata sidecars adjacent to the stable source object key.
-    await persistOriginalMetadataSidecars({
+    // Persist metadata sidecars off the critical response path once the image row
+    // and links can be committed safely.
+    enqueueMetadataSidecarPersistence({
       bucket: originalsBucket,
       publicId: payload.publicId,
       version,

@@ -198,6 +198,7 @@ export type UserContributedFeature = {
   projectId: Id
   layerId: Id
   geometry: Geometry
+  isDraft?: boolean
   i18n: Partial<
     Record<
       Locale,

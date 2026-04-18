@@ -16,6 +16,7 @@ const ELEVATED_CHROME_MIN_HEIGHT_PX = 800
 const ELEVATED_CHROME_EXTRA_REQUIRED_HEIGHT_PX = 40
 const ELEVATED_CHROME_DESKTOP_WIDE_EXTRA_REQUIRED_HEIGHT_PX = 48
 const ELEVATED_CHROME_DESKTOP_WIDE_MIN_WIDTH_PX = 1280
+const COMPACT_IMAGE_VIEWER_COUNTER_MAX_WIDTH_PX = 399
 
 export type ResponsiveDimensions = {
   width: number
@@ -103,6 +104,10 @@ export class ResponsiveCtx {
 
   get hasElevatedChrome(): boolean {
     return hasElevatedChrome(this.visibleWindowWidth, this.visibleWindowHeight)
+  }
+
+  get hasCompactImageViewerCounter(): boolean {
+    return this.visibleWindowWidth <= COMPACT_IMAGE_VIEWER_COUNTER_MAX_WIDTH_PX
   }
 
   get keyboardInsetHeight(): number {

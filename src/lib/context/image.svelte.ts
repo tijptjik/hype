@@ -820,7 +820,7 @@ export class ImageCtx {
             presentationMode: 'contain',
             createdAt: new Date().toISOString(),
             contributorId: null,
-            cdn: 'cloudflareR2',
+            cdn: 'preview',
             env: 'local',
             cdnId: null,
             publicId: tempId,
@@ -1098,6 +1098,13 @@ export class ImageCtx {
   resetImages() {
     // Clean up preview URLs before clearing
     this.cleanupStagedImages()
+    this.resetUploadQueue()
+    this.resetActiveImage()
+    this.resetTargetImage()
+    this.resetActivePreview()
+    this.state.loadStatus.clear()
+    this.state.thumbnailLoadStatus.clear()
+    this.state.errorMessages.clear()
     this.state.images.clear()
   }
 

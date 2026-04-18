@@ -1,10 +1,14 @@
 <script lang="ts">
 import { useImageEditorGalleryModel } from '$lib/adapters/image'
+import { getURLfromImage } from '$lib/client/services/image'
+import { CameraViewer } from '$lib/bits/patterns/images'
 import Viewer from '$lib/bits/patterns/images/components/Viewer.svelte'
+import { getCardCtx } from '$lib/context/card.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'
 import * as ViewerPrimitive from './images'
 import type { ViewerRenderable } from '$lib/bits/patterns/images'
 
+const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)
 let loadedActiveId = $state<string | null>(null)
@@ -26,6 +30,28 @@ let {
 } = $props()
 
 const viewerBlockMinHeightPx = $derived(minHeightPx + topPaddingPx + paddingPx)
+const isContributionMode = $derived(
+  cardCtx.isMissingMode || cardCtx.isAddPhotoMode || cardCtx.isNewMode,
+)
+const stagedItems = $derived.by<ViewerRenderable[]>(() =>
+  imageCtx.getStagedImages().map(image => ({
+    id: image.image.id,
+    src: getURLfromImage({ image }),
+    alt: null,
+    meta: {
+      imageId: image.image.id,
+    },
+  })),
+)
+const stagedActiveId = $derived.by(() => {
+  const activeImageId = imageCtx.state.activeImage?.image.id ?? null
+
+  if (activeImageId && stagedItems.some(item => item.id === activeImageId)) {
+    return activeImageId
+  }
+
+  return stagedItems[stagedItems.length - 1]?.id ?? null
+})
 
 const activeIndex = $derived.by(() => {
   const activeId = model.state.activeId
@@ -42,10 +68,6 @@ const pendingIndex = $derived.by(() => {
   if (activeIndex < 0 || loadedIndex === activeIndex) return -1
   return activeIndex
 })
-const currentImage = $derived(model.state.activeImage)
-const shouldShowMetadata = $derived(
-  Boolean(currentImage && !imageCtx.isImageStaged(currentImage)),
-)
 
 $effect(() => {
   const activeId = model.state.activeId
@@ -116,12 +138,6 @@ const viewerStyle = $derived.by(() => {
 })
 </script>
 
-{#snippet leftRail(_item: ViewerRenderable)}
-  {#if currentImage && shouldShowMetadata}
-    <ViewerPrimitive.Metadata {currentImage} />
-  {/if}
-{/snippet}
-
 {#snippet rightRail(_item: ViewerRenderable)}
   <ViewerPrimitive.Counter
     requestedIndex={activeIndex}
@@ -147,19 +163,44 @@ const viewerStyle = $derived.by(() => {
   ontouchmove={stopViewerEvent}
   ontouchend={stopViewerEvent}
 >
-  <Viewer
-    items={model.state.items}
-    activeId={model.state.activeId}
-    viewerFit={model.state.presentationMode === 'cover' ? 'cover' : 'fit'}
-    enableStageViewTransitions={false}
-    wrapNavigation={true}
-    showNavButtons={false}
-    railPadding={3}
-    centerAction="fullscreen"
-    {leftRail}
-    {rightRail}
-    {emptyState}
-    onActiveIdChange={model.actions.select}
-    onCurrentItemLoad={handleCurrentItemLoad}
-  />
+  {#if isContributionMode}
+    <CameraViewer
+      items={stagedItems}
+      activeId={stagedActiveId}
+      fit="fit"
+      viewerFit="fit"
+      enableStageViewTransitions={false}
+      wrapNavigation={true}
+      showNavButtons={false}
+      railPadding={3}
+      emptyDescription={null}
+      onActiveIdChange={id => {
+        imageCtx.targetItem(id)
+      }}
+      onUploadFiles={files => {
+        void imageCtx.handleStagedFilesSelect(Array.from(files), [])
+      }}
+      onCaptureFiles={files => {
+        void imageCtx.handleStagedFilesSelect(Array.from(files), [])
+      }}
+      onDeleteItem={item => {
+        imageCtx.unstageImage(item.id)
+      }}
+    />
+  {:else}
+    <Viewer
+      items={model.state.items}
+      activeId={model.state.activeId}
+      viewerFit={model.state.presentationMode === 'cover' ? 'cover' : 'fit'}
+      enableStageViewTransitions={false}
+      wrapNavigation={true}
+      showNavButtons={false}
+      railPadding={3}
+      centerAction="fullscreen"
+      {rightRail}
+      {emptyState}
+      onActiveIdChange={model.actions.select}
+      onCurrentItemLoad={handleCurrentItemLoad}
+    />
+  {/if}
 </div>
