@@ -27,6 +27,7 @@ import { feature, layer } from '$lib/db/schema/index'
 import {
   FeatureAdminProfileAPI,
   FeatureCardProfileAPI,
+  FeatureDraftEntityFormData,
   FeatureDetailProfileAPI,
   FeatureEntityFormData,
   FeatureListProfileAPI,
@@ -73,6 +74,8 @@ type PreparedUserContributedFeatureDraft = {
   validatedFeature: FeatureNew
   layerScope: NonNullable<Awaited<ReturnType<typeof probeLayerForUpdate>>>
 }
+
+type UserContributedFeatureDraftStage = 'draft' | 'final'
 
 const stripFeaturePropertyI18n = <T extends { properties?: unknown }>(input: T): T => ({
   ...input,
@@ -762,6 +765,7 @@ const prepareUserContributedFeatureDraft = async (
   newFeature: UserContributedFeature,
   region: string,
   subscriptionKey: string,
+  stage: UserContributedFeatureDraftStage = 'draft',
 ): Promise<PreparedUserContributedFeatureDraft> => {
   const layerScope = await probeLayerForUpdate(db, newFeature.layerId as string)
   if (!layerScope) {
@@ -789,8 +793,8 @@ const prepareUserContributedFeatureDraft = async (
 
       enrichedI18n[localeKey] = {
         title: localeValue?.title?.trim() ?? '',
-        description: localeValue?.description?.trim() || null,
-        displayAddress: localeValue?.displayAddress?.trim() || null,
+        description: localeValue?.description?.trim() ?? '',
+        displayAddress: localeValue?.displayAddress?.trim() ?? '',
         titleGen: false,
         descriptionGen: false,
         displayAddressGen: false,
@@ -809,8 +813,8 @@ const prepareUserContributedFeatureDraft = async (
       if (isSourceLocale) {
         enrichedI18n[localeKey] = {
           title: sourceTextObj.title,
-          description: sourceTextObj.description || null,
-          displayAddress: sourceTextObj.displayAddress || null,
+          description: sourceTextObj.description || '',
+          displayAddress: sourceTextObj.displayAddress || '',
           titleGen: false,
           descriptionGen: false,
           displayAddressGen: false,
@@ -862,9 +866,8 @@ const prepareUserContributedFeatureDraft = async (
 
       enrichedI18n[localeKey] = {
         title: translatedTitle || sourceTextObj.title,
-        description: translatedDescription || sourceTextObj.description || null,
-        displayAddress:
-          translatedDisplayAddress || sourceTextObj.displayAddress || null,
+        description: translatedDescription || sourceTextObj.description || '',
+        displayAddress: translatedDisplayAddress || sourceTextObj.displayAddress || '',
         titleGen: Boolean(translatedTitle),
         descriptionGen: Boolean(translatedDescription),
         displayAddressGen: Boolean(translatedDisplayAddress),
@@ -927,7 +930,7 @@ const prepareUserContributedFeatureDraft = async (
     }),
   )
 
-  const validatedFeature = FeatureEntityFormData.parse({
+  const draftPayload = {
     ...newFeature,
     organisationId: layerScope.organisationId,
     projectId: layerScope.projectId,
@@ -935,7 +938,11 @@ const prepareUserContributedFeatureDraft = async (
     isDraft: true,
     i18n: enrichedI18n as FeatureNew['i18n'],
     properties: enrichedProperties,
-  })
+  }
+  const validatedFeature =
+    stage === 'final'
+      ? FeatureEntityFormData.parse(draftPayload)
+      : FeatureDraftEntityFormData.parse(draftPayload)
 
   return {
     validatedFeature,
@@ -952,11 +959,14 @@ export const createUserContributedFeature = async (
   region: string,
   subscriptionKey: string,
 ) => {
+  const stage: UserContributedFeatureDraftStage =
+    newFeature.isDraft === true ? 'draft' : 'final'
   const { validatedFeature, layerScope } = await prepareUserContributedFeatureDraft(
     db,
     newFeature,
     region,
     subscriptionKey,
+    stage,
   )
 
   const created = await createFeature(db, {
@@ -990,11 +1000,14 @@ export const updateUserContributedFeatureDraft = async (
     throw new Error('Feature not found')
   }
 
+  const stage: UserContributedFeatureDraftStage =
+    newFeature.isDraft === true ? 'draft' : 'final'
   const { validatedFeature, layerScope } = await prepareUserContributedFeatureDraft(
     db,
     newFeature,
     region,
     subscriptionKey,
+    stage,
   )
 
   const updated = await updateFeatureByIdWithConcurrency(db, {
@@ -1024,4 +1037,95 @@ export const updateUserContributedFeatureDraft = async (
   await updateProperties(db, validatedFeature.properties ?? [], featureId)
 
   return updated
+}
+
+/**
+ * Validates that a persisted user-contributed feature draft satisfies final-submission requirements.
+ * @param db Database handle.
+ * @param featureId Draft feature identifier.
+ * @returns Nothing. Throws when the persisted draft is incomplete for final submission.
+ */
+export const assertUserContributedFeatureDraftIsSubmittable = async (
+  db: Database,
+  featureId: FeatureDB['id'],
+): Promise<void> => {
+  const persistedFeature = await db.query.feature.findFirst({
+    with: {
+      i18n: true,
+      properties: {
+        with: {
+          i18n: true,
+        },
+      },
+    },
+    where: eq(feature.id, featureId),
+  })
+
+  if (!persistedFeature) {
+    throw new Error('Feature not found')
+  }
+
+  const i18nByLocale = requiredLocaleKeys.reduce<
+    Record<LocaleKey, Record<string, unknown>>
+  >(
+    (accumulator, localeKey) => {
+      accumulator[localeKey] = {
+        title: '',
+        titleGen: false,
+        description: '',
+        descriptionGen: false,
+        displayAddress: '',
+        displayAddressGen: false,
+        addressProperties: {},
+      }
+      return accumulator
+    },
+    {} as Record<LocaleKey, Record<string, unknown>>,
+  )
+
+  persistedFeature.i18n?.forEach(localeRecord => {
+    const localeKey = toLocaleKey(localeRecord.locale as Locale)
+    i18nByLocale[localeKey] = {
+      title: localeRecord.title ?? '',
+      titleGen: Boolean(localeRecord.titleGen),
+      description: localeRecord.description ?? '',
+      descriptionGen: Boolean(localeRecord.descriptionGen),
+      displayAddress: localeRecord.displayAddress ?? '',
+      displayAddressGen: Boolean(localeRecord.displayAddressGen),
+      addressProperties: localeRecord.addressProperties ?? {},
+    }
+  })
+
+  const properties = (persistedFeature.properties ?? []).map(propertyRow => ({
+    propertyId: propertyRow.propertyId,
+    value: propertyRow.value ?? null,
+    propertyValueId: propertyRow.propertyValueId ?? null,
+    i18n: (propertyRow.i18n ?? []).reduce<
+      Record<LocaleKey, { value?: string; valueGen?: boolean }>
+    >(
+      (accumulator, localeRecord) => {
+        accumulator[toLocaleKey(localeRecord.locale as Locale)] = {
+          value: localeRecord.value ?? undefined,
+          valueGen: Boolean(localeRecord.valueGen),
+        }
+        return accumulator
+      },
+      {} as Record<LocaleKey, { value?: string; valueGen?: boolean }>,
+    ),
+  }))
+
+  FeatureEntityFormData.parse({
+    organisationId: persistedFeature.organisationId,
+    projectId: persistedFeature.projectId,
+    layerId: persistedFeature.layerId,
+    contributorId: persistedFeature.contributorId,
+    geometry: persistedFeature.geometry,
+    addressMeta: persistedFeature.addressMeta ?? {},
+    isIntangible: persistedFeature.isIntangible,
+    isVisitable: persistedFeature.isVisitable,
+    isPendingReview: persistedFeature.isPendingReview,
+    isDraft: false,
+    i18n: i18nByLocale,
+    properties,
+  })
 }
