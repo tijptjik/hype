@@ -19,9 +19,15 @@ type RootProps = {
   children: import('svelte').Snippet
   heightBudgetPx?: number | null
   onLayoutChange?: (layout: FeatureCardLayout) => void
+  onContentVisibilityChange?: (visible: boolean) => void
 }
 
-let { children, heightBudgetPx = null, onLayoutChange }: RootProps = $props()
+let {
+  children,
+  heightBudgetPx = null,
+  onLayoutChange,
+  onContentVisibilityChange,
+}: RootProps = $props()
 
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
@@ -279,6 +285,11 @@ $effect(() => {
   }
 })
 
+$effect(() => {
+  const isContentVisible = isCardContentVisible
+  onContentVisibilityChange?.(isContentVisible)
+})
+
 /**
  * Handles outside clicks for canvas dismissals and marker handoff.
  *
@@ -305,7 +316,7 @@ function handleClickOutside(event: MouseEvent): void {
   <div
     bind:this={shellElement}
     id="feature-card-shell"
-    class={`feature-card-chrome relative mx-auto flex w-full flex-col motion-reduce:transition-none ${isCardContentVisible ? 'bg-transparent' : 'bg-black'}`}
+    class="feature-card-chrome relative mx-auto flex w-full flex-col motion-reduce:transition-none"
     style={cardStyle}
   >
     <!-- Border chrome and inner fill live on the outer shell; the surface handles
