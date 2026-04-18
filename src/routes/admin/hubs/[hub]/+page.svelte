@@ -850,7 +850,7 @@ $effect(() => {
     })
       .then(result => {
         if (currentRequestId !== hubLayerRequestId) return
-        availableHubLayers = result.data
+        availableHubLayers = Array.isArray(result?.data) ? result.data : []
       })
       .catch(() => {
         if (currentRequestId !== hubLayerRequestId) return
@@ -1304,7 +1304,9 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
   })
 
   const currentHubId = hub?.data?.id ?? null
-  return result.data.map(organisation => {
+  const organisations = Array.isArray(result?.data) ? result.data : []
+
+  return organisations.map(organisation => {
     const assignedHubId =
       typeof organisation.hubId === 'string' ? organisation.hubId : null
     const assignedHubCode =

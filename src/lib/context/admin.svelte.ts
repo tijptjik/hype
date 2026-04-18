@@ -312,6 +312,7 @@ export class AdminCtx {
   appCtx!: AppCtx
   // Load State
   isInitialised: boolean = $state(false)
+  isInitializing: boolean = $state(false)
 
   // ═══════════════════════
   // CONSTRUCTOR
@@ -704,20 +705,37 @@ export class AdminCtx {
 
   // Initialize data using appCtx's refresh methods
   init = async (): Promise<void> => {
+    if (this.isInitialised || this.isInitializing) return
+
     // Ensure query map is initialized if it wasn't done in constructor
     if (this.appCtx?.queryMap && !this.isInitialised) {
       this.initializeAdminQueryMap()
     }
 
-    // Use AppCtx's cascading refresh logic but with admin query functions
-    await this.appCtx.refreshOrganisations()
-    await this.refreshHubs(false)
+    this.isInitializing = true
 
-    // Always refresh tasks when admin initializes to ensure fresh task data
-    // This is especially important when navigating from app to admin
-    await this.invalidateAndRefresh(FirstClassResource.task)
+    try {
+      // Bootstrap admin resources independently so a single network failure does not
+      // keep the entire admin shell stuck in an uninitialised retry loop.
+      const initSteps = [
+        ['organisations', () => this.appCtx.refreshOrganisations()],
+        ['hubs', () => this.refreshHubs(false)],
+        ['tasks', () => this.invalidateAndRefresh(FirstClassResource.task)],
+      ] as const
 
-    this.isInitialised = true
+      const results = await Promise.allSettled(initSteps.map(([, load]) => load()))
+      for (const [index, result] of results.entries()) {
+        if (result.status === 'fulfilled') continue
+
+        console.error(
+          `[AdminCtx][init] Resource bootstrap failed (${initSteps[index][0]}):`,
+          result.reason,
+        )
+      }
+    } finally {
+      this.isInitializing = false
+      this.isInitialised = true
+    }
   }
 
   refreshHubs = async (isCascading: boolean = true): Promise<void> => {
