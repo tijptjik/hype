@@ -25,6 +25,7 @@ import {
   createResourceFormConfig,
   focusFacetFromHash,
   getEditorCtrl,
+  handleResourceBooleanStateToggle,
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   resolveFacetTabsWithIssues,
@@ -56,7 +57,6 @@ import {
 } from '$lib/client/services/image'
 import { getIssueMessagesForPath } from '$lib/client/services/issues'
 import {
-  getNameForToast,
   overrideResourceEntityBoolean,
   overrideResourceListItemBoolean,
 } from '$lib/client/services/resource'
@@ -882,53 +882,48 @@ async function handleFeatureStateToggle(
   field: 'isPublished' | 'isArchived',
 ): Promise<void> {
   if (!isCurrentRefLoaded) return
-  const current = feature?.data
-  if (!current) return
-  const nextState = !current[field]
-  const mutate = field === 'isPublished' ? publishFeature : archiveFeature
-  const setBusy =
-    field === 'isPublished'
-      ? (value: boolean) => headerCtrl.setPublishing(value)
-      : (value: boolean) => headerCtrl.setDeleting(value)
 
-  try {
-    setBusy(true)
-    await mutate({
-      id: current.id,
-      state: nextState,
-      meta: { isAdminRequest: true },
-    }).updates(
+  await handleResourceBooleanStateToggle({
+    current: feature?.data,
+    field,
+    successWhenTrue: field === 'isPublished' ? m.published() : m.forms__delete(),
+    successWhenFalse:
+      field === 'isPublished' ? m.forms__unpublished() : m.forms__restored(),
+    setBusy:
+      field === 'isPublished'
+        ? (value: boolean) => headerCtrl.setPublishing(value)
+        : (value: boolean) => headerCtrl.setDeleting(value),
+    mutate: payload =>
+      (field === 'isPublished' ? publishFeature : archiveFeature)({
+        ...payload,
+        meta: { isAdminRequest: true },
+      }),
+    applyOptimistic: nextState => {
+      const featureId = feature?.data?.id
+      if (!featureId) return
+
       getFeature({
-        ref: current.id,
+        ref: featureId,
         refKey: 'id',
         meta: { isAdminRequest: true, profile: 'admin' },
-      }).withOverride(overrideResourceEntityBoolean(field, nextState)),
+      }).withOverride(overrideResourceEntityBoolean(field, nextState))
+
       getFeatures({
         conditions: adminCtx.appCtx.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
         prisms: adminCtx.appCtx.state.prisms,
         meta: { isAdminRequest: true, profile: 'card' },
-      }).withOverride(overrideResourceListItemBoolean(current.id, field, nextState)),
-    )
-
-    await refreshFeature()
-    toast.success(
-      `${
-        field === 'isPublished'
-          ? nextState
-            ? m.published()
-            : m.forms__unpublished()
-          : nextState
-            ? m.forms__delete()
-            : m.forms__restored()
-      } ${getNameForToast(feature, 'title')}`,
-    )
-  } catch {
-    toast.error(m.long_crazy_peacock_care())
-  } finally {
-    setBusy(false)
-  }
+      }).withOverride(overrideResourceListItemBoolean(featureId, field, nextState))
+    },
+    refresh: () => refreshFeature(),
+    commit: next => {
+      commitSettledFeatureState(next)
+    },
+    onError: () => {
+      toast.error(m.long_crazy_peacock_care())
+    },
+  })
 }
 
 function onPublishToggle(): void {
