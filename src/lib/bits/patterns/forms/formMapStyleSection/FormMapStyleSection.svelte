@@ -72,6 +72,17 @@ $effect(() => {
   isAdding = true
   hasAutoOpenedAdding = true
 })
+
+$effect(() => {
+  console.log('[FormMapStyleSection] props', {
+    isAdding,
+    showModeUi,
+    availableCount: availableMapStyles.length,
+    sortedCount: sortedMapStyles.length,
+    selectedCode: selectedMapStyle?.code ?? null,
+    sampleCodes: sortedMapStyles.slice(0, 5).map(mapStyle => mapStyle.code),
+  })
+})
 </script>
 
 <section

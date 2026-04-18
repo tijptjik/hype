@@ -1783,6 +1783,14 @@ $effect(() => {
           return
         }
 
+        console.log('[admin project] fetched map styles', {
+          nextSignature,
+          organisationId,
+          fallbackProject,
+          count: response.data?.length ?? 0,
+          sampleCodes: (response.data ?? []).slice(0, 5).map(mapStyle => mapStyle.code),
+        })
+
         availableMapStyles = (response.data ?? []) as MapStyleSelectionItem[]
       } finally {
         if (lastMapStyleScopeSignature === nextSignature) {
@@ -1811,6 +1819,16 @@ $effect(() => {
   updateFormData(projectEntityUpdaterForm, data => {
     data.mapStyleCode = ''
     return data
+  })
+})
+
+$effect(() => {
+  console.log('[admin project] map style state', {
+    signature: lastMapStyleScopeSignature,
+    isMapStyleScopeLoading,
+    availableCount: availableMapStyles.length,
+    selectedMapStyleCodeValue,
+    sampleCodes: availableMapStyles.slice(0, 5).map(mapStyle => mapStyle.code),
   })
 })
 
