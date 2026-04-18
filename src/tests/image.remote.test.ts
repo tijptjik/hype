@@ -484,7 +484,7 @@ describe('image.remote', () => {
 
     expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
     expect(put).toHaveBeenCalledTimes(3)
-    expect(mockWaitUntil).toHaveBeenCalledTimes(1)
+    expect(mockWaitUntil).toHaveBeenCalledTimes(2)
     expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
       event: expect.objectContaining({
         request: expect.any(Request),
