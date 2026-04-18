@@ -259,6 +259,22 @@ export const FeatureI18nFormData = z.object({
   addressProperties: z.custom<AddressProperties>().prefault({}).nullish(),
 })
 
+export const FeatureDraftI18nFormData = z.object({
+  title: z.string().max(128, { message: m.admin__validation_lte_128_chars() }),
+  titleGen: FormBoolean.default(false),
+  description: z
+    .string()
+    .max(8192, { message: m.admin__validation_description_lte_8192_chars() })
+    .default(''),
+  descriptionGen: FormBoolean.default(false),
+  displayAddress: z
+    .string()
+    .max(512, { message: m.admin__validation_lte_128_chars() })
+    .default(''),
+  displayAddressGen: FormBoolean.default(false),
+  addressProperties: z.custom<AddressProperties>().prefault({}).nullish(),
+})
+
 export const FeaturePropertyI18nFormData = z.object({
   value: z.string().optional(),
   valueGen: FormBoolean.default(false),
@@ -285,6 +301,12 @@ export const FeatureI18nByLocaleFormData = z.object({
   zhHant: FeatureI18nFormData,
 })
 
+export const FeatureDraftI18nByLocaleFormData = z.object({
+  en: FeatureDraftI18nFormData,
+  zhHans: FeatureDraftI18nFormData,
+  zhHant: FeatureDraftI18nFormData,
+})
+
 export const FeatureEntityFormData = z.object({
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })
@@ -303,6 +325,27 @@ export const FeatureEntityFormData = z.object({
   isPendingReview: FormBoolean.default(false),
   isDraft: FormBoolean.default(false),
   i18n: FeatureI18nByLocaleFormData,
+  properties: z.array(FeaturePropertyFormData).default([]),
+})
+
+export const FeatureDraftEntityFormData = z.object({
+  organisationId: z
+    .string({ message: m.field_is_required({ field: m.field_organisation() }) })
+    .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
+  projectId: z
+    .string({ message: m.field_is_required({ field: 'Project' }) })
+    .min(1, { message: m.field_is_required({ field: 'Project' }) }),
+  layerId: z
+    .string({ message: m.field_is_required({ field: 'Layer' }) })
+    .min(1, { message: m.field_is_required({ field: 'Layer' }) }),
+  contributorId: z.string().optional().nullable(),
+  geometry: z.custom<GeometryObject>(),
+  addressMeta: z.custom<AddressMeta>().prefault({}).nullish(),
+  isIntangible: FormBoolean.default(false),
+  isVisitable: FormBoolean.default(true),
+  isPendingReview: FormBoolean.default(false),
+  isDraft: FormBoolean.default(false),
+  i18n: FeatureDraftI18nByLocaleFormData,
   properties: z.array(FeaturePropertyFormData).default([]),
 })
 
