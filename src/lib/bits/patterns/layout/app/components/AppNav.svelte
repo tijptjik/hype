@@ -115,9 +115,12 @@ const trailingItems = $derived<AppMenuItem<AppNavMenuValue>[]>([
 ])
 const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
 
-async function handleSelect(item: AppMenuItem<AppNavMenuValue>): Promise<void> {
+async function handleSelect(
+  item: AppMenuItem<AppNavMenuValue>,
+  event: MouseEvent,
+): Promise<void> {
   if (item.value === ADD_FEATURE_MENU_VALUE) {
-    await initAddNewFeature(appCtx, omniCtx, new Event('click'))
+    await initAddNewFeature(appCtx, omniCtx, event)
     return
   }
 
