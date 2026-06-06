@@ -12,6 +12,7 @@ import type {
   MapRenderRemoteConfig,
   PreviewStage,
 } from '../../types'
+import { launchChromiumBrowser, type LocalChromiumBrowser } from '../playwright.local'
 import { buildMapStyleArtifacts } from './build'
 import { getMapStyleAssetRecord, type MapStyleKey } from './registry'
 import {
@@ -40,15 +41,6 @@ import {
 //    - doesMapStyleRenderExistLocally
 //    - generateAllMapStyleRendersLocally
 
-const loadChromium = async () => {
-  const loadModule = new Function('moduleId', 'return import(moduleId)') as (
-    moduleId: string,
-  ) => Promise<{ chromium: unknown }>
-  const playwright = await loadModule(['@play', 'wright/test'].join(''))
-
-  return playwright.chromium
-}
-
 const SERVER_START_TIMEOUT_MS = 45_000
 const PREVIEW_READY_TIMEOUT_MS = 45_000
 const PREVIEW_NAVIGATION_TIMEOUT_MS = 45_000
@@ -65,7 +57,7 @@ type RenderMapStyleOptions = {
   baseUrl?: string
   ensureArtifacts?: boolean
   manageServer?: boolean
-  browser?: Awaited<ReturnType<Awaited<ReturnType<typeof loadChromium>>['launch']>>
+  browser?: LocalChromiumBrowser
   force?: boolean
   storage?: 'local' | 'remote'
   stage?: PreviewStage
@@ -226,7 +218,6 @@ const renderMapStyleRender = async (
   styleCode: string,
   options: RenderMapStyleOptions = {},
 ): Promise<MapRenderManifestEntry> => {
-  const chromium = await loadChromium()
   const baseUrl =
     options.baseUrl ??
     process.env.MAP_STYLE_RENDER_BASE_URL ??
@@ -241,11 +232,7 @@ const renderMapStyleRender = async (
   const server = manageServer
     ? await ensureRenderServer(baseUrl)
     : { dispose: () => undefined }
-  const browser =
-    options.browser ??
-    (await chromium.launch({
-      headless: true,
-    }))
+  const browser = options.browser ?? (await launchChromiumBrowser())
   const shouldCloseBrowser = !options.browser
 
   try {
@@ -483,7 +470,6 @@ export const generateAllMapStyleRendersLocally = async (
   styleCodes: string[],
   options: RenderMapStyleOptions = {},
 ): Promise<Record<string, MapRenderManifestEntry>> => {
-  const chromium = await loadChromium()
   const force = options.force ?? false
   const stage = options.stage ?? 'local'
   const baseUrl =
@@ -497,9 +483,7 @@ export const generateAllMapStyleRendersLocally = async (
 
   const previews: Record<string, MapRenderManifestEntry> = {}
   const server = await ensureRenderServer(baseUrl)
-  const browser = await chromium.launch({
-    headless: true,
-  })
+  const browser = await launchChromiumBrowser()
 
   try {
     for (const [index, styleCode] of styleCodes.entries()) {
