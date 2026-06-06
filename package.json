@@ -100,10 +100,10 @@
     "@biomejs/biome": "^2.4.16",
     "@changesets/cli": "^2.31.0",
     "@cloudflare/vite-plugin": "^1.40.0",
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
-    "@commitlint/cz-commitlint": "^20.5.3",
-    "@commitlint/prompt-cli": "^20.5.3",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@commitlint/cz-commitlint": "^21.0.2",
+    "@commitlint/prompt-cli": "^21.0.2",
     "@iconify/json": "^2.2.483",
     "@miniflare/d1": "^2.14.4",
     "@nerdfolio/drizzle-d1-helpers": "^0.1.5",
@@ -121,7 +121,7 @@
     "drizzle-dbml-generator": "^0.10.0",
     "drizzle-kit": "^0.31.10",
     "husky": "^9.1.7",
-    "inquirer": "^13.4.3",
+    "inquirer": "^14.0.2",
     "jsdom": "^29.1.1",
     "svelte-check": "^4.6.0",
     "tsx": "^4.22.4",
@@ -143,7 +143,7 @@
     "workerd"
   ],
   "dependencies": {
-    "@chenglou/pretext": "^0.0.5",
+    "@chenglou/pretext": "^0.0.7",
     "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "^2.18.2",
     "@jsquash/avif": "^2.1.1",
@@ -202,7 +202,7 @@
     "unique-names-generator": "^4.7.1",
     "utif": "^3.1.0",
     "vite": "^7.3.5",
-    "zod": "4.3.6"
+    "zod": "4.4.3"
   },
   "config": {
     "commitizen": {
