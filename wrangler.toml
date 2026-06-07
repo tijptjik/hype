@@ -175,10 +175,6 @@ pattern = "hkghostsigns.hype.hk"
 custom_domain = true
 
 [[env.production.routes]]
-pattern = "breadline.hk"
-custom_domain = true
-
-[[env.production.routes]]
 pattern = "breadline.hype.hk"
 custom_domain = true
 
