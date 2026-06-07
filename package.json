@@ -10,9 +10,7 @@
     "kysely": "0.28.17"
   },
   "scripts": {
-    "dev": "PUBLIC_ASSET_BASE_URL=http://localhost:8788 bash ./scripts/dev.sh",
-    "dev:app": "vite dev",
-    "dev:cf": "vite dev",
+    "dev": "vite dev",
     "dev:cf:preview": "CLOUDFLARE_ENV=preview vite dev",
     "dev:cf:prod": "CLOUDFLARE_ENV=production vite dev",
     "dev:local": "HYPE_LOCAL_R2=1 vite dev",

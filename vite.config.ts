@@ -41,19 +41,11 @@ const localCloudflare = async (command: ConfigEnv['command']): Promise<Plugin[]>
   const isServe = command === 'serve'
   const isCI = process.env.CI === 'true'
   const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
-  const enableCloudflareVite = process.env.HYPE_ENABLE_CLOUDFLARE_VITE === '1'
   const useLocalR2 = process.env.HYPE_LOCAL_R2 === '1'
 
-  if (enableCloudflareVite && isServe && !isCI && !isTest) {
+  if (isServe && !isCI && !isTest) {
     return cloudflare({
       configPath: useLocalR2 ? './wrangler.local.toml' : './wrangler.toml',
-      auxiliaryWorkers: [
-        {
-          configPath: useLocalR2
-            ? './workers/asset-service/wrangler.local.toml'
-            : './workers/asset-service/wrangler.toml',
-        },
-      ],
     })
   } else {
     return [
@@ -61,14 +53,31 @@ const localCloudflare = async (command: ConfigEnv['command']): Promise<Plugin[]>
         name: 'skip-cloudflare-plugin',
         apply: 'build',
         buildStart() {
-          console.log(
-            'Skipping Cloudflare plugin without HYPE_ENABLE_CLOUDFLARE_VITE=1',
-          )
+          console.log('Skipping Cloudflare plugin on CI and TEST')
         },
       },
     ]
   }
 }
+
+const suppressOptimizedKyselyMigrationWarning = (): Plugin => ({
+  name: 'suppress-optimized-kysely-migration-warning',
+  enforce: 'pre',
+  transform(code, id) {
+    if (
+      !id.includes('/.svelte-kit/vite/deps_hype/') ||
+      !code.includes('this.#props.path.join(this.#props.migrationFolder, fileName)')
+    ) {
+      return null
+    }
+
+    // Kysely intentionally resolves migration modules from disk at runtime.
+    return code.replace(
+      '/* webpackIgnore: true */',
+      '/* webpackIgnore: true */ /* @vite-ignore */',
+    )
+  },
+})
 
 // CONFIG
 export default defineConfig(async ({ command }) => ({
@@ -78,6 +87,7 @@ export default defineConfig(async ({ command }) => ({
     hype_preview: {},
   },
   plugins: [
+    suppressOptimizedKyselyMigrationWarning(),
     paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/lib/paraglide',
@@ -94,9 +104,6 @@ export default defineConfig(async ({ command }) => ({
   ],
   build: {
     target: 'es2020',
-    rollupOptions: {
-      cache: true,
-    },
   },
   // Enable build caching for CI environments
   cacheDir: '.svelte-kit/vite',
