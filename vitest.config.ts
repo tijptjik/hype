@@ -1,10 +1,15 @@
-import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
+import { defineConfig } from 'vitest/config'
 import { sveltekit } from '@sveltejs/kit/vite'
 
 const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run'
+const suppressedVitestConsoleLogPatterns = [
+  '[image.remote.rotateImage] applying rotation',
+  '[image.remote.rotateImage] bucket original put failed; falling back to direct R2 API',
+] as const
 
 export default defineConfig({
+  logLevel: 'error',
   plugins: [sveltekit()],
   define: {
     __SVELTEKIT_PATHS_BASE__: '""',
@@ -131,6 +136,11 @@ export default defineConfig({
     teardownTimeout: 1000,
     logHeapUsage: false,
     watch: isWatch,
+    onConsoleLog(log) {
+      if (suppressedVitestConsoleLogPatterns.some(pattern => log.includes(pattern))) {
+        return false
+      }
+    },
     // Use custom tsconfig for tests
     typecheck: {
       tsconfig: './tsconfig.test.json',
