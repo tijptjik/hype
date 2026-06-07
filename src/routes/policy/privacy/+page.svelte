@@ -1,7 +1,11 @@
 <script lang="ts">
+// SVELTE
+import { page } from '$app/state'
 // I18N
 import * as m from '$lib/paraglide/messages'
 import { getLocaleKey, toLocaleCode } from '$lib/i18n'
+// NAVIGATION
+import { resolveTitle } from '$lib/navigation/title'
 // COMPONENTS
 import HubPolicyDocumentBody from '$lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
 // SERVICES
@@ -10,6 +14,7 @@ import {
   renderPolicyMarkdown,
 } from '$lib/services/policy'
 // TYPES
+import type { TitleEnvironmentLabel } from '$lib/types'
 import type { PageProps } from './$types'
 
 let { data }: PageProps = $props()
@@ -34,9 +39,15 @@ const html = $derived(
     ),
   ),
 )
+const documentTitle = $derived(
+  resolveTitle(
+    m.hub__subscription_privacy_policy(),
+    page.data.titleEnvironmentLabel as TitleEnvironmentLabel | undefined,
+  ),
+)
 </script>
 
-<svelte:head> <title>{m.hub__subscription_privacy_policy()}</title> </svelte:head>
+<svelte:head> <title>{documentTitle}</title> </svelte:head>
 
 <div class="min-h-screen bg-black">
   <main class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
