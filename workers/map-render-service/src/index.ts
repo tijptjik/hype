@@ -75,7 +75,10 @@ const renderMapRender = async (env: Env, job: MapRenderJob): Promise<ArrayBuffer
           waitUntil: 'load',
           timeout: SCREENSHOT_TIMEOUT_MS,
         },
-        waitForSelector: MAP_RENDER_READY_SELECTOR,
+        waitForSelector: {
+          selector: MAP_RENDER_READY_SELECTOR,
+          timeout: SCREENSHOT_TIMEOUT_MS,
+        },
         screenshotOptions: {
           type: 'png',
         },
