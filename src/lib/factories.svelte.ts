@@ -359,10 +359,11 @@ export function configureForm<Input = RemoteFormInput>(
   }
 
   const attributes = $derived.by(() => {
-    const enhanced = form.enhance(async ({ submit, form: formEl, data }) => {
+    const enhanced = form.enhance(async instance => {
       if (submitting) return
 
-      const typedData = data as Input
+      const formEl = instance.element
+      const typedData = instance.fields.value() as Input
       const bf = !onsubmit || (await onsubmit({ dirty, form: formEl, data: typedData }))
       if (!bf) return
       // Lock immediately so rapid repeat submits cannot race preflight and send
@@ -393,9 +394,9 @@ export function configureForm<Input = RemoteFormInput>(
           data: typedData,
         })
         if (updates && updates.length > 0) {
-          await submit().updates(...updates)
+          await instance.submit().updates(...updates)
         } else {
-          await submit()
+          await instance.submit()
         }
         submitted = true
 

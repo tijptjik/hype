@@ -2382,6 +2382,8 @@ export type DisplayFieldProps = {
 // PANELS :: APP
 /* -------- */
 
+export type TitleEnvironmentLabel = 'ᴰᴱⱽ' | 'ᴾᴿᴱⱽᴵᴱᵂ' | 'ᴾᴿᴼᴰ'
+
 export type PanelProps = {
   panelType: Panel
   position: PanelPosition
