@@ -51,6 +51,7 @@ const resolvedMoveWindowSize = $derived(
 )
 
 let collapsed = $state(false)
+let appliedCollapseAllVersion = $state(-1)
 
 const setCollapsed = (nextCollapsed: boolean): void => {
   if (collapsed === nextCollapsed) return
@@ -59,7 +60,8 @@ const setCollapsed = (nextCollapsed: boolean): void => {
 }
 
 $effect(() => {
-  void collapseAllVersion
+  if (collapseAllVersion === appliedCollapseAllVersion) return
+  appliedCollapseAllVersion = collapseAllVersion
   if (keepExpandedOnIntro) {
     setCollapsed(false)
     return

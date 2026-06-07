@@ -34,20 +34,21 @@ let {
 
 const rootClass = $derived(['bits-project-fields', className].filter(Boolean).join(' '))
 const hasIssues = $derived(issues.length > 0)
-const hasItems = $derived(items.length > 0)
-const hasOptimisticItems = $derived(hasItems || loadingItems.length > 0)
-const showEmptyState = $derived(!hasOptimisticItems && !isLoading)
-const showHeaderActions = $derived(hasOptimisticItems && !isLoading)
 
 let isCollapsedAll = $state(false)
 let collapseAllVersion = $state(0)
 let layoutFlipLocked = $state(false)
 let introItemId = $state<string | null>(null)
 let isIntroActive = $state(false)
-let loadingItems = $state<FormFieldsSectionLoadingItem[]>(providedLoadingItems)
+let loadingItems = $state<FormFieldsSectionLoadingItem[]>([])
 let flipResumeTimer: ReturnType<typeof setTimeout> | undefined
-let lastLayoutMutationVersion = layoutMutationVersion
+let lastLayoutMutationVersion = $state(0)
 let previousItemIds: string[] = []
+
+const hasItems = $derived(items.length > 0)
+const hasOptimisticItems = $derived(hasItems || loadingItems.length > 0)
+const showEmptyState = $derived(!hasOptimisticItems && !isLoading)
+const showHeaderActions = $derived(hasOptimisticItems && !isLoading)
 const flipDisabled = $derived(layoutFlipLocked || isIntroActive || forceFlipDisabled)
 
 const triggerFlipLock = (): void => {
@@ -62,6 +63,18 @@ const onCollapsableToggle = (nextCollapsed: boolean): void => {
   triggerFlipLock()
   isCollapsedAll = nextCollapsed
   collapseAllVersion += 1
+  loadingItems = (
+    loadingItems.length > 0
+      ? loadingItems
+      : items.map(item => ({
+          id: item.id,
+          presentation: card?.resolveCardPresentation?.(item) ?? 'full',
+          isCollapsed: false,
+        }))
+  ).map(item => ({
+    ...item,
+    isCollapsed: nextCollapsed,
+  }))
 }
 
 const onCardCollapseToggle = (): void => {
