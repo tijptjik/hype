@@ -21,6 +21,7 @@ type AdminIndexCardEntity<T extends Exclude<Resource, Task>> = T & {
 
 type CreateAdminIndexCardModelParams<T extends Exclude<Resource, Task>> = {
   adminCtx: AdminCtx
+  resourceType?: FirstClassResource | null | false
   entity: AdminIndexCardEntity<T>
   keyMap: KeyMap
   search?: string
@@ -184,12 +185,24 @@ function toDescriptionFallback(value: unknown): string {
   return toDescriptionPreview(value) || m.loved_spare_hyena_imagine()
 }
 
+/**
+ * Builds the shared card model used by admin resource index pages.
+ *
+ * @param params - Card entity data, page resource type, and UI callbacks.
+ * @returns Normalized index-card props for the current admin resource page.
+ */
 export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
   params: CreateAdminIndexCardModelParams<T>,
 ): IndexCardProps {
-  const { adminCtx, entity, keyMap, search = '', onImageClick } = params
+  const {
+    adminCtx,
+    entity,
+    keyMap,
+    resourceType = adminCtx.activeResourceType,
+    search = '',
+    onImageClick,
+  } = params
   const localeKey = getLocaleKey()
-  const resourceType = adminCtx.activeResourceType
   const appCtx = adminCtx.appCtx
   const preferences = appCtx.getUserPreferences()
 

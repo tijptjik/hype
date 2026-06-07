@@ -17,5 +17,9 @@ let { imageSrc, imageAlt, imageLayout, onImageClick }: IndexCardHeaderProps = $p
     alt={imageAlt}
     class="bits-index-card__header-image"
     fit={imageLayout === 'cover' ? 'cover' : 'fit'}
+    rounded="rounded-t-2xl rounded-b-none"
+    showBackdrop={false}
+    enableSourceTransition={false}
+    revealOnLoad={true}
   />
 </div>

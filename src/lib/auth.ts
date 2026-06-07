@@ -1,5 +1,6 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth'
+import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { customSession, anonymous, username } from 'better-auth/plugins'
 // CONFIG
 import { authConfig } from './auth/config'
@@ -70,7 +71,10 @@ function createAuthInstance(
     // ENV
     secret: env.AUTH_SECRET,
     // DB
-    database: env.DB,
+    database: drizzleAdapter(db, {
+      provider: 'sqlite',
+      schema,
+    }),
     // DATABASE HOOKS
     databaseHooks: {
       user: {

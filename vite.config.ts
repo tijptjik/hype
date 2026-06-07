@@ -10,7 +10,7 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
-import type { Plugin } from 'vite'
+import type { ConfigEnv, Plugin } from 'vite'
 
 // Load env file based on `mode` in the current working directory.
 // Set the third parameter to '' to load all env regardless of the
@@ -35,15 +35,25 @@ import type { Plugin } from 'vite'
 //   }
 // };
 
-const localCloudflare = async (): Promise<Plugin[]> => {
-  // Only load Cloudflare plugin in dev mode, skip in CI/build/test environments
-  const isDev = process.env.NODE_ENV === 'dev' || process.env.DEV
+const localCloudflare = async (command: ConfigEnv['command']): Promise<Plugin[]> => {
+  // Only load Cloudflare plugin when explicitly requested, because the default local
+  // app dev flow runs the asset worker as a separate Wrangler process.
+  const isServe = command === 'serve'
   const isCI = process.env.CI === 'true'
   const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
+  const enableCloudflareVite = process.env.HYPE_ENABLE_CLOUDFLARE_VITE === '1'
+  const useLocalR2 = process.env.HYPE_LOCAL_R2 === '1'
 
-  if (isDev && !isCI && !isTest) {
+  if (enableCloudflareVite && isServe && !isCI && !isTest) {
     return cloudflare({
-      configPath: './wrangler.toml',
+      configPath: useLocalR2 ? './wrangler.local.toml' : './wrangler.toml',
+      auxiliaryWorkers: [
+        {
+          configPath: useLocalR2
+            ? './workers/asset-service/wrangler.local.toml'
+            : './workers/asset-service/wrangler.toml',
+        },
+      ],
     })
   } else {
     return [
@@ -51,7 +61,9 @@ const localCloudflare = async (): Promise<Plugin[]> => {
         name: 'skip-cloudflare-plugin',
         apply: 'build',
         buildStart() {
-          console.log('🚀 Skipping Cloudflare plugin in CI/build environment')
+          console.log(
+            'Skipping Cloudflare plugin without HYPE_ENABLE_CLOUDFLARE_VITE=1',
+          )
         },
       },
     ]
@@ -59,7 +71,7 @@ const localCloudflare = async (): Promise<Plugin[]> => {
 }
 
 // CONFIG
-export default defineConfig({
+export default defineConfig(async ({ command }) => ({
   envPrefix: ['VITE_', 'PUBLIC_'],
   environments: {
     hype_prod: {},
@@ -78,14 +90,8 @@ export default defineConfig({
       compiler: 'svelte',
     }),
     tailwindcss(),
-    localCloudflare(),
+    ...(await localCloudflare(command)),
   ],
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'esnext',
-      sourcemap: true,
-    },
-  },
   build: {
     target: 'es2020',
     rollupOptions: {
@@ -110,4 +116,4 @@ export default defineConfig({
       'timri-58-153-118-141.a.free.pinggy.link',
     ],
   },
-})
+}))

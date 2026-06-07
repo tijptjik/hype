@@ -8,6 +8,10 @@ let {
   fit = 'fit',
   isLoading = false,
   class: className = '',
+  rounded = 'rounded-2xl',
+  showBackdrop = true,
+  enableSourceTransition = true,
+  revealOnLoad = false,
 }: ImageProps = $props()
 
 const item = $derived(
@@ -21,12 +25,15 @@ const item = $derived(
 )
 </script>
 
-<div class={`h-full w-full ${className}`.trim()}>
+<div class={className}>
   <ImagePrimitive.ImageSurface
     {item}
     {fit}
     {isLoading}
+    {rounded}
+    {showBackdrop}
+    {enableSourceTransition}
+    {revealOnLoad}
     class="h-full w-full"
-    rounded="rounded-2xl"
   />
 </div>

@@ -38,7 +38,7 @@ bun run deploy:asset-service:prod
 Configure the main app with the shared asset host:
 
 ```text
-PUBLIC_ASSET_BASE_URL=https://assets.hype.hk
+PUBLIC_ASSET_BASE_URL=http://localhost:8788
 PUBLIC_ASSET_BASE_URL=https://assets.preview.hype.hk
 PUBLIC_ASSET_BASE_URL=https://assets.hype.hk
 ```

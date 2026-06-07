@@ -191,6 +191,7 @@ let entities: Organisation[] = $derived(
 function getIndexModel(entity: Organisation) {
   return createAdminIndexCardModel({
     adminCtx,
+    resourceType: FirstClassResource.organisation,
     entity,
     keyMap,
     search: page.url.search,

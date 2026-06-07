@@ -305,6 +305,7 @@ const MAX_SMARTCROP_SOURCE_PIXELS = 4_000_000
 const MAX_LOW_MEMORY_SOURCE_PIXELS = 2_000_000
 const LOW_MEMORY_MIN_INTERMEDIATE_DIMENSION = 1024
 const LOW_MEMORY_MAX_INTERMEDIATE_DIMENSION = 2048
+const LOW_MEMORY_TARGET_SCALE_FACTOR = 1
 const LOW_MEMORY_FALLBACK_MAX_SOURCE_DIMENSION = 4096
 const WARMUP_RETRY_DELAY_MS = 750
 const WARMUP_RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504, 522, 524])
@@ -583,6 +584,11 @@ const handleFetch = async (
   ctx: ExecutionContext,
 ): Promise<Response> => {
   const url = new URL(request.url)
+
+  // Log local asset-worker requests so dev image delivery can be traced from the terminal.
+  if (env.ENVIRONMENT === 'local') {
+    console.log('[asset-service]', request.method, url.pathname, url.search)
+  }
 
   if (request.method === 'GET' && url.pathname === '/health') {
     return Response.json({
@@ -2879,6 +2885,16 @@ const transformSourceAsset = async (
 ): Promise<{ body: ArrayBuffer; contentType: string }> => {
   await ensureResizeReady()
 
+  logTransformDebug(debug, 'transform-start', {
+    sourceObjectKey: source.objectKey,
+    sourceContentType: source.contentType,
+    sourceBytes: source.body.byteLength,
+    targetWidth: request.width ?? null,
+    targetHeight: request.height ?? null,
+    outputFormat: request.format,
+    cropMode: request.cropMode,
+  })
+
   if (source.contentType === 'image/svg+xml') {
     if (request.format !== 'svg') {
       return {
@@ -2935,6 +2951,12 @@ const decodeAndTransformSourceAsset = async (
 ): Promise<
   TransformPipelineResult & Pick<DecodedImage, 'hasAlpha' | 'inputFormat'>
 > => {
+  logTransformDebug(debug, 'decode-start', {
+    sourceObjectKey: source.objectKey,
+    sourceContentType: source.contentType,
+    sourceBytes: source.body.byteLength,
+  })
+
   const decoded = await decodeSourceImage(source)
   const decodedBytes = toImageDataBytes(decoded.data)
 
@@ -3150,7 +3172,7 @@ const maybeDownscaleForLowMemoryPath = async (
 
   const currentMaxDimension = Math.max(image.width, image.height)
   const intermediateMaxDimension = clamp(
-    Math.max(target.width, target.height) * 4,
+    Math.max(target.width, target.height) * LOW_MEMORY_TARGET_SCALE_FACTOR,
     LOW_MEMORY_MIN_INTERMEDIATE_DIMENSION,
     LOW_MEMORY_MAX_INTERMEDIATE_DIMENSION,
   )

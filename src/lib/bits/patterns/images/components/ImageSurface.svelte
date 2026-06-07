@@ -22,6 +22,7 @@ let {
   isLoading = false,
   showBackdrop = fit === 'fit',
   enableSourceTransition = true,
+  revealOnLoad = false,
   isBlurred = false,
   isGreyscale = false,
   rounded = 'rounded-xl',
@@ -52,15 +53,19 @@ let rotationOverlayFadeTimer: ReturnType<typeof setTimeout> | null = null
 
 const src = $derived(item?.src ?? null)
 const sourceFallbackSrc = $derived(item?.sourceFallbackSrc ?? null)
-const blurSrc = $derived(item?.blurSrc ?? src)
+const blurSrc = $derived(item?.blurSrc ?? null)
 const alt = $derived(item?.alt ?? '')
 const fallbackSrc = $derived(
   getFeatureIdenticonUrl(item?.fallbackSeed ?? item?.id ?? 'gallery-fallback'),
 )
 const effectiveSrc = $derived(src ?? sourceFallbackSrc ?? fallbackSrc)
 const backdropSrc = $derived(blurSrc ?? sourceFallbackSrc ?? src ?? fallbackSrc)
+const hasDedicatedBackdropSource = $derived(Boolean(blurSrc || sourceFallbackSrc))
 const shouldShowBackdrop = $derived(
-  Boolean(src || sourceFallbackSrc) && fit === 'fit' && showBackdrop,
+  Boolean(src || sourceFallbackSrc) &&
+    fit === 'fit' &&
+    showBackdrop &&
+    (hasDedicatedBackdropSource || hasLoaded),
 )
 const shouldShowFallbackBackdrop = $derived(
   Boolean(sourceFallbackSrc) &&
@@ -392,45 +397,47 @@ onDestroy(() => {
     >
   {/if}
 
-  <div class="absolute inset-0 flex items-center justify-center">
-    <div class={imageStackClass()}>
-      {#if shouldShowFallbackForeground && sourceFallbackSrc}
-        <img
-          src={sourceFallbackSrc}
-          alt=""
-          aria-hidden="true"
-          class={foregroundLayerClass({
-            fit,
-            isBlurred,
-            isGreyscale,
-            animateRotation: false,
-          })}
-        >
-      {/if}
-
+  <div class={imageStackClass()}>
+    {#if shouldShowFallbackForeground && sourceFallbackSrc}
       <img
-        src={currentSrc ?? effectiveSrc}
-        alt={alt || ''}
+        src={sourceFallbackSrc}
+        alt=""
+        aria-hidden="true"
         class={foregroundLayerClass({
           fit,
           isBlurred,
           isGreyscale,
-          animateRotation,
-          isHidden: Boolean(rotationOverlaySrc && rotationOverlayVisible),
+          animateRotation: false,
         })}
-        onload={event => {
-          const image = event.currentTarget as HTMLImageElement
-          hasLoaded = true
-          hasError = false
-          showSkeleton = false
-          onLoad?.({
-            width: image.naturalWidth,
-            height: image.naturalHeight,
-          })
-        }}
-        onerror={handleImageError}
       >
+    {/if}
 
+    <img
+      src={currentSrc ?? effectiveSrc}
+      alt={alt || ''}
+      class={foregroundLayerClass({
+        fit,
+        isBlurred,
+        isGreyscale,
+        animateRotation,
+        isHidden:
+          Boolean(rotationOverlaySrc && rotationOverlayVisible) ||
+          (revealOnLoad && !hasLoaded),
+      })}
+      onload={event => {
+        const image = event.currentTarget as HTMLImageElement
+        hasLoaded = true
+        hasError = false
+        showSkeleton = false
+        onLoad?.({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        })
+      }}
+      onerror={handleImageError}
+    >
+
+    {#if shouldPulseImage && !Boolean(rotationOverlaySrc && rotationOverlayVisible)}
       <img
         src={currentSrc ?? effectiveSrc}
         alt=""
@@ -439,80 +446,82 @@ onDestroy(() => {
           fit,
           isBlurred,
           isGreyscale,
-          isVisible: shouldPulseImage && !Boolean(rotationOverlaySrc && rotationOverlayVisible),
+          isVisible: true,
         })}
       >
+    {/if}
 
-      {#if rotationOverlaySrc && rotationOverlayVisible}
-        {#key rotationOverlaySrc}
-          <img
-            src={rotationOverlaySrc}
-            alt=""
-            aria-hidden="true"
-            style={`transform: rotate(${rotationOverlayDegrees}deg);`}
-            class={rotationOverlayClass({
-              fit,
-              isBlurred,
-              isGreyscale,
-              isFadingOut: rotationOverlayFadeOut,
-            })}
-          >
-        {/key}
-      {/if}
-
-      {#if incomingSrc && enableSourceTransition}
+    {#if rotationOverlaySrc && rotationOverlayVisible}
+      {#key rotationOverlaySrc}
         <img
-          src={incomingSrc}
-          alt={alt || ''}
-          class={incomingLayerClass({
+          src={rotationOverlaySrc}
+          alt=""
+          aria-hidden="true"
+          style={`transform: rotate(${rotationOverlayDegrees}deg);`}
+          class={rotationOverlayClass({
             fit,
             isBlurred,
             isGreyscale,
-            animateRotation,
-            isVisible: incomingVisible,
+            isFadingOut: rotationOverlayFadeOut,
           })}
-          aria-hidden="true"
         >
+      {/key}
+    {/if}
 
+    {#if incomingSrc && enableSourceTransition}
+      <img
+        src={incomingSrc}
+        alt={alt || ''}
+        class={incomingLayerClass({
+          fit,
+          isBlurred,
+          isGreyscale,
+          animateRotation,
+          isVisible: incomingVisible && (!revealOnLoad || hasLoaded),
+        })}
+        aria-hidden="true"
+      >
+
+      {#if shouldPulseImage && incomingVisible}
         <img
           src={incomingSrc}
           alt=""
           aria-hidden="true"
           class={loadingBreathLayerClass({
-            fit,
-            isBlurred,
-            isGreyscale,
-            isVisible: shouldPulseImage && incomingVisible,
-          })}
+              fit,
+              isBlurred,
+              isGreyscale,
+              isVisible: true,
+            })}
         >
       {/if}
-    </div>
-
-    {#if pendingSrc && enableSourceTransition}
-      <img
-        src={pendingSrc}
-        alt=""
-        aria-hidden="true"
-        class={preloadImageClass()}
-        onload={async event => {
-          const image = event.currentTarget as HTMLImageElement
-
-          try {
-            if (typeof image.decode === 'function') {
-              await image.decode()
-            }
-          } catch {
-            // Firefox can reject decode() even when an already-loaded image is paintable.
-          }
-
-          startDisplayedSourceTransition(pendingSrc, rotationDegrees ?? 0)
-        }}
-        onerror={() => {
-          pendingSrc = null
-        }}
-      >
     {/if}
   </div>
+
+  {#if pendingSrc && enableSourceTransition}
+    <img
+      src={pendingSrc}
+      alt=""
+      aria-hidden="true"
+      class={preloadImageClass()}
+      onload={async event => {
+        const image = event.currentTarget as HTMLImageElement
+
+        try {
+          if (typeof image.decode === 'function') {
+            await image.decode()
+          }
+        } catch {
+          // Firefox can reject decode() even when an already-loaded image is paintable.
+        }
+
+        startDisplayedSourceTransition(pendingSrc, rotationDegrees ?? 0)
+      }}
+      onerror={() => {
+        pendingSrc = null
+      }}
+    >
+  {/if}
 
   <ImageSurfaceOverlays {showSkeleton} {hasLoaded} {hasError} />
 </div>
