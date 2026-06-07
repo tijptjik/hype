@@ -64,7 +64,7 @@ PUBLIC_HUB_CODE = "core"
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
 PUBLIC_ORIGIN = "http://localhost:5173"
-PUBLIC_ASSET_BASE_URL = ""
+PUBLIC_ASSET_BASE_URL = "http://localhost:8788"
 PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
 
 [dev]

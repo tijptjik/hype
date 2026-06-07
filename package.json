@@ -7,7 +7,7 @@
     "url": "https://github.com/tijptjik/hype/issues"
   },
   "scripts": {
-    "dev": "bash ./scripts/dev.sh",
+    "dev": "PUBLIC_ASSET_BASE_URL=http://localhost:8788 bash ./scripts/dev.sh",
     "dev:app": "vite dev",
     "dev:cf": "vite dev",
     "dev:cf:preview": "CLOUDFLARE_ENV=preview vite dev",
