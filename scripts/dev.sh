@@ -15,4 +15,4 @@ trap cleanup EXIT INT TERM
 bun run dev:asset-service:remote &
 ASSET_PID=$!
 
-exec vite dev
+vite dev
