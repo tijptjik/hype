@@ -4,7 +4,7 @@ import maplibregl, { type MapOptions } from 'maplibre-gl'
 import { onMount } from 'svelte'
 
 import { MAP_STYLE_RENDER_VIEW } from '$lib/map/styles/render.shared'
-import { isMapStyleKey } from '$lib/map/styles'
+import { getDefaultMapStyleKey, isMapStyleKey } from '$lib/map/styles'
 
 let mapContainer: HTMLDivElement
 let previewReady = $state(false)
@@ -18,10 +18,11 @@ const parseNumber = (value: string | null, fallback: number): number => {
 
 onMount(() => {
   const url = new URL(window.location.href)
-  const styleParam = page.params.style ?? 'hyper'
+  const defaultStyleKey = getDefaultMapStyleKey()
+  const styleParam = page.params.style ?? defaultStyleKey
   const style = isMapStyleKey(styleParam)
     ? `/api/mapStyles/${styleParam}`
-    : `/api/mapStyles/hyper`
+    : `/api/mapStyles/${defaultStyleKey}`
   const previewWindow = window as Window & {
     __HYPE_MAP_STYLE_PREVIEW_READY__?: boolean
   }

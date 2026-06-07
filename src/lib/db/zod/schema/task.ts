@@ -274,6 +274,7 @@ export const GetTaskEditorDataSchema = z.object({
 export const GetTasksSchema = ListQueryParamsSchema.extend({
   conditions: z
     .object({
+      isDraft: z.boolean().nullable().optional(),
       isReviewed: z.boolean().nullable().optional(),
       type: z
         .enum(Object.values(TaskType) as [string, ...string[]])

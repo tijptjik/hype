@@ -126,7 +126,7 @@ const getTasksQuery = guardedQuery(GetTasksSchema, async (params, ctx) => {
   const queryParams = validateQueryParams<TaskDB>(
     taskTable,
     normalizedConditions as Partial<TaskDB>,
-    {},
+    { isDraft: false } as Partial<TaskDB>,
   )
   const normalizedPrisms = toTaskPrisms(params.prisms as never)
 

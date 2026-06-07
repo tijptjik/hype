@@ -4,8 +4,8 @@ import { getUserMarkerStyleVariant } from '$lib/map/markers'
 import { buildMapStyle, getDefaultMapStyleKey } from '$lib/map/styles'
 
 describe('map styles', () => {
-  it('defaults to the Hyper style', () => {
-    expect(getDefaultMapStyleKey()).toBe('hyper')
+  it('defaults to the Ghostery style', () => {
+    expect(getDefaultMapStyleKey()).toBe('ghostery')
   })
 
   it('defaults markers to image style and accepts dot override', () => {
