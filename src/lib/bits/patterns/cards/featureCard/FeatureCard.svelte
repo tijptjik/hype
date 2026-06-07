@@ -10,7 +10,7 @@ import FeatureCardRoot from './components/FeatureCardRoot.svelte'
 import FeatureCardTitle from './components/FeatureCardTitle.svelte'
 import FeatureCardViewerContent from './components/FeatureCardViewerContent.svelte'
 import * as FeatureCardActionPrimitive from './components/actions'
-import ValidationError from '$lib/components/featureCard/ValidationError.svelte'
+import * as FeatureCardNewPrimitive from './components/newFeature'
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
@@ -325,7 +325,9 @@ $effect(() => {
       <FeatureCardActions centerRightActionsOnMobile={mode !== FeatureCardMode.Display}>
         {#snippet topActions()}
           {#if mode !== FeatureCardMode.Display}
-            <div bind:this={validationElement} class="min-w-0"><ValidationError /></div>
+            <div bind:this={validationElement} class="min-w-0">
+              <FeatureCardNewPrimitive.ValidationError />
+            </div>
           {/if}
         {/snippet}
         {#snippet leftActions()}
