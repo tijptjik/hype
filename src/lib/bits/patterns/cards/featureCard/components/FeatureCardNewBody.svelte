@@ -4,13 +4,11 @@ import { m } from '$lib/i18n'
 // ICONS
 import Heart from 'virtual:icons/lucide/heart'
 // COMPONENTS
-import FeaturePropertiesEditable from '$lib/components/featureCard/FeaturePropertiesEditable.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
 import FeatureCardContributionPanel from './contribution/FeatureCardContributionPanel.svelte'
 import FeatureCardAttributionField from './contribution/FeatureCardAttributionField.svelte'
-import FeatureCardNewAddressField from './newFeature/FeatureCardNewAddressField.svelte'
-import FeatureCardNewDescriptionField from './newFeature/FeatureCardNewDescriptionField.svelte'
-import FeatureCardNewTitleField from './newFeature/FeatureCardNewTitleField.svelte'
+import * as FeatureCardNewPrimitive from './newFeature'
+// TYPES
+import type { Feature } from '$lib/db/zod/schema/feature.types'
 
 let { viewport, feature }: { viewport: HTMLElement; feature: Feature } = $props()
 
@@ -31,10 +29,10 @@ const infoItems = [
 >
   {#snippet children()}
     <div class="grid gap-4 px-1 py-4">
-      <FeatureCardNewTitleField />
-      <FeatureCardNewAddressField />
-      <FeatureCardNewDescriptionField />
-      <FeaturePropertiesEditable {feature} />
+      <FeatureCardNewPrimitive.TitleField />
+      <FeatureCardNewPrimitive.AddressField />
+      <FeatureCardNewPrimitive.DescriptionField />
+      <FeatureCardNewPrimitive.PropertiesField {feature} />
       <div class="border-t border-white/10 pt-4"><FeatureCardAttributionField /></div>
     </div>
   {/snippet}
