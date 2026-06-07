@@ -612,6 +612,11 @@ const handleFetch = async (
     ? toStage(segments[0])
     : resolveRequestedStageFromRequest(url, env)
   const routeOffset = hasLegacyStagePrefix ? 1 : 0
+
+  if (segments[routeOffset] === 'mapRender') {
+    return handleMapRenderAssetRequest(request, env, stage, segments.slice(routeOffset))
+  }
+
   const mediaType = segments[routeOffset]
   const serviceType = segments[routeOffset + 1]
 
@@ -648,6 +653,41 @@ const handleFetch = async (
   }
 
   return new Response('Not found', { status: 404 })
+}
+
+/**
+ * Serves immutable map preview renders stored directly in the public asset bucket.
+ *
+ * @param request Incoming asset request.
+ * @param env Worker bindings.
+ * @param stage Requested storage stage.
+ * @param objectKeySegments Object key path segments beginning with `mapRender`.
+ * @returns Stored PNG response or 404 when the render has not been generated.
+ */
+const handleMapRenderAssetRequest = async (
+  request: Request,
+  env: Env,
+  stage: ImageStage,
+  objectKeySegments: string[],
+): Promise<Response> => {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return new Response('Method not allowed', { status: 405 })
+  }
+
+  const objectKey = objectKeySegments.join('/')
+  const object = await getDerivedBucket(env, stage).get(objectKey)
+
+  if (!object) {
+    return new Response('Map render not found', { status: 404 })
+  }
+
+  return new Response(request.method === 'HEAD' ? null : object.body, {
+    headers: {
+      'cache-control': object.httpMetadata?.cacheControl ?? CACHE_CONTROL_IMMUTABLE,
+      'content-type': object.httpMetadata?.contentType ?? 'image/png',
+      'x-image-source-env': stage,
+    },
+  })
 }
 
 /**
