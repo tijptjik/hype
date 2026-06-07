@@ -14,7 +14,7 @@ const DEPLOY_TARGETS: Record<
   production: {
     name: 'hype-prod',
     env: 'production',
-    toleratedHostnames: ['breadline.hk']
+    toleratedHostnames: []
   }
 }
 
