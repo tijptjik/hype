@@ -448,8 +448,8 @@ const getProjectScope = async (
 export const getOrganisationMapStyleScope = async (
   db: Database,
   organisationId: string,
-): Promise<ProjectScope | null> =>
-  firstOrNull(
+): Promise<ProjectScope | null> => {
+  return firstOrNull(
     await db
       .select({
         organisationId: organisation.id,
@@ -458,6 +458,7 @@ export const getOrganisationMapStyleScope = async (
       .from(organisation)
       .where(eq(organisation.id, organisationId)),
   )
+}
 
 /**
  * Resolves a visible map-style id for the supplied scope and catalog code.

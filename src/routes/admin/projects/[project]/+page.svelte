@@ -1808,6 +1808,10 @@ $effect(() => {
     return
   }
 
+  if (availableMapStyles.length === 0) {
+    return
+  }
+
   updateFormData(projectEntityUpdaterForm, data => {
     data.mapStyleCode = ''
     return data

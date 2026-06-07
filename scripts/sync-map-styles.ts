@@ -46,8 +46,14 @@ const toStableMapStyleId = (key: string): string => {
   return digest.slice(0, 12)
 }
 
-const buildSyncSql = (): string => {
-  const statements: string[] = ['BEGIN TRANSACTION;']
+const shouldWrapInTransaction = (target: SyncTarget): boolean => target === 'local'
+
+const buildSyncSql = (target: SyncTarget): string => {
+  const statements: string[] = []
+
+  if (shouldWrapInTransaction(target)) {
+    statements.push('BEGIN TRANSACTION;')
+  }
 
   // Upsert persisted map-style rows from the checked-in catalog.
   for (const entry of REGISTERED_MAP_STYLE_CATALOG) {
@@ -94,7 +100,9 @@ ON CONFLICT("mapStyleId", "locale") DO UPDATE SET
     }
   }
 
-  statements.push('COMMIT;')
+  if (shouldWrapInTransaction(target)) {
+    statements.push('COMMIT;')
+  }
 
   return `${statements.join('\n\n')}\n`
 }
@@ -114,7 +122,7 @@ const main = async (): Promise<void> => {
   const sqlFile = join(tempDir, `sync-map-styles-${target}.sql`)
 
   try {
-    await Bun.write(sqlFile, buildSyncSql())
+    await Bun.write(sqlFile, buildSyncSql(target))
 
     const wranglerProcess = Bun.spawn(
       ['bunx', 'wrangler', 'd1', 'execute', databaseName, ...wranglerArgs, `--file=${sqlFile}`],

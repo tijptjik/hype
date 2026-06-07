@@ -66,6 +66,7 @@ export {
   FeatureCardBreadcrumbs,
   FeatureCardContent,
   FeatureCardContainer,
+  FeatureCardNew,
   FeatureCardRoot,
   FeatureCardTitle,
   AdminShell,
@@ -159,6 +160,9 @@ export {
   AdminThumbnail,
   AdminViewer,
   CameraViewer,
+  GeoLocationModal,
+  LayerSelectionModal,
+  NewFeatureCard,
 } from './patterns'
 
 export type { HeaderProps } from './patterns/layout/header'

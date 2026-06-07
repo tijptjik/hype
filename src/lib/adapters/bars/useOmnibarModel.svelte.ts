@@ -17,7 +17,8 @@ import type {
   OmnibarProps,
   OmnibarResultSection,
 } from '$lib/bits/patterns/bars/omnibar'
-import type { Locale, LocaleKey } from '$lib/types'
+import type { DeepPartial, Locale, LocaleKey } from '$lib/types'
+import type { NewFeatureTask } from '$lib/db/zod/schema/task.types'
 // UTILS
 import { getOmnibarAvailableViewportHeight } from '$lib/bits/patterns/bars/omnibar/omnibar.utils'
 
@@ -37,23 +38,43 @@ export function useOmnibarModel(
 ): {
   getOmnibarProps: () => OmnibarProps
 } {
+  type FeatureNavigationSource =
+    | Feature
+    | DeepPartial<NewFeatureTask>['feature']
+    | null
+    | undefined
+
+  /**
+   * Normalizes feature-like navigation sources so the omnibar can read both
+   * persisted features and in-progress new-feature drafts through one path.
+   * @param source Active feature or draft feature payload.
+   * @returns The localized i18n container used by navigation title helpers.
+   */
+  function getFeatureNavigationI18n(
+    source: FeatureNavigationSource,
+  ): Feature['i18n'] | null | undefined {
+    return source?.i18n as Feature['i18n'] | null | undefined
+  }
+
   /**
    * Resolve feature text for navigation chrome across locale fallbacks.
    * The header should still identify the current feature even when only generated
    * translations exist in the preferred or fallback locales.
-   * @param feature Feature to read translated fields from.
+   * @param source Feature-like payload to read translated fields from.
    * @param field I18n field name to resolve.
    * @param fallback Fallback text if no value exists.
    * @param allowGenerated Whether generated translations are acceptable.
    * @returns The best available field value for the current locale order.
    */
   function getFeatureNavigationText(
-    feature: Feature | null | undefined,
+    source: FeatureNavigationSource,
     field: 'displayAddress' | 'title',
     fallback: string,
     allowGenerated: boolean,
   ): string {
-    if (!feature?.i18n) {
+    const i18n = getFeatureNavigationI18n(source)
+
+    if (!i18n) {
       return fallback
     }
 
@@ -61,7 +82,7 @@ export function useOmnibarModel(
 
     for (const localeKey of locales) {
       const localeCode = toLocaleCode(localeKey)
-      const entry = feature.i18n[localeCode] ?? feature.i18n[localeKey]
+      const entry = i18n[localeCode] ?? i18n[localeKey]
       const value = entry?.[field]
       const isGenerated = Boolean(entry?.[`${field}Gen`])
 
@@ -98,6 +119,11 @@ export function useOmnibarModel(
   }
 
   function handleNavigationClose(): void {
+    if (omniCtx.isNewFeatureMode) {
+      omniCtx.cancelNewFeature()
+      return
+    }
+
     const didDismiss = dismissActiveFeatureNavigation({
       hasActiveFeature: Boolean(appCtx.getActiveFeature()),
       isCardOpen: omniCtx.state.isCardOpen,
@@ -168,7 +194,7 @@ export function useOmnibarModel(
   function getFeatureTitle(): string {
     if (omniCtx.isNewFeatureMode) {
       return getFeatureNavigationText(
-        appCtx.getNewFeature() as Feature,
+        appCtx.getNewFeature()?.feature,
         'title',
         m.red_arable_herring_trust(),
         true,
@@ -245,6 +271,7 @@ export function useOmnibarModel(
         navigation: {
           isTrayOpen: omniCtx.state.isTrayOpen,
           isCardOpen: omniCtx.state.isCardOpen,
+          isCardOpeningPending: omniCtx.isCardOpeningPending,
           showArrows:
             omniCtx.state.mode !== OmniMode.feature &&
             !omniCtx.isNewFeatureMode &&

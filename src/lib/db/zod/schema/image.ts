@@ -314,6 +314,13 @@ export const GetImageMetadataSchema = z.object({
   meta: ImageRequestMetaSchema,
 })
 
+export const FinalizeImageUploadLinkSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('taskImage'),
+    taskId: z.string().min(1),
+  }),
+])
+
 export const AuthImageUploadSchema = z.object({
   cdn: z.enum(Object.values(ImageCDN) as [string, ...string[]]),
   env: z.enum(Object.values(ImageEnv) as [string, ...string[]]),
@@ -328,15 +335,9 @@ export const AuthImageUploadSchema = z.object({
     .refine(isSupportedUploadImageContentType, 'Unsupported image content type'),
   size: z.number().int().positive(),
   replaceImageId: z.string().optional(),
+  links: z.array(FinalizeImageUploadLinkSchema).optional(),
   meta: ImageRequestMetaSchema,
 })
-
-export const FinalizeImageUploadLinkSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('taskImage'),
-    taskId: z.string().min(1),
-  }),
-])
 
 export const FinalizeImageUploadSchema = z.object({
   token: z.string().min(1),

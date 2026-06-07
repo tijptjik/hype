@@ -8,6 +8,39 @@ export type ActiveFeatureDismissOptions = {
 }
 
 /**
+ * Releases the intentional-close guard after navigation and route effects have had a chance
+ * to settle, preventing feature pages from immediately restoring omnibar navigation mode.
+ *
+ * @param setIntentionallyClosing Optional state setter for the dismiss guard.
+ * @returns Nothing.
+ */
+function releaseIntentionalCloseGuard(
+  setIntentionallyClosing?: (value: boolean) => void,
+): void {
+  if (!setIntentionallyClosing) {
+    return
+  }
+
+  // Keep the guard active through the next paint so feature-route rehydration effects do not
+  // observe the stale `[id]` route during an in-flight transition back to `/`.
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.requestAnimationFrame === 'function'
+  ) {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        setIntentionallyClosing(false)
+      })
+    })
+    return
+  }
+
+  setTimeout(() => {
+    setIntentionallyClosing(false)
+  }, 32)
+}
+
+/**
  * Dismisses active-feature navigation using the same two-step behavior as the omnibar close control.
  *
  * @param options Current active-feature and card state plus dismissal callbacks.
@@ -28,10 +61,7 @@ export function dismissActiveFeatureNavigation(
   options.setIntentionallyClosing?.(true)
   options.resetActiveFeature()
   options.resetToSearch()
-  // Hold the dismiss guard through the synchronous reset, then release it.
-  setTimeout(() => {
-    options.setIntentionallyClosing?.(false)
-  }, 0)
+  releaseIntentionalCloseGuard(options.setIntentionallyClosing)
   return true
 }
 

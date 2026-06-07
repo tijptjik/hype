@@ -2126,6 +2126,7 @@ type BaseTaskData = {
 export type NewFeatureTask = BaseTaskData & {
   type: 'newFeature'
   feature: UserContributedFeature
+  taskId?: Id
   featureId?: Id
 }
 

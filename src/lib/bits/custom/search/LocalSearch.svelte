@@ -7,7 +7,7 @@ import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.ut
 import * as SearchPrimitive from './src/components'
 
 let {
-  options,
+  options = [],
   placeholder = m.forms__search_placeholder(),
   focusOnMount = false,
   mountTransitionDuration = 0,
@@ -25,11 +25,13 @@ let {
 }: LocalSearchProps<T> = $props()
 
 let query = $state('')
-let results = $state<T[]>([])
 let isOpen = $state(false)
 let rootEl = $state<HTMLDivElement | null>(null)
 let localExcludedIds = $state<string[]>([])
-let previousExcludeIds = excludeIds
+let previousExcludeIds: string[] = []
+const resolvedOptions = $derived(Array.isArray(options) ? options : [])
+const resolvedExcludeIds = $derived(Array.isArray(excludeIds) ? excludeIds : [])
+const results = $derived(isOpen ? resolveResults(query) : [])
 const shouldShowEmptyState = $derived(isOpen && results.length === 0)
 
 function toItemId(item: T): string {
@@ -44,13 +46,13 @@ function toSearchText(item: T): string {
 }
 
 function getExcludedIds(): Set<string> {
-  return new Set([...excludeIds, ...localExcludedIds])
+  return new Set([...resolvedExcludeIds, ...localExcludedIds])
 }
 
 function resolveResults(nextQuery: string): T[] {
   const needle = nextQuery.trim().toLowerCase()
   const excludedIds = getExcludedIds()
-  const filtered = options.filter(item => {
+  const filtered = resolvedOptions.filter(item => {
     if (excludedIds.has(toItemId(item))) return false
     if (needle.length === 0) return true
     return toSearchText(item).toLowerCase().includes(needle)
@@ -58,23 +60,24 @@ function resolveResults(nextQuery: string): T[] {
   return filtered.slice(0, Math.max(1, maxResults))
 }
 
-function openResults(nextQuery: string): void {
-  results = resolveResults(nextQuery)
-  isOpen = true
+function openResults(): void {
+  if (!isOpen) {
+    isOpen = true
+  }
 }
 
 function handleQuery(nextQuery: string): void {
   query = nextQuery
-  openResults(nextQuery)
+  openResults()
 }
 
 function handleClear(): void {
   query = ''
-  openResults('')
+  openResults()
 }
 
 function handleFocusIn(): void {
-  openResults(query)
+  openResults()
 }
 
 function handleIntroEnd(): void {
@@ -113,7 +116,6 @@ function selectItem(item: T): void {
   }
   onSelect(item)
   query = ''
-  results = []
   isOpen = false
 
   void tick().then(() => {
@@ -123,17 +125,20 @@ function selectItem(item: T): void {
 }
 
 $effect(() => {
-  if (!isOpen) return
-  results = resolveResults(query)
-})
-
-$effect(() => {
-  const removedExcludeIds = previousExcludeIds.filter(id => !excludeIds.includes(id))
+  const removedExcludeIds = previousExcludeIds.filter(
+    id => !resolvedExcludeIds.includes(id),
+  )
   if (removedExcludeIds.length > 0) {
     const removedExcludeIdSet = new Set(removedExcludeIds)
     localExcludedIds = localExcludedIds.filter(id => !removedExcludeIdSet.has(id))
   }
-  previousExcludeIds = [...excludeIds]
+  const excludeIdsChanged =
+    previousExcludeIds.length !== resolvedExcludeIds.length ||
+    previousExcludeIds.some((id, index) => id !== resolvedExcludeIds[index])
+
+  if (excludeIdsChanged) {
+    previousExcludeIds = [...resolvedExcludeIds]
+  }
 })
 </script>
 

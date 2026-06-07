@@ -2,6 +2,8 @@
 import { LocalSearch, SectionHeader } from '$lib/bits/custom'
 import { m } from '$lib/i18n'
 import { MapStyleCard } from '$lib/bits/patterns/cards/mapStyleCard'
+import { REGISTERED_MAP_STYLE_CATALOG } from '$lib/map/styles/catalog'
+import { getMapStyleCatalogI18n } from '$lib/map/styles/i18n'
 import * as FormMapStyleSectionPrimitive from './components'
 
 import type {
@@ -27,8 +29,23 @@ let isAdding = $state(false)
 let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 
+const fallbackMapStyles = $derived(
+  REGISTERED_MAP_STYLE_CATALOG.map(
+    (entry): MapStyleSelectionItem => ({
+      id: entry.key,
+      code: entry.key,
+      previewImagePath: null,
+      i18n: getMapStyleCatalogI18n(entry.key),
+    }),
+  ),
+)
+
+const resolvedMapStyles = $derived(
+  availableMapStyles.length > 0 ? availableMapStyles : fallbackMapStyles,
+)
+
 const sortedMapStyles = $derived(
-  [...availableMapStyles].sort((a, b) =>
+  [...resolvedMapStyles].sort((a, b) =>
     (a.i18n?.en?.name ?? a.code).localeCompare(b.i18n?.en?.name ?? b.code),
   ),
 )

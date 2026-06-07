@@ -1,3 +1,5 @@
+import type { ListResponse } from '$lib/types'
+
 export type ImperativeRemoteQuery<T> = Promise<T> & {
   run?: () => Promise<T>
 }
@@ -33,5 +35,33 @@ export async function runRemoteQuery<T>(query: ImperativeRemoteQuery<T>): Promis
     }
 
     throw error
+  }
+}
+
+/**
+ * Normalizes list-style remote responses so query functions never hand TanStack
+ * an `undefined` `data` array after transport/runtime edge cases.
+ *
+ * @param result Remote list envelope, which may be partial or absent.
+ * @returns A list response with `data` guaranteed to be an array.
+ */
+export function toSafeListResponse<T>(
+  result: Partial<ListResponse<T>> | null | undefined,
+): ListResponse<T> {
+  const data = Array.isArray(result?.data) ? result.data : []
+
+  return {
+    data,
+    limit: result?.limit,
+    offset: result?.offset ?? 0,
+    totalCount:
+      typeof result?.totalCount === 'number' ? result.totalCount : data.length,
+    hasMore: result?.hasMore ?? false,
+    nextOffset: result?.nextOffset ?? null,
+    sortBy: result?.sortBy,
+    sortOrder: result?.sortOrder,
+    appliedFilters: result?.appliedFilters,
+    q: result?.q,
+    durationMs: result?.durationMs,
   }
 }

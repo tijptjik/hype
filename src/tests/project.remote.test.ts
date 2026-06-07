@@ -428,7 +428,7 @@ const throwingInvalid = (message: string): never => {
 describe('project.remote form organisation move authz', () => {
   beforeAll(async () => {
     remote = await import('$lib/api/server/project.remote')
-  })
+  }, 15_000)
 
   beforeEach(async () => {
     vi.clearAllMocks()

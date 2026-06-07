@@ -1,19 +1,19 @@
 <script lang="ts">
 // BITS
+import FeatureCardAddPhotoBody from './components/FeatureCardAddPhotoBody.svelte'
 import FeatureCardActions from './components/FeatureCardActions.svelte'
 import FeatureCardBreadcrumbs from './components/FeatureCardBreadcrumbs.svelte'
 import FeatureCardContainer from './components/FeatureCardContainer.svelte'
 import FeatureCardContent from './components/FeatureCardContent.svelte'
+import FeatureCardMissingReportBody from './components/FeatureCardMissingReportBody.svelte'
 import FeatureCardRoot from './components/FeatureCardRoot.svelte'
 import FeatureCardTitle from './components/FeatureCardTitle.svelte'
 import FeatureCardViewerContent from './components/FeatureCardViewerContent.svelte'
 import * as FeatureCardActionPrimitive from './components/actions'
-// COMPONENTS
-import AddPhotoBody from '$lib/components/featureCard/AddPhotoBody.svelte'
-import MissingReportBody from '$lib/components/featureCard/MissingReportBody.svelte'
 import ValidationError from '$lib/components/featureCard/ValidationError.svelte'
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
 import { getResponsiveCtx, setResponsiveCtx } from '$lib/context/responsive.svelte'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
@@ -30,6 +30,7 @@ type FeatureCardProps = {
 let { feature }: FeatureCardProps = $props()
 
 const cardCtx = getCardCtx()
+const omniCtx = getOmniCtx()
 // HMR can temporarily remount this subtree before the root layout context is
 // rebound. Fall back to a local responsive context so the card can recover.
 const responsiveCtx = (() => {
@@ -65,6 +66,36 @@ let latchedViewerTargetHeightPx = $state<number | null>(null)
 let viewerBudgetFrame = 0
 
 /**
+ * Reconciles per-mode rounding drift between measured stack height and shell budget.
+ *
+ * @param mode Current feature-card mode.
+ * @returns Pixel compensation applied to the computed viewer budget.
+ */
+function getContributionHeightCompensationPx(mode: FeatureCardMode): number {
+  switch (mode) {
+    case FeatureCardMode.AddPhoto:
+      return 0
+    case FeatureCardMode.Missing:
+      return 1
+    case FeatureCardMode.New:
+      return 2
+    default:
+      return 0
+  }
+}
+
+/**
+ * Measures layout height without animation transforms so card-open FLIP motion
+ * cannot shrink the viewer budget inputs.
+ *
+ * @param element Element whose layout height should be read.
+ * @returns Stable layout height in pixels.
+ */
+function measureElementHeight(element: HTMLElement | null | undefined): number {
+  return element?.offsetHeight ?? 0
+}
+
+/**
  * Coalesces budget recalculation into a single paint-aligned pass.
  */
 function scheduleViewerBudgetUpdate(): void {
@@ -82,45 +113,45 @@ function scheduleViewerBudgetUpdate(): void {
 function updateViewerBudget(): void {
   const viewportElement = viewport
   const viewerShell = viewerShellElement
-  const breadcrumbsShell = breadcrumbsElement
-  const titleShell = titleElement
   const contentShell = contentShellElement
+  const shouldMeasureDisplayChrome =
+    cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode
 
-  if (
-    !viewportElement ||
-    !viewerShell ||
-    !breadcrumbsShell ||
-    !titleShell ||
-    !contentShell
-  ) {
+  if (!viewportElement || !viewerShell || !contentShell) {
     containerScrollable = false
     viewerTargetHeightPx = null
     return
   }
 
-  const measureElementHeight = (element: HTMLElement | null | undefined): number =>
-    element ? element.getBoundingClientRect().height : 0
+  if (shouldMeasureDisplayChrome && (!breadcrumbsElement || !titleElement)) {
+    containerScrollable = false
+    viewerTargetHeightPx = null
+    return
+  }
 
-  const validationHeight = measureElementHeight(validationElement)
   const actionsHeight = measureElementHeight(actionsElement)
   const bottomSpacerHeight = measureElementHeight(bottomSpacerElement)
-  const breadcrumbsHeight = measureElementHeight(breadcrumbsShell)
-  const titleHeight = measureElementHeight(titleShell)
+  const breadcrumbsHeight = measureElementHeight(breadcrumbsElement)
+  const titleHeight = measureElementHeight(titleElement)
   const contentHeight = measureElementHeight(contentShell)
   const staticHeight =
-    breadcrumbsHeight +
-    titleHeight +
-    contentHeight +
-    validationHeight +
-    actionsHeight +
-    bottomSpacerHeight
+    breadcrumbsHeight + titleHeight + contentHeight + actionsHeight + bottomSpacerHeight
   const shellElement = document.getElementById('feature-card-shell')
   const shellStyle = shellElement ? getComputedStyle(shellElement) : null
   const chromeBorderHeight = shellStyle
     ? (Number.parseFloat(shellStyle.borderTopWidth) || 0) +
       (Number.parseFloat(shellStyle.borderBottomWidth) || 0)
     : layout.chromeBorderWidthPx * 2
-  const availableHeight = layout.heightBudgetPx - staticHeight - chromeBorderHeight
+  // Contribution modes do not all round the same way, so reconcile the final
+  // viewer budget against the observed per-mode drift.
+  const contributionHeightCompensationPx = shouldMeasureDisplayChrome
+    ? 0
+    : getContributionHeightCompensationPx(mode)
+  const availableHeight =
+    layout.heightBudgetPx -
+    staticHeight -
+    chromeBorderHeight +
+    contributionHeightCompensationPx
   const viewerBlockMinHeightPx =
     layout.viewerMinHeightPx + layout.viewerTopPaddingPx + layout.viewerPaddingPx
   const resolvedViewerTargetHeightPx = isDescriptionExpanded
@@ -173,6 +204,20 @@ function handleDescriptionToggleVisibility(visible: boolean): void {
   showDescriptionToggle = visible
 }
 
+function handleRootContentVisibilityChange(visible: boolean): void {
+  if (!visible) return
+
+  scheduleViewerBudgetUpdate()
+
+  requestAnimationFrame(() => {
+    scheduleViewerBudgetUpdate()
+
+    requestAnimationFrame(() => {
+      scheduleViewerBudgetUpdate()
+    })
+  })
+}
+
 $effect(() => {
   feature.id
   isDescriptionExpanded = false
@@ -182,20 +227,19 @@ $effect(() => {
 $effect(() => {
   const currentLayout = layout
   const viewportElement = viewport
-  const viewerShell = viewerShellElement
-  const breadcrumbsShell = breadcrumbsElement
-  const titleShell = titleElement
   const contentShell = contentShellElement
+  const shouldMeasureDisplayChrome =
+    cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode
 
   void currentLayout
 
-  if (
-    !viewportElement ||
-    !viewerShell ||
-    !breadcrumbsShell ||
-    !titleShell ||
-    !contentShell
-  ) {
+  if (!viewportElement || !viewerShellElement || !contentShell) {
+    containerScrollable = false
+    viewerTargetHeightPx = null
+    return
+  }
+
+  if (shouldMeasureDisplayChrome && (!breadcrumbsElement || !titleElement)) {
     containerScrollable = false
     viewerTargetHeightPx = null
     return
@@ -207,10 +251,9 @@ $effect(() => {
   })
 
   observer.observe(viewportElement)
-  observer.observe(viewerShell)
-  observer.observe(breadcrumbsShell)
-  observer.observe(titleShell)
   observer.observe(contentShell)
+  if (breadcrumbsElement) observer.observe(breadcrumbsElement)
+  if (titleElement) observer.observe(titleElement)
   if (validationElement) observer.observe(validationElement)
   if (actionsElement) observer.observe(actionsElement)
   if (bottomSpacerElement) observer.observe(bottomSpacerElement)
@@ -229,7 +272,7 @@ $effect(() => {
 })
 </script>
 
-<FeatureCardRoot>
+<FeatureCardRoot onContentVisibilityChange={handleRootContentVisibilityChange}>
   <div class="pointer-events-none flex min-h-0 flex-1 flex-col">
     <FeatureCardContainer bind:viewport scrollable={containerScrollable}>
       <div
@@ -267,28 +310,30 @@ $effect(() => {
               onToggleVisibility={handleDescriptionToggleVisibility}
             />
           </div>
-        {:else if cardCtx.isMissingMode && viewport}
-          <MissingReportBody {viewport} />
-        {:else if cardCtx.isAddPhotoMode && viewport}
-          <AddPhotoBody {viewport} />
+        {:else if viewport}
+          <div bind:this={contentShellElement}>
+            {#if cardCtx.isMissingMode}
+              <FeatureCardMissingReportBody {viewport} />
+            {:else if cardCtx.isAddPhotoMode}
+              <FeatureCardAddPhotoBody {viewport} />
+            {/if}
+          </div>
         {/if}
       </div>
     </FeatureCardContainer>
-    <div bind:this={validationElement}><ValidationError /></div>
     <div bind:this={actionsElement}>
-      <FeatureCardActions>
+      <FeatureCardActions centerRightActionsOnMobile={mode !== FeatureCardMode.Display}>
+        {#snippet topActions()}
+          {#if mode !== FeatureCardMode.Display}
+            <div bind:this={validationElement} class="min-w-0"><ValidationError /></div>
+          {/if}
+        {/snippet}
         {#snippet leftActions()}
           {#if mode === FeatureCardMode.Display}
             <div class="flex items-center gap-2">
               <FeatureCardActionPrimitive.WishlistAction {feature} />
               <FeatureCardActionPrimitive.VisitAction {feature} />
             </div>
-          {:else if mode === FeatureCardMode.New}
-            <FeatureCardActionPrimitive.FeatureCardActionLabelPrimitive.NewFeatureLabel />
-          {:else if mode === FeatureCardMode.Missing}
-            <FeatureCardActionPrimitive.FeatureCardActionLabelPrimitive.MissingReportLabel />
-          {:else if mode === FeatureCardMode.AddPhoto}
-            <FeatureCardActionPrimitive.FeatureCardActionLabelPrimitive.AddPhotoLabel />
           {/if}
         {/snippet}
         {#snippet rightActions()}
@@ -297,7 +342,9 @@ $effect(() => {
           {:else if mode === FeatureCardMode.New}
             <FeatureCardActionPrimitive.SubmitNewFeatureAction />
           {:else if mode === FeatureCardMode.Missing}
-            <FeatureCardActionPrimitive.SubmitMissingReportAction {feature} />
+            <div class="flex w-full justify-center">
+              <FeatureCardActionPrimitive.SubmitMissingReportAction {feature} />
+            </div>
           {:else if mode === FeatureCardMode.AddPhoto}
             <FeatureCardActionPrimitive.SubmitNewPhotosAction {feature} />
           {/if}

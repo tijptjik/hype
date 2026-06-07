@@ -1,7 +1,18 @@
 <script lang="ts">
-import GeoLocationModal from '$lib/components/modals/GeoLocationModal.svelte'
-import LayerSelectionModal from '$lib/components/modals/LayerSelectionModal.svelte'
-import NewFeatureCard from '$lib/components/modals/NewFeatureCard.svelte'
+import { onMount } from 'svelte'
+import { GeoLocationModal, LayerSelectionModal, NewFeatureCard } from '$lib/bits'
+import { initAddNewFeature } from '$lib/client/services/feature'
+import { getAppCtx } from '$lib/context/app.svelte'
+import { getOmniCtx } from '$lib/context/omni.svelte'
+
+const appCtx = getAppCtx()
+const omniCtx = getOmniCtx()
+
+onMount(() => {
+  void initAddNewFeature(appCtx, omniCtx, null, {
+    navigateToRoute: false,
+  })
+})
 </script>
 
 <LayerSelectionModal />

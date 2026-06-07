@@ -1,15 +1,16 @@
 // API
 import { updateFeatureState } from '$lib/api/server/feature.remote'
 import {
+  beginMissingReportDraft as beginMissingReportDraftRemote,
+  beginNewFeatureDraft as beginNewFeatureDraftRemote,
+  beginNewPhotosDraft as beginNewPhotosDraftRemote,
+  finalizeTaskDraft as finalizeTaskDraftRemote,
   reviewTask as reviewTaskRemote,
-  submitMissingReport as submitMissingReportRemote,
-  submitNewFeature as submitNewFeatureRemote,
-  submitNewPhotos as submitNewPhotosRemote,
 } from '$lib/api/server/tasks.remote'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES
-import type { Id, NewFeatureTask, Task } from '$lib/types'
+import type { DeepPartial, Id, NewFeatureTask, Task } from '$lib/types'
 import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
 import type { ViewerRenderable } from '$lib/bits/patterns/images/images.types'
 import type {
@@ -17,12 +18,23 @@ import type {
   TaskEditorLayerOption,
 } from '$lib/db/zod/schema/task.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ImageUpload } from '$lib/db/zod/schema/image.types'
+import type { ImageUpload, Intent } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type {
+  Organisation,
+  OrganisationDB,
+} from '$lib/db/zod/schema/organisation.types'
+import type { Project, ProjectDB } from '$lib/db/zod/schema/project.types'
+import type { Geometry } from 'geojson'
 // IMAGE
-import { getGalleryItemTargetImageId } from '$lib/client/services/image'
+import {
+  finalizePreparedImageUpload,
+  getGalleryItemTargetImageId,
+  prepareImageUpload,
+  uploadPreparedImageObject,
+} from '$lib/client/services/image'
+// ENUMS
+import { ImageContextResource } from '$lib/enums'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -31,8 +43,8 @@ import { getGalleryItemTargetImageId } from '$lib/client/services/image'
 //
 // 0. SHARED HELPERS
 // - createJsonResponse
-// - mapPhotoFiles
 // - assertPhotosProvided
+// - uploadTaskDraftImages
 // - getReviewAction
 // - getTaskReviewActionLabel
 //
@@ -48,6 +60,7 @@ import { getGalleryItemTargetImageId } from '$lib/client/services/image'
 // - syncAssignedTaskLayerCache
 //
 // 2. TASK CREATION CLIENT SERVICES
+// - upsertNewFeatureDraft
 // - submitMissingReport
 // - submitNewFeature
 // - submitNewPhotos
@@ -62,6 +75,40 @@ import { getGalleryItemTargetImageId } from '$lib/client/services/image'
 // +++ Shared Helpers
 
 const JSON_RESPONSE_HEADERS = { 'Content-Type': 'application/json' }
+const DEFAULT_NEW_FEATURE_DRAFT_COORDINATES: [number, number] = [
+  114.1693671540923, 22.319307515052614,
+]
+
+const TASK_SUBMISSION_STAGE = {
+  draftingReport: 'draftingReport',
+  uploadingImage: 'uploadingImage',
+  submittingReport: 'submittingReport',
+  draftingFeature: 'draftingFeature',
+  submittingFeature: 'submittingFeature',
+  draftingPhotos: 'draftingPhotos',
+  submittingPhotos: 'submittingPhotos',
+} as const
+
+const toTaskSubmissionStageLabel = (
+  stage: (typeof TASK_SUBMISSION_STAGE)[keyof typeof TASK_SUBMISSION_STAGE],
+): string => {
+  switch (stage) {
+    case TASK_SUBMISSION_STAGE.draftingReport:
+      return m.task_submission__drafting_report()
+    case TASK_SUBMISSION_STAGE.uploadingImage:
+      return m.task_submission__uploading_image()
+    case TASK_SUBMISSION_STAGE.submittingReport:
+      return m.task_submission__submitting_report()
+    case TASK_SUBMISSION_STAGE.draftingFeature:
+      return m.task_submission__drafting_feature()
+    case TASK_SUBMISSION_STAGE.submittingFeature:
+      return m.task_submission__submitting_feature()
+    case TASK_SUBMISSION_STAGE.draftingPhotos:
+      return m.task_submission__drafting_photos()
+    case TASK_SUBMISSION_STAGE.submittingPhotos:
+      return m.task_submission__submitting_photos()
+  }
+}
 
 /**
  * Creates a standard JSON response for remote action payloads.
@@ -74,13 +121,6 @@ const createJsonResponse = (data: unknown): Response =>
   })
 
 /**
- * Extracts raw files from staged image uploads.
- * @param photos - Uploaded image descriptors from the client
- * @returns File array ready for remote submission
- */
-const mapPhotoFiles = (photos: ImageUpload[]): File[] => photos.map(photo => photo.file)
-
-/**
  * Ensures at least one uploaded image is present.
  * @param photos - Uploaded image descriptors from the client
  * @param errorMessage - Error thrown when no photos are provided
@@ -89,6 +129,122 @@ const assertPhotosProvided = (photos: ImageUpload[], errorMessage: string): void
   if (photos.length === 0) {
     throw new Error(errorMessage)
   }
+}
+
+/**
+ * Normalizes the client-side new-feature draft into the minimum persisted task payload.
+ * @param newFeature Mutable new-feature draft from app state.
+ * @returns Draft-safe task payload ready for remote persistence.
+ */
+const toDraftNewFeatureTask = (
+  newFeature: DeepPartial<NewFeatureTask>,
+): NewFeatureTask => {
+  const geometry = newFeature.feature?.geometry ?? {
+    type: 'Point',
+    coordinates: DEFAULT_NEW_FEATURE_DRAFT_COORDINATES,
+  }
+  const i18n = (newFeature.feature?.i18n ?? {}) as NonNullable<
+    NewFeatureTask['feature']['i18n']
+  >
+
+  return {
+    type: 'newFeature',
+    taskId: newFeature.taskId,
+    featureId: newFeature.featureId,
+    layerId: newFeature.layerId as Id,
+    organisationId: newFeature.organisationId as Id,
+    projectId: newFeature.projectId as Id,
+    contributorId: newFeature.contributorId as Id,
+    feature: {
+      organisationId:
+        newFeature.feature?.organisationId ?? (newFeature.organisationId as Id),
+      projectId: newFeature.feature?.projectId ?? (newFeature.projectId as Id),
+      layerId: newFeature.feature?.layerId ?? (newFeature.layerId as Id),
+      contributorId: newFeature.feature?.contributorId,
+      isDraft: true,
+      geometry: geometry as Geometry,
+      i18n,
+      properties: (newFeature.feature?.properties ?? []).filter(
+        Boolean,
+      ) as NewFeatureTask['feature']['properties'],
+    },
+  }
+}
+
+/**
+ * Runs async work over a list with a small fixed concurrency.
+ * This keeps image finalization off the fully-serial path without overwhelming D1.
+ *
+ * @param items Work items to process.
+ * @param concurrency Maximum number of active workers.
+ * @param worker Async worker for each item.
+ * @returns Resolves once all items finish successfully.
+ */
+const mapWithConcurrency = async <T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> => {
+  let nextIndex = 0
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length)
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex
+        nextIndex += 1
+        await worker(items[currentIndex] as T)
+      }
+    }),
+  )
+}
+
+/**
+ * Uploads staged task photos through the direct-to-R2 image pipeline and links them to the task.
+ * @param params - Task/image upload parameters.
+ * @returns Resolves once all uploads are finalized and linked.
+ */
+const uploadTaskDraftImages = async (params: {
+  taskId: Id
+  featureId: Id
+  organisationId: Id
+  projectId: Id
+  photos: ImageUpload[]
+  intent: Intent
+  finalizingLabel?: string
+  onStatusChange?: (label: string) => void
+}): Promise<void> => {
+  const uploadCtx = {
+    ctxType: ImageContextResource.feature,
+    ctxId: params.featureId,
+    organisation: { id: params.organisationId } as OrganisationDB,
+    project: { id: params.projectId } as ProjectDB,
+    links: [{ type: 'taskImage' as const, taskId: params.taskId }],
+  }
+  const featureImage = {
+    isPublished: false,
+    intent: params.intent,
+  } as const
+
+  params.onStatusChange?.(
+    toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.uploadingImage),
+  )
+  const preparedUploads = await Promise.all(
+    params.photos.map(photo => prepareImageUpload(photo.file, uploadCtx, featureImage)),
+  )
+
+  await Promise.all(
+    preparedUploads.map(preparedUpload => uploadPreparedImageObject(preparedUpload)),
+  )
+
+  params.onStatusChange?.(
+    params.finalizingLabel ??
+      toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingReport),
+  )
+
+  await mapWithConcurrency(preparedUploads, 2, async preparedUpload => {
+    await finalizePreparedImageUpload(preparedUpload)
+  })
 }
 
 /**
@@ -368,14 +524,41 @@ export const syncAssignedTaskLayerCache = (params: {
 // +++ Task Creation Client Services
 
 /**
- * Creates a new task for reporting a missing feature.
- * @param feature - The feature being reported as missing
- * @param layer - The layer containing the feature
- * @param project - The project containing the layer
- * @param organisation - The organisation containing the project
- * @param reason - The reason for reporting as missing
- * @param photos - Evidence photos
- * @returns Promise resolving to the created task
+ * Creates or updates the provisional new-feature task and backing feature draft.
+ * @param newFeature Current client-side draft state.
+ * @returns Server-minted draft identifiers and resolved hierarchy ids.
+ */
+export const upsertNewFeatureDraft = async (
+  newFeature: DeepPartial<NewFeatureTask>,
+): Promise<{
+  task: { id: Id }
+  featureId: Id
+  layerId: Id
+  projectId: Id
+  organisationId: Id
+}> => {
+  const draftResult = await beginNewFeatureDraftRemote({
+    task: toDraftNewFeatureTask(newFeature),
+  })
+
+  return draftResult.data as {
+    task: { id: Id }
+    featureId: Id
+    layerId: Id
+    projectId: Id
+    organisationId: Id
+  }
+}
+
+/**
+ * Creates a draft reported-missing task, uploads linked evidence images directly to R2, and finalizes the task.
+ * @param feature - The feature being reported as missing.
+ * @param layer - The layer containing the feature.
+ * @param project - The project containing the feature.
+ * @param organisation - The organisation containing the feature.
+ * @param reason - The missing-report reason.
+ * @param photos - Evidence photos staged on the client.
+ * @returns Promise resolving to the finalized task payload.
  */
 export const submitMissingReport = async (
   feature: Feature,
@@ -384,28 +567,52 @@ export const submitMissingReport = async (
   organisation: Organisation,
   reason: string,
   photos: ImageUpload[],
+  options: {
+    onStatusChange?: (label: string) => void
+  } = {},
 ): Promise<Response> => {
-  // Validate the minimum task submission inputs before invoking the remote action.
   assertPhotosProvided(photos, 'At least one image is required as evidence')
 
   if (reason.trim().length < 5) {
     throw new Error('Reason must be at least 5 characters long')
   }
 
-  const result = await submitMissingReportRemote({
+  options.onStatusChange?.(
+    toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.draftingReport),
+  )
+  const draftResult = await beginMissingReportDraftRemote({
     featureId: feature.id,
     layerId: layer.id,
     projectId: project.id,
     organisationId: organisation.id,
     reason: reason.trim(),
-    photos: mapPhotoFiles(photos),
   })
 
-  return createJsonResponse(result)
+  const draftTask = draftResult.data as { id: Id }
+
+  await uploadTaskDraftImages({
+    taskId: draftTask.id,
+    featureId: feature.id,
+    organisationId: organisation.id as Id,
+    projectId: project.id as Id,
+    photos,
+    intent: 'research',
+    finalizingLabel: toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingReport),
+    onStatusChange: options.onStatusChange,
+  })
+
+  options.onStatusChange?.(
+    toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingReport),
+  )
+  const finalizedTask = await finalizeTaskDraftRemote({
+    id: draftTask.id,
+  })
+
+  return createJsonResponse(finalizedTask)
 }
 
 /**
- * Creates a new task for submitting a new feature.
+ * Creates a draft new-feature task, uploads linked images directly to R2, and finalizes the task.
  * @param newFeature - The new feature data
  * @param photos - Photos for the new feature
  * @returns Promise resolving to the created task
@@ -413,6 +620,9 @@ export const submitMissingReport = async (
 export const submitNewFeature = async (
   newFeature: NewFeatureTask,
   photos: ImageUpload[],
+  options: {
+    onStatusChange?: (label: string) => void
+  } = {},
 ): Promise<Response> => {
   // Validate the minimum task submission inputs before invoking the remote action.
   assertPhotosProvided(photos, 'At least one image is required')
@@ -421,19 +631,36 @@ export const submitNewFeature = async (
     throw new Error('Title is required')
   }
 
-  const result = await submitNewFeatureRemote({
-    task: {
-      ...newFeature,
-      type: 'newFeature',
-    },
-    photos: mapPhotoFiles(photos),
+  options.onStatusChange?.(
+    toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.draftingFeature),
+  )
+  const draftData = await upsertNewFeatureDraft(newFeature)
+
+  await uploadTaskDraftImages({
+    taskId: draftData.task.id,
+    featureId: draftData.featureId,
+    organisationId: draftData.organisationId,
+    projectId: draftData.projectId,
+    photos,
+    intent: 'undefined',
+    finalizingLabel: toTaskSubmissionStageLabel(
+      TASK_SUBMISSION_STAGE.submittingFeature,
+    ),
+    onStatusChange: options.onStatusChange,
   })
 
-  return createJsonResponse(result)
+  options.onStatusChange?.(
+    toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingFeature),
+  )
+  const finalizedTask = await finalizeTaskDraftRemote({
+    id: draftData.task.id,
+  })
+
+  return createJsonResponse(finalizedTask)
 }
 
 /**
- * Creates a new task for submitting new photos for an existing feature.
+ * Creates a draft new-photo task, uploads linked images directly to R2, and finalizes the task.
  * @param feature - The existing feature
  * @param layer - The layer containing the feature
  * @param project - The project containing the layer
@@ -447,19 +674,44 @@ export const submitNewPhotos = async (
   project: Project,
   organisation: Organisation,
   photos: ImageUpload[],
+  options: {
+    onStatusChange?: (label: string) => void
+  } = {},
 ): Promise<Response> => {
   // Validate the minimum task submission inputs before invoking the remote action.
   assertPhotosProvided(photos, 'At least one image is required')
 
-  const result = await submitNewPhotosRemote({
+  options.onStatusChange?.(
+    toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.draftingPhotos),
+  )
+  const draftResult = await beginNewPhotosDraftRemote({
     featureId: feature.id,
     layerId: layer.id,
     projectId: project.id,
     organisationId: organisation.id,
-    photos: mapPhotoFiles(photos),
   })
 
-  return createJsonResponse(result)
+  const draftTask = draftResult.data as { id: Id }
+
+  await uploadTaskDraftImages({
+    taskId: draftTask.id,
+    featureId: feature.id,
+    organisationId: organisation.id as Id,
+    projectId: project.id as Id,
+    photos,
+    intent: 'undefined',
+    finalizingLabel: toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingPhotos),
+    onStatusChange: options.onStatusChange,
+  })
+
+  options.onStatusChange?.(
+    toTaskSubmissionStageLabel(TASK_SUBMISSION_STAGE.submittingPhotos),
+  )
+  const finalizedTask = await finalizeTaskDraftRemote({
+    id: draftTask.id,
+  })
+
+  return createJsonResponse(finalizedTask)
 }
 
 // ---

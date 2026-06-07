@@ -1,5 +1,10 @@
 <script lang="ts">
+import { getCardCtx } from '$lib/context/card.svelte'
+import { FeatureCardMode } from '$lib/enums'
+import { m } from '$lib/i18n'
 import CameraIcon from 'virtual:icons/lucide/camera'
+
+const cardCtx = getCardCtx()
 </script>
 
 <div
@@ -15,8 +20,11 @@ import CameraIcon from 'virtual:icons/lucide/camera'
   <button
     type="button"
     class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-white/92 backdrop-blur-sm"
+    onclick={() => {
+      cardCtx.setMode(FeatureCardMode.AddPhoto)
+    }}
   >
     <CameraIcon class="h-4 w-4" />
-    add Photo
+    {m.honest_fluffy_falcon_enjoy()}
   </button>
 </div>
