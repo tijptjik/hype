@@ -15,7 +15,11 @@ import {
   updateMarkers,
   USER_MARKER_STYLE_PARAM,
 } from '$lib/map/markers'
-import { getMapStyleDefinition, isMapStyleKey } from '$lib/map/styles'
+import {
+  getDefaultMapStyleKey,
+  getMapStyleDefinition,
+  isMapStyleKey,
+} from '$lib/map/styles'
 // ICONS
 import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 // CONTEXT
@@ -375,7 +379,7 @@ const userMarkerStyleVariant = $derived(
 )
 const activeLocale = $derived(getLocale())
 const resolvedMapStyleCode = $derived(
-  mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : 'hyper',
+  mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : getDefaultMapStyleKey(),
 )
 const resolvedMapStyleEndpoint = $derived(getMapStyleEndpoint(resolvedMapStyleCode))
 const resolvedMapStyleVariant = $derived(

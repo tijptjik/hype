@@ -16,6 +16,7 @@ import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
 // MAP
 import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
+import { getDefaultMapStyleKey } from '$lib/map/styles'
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type {
@@ -292,7 +293,7 @@ $effect(() => {
 </svelte:head>
 
 <div class="headless-map-render">
-  <MapCanvas mapStyleCode={payload?.styleCode ?? 'hyper'} />
+  <MapCanvas mapStyleCode={payload?.styleCode ?? getDefaultMapStyleKey()} />
 </div>
 <div
   id="map-style-render-ready"
