@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import type { FormIssueLike, Id, Locale } from '$lib/types'
+import type { FormIssueLike, Id, Locale, LocaleKey } from '$lib/types'
 import type {
   ProjectPropertyFormData,
   PropertyAdminProfileAPI,
@@ -48,7 +48,7 @@ export type FormFieldCardBodyProps = {
   sectionRank: number
   propertyFields?: unknown
   allIssues?: FormIssueLike[]
-  locales: Locale[]
+  locales: LocaleKey[]
   classifierComponents: readonly string[]
   specifierComponents: readonly string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean

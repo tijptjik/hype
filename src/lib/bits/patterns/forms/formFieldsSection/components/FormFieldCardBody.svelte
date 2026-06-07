@@ -13,7 +13,7 @@ import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
 // TYPES
 import type { SelectItem } from '$lib/bits/core/select/select.types'
-import type { FormIssueLike, Locale } from '$lib/types'
+import type { FormIssueLike, Locale, LocaleKey } from '$lib/types'
 import type { FormFieldCardBodyProps } from '$lib/db/zod/schema/property.types'
 import type { DragDropState } from '@thisux/sveltednd'
 
@@ -61,18 +61,23 @@ const sortedValues = $derived(
 )
 const valueEditableRefs = new Map<string, HTMLElement>()
 let pendingAddedValueFocus = $state<{
-  locale: Locale
+  locale: LocaleKey
   expectedCount: number
 } | null>(null)
 
-const primaryLocale = $derived(locales[0] as Locale)
+type FormFieldAccessor = {
+  as: (kind: string, value?: string) => Record<string, unknown>
+  issues?: () => FormIssueLike[] | undefined
+}
+
+const primaryLocale = $derived(locales[0])
 const propertyPathPrefix = $derived<Array<string | number>>([
   'data',
   'properties',
   propertyIndex,
 ])
 
-function isPrimary(locale: Locale): boolean {
+function isPrimary(locale: LocaleKey): boolean {
   return locale === primaryLocale
 }
 
@@ -83,11 +88,11 @@ function sanitizeDragPayloadArtifacts(input: string): string {
     .trim()
 }
 
-function getValueRefKey(valueId: string, locale: Locale): string {
+function getValueRefKey(valueId: string, locale: LocaleKey): string {
   return `${valueId}:${locale}`
 }
 
-function getLocaleArticleSelector(locale: Locale): string {
+function getLocaleArticleSelector(locale: LocaleKey): string {
   return `[data-locale="${locale}"]`
 }
 
@@ -103,14 +108,14 @@ function getLocaleGridFromTarget(target: EventTarget | null): HTMLElement | null
 
 function getLocaleEntry<T extends Record<string, unknown>>(
   i18n: Record<string, T> | null | undefined,
-  locale: Locale,
+  locale: Locale | LocaleKey,
 ): T | undefined {
   if (!i18n) return undefined
   const localeKey = toLocaleKey(locale)
   return (i18n[locale] ?? i18n[localeKey]) as T | undefined
 }
 
-function getValueDisplayText(valueId: string, locale: Locale): string {
+function getValueDisplayText(valueId: string, locale: LocaleKey): string {
   const match = sortedValues.find(value => value.id === valueId)
   if (!valuesAreTranslatable) {
     if (typeof match?.value === 'string')
@@ -141,11 +146,20 @@ function getPropertyField(pathSuffix: Array<string | number>): unknown {
   return current
 }
 
+function isFormFieldAccessor(field: unknown): field is FormFieldAccessor {
+  return Boolean(
+    field &&
+      typeof field === 'object' &&
+      'as' in field &&
+      typeof field.as === 'function',
+  )
+}
+
 function getFieldIssues(
   pathSuffix: Array<string | number>,
 ): FormIssueLike[] | undefined {
   const field = getPropertyField(pathSuffix)
-  if (!field || typeof field !== 'object' || typeof field.issues !== 'function')
+  if (!isFormFieldAccessor(field) || typeof field.issues !== 'function')
     return getFallbackIssues(pathSuffix)
   const issues = field.issues()
   if (Array.isArray(issues) && issues.length > 0) return issues as FormIssueLike[]
@@ -189,21 +203,30 @@ function getFieldAttrs(
   kind: string,
 ): Record<string, unknown> {
   const field = getPropertyField(pathSuffix)
-  if (!field || typeof field !== 'object' || typeof field.as !== 'function') return {}
+  if (!isFormFieldAccessor(field)) return {}
   return field.as(kind) as Record<string, unknown>
 }
 
 function getFieldName(pathSuffix: Array<string | number>): string | undefined {
   const field = getPropertyField(pathSuffix)
-  if (!field || typeof field !== 'object' || typeof field.as !== 'function')
-    return undefined
+  if (!isFormFieldAccessor(field)) return undefined
   const attrs = field.as('text') as { name?: unknown }
   return typeof attrs?.name === 'string' ? attrs.name : undefined
 }
 
+function withFallbackName(
+  attrs: Record<string, unknown>,
+  fallbackName: string,
+): Record<string, unknown> {
+  return {
+    ...attrs,
+    name: typeof attrs.name === 'string' ? attrs.name : fallbackName,
+  }
+}
+
 function withCoreFieldAttrs(
   attrs: Record<string, unknown>,
-  locale: Locale,
+  locale: LocaleKey,
   field: 'key' | 'label' | 'placeholder',
 ): Record<string, unknown> {
   const forwardedKeydown = attrs.onkeydown
@@ -228,7 +251,7 @@ type CoreFieldKey = 'key' | 'label' | 'placeholder' | 'component'
  */
 function getCoreFieldElement(
   localeGrid: HTMLElement | null,
-  locale: Locale,
+  locale: LocaleKey,
   field: CoreFieldKey,
 ): HTMLElement | null {
   if (!localeGrid) return null
@@ -245,7 +268,7 @@ function getCoreFieldElement(
  */
 function getTranslationBarButtons(
   localeGrid: HTMLElement | null,
-  locale: Locale,
+  locale: LocaleKey,
 ): HTMLElement[] {
   const localeArticle = localeGrid?.querySelector<HTMLElement>(
     getLocaleArticleSelector(locale),
@@ -260,7 +283,10 @@ function getTranslationBarButtons(
  * Focus the trailing control in the translation bar for the current locale.
  * This gives Shift+Tab from the first field a stable "go to translation tools" target.
  */
-function focusTranslationBar(localeGrid: HTMLElement | null, locale: Locale): boolean {
+function focusTranslationBar(
+  localeGrid: HTMLElement | null,
+  locale: LocaleKey,
+): boolean {
   const buttons = getTranslationBarButtons(localeGrid, locale)
   const target = buttons[buttons.length - 1]
   if (!target) return false
@@ -292,7 +318,7 @@ function focusFirstValueAction(localeGrid: HTMLElement | null): boolean {
  */
 function onCoreFieldKeydown(
   event: KeyboardEvent,
-  locale: Locale,
+  locale: LocaleKey,
   field: CoreFieldKey,
 ): void {
   if (!isEditing || !canShowValues) return
@@ -334,13 +360,12 @@ function getFieldAttrsWithValue(
   value: string,
 ): Record<string, unknown> | undefined {
   const field = getPropertyField(pathSuffix)
-  if (!field || typeof field !== 'object' || typeof field.as !== 'function')
-    return undefined
+  if (!isFormFieldAccessor(field)) return undefined
   return field.as(kind, value) as Record<string, unknown>
 }
 
 function getPropertyGenState(
-  locale: Locale,
+  locale: LocaleKey,
   key: 'labelGen' | 'placeholderGen',
 ): boolean {
   const localeKey = toLocaleKey(locale)
@@ -359,7 +384,10 @@ function getPropertyGenState(
   return Boolean(localeEntry?.[key])
 }
 
-function getValueIssues(valueId: string, locale: Locale): FormIssueLike[] | undefined {
+function getValueIssues(
+  valueId: string,
+  locale: LocaleKey,
+): FormIssueLike[] | undefined {
   const valueIndex = (property.values || []).findIndex(value => value.id === valueId)
   if (valueIndex < 0) return undefined
   if (!valuesAreTranslatable) {
@@ -376,9 +404,22 @@ function isFieldRequired(pathSuffix: Array<string | number>): boolean {
 }
 
 const keyAttrs = $derived(getFieldAttrs(['key'], 'text'))
+const keyInputAttrs = $derived(
+  withFallbackName(keyAttrs, `data.properties[${propertyIndex}].key`),
+)
 const keyIssues = $derived(getFieldIssues(['key']))
+const getPropertyLocaleFieldAttrs = $derived(
+  (locale: LocaleKey, field: 'label' | 'placeholder') =>
+    withFallbackName(
+      getFieldAttrs(['i18n', locale, field], 'text'),
+      `data.properties[${propertyIndex}].i18n.${locale}.${field}`,
+    ),
+)
 const componentAttrs = $derived(
   getFieldAttrs(['component'], 'select') as { name?: string; value?: string },
+)
+const componentName = $derived(
+  componentAttrs.name ?? `data.properties[${propertyIndex}].component`,
 )
 const componentIssues = $derived(getFieldIssues(['component']))
 const minAttrs = $derived(getFieldAttrs(['min'], 'number'))
@@ -387,7 +428,7 @@ const maxAttrs = $derived(getFieldAttrs(['max'], 'number'))
 const maxIssues = $derived(getFieldIssues(['max']))
 const propertyRootIssues = $derived(getFieldIssues([]) ?? [])
 
-function onValueBlur(event: FocusEvent, valueId: string, locale: Locale): void {
+function onValueBlur(event: FocusEvent, valueId: string, locale: LocaleKey): void {
   if (!isEditing) return
   const target = event.currentTarget as HTMLElement
   const rawValue = target.textContent?.trim() ?? ''
@@ -398,10 +439,10 @@ function onValueBlur(event: FocusEvent, valueId: string, locale: Locale): void {
     onUpdateValue(property.id, valueId, 'value', nextValue)
     return
   }
-  onUpdateValueI18n(property.id, valueId, locale, 'value', nextValue)
+  onUpdateValueI18n(property.id, valueId, toLocaleCode(locale), 'value', nextValue)
 }
 
-function onValueInput(event: Event, valueId: string, locale: Locale): void {
+function onValueInput(event: Event, valueId: string, locale: LocaleKey): void {
   if (!isEditing) return
   const target = event.currentTarget as HTMLElement
   const rawValue = target.textContent ?? ''
@@ -411,7 +452,7 @@ function onValueInput(event: Event, valueId: string, locale: Locale): void {
     onUpdateValue(property.id, valueId, 'value', nextValue)
     return
   }
-  onUpdateValueI18n(property.id, valueId, locale, 'value', nextValue)
+  onUpdateValueI18n(property.id, valueId, toLocaleCode(locale), 'value', nextValue)
 }
 
 function preventDefaultAndPropagation(event: Event): void {
@@ -495,7 +536,7 @@ function onValueDoubleClick(event: MouseEvent): void {
 
 function resolveAdjacentValueEditable(
   valueId: string,
-  locale: Locale,
+  locale: LocaleKey,
   direction: 1 | -1,
 ): HTMLElement | null {
   const localeIndex = locales.indexOf(locale)
@@ -535,7 +576,7 @@ function resolveAdjacentValueEditable(
   }
 }
 
-async function onValueEnter(event: KeyboardEvent, locale: Locale): Promise<void> {
+async function onValueEnter(event: KeyboardEvent, locale: LocaleKey): Promise<void> {
   if (!isEditing) return
   if (event.key !== 'Enter') return
   if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
@@ -550,7 +591,7 @@ async function onValueEnter(event: KeyboardEvent, locale: Locale): Promise<void>
   onAddValue(property.id)
 }
 
-function onValueTab(event: KeyboardEvent, valueId: string, locale: Locale): void {
+function onValueTab(event: KeyboardEvent, valueId: string, locale: LocaleKey): void {
   if (!isEditing) return
   if (event.key !== 'Tab') return
 
@@ -564,9 +605,9 @@ function onValueTab(event: KeyboardEvent, valueId: string, locale: Locale): void
 
 function bindValueEditable(
   node: HTMLElement,
-  params: { valueId: string; locale: Locale; text: string },
+  params: { valueId: string; locale: LocaleKey; text: string },
 ): {
-  update: (next: { valueId: string; locale: Locale; text: string }) => void
+  update: (next: { valueId: string; locale: LocaleKey; text: string }) => void
   destroy: () => void
 } {
   let current = params
@@ -652,10 +693,9 @@ $effect(() => {
   }}
 >
   {#snippet children(locale)}
-    {@const localeCode = toLocaleCode(locale)}
-    {@const showCoreFields = isPrimary(localeCode)}
-    {@const labelGenValue = getPropertyGenState(localeCode, 'labelGen')}
-    {@const placeholderGenValue = getPropertyGenState(localeCode, 'placeholderGen')}
+    {@const showCoreFields = isPrimary(locale)}
+    {@const labelGenValue = getPropertyGenState(locale, 'labelGen')}
+    {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
     {@const labelGenName = getFieldName(['i18n', locale, 'labelGen'])}
     {@const placeholderGenName = getFieldName(['i18n', locale, 'placeholderGen'])}
 
@@ -715,10 +755,11 @@ $effect(() => {
         <TextInput
           label={m.admin__forms_property_name_api()}
           required={isFieldRequired(['key'])}
-          value={(keyAttrs as { value?: string }).value ?? (property.key ?? '')}
+          value={(keyInputAttrs as { value?: string }).value ?? (property.key ?? '')}
           issues={keyIssues}
           {isEditing}
-          inputAttrs={withCoreFieldAttrs(keyAttrs, locale, 'key')}
+          inputAttrs={withCoreFieldAttrs(keyInputAttrs, locale, 'key')}
+          onValueChange={value => onUpdateBase(property.id, 'key', value)}
         />
       {:else}
         <Skeleton isLabelCovered={false} />
@@ -731,8 +772,8 @@ $effect(() => {
         isTranslated={true}
         isGenAI={labelGenValue}
         onToggleGenAI={() =>
-          onUpdateI18n(property.id, locale, 'labelGen', !labelGenValue)}
-        value={(getFieldAttrs(['i18n', locale, 'label'], 'text') as { value?: string })
+          onUpdateI18n(property.id, toLocaleCode(locale), 'labelGen', !labelGenValue)}
+        value={(getPropertyLocaleFieldAttrs(locale, 'label') as { value?: string })
             .value ??
           (getLocaleEntry(
             property.i18n as Record<string, { label?: string }> | null | undefined,
@@ -741,10 +782,12 @@ $effect(() => {
         issues={getFieldIssues(['i18n', locale, 'label'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
-          getFieldAttrs(['i18n', locale, 'label'], 'text'),
+          getPropertyLocaleFieldAttrs(locale, 'label'),
           locale,
           'label',
         )}
+        onValueChange={value =>
+          onUpdateI18n(property.id, toLocaleCode(locale), 'label', value)}
       />
 
       <TextInput
@@ -754,8 +797,13 @@ $effect(() => {
         isTranslated={true}
         isGenAI={placeholderGenValue}
         onToggleGenAI={() =>
-          onUpdateI18n(property.id, locale, 'placeholderGen', !placeholderGenValue)}
-        value={(getFieldAttrs(['i18n', locale, 'placeholder'], 'text') as {
+          onUpdateI18n(
+            property.id,
+            toLocaleCode(locale),
+            'placeholderGen',
+            !placeholderGenValue,
+          )}
+        value={(getPropertyLocaleFieldAttrs(locale, 'placeholder') as {
             value?: string
           }).value ??
           (getLocaleEntry(
@@ -765,10 +813,12 @@ $effect(() => {
         issues={getFieldIssues(['i18n', locale, 'placeholder'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
-          getFieldAttrs(['i18n', locale, 'placeholder'], 'text'),
+          getPropertyLocaleFieldAttrs(locale, 'placeholder'),
           locale,
           'placeholder',
         )}
+        onValueChange={value =>
+          onUpdateI18n(property.id, toLocaleCode(locale), 'placeholder', value)}
       />
 
       {#if showCoreFields}
@@ -780,7 +830,7 @@ $effect(() => {
           placeholder={m.admin__forms_property_component()}
           issues={componentIssues}
           {isEditing}
-          name={componentAttrs.name}
+          name={componentName}
           wrapperAttrs={{
             'data-property-core-field': 'component',
             onkeydown: (event: KeyboardEvent) => onCoreFieldKeydown(event, locale, 'component'),
@@ -835,7 +885,7 @@ $effect(() => {
           }}
           onSort={() => {
             onLayoutMutationStart?.()
-            onSortValuesAlphabetically(property.id, locale)
+            onSortValuesAlphabetically(property.id, toLocaleCode(locale))
           }}
           onToggleRemoveMode={toggleOptionRemoveMode}
         >
