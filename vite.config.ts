@@ -92,12 +92,6 @@ export default defineConfig(async ({ command }) => ({
     tailwindcss(),
     ...(await localCloudflare(command)),
   ],
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'esnext',
-      sourcemap: true,
-    },
-  },
   build: {
     target: 'es2020',
     rollupOptions: {
