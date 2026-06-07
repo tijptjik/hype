@@ -716,6 +716,7 @@ function updateRowFocus(index: number) {
     <IndexCard
       {...createAdminIndexCardModel({
         adminCtx,
+        resourceType: FirstClassResource.feature,
         entity,
         keyMap: featureIndexCardKeyMap,
         search: page.url.search,

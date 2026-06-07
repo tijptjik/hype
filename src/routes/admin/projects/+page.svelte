@@ -226,6 +226,7 @@ let entities: Project[] = $derived(
 function getIndexModel(entity: Project) {
   return createAdminIndexCardModel({
     adminCtx,
+    resourceType: FirstClassResource.project,
     entity,
     keyMap,
     search: page.url.search,

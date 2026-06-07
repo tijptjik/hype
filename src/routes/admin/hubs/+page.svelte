@@ -115,6 +115,7 @@ let entities: Hub[] = $derived(
 function getIndexModel(entity: Hub) {
   return createAdminIndexCardModel({
     adminCtx,
+    resourceType: FirstClassResource.hub,
     entity,
     keyMap,
     search: page.url.search,

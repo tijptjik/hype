@@ -291,17 +291,11 @@ export async function uploadAndProcessImage(
 
 const DEFAULT_PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
 
-const resolveConfiguredPublicAssetBaseUrl = (): string =>
-  import.meta.env.PUBLIC_ASSET_BASE_URL || ''
-
 const resolvePublicAssetBaseUrl = (): string => {
-  const configuredBaseUrl = resolveConfiguredPublicAssetBaseUrl()
+  const configuredBaseUrl = import.meta.env.PUBLIC_ASSET_BASE_URL || ''
+
   if (configuredBaseUrl) {
     return configuredBaseUrl
-  }
-
-  if (typeof window === 'undefined') {
-    return DEFAULT_PUBLIC_ASSET_BASE_URL
   }
 
   return DEFAULT_PUBLIC_ASSET_BASE_URL

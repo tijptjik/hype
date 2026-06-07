@@ -102,6 +102,10 @@ export type ImageProps = {
   fit?: GalleryObjectFit
   isLoading?: boolean
   class?: string
+  rounded?: string
+  showBackdrop?: boolean
+  enableSourceTransition?: boolean
+  revealOnLoad?: boolean
 }
 
 export type ViewerProps = {

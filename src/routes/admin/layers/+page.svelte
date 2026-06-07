@@ -179,6 +179,7 @@ let entities: Layer[] = $derived(
 function getIndexModel(entity: Layer) {
   return createAdminIndexCardModel({
     adminCtx,
+    resourceType: FirstClassResource.layer,
     entity,
     keyMap,
     search: page.url.search,

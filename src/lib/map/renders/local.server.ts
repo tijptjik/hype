@@ -16,6 +16,7 @@ import type {
   MapRenderJob,
   PreviewStage,
 } from '../../types'
+import { launchChromiumBrowser, type LocalChromiumBrowser } from '../playwright.local'
 // HELPERS
 import {
   MAP_STYLE_RENDER_BASE_URL,
@@ -36,15 +37,6 @@ import { resolveMapRenderAssetUrl } from './storage.shared'
 //    - renderMapRenderJobLocally
 //    - generateRenderJobsLocally
 
-const loadChromium = async () => {
-  const loadModule = new Function('moduleId', 'return import(moduleId)') as (
-    moduleId: string,
-  ) => Promise<{ chromium: unknown }>
-  const playwright = await loadModule(['@play', 'wright/test'].join(''))
-
-  return playwright.chromium
-}
-
 const SERVER_START_TIMEOUT_MS = 45_000
 const PREVIEW_READY_TIMEOUT_MS = 45_000
 const LOCAL_RENDER_ROOT_DIR = path.join(os.tmpdir(), 'hype-map-renders')
@@ -60,7 +52,7 @@ const MAP_ENTITY_PREVIEW_SIZE = {
 
 type GenerateRenderJobsLocallyOptions = {
   baseUrl?: string
-  browser?: Awaited<ReturnType<Awaited<ReturnType<typeof loadChromium>>['launch']>>
+  browser?: LocalChromiumBrowser
   storage?: MapRenderPersistenceTarget
   stage?: PreviewStage
   remoteConfig?: MapRenderRemoteConfig
@@ -229,18 +221,13 @@ const getLocalRenderAssetPath = (job: MapRenderJob): string =>
 export const renderMapRenderJobLocally = async (
   job: MapRenderJob,
   options: {
-    browser?: Awaited<ReturnType<Awaited<ReturnType<typeof loadChromium>>['launch']>>
+    browser?: LocalChromiumBrowser
     storage?: MapRenderPersistenceTarget
     stage?: PreviewStage
     remoteConfig?: MapRenderRemoteConfig
   } = {},
 ): Promise<MapRenderManifestEntry> => {
-  const chromium = await loadChromium()
-  const browser =
-    options.browser ??
-    (await chromium.launch({
-      headless: true,
-    }))
+  const browser = options.browser ?? (await launchChromiumBrowser())
   const shouldCloseBrowser = !options.browser
   const stage = options.stage ?? 'local'
   const fileName = job.targetObjectKey.split('/').pop() ?? `${job.hash}.png`
@@ -330,16 +317,13 @@ export const generateRenderJobsLocally = async (
   jobs: MapRenderJob[],
   options: GenerateRenderJobsLocallyOptions = {},
 ): Promise<Record<string, MapRenderManifestEntry>> => {
-  const chromium = await loadChromium()
   const baseUrl =
     options.baseUrl ??
     process.env.MAP_STYLE_RENDER_BASE_URL ??
     MAP_STYLE_RENDER_BASE_URL
   const server = await ensureRenderServer(baseUrl)
   const entries: Record<string, MapRenderManifestEntry> = {}
-  const browser = await chromium.launch({
-    headless: true,
-  })
+  const browser = await launchChromiumBrowser()
   const stage = options.stage ?? 'local'
   const force = options.force ?? false
 

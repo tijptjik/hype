@@ -25,11 +25,18 @@ See [Contribution](CONTRIBUTING.md) docs.
 
 ## Commands
 
-See [package.json](package.json) for available commands, and run them with bun
+See [package.json](package.json) for available commands, and run them with bun. 
 
-```bash
-bun run {command}
+For the dev environment
+
+```sh
+bun run ...
 ```
+
+- `dev`: `local compute + local queues + remote R2`
+- `dev:local`: `local compute + local queues + local R2`
+- `dev:cf:preview`: `local compute + preview remote D1/R2 + local preview queue simulation`
+- `dev:cf:prod`: `local compute + prod remote D1/R2 + local prod queue simulation`
 
 ## Database Management
 
