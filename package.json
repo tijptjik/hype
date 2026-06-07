@@ -6,6 +6,9 @@
   "issues": {
     "url": "https://github.com/tijptjik/hype/issues"
   },
+  "overrides": {
+    "kysely": "0.28.17"
+  },
   "scripts": {
     "dev": "PUBLIC_ASSET_BASE_URL=http://localhost:8788 bash ./scripts/dev.sh",
     "dev:app": "vite dev",
@@ -176,7 +179,7 @@
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "heic2any": "^0.0.4",
-    "kysely": "0.29.2",
+    "kysely": "^0.28.17",
     "maplibre-gl": "^5.24.0",
     "node-gyp": "^12.4.0",
     "papaparse": "^5.5.3",
