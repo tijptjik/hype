@@ -1,4 +1,4 @@
-import type { Id, Locale } from '$lib/types'
+import type { Id, Locale, LocaleKey } from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Snippet } from 'svelte'
 import type { DragDropOptions } from '@thisux/sveltednd'
@@ -94,7 +94,7 @@ export interface FormFieldsSectionItemProps {
 }
 
 export interface FormFieldsSectionCardConfig extends FormFieldCardCallbacks {
-  locales: Locale[]
+  locales: LocaleKey[]
   classifierComponents: readonly string[]
   specifierComponents: readonly string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean
@@ -177,7 +177,7 @@ export interface FormFieldCardProps extends FormFieldCardCallbacks {
   allIssues?: Array<{ message: string; path?: Array<string | number> }>
   totalItems: number
   removeMode: boolean
-  locales: Locale[]
+  locales: LocaleKey[]
   classifierComponents: readonly string[]
   specifierComponents: readonly string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean

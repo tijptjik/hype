@@ -223,7 +223,6 @@ const editorCtrl = getEditorCtrl({
 
 const projectRef = $derived(page.params.project as string)
 const locales = $derived(getLocaleOrder(getLocaleKey()))
-const propertyLocales = ['en', 'zh-hans', 'zh-hant'] as const
 const currentLocaleKey = $derived(getLocaleKey())
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
@@ -2732,40 +2731,40 @@ $effect(() => {
           fieldRemoveMode = value
         }}
         card={{
-            removeMode: fieldRemoveMode,
-            locales: [...propertyLocales] as Array<'en' | 'zh-hans' | 'zh-hant'>,
-            isEditing,
-            isRequiredInPreflight,
-            allIssues: visibleAllIssues as Array<{
-              message: string
-              path?: Array<string | number>
-            }>,
-            classifierComponents: classifierComponentTypes,
-            specifierComponents: specifierComponentTypes,
-            onIncreaseRank: fieldActions.increaseRank,
-            onDecreaseRank: fieldActions.decreaseRank,
-            onRemove: fieldActions.remove,
-            onUpdateBase: updatePropertyBase,
-            onUpdateI18n: updatePropertyI18n,
-            onAddValue: addPropertyValue,
-            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
-            onRemoveValue: removePropertyValue,
-            onMoveValue: movePropertyValue,
-            onUpdateValue: updatePropertyValue,
-            onUpdateValueI18n: updatePropertyValueI18n,
-            onTranslateLocale: onTranslatePropertyLocale,
-            onResetLocale: onResetPropertyLocale,
-            getPropertyIndex: (propertyId, _sectionIndex) =>
-              currentProjectProperties.findIndex(candidate => candidate.id === propertyId),
-            getPropertyFields: (_propertyId, propertyIndex) =>
-              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-            resolveCardPresentation: resolveProjectPropertyCardPresentation,
-            resolveTitleHref: resolveProjectPropertyTitleHref,
-            getMoveWindowSize: () => enabledProjectFieldWindowSize,
-            isMoveLocked: property =>
-              property.scope !== 'project' && !isPropertyEnabled(property),
-            resolveSourceTag: resolveProjectPropertySourceTag,
-          }}
+          removeMode: fieldRemoveMode,
+          locales,
+          isEditing,
+          isRequiredInPreflight,
+          allIssues: visibleAllIssues as Array<{
+            message: string
+            path?: Array<string | number>
+          }>,
+          classifierComponents: classifierComponentTypes,
+          specifierComponents: specifierComponentTypes,
+          onIncreaseRank: fieldActions.increaseRank,
+          onDecreaseRank: fieldActions.decreaseRank,
+          onRemove: fieldActions.remove,
+          onUpdateBase: updatePropertyBase,
+          onUpdateI18n: updatePropertyI18n,
+          onAddValue: addPropertyValue,
+          onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
+          onRemoveValue: removePropertyValue,
+          onMoveValue: movePropertyValue,
+          onUpdateValue: updatePropertyValue,
+          onUpdateValueI18n: updatePropertyValueI18n,
+          onTranslateLocale: onTranslatePropertyLocale,
+          onResetLocale: onResetPropertyLocale,
+          getPropertyIndex: (propertyId, _sectionIndex) =>
+            currentProjectProperties.findIndex(candidate => candidate.id === propertyId),
+          getPropertyFields: (_propertyId, propertyIndex) =>
+            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+          resolveCardPresentation: resolveProjectPropertyCardPresentation,
+          resolveTitleHref: resolveProjectPropertyTitleHref,
+          getMoveWindowSize: () => enabledProjectFieldWindowSize,
+          isMoveLocked: property =>
+            property.scope !== 'project' && !isPropertyEnabled(property),
+          resolveSourceTag: resolveProjectPropertySourceTag,
+        }}
       />
       <div class="w-full min-h-20 flex-none"></div>
     </Main.Facet>
