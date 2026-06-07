@@ -1,0 +1,73 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "hype"
+main = ".svelte-kit/cloudflare/_worker.js"
+send_metrics = false
+account_id = "a6eeace4b6d9f8e07ab307964e74d801"
+compatibility_date = "2025-04-02"
+compatibility_flags = ["nodejs_compat_v2"]
+workers_dev = false
+preview_urls = false
+keep_vars = false
+
+[placement]
+mode = "smart"
+
+[observability]
+enabled = true
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hype-db-local"
+database_id = "6757bbf2-ac2c-4323-b73a-0a48f0c41d62"
+migrations_dir = "migrations"
+
+[[queues.producers]]
+binding = "MAP_RENDER_QUEUE"
+queue = "hype-map-render-jobs-local"
+
+[[queues.producers]]
+binding = "ASSET_RENDER_QUEUE"
+queue = "hype-asset-render-jobs-local"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+
+[vars]
+ENVIRONMENT = "local"
+PUBLIC_DRIZZLE_LOGGER = false
+PUBLIC_HUB_CODE = "core"
+PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
+PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
+PUBLIC_ORIGIN = "http://localhost:5173"
+PUBLIC_ASSET_BASE_URL = ""
+PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
+
+[dev]
+ip = "localhost"
+port = 5173
+local_protocol = "http"

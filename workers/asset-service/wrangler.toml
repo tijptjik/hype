@@ -78,26 +78,32 @@ dataset = "hype_asset_warmup"
 [[env.preview.r2_buckets]]
 binding = "ASSET_RAW_DEV"
 bucket_name = "hype-assets-raw-dev"
+remote = true
 
 [[env.preview.r2_buckets]]
 binding = "ASSET_RAW_PREVIEW"
 bucket_name = "hype-assets-raw-preview"
+remote = true
 
 [[env.preview.r2_buckets]]
 binding = "ASSET_RAW_PRODUCTION"
 bucket_name = "hype-assets-raw-prod"
+remote = true
 
 [[env.preview.r2_buckets]]
 binding = "ASSET_PUBLIC_DEV"
 bucket_name = "hype-assets-dev"
+remote = true
 
 [[env.preview.r2_buckets]]
 binding = "ASSET_PUBLIC_PREVIEW"
 bucket_name = "hype-assets-preview"
+remote = true
 
 [[env.preview.r2_buckets]]
 binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
+remote = true
 
 [[env.preview.queues.consumers]]
 queue = "hype-asset-render-jobs-preview"
@@ -128,26 +134,32 @@ dataset = "hype_asset_warmup"
 [[env.production.r2_buckets]]
 binding = "ASSET_RAW_DEV"
 bucket_name = "hype-assets-raw-dev"
+remote = true
 
 [[env.production.r2_buckets]]
 binding = "ASSET_RAW_PREVIEW"
 bucket_name = "hype-assets-raw-preview"
+remote = true
 
 [[env.production.r2_buckets]]
 binding = "ASSET_RAW_PRODUCTION"
 bucket_name = "hype-assets-raw-prod"
+remote = true
 
 [[env.production.r2_buckets]]
 binding = "ASSET_PUBLIC_DEV"
 bucket_name = "hype-assets-dev"
+remote = true
 
 [[env.production.r2_buckets]]
 binding = "ASSET_PUBLIC_PREVIEW"
 bucket_name = "hype-assets-preview"
+remote = true
 
 [[env.production.r2_buckets]]
 binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
+remote = true
 
 [[env.production.queues.consumers]]
 queue = "hype-asset-render-jobs-prod"

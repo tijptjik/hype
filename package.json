@@ -7,13 +7,13 @@
     "url": "https://github.com/tijptjik/hype/issues"
   },
   "scripts": {
-    "dev": "sh -c 'bun run dev:cf & bun run dev:asset-service:remote & wait'",
+    "dev": "bash ./scripts/dev.sh",
+    "dev:app": "vite dev",
     "dev:cf": "vite dev",
     "dev:cf:preview": "CLOUDFLARE_ENV=preview vite dev",
     "dev:cf:prod": "CLOUDFLARE_ENV=production vite dev",
-    "dev:local": "DISABLE_LOCAL_CLOUDFLARE=1 vite -d dev",
-    "dev:no-cf": "DISABLE_LOCAL_CLOUDFLARE=1 vite dev",
-    "dev:no-mullvad": "DISABLE_LOCAL_CLOUDFLARE=1 mullvad-exclude vite dev",
+    "dev:local": "HYPE_LOCAL_R2=1 vite dev",
+    "dev:no-mullvad": "mullvad-exclude vite dev",
     "dev:asset-service:local": "bun wrangler dev -c workers/asset-service/wrangler.toml --local --persist-to .wrangler/state/asset-service --port 8788",
     "dev:asset-service:remote": "bun wrangler dev -c workers/asset-service/wrangler.toml --remote --port 8788",
     "dev:asset-service:remote:preview": "bun wrangler dev -c workers/asset-service/wrangler.toml --remote --env preview --port 8788",

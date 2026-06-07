@@ -1,0 +1,53 @@
+#:schema ../../node_modules/wrangler/config-schema.json
+name = "hype-asset-service"
+main = "src/index.ts"
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
+send_metrics = false
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+ENVIRONMENT = "local"
+ASSET_DEBUG_MEMORY = "0"
+ASSET_DEBUG_MEMORY_MATCH = ""
+BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
+
+[[analytics_engine_datasets]]
+binding = "ASSET_ANALYTICS"
+dataset = "hype_asset_delivery"
+
+[[analytics_engine_datasets]]
+binding = "ASSET_WARMUP_ANALYTICS"
+dataset = "hype_asset_warmup"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_DEV"
+bucket_name = "hype-assets-raw-dev"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PREVIEW"
+bucket_name = "hype-assets-raw-preview"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_DEV"
+bucket_name = "hype-assets-dev"
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PREVIEW"
+bucket_name = "hype-assets-preview"
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+
+[[queues.consumers]]
+queue = "hype-asset-render-jobs-local"
+max_batch_size = 4
+max_batch_timeout = 5
