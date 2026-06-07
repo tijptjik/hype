@@ -12,6 +12,7 @@ export type ImageSurfaceProps = {
   isLoading?: boolean
   showBackdrop?: boolean
   enableSourceTransition?: boolean
+  revealOnLoad?: boolean
   isBlurred?: boolean
   isGreyscale?: boolean
   rounded?: string

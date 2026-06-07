@@ -31,12 +31,12 @@ export function surfaceRootClass(rounded: string, className: string): string {
 }
 
 export function backdropImageClass(): string {
-  return 'absolute inset-0 h-full w-full scale-[1.04] object-cover opacity-30 blur-lg'
+  return 'absolute inset-0 h-full w-full scale-[1.04] object-cover object-center opacity-30 blur-lg'
 }
 
 export function incomingBackdropClass(isVisible: boolean): string {
   return cx(
-    'absolute inset-0 h-full w-full scale-[1.04] object-cover blur-lg transition-opacity duration-[520ms] ease-out',
+    'absolute inset-0 h-full w-full scale-[1.04] object-cover object-center blur-lg transition-opacity duration-520 ease-out',
     isVisible ? 'opacity-30' : 'opacity-0',
   )
 }
@@ -56,7 +56,7 @@ export function loadingBreathLayerClass({
   isVisible,
 }: LoadingBreathLayerState): string {
   return cx(
-    'pointer-events-none absolute inset-0 h-full w-full blur-md transition-[opacity,transform] duration-[1450ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+    'pointer-events-none absolute inset-0 h-full w-full object-center blur-md transition-[opacity,transform] duration-1450 ease-[cubic-bezier(0.22,1,0.36,1)]',
     fit === 'cover' ? 'object-cover' : 'object-contain',
     isBlurred && 'blur-lg',
     isGreyscale && 'grayscale',
@@ -72,7 +72,7 @@ export function foregroundLayerClass({
   isHidden = false,
 }: ForegroundLayerState): string {
   return cx(
-    'absolute inset-0 h-full w-full',
+    'absolute inset-0 h-full w-full object-center',
     fit === 'cover' ? 'object-cover' : 'object-contain',
     isBlurred && 'blur-md',
     isGreyscale && 'grayscale',
@@ -88,7 +88,7 @@ export function rotationOverlayClass({
   isFadingOut,
 }: RotationOverlayState): string {
   return cx(
-    'absolute inset-0 h-full w-full transition-[transform,opacity] duration-[240ms] ease-out',
+    'absolute inset-0 h-full w-full object-center transition-[transform,opacity] duration-[240ms] ease-out',
     fit === 'cover' ? 'object-cover' : 'object-contain',
     isBlurred && 'blur-md',
     isGreyscale && 'grayscale',
@@ -104,7 +104,7 @@ export function incomingLayerClass({
   isVisible,
 }: IncomingLayerState): string {
   return cx(
-    'absolute inset-0 h-full w-full transition-opacity duration-[520ms] ease-out',
+    'absolute inset-0 h-full w-full object-center transition-opacity duration-[520ms] ease-out',
     fit === 'cover' ? 'object-cover' : 'object-contain',
     isBlurred && 'blur-md',
     isGreyscale && 'grayscale',
