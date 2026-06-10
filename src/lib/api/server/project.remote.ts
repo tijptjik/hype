@@ -73,6 +73,7 @@ import {
   updateProjectArchivedStateById,
   updateProjectByIdWithConcurrency,
   updateProjectPublishedStateById,
+  cascadeProjectArchivedStateToDescendants,
   cascadeProjectPublishedStateToDescendants,
 } from '$lib/db/services/project'
 import { hasProjectLayersCondition } from '$lib/db/services/layer'
@@ -1041,6 +1042,10 @@ export const archiveProject = guardedCommand(
         throw error(404, 'PROJECT_NOT_FOUND')
       },
     )
+    await cascadeProjectArchivedStateToDescendants(db, {
+      projectId,
+      state: params.state,
+    })
 
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },

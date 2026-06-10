@@ -56,6 +56,7 @@ import {
   updateOrganisationPublishedStateById,
   updateOrganisationArchivedStateById,
   cascadeOrganisationPublishedStateToDescendants,
+  cascadeOrganisationArchivedStateToDescendants,
   syncUserRoles,
   toUserRoles,
 } from '$lib/db/services/organisation'
@@ -673,6 +674,10 @@ export const archiveOrganisation = guardedCommand(
         throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
+    await cascadeOrganisationArchivedStateToDescendants(db, {
+      organisationId: commandOrganisationId,
+      state: params.state,
+    })
 
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },

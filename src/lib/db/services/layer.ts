@@ -644,6 +644,34 @@ export const updateLayerArchivedStateById = async (
 }
 
 /**
+ * Cascades a layer archive-state change into descendant features.
+ * Existing local archive snapshots are preserved while an ancestor remains archived so
+ * unarchiving restores the prior descendant state instead of reviving every record.
+ * @param db - The database instance.
+ * @param params - The parent layer id and next archived state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeLayerArchivedStateToDescendants = async (
+  db: Database,
+  params: {
+    layerId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(feature)
+    .set({
+      localIsArchived: params.state
+        ? sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`
+        : null,
+      isArchived: params.state
+        ? sql`1`
+        : sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`,
+    })
+    .where(eq(feature.layerId, params.layerId))
+}
+
+/**
  * Replaces layer i18n rows from locale-keyed payload.
  * Used by update orchestration to persist submitted translations.
  */
