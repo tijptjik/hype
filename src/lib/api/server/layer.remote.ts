@@ -51,6 +51,7 @@ import {
   updateLayerArchivedStateById,
   updateLayerByIdWithConcurrency,
   updateLayerPublishedStateById,
+  cascadeLayerArchivedStateToDescendants,
   cascadeLayerPublishedStateToDescendants,
 } from '$lib/db/services/layer'
 import { probeProjectForUpdate } from '$lib/db/services/project'
@@ -503,6 +504,10 @@ export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx
       throw error(404, 'LAYER_NOT_FOUND')
     },
   )
+  await cascadeLayerArchivedStateToDescendants(db, {
+    layerId,
+    state: params.state,
+  })
 
   return toBooleanStateResponseShape(persisted, 'isArchived')
 })

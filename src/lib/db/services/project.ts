@@ -796,6 +796,46 @@ export const updateProjectArchivedStateById = async (
 }
 
 /**
+ * Cascades a project archive-state change into descendant layers and features.
+ * Existing local archive snapshots are preserved while an ancestor remains archived so
+ * unarchiving restores the prior descendant state instead of reviving every record.
+ * @param db - The database instance.
+ * @param params - The parent project id and next archived state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeProjectArchivedStateToDescendants = async (
+  db: Database,
+  params: {
+    projectId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(layer)
+    .set({
+      localIsArchived: params.state
+        ? sql`coalesce(${layer.localIsArchived}, ${layer.isArchived})`
+        : null,
+      isArchived: params.state
+        ? sql`1`
+        : sql`coalesce(${layer.localIsArchived}, ${layer.isArchived})`,
+    })
+    .where(eq(layer.projectId, params.projectId))
+
+  await db
+    .update(feature)
+    .set({
+      localIsArchived: params.state
+        ? sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`
+        : null,
+      isArchived: params.state
+        ? sql`1`
+        : sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`,
+    })
+    .where(eq(feature.projectId, params.projectId))
+}
+
+/**
  * Updates translations for a project by deleting existing ones and creating new ones.
  * @param db - The database instance.
  * @param i18n - Record of translations for each target locale.

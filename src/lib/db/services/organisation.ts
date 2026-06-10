@@ -81,6 +81,7 @@ import type {
 //    - updateOrganisationPublishedStateById
 //    - cascadeOrganisationPublishedStateToDescendants
 //    - updateOrganisationArchivedStateById
+//    - cascadeOrganisationArchivedStateToDescendants
 //    - updateI18n
 //
 // 3.2 CRUD :: UPDATE (SYNC)
@@ -695,6 +696,59 @@ export const updateOrganisationArchivedStateById = async (
     })
 
   return updated ?? null
+}
+
+/**
+ * Cascades an organisation archive-state change into descendant projects, layers, and
+ * features. Existing local archive snapshots are preserved while an ancestor remains
+ * archived so unarchiving restores the prior descendant state instead of blindly
+ * reviving every record.
+ * @param db - The database instance.
+ * @param params - The parent organisation id and next archived state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeOrganisationArchivedStateToDescendants = async (
+  db: Database,
+  params: {
+    organisationId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(project)
+    .set({
+      localIsArchived: params.state
+        ? sql`coalesce(${project.localIsArchived}, ${project.isArchived})`
+        : null,
+      isArchived: params.state
+        ? sql`1`
+        : sql`coalesce(${project.localIsArchived}, ${project.isArchived})`,
+    })
+    .where(eq(project.organisationId, params.organisationId))
+
+  await db
+    .update(layer)
+    .set({
+      localIsArchived: params.state
+        ? sql`coalesce(${layer.localIsArchived}, ${layer.isArchived})`
+        : null,
+      isArchived: params.state
+        ? sql`1`
+        : sql`coalesce(${layer.localIsArchived}, ${layer.isArchived})`,
+    })
+    .where(eq(layer.organisationId, params.organisationId))
+
+  await db
+    .update(feature)
+    .set({
+      localIsArchived: params.state
+        ? sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`
+        : null,
+      isArchived: params.state
+        ? sql`1`
+        : sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`,
+    })
+    .where(eq(feature.organisationId, params.organisationId))
 }
 
 /**

@@ -1,9 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SQL } from 'drizzle-orm'
 import { feature, layer, project } from '$lib/db/schema'
-import { cascadeOrganisationPublishedStateToDescendants } from '$lib/db/services/organisation'
-import { cascadeProjectPublishedStateToDescendants } from '$lib/db/services/project'
-import { cascadeLayerPublishedStateToDescendants } from '$lib/db/services/layer'
+import {
+  cascadeOrganisationArchivedStateToDescendants,
+  cascadeOrganisationPublishedStateToDescendants,
+} from '$lib/db/services/organisation'
+import {
+  cascadeProjectArchivedStateToDescendants,
+  cascadeProjectPublishedStateToDescendants,
+} from '$lib/db/services/project'
+import {
+  cascadeLayerArchivedStateToDescendants,
+  cascadeLayerPublishedStateToDescendants,
+} from '$lib/db/services/layer'
 import type { Database } from '$lib/types'
 
 type UpdateCall = {
@@ -98,5 +107,71 @@ describe('publication cascade services', () => {
     expect(updateCalls[0]?.table).toBe(feature)
     expect(updateCalls[0]?.values.localIsPublished).toBeNull()
     expect(isSqlExpression(updateCalls[0]?.values.isPublished)).toBe(true)
+  })
+
+  it('snapshots organisation descendants into local archive state when archiving', async () => {
+    const { db, updateCalls } = createDbMock()
+
+    await cascadeOrganisationArchivedStateToDescendants(db, {
+      organisationId: 'org-1',
+      state: true,
+    })
+
+    expect(updateCalls).toHaveLength(3)
+    expect(updateCalls.map(call => call.table)).toEqual([project, layer, feature])
+    expect(isSqlExpression(updateCalls[0]?.values.localIsArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.localIsArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[2]?.values.localIsArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[0]?.values.isArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.isArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[2]?.values.isArchived)).toBe(true)
+  })
+
+  it('restores organisation descendants from local archive state when unarchiving', async () => {
+    const { db, updateCalls } = createDbMock()
+
+    await cascadeOrganisationArchivedStateToDescendants(db, {
+      organisationId: 'org-1',
+      state: false,
+    })
+
+    expect(updateCalls).toHaveLength(3)
+    expect(updateCalls.map(call => call.table)).toEqual([project, layer, feature])
+    expect(updateCalls[0]?.values.localIsArchived).toBeNull()
+    expect(updateCalls[1]?.values.localIsArchived).toBeNull()
+    expect(updateCalls[2]?.values.localIsArchived).toBeNull()
+    expect(isSqlExpression(updateCalls[0]?.values.isArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.isArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[2]?.values.isArchived)).toBe(true)
+  })
+
+  it('cascades project archive changes into layers and features only', async () => {
+    const { db, updateCalls } = createDbMock()
+
+    await cascadeProjectArchivedStateToDescendants(db, {
+      projectId: 'project-1',
+      state: true,
+    })
+
+    expect(updateCalls).toHaveLength(2)
+    expect(updateCalls.map(call => call.table)).toEqual([layer, feature])
+    expect(isSqlExpression(updateCalls[0]?.values.localIsArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.localIsArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[0]?.values.isArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.isArchived)).toBe(true)
+  })
+
+  it('cascades layer archive changes into features only', async () => {
+    const { db, updateCalls } = createDbMock()
+
+    await cascadeLayerArchivedStateToDescendants(db, {
+      layerId: 'layer-1',
+      state: false,
+    })
+
+    expect(updateCalls).toHaveLength(1)
+    expect(updateCalls[0]?.table).toBe(feature)
+    expect(updateCalls[0]?.values.localIsArchived).toBeNull()
+    expect(isSqlExpression(updateCalls[0]?.values.isArchived)).toBe(true)
   })
 })

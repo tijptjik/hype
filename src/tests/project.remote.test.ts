@@ -30,6 +30,7 @@ const {
   mockUpdateProjectPublishedStateById,
   mockUpdateProjectArchivedStateById,
   mockSetProjectMapStyleByCode,
+  mockCascadeProjectArchivedStateToDescendants,
   mockCascadeProjectPublishedStateToDescendants,
   mockGuardedContext,
 } = vi.hoisted(() => ({
@@ -66,6 +67,7 @@ const {
   mockUpdateProjectPublishedStateById: vi.fn(async () => null),
   mockUpdateProjectArchivedStateById: vi.fn(async () => null),
   mockSetProjectMapStyleByCode: vi.fn(async () => undefined),
+  mockCascadeProjectArchivedStateToDescendants: vi.fn(async () => undefined),
   mockCascadeProjectPublishedStateToDescendants: vi.fn(async () => undefined),
   mockGuardedContext: vi.fn(),
 }))
@@ -349,6 +351,8 @@ vi.mock('$lib/db/services/project', () => ({
   toListResponseShape: vi.fn((value: unknown) => value),
   updateI18n: mockUpdateI18n,
   cascadeOrganisationToDescendants: mockCascadeProjectOrganisationToDescendants,
+  cascadeProjectArchivedStateToDescendants:
+    mockCascadeProjectArchivedStateToDescendants,
   cascadeProjectPublishedStateToDescendants:
     mockCascadeProjectPublishedStateToDescendants,
   updateProjectArchivedStateById: mockUpdateProjectArchivedStateById,
@@ -884,6 +888,18 @@ describe('project.remote form organisation move authz', () => {
     await remote.publishProject({ id: 'project-1', state: true })
 
     expect(mockCascadeProjectPublishedStateToDescendants).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        projectId: 'project-1',
+        state: true,
+      },
+    )
+  })
+
+  it('cascades descendant archive state after a successful archive command', async () => {
+    await remote.archiveProject({ id: 'project-1', state: true })
+
+    expect(mockCascadeProjectArchivedStateToDescendants).toHaveBeenCalledWith(
       expect.any(Object),
       {
         projectId: 'project-1',
