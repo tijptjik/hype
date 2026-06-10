@@ -28,8 +28,8 @@
   }
 
   .bits-resource-filter-bar__filter-trigger:hover:not(:disabled):not(
-      [aria-disabled="true"]
-    ) {
+    [aria-disabled="true"]
+  ) {
     background-color: color-mix(in oklab, var(--color-base-300) 10%, transparent);
   }
 
@@ -66,8 +66,8 @@
   }
 
   .bits-resource-filter-bar__carousel-nav:hover:not(:disabled):not(
-      [aria-disabled="true"]
-    ) {
+    [aria-disabled="true"]
+  ) {
     background-color: color-mix(in oklab, var(--color-base-300) 20%, transparent);
   }
 
@@ -105,8 +105,8 @@
 
   .bits-resource-filter-bar__reset:hover:not(:disabled):not([aria-disabled="true"]),
   .bits-resource-filter-bar__reset:focus-visible:not(:disabled):not(
-      [aria-disabled="true"]
-    ) {
+    [aria-disabled="true"]
+  ) {
     background-color: color-mix(in oklab, var(--color-base-300) 20%, transparent);
     border-color: transparent;
     color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
@@ -219,11 +219,11 @@
   }
 
   .bits-resource-filter-bar__locale-group-button:hover:not(:disabled):not(
-      [aria-disabled="true"]
-    ),
+    [aria-disabled="true"]
+  ),
   .bits-resource-filter-bar__locale-group-button:focus-visible:not(:disabled):not(
-      [aria-disabled="true"]
-    ) {
+    [aria-disabled="true"]
+  ) {
     color: color-mix(in oklab, var(--color-base-content) 92%, transparent);
   }
 
@@ -236,11 +236,11 @@
   }
 
   .bits-resource-filter-bar__locale-group-button--active:hover:not(:disabled):not(
-      [aria-disabled="true"]
-    ),
+    [aria-disabled="true"]
+  ),
   .bits-resource-filter-bar__locale-group-button--active:focus-visible:not(
-      :disabled
-    ):not([aria-disabled="true"]) {
+    :disabled
+  ):not([aria-disabled="true"]) {
     background-color: color-mix(in oklab, var(--color-secondary) 90%, white);
     border-color: transparent;
     color: white;
