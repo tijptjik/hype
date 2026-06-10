@@ -159,11 +159,11 @@
 }
 
 @custom-variant dark (&:where(
-    .dark,
-    .dark *,
-    [data-theme="spectre"],
-    [data-theme="spectre"] *
-  ));
+  .dark,
+  .dark *,
+  [data-theme="spectre"],
+  [data-theme="spectre"] *
+));
 
 @custom-variant h-160 {
   @media (min-height: 640px) {
