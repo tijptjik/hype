@@ -233,7 +233,7 @@ export class ImportCtx {
     return this.state.currentStep
   }
 
-  setSelectedOrganisation(selectedOrganisation: Organisation) {
+  setSelectedOrganisation(selectedOrganisation: Organisation | null) {
     this.state.selectedOrganisation = selectedOrganisation
   }
 
@@ -241,7 +241,7 @@ export class ImportCtx {
     return this.state.selectedOrganisation
   }
 
-  setSelectedProject(selectedProject: Project) {
+  setSelectedProject(selectedProject: Project | null) {
     this.state.selectedProject = selectedProject
   }
 

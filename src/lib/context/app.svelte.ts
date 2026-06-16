@@ -19,7 +19,7 @@ import {
   getOrganisationsWhichHaveLayers,
 } from '$lib/api/server/organisation.remote'
 import { getHub, getHubs } from '$lib/api/server/hub.remote'
-import { getProject, getProjectsWhichHaveLayers } from '$lib/api/server/project.remote'
+import { getProject, getProjects } from '$lib/api/server/project.remote'
 import { getLayer, getLayers } from '$lib/api/server/layer.remote'
 import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
 import { getProperties, getProperty } from '$lib/api/server/property.remote'
@@ -680,7 +680,7 @@ export class AppCtx {
       get: getOrganisation,
     }
     this.remoteMap[FirstClassResource.project] = {
-      list: getProjectsWhichHaveLayers as unknown as RemoteListFn<unknown, unknown>,
+      list: getProjects as unknown as RemoteListFn<unknown, unknown>,
       get: getProject as unknown as RemoteGetFn<unknown, unknown>,
     }
     this.remoteMap[FirstClassResource.layer] = {
