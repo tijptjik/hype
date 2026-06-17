@@ -533,7 +533,7 @@
   "arable_gray_okapi_roam": "複製座標",
   "blue_smug_marlin_peel": "未能同步",
   "equal_petty_goose_pull": "確認要刪除此圖片嗎？",
-  "caring_aloof_haddock_bubble": "拖放圖片並根據檔案名稱自動將圖片按其特徵及屬性分類",
+  "import_batch_image_description": "拖放圖片並根據檔案名稱自動將圖片按其特徵及屬性分類",
   "north_level_niklas_tap": "拒絕原因",
   "antsy_patient_moth_taste": "可選項目",
   "home_legal_trout_hurl": "切換按鈕以控制該地圖項目的公開性：",
@@ -893,5 +893,12 @@
   "feature__no_canonical_image_yet": "尚未有標準圖片",
   "feature__address_refactor_placeholder": "地址分頁外殼已為重構掛載，但地址輸入暫緩處理。",
   "user__current_user": "目前使用者",
-  "viewer__loading_image": "正在載入圖片"
+  "viewer__loading_image": "正在載入圖片",
+  "import_data": "匯入資料",
+  "import_data_csv_only": "僅接受 CSV 檔案。",
+  "import_batch_image": "批次圖片上傳",
+  "import_data_subtitle": "拖放含標題列的 CSV",
+  "import_data_images": "使用者",
+  "import_coming_soon": "即將推出",
+  "import_data_events": "活動"
 }

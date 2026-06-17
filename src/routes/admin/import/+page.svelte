@@ -4,22 +4,22 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 import { getImportCtx, setImportCtx } from '$lib/context/import.svelte'
+// BITS COMPONENTS
+import * as Main from '$lib/bits/custom/main'
 // COMPONENTS
-import Dropzones from '$lib/components/import/Dropzones.svelte'
-import ImportFeatureFlow from '$lib/components/import/features/ImportFeatureFlow.svelte'
-import ImportImageFlow from '$lib/components/import/images/ImportImageFlow.svelte'
+import Dropzones from '$lib/bits/patterns/import/Dropzones.svelte'
+import ImportFeatureFlow from '$lib/bits/patterns/import/ImportFeatureFlow.svelte'
+import ImportImageFlow from '$lib/bits/patterns/import/ImportImageFlow.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
 import Upload from 'virtual:icons/lucide/upload'
 // TYPES
-type ImportableResource = 'features' | 'users' | 'events' | 'images'
-type DropContext = {
-  acceptedFiles: File[]
-  fileRejections?: unknown[]
-  type: ImportableResource
-  event?: Event
-}
+import type {
+  DropzoneEvent,
+  ImportableResource,
+} from '$lib/bits/patterns/import/types.ts'
+
 // CONTEXT
 setImportCtx()
 
@@ -48,8 +48,8 @@ $effect(() => {
 // STATE
 
 let importResourceType: ImportableResource | null = $state(null)
-let pendingFeaturesDrop: DropContext | null = $state(null)
-let pendingImagesDrop: DropContext | null = $state(null)
+let pendingFeaturesDrop: DropzoneEvent | null = $state(null)
+let pendingImagesDrop: DropzoneEvent | null = $state(null)
 
 // HANDLERS
 
@@ -81,21 +81,23 @@ function resetPending(): void {
 }
 </script>
 
-<section class="bits-theme flex h-full min-h-0 flex-col overflow-y-auto p-6 pb-12">
-  {#if importResourceType === 'features'}
-    <ImportFeatureFlow
-      {appCtx}
-      {importCtx}
-      pendingDrop={pendingFeaturesDrop}
-      onCancel={handleFlowCancel}
-    />
-  {:else if importResourceType === 'images'}
-    <ImportImageFlow
-      {adminCtx}
-      pendingDrop={pendingImagesDrop}
-      onCancel={handleFlowCancel}
-    />
-  {:else}
-    <Dropzones onDrop={handleDrop} isUploading={false} uploadProgress="" />
-  {/if}
-</section>
+<Main.Root>
+  <Main.Content>
+    {#if importResourceType === 'features'}
+      <ImportFeatureFlow
+        {appCtx}
+        {importCtx}
+        pendingDrop={pendingFeaturesDrop}
+        onCancel={handleFlowCancel}
+      />
+    {:else if importResourceType === 'images'}
+      <ImportImageFlow
+        {adminCtx}
+        pendingDrop={pendingImagesDrop}
+        onCancel={handleFlowCancel}
+      />
+    {:else}
+      <Dropzones onDrop={handleDrop} isUploading={false} uploadProgress="" />
+    {/if}
+  </Main.Content>
+</Main.Root>

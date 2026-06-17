@@ -158,12 +158,9 @@
   --breakpoint-w-768: 3072px;
 }
 
-@custom-variant dark (&:where(
-  .dark,
-  .dark *,
-  [data-theme="spectre"],
-  [data-theme="spectre"] *
-));
+@custom-variant dark (
+  &:where(.dark, .dark *, [data-theme="spectre"], [data-theme="spectre"] *)
+);
 
 @custom-variant h-160 {
   @media (min-height: 640px) {
