@@ -745,7 +745,7 @@ export class OmniCtx {
     walkRef: string,
     options?: OmniSelectionOptions,
     items?: (FeatureFromCollection | Feature)[],
-    customI18n?: Record<Locale, string>,
+    customI18n?: Record<LocaleKey, string>,
   ): void {
     this.setActiveCollectionDescriptor({
       kind: 'walk',
