@@ -1,4 +1,5 @@
 import {
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -26,43 +27,49 @@ import { ImageCDN, ImageEnv, ImageIntent, ImagePresentationMode } from '../../en
  * - Contributor reference
  * - Archive status
  */
-export const image = sqliteTable('image', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
-  contributorId: text('contributorId'),
-  // CDN
-  cdn: text('cdn', { enum: Object.values(ImageCDN) as [string, ...string[]] })
-    .default(ImageCDN.cloudflareR2)
-    .notNull(),
-  // Stage / bucket namespace
-  env: text('env', { enum: Object.values(ImageEnv) as [string, ...string[]] })
-    .default(ImageEnv.local)
-    .notNull(),
-  // Optional provider asset id
-  cdnId: text('cdnId'),
-  // Stable logical path for the asset
-  publicId: text('publicId').notNull(),
-  // Cache-busting version
-  version: integer('version'),
-  // Preferred presentation policy for UI rendering
-  presentationMode: text('presentationMode', {
-    enum: Object.values(ImagePresentationMode) as [string, ...string[]],
-  })
-    .default(ImagePresentationMode.contain)
-    .notNull(),
-  // False : Images may be shown in the Admin Panel
-  // True : Image is considered deleted
-  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
-  localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
-  createdAt: text('createdAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
-  modifiedAt: text('modifiedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-    .notNull(),
-})
+export const image = sqliteTable(
+  'image',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    contributorId: text('contributorId'),
+    // CDN
+    cdn: text('cdn', { enum: Object.values(ImageCDN) as [string, ...string[]] })
+      .default(ImageCDN.cloudflareR2)
+      .notNull(),
+    // Stage / bucket namespace
+    env: text('env', { enum: Object.values(ImageEnv) as [string, ...string[]] })
+      .default(ImageEnv.local)
+      .notNull(),
+    // Optional provider asset id
+    cdnId: text('cdnId'),
+    // Stable logical path for the asset
+    publicId: text('publicId').notNull(),
+    // SHA-256 of the normalized uploaded bytes for exact duplicate detection
+    contentHash: text('contentHash'),
+    // Cache-busting version
+    version: integer('version'),
+    // Preferred presentation policy for UI rendering
+    presentationMode: text('presentationMode', {
+      enum: Object.values(ImagePresentationMode) as [string, ...string[]],
+    })
+      .default(ImagePresentationMode.contain)
+      .notNull(),
+    // False : Images may be shown in the Admin Panel
+    // True : Image is considered deleted
+    isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+    localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
+    createdAt: text('createdAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .notNull(),
+    modifiedAt: text('modifiedAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString())
+      .notNull(),
+  },
+  table => [index('image_content_hash_idx').on(table.contentHash)],
+)
 
 /**
  * Feature image assignments

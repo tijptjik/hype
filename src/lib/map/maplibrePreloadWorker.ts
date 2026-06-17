@@ -4,10 +4,22 @@ import { bounds } from '@placemarkio/geo-viewport'
 import type { BBox } from 'geojson'
 import type { LngLatLike } from 'maplibre-gl'
 
+type PrecacheMessagePayload = {
+  abort?: boolean
+  center: LngLatLike | [number, number]
+  startCenter: LngLatLike | [number, number]
+  zoom: number
+  zmin: number
+  dimensions: [number, number]
+  tilesize: number
+  sources: string[] | null
+  debug?: boolean
+}
+
 let controller: AbortController | undefined
 let signal: AbortSignal | undefined
 
-onmessage = o => {
+globalThis.onmessage = (event: MessageEvent<PrecacheMessagePayload>) => {
   if (
     controller !== undefined &&
     controller.signal !== undefined &&
@@ -15,16 +27,16 @@ onmessage = o => {
   ) {
     controller.abort()
   }
-  if (o.data.abort) {
+  if (event.data.abort) {
     postMessage({ t: Date.now(), e: true })
     return
   }
   controller = new AbortController()
   signal = controller.signal
-  precache_function(o.data)
+  precache_function(event.data)
 }
 
-const precache_function = (o: any) => {
+const precache_function = (o: PrecacheMessagePayload) => {
   // Final scenario bbox
   if (Array.isArray(o.center)) {
     o.center = { lon: o.center[0], lat: o.center[1] }
@@ -132,6 +144,6 @@ const precache_function = (o: any) => {
       postMessage({ t: Date.now(), e: false })
     })
     .catch(e => {
-      if (!!o.debug && e.name !== 'AbortError') console.log('🔴 Precache error')
+      if (o.debug && e.name !== 'AbortError') console.log('🔴 Precache error')
     })
 }

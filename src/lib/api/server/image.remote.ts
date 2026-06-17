@@ -4,6 +4,7 @@ import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import { z } from 'zod'
 // AUTHORIZATION
 import {
   authorizeImageList,
@@ -29,6 +30,7 @@ import {
   createFeatureImage,
   createImage as createImageRecord,
   createTaskImagesFromImageIds,
+  getFeatureCanonicalImageOccupancy as loadFeatureCanonicalImageOccupancy,
   getImageById as loadImageById,
   toImageEnvelope,
   getImageForContextType,
@@ -108,6 +110,16 @@ import {
   toImageStage,
   toMetadataProfilePayload,
 } from '$lib/images/storage'
+
+const FeatureCanonicalImagesSchema = z.object({
+  featureIds: z.array(z.string().min(1)).min(1),
+  meta: z
+    .object({
+      isAdminRequest: z.boolean().optional(),
+      profile: z.enum(['list', 'card', 'detail', 'admin']).optional(),
+    })
+    .optional(),
+})
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -1384,6 +1396,15 @@ export const getImagesForIdsByProfile = getImagesForIds as typeof getImagesForId
     params: ImagesForIdsParamsByProfile<P>,
   ) => Promise<EntityResponse<Array<ImageContextEnvelope<P>>> & { profile: P }>)
 
+export const getFeatureCanonicalImageOccupancy = guardedQuery(
+  FeatureCanonicalImagesSchema,
+  async (params, ctx): Promise<{ data: string[] }> => {
+    return {
+      data: await loadFeatureCanonicalImageOccupancy(ctx.db, params.featureIds as Id[]),
+    }
+  },
+)
+
 /**
  * Returns a single image by ID.
  */
@@ -1501,7 +1522,7 @@ export const authImageUpload = guardedCommand(
       params.links,
     )
 
-    const stage = toImageStage(params.env)
+    const stage = toImageStage(event.platform?.env.ENVIRONMENT ?? params.env)
     const bucket = getOriginalsBucketForStage(event.platform, stage)
     const bucketName = getOriginalsBucketNameForStage(stage)
     const credentials = getStorageApiCredentials(event.platform)
@@ -1624,7 +1645,6 @@ export const finalizeImageUpload = guardedCommand(
       stage,
       event,
     })
-    const verifiedStorageAt = Date.now()
 
     if (!uploadedObject) {
       throw error(404, 'Uploaded image not found in storage')
@@ -1704,6 +1724,7 @@ export const finalizeImageUpload = guardedCommand(
       env: stage,
       cdnId: null,
       publicId: payload.publicId,
+      contentHash: params.metadata.contentHash ?? null,
       version,
       contributorId: params.persist?.contributorId ?? user.id,
       ctxType: payload.ctxType as ImageContextResource,
