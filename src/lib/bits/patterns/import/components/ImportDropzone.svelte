@@ -3,9 +3,8 @@
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import SvelteDropzone from 'svelte-file-dropzone'
 // TYPES
-import type { DropzoneEvent, ImportableResource } from './import.types'
+import type { DropzoneEvent, ImportableResource } from '../import.types'
 
-// TYPES
 type Props = {
   type: ImportableResource
   title: string
@@ -34,13 +33,11 @@ let {
   onselect,
 }: Props = $props()
 
-// HANDLERS
-
-function handleDrop(e: CustomEvent) {
+function handleDrop(e: CustomEvent): void {
   ondrop?.({ ...e.detail, type })
 }
 
-function handleSelect(e: CustomEvent) {
+function handleSelect(e: CustomEvent): void {
   onselect?.({ ...e.detail, type })
 }
 </script>

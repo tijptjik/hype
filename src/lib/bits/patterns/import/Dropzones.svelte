@@ -1,14 +1,14 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n'
-// COMPONENTS
-import ImportDropzone from './Dropzone.svelte'
+// PATTERN COMPONENTS
+import * as ImportPrimitive from './components'
 import CloudArrowUp from 'virtual:icons/lucide/cloud-upload'
 import UserGroup from 'virtual:icons/lucide/users'
 import CalendarDays from 'virtual:icons/lucide/calendar-days'
 import TableCells from 'virtual:icons/lucide/table-cells-split'
 // TYPES
-import type { DropzoneEvent } from './types.ts'
+import type { DropzoneEvent } from './import.types'
 import Heading from '$lib/bits/custom/text/Heading.svelte'
 import Subheading from '$lib/bits/custom/text/Subheading.svelte'
 
@@ -26,7 +26,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
 <Subheading level={4} class="pb-4">{m.import_data_csv_only()}</Subheading>
 
 <div class="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
-  <ImportDropzone
+  <ImportPrimitive.ImportDropzone
     type="features"
     title={m.omni__title_features()}
     subtitle={m.import_data_subtitle()}
@@ -36,7 +36,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
     ondrop={onDrop}
   />
 
-  <ImportDropzone
+  <ImportPrimitive.ImportDropzone
     type="users"
     title={m.import_data_images()}
     subtitle={m.import_coming_soon()}
@@ -47,7 +47,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
     ondrop={onDrop || (() => {})}
   />
 
-  <ImportDropzone
+  <ImportPrimitive.ImportDropzone
     type="events"
     title={m.import_data_events()}
     subtitle={m.import_coming_soon()}
@@ -62,7 +62,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
 <Heading level={4}>{m.import_batch_image()}</Heading>
 <Subheading level={4} class="pb-4">{m.import_batch_image_description()}</Subheading>
 
-<ImportDropzone
+<ImportPrimitive.ImportDropzone
   type="images"
   title={m.maroon_teary_warbler_nourish()}
   subtitle={m.teal_dizzy_finch_file()}
