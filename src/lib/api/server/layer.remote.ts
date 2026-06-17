@@ -3,12 +3,10 @@ import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remot
 import { error } from '@sveltejs/kit'
 // I18N
 import { getLocale } from '$lib/i18n'
-// UTILS
-import { nanoid } from 'nanoid'
+// DRIZZLE
 import { eq } from 'drizzle-orm'
 // AUTHORIZATION
 import {
-  authorizeLayerCreateForSubmission,
   authorizeLayerDeleteForSubmission,
   authorizeLayerListForContext,
   authorizeLayerPublishForSubmission,
@@ -28,6 +26,7 @@ import {
 } from '$lib/api/services'
 import {
   getLayerWithRelations,
+  createLayerFromSubmission,
   toComparableLayerProperties,
   toEntityResponseShape,
   toListResponseShape,
@@ -39,8 +38,6 @@ import {
 } from '$lib/api/services/layer'
 // DB
 import {
-  createI18n,
-  createLayer,
   getLayer as loadLayer,
   listLayers,
   probeLayerForUpdate,
@@ -88,6 +85,7 @@ import { getValidQueryParams as validateQueryParams } from '$lib/api'
 // - layerForm
 //
 // COMMAND
+// - createLayer
 // - publishLayer
 // - archiveLayer
 
@@ -291,38 +289,18 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('MISSING_LAYER_ID'))
   }
 
-  const projectScope = requireValue(
-    await probeProjectForUpdate(db, data.projectId as Id),
-    () => invalid(issue('PROJECT_NOT_FOUND')),
-  )
-  const resolvedOrganisationId = projectScope.organisationId
-
   if (mode === 'create') {
-    const createDecision = authorizeLayerCreateForSubmission({
+    const created = await createLayerFromSubmission({
+      db,
       user,
       userRoles,
-      resource: {
-        organisationId: resolvedOrganisationId,
-        projectId: data.projectId,
-        hubId: projectScope.hubId,
-      },
       submittedData: data,
+      submittedProperties,
+      onInvalid: message => invalid(issue(toIssueDetailMessage(message))),
+      onNotFound: message => invalid(issue(message)),
+      onForbidden: message => invalid(issue(toIssueDetailMessage(message))),
+      onInvalidProperties: message => invalid(issue.data.properties(message)),
     })
-    if (!createDecision.allowed) {
-      invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
-    }
-
-    const created = await createLayer(db, {
-      id: nanoid(12),
-      organisationId: resolvedOrganisationId,
-      projectId: data.projectId,
-      metadata: data.metadata,
-      isDefaultVisible: data.isDefaultVisible,
-      isPublished: false,
-      isArchived: false,
-    })
-    await createI18n(db, data.i18n, created.id)
-    await updateProperties(db, created.id, submittedProperties)
 
     return toCreatedResponseShape(created)
   }
@@ -334,6 +312,11 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   const current = requireValue(await probeLayerForUpdate(db, targetLayerId), () =>
     invalid(issue('LAYER_NOT_FOUND')),
   )
+  const projectScope = requireValue(
+    await probeProjectForUpdate(db, data.projectId as Id),
+    () => invalid(issue('PROJECT_NOT_FOUND')),
+  )
+  const resolvedOrganisationId = projectScope.organisationId
 
   const currentWithRelations = requireValue(
     await loadLayer(
@@ -510,4 +493,52 @@ export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx
   })
 
   return toBooleanStateResponseShape(persisted, 'isArchived')
+})
+
+/**
+ * Creates a layer from a programmatic remote command payload.
+ *
+ * @param input - Layer form-compatible create payload parsed by `LayerFormData`.
+ * @returns A promise resolving to `{ data: { id, modifiedAt } }`.
+ * @remarks
+ * This mirrors the create branch of `layerForm`, but is callable from non-form import
+ * flows that build object payloads directly rather than submitting an attached DOM form.
+ */
+export const createLayer = guardedCommand(LayerFormData, async (params, ctx) => {
+  const { db, user, userRoles } = ctx
+  const { meta, data } = params
+
+  if (meta?.mode !== 'create') {
+    throw error(400, toIssueDetailMessage('INVALID_MODE'))
+  }
+  if (meta?.id?.trim()) {
+    throw error(400, 'CREATE_MODE_CANNOT_INCLUDE_ID')
+  }
+
+  const submittedProperties = (
+    Array.isArray(data.properties) ? data.properties : []
+  ) as Array<{
+    propertyId: string
+    isVisible?: boolean
+    isUserContributable?: boolean
+  }>
+
+  const created = await createLayerFromSubmission({
+    db,
+    user,
+    userRoles,
+    submittedData: data,
+    submittedProperties,
+    onInvalid: message => {
+      throw error(400, toIssueDetailMessage(message))
+    },
+    onNotFound: message => {
+      throw error(404, message)
+    },
+    onForbidden: message => {
+      throw error(403, toAuthMessage(message))
+    },
+  })
+
+  return toCreatedResponseShape(created)
 })
