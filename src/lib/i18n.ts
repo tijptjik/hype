@@ -1,6 +1,10 @@
+// THIRD PARTY
+import type { Locale as DateFnsLocale } from 'date-fns'
+import { enGB, zhCN, zhHK } from 'date-fns/locale'
 // I18N
 import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'
+// TYPES
 import type { Locale, LocaleKey, Neighbourhood } from '$lib/types'
 import type { Resource } from '$lib/types'
 import type {
@@ -30,6 +34,8 @@ export { supportedLocaleKeys }
 //    - toLocaleKey
 //    - toLocaleCode
 //    - normalizeLocaleCode
+//    - toCloudflareLocale
+//    - toDateFnsLocale
 //
 // 3. FORM I18N RECORD HELPERS
 //    - toFormLocaleRecord
@@ -121,6 +127,25 @@ export function normalizeLocaleCode(input: string): string {
     return toLocaleCode(input as LocaleKey)
   }
   return input
+}
+
+export function toCloudflareLocale(): string {
+  const locale = getLocale()
+  if (locale === 'zh-hans') return 'zh-Hans'
+  if (locale === 'zh-hant') return 'zh-Hant'
+  return 'en-US'
+}
+
+/**
+ * Convert the current app locale into a date-fns locale object.
+ * @returns The matching date-fns locale for the active app locale.
+ */
+export function toDateFnsLocale(): DateFnsLocale {
+  const locale = getLocale()
+
+  if (locale === 'zh-hant') return zhHK
+  if (locale === 'zh-hans') return zhCN
+  return enGB
 }
 
 // ═══════════════════════
@@ -360,10 +385,10 @@ export async function translateText(
 }
 
 type TranslateI18nFieldsParams = {
-  source: Locale
-  target: Locale
+  source: LocaleKey
+  target: LocaleKey
   fields: string[]
-  i18n: Partial<Record<Locale, Record<string, string | null | undefined>>>
+  i18n: Partial<Record<LocaleKey, Record<string, string | null | undefined>>>
   onSuccess?: (translated: Record<string, string>) => void
   onFailure?: (error: unknown) => void
 }
@@ -383,7 +408,11 @@ export async function translateI18nFields({
 }: TranslateI18nFieldsParams): Promise<Record<string, string>> {
   try {
     const sourceTexts = fields.map(field => i18n[source]?.[field] ?? '')
-    const translatedTexts = await translateText(source, target, sourceTexts)
+    const translatedTexts = await translateText(
+      toLocaleCode(source),
+      toLocaleCode(target),
+      sourceTexts,
+    )
 
     const translated = fields.reduce<Record<string, string>>((acc, field, index) => {
       acc[field] = translatedTexts[index] ?? ''

@@ -942,6 +942,7 @@ async function onTranslateDescriptorLocale(
   sourceLocale: Locale,
   targetLocale: Locale,
 ): Promise<boolean> {
+  const sourceLocaleKey = toLocaleKey(sourceLocale)
   const targetLocaleKey = toLocaleKey(targetLocale)
   const fieldsToTranslate = featureDescriptorTranslatableFields.filter(field => {
     const currentValue = currentFeatureData.i18n?.[targetLocaleKey]?.[field] ?? ''
@@ -950,8 +951,8 @@ async function onTranslateDescriptorLocale(
   if (fieldsToTranslate.length === 0) return false
 
   const translated = await translateI18nFields({
-    source: sourceLocale,
-    target: targetLocale,
+    source: sourceLocaleKey,
+    target: targetLocaleKey,
     fields: [...fieldsToTranslate],
     i18n: {
       en: Object.fromEntries(
@@ -960,13 +961,13 @@ async function onTranslateDescriptorLocale(
           currentFeatureData.i18n?.en?.[field] ?? '',
         ]),
       ),
-      'zh-hans': Object.fromEntries(
+      zhHans: Object.fromEntries(
         fieldsToTranslate.map(field => [
           field,
           currentFeatureData.i18n?.zhHans?.[field] ?? '',
         ]),
       ),
-      'zh-hant': Object.fromEntries(
+      zhHant: Object.fromEntries(
         fieldsToTranslate.map(field => [
           field,
           currentFeatureData.i18n?.zhHant?.[field] ?? '',
@@ -1023,6 +1024,7 @@ async function onTranslateTranslatableValues(
   sourceLocale: Locale,
   targetLocale: Locale,
 ): Promise<boolean> {
+  const sourceLocaleKey = toLocaleKey(sourceLocale)
   const targetLocaleKey = toLocaleKey(targetLocale)
   const propertyIds = translatableSpecifierItems
     .filter(property => {
@@ -1041,14 +1043,14 @@ async function onTranslateTranslatableValues(
           ?.i18n?.en?.value ?? '',
       ]),
     ),
-    'zh-hans': Object.fromEntries(
+    zhHans: Object.fromEntries(
       propertyIds.map(propertyId => [
         propertyId,
         translatableSpecifierItems.find(property => property.propertyId === propertyId)
           ?.i18n?.zhHans?.value ?? '',
       ]),
     ),
-    'zh-hant': Object.fromEntries(
+    zhHant: Object.fromEntries(
       propertyIds.map(propertyId => [
         propertyId,
         translatableSpecifierItems.find(property => property.propertyId === propertyId)
@@ -1058,8 +1060,8 @@ async function onTranslateTranslatableValues(
   }
 
   const translated = await translateI18nFields({
-    source: sourceLocale,
-    target: targetLocale,
+    source: sourceLocaleKey,
+    target: targetLocaleKey,
     fields: propertyIds,
     i18n: i18nPayload,
   })

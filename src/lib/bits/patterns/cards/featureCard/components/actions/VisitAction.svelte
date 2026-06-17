@@ -3,10 +3,9 @@
 import { Icon } from '$lib/bits'
 // THIRD PARTY
 import { formatDistanceToNow } from 'date-fns'
-import { enGB, zhCN, zhHK } from 'date-fns/locale'
 import { toast } from 'svelte-sonner'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { m, toDateFnsLocale } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getResponsiveCtx } from '$lib/context/responsive.svelte'
@@ -70,14 +69,6 @@ async function toggleVisited(): Promise<void> {
     isSubmitting = false
   }
 }
-
-function getVisitedLocale() {
-  const locale = getLocale()
-
-  if (locale === 'zh-hant') return zhHK
-  if (locale === 'zh-hans') return zhCN
-  return enGB
-}
 </script>
 
 {#snippet visitIcon()}
@@ -99,7 +90,7 @@ function getVisitedLocale() {
     <p class="font-mono text-white">
       {formatDistanceToNow(new Date(visitedFeature.visitedAt), {
         addSuffix: true,
-        locale: getVisitedLocale(),
+        locale: toDateFnsLocale(),
       }).replace('minute', 'min')}
     </p>
   </div>
