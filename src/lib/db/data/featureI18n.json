@@ -13,7 +13,7 @@
       "streetName": "Nga Tsin Long Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -31,7 +31,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -49,7 +49,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -67,7 +67,7 @@
       "streetName": "Kai Tak Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -85,7 +85,7 @@
       "streetName": "啟德道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -103,7 +103,7 @@
       "streetName": "启德道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -121,7 +121,7 @@
       "streetName": "Kai Tak Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -139,7 +139,7 @@
       "streetName": "啟德道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -157,7 +157,7 @@
       "streetName": "启德道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -175,7 +175,7 @@
       "streetName": "Kai Tak Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -193,7 +193,7 @@
       "streetName": "啟德道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -211,7 +211,7 @@
       "streetName": "启德道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -230,7 +230,7 @@
       "streetName": "Ma Tau Chung Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -249,7 +249,7 @@
       "streetName": "馬頭涌道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -268,7 +268,7 @@
       "streetName": "马头涌道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -286,7 +286,7 @@
       "streetName": "Tong Yan San Tsuen Road",
       "neighbourhood": "Ping Shan, Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -303,7 +303,7 @@
       "buildingNumberFrom": "156",
       "streetName": "唐人新村路",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -320,7 +320,7 @@
       "buildingNumberFrom": "156",
       "streetName": "唐人新村路",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -339,7 +339,7 @@
       "streetName": "Yuen Long On Hing Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -358,7 +358,7 @@
       "streetName": "元朗安興街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -377,7 +377,7 @@
       "streetName": "元朗安兴街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -396,7 +396,7 @@
       "streetName": "Yuen Long On Hing Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -415,7 +415,7 @@
       "streetName": "元朗安興街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -434,7 +434,7 @@
       "streetName": "元朗安兴街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -453,7 +453,7 @@
       "streetName": "Kam Fai Path",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -472,7 +472,7 @@
       "streetName": "金輝徑",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -491,7 +491,7 @@
       "streetName": "金辉径",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -510,7 +510,7 @@
       "streetName": "Tai Tong Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -529,7 +529,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -548,7 +548,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -567,7 +567,7 @@
       "streetName": "Tai Tong Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -586,7 +586,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -605,7 +605,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -624,7 +624,7 @@
       "streetName": "Tai Tong Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -643,7 +643,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -662,7 +662,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -681,7 +681,7 @@
       "streetName": "Tai Tong Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -700,7 +700,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -719,7 +719,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -737,7 +737,7 @@
       "streetName": "Fook Hong Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -755,7 +755,7 @@
       "streetName": "福康街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -773,7 +773,7 @@
       "streetName": "福康街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -792,7 +792,7 @@
       "streetName": "Tai Tong Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -811,7 +811,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -830,7 +830,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -849,7 +849,7 @@
       "streetName": "Tai Tong Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -868,7 +868,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -887,7 +887,7 @@
       "streetName": "大棠路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -905,7 +905,7 @@
       "streetName": "Castle Peak Road Yuen Long",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -923,7 +923,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -941,7 +941,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -960,7 +960,7 @@
       "streetName": "Yuen Long On Ning Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -979,7 +979,7 @@
       "streetName": "元朗安寧路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -998,7 +998,7 @@
       "streetName": "元朗安宁路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1016,7 +1016,7 @@
       "streetName": "Castle Peak Road Yuen Long",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1034,7 +1034,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1052,7 +1052,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1071,7 +1071,7 @@
       "streetName": "Sai Tai Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1090,7 +1090,7 @@
       "streetName": "西堤街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1109,7 +1109,7 @@
       "streetName": "西堤街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1128,7 +1128,7 @@
       "streetName": "Yuen Long Pau Cheung Square",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1147,7 +1147,7 @@
       "streetName": "元朗炮仗坊",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1166,7 +1166,7 @@
       "streetName": "元朗炮仗坊",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1184,7 +1184,7 @@
       "streetName": "Castle Peak Road Yuen Long",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1202,7 +1202,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1220,7 +1220,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1238,7 +1238,7 @@
       "streetName": "Castle Peak Road Yuen Long",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1256,7 +1256,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1274,7 +1274,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1293,7 +1293,7 @@
       "streetName": "Kuk Ting Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1312,7 +1312,7 @@
       "streetName": "谷亭街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1331,7 +1331,7 @@
       "streetName": "谷亭街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1350,7 +1350,7 @@
       "streetName": "Kuk Ting Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1369,7 +1369,7 @@
       "streetName": "谷亭街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1388,7 +1388,7 @@
       "streetName": "谷亭街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1407,7 +1407,7 @@
       "streetName": "Kuk Ting Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1426,7 +1426,7 @@
       "streetName": "谷亭街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1445,7 +1445,7 @@
       "streetName": "谷亭街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1463,7 +1463,7 @@
       "streetName": "Castle Peak Road Yuen Long",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1481,7 +1481,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1499,7 +1499,7 @@
       "streetName": "青山公路元朗段",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1518,7 +1518,7 @@
       "streetName": "Sai Tai Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1537,7 +1537,7 @@
       "streetName": "西堤街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1556,7 +1556,7 @@
       "streetName": "西堤街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1575,7 +1575,7 @@
       "streetName": "Kin Tak Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1594,7 +1594,7 @@
       "streetName": "建德街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1613,7 +1613,7 @@
       "streetName": "建德街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1632,7 +1632,7 @@
       "streetName": "Hop Yick Road",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1651,7 +1651,7 @@
       "streetName": "合益路",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1670,7 +1670,7 @@
       "streetName": "合益路",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1688,7 +1688,7 @@
       "streetName": "Tung Wan Road",
       "neighbourhood": "Cheung Chau",
       "district": "ILD",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1706,7 +1706,7 @@
       "streetName": "東灣路",
       "neighbourhood": "長洲",
       "district": "離島區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1724,7 +1724,7 @@
       "streetName": "东湾路",
       "neighbourhood": "长洲",
       "district": "离岛区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1742,7 +1742,7 @@
       "streetName": "Tung Wan Road",
       "neighbourhood": "Cheung Chau",
       "district": "ILD",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1760,7 +1760,7 @@
       "streetName": "東灣路",
       "neighbourhood": "長洲",
       "district": "離島區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1778,7 +1778,7 @@
       "streetName": "东湾路",
       "neighbourhood": "长洲",
       "district": "离岛区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1797,7 +1797,7 @@
       "streetName": "Yau San Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1816,7 +1816,7 @@
       "streetName": "又新街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1835,7 +1835,7 @@
       "streetName": "又新街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1854,7 +1854,7 @@
       "streetName": "Kin Yip Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1873,7 +1873,7 @@
       "streetName": "建業街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1892,7 +1892,7 @@
       "streetName": "建业街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1911,7 +1911,7 @@
       "streetName": "Kin Yip Street",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1930,7 +1930,7 @@
       "streetName": "建業街",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -1949,7 +1949,7 @@
       "streetName": "建业街",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -1967,7 +1967,7 @@
       "streetName": "Nam Mun Hau",
       "neighbourhood": "Yuen Long",
       "district": "YL",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -1985,7 +1985,7 @@
       "streetName": "南門口",
       "neighbourhood": "元朗",
       "district": "元朗區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -2003,7 +2003,7 @@
       "streetName": "南门口",
       "neighbourhood": "元朗",
       "district": "元朗区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -2021,7 +2021,7 @@
       "streetName": "Castle Peak Road Tsuen Wan",
       "neighbourhood": "Tsuen Wan",
       "district": "TW",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -2039,7 +2039,7 @@
       "streetName": "青山公路荃灣段",
       "neighbourhood": "荃灣",
       "district": "荃灣區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -2057,7 +2057,7 @@
       "streetName": "青山公路荃湾段",
       "neighbourhood": "荃湾",
       "district": "荃湾区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -2075,7 +2075,7 @@
       "streetName": "Yeung Uk Road",
       "neighbourhood": "Tsuen Wan",
       "district": "TW",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -2093,7 +2093,7 @@
       "streetName": "楊屋道",
       "neighbourhood": "荃灣",
       "district": "荃灣區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -2111,7 +2111,7 @@
       "streetName": "杨屋道",
       "neighbourhood": "荃湾",
       "district": "荃湾区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -2130,7 +2130,7 @@
       "streetName": "Cadogan Street",
       "neighbourhood": "Kennedy Town",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2149,7 +2149,7 @@
       "streetName": "加多近街",
       "neighbourhood": "堅尼地城",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2168,7 +2168,7 @@
       "streetName": "加多近街",
       "neighbourhood": "坚尼地城",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2188,7 +2188,7 @@
       "streetName": "Belcher's Street",
       "neighbourhood": "Kennedy Town",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2208,7 +2208,7 @@
       "streetName": "卑路乍街",
       "neighbourhood": "堅尼地城",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2228,7 +2228,7 @@
       "streetName": "卑路乍街",
       "neighbourhood": "坚尼地城",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2247,7 +2247,7 @@
       "streetName": "Belcher's Street",
       "neighbourhood": "Kennedy Town",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2266,7 +2266,7 @@
       "streetName": "卑路乍街",
       "neighbourhood": "堅尼地城",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2285,7 +2285,7 @@
       "streetName": "卑路乍街",
       "neighbourhood": "坚尼地城",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2304,7 +2304,7 @@
       "streetName": "Catchick Street",
       "neighbourhood": "Kennedy Town",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2323,7 +2323,7 @@
       "streetName": "吉席街",
       "neighbourhood": "堅尼地城",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2342,7 +2342,7 @@
       "streetName": "吉席街",
       "neighbourhood": "坚尼地城",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2360,7 +2360,7 @@
       "streetName": "Catchick Street",
       "neighbourhood": "Kennedy Town",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2378,7 +2378,7 @@
       "streetName": "吉席街",
       "neighbourhood": "堅尼地城",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2396,7 +2396,7 @@
       "streetName": "吉席街",
       "neighbourhood": "坚尼地城",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2415,7 +2415,7 @@
       "streetName": "Catchick Street",
       "neighbourhood": "Kennedy Town",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2434,7 +2434,7 @@
       "streetName": "吉席街",
       "neighbourhood": "堅尼地城",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2453,7 +2453,7 @@
       "streetName": "吉席街",
       "neighbourhood": "坚尼地城",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2471,7 +2471,7 @@
       "streetName": "Ha Kwai Chung Village",
       "neighbourhood": "Kwai Chung",
       "district": "KC",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -2489,7 +2489,7 @@
       "streetName": "下葵涌村",
       "neighbourhood": "葵涌",
       "district": "葵青區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -2507,7 +2507,7 @@
       "streetName": "下葵涌村",
       "neighbourhood": "葵涌",
       "district": "葵青区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -2525,7 +2525,7 @@
       "streetName": "Ha Kwai Chung Village",
       "neighbourhood": "Kwai Chung",
       "district": "KC",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -2543,7 +2543,7 @@
       "streetName": "下葵涌村",
       "neighbourhood": "葵涌",
       "district": "葵青區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -2561,7 +2561,7 @@
       "streetName": "下葵涌村",
       "neighbourhood": "葵涌",
       "district": "葵青区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -2580,7 +2580,7 @@
       "streetName": "Queen's Road West",
       "neighbourhood": "Shek Tong Tsui",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2599,7 +2599,7 @@
       "streetName": "皇后大道西",
       "neighbourhood": "石塘咀",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2618,7 +2618,7 @@
       "streetName": "皇后大道西",
       "neighbourhood": "石塘咀",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2637,7 +2637,7 @@
       "streetName": "Whitty Street",
       "neighbourhood": "Shek Tong Tsui",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2656,7 +2656,7 @@
       "streetName": "屈地街",
       "neighbourhood": "石塘咀",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2675,7 +2675,7 @@
       "streetName": "屈地街",
       "neighbourhood": "石塘咀",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2695,7 +2695,7 @@
       "streetName": "Wah Cheung Street",
       "neighbourhood": "Pok Fu Lam",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2714,7 +2714,7 @@
       "estateName": "華富(二)邨",
       "streetName": "華昌街",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2733,7 +2733,7 @@
       "estateName": "华富（二）村",
       "streetName": "华昌街",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2751,7 +2751,7 @@
       "streetName": "Des Voeux Road West",
       "neighbourhood": "Sai Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2769,7 +2769,7 @@
       "streetName": "德輔道西",
       "neighbourhood": "西環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2787,7 +2787,7 @@
       "streetName": "德辅道西",
       "neighbourhood": "西环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2805,7 +2805,7 @@
       "streetName": "Des Voeux Road West",
       "neighbourhood": "Sai Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2823,7 +2823,7 @@
       "streetName": "德輔道西",
       "neighbourhood": "西環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2841,7 +2841,7 @@
       "streetName": "德辅道西",
       "neighbourhood": "西环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2859,7 +2859,7 @@
       "streetName": "Third Street",
       "neighbourhood": "Sai Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2877,7 +2877,7 @@
       "streetName": "第三街",
       "neighbourhood": "西環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2895,7 +2895,7 @@
       "streetName": "第三街",
       "neighbourhood": "西环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2914,7 +2914,7 @@
       "streetName": "Second Street",
       "neighbourhood": "Sai Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2933,7 +2933,7 @@
       "streetName": "第二街",
       "neighbourhood": "西環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -2952,7 +2952,7 @@
       "streetName": "第二街",
       "neighbourhood": "西环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -2971,7 +2971,7 @@
       "streetName": "Second Street",
       "neighbourhood": "Sai Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -2990,7 +2990,7 @@
       "streetName": "第二街",
       "neighbourhood": "西環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3009,7 +3009,7 @@
       "streetName": "第二街",
       "neighbourhood": "西环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3027,7 +3027,7 @@
       "streetName": "First Street",
       "neighbourhood": "Sai Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3045,7 +3045,7 @@
       "streetName": "第一街",
       "neighbourhood": "西環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3063,7 +3063,7 @@
       "streetName": "第一街",
       "neighbourhood": "西环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3081,7 +3081,7 @@
       "streetName": "Second Street",
       "neighbourhood": "Sai Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3099,7 +3099,7 @@
       "streetName": "第二街",
       "neighbourhood": "西環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3117,7 +3117,7 @@
       "streetName": "第二街",
       "neighbourhood": "西环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3135,7 +3135,7 @@
       "streetName": "Queen's Road West",
       "neighbourhood": "Sai Ying Pun",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3153,7 +3153,7 @@
       "streetName": "皇后大道西",
       "neighbourhood": "西營盤",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3171,7 +3171,7 @@
       "streetName": "皇后大道西",
       "neighbourhood": "西营盘",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3189,7 +3189,7 @@
       "streetName": "Second Street",
       "neighbourhood": "Sai Ying Pun",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3207,7 +3207,7 @@
       "streetName": "第二街",
       "neighbourhood": "西營盤",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3225,7 +3225,7 @@
       "streetName": "第二街",
       "neighbourhood": "西营盘",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3244,7 +3244,7 @@
       "streetName": "First Street",
       "neighbourhood": "Sai Ying Pun",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3263,7 +3263,7 @@
       "streetName": "第一街",
       "neighbourhood": "西營盤",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3282,7 +3282,7 @@
       "streetName": "第一街",
       "neighbourhood": "西营盘",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3300,7 +3300,7 @@
       "streetName": "Eastern Street",
       "neighbourhood": "Sai Ying Pun",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3318,7 +3318,7 @@
       "streetName": "東邊街",
       "neighbourhood": "西營盤",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3336,7 +3336,7 @@
       "streetName": "东边街",
       "neighbourhood": "西营盘",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3354,7 +3354,7 @@
       "streetName": "Tin Wan Praya Road",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3372,7 +3372,7 @@
       "streetName": "田灣海旁道",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3390,7 +3390,7 @@
       "streetName": "田湾海旁道",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3409,7 +3409,7 @@
       "streetName": "Queen's Road West",
       "neighbourhood": "Sai Ying Pun",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3428,7 +3428,7 @@
       "streetName": "皇后大道西",
       "neighbourhood": "西營盤",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3447,7 +3447,7 @@
       "streetName": "皇后大道西",
       "neighbourhood": "西营盘",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3466,7 +3466,7 @@
       "streetName": "Tin Wan Praya Road",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3485,7 +3485,7 @@
       "streetName": "田灣海旁道",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3504,7 +3504,7 @@
       "streetName": "田湾海旁道",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3523,7 +3523,7 @@
       "streetName": "Connaught Road West",
       "neighbourhood": "Sai Ying Pun",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3542,7 +3542,7 @@
       "streetName": "干諾道西",
       "neighbourhood": "西營盤",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3561,7 +3561,7 @@
       "streetName": "干诺道西",
       "neighbourhood": "西营盘",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3580,7 +3580,7 @@
       "streetName": "Yue Ko Street",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3599,7 +3599,7 @@
       "streetName": "漁歌街",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3618,7 +3618,7 @@
       "streetName": "渔歌街",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3636,7 +3636,7 @@
       "streetName": "Shek Pai Wan Road",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3654,7 +3654,7 @@
       "streetName": "石排灣道",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3672,7 +3672,7 @@
       "streetName": "石排湾道",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3690,7 +3690,7 @@
       "streetName": "Shek Pai Wan Road",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3708,7 +3708,7 @@
       "streetName": "石排灣道",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3726,7 +3726,7 @@
       "streetName": "石排湾道",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3744,7 +3744,7 @@
       "streetName": "Shek Pai Wan Road",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3762,7 +3762,7 @@
       "streetName": "石排灣道",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3780,7 +3780,7 @@
       "streetName": "石排湾道",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3798,7 +3798,7 @@
       "streetName": "Tin Wan Street",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3816,7 +3816,7 @@
       "streetName": "田灣街",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3834,7 +3834,7 @@
       "streetName": "田湾街",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3852,7 +3852,7 @@
       "streetName": "Tin Wan Street",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3870,7 +3870,7 @@
       "streetName": "田灣街",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3888,7 +3888,7 @@
       "streetName": "田湾街",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3906,7 +3906,7 @@
       "streetName": "Shek Pai Wan Road",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3924,7 +3924,7 @@
       "streetName": "石排灣道",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3942,7 +3942,7 @@
       "streetName": "石排湾道",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -3961,7 +3961,7 @@
       "streetName": "Wing Lok Street",
       "neighbourhood": "Sheung Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -3980,7 +3980,7 @@
       "streetName": "永樂街",
       "neighbourhood": "上環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -3999,7 +3999,7 @@
       "streetName": "永乐街",
       "neighbourhood": "上环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4017,7 +4017,7 @@
       "streetName": "Shek Pai Wan Road",
       "neighbourhood": "Aberdeen",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4035,7 +4035,7 @@
       "streetName": "石排灣道",
       "neighbourhood": "香港仔",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4053,7 +4053,7 @@
       "streetName": "石排湾道",
       "neighbourhood": "香港人",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4072,7 +4072,7 @@
       "streetName": "Connaught Road West",
       "neighbourhood": "Sheung Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4091,7 +4091,7 @@
       "streetName": "干諾道西",
       "neighbourhood": "上環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4110,7 +4110,7 @@
       "streetName": "干诺道西",
       "neighbourhood": "上环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4129,7 +4129,7 @@
       "streetName": "Upper Lascar Row",
       "neighbourhood": "Sheung Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4148,7 +4148,7 @@
       "streetName": "摩羅上街",
       "neighbourhood": "上環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4167,7 +4167,7 @@
       "streetName": "摩罗上街",
       "neighbourhood": "上环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4185,7 +4185,7 @@
       "streetName": "Elgin Street",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4202,7 +4202,7 @@
       "buildingNumberFrom": "21",
       "streetName": "伊利近街",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4219,7 +4219,7 @@
       "buildingNumberFrom": "21",
       "streetName": "伊利近街",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4239,7 +4239,7 @@
       "streetName": "Peel Street",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4258,7 +4258,7 @@
       "buildingNumberTo": "52A",
       "streetName": "卑利街",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4277,7 +4277,7 @@
       "buildingNumberTo": "52A",
       "streetName": "卑利街",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4296,7 +4296,7 @@
       "streetName": "Wing Lok Street",
       "neighbourhood": "Sheung Wan",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4315,7 +4315,7 @@
       "streetName": "永樂街",
       "neighbourhood": "上環",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4334,7 +4334,7 @@
       "streetName": "永乐街",
       "neighbourhood": "上环",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4352,7 +4352,7 @@
       "streetName": "Elgin Street",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4369,7 +4369,7 @@
       "buildingNumberFrom": "14D",
       "streetName": "伊利近街",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4386,7 +4386,7 @@
       "buildingNumberFrom": "14D",
       "streetName": "伊利近街",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4405,7 +4405,7 @@
       "streetName": "Elgin Street",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4423,7 +4423,7 @@
       "buildingNumberFrom": "28",
       "streetName": "伊利近街",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4441,7 +4441,7 @@
       "buildingNumberFrom": "28",
       "streetName": "伊利近街",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4459,7 +4459,7 @@
       "streetName": "Hollywood Road",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4476,7 +4476,7 @@
       "buildingNumberFrom": "60",
       "streetName": "荷李活道",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4493,7 +4493,7 @@
       "buildingNumberFrom": "60",
       "streetName": "荷李活道",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4512,7 +4512,7 @@
       "streetName": "Staunton Street",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4530,7 +4530,7 @@
       "buildingNumberFrom": "14",
       "streetName": "士丹頓街",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4548,7 +4548,7 @@
       "buildingNumberFrom": "14",
       "streetName": "士丹顿街",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4568,7 +4568,7 @@
       "streetName": "Pottinger Street",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4587,7 +4587,7 @@
       "buildingNumberTo": "26",
       "streetName": "砵典乍街",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4606,7 +4606,7 @@
       "buildingNumberTo": "26",
       "streetName": "砵典乍街",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4624,7 +4624,7 @@
       "streetName": "Wing Lung Street",
       "neighbourhood": "Cheung Sha Wan",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -4642,7 +4642,7 @@
       "streetName": "永隆街",
       "neighbourhood": "長沙灣",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -4660,7 +4660,7 @@
       "streetName": "永隆街",
       "neighbourhood": "长沙湾",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -4678,7 +4678,7 @@
       "streetName": "Un Chau Street",
       "neighbourhood": "Cheung Sha Wan",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -4696,7 +4696,7 @@
       "streetName": "元州街",
       "neighbourhood": "長沙灣",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -4714,7 +4714,7 @@
       "streetName": "元州街",
       "neighbourhood": "长沙湾",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -4733,7 +4733,7 @@
       "streetName": "Castle Peak Road",
       "neighbourhood": "Cheung Sha Wan",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -4752,7 +4752,7 @@
       "streetName": "青山道",
       "neighbourhood": "長沙灣",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -4771,7 +4771,7 @@
       "streetName": "青山道",
       "neighbourhood": "长沙湾",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -4790,7 +4790,7 @@
       "streetName": "Un Chau Street",
       "neighbourhood": "Cheung Sha Wan",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -4809,7 +4809,7 @@
       "streetName": "元州街",
       "neighbourhood": "長沙灣",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -4828,7 +4828,7 @@
       "streetName": "元州街",
       "neighbourhood": "长沙湾",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -4846,7 +4846,7 @@
       "streetName": "Castle Peak Road",
       "neighbourhood": "Cheung Sha Wan",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -4864,7 +4864,7 @@
       "streetName": "青山道",
       "neighbourhood": "長沙灣",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -4882,7 +4882,7 @@
       "streetName": "青山道",
       "neighbourhood": "长沙湾",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -4902,7 +4902,7 @@
       "streetName": "Finance Street",
       "neighbourhood": "Central District",
       "district": null,
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -4921,7 +4921,7 @@
       "estateName": "國際金融中心",
       "streetName": "金融街",
       "district": "中西區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -4940,7 +4940,7 @@
       "estateName": "国际金融中心",
       "streetName": "金融街",
       "district": "中西区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -4958,7 +4958,7 @@
       "streetName": "Fuk Wing Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -4976,7 +4976,7 @@
       "streetName": "福榮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -4994,7 +4994,7 @@
       "streetName": "福荣街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5012,7 +5012,7 @@
       "streetName": "Pei Ho Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5030,7 +5030,7 @@
       "streetName": "北河街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5048,7 +5048,7 @@
       "streetName": "北河街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5066,7 +5066,7 @@
       "streetName": "Ka Shin Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5084,7 +5084,7 @@
       "streetName": "嘉善街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5102,7 +5102,7 @@
       "streetName": "嘉善街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5120,7 +5120,7 @@
       "streetName": "Pok Man Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5138,7 +5138,7 @@
       "streetName": "博文街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5156,7 +5156,7 @@
       "streetName": "博文街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5174,7 +5174,7 @@
       "streetName": "Ka Shin Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5192,7 +5192,7 @@
       "streetName": "嘉善街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5210,7 +5210,7 @@
       "streetName": "嘉善街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5228,7 +5228,7 @@
       "streetName": "Ka Shin Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5246,7 +5246,7 @@
       "streetName": "嘉善街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5264,7 +5264,7 @@
       "streetName": "嘉善街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5282,7 +5282,7 @@
       "streetName": "Pok Man Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5300,7 +5300,7 @@
       "streetName": "博文街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5318,7 +5318,7 @@
       "streetName": "博文街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5336,7 +5336,7 @@
       "streetName": "Tai Kok Tsui Road",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5354,7 +5354,7 @@
       "streetName": "大角咀道",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5372,7 +5372,7 @@
       "streetName": "大角咀道",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5390,7 +5390,7 @@
       "streetName": "Tai Kok Tsui Road",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5408,7 +5408,7 @@
       "streetName": "大角咀道",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5426,7 +5426,7 @@
       "streetName": "大角咀道",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5445,7 +5445,7 @@
       "streetName": "Tai Kok Tsui Road",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5464,7 +5464,7 @@
       "streetName": "大角咀道",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5483,7 +5483,7 @@
       "streetName": "大角咀道",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5502,7 +5502,7 @@
       "streetName": "Kweilin Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5521,7 +5521,7 @@
       "streetName": "桂林街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5540,7 +5540,7 @@
       "streetName": "桂林街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5558,7 +5558,7 @@
       "streetName": "Pei Ho Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5576,7 +5576,7 @@
       "streetName": "北河街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5594,7 +5594,7 @@
       "streetName": "北河街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5613,7 +5613,7 @@
       "streetName": "Larch Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5632,7 +5632,7 @@
       "streetName": "洋松街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5651,7 +5651,7 @@
       "streetName": "洋松街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5669,7 +5669,7 @@
       "streetName": "Tung Chau Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5687,7 +5687,7 @@
       "streetName": "通州街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5705,7 +5705,7 @@
       "streetName": "通州街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5724,7 +5724,7 @@
       "streetName": "Fuk Wing Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5743,7 +5743,7 @@
       "streetName": "福榮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5762,7 +5762,7 @@
       "streetName": "福荣街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5781,7 +5781,7 @@
       "streetName": "Apliu Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5800,7 +5800,7 @@
       "streetName": "鴨寮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5819,7 +5819,7 @@
       "streetName": "鸭寮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5837,7 +5837,7 @@
       "streetName": "Apliu Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5855,7 +5855,7 @@
       "streetName": "鴨寮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5873,7 +5873,7 @@
       "streetName": "鸭寮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5891,7 +5891,7 @@
       "streetName": "Shek Kip Mei Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5909,7 +5909,7 @@
       "streetName": "石硤尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5927,7 +5927,7 @@
       "streetName": "石硖尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -5946,7 +5946,7 @@
       "streetName": "Shek Kip Mei Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -5965,7 +5965,7 @@
       "streetName": "石硤尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -5984,7 +5984,7 @@
       "streetName": "石硖尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6003,7 +6003,7 @@
       "streetName": "Shek Kip Mei Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6022,7 +6022,7 @@
       "streetName": "石硤尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6041,7 +6041,7 @@
       "streetName": "石硖尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6059,7 +6059,7 @@
       "streetName": "Ki Lung Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6077,7 +6077,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6095,7 +6095,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6113,7 +6113,7 @@
       "streetName": "Ki Lung Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6131,7 +6131,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6149,7 +6149,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6167,7 +6167,7 @@
       "streetName": "Ki Lung Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6185,7 +6185,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6203,7 +6203,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6221,7 +6221,7 @@
       "streetName": "Shek Kip Mei Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6239,7 +6239,7 @@
       "streetName": "石硤尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6257,7 +6257,7 @@
       "streetName": "石硖尾街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6275,7 +6275,7 @@
       "streetName": "Apliu Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6293,7 +6293,7 @@
       "streetName": "鴨寮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6311,7 +6311,7 @@
       "streetName": "鸭寮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6329,7 +6329,7 @@
       "streetName": "Yu Chau Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6347,7 +6347,7 @@
       "streetName": "汝州街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6365,7 +6365,7 @@
       "streetName": "汝州街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6383,7 +6383,7 @@
       "streetName": "Fuk Wing Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6401,7 +6401,7 @@
       "streetName": "福榮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6419,7 +6419,7 @@
       "streetName": "福荣街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6438,7 +6438,7 @@
       "streetName": "Ki Lung Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6457,7 +6457,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6476,7 +6476,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6495,7 +6495,7 @@
       "streetName": "Welfare Road",
       "neighbourhood": "Wong Chuk Hang",
       "district": "STH",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -6513,7 +6513,7 @@
       "buildingNumberFrom": "3",
       "streetName": "惠福道",
       "district": "南區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -6531,7 +6531,7 @@
       "buildingNumberFrom": "3",
       "streetName": "惠福道",
       "district": "南区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -6550,7 +6550,7 @@
       "streetName": "Ki Lung Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6569,7 +6569,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6588,7 +6588,7 @@
       "streetName": "基隆街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6607,7 +6607,7 @@
       "streetName": "Fir Street",
       "neighbourhood": "Tai Kok Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6626,7 +6626,7 @@
       "streetName": "松樹街",
       "neighbourhood": "大角咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6645,7 +6645,7 @@
       "streetName": "松树街",
       "neighbourhood": "大角咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6664,7 +6664,7 @@
       "streetName": "Un Chau Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6683,7 +6683,7 @@
       "streetName": "元州街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6702,7 +6702,7 @@
       "streetName": "元州街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6722,7 +6722,7 @@
       "streetName": "Cheung Sha Wan Road",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6742,7 +6742,7 @@
       "streetName": "長沙灣道",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6762,7 +6762,7 @@
       "streetName": "长沙湾道",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6780,7 +6780,7 @@
       "streetName": "Wong Chuk Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6798,7 +6798,7 @@
       "streetName": "黃竹街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6816,7 +6816,7 @@
       "streetName": "黄竹街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6834,7 +6834,7 @@
       "streetName": "Wong Chuk Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6852,7 +6852,7 @@
       "streetName": "黃竹街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6870,7 +6870,7 @@
       "streetName": "黄竹街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6888,7 +6888,7 @@
       "streetName": "Fuk Wing Street",
       "neighbourhood": "Sham Shui Po",
       "district": "SSP",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6906,7 +6906,7 @@
       "streetName": "福榮街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6924,7 +6924,7 @@
       "streetName": "福荣街",
       "neighbourhood": "深水埗",
       "district": "深水埗區",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -6943,7 +6943,7 @@
       "streetName": "Shantung Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -6962,7 +6962,7 @@
       "streetName": "山東街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -6981,7 +6981,7 @@
       "streetName": "山东街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7000,7 +7000,7 @@
       "streetName": "Shantung Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7019,7 +7019,7 @@
       "streetName": "山東街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7038,7 +7038,7 @@
       "streetName": "山东街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7056,7 +7056,7 @@
       "streetName": "Ki Lung Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7074,7 +7074,7 @@
       "streetName": "基隆街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7092,7 +7092,7 @@
       "streetName": "基隆街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7111,7 +7111,7 @@
       "streetName": "Argyle Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7130,7 +7130,7 @@
       "streetName": "亞皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7149,7 +7149,7 @@
       "streetName": "亚皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7167,7 +7167,7 @@
       "streetName": "Canton Road",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7185,7 +7185,7 @@
       "streetName": "廣東道",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7203,7 +7203,7 @@
       "streetName": "广东道",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7221,7 +7221,7 @@
       "streetName": "Canton Road",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7239,7 +7239,7 @@
       "streetName": "廣東道",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7257,7 +7257,7 @@
       "streetName": "广东道",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7275,7 +7275,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7293,7 +7293,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7311,7 +7311,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7330,7 +7330,7 @@
       "streetName": "Canton Road",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7349,7 +7349,7 @@
       "streetName": "廣東道",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7368,7 +7368,7 @@
       "streetName": "广东道",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7386,7 +7386,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7404,7 +7404,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7422,7 +7422,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7440,7 +7440,7 @@
       "streetName": "Portland Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7458,7 +7458,7 @@
       "streetName": "砵蘭街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7476,7 +7476,7 @@
       "streetName": "砵兰街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7494,7 +7494,7 @@
       "streetName": "Canton Road",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7512,7 +7512,7 @@
       "streetName": "廣東道",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7530,7 +7530,7 @@
       "streetName": "广东道",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7549,7 +7549,7 @@
       "streetName": "Argyle Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7568,7 +7568,7 @@
       "streetName": "亞皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7587,7 +7587,7 @@
       "streetName": "亚皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7606,7 +7606,7 @@
       "streetName": "Argyle Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7625,7 +7625,7 @@
       "streetName": "亞皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7644,7 +7644,7 @@
       "streetName": "亚皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7663,7 +7663,7 @@
       "streetName": "Argyle Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7682,7 +7682,7 @@
       "streetName": "亞皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7701,7 +7701,7 @@
       "streetName": "亚皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7719,7 +7719,7 @@
       "streetName": "Canton Road",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7737,7 +7737,7 @@
       "streetName": "廣東道",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7755,7 +7755,7 @@
       "streetName": "广东道",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7774,7 +7774,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7793,7 +7793,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7812,7 +7812,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7831,7 +7831,7 @@
       "streetName": "Dundas Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7850,7 +7850,7 @@
       "streetName": "登打士街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7869,7 +7869,7 @@
       "streetName": "登打士街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7889,7 +7889,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7909,7 +7909,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7929,7 +7929,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -7947,7 +7947,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -7965,7 +7965,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -7983,7 +7983,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8001,7 +8001,7 @@
       "streetName": "Queen's Road East",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -8019,7 +8019,7 @@
       "streetName": "皇后大道東",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -8037,7 +8037,7 @@
       "streetName": "皇后大道东",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -8055,7 +8055,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8073,7 +8073,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8091,7 +8091,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8109,7 +8109,7 @@
       "streetName": "Min Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8127,7 +8127,7 @@
       "streetName": "閩街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8145,7 +8145,7 @@
       "streetName": "闽街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8164,7 +8164,7 @@
       "streetName": "Argyle Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8183,7 +8183,7 @@
       "streetName": "亞皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8202,7 +8202,7 @@
       "streetName": "亚皆老街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8221,7 +8221,7 @@
       "streetName": "Kwun Chung Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8240,7 +8240,7 @@
       "streetName": "官涌街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8259,7 +8259,7 @@
       "streetName": "官涌街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8277,7 +8277,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8295,7 +8295,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8313,7 +8313,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8331,7 +8331,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8349,7 +8349,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8367,7 +8367,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8386,7 +8386,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8405,7 +8405,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8424,7 +8424,7 @@
       "streetName": "新填地街",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8442,7 +8442,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8460,7 +8460,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8478,7 +8478,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8496,7 +8496,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8514,7 +8514,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8532,7 +8532,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8551,7 +8551,7 @@
       "streetName": "Nathan Road",
       "neighbourhood": "Mong Kok",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8570,7 +8570,7 @@
       "streetName": "彌敦道",
       "neighbourhood": "旺角",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8589,7 +8589,7 @@
       "streetName": "弥敦道",
       "neighbourhood": "旺角",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8607,7 +8607,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8625,7 +8625,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8643,7 +8643,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8661,7 +8661,7 @@
       "streetName": "Reclamation Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8679,7 +8679,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8697,7 +8697,7 @@
       "streetName": "新填地街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8715,7 +8715,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8733,7 +8733,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8751,7 +8751,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8769,7 +8769,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8787,7 +8787,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8805,7 +8805,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8824,7 +8824,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8843,7 +8843,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8862,7 +8862,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8880,7 +8880,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8898,7 +8898,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8916,7 +8916,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8934,7 +8934,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -8952,7 +8952,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -8970,7 +8970,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -8988,7 +8988,7 @@
       "streetName": "Bowring Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9006,7 +9006,7 @@
       "streetName": "寶靈街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9024,7 +9024,7 @@
       "streetName": "宝灵街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9042,7 +9042,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9060,7 +9060,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9078,7 +9078,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9096,7 +9096,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9114,7 +9114,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9132,7 +9132,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9150,7 +9150,7 @@
       "streetName": "Temple Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9168,7 +9168,7 @@
       "streetName": "廟街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9186,7 +9186,7 @@
       "streetName": "庙街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9204,7 +9204,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9222,7 +9222,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9240,7 +9240,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9258,7 +9258,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9276,7 +9276,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9294,7 +9294,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9312,7 +9312,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9330,7 +9330,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9348,7 +9348,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9367,7 +9367,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9386,7 +9386,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9405,7 +9405,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9424,7 +9424,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9443,7 +9443,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9462,7 +9462,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9480,7 +9480,7 @@
       "streetName": "Waterloo Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9498,7 +9498,7 @@
       "streetName": "窩打老道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9516,7 +9516,7 @@
       "streetName": "窝打老道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9534,7 +9534,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9552,7 +9552,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9570,7 +9570,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9588,7 +9588,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9606,7 +9606,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9624,7 +9624,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9642,7 +9642,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9660,7 +9660,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9678,7 +9678,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9696,7 +9696,7 @@
       "streetName": "Bowring Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9714,7 +9714,7 @@
       "streetName": "寶靈街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9732,7 +9732,7 @@
       "streetName": "宝灵街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9750,7 +9750,7 @@
       "streetName": "Shanghai Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9768,7 +9768,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9786,7 +9786,7 @@
       "streetName": "上海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9804,7 +9804,7 @@
       "streetName": "Temple Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9822,7 +9822,7 @@
       "streetName": "廟街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9840,7 +9840,7 @@
       "streetName": "庙街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9858,7 +9858,7 @@
       "streetName": "Queen's Road East",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -9876,7 +9876,7 @@
       "streetName": "皇后大道東",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -9894,7 +9894,7 @@
       "streetName": "皇后大道东",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -9913,7 +9913,7 @@
       "streetName": "Nathan Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9932,7 +9932,7 @@
       "streetName": "彌敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -9951,7 +9951,7 @@
       "streetName": "弥敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -9969,7 +9969,7 @@
       "streetName": "Wing Sing Lane",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -9987,7 +9987,7 @@
       "streetName": "永星里",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10005,7 +10005,7 @@
       "streetName": "永星里",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10023,7 +10023,7 @@
       "streetName": "Jordan Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10041,7 +10041,7 @@
       "streetName": "佐敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10059,7 +10059,7 @@
       "streetName": "佐敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10079,7 +10079,7 @@
       "streetName": "Parkes Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10099,7 +10099,7 @@
       "streetName": "白加士街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10119,7 +10119,7 @@
       "streetName": "白加士街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10137,7 +10137,7 @@
       "streetName": "Parkes Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10155,7 +10155,7 @@
       "streetName": "白加士街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10173,7 +10173,7 @@
       "streetName": "白加士街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10192,7 +10192,7 @@
       "streetName": "Nathan Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10211,7 +10211,7 @@
       "streetName": "彌敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10230,7 +10230,7 @@
       "streetName": "弥敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10248,7 +10248,7 @@
       "streetName": "Nathan Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10266,7 +10266,7 @@
       "streetName": "彌敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10284,7 +10284,7 @@
       "streetName": "弥敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10303,7 +10303,7 @@
       "streetName": "Nathan Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10322,7 +10322,7 @@
       "streetName": "彌敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10341,7 +10341,7 @@
       "streetName": "弥敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10359,7 +10359,7 @@
       "streetName": "Saigon Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10377,7 +10377,7 @@
       "streetName": "西貢街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10395,7 +10395,7 @@
       "streetName": "西贡街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10414,7 +10414,7 @@
       "streetName": "Pak Hoi Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10433,7 +10433,7 @@
       "streetName": "北海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10452,7 +10452,7 @@
       "streetName": "北海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10471,7 +10471,7 @@
       "streetName": "Pak Hoi Street",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10490,7 +10490,7 @@
       "streetName": "北海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10509,7 +10509,7 @@
       "streetName": "北海街",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10529,7 +10529,7 @@
       "streetName": "Jordan Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10549,7 +10549,7 @@
       "streetName": "佐敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10569,7 +10569,7 @@
       "streetName": "佐敦道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10588,7 +10588,7 @@
       "streetName": "Cox's Road",
       "neighbourhood": "Yau Ma Tei",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10607,7 +10607,7 @@
       "streetName": "覺士道",
       "neighbourhood": "油麻地",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10626,7 +10626,7 @@
       "streetName": "觉士道",
       "neighbourhood": "油麻地",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10645,7 +10645,7 @@
       "streetName": "Kimberley Street",
       "neighbourhood": "Tsim Sha Tsui",
       "district": "YTM",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -10664,7 +10664,7 @@
       "streetName": "金巴利街",
       "neighbourhood": "尖沙咀",
       "district": "油尖旺區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -10683,7 +10683,7 @@
       "streetName": "金巴利街",
       "neighbourhood": "尖沙咀",
       "district": "油尖旺区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -10702,7 +10702,7 @@
       "streetName": "Wan Chai Road",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -10721,7 +10721,7 @@
       "streetName": "灣仔道",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -10740,7 +10740,7 @@
       "streetName": "湾仔道",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -10758,7 +10758,7 @@
       "streetName": "Lockhart Road",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -10776,7 +10776,7 @@
       "streetName": "駱克道",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -10794,7 +10794,7 @@
       "streetName": "骆克道",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -10812,7 +10812,7 @@
       "streetName": "Gloucester Road",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -10830,7 +10830,7 @@
       "streetName": "告士打道",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -10848,7 +10848,7 @@
       "streetName": "告士打道",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -10868,7 +10868,7 @@
       "streetName": "Che Kung Miu Road",
       "neighbourhood": "Tai Wai, Sha Tin",
       "district": "ST",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -10887,7 +10887,7 @@
       "estateName": "柏傲莊",
       "streetName": "車公廟路",
       "district": "沙田區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -10906,7 +10906,7 @@
       "estateName": "柏傲庄",
       "streetName": "车公庙路",
       "district": "沙田区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -10925,7 +10925,7 @@
       "streetName": "Lockhart Road",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -10944,7 +10944,7 @@
       "streetName": "駱克道",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -10963,7 +10963,7 @@
       "streetName": "骆克道",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -10981,7 +10981,7 @@
       "streetName": "Morrison Hill Road",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -10999,7 +10999,7 @@
       "streetName": "摩理臣山道",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -11017,7 +11017,7 @@
       "streetName": "摩理臣山道",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -11036,7 +11036,7 @@
       "streetName": "Lockhart Road",
       "neighbourhood": "Wan Chai",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -11055,7 +11055,7 @@
       "streetName": "駱克道",
       "neighbourhood": "灣仔",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -11074,7 +11074,7 @@
       "streetName": "骆克道",
       "neighbourhood": "湾仔",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -11094,7 +11094,7 @@
       "streetName": "Hennessy Road",
       "neighbourhood": "Causeway Bay",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -11114,7 +11114,7 @@
       "streetName": "軒尼詩道",
       "neighbourhood": "銅鑼灣",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -11134,7 +11134,7 @@
       "streetName": "轩尼诗道",
       "neighbourhood": "铜锣湾",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -11152,7 +11152,7 @@
       "streetName": "Winslow Street",
       "neighbourhood": "Hung Hom",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11170,7 +11170,7 @@
       "streetName": "溫思勞街",
       "neighbourhood": "紅磡",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11188,7 +11188,7 @@
       "streetName": "温思劳街",
       "neighbourhood": "红磡",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11206,7 +11206,7 @@
       "streetName": "Winslow Street",
       "neighbourhood": "Hung Hom",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11224,7 +11224,7 @@
       "streetName": "溫思勞街",
       "neighbourhood": "紅磡",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11242,7 +11242,7 @@
       "streetName": "温思劳街",
       "neighbourhood": "红磡",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11261,7 +11261,7 @@
       "streetName": "Wong Nai Chung Road",
       "neighbourhood": "Happy Valley",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -11280,7 +11280,7 @@
       "streetName": "黃泥涌道",
       "neighbourhood": "跑馬地",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -11299,7 +11299,7 @@
       "streetName": "黄泥涌道",
       "neighbourhood": "跑马地",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -11317,7 +11317,7 @@
       "streetName": "Wuhu Street",
       "neighbourhood": "Hung Hom",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11335,7 +11335,7 @@
       "streetName": "蕪湖街",
       "neighbourhood": "紅磡",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11353,7 +11353,7 @@
       "streetName": "芜湖街",
       "neighbourhood": "红磡",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11372,7 +11372,7 @@
       "streetName": "Wuhu Street",
       "neighbourhood": "Hung Hom",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11391,7 +11391,7 @@
       "streetName": "蕪湖街",
       "neighbourhood": "紅磡",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11410,7 +11410,7 @@
       "streetName": "芜湖街",
       "neighbourhood": "红磡",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11429,7 +11429,7 @@
       "streetName": "Chatham Road North",
       "neighbourhood": "Hung Hom",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11448,7 +11448,7 @@
       "streetName": "漆咸道北",
       "neighbourhood": "紅磡",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11467,7 +11467,7 @@
       "streetName": "漆咸道北",
       "neighbourhood": "红磡",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11486,7 +11486,7 @@
       "streetName": "Leighton Road",
       "neighbourhood": "Causeway Bay",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -11505,7 +11505,7 @@
       "streetName": "禮頓道",
       "neighbourhood": "銅鑼灣",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -11524,7 +11524,7 @@
       "streetName": "礼顿道",
       "neighbourhood": "铜锣湾",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -11542,7 +11542,7 @@
       "streetName": "Wuhu Street",
       "neighbourhood": "Hung Hom",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11560,7 +11560,7 @@
       "streetName": "蕪湖街",
       "neighbourhood": "紅磡",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11578,7 +11578,7 @@
       "streetName": "芜湖街",
       "neighbourhood": "红磡",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11598,7 +11598,7 @@
       "streetName": "Wu Kwong Street",
       "neighbourhood": "Hung Hom",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11618,7 +11618,7 @@
       "streetName": "湖光街",
       "neighbourhood": "紅磡",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11638,7 +11638,7 @@
       "streetName": "湖光街",
       "neighbourhood": "红磡",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11656,7 +11656,7 @@
       "streetName": "Ma Tau Wai Road",
       "neighbourhood": "To Kwa Wan",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11674,7 +11674,7 @@
       "streetName": "馬頭圍道",
       "neighbourhood": "土瓜灣",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11692,7 +11692,7 @@
       "streetName": "马头围道",
       "neighbourhood": "土瓜湾",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11711,7 +11711,7 @@
       "streetName": "Lion Rock Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11730,7 +11730,7 @@
       "streetName": "獅子石道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11749,7 +11749,7 @@
       "streetName": "狮子石道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11767,7 +11767,7 @@
       "streetName": "Kowloon City Road",
       "neighbourhood": "To Kwa Wan",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11785,7 +11785,7 @@
       "streetName": "九龍城道",
       "neighbourhood": "土瓜灣",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11803,7 +11803,7 @@
       "streetName": "九龙城道",
       "neighbourhood": "土瓜湾",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11821,7 +11821,7 @@
       "streetName": "Nga Tsin Wai Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11839,7 +11839,7 @@
       "streetName": "衙前圍道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11857,7 +11857,7 @@
       "streetName": "衙前围道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11876,7 +11876,7 @@
       "streetName": "Hau Wong Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11895,7 +11895,7 @@
       "streetName": "侯王道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11914,7 +11914,7 @@
       "streetName": "侯王道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11932,7 +11932,7 @@
       "streetName": "Prince Edward Road West",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -11950,7 +11950,7 @@
       "streetName": "太子道西",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -11968,7 +11968,7 @@
       "streetName": "太子道西",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -11986,7 +11986,7 @@
       "streetName": "Nga Tsin Long Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12004,7 +12004,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12022,7 +12022,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12040,7 +12040,7 @@
       "streetName": "Nga Tsin Long Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12058,7 +12058,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12076,7 +12076,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12094,7 +12094,7 @@
       "streetName": "Nga Tsin Long Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12112,7 +12112,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12130,7 +12130,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12148,7 +12148,7 @@
       "streetName": "Ha Heung Road",
       "neighbourhood": "To Kwa Wan",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12166,7 +12166,7 @@
       "streetName": "下鄉道",
       "neighbourhood": "土瓜灣",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12184,7 +12184,7 @@
       "streetName": "下乡道",
       "neighbourhood": "土瓜湾",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12202,7 +12202,7 @@
       "streetName": "Nga Tsin Long Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12220,7 +12220,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12238,7 +12238,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12256,7 +12256,7 @@
       "streetName": "Nga Tsin Long Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12274,7 +12274,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12292,7 +12292,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12310,7 +12310,7 @@
       "streetName": "Nga Tsin Long Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12328,7 +12328,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12346,7 +12346,7 @@
       "streetName": "衙前塱道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12365,7 +12365,7 @@
       "streetName": "Nga Tsin Wai Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12384,7 +12384,7 @@
       "streetName": "衙前圍道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12403,7 +12403,7 @@
       "streetName": "衙前围道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12421,7 +12421,7 @@
       "streetName": "Nam Kok Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12439,7 +12439,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12457,7 +12457,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12476,7 +12476,7 @@
       "streetName": "Causeway Road",
       "neighbourhood": "Causeway Bay",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -12495,7 +12495,7 @@
       "streetName": "高士威道",
       "neighbourhood": "銅鑼灣",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -12514,7 +12514,7 @@
       "streetName": "高士威道",
       "neighbourhood": "铜锣湾",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -12532,7 +12532,7 @@
       "streetName": "Nam Kok Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12550,7 +12550,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12568,7 +12568,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12586,7 +12586,7 @@
       "streetName": "Nam Kok Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12604,7 +12604,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12622,7 +12622,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12640,7 +12640,7 @@
       "streetName": "Nga Tsin Wai Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12658,7 +12658,7 @@
       "streetName": "衙前圍道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12676,7 +12676,7 @@
       "streetName": "衙前围道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12694,7 +12694,7 @@
       "streetName": "Nga Tsin Wai Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12712,7 +12712,7 @@
       "streetName": "衙前圍道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12730,7 +12730,7 @@
       "streetName": "衙前围道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12748,7 +12748,7 @@
       "streetName": "Nam Kok Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12766,7 +12766,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12784,7 +12784,7 @@
       "streetName": "南角道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12802,7 +12802,7 @@
       "streetName": "Nga Tsin Wai Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12820,7 +12820,7 @@
       "streetName": "衙前圍道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12838,7 +12838,7 @@
       "streetName": "衙前围道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12856,7 +12856,7 @@
       "streetName": "Lung Kong Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12874,7 +12874,7 @@
       "streetName": "龍崗道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12892,7 +12892,7 @@
       "streetName": "龙岗道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12911,7 +12911,7 @@
       "streetName": "Lung Kong Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12930,7 +12930,7 @@
       "streetName": "龍崗道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -12949,7 +12949,7 @@
       "streetName": "龙岗道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -12967,7 +12967,7 @@
       "streetName": "Lung Kong Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -12985,7 +12985,7 @@
       "streetName": "龍崗道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13003,7 +13003,7 @@
       "streetName": "龙岗道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13021,7 +13021,7 @@
       "streetName": "Lung Kong Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13039,7 +13039,7 @@
       "streetName": "龍崗道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13057,7 +13057,7 @@
       "streetName": "龙岗道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13075,7 +13075,7 @@
       "streetName": "South Wall Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13093,7 +13093,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13111,7 +13111,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13129,7 +13129,7 @@
       "streetName": "South Wall Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13147,7 +13147,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13165,7 +13165,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13183,7 +13183,7 @@
       "streetName": "South Wall Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13201,7 +13201,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13219,7 +13219,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13237,7 +13237,7 @@
       "streetName": "South Wall Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13255,7 +13255,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13273,7 +13273,7 @@
       "streetName": "城南道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13291,7 +13291,7 @@
       "streetName": "Electric Road",
       "neighbourhood": "Causeway Bay",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -13309,7 +13309,7 @@
       "streetName": "電氣道",
       "neighbourhood": "銅鑼灣",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -13327,7 +13327,7 @@
       "streetName": "电气道",
       "neighbourhood": "铜锣湾",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -13346,7 +13346,7 @@
       "streetName": "Electric Road",
       "neighbourhood": "Causeway Bay",
       "district": "WC",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -13365,7 +13365,7 @@
       "streetName": "電氣道",
       "neighbourhood": "銅鑼灣",
       "district": "灣仔區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -13384,7 +13384,7 @@
       "streetName": "电气道",
       "neighbourhood": "铜锣湾",
       "district": "湾仔区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -13403,7 +13403,7 @@
       "streetName": "Tak Ku Ling Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13422,7 +13422,7 @@
       "streetName": "打鼓嶺道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13441,7 +13441,7 @@
       "streetName": "打鼓岭道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13459,7 +13459,7 @@
       "streetName": "Kai Tak Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13477,7 +13477,7 @@
       "streetName": "啟德道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13495,7 +13495,7 @@
       "streetName": "启德道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13513,7 +13513,7 @@
       "streetName": "Kai Tak Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13531,7 +13531,7 @@
       "streetName": "啟德道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13549,7 +13549,7 @@
       "streetName": "启德道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13567,7 +13567,7 @@
       "streetName": "Kai Tak Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13585,7 +13585,7 @@
       "streetName": "啟德道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13603,7 +13603,7 @@
       "streetName": "启德道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13621,7 +13621,7 @@
       "streetName": "Kai Tak Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13639,7 +13639,7 @@
       "streetName": "啟德道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13657,7 +13657,7 @@
       "streetName": "启德道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13676,7 +13676,7 @@
       "streetName": "Carpenter Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13695,7 +13695,7 @@
       "streetName": "賈炳達道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13714,7 +13714,7 @@
       "streetName": "贾炳达道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13732,7 +13732,7 @@
       "streetName": "Sa Po Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13750,7 +13750,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13768,7 +13768,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13786,7 +13786,7 @@
       "streetName": "Sa Po Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13804,7 +13804,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13822,7 +13822,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13840,7 +13840,7 @@
       "streetName": "Sa Po Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13858,7 +13858,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13876,7 +13876,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13895,7 +13895,7 @@
       "streetName": "Carpenter Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13914,7 +13914,7 @@
       "streetName": "賈炳達道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13933,7 +13933,7 @@
       "streetName": "贾炳达道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -13951,7 +13951,7 @@
       "streetName": "Sa Po Road",
       "neighbourhood": "Kowloon City",
       "district": "KLC",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -13969,7 +13969,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龍城",
       "district": "九龍城區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -13987,7 +13987,7 @@
       "streetName": "沙浦道",
       "neighbourhood": "九龙城",
       "district": "九龙城区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14006,7 +14006,7 @@
       "streetName": "Yin Hing Street",
       "neighbourhood": "San Po Kong",
       "district": null,
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14025,7 +14025,7 @@
       "streetName": "衍慶街",
       "neighbourhood": "新蒲崗",
       "district": "黃大仙區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14044,7 +14044,7 @@
       "streetName": "衍庆街",
       "neighbourhood": "新蒲岗",
       "district": "黄大仙区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14063,7 +14063,7 @@
       "streetName": "Yin Hing Street",
       "neighbourhood": "San Po Kong",
       "district": null,
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14082,7 +14082,7 @@
       "streetName": "衍慶街",
       "neighbourhood": "新蒲崗",
       "district": "黃大仙區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14101,7 +14101,7 @@
       "streetName": "衍庆街",
       "neighbourhood": "新蒲岗",
       "district": "黄大仙区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14120,7 +14120,7 @@
       "streetName": "Foo Yuen Street",
       "neighbourhood": "San Po Kong",
       "district": null,
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14139,7 +14139,7 @@
       "streetName": "富源街",
       "neighbourhood": "新蒲崗",
       "district": "黃大仙區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14158,7 +14158,7 @@
       "streetName": "富源街",
       "neighbourhood": "新蒲岗",
       "district": "黄大仙区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14177,7 +14177,7 @@
       "streetName": "Ning Yuen Street",
       "neighbourhood": "San Po Kong",
       "district": null,
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14196,7 +14196,7 @@
       "streetName": "寧遠街",
       "neighbourhood": "新蒲崗",
       "district": "黃大仙區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14215,7 +14215,7 @@
       "streetName": "宁远街",
       "neighbourhood": "新蒲岗",
       "district": "黄大仙区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14234,7 +14234,7 @@
       "streetName": "Foo Yuen Street",
       "neighbourhood": "San Po Kong",
       "district": null,
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14253,7 +14253,7 @@
       "streetName": "富源街",
       "neighbourhood": "新蒲崗",
       "district": "黃大仙區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14272,7 +14272,7 @@
       "streetName": "富源街",
       "neighbourhood": "新蒲岗",
       "district": "黄大仙区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14291,7 +14291,7 @@
       "streetName": "Tseuk Luk Street",
       "neighbourhood": "San Po Kong",
       "district": null,
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14310,7 +14310,7 @@
       "streetName": "爵祿街",
       "neighbourhood": "新蒲崗",
       "district": "黃大仙區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14329,7 +14329,7 @@
       "streetName": "爵禄街",
       "neighbourhood": "新蒲岗",
       "district": "黄大仙区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14348,7 +14348,7 @@
       "streetName": "Chun Yeung Street",
       "neighbourhood": "North Point",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14367,7 +14367,7 @@
       "streetName": "春秧街",
       "neighbourhood": "北角",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -14386,7 +14386,7 @@
       "streetName": "春秧街",
       "neighbourhood": "北角",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -14405,7 +14405,7 @@
       "streetName": "Ng Fong Street",
       "neighbourhood": "San Po Kong",
       "district": null,
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14424,7 +14424,7 @@
       "streetName": "五芳街",
       "neighbourhood": "新蒲崗",
       "district": "黃大仙區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14443,7 +14443,7 @@
       "streetName": "五芳街",
       "neighbourhood": "新蒲岗",
       "district": "黄大仙区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14462,7 +14462,7 @@
       "streetName": "King's Road",
       "neighbourhood": "Quarry Bay",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14481,7 +14481,7 @@
       "streetName": "英皇道",
       "neighbourhood": "鰂魚涌",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -14500,7 +14500,7 @@
       "streetName": "英皇道",
       "neighbourhood": "鲗鱼涌",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -14519,7 +14519,7 @@
       "streetName": "King's Road",
       "neighbourhood": "Quarry Bay",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14538,7 +14538,7 @@
       "streetName": "英皇道",
       "neighbourhood": "鰂魚涌",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -14557,7 +14557,7 @@
       "streetName": "英皇道",
       "neighbourhood": "鲗鱼涌",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -14577,7 +14577,7 @@
       "streetName": "King's Road",
       "neighbourhood": "Quarry Bay",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14597,7 +14597,7 @@
       "streetName": "英皇道",
       "neighbourhood": "鰂魚涌",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -14617,7 +14617,7 @@
       "streetName": "英皇道",
       "neighbourhood": "鲗鱼涌",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -14635,7 +14635,7 @@
       "streetName": "Hoi Chak Street",
       "neighbourhood": "Quarry Bay",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14653,7 +14653,7 @@
       "streetName": "海澤街",
       "neighbourhood": "鰂魚涌",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -14671,7 +14671,7 @@
       "streetName": "海泽街",
       "neighbourhood": "鲗鱼涌",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -14690,7 +14690,7 @@
       "streetName": "Kwun Tong Road",
       "neighbourhood": "Ngau Tau Kok",
       "district": "KT",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14709,7 +14709,7 @@
       "streetName": "觀塘道",
       "neighbourhood": "牛頭角",
       "district": "觀塘區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14728,7 +14728,7 @@
       "streetName": "观塘道",
       "neighbourhood": "牛头角",
       "district": "观塘区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14747,7 +14747,7 @@
       "streetName": "Ting On Street",
       "neighbourhood": "Ngau Tau Kok",
       "district": "KT",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14766,7 +14766,7 @@
       "streetName": "定安街",
       "neighbourhood": "牛頭角",
       "district": "觀塘區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14785,7 +14785,7 @@
       "streetName": "定安街",
       "neighbourhood": "牛头角",
       "district": "观塘区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14804,7 +14804,7 @@
       "streetName": "Lai Yip Street",
       "neighbourhood": "Kwun Tong",
       "district": "KT",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -14823,7 +14823,7 @@
       "streetName": "勵業街",
       "neighbourhood": "觀塘",
       "district": "觀塘區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -14842,7 +14842,7 @@
       "streetName": "励业街",
       "neighbourhood": "观塘",
       "district": "观塘区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -14860,7 +14860,7 @@
       "streetName": "Shau Kei Wan Road",
       "neighbourhood": "Sai Wan Ho",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14878,7 +14878,7 @@
       "streetName": "筲箕灣道",
       "neighbourhood": "西灣河",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -14896,7 +14896,7 @@
       "streetName": "筲箕湾道",
       "neighbourhood": "西湾河",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -14915,7 +14915,7 @@
       "streetName": "Tai Hong Street",
       "neighbourhood": "Sai Wan Ho",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14934,7 +14934,7 @@
       "streetName": "太康街",
       "neighbourhood": "西灣河",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -14953,7 +14953,7 @@
       "streetName": "太康街",
       "neighbourhood": "西湾河",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -14972,7 +14972,7 @@
       "streetName": "Tai Hong Street",
       "neighbourhood": "Sai Wan Ho",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -14991,7 +14991,7 @@
       "streetName": "太康街",
       "neighbourhood": "西灣河",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15010,7 +15010,7 @@
       "streetName": "太康街",
       "neighbourhood": "西湾河",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15029,7 +15029,7 @@
       "streetName": "Shau Kei Wan Road",
       "neighbourhood": "Sai Wan Ho",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15048,7 +15048,7 @@
       "streetName": "筲箕灣道",
       "neighbourhood": "西灣河",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15067,7 +15067,7 @@
       "streetName": "筲箕湾道",
       "neighbourhood": "西湾河",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15086,7 +15086,7 @@
       "streetName": "Tai Hong Street",
       "neighbourhood": "Sai Wan Ho",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15105,7 +15105,7 @@
       "streetName": "太康街",
       "neighbourhood": "西灣河",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15124,7 +15124,7 @@
       "streetName": "太康街",
       "neighbourhood": "西湾河",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15143,7 +15143,7 @@
       "streetName": "Tai Hong Street",
       "neighbourhood": "Sai Wan Ho",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15162,7 +15162,7 @@
       "streetName": "太康街",
       "neighbourhood": "西灣河",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15181,7 +15181,7 @@
       "streetName": "太康街",
       "neighbourhood": "西湾河",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15200,7 +15200,7 @@
       "streetName": "Shau Kei Wan Road",
       "neighbourhood": "Sai Wan Ho",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15219,7 +15219,7 @@
       "streetName": "筲箕灣道",
       "neighbourhood": "西灣河",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15238,7 +15238,7 @@
       "streetName": "筲箕湾道",
       "neighbourhood": "西湾河",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15257,7 +15257,7 @@
       "streetName": "Fu Yan Street",
       "neighbourhood": "Kwun Tong",
       "district": "KT",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -15276,7 +15276,7 @@
       "streetName": "輔仁街",
       "neighbourhood": "觀塘",
       "district": "觀塘區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -15295,7 +15295,7 @@
       "streetName": "辅仁街",
       "neighbourhood": "观塘",
       "district": "观塘区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -15314,7 +15314,7 @@
       "streetName": "Fu Yan Street",
       "neighbourhood": "Kwun Tong",
       "district": "KT",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -15333,7 +15333,7 @@
       "streetName": "輔仁街",
       "neighbourhood": "觀塘",
       "district": "觀塘區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -15352,7 +15352,7 @@
       "streetName": "辅仁街",
       "neighbourhood": "观塘",
       "district": "观塘区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -15371,7 +15371,7 @@
       "streetName": "Hoi Yuen Road",
       "neighbourhood": "Kwun Tong",
       "district": "KT",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -15390,7 +15390,7 @@
       "streetName": "開源道",
       "neighbourhood": "觀塘",
       "district": "觀塘區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -15409,7 +15409,7 @@
       "streetName": "开源道",
       "neighbourhood": "观塘",
       "district": "观塘区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -15428,7 +15428,7 @@
       "streetName": "Wan Hon Street",
       "neighbourhood": "Kwun Tong",
       "district": "KT",
-      "region": "KL",
+      "area": "KL",
       "country": "HKSAR"
     }
   },
@@ -15447,7 +15447,7 @@
       "streetName": "雲漢街",
       "neighbourhood": "觀塘",
       "district": "觀塘區",
-      "region": "九龍",
+      "area": "九龍",
       "country": "香港特區"
     }
   },
@@ -15466,7 +15466,7 @@
       "streetName": "云汉街",
       "neighbourhood": "观塘",
       "district": "观塘区",
-      "region": "九龙",
+      "area": "九龙",
       "country": "香港特区"
     }
   },
@@ -15484,7 +15484,7 @@
       "streetName": "Shau Kei Wan Road",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15502,7 +15502,7 @@
       "streetName": "筲箕灣道",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15520,7 +15520,7 @@
       "streetName": "筲箕湾道",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15538,7 +15538,7 @@
       "streetName": "Shau Kei Wan Road",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15556,7 +15556,7 @@
       "streetName": "筲箕灣道",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15574,7 +15574,7 @@
       "streetName": "筲箕湾道",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15593,7 +15593,7 @@
       "streetName": "Shau Kei Wan Road",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15612,7 +15612,7 @@
       "streetName": "筲箕灣道",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15631,7 +15631,7 @@
       "streetName": "筲箕湾道",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15649,7 +15649,7 @@
       "streetName": "Shau Kei Wan Road",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15667,7 +15667,7 @@
       "streetName": "筲箕灣道",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15685,7 +15685,7 @@
       "streetName": "筲箕湾道",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15704,7 +15704,7 @@
       "streetName": "Aldrich Street",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15723,7 +15723,7 @@
       "streetName": "愛秩序街",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15742,7 +15742,7 @@
       "streetName": "爱秩序街",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15760,7 +15760,7 @@
       "streetName": "Kam Wa Street",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15778,7 +15778,7 @@
       "streetName": "金華街",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15796,7 +15796,7 @@
       "streetName": "金华街",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15815,7 +15815,7 @@
       "streetName": "Shau Kei Wan Main Street East",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15834,7 +15834,7 @@
       "streetName": "筲箕灣東大街",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15853,7 +15853,7 @@
       "streetName": "筲箕湾东大街",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15871,7 +15871,7 @@
       "streetName": "Kam Wa Street",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15889,7 +15889,7 @@
       "streetName": "金華街",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15907,7 +15907,7 @@
       "streetName": "金华街",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15926,7 +15926,7 @@
       "streetName": "Shau Kei Wan Main Street East",
       "neighbourhood": "Shau Kei Wan",
       "district": "EST",
-      "region": "HK",
+      "area": "HK",
       "country": "HKSAR"
     }
   },
@@ -15945,7 +15945,7 @@
       "streetName": "筲箕灣東大街",
       "neighbourhood": "筲箕灣",
       "district": "東區",
-      "region": null,
+      "area": null,
       "country": "香港特區"
     }
   },
@@ -15964,7 +15964,7 @@
       "streetName": "筲箕湾东大街",
       "neighbourhood": "筲箕湾",
       "district": "东区",
-      "region": null,
+      "area": null,
       "country": "香港特区"
     }
   },
@@ -15982,7 +15982,7 @@
       "streetName": "Luk Mei Tsuen",
       "neighbourhood": "Sai Kung",
       "district": "SK",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -16000,7 +16000,7 @@
       "streetName": "鹿尾村",
       "neighbourhood": "西貢",
       "district": "西貢區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -16018,7 +16018,7 @@
       "streetName": "鹿尾村",
       "neighbourhood": "西贡",
       "district": "西贡区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -16038,7 +16038,7 @@
       "streetName": "Clear Water Bay Road",
       "neighbourhood": "Clear Water Bay, Sai Kung",
       "district": "SK",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -16057,7 +16057,7 @@
       "estateName": "清水灣道３２８號",
       "streetName": "清水灣道",
       "district": "西貢區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -16076,7 +16076,7 @@
       "estateName": "清水湾道328号",
       "streetName": "清水湾道",
       "district": "西贡区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -16094,7 +16094,7 @@
       "streetName": "Hong Ting Road",
       "neighbourhood": "Sai Kung",
       "district": "SK",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -16112,7 +16112,7 @@
       "streetName": "康定路",
       "neighbourhood": "西貢",
       "district": "西貢區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -16130,7 +16130,7 @@
       "streetName": "康定路",
       "neighbourhood": "西贡",
       "district": "西贡区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -16148,7 +16148,7 @@
       "streetName": "Tai Mong Tsai Road",
       "neighbourhood": "Sai Kung",
       "district": "SK",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -16166,7 +16166,7 @@
       "streetName": "大網仔路",
       "neighbourhood": "西貢",
       "district": "西貢區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -16184,7 +16184,7 @@
       "streetName": "大网仔路",
       "neighbourhood": "西贡",
       "district": "西贡区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   },
@@ -16202,7 +16202,7 @@
       "streetName": "Wan King Path",
       "neighbourhood": "Sai Kung",
       "district": "SK",
-      "region": "NT",
+      "area": "NT",
       "country": "HKSAR"
     }
   },
@@ -16220,7 +16220,7 @@
       "streetName": "灣景街",
       "neighbourhood": "西貢",
       "district": "西貢區",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特區"
     }
   },
@@ -16238,7 +16238,7 @@
       "streetName": "湾景街",
       "neighbourhood": "西贡",
       "district": "西贡区",
-      "region": "新界",
+      "area": "新界",
       "country": "香港特区"
     }
   }
