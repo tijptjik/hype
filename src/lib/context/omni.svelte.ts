@@ -961,8 +961,8 @@ export class OmniCtx {
         en: {
           name: address.replace(', Hong Kong', '').replace(', Hong Kong Island', ''),
         },
-        'zh-hant': { name: address },
-        'zh-hans': { name: address },
+        zhHant: { name: address },
+        zhHans: { name: address },
       },
       items: [feature],
     }
@@ -974,7 +974,7 @@ export class OmniCtx {
   toWalkCollection(
     walkRef: string,
     items: (FeatureFromCollection | Feature)[],
-    customI18n?: Record<Locale, string>,
+    customI18n?: Record<LocaleKey, string>,
   ): ActiveCollection {
     // Default i18n for special walks
     let i18nConfig: CollectionI18n
@@ -982,27 +982,27 @@ export class OmniCtx {
     if (walkRef === 'stars') {
       i18nConfig = {
         en: { name: m.omni__title_star_walks() },
-        'zh-hant': { name: m.omni__title_star_walks() },
-        'zh-hans': { name: m.omni__title_star_walks() },
+        zhHant: { name: m.omni__title_star_walks() },
+        zhHans: { name: m.omni__title_star_walks() },
       }
     } else if (walkRef === 'visited') {
       i18nConfig = {
         en: { name: m.omni__title_visited_walks() },
-        'zh-hant': { name: m.omni__title_visited_walks() },
-        'zh-hans': { name: m.omni__title_visited_walks() },
+        zhHant: { name: m.omni__title_visited_walks() },
+        zhHans: { name: m.omni__title_visited_walks() },
       }
     } else if (customI18n) {
       i18nConfig = {
         en: { name: customI18n.en },
-        'zh-hant': { name: customI18n['zh-hant'] },
-        'zh-hans': { name: customI18n['zh-hans'] },
+        zhHant: { name: customI18n.zhHant },
+        zhHans: { name: customI18n.zhHans },
       }
     } else {
       // Fallback for unknown walk types
       i18nConfig = {
         en: { name: walkRef },
-        'zh-hant': { name: walkRef },
-        'zh-hans': { name: walkRef },
+        zhHant: { name: walkRef },
+        zhHans: { name: walkRef },
       }
     }
 
@@ -1029,10 +1029,10 @@ export class OmniCtx {
       type: 'neighbourhood',
       i18n: {
         en: { name: neighbourhood },
-        'zh-hant': {
+        zhHant: {
           name: selectedNeighbourhood?.i18n?.zhHant?.name || neighbourhood,
         },
-        'zh-hans': {
+        zhHans: {
           name: selectedNeighbourhood?.i18n?.zhHans?.name || neighbourhood,
         },
       },
@@ -1051,8 +1051,8 @@ export class OmniCtx {
       type: 'walk',
       i18n: {
         en: { name: `${projectName} by ${username}` },
-        'zh-hant': { name: `貢獻者 ${username}` },
-        'zh-hans': { name: `贡献者 ${username}` },
+        zhHant: { name: `貢獻者 ${username}` },
+        zhHans: { name: `贡献者 ${username}` },
       },
       items: features as (FeatureFromCollection | Feature)[],
     }
@@ -1187,13 +1187,13 @@ const getCollectionInitDefaults = (
 const _createCollectionI18n = (
   type: 'walk' | 'neighbourhood' | 'feature',
   identifier: string,
-  customI18n?: Record<Locale, string>,
-): Record<Locale, { name: string }> => {
+  customI18n?: Record<LocaleKey, string>,
+): Record<LocaleKey, { name: string }> => {
   if (customI18n) {
     return {
       en: { name: customI18n.en },
-      'zh-hant': { name: customI18n['zh-hant'] },
-      'zh-hans': { name: customI18n['zh-hans'] },
+      zhHant: { name: customI18n.zhHant },
+      zhHans: { name: customI18n.zhHans },
     }
   }
 
@@ -1202,14 +1202,14 @@ const _createCollectionI18n = (
     if (identifier === 'stars') {
       return {
         en: { name: m.omni__title_star_walks() },
-        'zh-hant': { name: m.omni__title_star_walks() },
-        'zh-hans': { name: m.omni__title_star_walks() },
+        zhHant: { name: m.omni__title_star_walks() },
+        zhHans: { name: m.omni__title_star_walks() },
       }
     } else if (identifier === 'visited') {
       return {
         en: { name: m.omni__title_visited_walks() },
-        'zh-hant': { name: m.omni__title_visited_walks() },
-        'zh-hans': { name: m.omni__title_visited_walks() },
+        zhHant: { name: m.omni__title_visited_walks() },
+        zhHans: { name: m.omni__title_visited_walks() },
       }
     }
   }
@@ -1217,8 +1217,8 @@ const _createCollectionI18n = (
   // Fallback
   return {
     en: { name: identifier },
-    'zh-hant': { name: identifier },
-    'zh-hans': { name: identifier },
+    zhHant: { name: identifier },
+    zhHans: { name: identifier },
   }
 }
 

@@ -10,7 +10,7 @@ import { OmniCollection, OmniMode } from '$lib/enums'
 // CONTEXT
 import { hasElevatedChrome } from '$lib/context/responsive.svelte'
 // I18N
-import { getI18n, getLocaleKey, getLocaleOrder, m, toLocaleCode } from '$lib/i18n'
+import { getI18n, getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
 // TYPES
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 import type {
@@ -18,7 +18,7 @@ import type {
   OmnibarResultSection,
 } from '$lib/bits/patterns/bars/omnibar'
 import type { DeepPartial, Locale, LocaleKey } from '$lib/types'
-import type { NewFeatureTask } from '$lib/db/zod/schema/task.types'
+import type { NewFeatureTask } from '$lib/types'
 // UTILS
 import { getOmnibarAvailableViewportHeight } from '$lib/bits/patterns/bars/omnibar/omnibar.utils'
 
@@ -81,8 +81,7 @@ export function useOmnibarModel(
     const locales = getLocaleOrder(getLocaleKey())
 
     for (const localeKey of locales) {
-      const localeCode = toLocaleCode(localeKey)
-      const entry = i18n[localeCode] ?? i18n[localeKey]
+      const entry = i18n[localeKey]
       const value = entry?.[field]
       const isGenerated = Boolean(entry?.[`${field}Gen`])
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { getLocale, getLocaleKey, toLocaleCode } from '$lib/i18n'
+import { getLocale, getLocaleKey } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // BITS
 import { Switch } from '$lib/bits'

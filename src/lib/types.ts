@@ -1009,7 +1009,7 @@ export type FeatureRowModel = {
 export type ActiveCollection = {
   id: string
   type: 'neighbourhood' | 'walk' | 'feature' | 'search'
-  i18n: Record<Locale, { name: string }>
+  i18n: Record<LocaleKey, { name: string }>
   items: (FeatureFromCollection | Feature)[]
 } | null
 
@@ -1361,7 +1361,10 @@ export type CollectionNavOptions = {
   focus?: boolean
   focusFeature?: boolean
   highlight?: boolean
-  navOptions?: Record<string, string>
+  navOptions?: {
+    paramsToDrop?: string[]
+    paramsToAdd?: Record<string, string>
+  }
 }
 
 export type ConfigureFormResourceResultOptions<Input> = {

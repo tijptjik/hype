@@ -7,7 +7,7 @@ import {
 import { applySpriteVariant, type MapStyleDefinition } from './definitions/common'
 // TYPES
 import type { StyleSpecification } from 'maplibre-gl'
-import type { Locale } from '../../types'
+import type { LocaleKey } from '../../types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -102,7 +102,7 @@ export const buildMapStyle = (
   key: MapStyleKey,
   options?: {
     noLabels?: boolean
-    locale?: Locale
+    locale?: LocaleKey
   },
 ): StyleSpecification => {
   const definition = getMapStyleDefinition(key)

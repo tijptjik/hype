@@ -30,7 +30,7 @@ import {
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 // I18N
-import { toLocaleCode } from '$lib/i18n'
+import { toLocaleKebab } from '$lib/i18n'
 // TYPES
 import type {
   Database,
@@ -162,7 +162,7 @@ const upsertFeaturePropertyI18n = async (
   const i18nRecords = Object.entries(i18n).map(([locale, data]) => ({
     featureId,
     propertyId,
-    locale: toLocaleCode(locale as LocaleKey) as Locale,
+    locale: toLocaleKebab(locale as LocaleKey) as Locale,
     value: data.value ?? null,
     valueGen: Boolean(data.valueGen),
   }))

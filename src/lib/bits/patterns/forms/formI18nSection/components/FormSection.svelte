@@ -1,5 +1,5 @@
 <script lang="ts">
-import { toLocaleCode } from '$lib/i18n'
+import { toLocaleKebab } from '$lib/i18n'
 import FormI18nTranslationBar from './FormI18nTranslationBar.svelte'
 import type { LocaleKey } from '$lib/types'
 import type { Snippet } from 'svelte'
@@ -96,7 +96,7 @@ $effect(() => {
   {/if}
   {#if showsTranslationBar && locale}
     <FormI18nTranslationBar
-      targetLocale={toLocaleCode(locale)}
+      targetLocale={toLocaleKebab(locale)}
       {localeCodeClass}
       {onTranslate}
       {onResetLocale}

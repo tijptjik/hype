@@ -1,5 +1,5 @@
 // I18N
-import { toLocaleCode, toLocaleKey } from '$lib/i18n'
+import { toLocaleKebab, toLocaleKey } from '$lib/i18n'
 import { toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { HubSubscriptionService } from '$lib/enums'
@@ -28,11 +28,24 @@ import type {
   HubIdentityPatch,
 } from '$lib/db/zod/schema/hub.types'
 
+type HubFormLocale = HubFormInput['data']['i18n']['en']
+type HubFormRootForDefaults = {
+  legalContactAddress?: string | null | undefined
+}
+
+function normalizeHubSubscriptionService(
+  subscriptionService: Hub['subscriptionService'] | null | undefined,
+): NonNullable<HubFormInput['data']['subscriptionService']> {
+  return subscriptionService === HubSubscriptionService.substack
+    ? HubSubscriptionService.substack
+    : HubSubscriptionService.substack
+}
+
 function normalizeHubFormLocale(
-  root: Pick<HubFormInput['data'], 'legalContactAddress'> | null | undefined,
-  locale: Partial<HubFormInput['data']['i18n']['en']> | null | undefined,
+  root: HubFormRootForDefaults | null | undefined,
+  locale: Partial<HubFormLocale> | null | undefined,
   localeKey: 'en' | 'zhHans' | 'zhHant',
-): HubFormInput['data']['i18n']['en'] {
+): HubFormLocale {
   return {
     name: locale?.name ?? '',
     nameShort: locale?.nameShort ?? '',
@@ -128,7 +141,7 @@ export function toHubFormInput(data?: Hub | null): HubFormInput {
     domain: data.domain ?? '',
     legalContactAddress: data.legalContactAddress ?? '',
     isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
-    subscriptionService: data.subscriptionService ?? HubSubscriptionService.substack,
+    subscriptionService: normalizeHubSubscriptionService(data.subscriptionService),
     subscriptionId: data.subscriptionId ?? '',
     subscriptionSessionCookie: data.subscriptionSessionCookie ?? '',
     subscriptionPlacement: {
@@ -258,7 +271,7 @@ export function toHubIdentityPatch(
   locale: Locale,
 ): HubIdentityPatch {
   const localeKey = toLocaleKey(locale)
-  const entityLocale = toLocaleCode(localeKey)
+  const entityLocale = toLocaleKebab(localeKey)
   const localeData = formData.data?.i18n?.[localeKey]
 
   return {
