@@ -10,6 +10,7 @@ import {
   applyAddressAbbreviations,
   getNormalisedCountry,
   districtCodeToName,
+  parseSubPremisesComponent,
 } from '$lib/utils/geocoding'
 import { translateText } from '$lib/api/external/translation'
 // DATA
@@ -22,6 +23,7 @@ import type {
   ParsedReverseGeocodeResult,
   ALSResult,
   ALSSuggestedAddressItem,
+  Locale,
   LocaleKey,
 } from '$lib/types'
 
@@ -198,20 +200,44 @@ export async function fetchForwardGeocodeALSResult(
   _neighbourhood: string | null = null,
   minConfidence: number = 60,
   maxResults: number = 1,
+  floor: string | null = null,
+  unit: string | null = null,
 ): Promise<ALSResult> {
   const endPoint = 'https://www.als.gov.hk/lookup'
-  const response = await fetch(
-    `${endPoint}?q=${encodeURIComponent(address)}&t=${minConfidence}&n=${maxResults}`,
-    {
-      headers: {
-        Accept: 'application/json',
-        'Accept-Encoding': 'gzip',
-        'Accept-Language': 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7,zh-hant;q=0.7',
-      },
+  const params = new URLSearchParams({
+    q: address,
+    t: String(minConfidence),
+    n: String(maxResults),
+    '3d': floor || unit ? '1' : '0',
+  })
+  if (floor) params.set('floor', floor)
+  if (unit) params.set('unit', unit)
+
+  const response = await fetch(`${endPoint}?${params}`, {
+    headers: {
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip',
+      'Accept-Language': 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7,zh-hant;q=0.7',
     },
-  )
+  })
   const result = await response.json()
   return result
+}
+
+/**
+ * Fetch forward geocoding results for an address.
+ * @param address - The address query to geocode.
+ * @param floor - Optional floor for ALS 3D sub-premises lookup.
+ * @param unit - Optional unit for ALS 3D sub-premises lookup.
+ * @returns The ALS geocoding result.
+ * @remarks Compatibility wrapper for the revived import flow.
+ */
+export async function fetchALSResultFromAddress(
+  address: string,
+  floor: string | null = null,
+  unit: string | null = null,
+): Promise<ALSResult> {
+  return fetchForwardGeocodeALSResult(address, null, 60, 1, floor, unit)
 }
 
 export async function geoAddressLookup(geoAddressCode: string): Promise<ALSResult> {
@@ -370,6 +396,9 @@ export async function processForwardGeocodeResult(
   genDisplayAddress: boolean,
   lng: number,
   lat: number,
+  subpremisesRaw?: string | null,
+  _subpremisesLocale: Locale = 'en',
+  rawAddress?: string | null,
 ): Promise<ParsedReverseGeocodeResult | null> {
   if (!result.SuggestedAddress?.length) return null
 
@@ -398,11 +427,13 @@ export async function processForwardGeocodeResult(
     ? parseALSResultToDisplay(address, neighbourhoodZhHant, 'zh-hant')
     : undefined
   let displayAddressZhHans: string | undefined
+  const parsedSubpremises = parseSubPremisesComponent(subpremisesRaw)
 
   // Prepare Chinese address properties
   let addressPropsZhHant: Partial<AddressProperties> = {}
   if ('ChiPremisesAddress' in pa) {
     addressPropsZhHant = {
+      ...parsedSubpremises,
       buildingName: pa.ChiPremisesAddress.BuildingName || undefined,
       buildingNumberFrom: pa.ChiPremisesAddress.ChiStreet?.BuildingNoFrom || undefined,
       buildingNumberTo: pa.ChiPremisesAddress.ChiStreet?.BuildingNoTo || undefined,
@@ -417,6 +448,7 @@ export async function processForwardGeocodeResult(
       ),
       region: getNormalisedRegion(pa.ChiPremisesAddress?.Region, 'zh-hant'),
       country: getNormalisedCountry('Hong Kong', 'zh-hant'),
+      rawAddress: rawAddress ?? undefined,
     }
   }
 
@@ -429,12 +461,15 @@ export async function processForwardGeocodeResult(
         !platformEnv?.PUBLIC_AZURE_TRANSLATION_REGION ||
         !platformEnv?.AZURE_TRANSLATION_KEY
       ) {
-        displayAddressZhHans = displayAddressZhHant
+        displayAddressZhHans = displayAddressZhHant ?? undefined
         addressPropsZhHans = { ...addressPropsZhHant }
       } else {
-        const propsToTranslate = Object.values(addressPropsZhHant).filter(Boolean)
+        const propsToTranslate = Object.values(addressPropsZhHant).filter(
+          (value): value is string => typeof value === 'string' && value !== '',
+        )
+        const zhHantDisplayAddress = displayAddressZhHant ?? ''
         const [translatedDisplayAddress, ...translatedProps] = await translateText(
-          [displayAddressZhHant, ...propsToTranslate],
+          [zhHantDisplayAddress, ...propsToTranslate],
           'zh-hant',
           'zh-hans',
           platformEnv.PUBLIC_AZURE_TRANSLATION_REGION,
@@ -457,6 +492,7 @@ export async function processForwardGeocodeResult(
   }
 
   const addressPropertiesEn: AddressProperties = {
+    ...parsedSubpremises,
     buildingName: titleCase(pa.EngPremisesAddress.BuildingName),
     buildingNumberFrom: pa.EngPremisesAddress.EngStreet.BuildingNoFrom,
     buildingNumberTo: pa.EngPremisesAddress.EngStreet.BuildingNoTo,
@@ -483,6 +519,7 @@ export async function processForwardGeocodeResult(
     ),
     region: getNormalisedRegion(pa.EngPremisesAddress?.Region, 'en'),
     country: getNormalisedCountry('Hong Kong', 'en'),
+    rawAddress: rawAddress ?? undefined,
   }
 
   const addressMeta: AddressMeta = {
