@@ -1,5 +1,7 @@
-<script lang="ts" generics="T extends { id: string }">
+<script lang="ts" generics="T extends ResourceIndexEntity">
 import type { Snippet } from 'svelte'
+
+type ResourceIndexEntity = { id: string }
 
 type ResourceCardRowProps<T extends { id: string }> = {
   entities: T[]
