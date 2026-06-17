@@ -85,7 +85,7 @@ export function useImageProviderModel(
       untrack(() =>
         getImageById({
           id: urlImageId,
-          meta: { isAdminRequest: true },
+          meta: options.isAdminMode ? { isAdminRequest: true } : undefined,
         }).then(result => {
           if (requestedImageId === urlImageId) {
             targetImage = (result?.data as ImageCtxEnvelope | null | undefined) ?? null
