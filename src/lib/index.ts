@@ -1,5 +1,5 @@
-import { getLocale } from './i18n'
-import { MOBILE_MAX_WIDTH } from '$lib/constants'
+import { HUB_ORIGINS } from './constants'
+import { getDatetimeLocale } from './i18n'
 // COMPONENTS
 // TYPES
 import type { Writable } from 'svelte/store'
@@ -15,6 +15,15 @@ import type {
   FeatureForm,
   Task,
 } from './types'
+
+export {
+  ADMIN_PATH,
+  API_PATH,
+  HUB_ORIGINS,
+  isMobile,
+  NEW_REF,
+  NEW_TITLE,
+} from './constants'
 
 /**
  * Convenience functions to prevent event handlers from being called multiple times
@@ -62,13 +71,7 @@ export function loadScript(src: string) {
 }
 
 export function formatDate(dateString: string): string {
-  const datetimeLocale = {
-    en: 'en-HK',
-    'zh-hant': 'zh-hant',
-    'zh-hans': 'zh-hans',
-  }[getLocale()]
-
-  return new Date(dateString).toLocaleDateString(datetimeLocale, {
+  return new Date(dateString).toLocaleDateString(getDatetimeLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -295,13 +298,6 @@ export const derivedAsync = async <T>(promiseFn: () => Promise<T>) => {
   return $derived(await promise) as T
 }
 
-// CONFIG
-export const targetLanguageTags: Locale[] = ['zh-hant', 'zh-hans']
-export const NEW_TITLE = 'New'
-export const NEW_REF = NEW_TITLE.toLowerCase()
-export const ADMIN_PATH = '/admin'
-export const API_PATH = '/api'
-
 export const capitalizeFirstLetter = (text: string | null) => {
   if (!text) return null
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -314,8 +310,6 @@ export const fetchOrThrow = async <T>(url: string): Promise<T> => {
   }
   return (await response.json()) as T
 }
-
-const HUB_ORIGINS = ['hype.hk', 'hkghostsigns.com', 'breadline.hk'] as const
 
 const toHostname = (originOrHostname: string): string => {
   if (!originOrHostname) return ''
@@ -356,8 +350,4 @@ export const resolveAppStage = (originOrHostname = ''): PreviewStage => {
   }
 
   return 'local'
-}
-
-export const isMobile = () => {
-  return typeof window !== 'undefined' && window.innerWidth < MOBILE_MAX_WIDTH
 }
