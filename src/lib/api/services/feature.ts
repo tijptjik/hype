@@ -21,7 +21,7 @@ import {
 } from '$lib/db/services/feature'
 import { probeLayerForUpdate } from '$lib/db/services/layer'
 // I18N
-import { toLocaleKey } from '$lib/i18n'
+import { supportedLocaleKeys, toFormLocaleRecord, toLocaleKey } from '$lib/i18n'
 // SCHEMA
 import { feature, layer } from '$lib/db/schema/index'
 import {
@@ -33,11 +33,7 @@ import {
   FeatureListProfileAPI,
 } from '$lib/db/zod/schema/feature'
 // ENUMS
-import {
-  HierarchicalResource,
-  ImageContextResource,
-  supportedLocales,
-} from '$lib/enums'
+import { HierarchicalResource, ImageContextResource } from '$lib/enums'
 // CLIENT
 import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
@@ -66,9 +62,10 @@ import type {
   UserContributedFeature,
 } from '$lib/db/zod/schema/feature.types'
 
-const requiredLocaleKeys = supportedLocales.map(locale =>
-  toLocaleKey(locale),
-) as LocaleKey[]
+const requiredLocaleKeys = supportedLocaleKeys
+
+type DraftFeatureLocaleOutput = FeatureNew['i18n'][LocaleKey]
+type DraftPropertyLocaleInput = { value?: string; valueGen?: boolean }
 
 type PreparedUserContributedFeatureDraft = {
   validatedFeature: FeatureNew
@@ -76,6 +73,32 @@ type PreparedUserContributedFeatureDraft = {
 }
 
 type UserContributedFeatureDraftStage = 'draft' | 'final'
+
+/**
+ * Checks whether a locale bucket contains any meaningful user-provided content.
+ * @param entry Candidate locale entry.
+ * @returns Whether the locale entry has at least one non-empty field.
+ */
+function hasMeaningfulLocaleContent(
+  entry: Record<string, unknown> | null | undefined,
+): boolean {
+  if (!entry) return false
+
+  return Object.entries(entry).some(([key, value]) => {
+    if (key === 'locale') return false
+    if (typeof value === 'string') return value.trim().length > 0
+    return value !== null && value !== undefined
+  })
+}
+
+/**
+ * Returns a trimmed string value or an empty string.
+ * @param value Candidate string value.
+ * @returns Trimmed string when present.
+ */
+function toTrimmedString(value: string | null | undefined): string {
+  return value?.trim() ?? ''
+}
 
 const stripFeaturePropertyI18n = <T extends { properties?: unknown }>(input: T): T => ({
   ...input,
@@ -772,24 +795,23 @@ const prepareUserContributedFeatureDraft = async (
     throw new Error('Layer not found')
   }
 
-  const providedLocales = Object.keys(newFeature.i18n).filter(locale => {
-    const textObj = newFeature.i18n[locale as Locale]
-    if (!textObj) return false
+  const providedLocaleKeys = supportedLocaleKeys.filter(localeKey =>
+    hasMeaningfulLocaleContent(
+      newFeature.i18n[localeKey] as Record<string, unknown> | undefined,
+    ),
+  )
 
-    return Object.entries(textObj).some(
-      ([key, value]) => key !== 'locale' && value !== null && value !== undefined,
-    )
-  }) as Locale[]
-
-  const enrichedI18n: Partial<Record<LocaleKey, unknown>> = {}
-  const sourceLocale = providedLocales[0]
-  const sourceTextObj = sourceLocale ? newFeature.i18n[sourceLocale] : null
+  const enrichedI18n: Partial<Record<LocaleKey, DraftFeatureLocaleOutput>> = {}
+  const sourceLocaleKey =
+    providedLocaleKeys.find(localeKey =>
+      Boolean(newFeature.i18n[localeKey]?.title?.trim()),
+    ) ?? providedLocaleKeys[0]
+  const sourceTextObj = sourceLocaleKey ? newFeature.i18n[sourceLocaleKey] : null
   const hasSourceTitle = Boolean(sourceTextObj?.title?.trim())
 
-  if (!sourceLocale || !hasSourceTitle) {
-    for (const locale of supportedLocales) {
-      const localeKey = toLocaleKey(locale)
-      const localeValue = newFeature.i18n[locale]
+  if (!sourceLocaleKey || !hasSourceTitle) {
+    for (const localeKey of supportedLocaleKeys) {
+      const localeValue = newFeature.i18n[localeKey]
 
       enrichedI18n[localeKey] = {
         title: localeValue?.title?.trim() ?? '',
@@ -806,15 +828,15 @@ const prepareUserContributedFeatureDraft = async (
       throw new Error('Source locale must have content')
     }
 
-    for (const locale of supportedLocales) {
-      const localeKey = toLocaleKey(locale)
-      const isSourceLocale = locale === sourceLocale
+    for (const localeKey of supportedLocaleKeys) {
+      const targetTextObj = newFeature.i18n[localeKey]
+      const isSourceLocale = localeKey === sourceLocaleKey
 
       if (isSourceLocale) {
         enrichedI18n[localeKey] = {
-          title: sourceTextObj.title,
-          description: sourceTextObj.description || '',
-          displayAddress: sourceTextObj.displayAddress || '',
+          title: toTrimmedString(sourceTextObj.title),
+          description: toTrimmedString(sourceTextObj.description),
+          displayAddress: toTrimmedString(sourceTextObj.displayAddress),
           titleGen: false,
           descriptionGen: false,
           displayAddressGen: false,
@@ -823,10 +845,17 @@ const prepareUserContributedFeatureDraft = async (
         continue
       }
 
+      const targetTitle = toTrimmedString(targetTextObj?.title)
+      const targetDescription = toTrimmedString(targetTextObj?.description)
+      const targetDisplayAddress = toTrimmedString(targetTextObj?.displayAddress)
+      const sourceTitle = toTrimmedString(sourceTextObj.title)
+      const sourceDescription = toTrimmedString(sourceTextObj.description)
+      const sourceDisplayAddress = toTrimmedString(sourceTextObj.displayAddress)
+
       const fieldsToTranslate = [
-        sourceTextObj.title,
-        sourceTextObj.description,
-        sourceTextObj.displayAddress,
+        !targetTitle && sourceTitle ? sourceTitle : null,
+        !targetDescription && sourceDescription ? sourceDescription : null,
+        !targetDisplayAddress && sourceDisplayAddress ? sourceDisplayAddress : null,
       ].filter(
         (value): value is string => typeof value === 'string' && value.length > 0,
       )
@@ -837,14 +866,14 @@ const prepareUserContributedFeatureDraft = async (
         try {
           translatedValues = await translateText(
             fieldsToTranslate,
-            sourceLocale,
-            locale,
+            sourceLocaleKey,
+            localeKey,
             region,
             subscriptionKey,
           )
         } catch (translationError) {
           console.error(
-            `Translation failed for ${sourceLocale} -> ${locale}:`,
+            `Translation failed for ${sourceLocaleKey} -> ${localeKey}:`,
             translationError,
           )
         }
@@ -852,22 +881,27 @@ const prepareUserContributedFeatureDraft = async (
 
       let translationIndex = 0
       const translatedTitle =
-        sourceTextObj.title && translationIndex < translatedValues.length
+        !targetTitle && sourceTitle && translationIndex < translatedValues.length
           ? translatedValues[translationIndex++]
           : null
       const translatedDescription =
-        sourceTextObj.description && translationIndex < translatedValues.length
+        !targetDescription &&
+        sourceDescription &&
+        translationIndex < translatedValues.length
           ? translatedValues[translationIndex++]
           : null
       const translatedDisplayAddress =
-        sourceTextObj.displayAddress && translationIndex < translatedValues.length
+        !targetDisplayAddress &&
+        sourceDisplayAddress &&
+        translationIndex < translatedValues.length
           ? translatedValues[translationIndex++]
           : null
 
       enrichedI18n[localeKey] = {
-        title: translatedTitle || sourceTextObj.title,
-        description: translatedDescription || sourceTextObj.description || '',
-        displayAddress: translatedDisplayAddress || sourceTextObj.displayAddress || '',
+        title: targetTitle || translatedTitle || sourceTitle,
+        description: targetDescription || translatedDescription || sourceDescription,
+        displayAddress:
+          targetDisplayAddress || translatedDisplayAddress || sourceDisplayAddress,
         titleGen: Boolean(translatedTitle),
         descriptionGen: Boolean(translatedDescription),
         displayAddressGen: Boolean(translatedDisplayAddress),
@@ -880,21 +914,26 @@ const prepareUserContributedFeatureDraft = async (
     (newFeature.properties || []).map(async property => {
       if (!property.i18n) return property
 
-      const propertyLocales = Object.keys(property.i18n) as Locale[]
-      if (propertyLocales.length === 0) return property
-      const propertySourceLocale = propertyLocales[0]
-      const propertySourceTextObj = property.i18n[propertySourceLocale]
-      if (!propertySourceTextObj?.value) return property
+      const propertyI18nByLocale =
+        toFormLocaleRecord(property.i18n as Record<string, DraftPropertyLocaleInput>) ??
+        {}
+      const propertySourceLocaleKey = supportedLocaleKeys.find(localeKey =>
+        Boolean(propertyI18nByLocale[localeKey]?.value?.trim()),
+      )
+      if (!propertySourceLocaleKey) return property
+
+      const propertySourceTextObj = propertyI18nByLocale[propertySourceLocaleKey]
+      if (!propertySourceTextObj?.value?.trim()) return property
 
       const enrichedPropertyI18n: Partial<
         Record<LocaleKey, { value: string; valueGen: boolean }>
       > = {}
 
-      for (const locale of supportedLocales) {
-        const localeKey = toLocaleKey(locale)
-        if (locale === propertySourceLocale) {
+      for (const localeKey of supportedLocaleKeys) {
+        const currentValue = toTrimmedString(propertyI18nByLocale[localeKey]?.value)
+        if (localeKey === propertySourceLocaleKey || currentValue) {
           enrichedPropertyI18n[localeKey] = {
-            value: propertySourceTextObj.value,
+            value: currentValue || toTrimmedString(propertySourceTextObj.value),
             valueGen: false,
           }
           continue
@@ -907,9 +946,9 @@ const prepareUserContributedFeatureDraft = async (
             translatedValue =
               (
                 await translateText(
-                  [propertySourceTextObj.value],
-                  propertySourceLocale,
-                  locale,
+                  [toTrimmedString(propertySourceTextObj.value)],
+                  propertySourceLocaleKey,
+                  localeKey,
                   region,
                   subscriptionKey,
                 )
@@ -918,7 +957,7 @@ const prepareUserContributedFeatureDraft = async (
         }
 
         enrichedPropertyI18n[localeKey] = {
-          value: translatedValue || propertySourceTextObj.value,
+          value: translatedValue || toTrimmedString(propertySourceTextObj.value),
           valueGen: Boolean(translatedValue),
         }
       }
