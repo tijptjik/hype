@@ -1,12 +1,27 @@
 // DRIZZLE
 import type { SQL } from 'drizzle-orm'
+// UTILS
+import { nanoid } from 'nanoid'
 // API
 import { applyQueryFilters } from '$lib/api'
-import { toBooleanOrUndefined } from '$lib/api/services'
-import { buildLayerVisibilityAndOwnershipConditions } from '$lib/api/services/authz/layer'
+import {
+  getDuplicateValues,
+  requireValue,
+  toBooleanOrUndefined,
+} from '$lib/api/services'
+import {
+  authorizeLayerCreateForSubmission,
+  buildLayerVisibilityAndOwnershipConditions,
+} from '$lib/api/services/authz/layer'
 // DB
 import { transformI18nSafely } from '$lib/db'
 import { layer } from '$lib/db/schema'
+import {
+  createI18n,
+  createLayer as insertLayer,
+  updateProperties,
+} from '$lib/db/services/layer'
+import { probeProjectForUpdate } from '$lib/db/services/project'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
   LayerAdminProfileAPI,
@@ -32,6 +47,7 @@ import type {
   LayerDBRaw,
   LayerEntityByProfile,
   LayerListByProfile,
+  LayerNew,
   LayerProfile,
 } from '$lib/db/zod/schema/layer.types'
 
@@ -54,6 +70,9 @@ import type {
 // NORMALIZATION
 // - toComparableLayerProperties
 // - toLayerPrisms
+//
+// COMMANDS
+// - createLayerFromSubmission
 //
 // QUERY CONTEXT
 // - toLookupConditions
@@ -179,9 +198,10 @@ const normalizeLayerPropertiesForProfile = (
         values: normalizedValues,
       },
     }
-  }) as LayerDBRaw['properties']
+  }) as NonNullable<LayerDBRaw['properties']>
 
-  const deduped = new Map<string, (typeof normalized)[number]>()
+  type NormalizedLayerProperty = NonNullable<LayerDBRaw['properties']>[number]
+  const deduped = new Map<string, NormalizedLayerProperty>()
   for (const propertyRow of normalized) {
     const propertyId =
       typeof propertyRow?.propertyId === 'string'
@@ -341,6 +361,114 @@ export const toLayerPrisms = (prisms?: Prisms): Prisms => ({
   project: Array.isArray(prisms?.project) ? prisms.project : [],
   layer: Array.isArray(prisms?.layer) ? prisms.layer : [],
 })
+
+/********************
+ *  COMMANDS
+ ************/
+type LayerSubmittedProperty = {
+  propertyId: string
+  isVisible?: boolean
+  isUserContributable?: boolean
+}
+
+type LayerCreateFailureHandler = (message: string) => never
+
+type CreateLayerFromSubmissionParams = {
+  db: Database
+  user: SessionUser
+  userRoles: UserRoleDisco[]
+  submittedData: LayerNew
+  submittedProperties: LayerSubmittedProperty[]
+  onInvalid: LayerCreateFailureHandler
+  onNotFound?: LayerCreateFailureHandler
+  onForbidden?: LayerCreateFailureHandler
+  onInvalidProperties?: LayerCreateFailureHandler
+}
+
+/**
+ * Creates a layer from normalized submission data shared by form and command remotes.
+ * Validates duplicate property assignments, resolves project scope, checks authz, and
+ * persists the layer, i18n rows, and property assignments in one path.
+ *
+ * @param params - Shared create context and normalized layer submission payload.
+ * @param params.db - Database handle used for scope lookup and persistence.
+ * @param params.user - Current session user.
+ * @param params.userRoles - Current user's resolved role rows.
+ * @param params.submittedData - Parsed layer create payload.
+ * @param params.submittedProperties - Normalized property assignments for the layer.
+ * @param params.onInvalid - Failure handler for generic validation or authz issues.
+ * @param params.onNotFound - Optional handler for missing project scope.
+ * @param params.onForbidden - Optional handler for authorization failures.
+ * @param params.onInvalidProperties - Optional property-field-specific failure handler.
+ * @returns Persisted layer row containing the created id and timestamps.
+ * @remarks
+ * Callers provide the failure handlers so remote forms can surface field-aware validation
+ * issues while command remotes can translate the same failures into HTTP errors.
+ */
+export const createLayerFromSubmission = async ({
+  db,
+  user,
+  userRoles,
+  submittedData,
+  submittedProperties,
+  onInvalid,
+  onNotFound,
+  onForbidden,
+  onInvalidProperties,
+}: CreateLayerFromSubmissionParams): Promise<LayerDB> => {
+  const invalidProperties = onInvalidProperties ?? onInvalid
+  const notFound = onNotFound ?? onInvalid
+  const forbidden = onForbidden ?? onInvalid
+
+  const duplicateSubmittedPropertyIds = getDuplicateValues(
+    submittedProperties
+      .map(property => property?.propertyId)
+      .filter(
+        (propertyId): propertyId is string =>
+          typeof propertyId === 'string' && propertyId.trim().length > 0,
+      ),
+  )
+
+  if (duplicateSubmittedPropertyIds.length > 0) {
+    invalidProperties(
+      `INVALID: Duplicate properties submitted (${Array.from(new Set(duplicateSubmittedPropertyIds)).join(', ')})`,
+    )
+  }
+
+  const projectScope = requireValue(
+    await probeProjectForUpdate(db, submittedData.projectId as Id),
+    () => notFound('PROJECT_NOT_FOUND'),
+  )
+
+  // Evaluate create permissions against the resolved project scope before persistence.
+  const createDecision = authorizeLayerCreateForSubmission({
+    user,
+    userRoles,
+    resource: {
+      organisationId: projectScope.organisationId,
+      projectId: submittedData.projectId,
+      hubId: projectScope.hubId,
+    },
+    submittedData,
+  })
+  if (!createDecision.allowed) {
+    forbidden(createDecision.code ?? 'INSUFFICIENT_ROLE')
+  }
+
+  const created = await insertLayer(db, {
+    id: nanoid(12),
+    organisationId: projectScope.organisationId,
+    projectId: submittedData.projectId,
+    metadata: submittedData.metadata,
+    isDefaultVisible: submittedData.isDefaultVisible,
+    isPublished: false,
+    isArchived: false,
+  })
+  await createI18n(db, submittedData.i18n, created.id)
+  await updateProperties(db, created.id, submittedProperties)
+
+  return created
+}
 
 /********************
  *  QUERY CONTEXT

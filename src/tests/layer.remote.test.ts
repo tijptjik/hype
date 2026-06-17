@@ -3,6 +3,11 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
+type MockDecision = {
+  allowed: boolean
+  code?: string
+}
+
 const {
   mockAuthorizeLayerListForContext,
   mockAuthorizeLayerReadForProbe,
@@ -37,23 +42,33 @@ const {
   mockCascadeLayerPublishedStateToDescendants,
   mockGuardedContext,
 } = vi.hoisted(() => ({
-  mockAuthorizeLayerListForContext: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeLayerReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeLayerCreateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeLayerUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeLayerPublishForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeLayerDeleteForSubmission: vi.fn(() => ({ allowed: true })),
-  mockProbeLayerQuery: vi.fn(async () => null),
+  mockAuthorizeLayerListForContext: vi.fn<() => MockDecision>(() => ({
+    allowed: true,
+  })),
+  mockAuthorizeLayerReadForProbe: vi.fn<() => MockDecision>(() => ({ allowed: true })),
+  mockAuthorizeLayerCreateForSubmission: vi.fn<() => MockDecision>(() => ({
+    allowed: true,
+  })),
+  mockAuthorizeLayerUpdateForSubmission: vi.fn<() => MockDecision>(() => ({
+    allowed: true,
+  })),
+  mockAuthorizeLayerPublishForSubmission: vi.fn<() => MockDecision>(() => ({
+    allowed: true,
+  })),
+  mockAuthorizeLayerDeleteForSubmission: vi.fn<() => MockDecision>(() => ({
+    allowed: true,
+  })),
+  mockProbeLayerQuery: vi.fn<() => Promise<unknown | null>>(async () => null),
   mockResolveLayerCommandProbe: vi.fn(),
-  mockProbeLayerForUpdate: vi.fn(async () => null),
-  mockProbeProjectForUpdate: vi.fn(async () => null),
+  mockProbeLayerForUpdate: vi.fn<() => Promise<unknown | null>>(async () => null),
+  mockProbeProjectForUpdate: vi.fn<() => Promise<unknown | null>>(async () => null),
   mockListLayers: vi.fn(async () => ({
     data: [],
     limit: 20,
     offset: 0,
     totalCount: 0,
   })),
-  mockLoadLayer: vi.fn(async () => null),
+  mockLoadLayer: vi.fn<() => Promise<unknown | null>>(async () => null),
   mockCreateLayer: vi.fn(async () => ({
     id: 'layer-1',
     modifiedAt: '2026-03-18T00:00:01.000Z',
@@ -61,9 +76,15 @@ const {
   mockCreateI18n: vi.fn(async () => undefined),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockUpdateProperties: vi.fn(async () => undefined),
-  mockUpdateLayerByIdWithConcurrency: vi.fn(async () => null),
-  mockUpdateLayerPublishedStateById: vi.fn(async () => null),
-  mockUpdateLayerArchivedStateById: vi.fn(async () => null),
+  mockUpdateLayerByIdWithConcurrency: vi.fn<() => Promise<unknown | null>>(
+    async () => null,
+  ),
+  mockUpdateLayerPublishedStateById: vi.fn<() => Promise<unknown | null>>(
+    async () => null,
+  ),
+  mockUpdateLayerArchivedStateById: vi.fn<() => Promise<unknown | null>>(
+    async () => null,
+  ),
   mockToQueryConditions: vi.fn(() => ({ conditions: [], filtersToApply: {} })),
   mockToLayerPrisms: vi.fn((value: unknown) => value),
   mockToLookupConditions: vi.fn((params: unknown) => params),
@@ -177,17 +198,21 @@ vi.mock('$lib/api/services', () => ({
   }),
 }))
 
-vi.mock('$lib/api/services/layer', () => ({
-  getLayerWithRelations: mockGetLayerWithRelations,
-  toComparableLayerProperties: mockToComparableLayerProperties,
-  toEntityResponseShape: mockToEntityResponseShape,
-  toListResponseShape: mockToListResponseShape,
-  toLayerProfile: mockToLayerProfile,
-  toLayerPrisms: mockToLayerPrisms,
-  toLookupConditions: mockToLookupConditions,
-  toQueryConditions: mockToQueryConditions,
-  toRequestedListState: mockToRequestedListState,
-}))
+vi.mock('$lib/api/services/layer', async importOriginal => {
+  const actual = await importOriginal<typeof import('$lib/api/services/layer')>()
+  return {
+    ...actual,
+    getLayerWithRelations: mockGetLayerWithRelations,
+    toComparableLayerProperties: mockToComparableLayerProperties,
+    toEntityResponseShape: mockToEntityResponseShape,
+    toListResponseShape: mockToListResponseShape,
+    toLayerProfile: mockToLayerProfile,
+    toLayerPrisms: mockToLayerPrisms,
+    toLookupConditions: mockToLookupConditions,
+    toQueryConditions: mockToQueryConditions,
+    toRequestedListState: mockToRequestedListState,
+  }
+})
 
 vi.mock('$lib/api/services/authz', () => ({
   authorizeLayerCreateForSubmission: mockAuthorizeLayerCreateForSubmission,
@@ -196,6 +221,7 @@ vi.mock('$lib/api/services/authz', () => ({
   authorizeLayerPublishForSubmission: mockAuthorizeLayerPublishForSubmission,
   authorizeLayerReadForProbe: mockAuthorizeLayerReadForProbe,
   authorizeLayerUpdateForSubmission: mockAuthorizeLayerUpdateForSubmission,
+  shouldLogAuthzDeny: () => false,
   ensureLayerCommandAllowed: (
     decision: { allowed: boolean; code?: string },
     toIssueDetailMessage?: (code: string) => string,
@@ -252,7 +278,7 @@ vi.mock('$lib/i18n', async importOriginal => {
   }
 })
 
-let remote: Awaited<typeof import('$lib/api/server/layer.remote')>
+let remote: any
 
 const matrix = createAuthzMatrixReporter('layer.remote')
 
