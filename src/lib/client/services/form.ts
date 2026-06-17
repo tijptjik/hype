@@ -1,6 +1,6 @@
 import { toast } from 'svelte-sonner'
 import { onMount, untrack } from 'svelte'
-import { getLocale, toLocaleCode, toLocaleKey, translateI18nFields } from '$lib/i18n'
+import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
 import { m } from '$lib/i18n'
 import type { Component } from 'svelte'
 import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'

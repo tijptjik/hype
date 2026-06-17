@@ -23,7 +23,6 @@ import type {
   ParsedReverseGeocodeResult,
   ALSResult,
   ALSSuggestedAddressItem,
-  Locale,
   LocaleKey,
 } from '$lib/types'
 
@@ -397,7 +396,6 @@ export async function processForwardGeocodeResult(
   lng: number,
   lat: number,
   subpremisesRaw?: string | null,
-  _subpremisesLocale: Locale = 'en',
   rawAddress?: string | null,
 ): Promise<ParsedReverseGeocodeResult | null> {
   if (!result.SuggestedAddress?.length) return null

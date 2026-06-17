@@ -1,11 +1,12 @@
 import { layers, namedFlavor } from '@protomaps/basemaps'
 import type { StyleSpecification } from 'maplibre-gl'
 
-import type { Locale } from '../../../types'
+import { toProtomapLocale } from '$lib/i18n'
+import type { LocaleKey } from '../../../types'
 
 export type StyleBuildOptions = {
   noLabels?: boolean
-  locale?: Locale
+  locale?: LocaleKey
 }
 
 export const MAP_STYLE_VARIANTS = [
@@ -74,7 +75,7 @@ export const hideSymbolLayers = (style: StyleSpecification): StyleSpecification 
 
 export const getLocaleTextField = (
   layerId: string,
-  locale: Locale,
+  locale: LocaleKey,
 ): unknown[] | undefined => {
   if (layerId === 'address_label') {
     return ['get', 'addr_housenumber']
@@ -131,17 +132,6 @@ export const getLocaleTextField = (
   ]
 }
 
-const toProtomapsLang = (locale: Locale): string => {
-  switch (locale) {
-    case 'zh-hans':
-      return 'zh-Hans'
-    case 'zh-hant':
-      return 'zh-Hant'
-    default:
-      return 'en'
-  }
-}
-
 export const buildNamedProtomapsStyle = (
   flavorName: NamedProtomapsFlavor,
   { noLabels = false, locale = 'en' }: StyleBuildOptions = {},
@@ -154,7 +144,7 @@ export const buildNamedProtomapsStyle = (
     noLabels
       ? undefined
       : {
-          lang: toProtomapsLang(locale),
+          lang: toProtomapLocale(locale),
         },
   ) as StyleSpecification['layers']
 

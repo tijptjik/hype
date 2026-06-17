@@ -14,6 +14,8 @@ import {
   type SQL,
   type Table,
 } from 'drizzle-orm'
+// I18N
+import { toLocaleKey, toLocaleKebab } from '$lib/i18n'
 // SCHEMA
 import * as schema from './schema'
 // ENUMS
@@ -394,27 +396,15 @@ export const createJsonPathCondition = (
 // 6. TRANSFORMATIONS :: LOCALE
 // ═══════════════════════
 
-function toFormLocaleKey(locale: string): string {
-  if (locale === 'zh-hans') return 'zhHans'
-  if (locale === 'zh-hant') return 'zhHant'
-  return locale
-}
-
-function toDbLocaleKey(locale: string): string {
-  if (locale === 'zhHans') return 'zh-hans'
-  if (locale === 'zhHant') return 'zh-hant'
-  return locale
-}
-
 function normalizeLocaleRecordEntries<T extends Record<string, unknown>>(
   i18n: Record<string, T>,
 ): Record<string, T> {
   return Object.entries(i18n).reduce(
     (acc, [rawLocale, entry]) => {
-      const inferredLocale = toDbLocaleKey(rawLocale)
+      const inferredLocale = toLocaleKebab(rawLocale as Locale)
       const locale =
         typeof entry?.locale === 'string' && entry.locale.length > 0
-          ? toDbLocaleKey(entry.locale)
+          ? toLocaleKebab(entry.locale as Locale)
           : inferredLocale
       acc[locale] = {
         ...entry,
@@ -436,7 +426,7 @@ function toFormLocaleRecord<T extends Record<string, unknown>>(
         typeof entry?.locale === 'string' && entry.locale.length > 0
           ? entry.locale
           : rawLocale
-      acc[toFormLocaleKey(locale)] = entry
+      acc[toLocaleKey(locale as Locale)] = entry
       return acc
     },
     {} as Record<string, T>,

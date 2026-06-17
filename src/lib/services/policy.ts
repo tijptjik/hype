@@ -1,5 +1,5 @@
 // I18N
-import { toLocaleCode } from '$lib/i18n'
+import { toLocaleKebab } from '$lib/i18n'
 // TYPES
 import type { LocaleKey } from '$lib/types'
 // ASSETS
@@ -74,7 +74,7 @@ function toHumanReadablePolicyDate(
   localeKey: LocaleKey,
   currentDate: Date = new Date(),
 ): string {
-  return new Intl.DateTimeFormat(toLocaleCode(localeKey), {
+  return new Intl.DateTimeFormat(toLocaleKebab(localeKey), {
     dateStyle: 'long',
   }).format(currentDate)
 }

@@ -3,7 +3,7 @@
 import { tick } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
-import { m, toLocaleCode, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKebab, toLocaleKey } from '$lib/i18n'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
 // COMPONENTS
@@ -439,7 +439,7 @@ function onValueBlur(event: FocusEvent, valueId: string, locale: LocaleKey): voi
     onUpdateValue(property.id, valueId, 'value', nextValue)
     return
   }
-  onUpdateValueI18n(property.id, valueId, toLocaleCode(locale), 'value', nextValue)
+  onUpdateValueI18n(property.id, valueId, toLocaleKebab(locale), 'value', nextValue)
 }
 
 function onValueInput(event: Event, valueId: string, locale: LocaleKey): void {
@@ -452,7 +452,7 @@ function onValueInput(event: Event, valueId: string, locale: LocaleKey): void {
     onUpdateValue(property.id, valueId, 'value', nextValue)
     return
   }
-  onUpdateValueI18n(property.id, valueId, toLocaleCode(locale), 'value', nextValue)
+  onUpdateValueI18n(property.id, valueId, toLocaleKebab(locale), 'value', nextValue)
 }
 
 function preventDefaultAndPropagation(event: Event): void {
@@ -772,7 +772,7 @@ $effect(() => {
         isTranslated={true}
         isGenAI={labelGenValue}
         onToggleGenAI={() =>
-          onUpdateI18n(property.id, toLocaleCode(locale), 'labelGen', !labelGenValue)}
+          onUpdateI18n(property.id, toLocaleKebab(locale), 'labelGen', !labelGenValue)}
         value={(getPropertyLocaleFieldAttrs(locale, 'label') as { value?: string })
             .value ??
           (getLocaleEntry(
@@ -787,7 +787,7 @@ $effect(() => {
           'label',
         )}
         onValueChange={value =>
-          onUpdateI18n(property.id, toLocaleCode(locale), 'label', value)}
+          onUpdateI18n(property.id, toLocaleKebab(locale), 'label', value)}
       />
 
       <TextInput
@@ -799,7 +799,7 @@ $effect(() => {
         onToggleGenAI={() =>
           onUpdateI18n(
             property.id,
-            toLocaleCode(locale),
+            toLocaleKebab(locale),
             'placeholderGen',
             !placeholderGenValue,
           )}
@@ -818,7 +818,7 @@ $effect(() => {
           'placeholder',
         )}
         onValueChange={value =>
-          onUpdateI18n(property.id, toLocaleCode(locale), 'placeholder', value)}
+          onUpdateI18n(property.id, toLocaleKebab(locale), 'placeholder', value)}
       />
 
       {#if showCoreFields}
@@ -885,7 +885,7 @@ $effect(() => {
           }}
           onSort={() => {
             onLayoutMutationStart?.()
-            onSortValuesAlphabetically(property.id, toLocaleCode(locale))
+            onSortValuesAlphabetically(property.id, toLocaleKebab(locale))
           }}
           onToggleRemoveMode={toggleOptionRemoveMode}
         >

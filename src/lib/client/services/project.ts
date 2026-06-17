@@ -1,5 +1,5 @@
 // I18N
-import { toLocaleCode, toLocaleKey, toFormLocaleRecord } from '$lib/i18n'
+import { toLocaleKebab, toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
 import { normalizeProjectLicense as normalizeSharedProjectLicense } from '$lib/client/services/licence'
@@ -360,7 +360,7 @@ export function toProjectIdentityPatch(
 
   return {
     code: formData.data?.code ?? '',
-    locale: toLocaleCode(localeKey),
+    locale: toLocaleKebab(localeKey),
     name: localeData?.name ?? '',
     nameShort: localeData?.nameShort ?? '',
   }

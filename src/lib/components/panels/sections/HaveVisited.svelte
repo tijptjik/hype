@@ -1,6 +1,5 @@
 <script lang="ts">
 // I18N
-import { getLocale } from '$lib/i18n'
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ANIMATIONS
@@ -15,8 +14,8 @@ import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
 import { Icon } from '$lib/bits'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 // UTILS
+import { toDateFnsLocale } from '$lib/i18n'
 import { formatDistanceToNow } from 'date-fns'
-import { enGB, zhCN, zhHK } from 'date-fns/locale'
 // SERVICES
 import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures'
 // NAVIGATION
@@ -69,6 +68,18 @@ let visitedFeaturesPromise = $derived(
     return results
   })(),
 )
+
+function getVisitedTimestamp(value: { visitedAt?: string | null }): number {
+  if (!value.visitedAt) return 0
+  return new Date(value.visitedAt).getTime()
+}
+
+function openVisitedFeature(
+  featureId: string,
+  features: Awaited<typeof visitedFeaturesPromise>,
+): void {
+  navigateToVisited(appCtx, omniCtx, featureId, features)
+}
 </script>
 
 <Section
@@ -89,14 +100,17 @@ let visitedFeaturesPromise = $derived(
       visitedFeatures,
       searchTerm
     )}
+    {@const sortedFeatures = [...filteredFeatures].sort(
+      (a, b) => getVisitedTimestamp(b) - getVisitedTimestamp(a)
+    )}
     <div class="flex min-h-0 flex-auto flex-col">
-      {#if filteredFeatures.length === 0}
+      {#if sortedFeatures.length === 0}
         <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
           <p class="text-sm text-base-content/60">{m.due_mad_whale_attend()}</p>
         </div>
       {:else}
         <div class="flex-1 overflow-y-auto">
-          {#each filteredFeatures.sort((a, b) => new Date(b.visitedAt!).getTime() - new Date(a.visitedAt!).getTime()) as visited (visited.featureId)}
+          {#each sortedFeatures as visited (visited.featureId)}
             {@const organisationName = getI18n(
               visited.hierarchy.organisation,
               'nameShort',
@@ -107,28 +121,18 @@ let visitedFeaturesPromise = $derived(
               visited.hierarchy.project
             )}
             {@const showProject = visited.hierarchy.project && projectName}
-            {@const layerName = appCtx.getContextualLayerName(visited.hierarchy.layer!)}
+            {@const layerName = visited.hierarchy.layer
+              ? appCtx.getContextualLayerName(visited.hierarchy.layer)
+              : null}
             {@const showLayer = visited.hierarchy.layer && layerName}
-            {@const featureName = getI18n(
-              visited.feature,
-              'title',
-              appCtx.getUserPreferences()
-            )}
-            <div
-              class="min-h-21 flex cursor-pointer flex-row items-start justify-between gap-4 bg-black px-4 py-2 text-[#374151]"
+            <button
+              type="button"
+              class="min-h-21 flex w-full cursor-pointer flex-row items-start justify-between gap-4 bg-black px-4 py-2 text-left text-[#374151]"
               animate:flip={{ duration: 200 }}
               onclick={() => {
                 visitedFeaturesPromise.then((features) => {
-                  navigateToVisited(appCtx, omniCtx, visited.featureId, features);
-                });
-              }}
-              onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  visitedFeaturesPromise.then((features) => {
-                    navigateToVisited(appCtx, omniCtx, visited.featureId, features);
-                  });
-                }
+                  openVisitedFeature(visited.featureId, features)
+                })
               }}
             >
               <Icon src={Squares2x2} class="h-5 w-5 shrink-0" filled />
@@ -154,12 +158,7 @@ let visitedFeaturesPromise = $derived(
                       {visited.visitedAt
                         ? formatDistanceToNow(new Date(visited.visitedAt), {
                             addSuffix: true,
-                            locale:
-                              getLocale() === 'zh-hant'
-                                ? zhHK
-                                : getLocale() === 'zh-hans'
-                                  ? zhCN
-                                  : enGB
+                            locale: toDateFnsLocale()
                           })
                             .replace('minute', 'min')
                             .replace('hour', 'hr')
@@ -171,7 +170,7 @@ let visitedFeaturesPromise = $derived(
                   {getI18n(visited.feature, 'title', appCtx.getUserPreferences())}
                 </p>
               </div>
-            </div>
+            </button>
           {/each}
         </div>
       {/if}

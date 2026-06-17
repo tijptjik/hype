@@ -36,6 +36,8 @@ export { supportedLocaleKeys }
 //    - normalizeLocaleCode
 //    - toCloudflareLocale
 //    - toDateFnsLocale
+//    - getProtomapLocale
+//    - getDatetimeLocale
 //
 // 3. FORM I18N RECORD HELPERS
 //    - toFormLocaleRecord
@@ -50,7 +52,6 @@ export { supportedLocaleKeys }
 //    - getFPI18n
 //
 // 6. LOCALE LABELS / EXPORTS
-//    - localeLabels
 //    - m, runtime
 //
 // 7. TRANSLATION API HELPERS
@@ -107,14 +108,10 @@ export function toLocaleKey(locale: Locale | LocaleKey): LocaleKey {
   return 'en'
 }
 
-/**
- * Convert organisation form i18n key back to app locale.
- * @param localeKey - Form locale key.
- * @returns Locale value used by entity i18n payloads.
- */
-export function toLocaleCode(localeKey: LocaleKey): Locale {
-  if (localeKey === 'zhHans') return 'zh-hans'
-  if (localeKey === 'zhHant') return 'zh-hant'
+export function toLocaleKebab(locale: LocaleKey | Locale): Locale {
+  if (locale === 'en' || locale === 'zh-hans' || locale === 'zh-hant') return locale
+  if (locale === 'zhHans') return 'zh-hans'
+  if (locale === 'zhHant') return 'zh-hant'
   return 'en'
 }
 
@@ -124,15 +121,19 @@ export function toLocaleCode(localeKey: LocaleKey): Locale {
  */
 export function normalizeLocaleCode(input: string): string {
   if (input === 'zhHans' || input === 'zhHant' || input === 'en') {
-    return toLocaleCode(input as LocaleKey)
+    return toLocaleKebab(input as LocaleKey)
   }
   return input
 }
 
+// ═══════════════════════
+// 2.1 THIRD-PARTY COMPATIBILITY
+// ═══════════════════════
+
 export function toCloudflareLocale(): string {
-  const locale = getLocale()
-  if (locale === 'zh-hans') return 'zh-Hans'
-  if (locale === 'zh-hant') return 'zh-Hant'
+  const locale = getLocaleKey()
+  if (locale === 'zhHans') return 'zh-Hans'
+  if (locale === 'zhHant') return 'zh-Hant'
   return 'en-US'
 }
 
@@ -141,11 +142,33 @@ export function toCloudflareLocale(): string {
  * @returns The matching date-fns locale for the active app locale.
  */
 export function toDateFnsLocale(): DateFnsLocale {
-  const locale = getLocale()
-
-  if (locale === 'zh-hant') return zhHK
-  if (locale === 'zh-hans') return zhCN
+  const locale = getLocaleKey()
+  if (locale === 'zhHant') return zhHK
+  if (locale === 'zhHans') return zhCN
   return enGB
+}
+
+/**
+ * Convert a locale key into the Protomaps language tag.
+ * @param locale - The locale key to convert.
+ * @returns The matching Protomaps language tag.
+ */
+export function toProtomapLocale(locale: LocaleKey): string {
+  if (locale === 'zhHans') return 'zh-Hans'
+  if (locale === 'zhHant') return 'zh-Hant'
+  return 'en'
+}
+
+/**
+ * Convert the current app locale into the Intl date formatting locale.
+ * @returns The matching Intl date formatting locale tag.
+ */
+export function getDatetimeLocale(): string {
+  const locale = getLocaleKey()
+
+  if (locale === 'zhHans') return 'zh-hans'
+  if (locale === 'zhHant') return 'zh-hant'
+  return 'en-HK'
 }
 
 // ═══════════════════════
@@ -198,7 +221,7 @@ export function ensureLocaleEntryForWrite(
   const localeKey = toLocaleKey(locale)
   if (!i18n[localeKey]) {
     i18n[localeKey] = {
-      locale: toLocaleCode(localeKey),
+      locale: toLocaleKebab(localeKey),
     }
   }
   return i18n[localeKey] as Record<string, unknown>
@@ -273,7 +296,7 @@ export function getI18n<T>(
 
   // CONFIG : Locale key only (no locale fallback chain)
   const localeKey = getLocaleKey()
-  const localeCode = toLocaleCode(localeKey)
+  const localeCode = toLocaleKebab(localeKey)
   const opts = {
     fallback: fallback || defaultFallback,
   }
@@ -343,16 +366,6 @@ export function getFPI18n(
 // 6. LOCALE LABELS / EXPORTS
 // ═══════════════════════
 
-/**
- * Labels for the locales.
- * @returns The labels for the locales.
- */
-export const localeLabels = [
-  { locale: 'en', label: 'EN' },
-  { locale: 'zh-hant', label: 'HK' },
-  { locale: 'zh-hans', label: 'CN' },
-]
-
 // EXPORT PARAGLIDE
 export { m, runtime }
 
@@ -409,8 +422,8 @@ export async function translateI18nFields({
   try {
     const sourceTexts = fields.map(field => i18n[source]?.[field] ?? '')
     const translatedTexts = await translateText(
-      toLocaleCode(source),
-      toLocaleCode(target),
+      toLocaleKebab(source),
+      toLocaleKebab(target),
       sourceTexts,
     )
 
