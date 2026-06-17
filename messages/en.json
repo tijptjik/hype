@@ -533,7 +533,7 @@
   "arable_gray_okapi_roam": "Copy coordinates",
   "blue_smug_marlin_peel": "OUT OF SYNC",
   "equal_petty_goose_pull": "Delete this image?",
-  "caring_aloof_haddock_bubble": "Drop images to automatically associate them with features based on filename",
+  "import_batch_image_description": "Drop images to automatically associate them with features based on filename",
   "north_level_niklas_tap": "Reason for rejection",
   "antsy_patient_moth_taste": "Actions",
   "home_legal_trout_hurl": "The toggles control the public visibility of the feature:",
@@ -893,5 +893,12 @@
   "feature__no_canonical_image_yet": "No canonical image yet",
   "feature__address_refactor_placeholder": "Address facet shell is mounted for the refactor, but address inputs are deferred.",
   "user__current_user": "Current User",
-  "viewer__loading_image": "Loading image"
+  "viewer__loading_image": "Loading image",
+  "import_data": "Import Data",
+  "import_data_csv_only": "Only CSV files are accepted.",
+  "import_batch_image": "Batch Image Upload",
+  "import_data_subtitle": "Drop CSV with a header row",
+  "import_data_images": "Users",
+  "import_coming_soon": "Coming Soon",
+  "import_data_events": "Events"
 }

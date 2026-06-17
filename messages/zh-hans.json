@@ -533,7 +533,7 @@
   "arable_gray_okapi_roam": "复制坐标",
   "blue_smug_marlin_peel": "未能同步",
   "equal_petty_goose_pull": "确定要删除此图像吗？",
-  "caring_aloof_haddock_bubble": "拖放图像并根据文件名称自动将图片按其特征及属性分类",
+  "import_batch_image_description": "拖放图像并根据文件名称自动将图片按其特征及属性分类",
   "north_level_niklas_tap": "拒绝原因",
   "antsy_patient_moth_taste": "可选项目",
   "home_legal_trout_hurl": "切换按钮以控制该地图项的公开性：",
@@ -893,5 +893,12 @@
   "feature__no_canonical_image_yet": "还没有规范图片",
   "feature__address_refactor_placeholder": "地址分面的外壳已为重构挂载，但地址输入暂缓处理。",
   "user__current_user": "当前用户",
-  "viewer__loading_image": "正在加载图片"
+  "viewer__loading_image": "正在加载图片",
+  "import_data": "导入数据",
+  "import_data_csv_only": "仅接受 CSV 文件。",
+  "import_batch_image": "批量图片上传",
+  "import_data_subtitle": "拖放带有标题行的 CSV",
+  "import_data_images": "用户",
+  "import_coming_soon": "即将推出",
+  "import_data_events": "活动"
 }
