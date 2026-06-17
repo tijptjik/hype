@@ -1,5 +1,6 @@
 // Custom Bits-compatible components are exported here.
 export * from './analyticsCard'
+export * from './badge'
 export * from './checkbox'
 export * as Card from './card'
 export * from './featureStats'
