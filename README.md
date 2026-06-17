@@ -33,8 +33,10 @@ For the dev environment
 bun run ...
 ```
 
-- `dev`: `local compute + local queues + remote R2`
-- `dev:local`: `local compute + local queues + local R2`
+- `dev`: `local compute + local queues + remote R2 (local-stage uploads land in \`hype-assets-raw-dev\`, derived assets in \`hype-assets-dev\`)`
+- `dev:local`: `local compute + local queues + local R2 simulation`
+- `dev:asset-service:local`: `local asset worker code + remote R2 bindings from \`workers/asset-service/wrangler.toml\``
+- `dev:asset-service:simulated`: `local asset worker code + local R2 simulation from \`workers/asset-service/wrangler.local.toml\``
 - `dev:cf:preview`: `local compute + preview remote D1/R2 + local preview queue simulation`
 - `dev:cf:prod`: `local compute + prod remote D1/R2 + local prod queue simulation`
 

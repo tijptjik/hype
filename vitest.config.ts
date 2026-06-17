@@ -47,6 +47,10 @@ export default defineConfig({
         replacement: resolve(__dirname, 'src/tests/mocks/env-static-public.ts'),
       },
       {
+        find: '$env/dynamic/public',
+        replacement: resolve(__dirname, 'src/tests/mocks/env-dynamic-public.ts'),
+      },
+      {
         find: '$lib/context/form.svelte',
         replacement: resolve(__dirname, 'src/tests/mocks/form-context.ts'),
       },
