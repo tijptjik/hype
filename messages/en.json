@@ -648,7 +648,7 @@
   "batch_upload__uploading": "Uploading",
   "batch_upload__pending": "Pending",
   "batch_upload__results": "Upload Results",
-  "batch_upload__feature_id": "Feature ID",
+  "batch_upload__feature_id": "FeatureId",
   "error_message__failed_to_extract_feature_id_from_image": "Could not extract feature ID from filename",
   "error_messages__failed_to_create_error_context": "Could not create upload context",
   "error_message__failed_to_load_image": "Failed to load image",
