@@ -148,7 +148,7 @@ type ImportSession = {
     | 'failed'
   organisationId: string | null
   projectId: string | null
-  selectedLocale: 'en' | 'zh-hans' | 'zh-hant' | null
+  selectedLocale: 'en' | 'zhHans' | zhHant | null
   sourceFileName: string
   sourcePayload: string
   mappingPayload: string | null

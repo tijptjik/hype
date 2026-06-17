@@ -9,9 +9,9 @@ import type {
   Project,
   CSVImportStep,
   Id,
-  Locale,
   Property,
 } from '$lib/client/services/import/types'
+import type { Locale, LocaleKey } from '$lib/types'
 
 export class ImportCtx {
   state: ImportState = $state({
@@ -91,6 +91,7 @@ export class ImportCtx {
       results: [],
       showPreview: false,
       previewIndex: 0,
+      ignoreMissingFeatureIds: false,
     },
   })
 
@@ -249,7 +250,7 @@ export class ImportCtx {
     return this.state.selectedProject
   }
 
-  setSelectedLocale(selectedLocale: string) {
+  setSelectedLocale(selectedLocale: LocaleKey) {
     this.state.selectedLocale = selectedLocale
   }
 
@@ -541,6 +542,7 @@ export class ImportCtx {
       results: [],
       showPreview: false,
       previewIndex: 0,
+      ignoreMissingFeatureIds: false,
     }
   }
 }

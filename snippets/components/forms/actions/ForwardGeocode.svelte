@@ -10,7 +10,7 @@ import {
   processForwardGeocodeResult,
   extractNeighbourhoodFromAddress,
 } from '$lib/api/external/geocoding'
-import { removeCountry, removeRegion, removeDistrict } from '$lib/utils/geocoding'
+import { removeCountry, removeArea, removeDistrict } from '$lib/utils/geocoding'
 // COMPONENTS
 import { Icon } from '$lib/bits'
 import Language from 'virtual:icons/lucide/languages'
@@ -45,7 +45,7 @@ function getStreetAddressAndNeighbourhood(address: string): {
   // First remove Hong Kong SAR identifiers
   let cleaned = removeCountry(address)
   // Then remove any region identifiers
-  cleaned = removeRegion(cleaned)
+  cleaned = removeArea(cleaned)
   // Then remove any district identifiers
   cleaned = removeDistrict(cleaned)
 
@@ -165,8 +165,8 @@ let handleGeocodeToLocate = (e: Event) => {
     </label>
     <select class="select select-sm bg-glass-salmon-dark" bind:value={sourceLocale}>
       <option value="en">{m.lang__en()}</option>
-      <option value="zh-hant">{m.lang__zh_hant()}</option>
-      <option value="zh-hans">{m.lang__zh_hans()}</option>
+      <option value="zhHant">{m.lang__zh_hant()}</option>
+      <option value="zhHans">{m.lang__zh_hans()}</option>
     </select>
   </div>
   <div class="flex flex-row items-center gap-2">

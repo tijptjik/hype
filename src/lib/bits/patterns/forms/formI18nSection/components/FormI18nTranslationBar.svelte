@@ -33,7 +33,7 @@ let errorResetTimer = $state<ReturnType<typeof setTimeout> | null>(null)
 let resetFlashToken = $state(0)
 
 const sourceLocales = $derived(
-  supportedLocales.filter(locale => locale !== targetLocale) as Locale[],
+  supportedLocales.filter(locale => locale !== targetLocale),
 )
 const isLoading = $derived(status === 'loading')
 

@@ -4,8 +4,8 @@ import {
   capitalizeFirstLetter,
   getFirstLocation,
   getNormalisedDistrict,
-  getNormalisedRegion,
-  removeRegion,
+  getNormalisedArea,
+  removeArea,
   titleCase,
   applyAddressAbbreviations,
   getNormalisedCountry,
@@ -39,7 +39,7 @@ type NeighbourhoodI18n = Record<
     name: string
     neighbourhood: string
     district: string
-    region: string
+    area: string
   }
 >
 type Neighbourhoods = Record<Neighbourhood, Record<'i18n', NeighbourhoodI18n>>
@@ -338,7 +338,7 @@ function processReverseGeocodeResult(
   // Create display address - ensure it exists
   const rawDisplayAddress = result.address.Match_addr
   const processedDisplayAddress = rawDisplayAddress
-    ? removeRegion(titleCase(applyAddressAbbreviations(rawDisplayAddress)))
+    ? removeArea(titleCase(applyAddressAbbreviations(rawDisplayAddress)))
     : undefined
 
   // Process the result
@@ -361,16 +361,16 @@ function processReverseGeocodeResult(
           streetName,
           neighbourhood: titleCase(neighbourhood) || undefined,
           district: district,
-          region: getNormalisedRegion(result.address.State, 'en'),
+          area: getNormalisedArea(result.address.State, 'en'),
           country: 'HKSAR',
         },
       },
-      'zh-hant': {
+      zhHant: {
         displayAddress: undefined,
         displayAddressGen: true,
         addressProperties: {},
       },
-      'zh-hans': {
+      zhHans: {
         displayAddress: undefined,
         displayAddressGen: true,
         addressProperties: {},
@@ -424,10 +424,15 @@ export async function processForwardGeocodeResult(
     ? parseALSResultToDisplay(address, neighbourhood ?? null, 'en')
     : undefined
   const displayAddressZhHant = genDisplayAddress
-    ? parseALSResultToDisplay(address, neighbourhoodZhHant, 'zh-hant')
+    ? parseALSResultToDisplay(address, neighbourhoodZhHant, 'zhHant')
     : undefined
   let displayAddressZhHans: string | undefined
   const parsedSubpremises = parseSubPremisesComponent(subpremisesRaw)
+  const premisesNameEn = titleCase(pa.EngPremisesAddress?.EngEstate?.EstateName)
+  const premisesNameZhHant =
+    'ChiPremisesAddress' in pa
+      ? pa.ChiPremisesAddress.ChiEstate?.EstateName || undefined
+      : undefined
 
   // Prepare Chinese address properties
   let addressPropsZhHant: Partial<AddressProperties> = {}
@@ -439,15 +444,16 @@ export async function processForwardGeocodeResult(
       buildingNumberTo: pa.ChiPremisesAddress.ChiStreet?.BuildingNoTo || undefined,
       blockType: pa.ChiPremisesAddress.ChiBlock?.BlockDescriptor || undefined,
       blockNumber: pa.ChiPremisesAddress.ChiBlock?.BlockNo || undefined,
-      estateName: pa.ChiPremisesAddress.ChiEstate?.EstateName || undefined,
+      premisesName: premisesNameZhHant,
       streetName: pa.ChiPremisesAddress.ChiStreet?.StreetName || undefined,
+      macrohood: neighbourhoodZhHant || undefined,
       neighbourhood: neighbourhoodZhHant || undefined,
       district: getNormalisedDistrict(
         pa.ChiPremisesAddress.ChiDistrict?.DcDistrict,
-        'zh-hant',
+        'zhHant',
       ),
-      region: getNormalisedRegion(pa.ChiPremisesAddress?.Region, 'zh-hant'),
-      country: getNormalisedCountry('Hong Kong', 'zh-hant'),
+      area: getNormalisedArea(pa.ChiPremisesAddress?.Region, 'zhHant'),
+      country: getNormalisedCountry('Hong Kong', 'zhHant'),
       rawAddress: rawAddress ?? undefined,
     }
   }
@@ -470,8 +476,8 @@ export async function processForwardGeocodeResult(
         const zhHantDisplayAddress = displayAddressZhHant ?? ''
         const [translatedDisplayAddress, ...translatedProps] = await translateText(
           [zhHantDisplayAddress, ...propsToTranslate],
-          'zh-hant',
-          'zh-hans',
+          'zhHant',
+          'zhHans',
           platformEnv.PUBLIC_AZURE_TRANSLATION_REGION,
           platformEnv.AZURE_TRANSLATION_KEY,
         )
@@ -506,8 +512,9 @@ export async function processForwardGeocodeResult(
       ? titleCase(pa.EngPremisesAddress.EngEstate.EngPhase.PhaseName)
       : undefined,
     phaseNumber: pa.EngPremisesAddress?.EngEstate?.EngPhase?.PhaseNo,
-    estateName: titleCase(pa.EngPremisesAddress?.EngEstate?.EstateName),
+    premisesName: premisesNameEn,
     streetName: titleCase(pa.EngPremisesAddress?.EngStreet?.StreetName),
+    macrohood: neighbourhood || undefined,
     neighbourhood: neighbourhood
       ? neighbourhood
       : pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName
@@ -517,7 +524,7 @@ export async function processForwardGeocodeResult(
       pa.EngPremisesAddress?.EngDistrict?.DcDistrict,
       'en',
     ),
-    region: getNormalisedRegion(pa.EngPremisesAddress?.Region, 'en'),
+    area: getNormalisedArea(pa.EngPremisesAddress?.Region, 'en'),
     country: getNormalisedCountry('Hong Kong', 'en'),
     rawAddress: rawAddress ?? undefined,
   }
@@ -551,7 +558,7 @@ export async function processForwardGeocodeResult(
           ),
         ),
       },
-      'zh-hant': {
+      zhHant: {
         displayAddress: displayAddressZhHant,
         displayAddressGen: genDisplayAddress,
         addressProperties: Object.fromEntries(
@@ -560,7 +567,7 @@ export async function processForwardGeocodeResult(
           ),
         ),
       },
-      'zh-hans': {
+      zhHans: {
         displayAddress: displayAddressZhHans,
         displayAddressGen: genDisplayAddress,
         addressProperties: Object.fromEntries(
@@ -576,7 +583,7 @@ export async function processForwardGeocodeResult(
 function parseALSResultToDisplay(
   address: ALSSuggestedAddressItem,
   neighbourhood: string | null,
-  locale: Exclude<Locale, 'zh-hans'> = 'en',
+  locale: Exclude<LocaleKey, 'zhHans'> = 'en',
 ) {
   const pa = address.Address.PremisesAddress
 
@@ -632,7 +639,7 @@ function parseALSResultToDisplay(
       }
     }
 
-    return removeRegion(titleCase(applyAddressAbbreviations(parts.join(', '))))
+    return removeArea(titleCase(applyAddressAbbreviations(parts.join(', '))))
   } else {
     if (!('ChiPremisesAddress' in pa)) return null
     const { ChiPremisesAddress: chi } = pa

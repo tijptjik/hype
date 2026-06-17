@@ -3,7 +3,7 @@
 import { page } from '$app/state'
 // I18N
 import * as m from '$lib/paraglide/messages'
-import { getLocaleKey, toLocaleCode } from '$lib/i18n'
+import { getLocaleKey } from '$lib/i18n'
 // NAVIGATION
 import { resolveTitle } from '$lib/navigation/title'
 // COMPONENTS
@@ -20,11 +20,10 @@ import type { PageProps } from './$types'
 let { data }: PageProps = $props()
 
 const localeKey = getLocaleKey()
-const localeCode = toLocaleCode(localeKey)
 
 // Resolve hub-level legal copy tokens from the active localized hub content when available.
 const localizedHub = $derived(
-  data.hub.i18n?.[localeCode] ??
+  data.hub.i18n?.[localeKey] ??
     data.hub.i18n?.en ??
     Object.values(data.hub.i18n ?? {})[0],
 )

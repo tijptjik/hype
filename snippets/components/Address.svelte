@@ -56,24 +56,24 @@ $effect(() => {
 
 let enIsGenAI = $derived(
   currentFormIsFeature
-    ? (($formStore as Feature).i18n!['en']?.displayAddressGen ?? false)
+    ? (($formStore as Feature).i18n!.en?.displayAddressGen ?? false)
     : false,
 )
 let zhHantIsGenAI = $derived(
   currentFormIsFeature
-    ? (($formStore as Feature).i18n!['zh-hant']?.displayAddressGen ?? false)
+    ? (($formStore as Feature).i18n!.zhHant?.displayAddressGen ?? false)
     : false,
 )
 let zhHansIsGenAI = $derived(
   currentFormIsFeature
-    ? (($formStore as Feature).i18n!['zh-hans']?.displayAddressGen ?? false)
+    ? (($formStore as Feature).i18n!.zhHans?.displayAddressGen ?? false)
     : false,
 )
 
 let defaultMissingTranslations: TranslationStates = {
   en: { confirmed: false, translated: false, required: false },
-  'zh-hant': { confirmed: false, translated: false, required: false },
-  'zh-hans': { confirmed: false, translated: false, required: false },
+  zhHant: { confirmed: false, translated: false, required: false },
+  zhHans: { confirmed: false, translated: false, required: false },
 }
 // STATE : UI
 let missingTranslations: TranslationStates = $state(defaultMissingTranslations)

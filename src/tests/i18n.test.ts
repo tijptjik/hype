@@ -21,8 +21,8 @@ describe('I18N Message Validation', () => {
   // MESSAGE FILES MAP
   const messageFiles = {
     [SupportedLocales.en]: enMessages,
-    [SupportedLocales['zh-hant']]: zhHantMessages,
-    [SupportedLocales['zh-hans']]: zhHansMessages,
+    [SupportedLocales.zhHant]: zhHantMessages,
+    [SupportedLocales.zhHans]: zhHansMessages,
   }
 
   // HELPER FUNCTIONS
