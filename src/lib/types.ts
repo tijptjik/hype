@@ -1806,10 +1806,10 @@ export type IntermediateValue = {
   rank: number
   en: string
   enGen: boolean
-  'zh-hans': string
-  'zh-hansGen': boolean
-  'zh-hant': string
-  'zh-hantGen': boolean
+  zhHans: string
+  zhHansGen: boolean
+  zhHant: string
+  zhHantGen: boolean
 }
 
 export type UserRole = HubRole | OrganisationRole | ProjectRole

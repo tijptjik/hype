@@ -1497,6 +1497,7 @@ export async function translateLocaleIntoEmptyFields<
   const currentFormData = form.fields.value().data
   if (!currentFormData?.i18n) return false
 
+  const sourceLocaleKey = toLocaleKey(sourceLocale)
   const targetLocaleKey = toLocaleKey(targetLocale)
   const targetLocaleData = currentFormData.i18n?.[targetLocaleKey]
   if (!targetLocaleData) return false
@@ -1523,15 +1524,15 @@ export async function translateLocaleIntoEmptyFields<
       ]),
     )
 
-  const i18n: Partial<Record<Locale, Record<string, string | null | undefined>>> = {
-    [toLocaleCode('en')]: toTranslationLocaleRecord('en'),
-    [toLocaleCode('zhHans')]: toTranslationLocaleRecord('zhHans'),
-    [toLocaleCode('zhHant')]: toTranslationLocaleRecord('zhHant'),
+  const i18n: Partial<Record<LocaleKey, Record<string, string | null | undefined>>> = {
+    en: toTranslationLocaleRecord('en'),
+    zhHans: toTranslationLocaleRecord('zhHans'),
+    zhHant: toTranslationLocaleRecord('zhHant'),
   }
 
   const translated = await translateI18nFields({
-    source: sourceLocale,
-    target: targetLocale,
+    source: sourceLocaleKey,
+    target: targetLocaleKey,
     fields: fieldsToTranslate,
     i18n,
   })

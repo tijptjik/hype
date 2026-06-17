@@ -1,5 +1,5 @@
 // LIB
-import { getLocale } from '$lib/i18n'
+import { toCloudflareLocale } from '$lib/i18n'
 import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
 // TYPES
 import type {
@@ -127,13 +127,6 @@ export const ASSET_ANALYTICS_SERIES: AssetAnalyticsSeriesConfig[] = [
   },
 ]
 
-function getAnalyticsIntlLocale(): string {
-  const locale = getLocale()
-  if (locale === 'zh-hans') return 'zh-Hans'
-  if (locale === 'zh-hant') return 'zh-Hant'
-  return 'en-US'
-}
-
 export function getAssetAnalyticsSeriesLabel(
   seriesKey: AssetAnalyticsSeriesKey,
 ): string {
@@ -189,7 +182,7 @@ export function buildAssetAnalyticsPreviewUrl(params: {
  */
 export function formatAnalyticsCount(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return '—'
-  return Intl.NumberFormat(getAnalyticsIntlLocale()).format(value)
+  return Intl.NumberFormat(toCloudflareLocale()).format(value)
 }
 
 /**
@@ -226,7 +219,7 @@ export function formatAnalyticsDayLabel(value: string): string {
   const date = new Date(`${value}T00:00:00Z`)
   if (Number.isNaN(date.getTime())) return value
 
-  return new Intl.DateTimeFormat(getAnalyticsIntlLocale(), {
+  return new Intl.DateTimeFormat(toCloudflareLocale(), {
     month: 'short',
     day: 'numeric',
     timeZone: 'UTC',
