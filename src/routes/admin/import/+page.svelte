@@ -18,7 +18,7 @@ import Upload from 'virtual:icons/lucide/upload'
 import type {
   DropzoneEvent,
   ImportableResource,
-} from '$lib/bits/patterns/import/types.ts'
+} from '$lib/bits/patterns/import/import.types'
 
 // CONTEXT
 setImportCtx()
