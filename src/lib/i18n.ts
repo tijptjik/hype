@@ -316,6 +316,18 @@ export function getI18n<T>(
 }
 
 /**
+ * Determine whether a feature property is effectively blank and should not
+ * trigger missing-translation warnings.
+ * @param obj - The feature property candidate.
+ * @returns `true` when the property has no direct value, no selected option, and no i18n payload.
+ */
+function isEmptyFeatureProperty(obj: Omit<FeatureProperty, 'featureId'>): boolean {
+  const hasDirectValue =
+    typeof obj.value === 'string' ? obj.value.trim().length > 0 : !!obj.value
+  return !hasDirectValue && !obj.propertyValueId && !obj.i18n
+}
+
+/**
  * Get the translated value of a feature property using user preferences.
  * @param obj - The feature property to get the translated value from.
  * @param userPreferences - User preferences with defaults applied
@@ -327,6 +339,9 @@ export function getFPI18n(
 ): string {
   const field = 'value'
   const fallback = m.great_crazy_squid_promise()
+
+  // Ignore empty property shells created for incomplete feature data.
+  if (isEmptyFeatureProperty(obj)) return fallback
 
   // CASE : SPECIFIER Property & UNIVERSAL VALUE
   if (obj.property?.type === 'specifier' && obj.value) {
