@@ -124,7 +124,7 @@ const ImportFeatureLookupSchema = z.object({
     .optional(),
 })
 
-const IMPORT_FEATURE_LOOKUP_BATCH_SIZE = 90
+const IMPORT_FEATURE_LOOKUP_BATCH_SIZE = 80
 
 /**
  * Splits dynamic feature id lists into D1-safe batches for relation-heavy admin reads.
