@@ -33,8 +33,8 @@ let handleToggle = () => {
 }
 
 // DISPLAY TEXT
-let regionDisplay = $derived(
-  getI18n(i18n, 'region', appCtx.getUserPreferences(), undefined, true).replace(
+let areaDisplay = $derived(
+  getI18n(i18n, 'area', appCtx.getUserPreferences(), undefined, true).replace(
     'Hong Kong',
     'HK',
   ),
@@ -50,14 +50,12 @@ let neighbourhoodDisplay = $derived(
 </script>
 
 {#if featureCount > 0}
-  <div
-    class="focus:-ring-offset-2 group ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md bg-black py-2 pl-4 pr-7.5 caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
+  <button
+    type="button"
+    class="focus:-ring-offset-2 group ml-4 flex cursor-pointer flex-row items-center justify-between gap-4 overflow-visible rounded-l-md border-0 bg-black py-2 pl-4 pr-7.5 text-left caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0"
     onclick={handleToggle}
     onkeydown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        handleToggle();
-        e.preventDefault();
-      } else if (e.key === 'Escape') {
+      if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
         // Find the nearest section ancestor and focus its input
@@ -66,7 +64,6 @@ let neighbourhoodDisplay = $derived(
         input?.focus();
       }
     }}
-    tabindex="0"
   >
     <div class="flex -translate-x-5 flex-row items-center gap-3">
       <div
@@ -79,7 +76,7 @@ let neighbourhoodDisplay = $derived(
         <p class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
           <span class="text-primary/80">{districtDisplay}</span>
           <span class="mtext-base-content/60 font-sans">::</span>
-          <span class="text-accent">{regionDisplay}</span>
+          <span class="text-accent">{areaDisplay}</span>
         </p>
         <p class="font-normal text-base-content">{neighbourhoodDisplay}</p>
       </div>
@@ -90,5 +87,5 @@ let neighbourhoodDisplay = $derived(
         >{featureCount}</span
       >
     </div>
-  </div>
+  </button>
 {/if}

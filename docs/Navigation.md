@@ -73,8 +73,8 @@ omniCtx.initWalk(
   features,
   {
     en: 'My Features',
-    'zh-hant': '我的功能',
-    'zh-hans': '我的功能'
+    zhHant: '我的功能',
+    'zhHans': '我的功能'
   }
 );
 ```
@@ -149,8 +149,8 @@ const starsCollection = omniCtx.toWalkCollection('stars', wishlistedFeatures);
 // Custom collection
 const customCollection = omniCtx.toWalkCollection('myWalk', features, {
   en: 'My Walk',
-  'zh-hant': '我的路線',
-  'zh-hans': '我的路线'
+  zhHant: '我的路線',
+  'zhHans': '我的路线'
 });
 ```
 
@@ -268,8 +268,8 @@ omniCtx.initWalk(
   features,
   {
     en: `${projectName} by ${username}`,
-    'zh-hant': `貢獻者 ${username}`,
-    'zh-hans': `贡献者 ${username}`
+    zhHant: `貢獻者 ${username}`,
+    'zhHans': `贡献者 ${username}`
   }
 );
 ```

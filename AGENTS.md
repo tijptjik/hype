@@ -89,7 +89,7 @@ Run all commands with Bun:
   - If a schema/API rename is shipped without a physical DB migration (for compatibility or staged rollout), add an entry to `docs/Deferred-Migrations.md` in the same PR.
 - `paraglide-js` - i18n:
   - Use Paraglide for translations in `messages/`.
-  - Supported locales are `en`, `zh-hans`, and `zh-hant`.
+  - Supported locales are `en`, `zhHans`, and `zhHant`.
   - Write messages using Inlang Message Syntax.
 - `unplugin-icons` - icon usage:
   - Use Lucide icons via unplugin-icons.

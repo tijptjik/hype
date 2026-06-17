@@ -262,8 +262,8 @@ export function getResourceLocaleToggleItems<T extends ViewFilterResource>(
   }
 
   return supportedLocaleKeys.map(localeKey => ({
-    value: localeKey,
-    label: localeCodes[toLocaleCode(localeKey)],
+    localeKey,
+    label: localeCodes[localeKey],
     selected: translationLocales[localeKey],
     onToggle: () => toggleResourceTranslationLocale(adminCtx, resource, localeKey),
   }))
@@ -288,13 +288,13 @@ export function getNextTriState(currentValue: FilterTriState): FilterTriState {
  * Toggles a resource translation locale while preserving a valid non-current selection.
  * @param adminCtx Admin context containing mutable filter state.
  * @param resource Resource whose translation locales should be updated.
- * @param locale Locale to toggle.
+ * @param localeKey Locale key to toggle.
  * @returns Nothing.
  */
 export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
   adminCtx: AdminCtx,
   resource: T,
-  locale: LocaleKey,
+  localeKey: LocaleKey,
 ): void {
   const resourceFilters = getResourceFilters(adminCtx, resource)
   if (!resourceFilters || !supportsTranslationLocales(resourceFilters)) {
@@ -302,7 +302,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
   }
 
   const currentLocaleKey = getLocaleKey()
-  if (locale === currentLocaleKey) {
+  if (localeKey === currentLocaleKey) {
     return
   }
 
@@ -311,7 +311,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
     return
   }
 
-  normalizedLocales[locale] = !normalizedLocales[locale]
+  normalizedLocales[localeKey] = !normalizedLocales[localeKey]
 
   const hasActiveNonCurrentLocale = supportedLocaleKeys.some(
     supportedLocale =>
@@ -319,7 +319,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
   )
 
   if (!hasActiveNonCurrentLocale) {
-    normalizedLocales[locale] = true
+    normalizedLocales[localeKey] = true
   }
 
   const nextTranslationLocales = { ...resourceFilters.translationLocales }

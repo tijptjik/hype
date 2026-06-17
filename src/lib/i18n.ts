@@ -8,13 +8,13 @@ import type {
   WritableI18nRecord,
 } from '$lib/db/zod/schema/property.types'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
-import { supportedLocales } from './enums'
+import { supportedLocaleKeys, supportedLocales } from './enums'
 import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
 } from '$lib/db/zod/schema/feature.types'
 
-export const supportedLocaleKeys: LocaleKey[] = ['en', 'zhHans', 'zhHant']
+export { supportedLocaleKeys }
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -227,8 +227,8 @@ export function getI18n<T>(
   obj:
     | Resource
     | Neighbourhood
-    | { i18n: Record<Locale | LocaleKey, T> | null }
-    | Record<Locale | LocaleKey, T>
+    | { i18n: Record<LocaleKey, T> | null }
+    | Record<LocaleKey, T>
     | undefined,
   field: string,
   _userPreferences: UserPreferences,

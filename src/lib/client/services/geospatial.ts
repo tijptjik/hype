@@ -22,7 +22,7 @@ import type { LngLatLike } from 'maplibre-gl'
 //
 // 2. FILTERS
 //    - filterPlaces(appCtx: AppCtx, term: string)
-//      Filters places by search term across name, district, and region
+//      Filters places by search term across name, district, and area
 //
 // 3. TRANSFORMATIONS
 //    - getNeighbourhoodsAsResources(): NeighbourhoodResource[]
@@ -71,7 +71,7 @@ export function filterPlaces(appCtx: AppCtx, term: string) {
       getI18n(data, 'district', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower) ||
-      getI18n(data, 'region', appCtx.getUserPreferences())
+      getI18n(data, 'area', appCtx.getUserPreferences())
         .toLowerCase()
         .includes(searchLower)
     )

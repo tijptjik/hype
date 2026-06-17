@@ -17,7 +17,7 @@ import {
 // SCHEMA
 import * as schema from './schema'
 // ENUMS
-import { supportedLocales, type SupportedLocales, HierarchicalResource } from '../enums'
+import { supportedLocaleKeys, HierarchicalResource } from '../enums'
 // TYPES
 import type {
   Field,
@@ -25,6 +25,7 @@ import type {
   ResourceDB,
   ResourceType,
   Locale,
+  LocaleKey,
   Database,
   ResourceConfig,
   ResourceHierarchy,
@@ -470,7 +471,7 @@ const isTransformedLocaleMap = <T extends LocaleBundle>(
   // Check if all keys are supported locales
   const keys = Object.keys(value)
   const allKeysAreLocales = keys.every(key =>
-    supportedLocales.includes(key as SupportedLocales),
+    supportedLocaleKeys.includes(key as LocaleKey),
   )
   if (!allKeysAreLocales) return false
 

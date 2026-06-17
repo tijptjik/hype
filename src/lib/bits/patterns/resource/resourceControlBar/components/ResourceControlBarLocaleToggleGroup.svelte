@@ -15,7 +15,7 @@ let { items = [], class: className = '' }: ResourceControlBarLocaleToggleGroupPr
     class="bits-resource-filter-bar__locale-group-divider"
   />
   <div class="bits-resource-filter-bar__locale-group-items">
-    {#each items as item (item.value)}
+    {#each items as item (item.localeKey)}
       <Button
         text={item.label}
         size="xs"
