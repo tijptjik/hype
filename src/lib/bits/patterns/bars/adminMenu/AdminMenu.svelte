@@ -92,7 +92,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
 
   if (adminCtx.appCtx.isSuperAdmin()) {
     items.push({
-      href: `${ADMIN_PATH}/images/batch`,
+      href: `${ADMIN_PATH}/import`,
       label: 'Uploads',
       icon: CloudArrowUp,
     })
