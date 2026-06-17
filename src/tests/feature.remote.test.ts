@@ -86,6 +86,22 @@ vi.mock('$lib/api/server/remote', () => ({
         await mockGuardedContext(),
       )
     }, 'query'),
+  guardedBatchByIdQuery: (_schema: unknown, fn: unknown) =>
+    withRemoteMeta(async (input: { id: string }) => {
+      const resolver = await (
+        fn as (params: {
+          args: Array<{ id: string }>
+          ids: string[]
+          ctx: unknown
+        }) => Promise<(arg: { id: string }) => unknown>
+      )({
+        args: [input],
+        ids: [input.id],
+        ctx: await mockGuardedContext(),
+      })
+
+      return resolver(input)
+    }, 'query'),
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -509,6 +525,36 @@ describe('feature.remote authz matrix', () => {
       expected: true,
       actual: true,
     })
+  })
+
+  it('featureForm create allows a caller-supplied id', async () => {
+    await remote.featureForm(
+      {
+        meta: {
+          id: 'import-feature-1',
+          mode: 'create',
+        },
+        data: {
+          layerId: 'layer-1',
+          contributorId: null,
+          i18n: { en: { name: 'Imported feature' } },
+          properties: [],
+          geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+          addressMeta: {},
+          isIntangible: false,
+          isVisitable: true,
+          isPendingReview: false,
+        },
+      },
+      throwingInvalid,
+    )
+
+    expect(mockCreateFeature).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        id: 'import-feature-1',
+      }),
+    )
   })
 
   it('publishFeature denies when publish authz denies', async () => {
