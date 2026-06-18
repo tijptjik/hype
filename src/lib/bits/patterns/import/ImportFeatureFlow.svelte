@@ -154,15 +154,6 @@ const headerProgressValue = $derived.by(() =>
 const featureResolutionResults = $derived(
   importCtx.getFeatureResolution().results as FeatureResolutionData[],
 )
-const hasFeatureResolutionCreatePolicy = $derived(
-  featureResolutionResults.some(
-    result =>
-      result.hasProvidedIdWithoutMatch ||
-      (result.status === 'skipped' &&
-        Boolean(result.submitted?.feature?.id) &&
-        !result.existing),
-  ),
-)
 const featureResolutionIgnoreMissingIds = $derived(
   importCtx.getFeatureResolution().ignoreMissingFeatureIds,
 )
@@ -633,6 +624,24 @@ $effect(() => {
 })
 </script>
 
+{#snippet featureResolutionStatsAction()}
+  <div class="flex items-center gap-4">
+    <div
+      class="font-mono text-sm font-semibold uppercase tracking-[0.22em] text-warning"
+    >
+      Update Policy
+    </div>
+    <Switch
+      checked={featureResolutionIgnoreMissingIds}
+      onCheckedChange={checked => handleFeatureResolutionUpdatePolicy(checked === true)}
+      color="warning"
+      leftText="Select"
+      rightText="All"
+      size="sm"
+    />
+  </div>
+{/snippet}
+
 <div class="min-h-0 flex-1" in:fade={{ duration: 300 }}>
   <ImportPrimitive.Root>
     <ImportPrimitive.Header
@@ -640,29 +649,11 @@ $effect(() => {
       subtitle={headerContent.subtitle}
       {dataLabel}
       stats={headerStats}
+      statsAction={currentStep === 'feature-resolution'
+        ? featureResolutionStatsAction
+        : undefined}
       progressValue={headerProgressValue}
-    >
-      {#if currentStep === 'feature-resolution' && hasFeatureResolutionCreatePolicy}
-        {#snippet statsAction()}
-          <div class="flex items-center gap-4">
-            <div
-              class="font-mono text-sm font-semibold uppercase tracking-[0.22em] text-warning"
-            >
-              Update Policy
-            </div>
-            <Switch
-              checked={featureResolutionIgnoreMissingIds}
-              onCheckedChange={checked =>
-                handleFeatureResolutionUpdatePolicy(checked === true)}
-              color="warning"
-              leftText="Select"
-              rightText="All"
-              size="sm"
-            />
-          </div>
-        {/snippet}
-      {/if}
-    </ImportPrimitive.Header>
+    />
 
     <ImportPrimitive.Body>
       <ImportPrimitive.ImportStep
