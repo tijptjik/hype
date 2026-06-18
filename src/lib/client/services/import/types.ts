@@ -101,6 +101,7 @@ export type FeatureImportStep =
   | 'finished'
 
 export type UserValidationResult = {
+  id?: string
   value: string
   isValid: boolean
   userId?: string

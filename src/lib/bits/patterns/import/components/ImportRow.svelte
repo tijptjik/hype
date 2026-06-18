@@ -13,7 +13,7 @@ let {
 
 const rootClass = $derived(
   cx(
-    'flex overflow-hidden rounded-xl border border-base-content/10 bg-base-100/70',
+    'flex overflow-visible rounded-xl border border-base-content/10 bg-base-100/70',
     className,
   ),
 )
