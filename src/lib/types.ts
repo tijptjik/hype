@@ -1144,6 +1144,19 @@ export type HubUserStateFlags = {
 export type Locale = `${SupportedLocales}`
 export type LocaleExtended = LocaleKey | 'core'
 
+export type MapStyleCatalogKey =
+  | 'hyper'
+  | 'hyperLight'
+  | 'ghostery'
+  | 'ghostery-legacy'
+  | 'breadline'
+  | 'protomaps-light'
+  | 'protomaps-dark'
+  | 'protomaps-white'
+  | 'protomaps-grayscale'
+  | 'protomaps-black'
+  | 'hyperAdmin'
+
 export type TranslatedValue = {
   value: string
   i18n?: {
