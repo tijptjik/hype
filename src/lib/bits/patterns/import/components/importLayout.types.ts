@@ -23,6 +23,15 @@ export type ImportRowProps = ImportRegionProps & {
   contentClass?: string
 }
 
+export type ImportRowColsProps = ImportRegionProps & {
+  cols?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
+  contentClass?: string
+}
+
+export type ImportRowColProps = ImportRegionProps & {
+  span?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
+}
+
 export type ImportRowsProps = {
   children?: Snippet
   class?: string
