@@ -288,7 +288,7 @@ export function selectFallbackUser(
   const userId = getImportUserId(user)
   if (!userId) return false
 
-  importCtx.setUserValidation({ fallbackUserId: userId })
+  importCtx.setUserValidation({ fallbackUserId: userId, fallbackUserData: user })
   importCtx.setUserSearchQuery('')
   importCtx.setUserSearchResults([])
   return true
@@ -300,7 +300,10 @@ export function selectFallbackUser(
  * @param importCtx - Active import context.
  */
 export function clearFallbackUser(importCtx: ImportCtx): void {
-  importCtx.setUserValidation({ fallbackUserId: undefined })
+  importCtx.setUserValidation({
+    fallbackUserId: undefined,
+    fallbackUserData: undefined,
+  })
 }
 
 /**

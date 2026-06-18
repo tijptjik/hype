@@ -1136,80 +1136,84 @@ $effect(() => {
         </div>
       {:else}
         <!-- Pre-geocoding state -->
-        <div class="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-3">
-          <section
-            class="flex min-h-48 flex-col justify-between rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
-          >
-            <div class="font-black text-7xl leading-none tracking-[-0.08em] text-info">
-              {addressColumns.length}
-            </div>
-            <div>
-              <p
-                class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
-              >
-                Address Columns
-              </p>
-              <div class="mt-4 flex flex-wrap gap-2">
-                {#if addressColumns.length > 0}
-                  {#each addressColumns as col}
-                    <Badge text={`${col.field} ${col.locale ?? ''}`} tone="neutral" />
-                  {/each}
-                {:else}
-                  <span class="text-sm text-base-content/50">None</span>
-                {/if}
-              </div>
-            </div>
-          </section>
-
-          <section
-            class="flex min-h-48 flex-col justify-between rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
-          >
-            <div
-              class="font-black text-7xl leading-none tracking-[-0.08em] text-warning"
+        <div class="flex flex-1 items-center p-4">
+          <div class="grid w-full grid-cols-1 gap-4 lg:grid-cols-3">
+            <section
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
-              {coordinateColumns.latitude.length + coordinateColumns.longitude.length}
-            </div>
-            <div>
-              <p
-                class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+              <div
+                class="font-black text-7xl leading-none tracking-[-0.08em] text-info"
               >
-                Coordinate Columns
-              </p>
-              <div class="mt-4 flex flex-wrap gap-2">
-                {#if coordinateColumns.latitude.length > 0}
-                  <Badge text="latitude" tone="neutral" />
-                {/if}
-                {#if coordinateColumns.longitude.length > 0}
-                  <Badge text="longitude" tone="neutral" />
-                {/if}
-                {#if coordinateColumns.latitude.length === 0 && coordinateColumns.longitude.length === 0}
-                  <span class="text-sm text-base-content/50">None</span>
-                {/if}
+                {addressColumns.length}
               </div>
-            </div>
-          </section>
+              <div>
+                <p
+                  class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+                >
+                  Address Columns
+                </p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  {#if addressColumns.length > 0}
+                    {#each addressColumns as col}
+                      <Badge text={`${col.field} ${col.locale ?? ''}`} tone="neutral" />
+                    {/each}
+                  {:else}
+                    <span class="text-sm text-base-content/50">None</span>
+                  {/if}
+                </div>
+              </div>
+            </section>
 
-          <section
-            class="flex min-h-48 flex-col justify-between rounded-3xl border border-success/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
-          >
-            <div
-              class="font-black text-7xl leading-none tracking-[-0.08em] text-success"
+            <section
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
-              {geocodeCacheSize}
-            </div>
-            <div>
-              <p
-                class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+              <div
+                class="font-black text-7xl leading-none tracking-[-0.08em] text-warning"
               >
-                Cached Addresses
-              </p>
-              <p
-                class="mt-4 font-mono text-xs uppercase tracking-[0.18em] text-base-content/55"
+                {coordinateColumns.latitude.length + coordinateColumns.longitude.length}
+              </div>
+              <div>
+                <p
+                  class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+                >
+                  Coordinate Columns
+                </p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  {#if coordinateColumns.latitude.length > 0}
+                    <Badge text="latitude" tone="neutral" />
+                  {/if}
+                  {#if coordinateColumns.longitude.length > 0}
+                    <Badge text="longitude" tone="neutral" />
+                  {/if}
+                  {#if coordinateColumns.latitude.length === 0 && coordinateColumns.longitude.length === 0}
+                    <span class="text-sm text-base-content/50">None</span>
+                  {/if}
+                </div>
+              </div>
+            </section>
+
+            <section
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-success/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+            >
+              <div
+                class="font-black text-7xl leading-none tracking-[-0.08em] text-success"
               >
-                {isLoadingCache ? 'Reading cache' : 'Ready'}
-              </p>
-            </div>
-          </section>
+                {geocodeCacheSize}
+              </div>
+              <div>
+                <p
+                  class="text-xs font-bold uppercase tracking-[0.22em] text-base-content/45"
+                >
+                  Cached Addresses
+                </p>
+                <p
+                  class="mt-4 font-mono text-xs uppercase tracking-[0.18em] text-base-content/55"
+                >
+                  {isLoadingCache ? 'Reading cache' : 'Ready'}
+                </p>
+              </div>
+            </section>
+          </div>
         </div>
       {/if}
     </div>

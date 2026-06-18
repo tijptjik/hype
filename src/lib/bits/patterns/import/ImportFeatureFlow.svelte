@@ -154,8 +154,14 @@ const headerProgressValue = $derived.by(() =>
 const featureResolutionResults = $derived(
   importCtx.getFeatureResolution().results as FeatureResolutionData[],
 )
-const featureResolutionMissingIdResults = $derived(
-  featureResolutionResults.filter(result => result.hasProvidedIdWithoutMatch),
+const hasFeatureResolutionCreatePolicy = $derived(
+  featureResolutionResults.some(
+    result =>
+      result.hasProvidedIdWithoutMatch ||
+      (result.status === 'skipped' &&
+        Boolean(result.submitted?.feature?.id) &&
+        !result.existing),
+  ),
 )
 const featureResolutionIgnoreMissingIds = $derived(
   importCtx.getFeatureResolution().ignoreMissingFeatureIds,
@@ -570,6 +576,7 @@ function handleFeatureResolutionUpdatePolicy(checked: boolean): void {
 
 async function handleCloseImportFlow(): Promise<void> {
   importCtx.reset()
+  onCancel()
   await goto('/admin/import')
 }
 
@@ -635,7 +642,7 @@ $effect(() => {
       stats={headerStats}
       progressValue={headerProgressValue}
     >
-      {#if currentStep === 'feature-resolution' && featureResolutionMissingIdResults.length > 0}
+      {#if currentStep === 'feature-resolution' && hasFeatureResolutionCreatePolicy}
         {#snippet statsAction()}
           <div class="flex items-center gap-4">
             <div
