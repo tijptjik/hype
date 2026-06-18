@@ -4,7 +4,7 @@ import type { ImportCtx } from '$lib/context/import.svelte'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
-import ImportRowCol from '../ImportRowCol.svelte'
+import ImportRowCol from '../../../shared/ImportRowCol.svelte'
 // SERVICES
 import { getAvailableFields } from '$lib/client/services/import/features'
 import { getPropertyType } from '$lib/client/services/import/features/property'

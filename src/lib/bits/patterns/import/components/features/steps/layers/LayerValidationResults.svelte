@@ -1,7 +1,7 @@
 <script lang="ts">
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import ImportRow from '../ImportRow.svelte'
+import ImportRow from '../../../shared/ImportRow.svelte'
 import CheckCircle from 'virtual:icons/lucide/circle-check'
 import XCircle from 'virtual:icons/lucide/circle-x'
 // TYPES

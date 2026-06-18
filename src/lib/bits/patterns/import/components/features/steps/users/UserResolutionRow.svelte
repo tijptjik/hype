@@ -12,8 +12,8 @@ import {
 } from '$lib/client/services/import/users'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import ImportMappingRow from '../ImportMappingRow.svelte'
-import ResolvedTargetButton from './ResolvedTargetButton.svelte'
+import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
+import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import UserIdentity from './UserIdentity.svelte'
 import UserSearchBox from './UserSearchBox.svelte'
 import XCircle from 'virtual:icons/lucide/circle-x'

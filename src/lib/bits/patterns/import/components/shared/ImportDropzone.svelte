@@ -3,7 +3,7 @@
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import SvelteDropzone from 'svelte-file-dropzone'
 // TYPES
-import type { DropzoneEvent, ImportableResource } from '../import.types'
+import type { DropzoneEvent, ImportableResource } from '../../import.types'
 
 type Props = {
   type: ImportableResource

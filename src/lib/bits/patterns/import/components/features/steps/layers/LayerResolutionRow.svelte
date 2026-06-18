@@ -14,12 +14,12 @@ import {
 import { Button } from '$lib/bits/core'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import ImportMappingRow from '../ImportMappingRow.svelte'
-import ImportSearchBox from '../ImportSearchBox.svelte'
-import ResolvedTargetButton from './ResolvedTargetButton.svelte'
+import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
+import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
+import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import XCircle from 'virtual:icons/lucide/circle-x'
 // TYPES
-import type { ImportSearchBoxItem } from '../importSearch.types'
+import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 
 type LayerLike = {
   id?: string

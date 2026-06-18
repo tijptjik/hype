@@ -11,7 +11,7 @@ import {
 } from '$lib/client/services/import/users'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import ImportRow from '../ImportRow.svelte'
+import ImportRow from '../../../shared/ImportRow.svelte'
 import UserSearchBox from './UserSearchBox.svelte'
 import CheckCircle from 'virtual:icons/lucide/circle-check'
 // TYPES
