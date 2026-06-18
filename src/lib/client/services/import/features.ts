@@ -61,7 +61,7 @@ import type {
 import type {
   ImportFooterProps,
   ImportHeaderStatItem,
-} from '$lib/bits/patterns/import/components/importLayout.types'
+} from '$lib/bits/patterns/import/components/shared/importLayout.types'
 import type { ImportCtx, ImportState } from '$lib/context/import.svelte'
 
 /********************

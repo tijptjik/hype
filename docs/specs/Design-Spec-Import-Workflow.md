@@ -8,7 +8,7 @@ as a future reimplementation target, not as a recommendation to restore the old 
 The source snapshot was centered on:
 
 - `src/routes/admin/import/+page.svelte`
-- `src/lib/components/import/*`
+- `src/lib/bits/patterns/import/*`
 - `src/lib/client/services/import/*`
 - `src/lib/context/import.svelte.ts`
 

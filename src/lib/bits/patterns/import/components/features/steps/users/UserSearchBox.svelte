@@ -2,10 +2,10 @@
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
-import ImportSearchBox from '../ImportSearchBox.svelte'
+import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
 // TYPES
 import type { UserValidationResult } from '$lib/client/services/import/types'
-import type { ImportSearchBoxItem } from '../importSearch.types'
+import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 
 type Props = {
   id: string

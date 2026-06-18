@@ -13,7 +13,7 @@ import CopyX from 'virtual:icons/lucide/copy-x'
 import Photo from 'virtual:icons/lucide/image'
 import Replace from 'virtual:icons/lucide/replace'
 // PATTERN COMPONENTS
-import ImportRow from '../ImportRow.svelte'
+import ImportRow from '../shared/ImportRow.svelte'
 import ImportImagePreview from './ImportImagePreview.svelte'
 // SERVICES
 import {

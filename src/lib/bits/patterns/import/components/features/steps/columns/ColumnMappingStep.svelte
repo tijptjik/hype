@@ -9,9 +9,9 @@ import {
   type ParentSectionOrganisationItem,
   type ParentSectionProjectItem,
 } from '$lib/bits/patterns/forms/formParentSection'
-import ImportRows from '../ImportRows.svelte'
-import ImportRowCol from '../ImportRowCol.svelte'
-import ImportRowCols from '../ImportRowCols.svelte'
+import ImportRows from '../../../shared/ImportRows.svelte'
+import ImportRowCol from '../../../shared/ImportRowCol.svelte'
+import ImportRowCols from '../../../shared/ImportRowCols.svelte'
 import ColumnMappingRowLabel from './ColumnMappingRowLabel.svelte'
 import ColumnMappingRowSelects from './ColumnMappingRowSelects.svelte'
 
