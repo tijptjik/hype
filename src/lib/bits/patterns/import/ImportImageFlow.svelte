@@ -58,6 +58,9 @@ let pendingCount = $derived(
 )
 let totalCount = $derived(uploadResults.length)
 let completedCount = $derived(successCount + errorCount + duplicateCount)
+let canQueueReplacements = $derived(
+  currentPhase === 'uploading' && totalCount > 0 && pendingCount === 0 && !isUploading,
+)
 let canAdvanceToFinished = $derived(
   totalCount > 0 &&
     pendingCount === 0 &&
@@ -151,6 +154,7 @@ function handleContinue(): void {
   }
 }
 async function handleReplaceUpload(resultId: string): Promise<void> {
+  if (!canQueueReplacements) return
   if (replacingResultIds.has(resultId)) return
 
   const index = uploadResults.findIndex(result => result.id === resultId)
@@ -277,7 +281,7 @@ $effect(() => {
               {result}
               {index}
               onReplace={handleReplaceUpload}
-              replaceDisabled={replacingResultIds.has(result.id)}
+              replaceDisabled={!canQueueReplacements || replacingResultIds.has(result.id)}
             />
           {/each}
         </ImportPrimitive.Rows>
