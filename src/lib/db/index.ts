@@ -491,7 +491,16 @@ export const toLocaleMap = <T extends LocaleBundle>(
     if (i18n.length === 0) return null
     return i18n.reduce(
       (acc: Record<Locale, T>, bundle: T) => {
-        acc[bundle.locale] = bundle
+        const locale = toLocaleKebab(bundle.locale as Locale | LocaleKey)
+        const isCanonicalLocale = bundle.locale === locale
+
+        // Prefer canonical DB-locale rows when stale camelCase duplicates exist.
+        if (!acc[locale] || isCanonicalLocale) {
+          acc[locale] = {
+            ...bundle,
+            locale,
+          }
+        }
         return acc
       },
       {} as Record<Locale, T>,
@@ -675,13 +684,12 @@ export const toRelatedRecords = <
   foreignKeyValue: string,
   keyName: K = 'id' as K,
 ): Array<T & Record<K, KeyValue> & Record<F, string>> => {
-  return Object.entries(data).map(([rawKey, rawValue]) => {
+  return Object.entries(data).map(([key, rawValue]) => {
     const isLocaleKey = keyName === 'locale'
-    const key = (isLocaleKey ? toDbLocaleKey(rawKey) : rawKey) as KeyValue
     const valueRecord = rawValue as Record<string, unknown>
     const normalizedLocale =
       isLocaleKey && typeof valueRecord.locale === 'string'
-        ? toDbLocaleKey(valueRecord.locale)
+        ? toLocaleKebab(valueRecord.locale as Locale | LocaleKey)
         : undefined
 
     return {
