@@ -150,9 +150,11 @@ type FeatureImportFooterPropsParams = {
   geoLookupIsBusy: boolean
   geoLookupStartProcessing?: () => void
   geoLookupFooterStatus: string
+  geoLookupStatusCounts?: GeoLookupStatusCounts
   featureResolutionStatusCounts?: FeatureResolutionStatusCounts
   featureResolutionIsProcessing: boolean
   featureResolutionStartProcessing?: () => void
+  featureResolutionFooterStatus?: string
   propertyCanContinue?: boolean
   propertyAction?: () => void
   propertyActionLabel?: string
@@ -711,11 +713,6 @@ export function getFeatureImportHeaderStats(
         value: geo.noMatch,
         tone: geo.noMatch > 0 ? 'warning' : 'neutral',
       },
-      {
-        label: 'Cache',
-        value: geo.cacheSize,
-        tone: 'info',
-      },
     ]
   }
 
@@ -1028,7 +1025,7 @@ export function getFeatureImportFooterProps(
       onBack: params.onBack,
       onSecondary: params.geoLookupClearCache,
       secondaryPlacement: 'left',
-      secondaryLabel: 'Clear Cache',
+      secondaryLabel: 'Clear',
       secondaryDisabled: false,
       onContinue: params.geoLookupIsBusy
         ? params.geoLookupPauseProcessing
@@ -1043,7 +1040,10 @@ export function getFeatureImportFooterProps(
       continueDisabled: params.geoLookupIsBusy
         ? !params.geoLookupPauseProcessing
         : !params.geoLookupStartProcessing,
-      leftMetaText: params.geoLookupFooterStatus,
+      leftMetaText: params.geoLookupStatusCounts
+        ? `Cache ${params.geoLookupStatusCounts.cacheSize}`
+        : '',
+      rightMetaText: params.geoLookupFooterStatus,
     }
   }
 
@@ -1066,6 +1066,7 @@ export function getFeatureImportFooterProps(
           pending === 0 ||
           processing > 0 ||
           params.featureResolutionIsProcessing,
+      rightMetaText: params.featureResolutionFooterStatus,
     }
   }
 

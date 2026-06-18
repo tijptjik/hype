@@ -39,10 +39,12 @@ export type ImportRowsProps = {
 }
 
 export type ImportHeaderProps = {
+  children?: Snippet
   title: string
   subtitle?: string
   dataLabel?: string
   stats?: ImportHeaderStatItem[]
+  statsAction?: Snippet
   progressValue?: number | null
   class?: string
 }

@@ -22,6 +22,10 @@ import {
   type GeoLookupStatusCounts,
 } from '$lib/client/services/import/features'
 import {
+  setAllMissingProvidedFeatureIdRows,
+  type FeatureResolutionData,
+} from '$lib/client/services/import/features/resolution'
+import {
   canCompleteUserResolution,
   validateUsers,
   startUserResolution,
@@ -37,6 +41,8 @@ import {
   validateLayers,
   enrichFeaturesWithLayerData,
 } from '$lib/client/services/import/features/layer'
+// BITS COMPONENTS
+import { Switch } from '$lib/bits/custom/switch'
 // PATTERN COMPONENTS
 import * as ImportPrimitive from './components'
 // COMPONENT TYPES
@@ -104,6 +110,7 @@ let featureResolutionDownloadResults: (() => void) | undefined = $state()
 let featureResolutionCanDownloadResults = $state(false)
 let featureResolutionStatusCounts: FeatureResolutionStatusCounts | undefined = $state()
 let featureResolutionIsProcessing = $state(false)
+let featureResolutionFooterStatus = $state('')
 
 // STATE :: RESOURCE HIERACHY
 
@@ -143,6 +150,15 @@ const headerProgressValue = $derived.by(() =>
     geoLookupStatusCounts,
     featureResolutionStatusCounts,
   }),
+)
+const featureResolutionResults = $derived(
+  importCtx.getFeatureResolution().results as FeatureResolutionData[],
+)
+const featureResolutionMissingIdResults = $derived(
+  featureResolutionResults.filter(result => result.hasProvidedIdWithoutMatch),
+)
+const featureResolutionIgnoreMissingIds = $derived(
+  importCtx.getFeatureResolution().ignoreMissingFeatureIds,
 )
 
 // HANDLERS
@@ -547,6 +563,11 @@ function handleResolve(): void {
   }
 }
 
+function handleFeatureResolutionUpdatePolicy(checked: boolean): void {
+  importCtx.updateFeatureResolution({ ignoreMissingFeatureIds: checked })
+  setAllMissingProvidedFeatureIdRows(importCtx, featureResolutionResults, checked)
+}
+
 async function handleCloseImportFlow(): Promise<void> {
   importCtx.reset()
   await goto('/admin/import')
@@ -575,9 +596,11 @@ const footerProps = $derived.by(() =>
     geoLookupIsBusy,
     geoLookupStartProcessing,
     geoLookupFooterStatus,
+    geoLookupStatusCounts,
     featureResolutionStatusCounts,
     featureResolutionIsProcessing,
     featureResolutionStartProcessing,
+    featureResolutionFooterStatus,
     propertyCanContinue: propertyBackInspection,
     propertyAction,
     propertyActionLabel,
@@ -611,7 +634,28 @@ $effect(() => {
       {dataLabel}
       stats={headerStats}
       progressValue={headerProgressValue}
-    />
+    >
+      {#if currentStep === 'feature-resolution' && featureResolutionMissingIdResults.length > 0}
+        {#snippet statsAction()}
+          <div class="flex items-center gap-4">
+            <div
+              class="font-mono text-sm font-semibold uppercase tracking-[0.22em] text-warning"
+            >
+              Update Policy
+            </div>
+            <Switch
+              checked={featureResolutionIgnoreMissingIds}
+              onCheckedChange={checked =>
+                handleFeatureResolutionUpdatePolicy(checked === true)}
+              color="warning"
+              leftText="Select"
+              rightText="All"
+              size="sm"
+            />
+          </div>
+        {/snippet}
+      {/if}
+    </ImportPrimitive.Header>
 
     <ImportPrimitive.Body>
       <ImportPrimitive.ImportStep
@@ -667,6 +711,7 @@ $effect(() => {
             bind:canDownloadResults={featureResolutionCanDownloadResults}
             bind:statusCounts={featureResolutionStatusCounts}
             bind:isProcessing={featureResolutionIsProcessing}
+            bind:footerStatus={featureResolutionFooterStatus}
           />
         {:else if currentStep === 'finished'}
           <ImportPrimitive.FinishedStep

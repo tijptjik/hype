@@ -11,6 +11,7 @@ let {
   subtitle,
   dataLabel = '',
   stats = [],
+  statsAction,
   progressValue = null,
   class: className = '',
 }: ImportHeaderProps = $props()
@@ -45,7 +46,15 @@ const rootClass = $derived(
     {/if}
   </div>
 
-  <ImportHeaderStats {stats} />
+  <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <ImportHeaderStats {stats} />
+
+    {#if statsAction}
+      <div class="flex justify-start md:justify-end">
+        {@render statsAction()}
+      </div>
+    {/if}
+  </div>
 
   {#if normalizedProgress !== null}
     <div class="absolute inset-x-0 bottom-0 h-px bg-base-content/10">
