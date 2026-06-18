@@ -154,6 +154,10 @@ type FeatureImportFooterPropsParams = {
   featureResolutionIsProcessing: boolean
   featureResolutionStartProcessing?: () => void
   propertyCanContinue?: boolean
+  propertyAction?: () => void
+  propertyActionLabel?: string
+  propertyActionDisabled?: boolean
+  propertyFooterStatus?: string
   canCompleteUserResolution: boolean
   canCompleteLayerResolution: boolean
   onCancel: () => void
@@ -966,6 +970,17 @@ export function getFeatureImportFooterProps(
   }
 
   if (params.currentStep === 'property-matching') {
+    if (params.propertyAction) {
+      return {
+        ...baseProps,
+        onBack: params.onBack,
+        onContinue: params.propertyAction,
+        continueLabel: params.propertyActionLabel ?? 'Create',
+        continueDisabled: params.propertyActionDisabled,
+        rightMetaText: params.propertyFooterStatus,
+      }
+    }
+
     return {
       ...baseProps,
       onBack: params.onBack,
