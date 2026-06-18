@@ -751,8 +751,6 @@ export function handleImageDropEvent(
       if (successful > 0) {
         adminCtx.invalidateAndRefresh(FirstClassResource.feature)
       }
-
-      console.log(`Upload complete: ${successful} successful, ${failed} failed`)
     },
     (error: Error) => {
       console.error('Upload failed:', error)

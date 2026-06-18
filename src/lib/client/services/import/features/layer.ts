@@ -503,8 +503,6 @@ export function enrichFeaturesWithLayerData(
   importCtx: ImportCtx,
   validationResults: LayerValidationResult[],
 ): void {
-  console.log('🔧 Enriching features with validated layer data...')
-
   const data = importCtx.getData()
   const columns = importCtx.getColumns()
   const headers = importCtx.getHeaders()
@@ -512,7 +510,6 @@ export function enrichFeaturesWithLayerData(
   // Find layer columns
   const layerColumns = columns.filter(col => col.modelType === 'Layer')
   if (layerColumns.length === 0) {
-    console.log('🔧 No layer columns found, using fallback layer for all features')
     // If no layer columns, all features should use the fallback layer
     const layerValidation = importCtx.getLayerValidation()
     if (layerValidation.fallbackLayerId) {
@@ -564,9 +561,6 @@ export function enrichFeaturesWithLayerData(
     }
   })
 
-  console.log('🔧 Layer value to ID mapping:', Object.fromEntries(layerValueToId))
-  console.log('🔧 Layer ID to data mapping:', Object.fromEntries(layerIdToData))
-
   // Get column indices for layer columns
   const layerColumnIndices = layerColumns
     .map(col => ({
@@ -600,10 +594,6 @@ export function enrichFeaturesWithLayerData(
       }
 
       enriched.layer = enrichedLayer
-
-      console.log(
-        `🔧 Row ${rowIndex + 1}: Set layer ID ${layerId} and name "${enrichedLayer.name}" for reference "${reference.label}"`,
-      )
     }
 
     // Check each layer column for this row
@@ -619,9 +609,6 @@ export function enrichFeaturesWithLayerData(
             name: layerData ? getLayerDisplayName(layerData) : layerValue,
           }
 
-          console.log(
-            `🔧 Row ${rowIndex + 1}: Set layer ID ${layerId} and name "${enriched.layer.name}" for value "${layerValue}"`,
-          )
           break // Use first matching layer column
         }
       }
@@ -637,17 +624,11 @@ export function enrichFeaturesWithLayerData(
           id: layerValidation.fallbackLayerId,
           name: fallbackLayerData?.i18n?.en?.name || 'Unknown Layer',
         }
-
-        console.log(
-          `🔧 Row ${rowIndex + 1}: Using fallback layer ID ${layerValidation.fallbackLayerId} and name "${enriched.layer.name}"`,
-        )
       }
     }
 
     importCtx.setRowEnrichedData(rowIndex, enriched)
   }
-
-  console.log('✅ Layer data enrichment completed')
 }
 
 // Layer creation functions
@@ -704,14 +685,10 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
   try {
     const currentFormData = layerForm as LayerFormInput['data']
 
-    console.log('Current form data when submitting:', currentFormData)
-
     const selectedProject = importCtx.getSelectedProject()!
 
     // Fetch project properties and create layer properties for the new layer
-    console.log('Fetching project properties to include in layer creation...')
     const projectProperties = await getProjectProperties(selectedProject.id)
-    console.log('Found', projectProperties.length, 'project properties to add to layer')
 
     // Create layer properties array for the new layer
     const layerProperties = projectProperties.map((projectProp: Property) => {
@@ -775,8 +752,6 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
       }
     })
 
-    console.log('Created', layerProperties.length, 'layer properties')
-
     const layerData = {
       metadata: currentFormData.metadata ?? {},
       isDefaultVisible: Boolean(currentFormData.isDefaultVisible),
@@ -838,8 +813,6 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
 
     // Hide the form
     hideLayerCreationForm(importCtx)
-
-    console.log('Layer created successfully:', newLayer)
   } catch (error) {
     console.error('Error creating layer:', error)
   } finally {
