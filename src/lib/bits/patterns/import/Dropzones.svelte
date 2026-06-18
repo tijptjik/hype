@@ -26,7 +26,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
 <Subheading level={4} class="pb-4">{m.import_data_csv_only()}</Subheading>
 
 <div class="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
-  <ImportPrimitive.ImportDropzone
+  <ImportPrimitive.Dropzone
     type="features"
     title={m.omni__title_features()}
     subtitle={m.import_data_subtitle()}
@@ -36,7 +36,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
     ondrop={onDrop}
   />
 
-  <ImportPrimitive.ImportDropzone
+  <ImportPrimitive.Dropzone
     type="users"
     title={m.import_data_images()}
     subtitle={m.import_coming_soon()}
@@ -47,7 +47,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
     ondrop={onDrop || (() => {})}
   />
 
-  <ImportPrimitive.ImportDropzone
+  <ImportPrimitive.Dropzone
     type="events"
     title={m.import_data_events()}
     subtitle={m.import_coming_soon()}
@@ -62,7 +62,7 @@ let { onDrop, isUploading, uploadProgress }: Props = $props()
 <Heading level={4}>{m.import_batch_image()}</Heading>
 <Subheading level={4} class="pb-4">{m.import_batch_image_description()}</Subheading>
 
-<ImportPrimitive.ImportDropzone
+<ImportPrimitive.Dropzone
   type="images"
   title={m.maroon_teary_warbler_nourish()}
   subtitle={m.teal_dizzy_finch_file()}

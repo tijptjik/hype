@@ -2,16 +2,112 @@
 import { setContext, getContext } from 'svelte'
 // TYPES
 import type {
-  ImportState,
-  CSVColumn,
+  FeatureCSVColumn,
   UserValidationResult,
+  LayerValidationResult,
   Organisation,
   Project,
-  CSVImportStep,
-  Id,
+  FeatureImportStep,
   Property,
+  Layer,
 } from '$lib/client/services/import/types'
-import type { Locale, LocaleKey } from '$lib/types'
+import type { Id, Locale, LocaleKey } from '$lib/types'
+
+export type ImportState = {
+  isTypeSelected: boolean
+  file: File | null
+  headers: string[]
+  data: string[][]
+  columns: FeatureCSVColumn[]
+  selectedOrganisation: Organisation | null
+  selectedProject: Project | null
+  selectedLocale: LocaleKey
+  showAssociationModal: boolean
+  currentStep: FeatureImportStep
+  stats: { valid: number; invalid: number; truncated: number }
+  userValidation: {
+    isValidating: boolean
+    progress: number
+    total: number
+    results: UserValidationResult[]
+    fallbackUserId?: string
+    showUserSelection: boolean
+    showUserResolution: boolean
+  }
+  userResolution: {
+    invalidValues: string[]
+    resolutions: Map<string, { userId: string; userData?: unknown }>
+  }
+  layerValidation: {
+    isValidating: boolean
+    progress: number
+    total: number
+    results: LayerValidationResult[]
+    fallbackLayerId?: string
+    showLayerSelection: boolean
+    showLayerResolution: boolean
+    showLayerCreation: boolean
+  }
+  layerResolution: {
+    invalidValues: string[]
+    resolutions: Map<string, { layerId: string; layerData?: unknown }>
+  }
+  activeLayerCreation: string | null
+  isCreatingLayer: boolean
+  isSubmittingLayer: boolean
+  layerForm: unknown | null
+  availablePropertyKeys: string[]
+  fetchedProperties: Property[]
+  isFetchingProperties: boolean
+  userSearchQuery: string
+  userSearchResults: UserValidationResult[]
+  resolutionSearchResults: Map<string, UserValidationResult[]>
+  resolutionSearchQueries: Map<string, string>
+  layerSearchQuery: string
+  layerSearchResults: LayerValidationResult[]
+  allLayers: Layer[]
+  selectedLayer: Layer | null
+  layersLoaded: boolean
+  layerResolutionSearchResults: Map<string, LayerValidationResult[]>
+  layerResolutionSearchQueries: Map<string, string>
+  propertyReconciliation: {
+    currentAction:
+      | 'none'
+      | 'freeform-creation'
+      | 'translation-prompt'
+      | 'data-enrichment'
+      | 'value-matching'
+      | 'range-validation'
+      | 'categorical-creation'
+    enrichedData: Map<
+      string,
+      {
+        propertyId?: Id
+        propertyValueId?: Id
+        translatedValues?: Record<Locale, string>
+        enrichedData?: Map<number, Record<Locale, string>>
+        resolvedValues?: Record<string, Id | undefined>
+      }
+    >
+    pendingProperties: string[]
+    currentPropertyIndex: number
+    translationChoices: Map<
+      string,
+      { mode: 'translate' | 'copy'; sourceLocale?: Locale }
+    >
+    isProcessing: boolean
+  }
+  rowEnrichedData: Map<number, Record<string, unknown>>
+  featureResolution: {
+    isProcessing: boolean
+    currentIndex: number
+    total: number
+    results: unknown[]
+    showPreview: boolean
+    previewIndex: number
+    ignoreMissingFeatureIds: boolean
+  }
+}
 
 export class ImportCtx {
   state: ImportState = $state({
@@ -123,7 +219,7 @@ export class ImportCtx {
     return this.state.data
   }
 
-  setColumns(columns: CSVColumn[]) {
+  setColumns(columns: FeatureCSVColumn[]) {
     this.state.columns = columns
   }
 
@@ -131,7 +227,7 @@ export class ImportCtx {
     return this.state.columns
   }
 
-  getColumnIndex(column: any) {
+  getColumnIndex(column: FeatureCSVColumn) {
     return this.state.columns.indexOf(column)
   }
 
@@ -164,7 +260,7 @@ export class ImportCtx {
 
   setUserResolution(userResolution: {
     invalidValues: string[]
-    resolutions: Map<string, { userId: string; userData?: any }>
+    resolutions: Map<string, { userId: string; userData?: unknown }>
   }) {
     this.state.userResolution = userResolution
   }
@@ -175,7 +271,7 @@ export class ImportCtx {
 
   updateUserResolution(userResolution: {
     invalidValues?: string[]
-    resolutions?: Map<string, { userId: string; userData?: any }>
+    resolutions?: Map<string, { userId: string; userData?: unknown }>
   }) {
     this.state.userResolution = { ...this.state.userResolution, ...userResolution }
   }
@@ -194,7 +290,7 @@ export class ImportCtx {
 
   setLayerResolution(layerResolution: {
     invalidValues: string[]
-    resolutions: Map<string, { layerId: string; layerData?: any }>
+    resolutions: Map<string, { layerId: string; layerData?: unknown }>
   }) {
     this.state.layerResolution = layerResolution
   }
@@ -213,7 +309,7 @@ export class ImportCtx {
 
   updateLayerResolution(layerResolution: {
     invalidValues?: string[]
-    resolutions?: Map<string, { layerId: string; layerData?: any }>
+    resolutions?: Map<string, { layerId: string; layerData?: unknown }>
   }) {
     this.state.layerResolution = { ...this.state.layerResolution, ...layerResolution }
   }
@@ -226,7 +322,7 @@ export class ImportCtx {
     return this.state.showAssociationModal
   }
 
-  setCurrentStep(currentStep: CSVImportStep) {
+  setCurrentStep(currentStep: FeatureImportStep) {
     this.state.currentStep = currentStep
   }
 
@@ -298,7 +394,7 @@ export class ImportCtx {
     return this.state.userSearchQuery
   }
 
-  setUserSearchResults(userSearchResults: any[]) {
+  setUserSearchResults(userSearchResults: UserValidationResult[]) {
     this.state.userSearchResults = userSearchResults
   }
 
@@ -306,7 +402,9 @@ export class ImportCtx {
     return this.state.userSearchResults
   }
 
-  setResolutionSearchResults(resolutionSearchResults: Map<string, any[]>) {
+  setResolutionSearchResults(
+    resolutionSearchResults: Map<string, UserValidationResult[]>,
+  ) {
     this.state.resolutionSearchResults = resolutionSearchResults
   }
 
@@ -330,7 +428,7 @@ export class ImportCtx {
     return this.state.layerSearchQuery
   }
 
-  setLayerSearchResults(layerSearchResults: any[]) {
+  setLayerSearchResults(layerSearchResults: LayerValidationResult[]) {
     this.state.layerSearchResults = layerSearchResults
   }
 
@@ -338,7 +436,7 @@ export class ImportCtx {
     return this.state.layerSearchResults
   }
 
-  setAllLayers(allLayers: any[]) {
+  setAllLayers(allLayers: Layer[]) {
     this.state.allLayers = allLayers
   }
 
@@ -346,7 +444,7 @@ export class ImportCtx {
     return this.state.allLayers
   }
 
-  setSelectedLayer(selectedLayer: any) {
+  setSelectedLayer(selectedLayer: Layer | null) {
     this.state.selectedLayer = selectedLayer
   }
 
@@ -362,7 +460,9 @@ export class ImportCtx {
     return this.state.layersLoaded
   }
 
-  setLayerResolutionSearchResults(layerResolutionSearchResults: Map<string, any[]>) {
+  setLayerResolutionSearchResults(
+    layerResolutionSearchResults: Map<string, LayerValidationResult[]>,
+  ) {
     this.state.layerResolutionSearchResults = layerResolutionSearchResults
   }
 
@@ -386,7 +486,7 @@ export class ImportCtx {
     return this.state.isCreatingLayer
   }
 
-  setLayerForm(layerForm: any) {
+  setLayerForm(layerForm: unknown) {
     this.state.layerForm = layerForm
   }
 
@@ -432,7 +532,7 @@ export class ImportCtx {
   }
 
   // Row enriched data methods
-  setRowEnrichedData(rowIndex: number, data: Record<string, any>) {
+  setRowEnrichedData(rowIndex: number, data: Record<string, unknown>) {
     if (!this.state.rowEnrichedData) {
       this.state.rowEnrichedData = new Map()
     }
@@ -455,11 +555,11 @@ export class ImportCtx {
     }
   }
 
-  setFeatureResolutionResults(results: any[]) {
+  setFeatureResolutionResults(results: unknown[]) {
     this.state.featureResolution.results = results
   }
 
-  updateFeatureResolutionResult(index: number, result: any) {
+  updateFeatureResolutionResult(index: number, result: unknown) {
     this.state.featureResolution.results[index] = result
   }
 
