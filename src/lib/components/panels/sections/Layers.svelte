@@ -35,6 +35,7 @@ let {
 const selectedLayers = $derived(appCtx.state.prisms.layer)
 // Get cached features for counting
 const layers = $derived(appCtx.state.resources.layer)
+const visibleLayers = $derived(layers.filter(layer => layer.isArchived !== true))
 
 let searchTerm = $state('')
 
@@ -61,7 +62,7 @@ function filterLayers(layers: typeof appCtx.state.resources.layer, term: string)
   })
 }
 
-const filteredLayers = $derived(filterLayers(layers, searchTerm))
+const filteredLayers = $derived(filterLayers(visibleLayers, searchTerm))
 let isDefaultOpen = $derived(browser ? window.innerHeight > 1000 : false)
 const orderedFilteredLayers = $derived.by(() =>
   [...filteredLayers].sort((left, right) => {
@@ -88,7 +89,7 @@ let handleReset = () => {
 }
 
 let collapsedLayers = $derived(
-  layers.filter(layer => selectedLayers.includes(layer.id)),
+  visibleLayers.filter(layer => selectedLayers.includes(layer.id)),
 )
 </script>
 
@@ -128,7 +129,7 @@ let collapsedLayers = $derived(
   defaultOpen={isDefaultOpen}
   {...panelProps}
 >
-  {#if layers.length > 4 && !panelProps.isNarrow}
+  {#if visibleLayers.length > 4 && !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}
