@@ -127,6 +127,33 @@ const ImportFeatureLookupSchema = z.object({
 const IMPORT_FEATURE_LOOKUP_BATCH_SIZE = 80
 
 /**
+ * Normalizes GeoJSON point coordinates after form parsing.
+ *
+ * @param geometry - Parsed geometry payload from the feature form.
+ * @returns Geometry with numeric point coordinates when possible.
+ * @remarks FormData submissions can serialize nested numbers as strings; D1 spatial
+ * consumers expect persisted GeoJSON coordinates to remain numeric.
+ */
+function normalizeFeatureFormGeometry<T>(geometry: T): T {
+  const point = geometry as { type?: unknown; coordinates?: unknown }
+  if (point?.type !== 'Point' || !Array.isArray(point.coordinates)) {
+    return geometry
+  }
+
+  const longitude = Number(point.coordinates[0])
+  const latitude = Number(point.coordinates[1])
+  if (Number.isNaN(longitude) || Number.isNaN(latitude)) {
+    return geometry
+  }
+
+  return {
+    ...point,
+    type: 'Point',
+    coordinates: [longitude, latitude],
+  } as T
+}
+
+/**
  * Splits dynamic feature id lists into D1-safe batches for relation-heavy admin reads.
  *
  * @param ids - Authorized feature identifiers to load.
@@ -399,7 +426,11 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const params = FeatureFormData.parse(input)
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
-  const { meta, data } = params
+  const { meta } = params
+  const data = {
+    ...params.data,
+    geometry: normalizeFeatureFormGeometry(params.data.geometry),
+  }
 
   const featureId = meta?.id?.trim()
   const mode = meta?.mode

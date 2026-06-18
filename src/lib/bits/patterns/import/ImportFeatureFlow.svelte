@@ -5,6 +5,8 @@ import { fade } from 'svelte/transition'
 // CONTEXT
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { ImportCtx } from '$lib/context/import.svelte'
+// I18N
+import { m } from '$lib/i18n'
 // SERVICES
 import {
   handleProjectSelection,
@@ -629,7 +631,7 @@ $effect(() => {
     <div
       class="font-mono text-sm font-semibold uppercase tracking-[0.22em] text-warning"
     >
-      Update Policy
+      {m.feature_import__resolution_update_policy()}
     </div>
     <Switch
       checked={featureResolutionIgnoreMissingIds}
