@@ -9,10 +9,16 @@ const {
   mockListProperties,
   mockLoadProperty,
   mockListResolvedProjectProperties,
+  mockCreateBaseProperty,
+  mockCreateI18n,
+  mockCreatePropertyValues,
+  mockCreatePropertyValueI18n,
   mockProbeProjectQuery,
   mockAuthorizeProjectReadForProbe,
+  mockAuthorizeProjectUpdateForSubmission,
   mockGuardedContext,
   mockProjectProbeRows,
+  mockRetryBusyRead,
 } = vi.hoisted(() => ({
   mockGetPrisms: vi.fn(() => ({ organisation: [], project: [], layer: [] })),
   mockGetPropertyQueryContext: vi.fn(() => ({ conditions: [] })),
@@ -20,13 +26,26 @@ const {
   mockListProperties: vi.fn(async () => []),
   mockLoadProperty: vi.fn(async () => null),
   mockListResolvedProjectProperties: vi.fn(async () => []),
+  mockCreateBaseProperty: vi.fn(async () => ({ id: 'property-created' })),
+  mockCreateI18n: vi.fn(async () => undefined),
+  mockCreatePropertyValues: vi.fn(async () => []),
+  mockCreatePropertyValueI18n: vi.fn(async () => undefined),
   mockProbeProjectQuery: vi.fn(async () => null),
   mockAuthorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
   mockGuardedContext: vi.fn(),
   mockProjectProbeRows: vi.fn(async () => []),
+  mockRetryBusyRead: vi.fn(async (operation: () => Promise<unknown>) => operation()),
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
+  guardedCommand: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'command'),
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -60,10 +79,15 @@ vi.mock('$lib/api/services/property', () => ({
 
 vi.mock('$lib/api/services/authz', () => ({
   authorizeProjectReadForProbe: mockAuthorizeProjectReadForProbe,
+  authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
   toAuthMessage: (code: string) => code,
 }))
 
 vi.mock('$lib/db/services/property', () => ({
+  createBaseProperty: mockCreateBaseProperty,
+  createI18n: mockCreateI18n,
+  createPropertyValues: mockCreatePropertyValues,
+  createPropertyValueI18n: mockCreatePropertyValueI18n,
   listProperties: mockListProperties,
   listResolvedProjectProperties: mockListResolvedProjectProperties,
   getProperty: mockLoadProperty,
@@ -73,11 +97,16 @@ vi.mock('$lib/db/services/project', () => ({
   probeProjectQuery: mockProbeProjectQuery,
 }))
 
+vi.mock('$lib/db/services/sqlite', () => ({
+  retryBusyRead: mockRetryBusyRead,
+}))
+
 vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
 
 vi.mock('$lib/db/zod', () => ({
   ListQueryParamsSchema: {},
   ProjectPropertiesQuery: {},
+  ProjectPropertyFormData: {},
 }))
 
 let remote: Awaited<typeof import('$lib/api/server/property.remote')>
