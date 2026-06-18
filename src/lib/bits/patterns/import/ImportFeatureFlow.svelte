@@ -81,6 +81,11 @@ const dataLabel = $derived(
 // STEP 1 :: COLUMN MAPPING
 let showEmptyColumnsModal = $state(false)
 let emptyColumnsErrors = $state<string[]>([])
+// STEP 4 :: PROPERTY MATCHING
+let propertyAction: (() => void) | undefined = $state()
+let propertyActionLabel = $state('')
+let propertyActionDisabled = $state(false)
+let propertyFooterStatus = $state('')
 // STEP 5 :: TRANSLATION
 let translationStartProcessing: (() => void) | undefined = $state()
 let translationFooterStatus = $state('')
@@ -574,6 +579,10 @@ const footerProps = $derived.by(() =>
     featureResolutionIsProcessing,
     featureResolutionStartProcessing,
     propertyCanContinue: propertyBackInspection,
+    propertyAction,
+    propertyActionLabel,
+    propertyActionDisabled,
+    propertyFooterStatus,
     canCompleteUserResolution: canCompleteUserResolutionWrapper(),
     canCompleteLayerResolution: canCompleteLayerResolutionWrapper(),
     onCancel: handleCancel,
@@ -629,6 +638,10 @@ $effect(() => {
         {:else if currentStep === 'property-matching'}
           <ImportPrimitive.PropertyReconciliation
             autoAdvance={!propertyBackInspection}
+            bind:footerAction={propertyAction}
+            bind:footerActionLabel={propertyActionLabel}
+            bind:footerActionDisabled={propertyActionDisabled}
+            bind:footerStatus={propertyFooterStatus}
           />
         {:else if currentStep === 'translation'}
           <ImportPrimitive.TranslationStep
