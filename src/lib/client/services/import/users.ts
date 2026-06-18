@@ -596,15 +596,12 @@ export function enrichFeaturesWithUserData(
   importCtx: ImportCtx,
   validationResults: UserValidationResult[],
 ): void {
-  console.log('🔧 Enriching features with validated user data...')
-
   const data = importCtx.getData()
   const columns = importCtx.getColumns()
   const headers = importCtx.getHeaders()
 
   const userColumns = columns.filter(column => column.modelType === 'User')
   if (userColumns.length === 0) {
-    console.log('🔧 No user columns found, using fallback user for all features')
     const userValidation = importCtx.getUserValidation()
     if (userValidation.fallbackUserId) {
       for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
@@ -630,8 +627,6 @@ export function enrichFeaturesWithUserData(
     }
   })
 
-  console.log('🔧 User value to ID mapping:', Object.fromEntries(userValueToId))
-
   const userColumnIndices = userColumns.map(column => headers.indexOf(column.header))
 
   for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
@@ -645,9 +640,6 @@ export function enrichFeaturesWithUserData(
         const userId = userValueToId.get(userValue)
         if (userId) {
           enriched.user = { id: userId }
-          console.log(
-            `🔧 Row ${rowIndex + 1}: Set user ID ${userId} for value "${userValue}"`,
-          )
         }
         break
       }
@@ -657,16 +649,10 @@ export function enrichFeaturesWithUserData(
       const userValidation = importCtx.getUserValidation()
       if (userValidation.fallbackUserId) {
         enriched.user = { id: userValidation.fallbackUserId }
-        console.log(
-          `🔧 Row ${rowIndex + 1}: Using fallback user ID ${userValidation.fallbackUserId}`,
-        )
       }
     }
-
     importCtx.setRowEnrichedData(rowIndex, enriched)
   }
-
-  console.log('✅ User data enrichment completed')
 }
 
 // ---
