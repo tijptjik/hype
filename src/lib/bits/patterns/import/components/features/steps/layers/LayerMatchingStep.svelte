@@ -1,6 +1,8 @@
 <script lang="ts">
 // CONTEXT
 import type { ImportCtx } from '$lib/context/import.svelte'
+// I18N
+import { m } from '$lib/i18n'
 // SERVICES
 import {
   getLayerCreationPrefill,
@@ -16,6 +18,7 @@ import {
 import { Button } from '$lib/bits/core'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import ImportAnalysisStatus from '../../../shared/ImportAnalysisStatus.svelte'
 import LayerResolutionPanel from './LayerResolutionPanel.svelte'
 import LayerValidationResults from './LayerValidationResults.svelte'
 import CheckCircle from 'virtual:icons/lucide/circle-check'
@@ -218,21 +221,7 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
 {/snippet}
 
 {#if importCtx.getLayerValidation().isValidating}
-  <div class="mb-6">
-    <div class="mb-2 flex items-center justify-between text-sm">
-      <span>Validating layers...</span>
-      <span>
-        {importCtx.getLayerValidation().progress}
-        /
-        {importCtx.getLayerValidation().total}
-      </span>
-    </div>
-    <progress
-      class="progress progress-primary w-full"
-      value={importCtx.getLayerValidation().progress}
-      max={importCtx.getLayerValidation().total}
-    ></progress>
-  </div>
+  <ImportAnalysisStatus label={m.feature_import__layers_analysing()} />
 {/if}
 
 {#if importCtx.getLayerValidation().showLayerSelection}

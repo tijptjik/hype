@@ -4,9 +4,9 @@ import type { ImportCtx } from '$lib/context/import.svelte'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
+import ImportAnalysisStatus from '../../../shared/ImportAnalysisStatus.svelte'
 import UserFallbackSelection from './UserFallbackSelection.svelte'
 import UserResolutionPanel from './UserResolutionPanel.svelte'
-import UserValidationProgress from './UserValidationProgress.svelte'
 import UserValidationResults from './UserValidationResults.svelte'
 
 type Props = {
@@ -19,10 +19,7 @@ const userValidation = $derived(importCtx.getUserValidation())
 </script>
 
 {#if userValidation.isValidating}
-  <UserValidationProgress
-    progress={userValidation.progress}
-    total={userValidation.total}
-  />
+  <ImportAnalysisStatus label={m.feature_import__users_analysing()} />
 {/if}
 
 {#if userValidation.showUserSelection}

@@ -3,13 +3,14 @@
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import SvelteDropzone from 'svelte-file-dropzone'
 // TYPES
+import type { Component } from 'svelte'
 import type { DropzoneEvent, ImportableResource } from '../../import.types'
 
 type Props = {
   type: ImportableResource
   title: string
   subtitle: string
-  icon: any
+  icon: Component<Record<string, unknown>>
   accept: string[]
   disabled?: boolean
   multiple?: boolean
