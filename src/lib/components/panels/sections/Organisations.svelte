@@ -39,6 +39,9 @@ let {
 // Get cached features for counting
 const organisations = $derived(appCtx.state.resources.organisation)
 const selectedOrganisations = $derived(appCtx.state.prisms.organisation)
+const visibleOrganisations = $derived(
+  organisations.filter(organisation => organisation.isArchived !== true),
+)
 
 let searchTerm = $state('')
 
@@ -66,7 +69,9 @@ function filterOrganisations(
   })
 }
 
-const filteredOrganisations = $derived(filterOrganisations(organisations, searchTerm))
+const filteredOrganisations = $derived(
+  filterOrganisations(visibleOrganisations, searchTerm),
+)
 let isDefaultOpen = $derived(
   typeof window !== 'undefined' ? document.body.clientHeight > 1000 : false,
 )
@@ -80,7 +85,9 @@ let handleReset = () => {
 }
 
 let collapsedOrganisations = $derived(
-  organisations.filter(organisation => selectedOrganisations.includes(organisation.id)),
+  visibleOrganisations.filter(organisation =>
+    selectedOrganisations.includes(organisation.id),
+  ),
 )
 </script>
 
@@ -119,7 +126,7 @@ let collapsedOrganisations = $derived(
   defaultOpen={panelProps.isAdmin ? isDefaultOpen : false}
   {...panelProps}
 >
-  {#if organisations.length > 4 && !panelProps.isNarrow}
+  {#if visibleOrganisations.length > 4 && !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}

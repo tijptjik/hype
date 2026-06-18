@@ -34,6 +34,9 @@ let {
 // Get cached features for counting
 const projects = $derived(appCtx.state.resources.project)
 const selectedProjects = $derived(appCtx.state.prisms.project)
+const visibleProjects = $derived(
+  projects.filter(project => project.isArchived !== true),
+)
 
 let searchTerm = $state('')
 
@@ -59,7 +62,7 @@ function filterProjects(projects: typeof appCtx.state.resources.project, term: s
   })
 }
 
-const filteredProjects = $derived(filterProjects(projects, searchTerm))
+const filteredProjects = $derived(filterProjects(visibleProjects, searchTerm))
 let isDefaultOpen = $derived(
   typeof document !== 'undefined' ? document.body.clientHeight > 1000 : false,
 )
@@ -73,7 +76,7 @@ let handleReset = () => {
 }
 
 let collapsedProjects = $derived(
-  projects.filter(project => selectedProjects.includes(project.id)),
+  visibleProjects.filter(project => selectedProjects.includes(project.id)),
 )
 </script>
 
@@ -113,7 +116,7 @@ let collapsedProjects = $derived(
   defaultOpen={isDefaultOpen}
   {...panelProps}
 >
-  {#if projects.length > 4 && !panelProps.isNarrow}
+  {#if visibleProjects.length > 4 && !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}
