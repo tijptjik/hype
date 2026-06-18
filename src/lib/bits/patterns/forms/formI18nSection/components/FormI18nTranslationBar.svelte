@@ -6,6 +6,7 @@ import AlertCircle from 'virtual:icons/lucide/alert-circle'
 import Eraser from 'virtual:icons/lucide/eraser'
 import Languages from 'virtual:icons/lucide/languages'
 import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import { toLocaleKey } from '$lib/i18n'
 import type { FormSectionProps } from '../formI18nSection.types'
 
 type Props = Pick<
@@ -98,7 +99,7 @@ $effect(() => {
         </span>
       {:else}
         <span in:fade={{ duration: 250 }} out:fade={{ duration: 250 }}>
-          {localeCodes[targetLocale] ?? targetLocale.toUpperCase()}
+          {localeCodes[toLocaleKey(targetLocale)]}
         </span>
       {/if}
     {/key}
