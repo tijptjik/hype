@@ -444,7 +444,7 @@ Recommended improvements:
 These concepts from the legacy implementation should remain, even if their exact types
 change:
 
-- `CSVColumn`
+- `FeatureCSVColumn`
 - inferred sample values per column
 - user resolution map
 - layer resolution map
