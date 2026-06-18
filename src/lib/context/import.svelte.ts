@@ -11,6 +11,7 @@ import type {
   Property,
   Layer,
 } from '$lib/client/services/import/types'
+import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
 import type { Id, Locale, LocaleKey } from '$lib/types'
 
 export type ImportState = {
@@ -55,7 +56,7 @@ export type ImportState = {
   activeLayerCreation: string | null
   isCreatingLayer: boolean
   isSubmittingLayer: boolean
-  layerForm: unknown | null
+  layerForm: LayerFormInput['data'] | null
   availablePropertyKeys: string[]
   fetchedProperties: Property[]
   isFetchingProperties: boolean
@@ -64,11 +65,11 @@ export type ImportState = {
   resolutionSearchResults: Map<string, UserValidationResult[]>
   resolutionSearchQueries: Map<string, string>
   layerSearchQuery: string
-  layerSearchResults: LayerValidationResult[]
+  layerSearchResults: Layer[]
   allLayers: Layer[]
   selectedLayer: Layer | null
   layersLoaded: boolean
-  layerResolutionSearchResults: Map<string, LayerValidationResult[]>
+  layerResolutionSearchResults: Map<string, Layer[]>
   layerResolutionSearchQueries: Map<string, string>
   propertyReconciliation: {
     currentAction:
@@ -428,7 +429,7 @@ export class ImportCtx {
     return this.state.layerSearchQuery
   }
 
-  setLayerSearchResults(layerSearchResults: LayerValidationResult[]) {
+  setLayerSearchResults(layerSearchResults: Layer[]) {
     this.state.layerSearchResults = layerSearchResults
   }
 
@@ -460,9 +461,7 @@ export class ImportCtx {
     return this.state.layersLoaded
   }
 
-  setLayerResolutionSearchResults(
-    layerResolutionSearchResults: Map<string, LayerValidationResult[]>,
-  ) {
+  setLayerResolutionSearchResults(layerResolutionSearchResults: Map<string, Layer[]>) {
     this.state.layerResolutionSearchResults = layerResolutionSearchResults
   }
 
@@ -486,7 +485,7 @@ export class ImportCtx {
     return this.state.isCreatingLayer
   }
 
-  setLayerForm(layerForm: unknown) {
+  setLayerForm(layerForm: LayerFormInput['data'] | null) {
     this.state.layerForm = layerForm
   }
 
