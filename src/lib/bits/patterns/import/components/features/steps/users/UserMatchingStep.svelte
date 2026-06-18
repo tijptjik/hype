@@ -23,7 +23,9 @@ const userValidation = $derived(importCtx.getUserValidation())
 {/if}
 
 {#if userValidation.showUserSelection}
-  <UserFallbackSelection {importCtx} />
+  <div class="flex h-full min-h-80 items-center">
+    <UserFallbackSelection {importCtx} />
+  </div>
 {/if}
 
 {#if userValidation.results.length > 0 && !userValidation.showUserSelection}

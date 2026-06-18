@@ -19,16 +19,18 @@ import { Button } from '$lib/bits/core'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import ImportAnalysisStatus from '../../../shared/ImportAnalysisStatus.svelte'
+import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
+import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
 import LayerResolutionPanel from './LayerResolutionPanel.svelte'
 import LayerValidationResults from './LayerValidationResults.svelte'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
+import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import XCircle from 'virtual:icons/lucide/circle-x'
-import MagnifyingGlass from 'virtual:icons/lucide/search'
 import Plus from 'virtual:icons/lucide/plus'
 // ENUMS
 import { SupportedLocales } from '$lib/enums'
 // TYPES
 import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
+import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 
 type LayerLike = {
   id?: string
@@ -50,6 +52,26 @@ type LayerFormLocaleKey = keyof LayerFormData['i18n']
 let { importCtx }: Props = $props()
 
 let layerFormData = $derived(importCtx.getLayerForm())
+const selectedLayer = $derived(importCtx.getSelectedLayer() as LayerLike | null)
+const fallbackLayerSearchResults = $derived(
+  importCtx
+    .getLayerSearchResults()
+    .map((layer, index) => toLayerSearchItem(layer as LayerLike, index)),
+)
+
+function toLayerSearchItem(
+  layer: LayerLike,
+  index: number,
+): ImportSearchBoxItem<LayerLike> {
+  const title = layer.i18n?.en?.name || 'Unknown Layer'
+  return {
+    id: `${layer.id ?? title}-${index}`,
+    title,
+    subtitle: layer.i18n?.en?.description,
+    fallback: title.charAt(0).toUpperCase() || 'L',
+    value: layer,
+  }
+}
 
 function updateLayerFormField(
   locale: LayerFormLocaleKey,
@@ -118,6 +140,10 @@ function handleLayerSelect(layer: LayerLike): void {
   importCtx.setLayerValidation(layerValidation)
   importCtx.setLayerSearchQuery('')
   importCtx.setLayerSearchResults([])
+}
+
+function handleLayerSearchSelect(item: ImportSearchBoxItem): void {
+  handleLayerSelect(item.value as LayerLike)
 }
 
 function handleSelectedLayerClear(): void {
@@ -225,159 +251,119 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
 {/if}
 
 {#if importCtx.getLayerValidation().showLayerSelection}
-  <div class="space-y-4">
-    <div class="rounded-lg border border-info bg-info/10 p-4">
-      <h4 class="font-medium text-info">Select Layer</h4>
-      <p class="text-sm text-base-content/70">
-        No layer column was detected.
-        {#if importCtx.getLayersLoaded() && importCtx.getAllLayers().length === 0}
-          Create a new layer for all features to be assigned to.
-        {:else}
-          Please select which layer all features should be assigned to.
-        {/if}
-      </p>
-    </div>
+  <div class="flex h-full min-h-80 items-center">
+    <div class="mx-auto w-full max-w-5xl space-y-4">
+      <ImportMappingRow actionLabel={m.feature_import__users_assign_action()}>
+        {#snippet source()}
+          <div class="min-w-0 space-y-1.5">
+            <h4 class="text-xs font-bold uppercase tracking-wide text-base-content/55">
+              {m.feature_import__layers_no_columns_title()}
+            </h4>
+            <div class="truncate text-sm font-semibold text-base-content">
+              {m.feature_import__users_all_features_label()}
+            </div>
+            <p class="text-xs leading-relaxed text-base-content/60">
+              {m.feature_import__layers_no_columns_select_description()}
+            </p>
+          </div>
+        {/snippet}
 
-    {#if !importCtx.getSelectedLayer() && !importCtx.getIsCreatingLayer()}
-      {#if importCtx.getLayersLoaded() && importCtx.getAllLayers().length > 0}
-        <div class="space-y-4">
-          <div class="flex w-full flex-row items-stretch gap-2">
-            <div class="relative z-10 flex-1">
-              <div class="relative">
-                <input
-                  type="text"
-                  placeholder="Search for layer..."
-                  class="input input-bordered w-full border-base-content/25 bg-base-100 pr-10 shadow-[var(--shadow-mini)] outline-none focus:border-primary focus:outline focus:outline-2 focus:outline-primary/20"
-                  bind:value={importCtx.state.layerSearchQuery}
-                  oninput={handleLayerSearchInput}
-                  onfocus={handleLayerSearchInputFocus}
-                >
-                <div
-                  class="pointer-events-none absolute inset-y-0 right-2 flex items-center pr-3"
-                >
-                  <Icon src={MagnifyingGlass} class="h-4 w-4 text-base-content/50" />
-                </div>
+        {#snippet target()}
+          {#if selectedLayer}
+            <ResolvedTargetButton
+              onReset={handleSelectedLayerClear}
+              title="Click to change layer selection"
+              changeLabel={m.feature_import__users_click_to_change()}
+            >
+              <div
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success text-xs font-medium text-success-content"
+              >
+                {selectedLayer.i18n?.en?.name?.charAt(0)?.toUpperCase() || 'L'}
               </div>
-
-              {#if importCtx.getLayerSearchResults().length > 0}
-                <div
-                  class="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-base-content/20 bg-base-100 shadow-lg"
-                >
-                  {#each importCtx.getLayerSearchResults() as layer}
-                    {@const layerItem = layer as LayerLike}
-                    <button
-                      type="button"
-                      class="flex w-full items-center gap-3 p-3 text-left transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-base-200 focus:bg-base-200 focus:outline-none"
-                      onclick={() => handleLayerSelect(layerItem)}
-                    >
-                      <div
-                        class="flex h-8 w-8 items-center justify-center rounded bg-primary text-xs font-medium text-primary-content"
-                      >
-                        {layerItem.i18n?.en?.name?.charAt(0)?.toUpperCase() || 'L'}
-                      </div>
-                      <div class="min-w-0 flex-1">
-                        <div class="text-sm font-medium">
-                          {layerItem.i18n?.en?.name || 'Unknown Layer'}
-                        </div>
-                        {#if layerItem.i18n?.en?.description}
-                          <div class="text-xs text-base-content/70">
-                            {layerItem.i18n.en.description}
-                          </div>
-                        {/if}
-                      </div>
-                    </button>
-                  {/each}
+              <div class="min-w-0">
+                <div class="truncate text-sm font-medium">
+                  {selectedLayer.i18n?.en?.name || 'Selected Layer'}
+                </div>
+                {#if selectedLayer.i18n?.en?.description}
+                  <div class="truncate text-xs text-success/70">
+                    {selectedLayer.i18n.en.description}
+                  </div>
+                {/if}
+              </div>
+            </ResolvedTargetButton>
+          {:else if !importCtx.getIsCreatingLayer()}
+            <div class="flex w-full items-center gap-2">
+              {#if importCtx.getLayersLoaded() && importCtx.getAllLayers().length > 0}
+                <div class="min-w-0 flex-1">
+                  <ImportSearchBox
+                    id="feature-import-layer-fallback"
+                    value={importCtx.getLayerSearchQuery()}
+                    results={fallbackLayerSearchResults}
+                    ariaLabel={m.feature_import__layers_no_columns_select_description()}
+                    placeholder="Search for layer..."
+                    size="sm"
+                    dropdown="floating"
+                    searchFor={m.feature_import__users_all_features_label()}
+                    inputClass="rounded-xl border-base-content/25 bg-base-100 p-3 shadow-[var(--shadow-mini)] outline-none focus:border-primary focus:outline focus:outline-2 focus:outline-primary/20"
+                    onInput={handleLayerSearchInput}
+                    onFocus={handleLayerSearchInputFocus}
+                    onSelect={handleLayerSearchSelect}
+                  />
                 </div>
               {/if}
+              <Button
+                text="+ NEW"
+                style="outline"
+                color="primary"
+                size="sm"
+                onClick={() => handleLayerCreationShow()}
+              />
             </div>
+          {/if}
+        {/snippet}
+      </ImportMappingRow>
+
+      {#if importCtx.getIsCreatingLayer()}
+        <div class="mt-4 rounded-lg border border-primary bg-primary/5 p-4">
+          <div class="mb-4 flex items-center justify-between">
+            <h4 class="font-medium text-primary">Create New Layer</h4>
             <button
               type="button"
-              class="btn btn-outline btn-primary flex-shrink-0"
-              onclick={() => handleLayerCreationShow()}
+              class="btn btn-ghost btn-sm"
+              onclick={handleLayerCreationHide}
             >
-              <Icon src={Plus} class="h-4 w-4" />
-              Create New Layer
+              <Icon src={XCircle} class="h-4 w-4" />
             </button>
           </div>
-        </div>
-      {:else}
-        <div class="flex justify-center">
-          <button
-            type="button"
-            class="btn btn-outline btn-primary"
-            onclick={() => handleLayerCreationShow()}
-          >
-            <Icon src={Plus} class="h-4 w-4" />
-            Create New Layer
-          </button>
+
+          {#if importCtx.getLayerForm()}
+            <form onsubmit={handleLayerFormSubmit}>
+              {@render layerI18nSection()}
+
+              <div class="mt-4 flex justify-end gap-2">
+                <Button
+                  text="Cancel"
+                  style="ghost"
+                  color="light"
+                  size="md"
+                  type="button"
+                  onClick={handleLayerCreationHide}
+                />
+                <Button
+                  text={importCtx.getIsSubmittingLayer() ? 'Creating...' : 'Create Layer'}
+                  style="none"
+                  color="primary"
+                  size="md"
+                  type="button"
+                  onClick={handleLayerFormSubmit}
+                  disabled={importCtx.getIsSubmittingLayer()}
+                />
+              </div>
+            </form>
+          {/if}
         </div>
       {/if}
-    {/if}
-
-    {#if importCtx.getIsCreatingLayer()}
-      <div class="mt-4 rounded-lg border border-primary bg-primary/5 p-4">
-        <div class="mb-4 flex items-center justify-between">
-          <h4 class="font-medium text-primary">Create New Layer</h4>
-          <button
-            type="button"
-            class="btn btn-ghost btn-sm"
-            onclick={handleLayerCreationHide}
-          >
-            <Icon src={XCircle} class="h-4 w-4" />
-          </button>
-        </div>
-
-        {#if importCtx.getLayerForm()}
-          <form onsubmit={handleLayerFormSubmit}>
-            {@render layerI18nSection()}
-
-            <div class="mt-4 flex justify-end gap-2">
-              <Button
-                text="Cancel"
-                style="ghost"
-                color="light"
-                size="md"
-                type="button"
-                onClick={handleLayerCreationHide}
-              />
-              <Button
-                text={importCtx.getIsSubmittingLayer() ? 'Creating...' : 'Create Layer'}
-                style="none"
-                color="primary"
-                size="md"
-                type="button"
-                onClick={handleLayerFormSubmit}
-                disabled={importCtx.getIsSubmittingLayer()}
-              />
-            </div>
-          </form>
-        {/if}
-      </div>
-    {/if}
-
-    {#if importCtx.getSelectedLayer()}
-      <button
-        type="button"
-        class="w-full rounded border border-success bg-success/10 p-3 text-left transition-colors hover:bg-success/20"
-        onclick={handleSelectedLayerClear}
-        title="Click to unselect this layer"
-      >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <Icon src={CheckCircle} class="h-5 w-5 text-success" />
-            <div>
-              <div class="font-medium text-success">
-                Selected: {importCtx.getSelectedLayer()?.i18n?.en?.name}
-              </div>
-              <div class="text-sm text-success/70">
-                All features will be assigned to this layer
-              </div>
-            </div>
-          </div>
-          <div class="text-xs text-success/70">Click to change</div>
-        </div>
-      </button>
-    {/if}
+    </div>
   </div>
 {/if}
 

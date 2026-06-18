@@ -32,6 +32,7 @@ export type ImportState = {
     total: number
     results: UserValidationResult[]
     fallbackUserId?: string
+    fallbackUserData?: UserValidationResult
     showUserSelection: boolean
     showUserResolution: boolean
   }
@@ -142,6 +143,7 @@ export class ImportCtx {
       total: 0,
       results: [],
       fallbackUserId: undefined,
+      fallbackUserData: undefined,
       showUserSelection: false,
       showUserResolution: false,
     },
@@ -621,6 +623,7 @@ export class ImportCtx {
       total: 0,
       results: [],
       fallbackUserId: undefined,
+      fallbackUserData: undefined,
       showUserSelection: false,
       showUserResolution: false,
     }
