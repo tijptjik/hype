@@ -650,6 +650,7 @@
   "batch_upload__pending": "有待上載",
   "batch_upload__results": "上載結果",
   "batch_upload__feature_id": "地圖項目ID",
+  "batch_upload__feature_not_found": "找不到",
   "batch_upload__import_complete": "匯入完成",
   "batch_upload__finished_subtitle": "下載最終上載結果，然後完成此流程以返回匯入儀表板。",
   "batch_upload__active_subtitle": "已排隊的圖像上載會保留在此處，直到每個檔案都達到最終狀態。",
