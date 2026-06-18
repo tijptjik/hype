@@ -744,6 +744,8 @@ export class AppCtx {
 
   // Initialize default query map (can be overridden by AdminCtx)
   private initializeQueryMap = (): void => {
+    this.queryMap.clear()
+
     this.queryMap.set(FirstClassResource.organisation, {
       queryKey: this.organisationsQueryKey,
       queryFn: () => this.organisationsQueryFn(),
@@ -1002,6 +1004,7 @@ export class AppCtx {
           },
           prisms: this.state.prisms,
           sorting: this.state.viewSorting.organisation,
+          meta: { isAdminRequest: false, profile: 'card' },
         }),
       )) as ListResponse<Organisation> | undefined,
     )
@@ -1020,7 +1023,7 @@ export class AppCtx {
       },
       prisms: this.state.prisms,
       sorting: this.state.viewSorting.project,
-      meta: { profile: 'card' },
+      meta: { isAdminRequest: false, profile: 'card' },
     }
 
     const result = toSafeListResponse<Project>(
@@ -1047,7 +1050,7 @@ export class AppCtx {
           },
           prisms: this.state.prisms,
           sorting: this.state.viewSorting.layer,
-          meta: { profile: 'card' },
+          meta: { isAdminRequest: false, profile: 'card' },
         }),
       )) as ListResponse<Layer> | undefined,
     )
@@ -1069,7 +1072,7 @@ export class AppCtx {
           },
           prisms: this.state.prisms,
           sorting: this.state.viewSorting.feature,
-          meta: { profile: 'list' },
+          meta: { isAdminRequest: false, profile: 'list' },
         }),
       )) as ListResponse<FeatureFromCollection> | undefined,
     )
@@ -3704,6 +3707,67 @@ export class AppCtx {
     this.organisationCodeToId.clear()
     this.projectCodeToId.clear()
     this.hubCodeToId.clear()
+  }
+
+  /**
+   * Restores the shared query map to the default app-scoped resource loaders.
+   *
+   * @returns Nothing.
+   * @remarks Admin routes override `queryMap` on the shared `AppCtx`. When leaving
+   * `/admin`, this must run before any app-side refresh so non-admin reads do not
+   * keep using admin-scoped query functions.
+   */
+  restoreDefaultQueryMap = (): void => {
+    this.initializeQueryMap()
+  }
+
+  /**
+   * Clears shared resource caches, list metadata, and query results when switching
+   * between app and admin surfaces.
+   *
+   * @returns Nothing.
+   * @remarks App and admin share a single `AppCtx`, so resource entities loaded in one
+   * surface can otherwise leak into the other via in-memory maps or TanStack Query.
+   */
+  resetSharedResourceCachesForSurfaceSwitch = (): void => {
+    this.clearAllCaches()
+    this.listQueryMeta.clear()
+
+    this.state.resources.organisation = []
+    this.state.resources.project = []
+    this.state.resources.layer = []
+    this.state.resources.feature = []
+    this.state.resources.task = []
+    this.state.resources.hub = []
+    this.placeCtx.setNeighbourhoodFeatures([])
+
+    const resourceQueryPrefixes: Array<FirstClassResource | 'property'> = [
+      FirstClassResource.organisation,
+      FirstClassResource.project,
+      FirstClassResource.layer,
+      FirstClassResource.feature,
+      FirstClassResource.task,
+      FirstClassResource.hub,
+      'property',
+    ]
+
+    for (const queryKey of resourceQueryPrefixes) {
+      this.queryClient.removeQueries({
+        queryKey: [queryKey],
+        exact: false,
+      })
+    }
+  }
+
+  /**
+   * Reloads the shared app resource tree after leaving the admin surface.
+   *
+   * @returns A promise that resolves when the public app hierarchy has been refetched.
+   * @remarks This intentionally preserves the current prism state while forcing fresh
+   * non-admin reads so unpublished admin records cannot persist in shared state.
+   */
+  reloadAppSurfaceResources = async (): Promise<void> => {
+    await this.refreshOrganisations()
   }
 
   // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
