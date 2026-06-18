@@ -25,7 +25,7 @@ import {
   validateUsers,
   startUserResolution,
   enrichFeaturesWithUserData,
-} from '$lib/client/services/import/features/user'
+} from '$lib/client/services/import/users'
 import {
   fetchAvailablePropertyKeys,
   validatePropertyColumns,
@@ -532,6 +532,7 @@ const footerProps = $derived.by(() =>
     totalSteps,
     selectedProject: importCtx.getSelectedProject(),
     userValidation: importCtx.getUserValidation(),
+    userResolution: importCtx.getUserResolution(),
     layerValidation: importCtx.getLayerValidation(),
     layerResolution: importCtx.getLayerResolution(),
     columns: importCtx.getColumns(),

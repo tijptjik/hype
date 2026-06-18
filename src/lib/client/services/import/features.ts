@@ -122,6 +122,7 @@ type FeatureImportFooterPropsParams = {
   totalSteps: number
   selectedProject: Project | null
   userValidation: ImportState['userValidation']
+  userResolution: ImportState['userResolution']
   layerValidation: ImportState['layerValidation']
   layerResolution: ImportState['layerResolution']
   columns: FeatureCSVColumn[]
@@ -788,11 +789,14 @@ export function getFeatureImportFooterProps(
     }
 
     if (params.userValidation.showUserResolution) {
+      const resolvedCount = params.userResolution.resolutions.size
+      const totalCount = params.userResolution.invalidValues.length
       return {
         ...baseProps,
         onBack: params.onBack,
         onContinue: params.onContinue,
         continueDisabled: !params.canCompleteUserResolution,
+        rightMetaText: `Resolved: ${resolvedCount} / ${totalCount}`,
       }
     }
 
