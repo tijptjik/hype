@@ -117,11 +117,6 @@ let coordinateColumns = $derived.by(() => {
     .getColumns()
     .filter(col => col.modelType === 'Feature' && col.field === 'longitude')
 
-  console.log('🗺️ GeoLookupStep: Found coordinate columns:', {
-    latitude: latColumns.map(c => c.header),
-    longitude: lngColumns.map(c => c.header),
-  })
-
   return { latitude: latColumns, longitude: lngColumns }
 })
 
@@ -467,8 +462,6 @@ async function handleGeocodeForCSV(
   processedResult: Awaited<ReturnType<typeof processForwardGeocodeResult>> | null
   fromCache: boolean
 }> {
-  console.log(`🗺️ GeoLookupStep: Geocoding "${rawAddress}" (locale: ${locale})`)
-
   try {
     // Parse address components using new structured function
     const addressComponents = getAddressForQuery(rawAddress, locale)
@@ -722,10 +715,6 @@ async function startGeocoding() {
               const correctedLatitude = rawLongitude
               const correctedLongitude = rawLatitude
 
-              console.log(
-                `✅ [GeoLookupStep] Corrected coordinates: rawLongitude=${correctedLongitude}, rawLatitude=${correctedLatitude}`,
-              )
-
               rawLatitude = correctedLatitude
               rawLongitude = correctedLongitude
             }
@@ -860,6 +849,7 @@ function togglePauseResume() {
 }
 
 function proceedToNextStep() {
+  importCtx.updateFeatureResolution({ ignoreMissingFeatureIds: true })
   importCtx.setCurrentStep('feature-resolution') // Will be updated when next step is implemented
 }
 
