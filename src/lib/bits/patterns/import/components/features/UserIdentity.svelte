@@ -55,8 +55,6 @@ const initial = $derived(displayName.charAt(0).toUpperCase() || '?')
 <div class="min-w-0 flex-1">
   <div class={nameClass}>{displayName}</div>
   {#if user?.email}
-    <div class={emailTextClass}>
-      {user.email}
-    </div>
+    <div class={emailTextClass}>{user.email}</div>
   {/if}
 </div>

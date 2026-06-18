@@ -154,9 +154,9 @@ function handleFieldChange(event: Event): void {
       onchange={handleLocaleChange}
     >
       <option value="None">{m.feature_import__column_locale_none()}</option>
-      <option value="en">{m.feature_import__column_locale_en()}</option>
-      <option value="zh-hant">{m.feature_import__column_locale_zh_hant()}</option>
-      <option value="zh-hans">{m.feature_import__column_locale_zh_hans()}</option>
+      <option value="en">{m.lang__en()}</option>
+      <option value="zh-hant">{m.lang__zh_hant()}</option>
+      <option value="zh-hans">{m.lang__zh_hans()}</option>
     </select>
   </div>
 </ImportRowCol>

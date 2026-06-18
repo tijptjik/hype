@@ -47,6 +47,8 @@ import {
   FirstClassResource,
   type SupportedLocales,
 } from '$lib/enums'
+// I18N
+import { m } from '$lib/i18n'
 // TYPES
 import type {
   Organisation,
@@ -105,10 +107,22 @@ export type FeatureResolutionStatusCounts = {
   unchanged: number
 }
 
+export type GeoLookupStatusCounts = {
+  completed: number
+  errors: number
+  matched: number
+  noMatch: number
+  total: number
+  cacheSize: number
+  status: 'loading' | 'ready' | 'processing' | 'paused' | 'complete'
+}
+
 type FeatureImportProgressParams = {
   currentStep: FeatureImportStep
   userValidation: ImportState['userValidation']
   layerValidation: ImportState['layerValidation']
+  translation: ImportState['translation']
+  geoLookupStatusCounts?: GeoLookupStatusCounts
   featureResolutionStatusCounts?: FeatureResolutionStatusCounts
 }
 
@@ -125,14 +139,21 @@ type FeatureImportFooterPropsParams = {
   userResolution: ImportState['userResolution']
   layerValidation: ImportState['layerValidation']
   layerResolution: ImportState['layerResolution']
+  translation: ImportState['translation']
+  translationStartProcessing?: () => void
+  translationIsProcessing: boolean
+  translationFooterStatus: string
   columns: FeatureCSVColumn[]
   geoLookupClearCache?: () => void
+  geoLookupPauseProcessing?: () => void
+  geoLookupIsPaused: boolean
   geoLookupIsBusy: boolean
   geoLookupStartProcessing?: () => void
   geoLookupFooterStatus: string
   featureResolutionStatusCounts?: FeatureResolutionStatusCounts
   featureResolutionIsProcessing: boolean
   featureResolutionStartProcessing?: () => void
+  propertyCanContinue?: boolean
   canCompleteUserResolution: boolean
   canCompleteLayerResolution: boolean
   onCancel: () => void
@@ -501,8 +522,8 @@ export function getHeaderProps(currentStep: FeatureImportStep) {
       }
     case 'translation':
       return {
-        title: 'Translate Descriptors',
-        subtitle: 'Translating property descriptors to the selected locales.',
+        title: m.feature_import__translation_step_title(),
+        subtitle: m.feature_import__translation_step_subtitle(),
         showProgress: true,
         currentStep: stepIndex,
         totalSteps,
@@ -558,6 +579,7 @@ export function getFeatureImportHeaderStats(
     stats,
     userValidation,
     layerValidation,
+    translation,
     featureResolutionStatusCounts,
   } = params
 
@@ -637,6 +659,62 @@ export function getFeatureImportHeaderStats(
     }
   }
 
+  if (currentStep === 'translation') {
+    return [
+      {
+        label: m.feature_import__translation_stat_all_translated(),
+        value: translation.allTranslated,
+        tone: 'success',
+      },
+      {
+        label: m.feature_import__translation_stat_missing_translations(),
+        value: translation.missingTranslations,
+        tone: translation.missingTranslations > 0 ? 'warning' : 'neutral',
+      },
+      {
+        label: m.feature_import__translation_stat_translating(),
+        value: translation.translating,
+        tone: translation.translating > 0 ? 'info' : 'neutral',
+      },
+      {
+        label: m.feature_import__translation_stat_not_linguistic(),
+        value: translation.notLinguistic,
+        tone: 'neutral',
+      },
+    ]
+  }
+
+  if (currentStep === 'geo-lookup' && params.geoLookupStatusCounts) {
+    const geo = params.geoLookupStatusCounts
+    return [
+      {
+        label: 'Completed',
+        value: `${geo.completed} / ${geo.total}`,
+        tone: geo.completed > 0 ? 'success' : 'neutral',
+      },
+      {
+        label: 'Errors',
+        value: geo.errors,
+        tone: geo.errors > 0 ? 'error' : 'neutral',
+      },
+      {
+        label: 'Matched',
+        value: geo.matched,
+        tone: geo.matched > 0 ? 'success' : 'neutral',
+      },
+      {
+        label: 'No Match',
+        value: geo.noMatch,
+        tone: geo.noMatch > 0 ? 'warning' : 'neutral',
+      },
+      {
+        label: 'Cache',
+        value: geo.cacheSize,
+        tone: 'info',
+      },
+    ]
+  }
+
   if (currentStep === 'feature-resolution' && featureResolutionStatusCounts) {
     return [
       {
@@ -710,6 +788,8 @@ export function getFeatureImportHeaderProgressValue(
     currentStep,
     userValidation,
     layerValidation,
+    translation,
+    geoLookupStatusCounts,
     featureResolutionStatusCounts,
   } = params
 
@@ -722,6 +802,22 @@ export function getFeatureImportHeaderProgressValue(
   if (currentStep === 'layer-matching') {
     return layerValidation.isValidating && layerValidation.total > 0
       ? (layerValidation.progress / layerValidation.total) * 100
+      : null
+  }
+
+  if (currentStep === 'translation') {
+    return translation.totalTranslations > 0
+      ? (translation.completedTranslations / translation.totalTranslations) * 100
+      : translation.status === 'complete'
+        ? 100
+        : null
+  }
+
+  if (currentStep === 'geo-lookup' && geoLookupStatusCounts) {
+    return geoLookupStatusCounts.total > 0
+      ? ((geoLookupStatusCounts.completed + geoLookupStatusCounts.errors) /
+          geoLookupStatusCounts.total) *
+          100
       : null
   }
 
@@ -873,7 +969,36 @@ export function getFeatureImportFooterProps(
     return {
       ...baseProps,
       onBack: params.onBack,
+      onContinue: params.propertyCanContinue ? params.onContinue : undefined,
       // Property reconciliation handles its own navigation.
+    }
+  }
+
+  if (params.currentStep === 'translation') {
+    const isComplete = params.translation.status === 'complete'
+    const isBusy =
+      params.translationIsProcessing || params.translation.status === 'translating'
+    const hasWork = params.translation.totalTranslations > 0
+
+    return {
+      ...baseProps,
+      onBack: params.onBack,
+      onContinue: isComplete ? params.onContinue : params.translationStartProcessing,
+      continueLabel: isComplete
+        ? m.continue()
+        : hasWork
+          ? isBusy
+            ? m.feature_import__translation_footer_translating()
+            : m.feature_import__translation_footer_start()
+          : m.continue(),
+      continueDisabled: !isComplete && (!params.translationStartProcessing || isBusy),
+      leftMetaText: params.translationFooterStatus,
+      rightMetaText: hasWork
+        ? m.feature_import__translation_footer_translated({
+            completed: params.translation.completedTranslations,
+            total: params.translation.totalTranslations,
+          })
+        : '',
     }
   }
 
@@ -887,15 +1012,22 @@ export function getFeatureImportFooterProps(
       ...baseProps,
       onBack: params.onBack,
       onSecondary: params.geoLookupClearCache,
+      secondaryPlacement: 'left',
       secondaryLabel: 'Clear Cache',
-      secondaryDisabled: params.geoLookupIsBusy,
-      onContinue: params.geoLookupStartProcessing,
-      continueLabel: canStartGeoLookup
-        ? params.geoLookupIsBusy
-          ? 'Processing Geocoding'
-          : 'Start Geocoding'
-        : 'Continue',
-      continueDisabled: !params.geoLookupStartProcessing || params.geoLookupIsBusy,
+      secondaryDisabled: false,
+      onContinue: params.geoLookupIsBusy
+        ? params.geoLookupPauseProcessing
+        : params.geoLookupStartProcessing,
+      continueLabel: params.geoLookupIsBusy
+        ? params.geoLookupIsPaused
+          ? 'Resume'
+          : 'Pause'
+        : canStartGeoLookup
+          ? 'Start Geocoding'
+          : 'Continue',
+      continueDisabled: params.geoLookupIsBusy
+        ? !params.geoLookupPauseProcessing
+        : !params.geoLookupStartProcessing,
       leftMetaText: params.geoLookupFooterStatus,
     }
   }

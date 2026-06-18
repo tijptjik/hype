@@ -71,6 +71,19 @@ export type ImportState = {
   layersLoaded: boolean
   layerResolutionSearchResults: Map<string, Layer[]>
   layerResolutionSearchQueries: Map<string, string>
+  translation: {
+    status: 'idle' | 'analyzing' | 'translating' | 'complete' | 'error'
+    allTranslated: number
+    missingTranslations: number
+    translating: number
+    notLinguistic: number
+    totalRows: number
+    totalTranslations: number
+    completedTranslations: number
+    currentBatch: number
+    totalBatches: number
+    error?: string
+  }
   propertyReconciliation: {
     currentAction:
       | 'none'
@@ -165,6 +178,19 @@ export class ImportCtx {
     layersLoaded: false,
     layerResolutionSearchResults: new Map(),
     layerResolutionSearchQueries: new Map(),
+    translation: {
+      status: 'idle',
+      allTranslated: 0,
+      missingTranslations: 0,
+      translating: 0,
+      notLinguistic: 0,
+      totalRows: 0,
+      totalTranslations: 0,
+      completedTranslations: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+      error: undefined,
+    },
     // Layer FORM state
     isCreatingLayer: false,
     layerForm: null,
@@ -542,6 +568,18 @@ export class ImportCtx {
     return this.state.rowEnrichedData?.get(rowIndex)
   }
 
+  // Translation state methods
+  getTranslation() {
+    return this.state.translation
+  }
+
+  updateTranslation(updates: Partial<typeof this.state.translation>) {
+    this.state.translation = {
+      ...this.state.translation,
+      ...updates,
+    }
+  }
+
   // Feature resolution methods
   getFeatureResolution() {
     return this.state.featureResolution
@@ -622,6 +660,19 @@ export class ImportCtx {
     this.state.layersLoaded = false
     this.state.layerResolutionSearchResults = new Map()
     this.state.layerResolutionSearchQueries = new Map()
+    this.state.translation = {
+      status: 'idle',
+      allTranslated: 0,
+      missingTranslations: 0,
+      translating: 0,
+      notLinguistic: 0,
+      totalRows: 0,
+      totalTranslations: 0,
+      completedTranslations: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+      error: undefined,
+    }
 
     // Reset property reconciliation state
     this.state.propertyReconciliation = {

@@ -11,8 +11,8 @@ import {
   updateResolutionUserSearchResults,
 } from '$lib/client/services/import/users'
 // COMPONENTS
-import ImportMappingRow from '../ImportMappingRow.svelte'
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import ImportMappingRow from '../ImportMappingRow.svelte'
 import ResolvedTargetButton from './ResolvedTargetButton.svelte'
 import UserIdentity from './UserIdentity.svelte'
 import UserSearchBox from './UserSearchBox.svelte'

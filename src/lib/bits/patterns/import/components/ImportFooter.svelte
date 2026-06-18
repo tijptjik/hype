@@ -8,6 +8,7 @@ let {
   onBack,
   onContinue,
   onSecondary,
+  secondaryPlacement = 'right',
   backLabel = 'Back',
   continueDisabled = false,
   secondaryDisabled = false,
@@ -34,9 +35,19 @@ let {
           onClick={onBack}
         />
       {/if}
+      {#if onSecondary && secondaryLabel && secondaryPlacement === 'left'}
+        <Button
+          text={secondaryLabel}
+          style="soft"
+          color="neutral"
+          size="md"
+          onClick={onSecondary}
+          disabled={secondaryDisabled}
+        />
+      {/if}
       {#if leftMetaText}
         <div
-          class="flex items-center rounded-lg border border-base-content/10 bg-base-100/60 px-3 text-sm text-base-content/70"
+          class="flex items-center font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/55"
         >
           {leftMetaText}
         </div>
@@ -59,7 +70,7 @@ let {
     </div>
 
     <div class="flex justify-end gap-2">
-      {#if onSecondary && secondaryLabel}
+      {#if onSecondary && secondaryLabel && secondaryPlacement === 'right'}
         <Button
           text={secondaryLabel}
           style="soft"
@@ -71,7 +82,9 @@ let {
       {/if}
 
       {#if rightMetaText}
-        <div class="flex items-center rounded-lg px-3 text-sm text-base-content/70">
+        <div
+          class="flex items-center px-3 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/55"
+        >
           {rightMetaText}
         </div>
       {/if}

@@ -139,8 +139,7 @@ function handleLayerResolutionSearchFocus(): void {
         <h4 class="text-xs font-bold uppercase tracking-wide text-error">
           No Match Found
         </h4>
-        <div class="space-y-2 rounded-lg border border-error/20 bg-error/5 p-3">
-          <Icon src={XCircle} class="h-4 w-4 text-error" />
+        <div class="space-y-2 p-3">
           {#each getLayerResolutionParts(invalidValue) as part}
             <div class="flex items-start gap-2 text-sm">
               <code class="rounded bg-base-200 px-2 py-1 text-xs uppercase">

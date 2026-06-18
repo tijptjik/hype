@@ -19,6 +19,7 @@ import {
   validateFeatureImportLocationData,
   enrichFeatureImportBooleanFields,
   type FeatureResolutionStatusCounts,
+  type GeoLookupStatusCounts,
 } from '$lib/client/services/import/features'
 import {
   canCompleteUserResolution,
@@ -63,6 +64,7 @@ type Props = {
 let { appCtx, importCtx, pendingDrop, onCancel }: Props = $props()
 
 let lastProcessedDrop = $state<Props['pendingDrop']>(null)
+let propertyBackInspection = $state(false)
 
 // STATE :: FLOW ORCHESTRATION
 
@@ -79,11 +81,18 @@ const dataLabel = $derived(
 // STEP 1 :: COLUMN MAPPING
 let showEmptyColumnsModal = $state(false)
 let emptyColumnsErrors = $state<string[]>([])
+// STEP 5 :: TRANSLATION
+let translationStartProcessing: (() => void) | undefined = $state()
+let translationFooterStatus = $state('')
+let translationIsProcessing = $state(false)
 // STEP 6 :: GEO LOOKUP
 let geoLookupStartProcessing: (() => void) | undefined = $state()
 let geoLookupClearCache: (() => void) | undefined = $state()
+let geoLookupPauseProcessing: (() => void) | undefined = $state()
 let geoLookupFooterStatus = $state('')
 let geoLookupIsBusy = $state(false)
+let geoLookupIsPaused = $state(false)
+let geoLookupStatusCounts: GeoLookupStatusCounts | undefined = $state()
 // STEP 7 :: FEATURE RESOLUTION
 let featureResolutionStartProcessing: (() => void) | undefined = $state()
 let featureResolutionDownloadResults: (() => void) | undefined = $state()
@@ -114,6 +123,8 @@ const headerStats = $derived.by(() =>
     stats: importCtx.getStats(),
     userValidation: importCtx.getUserValidation(),
     layerValidation: importCtx.getLayerValidation(),
+    translation: importCtx.getTranslation(),
+    geoLookupStatusCounts,
     featureResolutionStatusCounts,
   }),
 )
@@ -123,6 +134,8 @@ const headerProgressValue = $derived.by(() =>
     currentStep,
     userValidation: importCtx.getUserValidation(),
     layerValidation: importCtx.getLayerValidation(),
+    translation: importCtx.getTranslation(),
+    geoLookupStatusCounts,
     featureResolutionStatusCounts,
   }),
 )
@@ -134,6 +147,7 @@ const headerProgressValue = $derived.by(() =>
 async function handleFeaturesDropWrapper(
   event: NonNullable<Props['pendingDrop']>,
 ): Promise<void> {
+  propertyBackInspection = false
   await handleCSVDropEvent(importCtx, event)
   importCtx.setShowAssociationModal(false)
   importCtx.setIsTypeSelected(true)
@@ -405,6 +419,7 @@ async function validateLayersWrapper(): Promise<void> {
 
 // Footer button handlers
 function handleCancel(): void {
+  propertyBackInspection = false
   importCtx.reset()
   onCancel()
 }
@@ -427,6 +442,9 @@ function handleBack(): void {
     })
   } else if (currentStep === 'property-matching') {
     importCtx.setCurrentStep('layer-matching')
+  } else if (currentStep === 'translation') {
+    propertyBackInspection = true
+    importCtx.setCurrentStep('property-matching')
   } else if (currentStep === 'geo-lookup') {
     importCtx.setCurrentStep('translation')
   } else if (currentStep === 'feature-resolution') {
@@ -493,6 +511,7 @@ function handleContinue(): void {
       void validateLayersWrapper()
     }
   } else if (currentStep === 'layer-matching') {
+    propertyBackInspection = false
     if (importCtx.getLayerValidation().showLayerSelection) {
       enrichFeaturesWithLayerData(importCtx, [])
       importCtx.setCurrentStep('property-matching')
@@ -503,8 +522,13 @@ function handleContinue(): void {
       // All layers validated
       importCtx.setCurrentStep('property-matching')
     }
+  } else if (currentStep === 'property-matching') {
+    propertyBackInspection = false
+    importCtx.setCurrentStep('translation')
   } else if (currentStep === 'feature-resolution') {
     importCtx.setCurrentStep('finished')
+  } else if (currentStep === 'translation') {
+    importCtx.setCurrentStep('geo-lookup')
   }
 }
 
@@ -535,14 +559,21 @@ const footerProps = $derived.by(() =>
     userResolution: importCtx.getUserResolution(),
     layerValidation: importCtx.getLayerValidation(),
     layerResolution: importCtx.getLayerResolution(),
+    translation: importCtx.getTranslation(),
+    translationStartProcessing,
+    translationIsProcessing,
+    translationFooterStatus,
     columns: importCtx.getColumns(),
     geoLookupClearCache,
+    geoLookupPauseProcessing,
+    geoLookupIsPaused,
     geoLookupIsBusy,
     geoLookupStartProcessing,
     geoLookupFooterStatus,
     featureResolutionStatusCounts,
     featureResolutionIsProcessing,
     featureResolutionStartProcessing,
+    propertyCanContinue: propertyBackInspection,
     canCompleteUserResolution: canCompleteUserResolutionWrapper(),
     canCompleteLayerResolution: canCompleteLayerResolutionWrapper(),
     onCancel: handleCancel,
@@ -596,15 +627,25 @@ $effect(() => {
         {:else if currentStep === 'layer-matching'}
           <ImportPrimitive.LayerMatchingStep {importCtx} />
         {:else if currentStep === 'property-matching'}
-          <ImportPrimitive.PropertyReconciliation />
+          <ImportPrimitive.PropertyReconciliation
+            autoAdvance={!propertyBackInspection}
+          />
         {:else if currentStep === 'translation'}
-          <ImportPrimitive.TranslationStep />
+          <ImportPrimitive.TranslationStep
+            {importCtx}
+            bind:startProcessing={translationStartProcessing}
+            bind:footerStatus={translationFooterStatus}
+            bind:isProcessing={translationIsProcessing}
+          />
         {:else if currentStep === 'geo-lookup'}
           <ImportPrimitive.GeoLookupStep
             bind:startProcessing={geoLookupStartProcessing}
             bind:clearCacheAction={geoLookupClearCache}
+            bind:pauseAction={geoLookupPauseProcessing}
             bind:footerStatus={geoLookupFooterStatus}
             bind:isBusy={geoLookupIsBusy}
+            bind:isPaused={geoLookupIsPaused}
+            bind:statusCounts={geoLookupStatusCounts}
           />
         {:else if currentStep === 'feature-resolution'}
           <ImportPrimitive.FeatureResolutionStep
