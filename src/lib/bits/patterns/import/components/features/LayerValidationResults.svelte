@@ -16,7 +16,7 @@ let { results }: Props = $props()
 
 <div class="space-y-2">
   {#each results as result}
-    <ImportRow contentClass="p-3">
+    <ImportRow contentClass="p-4 px-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           {#if result.isValid}

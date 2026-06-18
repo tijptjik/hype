@@ -42,6 +42,7 @@ $effect(() => {
     showLayoutToggle: false,
     showControlBarToggle: false,
   })
+  headerCtrl.clearControlBar()
   headerCtrl.clearFooter()
 })
 

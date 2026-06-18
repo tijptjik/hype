@@ -51,6 +51,7 @@ export type ImportFooterProps = {
   onBack?: () => void
   onContinue?: () => void
   onSecondary?: () => void
+  secondaryPlacement?: 'left' | 'right'
   backLabel?: string
   continueLabel?: string
   secondaryLabel?: string
