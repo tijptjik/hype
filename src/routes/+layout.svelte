@@ -182,6 +182,7 @@ const shelllessClass = $derived(
     localeKey === 'zhHans' ? 'font-(--font-hans)' : '',
   ),
 )
+let lastIsAdminMode = $state<boolean | null>(null)
 
 // Handle keydown listeners based on admin mode
 watch(
@@ -190,6 +191,34 @@ watch(
     newIsAdminMode
       ? appCtx.unregisterKeydownHandlers()
       : appCtx.registerKeydownHandlers()
+  },
+)
+
+// Reset shared resource state whenever navigation crosses the app/admin boundary.
+watch(
+  () => isAdminMode,
+  newIsAdminMode => {
+    if (!hasMounted) {
+      lastIsAdminMode = newIsAdminMode
+      return
+    }
+
+    if (lastIsAdminMode === null) {
+      lastIsAdminMode = newIsAdminMode
+      return
+    }
+
+    if (lastIsAdminMode === newIsAdminMode) {
+      return
+    }
+
+    lastIsAdminMode = newIsAdminMode
+    appCtx.resetSharedResourceCachesForSurfaceSwitch()
+
+    if (!newIsAdminMode) {
+      appCtx.restoreDefaultQueryMap()
+      void appCtx.reloadAppSurfaceResources()
+    }
   },
 )
 
