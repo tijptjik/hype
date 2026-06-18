@@ -1299,6 +1299,8 @@ export function parseHeader(
     { pattern: /^feature\.(longitude|lng|long|lon)$/, field: 'longitude' },
     { pattern: /^feature\.geometry\.(lat|latitude)$/, field: 'latitude' },
     { pattern: /^feature\.geometry\.(lng|lon|long|longitude)$/, field: 'longitude' },
+    { pattern: /^(latitude|lat)$/i, field: 'latitude' },
+    { pattern: /^(longitude|lng|long|lon)$/i, field: 'longitude' },
   ]
 
   for (const { pattern, field } of coordinateMatches) {
