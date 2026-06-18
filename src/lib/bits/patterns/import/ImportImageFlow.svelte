@@ -37,6 +37,7 @@ let totalBatches = $state(0)
 let imageUploadSessionId = $state(0)
 let lastProcessedDrop = $state<Props['pendingDrop']>(null)
 let currentPhase = $state<'uploading' | 'finished'>('uploading')
+let replacingResultIds = $state(new Set<string>())
 
 // IMPORT :: STATS
 
@@ -58,7 +59,11 @@ let pendingCount = $derived(
 let totalCount = $derived(uploadResults.length)
 let completedCount = $derived(successCount + errorCount + duplicateCount)
 let canAdvanceToFinished = $derived(
-  totalCount > 0 && pendingCount === 0 && uploadingCount === 0 && !isUploading,
+  totalCount > 0 &&
+    pendingCount === 0 &&
+    uploadingCount === 0 &&
+    !isUploading &&
+    replacingResultIds.size === 0,
 )
 let progressValue = $derived(
   totalCount === 0 ? null : (completedCount / totalCount) * 100,
@@ -146,6 +151,8 @@ function handleContinue(): void {
   }
 }
 async function handleReplaceUpload(resultId: string): Promise<void> {
+  if (replacingResultIds.has(resultId)) return
+
   const index = uploadResults.findIndex(result => result.id === resultId)
   if (index === -1) return
 
@@ -157,22 +164,37 @@ async function handleReplaceUpload(resultId: string): Promise<void> {
     return
   }
 
-  isUploading = true
+  replacingResultIds = new Set(replacingResultIds).add(resultId)
+  const uploadingResult: BatchUploadResult = {
+    ...result,
+    status: 'uploading',
+    error: undefined,
+  }
+  uploadResults = uploadResults.map(currentResult =>
+    currentResult.id === resultId ? uploadingResult : currentResult,
+  )
 
   try {
     await processSingleUpload(
-      result,
-      index,
-      uploadResults,
+      uploadingResult,
+      0,
+      [uploadingResult],
       new Map(),
       results => {
-        uploadResults = results
+        const [updatedResult] = results
+        if (!updatedResult) return
+
+        uploadResults = uploadResults.map(currentResult =>
+          currentResult.id === resultId ? updatedResult : currentResult,
+        )
       },
       () => 'Replace requested but the feature could not be resolved.',
       { replaceExisting: true },
     )
   } finally {
-    isUploading = false
+    const nextReplacingResultIds = new Set(replacingResultIds)
+    nextReplacingResultIds.delete(resultId)
+    replacingResultIds = nextReplacingResultIds
   }
 }
 
@@ -185,6 +207,7 @@ function resetImageUploadState(): void {
   currentBatch = 0
   totalBatches = 0
   currentPhase = 'uploading'
+  replacingResultIds = new Set()
 }
 
 // EFFECTS
@@ -254,7 +277,7 @@ $effect(() => {
               {result}
               {index}
               onReplace={handleReplaceUpload}
-              replaceDisabled={isUploading}
+              replaceDisabled={replacingResultIds.has(result.id)}
             />
           {/each}
         </ImportPrimitive.Rows>

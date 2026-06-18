@@ -650,6 +650,7 @@
   "batch_upload__pending": "Pending",
   "batch_upload__results": "Upload Results",
   "batch_upload__feature_id": "FeatureId",
+  "batch_upload__feature_not_found": "Not found",
   "batch_upload__import_complete": "Import Complete",
   "batch_upload__finished_subtitle": "Download the final upload results, then finish this workflow to return to the import dashboard.",
   "batch_upload__active_subtitle": "Queued image uploads stay here until every file reaches a final status.",

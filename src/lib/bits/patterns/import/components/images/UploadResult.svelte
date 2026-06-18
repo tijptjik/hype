@@ -32,6 +32,8 @@ type Props = {
 }
 
 let { result, index, onReplace, replaceDisabled = false }: Props = $props()
+
+let shouldShowError = $derived(Boolean(result.error && result.status !== 'uploading'))
 </script>
 
 {#snippet preview()}
@@ -66,7 +68,7 @@ let { result, index, onReplace, replaceDisabled = false }: Props = $props()
           <span>{formatImportFileSize(result.file.size)}</span>
           <span>{result.file.type || 'unknown format'}</span>
         </div>
-        {#if result.error}
+        {#if shouldShowError}
           <div
             class={result.status === 'conflict' ? 'text-sm text-warning' : 'text-sm text-error'}
           >
@@ -75,9 +77,18 @@ let { result, index, onReplace, replaceDisabled = false }: Props = $props()
         {:else}
           <div class="text-sm text-base-content/70">
             {m.batch_upload__feature_id()}:
-            <a href={`/admin/features/${result.featureId}`} class="hover:underline">
-              <code class="text-white">{result.featureId || 'Not found'}</code>
-            </a>
+            {#if result.featureId}
+              <a
+                href={`/admin/features/${result.featureId}`}
+                target="_blank"
+                rel="noreferrer"
+                class="hover:underline"
+              >
+                <code class="text-white">{result.featureId}</code>
+              </a>
+            {:else}
+              <code class="text-white">{m.batch_upload__feature_not_found()}</code>
+            {/if}
           </div>
         {/if}
       </div>
@@ -86,7 +97,7 @@ let { result, index, onReplace, replaceDisabled = false }: Props = $props()
     <div class="mr-2 mt-2 flex shrink-0 items-start gap-3">
       {#if result.status === 'conflict' && onReplace}
         <Button
-          text="Replace"
+          text={m.replace()}
           size="sm"
           style="outline"
           iconComponent={Replace}

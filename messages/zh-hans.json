@@ -650,6 +650,7 @@
   "batch_upload__pending": "有待上传",
   "batch_upload__results": "上传结果",
   "batch_upload__feature_id": "地图项ID",
+  "batch_upload__feature_not_found": "未找到",
   "batch_upload__import_complete": "导入完成",
   "batch_upload__finished_subtitle": "下载最终上传结果，然后完成此流程以返回导入仪表板。",
   "batch_upload__active_subtitle": "已排队的图像上传会保留在此处，直到每个文件都达到最终状态。",
