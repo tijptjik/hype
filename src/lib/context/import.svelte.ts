@@ -216,7 +216,7 @@ export class ImportCtx {
       results: [],
       showPreview: false,
       previewIndex: 0,
-      ignoreMissingFeatureIds: false,
+      ignoreMissingFeatureIds: true,
     },
   })
 
@@ -695,7 +695,7 @@ export class ImportCtx {
       results: [],
       showPreview: false,
       previewIndex: 0,
-      ignoreMissingFeatureIds: false,
+      ignoreMissingFeatureIds: true,
     }
   }
 }
