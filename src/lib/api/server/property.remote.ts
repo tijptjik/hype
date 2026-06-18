@@ -1,5 +1,5 @@
 // REMOTE
-import { guardedQuery } from '$lib/api/server/remote'
+import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { eq, inArray } from 'drizzle-orm'
@@ -18,16 +18,33 @@ import {
   listProperties,
   listResolvedProjectProperties,
   getProperty as loadProperty,
+  createBaseProperty,
+  createI18n,
+  createPropertyValues,
+  createPropertyValueI18n,
 } from '$lib/db/services/property'
 import { probeProjectQuery } from '$lib/db/services/project'
 import { retryBusyRead } from '$lib/db/services/sqlite'
 // SCHEMA
-import { ListQueryParamsSchema, ProjectPropertiesQuery } from '$lib/db/zod'
+import {
+  ListQueryParamsSchema,
+  ProjectPropertiesQuery,
+  ProjectPropertyFormData,
+} from '$lib/db/zod'
 // ZOD
 import { z } from 'zod'
+// AUTHZ
+import { authorizeProjectUpdateForSubmission } from '$lib/api/services/authz'
 // TYPES
-import type { Prisms, QueryParams } from '$lib/types'
-import type { PropertyDB } from '$lib/db/zod/schema/property.types'
+import type { InferInsertModel } from 'drizzle-orm'
+import type { Locale, Prisms, QueryParams } from '$lib/types'
+import type {
+  Property,
+  PropertyDB,
+  PropertyI18nNew,
+  PropertyValueI18nNew,
+  PropertyValueNew,
+} from '$lib/db/zod/schema/property.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -42,7 +59,7 @@ import type { PropertyDB } from '$lib/db/zod/schema/property.types'
 // - none
 //
 // COMMAND
-// - none
+// - createProjectProperty
 
 /* ----------------- */
 // REMOTE FUNCTION REFACTOR
@@ -55,6 +72,15 @@ const PropertyEntityQuery = z.object({
       isAdminRequest: z.coerce.boolean<boolean>().optional(),
     })
     .optional(),
+})
+
+const CreateProjectPropertyCommand = z.object({
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+  data: ProjectPropertyFormData,
 })
 
 const toProjectReadDecision = async (params: {
@@ -244,6 +270,93 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
 })
 
 export const getProperty = getPropertyQuery
+
+/**
+ * Creates one project-scoped property from an import/property creation flow.
+ *
+ * @param params - Property form payload and explicit remote metadata.
+ * @returns The created property in the canonical API response shape.
+ * @remarks
+ * This intentionally inserts a single property only. It does not call
+ * `upsertProjectProperties`, because that helper synchronizes an entire project property
+ * collection and would treat omitted project-local properties as deletes.
+ */
+export const createProjectProperty = guardedCommand(
+  CreateProjectPropertyCommand,
+  async (params, ctx) => {
+    const { db, user, userRoles } = ctx
+    const { data } = params
+
+    if (!data.projectId) {
+      throw error(400, 'PROJECT_ID_REQUIRED')
+    }
+
+    const probe = await probeProjectQuery(db, {
+      ref: data.projectId,
+      refKey: 'id',
+    })
+    if (!probe) {
+      throw error(404, 'PROJECT_NOT_FOUND')
+    }
+
+    const writeDecision = authorizeProjectUpdateForSubmission({
+      user,
+      userRoles,
+      resource: probe,
+      submittedData: { properties: [data] },
+    })
+    if (!writeDecision.allowed) {
+      throw error(403, toAuthMessage(writeDecision.code ?? 'INSUFFICIENT_ROLE'))
+    }
+
+    const { i18n, values, rank: _rank, isEnabled: _isEnabled, ...baseProperty } = data
+    const createdBase = await createBaseProperty(db, {
+      ...baseProperty,
+      projectId: data.projectId,
+      hubId: null,
+      organisationId: null,
+      scope: 'project',
+      type: data.type ?? 'specifier',
+      isDefaultEnabled: Boolean(data.isDefaultEnabled),
+    } as InferInsertModel<typeof property>)
+
+    await createI18n(
+      db,
+      i18n as unknown as Record<Locale, PropertyI18nNew>,
+      createdBase.id,
+    )
+
+    if (Array.isArray(values) && values.length > 0) {
+      const createdValues = await createPropertyValues(
+        db,
+        values.map(({ i18n: _i18n, ...value }) => value) as PropertyValueNew[],
+        createdBase.id,
+      )
+
+      for (const [index, createdValue] of createdValues.entries()) {
+        const submittedValue = values[index]
+        if (!submittedValue?.i18n) continue
+
+        await createPropertyValueI18n(
+          db,
+          submittedValue.i18n as unknown as Record<Locale, PropertyValueI18nNew>,
+          createdValue.id,
+        )
+      }
+    }
+
+    const created = await loadProperty(db, propertyCollectionWithRelations, [
+      eq(property.id, createdBase.id),
+    ])
+    if (!created) {
+      throw error(500, 'PROPERTY_CREATE_FAILED')
+    }
+
+    return {
+      data: toPropertyResponseShape(created) as Property,
+    }
+  },
+)
 
 /**
  * Returns the full property set for a project.
