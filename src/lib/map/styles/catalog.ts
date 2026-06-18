@@ -12,6 +12,7 @@ import {
 } from './definitions/common'
 import { buildProtomapsFlavorStyle } from './definitions/protomaps'
 import { getMapStyleCatalogCopy } from './i18n'
+import type { MapStyleCatalogKey } from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -111,7 +112,7 @@ export const MAP_STYLE_CATALOG = [
   },
 ] as const satisfies ReadonlyArray<MapStyleCatalogEntry>
 
-export type MapStyleCatalogKey = (typeof MAP_STYLE_CATALOG)[number]['key']
+export type { MapStyleCatalogKey } from '$lib/types'
 
 export const REGISTERED_MAP_STYLE_CATALOG = MAP_STYLE_CATALOG.filter(
   (
