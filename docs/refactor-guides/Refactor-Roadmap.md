@@ -9,7 +9,7 @@ Current strategic goals:
 - Continue Tailwind v4 + DaisyUI v5 migration safely while legacy UI remains.
 
 Related checklist: `docs/refactor-todo.md`
-Resource cache architecture: `docs/Resource-Cache-Architecture.md`
+Resource cache architecture: `docs/specs/Design-Spec-Resource-Cache.md`
 
 ## Principles
 - Keep behavior stable while migrating implementation.
@@ -29,7 +29,7 @@ Resource cache architecture: `docs/Resource-Cache-Architecture.md`
 
 ### Phase 2: Forms Migration (`in progress`)
 - [x] Identify all `sveltekit-superforms` usage by route/feature.
-- Replace with SvelteKit remote functions `form` call patterns.
+- [x] Replace with SvelteKit remote functions `form` call patterns.
 - [x] Keep validation and error UX equivalent.
 - [x] Add tests for submission success/error flows where missing.
 
@@ -68,7 +68,7 @@ Resource cache architecture: `docs/Resource-Cache-Architecture.md`
   - https://runed.dev/docs/utilities/resource
 
 ## Definition of Done
-- No active feature routes depend on `sveltekit-superforms`.
-- New UI work is implemented in `src/lib/bits`.
+- [x] No active feature routes depend on `sveltekit-superforms`.
+- [x] New UI work is implemented in `src/lib/bits`.
 - [x] DaisyUI usage reduced to approved legacy areas or fully removed.
 - Tests cover critical form and UI state transitions after migration.
