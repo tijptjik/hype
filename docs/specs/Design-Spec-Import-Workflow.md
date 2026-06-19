@@ -205,7 +205,7 @@ Recommended Bits pattern structure:
 - `src/lib/bits/patterns/import/ImportColumnMapping.svelte`
 - `src/lib/bits/patterns/import/ImportUserResolution.svelte`
 - `src/lib/bits/patterns/import/ImportLayerResolution.svelte`
-- `src/lib/bits/patterns/import/ImportPropertyReconciliation.svelte`
+- `src/lib/bits/patterns/import/components/features/steps/properties/PropertyReconciliationStep.svelte`
 - `src/lib/bits/patterns/import/ImportPreview.svelte`
 - `src/lib/bits/patterns/import/ImportExecution.svelte`
 - `src/lib/bits/patterns/import/ImportImageUpload.svelte`

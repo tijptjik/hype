@@ -534,11 +534,9 @@ const configuredProjectForm = configureForm(() => ({
       currentValue: currentFormSnapshot.data?.layers,
       baselineValue:
         (baselineFormInput.data as ProjectSubmitBaselineRelations).layers ?? [],
-      toEffective: ({ submittedValue, currentValue }) => {
-        const raw = submittedValue ?? currentValue ?? []
-        if (!Array.isArray(raw)) return []
-        return normalizeProjectLayersForSubmit(raw as Array<Record<string, unknown>>)
-      },
+      // Always shape layers from the live section projection so drag/toggle edits
+      // cannot drift from the nested form snapshot used by preflight/submit.
+      toEffective: () => getProjectLayerSubmitValues() ?? [],
       toComparableEffective: value => value,
       toComparableBaseline: value =>
         normalizeProjectLayersForSubmit(value as Array<Record<string, unknown>>),
@@ -748,6 +746,19 @@ function onMoveProjectLayer(sourceLayerId: string, targetLayerId: string): void 
   if (!movedLayer) return
   nextLayers.splice(targetIndex, 0, movedLayer)
   replaceProjectLayerFormValues(nextLayers)
+}
+
+/**
+ * Builds the canonical layer payload from the live layer section projection.
+ *
+ * @returns Dense layer rows in current UI order with explicit visibility flags.
+ */
+function getProjectLayerSubmitValues(): ProjectFormInput['data']['layers'] {
+  return projectLayersInSection.map((layer, rank) => ({
+    id: layer.id,
+    rank,
+    isDefaultVisible: Boolean(layer.isDefaultVisible),
+  }))
 }
 
 // Update base property fields (`key`, `component`, numeric bounds, translatability).
@@ -1144,7 +1155,9 @@ const hiddenProjectCapabilityInputAttrs = $derived.by(() => {
     .filter(Boolean) as Array<Record<string, unknown>>
 })
 const hiddenProjectLayerInputAttrs = $derived.by(() => {
-  return formProjectLayerValues.flatMap((layer, index) => {
+  const layerValues = getProjectLayerSubmitValues() ?? []
+
+  return layerValues.flatMap((layer, index) => {
     const layerId = typeof layer.id === 'string' ? layer.id : ''
     if (!layerId) return []
 
@@ -2214,6 +2227,7 @@ function onSubmit(): void {
     data.properties = toDenseProperties(
       data.properties,
     ) as ProjectFormInput['data']['properties']
+    data.layers = getProjectLayerSubmitValues()
     return data
   })
   const baseMeta = activeCommittedProjectData
