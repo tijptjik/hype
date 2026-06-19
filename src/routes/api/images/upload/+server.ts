@@ -28,6 +28,15 @@ type UploadWrite = {
   contentType: string
 }
 
+type OriginalsBucket = ReturnType<typeof getOriginalsBucketForStage>
+
+type UploadedObjectSnapshot = {
+  key: string
+  body: ArrayBuffer
+  httpMetadata?: R2HTTPMetadata
+  customMetadata?: Record<string, string>
+}
+
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -36,12 +45,18 @@ type UploadWrite = {
 // 0. TYPES
 // - UploadMetadataInput
 // - UploadWrite
+// - OriginalsBucket
+// - UploadedObjectSnapshot
 //
 // 1. INPUT HELPERS
 // - parseUploadMetadataInput
 //
 // 2. STORAGE HELPERS
+// - isUploadedObjectSnapshot
+// - readExistingObjectSnapshots
 // - deleteUploadedObjects
+// - restoreUploadedObjects
+// - rollbackUploadedObjects
 // - persistUploadedObjects
 //
 // 3. ROUTE HANDLERS
@@ -72,6 +87,51 @@ const parseUploadMetadataInput = (
 }
 
 /**
+ * Narrows a rollback snapshot to an object that can be restored.
+ *
+ * @param snapshot Previously captured object snapshot or absence marker.
+ * @returns Whether the snapshot contains a restorable object body.
+ */
+const isUploadedObjectSnapshot = (
+  snapshot: UploadedObjectSnapshot | null | undefined,
+): snapshot is UploadedObjectSnapshot => Boolean(snapshot)
+
+/**
+ * Reads any objects that already exist before a replacement upload starts.
+ *
+ * @param bucket Originals bucket bound for the current stage.
+ * @param keys Object keys that may be overwritten by the upload.
+ * @returns Existing object snapshots keyed by object key; `null` means absent.
+ * @remarks Replacement uploads intentionally reuse the current public id, so
+ * rollback needs the previous bytes instead of blindly deleting written keys.
+ */
+const readExistingObjectSnapshots = async (
+  bucket: OriginalsBucket,
+  keys: string[],
+): Promise<Map<string, UploadedObjectSnapshot | null>> => {
+  const snapshots = new Map<string, UploadedObjectSnapshot | null>()
+  const uniqueKeys = Array.from(new Set(keys.filter(Boolean)))
+
+  for (const key of uniqueKeys) {
+    const existing = await bucket.get(key)
+
+    if (!existing) {
+      snapshots.set(key, null)
+      continue
+    }
+
+    snapshots.set(key, {
+      key,
+      body: await existing.arrayBuffer(),
+      httpMetadata: existing.httpMetadata,
+      customMetadata: existing.customMetadata,
+    })
+  }
+
+  return snapshots
+}
+
+/**
  * Removes any objects written before a later upload persistence failure.
  *
  * @param bucket Originals bucket bound for the current stage.
@@ -79,7 +139,7 @@ const parseUploadMetadataInput = (
  * @returns Nothing.
  */
 const deleteUploadedObjects = async (
-  bucket: ReturnType<typeof getOriginalsBucketForStage>,
+  bucket: OriginalsBucket,
   keys: string[],
 ): Promise<void> => {
   const uniqueKeys = Array.from(new Set(keys.filter(Boolean)))
@@ -97,6 +157,61 @@ const deleteUploadedObjects = async (
 }
 
 /**
+ * Restores pre-existing objects that were overwritten before rollback.
+ *
+ * @param bucket Originals bucket bound for the current stage.
+ * @param snapshots Object bodies captured before writes began.
+ * @returns Nothing.
+ */
+const restoreUploadedObjects = async (
+  bucket: OriginalsBucket,
+  snapshots: UploadedObjectSnapshot[],
+): Promise<void> => {
+  for (const snapshot of snapshots) {
+    const options: R2PutOptions = {}
+
+    if (snapshot.httpMetadata) options.httpMetadata = snapshot.httpMetadata
+    if (snapshot.customMetadata) options.customMetadata = snapshot.customMetadata
+
+    try {
+      await bucket.put(snapshot.key, snapshot.body, options)
+    } catch (cleanupError) {
+      console.error('[api.images.upload] rollback restore failed', {
+        key: snapshot.key,
+        cleanupError,
+      })
+    }
+  }
+}
+
+/**
+ * Undoes successful writes after a later upload persistence failure.
+ *
+ * @param params Rollback inputs.
+ * @returns Nothing.
+ * @remarks Objects that existed before the request are restored; only keys
+ * known to have been newly created by this request are deleted.
+ */
+const rollbackUploadedObjects = async (params: {
+  bucket: OriginalsBucket
+  writtenKeys: string[]
+  existingSnapshots: Map<string, UploadedObjectSnapshot | null> | null
+}): Promise<void> => {
+  const uniqueWrittenKeys = Array.from(new Set(params.writtenKeys.filter(Boolean)))
+  const keysToDelete = uniqueWrittenKeys.filter(key => {
+    if (!params.existingSnapshots) return true
+    return params.existingSnapshots.get(key) === null
+  })
+  const snapshotsToRestore = uniqueWrittenKeys
+    .map(key => params.existingSnapshots?.get(key))
+    .filter(isUploadedObjectSnapshot)
+    .reverse()
+
+  await deleteUploadedObjects(params.bucket, keysToDelete)
+  await restoreUploadedObjects(params.bucket, snapshotsToRestore)
+}
+
+/**
  * Persists the upload and sidecars in a recoverable order.
  *
  * @param params Upload persistence inputs.
@@ -105,13 +220,23 @@ const deleteUploadedObjects = async (
  * until both the original file and metadata sidecars already exist.
  */
 const persistUploadedObjects = async (params: {
-  bucket: ReturnType<typeof getOriginalsBucketForStage>
+  bucket: OriginalsBucket
   publicId: string
   writes: UploadWrite[]
+  snapshotExistingObjects: boolean
 }): Promise<void> => {
   const writtenKeys: string[] = []
+  let existingSnapshots: Map<string, UploadedObjectSnapshot | null> | null = null
 
   try {
+    if (params.snapshotExistingObjects) {
+      // Capture replacement targets before writes so rollback can restore them.
+      existingSnapshots = await readExistingObjectSnapshots(
+        params.bucket,
+        params.writes.map(write => write.key),
+      )
+    }
+
     for (const write of params.writes) {
       await params.bucket.put(write.key, write.body, {
         httpMetadata: { contentType: write.contentType },
@@ -119,7 +244,11 @@ const persistUploadedObjects = async (params: {
       writtenKeys.push(write.key)
     }
   } catch (cause) {
-    await deleteUploadedObjects(params.bucket, writtenKeys)
+    await rollbackUploadedObjects({
+      bucket: params.bucket,
+      writtenKeys,
+      existingSnapshots,
+    })
 
     console.error('[api.images.upload] upload persistence failed', {
       publicId: params.publicId,
@@ -209,6 +338,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
     bucket: originalsBucket,
     publicId: payload.publicId,
     writes,
+    snapshotExistingObjects: Boolean(payload.replaceImageId),
   })
 
   return json({
