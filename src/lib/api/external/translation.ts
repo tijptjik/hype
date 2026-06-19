@@ -50,8 +50,8 @@ export async function translateText(
       )
     }
 
-    const data = await response.json()
-    return data.map((item: Record<string, any>) => item.translations[0].text)
+    const data: Array<{ translations: Array<{ text: string }> }> = await response.json()
+    return data.map(item => item.translations[0].text)
   } catch (err) {
     console.error('Translation error:', err)
     throw error(500, 'Translation service unavailable')

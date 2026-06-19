@@ -84,6 +84,7 @@ type FeatureImageProviderProject = {
 //
 // 6. UTILS
 //    - sortImages
+//    - extractVersionFromImageUrl
 //    - getHashiconUrl
 //    - getImageSrcOrHashicon
 //    - getFeatureImagesFacetHref
@@ -1003,6 +1004,24 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
   })
 
   return sortedImages
+}
+
+/**
+ * Extracts a Cloudflare image version segment from a delivery URL.
+ *
+ * @param url - The image URL to inspect.
+ * @returns Parsed version number when present, otherwise `null`.
+ */
+export function extractVersionFromImageUrl(
+  url: string | null | undefined,
+): number | null {
+  if (!url) return null
+
+  const match = url.match(/\/v(\d+)\//)
+  if (!match) return null
+
+  const parsed = Number.parseInt(match[1] ?? '', 10)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 // Generate hashicon URL for fallback

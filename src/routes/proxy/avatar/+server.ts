@@ -52,7 +52,7 @@ export const GET: RequestHandler = async ({ url }) => {
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
-        'Content-Type': upstreamContentType,
+        'Content-Type': upstreamContentType ?? 'application/octet-stream',
         'Cache-Control': cacheControl,
       },
     })

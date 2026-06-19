@@ -194,7 +194,7 @@ $effect(() => {
     const savedScrollPosition = profileCtx?.savedScrollPosition ?? 0
     if (savedScrollPosition > 0) {
       // Small delay to ensure content is rendered
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (profilePanelContainer) {
           profilePanelContainer.scrollTop = savedScrollPosition
           // Clear the saved position
@@ -203,6 +203,10 @@ $effect(() => {
           }
         }
       }, 250)
+
+      return () => {
+        clearTimeout(timeoutId)
+      }
     }
   }
 })
@@ -389,6 +393,7 @@ function handleOpenHubSubscriptionOverlay(): void {
 }
 </script>
 
+<!-- biome-ignore lint/a11y/noStaticElementInteractions: Svelte special element handles global keyboard shortcuts. -->
 <svelte:window onkeydown={handleWindowKeydown} />
 
 <AppShell>

@@ -468,12 +468,18 @@ export async function processForwardGeocodeResult(
         displayAddressZhHans = displayAddressZhHant ?? undefined
         addressPropsZhHans = { ...addressPropsZhHant }
       } else {
-        const propsToTranslate = Object.values(addressPropsZhHant).filter(
-          (value): value is string => typeof value === 'string' && value !== '',
-        )
+        const propsToTranslate = Object.entries(addressPropsZhHant).reduce<
+          Array<[string, string]>
+        >((entries, [key, value]) => {
+          if (typeof value === 'string' && value !== '') {
+            entries.push([key, value])
+          }
+
+          return entries
+        }, [])
         const zhHantDisplayAddress = displayAddressZhHant ?? ''
         const [translatedDisplayAddress, ...translatedProps] = await translateText(
-          [zhHantDisplayAddress, ...propsToTranslate],
+          [zhHantDisplayAddress, ...propsToTranslate.map(([, value]) => value)],
           'zhHant',
           'zhHans',
           platformEnv.PUBLIC_AZURE_TRANSLATION_REGION,
@@ -481,12 +487,14 @@ export async function processForwardGeocodeResult(
         )
         displayAddressZhHans = translatedDisplayAddress
 
-        // Map translated properties back to their keys
-        let propIndex = 0
+        // Reattach translated values by property name so schema changes cannot shift indices.
+        const translatedPropsByKey = Object.fromEntries(
+          propsToTranslate.map(([key], index) => [key, translatedProps[index]]),
+        )
         addressPropsZhHans = Object.fromEntries(
           Object.entries(addressPropsZhHant).map(([key, value]) => [
             key,
-            value ? translatedProps[propIndex++] : value,
+            translatedPropsByKey[key] ?? value,
           ]),
         )
       }

@@ -33,7 +33,7 @@ const cardCtx = getCardCtx()
 omniCtx.setCardCtx(cardCtx)
 
 // Use state instead of async derived to prevent component destruction
-let feature: Feature | undefined = $state()!
+let feature: Feature | undefined = $state()
 
 // ═══════════════════════
 // 1. LOADING
@@ -179,12 +179,27 @@ const imageProviderProps = $derived({
       : undefined,
   context:
     feature?.id === featureId && feature
-      ? {
-          ctxType: ImageContextResource.feature,
-          ctxId: featureId,
-          organisation: appCtx.getHierarchySync(feature).organisation as never,
-          project: appCtx.getHierarchySync(feature).project as never,
-        }
+      ? (() => {
+          const hierarchy = appCtx.getHierarchySync(feature)
+
+          return {
+            ctxType: ImageContextResource.feature,
+            ctxId: featureId,
+            organisation: hierarchy.organisation
+              ? {
+                  id: hierarchy.organisation.id,
+                  code: hierarchy.organisation.code,
+                }
+              : undefined,
+            project: hierarchy.project
+              ? {
+                  id: hierarchy.project.id,
+                  organisationId: hierarchy.project.organisationId,
+                  code: hierarchy.project.code,
+                }
+              : undefined,
+          }
+        })()
       : undefined, // Don't provide mismatched context during transitions
 })
 const imageProviderModel = useImageProviderModel(
