@@ -1,4 +1,5 @@
 import type { Snippet } from 'svelte'
+import type { ResourceIndexRowSelectionState } from '$lib/types'
 
 export type RowImageClickHandler = ((image: unknown) => void) | (() => void)
 
@@ -8,6 +9,8 @@ export type RowRootProps = {
   index: number
   entityId?: string
   isSelected?: boolean
+  selectionState?: ResourceIndexRowSelectionState | null
+  isFocusable?: boolean
   variant?: RowVariant
   onclick: (event: MouseEvent) => void
   onkeydown: (event: KeyboardEvent) => void

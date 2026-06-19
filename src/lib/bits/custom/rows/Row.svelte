@@ -6,6 +6,8 @@ let {
   index,
   entityId,
   isSelected = false,
+  selectionState = null,
+  isFocusable = true,
   variant,
   onclick,
   onkeydown,
@@ -26,6 +28,8 @@ let {
   {index}
   {entityId}
   {isSelected}
+  {selectionState}
+  {isFocusable}
   {variant}
   {onclick}
   {onkeydown}
