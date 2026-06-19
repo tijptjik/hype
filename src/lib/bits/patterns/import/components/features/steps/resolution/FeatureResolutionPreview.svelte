@@ -3,14 +3,14 @@
 import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
+// BITS COMPONENTS
+import { SimpleTooltip } from '$lib/bits/core/tooltip'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import CheckCircle from 'virtual:icons/lucide/circle-check'
 import ClipboardDocument from 'virtual:icons/lucide/clipboard'
 import ChevronsDownUp from 'virtual:icons/lucide/chevrons-down-up'
 import ChevronsUpDown from 'virtual:icons/lucide/chevrons-up-down'
-// BITS COMPONENTS
-import { Swap } from '$lib/bits/custom/swap'
 // SERVICES
 import {
   isFeatureResolutionCreateResult,
@@ -52,13 +52,13 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
           </h4>
           <button
             type="button"
-            class="inline-flex h-4 w-4 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
+            class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(previewExisting, `existing-${index}`)}
             title={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `existing-${index}` ? CheckCircle : ClipboardDocument}
-              class="h-3.5 w-3.5"
+              class="h-4 w-4"
             />
           </button>
         </div>
@@ -92,30 +92,33 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
         </h4>
         <div class="flex items-center gap-2">
           {#if previewExisting}
-            <div class="flex items-center gap-2 text-xs text-base-content/70">
-              <Swap
-                checked={hideUnchanged}
-                onIcon={ChevronsDownUp}
-                offIcon={ChevronsUpDown}
-                size="sm"
-                variant="default"
-                onColor="primary"
-                offColor="neutral"
-                label={m.feature_import__resolution_hide_unchanged()}
-                onCheckedChange={onHideUnchangedChange}
-              />
+            <SimpleTooltip triggerClass="inline-flex h-6 w-6">
+              {#snippet trigger()}
+                <button
+                  type="button"
+                  class={`inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary ${hideUnchanged ? 'bg-base-content/10 text-primary' : ''}`}
+                  aria-pressed={hideUnchanged}
+                  aria-label={m.feature_import__resolution_hide_unchanged()}
+                  onclick={() => onHideUnchangedChange(!hideUnchanged)}
+                >
+                  <Icon
+                    src={hideUnchanged ? ChevronsDownUp : ChevronsUpDown}
+                    class="h-4 w-4"
+                  />
+                </button>
+              {/snippet}
               <span>{m.feature_import__resolution_hide_unchanged()}</span>
-            </div>
+            </SimpleTooltip>
           {/if}
           <button
             type="button"
-            class="inline-flex h-4 w-4 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
+            class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(previewMerged, `merged-${index}`)}
             title={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `merged-${index}` ? CheckCircle : ClipboardDocument}
-              class="h-3.5 w-3.5"
+              class="h-4 w-4"
             />
           </button>
         </div>
@@ -146,13 +149,13 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
           </h5>
           <button
             type="button"
-            class="inline-flex h-4 w-4 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
+            class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(result.submitted, `submitted-${index}`)}
             title={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `submitted-${index}` ? CheckCircle : ClipboardDocument}
-              class="h-3.5 w-3.5"
+              class="h-4 w-4"
             />
           </button>
         </div>
@@ -168,13 +171,13 @@ const previewMerged = $derived(toFeatureResolutionPreview(result.merged))
           </h5>
           <button
             type="button"
-            class="inline-flex h-4 w-4 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
+            class="inline-flex h-6 w-6 items-center justify-center rounded text-base-content/55 transition-colors hover:bg-base-content/10 hover:text-primary"
             onclick={() => onCopy(result.enriched, `enriched-${index}`)}
             title={m.feature_import__resolution_copy_title()}
           >
             <Icon
               src={copiedKey === `enriched-${index}` ? CheckCircle : ClipboardDocument}
-              class="h-3.5 w-3.5"
+              class="h-4 w-4"
             />
           </button>
         </div>

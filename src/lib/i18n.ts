@@ -350,7 +350,7 @@ export function getFPI18n(
   // CASE : SPECIFIER Property & I18N VALUE
   else if (obj.property?.type === 'specifier' && obj.i18n) {
     return getI18n<FeaturePropertyI18nDB>(
-      obj.i18n as Record<Locale, FeaturePropertyI18nDB>,
+      obj.i18n as Record<LocaleKey, FeaturePropertyI18nDB>,
       field,
       userPreferences,
       fallback,
@@ -364,7 +364,7 @@ export function getFPI18n(
   else if (obj.property?.type === 'classifier' && obj.propertyValueId) {
     return getI18n<PropertyValueI18nDB>(
       obj.property.values?.find(v => v.id === obj.propertyValueId)?.i18n as Record<
-        Locale,
+        LocaleKey,
         PropertyValueI18nDB
       >,
       field,
@@ -400,14 +400,14 @@ async function loadTranslateTextRemote(): Promise<
 }
 
 export async function translateText(
-  sourceLang: Locale,
-  targetLang: Locale,
+  sourceLang: Locale | LocaleKey,
+  targetLang: Locale | LocaleKey,
   texts: string[],
 ): Promise<string[]> {
   const translateTextRemote = await loadTranslateTextRemote()
   return translateTextRemote({
-    source: sourceLang,
-    target: targetLang,
+    source: toLocaleKey(sourceLang),
+    target: toLocaleKey(targetLang),
     texts,
   })
 }
@@ -436,11 +436,7 @@ export async function translateI18nFields({
 }: TranslateI18nFieldsParams): Promise<Record<string, string>> {
   try {
     const sourceTexts = fields.map(field => i18n[source]?.[field] ?? '')
-    const translatedTexts = await translateText(
-      toLocaleKebab(source),
-      toLocaleKebab(target),
-      sourceTexts,
-    )
+    const translatedTexts = await translateText(source, target, sourceTexts)
 
     const translated = fields.reduce<Record<string, string>>((acc, field, index) => {
       acc[field] = translatedTexts[index] ?? ''

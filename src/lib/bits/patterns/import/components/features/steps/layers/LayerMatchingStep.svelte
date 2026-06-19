@@ -10,14 +10,17 @@ import {
   handleLayerSearchFocus,
   hideLayerCreationForm,
   preloadLayers,
+  resetLayerFormLocale,
   selectLayer,
   showLayerCreationForm,
   submitLayerForm,
+  translateLayerFormLocale,
 } from '$lib/client/services/import/features/layer'
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import FormI18nTranslationBar from '$lib/bits/patterns/forms/formI18nSection/components/FormI18nTranslationBar.svelte'
 import ImportAnalysisStatus from '../../../shared/ImportAnalysisStatus.svelte'
 import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
 import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
@@ -25,11 +28,11 @@ import LayerResolutionPanel from './LayerResolutionPanel.svelte'
 import LayerValidationResults from './LayerValidationResults.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import XCircle from 'virtual:icons/lucide/circle-x'
-import Plus from 'virtual:icons/lucide/plus'
 // ENUMS
 import { SupportedLocales } from '$lib/enums'
 // TYPES
 import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
+import type { Locale } from '$lib/types'
 import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 
 type LayerLike = {
@@ -52,6 +55,7 @@ type LayerFormLocaleKey = keyof LayerFormData['i18n']
 let { importCtx }: Props = $props()
 
 let layerFormData = $derived(importCtx.getLayerForm())
+let visibleTranslationLocale = $state<LayerFormLocaleKey | null>(null)
 const selectedLayer = $derived(importCtx.getSelectedLayer() as LayerLike | null)
 const fallbackLayerSearchResults = $derived(
   importCtx
@@ -92,6 +96,27 @@ function updateLayerFormField(
       },
     },
   })
+}
+
+async function handleLayerFormTranslate(
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> {
+  return translateLayerFormLocale(importCtx, sourceLocale, targetLocale)
+}
+
+function handleLayerFormLocaleReset(targetLocale: Locale): void {
+  resetLayerFormLocale(importCtx, targetLocale)
+}
+
+function handleLayerLocaleEnter(locale: LayerFormLocaleKey): void {
+  visibleTranslationLocale = locale
+}
+
+function handleLayerLocaleLeave(locale: LayerFormLocaleKey): void {
+  if (visibleTranslationLocale === locale) {
+    visibleTranslationLocale = null
+  }
 }
 
 async function preloadLayersForStep(): Promise<void> {
@@ -172,18 +197,27 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
 </script>
 
 {#snippet layerI18nSection()}
-  <!-- Inlined from old $lib/components/forms/sections/I18n.svelte. -->
   {#if layerFormData?.i18n}
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
       {#each Object.keys(SupportedLocales) as locale}
         {@const localeKey = locale as LayerFormLocaleKey}
+        {@const localeCode = SupportedLocales[localeKey] as Locale}
         <fieldset
-          class="min-w-0 space-y-4 rounded-xl border border-base-content/20 bg-base-100/70 p-4"
+          class="relative min-w-0 space-y-4 overflow-visible rounded-xl border border-base-content/20 bg-base-100/70 p-4"
+          onmouseenter={() => handleLayerLocaleEnter(localeKey)}
+          onmouseleave={() => handleLayerLocaleLeave(localeKey)}
+          onfocusin={() => handleLayerLocaleEnter(localeKey)}
+          onfocusout={() => handleLayerLocaleLeave(localeKey)}
         >
-          <legend class="px-2 text-xs font-bold uppercase text-base-content/60">
-            {SupportedLocales[localeKey]}
-          </legend>
-          <div class="space-y-1.5">
+          <FormI18nTranslationBar
+            targetLocale={localeCode}
+            onTranslate={handleLayerFormTranslate}
+            onResetLocale={handleLayerFormLocaleReset}
+            isEditing={true}
+            isVisible={visibleTranslationLocale === localeKey}
+            positionStyle="top: 0px; right: -0px;"
+          />
+          <div class="space-y-1.5 mt-6">
             <label
               class="block text-xs font-semibold uppercase tracking-wide text-base-content/60"
               for={`layer-${locale}-name`}
@@ -324,7 +358,7 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
       </ImportMappingRow>
 
       {#if importCtx.getIsCreatingLayer()}
-        <div class="mt-4 rounded-lg border border-primary bg-primary/5 p-4">
+        <div class="mt-4 rounded-lg bg-primary/5 p-4">
           <div class="mb-4 flex items-center justify-between">
             <h4 class="font-medium text-primary">Create New Layer</h4>
             <button
@@ -377,10 +411,11 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
 
       {#each importCtx.getLayerResolution().invalidValues as invalidValue}
         {#if importCtx.getIsCreatingLayer() && importCtx.getActiveLayerCreation() === invalidValue}
-          <div class="mt-4 rounded-lg border border-primary bg-primary/5 p-4">
+          <div class="mt-4 rounded-lg bg-primary/5 p-4">
             <div class="mb-4 flex items-center justify-between">
-              <h4 class="font-medium text-primary">
-                Create New Layer for "{invalidValue}"
+              <h4 class="font-medium text-white">
+                Create New Layer for
+                <span class="font-semibold text-secondary">{invalidValue}</span>
               </h4>
               <button
                 type="button"

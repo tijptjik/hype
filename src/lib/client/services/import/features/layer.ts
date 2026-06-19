@@ -1,5 +1,5 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m, toLocaleKey, translateI18nFields } from '$lib/i18n'
 // API
 import { createLayer, getLayer, getLayers } from '$lib/api/server/layer.remote'
 import { getProjectProperties as getProjectPropertiesRemote } from '$lib/api/server/property.remote'
@@ -13,6 +13,7 @@ import type {
   LayerValidationResult,
 } from '$lib/client/services/import/types'
 import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
+import type { Locale, LocaleKey } from '$lib/types'
 // Layer validation and resolution functions for CSV import
 
 type LayerReferencePart = {
@@ -38,6 +39,14 @@ type LayerFormLocale = {
   nameShortGen: boolean
   descriptionGen: boolean
 }
+
+type LayerTranslatableField = 'name' | 'nameShort' | 'description'
+
+const LAYER_TRANSLATABLE_FIELDS = [
+  'name',
+  'nameShort',
+  'description',
+] as const satisfies readonly LayerTranslatableField[]
 
 // LAYER FORM CONFIGURATION
 export const LAYER_FIELDS = {
@@ -328,6 +337,42 @@ function toLayerFormI18n(i18n: Record<string, any> | undefined): {
     zhHant: normalizeLayerFormLocale(i18n?.zhHant, fallbackName),
     zhHans: normalizeLayerFormLocale(i18n?.zhHans, fallbackName),
   }
+}
+
+/**
+ * Builds the field-only translation payload expected by the shared i18n helper.
+ *
+ * @param i18n - Current layer form i18n state.
+ * @param fields - Translatable fields included in this request.
+ * @returns Locale-keyed strings for translation.
+ */
+function toLayerTranslationPayload(
+  i18n: LayerFormInput['data']['i18n'],
+  fields: readonly LayerTranslatableField[],
+): Partial<Record<LocaleKey, Record<string, string | null | undefined>>> {
+  return {
+    en: toLayerTranslationLocaleRecord(i18n, 'en', fields),
+    zhHans: toLayerTranslationLocaleRecord(i18n, 'zhHans', fields),
+    zhHant: toLayerTranslationLocaleRecord(i18n, 'zhHant', fields),
+  }
+}
+
+/**
+ * Reads one layer locale into a flat field/value record for translation.
+ *
+ * @param i18n - Current layer form i18n state.
+ * @param localeKey - Locale to read.
+ * @param fields - Fields included in this request.
+ * @returns Field/value pairs keyed by layer i18n field name.
+ */
+function toLayerTranslationLocaleRecord(
+  i18n: LayerFormInput['data']['i18n'],
+  localeKey: LocaleKey,
+  fields: readonly LayerTranslatableField[],
+): Record<string, string | null | undefined> {
+  return Object.fromEntries(
+    fields.map(field => [field, i18n[localeKey]?.[field] ?? '']),
+  )
 }
 
 function toLayerReferenceKey(parts: LayerReferencePart[]): string {
@@ -667,6 +712,106 @@ export function showLayerCreationForm(importCtx: ImportCtx, prefillValue?: strin
 
   // Store draft layer data directly in import context; the flow mutates it as controlled state.
   importCtx.setLayerForm(emptyLayer as LayerFormInput['data'])
+}
+
+/**
+ * Machine-translates empty fields in one create-layer locale from another locale.
+ *
+ * @param importCtx - Import flow state owner containing the draft layer form.
+ * @param sourceLocale - Locale to translate from.
+ * @param targetLocale - Locale to fill.
+ * @returns `true` when at least one empty target field was translated.
+ * @remarks Existing target text is never overwritten.
+ */
+export async function translateLayerFormLocale(
+  importCtx: ImportCtx,
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> {
+  const layerForm = importCtx.getLayerForm()
+  if (!layerForm?.i18n) return false
+
+  const sourceLocaleKey = toLocaleKey(sourceLocale)
+  const targetLocaleKey = toLocaleKey(targetLocale)
+  const sourceLocaleData = layerForm.i18n[sourceLocaleKey]
+  const targetLocaleData = layerForm.i18n[targetLocaleKey]
+  if (!sourceLocaleData || !targetLocaleData) return false
+
+  // Only translate populated source fields into blank targets.
+  const fieldsToTranslate = LAYER_TRANSLATABLE_FIELDS.filter(field => {
+    const sourceValue = sourceLocaleData[field]
+    const currentValue = targetLocaleData[field]
+    return (
+      typeof sourceValue === 'string' &&
+      sourceValue.trim().length > 0 &&
+      !(typeof currentValue === 'string' && currentValue.trim().length > 0)
+    )
+  })
+  if (fieldsToTranslate.length === 0) return false
+
+  const i18n = toLayerTranslationPayload(layerForm.i18n, fieldsToTranslate)
+  const translated = await translateI18nFields({
+    source: sourceLocaleKey,
+    target: targetLocaleKey,
+    fields: [...fieldsToTranslate],
+    i18n,
+  })
+
+  const currentLayerForm = importCtx.getLayerForm()
+  if (!currentLayerForm?.i18n?.[targetLocaleKey]) return false
+
+  const nextTargetLocaleData = { ...currentLayerForm.i18n[targetLocaleKey] }
+  for (const field of fieldsToTranslate) {
+    const currentValue = nextTargetLocaleData[field]
+    if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
+      continue
+    }
+
+    const nextValue = translated[field] ?? ''
+    nextTargetLocaleData[field] = nextValue
+    nextTargetLocaleData[`${field}Gen`] = nextValue.trim().length > 0
+  }
+
+  importCtx.setLayerForm({
+    ...currentLayerForm,
+    i18n: {
+      ...currentLayerForm.i18n,
+      [targetLocaleKey]: nextTargetLocaleData,
+    },
+  })
+
+  return true
+}
+
+/**
+ * Clears one create-layer locale and resets its generated-field flags.
+ *
+ * @param importCtx - Import flow state owner containing the draft layer form.
+ * @param targetLocale - Locale to clear.
+ */
+export function resetLayerFormLocale(importCtx: ImportCtx, targetLocale: Locale): void {
+  const layerForm = importCtx.getLayerForm()
+  if (!layerForm?.i18n) return
+
+  const targetLocaleKey = toLocaleKey(targetLocale)
+  const targetLocaleData = layerForm.i18n[targetLocaleKey]
+  if (!targetLocaleData) return
+
+  importCtx.setLayerForm({
+    ...layerForm,
+    i18n: {
+      ...layerForm.i18n,
+      [targetLocaleKey]: {
+        ...targetLocaleData,
+        name: '',
+        nameGen: false,
+        nameShort: '',
+        nameShortGen: false,
+        description: '',
+        descriptionGen: false,
+      },
+    },
+  })
 }
 
 export function hideLayerCreationForm(importCtx: ImportCtx) {
