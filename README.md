@@ -17,7 +17,7 @@ Journey through Hong Kong
 
 ## Development
 
-![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=for-the-badge)
+![Code Style](https://img.shields.io/badge/code_style-biome-60a5fa.svg?style=for-the-badge)
 ![Commitizen](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg?style=for-the-badge)
 ![Changesets](https://img.shields.io/badge/Changesets-enabled-green?style=for-the-badge)
 
