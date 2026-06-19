@@ -1,12 +1,13 @@
 import type { Component, Snippet } from 'svelte'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey, ResourceBulkEditConfig } from '$lib/types'
 
 export type ResourceControlBarRootProps = {
   filterLabel: string
   filterIcon?: Component
   hasActiveSection?: boolean
   disableMenuToggle?: boolean
+  showBulkEdit?: boolean
   showSort?: boolean
   count: number
   resetDisabled?: boolean
@@ -28,8 +29,22 @@ export type ResourceControlBarRootProps = {
       },
     ]
   >
+  bulkContent?: Snippet<
+    [
+      {
+        isBulkOpen: boolean
+        handleBulkOpenChange: (isOpen: boolean) => Promise<void>
+      },
+    ]
+  >
   children?: Snippet
   class?: string
+}
+
+export type ResourceBulkEditControlProps = {
+  config: ResourceBulkEditConfig
+  isOpen?: boolean
+  onOpenChange?: (isOpen: boolean) => Promise<void> | void
 }
 
 export type ResourceControlBarFilterCtrlProps = {

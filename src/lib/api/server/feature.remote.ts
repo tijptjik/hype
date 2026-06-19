@@ -1,5 +1,6 @@
 // REMOTE
 import {
+  guardedBatchQuery,
   guardedBatchByIdQuery,
   guardedCommand,
   guardedForm,
@@ -71,7 +72,14 @@ import {
   RemoveFeatureSchema,
 } from '$lib/db/zod'
 // TYPES
-import type { EntityResponse, Id, ListResponse } from '$lib/types'
+import type {
+  EntityResponse,
+  FeatureBulkStateResult,
+  GuardedCommandContext,
+  GuardedQueryContext,
+  Id,
+  ListResponse,
+} from '$lib/types'
 import type {
   FeatureCommandProbe,
   FeatureDB,
@@ -98,6 +106,7 @@ import type {
 // - publishFeature
 // - archiveFeature
 // - updateFeatureState
+// - updateFeatureBulkState
 
 const PatchFeatureStateSchema = z.object({
   id: z.string().min(1),
@@ -108,6 +117,17 @@ const PatchFeatureStateSchema = z.object({
     isVisitable: FormBoolean.optional(),
     isPendingReview: FormBoolean.optional(),
   }),
+  meta: z
+    .object({
+      isAdminRequest: FormBoolean.optional(),
+    })
+    .optional(),
+})
+
+const BulkFeatureStateSchema = z.object({
+  id: z.string().min(1),
+  field: z.enum(['isPublished', 'isArchived', 'isIntangible', 'isVisitable']),
+  value: FormBoolean,
   meta: z
     .object({
       isAdminRequest: FormBoolean.optional(),
@@ -697,6 +717,191 @@ export const archiveFeature = guardedCommand(
 )
 
 /**
+ * Applies the task-oriented feature state patch used by non-form update flows.
+ *
+ * @param params - Feature id and partial feature-state data to persist.
+ * @param ctx - Guarded command/query context with DB, user, and role state.
+ * @returns The persisted feature row.
+ * @remarks
+ * The current feature row is probed immediately before update so authorization and
+ * optimistic concurrency are both evaluated against the same persisted hierarchy state.
+ */
+async function applyFeatureStatePatch(
+  params: z.infer<typeof PatchFeatureStateSchema>,
+  ctx: GuardedCommandContext | GuardedQueryContext,
+): Promise<FeatureDB> {
+  const { db, user, userRoles } = ctx
+
+  const current = requireValue(await probeFeatureForUpdate(db, params.id as Id), () => {
+    throw error(404, 'FEATURE_NOT_FOUND')
+  })
+
+  const updateDecision = authorizeFeatureUpdateForSubmission({
+    user,
+    userRoles,
+    resource: {
+      id: current.id,
+      organisationId: current.organisationId,
+      projectId: current.projectId,
+      layerId: current.layerId,
+      resourceHubId: current.resourceHubId,
+    },
+    submittedData: params.data,
+  })
+  if (!updateDecision.allowed) {
+    throw error(403, toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+
+  const persisted = requireValue(
+    await updateFeatureByIdWithConcurrency(db, {
+      id: params.id as Id,
+      updatedAt: current.modifiedAt,
+      data: params.data,
+    }),
+    () => {
+      throw error(409, 'STALE_WRITE')
+    },
+  )
+
+  if (params.data.isPublished === true) {
+    await publishAllImagesWithPublicIntent(db, params.id as Id, user.id as Id)
+  }
+
+  return persisted
+}
+
+/**
+ * Applies a single field-oriented bulk state update.
+ *
+ * @param params - Feature id, state field, and boolean value to apply.
+ * @param ctx - Guarded query context for the batched remote call.
+ * @returns The persisted feature row after the state change.
+ * @remarks
+ * Publish/archive fields deliberately use the dedicated command semantics so publisher
+ * metadata and public-intent image side effects remain consistent with single-feature
+ * admin actions. Archive changes are exposed only to super admins in bulk mode.
+ */
+async function applyFeatureBulkStateField(
+  params: z.infer<typeof BulkFeatureStateSchema>,
+  ctx: GuardedQueryContext,
+): Promise<FeatureDB> {
+  const { db, user, userRoles } = ctx
+  const featureId = params.id as Id
+
+  if (params.field === 'isPublished') {
+    const probed = (await resolveFeatureCommandProbe(db, featureId, () => {
+      throw error(404, 'FEATURE_NOT_FOUND')
+    })) as FeatureCommandProbe
+
+    ensureFeatureCommandAllowed(
+      authorizeFeaturePublishForSubmission({
+        user,
+        userRoles,
+        resource: {
+          id: probed.id,
+          organisationId: probed.organisationId,
+          projectId: probed.projectId,
+          layerId: probed.layerId,
+          resourceHubId: probed.resourceHubId,
+        },
+      }),
+      toIssueDetailMessage,
+    )
+
+    const persisted = requireValue(
+      await updateFeaturePublishedStateById(db, {
+        id: featureId,
+        state: params.value,
+        publisherId: user.id,
+      }),
+      () => {
+        throw error(404, 'FEATURE_NOT_FOUND')
+      },
+    )
+
+    if (params.value) {
+      await publishAllImagesWithPublicIntent(db, featureId, user.id as Id)
+    }
+
+    return persisted
+  }
+
+  if (params.field === 'isArchived') {
+    if (!user.superAdmin) {
+      throw error(403, toIssueDetailMessage('INSUFFICIENT_ROLE'))
+    }
+
+    const probed = (await resolveFeatureCommandProbe(db, featureId, () => {
+      throw error(404, 'FEATURE_NOT_FOUND')
+    })) as FeatureCommandProbe
+
+    ensureFeatureCommandAllowed(
+      authorizeFeatureDeleteForSubmission({
+        user,
+        userRoles,
+        resource: {
+          id: probed.id,
+          organisationId: probed.organisationId,
+          projectId: probed.projectId,
+          layerId: probed.layerId,
+          resourceHubId: probed.resourceHubId,
+        },
+      }),
+      toIssueDetailMessage,
+    )
+
+    const persisted = requireValue(
+      await updateFeatureArchivedStateById(db, {
+        id: featureId,
+        state: params.value,
+      }),
+      () => {
+        throw error(404, 'FEATURE_NOT_FOUND')
+      },
+    )
+
+    return persisted
+  }
+
+  return applyFeatureStatePatch(
+    {
+      id: params.id,
+      data: {
+        [params.field]: params.value,
+      },
+      meta: params.meta,
+    },
+    ctx,
+  )
+}
+
+/**
+ * Converts a per-row bulk update exception into a stable row-level error string.
+ *
+ * @param err - Unknown exception thrown while processing one feature row.
+ * @returns A concise error message suitable for row result state and toasts.
+ */
+function toFeatureBulkStateErrorMessage(err: unknown): string {
+  if (!err || typeof err !== 'object') return 'FEATURE_UPDATE_FAILED'
+
+  if (
+    'body' in err &&
+    err.body &&
+    typeof err.body === 'object' &&
+    'message' in err.body &&
+    typeof err.body.message === 'string'
+  ) {
+    return err.body.message
+  }
+
+  if ('message' in err && typeof err.message === 'string') {
+    return err.message
+  }
+
+  return 'FEATURE_UPDATE_FAILED'
+}
+
+/**
  * Applies task-oriented partial feature state updates.
  *
  * @param params - Command payload validated by `PatchFeatureStateSchema`.
@@ -714,46 +919,54 @@ export const archiveFeature = guardedCommand(
 export const updateFeatureState = guardedCommand(
   PatchFeatureStateSchema,
   async (params, ctx) => {
-    const { db, user, userRoles } = ctx
+    return { data: await applyFeatureStatePatch(params, ctx) }
+  },
+)
 
-    const current = requireValue(
-      await probeFeatureForUpdate(db, params.id as Id),
-      () => {
-        throw error(404, 'FEATURE_NOT_FOUND')
-      },
-    )
+/**
+ * Applies feature state updates in a batched remote query for bulk admin editing.
+ *
+ * @param params.id - Feature id to update.
+ * @param params.field - Boolean state field to change.
+ * @param params.value - Boolean value to persist for the field.
+ * @returns A per-row result object containing either the persisted feature row or an error.
+ * @remarks
+ * Call this query concurrently for up to 100 selected feature ids; SvelteKit collapses
+ * those calls into a single `query.batch` request while preserving row-level results.
+ */
+export const updateFeatureBulkState = guardedBatchQuery(
+  BulkFeatureStateSchema,
+  async (outputs, ctx) => {
+    const resultEntries: Array<readonly [string, FeatureBulkStateResult]> =
+      await Promise.all(
+        outputs.map(async params => {
+          const key = `${params.id}:${params.field}:${params.value}`
 
-    const updateDecision = authorizeFeatureUpdateForSubmission({
-      user,
-      userRoles,
-      resource: {
-        id: current.id,
-        organisationId: current.organisationId,
-        projectId: current.projectId,
-        layerId: current.layerId,
-        resourceHubId: current.resourceHubId,
-      },
-      submittedData: params.data,
-    })
-    if (!updateDecision.allowed) {
-      throw error(403, toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
-    }
+          try {
+            const data = await applyFeatureBulkStateField(params, ctx)
+            const result: FeatureBulkStateResult = {
+              id: params.id as Id,
+              ok: true,
+              data,
+            }
+            return [key, result] as const
+          } catch (err) {
+            const result: FeatureBulkStateResult = {
+              id: params.id as Id,
+              ok: false,
+              error: toFeatureBulkStateErrorMessage(err),
+            }
+            return [key, result] as const
+          }
+        }),
+      )
+    const resultsByKey = new Map(resultEntries)
 
-    const persisted = requireValue(
-      await updateFeatureByIdWithConcurrency(db, {
+    return params =>
+      resultsByKey.get(`${params.id}:${params.field}:${params.value}`) ?? {
         id: params.id as Id,
-        updatedAt: current.modifiedAt,
-        data: params.data,
-      }),
-      () => {
-        throw error(409, 'STALE_WRITE')
-      },
-    )
-
-    if (params.data.isPublished === true) {
-      await publishAllImagesWithPublicIntent(db, params.id as Id, user.id as Id)
-    }
-
-    return { data: persisted }
+        ok: false,
+        error: 'FEATURE_UPDATE_FAILED',
+      }
   },
 )
