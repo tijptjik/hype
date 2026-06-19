@@ -16,6 +16,7 @@ type Props = Pick<
   targetLocale: Locale
   isVisible?: boolean
   isEditing?: boolean
+  positionStyle?: string
 }
 
 let {
@@ -26,6 +27,7 @@ let {
   sectionKey,
   isVisible = false,
   isEditing = false,
+  positionStyle = '',
 }: Props = $props()
 
 let status = $state<'idle' | 'loading' | 'error'>('idle')
@@ -84,7 +86,7 @@ $effect(() => {
 })
 </script>
 
-<div class="bits-form__i18n-translation">
+<div class="bits-form__i18n-translation" style={positionStyle}>
   <div class={localeCodeClass}>
     {#key status}
       {#if status === 'loading'}
@@ -118,7 +120,7 @@ $effect(() => {
           tabindex={isVisible ? 0 : -1}
           onclick={event => handleTranslate(event, sourceLocale)}
         >
-          {localeCodes[sourceLocale] ?? sourceLocale.toUpperCase()}
+          {localeCodes[toLocaleKey(sourceLocale)] ?? sourceLocale.toUpperCase()}
         </button>
       {/each}
       <button

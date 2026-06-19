@@ -121,6 +121,7 @@ export type ImportState = {
     showPreview: boolean
     previewIndex: number
     ignoreMissingFeatureIds: boolean
+    updatePolicy: 'none' | 'custom' | 'all'
   }
 }
 
@@ -217,6 +218,7 @@ export class ImportCtx {
       showPreview: false,
       previewIndex: 0,
       ignoreMissingFeatureIds: true,
+      updatePolicy: 'all',
     },
   })
 
@@ -696,6 +698,7 @@ export class ImportCtx {
       showPreview: false,
       previewIndex: 0,
       ignoreMissingFeatureIds: true,
+      updatePolicy: 'all',
     }
   }
 }

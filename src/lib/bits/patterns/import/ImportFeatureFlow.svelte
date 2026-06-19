@@ -24,7 +24,7 @@ import {
   type GeoLookupStatusCounts,
 } from '$lib/client/services/import/features'
 import {
-  setAllMissingProvidedFeatureIdRows,
+  setAllFeatureResolutionUpdatePolicyRows,
   type FeatureResolutionData,
 } from '$lib/client/services/import/features/resolution'
 import {
@@ -156,9 +156,14 @@ const headerProgressValue = $derived.by(() =>
 const featureResolutionResults = $derived(
   importCtx.getFeatureResolution().results as FeatureResolutionData[],
 )
-const featureResolutionIgnoreMissingIds = $derived(
-  importCtx.getFeatureResolution().ignoreMissingFeatureIds,
+const featureResolutionUpdatePolicy = $derived(
+  importCtx.getFeatureResolution().updatePolicy,
 )
+const featureResolutionUpdatePolicyChecked = $derived.by<boolean | null>(() => {
+  if (featureResolutionUpdatePolicy === 'all') return true
+  if (featureResolutionUpdatePolicy === 'none') return false
+  return null
+})
 
 // HANDLERS
 
@@ -562,9 +567,21 @@ function handleResolve(): void {
   }
 }
 
-function handleFeatureResolutionUpdatePolicy(checked: boolean): void {
-  importCtx.updateFeatureResolution({ ignoreMissingFeatureIds: checked })
-  setAllMissingProvidedFeatureIdRows(importCtx, featureResolutionResults, checked)
+function handleFeatureResolutionUpdatePolicy(checked: boolean | null): void {
+  const updatePolicy = checked === true ? 'all' : checked === false ? 'none' : 'custom'
+
+  importCtx.updateFeatureResolution({
+    updatePolicy,
+    ignoreMissingFeatureIds: checked !== false,
+  })
+
+  if (checked !== null) {
+    setAllFeatureResolutionUpdatePolicyRows(
+      importCtx,
+      featureResolutionResults,
+      checked,
+    )
+  }
 }
 
 async function handleCloseImportFlow(): Promise<void> {
@@ -634,11 +651,16 @@ $effect(() => {
       {m.feature_import__resolution_update_policy()}
     </div>
     <Switch
-      checked={featureResolutionIgnoreMissingIds}
-      onCheckedChange={checked => handleFeatureResolutionUpdatePolicy(checked === true)}
+      checked={featureResolutionUpdatePolicyChecked}
+      states={3}
+      onCheckedChange={handleFeatureResolutionUpdatePolicy}
       color="warning"
-      leftText="Select"
-      rightText="All"
+      leftColor="error"
+      rightColor="success"
+      midColor="warning"
+      leftText={m.feature_import__resolution_update_policy_none()}
+      rightText={m.feature_import__resolution_update_policy_all()}
+      topText={m.feature_import__resolution_update_policy_custom()}
       size="sm"
     />
   </div>

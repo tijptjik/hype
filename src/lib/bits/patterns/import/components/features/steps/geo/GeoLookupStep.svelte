@@ -849,7 +849,10 @@ function togglePauseResume() {
 }
 
 function proceedToNextStep() {
-  importCtx.updateFeatureResolution({ ignoreMissingFeatureIds: true })
+  importCtx.updateFeatureResolution({
+    ignoreMissingFeatureIds: true,
+    updatePolicy: 'all',
+  })
   importCtx.setCurrentStep('feature-resolution') // Will be updated when next step is implemented
 }
 

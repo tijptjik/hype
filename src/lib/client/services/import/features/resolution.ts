@@ -37,6 +37,7 @@ export interface FeatureResolutionState {
   results: FeatureResolutionData[]
   showPreview: boolean
   previewIndex: number
+  updatePolicy: 'none' | 'custom' | 'all'
 }
 
 export interface FeatureResolutionStatusCounts {
@@ -244,27 +245,35 @@ export function getMissingProvidedFeatureIdError(
 }
 
 /**
- * Applies a create/skip decision to all rows with supplied unknown feature IDs.
+ * Applies an include/skip decision to unresolved feature update rows.
  *
  * @param importCtx - Active import context.
  * @param results - Current resolution rows.
- * @param acceptProvidedIdAsCreate - Whether to create using supplied IDs.
+ * @param includeForProcessing - Whether unresolved update rows should be processed.
  * @returns Nothing.
  */
-export function setAllMissingProvidedFeatureIdRows(
+export function setAllFeatureResolutionUpdatePolicyRows(
   importCtx: ImportCtx,
   results: FeatureResolutionData[],
-  acceptProvidedIdAsCreate: boolean,
+  includeForProcessing: boolean,
 ): void {
   results.forEach((result, index) => {
-    if (!result.hasProvidedIdWithoutMatch) return
+    if (result.status !== 'pending' && result.status !== 'skipped') return
+    if (!result.existing) return
+
+    const acceptProvidedIdAsCreate = result.hasProvidedIdWithoutMatch
+      ? includeForProcessing
+      : result.acceptProvidedIdAsCreate
+
     importCtx.updateFeatureResolutionResult(index, {
       ...result,
       acceptProvidedIdAsCreate,
-      status: acceptProvidedIdAsCreate ? 'pending' : 'skipped',
-      error: acceptProvidedIdAsCreate
+      status: includeForProcessing ? 'pending' : 'skipped',
+      error: includeForProcessing
         ? undefined
-        : getMissingProvidedFeatureIdError(result),
+        : result.hasProvidedIdWithoutMatch
+          ? getMissingProvidedFeatureIdError(result)
+          : result.error,
     })
   })
 }
@@ -1345,14 +1354,17 @@ function mergeI18nData(
 
   // Helper to ensure locale object has required fields
   function ensureLocaleFields(localeObj: any, locale: string): any {
+    const localeKey = getCanonicalLocaleKey(locale)
     return {
       ...localeObj,
       featureId: featureId,
-      locale: locale,
+      locale: toFeatureI18nLocaleValue(localeKey),
     }
   }
 
   function getCanonicalLocaleKey(locale: string): string {
+    if (locale === 'zh-Hant') return 'zhHant'
+    if (locale === 'zh-Hans') return 'zhHans'
     return toLocaleKey(locale as Parameters<typeof toLocaleKey>[0])
   }
 
@@ -1360,6 +1372,12 @@ function mergeI18nData(
     const localeKey = getCanonicalLocaleKey(locale)
     if (!merged[localeKey]) merged[localeKey] = {}
     return localeKey
+  }
+
+  function toFeatureI18nLocaleValue(localeKey: string): string {
+    if (localeKey === 'zhHant') return 'zh-Hant'
+    if (localeKey === 'zhHans') return 'zh-Hans'
+    return 'en'
   }
 
   // Normalize any existing persisted locale keys before applying import updates.

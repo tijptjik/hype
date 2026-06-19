@@ -57,7 +57,7 @@ $effect(() => {
 })
 
 $effect(() => {
-  const resolutionKey = `${importCtx.getFile()?.name ?? ''}:${resolution.ignoreMissingFeatureIds}`
+  const resolutionKey = importCtx.getFile()?.name ?? ''
   if (resolutionKey === lastResolutionKey) return
   lastResolutionKey = resolutionKey
   void refreshFeatureResolution(importCtx, resolution.ignoreMissingFeatureIds)
@@ -120,10 +120,12 @@ async function showPreview(index: number): Promise<void> {
 
 function skipRecord(index: number): void {
   skipFeatureResolutionRecord(importCtx, results[index], index)
+  importCtx.updateFeatureResolution({ updatePolicy: 'custom' })
 }
 
 function includeRecord(index: number): void {
   includeFeatureResolutionRecord(importCtx, results[index], index)
+  importCtx.updateFeatureResolution({ updatePolicy: 'custom' })
 }
 
 function retryRecord(index: number): void {
