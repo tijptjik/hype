@@ -37,6 +37,74 @@ type DraftPropertyLocaleValue = {
 
 type DraftPropertyI18nMap = Record<string, DraftPropertyLocaleValue>
 
+type ImportPropertyPayload = {
+  propertyId?: string | null
+  propertyValueId?: string | null
+  value?: string | null
+  translatedValues?: unknown
+}
+
+/**
+ * Logs feature import property diagnostics with a stable prefix for console filtering.
+ *
+ * @param stage - Import pipeline stage being inspected.
+ * @param payload - Debug payload for the current property operation.
+ * @returns Nothing.
+ */
+function logImportPropertyDebug(stage: string, payload: Record<string, unknown>): void {
+  console.info(`[IMPORT_PROPERTY_DEBUG] ${stage}`, payload)
+}
+
+function getSubmittedPropertyRawValue(
+  property: Record<string, any> | null | undefined,
+): string | null {
+  const directValue = typeof property?.value === 'string' ? property.value.trim() : ''
+  if (directValue) {
+    return directValue
+  }
+
+  const i18n = property?.i18n as Record<string, { value?: string | null }> | undefined
+  if (!i18n) return null
+
+  for (const entry of Object.values(i18n)) {
+    const localizedValue = typeof entry?.value === 'string' ? entry.value.trim() : ''
+    if (localizedValue) {
+      return localizedValue
+    }
+  }
+
+  return null
+}
+
+/**
+ * Returns a trimmed import property ID when one is present.
+ *
+ * @param value - Candidate property or option identifier.
+ * @returns A non-empty identifier, otherwise `null`.
+ */
+function normalizeImportPropertyId(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+
+  const trimmedValue = value.trim()
+  return trimmedValue || null
+}
+
+/**
+ * Returns whether an imported property should bind through `propertyValueId`.
+ *
+ * @param propertyType - Reconciled field discriminator.
+ * @param isRangeField - Whether the UI component stores direct range values.
+ * @param isToggleField - Whether the UI component stores direct boolean values.
+ * @returns `true` for categorical classifier fields.
+ */
+function shouldUseClassifierPropertyValueId(
+  propertyType: string,
+  isRangeField: boolean,
+  isToggleField: boolean,
+): boolean {
+  return propertyType === 'classifier' && !isRangeField && !isToggleField
+}
+
 export interface FeatureResolutionData {
   rowIndex: number
   existing?: Feature
@@ -929,7 +997,11 @@ function extractSubmittedData(
 
     switch (column.modelType) {
       case 'Feature':
-        if (column.locale && column.locale !== 'None') {
+        if (
+          column.locale &&
+          column.locale !== 'None' &&
+          column.propertyType !== 'classifier'
+        ) {
           if (!submitted.i18n[column.locale]) {
             submitted.i18n[column.locale] = {}
           }
@@ -1582,94 +1654,92 @@ function mergeProperties(
   importCtx: ImportCtx,
 ): any[] {
   const merged: any[] = []
-  const processedKeys = new Set<string>()
   const existingPropertyByKey = new Map<string, any>()
-
-  // Get property enriched data from property reconciliation step
   const propertyReconciliation = importCtx.getPropertyReconciliation()
-
-  // Log all enriched data entries
-  propertyReconciliation.enrichedData.forEach((data, key) => {})
-
-  // If enrichedData is empty, let's check the full reconciliation state
-  if (propertyReconciliation.enrichedData.size === 0) {
-    // Let's also check if the property reconciliation was ever run
-  }
-
-  // Also check if we can get property type information
   const fetchedProperties = importCtx.getFetchedProperties()
+  const mergedByKey = new Set([
+    ...Object.keys(submittedProperties),
+    ...Object.keys(enrichedProperties),
+  ])
 
-  // Create a map of property keys to their resolved IDs
-  const propertyKeyToId = new Map<string, string>()
-
-  // Add enriched properties from property reconciliation
-  propertyReconciliation.enrichedData.forEach((data, key) => {
-    if (data.propertyId) {
-      propertyKeyToId.set(key, data.propertyId)
-    }
+  logImportPropertyDebug('merge:start', {
+    featureId,
+    submittedKeys: Object.keys(submittedProperties),
+    enrichedKeys: Object.keys(enrichedProperties),
+    existingCount: existingProperties.length,
+    reconciliationKeys: Array.from(propertyReconciliation.enrichedData.keys()),
+    submittedProperties,
+    enrichedProperties,
   })
 
-  // Keep existing properties that aren't referenced by submitted or enriched
   existingProperties.forEach(prop => {
     const propertyKey = prop.property?.key
     if (propertyKey) {
       existingPropertyByKey.set(propertyKey, prop)
     }
-    if (
-      propertyKey &&
-      !submittedProperties[propertyKey] &&
-      !enrichedProperties[propertyKey]
-    ) {
+    if (!propertyKey || !mergedByKey.has(propertyKey)) {
       merged.push(prop)
     }
   })
 
-  // Add submitted properties
-  Object.keys(submittedProperties).forEach(key => {
-    const submittedProp = submittedProperties[key]
-    processedKeys.add(key)
-    const existingProperty = existingPropertyByKey.get(key)
-    const matchedProperty = fetchedProperties.find(property => property.key === key)
+  for (const propertyKey of mergedByKey) {
+    const submittedProp = submittedProperties[propertyKey]
+    const enrichedProp = enrichedProperties[propertyKey] as
+      | ImportPropertyPayload
+      | undefined
+    const existingProperty = existingPropertyByKey.get(propertyKey)
+    const matchedProperty = fetchedProperties.find(
+      property => property.key === propertyKey,
+    )
+    const enrichedData = propertyReconciliation.enrichedData.get(propertyKey)
+    const propertyType =
+      enrichedData?.propertyType ||
+      matchedProperty?.type ||
+      existingProperty?.property?.type ||
+      'classifier'
     const isRangeField = matchedProperty?.component === 'RangeField'
     const isToggleField = matchedProperty?.component === 'ToggleField'
     const isTranslatableSpecifier =
-      (matchedProperty?.type === 'specifier' ||
-        existingProperty?.property?.type === 'specifier') &&
+      propertyType === 'specifier' &&
       Boolean(
         matchedProperty?.isTranslatable ?? existingProperty?.property?.isTranslatable,
       )
-
-    // Try to get propertyId from enriched properties first, then from reconciliation data
-    const enrichedPropData = enrichedProperties[key]
     const propertyId =
-      enrichedPropData?.propertyId ||
-      propertyKeyToId.get(key) ||
-      matchedProperty?.id ||
-      submittedProp.id ||
-      ''
-    const enrichedData = propertyReconciliation.enrichedData.get(key)
+      normalizeImportPropertyId(enrichedProp?.propertyId) ||
+      normalizeImportPropertyId(enrichedData?.propertyId) ||
+      normalizeImportPropertyId(matchedProperty?.id) ||
+      normalizeImportPropertyId(existingProperty?.propertyId) ||
+      normalizeImportPropertyId(submittedProp?.id)
 
-    let resolvedMappedValue: string | null = null
-    if (!resolvedMappedValue && enrichedData?.resolvedValues && submittedProp.value) {
-      resolvedMappedValue = enrichedData.resolvedValues[submittedProp.value] || null
+    if (!propertyId) {
+      console.warn('[IMPORT_PROPERTY_DEBUG] merge:skip-missing-property-id', {
+        featureId,
+        propertyKey,
+        submittedProp,
+        enrichedProp,
+        enrichedData,
+        matchedPropertyId: matchedProperty?.id,
+        existingPropertyId: existingProperty?.propertyId,
+      })
+      continue
     }
 
-    // Resolve property value ID from mapping or direct value
-    // Priority: submitted > enriched properties > reconciliation data
-    let propertyValueId =
-      submittedProp.valueId ||
-      enrichedPropData?.propertyValueId ||
-      enrichedData?.propertyValueId ||
-      null
-
-    // Check if we have a property value mapping for this value
-    if (!propertyValueId && !isRangeField && !isToggleField && resolvedMappedValue) {
-      propertyValueId = resolvedMappedValue
-    }
+    const submittedRawValue = getSubmittedPropertyRawValue(submittedProp)
+    const enrichedRawValue =
+      typeof enrichedProp?.value === 'string' ? enrichedProp.value.trim() : ''
+    const rawValue = enrichedRawValue || submittedRawValue
+    const isClassifierReference = shouldUseClassifierPropertyValueId(
+      propertyType,
+      isRangeField,
+      isToggleField,
+    )
+    let propertyValueId = isClassifierReference
+      ? normalizeImportPropertyId(enrichedProp?.propertyValueId) ||
+        normalizeImportPropertyId(submittedProp?.valueId)
+      : null
 
     const mappedToggleValue =
-      normalizeToggleValue(resolvedMappedValue) ||
-      normalizeToggleValue(submittedProp.value)
+      normalizeToggleValue(enrichedRawValue) || normalizeToggleValue(rawValue)
     const shouldUseDirectToggleValue =
       isToggleField ||
       (!matchedProperty &&
@@ -1677,114 +1747,87 @@ function mergeProperties(
         enrichedData?.propertyValueMapping !== undefined &&
         Object.keys(enrichedData.propertyValueMapping).length === 0)
 
-    const resolvedValue =
-      isRangeField || shouldUseDirectToggleValue
-        ? resolvedMappedValue || mappedToggleValue || submittedProp.value || null
-        : submittedProp.value || null
-
     if (shouldUseDirectToggleValue || isBooleanLikePropertyValueId(propertyValueId)) {
       propertyValueId = null
+    }
+
+    if (isClassifierReference && !propertyValueId) {
+      console.warn('[IMPORT_PROPERTY_DEBUG] merge:skip-classifier-missing-value-id', {
+        featureId,
+        propertyKey,
+        propertyId,
+        submittedRawValue,
+        enrichedRawValue,
+        submittedProp,
+        enrichedProp,
+        enrichedData,
+      })
+      if (existingProperty) {
+        merged.push(existingProperty)
+      }
+      continue
     }
 
     const propertyI18n = buildMergedFeaturePropertyI18n({
       existingProperty,
       submittedProperty: submittedProp,
-      translatedValues: enrichedPropData?.translatedValues,
+      translatedValues: enrichedProp?.translatedValues,
       isTranslatableSpecifier,
     })
 
+    const value =
+      propertyValueId || propertyI18n
+        ? null
+        : isRangeField || shouldUseDirectToggleValue
+          ? enrichedRawValue || mappedToggleValue || rawValue || null
+          : rawValue || null
+
+    logImportPropertyDebug('merge:property-decision', {
+      featureId,
+      propertyKey,
+      propertyId,
+      propertyType,
+      component: matchedProperty?.component,
+      isClassifierReference,
+      isTranslatableSpecifier,
+      submittedRawValue,
+      enrichedRawValue,
+      rawValue,
+      propertyValueId,
+      value,
+      i18nLocales: propertyI18n ? Object.keys(propertyI18n) : [],
+      submittedProp,
+      enrichedProp,
+      enrichedData,
+    })
+
     merged.push({
-      featureId: featureId,
-      propertyId: propertyId,
-      propertyValueId: propertyValueId,
-      value: propertyValueId || propertyI18n ? null : resolvedValue, // If propertyValueId or i18n exists, value should be null
+      featureId,
+      propertyId,
+      propertyValueId,
+      value,
       i18n: propertyI18n,
       property: matchedProperty || existingProperty?.property,
       propertyValue: existingProperty?.propertyValue,
     })
+  }
 
-    const finalValue = propertyValueId ? null : submittedProp.value || null
+  const deduped = dedupeMergedProperties(merged)
 
-    // Special logging for boolean values
-    if (submittedProp.value === 'TRUE' || submittedProp.value === 'FALSE') {
-    }
+  logImportPropertyDebug('merge:final', {
+    featureId,
+    mergedCount: merged.length,
+    dedupedCount: deduped.length,
+    properties: deduped.map(property => ({
+      propertyId: property.propertyId,
+      propertyKey: property.property?.key,
+      propertyValueId: property.propertyValueId,
+      value: property.value,
+      i18nLocales: property.i18n ? Object.keys(property.i18n) : [],
+    })),
   })
 
-  // Add enriched properties (only if not already processed)
-  Object.keys(enrichedProperties).forEach(key => {
-    if (!processedKeys.has(key)) {
-      const enrichedProp = enrichedProperties[key]
-      const existingProperty = existingPropertyByKey.get(key)
-      const matchedProperty = fetchedProperties.find(property => property.key === key)
-      const isRangeField = matchedProperty?.component === 'RangeField'
-      const isToggleField = matchedProperty?.component === 'ToggleField'
-      const isTranslatableSpecifier =
-        (matchedProperty?.type === 'specifier' ||
-          existingProperty?.property?.type === 'specifier') &&
-        Boolean(
-          matchedProperty?.isTranslatable ?? existingProperty?.property?.isTranslatable,
-        )
-      const propertyId =
-        enrichedProp.propertyId ||
-        propertyKeyToId.get(key) ||
-        matchedProperty?.id ||
-        enrichedProp.id ||
-        ''
-      const enrichedData = propertyReconciliation.enrichedData.get(key)
-
-      let resolvedMappedValue: string | null = null
-      if (!resolvedMappedValue && enrichedData?.resolvedValues && enrichedProp.value) {
-        resolvedMappedValue = enrichedData.resolvedValues[enrichedProp.value] || null
-      }
-
-      // Resolve property value ID from mapping or direct value
-      let propertyValueId =
-        enrichedProp.propertyValueId || enrichedData?.propertyValueId || null
-
-      // Check if we have a property value mapping for this value
-      if (!propertyValueId && !isRangeField && !isToggleField && resolvedMappedValue) {
-        propertyValueId = resolvedMappedValue
-      }
-
-      const mappedToggleValue =
-        normalizeToggleValue(resolvedMappedValue) ||
-        normalizeToggleValue(enrichedProp.value)
-      const shouldUseDirectToggleValue =
-        isToggleField ||
-        (!matchedProperty &&
-          mappedToggleValue !== null &&
-          enrichedData?.propertyValueMapping !== undefined &&
-          Object.keys(enrichedData.propertyValueMapping).length === 0)
-
-      const resolvedValue =
-        isRangeField || shouldUseDirectToggleValue
-          ? resolvedMappedValue || mappedToggleValue || enrichedProp.value || null
-          : enrichedProp.value || null
-
-      if (shouldUseDirectToggleValue || isBooleanLikePropertyValueId(propertyValueId)) {
-        propertyValueId = null
-      }
-
-      const propertyI18n = buildMergedFeaturePropertyI18n({
-        existingProperty,
-        submittedProperty: enrichedProp,
-        translatedValues: enrichedProp.translatedValues,
-        isTranslatableSpecifier,
-      })
-
-      merged.push({
-        featureId: featureId,
-        propertyId: propertyId,
-        propertyValueId: propertyValueId,
-        value: propertyValueId || propertyI18n ? null : resolvedValue, // If propertyValueId or i18n exists, value should be null
-        i18n: propertyI18n,
-        property: matchedProperty || existingProperty?.property,
-        propertyValue: existingProperty?.propertyValue,
-      })
-    }
-  })
-
-  return merged
+  return deduped
 }
 
 function buildMergedFeaturePropertyI18n(params: {
@@ -1847,6 +1890,38 @@ function buildMergedFeaturePropertyI18n(params: {
   }
 
   return Object.keys(mergedI18n).length > 0 ? mergedI18n : null
+}
+
+function dedupeMergedProperties(properties: any[]): any[] {
+  const mergedByPropertyId = new Map<string, any>()
+
+  for (const property of properties) {
+    if (!property?.propertyId) continue
+
+    const existing = mergedByPropertyId.get(property.propertyId)
+    if (!existing) {
+      mergedByPropertyId.set(property.propertyId, property)
+      continue
+    }
+
+    const mergedI18n = {
+      ...(existing.i18n ?? {}),
+      ...(property.i18n ?? {}),
+    }
+
+    mergedByPropertyId.set(property.propertyId, {
+      ...existing,
+      ...property,
+      propertyId: property.propertyId,
+      propertyValueId: property.propertyValueId ?? existing.propertyValueId ?? null,
+      value: property.value ?? existing.value ?? null,
+      i18n: Object.keys(mergedI18n).length > 0 ? mergedI18n : null,
+      property: property.property ?? existing.property,
+      propertyValue: property.propertyValue ?? existing.propertyValue,
+    })
+  }
+
+  return Array.from(mergedByPropertyId.values())
 }
 
 /**
@@ -1928,6 +2003,18 @@ export async function submitFeature(
       propertyValueId: property.propertyValueId ?? null,
       i18n: property.i18n,
     }))
+
+    logImportPropertyDebug('submit:payload-properties', {
+      featureId: feature.id,
+      isCreate,
+      properties: payload.data.properties.map(property => ({
+        propertyId: property.propertyId,
+        propertyValueId: property.propertyValueId,
+        value: property.value,
+        i18nLocales: property.i18n ? Object.keys(property.i18n) : [],
+      })),
+    })
+
     payload.meta = {
       ...payload.meta,
       mode: isCreate ? 'create' : 'update',

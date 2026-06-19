@@ -394,13 +394,13 @@ export const RemoveFeatureSchema = z.object({
 export const FeatureProfile = z.enum(['list', 'card', 'detail', 'admin'])
 
 export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
-  i18n: getLocales(FeaturePropertyI18nBase).nullish(),
+  i18n: getLocales(FeaturePropertyI18nBase, []).nullish(),
   property: PropertyDetailProfileAPI.optional(),
   propertyValue: PropertyValueDetailProfileAPI.nullish(),
 })
 
 export const FeaturePropertyAPI = FeaturePropertyBase.extend({
-  i18n: getLocales(FeaturePropertyI18nBase).nullish(),
+  i18n: getLocales(FeaturePropertyI18nBase, []).nullish(),
   property: PropertyAdminProfileAPI.optional(),
   propertyValue: PropertyValueAdminProfileAPI.nullish(),
 })

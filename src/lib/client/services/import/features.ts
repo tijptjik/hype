@@ -232,11 +232,6 @@ export async function handleCSVDropEvent(
     importCtx.setShowAssociationModal(false)
     importCtx.setIsTypeSelected(true)
     importCtx.setCurrentStep('column-mapping')
-    console.info('CSV import state ready', {
-      showAssociationModal: importCtx.getShowAssociationModal(),
-      currentStep: importCtx.getCurrentStep(),
-      isTypeSelected: importCtx.getIsTypeSelected(),
-    })
   })
 }
 
@@ -1882,11 +1877,6 @@ export async function handleCSVDrop(
   const file = acceptedFiles[0]
 
   try {
-    console.info('CSV import reading file', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    })
     const text = await file.text()
     const { headers, data, stats } = parseCSV(text)
 

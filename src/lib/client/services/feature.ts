@@ -582,7 +582,10 @@ export function getNonTranslatableFeatureFieldItems({
     )
     .map(property => ({
       property: property.property,
-      value: property.value ?? '',
+      value:
+        property.property.component === 'SelectField'
+          ? property.propertyValueId || ''
+          : (property.value ?? ''),
       checked: property.value === 'true',
       isEditing,
       options:

@@ -34,6 +34,16 @@ type PropertyReconciliationEnrichment = {
   enrichedData?: Map<number, Record<Locale, string>>
 }
 
+/**
+ * Logs import property diagnostics with a stable prefix for console filtering.
+ * @param stage - Import pipeline stage being inspected.
+ * @param payload - Debug payload for the current property operation.
+ * @returns Nothing.
+ */
+function logImportPropertyDebug(stage: string, payload: Record<string, unknown>): void {
+  console.info(`[IMPORT_PROPERTY_DEBUG] ${stage}`, payload)
+}
+
 function normalizeToggleValue(value: string): 'true' | 'false' | null {
   const normalized = value.trim().toLowerCase()
 
@@ -107,6 +117,12 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
     return
   }
 
+  logImportPropertyDebug('enrichment:start', {
+    rowCount: data.length,
+    propertyColumnCount: propertyColumns.length,
+    reconciliationKeys: Array.from(propertyReconciliation.enrichedData.keys()),
+  })
+
   // Get column indices for property columns
   const propertyColumnIndices = propertyColumns.map(col => ({
     index: headers.indexOf(col.header),
@@ -138,6 +154,15 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
         const matchedProperty = importCtx
           .getFetchedProperties()
           .find(property => property.key === propertyKey)
+
+        if (!enrichedData && !matchedProperty) {
+          console.warn('[IMPORT_PROPERTY_DEBUG] enrichment:missing-property-source', {
+            rowIndex,
+            propertyKey,
+            rawValue: propertyValue,
+            locale,
+          })
+        }
 
         if (enrichedData || matchedProperty) {
           // Initialize property object if it doesn't exist
@@ -268,10 +293,34 @@ export function enrichFeaturesWithPropertyData(importCtx: ImportCtx): void {
           } else if (enrichedData?.translatedValues) {
             rowProperties[propertyKey].translatedValues = enrichedData.translatedValues
           }
+
+          logImportPropertyDebug('enrichment:row-property', {
+            rowIndex,
+            propertyKey,
+            rawValue: propertyValue,
+            locale,
+            propertyId: rowProperties[propertyKey]?.propertyId,
+            propertyType,
+            component: matchedProperty?.component,
+            isClassifier,
+            isRangeField,
+            isToggleField,
+            resolvedDataKey,
+            resolvedMappedValue,
+            resolvedPropertyValueId: propertyValueId,
+            storedPropertyValueId: rowProperties[propertyKey]?.propertyValueId,
+            storedValue: rowProperties[propertyKey]?.value,
+            hasTranslatedValues: Boolean(rowProperties[propertyKey]?.translatedValues),
+            error: rowProperties[propertyKey]?._error,
+          })
         }
       }
     }
 
+    logImportPropertyDebug('enrichment:row-final', {
+      rowIndex,
+      properties: rowProperties,
+    })
     importCtx.setRowEnrichedData(rowIndex, enriched)
   }
 }

@@ -504,11 +504,25 @@ async function submitProperty(): Promise<void> {
       enrichedData.resolvedValues = toggleMappings
       enrichedData.resolvedData = toggleMappings
     } else if (propertyKind === 'classifier' && createdProperty.values) {
-      enrichedData.propertyValueMapping =
+      const createdPropertyValueMapping =
         getCreatedPropertyValueMapping(createdProperty)
+      enrichedData.propertyValueMapping = createdPropertyValueMapping
+      enrichedData.resolvedValues = createdPropertyValueMapping
+      enrichedData.resolvedData = createdPropertyValueMapping
     }
 
     importCtx.setPropertyEnrichedData(property.key, enrichedData)
+    importCtx.setFetchedProperties([
+      ...importCtx
+        .getFetchedProperties()
+        .filter(candidate => candidate.id !== createdProperty.id),
+      createdProperty,
+    ])
+    importCtx.setAvailablePropertyKeys(
+      Array.from(
+        new Set([...importCtx.getAvailablePropertyKeys(), createdProperty.key]),
+      ),
+    )
     appCtx.addToCache(FirstClassResource.property, createdProperty.id, createdProperty)
 
     importCtx.updatePropertyReconciliation({ isProcessing: false })
