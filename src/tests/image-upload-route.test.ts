@@ -8,14 +8,27 @@ vi.mock('$lib/images/auth', () => ({
 }))
 
 type BucketMock = {
+  get: ReturnType<typeof vi.fn>
   put: ReturnType<typeof vi.fn>
   delete: ReturnType<typeof vi.fn>
 }
 
 const createBucketMock = (): BucketMock => ({
+  get: vi.fn(async () => null),
   put: vi.fn(async () => undefined),
   delete: vi.fn(async () => undefined),
 })
+
+const createR2ObjectBodyMock = (params: {
+  body: ArrayBuffer
+  httpMetadata?: R2HTTPMetadata
+  customMetadata?: Record<string, string>
+}): R2ObjectBody =>
+  ({
+    arrayBuffer: vi.fn(async () => params.body),
+    httpMetadata: params.httpMetadata,
+    customMetadata: params.customMetadata,
+  }) as unknown as R2ObjectBody
 
 const createUploadRequest = (params?: {
   file?: File
@@ -160,5 +173,63 @@ describe('api image upload route', () => {
       expect.stringMatching(/^gallery\/photo\.v\d+\.json$/),
       'gallery/photo',
     ])
+  })
+
+  it('restores pre-existing replacement objects when a later put fails', async () => {
+    const bucket = createBucketMock()
+    const file = new File(['abc'], 'photo.jpg', { type: 'image/jpeg' })
+    const previousOriginal = new ArrayBuffer(3)
+
+    mockVerifyUploadToken.mockResolvedValue({
+      env: 'local',
+      publicId: 'gallery/photo',
+      replaceImageId: 'img-1',
+      contentType: file.type,
+      size: file.size,
+    })
+
+    bucket.get.mockImplementation(async (key: string) => {
+      if (key === 'gallery/photo') {
+        return createR2ObjectBodyMock({
+          body: previousOriginal,
+          httpMetadata: { contentType: 'image/jpeg' },
+          customMetadata: { source: 'previous' },
+        })
+      }
+
+      return null
+    })
+    bucket.put
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('metadata write failed'))
+      .mockResolvedValueOnce(undefined)
+
+    const { POST } = await import('../routes/api/images/upload/+server')
+
+    await expect(
+      POST({
+        request: createUploadRequest({ file }),
+        platform: {
+          env: {
+            AUTH_SECRET: 'secret',
+            ASSET_RAW_DEV: bucket,
+          },
+        },
+      } as never),
+    ).rejects.toMatchObject({
+      status: 500,
+      body: {
+        message: 'Failed to persist uploaded image',
+      },
+    })
+
+    expect(bucket.delete).toHaveBeenCalledWith([
+      expect.stringMatching(/^gallery\/photo\.v\d+\.json$/),
+    ])
+    expect(bucket.put).toHaveBeenLastCalledWith('gallery/photo', previousOriginal, {
+      httpMetadata: { contentType: 'image/jpeg' },
+      customMetadata: { source: 'previous' },
+    })
   })
 })
