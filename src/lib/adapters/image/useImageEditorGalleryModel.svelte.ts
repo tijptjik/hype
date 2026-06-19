@@ -9,6 +9,7 @@ import { m } from '$lib/i18n'
 // IMAGE
 import { IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '$lib/images/delivery'
 import {
+  extractVersionFromImageUrl,
   getGalleryItemTargetImageId,
   getGalleryItemThumbnailStatusId,
   getURLfromImage,
@@ -100,22 +101,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function extractVersionFromUrl(url: string | null | undefined): number | null {
-  if (!url) return null
-
-  const match = url.match(/\/v(\d+)\//)
-  if (!match) return null
-
-  const parsed = Number.parseInt(match[1] ?? '', 10)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
 function getDisplayedItemVersion(
   item: ViewerRenderable | null | undefined,
 ): number | null {
   return (
-    extractVersionFromUrl(item?.src) ??
-    extractVersionFromUrl(item?.sourceFallbackSrc) ??
+    extractVersionFromImageUrl(item?.src) ??
+    extractVersionFromImageUrl(item?.sourceFallbackSrc) ??
     null
   )
 }
@@ -220,7 +211,7 @@ export function useImageEditorGalleryModel(
     const optimisticRotation = optimisticRotationByImageId[imageId]
     if (!optimisticRotation) return 0
 
-    const displayedVersion = extractVersionFromUrl(sourceUrl)
+    const displayedVersion = extractVersionFromImageUrl(sourceUrl)
     if (
       optimisticRotation.pendingVersion != null &&
       displayedVersion === optimisticRotation.pendingVersion
@@ -242,7 +233,7 @@ export function useImageEditorGalleryModel(
       return getPersistedRotation(imageId)
     }
 
-    const displayedVersion = extractVersionFromUrl(sourceUrl)
+    const displayedVersion = extractVersionFromImageUrl(sourceUrl)
     if (
       optimisticRotation.pendingVersion != null &&
       displayedVersion === optimisticRotation.pendingVersion
@@ -846,7 +837,7 @@ export function useImageEditorGalleryModel(
 
     const activeItem = items.find(item => item.id === activeId) ?? null
     const activeSrc = activeItem?.src ?? null
-    const activeSrcVersion = extractVersionFromUrl(activeSrc)
+    const activeSrcVersion = extractVersionFromImageUrl(activeSrc)
     const existingOptimisticRotation = optimisticRotationByImageId[imageId]
     const persistedVersion = imageCtx.getImage(imageId)?.image.version ?? null
 
@@ -965,8 +956,8 @@ export function useImageEditorGalleryModel(
     }
 
     const loadedVersion =
-      extractVersionFromUrl(item.src) ??
-      extractVersionFromUrl(item.sourceFallbackSrc) ??
+      extractVersionFromImageUrl(item.src) ??
+      extractVersionFromImageUrl(item.sourceFallbackSrc) ??
       null
 
     if (loadedVersion !== optimisticRotation.pendingVersion) {

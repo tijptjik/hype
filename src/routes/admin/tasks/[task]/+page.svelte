@@ -474,6 +474,9 @@ async function handleReview(
     }
 
     goToNextTask(adminCtx)
+  } catch (error) {
+    console.error('Failed to review task:', error)
+    toast.error('Failed to review task')
   } finally {
     isReviewBusy = false
   }
@@ -522,6 +525,9 @@ async function handleReassignLayer(layerId: string): Promise<void> {
       layerCache: adminCtx.appCtx.cache.layer,
     })
     adminCtx.appCtx.setTaskResourceAndCache(updatedTask)
+  } catch (error) {
+    console.error('Failed to reassign task layer:', error)
+    toast.error('Failed to reassign layer')
   } finally {
     isLayerBusy = false
   }
@@ -568,7 +574,9 @@ const imageProviderModel = useImageProviderModel(
 )
 </script>
 
-<TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} />
+{#if task}
+  <TaskInfoDialog bind:open={isInfoOpen} type={task.type as TaskType} />
+{/if}
 <TaskRejectDialog
   bind:open={isRejectDialogOpen}
   bind:value={reviewReason}

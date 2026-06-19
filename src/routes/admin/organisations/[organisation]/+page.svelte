@@ -926,7 +926,7 @@ async function onPublishToggle(): Promise<void> {
 }
 
 async function onDeleteToggle(): Promise<void> {
-  if (!isCurrentRefLoaded) return
+  if (!isCurrentRefLoaded || !canDeleteOrganisation) return
   await handleOrganisationStateToggle({
     field: 'isArchived',
     successWhenTrue: m.bad_swift_cheetah_surge(),
@@ -1178,6 +1178,7 @@ $effect(() => {
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/snippet}
 
+        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
         {#snippet children(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}

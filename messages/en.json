@@ -231,6 +231,8 @@
   "admin__forms_organisation_url": "URL",
   "admin__forms_organisation_image_title": "Profile Image",
   "admin__forms_organisation_image_save_hint": "Save the organisation first to add its image.",
+  "admin__forms_hub_image_save_hint": "Save the hub first to add its image.",
+  "admin__forms_project_image_save_hint": "Save the project first to add its image.",
   "admin__forms_project_credit": "Credit",
   "admin__forms_project_credit_subtitle": "The terms under which the project is made available and how the creators should be acknowledged.",
   "admin__forms_project_members_title": "Members",

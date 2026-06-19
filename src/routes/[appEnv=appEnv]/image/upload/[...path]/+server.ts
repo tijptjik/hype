@@ -47,7 +47,7 @@ export const GET = async ({ params, platform }) => {
       'cache-control': resolvedVersion
         ? 'public, max-age=31536000, immutable'
         : 'public, max-age=300',
-      etag: object.httpEtag,
+      ...(object.httpEtag ? { etag: object.httpEtag } : {}),
     },
   })
 }

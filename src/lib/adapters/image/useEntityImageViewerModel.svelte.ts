@@ -1,5 +1,8 @@
 import { useImageEditorGalleryModel } from './useImageEditorGalleryModel.svelte'
-import { getGalleryItemTargetImageId } from '$lib/client/services/image'
+import {
+  extractVersionFromImageUrl,
+  getGalleryItemTargetImageId,
+} from '$lib/client/services/image'
 import type { ImageCtx } from '$lib/context/image.svelte'
 import type { ImageMetadataBasic } from '$lib/db/zod/schema/image.types'
 import type { ViewerRenderable } from '$lib/bits/patterns/images'
@@ -143,16 +146,6 @@ export function useEntityImageViewerModel(
     await galleryModel.actions.deleteItem(activeItem)
   }
 
-  function extractVersionFromUrl(url: string | null | undefined): number | null {
-    if (!url) return null
-
-    const match = url.match(/\/v(\d+)\//)
-    if (!match) return null
-
-    const parsed = Number.parseInt(match[1] ?? '', 10)
-    return Number.isFinite(parsed) ? parsed : null
-  }
-
   function markCurrentItemLoaded(item: ViewerRenderable): void {
     galleryModel.actions.markCurrentItemLoaded(item)
 
@@ -161,8 +154,8 @@ export function useEntityImageViewerModel(
       galleryModel.state.activeImage?.image.id
     const targetImage = targetImageId ? imageCtx.getImage(targetImageId) : null
     const displayedVersion =
-      extractVersionFromUrl(item.src) ??
-      extractVersionFromUrl(item.sourceFallbackSrc) ??
+      extractVersionFromImageUrl(item.src) ??
+      extractVersionFromImageUrl(item.sourceFallbackSrc) ??
       null
     const persistedVersion = targetImage?.image.version ?? null
 
