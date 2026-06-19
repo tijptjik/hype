@@ -2,7 +2,7 @@
 import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 // API
 import { getPrisms, getValidQueryParams as validateQueryParams } from '$lib/api'
 import {
@@ -82,6 +82,26 @@ const CreateProjectPropertyCommand = z.object({
     .optional(),
   data: ProjectPropertyFormData,
 })
+
+/**
+ * Returns whether an unknown database error represents a scoped property-key conflict.
+ *
+ * @param error - Unknown error thrown by D1/Drizzle.
+ * @returns `true` when the error indicates one of the property scoped-key unique indexes.
+ */
+const isPropertyKeyConflictError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false
+
+  const message = error.message.toLowerCase()
+
+  return (
+    message.includes('unique constraint failed') &&
+    (message.includes('property.scope, property.projectid, property.key') ||
+      message.includes('property_scope_projectid_key_idx') ||
+      message.includes('property_scope_organisationid_key_idx') ||
+      message.includes('property_scope_hubid_key_idx'))
+  )
+}
 
 const toProjectReadDecision = async (params: {
   db: Parameters<typeof probeProjectQuery>[0]
@@ -309,16 +329,42 @@ export const createProjectProperty = guardedCommand(
       throw error(403, toAuthMessage(writeDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
+    const existingPropertyWithKey = await retryBusyRead(() =>
+      db
+        .select({ id: property.id })
+        .from(property)
+        .where(
+          and(
+            eq(property.scope, 'project'),
+            eq(property.projectId, data.projectId),
+            eq(property.key, data.key),
+          ),
+        )
+        .limit(1),
+    )
+    if (existingPropertyWithKey.length > 0) {
+      throw error(409, 'PROPERTY_KEY_TAKEN')
+    }
+
     const { i18n, values, rank: _rank, isEnabled: _isEnabled, ...baseProperty } = data
-    const createdBase = await createBaseProperty(db, {
-      ...baseProperty,
-      projectId: data.projectId,
-      hubId: null,
-      organisationId: null,
-      scope: 'project',
-      type: data.type ?? 'specifier',
-      isDefaultEnabled: Boolean(data.isDefaultEnabled),
-    } as InferInsertModel<typeof property>)
+    let createdBase: Awaited<ReturnType<typeof createBaseProperty>>
+
+    try {
+      createdBase = await createBaseProperty(db, {
+        ...baseProperty,
+        projectId: data.projectId,
+        hubId: null,
+        organisationId: null,
+        scope: 'project',
+        type: data.type ?? 'specifier',
+        isDefaultEnabled: Boolean(data.isDefaultEnabled),
+      } as InferInsertModel<typeof property>)
+    } catch (createError) {
+      if (isPropertyKeyConflictError(createError)) {
+        throw error(409, 'PROPERTY_KEY_TAKEN')
+      }
+      throw createError
+    }
 
     await createI18n(
       db,

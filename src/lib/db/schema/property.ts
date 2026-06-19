@@ -1,4 +1,10 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
@@ -27,57 +33,73 @@ import {
  * - Component type for UI rendering
  * - Min/max values for numeric properties
  */
-export const property = sqliteTable('property', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
-  organisationId: text('organisationId').references(() => organisation.id, {
-    onDelete: 'cascade',
-    onUpdate: 'cascade',
-  }),
-  hubId: text('hubId').references(() => hub.id, {
-    onDelete: 'cascade',
-    onUpdate: 'cascade',
-  }),
-  projectId: text('projectId').references(() => project.id, {
-    onDelete: 'cascade',
-    onUpdate: 'cascade',
-  }),
-  scope: text('scope', {
-    enum: Object.values(PropertyScope) as [string, ...string[]],
-  })
-    .notNull()
-    .default(PropertyScope.project),
-  type: text('type', {
-    enum: Object.values(FieldDiscriminator) as [string, ...string[]],
-  })
-    .notNull()
-    .default(FieldDiscriminator.classifier),
-  key: text('key').notNull(),
-  component: text('component', {
-    enum: Object.values(PropertyComponentType) as [string, ...string[]],
-  })
-    .notNull()
-    .default(PropertyComponentType.SelectField),
-  min: integer('min'),
-  max: integer('max'),
-  isTranslatable: integer('isTranslatable', { mode: 'boolean' })
-    .notNull()
-    .default(true),
-  isUserContributable: integer('isUserContributable', { mode: 'boolean' })
-    .notNull()
-    .default(true),
-  isDefaultEnabled: integer('isDefaultEnabled', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  createdAt: text('createdAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
-  modifiedAt: text('modifiedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-    .notNull(),
-})
+export const property = sqliteTable(
+  'property',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    organisationId: text('organisationId').references(() => organisation.id, {
+      onDelete: 'cascade',
+      onUpdate: 'cascade',
+    }),
+    hubId: text('hubId').references(() => hub.id, {
+      onDelete: 'cascade',
+      onUpdate: 'cascade',
+    }),
+    projectId: text('projectId').references(() => project.id, {
+      onDelete: 'cascade',
+      onUpdate: 'cascade',
+    }),
+    scope: text('scope', {
+      enum: Object.values(PropertyScope) as [string, ...string[]],
+    })
+      .notNull()
+      .default(PropertyScope.project),
+    type: text('type', {
+      enum: Object.values(FieldDiscriminator) as [string, ...string[]],
+    })
+      .notNull()
+      .default(FieldDiscriminator.classifier),
+    key: text('key').notNull(),
+    component: text('component', {
+      enum: Object.values(PropertyComponentType) as [string, ...string[]],
+    })
+      .notNull()
+      .default(PropertyComponentType.SelectField),
+    min: integer('min'),
+    max: integer('max'),
+    isTranslatable: integer('isTranslatable', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+    isUserContributable: integer('isUserContributable', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+    isDefaultEnabled: integer('isDefaultEnabled', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    createdAt: text('createdAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .notNull(),
+    modifiedAt: text('modifiedAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString())
+      .notNull(),
+  },
+  table => [
+    uniqueIndex('property_scope_projectId_key_idx').on(
+      table.scope,
+      table.projectId,
+      table.key,
+    ),
+    uniqueIndex('property_scope_organisationId_key_idx').on(
+      table.scope,
+      table.organisationId,
+      table.key,
+    ),
+    uniqueIndex('property_scope_hubId_key_idx').on(table.scope, table.hubId, table.key),
+  ],
+)
 
 /**
  * Project property assignments
