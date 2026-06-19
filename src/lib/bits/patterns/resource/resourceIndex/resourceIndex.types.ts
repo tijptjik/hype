@@ -1,14 +1,20 @@
 import type { Snippet } from 'svelte'
-import type { NavigableResource, Resource } from '$lib/types'
+import type {
+  NavigableResource,
+  Resource,
+  ResourceIndexRowSelectionState,
+} from '$lib/types'
 
 export type ResourceIndexProps<T extends Resource> = {
   resource: NavigableResource
   entities: T[]
   card?: Snippet<[T, number]>
-  row?: Snippet<[T, number]>
+  row?: Snippet<[T, number, ResourceIndexRowSelectionState | null, boolean]>
   listContainer?: HTMLElement | null
   isInitialised?: boolean
   applyBottomOverflow?: boolean
+  getRowSelectionState?: (entity: T) => ResourceIndexRowSelectionState | null
+  onRowSelectionToggle?: (entity: T) => void
 }
 
 export type ResourceIndexGridRow<T extends Resource> = {

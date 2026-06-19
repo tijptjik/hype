@@ -102,6 +102,17 @@ vi.mock('$lib/api/server/remote', () => ({
 
       return resolver(input)
     }, 'query'),
+  guardedBatchQuery: (_schema: unknown, fn: unknown) =>
+    withRemoteMeta(async (input: Record<string, unknown>) => {
+      const resolver = await (
+        fn as (
+          payloads: Array<Record<string, unknown>>,
+          ctx: unknown,
+        ) => Promise<(arg: Record<string, unknown>) => unknown>
+      )([input], await mockGuardedContext())
+
+      return resolver(input)
+    }, 'query'),
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -605,6 +616,37 @@ describe('feature.remote authz matrix', () => {
       actor: 'authorized',
       expected: true,
       actual: true,
+    })
+  })
+
+  it('updateFeatureBulkState publishes through dedicated publish flow', async () => {
+    const result = await remote.updateFeatureBulkState({
+      id: 'feature-1',
+      field: 'isPublished',
+      value: true,
+      meta: { isAdminRequest: true },
+    })
+
+    expect(mockUpdateFeaturePublishedStateById).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        id: 'feature-1',
+        state: true,
+        publisherId: 'u-1',
+      }),
+    )
+    expect(mockPublishAllImagesWithPublicIntent).toHaveBeenCalledWith(
+      expect.any(Object),
+      'feature-1',
+      'u-1',
+    )
+    expect(result).toEqual({
+      id: 'feature-1',
+      ok: true,
+      data: {
+        id: 'feature-1',
+        isPublished: true,
+      },
     })
   })
 

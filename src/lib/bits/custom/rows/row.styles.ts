@@ -1,10 +1,12 @@
 import { cx } from '$lib/bits/utils'
 import type { IndexCardProps } from '$lib/bits/patterns/cards/indexCard'
+import type { ResourceIndexRowSelectionState } from '$lib/types'
 import type { RowVariant } from './row.types'
 
 type RowRootClassParams = {
   variant?: RowVariant
   isSelected?: boolean
+  selectionState?: ResourceIndexRowSelectionState | null
   className?: string
 }
 
@@ -33,8 +35,11 @@ export const rowShellClass =
 export function getRowRootClass({
   variant,
   isSelected = false,
+  selectionState,
   className = '',
 }: RowRootClassParams): string {
+  const resolvedSelectionState = selectionState ?? (isSelected ? 'selected' : null)
+
   return cx(
     'bits-theme overflow-hidden relative grid items-center gap-4 rounded-lg py-1 pl-1.5 caret-transparent shadow-[var(--shadow-mini)] transition-[box-shadow,background,transform] duration-200',
     'cursor-pointer bg-[color-mix(in_oklab,var(--color-base-300)_46%,transparent)]',
@@ -51,8 +56,12 @@ export function getRowRootClass({
     'focus-within:bg-[color-mix(in_oklab,var(--color-base-200)_78%,var(--color-primary)_6%)]',
     'focus-within:shadow-[0_1.2rem_2.6rem_color-mix(in_oklab,black_18%,transparent),0_0_0_1px_color-mix(in_oklab,white_8%,transparent),0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_92%,transparent),0_0_0_6px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]',
     'focus-within:outline-3 focus-within:outline-offset-3 focus-within:outline-transparent',
-    isSelected &&
-      'shadow-[0_0_0_2px_var(--color-primary),0_0_0_4px_color-mix(in_oklab,var(--color-primary)_30%,transparent)]',
+    resolvedSelectionState === 'selected' &&
+      'border-l-4 border-l-success hover:border-l-success transition-all pl-3 shadow-[inset_0.55rem_0_0_-0.35rem_color-mix(in_oklab,var(--color-success)_70%,white_8%),0_0_0_1px_color-mix(in_oklab,var(--color-success)_26%,transparent)]',
+    resolvedSelectionState === 'success' &&
+      'border-l-4 border-l-info hover:border-l-info transition-all pl-3 shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-success)_82%,white_8%),0_0_0_4px_color-mix(in_oklab,var(--color-success)_25%,transparent)]',
+    resolvedSelectionState === 'error' &&
+      'border-l-4 border-l-error hover:border-l-error transition-all pl-3 shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-error)_86%,white_6%),0_0_0_4px_color-mix(in_oklab,var(--color-error)_25%,transparent)]',
     variant ? `bits-resource-row--${variant}` : '',
     className,
   )

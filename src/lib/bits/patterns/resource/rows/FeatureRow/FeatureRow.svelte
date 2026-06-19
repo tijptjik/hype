@@ -31,6 +31,8 @@ let {
   index,
   onImageClick,
   isSelected = false,
+  selectionState = null,
+  isFocusable = true,
 }: FeatureRowProps = $props()
 
 const statSections = $derived([
@@ -123,6 +125,8 @@ function handleDescriptionClick(): void {
 <Row
   {index}
   {isSelected}
+  {selectionState}
+  {isFocusable}
   variant="feature"
   onclick={handleTitleClick}
   onkeydown={handleRowKeyDown}

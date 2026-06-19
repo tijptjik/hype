@@ -7,6 +7,7 @@ import { m } from '$lib/i18n'
 import Button from '$lib/bits/core/button/Button.svelte'
 import { cx } from '$lib/bits/utils'
 import * as ResourceControlBarPrimitive from '$lib/bits/patterns/resource/resourceControlBar/components'
+import ResourceBulkEditControl from '$lib/bits/patterns/resource/resourceControlBar/ResourceBulkEditControl.svelte'
 import { ResourceSortControl } from '$lib/bits/patterns/resource/resourceSortControl'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
@@ -24,6 +25,7 @@ import FunnelIcon from 'virtual:icons/lucide/funnel'
 // TYPES
 import type {
   NavigableResource,
+  ResourceBulkEditConfig,
   ResourceControlBarConfig,
   ResourceSortConfig,
 } from '$lib/types'
@@ -33,11 +35,13 @@ let {
   count = 0,
   filters,
   sortables,
+  bulkEdit,
 }: {
   resource: NavigableResource
   count?: number
   filters: ResourceControlBarConfig
   sortables?: ResourceSortConfig
+  bulkEdit?: ResourceBulkEditConfig
 } = $props()
 
 const adminCtx = getAdminCtx()
@@ -157,11 +161,25 @@ $effect(() => {
         : FunnelIcon}
     hasActiveSection={Boolean(effectiveSectionConfig)}
     disableMenuToggle={Boolean(singleSectionConfig)}
+    showBulkEdit={Boolean(bulkEdit)}
     showSort={Boolean(sortables)}
     {count}
     resetDisabled={totalFilterCount === 0}
     onReset={resetFilters}
   >
+    {#snippet bulkContent(args: {
+      isBulkOpen: boolean
+      handleBulkOpenChange: (isOpen: boolean) => Promise<void>
+    })}
+      {#if bulkEdit}
+        <ResourceBulkEditControl
+          config={bulkEdit}
+          isOpen={args.isBulkOpen}
+          onOpenChange={args.handleBulkOpenChange}
+        />
+      {/if}
+    {/snippet}
+
     {#snippet sortContent(args: {
       isSortOpen: boolean
       handleSortOpenChange: (isOpen: boolean) => Promise<void>

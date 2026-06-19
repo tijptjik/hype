@@ -4,13 +4,14 @@ import { page } from '$app/state'
 // SVELTE
 import { onMount, untrack } from 'svelte'
 import { debounce } from '@sillvva/utils'
+import { toast } from 'svelte-sonner'
 // ADAPTERS
 import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
 // REMOTE
-import { getFeatures } from '$lib/api/server/feature.remote'
+import { getFeatures, updateFeatureBulkState } from '$lib/api/server/feature.remote'
 // SERVICES
 import { getCachedFeatureRowModel } from '$lib/client/services/featureRow'
 import {
@@ -48,11 +49,17 @@ import type {
   FeatureRowModel,
   FeatureTextSearchWorkerRequest,
   FeatureTextSearchWorkerResponse,
+  FeatureBulkEditOption,
+  FeatureBulkStateResult,
   KeyMap,
   ResourceControlBarConfig,
+  ResourceIndexRowSelectionState,
+  ResourceBulkEditProgress,
   Resource,
   LocaleKey,
 } from '$lib/types'
+
+const BULK_FEATURE_UPDATE_CHUNK_SIZE = 100
 
 const featureIndexCardKeyMap: KeyMap = {
   id: 'id',
@@ -283,6 +290,14 @@ const displayEntities = $derived(
 let selectedImage = $state<ImageCtxEnvelope | null>(null)
 let selectedFeature = $state<Feature | null>(null)
 let selectedFeatureIndex = $state<number>(-1)
+let isBulkEditActive = $state(false)
+let selectedBulkActionValue = $state('publish')
+let bulkExcludedFeatureIds = $state.raw<Set<string>>(new Set())
+let bulkRowResultsById = $state.raw<Map<string, ResourceIndexRowSelectionState>>(
+  new Map(),
+)
+let bulkErrorMessagesById = $state.raw<Map<string, string>>(new Map())
+let bulkProgress = $state<ResourceBulkEditProgress | null>(null)
 
 const localeKey = $derived(getLocaleKey())
 const activeTranslationLocales = $derived.by(() => {
@@ -302,6 +317,91 @@ const isSuperAdmin = $derived(
       'superAdmin' in adminCtx.appCtx.user &&
       adminCtx.appCtx.user.superAdmin,
   ),
+)
+const bulkFeatureEditOptions = $derived.by(() => {
+  const options: FeatureBulkEditOption[] = [
+    {
+      value: 'publish',
+      label: 'Publish',
+      field: 'isPublished',
+      state: true,
+      pastTense: 'published',
+    },
+    {
+      value: 'unpublish',
+      label: 'Unpublish',
+      field: 'isPublished',
+      state: false,
+      pastTense: 'unpublished',
+    },
+    {
+      value: 'set-tangible',
+      label: 'Set tangible',
+      field: 'isIntangible',
+      state: false,
+      pastTense: 'set tangible',
+    },
+    {
+      value: 'set-intangible',
+      label: 'Set intangible',
+      field: 'isIntangible',
+      state: true,
+      pastTense: 'set intangible',
+    },
+    {
+      value: 'set-accessible',
+      label: 'Set accessible',
+      field: 'isVisitable',
+      state: true,
+      pastTense: 'set accessible',
+    },
+    {
+      value: 'set-inaccessible',
+      label: 'Set inaccessible',
+      field: 'isVisitable',
+      state: false,
+      pastTense: 'set inaccessible',
+    },
+  ]
+
+  if (isSuperAdmin) {
+    options.splice(
+      2,
+      0,
+      {
+        value: 'archive',
+        label: 'Archive',
+        field: 'isArchived',
+        state: true,
+        pastTense: 'archived',
+      },
+      {
+        value: 'unarchive',
+        label: 'Unarchive',
+        field: 'isArchived',
+        state: false,
+        pastTense: 'unarchived',
+      },
+    )
+  }
+
+  return options
+})
+const selectedBulkAction = $derived(
+  bulkFeatureEditOptions.find(option => option.value === selectedBulkActionValue) ??
+    bulkFeatureEditOptions[0],
+)
+const selectedBulkFeatureIds = $derived.by(() => {
+  if (!isBulkEditActive || featureLayoutMode === 'card') return []
+  return displayEntities
+    .map(feature => feature.id)
+    .filter(id => !bulkExcludedFeatureIds.has(id))
+})
+const isBulkApplyDisabled = $derived(
+  !isBulkEditActive ||
+    !selectedBulkAction ||
+    selectedBulkFeatureIds.length === 0 ||
+    Boolean(bulkProgress?.isApplying),
 )
 const baseEntities = $derived(
   adminCtx.applyFeatureViewFilters(
@@ -400,6 +500,222 @@ function toUniqueFeatures(features: Feature[]): Feature[] {
   return result
 }
 
+function setBulkMode(nextActive: boolean): void {
+  isBulkEditActive = nextActive
+  bulkExcludedFeatureIds = new Set()
+  bulkRowResultsById = new Map()
+  bulkErrorMessagesById = new Map()
+  bulkProgress = null
+}
+
+function toggleBulkMode(): void {
+  setBulkMode(!isBulkEditActive)
+}
+
+function setSelectedBulkAction(value: string): void {
+  selectedBulkActionValue = value
+  bulkRowResultsById = new Map()
+  bulkErrorMessagesById = new Map()
+  bulkProgress = null
+}
+
+function getFeatureBulkRowSelectionState(
+  feature: Feature,
+): ResourceIndexRowSelectionState | null {
+  if (!isBulkEditActive || featureLayoutMode === 'card') return null
+
+  const resultState = bulkRowResultsById.get(feature.id)
+  if (resultState) return resultState
+
+  return bulkExcludedFeatureIds.has(feature.id) ? null : 'selected'
+}
+
+function toggleFeatureBulkSelection(feature: Feature): void {
+  if (!isBulkEditActive || featureLayoutMode === 'card') return
+
+  const nextExcludedFeatureIds = new Set(bulkExcludedFeatureIds)
+  if (nextExcludedFeatureIds.has(feature.id)) {
+    nextExcludedFeatureIds.delete(feature.id)
+  } else {
+    nextExcludedFeatureIds.add(feature.id)
+  }
+
+  const nextResults = new Map(bulkRowResultsById)
+  const nextErrors = new Map(bulkErrorMessagesById)
+  nextResults.delete(feature.id)
+  nextErrors.delete(feature.id)
+
+  bulkExcludedFeatureIds = nextExcludedFeatureIds
+  bulkRowResultsById = nextResults
+  bulkErrorMessagesById = nextErrors
+  bulkProgress = null
+}
+
+function invertFeatureBulkSelection(): void {
+  if (!isBulkEditActive || featureLayoutMode === 'card') return
+
+  const visibleIds = displayEntities.map(feature => feature.id)
+  const nextExcludedFeatureIds = new Set(bulkExcludedFeatureIds)
+
+  for (const id of visibleIds) {
+    if (nextExcludedFeatureIds.has(id)) {
+      nextExcludedFeatureIds.delete(id)
+    } else {
+      nextExcludedFeatureIds.add(id)
+    }
+  }
+
+  bulkExcludedFeatureIds = nextExcludedFeatureIds
+  bulkRowResultsById = new Map()
+  bulkErrorMessagesById = new Map()
+  bulkProgress = null
+}
+
+function toFeatureBulkChunks(ids: string[]): string[][] {
+  const chunks: string[][] = []
+
+  for (let index = 0; index < ids.length; index += BULK_FEATURE_UPDATE_CHUNK_SIZE) {
+    chunks.push(ids.slice(index, index + BULK_FEATURE_UPDATE_CHUNK_SIZE))
+  }
+
+  return chunks
+}
+
+function recordBulkResult(result: FeatureBulkStateResult): void {
+  const nextResults = new Map(bulkRowResultsById)
+  const nextErrors = new Map(bulkErrorMessagesById)
+
+  nextResults.set(result.id, result.ok ? 'success' : 'error')
+  if (result.ok) {
+    nextErrors.delete(result.id)
+  } else {
+    nextErrors.set(result.id, result.error)
+  }
+
+  bulkRowResultsById = nextResults
+  bulkErrorMessagesById = nextErrors
+  bulkProgress = {
+    completed: (bulkProgress?.completed ?? 0) + 1,
+    total: bulkProgress?.total ?? selectedBulkFeatureIds.length,
+    errors: (bulkProgress?.errors ?? 0) + (result.ok ? 0 : 1),
+    isApplying: true,
+  }
+}
+
+function toBulkRemoteFailureResult(id: string, err: unknown): FeatureBulkStateResult {
+  const message = err instanceof Error ? err.message : 'FEATURE_UPDATE_FAILED'
+  return {
+    id,
+    ok: false,
+    error: message,
+  }
+}
+
+function patchSuccessfulBulkUpdates(
+  results: FeatureBulkStateResult[],
+  action: FeatureBulkEditOption,
+): void {
+  const successfulIds = new Set(
+    results.filter(result => result.ok).map(result => result.id),
+  )
+  if (successfulIds.size === 0) return
+
+  const nextFeatures = adminCtx.appCtx.state.resources.feature.map(feature =>
+    successfulIds.has(feature.id)
+      ? {
+          ...feature,
+          [action.field]: action.state,
+        }
+      : feature,
+  )
+
+  adminCtx.appCtx.setSortedResourceState(FirstClassResource.feature, nextFeatures)
+
+  if (remoteMatchedEntities) {
+    remoteMatchedEntities = remoteMatchedEntities.map(feature =>
+      successfulIds.has(feature.id)
+        ? {
+            ...feature,
+            [action.field]: action.state,
+          }
+        : feature,
+    )
+  }
+}
+
+function showBulkErrorToasts(errorMessages: string[]): void {
+  const groupedErrors = new Map<string, number>()
+
+  for (const message of errorMessages) {
+    groupedErrors.set(message, (groupedErrors.get(message) ?? 0) + 1)
+  }
+
+  for (const [message, count] of groupedErrors) {
+    toast.error(`${count} feature${count === 1 ? '' : 's'} failed to update`, {
+      description: message,
+    })
+  }
+}
+
+async function applyFeatureBulkEdit(): Promise<void> {
+  const action = selectedBulkAction
+  if (!action || isBulkApplyDisabled) return
+
+  const ids = [...selectedBulkFeatureIds]
+  bulkRowResultsById = new Map()
+  bulkErrorMessagesById = new Map()
+  bulkProgress = {
+    completed: 0,
+    total: ids.length,
+    errors: 0,
+    isApplying: true,
+  }
+
+  const results: FeatureBulkStateResult[] = []
+
+  for (const chunk of toFeatureBulkChunks(ids)) {
+    const chunkResults = await Promise.all(
+      chunk.map(async id => {
+        try {
+          const result = (await updateFeatureBulkState({
+            id,
+            field: action.field,
+            value: action.state,
+            meta: {
+              isAdminRequest: true,
+            },
+          })) as FeatureBulkStateResult
+          recordBulkResult(result)
+          return result
+        } catch (err) {
+          const result = toBulkRemoteFailureResult(id, err)
+          recordBulkResult(result)
+          return result
+        }
+      }),
+    )
+
+    results.push(...chunkResults)
+  }
+
+  const errors = results.filter(result => !result.ok)
+  patchSuccessfulBulkUpdates(results, action)
+  bulkProgress = {
+    completed: results.length,
+    total: ids.length,
+    errors: errors.length,
+    isApplying: false,
+  }
+
+  if (errors.length === 0) {
+    toast.success(`${ids.length} features have been ${action.pastTense}`)
+    setBulkMode(false)
+    return
+  }
+
+  showBulkErrorToasts(errors.map(errorResult => errorResult.error))
+}
+
 onMount(() => {
   const worker = new Worker(
     new URL('../../../lib/workers/featureTextSearchWorker.ts', import.meta.url),
@@ -430,6 +746,20 @@ function runScheduledRemoteQuery(nextQuery: string): void {
   const debounced = scheduleRemoteQuery as { call?: (value: string) => void }
   debounced.call?.(nextQuery)
 }
+
+$effect(() => {
+  if (featureLayoutMode === 'card' && isBulkEditActive) {
+    setBulkMode(false)
+  }
+})
+
+$effect(() => {
+  if (
+    !bulkFeatureEditOptions.some(option => option.value === selectedBulkActionValue)
+  ) {
+    selectedBulkActionValue = bulkFeatureEditOptions[0]?.value ?? ''
+  }
+})
 
 $effect(() => {
   if (!featureTextSearchWorker) return
@@ -596,6 +926,21 @@ $effect(() => {
       count: entities.length,
       filters,
       sortables,
+      bulkEdit:
+        featureLayoutMode === 'card'
+          ? undefined
+          : {
+              isActive: isBulkEditActive,
+              selectedCount: selectedBulkFeatureIds.length,
+              options: bulkFeatureEditOptions,
+              selectedOptionValue: selectedBulkActionValue,
+              progress: bulkProgress,
+              applyDisabled: isBulkApplyDisabled,
+              onToggleMode: toggleBulkMode,
+              onInvertSelection: invertFeatureBulkSelection,
+              onOptionChange: setSelectedBulkAction,
+              onApply: applyFeatureBulkEdit,
+            },
     },
     {
       isVisible:
@@ -711,6 +1056,10 @@ function updateRowFocus(index: number) {
   resource={FirstClassResource.feature}
   entities={displayEntities}
   bind:listContainer
+  getRowSelectionState={getFeatureBulkRowSelectionState}
+  onRowSelectionToggle={isBulkEditActive && featureLayoutMode !== 'card'
+    ? toggleFeatureBulkSelection
+    : undefined}
 >
   {#snippet card(entity: Feature)}
     <IndexCard
@@ -723,7 +1072,7 @@ function updateRowFocus(index: number) {
       })}
     />
   {/snippet}
-  {#snippet row(entity, index)}
+  {#snippet row(entity, index, selectionState, isSelectionModeActive)}
     {@const rowModel = rowModelsById.get(entity.id)}
     <FeatureRow
       {entity}
@@ -732,6 +1081,8 @@ function updateRowFocus(index: number) {
       {adminCtx}
       onImageClick={openModal}
       isSelected={selectedFeatureIndex === index && selectedImage !== null}
+      {selectionState}
+      isFocusable={!isSelectionModeActive}
     />
   {/snippet}
 </ResourceIndex>

@@ -12,7 +12,7 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
-import type { Resource } from '$lib/types'
+import type { Resource, ResourceIndexRowSelectionState } from '$lib/types'
 import type {
   ResourceIndexGridRow,
   ResourceIndexItem,
@@ -39,6 +39,8 @@ let {
   listContainer = $bindable(),
   isInitialised = true,
   applyBottomOverflow = true,
+  getRowSelectionState,
+  onRowSelectionToggle,
 }: ResourceIndexProps<T> = $props()
 
 const adminCtx = getAdminCtx()
@@ -153,7 +155,11 @@ $effect(() => {
     <ResourceTableRow
       entity={item as T}
       {index}
-      row={row as Snippet<[T, number]> | undefined}
+      row={row as
+        | Snippet<[T, number, ResourceIndexRowSelectionState | null, boolean]>
+        | undefined}
+      selectionState={getRowSelectionState?.(item as T) ?? null}
+      onSelectionToggle={onRowSelectionToggle}
     />
   {/if}
 {/snippet}
