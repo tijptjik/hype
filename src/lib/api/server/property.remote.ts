@@ -11,9 +11,15 @@ import {
   toPropertyPrismConditions,
   toPropertyResponseShape,
 } from '$lib/api/services/property'
-import { authorizeProjectReadForProbe, toAuthMessage } from '$lib/api/services/authz'
+import {
+  authorizeHubUpdateForSubmission,
+  authorizeOrganisationUpdateForSubmission,
+  authorizeProjectReadForProbe,
+  authorizeProjectUpdateForSubmission,
+  toAuthMessage,
+} from '$lib/api/services/authz'
 // DB
-import { organisation, project, property } from '$lib/db/schema'
+import { hub, organisation, project, property } from '$lib/db/schema'
 import {
   listProperties,
   listResolvedProjectProperties,
@@ -29,12 +35,11 @@ import { retryBusyRead } from '$lib/db/services/sqlite'
 import {
   ListQueryParamsSchema,
   ProjectPropertiesQuery,
+  ProjectPropertyValueFormData,
   ProjectPropertyFormData,
 } from '$lib/db/zod'
 // ZOD
 import { z } from 'zod'
-// AUTHZ
-import { authorizeProjectUpdateForSubmission } from '$lib/api/services/authz'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
 import type { Locale, Prisms, QueryParams } from '$lib/types'
@@ -54,12 +59,14 @@ import type {
 // - getProperties
 // - getProperty
 // - getProjectProperties
+// - getPropertyValueAppendAccess
 //
 // FORM
 // - none
 //
 // COMMAND
 // - createProjectProperty
+// - appendPropertyValues
 
 /* ----------------- */
 // REMOTE FUNCTION REFACTOR
@@ -81,6 +88,27 @@ const CreateProjectPropertyCommand = z.object({
     })
     .optional(),
   data: ProjectPropertyFormData,
+})
+
+const AppendPropertyValuesCommand = z.object({
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
+  data: z.object({
+    propertyId: z.string().min(1),
+    values: z.array(ProjectPropertyValueFormData).min(1),
+  }),
+})
+
+const PropertyValueAppendAccessQuery = z.object({
+  id: z.string().min(1),
+  meta: z
+    .object({
+      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    })
+    .optional(),
 })
 
 /**
@@ -180,6 +208,102 @@ const toProjectReadDecisionsByProjectId = async (params: {
   }
 
   return decisionsByProjectId
+}
+
+const toPropertyValueAppendAccess = async (params: {
+  db: Parameters<typeof probeProjectQuery>[0]
+  propertyId: string
+  user: { id: string; isAnonymous?: boolean; superAdmin?: boolean }
+  userRoles: Parameters<typeof authorizeProjectReadForProbe>[0]['userRoles']
+}) => {
+  const existingProperty = await loadProperty(
+    params.db,
+    propertyCollectionWithRelations,
+    [eq(property.id, params.propertyId)],
+  )
+
+  if (!existingProperty) {
+    return null
+  }
+
+  if (existingProperty.scope === 'project') {
+    if (!existingProperty.projectId) {
+      return { allowed: false, scope: existingProperty.scope }
+    }
+
+    const probe = await probeProjectQuery(params.db, {
+      ref: existingProperty.projectId,
+      refKey: 'id',
+    })
+    if (!probe) {
+      return { allowed: false, scope: existingProperty.scope }
+    }
+
+    return {
+      allowed: authorizeProjectUpdateForSubmission({
+        user: params.user,
+        userRoles: params.userRoles,
+        resource: probe,
+        submittedData: {},
+      }).allowed,
+      scope: existingProperty.scope,
+    }
+  }
+
+  if (existingProperty.scope === 'organisation') {
+    if (!existingProperty.organisationId) {
+      return { allowed: false, scope: existingProperty.scope }
+    }
+
+    const [organisationProbe] = await params.db
+      .select({
+        id: organisation.id,
+        hubId: organisation.hubId,
+      })
+      .from(organisation)
+      .where(eq(organisation.id, existingProperty.organisationId))
+      .limit(1)
+
+    if (!organisationProbe) {
+      return { allowed: false, scope: existingProperty.scope }
+    }
+
+    return {
+      allowed: authorizeOrganisationUpdateForSubmission({
+        user: params.user,
+        userRoles: params.userRoles,
+        resource: organisationProbe,
+        submittedData: {},
+      }).allowed,
+      scope: existingProperty.scope,
+    }
+  }
+
+  if (!existingProperty.hubId) {
+    return { allowed: false, scope: existingProperty.scope }
+  }
+
+  const [hubProbe] = await params.db
+    .select({
+      id: hub.id,
+    })
+    .from(hub)
+    .where(eq(hub.id, existingProperty.hubId))
+    .limit(1)
+
+  if (!hubProbe) {
+    return { allowed: false, scope: existingProperty.scope }
+  }
+
+  return {
+    allowed: authorizeHubUpdateForSubmission({
+      user: params.user,
+      userRoles: params.userRoles,
+      resource: hubProbe,
+      submittedData: {},
+    }).allowed,
+    scope: existingProperty.scope,
+  }
 }
 
 /**
@@ -292,6 +416,31 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
 export const getProperty = getPropertyQuery
 
 /**
+ * Returns whether the caller may append new values to the target property.
+ */
+export const getPropertyValueAppendAccess = guardedQuery(
+  PropertyValueAppendAccessQuery,
+  async (params, ctx) => {
+    const access = await toPropertyValueAppendAccess({
+      db: ctx.db,
+      propertyId: params.id,
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+    })
+
+    if (!access) {
+      return {
+        data: null,
+      }
+    }
+
+    return {
+      data: access,
+    }
+  },
+)
+
+/**
  * Creates one project-scoped property from an import/property creation flow.
  *
  * @param params - Property form payload and explicit remote metadata.
@@ -400,6 +549,136 @@ export const createProjectProperty = guardedCommand(
 
     return {
       data: toPropertyResponseShape(created) as Property,
+    }
+  },
+)
+
+/**
+ * Appends new values to an existing property while preserving its owning scope.
+ *
+ * @param params - Target property id and the new values to create.
+ * @returns The updated property in canonical API response shape.
+ */
+export const appendPropertyValues = guardedCommand(
+  AppendPropertyValuesCommand,
+  async (params, ctx) => {
+    const { db, user, userRoles } = ctx
+    const { propertyId, values } = params.data
+
+    const existingProperty = await loadProperty(db, propertyCollectionWithRelations, [
+      eq(property.id, propertyId),
+    ])
+
+    if (!existingProperty) {
+      throw error(404, 'PROPERTY_NOT_FOUND')
+    }
+
+    if (existingProperty.scope === 'project') {
+      if (!existingProperty.projectId) {
+        throw error(400, 'PROJECT_ID_REQUIRED')
+      }
+
+      const probe = await probeProjectQuery(db, {
+        ref: existingProperty.projectId,
+        refKey: 'id',
+      })
+      if (!probe) {
+        throw error(404, 'PROJECT_NOT_FOUND')
+      }
+
+      const updateDecision = authorizeProjectUpdateForSubmission({
+        user,
+        userRoles,
+        resource: probe,
+        submittedData: {},
+      })
+      if (!updateDecision.allowed) {
+        throw error(403, toAuthMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
+      }
+    } else if (existingProperty.scope === 'organisation') {
+      if (!existingProperty.organisationId) {
+        throw error(400, 'ORGANISATION_ID_REQUIRED')
+      }
+
+      const [organisationProbe] = await db
+        .select({
+          id: organisation.id,
+          hubId: organisation.hubId,
+        })
+        .from(organisation)
+        .where(eq(organisation.id, existingProperty.organisationId))
+        .limit(1)
+
+      if (!organisationProbe) {
+        throw error(404, 'ORGANISATION_NOT_FOUND')
+      }
+
+      const updateDecision = authorizeOrganisationUpdateForSubmission({
+        user,
+        userRoles,
+        resource: organisationProbe,
+        submittedData: {},
+      })
+      if (!updateDecision.allowed) {
+        throw error(403, toAuthMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
+      }
+    } else if (existingProperty.scope === 'hub') {
+      if (!existingProperty.hubId) {
+        throw error(400, 'HUB_ID_REQUIRED')
+      }
+
+      const [hubProbe] = await db
+        .select({
+          id: hub.id,
+        })
+        .from(hub)
+        .where(eq(hub.id, existingProperty.hubId))
+        .limit(1)
+
+      if (!hubProbe) {
+        throw error(404, 'HUB_NOT_FOUND')
+      }
+
+      const updateDecision = authorizeHubUpdateForSubmission({
+        user,
+        userRoles,
+        resource: hubProbe,
+        submittedData: {},
+      })
+      if (!updateDecision.allowed) {
+        throw error(403, toAuthMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
+      }
+    }
+
+    const createdValues = await createPropertyValues(
+      db,
+      values.map(({ i18n: _i18n, ...value }) => ({
+        ...value,
+        propertyId: existingProperty.id,
+      })) as PropertyValueNew[],
+      existingProperty.id,
+    )
+
+    for (const [index, createdValue] of createdValues.entries()) {
+      const submittedValue = values[index]
+      if (!submittedValue?.i18n) continue
+
+      await createPropertyValueI18n(
+        db,
+        submittedValue.i18n as unknown as Record<Locale, PropertyValueI18nNew>,
+        createdValue.id,
+      )
+    }
+
+    const updatedProperty = await loadProperty(db, propertyCollectionWithRelations, [
+      eq(property.id, existingProperty.id),
+    ])
+    if (!updatedProperty) {
+      throw error(500, 'PROPERTY_UPDATE_FAILED')
+    }
+
+    return {
+      data: toPropertyResponseShape(updatedProperty) as Property,
     }
   },
 )
