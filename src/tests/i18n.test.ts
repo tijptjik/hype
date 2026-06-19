@@ -1,12 +1,17 @@
 // I18N
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { supportedLocales, SupportedLocales } from '$lib/enums'
-import { getI18n, setLocale } from '$lib/i18n'
+import { getFPI18n, getI18n, normalizeI18nLocaleRecord, setLocale } from '$lib/i18n'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
+import type { FeatureProperty } from '$lib/db/zod/schema/feature.types'
 // MESSAGE FILES
 import enMessages from '../../messages/en.json'
 import zhHantMessages from '../../messages/zh-hant.json'
 import zhHansMessages from '../../messages/zh-hans.json'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 /**
  * I18N Message Validation Tests
@@ -21,8 +26,8 @@ describe('I18N Message Validation', () => {
   // MESSAGE FILES MAP
   const messageFiles = {
     [SupportedLocales.en]: enMessages,
-    [SupportedLocales['zh-hant']]: zhHantMessages,
-    [SupportedLocales['zh-hans']]: zhHansMessages,
+    [SupportedLocales.zhHant]: zhHantMessages,
+    [SupportedLocales.zhHans]: zhHansMessages,
   }
 
   // HELPER FUNCTIONS
@@ -237,5 +242,111 @@ describe('getI18n', () => {
     )
 
     expect(value).toBe('123 Test Street')
+  })
+})
+
+describe('normalizeI18nLocaleRecord', () => {
+  it('normalizes camelCase locale keys and entry locales to kebab-case', () => {
+    const normalized = normalizeI18nLocaleRecord({
+      zhHans: {
+        locale: 'zhHans',
+        value: '简体',
+      },
+      zhHant: {
+        locale: 'zhHant',
+        value: '繁體',
+      },
+      en: {
+        locale: 'en',
+        value: 'English',
+      },
+    })
+
+    expect(Object.keys(normalized).sort()).toEqual(['en', 'zh-hans', 'zh-hant'])
+    expect(normalized['zh-hans']?.locale).toBe('zh-hans')
+    expect(normalized['zh-hant']?.locale).toBe('zh-hant')
+    expect(normalized.en?.locale).toBe('en')
+  })
+})
+
+describe('getFPI18n', () => {
+  const userPreferences: UserPreferences = {
+    fallbackLocales: [],
+    allowMachineTranslation: false,
+    preferFallbackInCurrentLocale: false,
+    isTranslateButtonVisible: true,
+  }
+
+  const fallback = enMessages.great_crazy_squid_promise
+
+  const createProperty = (
+    overrides: Partial<Omit<FeatureProperty, 'featureId'>> = {},
+  ): Omit<FeatureProperty, 'featureId'> => ({
+    propertyId: 'property-1',
+    propertyValueId: null,
+    value: null,
+    i18n: null,
+    property: {
+      id: 'property-1',
+      projectId: 'project-1',
+      type: 'classifier',
+      rank: 1,
+      key: 'size',
+      isTranslatable: true,
+      component: 'SelectField',
+      createdAt: new Date().toISOString(),
+      modifiedAt: new Date().toISOString(),
+    },
+    propertyValue: null,
+    ...overrides,
+  })
+
+  it('returns the normal fallback for empty feature properties without warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const value = getFPI18n(createProperty(), userPreferences)
+
+    expect(value).toBe(fallback)
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns the normal fallback for blank specifier values without warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const value = getFPI18n(
+      createProperty({
+        propertyId: 'property-2',
+        value: '',
+        property: {
+          id: 'property-2',
+          projectId: 'project-1',
+          type: 'specifier',
+          rank: 2,
+          key: 'notes',
+          isTranslatable: false,
+          component: 'InputField',
+          createdAt: new Date().toISOString(),
+          modifiedAt: new Date().toISOString(),
+        },
+      }),
+      userPreferences,
+    )
+
+    expect(value).toBe(fallback)
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns the normal fallback for unresolved classifier options without warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const value = getFPI18n(
+      createProperty({
+        propertyValueId: 'missing-option',
+      }),
+      userPreferences,
+    )
+
+    expect(value).toBe(fallback)
+    expect(warnSpy).not.toHaveBeenCalled()
   })
 })

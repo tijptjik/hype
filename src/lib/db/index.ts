@@ -14,10 +14,12 @@ import {
   type SQL,
   type Table,
 } from 'drizzle-orm'
+// I18N
+import { toLocaleKey, toLocaleKebab } from '$lib/i18n'
 // SCHEMA
 import * as schema from './schema'
 // ENUMS
-import { supportedLocales, type SupportedLocales, HierarchicalResource } from '../enums'
+import { supportedLocaleKeys, HierarchicalResource } from '../enums'
 // TYPES
 import type {
   Field,
@@ -25,6 +27,7 @@ import type {
   ResourceDB,
   ResourceType,
   Locale,
+  LocaleKey,
   Database,
   ResourceConfig,
   ResourceHierarchy,
@@ -393,27 +396,15 @@ export const createJsonPathCondition = (
 // 6. TRANSFORMATIONS :: LOCALE
 // ═══════════════════════
 
-function toFormLocaleKey(locale: string): string {
-  if (locale === 'zh-hans') return 'zhHans'
-  if (locale === 'zh-hant') return 'zhHant'
-  return locale
-}
-
-function toDbLocaleKey(locale: string): string {
-  if (locale === 'zhHans') return 'zh-hans'
-  if (locale === 'zhHant') return 'zh-hant'
-  return locale
-}
-
 function normalizeLocaleRecordEntries<T extends Record<string, unknown>>(
   i18n: Record<string, T>,
 ): Record<string, T> {
   return Object.entries(i18n).reduce(
     (acc, [rawLocale, entry]) => {
-      const inferredLocale = toDbLocaleKey(rawLocale)
+      const inferredLocale = toLocaleKebab(rawLocale as Locale)
       const locale =
         typeof entry?.locale === 'string' && entry.locale.length > 0
-          ? toDbLocaleKey(entry.locale)
+          ? toLocaleKebab(entry.locale as Locale)
           : inferredLocale
       acc[locale] = {
         ...entry,
@@ -435,7 +426,7 @@ function toFormLocaleRecord<T extends Record<string, unknown>>(
         typeof entry?.locale === 'string' && entry.locale.length > 0
           ? entry.locale
           : rawLocale
-      acc[toFormLocaleKey(locale)] = entry
+      acc[toLocaleKey(locale as Locale)] = entry
       return acc
     },
     {} as Record<string, T>,
@@ -470,7 +461,7 @@ const isTransformedLocaleMap = <T extends LocaleBundle>(
   // Check if all keys are supported locales
   const keys = Object.keys(value)
   const allKeysAreLocales = keys.every(key =>
-    supportedLocales.includes(key as SupportedLocales),
+    supportedLocaleKeys.includes(key as LocaleKey),
   )
   if (!allKeysAreLocales) return false
 
@@ -500,7 +491,16 @@ export const toLocaleMap = <T extends LocaleBundle>(
     if (i18n.length === 0) return null
     return i18n.reduce(
       (acc: Record<Locale, T>, bundle: T) => {
-        acc[bundle.locale] = bundle
+        const locale = toLocaleKebab(bundle.locale as Locale | LocaleKey)
+        const isCanonicalLocale = bundle.locale === locale
+
+        // Prefer canonical DB-locale rows when stale camelCase duplicates exist.
+        if (!acc[locale] || isCanonicalLocale) {
+          acc[locale] = {
+            ...bundle,
+            locale,
+          }
+        }
         return acc
       },
       {} as Record<Locale, T>,
@@ -684,21 +684,21 @@ export const toRelatedRecords = <
   foreignKeyValue: string,
   keyName: K = 'id' as K,
 ): Array<T & Record<K, KeyValue> & Record<F, string>> => {
-  return Object.entries(data).map(([rawKey, rawValue]) => {
+  return Object.entries(data).map(([key, rawValue]) => {
     const isLocaleKey = keyName === 'locale'
-    const key = (isLocaleKey ? toDbLocaleKey(rawKey) : rawKey) as KeyValue
     const valueRecord = rawValue as Record<string, unknown>
     const normalizedLocale =
       isLocaleKey && typeof valueRecord.locale === 'string'
-        ? toDbLocaleKey(valueRecord.locale)
+        ? toLocaleKebab(valueRecord.locale as Locale | LocaleKey)
         : undefined
+    const normalizedKey = normalizedLocale ?? key
 
     return {
       ...(rawValue as T),
       ...(normalizedLocale
         ? ({ locale: normalizedLocale } as unknown as Partial<T>)
         : {}),
-      [keyName]: key,
+      [keyName]: normalizedKey,
       [foreignKeyName]: foreignKeyValue,
     } as T & Record<K, KeyValue> & Record<F, string>
   })

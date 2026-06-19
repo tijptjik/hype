@@ -81,6 +81,7 @@ export const ImageBasic = ImageBase.pick({
   env: true,
   cdnId: true,
   publicId: true,
+  contentHash: true,
   version: true,
   presentationMode: true,
 })
@@ -123,6 +124,7 @@ const ImageListFields = ImageBase.pick({
   env: true,
   cdnId: true,
   publicId: true,
+  contentHash: true,
   version: true,
   presentationMode: true,
   contributorId: true,
@@ -211,6 +213,7 @@ export const FeatureImageUpdateAPI = FeatureImageUpdate.extend({
 export const ImageMetadataBasicSchema = z.object({
   originalFilename: z.string().nullish(),
   originalExtension: z.string().nullish(),
+  contentHash: z.string().nullish(),
   originalWidth: z.number().int().nullish(),
   originalHeight: z.number().int().nullish(),
   rotation: z.number().int().min(0).max(270).nullish(),

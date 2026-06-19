@@ -1,5 +1,4 @@
 // ZOD SCHEMAS
-import type { z } from 'zod'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 // ENUMS
 import {
@@ -15,16 +14,7 @@ import {
   type OmniCollection,
 } from './enums'
 // ZOD SCHEMAS
-import type {
-  Task,
-  TaskCollection,
-  TaskDB,
-  TaskDBNew,
-  TaskDBPartial,
-  TaskDBRaw,
-  TaskNew,
-  TaskPartial,
-} from './db/zod'
+import type { Task, TaskNew, TaskDB } from './db/zod'
 import type {
   Hub,
   HubDB,
@@ -234,7 +224,7 @@ export type OrganisationCommandProbe = {
   hubId: string | null
 }
 
-export type DbTable = SQLiteTable<any>
+export type DbTable = SQLiteTable
 
 // Drizzle withRelations
 export type NestedRelations = {
@@ -494,12 +484,6 @@ export type ResourceTypeWithChildren = Exclude<
 /* ----------------- */
 // NAVIGATION :: ADMIN :: ACTIVE RESOURCE
 /* -------- */
-
-type activeResourceType = {
-  resourceType: FirstClassResource | false
-  resourceRef: Ref | false
-  facet: FacetType | false
-}
 
 export type SidebarState = 'closed' | 'narrow' | 'open'
 
@@ -1025,7 +1009,7 @@ export type FeatureRowModel = {
 export type ActiveCollection = {
   id: string
   type: 'neighbourhood' | 'walk' | 'feature' | 'search'
-  i18n: Record<Locale, { name: string }>
+  i18n: Record<LocaleKey, { name: string }>
   items: (FeatureFromCollection | Feature)[]
 } | null
 
@@ -1159,6 +1143,19 @@ export type HubUserStateFlags = {
 
 export type Locale = `${SupportedLocales}`
 export type LocaleExtended = LocaleKey | 'core'
+
+export type MapStyleCatalogKey =
+  | 'hyper'
+  | 'hyperLight'
+  | 'ghostery'
+  | 'ghostery-legacy'
+  | 'breadline'
+  | 'protomaps-light'
+  | 'protomaps-dark'
+  | 'protomaps-white'
+  | 'protomaps-grayscale'
+  | 'protomaps-black'
+  | 'hyperAdmin'
 
 export type TranslatedValue = {
   value: string
@@ -1377,7 +1374,10 @@ export type CollectionNavOptions = {
   focus?: boolean
   focusFeature?: boolean
   highlight?: boolean
-  navOptions?: Record<string, string>
+  navOptions?: {
+    paramsToDrop?: string[]
+    paramsToAdd?: Record<string, string>
+  }
 }
 
 export type ConfigureFormResourceResultOptions<Input> = {
@@ -1822,10 +1822,10 @@ export type IntermediateValue = {
   rank: number
   en: string
   enGen: boolean
-  'zh-hans': string
-  'zh-hansGen': boolean
-  'zh-hant': string
-  'zh-hantGen': boolean
+  zhHans: string
+  zhHansGen: boolean
+  zhHant: string
+  zhHantGen: boolean
 }
 
 export type UserRole = HubRole | OrganisationRole | ProjectRole
@@ -2040,8 +2040,10 @@ export type LayerMetadata = {}
 export type AddressProperties = {
   // Suggested Display Address
   formattedAddress?: string
+  // Source Address
+  rawAddress?: string
 
-  // ADDRESS COMPONENTS (sorted from smallest to largest unit)
+  // ADDRESS COMPONENTS (sorted roughly from smallest to largest unit)
 
   // Division - e.g. front, roof, etc.
   unitPortion?: string
@@ -2067,17 +2069,29 @@ export type AddressProperties = {
 
   phaseName?: string
   phaseNumber?: string
-  estateName?: string
+  premisesName?: string
 
-  streetNumber?: string
   streetName?: string
-
+  streetAddress?: string
   intersection?: string
 
+  // Outside of Settlements
+  lotType?: string
+  lotNumber?: string
+
+  // Settlements
+  hamlet?: string
+  village?: string
+  town?: string
+
+  // City Divisions
+  microhood?: string
   neighbourhood?: string
-  subDistrict?: string
+  macrohood?: string
+
+  // Administrative Divisions
   district?: string | null
-  region?: string | null
+  area?: string | null
   country?: string | null
 }
 
@@ -2103,7 +2117,7 @@ export type AddressMeta = {
   confidenceForwardGeocoder?: number
 
   // GEOCODING
-  addressForwardGeocoder?: 'hkgov_als' | 'googlemaps'
+  addressForwardGeocoder?: 'hkgov_als' | 'googlemaps' | 'invalid'
   addressReverseGeocoder?: 'hkgov_reverse' | 'googlemaps'
   addressReverseGen?: boolean
   addressForwardGen?: boolean
@@ -2698,7 +2712,7 @@ export type ParsedReverseGeocodeResultI18n = {
 // IDENTIFY RESULT
 export interface ParsedReverseGeocodeResult {
   addressMeta: AddressMeta
-  i18n: Record<Locale, ParsedReverseGeocodeResultI18n>
+  i18n: Record<LocaleKey, ParsedReverseGeocodeResultI18n>
 }
 
 export interface ReverseGeocodeResult {
@@ -2765,7 +2779,7 @@ export interface ALSResult {
           EngDistrict: {
             DcDistrict: string // English district name
           }
-          Region: string // Region code (HK/KLN/NT)
+          Region: 'HK' | 'KLN' | 'NT' // Area code (HK/KLN/NT)
         }
         // Chinese address components
         ChiPremisesAddress: {
@@ -2795,7 +2809,7 @@ export interface ALSResult {
           ChiDistrict: {
             DcDistrict: string // Chinese district name
           }
-          Region: string // Region in Chinese (香港/九龍/新界)
+          Region: '香港' | '九龍' | '新界' // Area in Chinese
         }
         // Unique identifier for the address
         GeoAddress: string // Unique address reference number
@@ -2826,7 +2840,7 @@ export type Neighbourhood = {
   neighbourhood: string
   data: {
     neighbourhood: string
-    region: string
+    area: string
     district: string
   }
 }
@@ -2834,7 +2848,7 @@ export type Neighbourhood = {
 export type NeighbourhoodI18n = {
   name: string
   neighbourhood: string
-  region: string
+  area: string
   district: string
 }
 
@@ -3064,19 +3078,18 @@ export type SvelteVirtualListProps = {
 
 /**
  * Debug information provided by the virtual list during rendering.
- *
- * @typedef {Object} SvelteVirtualListDebugInfo
- * @property {number} endIndex - Index of the last rendered item in the viewport.
- * @property {number} startIndex - Index of the first rendered item in the viewport.
- * @property {number} totalItems - Total number of items in the list.
- * @property {number} visibleItemsCount - Number of items currently visible in the viewport.
- * @property {number} processedItems - Number of items processed in the viewport.
  */
 export type SvelteVirtualListDebugInfo = {
+  /** Index of the last rendered item in the viewport. */
   endIndex: number
+  /** Index of the first rendered item in the viewport. */
   startIndex: number
+  /** Total number of items in the list. */
   totalItems: number
+  /** Number of items currently visible in the viewport. */
   visibleItemsCount: number
+  /** Number of items processed in the viewport. */
   processedItems: number
+  /** Average height of the processed items in pixels. */
   averageItemHeight: number
 }

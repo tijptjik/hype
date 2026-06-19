@@ -19,7 +19,7 @@ import {
   getOrganisationsWhichHaveLayers,
 } from '$lib/api/server/organisation.remote'
 import { getHub, getHubs } from '$lib/api/server/hub.remote'
-import { getProject, getProjectsWhichHaveLayers } from '$lib/api/server/project.remote'
+import { getProject, getProjects } from '$lib/api/server/project.remote'
 import { getLayer, getLayers } from '$lib/api/server/layer.remote'
 import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
 import { getProperties, getProperty } from '$lib/api/server/property.remote'
@@ -42,11 +42,7 @@ import {
 } from '$lib/client/services/property'
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
-import {
-  runRemoteQuery,
-  toSafeListResponse,
-  type ImperativeRemoteQuery,
-} from '$lib/remote'
+import { runRemoteQuery, toSafeListResponse } from '$lib/remote'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
@@ -61,6 +57,7 @@ import {
   ResourcePath,
   ResourceRefKey,
   type NewFeatureMode,
+  supportedLocaleKeys,
 } from '$lib/enums'
 // GUARDS
 import { isTask } from '$lib/types'
@@ -69,6 +66,7 @@ import type {
   ActiveCollection,
   AppContextState,
   Cache,
+  CollectionNavOptions,
   Code,
   DeepPartial,
   FacetType,
@@ -78,8 +76,10 @@ import type {
   Id,
   LayoutMode,
   Locale,
+  LocaleKey,
   NavigableResource,
   NewFeatureTask,
+  RangeFilterValue,
   Resource,
   ResourceContext,
   ResourceTypeWithChildren,
@@ -90,6 +90,7 @@ import type {
   RemoteListFn,
   RemoteGetFn,
   ResourceSortState,
+  UserRoleDisco,
 } from '$lib/types'
 import type { Image } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
@@ -117,10 +118,12 @@ export class AppCtx {
   queryClient!: QueryClient
   // Place Context
   placeCtx!: PlaceCtx
+  // Responsive Context
+  responsiveCtx!: ResponsiveCtx
   // Maplibre Map instance
   map: MaplibreMap | undefined = $state()
   // Maplibre library instance (loaded globally)
-  maplibre: any = $state(null)
+  maplibre: unknown = $state(null)
   // Whether maplibre has been loaded
   isMaplibreLoaded: boolean = $state(false)
   // User data (reactive)
@@ -136,8 +139,8 @@ export class AppCtx {
   queryMap = new Map<
     FirstClassResource | 'userFeatures',
     {
-      queryKey: () => any[]
-      queryFn: () => Promise<any>
+      queryKey: () => unknown[]
+      queryFn: () => Promise<unknown>
     }
   >()
 
@@ -566,10 +569,10 @@ export class AppCtx {
 
   private getRoleScopeQueryKey = (): string => {
     const userId = this.user?.id ?? 'anonymous'
-    const roles = Array.isArray(this.user?.roles) ? this.user.roles : []
+    const roles = this.getUserRoles()
 
     const roleSignature = roles
-      .map(role => {
+      .map((role: UserRoleDisco) => {
         if (role.type === 'organisation') {
           return `organisation:${role.organisationId}:${role.role}`
         }
@@ -578,10 +581,45 @@ export class AppCtx {
         }
         return `hub:${role.hubId}:${role.role}`
       })
-      .sort((left, right) => left.localeCompare(right))
+      .sort((left: string, right: string) => left.localeCompare(right))
       .join('|')
 
     return `${userId}::${roleSignature}`
+  }
+
+  private isCurrentUser = (
+    user: UserProfile | CurrentUser | SessionUser | null,
+  ): user is CurrentUser => {
+    return Boolean(user && 'preferences' in user && 'userLayers' in user)
+  }
+
+  private getUserRoles = (): UserRoleDisco[] => {
+    const currentUser = this.isCurrentUser(this.user)
+      ? (this.user as CurrentUser)
+      : null
+    if (!currentUser) {
+      return []
+    }
+
+    const roles = currentUser.roles
+    return Array.isArray(roles) ? roles : []
+  }
+
+  private getRequiredQueryConfig = (
+    resource: FirstClassResource | 'userFeatures',
+  ): {
+    queryKey: unknown[]
+    queryFn: () => Promise<unknown>
+  } => {
+    const config = this.queryMap.get(resource)
+    if (!config) {
+      throw new Error(`Missing query config for ${resource}`)
+    }
+
+    return {
+      queryKey: config.queryKey(),
+      queryFn: config.queryFn,
+    }
   }
 
   organisationsQueryKey = () => [
@@ -680,7 +718,7 @@ export class AppCtx {
       get: getOrganisation,
     }
     this.remoteMap[FirstClassResource.project] = {
-      list: getProjectsWhichHaveLayers as unknown as RemoteListFn<unknown, unknown>,
+      list: getProjects as unknown as RemoteListFn<unknown, unknown>,
       get: getProject as unknown as RemoteGetFn<unknown, unknown>,
     }
     this.remoteMap[FirstClassResource.layer] = {
@@ -706,6 +744,8 @@ export class AppCtx {
 
   // Initialize default query map (can be overridden by AdminCtx)
   private initializeQueryMap = (): void => {
+    this.queryMap.clear()
+
     this.queryMap.set(FirstClassResource.organisation, {
       queryKey: this.organisationsQueryKey,
       queryFn: () => this.organisationsQueryFn(),
@@ -964,6 +1004,7 @@ export class AppCtx {
           },
           prisms: this.state.prisms,
           sorting: this.state.viewSorting.organisation,
+          meta: { isAdminRequest: false, profile: 'card' },
         }),
       )) as ListResponse<Organisation> | undefined,
     )
@@ -982,7 +1023,7 @@ export class AppCtx {
       },
       prisms: this.state.prisms,
       sorting: this.state.viewSorting.project,
-      meta: { profile: 'card' },
+      meta: { isAdminRequest: false, profile: 'card' },
     }
 
     const result = toSafeListResponse<Project>(
@@ -1009,7 +1050,7 @@ export class AppCtx {
           },
           prisms: this.state.prisms,
           sorting: this.state.viewSorting.layer,
-          meta: { profile: 'card' },
+          meta: { isAdminRequest: false, profile: 'card' },
         }),
       )) as ListResponse<Layer> | undefined,
     )
@@ -1031,7 +1072,7 @@ export class AppCtx {
           },
           prisms: this.state.prisms,
           sorting: this.state.viewSorting.feature,
-          meta: { profile: 'list' },
+          meta: { isAdminRequest: false, profile: 'list' },
         }),
       )) as ListResponse<FeatureFromCollection> | undefined,
     )
@@ -1155,7 +1196,12 @@ export class AppCtx {
         }
 
         // Update the resources array if the resource exists there
-        this.updateResourceInArray(resource, updatedResource)
+        if (resource in this.state.resources) {
+          this.updateResourceInArray(
+            resource as keyof FilteredResources,
+            updatedResource as FilteredResources[keyof FilteredResources][number],
+          )
+        }
       }
     } catch (error) {
       console.error(`Failed to refresh resource ${resource}:${resourceId}`, error)
@@ -1350,17 +1396,16 @@ export class AppCtx {
    * @param resource - The resource type
    * @param updatedResource - The updated resource data
    */
-  private updateResourceInArray = (
-    resource: FirstClassResource,
-    updatedResource: any,
+  private updateResourceInArray = <K extends keyof FilteredResources>(
+    resource: K,
+    updatedResource: FilteredResources[K][number],
   ): void => {
-    const resourceArray =
-      this.state.resources[resource as keyof typeof this.state.resources]
-    if (resourceArray && Array.isArray(resourceArray)) {
-      const index = resourceArray.findIndex((r: any) => r.id === updatedResource.id)
-      if (index !== -1) {
-        resourceArray[index] = updatedResource
-      }
+    const resourceArray = this.state.resources[resource]
+    const index = resourceArray.findIndex(
+      resourceItem => resourceItem.id === updatedResource.id,
+    )
+    if (index !== -1) {
+      resourceArray[index] = updatedResource
     }
   }
 
@@ -1512,9 +1557,10 @@ export class AppCtx {
   }
 
   refreshOrganisations = async (isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig(FirstClassResource.organisation)
     this.state.resources.organisation = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.organisation)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.organisation)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<Organisation[]>,
     })
     // Efficiently sync organization cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.organisation, this.state.resources.organisation)
@@ -1528,9 +1574,10 @@ export class AppCtx {
   }
 
   refreshProjects = async (isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig(FirstClassResource.project)
     this.state.resources.project = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.project)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.project)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<Project[]>,
     })
     // Efficiently sync project cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.project, this.state.resources.project)
@@ -1545,9 +1592,10 @@ export class AppCtx {
   }
 
   refreshLayers = async (isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig(FirstClassResource.layer)
     this.state.resources.layer = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.layer)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.layer)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<Layer[]>,
     })
     // Efficiently sync layer cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.layer, this.state.resources.layer)
@@ -1558,9 +1606,10 @@ export class AppCtx {
   }
 
   refreshFeatures = async (_isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig(FirstClassResource.feature)
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.feature)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.feature)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<FeatureFromCollection[]>,
     })
     this.state.resources.feature = features
     this.syncCacheMap(this.cache.feature, features)
@@ -1580,9 +1629,10 @@ export class AppCtx {
   }
 
   refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig(FirstClassResource.task)
     this.state.resources.task = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.task)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.task)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<Task[]>,
     })
     // Efficiently sync task cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.task, this.state.resources.task)
@@ -1601,7 +1651,7 @@ export class AppCtx {
     if (task.organisation) {
       this.cache.organisation.set(
         task.organisation.id,
-        task.organisation as Organisation,
+        task.organisation as unknown as Organisation,
       )
       if (task.organisation.code) {
         this.organisationCodeToId.set(task.organisation.code, task.organisation.id)
@@ -1634,9 +1684,10 @@ export class AppCtx {
 
   refreshHubs = async (_isCascading: boolean = true): Promise<void> => {
     if (!this.isAdmin()) return
+    const query = this.getRequiredQueryConfig(FirstClassResource.hub)
     this.state.resources.hub = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.hub)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.hub)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<Hub[]>,
     })
     // Efficiently sync hub cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.hub, this.state.resources.hub)
@@ -1645,19 +1696,21 @@ export class AppCtx {
   }
 
   refreshProperties = async (_isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig(FirstClassResource.property)
     const properties = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.property)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.property)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<Property[]>,
     })
     // Efficiently sync property cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.property, properties)
   }
 
   refreshUserFeatures = async (_isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig('userFeatures')
     this.state.userFeatures = await this.queryClient
       .fetchQuery({
-        queryKey: this.queryMap.get('userFeatures')?.queryKey(),
-        queryFn: this.queryMap.get('userFeatures')?.queryFn,
+        queryKey: query.queryKey,
+        queryFn: query.queryFn as () => Promise<UserFeature[]>,
       })
       .then(uf => ({
         wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
@@ -1669,9 +1722,10 @@ export class AppCtx {
   }
 
   refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
+    const query = this.getRequiredQueryConfig(FirstClassResource.user)
     const user = await this.queryClient.fetchQuery({
-      queryKey: this.queryMap.get(FirstClassResource.user)?.queryKey(),
-      queryFn: this.queryMap.get(FirstClassResource.user)?.queryFn,
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<UserProfile | null>,
     })
     const currentUsername = this.user?.username?.trim() || null
     const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
@@ -1682,12 +1736,14 @@ export class AppCtx {
     if (isSelfProfile && user) {
       this.user = {
         ...(this.user ?? {}),
-        ...(user as CurrentUser),
-      } as CurrentUser | SessionUser
+        ...user,
+      } as UserProfile | CurrentUser | SessionUser
       this.postUserMutation()
     }
 
-    this.state.panels.profile.ctx!.userData = user
+    if (this.state.panels.profile.ctx) {
+      this.state.panels.profile.ctx.userData = user
+    }
   }
 
   /*
@@ -1698,7 +1754,7 @@ export class AppCtx {
    */
   postUserFeaturesMutation = (): void => {
     const activeCollection = this.getActiveCollection()
-    if (!activeCollection || activeCollection.type !== 'walk') {
+    if (activeCollection?.type !== 'walk') {
       return
     }
 
@@ -2247,7 +2303,7 @@ export class AppCtx {
     // Get Properties associated with LayerProperties
     const properties = layer.properties
       .filter(lp => lp.isVisible !== false)
-      .map(lp => this.cache.property.get(lp.propertyId!))
+      .map(lp => (lp.propertyId ? this.cache.property.get(lp.propertyId) : undefined))
 
     // Filter classifiers then sort by rank
     return sortProperties(
@@ -2256,7 +2312,7 @@ export class AppCtx {
           (prop): prop is Property => prop !== undefined && prop.type === 'classifier',
         )
         .map(p => ({ property: p })),
-    ).map(item => item.property!)
+    ).map(item => item.property)
   }
 
   getResourceById = async (
@@ -2306,7 +2362,9 @@ export class AppCtx {
         return remote.data
       }
       case FirstClassResource.project:
-        return await this.getProjectById(this.getProjectIdByCode(ref as Code)! as Id)
+        return await this.getProjectById(
+          this.getProjectIdByCode(ref as Code) ?? (ref as Id),
+        )
       case FirstClassResource.layer:
         return await this.getLayerById(ref as Id)
       case FirstClassResource.feature:
@@ -2602,12 +2660,16 @@ export class AppCtx {
 
   // Features (for Active Layers) that are on the user's wishlist
   getWishlistedFeatureIds = (): Id[] => {
-    return this.state.userFeatures?.wishlisted?.map(wl => wl.featureId!) || []
+    return (this.state.userFeatures?.wishlisted ?? [])
+      .map(wl => wl.featureId)
+      .filter((featureId): featureId is Id => Boolean(featureId))
   }
 
   // Features (for Active Layers) that the user has visited
   getVisitedFeatureIds = (): Id[] => {
-    return this.state.userFeatures?.visited?.map(wl => wl.featureId!) || []
+    return (this.state.userFeatures?.visited ?? [])
+      .map(wl => wl.featureId)
+      .filter((featureId): featureId is Id => Boolean(featureId))
   }
 
   getWishlistUserFeatures = (): UserFeature[] => {
@@ -2632,7 +2694,7 @@ export class AppCtx {
       openCard?: boolean
       openCardDelay?: number
       isCardOpen?: boolean
-      navOptions?: Record<string, any>
+      navOptions?: CollectionNavOptions['navOptions']
     },
   ) => {
     const optionsWithDefaults = {
@@ -2657,7 +2719,7 @@ export class AppCtx {
     openCard?: boolean
     openCardDelay?: number
     isCardOpen?: boolean
-    navOptions?: Record<string, any>
+    navOptions?: CollectionNavOptions['navOptions']
   }) => {
     const optionsWithDefaults = {
       highlight: true,
@@ -2748,7 +2810,7 @@ export class AppCtx {
       openCard?: boolean | null
       openCardDelay?: number
       isCardOpen?: boolean
-      navOptions?: Record<string, any>
+      navOptions?: CollectionNavOptions['navOptions']
     },
   ) => {
     const optionsWithDefaults = {
@@ -2762,7 +2824,13 @@ export class AppCtx {
     this.preActiveFeatureMutation()
 
     // Set active state to new feature
-    this.state.active.feature = this.features.get(featureId)!
+    const nextFeature = this.features.get(featureId)
+    if (!nextFeature) {
+      this.isTransitioning = false
+      return
+    }
+
+    this.state.active.feature = nextFeature
 
     // Post-mutation: setup new feature
     this.postActiveFeatureMutation(featureId, optionsWithDefaults)
@@ -2783,7 +2851,7 @@ export class AppCtx {
       openCard?: boolean | null
       openCardDelay?: number
       isCardOpen?: boolean
-      navOptions?: Record<string, any>
+      navOptions?: CollectionNavOptions['navOptions']
     },
   ) => {
     const optionsWithDefaults = {
@@ -3095,15 +3163,21 @@ export class AppCtx {
 
     // Close other panels on the same side first (without updating URL individually)
     if (this.responsiveCtx.isPanelOnLeft(panel)) {
-      this.responsiveCtx
-        .getOpenLeftPanels()
-        .filter(p => (p as unknown as Panel) !== panel)
-        .forEach(p => this.closePanel(p as unknown as Panel, false))
+      const openLeftPanels =
+        this.responsiveCtx.getOpenLeftPanels() as unknown as Panel[]
+      openLeftPanels
+        .filter(openPanel => openPanel !== panel)
+        .forEach(openPanel => {
+          this.closePanel(openPanel, false)
+        })
     } else if (this.responsiveCtx.isPanelOnRight(panel)) {
-      this.responsiveCtx
-        .getOpenRightPanels()
-        .filter(p => (p as unknown as Panel) !== panel)
-        .forEach(p => this.closePanel(p as unknown as Panel, false))
+      const openRightPanels =
+        this.responsiveCtx.getOpenRightPanels() as unknown as Panel[]
+      openRightPanels
+        .filter(openPanel => openPanel !== panel)
+        .forEach(openPanel => {
+          this.closePanel(openPanel, false)
+        })
     }
 
     if (window.innerWidth < DUAL_PANEL_MIN_WIDTH) {
@@ -3152,15 +3226,19 @@ export class AppCtx {
   }
 
   closeLeftPanel = (): void => {
-    this.responsiveCtx.getOpenLeftPanels().forEach(panel => {
-      this.closePanel(panel as unknown as Panel, false)
-    })
+    ;(this.responsiveCtx.getOpenLeftPanels() as unknown as Panel[]).forEach(
+      (openPanel: Panel) => {
+        this.closePanel(openPanel, false)
+      },
+    )
   }
 
   closeRightPanel = (): void => {
-    this.responsiveCtx.getOpenRightPanels().forEach(panel => {
-      this.closePanel(panel as unknown as Panel, false)
-    })
+    ;(this.responsiveCtx.getOpenRightPanels() as unknown as Panel[]).forEach(
+      (openPanel: Panel) => {
+        this.closePanel(openPanel, false)
+      },
+    )
   }
 
   closeAllPanels = (updateUrl: boolean = true): void => {
@@ -3227,7 +3305,11 @@ export class AppCtx {
   }
 
   // Helper method to open profile panel with username context
-  setPanelCtx = (panel: Panel, key: string, value: string | undefined | null): void => {
+  setPanelCtx = (
+    panel: Panel,
+    key: 'username',
+    value: string | undefined | null,
+  ): void => {
     // Set username context if provided
     if (value && this.state.panels[panel].ctx) {
       this.state.panels[panel].ctx[key] = value
@@ -3328,15 +3410,16 @@ export class AppCtx {
   setNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
     // Initialize with proper locale structure for all required locales
     if (newFeature.feature && !newFeature.feature.i18n) {
-      const requiredLocales = ['en', 'zh-hant', 'zh-hans']
-
-      newFeature.feature.i18n = {}
-      requiredLocales.forEach(locale => {
-        newFeature.feature!.i18n![locale as Locale] = {
-          ...newFeature.feature!.i18n![locale as Locale],
-          locale: locale,
+      const feature = newFeature.feature
+      const featureI18n: NonNullable<typeof feature.i18n> = {}
+      feature.i18n = featureI18n
+      supportedLocaleKeys.forEach(locale => {
+        featureI18n[locale as LocaleKey] = {
+          ...featureI18n[locale as LocaleKey],
           title: undefined,
           description: undefined,
+          displayAddress: '',
+          displayAddressGen: false,
         }
       })
     }
@@ -3354,7 +3437,10 @@ export class AppCtx {
     }
   }
 
-  updateNewFeatureValue = (key: keyof NewFeatureTask['feature'], value: any): void => {
+  updateNewFeatureValue = (
+    key: keyof NewFeatureTask['feature'],
+    value: unknown,
+  ): void => {
     this.newFeature = {
       ...this.newFeature,
       feature: { ...this.newFeature?.feature, [key]: value },
@@ -3363,8 +3449,8 @@ export class AppCtx {
 
   updateNewFeatureValueI18n = (
     key: FeatureI18nFieldKeys,
-    value: any,
-    locale: Locale = getLocale(),
+    value: unknown,
+    locale = getLocaleKey(),
   ): void => {
     this.newFeature = {
       ...this.newFeature,
@@ -3496,7 +3582,7 @@ export class AppCtx {
   setUserAttribution = async (
     attribution: string,
     onSuccess?: (attribution: string) => void,
-    onError?: (error: any) => void,
+    onError?: (error: unknown) => void,
   ) => {
     ;(this.user as CurrentUser).attribution = attribution
     await debouncedUpdateUserAttribution(
@@ -3519,6 +3605,7 @@ export class AppCtx {
     const hubId = this.getCurrentHubId()
     const hubCode = this.hub?.code ?? null
     if (!hubId && !hubCode) return
+    if (!hubId) return
     const currentUserLayers = (this.user as CurrentUser).userLayers || []
     const isCurrentHubLayer = (layer: UserLayer): boolean =>
       hubId ? layer.hubId === hubId : layer.hubCode === hubCode
@@ -3532,7 +3619,7 @@ export class AppCtx {
             ...currentHubLayers,
             {
               userId: (this.user as CurrentUser).id,
-              hubId: hubId ?? null,
+              hubId,
               hubCode: hubCode ?? undefined,
               layerId,
               isDefaultVisible: true,
@@ -3622,6 +3709,67 @@ export class AppCtx {
     this.hubCodeToId.clear()
   }
 
+  /**
+   * Restores the shared query map to the default app-scoped resource loaders.
+   *
+   * @returns Nothing.
+   * @remarks Admin routes override `queryMap` on the shared `AppCtx`. When leaving
+   * `/admin`, this must run before any app-side refresh so non-admin reads do not
+   * keep using admin-scoped query functions.
+   */
+  restoreDefaultQueryMap = (): void => {
+    this.initializeQueryMap()
+  }
+
+  /**
+   * Clears shared resource caches, list metadata, and query results when switching
+   * between app and admin surfaces.
+   *
+   * @returns Nothing.
+   * @remarks App and admin share a single `AppCtx`, so resource entities loaded in one
+   * surface can otherwise leak into the other via in-memory maps or TanStack Query.
+   */
+  resetSharedResourceCachesForSurfaceSwitch = (): void => {
+    this.clearAllCaches()
+    this.listQueryMeta.clear()
+
+    this.state.resources.organisation = []
+    this.state.resources.project = []
+    this.state.resources.layer = []
+    this.state.resources.feature = []
+    this.state.resources.task = []
+    this.state.resources.hub = []
+    this.placeCtx.setNeighbourhoodFeatures([])
+
+    const resourceQueryPrefixes: Array<FirstClassResource | 'property'> = [
+      FirstClassResource.organisation,
+      FirstClassResource.project,
+      FirstClassResource.layer,
+      FirstClassResource.feature,
+      FirstClassResource.task,
+      FirstClassResource.hub,
+      'property',
+    ]
+
+    for (const queryKey of resourceQueryPrefixes) {
+      this.queryClient.removeQueries({
+        queryKey: [queryKey],
+        exact: false,
+      })
+    }
+  }
+
+  /**
+   * Reloads the shared app resource tree after leaving the admin surface.
+   *
+   * @returns A promise that resolves when the public app hierarchy has been refetched.
+   * @remarks This intentionally preserves the current prism state while forcing fresh
+   * non-admin reads so unpublished admin records cannot persist in shared state.
+   */
+  reloadAppSurfaceResources = async (): Promise<void> => {
+    await this.refreshOrganisations()
+  }
+
   // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
   resetOrganisations = async () => {
     this.state.prisms.organisation = []
@@ -3692,11 +3840,20 @@ export class AppCtx {
         ) || []
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties?.[layerId]) {
-      this.state.filters.feature.properties![layerId] = {}
+    if (!this.state.filters.feature.properties) {
+      this.state.filters.feature.properties = {}
     }
 
-    const layerFilters = this.state.filters.feature.properties?.[layerId]
+    const featurePropertyFilters = this.state.filters.feature
+      .properties as unknown as Record<Id, Record<string, string[] | RangeFilterValue>>
+    if (!featurePropertyFilters[layerId]) {
+      featurePropertyFilters[layerId] = {}
+    }
+
+    const layerFilters = featurePropertyFilters[layerId] as Record<
+      string,
+      string[] | RangeFilterValue
+    >
 
     // Initialize each classifier property with an empty array if not already set
     classifierProperties.forEach((property: Property) => {
@@ -3732,11 +3889,20 @@ export class AppCtx {
         ) || []
 
     // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties?.[layerId]) {
-      this.state.filters.feature.properties![layerId] = {}
+    if (!this.state.filters.feature.properties) {
+      this.state.filters.feature.properties = {}
     }
 
-    const layerFilters = this.state.filters.feature.properties?.[layerId]
+    const featurePropertyFilters = this.state.filters.feature
+      .properties as unknown as Record<Id, Record<string, string[] | RangeFilterValue>>
+    if (!featurePropertyFilters[layerId]) {
+      featurePropertyFilters[layerId] = {}
+    }
+
+    const layerFilters = featurePropertyFilters[layerId] as Record<
+      string,
+      string[] | RangeFilterValue
+    >
 
     // Initialize each range property using its min/max if not already set
     rangeProperties.forEach((property: Property) => {
@@ -3770,10 +3936,15 @@ export class AppCtx {
     }
 
     const currentHub = this.hub
+    if (!currentHub) {
+      this.hub = hub
+      this.applyInitialLayerPrisms()
+      return
+    }
+
     const isSameHub =
-      Boolean(currentHub) &&
-      ((hub.id && currentHub.id === hub.id) ||
-        (!hub.id && currentHub?.code && currentHub.code === hub.code))
+      (hub.id && currentHub.id === hub.id) ||
+      (!hub.id && currentHub.code && currentHub.code === hub.code)
 
     if (!isSameHub) {
       this.hub = hub
@@ -3843,8 +4014,16 @@ export class AppCtx {
     )
   }
 
-  addToCache = (resource: FirstClassResource, id: Id, item: any): void => {
-    this.cache[resource].set(id, item)
+  addToCache = <K extends FirstClassResource>(
+    resource: K,
+    id: Id,
+    item: Cache[K] extends Map<Id, infer TValue> ? TValue : never,
+  ): void => {
+    const cache = this.cache[resource] as Map<
+      Id,
+      Cache[K] extends Map<Id, infer TValue> ? TValue : never
+    >
+    cache.set(id, item)
   }
 
   // Header management methods

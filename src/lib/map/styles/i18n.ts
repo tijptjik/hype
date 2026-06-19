@@ -1,8 +1,8 @@
-import { supportedLocales } from '../../enums'
+import { toLocaleKebab } from '$lib/i18n'
+import { supportedLocaleKeys } from '../../enums'
 import * as m from '../../paraglide/messages.js'
 
-import type { Locale } from '../../types'
-import type { MapStyleCatalogKey } from './catalog'
+import type { Locale, LocaleKey, MapStyleCatalogKey } from '../../types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -21,13 +21,15 @@ type MapStyleCopy = {
  * Resolves localized copy for one built-in map style.
  *
  * @param key - Built-in map style catalog key.
- * @param locale - Locale to resolve copy for.
+ * @param localeKey - Locale key to resolve copy for.
  * @returns Localized name/description pair.
  */
 export const getMapStyleCatalogCopy = (
   key: MapStyleCatalogKey,
-  locale: Locale,
+  localeKey: LocaleKey,
 ): MapStyleCopy => {
+  const locale = toLocaleKebab(localeKey)
+
   switch (key) {
     case 'hyper':
       return {
@@ -91,11 +93,14 @@ export const getMapStyleCatalogCopy = (
  * Resolves localized copy for every supported locale for one built-in map style.
  *
  * @param key - Built-in map style catalog key.
- * @returns Locale-keyed map-style copy.
+ * @returns DB-locale-keyed map-style copy.
  */
 export const getMapStyleCatalogI18n = (
   key: MapStyleCatalogKey,
 ): Record<Locale, MapStyleCopy> =>
   Object.fromEntries(
-    supportedLocales.map(locale => [locale, getMapStyleCatalogCopy(key, locale)]),
+    supportedLocaleKeys.map(localeKey => [
+      toLocaleKebab(localeKey),
+      getMapStyleCatalogCopy(key, localeKey),
+    ]),
   ) as Record<Locale, MapStyleCopy>

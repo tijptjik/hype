@@ -13,7 +13,7 @@ import FeatureCardNewBody from './components/FeatureCardNewBody.svelte'
 import FeatureCardRoot from './components/FeatureCardRoot.svelte'
 import FeatureCardViewerContent from './components/FeatureCardViewerContent.svelte'
 import * as FeatureCardActionPrimitive from './components/actions'
-import ValidationError from '$lib/components/featureCard/ValidationError.svelte'
+import * as FeatureCardNewPrimitive from './components/newFeature'
 // PROVIDERS
 import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // CONTEXT
@@ -307,7 +307,7 @@ const imageProviderModel = useImageProviderModel(
           >
             {#snippet topActions()}
               <div bind:this={validationElement} class="min-w-0">
-                <ValidationError />
+                <FeatureCardNewPrimitive.ValidationError />
               </div>
             {/snippet}
             {#snippet rightActions()}

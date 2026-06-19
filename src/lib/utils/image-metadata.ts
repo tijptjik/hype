@@ -59,9 +59,11 @@ export function getCoordinatesFromMetadata(
 }
 
 /**
- * Extracts the capture date from EXIF-style metadata.
+ * Extracts the capture date from EXIF-style metadata when one is explicitly present.
  */
-export function getCapturedAtFromMetadata(metadata: ImageMetadataMap): string {
+export function getCapturedAtFromMetadata(
+  metadata: ImageMetadataMap,
+): string | undefined {
   const possibleFields = ['DateTimeOriginal', 'CreateDate', 'ModifyDate']
   for (const field of possibleFields) {
     if (metadata[field]) {
@@ -74,12 +76,10 @@ export function getCapturedAtFromMetadata(metadata: ImageMetadataMap): string {
   if (metadata.DateCreated && metadata.TimeCreated) {
     try {
       return parseExifDate(`${metadata.DateCreated} ${metadata.TimeCreated}`)
-    } catch {
-      return new Date().toISOString()
-    }
+    } catch {}
   }
 
-  return new Date().toISOString()
+  return undefined
 }
 
 /**

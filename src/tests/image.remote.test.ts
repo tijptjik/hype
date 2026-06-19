@@ -47,8 +47,8 @@ const {
   mockToImageProfile: vi.fn((value: unknown, fallback: string) =>
     typeof value === 'string' ? value : fallback,
   ),
-  mockToResponseShape: vi.fn(async (image: any) => image),
-  mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: any) => image),
+  mockToResponseShape: vi.fn(async (image: unknown) => image),
+  mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: unknown) => image),
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
   mockCreateFeatureImage: vi.fn(async () => ({ id: 'fi-1' })),
   mockCreateImageRecord: vi.fn(async () => ({ id: 'img-1', publicId: null })),
@@ -408,6 +408,79 @@ describe('image.remote', () => {
       method: 'PUT',
       confirmToken: 'signed-upload-token',
     })
+  })
+
+  it('authImageUpload targets the dev raw bucket for local uploads', async () => {
+    await remote.authImageUpload({
+      cdn: 'cloudflareR2',
+      env: 'local',
+      ctxType: 'feature',
+      ctxId: 'feature-1',
+      filename: 'image.jpg',
+      contentType: 'image/jpeg',
+      size: 1234,
+    })
+
+    expect(mockGetOriginalsBucketNameForStage).toHaveBeenCalledWith('local')
+    expect(mockCreatePresignedR2UploadUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bucket: 'hype-assets-raw-dev',
+      }),
+    )
+  })
+
+  it('authImageUpload prefers the server runtime environment over the client env', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub-a',
+      }),
+      user: { id: 'u-1', isAnonymous: false },
+      userId: 'u-1',
+      userRoles: [],
+      isAdminRequest: true,
+      event: {
+        request: new Request('https://example.test'),
+        locals: { hub: null },
+        platform: {
+          env: {
+            ENVIRONMENT: 'local',
+            AUTH_SECRET: 'secret',
+            CLOUDFLARE_ACCOUNT_ID: 'account-id',
+            R2_S3_ACCESS_KEY_ID: 'access-key',
+            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+            ASSET_RAW_DEV: { head: vi.fn(async () => null) },
+            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null) },
+            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null) },
+            ASSET_PUBLIC_DEV: { put: vi.fn(), get: vi.fn() },
+            ASSET_PUBLIC_PREVIEW: { put: vi.fn(), get: vi.fn() },
+            ASSET_PUBLIC_PRODUCTION: { put: vi.fn(), get: vi.fn() },
+          },
+          context: {
+            waitUntil: mockWaitUntil,
+          },
+        },
+      },
+    })
+
+    const result = await remote.authImageUpload({
+      cdn: 'cloudflareR2',
+      env: 'production',
+      ctxType: 'feature',
+      ctxId: 'feature-1',
+      filename: 'image.jpg',
+      contentType: 'image/jpeg',
+      size: 1234,
+    })
+
+    expect(result.env).toBe('local')
+    expect(mockGetOriginalsBucketNameForStage).toHaveBeenLastCalledWith('local')
+    expect(mockCreatePresignedR2UploadUrl).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        bucket: 'hype-assets-raw-dev',
+      }),
+    )
   })
 
   it('finalizeImageUpload writes metadata sidecars after a confirmed upload', async () => {

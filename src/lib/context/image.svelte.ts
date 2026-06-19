@@ -21,7 +21,7 @@ import {
   setImageIntent,
   setImagePublished,
 } from '$lib/api/server/image.remote'
-import { runRemoteQuery, type ImperativeRemoteQuery } from '$lib/remote'
+import { runRemoteQuery } from '$lib/remote'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -85,9 +85,22 @@ function isValidImageEnvelope(
   return image != null && image.image.id != null
 }
 
+function getErrorMessage(error: unknown): string | null {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string'
+  ) {
+    return error.message
+  }
+
+  return null
+}
+
 type SingleImageResourceCacheEntry = {
   id: Id
-  image?: ImageCtxEnvelope | null
+  image?: { image: { id: Id } } | null
 }
 
 // ═══════════════════════
@@ -1715,7 +1728,7 @@ export class ImageCtx {
       getImagesForContext({
         ctxType,
         ctxId,
-        meta: { isAdminRequest: true },
+        meta: this.isAdminMode ? { isAdminRequest: true } : undefined,
       }),
     )
 
@@ -2516,7 +2529,7 @@ export class ImageCtx {
         ctxId: ctx.ctxId,
         meta: { isAdminRequest: true },
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       rollbackSingleResourceImageCache?.()
       await this.setImages(imagesBeforeDelete)
       this.setUploadQueue(uploadQueueBeforeDelete)
@@ -2533,13 +2546,14 @@ export class ImageCtx {
 
       // Extract error message from the server response
       let errorMessage = 'Failed to delete image'
-      if (error?.message) {
+      const errorMessageText = getErrorMessage(error)
+      if (errorMessageText) {
         // Parse the error message from deleteImage service
-        if (error.message.includes('Cannot delete image. It belongs to a Task')) {
+        if (errorMessageText.includes('Cannot delete image. It belongs to a Task')) {
           errorMessage = m.quaint_quaint_fly_zap()
-        } else if (error.message.includes('Failed to delete image:')) {
+        } else if (errorMessageText.includes('Failed to delete image:')) {
           // Extract the part after "Failed to delete image: "
-          errorMessage = error.message.replace('Failed to delete image: ', '')
+          errorMessage = errorMessageText.replace('Failed to delete image: ', '')
         }
       }
 
@@ -2565,10 +2579,8 @@ export class ImageCtx {
    * @param image Optional image to download; defaults to the active image.
    * @returns Resolves after the browser download has been triggered.
    */
-  async downloadImage(
-    _e: MouseEvent,
-    image: ImageCtxEnvelope = this.state.activeImage!,
-  ) {
+  async downloadImage(_e: MouseEvent, image?: ImageCtxEnvelope) {
+    image ??= this.state.activeImage ?? undefined
     if (!image) return
     let downloadUrl = ''
 

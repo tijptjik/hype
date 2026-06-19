@@ -1,5 +1,5 @@
 // I18N
-import { toLocaleCode, toFormLocaleRecord } from '$lib/i18n'
+import { toLocaleKebab, toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
 import { normalizeProjectLicense as normalizeSharedProjectLicense } from '$lib/client/services/licence'
@@ -18,6 +18,7 @@ import type {
   CapabilityDefinitions,
   CapabilityKey,
   Locale,
+  LocaleKey,
   ProjectLicense,
 } from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
@@ -348,21 +349,18 @@ export function overrideProjectListItemBoolean(
 
 export function toProjectIdentityPatch(
   formData: ProjectFormInput,
-  locale: Locale,
+  localeKey: LocaleKey,
 ): {
   code: string
   locale: Locale
   name: string
   nameShort: string
 } {
-  const localeKey =
-    locale === 'zh-hans' ? 'zhHans' : locale === 'zh-hant' ? 'zhHant' : 'en'
-  const entityLocale = toLocaleCode(localeKey)
   const localeData = formData.data?.i18n?.[localeKey]
 
   return {
     code: formData.data?.code ?? '',
-    locale: entityLocale,
+    locale: toLocaleKebab(localeKey),
     name: localeData?.name ?? '',
     nameShort: localeData?.nameShort ?? '',
   }

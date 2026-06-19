@@ -1,10 +1,35 @@
 import fs from 'fs';
 import path from 'path';
 
+type TranslationMap = Record<string, string>;
+
+type TranslationSet = {
+  areas: TranslationMap;
+  districts: TranslationMap;
+  neighbourhoods: TranslationMap;
+};
+
+type NeighbourhoodI18n = {
+  name: string;
+  neighbourhood: string;
+  district: string;
+  area: string;
+};
+
+type NeighbourhoodEntry = {
+  i18n: {
+    en?: NeighbourhoodI18n;
+    zhHant?: NeighbourhoodI18n;
+    zhHans?: NeighbourhoodI18n;
+  };
+};
+
+type NeighbourhoodsFile = Record<string, NeighbourhoodEntry>;
+
 // Translation mappings
-const translations = {
-  'zh-hant': {
-    regions: {
+const translations: { zhHant: TranslationSet } = {
+  zhHant: {
+    areas: {
       'Hong Kong Island': '香港島',
       Kowloon: '九龍',
       'New Territories': '新界'
@@ -81,15 +106,15 @@ const translations = {
 };
 
 // Add Simplified Chinese translations by converting Traditional to Simplified
-const zhHansTranslations = {
-  regions: {},
+const zhHansTranslations: TranslationSet = {
+  areas: {},
   districts: {},
   neighbourhoods: {}
 };
 
 // Function to convert Traditional to Simplified Chinese (simplified version)
 function toSimplified(traditional: string): string {
-  const simplificationMap: { [key: string]: string } = {
+  const simplificationMap: Record<string, string> = {
     區: '区',
     島: '岛',
     龍: '龙',
@@ -112,52 +137,49 @@ function toSimplified(traditional: string): string {
 }
 
 // Generate Simplified Chinese translations
-Object.entries(translations['zh-hant'].regions).forEach(([key, value]) => {
-  zhHansTranslations.regions[key] = toSimplified(value);
+Object.entries(translations.zhHant.areas).forEach(([key, value]) => {
+  zhHansTranslations.areas[key] = toSimplified(value);
 });
 
-Object.entries(translations['zh-hant'].districts).forEach(([key, value]) => {
+Object.entries(translations.zhHant.districts).forEach(([key, value]) => {
   zhHansTranslations.districts[key] = toSimplified(value);
 });
 
-Object.entries(translations['zh-hant'].neighbourhoods).forEach(([key, value]) => {
+Object.entries(translations.zhHant.neighbourhoods).forEach(([key, value]) => {
   zhHansTranslations.neighbourhoods[key] = toSimplified(value);
 });
 
 // Read the existing neighbourhoods.json
 const filePath = path.join(process.cwd(), 'src', 'lib', 'map', 'neighbourhoods.json');
-const neighbourhoods = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+const neighbourhoods: NeighbourhoodsFile = JSON.parse(
+  fs.readFileSync(filePath, 'utf8')
+);
 
 // Update each neighbourhood with translations
-Object.entries(neighbourhoods).forEach(
-  ([
-    key,
-    value
-  ]: [
-    string,
-    any
-  ]) => {
-    value.i18n = [
-      {
-        lang: 'zh-hant',
-        name: translations['zh-hant'].neighbourhoods[key] || key,
-        neighbourhood:
-          translations['zh-hant'].neighbourhoods[value.neighbourhood] ||
-          value.neighbourhood,
-        district: translations['zh-hant'].districts[value.district] || value.district,
-        region: translations['zh-hant'].regions[value.region] || value.region
-      },
-      {
-        lang: 'zh-hans',
-        name: zhHansTranslations.neighbourhoods[key] || key,
-        neighbourhood:
-          zhHansTranslations.neighbourhoods[value.neighbourhood] || value.neighbourhood,
-        district: zhHansTranslations.districts[value.district] || value.district,
-        region: zhHansTranslations.regions[value.region] || value.region
-      }
-    ];
-  }
-);
+Object.entries(neighbourhoods).forEach(([key, value]: [string, NeighbourhoodEntry]) => {
+  const englishI18n = value.i18n.en;
+  if (!englishI18n) return;
+
+  value.i18n.zhHant = {
+    name: translations.zhHant.neighbourhoods[key] || key,
+    neighbourhood:
+      translations.zhHant.neighbourhoods[englishI18n.neighbourhood] ||
+      englishI18n.neighbourhood,
+    district:
+      translations.zhHant.districts[englishI18n.district] || englishI18n.district,
+    area: translations.zhHant.areas[englishI18n.area] || englishI18n.area
+  };
+
+  value.i18n.zhHans = {
+    name: zhHansTranslations.neighbourhoods[key] || key,
+    neighbourhood:
+      zhHansTranslations.neighbourhoods[englishI18n.neighbourhood] ||
+      englishI18n.neighbourhood,
+    district:
+      zhHansTranslations.districts[englishI18n.district] || englishI18n.district,
+    area: zhHansTranslations.areas[englishI18n.area] || englishI18n.area
+  };
+});
 
 // Write the updated JSON back to file
 fs.writeFileSync(filePath, JSON.stringify(neighbourhoods, null, 2));

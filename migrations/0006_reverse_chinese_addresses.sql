@@ -2,7 +2,7 @@
 
 -- Update featureI18n table to construct Chinese formatted addresses
 WITH address_components AS (
-  SELECT 
+  SELECT
     featureId,
     locale,
     json_extract(addressProperties, '$.district') as district,
@@ -17,44 +17,44 @@ WITH address_components AS (
   FROM featureI18n
   WHERE addressProperties IS NOT NULL
     AND json_valid(addressProperties)
-    AND locale IN ('zh-hans', 'zh-hant')
+    AND locale IN ('zhHans', 'zhHant')
 ),
 formatted_addresses AS (
-  SELECT 
+  SELECT
     featureId,
     locale,
     TRIM(
-      COALESCE(district, '') 
-      || CASE 
-         WHEN street_name IS NOT NULL THEN 
-           COALESCE(street_name, '') 
-           || CASE 
-              WHEN building_number_from IS NOT NULL THEN 
-                building_number_from 
+      COALESCE(district, '')
+      || CASE
+         WHEN street_name IS NOT NULL THEN
+           COALESCE(street_name, '')
+           || CASE
+              WHEN building_number_from IS NOT NULL THEN
+                building_number_from
                 || COALESCE(
-                  CASE 
-                    WHEN building_number_to IS NOT NULL AND building_number_to != building_number_from 
-                    THEN '-' || building_number_to 
-                    ELSE '' 
-                  END, 
+                  CASE
+                    WHEN building_number_to IS NOT NULL AND building_number_to != building_number_from
+                    THEN '-' || building_number_to
+                    ELSE ''
+                  END,
                   ''
                 ) || '號'
               ELSE ''
               END
          ELSE ''
          END
-      || CASE 
-         WHEN estate_name IS NOT NULL THEN 
+      || CASE
+         WHEN estate_name IS NOT NULL THEN
            COALESCE(estate_name, '')
-           || CASE 
+           || CASE
               WHEN phase_number IS NOT NULL THEN '第' || phase_number || '期'
               ELSE ''
               END
          ELSE ''
          END
       || COALESCE(building_name, '')
-      || CASE 
-         WHEN block_number IS NOT NULL AND block_type IS NOT NULL THEN 
+      || CASE
+         WHEN block_number IS NOT NULL AND block_type IS NOT NULL THEN
            block_number || block_type
          ELSE ''
          END
@@ -62,10 +62,10 @@ formatted_addresses AS (
   FROM address_components
 )
 UPDATE featureI18n
-SET 
+SET
   displayAddress = fa.formatted_address_zh,
   displayAddressGen = 1
 FROM formatted_addresses fa
 WHERE featureI18n.featureId = fa.featureId
   AND featureI18n.locale = fa.locale
-  AND fa.formatted_address_zh != ''; 
+  AND fa.formatted_address_zh != '';

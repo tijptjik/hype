@@ -1,0 +1,44 @@
+<script lang="ts">
+// I18N
+import { m } from '$lib/i18n'
+// COMPONENTS
+import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import ImportRow from '../../../shared/ImportRow.svelte'
+import CheckCircle from 'virtual:icons/lucide/circle-check'
+import XCircle from 'virtual:icons/lucide/circle-x'
+// TYPES
+import type { UserValidationResult } from '$lib/client/services/import/types'
+
+type Props = {
+  results: UserValidationResult[]
+}
+
+let { results }: Props = $props()
+</script>
+
+<div class="space-y-2 pt">
+  {#each results as result}
+    <ImportRow contentClass="p-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          {#if result.isValid}
+            <Icon src={CheckCircle} class="h-5 w-5 text-success" />
+          {:else}
+            <Icon src={XCircle} class="h-5 w-5 text-error" />
+          {/if}
+          <div>
+            <div class="font-medium">{result.value}</div>
+            {#if result.error}
+              <div class="text-sm text-error">{result.error}</div>
+            {/if}
+          </div>
+        </div>
+        <div class={`badge ${result.isValid ? 'badge-success' : 'badge-error'}`}>
+          {result.isValid
+            ? m.feature_import__users_valid()
+            : m.feature_import__users_invalid()}
+        </div>
+      </div>
+    </ImportRow>
+  {/each}
+</div>

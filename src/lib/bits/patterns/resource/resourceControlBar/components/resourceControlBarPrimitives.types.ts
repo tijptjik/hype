@@ -1,4 +1,6 @@
 import type { Component, Snippet } from 'svelte'
+// TYPES
+import type { LocaleKey } from '$lib/types'
 
 export type ResourceControlBarRootProps = {
   filterLabel: string
@@ -108,7 +110,7 @@ export type ResourceControlBarSelectProps = {
 }
 
 export type ResourceControlBarLocaleToggleItem = {
-  value: string
+  localeKey: LocaleKey
   label: string
   selected: boolean
   onToggle?: (event: MouseEvent) => void

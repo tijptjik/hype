@@ -22,6 +22,7 @@ import type {
   Id,
   NavigableResource,
   Locale,
+  LocaleKey,
   OmniCollectionDescriptor,
 } from '$lib/types'
 import type { Image } from '$lib/db/zod/schema/image.types'
@@ -516,9 +517,9 @@ export const navigateToContributedFeature = async (
   }
   const collectionTitle = {
     en: `${projectName} by ${username}`,
-    'zh-hant': `貢獻者 ${username}`,
-    'zh-hans': `贡献者 ${username}`,
-  } as Record<Locale, string>
+    zhHant: `貢獻者 ${username}`,
+    zhHans: `贡献者 ${username}`,
+  } as Record<LocaleKey, string>
 
   handleCollectionNavigation(
     omniCtx,
@@ -571,9 +572,9 @@ export const navigateToContributedImage = async (
   }
   const collectionTitle = {
     en: `<b>${projectName}</b> with 📷 by <b>${username}</b>`,
-    'zh-hant': `<b>${projectName}</b> 📷 貢獻者 <b>${username}</b>`,
-    'zh-hans': `<b>${projectName}</b> 📷 贡献者 <b>${username}</b>`,
-  } as Record<Locale, string>
+    zhHant: `<b>${projectName}</b> 📷 貢獻者 <b>${username}</b>`,
+    zhHans: `<b>${projectName}</b> 📷 贡献者 <b>${username}</b>`,
+  } as Record<LocaleKey, string>
 
   handleCollectionNavigation(
     omniCtx,
@@ -605,9 +606,9 @@ export const navigateToStarred = async (
   }
   const collectionTitle = {
     en: m.omni__title_star_walks(),
-    'zh-hant': m.omni__title_star_walks(),
-    'zh-hans': m.omni__title_star_walks(),
-  } as Record<Locale, string>
+    zhHant: m.omni__title_star_walks(),
+    zhHans: m.omni__title_star_walks(),
+  } as Record<LocaleKey, string>
 
   handleCollectionNavigation(
     omniCtx,
@@ -639,9 +640,9 @@ export const navigateToVisited = async (
   }
   const collectionTitle = {
     en: m.omni__title_visited_walks(),
-    'zh-hant': m.omni__title_visited_walks(),
-    'zh-hans': m.omni__title_visited_walks(),
-  } as Record<Locale, string>
+    zhHant: m.omni__title_visited_walks(),
+    zhHans: m.omni__title_visited_walks(),
+  } as Record<LocaleKey, string>
 
   handleCollectionNavigation(
     omniCtx,

@@ -1,7 +1,7 @@
 // THIRD PARTY
 import { error } from '@sveltejs/kit'
 // TYPES
-import type { Locale } from '$lib/types'
+import type { LocaleKey } from '$lib/types'
 
 /**
  * Translates text using Azure Cognitive Services Translator
@@ -14,8 +14,8 @@ import type { Locale } from '$lib/types'
  */
 export async function translateText(
   texts: string[],
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: LocaleKey,
+  targetLocale: LocaleKey,
   region: string,
   apiKey: string,
 ): Promise<string[]> {
@@ -62,18 +62,18 @@ export async function translateText(
  * Convert locale to API language tag
  */
 const localeToApiLanguageTag = (
-  source: Locale,
-  target: Locale,
+  source: LocaleKey,
+  target: LocaleKey,
 ): { from: string; to: string } => {
   const sourceMaps = {
     en: 'en',
-    'zh-hant': 'yue',
-    'zh-hans': 'zh-Hans',
+    zhHant: 'yue',
+    zhHans: 'zh-Hans',
   }
   const targetMaps = {
     en: 'en',
-    'zh-hant': 'yue',
-    'zh-hans': 'zh-Hans',
+    zhHant: 'yue',
+    zhHans: 'zh-Hans',
   }
   return {
     from: sourceMaps[source as keyof typeof sourceMaps] || source,

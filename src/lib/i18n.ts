@@ -1,6 +1,10 @@
+// THIRD PARTY
+import type { Locale as DateFnsLocale } from 'date-fns'
+import { enGB, zhCN, zhHK } from 'date-fns/locale'
 // I18N
 import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'
+// TYPES
 import type { Locale, LocaleKey, Neighbourhood } from '$lib/types'
 import type { Resource } from '$lib/types'
 import type {
@@ -8,13 +12,13 @@ import type {
   WritableI18nRecord,
 } from '$lib/db/zod/schema/property.types'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
-import { supportedLocales } from './enums'
+import { supportedLocaleKeys, supportedLocales } from './enums'
 import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
 } from '$lib/db/zod/schema/feature.types'
 
-export const supportedLocaleKeys: LocaleKey[] = ['en', 'zhHans', 'zhHant']
+export { supportedLocaleKeys }
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -30,6 +34,10 @@ export const supportedLocaleKeys: LocaleKey[] = ['en', 'zhHans', 'zhHant']
 //    - toLocaleKey
 //    - toLocaleCode
 //    - normalizeLocaleCode
+//    - toCloudflareLocale
+//    - toDateFnsLocale
+//    - getProtomapLocale
+//    - getDatetimeLocale
 //
 // 3. FORM I18N RECORD HELPERS
 //    - toFormLocaleRecord
@@ -44,7 +52,6 @@ export const supportedLocaleKeys: LocaleKey[] = ['en', 'zhHans', 'zhHant']
 //    - getFPI18n
 //
 // 6. LOCALE LABELS / EXPORTS
-//    - localeLabels
 //    - m, runtime
 //
 // 7. TRANSLATION API HELPERS
@@ -101,14 +108,10 @@ export function toLocaleKey(locale: Locale | LocaleKey): LocaleKey {
   return 'en'
 }
 
-/**
- * Convert organisation form i18n key back to app locale.
- * @param localeKey - Form locale key.
- * @returns Locale value used by entity i18n payloads.
- */
-export function toLocaleCode(localeKey: LocaleKey): Locale {
-  if (localeKey === 'zhHans') return 'zh-hans'
-  if (localeKey === 'zhHant') return 'zh-hant'
+export function toLocaleKebab(locale: LocaleKey | Locale): Locale {
+  if (locale === 'en' || locale === 'zh-hans' || locale === 'zh-hant') return locale
+  if (locale === 'zhHans') return 'zh-hans'
+  if (locale === 'zhHant') return 'zh-hant'
   return 'en'
 }
 
@@ -118,9 +121,54 @@ export function toLocaleCode(localeKey: LocaleKey): Locale {
  */
 export function normalizeLocaleCode(input: string): string {
   if (input === 'zhHans' || input === 'zhHant' || input === 'en') {
-    return toLocaleCode(input as LocaleKey)
+    return toLocaleKebab(input as LocaleKey)
   }
   return input
+}
+
+// ═══════════════════════
+// 2.1 THIRD-PARTY COMPATIBILITY
+// ═══════════════════════
+
+export function toCloudflareLocale(): string {
+  const locale = getLocaleKey()
+  if (locale === 'zhHans') return 'zh-Hans'
+  if (locale === 'zhHant') return 'zh-Hant'
+  return 'en-US'
+}
+
+/**
+ * Convert the current app locale into a date-fns locale object.
+ * @returns The matching date-fns locale for the active app locale.
+ */
+export function toDateFnsLocale(): DateFnsLocale {
+  const locale = getLocaleKey()
+  if (locale === 'zhHant') return zhHK
+  if (locale === 'zhHans') return zhCN
+  return enGB
+}
+
+/**
+ * Convert a locale key into the Protomaps language tag.
+ * @param locale - The locale key to convert.
+ * @returns The matching Protomaps language tag.
+ */
+export function toProtomapLocale(locale: LocaleKey): string {
+  if (locale === 'zhHans') return 'zh-Hans'
+  if (locale === 'zhHant') return 'zh-Hant'
+  return 'en'
+}
+
+/**
+ * Convert the current app locale into the Intl date formatting locale.
+ * @returns The matching Intl date formatting locale tag.
+ */
+export function getDatetimeLocale(): string {
+  const locale = getLocaleKey()
+
+  if (locale === 'zhHans') return 'zh-hans'
+  if (locale === 'zhHant') return 'zh-hant'
+  return 'en-HK'
 }
 
 // ═══════════════════════
@@ -173,7 +221,7 @@ export function ensureLocaleEntryForWrite(
   const localeKey = toLocaleKey(locale)
   if (!i18n[localeKey]) {
     i18n[localeKey] = {
-      locale: toLocaleCode(localeKey),
+      locale: toLocaleKebab(localeKey),
     }
   }
   return i18n[localeKey] as Record<string, unknown>
@@ -227,8 +275,8 @@ export function getI18n<T>(
   obj:
     | Resource
     | Neighbourhood
-    | { i18n: Record<Locale | LocaleKey, T> | null }
-    | Record<Locale | LocaleKey, T>
+    | { i18n: Record<LocaleKey, T> | null }
+    | Record<LocaleKey, T>
     | undefined,
   field: string,
   _userPreferences: UserPreferences,
@@ -248,7 +296,7 @@ export function getI18n<T>(
 
   // CONFIG : Locale key only (no locale fallback chain)
   const localeKey = getLocaleKey()
-  const localeCode = toLocaleCode(localeKey)
+  const localeCode = toLocaleKebab(localeKey)
   const opts = {
     fallback: fallback || defaultFallback,
   }
@@ -268,6 +316,18 @@ export function getI18n<T>(
 }
 
 /**
+ * Determine whether a feature property is effectively blank and should not
+ * trigger missing-translation warnings.
+ * @param obj - The feature property candidate.
+ * @returns `true` when the property has no direct value, no selected option, and no i18n payload.
+ */
+function isEmptyFeatureProperty(obj: Omit<FeatureProperty, 'featureId'>): boolean {
+  const hasDirectValue =
+    typeof obj.value === 'string' ? obj.value.trim().length > 0 : !!obj.value
+  return !hasDirectValue && !obj.propertyValueId && !obj.i18n
+}
+
+/**
  * Get the translated value of a feature property using user preferences.
  * @param obj - The feature property to get the translated value from.
  * @param userPreferences - User preferences with defaults applied
@@ -280,6 +340,9 @@ export function getFPI18n(
   const field = 'value'
   const fallback = m.great_crazy_squid_promise()
 
+  // Ignore empty property shells created for incomplete feature data.
+  if (isEmptyFeatureProperty(obj)) return fallback
+
   // CASE : SPECIFIER Property & UNIVERSAL VALUE
   if (obj.property?.type === 'specifier' && obj.value) {
     return obj.value
@@ -287,7 +350,7 @@ export function getFPI18n(
   // CASE : SPECIFIER Property & I18N VALUE
   else if (obj.property?.type === 'specifier' && obj.i18n) {
     return getI18n<FeaturePropertyI18nDB>(
-      obj.i18n as Record<Locale, FeaturePropertyI18nDB>,
+      obj.i18n as Record<LocaleKey, FeaturePropertyI18nDB>,
       field,
       userPreferences,
       fallback,
@@ -301,7 +364,7 @@ export function getFPI18n(
   else if (obj.property?.type === 'classifier' && obj.propertyValueId) {
     return getI18n<PropertyValueI18nDB>(
       obj.property.values?.find(v => v.id === obj.propertyValueId)?.i18n as Record<
-        Locale,
+        LocaleKey,
         PropertyValueI18nDB
       >,
       field,
@@ -317,16 +380,6 @@ export function getFPI18n(
 // ═══════════════════════
 // 6. LOCALE LABELS / EXPORTS
 // ═══════════════════════
-
-/**
- * Labels for the locales.
- * @returns The labels for the locales.
- */
-export const localeLabels = [
-  { locale: 'en', label: 'EN' },
-  { locale: 'zh-hant', label: 'HK' },
-  { locale: 'zh-hans', label: 'CN' },
-]
 
 // EXPORT PARAGLIDE
 export { m, runtime }
@@ -347,23 +400,23 @@ async function loadTranslateTextRemote(): Promise<
 }
 
 export async function translateText(
-  sourceLang: Locale,
-  targetLang: Locale,
+  sourceLang: Locale | LocaleKey,
+  targetLang: Locale | LocaleKey,
   texts: string[],
 ): Promise<string[]> {
   const translateTextRemote = await loadTranslateTextRemote()
   return translateTextRemote({
-    source: sourceLang,
-    target: targetLang,
+    source: toLocaleKey(sourceLang),
+    target: toLocaleKey(targetLang),
     texts,
   })
 }
 
 type TranslateI18nFieldsParams = {
-  source: Locale
-  target: Locale
+  source: LocaleKey
+  target: LocaleKey
   fields: string[]
-  i18n: Partial<Record<Locale, Record<string, string | null | undefined>>>
+  i18n: Partial<Record<LocaleKey, Record<string, string | null | undefined>>>
   onSuccess?: (translated: Record<string, string>) => void
   onFailure?: (error: unknown) => void
 }

@@ -5,6 +5,7 @@ import type {
   EntityResponse,
   Id,
   Locale,
+  LocaleKey,
   NewFeatureTask,
   PartialExcept,
   ResolveChangedRelationParams,
@@ -201,7 +202,7 @@ export type UserContributedFeature = {
   isDraft?: boolean
   i18n: Partial<
     Record<
-      Locale,
+      LocaleKey,
       {
         title?: string
         description?: string

@@ -8,7 +8,7 @@ as a future reimplementation target, not as a recommendation to restore the old 
 The source snapshot was centered on:
 
 - `src/routes/admin/import/+page.svelte`
-- `src/lib/components/import/*`
+- `src/lib/bits/patterns/import/*`
 - `src/lib/client/services/import/*`
 - `src/lib/context/import.svelte.ts`
 
@@ -148,7 +148,7 @@ type ImportSession = {
     | 'failed'
   organisationId: string | null
   projectId: string | null
-  selectedLocale: 'en' | 'zh-hans' | 'zh-hant' | null
+  selectedLocale: 'en' | 'zhHans' | zhHant | null
   sourceFileName: string
   sourcePayload: string
   mappingPayload: string | null
@@ -205,7 +205,7 @@ Recommended Bits pattern structure:
 - `src/lib/bits/patterns/import/ImportColumnMapping.svelte`
 - `src/lib/bits/patterns/import/ImportUserResolution.svelte`
 - `src/lib/bits/patterns/import/ImportLayerResolution.svelte`
-- `src/lib/bits/patterns/import/ImportPropertyReconciliation.svelte`
+- `src/lib/bits/patterns/import/components/features/steps/properties/PropertyReconciliationStep.svelte`
 - `src/lib/bits/patterns/import/ImportPreview.svelte`
 - `src/lib/bits/patterns/import/ImportExecution.svelte`
 - `src/lib/bits/patterns/import/ImportImageUpload.svelte`
@@ -444,7 +444,7 @@ Recommended improvements:
 These concepts from the legacy implementation should remain, even if their exact types
 change:
 
-- `CSVColumn`
+- `FeatureCSVColumn`
 - inferred sample values per column
 - user resolution map
 - layer resolution map

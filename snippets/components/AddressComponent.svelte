@@ -19,13 +19,13 @@ import type {
 // CONFIG
 const columnHeaders: Record<Locale, string> = {
   en: 'English',
-  'zh-hant': 'Trad. Chinese',
-  'zh-hans': 'Simp. Chinese',
+  zhHant: 'Trad. Chinese',
+  zhHans: 'Simp. Chinese',
 }
 const columnColors: Record<Locale, string> = {
   en: '#E63A65',
-  'zh-hant': '#C52F73',
-  'zh-hans': '#A62481',
+  zhHant: '#C52F73',
+  zhHans: '#A62481',
 }
 
 // Fields sorted from smallest to largest unit
@@ -43,14 +43,20 @@ const addressFields = [
   'blockTypeBeforeNumber',
   'phaseNumber',
   'phaseName',
-  'estateName',
+  'premisesName',
   'streetNumber',
   'streetName',
   'intersection',
+  'lotType',
+  'lotNumber',
+  'hamlet',
+  'village',
+  'town',
+  'microhood',
   'neighbourhood',
-  'subDistrict',
+  'macrohood',
   'district',
-  'region',
+  'area',
   'country',
 ] as const
 
@@ -79,7 +85,7 @@ let sectionProps: SectionProps & { fields: FormField & FormFieldNested } = $prop
 
 // STATE : CONTEXT :: FORM
 // For $formStore reactivity and type safety
-const formStore = (sectionProps.form as unknown as FeatureForm).form
+const formStore = $derived((sectionProps.form as unknown as FeatureForm).form)
 
 // Helper function to check if field is a special geocoder field
 function isGeocoderField(field: string): boolean {
@@ -131,7 +137,7 @@ function hasValue(value: string | null): boolean {
           ]}] bg-glass-300"
           style={`border-color: ${columnColors[locale]}`}
         >
-          <div class="flex flex-col gap-[2px]">
+          <div class="flex flex-col gap-0.5">
             {#each addressFields as fieldKey}
               {@const value = getAddressPropertyValue(fieldKey, locale)}
               {#if hasValue(value)}

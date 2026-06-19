@@ -1,5 +1,6 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
+import { env as publicEnv } from '$env/dynamic/public'
 // I18N
 import { m } from '$lib/i18n'
 // IMAGE
@@ -27,6 +28,7 @@ import type {
   Id,
   ImageCtxConstructorOptions,
   NormalizedImageUploadAsset,
+  PreviewStage,
 } from '$lib/types'
 import type {
   GalleryObjectFit,
@@ -96,6 +98,20 @@ type FeatureImageProviderProject = {
 // ═══════════════════════
 
 /**
+ * Calculates a SHA-256 content hash for the exact bytes that will be uploaded.
+ *
+ * @param file Normalized upload file.
+ * @returns Lowercase hexadecimal SHA-256 digest.
+ */
+export async function calculateImageContentHash(file: File): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+
+  return Array.from(new Uint8Array(digest), byte =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('')
+}
+
+/**
  * Prepares an upload by normalizing the file, building metadata, and requesting an upload session.
  *
  * @param file The file to upload.
@@ -133,9 +149,16 @@ export async function prepareImageUpload(
     typeof performance !== 'undefined' ? performance.now() : Date.now()
   const uploadStartTime = now()
   const uploadLabel = `${file.name}:${file.size}:${file.lastModified}`
-  const extractedMetadata = await extractImageUploadMetadata(file)
-  const normalizedUpload = await normalizeUploadFileForAssetPipeline(file)
-  const metadata = await buildBasicMetadataDocument(normalizedUpload, extractedMetadata)
+  const [extractedMetadata, normalizedUpload] = await Promise.all([
+    extractImageUploadMetadata(file),
+    normalizeUploadFileForAssetPipeline(file),
+  ])
+  const contentHash = await calculateImageContentHash(normalizedUpload.file)
+  const metadata = await buildBasicMetadataDocument(
+    normalizedUpload,
+    extractedMetadata,
+    contentHash,
+  )
   const env = toImageEnv()
   const isAdminRequest = uploadCtx.isAdminRequest ?? true
   const { authImageUpload: authImageUploadRemote } = await loadImageRemotes()
@@ -218,8 +241,6 @@ export async function uploadPreparedImageObject(
 export async function finalizePreparedImageUpload(
   preparedUpload: Awaited<ReturnType<typeof prepareImageUpload>>,
 ): Promise<ImageCtxEnvelope> {
-  const now = (): number =>
-    typeof performance !== 'undefined' ? performance.now() : Date.now()
   const retryAttempts = 4
   const retryBaseDelayMs = 180
   const { finalizeImageUpload: finalizeImageUploadRemote } = await loadImageRemotes()
@@ -290,9 +311,12 @@ export async function uploadAndProcessImage(
 // ═══════════════════════
 
 const DEFAULT_PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
+const DEFAULT_PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
+const DEFAULT_LOCAL_ASSET_BASE_URL = 'http://localhost:8788'
 
 const resolvePublicAssetBaseUrl = (): string => {
-  const configuredBaseUrl = import.meta.env.PUBLIC_ASSET_BASE_URL || ''
+  const configuredBaseUrl =
+    publicEnv.PUBLIC_ASSET_BASE_URL || import.meta.env.PUBLIC_ASSET_BASE_URL || ''
 
   if (configuredBaseUrl) {
     return configuredBaseUrl
@@ -301,8 +325,76 @@ const resolvePublicAssetBaseUrl = (): string => {
   return DEFAULT_PUBLIC_ASSET_BASE_URL
 }
 
-const toImageEnv = (): 'local' | 'preview' | 'production' =>
-  resolveAppStage(resolvePublicAssetBaseUrl())
+const resolvePreviewAssetBaseUrl = (): string => {
+  const configuredBaseUrl =
+    publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL ||
+    import.meta.env.PUBLIC_PREVIEW_ASSET_BASE_URL ||
+    ''
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
+  }
+
+  return DEFAULT_PUBLIC_PREVIEW_ASSET_BASE_URL
+}
+
+/**
+ * Resolves the upload stage for the current client session.
+ *
+ * @param params Optional overrides for tests and non-browser contexts.
+ * @returns Stage whose raw bucket should receive the new upload.
+ * @remarks Runtime public env is preferred over build-time env because local
+ * dev sessions can inject different public asset hosts via Wrangler `.dev.vars`.
+ */
+export const resolveImageUploadEnv = (params?: {
+  appOrigin?: string
+  assetBaseUrl?: string
+}): PreviewStage => {
+  const appOrigin =
+    params?.appOrigin ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  const appStage = resolveAppStage(appOrigin)
+
+  if (appStage !== 'local') {
+    return appStage
+  }
+
+  return resolveAppStage(params?.assetBaseUrl ?? resolvePublicAssetBaseUrl())
+}
+
+const toImageEnv = (): PreviewStage => resolveImageUploadEnv()
+
+/**
+ * Resolves the correct asset host for an image based on its persisted stage.
+ *
+ * @param stage Image environment stored on the image record.
+ * @returns Public asset base URL that can serve that image stage.
+ */
+export const resolveImageAssetBaseUrl = (
+  stage?: PreviewStage,
+  appOrigin?: string,
+): string => {
+  const assetBaseUrl = resolvePublicAssetBaseUrl()
+  const configuredStage = resolveAppStage(assetBaseUrl)
+  const runtimeAppOrigin =
+    appOrigin ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  const runtimeAppStage = resolveAppStage(runtimeAppOrigin)
+
+  if (stage === 'preview') {
+    return configuredStage === 'preview' ? assetBaseUrl : resolvePreviewAssetBaseUrl()
+  }
+
+  if (stage === 'production') {
+    return configuredStage === 'production'
+      ? assetBaseUrl
+      : DEFAULT_PUBLIC_ASSET_BASE_URL
+  }
+
+  if (runtimeAppStage === 'local' && configuredStage === 'production') {
+    return DEFAULT_LOCAL_ASSET_BASE_URL
+  }
+
+  return assetBaseUrl
+}
 
 /**
  * Lazily loads image remotes so utility-only imports of this module do not
@@ -315,6 +407,7 @@ const loadImageRemotes = async (): Promise<
 export async function buildBasicMetadataDocument(
   normalizedUpload: NormalizedImageUploadAsset,
   extractedMetadata: ExtractedImageUploadMetadata,
+  contentHash: string,
 ): Promise<ImageMetadataBasic & { metadata?: Record<string, string> | null }> {
   const metadataEntries: Record<string, string> = {}
 
@@ -335,6 +428,7 @@ export async function buildBasicMetadataDocument(
   return {
     originalFilename: normalizedUpload.originalFilename,
     originalExtension: normalizedUpload.originalExtension,
+    contentHash,
     originalWidth: normalizedUpload.originalWidth,
     originalHeight: normalizedUpload.originalHeight,
     rotation: 0,
@@ -671,7 +765,7 @@ export function getURLfromImage(opts: {
   }
 
   if (image.cdn === 'cloudflareR2') {
-    const imageBaseUrl = resolvePublicAssetBaseUrl()
+    const imageBaseUrl = resolveImageAssetBaseUrl(image.env)
 
     return `${imageBaseUrl}${toCloudflareImageWorkerPath({
       publicId: image.publicId,

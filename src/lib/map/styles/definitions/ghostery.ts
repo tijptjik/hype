@@ -1,6 +1,6 @@
 import type { StyleSpecification } from 'maplibre-gl'
 
-import type { Locale } from '../../../types'
+import type { LocaleKey } from '../../../types'
 
 import {
   buildNamedProtomapsStyle,
@@ -145,7 +145,7 @@ const createBuildingOutlineLayer = (): NonNullable<
 const applyGhosteryThemeToProtomaps = (
   style: StyleSpecification,
   noLabels: boolean,
-  locale: Locale,
+  locale: LocaleKey,
 ): StyleSpecification => {
   if (!style.layers) {
     return style

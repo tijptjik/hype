@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocale, getLocaleKey } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // BITS
 import { Switch } from '$lib/bits'
@@ -13,9 +13,15 @@ import Section from '$lib/components/panels/common/Section.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
-import { supportedLocales, localeNames } from '$lib/enums'
+import {
+  localeNames,
+  LocaleKeysMap,
+  SupportedLocales,
+  supportedLocales,
+  supportedLocaleKeys,
+} from '$lib/enums'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps, LocaleKey } from '$lib/types'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 
 // CONTEXT
@@ -25,6 +31,7 @@ const { ...panelProps }: PanelProps = $props()
 
 // Ensure user preferences object exists and is reactive
 const userPreferences: UserPreferences = $derived(appCtx.getUserPreferences())
+const currentLocaleKey = $derived(getLocaleKey())
 
 // Advanced section features
 const advancedSettings = $derived([
@@ -74,24 +81,26 @@ let advancedOpen = $state(false)
     <details bind:open={preferredOpen}>
       {@render summary(m.settings_language_preferred(), preferredOpen)}
       <div class="ml-4 flex flex-col gap-2 pt-2">
-        {#each supportedLocales as locale}
+        {#each supportedLocaleKeys as localeKey}
           <div class="flex h-12 flex-row items-center justify-between gap-4">
             <div class="flex flex-row items-center gap-4">
               <Icon src={Language} class="h-5 w-5" />
-              <p class="font-normal text-base-content">{localeNames[locale][locale]}</p>
-              {#if locale !== getLocale() && localeNames[getLocale()][locale]}
+              <p class="font-normal text-base-content">
+                {localeNames[localeKey][localeKey]}
+              </p>
+              {#if localeKey !== getLocaleKey() && localeNames[currentLocaleKey][localeKey]}
                 <p class="text-sm text-neutral-content">
-                  ({localeNames[getLocale()][locale]})
+                  ({localeNames[currentLocaleKey][localeKey]})
                 </p>
               {/if}
             </div>
             <input
               type="radio"
               name="language"
-              value={locale}
+              value={SupportedLocales[localeKey]}
               class="radio-primary radio radio-sm mr-4 h-5 w-5 cursor-pointer"
-              checked={getLocale() === locale}
-              onclick={() => appCtx.setLocale(locale)}
+              checked={getLocaleKey() === localeKey}
+              onclick={() => appCtx.setLocale(SupportedLocales[localeKey])}
             >
           </div>
         {/each}
@@ -103,6 +112,7 @@ let advancedOpen = $state(false)
       {@render summary(m.settings_language_additional(), additionalOpen)}
       <div class="ml-4 flex flex-col gap-2 pt-2">
         {#each supportedLocales.filter((locale) => locale !== getLocale()) as locale (locale)}
+          {@const localeKey = LocaleKeysMap[locale] as LocaleKey}
           <div
             class="flex w-full flex-row items-start justify-between gap-3 py-1 pr-1.5"
           >
@@ -111,11 +121,11 @@ let advancedOpen = $state(false)
               class="flex min-w-0 grow cursor-pointer flex-col"
             >
               <span class="font-normal text-base-content"
-                >{localeNames[locale][locale]}</span
+                >{localeNames[localeKey][localeKey]}</span
               >
-              {#if localeNames[getLocale()][locale]}
+              {#if localeNames[currentLocaleKey][localeKey]}
                 <span class="text-sm text-neutral-content"
-                  >({localeNames[getLocale()][locale]})</span
+                  >({localeNames[currentLocaleKey][localeKey]})</span
                 >
               {/if}
             </label>

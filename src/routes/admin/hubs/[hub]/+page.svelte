@@ -140,6 +140,7 @@ import {
 import type {
   Id,
   Locale,
+  LocaleKey,
   User,
   UserRoleDisco,
   UserRoleFieldNameResolverForm,
@@ -933,26 +934,26 @@ const allowedOrganisationIdSet = $derived(new Set(allowedOrganisationIds ?? []))
 
 // § Handlers
 
-function getPolicyFields(locale: Locale) {
+function getPolicyFields(locale: LocaleKey) {
   return formCtx.form.fields.data.i18n[locale]
 }
 
 function getPolicyTextareaAttrs(
-  locale: Locale,
+  locale: LocaleKey,
   field: 'privacyPolicy' | 'termsOfService',
 ): Record<string, unknown> {
   return getPolicyFields(locale)[field].as('textarea') as Record<string, unknown>
 }
 
 function getPolicyGenValue(
-  locale: Locale,
+  locale: LocaleKey,
   field: 'privacyPolicy' | 'termsOfService',
 ): boolean {
   return getGenAiState(formCtx.form, locale, field)
 }
 
 function getPolicyGenAttrs(
-  locale: Locale,
+  locale: LocaleKey,
   field: 'privacyPolicyGen' | 'termsOfServiceGen',
   value: boolean,
 ): Record<string, unknown> {
@@ -970,8 +971,8 @@ function revalidateAfterProgrammaticChange(): void {
 }
 
 async function onTranslate(
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: LocaleKey,
+  targetLocale: LocaleKey,
   sectionKey?: string,
 ): Promise<boolean> {
   const fields =
@@ -988,7 +989,7 @@ async function onTranslate(
   return translated
 }
 
-function onResetLocale(targetLocale: Locale, sectionKey?: string): void {
+function onResetLocale(targetLocale: LocaleKey, sectionKey?: string): void {
   const fields =
     sectionKey === 'policies'
       ? translatableI18nFieldsBySection.policies
@@ -1482,7 +1483,7 @@ $effect(() => {
 $effect(() => {
   const title =
     (isNewHubRef ? `${NEW_TITLE} ${m.hub__title()}` : undefined) ??
-    hub?.data?.i18n?.[getLocale()]?.name ??
+    hub?.data?.i18n?.[getLocaleKey()]?.name ??
     hub?.data?.code ??
     m.hub__title()
   const displayFacets = resolveOptimisticHeaderFacets(

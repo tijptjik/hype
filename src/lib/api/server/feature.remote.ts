@@ -1,6 +1,12 @@
 // REMOTE
-import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
+import {
+  guardedBatchByIdQuery,
+  guardedCommand,
+  guardedForm,
+  guardedQuery,
+} from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
+import { inArray } from 'drizzle-orm'
 import { z } from 'zod'
 // I18N
 import { getLocale } from '$lib/i18n'
@@ -83,6 +89,7 @@ import type {
 // GET
 // - getFeatures
 // - getFeature
+// - getFeatureForImport
 //
 // FORM
 // - featureForm
@@ -107,6 +114,60 @@ const PatchFeatureStateSchema = z.object({
     })
     .optional(),
 })
+
+const ImportFeatureLookupSchema = z.object({
+  id: z.string().min(1),
+  meta: z
+    .object({
+      isAdminRequest: FormBoolean.optional(),
+    })
+    .optional(),
+})
+
+const IMPORT_FEATURE_LOOKUP_BATCH_SIZE = 80
+
+/**
+ * Normalizes GeoJSON point coordinates after form parsing.
+ *
+ * @param geometry - Parsed geometry payload from the feature form.
+ * @returns Geometry with numeric point coordinates when possible.
+ * @remarks FormData submissions can serialize nested numbers as strings; D1 spatial
+ * consumers expect persisted GeoJSON coordinates to remain numeric.
+ */
+function normalizeFeatureFormGeometry<T>(geometry: T): T {
+  const point = geometry as { type?: unknown; coordinates?: unknown }
+  if (point?.type !== 'Point' || !Array.isArray(point.coordinates)) {
+    return geometry
+  }
+
+  const longitude = Number(point.coordinates[0])
+  const latitude = Number(point.coordinates[1])
+  if (Number.isNaN(longitude) || Number.isNaN(latitude)) {
+    return geometry
+  }
+
+  return {
+    ...point,
+    type: 'Point',
+    coordinates: [longitude, latitude],
+  } as T
+}
+
+/**
+ * Splits dynamic feature id lists into D1-safe batches for relation-heavy admin reads.
+ *
+ * @param ids - Authorized feature identifiers to load.
+ * @returns Ordered chunks sized below Cloudflare D1's 100-parameter ceiling.
+ */
+function chunkImportFeatureLookupIds(ids: string[]): string[][] {
+  const chunks: string[][] = []
+
+  for (let index = 0; index < ids.length; index += IMPORT_FEATURE_LOOKUP_BATCH_SIZE) {
+    chunks.push(ids.slice(index, index + IMPORT_FEATURE_LOOKUP_BATCH_SIZE))
+  }
+
+  return chunks
+}
 
 /**
  * Returns a role-aware feature collection for guarded remote callers.
@@ -258,13 +319,99 @@ export const getFeature = getFeatureQuery as typeof getFeatureQuery &
   ) => Promise<EntityResponse<FeatureEntityByProfile<P>>>)
 
 /**
+ * Batched admin lookup used by CSV import reconciliation.
+ *
+ * @param params.id - Feature id to resolve.
+ * @param params.meta - Optional request metadata.
+ * @returns A promise resolving to `{ data }` with the admin profile feature or `null`.
+ * @remarks
+ * Call this query concurrently for many ids so SvelteKit can collapse them into a
+ * single batched remote request.
+ */
+export const getFeatureForImport = guardedBatchByIdQuery<
+  typeof ImportFeatureLookupSchema,
+  EntityResponse<FeatureEntityByProfile<'admin'>>
+>(ImportFeatureLookupSchema, async ({ ids, ctx }) => {
+  const { db, user, userRoles, event } = ctx
+
+  const probes = await Promise.all(
+    ids.map(id =>
+      probeFeatureQuery(db, {
+        ref: id,
+        refKey: 'id',
+      }),
+    ),
+  )
+  const probeById = new Map(
+    probes
+      .filter((probe): probe is NonNullable<typeof probe> => probe !== null)
+      .map(probe => [probe.id, probe]),
+  )
+
+  const readableIds = ids.filter(id => {
+    const probe = probeById.get(id)
+    if (!probe) return false
+
+    const decision = authorizeFeatureReadForProbe({
+      user,
+      userRoles,
+      probe,
+    })
+
+    return decision.allowed
+  })
+
+  // Chunk the authorized ids so the relation-heavy admin read stays under D1's
+  // 100 bound-parameter limit during batched import resolution lookups.
+  const loadedRows: FeatureEntityByProfile<'admin'>[] = []
+
+  for (const readableIdBatch of chunkImportFeatureLookupIds(readableIds)) {
+    const batchResult = await listFeatures(
+      db,
+      getFeatureWithRelations('admin') as never,
+      [inArray(feature.id, readableIdBatch as Id[])],
+      event.locals.hub,
+      {
+        limit: readableIdBatch.length,
+        offset: 0,
+      },
+      undefined,
+      {
+        locale: getLocale(),
+      },
+    )
+
+    loadedRows.push(...(batchResult.data as FeatureEntityByProfile<'admin'>[]))
+  }
+
+  const byId = new Map(
+    loadedRows.map(row => [
+      (row as { id: string }).id,
+      row as FeatureEntityByProfile<'admin'>,
+    ]),
+  )
+
+  const envelopes = await Promise.all(
+    ids.map(async id => [
+      id,
+      (await toEntityResponseShape((byId.get(id) ?? null) as never, 'admin')) as never,
+    ]),
+  )
+  const envelopeById = new Map(
+    envelopes as Array<[string, EntityResponse<FeatureEntityByProfile<'admin'>>]>,
+  )
+
+  return arg => envelopeById.get(arg.id) ?? { data: null }
+})
+
+/**
  * Creates or updates a feature and related i18n/property rows from remote form payload.
  *
  * @param input - Raw form payload parsed by `FeatureFormData`.
  * @returns A promise resolving to `{ data: { id, modifiedAt } }` for the persisted feature.
  * @remarks
  * - `mode` must be explicitly `create` or `update`.
- * - `create` submissions cannot include `meta.id`.
+ * - `create` submissions may include `meta.id` to persist a caller-supplied feature id.
  * - `update` submissions must include `meta.id` and pass optimistic concurrency via
  *   `meta.updatedAt`.
  * - Layer scope is resolved first so organisation/project ancestry comes from persisted
@@ -279,7 +426,11 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const params = FeatureFormData.parse(input)
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
-  const { meta, data } = params
+  const { meta } = params
+  const data = {
+    ...params.data,
+    geometry: normalizeFeatureFormGeometry(params.data.geometry),
+  }
 
   const featureId = meta?.id?.trim()
   const mode = meta?.mode
@@ -305,9 +456,6 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     )
   }
 
-  if (mode === 'create' && featureId) {
-    invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
-  }
   if (mode === 'update' && !featureId) {
     invalid(issue('MISSING_FEATURE_ID'))
   }
@@ -337,7 +485,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
 
     const created = await createFeature(db, {
       ...data,
-      id: nanoid(12),
+      id: featureId || nanoid(12),
       organisationId: resolvedOrganisationId,
       projectId: resolvedProjectId,
       contributorId: data.contributorId ?? user.id ?? null,

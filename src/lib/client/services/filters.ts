@@ -1,7 +1,7 @@
 // GUARDS
 import { isFeature } from '$lib/types'
 //I18N
-import { getLocaleKey, m, supportedLocaleKeys, toLocaleCode } from '$lib/i18n'
+import { getLocaleKey, m, supportedLocaleKeys } from '$lib/i18n'
 // ENUMS
 import { localeCodes } from '$lib/enums'
 import type { FirstClassResource } from '$lib/enums'
@@ -262,8 +262,8 @@ export function getResourceLocaleToggleItems<T extends ViewFilterResource>(
   }
 
   return supportedLocaleKeys.map(localeKey => ({
-    value: localeKey,
-    label: localeCodes[toLocaleCode(localeKey)],
+    localeKey,
+    label: localeCodes[localeKey],
     selected: translationLocales[localeKey],
     onToggle: () => toggleResourceTranslationLocale(adminCtx, resource, localeKey),
   }))
@@ -288,13 +288,13 @@ export function getNextTriState(currentValue: FilterTriState): FilterTriState {
  * Toggles a resource translation locale while preserving a valid non-current selection.
  * @param adminCtx Admin context containing mutable filter state.
  * @param resource Resource whose translation locales should be updated.
- * @param locale Locale to toggle.
+ * @param localeKey Locale key to toggle.
  * @returns Nothing.
  */
 export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
   adminCtx: AdminCtx,
   resource: T,
-  locale: LocaleKey,
+  localeKey: LocaleKey,
 ): void {
   const resourceFilters = getResourceFilters(adminCtx, resource)
   if (!resourceFilters || !supportsTranslationLocales(resourceFilters)) {
@@ -302,7 +302,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
   }
 
   const currentLocaleKey = getLocaleKey()
-  if (locale === currentLocaleKey) {
+  if (localeKey === currentLocaleKey) {
     return
   }
 
@@ -311,7 +311,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
     return
   }
 
-  normalizedLocales[locale] = !normalizedLocales[locale]
+  normalizedLocales[localeKey] = !normalizedLocales[localeKey]
 
   const hasActiveNonCurrentLocale = supportedLocaleKeys.some(
     supportedLocale =>
@@ -319,7 +319,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
   )
 
   if (!hasActiveNonCurrentLocale) {
-    normalizedLocales[locale] = true
+    normalizedLocales[localeKey] = true
   }
 
   const nextTranslationLocales = { ...resourceFilters.translationLocales }
@@ -477,7 +477,6 @@ function getResourceFilters<T extends ViewFilterResource>(
 ): ViewFilters[T] | null {
   const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
-  const resourceFilterRecord = resourceFilters as Record<string, unknown>
   return resourceFilters
 }
 
@@ -1044,7 +1043,7 @@ export function getSimpleFilterState<K extends keyof FeatureViewFilters>(
   adminCtx: AdminCtx,
   filterKey: K,
   propertyId?: Id,
-): FilterTriState | any {
+): ResourceFilterValue | null {
   if (!propertyId) {
     return getResourceFilterState(
       adminCtx,
@@ -1237,7 +1236,10 @@ export function setPropertyFilterState(
  * @returns The localized chip label.
  */
 export function getFeatureTaskLabel(
-  filterDef: any,
+  filterDef: Pick<
+    ResourceFilterConfigBase,
+    'falseLabel' | 'trueLabel' | 'invertBoolean'
+  >,
   targetState: boolean,
   isTranslation: boolean = false,
 ): string {

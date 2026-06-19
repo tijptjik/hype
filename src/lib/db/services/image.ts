@@ -27,7 +27,6 @@ import { insert, insertRelated, update, updateRelated } from '../crud'
 import {
   ImageContextResource,
   ImageContextResourceExtended,
-  ImageCDN,
   ImageEnv,
   ImageIntentPublic,
 } from '$lib/enums'
@@ -67,6 +66,7 @@ import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
 //
 // 3. LOOKUPS
 //    - getImageById
+//    - getFeatureCanonicalImageOccupancy
 //    - getImageForContextType
 //    - getImagesForFeature
 //    - getImagesForTask
@@ -215,6 +215,34 @@ export const getImageById = async (
     .where(and(...conditions))
   if (!result) return undefined
   return result as ImageDBFlat
+}
+
+/**
+ * Returns feature ids that already have a canonical image assignment.
+ *
+ * @param db - The database instance.
+ * @param featureIds - Feature ids to probe.
+ * @returns Unique feature ids with canonical occupancy.
+ */
+export const getFeatureCanonicalImageOccupancy = async (
+  db: Database,
+  featureIds: Id[],
+): Promise<Id[]> => {
+  if (featureIds.length === 0) return []
+
+  const rows = await db
+    .select({
+      featureId: featureImage.featureId,
+    })
+    .from(featureImage)
+    .where(
+      and(
+        inArray(featureImage.featureId, featureIds),
+        eq(featureImage.intent, 'canonical'),
+      ),
+    )
+
+  return [...new Set(rows.map(row => row.featureId))]
 }
 
 export const getImagesByIds = async (

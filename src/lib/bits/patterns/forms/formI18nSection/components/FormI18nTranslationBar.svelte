@@ -6,6 +6,7 @@ import AlertCircle from 'virtual:icons/lucide/alert-circle'
 import Eraser from 'virtual:icons/lucide/eraser'
 import Languages from 'virtual:icons/lucide/languages'
 import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import { toLocaleKey } from '$lib/i18n'
 import type { FormSectionProps } from '../formI18nSection.types'
 
 type Props = Pick<
@@ -15,6 +16,7 @@ type Props = Pick<
   targetLocale: Locale
   isVisible?: boolean
   isEditing?: boolean
+  positionStyle?: string
 }
 
 let {
@@ -25,6 +27,7 @@ let {
   sectionKey,
   isVisible = false,
   isEditing = false,
+  positionStyle = '',
 }: Props = $props()
 
 let status = $state<'idle' | 'loading' | 'error'>('idle')
@@ -33,7 +36,7 @@ let errorResetTimer = $state<ReturnType<typeof setTimeout> | null>(null)
 let resetFlashToken = $state(0)
 
 const sourceLocales = $derived(
-  supportedLocales.filter(locale => locale !== targetLocale) as Locale[],
+  supportedLocales.filter(locale => locale !== targetLocale),
 )
 const isLoading = $derived(status === 'loading')
 
@@ -83,7 +86,7 @@ $effect(() => {
 })
 </script>
 
-<div class="bits-form__i18n-translation">
+<div class="bits-form__i18n-translation" style={positionStyle}>
   <div class={localeCodeClass}>
     {#key status}
       {#if status === 'loading'}
@@ -98,7 +101,7 @@ $effect(() => {
         </span>
       {:else}
         <span in:fade={{ duration: 250 }} out:fade={{ duration: 250 }}>
-          {localeCodes[targetLocale] ?? targetLocale.toUpperCase()}
+          {localeCodes[toLocaleKey(targetLocale)]}
         </span>
       {/if}
     {/key}
@@ -117,7 +120,7 @@ $effect(() => {
           tabindex={isVisible ? 0 : -1}
           onclick={event => handleTranslate(event, sourceLocale)}
         >
-          {localeCodes[sourceLocale] ?? sourceLocale.toUpperCase()}
+          {localeCodes[toLocaleKey(sourceLocale)] ?? sourceLocale.toUpperCase()}
         </button>
       {/each}
       <button

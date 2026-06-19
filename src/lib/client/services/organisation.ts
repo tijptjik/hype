@@ -2,7 +2,7 @@
 import type { OrganisationRoleType } from '$lib/enums'
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '$lib/capabilities'
 // I18N
-import { toLocaleCode, toLocaleKey } from '$lib/i18n'
+import { toLocaleKebab, toLocaleKey } from '$lib/i18n'
 import { toFormLocaleRecord } from '$lib/i18n'
 // SERVICES
 import {
@@ -159,7 +159,7 @@ function toOrganisationEntityI18nPatchFromFormInput(
   const next: Record<string, Partial<OrganisationFormI18nValue>> = {}
 
   for (const formLocaleKey of formLocaleKeys) {
-    const entityLocaleKey = toLocaleCode(formLocaleKey)
+    const entityLocaleKey = toLocaleKebab(formLocaleKey)
     const localeData = formI18n[formLocaleKey]
     if (!localeData || typeof localeData !== 'object') continue
 

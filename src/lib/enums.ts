@@ -1,47 +1,50 @@
 /* ----------------- */
 // I18N
 
-import type { Locale } from './types'
+import type { Locale, LocaleKey } from './types'
 
 /* -------- */
 export enum SupportedLocales {
   en = 'en',
-  'zh-hant' = 'zh-hant',
-  'zh-hans' = 'zh-hans',
+  zhHant = 'zh-hant',
+  zhHans = 'zh-hans',
 }
-export const supportedLocales = Object.values(SupportedLocales)
+export enum LocaleKeysMap {
+  en = 'en',
+  'zh-hant' = 'zhHant',
+  'zh-hans' = 'zhHans',
+}
+export const supportedLocales = Object.values(SupportedLocales) as Locale[]
+export const supportedLocaleKeys = Object.keys(SupportedLocales) as LocaleKey[]
 
-// The Locale type is already defined in ./types and inferred from SupportedLocales values
-// This creates the union type: 'en' | 'zh-hant' | 'zh-hans'
+export enum localeCodes {
+  en = 'EN',
+  zhHant = 'HK',
+  zhHans = 'CN',
+}
 
 export enum LocaleNamesEn {
   en = 'English',
-  'zh-hant' = 'Traditional Chinese',
-  'zh-hans' = 'Simplified Chinese',
+  zhHant = 'Traditional Chinese',
+  zhHans = 'Simplified Chinese',
 }
 
 export enum LocaleNamesZhHant {
   en = '英語',
-  'zh-hant' = '繁體中文',
-  'zh-hans' = '簡體中文',
+  zhHant = '繁體中文',
+  zhHans = '簡體中文',
 }
 
 export enum LocaleNamesZhHans {
   en = '英语',
-  'zh-hant' = '繁体中文',
-  'zh-hans' = '简体中文',
+  zhHant = '繁体中文',
+  zhHans = '简体中文',
 }
 
-export const localeNames: Record<Locale, Record<Locale, string>> = {
-  [SupportedLocales.en]: LocaleNamesEn,
-  [SupportedLocales['zh-hant']]: LocaleNamesZhHant,
-  [SupportedLocales['zh-hans']]: LocaleNamesZhHans,
-}
-
-export const localeCodes: Record<Locale, string> = {
-  [SupportedLocales.en]: 'EN',
-  [SupportedLocales['zh-hant']]: 'HK',
-  [SupportedLocales['zh-hans']]: 'CN',
+export const localeNames: Record<LocaleKey, Record<LocaleKey, string>> = {
+  en: LocaleNamesEn,
+  zhHant: LocaleNamesZhHant,
+  zhHans: LocaleNamesZhHans,
 }
 
 /* ----------------- */

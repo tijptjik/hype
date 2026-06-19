@@ -34,8 +34,8 @@ const arrowClasses = $derived(
 {#snippet tooltipRoot()}
   <TooltipPrimitive.Root bind:open {...restProps}>
     <TooltipPrimitive.Trigger {...triggerProps}>
-      {#snippet child({ props })}
-        <div {...props} class={triggerClasses}>{@render trigger()}</div>
+      {#snippet child(_triggerChild)}
+        <div {..._triggerChild.props} class={triggerClasses}>{@render trigger()}</div>
       {/snippet}
     </TooltipPrimitive.Trigger>
 
@@ -46,7 +46,6 @@ const arrowClasses = $derived(
         sideOffset={contentProps.sideOffset ?? 8}
       >
         {@render children()}
-        <!-- <TooltipPrimitive.Arrow class={arrowClasses} /> -->
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   </TooltipPrimitive.Root>

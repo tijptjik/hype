@@ -21,6 +21,8 @@ import {
 } from '..'
 import { insert, insertManyRelated, replaceManyRelated } from '../crud'
 import { retryBusyRead } from './sqlite'
+// I18N
+import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 import type {
@@ -110,10 +112,13 @@ export const createI18n = async (
   i18n: Record<LocaleKey, LayerI18nNew>,
   layerId: string,
 ): Promise<LayerI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, LayerI18nNew>,
+  ) as Record<LocaleKey, LayerI18nNew>
   return await insertManyRelated(
     db,
     layerI18n,
-    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as never,
+    toRelatedRecords(normalizedI18n, 'layerId', layerId, 'locale') as never,
     'layerId',
     layerId,
   )
@@ -644,6 +649,34 @@ export const updateLayerArchivedStateById = async (
 }
 
 /**
+ * Cascades a layer archive-state change into descendant features.
+ * Existing local archive snapshots are preserved while an ancestor remains archived so
+ * unarchiving restores the prior descendant state instead of reviving every record.
+ * @param db - The database instance.
+ * @param params - The parent layer id and next archived state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
+export const cascadeLayerArchivedStateToDescendants = async (
+  db: Database,
+  params: {
+    layerId: Id
+    state: boolean
+  },
+): Promise<void> => {
+  await db
+    .update(feature)
+    .set({
+      localIsArchived: params.state
+        ? sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`
+        : null,
+      isArchived: params.state
+        ? sql`1`
+        : sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`,
+    })
+    .where(eq(feature.layerId, params.layerId))
+}
+
+/**
  * Replaces layer i18n rows from locale-keyed payload.
  * Used by update orchestration to persist submitted translations.
  */
@@ -652,10 +685,13 @@ export const updateI18n = async (
   i18n: Record<LocaleKey, LayerI18nPartial>,
   layerId: string,
 ): Promise<LayerI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, LayerI18nPartial>,
+  ) as Record<LocaleKey, LayerI18nPartial>
   return await replaceManyRelated(
     db,
     layerI18n,
-    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as never,
+    toRelatedRecords(normalizedI18n, 'layerId', layerId, 'locale') as never,
     layerI18n.layerId,
     layerId,
   )

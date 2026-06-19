@@ -31,6 +31,7 @@ import type {
   WireHeaderFormActionHandlersParams,
   ResourceEditorHeaderController,
   Locale,
+  LocaleKey,
   FacetType,
   FormBooleanValue,
   ResolveChangedRelationParams,
@@ -1384,11 +1385,10 @@ export function resolveFacetTabsWithIssues(params: {
  */
 export function getGenAiState(
   form: GenAiStateResolverForm,
-  locale: Locale | LocaleKey,
+  locale: LocaleKey,
   field: GenAiField,
 ): boolean {
-  const localeKey = toLocaleKey(locale)
-  const localeData = form.fields.value().data?.i18n?.[localeKey]
+  const localeData = form.fields.value().data?.i18n?.[locale]
   if (!localeData) return false
   if (field === 'title') return Boolean(localeData.titleGen)
   if (field === 'name') return Boolean(localeData.nameGen)
@@ -1497,11 +1497,7 @@ export async function translateLocaleIntoEmptyFields<
   const currentFormData = form.fields.value().data
   if (!currentFormData?.i18n) return false
 
-  const localeKeyMap: Record<Locale, string> = {
-    en: 'en',
-    'zh-hans': 'zhHans',
-    'zh-hant': 'zhHant',
-  }
+  const sourceLocaleKey = toLocaleKey(sourceLocale)
   const targetLocaleKey = toLocaleKey(targetLocale)
   const targetLocaleData = currentFormData.i18n?.[targetLocaleKey]
   if (!targetLocaleData) return false
@@ -1513,30 +1509,30 @@ export async function translateLocaleIntoEmptyFields<
   })
   if (fieldsToTranslate.length === 0) return false
 
-  const i18n = {
-    en: Object.fromEntries(
+  /**
+   * Builds the translation payload for a single locale using the current form i18n state.
+   * @param localeKey - Form locale key to read from.
+   * @returns Field/value pairs keyed by translatable field name.
+   */
+  const toTranslationLocaleRecord = (
+    localeKey: LocaleKey,
+  ): Record<string, string | null | undefined> =>
+    Object.fromEntries(
       fieldsToTranslate.map(field => [
         field,
-        currentFormData.i18n?.[localeKeyMap.en]?.[field] ?? '',
+        currentFormData.i18n?.[localeKey]?.[field] ?? '',
       ]),
-    ),
-    'zh-hans': Object.fromEntries(
-      fieldsToTranslate.map(field => [
-        field,
-        currentFormData.i18n?.[localeKeyMap['zh-hans']]?.[field] ?? '',
-      ]),
-    ),
-    'zh-hant': Object.fromEntries(
-      fieldsToTranslate.map(field => [
-        field,
-        currentFormData.i18n?.[localeKeyMap['zh-hant']]?.[field] ?? '',
-      ]),
-    ),
+    )
+
+  const i18n: Partial<Record<LocaleKey, Record<string, string | null | undefined>>> = {
+    en: toTranslationLocaleRecord('en'),
+    zhHans: toTranslationLocaleRecord('zhHans'),
+    zhHant: toTranslationLocaleRecord('zhHant'),
   }
 
   const translated = await translateI18nFields({
-    source: sourceLocale,
-    target: targetLocale,
+    source: sourceLocaleKey,
+    target: targetLocaleKey,
     fields: fieldsToTranslate,
     i18n,
   })
