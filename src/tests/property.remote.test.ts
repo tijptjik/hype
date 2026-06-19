@@ -107,6 +107,7 @@ vi.mock('$lib/db/zod', () => ({
   ListQueryParamsSchema: {},
   ProjectPropertiesQuery: {},
   ProjectPropertyFormData: {},
+  ProjectPropertyValueFormData: {},
 }))
 
 let remote: Awaited<typeof import('$lib/api/server/property.remote')>
