@@ -118,8 +118,11 @@ export const createI18n = async (
   i18n: Record<Locale, PropertyI18nNew>,
   propertyId: string,
 ): Promise<PropertyI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, PropertyI18nNew>,
+  )
   const relatedRecords = toRelatedRecords(
-    i18n,
+    normalizedI18n,
     'propertyId',
     propertyId,
     'locale',
@@ -520,8 +523,11 @@ export const updateI18n = async (
   i18n: Record<Locale, PropertyI18nPartial>,
   propertyId: string,
 ): Promise<PropertyI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, PropertyI18nPartial>,
+  )
   const relatedRecords = toRelatedRecords(
-    i18n,
+    normalizedI18n,
     'propertyId',
     propertyId,
     'locale',

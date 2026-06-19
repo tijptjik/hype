@@ -46,6 +46,16 @@ type InitAddNewFeatureOptions = {
   navigateToRoute?: boolean
 }
 
+function sanitizeFeaturePropertyValueId(
+  propertyValueId: string | null | undefined,
+): string {
+  if (propertyValueId === 'true' || propertyValueId === 'false') {
+    return ''
+  }
+
+  return propertyValueId ?? ''
+}
+
 // ---
 /********************
  *  0. NEW FEATURE FLOW
@@ -287,7 +297,7 @@ export function toFeatureFormInput(
         value.properties?.map(property => ({
           propertyId: property.propertyId,
           value: property.value ?? '',
-          propertyValueId: property.propertyValueId ?? '',
+          propertyValueId: sanitizeFeaturePropertyValueId(property.propertyValueId),
           i18n: {
             en: {
               value: property.i18n?.en?.value ?? '',
@@ -386,7 +396,7 @@ export function getProgrammaticFeatureInputEntries(
     appendEntry(`data.properties[${index}].value`, property.value ?? '')
     appendEntry(
       `data.properties[${index}].propertyValueId`,
-      property.propertyValueId ?? '',
+      sanitizeFeaturePropertyValueId(property.propertyValueId),
     )
 
     if (property.property?.isTranslatable) {

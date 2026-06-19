@@ -21,6 +21,8 @@ import {
 } from '..'
 import { insert, insertManyRelated, replaceManyRelated } from '../crud'
 import { retryBusyRead } from './sqlite'
+// I18N
+import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
 import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 import type {
@@ -110,10 +112,13 @@ export const createI18n = async (
   i18n: Record<LocaleKey, LayerI18nNew>,
   layerId: string,
 ): Promise<LayerI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, LayerI18nNew>,
+  ) as Record<LocaleKey, LayerI18nNew>
   return await insertManyRelated(
     db,
     layerI18n,
-    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as never,
+    toRelatedRecords(normalizedI18n, 'layerId', layerId, 'locale') as never,
     'layerId',
     layerId,
   )
@@ -680,10 +685,13 @@ export const updateI18n = async (
   i18n: Record<LocaleKey, LayerI18nPartial>,
   layerId: string,
 ): Promise<LayerI18nDB[]> => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, LayerI18nPartial>,
+  ) as Record<LocaleKey, LayerI18nPartial>
   return await replaceManyRelated(
     db,
     layerI18n,
-    toRelatedRecords(i18n, 'layerId', layerId, 'locale') as never,
+    toRelatedRecords(normalizedI18n, 'layerId', layerId, 'locale') as never,
     layerI18n.layerId,
     layerId,
   )

@@ -16,6 +16,27 @@ type FeaturePointGeometry = {
   coordinates: [number, number]
 }
 
+function normalizeToggleValue(value: unknown): 'true' | 'false' | null {
+  if (typeof value !== 'string') return null
+
+  const normalized = value.trim().toLowerCase()
+  if (['true', '1', 'yes'].includes(normalized)) return 'true'
+  if (['false', '0', 'no'].includes(normalized)) return 'false'
+
+  return null
+}
+
+function isBooleanLikePropertyValueId(value: unknown): value is 'true' | 'false' {
+  return normalizeToggleValue(value) !== null
+}
+
+type DraftPropertyLocaleValue = {
+  value?: string | null
+  valueGen?: boolean | null
+}
+
+type DraftPropertyI18nMap = Record<string, DraftPropertyLocaleValue>
+
 export interface FeatureResolutionData {
   rowIndex: number
   existing?: Feature
@@ -930,9 +951,32 @@ function extractSubmittedData(
         if (!submitted.properties[column.extractedPropertyKey || column.propertyKey]) {
           submitted.properties[column.extractedPropertyKey || column.propertyKey] = {}
         }
-        submitted.properties[column.extractedPropertyKey || column.propertyKey][
-          column.field
-        ] = value
+        if (column.locale && column.locale !== 'None') {
+          const localeKey = toLocaleKey(column.locale)
+          if (
+            !submitted.properties[column.extractedPropertyKey || column.propertyKey]
+              .i18n
+          ) {
+            submitted.properties[
+              column.extractedPropertyKey || column.propertyKey
+            ].i18n = {}
+          }
+          if (
+            !submitted.properties[column.extractedPropertyKey || column.propertyKey]
+              .i18n[localeKey]
+          ) {
+            submitted.properties[
+              column.extractedPropertyKey || column.propertyKey
+            ].i18n[localeKey] = {}
+          }
+          submitted.properties[column.extractedPropertyKey || column.propertyKey].i18n[
+            localeKey
+          ][column.field] = value
+        } else {
+          submitted.properties[column.extractedPropertyKey || column.propertyKey][
+            column.field
+          ] = value
+        }
         break
 
       case 'AddressMeta':
@@ -1539,6 +1583,7 @@ function mergeProperties(
 ): any[] {
   const merged: any[] = []
   const processedKeys = new Set<string>()
+  const existingPropertyByKey = new Map<string, any>()
 
   // Get property enriched data from property reconciliation step
   const propertyReconciliation = importCtx.getPropertyReconciliation()
@@ -1567,6 +1612,9 @@ function mergeProperties(
   // Keep existing properties that aren't referenced by submitted or enriched
   existingProperties.forEach(prop => {
     const propertyKey = prop.property?.key
+    if (propertyKey) {
+      existingPropertyByKey.set(propertyKey, prop)
+    }
     if (
       propertyKey &&
       !submittedProperties[propertyKey] &&
@@ -1580,12 +1628,31 @@ function mergeProperties(
   Object.keys(submittedProperties).forEach(key => {
     const submittedProp = submittedProperties[key]
     processedKeys.add(key)
+    const existingProperty = existingPropertyByKey.get(key)
+    const matchedProperty = fetchedProperties.find(property => property.key === key)
+    const isRangeField = matchedProperty?.component === 'RangeField'
+    const isToggleField = matchedProperty?.component === 'ToggleField'
+    const isTranslatableSpecifier =
+      (matchedProperty?.type === 'specifier' ||
+        existingProperty?.property?.type === 'specifier') &&
+      Boolean(
+        matchedProperty?.isTranslatable ?? existingProperty?.property?.isTranslatable,
+      )
 
     // Try to get propertyId from enriched properties first, then from reconciliation data
     const enrichedPropData = enrichedProperties[key]
     const propertyId =
-      enrichedPropData?.propertyId || propertyKeyToId.get(key) || submittedProp.id || ''
+      enrichedPropData?.propertyId ||
+      propertyKeyToId.get(key) ||
+      matchedProperty?.id ||
+      submittedProp.id ||
+      ''
     const enrichedData = propertyReconciliation.enrichedData.get(key)
+
+    let resolvedMappedValue: string | null = null
+    if (!resolvedMappedValue && enrichedData?.resolvedValues && submittedProp.value) {
+      resolvedMappedValue = enrichedData.resolvedValues[submittedProp.value] || null
+    }
 
     // Resolve property value ID from mapping or direct value
     // Priority: submitted > enriched properties > reconciliation data
@@ -1596,17 +1663,44 @@ function mergeProperties(
       null
 
     // Check if we have a property value mapping for this value
-    if (!propertyValueId && enrichedData?.resolvedValues && submittedProp.value) {
-      const mappedValueId = enrichedData.resolvedValues[submittedProp.value]
-      propertyValueId = mappedValueId || null
+    if (!propertyValueId && !isRangeField && !isToggleField && resolvedMappedValue) {
+      propertyValueId = resolvedMappedValue
     }
+
+    const mappedToggleValue =
+      normalizeToggleValue(resolvedMappedValue) ||
+      normalizeToggleValue(submittedProp.value)
+    const shouldUseDirectToggleValue =
+      isToggleField ||
+      (!matchedProperty &&
+        mappedToggleValue !== null &&
+        enrichedData?.propertyValueMapping !== undefined &&
+        Object.keys(enrichedData.propertyValueMapping).length === 0)
+
+    const resolvedValue =
+      isRangeField || shouldUseDirectToggleValue
+        ? resolvedMappedValue || mappedToggleValue || submittedProp.value || null
+        : submittedProp.value || null
+
+    if (shouldUseDirectToggleValue || isBooleanLikePropertyValueId(propertyValueId)) {
+      propertyValueId = null
+    }
+
+    const propertyI18n = buildMergedFeaturePropertyI18n({
+      existingProperty,
+      submittedProperty: submittedProp,
+      translatedValues: enrichedPropData?.translatedValues,
+      isTranslatableSpecifier,
+    })
 
     merged.push({
       featureId: featureId,
       propertyId: propertyId,
       propertyValueId: propertyValueId,
-      value: propertyValueId ? null : submittedProp.value || null, // If propertyValueId exists, value should be null
-      i18n: null, // TODO: Implement featurePropertyI18n
+      value: propertyValueId || propertyI18n ? null : resolvedValue, // If propertyValueId or i18n exists, value should be null
+      i18n: propertyI18n,
+      property: matchedProperty || existingProperty?.property,
+      propertyValue: existingProperty?.propertyValue,
     })
 
     const finalValue = propertyValueId ? null : submittedProp.value || null
@@ -1620,30 +1714,139 @@ function mergeProperties(
   Object.keys(enrichedProperties).forEach(key => {
     if (!processedKeys.has(key)) {
       const enrichedProp = enrichedProperties[key]
+      const existingProperty = existingPropertyByKey.get(key)
+      const matchedProperty = fetchedProperties.find(property => property.key === key)
+      const isRangeField = matchedProperty?.component === 'RangeField'
+      const isToggleField = matchedProperty?.component === 'ToggleField'
+      const isTranslatableSpecifier =
+        (matchedProperty?.type === 'specifier' ||
+          existingProperty?.property?.type === 'specifier') &&
+        Boolean(
+          matchedProperty?.isTranslatable ?? existingProperty?.property?.isTranslatable,
+        )
       const propertyId =
-        enrichedProp.propertyId || propertyKeyToId.get(key) || enrichedProp.id || ''
+        enrichedProp.propertyId ||
+        propertyKeyToId.get(key) ||
+        matchedProperty?.id ||
+        enrichedProp.id ||
+        ''
       const enrichedData = propertyReconciliation.enrichedData.get(key)
+
+      let resolvedMappedValue: string | null = null
+      if (!resolvedMappedValue && enrichedData?.resolvedValues && enrichedProp.value) {
+        resolvedMappedValue = enrichedData.resolvedValues[enrichedProp.value] || null
+      }
 
       // Resolve property value ID from mapping or direct value
       let propertyValueId =
         enrichedProp.propertyValueId || enrichedData?.propertyValueId || null
 
       // Check if we have a property value mapping for this value
-      if (!propertyValueId && enrichedData?.resolvedValues && enrichedProp.value) {
-        propertyValueId = enrichedData.resolvedValues[enrichedProp.value] || null
+      if (!propertyValueId && !isRangeField && !isToggleField && resolvedMappedValue) {
+        propertyValueId = resolvedMappedValue
       }
+
+      const mappedToggleValue =
+        normalizeToggleValue(resolvedMappedValue) ||
+        normalizeToggleValue(enrichedProp.value)
+      const shouldUseDirectToggleValue =
+        isToggleField ||
+        (!matchedProperty &&
+          mappedToggleValue !== null &&
+          enrichedData?.propertyValueMapping !== undefined &&
+          Object.keys(enrichedData.propertyValueMapping).length === 0)
+
+      const resolvedValue =
+        isRangeField || shouldUseDirectToggleValue
+          ? resolvedMappedValue || mappedToggleValue || enrichedProp.value || null
+          : enrichedProp.value || null
+
+      if (shouldUseDirectToggleValue || isBooleanLikePropertyValueId(propertyValueId)) {
+        propertyValueId = null
+      }
+
+      const propertyI18n = buildMergedFeaturePropertyI18n({
+        existingProperty,
+        submittedProperty: enrichedProp,
+        translatedValues: enrichedProp.translatedValues,
+        isTranslatableSpecifier,
+      })
 
       merged.push({
         featureId: featureId,
         propertyId: propertyId,
         propertyValueId: propertyValueId,
-        value: propertyValueId ? null : enrichedProp.value || null, // If propertyValueId exists, value should be null
-        i18n: null, // TODO: Implement featurePropertyI18n
+        value: propertyValueId || propertyI18n ? null : resolvedValue, // If propertyValueId or i18n exists, value should be null
+        i18n: propertyI18n,
+        property: matchedProperty || existingProperty?.property,
+        propertyValue: existingProperty?.propertyValue,
       })
     }
   })
 
   return merged
+}
+
+function buildMergedFeaturePropertyI18n(params: {
+  existingProperty?: any
+  submittedProperty?: Record<string, any> | undefined
+  translatedValues?: unknown
+  isTranslatableSpecifier: boolean
+}): DraftPropertyI18nMap | null {
+  const {
+    existingProperty,
+    submittedProperty,
+    translatedValues,
+    isTranslatableSpecifier,
+  } = params
+
+  if (!isTranslatableSpecifier) {
+    return null
+  }
+
+  const mergedI18n: DraftPropertyI18nMap = {}
+  const existingI18n = existingProperty?.i18n as DraftPropertyI18nMap | null | undefined
+  const submittedI18n = submittedProperty?.i18n as
+    | DraftPropertyI18nMap
+    | null
+    | undefined
+
+  Object.entries(existingI18n ?? {}).forEach(([localeKey, entry]) => {
+    const value = entry?.value?.trim()
+    if (!value) return
+    mergedI18n[localeKey] = {
+      value,
+      valueGen: Boolean(entry?.valueGen),
+    }
+  })
+
+  Object.entries(submittedI18n ?? {}).forEach(([localeKey, entry]) => {
+    const value = entry?.value?.trim()
+    if (!value) return
+    mergedI18n[localeKey] = {
+      value,
+      valueGen: Boolean(entry?.valueGen),
+    }
+  })
+
+  if (translatedValues && typeof translatedValues === 'object') {
+    Object.entries(translatedValues as Record<string, string>).forEach(
+      ([locale, value]) => {
+        const trimmedValue = value?.trim()
+        if (!trimmedValue) return
+        const localeKey = toLocaleKey(locale)
+
+        if (!mergedI18n[localeKey]?.value) {
+          mergedI18n[localeKey] = {
+            value: trimmedValue,
+            valueGen: true,
+          }
+        }
+      },
+    )
+  }
+
+  return Object.keys(mergedI18n).length > 0 ? mergedI18n : null
 }
 
 /**
@@ -1719,6 +1922,12 @@ export async function submitFeature(
       ...feature,
       geometry: toNumericPointGeometry(feature.geometry),
     } as Feature)
+    payload.data.properties = (payload.data.properties ?? []).map(property => ({
+      propertyId: property.propertyId,
+      value: property.value ?? null,
+      propertyValueId: property.propertyValueId ?? null,
+      i18n: property.i18n,
+    }))
     payload.meta = {
       ...payload.meta,
       mode: isCreate ? 'create' : 'update',

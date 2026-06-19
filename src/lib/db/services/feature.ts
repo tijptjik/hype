@@ -30,7 +30,7 @@ import {
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 // I18N
-import { toLocaleKebab } from '$lib/i18n'
+import { normalizeI18nLocaleRecord, toLocaleKebab } from '$lib/i18n'
 // TYPES
 import type {
   Database,
@@ -127,12 +127,18 @@ export const createI18n = async (
   i18n: Record<LocaleKey, FeatureI18nNew>,
   featureId: Id,
 ) => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, FeatureI18nNew>,
+  ) as Record<LocaleKey, FeatureI18nNew>
   return await insertManyRelated(
     db,
     featureI18n,
-    toRelatedRecords(i18n, 'featureId', featureId, 'locale') as InferInsertModel<
-      typeof featureI18n
-    >[],
+    toRelatedRecords(
+      normalizedI18n,
+      'featureId',
+      featureId,
+      'locale',
+    ) as InferInsertModel<typeof featureI18n>[],
     'featureId',
     featureId,
   )
@@ -193,6 +199,36 @@ const upsertFeaturePropertyI18n = async (
 }
 
 /**
+ * Normalizes invalid direct-value payloads that accidentally arrived in `propertyValueId`.
+ * @param propertyValueId - Candidate property value id from the caller payload.
+ * @param value - Direct property value from the caller payload.
+ * @returns Sanitized property linkage fields for persistence.
+ */
+function normalizeFeaturePropertyLink(
+  propertyValueId: string | null | undefined,
+  value: string | null | undefined,
+): {
+  propertyValueId: string | null
+  value: string | null
+} {
+  const normalizedPropertyValueId =
+    propertyValueId && propertyValueId !== '' ? propertyValueId : null
+  const normalizedValue = value ?? null
+
+  if (normalizedPropertyValueId === 'true' || normalizedPropertyValueId === 'false') {
+    return {
+      propertyValueId: null,
+      value: normalizedValue ?? normalizedPropertyValueId,
+    }
+  }
+
+  return {
+    propertyValueId: normalizedPropertyValueId,
+    value: normalizedValue,
+  }
+}
+
+/**
  * Creates feature-property rows and any submitted translatable value rows.
  * @param db - The database instance.
  * @param featureId - The parent feature id.
@@ -209,14 +245,15 @@ export const createProperties = async (
 ) => {
   if (properties.length > 0) {
     for (const propertyRow of properties) {
+      const normalizedLink = normalizeFeaturePropertyLink(
+        propertyRow.propertyValueId ?? null,
+        propertyRow.value ?? null,
+      )
       const propertyToInsert = {
         featureId,
         propertyId: propertyRow.propertyId,
-        value: propertyRow.value ?? null,
-        propertyValueId:
-          propertyRow.propertyValueId && propertyRow.propertyValueId !== ''
-            ? propertyRow.propertyValueId
-            : null,
+        value: normalizedLink.value,
+        propertyValueId: normalizedLink.propertyValueId,
       }
 
       await db
@@ -673,8 +710,11 @@ export const updateI18n = async (
   i18n: Record<LocaleKey, FeatureI18nPartial>,
   featureId: Id,
 ) => {
+  const normalizedI18n = normalizeI18nLocaleRecord(
+    i18n as Record<string, FeatureI18nPartial>,
+  ) as Record<LocaleKey, FeatureI18nPartial>
   const relatedRecords = toRelatedRecords(
-    i18n,
+    normalizedI18n,
     'featureId',
     featureId,
     'locale',
@@ -740,14 +780,15 @@ export const updateProperties = async (
   }
 
   for (const propertyRow of properties) {
+    const normalizedLink = normalizeFeaturePropertyLink(
+      propertyRow.propertyValueId ?? null,
+      propertyRow.value ?? null,
+    )
     const propertyToUpsert = {
       featureId,
       propertyId: propertyRow.propertyId,
-      value: propertyRow.value ?? null,
-      propertyValueId:
-        propertyRow.propertyValueId && propertyRow.propertyValueId !== ''
-          ? propertyRow.propertyValueId
-          : null,
+      value: normalizedLink.value,
+      propertyValueId: normalizedLink.propertyValueId,
     }
 
     await db

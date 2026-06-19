@@ -1,7 +1,7 @@
 // I18N
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { supportedLocales, SupportedLocales } from '$lib/enums'
-import { getFPI18n, getI18n, setLocale } from '$lib/i18n'
+import { getFPI18n, getI18n, normalizeI18nLocaleRecord, setLocale } from '$lib/i18n'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { FeatureProperty } from '$lib/db/zod/schema/feature.types'
 // MESSAGE FILES
@@ -242,6 +242,30 @@ describe('getI18n', () => {
     )
 
     expect(value).toBe('123 Test Street')
+  })
+})
+
+describe('normalizeI18nLocaleRecord', () => {
+  it('normalizes camelCase locale keys and entry locales to kebab-case', () => {
+    const normalized = normalizeI18nLocaleRecord({
+      zhHans: {
+        locale: 'zhHans',
+        value: '简体',
+      },
+      zhHant: {
+        locale: 'zhHant',
+        value: '繁體',
+      },
+      en: {
+        locale: 'en',
+        value: 'English',
+      },
+    })
+
+    expect(Object.keys(normalized).sort()).toEqual(['en', 'zh-hans', 'zh-hant'])
+    expect(normalized['zh-hans']?.locale).toBe('zh-hans')
+    expect(normalized['zh-hant']?.locale).toBe('zh-hant')
+    expect(normalized.en?.locale).toBe('en')
   })
 })
 

@@ -101,10 +101,10 @@ export type ImportState = {
         propertyType?: 'classifier' | 'specifier'
         propertyValueId?: Id
         propertyValueMapping?: Record<string, string>
-        resolvedData?: Record<string, Id | null | undefined>
+        resolvedData?: Record<string, string | null | undefined>
         translatedValues?: Record<Locale, string>
         enrichedData?: Map<number, Record<Locale, string>>
-        resolvedValues?: Record<string, Id | null | undefined>
+        resolvedValues?: Record<string, string | null | undefined>
       }
     >
     pendingProperties: string[]
@@ -555,10 +555,10 @@ export class ImportCtx {
       propertyType?: 'classifier' | 'specifier'
       propertyValueId?: Id
       propertyValueMapping?: Record<string, string>
-      resolvedData?: Record<string, Id | null | undefined>
+      resolvedData?: Record<string, string | null | undefined>
       translatedValues?: Record<Locale, string>
       enrichedData?: Map<number, Record<Locale, string>>
-      resolvedValues?: Record<string, Id | null | undefined>
+      resolvedValues?: Record<string, string | null | undefined>
     },
   ) {
     this.state.propertyReconciliation.enrichedData.set(key, data)

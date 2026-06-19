@@ -691,13 +691,14 @@ export const toRelatedRecords = <
       isLocaleKey && typeof valueRecord.locale === 'string'
         ? toLocaleKebab(valueRecord.locale as Locale | LocaleKey)
         : undefined
+    const normalizedKey = normalizedLocale ?? key
 
     return {
       ...(rawValue as T),
       ...(normalizedLocale
         ? ({ locale: normalizedLocale } as unknown as Partial<T>)
         : {}),
-      [keyName]: key,
+      [keyName]: normalizedKey,
       [foreignKeyName]: foreignKeyValue,
     } as T & Record<K, KeyValue> & Record<F, string>
   })
