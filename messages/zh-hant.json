@@ -231,6 +231,8 @@
   "admin__forms_organisation_url": "網址",
   "admin__forms_organisation_image_title": "個人檔案圖像",
   "admin__forms_organisation_image_save_hint": "請先儲存組織，再新增其圖像。",
+  "admin__forms_hub_image_save_hint": "請先儲存樞紐，再新增其圖像。",
+  "admin__forms_project_image_save_hint": "請先儲存專案，再新增其圖像。",
   "admin__forms_project_credit": "資料提供",
   "admin__forms_project_credit_subtitle": "本企劃是以哪種授權條款（例如 <code>CC-BY-SA</code> 或 <code>Copyrighted</code>）發布，應如何標示歸屬？",
   "admin__forms_project_members_title": "成員",

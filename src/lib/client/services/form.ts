@@ -723,7 +723,13 @@ export function prepareSubmitPayloadMeta<TData extends Record<string, unknown>>(
     const submittedId =
       typeof payload.meta.id === 'string' ? payload.meta.id.trim() : ''
     if (!submittedId) {
-      payload.meta.id = params.resolveUpdateId?.() ?? ''
+      const resolvedId = params.resolveUpdateId?.()?.trim() ?? ''
+
+      if (!resolvedId) {
+        throw new Error('Cannot update resource without a valid ID')
+      }
+
+      payload.meta.id = resolvedId
     }
   }
 

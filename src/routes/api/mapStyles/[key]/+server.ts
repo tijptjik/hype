@@ -1,6 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit'
 import { error } from '@sveltejs/kit'
 
+import { isMapStyleKey } from '$lib/map/styles'
 import { serveMapStyleByKey } from '$lib/map/styles/serve'
 
 // +++ Table Of Contents
@@ -26,10 +27,10 @@ import { serveMapStyleByKey } from '$lib/map/styles/serve'
  *
  * @param key - Raw `[key]` route param value.
  * @returns Validated map style key string.
- * @remarks Throws a 404 when the route param is missing.
+ * @remarks Throws a 404 when the route param is missing or invalid.
  */
 const requireMapStyleKeyParam = (key: string | undefined): string => {
-  if (!key) {
+  if (!key || !isMapStyleKey(key)) {
     throw error(404, 'Unknown map style')
   }
 

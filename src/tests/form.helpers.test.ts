@@ -57,6 +57,7 @@ vi.mock('$lib/navigation/facets', () => ({
 import { FirstClassResource } from '$lib/enums'
 import {
   createCodeRefResourceResult,
+  prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   resolveFacetTabsWithIssues,
   resolveDisplayUserRoles,
@@ -173,5 +174,20 @@ describe('form helpers', () => {
     expect(result.facetIssueSummary.facetsWithIssues.has('layers')).toBe(true)
     expect(result.facetTabsWithIssues.get('layers')?.hasIssues).toBe(true)
     expect(result.facetTabsWithIssues.get('core')?.hasIssues).toBe(false)
+  })
+
+  it('throws when an update submit payload cannot resolve a valid id', () => {
+    expect(() =>
+      prepareSubmitPayloadMeta(
+        {
+          meta: { mode: 'update' },
+          data: {},
+        },
+        {
+          defaultMode: 'update',
+          resolveUpdateId: () => '',
+        },
+      ),
+    ).toThrowError('Cannot update resource without a valid ID')
   })
 })

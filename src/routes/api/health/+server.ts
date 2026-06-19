@@ -53,8 +53,8 @@ export const GET: RequestHandler = async ({
       })),
     })
   } catch (e) {
-    // DB : Query Error
-    console.error('Database query error:', e)
+    // HEALTH : Request Error
+    console.error('Health check error:', e)
     throw error(500, 'Eternal Unhappiness Error')
   }
 }

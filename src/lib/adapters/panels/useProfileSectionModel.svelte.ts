@@ -1,3 +1,5 @@
+// SVELTE
+import { onDestroy } from 'svelte'
 // SVELTEKIT
 import { goto } from '$app/navigation'
 // AUTH
@@ -45,6 +47,35 @@ export function useProfileSectionModel(
       clearTimeout(timer)
     }
   }
+
+  /**
+   * Restores the previous username only if the current app user still reflects the
+   * optimistic value written by the pending save request.
+   *
+   * @param userId - The user ID associated with the optimistic mutation.
+   * @param optimisticUsername - The username applied before the save resolved.
+   * @param previousUsername - The username value to restore on failure.
+   */
+  function restoreOptimisticUsername(
+    userId: string,
+    optimisticUsername: string,
+    previousUsername: CurrentUser['username'],
+  ): void {
+    const currentUser = appCtx.getUser()
+
+    if (!currentUser || currentUser.id !== userId) return
+    if (currentUser.username !== optimisticUsername) return
+
+    appCtx.setUser({
+      ...currentUser,
+      username: previousUsername,
+    } as CurrentUser)
+  }
+
+  onDestroy(() => {
+    clearTimer(successTimer)
+    clearTimer(errorTimer)
+  })
 
   function showTransientError(): void {
     showErrorIndicator = true
@@ -95,6 +126,7 @@ export function useProfileSectionModel(
     if (!user || !editedUsername.trim()) return
 
     const { normalizedUsername, issues } = validateUsernameIssues(editedUsername.trim())
+    const previousUsername = user.username ?? null
 
     if (issues.length > 0) {
       showTransientError()
@@ -115,11 +147,13 @@ export function useProfileSectionModel(
         showTransientSuccess()
       },
       onInvalid: () => {
+        restoreOptimisticUsername(user.id, normalizedUsername, previousUsername)
         isLoadingUsername = false
         showTransientError()
       },
       onError: (error: unknown) => {
         console.error('Failed to save username:', error)
+        restoreOptimisticUsername(user.id, normalizedUsername, previousUsername)
         isLoadingUsername = false
         showTransientError()
       },

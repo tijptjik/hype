@@ -1741,6 +1741,7 @@ const selectedMapStyle = $derived.by(() => {
 })
 
 let lastMapStyleScopeSignature = $state('')
+let lastSuccessfulMapStyleScopeSignature = $state('')
 
 $effect(() => {
   const optimisticMapStyle = optimisticProjectData?.mapStyle as
@@ -1772,8 +1773,10 @@ $effect(() => {
 
   if (!nextSignature) {
     availableMapStyles = []
+    selectedMapStyleSnapshot = null
     isMapStyleScopeLoading = false
     lastMapStyleScopeSignature = ''
+    lastSuccessfulMapStyleScopeSignature = ''
     return
   }
 
@@ -1782,6 +1785,9 @@ $effect(() => {
   }
 
   lastMapStyleScopeSignature = nextSignature
+  lastSuccessfulMapStyleScopeSignature = ''
+  availableMapStyles = []
+  selectedMapStyleSnapshot = null
   isMapStyleScopeLoading = true
 
   untrack(() => {
@@ -1796,6 +1802,11 @@ $effect(() => {
         }
 
         availableMapStyles = (response.data ?? []) as MapStyleSelectionItem[]
+        lastSuccessfulMapStyleScopeSignature = nextSignature
+      } catch {
+        if (lastMapStyleScopeSignature === nextSignature) {
+          availableMapStyles = []
+        }
       } finally {
         if (lastMapStyleScopeSignature === nextSignature) {
           isMapStyleScopeLoading = false
@@ -1814,13 +1825,13 @@ $effect(() => {
     return
   }
 
-  if (
-    availableMapStyles.some(mapStyle => mapStyle.code === selectedMapStyleCodeValue)
-  ) {
+  if (lastSuccessfulMapStyleScopeSignature !== lastMapStyleScopeSignature) {
     return
   }
 
-  if (availableMapStyles.length === 0) {
+  if (
+    availableMapStyles.some(mapStyle => mapStyle.code === selectedMapStyleCodeValue)
+  ) {
     return
   }
 
@@ -1828,6 +1839,7 @@ $effect(() => {
     data.mapStyleCode = ''
     return data
   })
+  selectedMapStyleSnapshot = null
 })
 
 // § Handlers
@@ -1844,7 +1856,7 @@ function revalidateAfterProgrammaticChange(): void {
 async function onTranslate(
   sourceLocale: Locale,
   targetLocale: Locale,
-  sectionKey: string = 'descriptor',
+  _sectionKey: string = 'descriptor',
 ): Promise<boolean> {
   const section = 'descriptor' as const
   const translated = await translateLocaleIntoEmptyFields({
@@ -1857,7 +1869,7 @@ async function onTranslate(
   return translated
 }
 
-function onResetLocale(targetLocale: Locale, sectionKey: string = 'descriptor'): void {
+function onResetLocale(targetLocale: Locale, _sectionKey: string = 'descriptor'): void {
   const section = 'descriptor' as const
   resetLocaleFields({
     form: projectI18nUpdaterForm,
@@ -2564,6 +2576,7 @@ $effect(() => {
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/snippet}
 
+        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
         {#snippet children(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}
@@ -2822,7 +2835,7 @@ $effect(() => {
       <div
         class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
       >
-        {m.admin__forms_organisation_image_save_hint()}
+        {m.admin__forms_project_image_save_hint()}
       </div>
     {/if}
   </Main.Facet>

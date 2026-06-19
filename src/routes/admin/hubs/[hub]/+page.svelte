@@ -1067,6 +1067,7 @@ function onSubscriptionIdChange(nextValue: string): void {
     data.subscriptionId = nextValue
     return data
   })
+  revalidateAfterProgrammaticChange()
 }
 
 function onSubscriptionSessionCookieChange(nextValue: string): void {
@@ -1625,6 +1626,7 @@ $effect(() => {
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/snippet}
 
+        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
         {#snippet children(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}
@@ -1838,6 +1840,7 @@ $effect(() => {
         sectionKey="policies"
         {isEditing}
       >
+        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
         {#snippet children(locale)}
           <input
             {...getPolicyGenAttrs(
@@ -1905,7 +1908,7 @@ $effect(() => {
       <div
         class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
       >
-        {m.admin__forms_organisation_image_save_hint()}
+        {m.admin__forms_hub_image_save_hint()}
       </div>
     {/if}
   </Main.Facet>

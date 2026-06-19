@@ -15,13 +15,18 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
   const db = platform?.env?.DB
     ? drizzle(platform.env.DB as unknown as MiniflareD1Database, { schema })
     : null
-  const hubUserState =
-    db && locals.user?.id && locals.hub?.id
-      ? await getHubUserSubscriptionState(db, {
-          hubId: locals.hub.id,
-          userId: locals.user.id,
-        })
-      : null
+  let hubUserState = null
+
+  if (db && locals.user?.id && locals.hub?.id) {
+    try {
+      hubUserState = await getHubUserSubscriptionState(db, {
+        hubId: locals.hub.id,
+        userId: locals.user.id,
+      })
+    } catch (error) {
+      console.error('Failed to fetch hub user subscription state:', error)
+    }
+  }
 
   return {
     hub: locals.hub,
