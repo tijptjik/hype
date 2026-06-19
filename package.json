@@ -202,7 +202,6 @@
     "svelte-range-slider-pips": "^4.1.1",
     "svelte-sonner": "^1.1.1",
     "sveltekit-superforms": "^2.30.1",
-    "svrollbar": "https://github.com/tijptjik/svrollbar",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
     "tailwindcss-animate": "^1.0.7",
