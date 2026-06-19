@@ -1,0 +1,3 @@
+feature.i18n[locale=en].title,feature.i18n[locale=zh-hant].title,feature.i18n[locale=en].description,longitude,latitude,property[layer@ALL].grade
+Range Row 1,範圍列一,Fixture row to force the range validation property step,114.1499,22.2855,excellent
+Range Row 2,範圍列二,Fixture row to force the range validation property step,114.1501,22.2858,poor
