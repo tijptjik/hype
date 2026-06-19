@@ -80,7 +80,11 @@ const parseUploadMetadataInput = (
   }
 
   try {
-    return JSON.parse(metadataRaw) as UploadMetadataInput
+    const parsed: unknown = JSON.parse(metadataRaw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw error(400, 'Invalid metadata payload')
+    }
+    return parsed as UploadMetadataInput
   } catch {
     throw error(400, 'Invalid metadata payload')
   }
