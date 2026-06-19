@@ -206,19 +206,7 @@ export async function handleCSVDropEvent(
         : 'features',
   }
 
-  console.info('CSV import drop received', {
-    type: csvEvent.type,
-    acceptedFiles: csvEvent.acceptedFiles.map(file => file.name),
-  })
-
   await handleCSVDrop(csvEvent, (file: File, data: ParsedCSVData) => {
-    console.info('CSV import parsed', {
-      file: file.name,
-      headers: data.headers.length,
-      rows: data.data.length,
-      stats: data.stats,
-    })
-
     importCtx.setFile(file)
     importCtx.setHeaders(data.headers)
     importCtx.setData(data.data) // Store the complete dataset
@@ -972,7 +960,7 @@ export function getFeatureImportFooterProps(
         ...baseProps,
         onBack: params.onBack,
         onContinue: params.propertyAction,
-        continueLabel: params.propertyActionLabel ?? 'Create',
+        continueLabel: params.propertyActionLabel || m.continue(),
         continueDisabled: params.propertyActionDisabled,
         rightMetaText: params.propertyFooterStatus,
       }
@@ -982,6 +970,7 @@ export function getFeatureImportFooterProps(
       ...baseProps,
       onBack: params.onBack,
       onContinue: params.propertyCanContinue ? params.onContinue : undefined,
+      rightMetaText: params.propertyFooterStatus,
       // Property reconciliation handles its own navigation.
     }
   }

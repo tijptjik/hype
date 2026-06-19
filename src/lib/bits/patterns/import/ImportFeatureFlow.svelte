@@ -702,7 +702,7 @@ $effect(() => {
         {:else if currentStep === 'layer-matching'}
           <ImportPrimitive.LayerMatchingStep {importCtx} />
         {:else if currentStep === 'property-matching'}
-          <ImportPrimitive.PropertyReconciliation
+          <ImportPrimitive.PropertyReconciliationStep
             autoAdvance={!propertyBackInspection}
             bind:footerAction={propertyAction}
             bind:footerActionLabel={propertyActionLabel}
