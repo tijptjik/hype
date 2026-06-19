@@ -103,7 +103,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.0",
     "@changesets/cli": "^2.31.0",
-    "@cloudflare/vite-plugin": "^1.41.0",
+    "@cloudflare/vite-plugin": "^1.42.0",
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@commitlint/cz-commitlint": "^21.0.2",
@@ -135,7 +135,7 @@
     "vite-node": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.28.0",
     "vitest": "^4.1.9",
-    "wrangler": "^4.101.0"
+    "wrangler": "^4.102.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -162,7 +162,7 @@
     "@placemarkio/geo-viewport": "^1.0.2",
     "@sillvva/utils": "^0.8.5",
     "@sveltejs/adapter-cloudflare": "^7.2.9",
-    "@sveltejs/kit": "^2.65.2",
+    "@sveltejs/kit": "^2.66.0",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tailwindcss/postcss": "^4.3.1",
     "@tailwindcss/vite": "^4.3.1",
