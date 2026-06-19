@@ -651,6 +651,7 @@ onMount(() => {
 
 $effect(() => {
   if (activeFacet !== 'fields') return
+  if (!isCurrentRefSettled) return
   if (hasSelectedLayer) return
   untrack(() => {
     adminCtx.setFacet('core', featureRef, FirstClassResource.feature)
@@ -1341,7 +1342,11 @@ function updatePropertyValue(propertyId: string, nextValue: string | boolean): v
         ? {
             ...property,
             value:
-              typeof nextValue === 'boolean' ? String(nextValue) : String(nextValue),
+              property.property?.component === 'SelectField'
+                ? ''
+                : typeof nextValue === 'boolean'
+                  ? String(nextValue)
+                  : String(nextValue),
             propertyValueId:
               property.property?.component === 'SelectField'
                 ? String(nextValue)

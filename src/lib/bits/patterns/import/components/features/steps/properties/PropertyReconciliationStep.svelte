@@ -264,7 +264,22 @@ function processNextProperty() {
     scenarios.scenario5.includes(currentKey) ||
     scenarios.scenario6.includes(currentKey)
   ) {
-    action = 'freeform-creation'
+    if (
+      scenarios.scenario5.includes(currentKey) &&
+      recon.enrichedData.get(currentKey)?.propertyId
+    ) {
+      const columns = propertyGroups.get(currentKey) || []
+      const hasCompleteLocales = hasCompleteLocaleSet(columns)
+      const hasChoice = state.propertyReconciliation.translationChoices.has(currentKey)
+
+      if (!hasCompleteLocales && !hasChoice) {
+        action = 'translation-prompt'
+      } else {
+        action = 'data-enrichment'
+      }
+    } else {
+      action = 'freeform-creation'
+    }
   } else if (scenarios.scenario7.includes(currentKey)) {
     // Only prompt when locale data is incomplete and the user needs to choose
     // whether missing values should be translated or copied.
@@ -347,6 +362,21 @@ function hasCompleteLocaleSet(columns: FeatureCSVColumn[]): boolean {
 
 function onActionComplete() {
   const recon = state.propertyReconciliation
+  const currentKey = recon.pendingProperties[recon.currentPropertyIndex]
+
+  if (
+    currentKey &&
+    recon.currentAction === 'freeform-creation' &&
+    scenarios.scenario5.includes(currentKey)
+  ) {
+    importCtx.updatePropertyReconciliation({
+      currentAction: 'none',
+    })
+
+    processNextProperty()
+    return
+  }
+
   const nextIndex = recon.currentPropertyIndex + 1
 
   importCtx.updatePropertyReconciliation({

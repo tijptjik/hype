@@ -318,11 +318,10 @@ async function handleAccept() {
 
   // Store in enriched data
   const enrichedData = {
+    ...(importCtx.getPropertyEnrichedData(property.key) || {}),
     propertyId: existingProperty?.id,
     propertyValueMapping: propertyValueMapping,
     resolvedData: resolvedData,
-    // Store resolved value mappings for later use
-    ...(importCtx.getPropertyEnrichedData(property.key) || {}),
   }
 
   importCtx.setPropertyEnrichedData(property.key, enrichedData)
@@ -474,10 +473,10 @@ async function handleAccept() {
 
       // Store the updated enriched data
       const enrichedData = {
+        ...(importCtx.getPropertyEnrichedData(property.key) || {}),
         propertyId: existingProperty?.id,
         propertyValueMapping: updatedPropertyValueMapping,
         resolvedData: updatedResolvedData,
-        ...(importCtx.getPropertyEnrichedData(property.key) || {}),
       }
 
       importCtx.setPropertyEnrichedData(property.key, enrichedData)

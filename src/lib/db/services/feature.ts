@@ -229,6 +229,19 @@ function normalizeFeaturePropertyLink(
 }
 
 /**
+ * Logs feature-property persistence diagnostics with a stable prefix for filtering.
+ * @param stage - DB persistence stage being inspected.
+ * @param payload - Debug payload for the current property operation.
+ * @returns Nothing.
+ */
+function logFeaturePropertyPersistenceDebug(
+  stage: string,
+  payload: Record<string, unknown>,
+): void {
+  console.info(`[IMPORT_PROPERTY_DEBUG] db:${stage}`, payload)
+}
+
+/**
  * Creates feature-property rows and any submitted translatable value rows.
  * @param db - The database instance.
  * @param featureId - The parent feature id.
@@ -255,6 +268,16 @@ export const createProperties = async (
         value: normalizedLink.value,
         propertyValueId: normalizedLink.propertyValueId,
       }
+
+      logFeaturePropertyPersistenceDebug('create:upsert-property', {
+        featureId,
+        propertyId: propertyRow.propertyId,
+        inputPropertyValueId: propertyRow.propertyValueId ?? null,
+        inputValue: propertyRow.value ?? null,
+        normalizedPropertyValueId: normalizedLink.propertyValueId,
+        normalizedValue: normalizedLink.value,
+        i18nLocales: propertyRow.i18n ? Object.keys(propertyRow.i18n) : [],
+      })
 
       await db
         .insert(featureProperty)
@@ -790,6 +813,16 @@ export const updateProperties = async (
       value: normalizedLink.value,
       propertyValueId: normalizedLink.propertyValueId,
     }
+
+    logFeaturePropertyPersistenceDebug('update:upsert-property', {
+      featureId,
+      propertyId: propertyRow.propertyId,
+      inputPropertyValueId: propertyRow.propertyValueId ?? null,
+      inputValue: propertyRow.value ?? null,
+      normalizedPropertyValueId: normalizedLink.propertyValueId,
+      normalizedValue: normalizedLink.value,
+      i18nLocales: propertyRow.i18n ? Object.keys(propertyRow.i18n) : [],
+    })
 
     await db
       .insert(featureProperty)
