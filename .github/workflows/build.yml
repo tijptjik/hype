@@ -31,11 +31,14 @@ jobs:
         id: cache-deps
         with:
           path: node_modules
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lock') }}
+          key: ${{ runner.os }}-deps-${{ hashFiles('package.json', 'bun.lock', 'patches/**') }}
 
       - name: 'INSTALL :: Dependencies'
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
+
+      - name: 'VERIFY :: SvelteKit Patch'
+        run: bun run verify:sveltekit-patch
 
       - name: 'CACHE :: Restore Build'
         uses: actions/cache@v3
@@ -44,9 +47,9 @@ jobs:
           path: |
             .svelte-kit
             node_modules/.vite
-          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'svelte.config.js', 'vite.config.ts') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'svelte.config.js', 'vite.config.ts') }}
+            ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
 
       - name: 'BUILD :: Application'
         if: steps.cache-build.outputs.cache-hit != 'true'

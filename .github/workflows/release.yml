@@ -52,13 +52,16 @@ jobs:
         id: cache-deps
         with:
           path: node_modules
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lock') }}
+          key: ${{ runner.os }}-deps-${{ hashFiles('package.json', 'bun.lock', 'patches/**') }}
           restore-keys: |
             ${{ runner.os }}-deps-
 
       - name: 'INSTALL :: Dependencies'
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: bun install
+
+      - name: 'VERIFY :: SvelteKit Patch'
+        run: bun run verify:sveltekit-patch
 
       - name: 'RELEASE :: Create Release PR'
         id: changesets
