@@ -7,9 +7,10 @@ import type { UserLayer, UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { RemoteFormIssue } from '@sveltejs/kit'
 
 /**
- * Update the user's preferred locale on the server and in Paraglide's locale store. This triggers a page reload so the user can see the new locale immediately.
+ * Update the user's preferred locale on the server and refresh the auth session.
  * @param userId - The user's ID
  * @param locale - The new locale
+ * @remarks Callers remain responsible for updating the runtime locale and navigation.
  */
 export const updateLocale = async (userId: Id, locale: Locale) => {
   if (!userId) return

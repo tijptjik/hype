@@ -81,9 +81,13 @@ export function getLocaleKey(): LocaleKey {
 /**
  * Set the current locale. Wrapping for type safety.
  * @param locale - The locale to set.
+ * @param options - Optional Paraglide locale update behavior.
  */
-export function setLocale(locale: Locale) {
-  runtime.setLocale(locale)
+export function setLocale(
+  locale: Locale,
+  options?: { reload?: boolean },
+): void | Promise<void> {
+  return runtime.setLocale(locale, options)
 }
 
 // ═══════════════════════
