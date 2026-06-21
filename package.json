@@ -105,7 +105,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.0",
     "@changesets/cli": "^2.31.0",
-    "@cloudflare/vite-plugin": "^1.42.0",
+    "@cloudflare/vite-plugin": "^1.42.1",
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@commitlint/cz-commitlint": "^21.0.2",
@@ -137,7 +137,7 @@
     "vite-node": "^6.0.0",
     "vite-plugin-node-polyfills": "^0.28.0",
     "vitest": "^4.1.9",
-    "wrangler": "^4.102.0"
+    "wrangler": "^4.103.0"
   },
   "type": "module",
   "trustedDependencies": [
@@ -169,13 +169,13 @@
     "@tailwindcss/postcss": "^4.3.1",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/svelte-query": "^5.90.2",
-    "@testing-library/svelte": "^5.3.1",
+    "@testing-library/svelte": "^5.4.0",
     "@thisux/sveltednd": "0.0.20",
     "@turf/bbox": "^7.3.5",
     "@types/proj4": "^2.19.0",
     "aws4fetch": "^1.0.20",
     "baseline-browser-mapping": "^2.10.38",
-    "better-auth": "^1.6.19",
+    "better-auth": "^1.6.20",
     "bits-ui": "^2.18.1",
     "caniuse-lite": "^1.0.30001799",
     "clsx": "^2.1.1",
