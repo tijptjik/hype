@@ -106,6 +106,13 @@ PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
 [env.production]
 name = "hype-prod"
 
+# Pin the production Worker to APAC (Azure East Asia = Hong Kong) so it is
+# co-located with the hype-db-prod D1 primary (running_in_region: APAC).
+# Overrides the top-level smart-placement hint, which had routed the Worker
+# to ORD (Chicago) and added ~150-200ms RTT to every D1 round trip.
+[env.production.placement]
+region = "azure:eastasia"
+
 [env.production.vars]
 ENVIRONMENT = "production"
 
@@ -184,6 +191,11 @@ custom_domain = true
 
 [env.preview]
 name = "hype-preview"
+
+# Pin the preview Worker to APAC to match hype-db-preview (same D1 region
+# as production). See [env.production.placement] for rationale.
+[env.preview.placement]
+region = "azure:eastasia"
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
