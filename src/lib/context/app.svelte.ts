@@ -9,8 +9,8 @@ import {
   getFallbackLocales,
   getLocale,
   getLocaleKey,
-  setLocale,
   getI18n,
+  setLocale as setRuntimeLocale,
 } from '$lib/i18n'
 // LIB
 import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/constants'
@@ -3544,10 +3544,18 @@ export class AppCtx {
   }
 
   setLocale = async (locale: Locale) => {
-    ;(this.user as CurrentUser).locale = locale
-    await updateLocale((this.user as CurrentUser).id, locale)
-    // I18N : Update Paraglide's locale, triggers a page reload
-    setLocale(locale)
+    const user = this.user as CurrentUser
+
+    await updateLocale(user.id, locale)
+    // I18N : Persist Paraglide's locale, then hard reload to avoid re-rendering the full app tree in place.
+    await setRuntimeLocale(locale, { reload: false })
+
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+      return
+    }
+
+    user.locale = locale
   }
 
   setFallbackLocales = (localeCode: Locale, checked: boolean) => {
