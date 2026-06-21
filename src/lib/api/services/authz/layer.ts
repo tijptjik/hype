@@ -249,6 +249,15 @@ const toUniqueIds = (ids: Array<string | null | undefined>): string[] =>
   )
 
 /**
+ * Detects the public layer read state used by the user app.
+ * Published, non-archived layer reads should remain visible without role scope.
+ */
+const isPublicPublishedLayerState = (params: {
+  isPublished?: boolean | null
+  isArchived?: boolean | null
+}): boolean => params.isPublished !== false && params.isArchived !== true
+
+/**
  * Resolves high-level layer list scope metadata from policy buckets.
  * Used by query builders to derive allowed org/project filters and visibility modes.
  */
@@ -447,6 +456,20 @@ export const buildLayerVisibilityAndOwnershipConditions = (
     )
   }
 
+  const requestedIsPublished = toTriStateBoolean(params.isPublished) ?? true
+  const requestedIsArchived = toTriStateBoolean(params.isArchived) ?? false
+
+  if (
+    !isAdminRequest &&
+    isPublicPublishedLayerState({
+      isPublished: requestedIsPublished,
+      isArchived: requestedIsArchived,
+    })
+  ) {
+    conditions.push(eq(layer.isPublished, true), eq(layer.isArchived, false))
+    return { filtersToApply: filteredParams, conditions, excludeColumns }
+  }
+
   const policy = resolveLayerListReadPolicy({
     user: {
       id: user.id,
@@ -584,8 +607,6 @@ export const buildLayerVisibilityAndOwnershipConditions = (
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
 
-  const requestedIsPublished = toTriStateBoolean(params.isPublished) ?? true
-  const requestedIsArchived = toTriStateBoolean(params.isArchived) ?? false
   const accessCondition = toRoleScopedAccessUnionCondition(
     requestedIsPublished,
     requestedIsArchived,
@@ -647,6 +668,10 @@ export const authorizeLayerListForContext = (params: {
   resourceHubId?: string | null
   isAdminRequest?: boolean
 }): AuthorizationDecision => {
+  if (isPublicPublishedLayerState(params.requestedListState)) {
+    return { allowed: true }
+  }
+
   const policy = resolveLayerListReadPolicy({
     user: params.user,
     userRoles: params.userRoles,
@@ -709,6 +734,15 @@ export const authorizeLayerReadForProbe = (params: {
     isArchived: boolean
   }
 }): AuthorizationDecision => {
+  if (
+    isPublicPublishedLayerState({
+      isPublished: params.probe.isPublished,
+      isArchived: params.probe.isArchived,
+    })
+  ) {
+    return { allowed: true }
+  }
+
   const policy = resolveLayerListReadPolicy({
     user: params.user,
     userRoles: params.userRoles,

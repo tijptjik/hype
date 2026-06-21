@@ -22,14 +22,6 @@ preview_urls = false
 # Whether Wrangler should keep variables configured in the dashboard on deploy.
 keep_vars = false
 
-
-# Automatically place your workloads in an optimal location to minimize latency.
-# If you are running back-end logic in a Pages Function, running it closer to your back-end infrastructure
-# rather than the end user may result in better performance.
-# Docs: https://developers.cloudflare.com/pages/functions/smart-placement/#smart-placement
-[placement]
-mode = "smart"
-
 # Configures automatic observability settings for telemetry data emitted from your Worker.
 [observability]
 enabled = true

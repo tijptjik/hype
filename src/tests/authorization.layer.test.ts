@@ -179,7 +179,9 @@ describe('layer authorization policy matrix', () => {
         name: 'published + non-archived',
         requestedState: { isPublished: true, isArchived: false },
         allowed: [
+          'anonymous',
           'coreAdmin',
+          'hubAdminOther',
           'hubAdminSame',
           'orgOwner',
           'orgMember',
@@ -188,6 +190,7 @@ describe('layer authorization policy matrix', () => {
           'projectTranslator',
           'projectMember',
           'projectUser',
+          'unrelated',
         ],
       },
       {
