@@ -11,6 +11,7 @@ import zhHansMessages from '../../messages/zh-hans.json'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  setLocale('en')
 })
 
 /**
