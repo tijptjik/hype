@@ -187,13 +187,26 @@ function emitUploadResults(
 // +++ Filename Parsing And Export
 
 /**
+ * Feature ID length used by every resource schema (`nanoid(12)`).
+ *
+ * Used by {@link parseImageFilename} to disambiguate a trailing `-<digits>`
+ * sequence suffix from a hyphen that is genuinely part of a feature ID.
+ */
+const FEATURE_ID_LENGTH = 12
+
+/**
  * Parse an uploaded filename using the `featureId<sep>sequence.ext` convention.
  *
- * The separator may be either `.` or `-`. Because nanoid feature IDs can contain
- * `-` (but never `.`), a separator is only recognised when the trailing segment
- * is purely numeric — that is the sequence number. This keeps feature IDs such
- * as `abc-123` (which happen to end in `-<digits>`) from being mis-split when
- * no explicit sequence was appended.
+ * Separator rules, in priority order:
+ *
+ * 1. `.` is always treated as a sequence separator when followed by digits —
+ *    nanoid feature IDs never contain `.`, so this split is unambiguous.
+ * 2. `-` is treated as a sequence separator only when the preceding segment is
+ *    exactly {@link FEATURE_ID_LENGTH} characters long. nanoid feature IDs can
+ *    contain `-` followed by digits (e.g. `abc-123`), so a bare `-<digits>`
+ *    suffix is ambiguous; requiring the leading segment to be a full-length
+ *    feature ID prevents truncating valid IDs like `abc-123.jpg` while still
+ *    recognising explicit sequences like `0Gd7fU4rEvRM-00.webp`.
  *
  * @param filename Uploaded file name.
  * @returns Parsed feature and sequence values, or `null` parts when they cannot be derived.
@@ -210,13 +223,24 @@ export function parseImageFilename(filename: string): ParsedImageFilename {
     }
   }
 
-  // Match `featureId<sep>sequence` where sep is `.` or `-` and sequence is
-  // purely numeric. Greedy capture of the featureId so the last numeric span
-  // is treated as the sequence (e.g. `0Gd7fU4rEvRM-00` -> `0Gd7fU4rEvRM` / `00`).
-  const match = trimmedName.match(/^(.+)[.-](\d+)$/)
-  if (match) {
-    const featureId = match[1].trim()
-    const imageSequence = match[2].trim()
+  // Dot separator: unambiguous because nanoid IDs never contain `.`.
+  const dotMatch = trimmedName.match(/^(.+)\.(\d+)$/)
+  if (dotMatch) {
+    const featureId = dotMatch[1].trim()
+    const imageSequence = dotMatch[2].trim()
+    return {
+      featureId: featureId || null,
+      imageSequence: imageSequence || null,
+    }
+  }
+
+  // Dash separator: only treat the trailing `-<digits>` as a sequence when the
+  // preceding segment is a full-length feature ID. This keeps hyphenated IDs
+  // such as `abc-123` intact while still splitting `0Gd7fU4rEvRM-00`.
+  const dashMatch = trimmedName.match(/^(.+)-(\d+)$/)
+  if (dashMatch && dashMatch[1].length === FEATURE_ID_LENGTH) {
+    const featureId = dashMatch[1].trim()
+    const imageSequence = dashMatch[2].trim()
     return {
       featureId: featureId || null,
       imageSequence: imageSequence || null,
@@ -825,7 +849,7 @@ export async function handleImageDrop(
             featureContexts,
             onUpdateResults,
             () =>
-              `No matching feature found for filename "${result.file.name}". Expected the filename to follow "featureId.sequence.ext" or "featureId-sequence.ext".`,
+              `No matching feature found for filename "${result.file.name}". Expected the filename to follow "featureId.sequence.ext" or "featureId-sequence.ext" (dash separator only recognised when the feature ID is ${FEATURE_ID_LENGTH} characters).`,
           ),
         ),
       )

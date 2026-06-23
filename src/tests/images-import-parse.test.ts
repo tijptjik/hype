@@ -22,38 +22,41 @@ vi.mock('$lib/client/services/image', () => ({
 
 import { parseImageFilename } from '$lib/client/services/import/images'
 
+// A real nanoid(12) feature ID used across cases.
+const FEATURE_ID = '0Gd7fU4rEvRM'
+
 describe('parseImageFilename', () => {
-  describe('dash separator', () => {
-    it('parses `featureId-123` into featureId and sequence', () => {
-      expect(parseImageFilename('featureId-123')).toEqual({
-        featureId: 'featureId',
-        imageSequence: '123',
+  describe('dash separator (only recognised when feature ID is 12 chars)', () => {
+    it('parses `<12charId>-00.webp` into featureId and sequence', () => {
+      expect(parseImageFilename(`${FEATURE_ID}-00.webp`)).toEqual({
+        featureId: FEATURE_ID,
+        imageSequence: '00',
       })
     })
 
-    it('parses `featureId-123.webp` into featureId and sequence', () => {
-      expect(parseImageFilename('featureId-123.webp')).toEqual({
-        featureId: 'featureId',
-        imageSequence: '123',
-      })
-    })
-
-    it('parses `0Gd7fU4rEvRM-00.webp` (the original bug case) correctly', () => {
-      expect(parseImageFilename('0Gd7fU4rEvRM-00.webp')).toEqual({
-        featureId: '0Gd7fU4rEvRM',
+    it('parses `<12charId>-00` (no extension) into featureId and sequence', () => {
+      expect(parseImageFilename(`${FEATURE_ID}-00`)).toEqual({
+        featureId: FEATURE_ID,
         imageSequence: '00',
       })
     })
 
     it('preserves leading zeros in the sequence', () => {
-      expect(parseImageFilename('feat-007.webp')).toEqual({
-        featureId: 'feat',
+      expect(parseImageFilename(`${FEATURE_ID}-007.webp`)).toEqual({
+        featureId: FEATURE_ID,
         imageSequence: '007',
+      })
+    })
+
+    it('parses `<12charId>-123.webp` (non-zero-padded sequence) when ID is full length', () => {
+      expect(parseImageFilename(`${FEATURE_ID}-123.webp`)).toEqual({
+        featureId: FEATURE_ID,
+        imageSequence: '123',
       })
     })
   })
 
-  describe('dot separator', () => {
+  describe('dot separator (always recognised, nanoid never contains `.`)', () => {
     it('parses `featureId.123.webp` into featureId and sequence', () => {
       expect(parseImageFilename('featureId.123.webp')).toEqual({
         featureId: 'featureId',
@@ -81,41 +84,55 @@ describe('parseImageFilename', () => {
     })
   })
 
-  describe('feature IDs ending in digits', () => {
-    it('parses `abc123-456` into featureId `abc123` and sequence `456`', () => {
-      expect(parseImageFilename('abc123-456')).toEqual({
-        featureId: 'abc123',
-        imageSequence: '456',
+  describe('hyphenated feature IDs kept intact', () => {
+    it('keeps `abc-123.jpg` as the entire featureId (P2 badge case)', () => {
+      expect(parseImageFilename('abc-123.jpg')).toEqual({
+        featureId: 'abc-123',
+        imageSequence: null,
       })
     })
 
-    it('parses `abc123-456.webp` into featureId `abc123` and sequence `456`', () => {
-      expect(parseImageFilename('abc123-456.webp')).toEqual({
-        featureId: 'abc123',
-        imageSequence: '456',
+    it('keeps `abc-123` (no extension) as the entire featureId', () => {
+      expect(parseImageFilename('abc-123')).toEqual({
+        featureId: 'abc-123',
+        imageSequence: null,
+      })
+    })
+
+    it('keeps `featureId-123` as the entire featureId (leading segment not 12 chars)', () => {
+      expect(parseImageFilename('featureId-123')).toEqual({
+        featureId: 'featureId-123',
+        imageSequence: null,
+      })
+    })
+
+    it('keeps `abc123-456` as the entire featureId (leading segment not 12 chars)', () => {
+      expect(parseImageFilename('abc123-456')).toEqual({
+        featureId: 'abc123-456',
+        imageSequence: null,
+      })
+    })
+
+    it('keeps `featureId-1-2` as the entire featureId (no full-length segment before last dash)', () => {
+      expect(parseImageFilename('featureId-1-2')).toEqual({
+        featureId: 'featureId-1-2',
+        imageSequence: null,
       })
     })
   })
 
-  describe('greedy capture with multiple potential separators', () => {
-    it('parses `0Gd7fU4rEvRM-00` so the last numeric span is the sequence', () => {
-      expect(parseImageFilename('0Gd7fU4rEvRM-00')).toEqual({
-        featureId: '0Gd7fU4rEvRM',
+  describe('greedy capture with full-length feature ID', () => {
+    it('parses `<12charId>-00` so the last numeric span is the sequence', () => {
+      expect(parseImageFilename(`${FEATURE_ID}-00`)).toEqual({
+        featureId: FEATURE_ID,
         imageSequence: '00',
       })
     })
 
-    it('parses `featureId-1-2` so the last numeric span wins', () => {
-      expect(parseImageFilename('featureId-1-2')).toEqual({
-        featureId: 'featureId-1',
-        imageSequence: '2',
-      })
-    })
-
-    it('parses `a-b-c-99` so the last numeric span wins', () => {
-      expect(parseImageFilename('a-b-c-99')).toEqual({
-        featureId: 'a-b-c',
-        imageSequence: '99',
+    it('does not split `<12charId>-1-2` (segment before last dash is not 12 chars)', () => {
+      expect(parseImageFilename(`${FEATURE_ID}-1-2`)).toEqual({
+        featureId: `${FEATURE_ID}-1-2`,
+        imageSequence: null,
       })
     })
   })
@@ -136,8 +153,8 @@ describe('parseImageFilename', () => {
     })
 
     it('treats a bare nanoid-style id as featureId with no sequence', () => {
-      expect(parseImageFilename('0Gd7fU4rEvRM')).toEqual({
-        featureId: '0Gd7fU4rEvRM',
+      expect(parseImageFilename(FEATURE_ID)).toEqual({
+        featureId: FEATURE_ID,
         imageSequence: null,
       })
     })
@@ -173,9 +190,9 @@ describe('parseImageFilename', () => {
     })
 
     it('trims whitespace around the featureId and sequence', () => {
-      expect(parseImageFilename('  featureId-123  ')).toEqual({
-        featureId: 'featureId',
-        imageSequence: '123',
+      expect(parseImageFilename(`  ${FEATURE_ID}-00  `)).toEqual({
+        featureId: FEATURE_ID,
+        imageSequence: '00',
       })
     })
   })
