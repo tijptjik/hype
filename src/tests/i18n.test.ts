@@ -316,6 +316,25 @@ describe('getI18n', () => {
 
     expect(value).toBe('No title')
   })
+
+  it('returns the provided fallback when user preferences are omitted', () => {
+    setLocale('zh-hans')
+
+    const value = getI18n(
+      {
+        i18n: {
+          en: {
+            name: 'English layer name',
+          },
+        },
+      },
+      'name',
+      undefined,
+      'Fallback layer name',
+    )
+
+    expect(value).toBe('Fallback layer name')
+  })
 })
 
 describe('normalizeI18nLocaleRecord', () => {

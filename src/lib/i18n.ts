@@ -282,6 +282,38 @@ function getUserLocaleSearchOrder(userPreferences: UserPreferences): LocaleKey[]
   return localeOrder
 }
 
+const defaultUserPreferences: UserPreferences = {
+  fallbackLocales: [],
+  allowMachineTranslation: false,
+  preferFallbackInCurrentLocale: false,
+  isTranslateButtonVisible: true,
+}
+
+/**
+ * Apply safe runtime defaults to user preferences before reading locale fallbacks.
+ * @param userPreferences - Partial user preferences from the caller.
+ * @returns User preferences with required i18n fields populated.
+ */
+function resolveUserPreferences(
+  userPreferences?: Partial<UserPreferences>,
+): UserPreferences {
+  return {
+    ...defaultUserPreferences,
+    ...userPreferences,
+    fallbackLocales:
+      userPreferences?.fallbackLocales ?? defaultUserPreferences.fallbackLocales,
+    allowMachineTranslation:
+      userPreferences?.allowMachineTranslation ??
+      defaultUserPreferences.allowMachineTranslation,
+    preferFallbackInCurrentLocale:
+      userPreferences?.preferFallbackInCurrentLocale ??
+      defaultUserPreferences.preferFallbackInCurrentLocale,
+    isTranslateButtonVisible:
+      userPreferences?.isTranslateButtonVisible ??
+      defaultUserPreferences.isTranslateButtonVisible,
+  }
+}
+
 /**
  * Read a locale entry from a mixed-key i18n record supporting both camelCase
  * form keys and kebab-case locale codes.
@@ -304,7 +336,7 @@ function getLocaleEntry<T>(
  * Get the translated value of a field from an object using user preferences.
  * @param obj - The object to get the translated value from.
  * @param field - The field to get the translated value from.
- * @param userPreferences - User preferences with defaults applied
+ * @param userPreferences - Optional user preferences; missing i18n settings are defaulted.
  * @param fallback - Optional fallback value
  * @returns The translated value of the field.
  */
@@ -316,7 +348,7 @@ export function getI18n<T>(
     | Record<LocaleKey, T>
     | undefined,
   field: string,
-  _userPreferences: UserPreferences,
+  userPreferences?: Partial<UserPreferences>,
   fallback?: string,
   skipGenFieldCheck?: boolean,
 ): string {
@@ -332,7 +364,8 @@ export function getI18n<T>(
   }
 
   // CONFIG : Resolve runtime locale plus user-selected fallback locales.
-  const localeOrder = getUserLocaleSearchOrder(_userPreferences)
+  const resolvedUserPreferences = resolveUserPreferences(userPreferences)
+  const localeOrder = getUserLocaleSearchOrder(resolvedUserPreferences)
   const opts = {
     fallback: fallback || defaultFallback,
   }
@@ -353,8 +386,8 @@ export function getI18n<T>(
   // Only surface generated values when the caller bypasses the check or the
   // user has explicitly allowed machine translations.
   if (
-    _userPreferences.allowMachineTranslation &&
-    !_userPreferences.preferFallbackInCurrentLocale
+    resolvedUserPreferences.allowMachineTranslation &&
+    !resolvedUserPreferences.preferFallbackInCurrentLocale
   ) {
     for (const localeKey of localeOrder) {
       const localeEntry = getLocaleEntry(i18nObj, localeKey)

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
+// API
 import { extractVersionFromImageUrl } from '$lib/client/services/image'
+// DB
 import { getFeatureCanonicalImageOccupancy } from '$lib/db/services/image'
+// TYPES
 import type { Database } from '$lib/types'
 
 describe('image service helpers', () => {
