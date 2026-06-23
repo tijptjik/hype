@@ -30,6 +30,8 @@ import {
   ImageEnv,
   ImageIntentPublic,
 } from '$lib/enums'
+// UTILS
+import { autochunk } from '$lib/utils/batch-query'
 // TYPES
 import type { Id, Database, EntityResponse } from '$lib/types'
 import type {
@@ -230,17 +232,28 @@ export const getFeatureCanonicalImageOccupancy = async (
 ): Promise<Id[]> => {
   if (featureIds.length === 0) return []
 
-  const rows = await db
-    .select({
-      featureId: featureImage.featureId,
-    })
-    .from(featureImage)
-    .where(
-      and(
-        inArray(featureImage.featureId, featureIds),
-        eq(featureImage.intent, 'canonical'),
-      ),
-    )
+  const uniqueFeatureIds = [...new Set(featureIds)]
+
+  // D1 allows only 100 bound parameters per query, so reserve one slot for
+  // the fixed `intent = 'canonical'` predicate before batching feature IDs.
+  const rows = await autochunk(
+    {
+      items: uniqueFeatureIds,
+      otherParametersCount: 1,
+    },
+    async featureIdChunk =>
+      await db
+        .select({
+          featureId: featureImage.featureId,
+        })
+        .from(featureImage)
+        .where(
+          and(
+            inArray(featureImage.featureId, featureIdChunk),
+            eq(featureImage.intent, 'canonical'),
+          ),
+        ),
+  )
 
   return [...new Set(rows.map(row => row.featureId))]
 }
