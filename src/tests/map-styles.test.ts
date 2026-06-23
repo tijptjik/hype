@@ -103,8 +103,8 @@ describe('map styles', () => {
     ])
   })
 
-  it('gives neorgange orange roads and cyan building outlines', () => {
-    const style = buildMapStyle('neorgange') as {
+  it('gives neorange orange roads and cyan building outlines', () => {
+    const style = buildMapStyle('neorange') as {
       layers?: Array<{
         id?: string
         paint?: Record<string, unknown>
