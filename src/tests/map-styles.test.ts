@@ -68,6 +68,27 @@ describe('map styles', () => {
     expect(pathsLayer?.minzoom).toBe(17)
   })
 
+  it('switches neonmaster roads and glow layers to a red neon palette', () => {
+    const style = buildMapStyle('neonmaster') as {
+      layers?: Array<{
+        id?: string
+        paint?: Record<string, unknown>
+      }>
+    }
+
+    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
+    const casingLayer = style.layers?.find(
+      layer => layer.id === 'roads_major_casing_late',
+    )
+    const glowLabelLayer = style.layers?.find(
+      layer => layer.id === 'roads_labels_major__glow',
+    )
+
+    expect(roadsLayer?.paint?.['line-color']).toBe('#FF355E')
+    expect(casingLayer?.paint?.['line-color']).toBe('#FF7A8F')
+    expect(glowLabelLayer?.paint?.['text-halo-color']).toBe('rgb(255, 74, 110)')
+  })
+
   it('removes hot pink labels from the ghostery style', () => {
     const style = buildMapStyle('ghostery') as {
       layers?: Array<{ id?: string; paint?: Record<string, unknown> }>
