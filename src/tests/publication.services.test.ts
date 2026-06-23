@@ -145,7 +145,7 @@ describe('publication cascade services', () => {
     expect(isSqlExpression(updateCalls[2]?.values.isArchived)).toBe(true)
   })
 
-  it('cascades project archive changes into layers and features only', async () => {
+  it('snapshots project descendants into local archive state when archiving', async () => {
     const { db, updateCalls } = createDbMock()
 
     await cascadeProjectArchivedStateToDescendants(db, {
@@ -161,7 +161,23 @@ describe('publication cascade services', () => {
     expect(isSqlExpression(updateCalls[1]?.values.isArchived)).toBe(true)
   })
 
-  it('cascades layer archive changes into features only', async () => {
+  it('preserves project descendant archive snapshots while the organisation stays archived', async () => {
+    const { db, updateCalls } = createDbMock()
+
+    await cascadeProjectArchivedStateToDescendants(db, {
+      projectId: 'project-1',
+      state: false,
+    })
+
+    expect(updateCalls).toHaveLength(2)
+    expect(updateCalls.map(call => call.table)).toEqual([layer, feature])
+    expect(isSqlExpression(updateCalls[0]?.values.localIsArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.localIsArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[0]?.values.isArchived)).toBe(true)
+    expect(isSqlExpression(updateCalls[1]?.values.isArchived)).toBe(true)
+  })
+
+  it('preserves feature archive snapshots while project or organisation ancestors stay archived', async () => {
     const { db, updateCalls } = createDbMock()
 
     await cascadeLayerArchivedStateToDescendants(db, {
@@ -171,7 +187,7 @@ describe('publication cascade services', () => {
 
     expect(updateCalls).toHaveLength(1)
     expect(updateCalls[0]?.table).toBe(feature)
-    expect(updateCalls[0]?.values.localIsArchived).toBeNull()
+    expect(isSqlExpression(updateCalls[0]?.values.localIsArchived)).toBe(true)
     expect(isSqlExpression(updateCalls[0]?.values.isArchived)).toBe(true)
   })
 })

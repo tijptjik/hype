@@ -91,6 +91,7 @@ import type {
 //    - updateProjectPublishedStateById
 //    - cascadeProjectPublishedStateToDescendants
 //    - updateProjectArchivedStateById
+//    - cascadeProjectArchivedStateToDescendants
 //    - updateI18n
 //
 // 3.2 CRUD :: UPDATE (SYNC)
@@ -816,12 +817,20 @@ export const cascadeProjectArchivedStateToDescendants = async (
     state: boolean
   },
 ): Promise<void> => {
+  // Preserve descendant archive snapshots until the organisation no longer hides them.
   await db
     .update(layer)
     .set({
       localIsArchived: params.state
         ? sql`coalesce(${layer.localIsArchived}, ${layer.isArchived})`
-        : null,
+        : sql`case
+            when (
+              select ${organisation.isArchived}
+              from ${organisation}
+              where ${organisation.id} = ${layer.organisationId}
+            ) = 1 then ${layer.localIsArchived}
+            else null
+          end`,
       isArchived: params.state
         ? sql`1`
         : sql`case
@@ -840,7 +849,14 @@ export const cascadeProjectArchivedStateToDescendants = async (
     .set({
       localIsArchived: params.state
         ? sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`
-        : null,
+        : sql`case
+            when (
+              select ${organisation.isArchived}
+              from ${organisation}
+              where ${organisation.id} = ${feature.organisationId}
+            ) = 1 then ${feature.localIsArchived}
+            else null
+          end`,
       isArchived: params.state
         ? sql`1`
         : sql`case

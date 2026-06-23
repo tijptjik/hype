@@ -10,6 +10,9 @@ type BatchParams<T> = {
  *
  * @param params - Items to chunk and the count of non-array SQL parameters in the query.
  * @returns Ordered item batches that fit within D1's bound-parameter limit.
+ * @remarks Consumers must budget `otherParametersCount` so the combined fixed and dynamic
+ * query parameters stay within `SQL_BATCH_SIZE`. This function throws when the reserved
+ * fixed-parameter count leaves no room for any item parameters.
  */
 export function chunkForD1<T>(params: BatchParams<T>): T[][] {
   const otherParametersCount = params.otherParametersCount ?? 0
@@ -36,6 +39,9 @@ export function chunkForD1<T>(params: BatchParams<T>): T[][] {
  * @param params - Items to chunk and the count of non-array SQL parameters in the query.
  * @param query - Query callback executed once per chunk.
  * @returns Flattened rows from every chunk query.
+ * @remarks This helper inherits the same parameter-budgeting constraints as `chunkForD1`
+ * and will throw if `chunkForD1` cannot allocate any item parameter slots. Chunk queries
+ * are executed sequentially in input order, so callers must not rely on parallel execution.
  */
 export async function autochunk<TItem, TResult>(
   params: BatchParams<TItem>,

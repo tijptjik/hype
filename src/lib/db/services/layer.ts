@@ -79,6 +79,7 @@ import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
 //    - updateLayerPublishedStateById
 //    - cascadeLayerPublishedStateToDescendants
 //    - updateLayerArchivedStateById
+//    - cascadeLayerArchivedStateToDescendants
 //    - updateI18n
 //    - updateProperties
 //
@@ -652,14 +653,6 @@ export const updateLayerArchivedStateById = async (
  * Cascades a layer archive-state change into descendant features.
  * Existing local archive snapshots are preserved while an ancestor remains archived so
  * unarchiving restores the prior descendant state instead of reviving every record.
- * @param db - The database instance.
- * @param params - The parent layer id and next archived state.
- * @returns A promise that resolves once descendant rows are updated.
- */
-/**
- * Cascades a layer archive-state change into descendant features.
- * Existing local archive snapshots are preserved while an ancestor remains archived so
- * unarchiving restores the prior descendant state instead of reviving every record.
  *
  * When unarchiving (`state=false`), features are only restored from their
  * `localIsArchived` snapshot when neither the owning organisation nor the
@@ -678,12 +671,25 @@ export const cascadeLayerArchivedStateToDescendants = async (
     state: boolean
   },
 ): Promise<void> => {
+  // Preserve feature archive snapshots until neither owning ancestor keeps them hidden.
   await db
     .update(feature)
     .set({
       localIsArchived: params.state
         ? sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`
-        : null,
+        : sql`case
+            when (
+              select ${organisation.isArchived}
+              from ${organisation}
+              where ${organisation.id} = ${feature.organisationId}
+            ) = 1 then ${feature.localIsArchived}
+            when (
+              select ${project.isArchived}
+              from ${project}
+              where ${project.id} = ${feature.projectId}
+            ) = 1 then ${feature.localIsArchived}
+            else null
+          end`,
       isArchived: params.state
         ? sql`1`
         : sql`case

@@ -30,7 +30,7 @@ import {
   ImageEnv,
   ImageIntentPublic,
 } from '$lib/enums'
-// UTILS
+// DB
 import { autochunk } from '$lib/utils/batch-query'
 // TYPES
 import type { Id, Database, EntityResponse } from '$lib/types'
