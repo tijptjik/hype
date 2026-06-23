@@ -187,7 +187,13 @@ function emitUploadResults(
 // +++ Filename Parsing And Export
 
 /**
- * Parse an uploaded filename using the `featureId.sequence.ext` convention.
+ * Parse an uploaded filename using the `featureId<sep>sequence.ext` convention.
+ *
+ * The separator may be either `.` or `-`. Because nanoid feature IDs can contain
+ * `-` (but never `.`), a separator is only recognised when the trailing segment
+ * is purely numeric — that is the sequence number. This keeps feature IDs such
+ * as `abc-123` (which happen to end in `-<digits>`) from being mis-split when
+ * no explicit sequence was appended.
  *
  * @param filename Uploaded file name.
  * @returns Parsed feature and sequence values, or `null` parts when they cannot be derived.
@@ -204,20 +210,22 @@ export function parseImageFilename(filename: string): ParsedImageFilename {
     }
   }
 
-  const splitIndex = trimmedName.lastIndexOf('.')
-  if (splitIndex === -1) {
+  // Match `featureId<sep>sequence` where sep is `.` or `-` and sequence is
+  // purely numeric. Greedy capture of the featureId so the last numeric span
+  // is treated as the sequence (e.g. `0Gd7fU4rEvRM-00` -> `0Gd7fU4rEvRM` / `00`).
+  const match = trimmedName.match(/^(.+)[.-](\d+)$/)
+  if (match) {
+    const featureId = match[1].trim()
+    const imageSequence = match[2].trim()
     return {
-      featureId: trimmedName,
-      imageSequence: null,
+      featureId: featureId || null,
+      imageSequence: imageSequence || null,
     }
   }
 
-  const featureId = trimmedName.slice(0, splitIndex).trim()
-  const imageSequence = trimmedName.slice(splitIndex + 1).trim()
-
   return {
-    featureId: featureId || null,
-    imageSequence: imageSequence || null,
+    featureId: trimmedName,
+    imageSequence: null,
   }
 }
 
@@ -817,7 +825,7 @@ export async function handleImageDrop(
             featureContexts,
             onUpdateResults,
             () =>
-              `No matching feature found for filename "${result.file.name}". Expected the filename to follow "featureId.sequence.ext".`,
+              `No matching feature found for filename "${result.file.name}". Expected the filename to follow "featureId.sequence.ext" or "featureId-sequence.ext".`,
           ),
         ),
       )
