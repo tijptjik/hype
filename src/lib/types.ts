@@ -1202,6 +1202,7 @@ export type MapStyleCatalogKey =
   | 'ghostery'
   | 'ghostery-legacy'
   | 'neonmaster'
+  | 'neorgange'
   | 'breadline'
   | 'protomaps-light'
   | 'protomaps-dark'
