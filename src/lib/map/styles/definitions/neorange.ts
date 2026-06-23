@@ -9,7 +9,7 @@ import {
   type StyleBuildOptions,
 } from './common'
 
-const HIDDEN_NEORGANGE_PROTOMAPS_LAYER_IDS = new Set([
+const HIDDEN_neorange_PROTOMAPS_LAYER_IDS = new Set([
   'boundaries',
   'boundaries_country',
   'earth_label_islands',
@@ -28,13 +28,13 @@ const HIDDEN_NEORGANGE_PROTOMAPS_LAYER_IDS = new Set([
   'water_label_ocean',
 ])
 
-const NEORGANGE_ROAD_ORANGE = '#FF8A00'
-const NEORGANGE_ROAD_ORANGE_BRIGHT = '#FFB347'
-const NEORGANGE_DARK = '#141414'
-const NEORGANGE_BLACK = '#000000'
-const NEORGANGE_VOID = 'rgb(12,12,12)'
-const NEORGANGE_BUILDING_FILL = 'rgba(15, 14, 14, 1)'
-const NEORGANGE_TEXT_WHITE_SOLID = '#FFFFFF'
+const neorange_ROAD_ORANGE = '#FF8A00'
+const neorange_ROAD_ORANGE_BRIGHT = '#FFB347'
+const neorange_DARK = '#141414'
+const neorange_BLACK = '#000000'
+const neorange_VOID = 'rgb(12,12,12)'
+const neorange_BUILDING_FILL = 'rgba(15, 14, 14, 1)'
+const neorange_TEXT_WHITE_SOLID = '#FFFFFF'
 
 const GLOW_LABEL_LAYER_IDS = new Set([
   'roads_labels_major',
@@ -88,7 +88,7 @@ const createMinorLocalityLayer = (
   },
   paint: {
     ...(layer.paint ?? {}),
-    'text-color': NEORGANGE_TEXT_WHITE_SOLID,
+    'text-color': neorange_TEXT_WHITE_SOLID,
     'text-halo-color': 'rgba(255,255,255,0.2)',
     'text-halo-width': 0.3,
     'text-halo-blur': 0,
@@ -109,7 +109,7 @@ const createDetailLocalityLayer = (
   },
   paint: {
     ...(layer.paint ?? {}),
-    'text-color': NEORGANGE_TEXT_WHITE_SOLID,
+    'text-color': neorange_TEXT_WHITE_SOLID,
     'text-halo-color': 'rgba(255,255,255,0.2)',
     'text-halo-width': 0.3,
     'text-halo-blur': 0,
@@ -142,7 +142,7 @@ const createBuildingOutlineLayer = (): NonNullable<
   },
 })
 
-const applyNeorgangeThemeToProtomaps = (
+const applyneorangeThemeToProtomaps = (
   style: StyleSpecification,
   noLabels: boolean,
   locale: LocaleKey,
@@ -155,7 +155,7 @@ const applyNeorgangeThemeToProtomaps = (
     const localizedTextField =
       layer.type === 'symbol' ? getLocaleTextField(layer.id, locale) : undefined
 
-    if (HIDDEN_NEORGANGE_PROTOMAPS_LAYER_IDS.has(layer.id)) {
+    if (HIDDEN_neorange_PROTOMAPS_LAYER_IDS.has(layer.id)) {
       return {
         ...layer,
         layout: {
@@ -171,7 +171,7 @@ const applyNeorgangeThemeToProtomaps = (
           ...layer,
           paint: {
             ...(layer.paint ?? {}),
-            'background-color': NEORGANGE_VOID,
+            'background-color': neorange_VOID,
           },
         }
       case 'earth':
@@ -179,7 +179,7 @@ const applyNeorgangeThemeToProtomaps = (
           ...layer,
           paint: {
             ...(layer.paint ?? {}),
-            'fill-color': NEORGANGE_BLACK,
+            'fill-color': neorange_BLACK,
             'fill-outline-color': 'transparent',
             'fill-antialias': true,
           },
@@ -189,7 +189,7 @@ const applyNeorgangeThemeToProtomaps = (
           ...layer,
           paint: {
             ...(layer.paint ?? {}),
-            'fill-color': NEORGANGE_VOID,
+            'fill-color': neorange_VOID,
             'fill-antialias': false,
             'fill-outline-color': 'transparent',
           },
@@ -209,7 +209,7 @@ const applyNeorgangeThemeToProtomaps = (
           ...layer,
           paint: {
             ...(layer.paint ?? {}),
-            'fill-color': NEORGANGE_BLACK,
+            'fill-color': neorange_BLACK,
             'fill-opacity': 0,
           },
         }
@@ -230,7 +230,7 @@ const applyNeorgangeThemeToProtomaps = (
           maxzoom: 19,
           paint: {
             ...(layer.paint ?? {}),
-            'fill-color': NEORGANGE_BUILDING_FILL,
+            'fill-color': neorange_BUILDING_FILL,
             'fill-opacity': 0.5,
             'fill-outline-color': 'transparent',
           },
@@ -291,7 +291,7 @@ const applyNeorgangeThemeToProtomaps = (
                 : layer.minzoom,
           paint: {
             ...(layer.paint ?? {}),
-            'line-color': NEORGANGE_ROAD_ORANGE,
+            'line-color': neorange_ROAD_ORANGE,
             'line-opacity': layer.id === 'roads_other' ? 0.58 : 1,
             'line-dasharray': layer.id === 'roads_other' ? [1.5, 1.5] : [1, 0],
             'line-blur':
@@ -333,7 +333,7 @@ const applyNeorgangeThemeToProtomaps = (
               ? 10
               : layer.minzoom,
           paint: {
-            'line-color': NEORGANGE_ROAD_ORANGE_BRIGHT,
+            'line-color': neorange_ROAD_ORANGE_BRIGHT,
             'line-opacity': layer.id.includes('minor') ? 0.22 : 0.28,
             'line-blur': layer.id.includes('highway') ? 5.8 : 4.8,
             'line-dasharray': [1, 0],
@@ -347,7 +347,7 @@ const applyNeorgangeThemeToProtomaps = (
           ...layer,
           paint: {
             ...(layer.paint ?? {}),
-            'line-color': NEORGANGE_VOID,
+            'line-color': neorange_VOID,
           },
         }
       case 'roads_rail':
@@ -371,7 +371,7 @@ const applyNeorgangeThemeToProtomaps = (
             ...(layer.paint ?? {}),
             'text-color': 'rgba(240, 77, 127, 0.86)',
             'text-halo-blur': 1.2,
-            'text-halo-color': NEORGANGE_DARK,
+            'text-halo-color': neorange_DARK,
             'text-halo-width': 1,
             'text-opacity': ['interpolate', ['linear'], ['zoom'], 18.5, 0, 20, 1],
           },
@@ -407,7 +407,7 @@ const applyNeorgangeThemeToProtomaps = (
           },
           paint: {
             ...(layer.paint ?? {}),
-            'text-color': NEORGANGE_TEXT_WHITE_SOLID,
+            'text-color': neorange_TEXT_WHITE_SOLID,
             'text-halo-blur': 0,
             'text-halo-color': 'rgba(255,255,255,0.2)',
             'text-halo-width': 0.35,
@@ -438,7 +438,7 @@ const applyNeorgangeThemeToProtomaps = (
           },
           paint: {
             ...(layer.paint ?? {}),
-            'text-color': NEORGANGE_TEXT_WHITE_SOLID,
+            'text-color': neorange_TEXT_WHITE_SOLID,
             'text-halo-blur': 0,
             'text-halo-color': 'rgba(255,255,255,0.2)',
             'text-halo-width': 0.35,
@@ -459,7 +459,7 @@ const applyNeorgangeThemeToProtomaps = (
           },
           paint: {
             ...(layer.paint ?? {}),
-            'text-color': NEORGANGE_TEXT_WHITE_SOLID,
+            'text-color': neorange_TEXT_WHITE_SOLID,
             'text-halo-blur': 0,
             'text-halo-color': 'rgba(255,255,255,0.2)',
             'text-halo-width': 0.35,
@@ -521,7 +521,7 @@ const applyNeorgangeThemeToProtomaps = (
           },
           paint: {
             ...(layer.paint ?? {}),
-            'text-color': NEORGANGE_TEXT_WHITE_SOLID,
+            'text-color': neorange_TEXT_WHITE_SOLID,
             'text-halo-blur': 0,
             'text-halo-color': 'rgba(255,255,255,0.2)',
             'text-halo-width': 0.35,
@@ -571,13 +571,13 @@ const applyNeorgangeThemeToProtomaps = (
   return style
 }
 
-export const buildNeorgangeStyle = ({
+export const buildneorangeStyle = ({
   noLabels = false,
   locale = 'en',
 }: StyleBuildOptions = {}): StyleSpecification => {
   const style = buildNamedProtomapsStyle('dark', { locale })
 
-  applyNeorgangeThemeToProtomaps(style, noLabels, locale)
+  applyneorangeThemeToProtomaps(style, noLabels, locale)
 
   return noLabels ? hideSymbolLayers(style) : style
 }
