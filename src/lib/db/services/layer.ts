@@ -656,6 +656,21 @@ export const updateLayerArchivedStateById = async (
  * @param params - The parent layer id and next archived state.
  * @returns A promise that resolves once descendant rows are updated.
  */
+/**
+ * Cascades a layer archive-state change into descendant features.
+ * Existing local archive snapshots are preserved while an ancestor remains archived so
+ * unarchiving restores the prior descendant state instead of reviving every record.
+ *
+ * When unarchiving (`state=false`), features are only restored from their
+ * `localIsArchived` snapshot when neither the owning organisation nor the
+ * owning project is still archived. If either ancestor remains archived,
+ * features stay archived so that unarchiving a single layer cannot revive
+ * records hidden by an ancestor.
+ *
+ * @param db - The database instance.
+ * @param params - The parent layer id and next archived state.
+ * @returns A promise that resolves once descendant rows are updated.
+ */
 export const cascadeLayerArchivedStateToDescendants = async (
   db: Database,
   params: {
@@ -671,7 +686,19 @@ export const cascadeLayerArchivedStateToDescendants = async (
         : null,
       isArchived: params.state
         ? sql`1`
-        : sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`,
+        : sql`case
+            when (
+              select ${organisation.isArchived}
+              from ${organisation}
+              where ${organisation.id} = ${feature.organisationId}
+            ) = 1 then 1
+            when (
+              select ${project.isArchived}
+              from ${project}
+              where ${project.id} = ${feature.projectId}
+            ) = 1 then 1
+            else coalesce(${feature.localIsArchived}, ${feature.isArchived})
+          end`,
     })
     .where(eq(feature.layerId, params.layerId))
 }
