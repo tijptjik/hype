@@ -4,6 +4,7 @@ import { buildGhosteryLegacyStyle } from './definitions/ghostery-legacy'
 import { buildHyperStyle } from './definitions/hyper'
 import { buildHyperLightStyle } from './definitions/hyperLight'
 import { buildHyperAdminStyle } from './definitions/hyperAdmin'
+import { buildNeonmasterStyle } from './definitions/neonmaster'
 import {
   NAMED_PROTOMAPS_FLAVORS,
   type MapStyleDefinition,
@@ -90,6 +91,14 @@ export const MAP_STYLE_CATALOG = [
     hubCode: 'hkghostsigns',
     basemapVariant: null,
     showSymbols: false,
+  },
+  {
+    key: 'neonmaster',
+    name: getMapStyleCatalogCopy('neonmaster', 'en').name,
+    description: getMapStyleCatalogCopy('neonmaster', 'en').description,
+    buildStyle: buildNeonmasterStyle,
+    basemapVariant: 'dark',
+    showSymbols: true,
   },
   {
     key: 'breadline',

@@ -1201,6 +1201,7 @@ export type MapStyleCatalogKey =
   | 'hyperLight'
   | 'ghostery'
   | 'ghostery-legacy'
+  | 'neonmaster'
   | 'breadline'
   | 'protomaps-light'
   | 'protomaps-dark'
