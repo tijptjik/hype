@@ -799,6 +799,12 @@ export const updateProjectArchivedStateById = async (
  * Cascades a project archive-state change into descendant layers and features.
  * Existing local archive snapshots are preserved while an ancestor remains archived so
  * unarchiving restores the prior descendant state instead of reviving every record.
+ *
+ * When unarchiving (`state=false`), descendants are only restored from their
+ * `localIsArchived` snapshot when the owning organisation is not still archived.
+ * If the organisation remains archived, descendants stay archived so that
+ * unarchiving a single project cannot revive records hidden by an ancestor.
+ *
  * @param db - The database instance.
  * @param params - The parent project id and next archived state.
  * @returns A promise that resolves once descendant rows are updated.
@@ -818,7 +824,14 @@ export const cascadeProjectArchivedStateToDescendants = async (
         : null,
       isArchived: params.state
         ? sql`1`
-        : sql`coalesce(${layer.localIsArchived}, ${layer.isArchived})`,
+        : sql`case
+            when (
+              select ${organisation.isArchived}
+              from ${organisation}
+              where ${organisation.id} = ${layer.organisationId}
+            ) = 1 then 1
+            else coalesce(${layer.localIsArchived}, ${layer.isArchived})
+          end`,
     })
     .where(eq(layer.projectId, params.projectId))
 
@@ -830,7 +843,14 @@ export const cascadeProjectArchivedStateToDescendants = async (
         : null,
       isArchived: params.state
         ? sql`1`
-        : sql`coalesce(${feature.localIsArchived}, ${feature.isArchived})`,
+        : sql`case
+            when (
+              select ${organisation.isArchived}
+              from ${organisation}
+              where ${organisation.id} = ${feature.organisationId}
+            ) = 1 then 1
+            else coalesce(${feature.localIsArchived}, ${feature.isArchived})
+          end`,
     })
     .where(eq(feature.projectId, params.projectId))
 }
