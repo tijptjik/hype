@@ -243,6 +243,78 @@ describe('getI18n', () => {
 
     expect(value).toBe('123 Test Street')
   })
+
+  it('uses user fallback locales when the active locale is missing', () => {
+    setLocale('zh-hans')
+
+    const value = getI18n(
+      {
+        i18n: {
+          zhHant: {
+            title: '繁體標題',
+            titleGen: false,
+          },
+        },
+      },
+      'title',
+      {
+        ...userPreferences,
+        fallbackLocales: ['zh-hant'],
+      },
+      'No title',
+    )
+
+    expect(value).toBe('繁體標題')
+  })
+
+  it('returns generated fallback-locale values when machine translation is allowed', () => {
+    setLocale('zh-hans')
+
+    const value = getI18n(
+      {
+        i18n: {
+          zhHant: {
+            title: 'AI 繁體標題',
+            titleGen: true,
+          },
+        },
+      },
+      'title',
+      {
+        ...userPreferences,
+        fallbackLocales: ['zh-hant'],
+        allowMachineTranslation: true,
+      },
+      'No title',
+    )
+
+    expect(value).toBe('AI 繁體標題')
+  })
+
+  it('prefers placeholders over generated values when that setting is enabled', () => {
+    setLocale('zh-hans')
+
+    const value = getI18n(
+      {
+        i18n: {
+          zhHant: {
+            title: 'AI 繁體標題',
+            titleGen: true,
+          },
+        },
+      },
+      'title',
+      {
+        ...userPreferences,
+        fallbackLocales: ['zh-hant'],
+        allowMachineTranslation: true,
+        preferFallbackInCurrentLocale: true,
+      },
+      'No title',
+    )
+
+    expect(value).toBe('No title')
+  })
 })
 
 describe('normalizeI18nLocaleRecord', () => {

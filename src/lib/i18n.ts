@@ -263,6 +263,39 @@ export function getFallbackLocales(locale: Locale): Locale[] {
   return supportedLocales.filter((nextLocale: Locale) => nextLocale !== locale)
 }
 
+/**
+ * Resolve the locale search chain for i18n reads using runtime locale first and
+ * any user-selected fallback locales after that.
+ * @param userPreferences - User preferences with defaults applied.
+ * @returns Ordered locale keys without duplicates.
+ */
+function getUserLocaleSearchOrder(userPreferences: UserPreferences): LocaleKey[] {
+  const localeOrder = [getLocaleKey()]
+
+  for (const fallbackLocale of userPreferences.fallbackLocales ?? []) {
+    const fallbackLocaleKey = toLocaleKey(fallbackLocale)
+    if (!localeOrder.includes(fallbackLocaleKey)) {
+      localeOrder.push(fallbackLocaleKey)
+    }
+  }
+
+  return localeOrder
+}
+
+/**
+ * Read a locale entry from a mixed-key i18n record supporting both camelCase
+ * form keys and kebab-case locale codes.
+ * @param i18nObj - I18n record with locale-keyed entries.
+ * @param localeKey - Canonical form locale key.
+ * @returns Matching locale entry when present.
+ */
+function getLocaleEntry<T>(
+  i18nObj: Record<string, T>,
+  localeKey: LocaleKey,
+): T | undefined {
+  return i18nObj[localeKey] ?? i18nObj[toLocaleKebab(localeKey)]
+}
+
 // ═══════════════════════
 // 5. TRANSLATION RESOLUTION
 // ═══════════════════════
@@ -298,9 +331,8 @@ export function getI18n<T>(
     i18nObj = obj as Record<string, T>
   }
 
-  // CONFIG : Locale key only (no locale fallback chain)
-  const localeKey = getLocaleKey()
-  const localeCode = toLocaleKebab(localeKey)
+  // CONFIG : Resolve runtime locale plus user-selected fallback locales.
+  const localeOrder = getUserLocaleSearchOrder(_userPreferences)
   const opts = {
     fallback: fallback || defaultFallback,
   }
@@ -308,11 +340,30 @@ export function getI18n<T>(
   // indicator for machine-translated values
   const genField = `${field}Gen`
 
-  // SWITCH : BEST CASE : The field is available in the preferred locale key.
-  const preferredEntry = i18nObj[localeKey] ?? i18nObj[localeCode]
-  const translation = preferredEntry?.[field as keyof T] as string
-  if (translation && (!preferredEntry?.[genField as keyof T] || skipGenFieldCheck))
-    return translation
+  // Prefer human-authored translations across the user locale chain first.
+  for (const localeKey of localeOrder) {
+    const localeEntry = getLocaleEntry(i18nObj, localeKey)
+    const translation = localeEntry?.[field as keyof T] as string | undefined
+    const isGenerated = Boolean(localeEntry?.[genField as keyof T])
+
+    if (!translation) continue
+    if (!isGenerated || skipGenFieldCheck) return translation
+  }
+
+  // Only surface generated values when the caller bypasses the check or the
+  // user has explicitly allowed machine translations.
+  if (
+    _userPreferences.allowMachineTranslation &&
+    !_userPreferences.preferFallbackInCurrentLocale
+  ) {
+    for (const localeKey of localeOrder) {
+      const localeEntry = getLocaleEntry(i18nObj, localeKey)
+      const translation = localeEntry?.[field as keyof T] as string | undefined
+      const isGenerated = Boolean(localeEntry?.[genField as keyof T])
+
+      if (translation && isGenerated) return translation
+    }
+  }
 
   // SWTICH : CATCHALL CASE
   // If all prior attempts to get a translation (human, allowed machine, or newly generated machine) have failed or were skipped due to preferences, this is the last resort.
