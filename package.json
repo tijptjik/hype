@@ -222,6 +222,6 @@
   },
   "license": "MIT",
   "patchedDependencies": {
-    "@sveltejs/kit@2.66.0": "patches/@sveltejs%2Fkit@2.66.0.patch"
+    "@sveltejs/kit@2.67.0": "patches/@sveltejs%2Fkit@2.67.0.patch"
   }
 }
