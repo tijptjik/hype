@@ -5,6 +5,7 @@ import { buildHyperStyle } from './definitions/hyper'
 import { buildHyperLightStyle } from './definitions/hyperLight'
 import { buildHyperAdminStyle } from './definitions/hyperAdmin'
 import { buildNeonmasterStyle } from './definitions/neonmaster'
+import { buildNeorgangeStyle } from './definitions/neorgange'
 import {
   NAMED_PROTOMAPS_FLAVORS,
   type MapStyleDefinition,
@@ -97,6 +98,14 @@ export const MAP_STYLE_CATALOG = [
     name: getMapStyleCatalogCopy('neonmaster', 'en').name,
     description: getMapStyleCatalogCopy('neonmaster', 'en').description,
     buildStyle: buildNeonmasterStyle,
+    basemapVariant: 'dark',
+    showSymbols: true,
+  },
+  {
+    key: 'neorgange',
+    name: getMapStyleCatalogCopy('neorgange', 'en').name,
+    description: getMapStyleCatalogCopy('neorgange', 'en').description,
+    buildStyle: buildNeorgangeStyle,
     basemapVariant: 'dark',
     showSymbols: true,
   },

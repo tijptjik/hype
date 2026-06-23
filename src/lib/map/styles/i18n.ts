@@ -56,6 +56,11 @@ export const getMapStyleCatalogCopy = (
         name: m.map_style__neonmaster_name({}, { locale }),
         description: m.map_style__neonmaster_description({}, { locale }),
       }
+    case 'neorgange':
+      return {
+        name: m.map_style__neorgange_name({}, { locale }),
+        description: m.map_style__neorgange_description({}, { locale }),
+      }
     case 'breadline':
       return {
         name: m.map_style__breadline_name({}, { locale }),

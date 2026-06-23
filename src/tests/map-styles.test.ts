@@ -68,7 +68,7 @@ describe('map styles', () => {
     expect(pathsLayer?.minzoom).toBe(17)
   })
 
-  it('switches neonmaster roads and glow layers to a red neon palette', () => {
+  it('switches neonmaster roads to red neon and building outlines to white glow', () => {
     const style = buildMapStyle('neonmaster') as {
       layers?: Array<{
         id?: string
@@ -83,10 +83,59 @@ describe('map styles', () => {
     const glowLabelLayer = style.layers?.find(
       layer => layer.id === 'roads_labels_major__glow',
     )
+    const buildingOutline = style.layers?.find(
+      layer => layer.id === 'buildings_outline',
+    )
 
     expect(roadsLayer?.paint?.['line-color']).toBe('#FF355E')
     expect(casingLayer?.paint?.['line-color']).toBe('#FF7A8F')
     expect(glowLabelLayer?.paint?.['text-halo-color']).toBe('rgb(255, 74, 110)')
+    expect(buildingOutline?.paint?.['line-color']).toEqual([
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      17,
+      'rgba(255, 255, 255, 0.12)',
+      19,
+      'rgba(255, 255, 255, 0.72)',
+      20,
+      'rgba(255, 255, 255, 1)',
+    ])
+  })
+
+  it('gives neorgange orange roads and cyan building outlines', () => {
+    const style = buildMapStyle('neorgange') as {
+      layers?: Array<{
+        id?: string
+        paint?: Record<string, unknown>
+      }>
+    }
+
+    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
+    const casingLayer = style.layers?.find(
+      layer => layer.id === 'roads_major_casing_late',
+    )
+    const glowLabelLayer = style.layers?.find(
+      layer => layer.id === 'roads_labels_major__glow',
+    )
+    const buildingOutline = style.layers?.find(
+      layer => layer.id === 'buildings_outline',
+    )
+
+    expect(roadsLayer?.paint?.['line-color']).toBe('#FF8A00')
+    expect(casingLayer?.paint?.['line-color']).toBe('#FFB347')
+    expect(glowLabelLayer?.paint?.['text-halo-color']).toBe('rgb(255, 164, 72)')
+    expect(buildingOutline?.paint?.['line-color']).toEqual([
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      17,
+      'rgba(56, 247, 255, 0.14)',
+      19,
+      'rgba(56, 247, 255, 0.74)',
+      20,
+      'rgba(56, 247, 255, 1)',
+    ])
   })
 
   it('removes hot pink labels from the ghostery style', () => {
