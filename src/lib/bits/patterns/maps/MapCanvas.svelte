@@ -841,6 +841,7 @@ $effect(() => {
 <div
   id="map"
   class="map absolute! inset-0 overflow-hidden caret-transparent"
+  data-map-gesture-surface="true"
   data-testid="map"
   bind:this={mapContainer}
 >
