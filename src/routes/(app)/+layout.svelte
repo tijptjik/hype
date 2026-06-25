@@ -168,6 +168,7 @@ beforeNavigate(({ from, to }) => {
 let stopCircularFlight: (() => void) | null = $state(null)
 const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
 const menuReservedHeight = $derived(responsiveCtx.menuReservedHeight)
+const MAP_GESTURE_SURFACE_SELECTOR = '[data-map-gesture-surface="true"]'
 
 // PROFILE PANEL SCROLL POSITION
 let profilePanelContainer: HTMLDivElement | undefined = $state()
@@ -391,6 +392,90 @@ async function handleDismissSubscriptionPrompt(): Promise<void> {
 function handleOpenHubSubscriptionOverlay(): void {
   isHubSubscriptionOverlayOpen = true
 }
+
+/**
+ * Returns whether the event target lives inside the map subtree that is allowed
+ * to consume pinch gestures.
+ *
+ * @param target Native event target to inspect.
+ * @returns `true` when the target is inside the map gesture surface.
+ */
+function isMapGestureSurfaceTarget(target: EventTarget | null): boolean {
+  if (target instanceof Element) {
+    return Boolean(target.closest(MAP_GESTURE_SURFACE_SELECTOR))
+  }
+
+  if (target instanceof Node) {
+    return Boolean(target.parentElement?.closest(MAP_GESTURE_SURFACE_SELECTOR))
+  }
+
+  return false
+}
+
+/**
+ * Prevents multi-touch browser zoom everywhere except the map canvas subtree.
+ *
+ * @param event Native touch event emitted during a potential pinch interaction.
+ * @returns Nothing.
+ */
+function handleDocumentTouchZoomBoundary(event: TouchEvent): void {
+  if (event.touches.length < 2 || isMapGestureSurfaceTarget(event.target)) {
+    return
+  }
+
+  event.preventDefault()
+}
+
+/**
+ * Prevents Safari gesture zoom events everywhere except the map canvas subtree.
+ *
+ * @param event Native WebKit gesture event.
+ * @returns Nothing.
+ */
+function handleDocumentGestureZoomBoundary(event: Event): void {
+  if (isMapGestureSurfaceTarget(event.target)) {
+    return
+  }
+
+  event.preventDefault()
+}
+
+// Keep pinch zoom reserved for the map so the rest of the app surface cannot scale.
+$effect(() => {
+  if (!browser) return
+
+  document.addEventListener('touchstart', handleDocumentTouchZoomBoundary, {
+    passive: false,
+    capture: true,
+  })
+  document.addEventListener('touchmove', handleDocumentTouchZoomBoundary, {
+    passive: false,
+    capture: true,
+  })
+  document.addEventListener('gesturestart', handleDocumentGestureZoomBoundary, {
+    passive: false,
+    capture: true,
+  })
+  document.addEventListener('gesturechange', handleDocumentGestureZoomBoundary, {
+    passive: false,
+    capture: true,
+  })
+
+  return () => {
+    document.removeEventListener('touchstart', handleDocumentTouchZoomBoundary, {
+      capture: true,
+    })
+    document.removeEventListener('touchmove', handleDocumentTouchZoomBoundary, {
+      capture: true,
+    })
+    document.removeEventListener('gesturestart', handleDocumentGestureZoomBoundary, {
+      capture: true,
+    })
+    document.removeEventListener('gesturechange', handleDocumentGestureZoomBoundary, {
+      capture: true,
+    })
+  }
+})
 </script>
 
 <!-- biome-ignore lint/a11y/noStaticElementInteractions: Svelte special element handles global keyboard shortcuts. -->
