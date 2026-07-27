@@ -4,7 +4,10 @@ import { exit } from 'node:process'
 const PATCHED_QUERY_PATH =
   'node_modules/@sveltejs/kit/src/runtime/client/remote-functions/query/index.js'
 
-const EXPECTED_SNIPPET = 'return result._;'
+const EXPECTED_SNIPPETS = [
+  'await goto(result.redirect);\n\t\t\t\treturn;',
+  'return result._;',
+]
 
 /**
  * Verifies that Bun applied the local SvelteKit query patch.
@@ -17,7 +20,7 @@ const verifySvelteKitPatch = (): number => {
   try {
     const source = readFileSync(PATCHED_QUERY_PATH, 'utf8')
 
-    if (source.includes(EXPECTED_SNIPPET)) {
+    if (EXPECTED_SNIPPETS.every(snippet => source.includes(snippet))) {
       return 0
     }
   } catch (error) {
@@ -27,7 +30,7 @@ const verifySvelteKitPatch = (): number => {
   }
 
   console.error('SvelteKit patch is missing from installed dependencies.')
-  console.error(`Expected to find "${EXPECTED_SNIPPET}" in ${PATCHED_QUERY_PATH}.`)
+  console.error(`Expected to find the patched query return flow in ${PATCHED_QUERY_PATH}.`)
 
   return 1
 }

@@ -1,4 +1,5 @@
 import { dev } from '$app/environment'
+import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 
 const MAPLIBRE_VERSION = 'latest'
 const MAPLIBRE_CDN_BASE = `https://cdn.jsdelivr.net/npm/maplibre-gl@${MAPLIBRE_VERSION}/dist`
@@ -44,7 +45,13 @@ export const ensureMapLibreStyles = async (): Promise<void> => {
  */
 export const loadMapLibre = async (): Promise<MapLibreModule> => {
   if (dev) {
-    return import('maplibre-gl')
+    const maplibre = await import('maplibre-gl')
+
+    // Vite pre-bundles MapLibre, so its relative default worker URL cannot be
+    // served reliably from the optimized dependency path during local development.
+    maplibre.setWorkerUrl(mapLibreWorkerUrl)
+
+    return maplibre
   }
 
   return import(/* @vite-ignore */ MAPLIBRE_MODULE_URL) as Promise<MapLibreModule>
