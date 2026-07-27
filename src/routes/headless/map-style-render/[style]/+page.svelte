@@ -1,6 +1,7 @@
 <script lang="ts">
 import { page } from '$app/state'
-import maplibregl, { type MapOptions } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
+import type { MapOptions } from 'maplibre-gl'
 import { onMount } from 'svelte'
 
 import { MAP_STYLE_RENDER_VIEW } from '$lib/map/styles/render.shared'
