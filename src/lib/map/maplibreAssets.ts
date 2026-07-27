@@ -1,10 +1,8 @@
 import { dev } from '$app/environment'
 
-import { loadScript } from '$lib'
-
 const MAPLIBRE_VERSION = 'latest'
-const MAPLIBRE_CDN_BASE = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist`
-const MAPLIBRE_SCRIPT_ID = 'maplibre-gl-script'
+const MAPLIBRE_CDN_BASE = `https://cdn.jsdelivr.net/npm/maplibre-gl@${MAPLIBRE_VERSION}/dist`
+const MAPLIBRE_MODULE_URL = `${MAPLIBRE_CDN_BASE}/maplibre-gl.mjs`
 const MAPLIBRE_STYLE_ID = 'maplibre-gl-style'
 
 type MapLibreModule = typeof import('maplibre-gl')
@@ -40,25 +38,14 @@ export const ensureMapLibreStyles = async (): Promise<void> => {
 /**
  * Loads the MapLibre runtime from local assets in dev and the CDN in non-dev builds.
  *
+ * MapLibre 6 ships as an ES module and no longer exposes the legacy UMD global.
+ *
  * @returns Loaded MapLibre module namespace.
  */
-export const loadMapLibre = async (): Promise<MapLibreModule['default']> => {
+export const loadMapLibre = async (): Promise<MapLibreModule> => {
   if (dev) {
-    const module = await import('maplibre-gl')
-    return module.default
+    return import('maplibre-gl')
   }
 
-  if (!document.getElementById(MAPLIBRE_SCRIPT_ID)) {
-    const script = (await loadScript(
-      `${MAPLIBRE_CDN_BASE}/maplibre-gl.js`,
-    )) as HTMLScriptElement
-    script.id = MAPLIBRE_SCRIPT_ID
-  }
-
-  const globalMapLibre = globalThis.maplibregl as MapLibreModule['default'] | undefined
-  if (!globalMapLibre) {
-    throw new Error('MapLibre global was not available after loading the CDN script')
-  }
-
-  return globalMapLibre
+  return import(/* @vite-ignore */ MAPLIBRE_MODULE_URL) as Promise<MapLibreModule>
 }
