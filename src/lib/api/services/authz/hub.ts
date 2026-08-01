@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit'
 import {
   shouldLogAuthzDeny,
+  toAccountRequirementCode,
   toActorPolicyBase,
   toAuthMessage,
   toUserRoleSignature,
@@ -407,7 +408,7 @@ const readHubPolicy: HubPolicyHandler = params => {
 
 const createHubPolicy: HubPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
-    return logHubReject('create', params, 'UNAUTHENTICATED')
+    return logHubReject('create', params, toAccountRequirementCode(params))
   }
 
   if (params.isSuperAdmin) {
@@ -421,7 +422,7 @@ const createHubPolicy: HubPolicyHandler = params => {
 
 const updateHubPolicy: HubPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
-    return logHubReject('update', params, 'UNAUTHENTICATED')
+    return logHubReject('update', params, toAccountRequirementCode(params))
   }
 
   if (params.isSuperAdmin) {
@@ -439,7 +440,7 @@ const updateHubPolicy: HubPolicyHandler = params => {
 
 const deleteHubPolicy: HubPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
-    return logHubReject('delete', params, 'UNAUTHENTICATED')
+    return logHubReject('delete', params, toAccountRequirementCode(params))
   }
 
   if (params.isSuperAdmin) {

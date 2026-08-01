@@ -34,6 +34,18 @@ export const getSessionOrError = async (
   return { user: locals.user, session: locals.session }
 }
 
+/**
+ * Rejects a valid guest session at an account-only server boundary.
+ *
+ * @param user - Current Better Auth session user.
+ * @returns Nothing when the user has a durable account.
+ */
+export const ensureAccountUser = (user: SessionUser): void => {
+  if (user.isAnonymous === true) {
+    throw error(403, 'ACCOUNT_REQUIRED')
+  }
+}
+
 export const JSONResponseOrError = async (result: unknown): Promise<Response> => {
   if (!result) {
     return error(404, "These aren't the signs you're looking for")

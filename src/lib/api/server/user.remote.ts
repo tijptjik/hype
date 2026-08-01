@@ -22,6 +22,7 @@ import {
   guardedCommand,
   guardedQuery,
 } from '$lib/api/server/remote'
+import { ensureAccountUser } from '$lib/api'
 import {
   isPrivilegedArchivedSearchRequested,
   toEntityResponseShape,
@@ -237,6 +238,7 @@ export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => 
 export const updateUserProfile = guardedCommand(
   UpdateUserParamsSchema,
   async (params, ctx) => {
+    ensureAccountUser(ctx.user)
     const { db, user: sessionUser } = ctx
     if (!sessionUser) {
       throw error(401, 'AUTH_REQUIRED')

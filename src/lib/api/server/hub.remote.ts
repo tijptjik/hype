@@ -41,6 +41,7 @@ import {
   toHubUserRoleSignature,
   authorizeHubList,
 } from '$lib/api/services/authz'
+import { ensureAccountUser } from '$lib/api'
 // SERVICES
 import {
   createHub,
@@ -576,9 +577,7 @@ export const dismissSubscriptionPrompt = guardedCommand(
   DismissHubSubscriptionPromptSchema,
   async (params, ctx) => {
     const { db, user } = ctx
-    if (!user || user.isAnonymous) {
-      throw error(401, 'AUTH_REQUIRED')
-    }
+    ensureAccountUser(user)
 
     const target = await getHubSubscriptionTarget(db, params.hubId)
     if (!target) {
@@ -612,9 +611,7 @@ export const joinSubscription = guardedCommand(
   JoinHubSubscriptionSchema,
   async (params, ctx) => {
     const { db, user } = ctx
-    if (!user || user.isAnonymous) {
-      throw error(401, 'AUTH_REQUIRED')
-    }
+    ensureAccountUser(user)
 
     if (!params.hasAgreedToTerms) {
       throw error(400, 'TERMS_ACCEPTANCE_REQUIRED')

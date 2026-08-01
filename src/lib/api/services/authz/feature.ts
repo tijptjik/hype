@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit'
-import { shouldLogAuthzDeny, toActorPolicyBase } from '.'
+import { shouldLogAuthzDeny, toAccountRequirementCode, toActorPolicyBase } from '.'
 import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
 
@@ -28,6 +28,7 @@ import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
 
 type FeaturePolicyCode =
   | 'UNAUTHENTICATED'
+  | 'ACCOUNT_REQUIRED'
   | 'INSUFFICIENT_ROLE'
   | 'FIELD_FORBIDDEN'
   | 'REQUEST_STATE_REQUIRED'
@@ -331,7 +332,7 @@ export const authorizeFeatureCreateForSubmission = (params: {
   })
 
   if (!hasAuthenticatedSession(actor)) {
-    return logFeatureReject('create', 'UNAUTHENTICATED', {
+    return logFeatureReject('create', toAccountRequirementCode(actor), {
       actor,
       target: params.resource,
       fields: toFeatureSubmittedFields(params.submittedData ?? {}),
@@ -372,7 +373,7 @@ export const authorizeFeatureUpdateForSubmission = (params: {
   const fields = toFeatureSubmittedFields(params.submittedData ?? {})
 
   if (!hasAuthenticatedSession(actor)) {
-    return logFeatureReject('update', 'UNAUTHENTICATED', {
+    return logFeatureReject('update', toAccountRequirementCode(actor), {
       actor,
       target: params.resource,
       fields,
@@ -415,7 +416,7 @@ export const authorizeFeaturePublishForSubmission = (params: {
   })
 
   if (!hasAuthenticatedSession(actor)) {
-    return logFeatureReject('publish', 'UNAUTHENTICATED', {
+    return logFeatureReject('publish', toAccountRequirementCode(actor), {
       actor,
       target: params.resource,
     })
