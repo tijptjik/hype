@@ -264,13 +264,36 @@ key: ${{ runner.os }}-test-${{ github.sha }}
 ### Guest Accounts and Transactional Email
 
 - Onboard `hype.hk` for Cloudflare Email Sending before enabling email/password
-  flows. The Worker binding is `EMAIL`; `AUTH_EMAIL_FROM` is the verified sender.
+  flows. In the Cloudflare dashboard, open **Compute & AI → Email Service → Email
+  Sending**, choose **Onboard Domain**, select `hype.hk`, and let Cloudflare add the
+  bounce MX, SPF, DKIM, and DMARC records. Alternatively, use
+  `bunx wrangler email sending enable hype.hk` with an API token that can manage Email
+  Sending and DNS for the zone.
+- Confirm onboarding with `bunx wrangler email sending list hype.hk` and
+  `bunx wrangler email sending dns get hype.hk`. DNS verification may take several
+  minutes. Review the resulting DMARC policy against the domain's existing Google
+  Workspace mail flow before making it stricter.
+- The Worker binding is `EMAIL` in every environment and requires no email API key.
+  `AUTH_EMAIL_FROM` is the non-secret verified sender `account@hype.hk` in local,
+  preview, and production configuration.
 - Configure `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` together. Apple and WeChat
   remain disabled until explicit provider flags and complete credentials are added.
-- Set `ANONYMOUS_CLEANUP_TOKEN` with `wrangler secret put` in preview and production.
-- Schedule a daily authenticated `POST /api/maintenance/anonymous-cleanup` request.
+- Run `bun run auth:secrets:configure` after Wrangler authentication is configured.
+  The script securely prompts for `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and
+  `AUTH_GOOGLE_SECRET` for preview and production. It generates a different
+  `ANONYMOUS_CLEANUP_TOKEN` for each environment and uploads the same value to the app
+  and maintenance-scheduler Workers without printing or storing it. Pass `preview` or
+  `production` to configure only one environment.
+- The maintenance-scheduler Worker refreshes map renders hourly and runs the
+  authenticated guest cleanup daily at 03:15 UTC by posting to
+  `/api/maintenance/anonymous-cleanup`.
   Cleanup removes only guest users older than 45 days with no unexpired session and
   logs aggregate counts without deleted identifiers.
+- The scheduler environments deploy as `hype-scheduler-preview` and
+  `hype-scheduler-production`.
+  After confirming its cron triggers and logs, remove the superseded
+  `hype-render-scheduler-*` Workers in the Cloudflare dashboard to prevent duplicate
+  hourly render refreshes.
 
 ### Access Control
 
