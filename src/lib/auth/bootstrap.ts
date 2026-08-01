@@ -25,7 +25,7 @@ const defaultWait = (durationMs: number): Promise<void> =>
  * @returns `true` for interactive application routes only.
  */
 export function shouldBootstrapAnonymous(pathname: string): boolean {
-  return !['/admin', '/api', '/headless', '/policy', '/proxy'].some(
+  return !['/admin', '/account', '/api', '/headless', '/policy', '/proxy'].some(
     prefix => pathname === prefix || pathname.startsWith(`${prefix}/`),
   )
 }

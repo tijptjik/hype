@@ -34,18 +34,6 @@ export const getSessionOrError = async (
   return { user: locals.user, session: locals.session }
 }
 
-/**
- * Rejects a valid guest session at an account-only server boundary.
- *
- * @param user - Current Better Auth session user.
- * @returns Nothing when the user has a durable account.
- */
-export const ensureAccountUser = (user: SessionUser): void => {
-  if (user.isAnonymous === true) {
-    throw error(403, 'ACCOUNT_REQUIRED')
-  }
-}
-
 export const JSONResponseOrError = async (result: unknown): Promise<Response> => {
   if (!result) {
     return error(404, "These aren't the signs you're looking for")
@@ -107,7 +95,7 @@ export const setupRequestHandler = async (event: {
   const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true'
 
   const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger)
-  const userRoles = await getUserRoles(db, user.id as Id)
+  const userRoles = user.isAnonymous ? [] : await getUserRoles(db, user.id as Id)
   return {
     db,
     session,
@@ -133,7 +121,7 @@ export const getDatabase = async (
   const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true'
 
   const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger)
-  const userRoles = await getUserRoles(db, user.id as Id)
+  const userRoles = user.isAnonymous ? [] : await getUserRoles(db, user.id as Id)
   return {
     db,
     session,

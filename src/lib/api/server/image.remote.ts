@@ -1507,6 +1507,7 @@ export const authImageUpload = guardedCommand(
   AuthImageUploadSchema,
   async (params, ctx): Promise<ImageUploadSession> => {
     const { db, user, userRoles, event } = ctx
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
 
     if (params.cdn !== 'cloudflareR2') {
       throw error(400, 'Only cloudflareR2 uploads are supported')
@@ -1603,6 +1604,7 @@ export const finalizeImageUpload = guardedCommand(
   FinalizeImageUploadSchema,
   async (params: FinalizeImageUploadParams, ctx) => {
     const { db, user, userId, userRoles, event } = ctx
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
     const secret = event.platform?.env.AUTH_SECRET
     if (!secret) throw error(500, 'Upload auth secret not available')
 
@@ -1826,6 +1828,7 @@ export const createImage = guardedCommand(async (input, ctx) => {
   }
 
   const { db, user, userId, userRoles, event } = ctx
+  if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   const imageData: ImageNew = { ...data, contributorId: data.contributorId ?? userId }
 
   if (!imageData.ctxType || !imageData.ctxId) {
@@ -1848,6 +1851,7 @@ export const createImage = guardedCommand(async (input, ctx) => {
  */
 export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx) => {
   const { db, user, userId, userRoles, event } = ctx
+  if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   return updateImageForContext({
     db,
     user,
@@ -1868,6 +1872,7 @@ export const setImageIntent = guardedCommand(
   SetImageIntentSchema,
   async (params, ctx) => {
     const { db, user, userId, userRoles, event } = ctx
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
     return updateFeatureImageFields({
       db,
       user,
@@ -1895,6 +1900,7 @@ export const setImagePublished = guardedCommand(
   SetImagePublishedSchema,
   async (params, ctx) => {
     const { db, user, userId, userRoles, event } = ctx
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
     return updateFeatureImageFields({
       db,
       user,
@@ -1917,6 +1923,7 @@ export const setImagePublished = guardedCommand(
  */
 export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx) => {
   const { db, user, userId, userRoles, event } = ctx
+  if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   const existing = await loadImageById(db, [eq(image.id, params.id as Id)])
 
   if (!existing) {
@@ -2050,6 +2057,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
  */
 export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx) => {
   const { db, user, userRoles, event } = ctx
+  if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
 
   await assertPermissionsToDeleteImage(
     db,

@@ -42,9 +42,9 @@ const privateEnv = env as Record<string, string | undefined>
 export const getAssetAnalyticsSummary = guardedQuery(
   assetAnalyticsSummaryParamsSchema,
   async (params, ctx) => {
+    if (ctx.user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
     if (
       !ctx.isAdminRequest ||
-      ctx.user.isAnonymous ||
       !canAccessAnalytics({
         superAdmin: ctx.user.superAdmin,
         userRoles: ctx.userRoles,

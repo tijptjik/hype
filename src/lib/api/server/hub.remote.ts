@@ -41,7 +41,6 @@ import {
   toHubUserRoleSignature,
   authorizeHubList,
 } from '$lib/api/services/authz'
-import { ensureAccountUser } from '$lib/api'
 // SERVICES
 import {
   createHub,
@@ -138,6 +137,7 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
   const { db, user, userRoles, event } = ctx
   // Resolve desired `profile`.
   const profile = toHubProfile(params.meta?.profile, 'list')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   // Resolve desired `query params`.
   const queryParams = validateQueryParams<HubDB>(
@@ -158,6 +158,7 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
     {
       resourceHubId: event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
     },
+    requestedListState,
   )
   if (!listDecision.allowed) {
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
@@ -167,7 +168,12 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
   const result = await listHubs(
     db,
     hubCollectionWithRelations,
-    toHubListConditions(userRoles, requestedListState),
+    toHubListConditions(
+      userRoles,
+      requestedListState,
+      requestedListState.isPublished === true &&
+        requestedListState.isArchived === false,
+    ),
     params.pagination,
     params.sorting,
     {
@@ -223,6 +229,7 @@ const getHubQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   }
   // Resolve desired `profile`
   const profile = toHubProfile(params.meta?.profile, 'detail')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
   // Return loaded record with desired profile
   return toEntityResponseShape(result ?? null, profile)
 })
@@ -577,7 +584,7 @@ export const dismissSubscriptionPrompt = guardedCommand(
   DismissHubSubscriptionPromptSchema,
   async (params, ctx) => {
     const { db, user } = ctx
-    ensureAccountUser(user)
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
 
     const target = await getHubSubscriptionTarget(db, params.hubId)
     if (!target) {
@@ -611,7 +618,7 @@ export const joinSubscription = guardedCommand(
   JoinHubSubscriptionSchema,
   async (params, ctx) => {
     const { db, user } = ctx
-    ensureAccountUser(user)
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
 
     if (!params.hasAgreedToTerms) {
       throw error(400, 'TERMS_ACCEPTANCE_REQUIRED')

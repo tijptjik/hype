@@ -263,13 +263,14 @@ const hasProjectPropertyEditorAccessToHub = (
 export const toHubListConditions = (
   roles: UserRoleDisco[],
   requestedListState: HubRequestedListState,
+  allowPublic: boolean = false,
 ): SQL<unknown>[] => {
   const isCoreAdmin = isCoreHubAdmin(roles)
   const scopedHubIds = Array.from(getScopedHubAdminIds(roles))
 
   return [
     ...(!isCoreAdmin && scopedHubIds.length > 0 ? [inArray(hub.id, scopedHubIds)] : []),
-    ...(!isCoreAdmin && scopedHubIds.length === 0
+    ...(!allowPublic && !isCoreAdmin && scopedHubIds.length === 0
       ? [eq(hub.id, '__none__' as Id)]
       : []),
     ...(requestedListState.isPublished === undefined
@@ -360,8 +361,15 @@ const toHubPolicyBase = (
 /* -------- */
 
 const listHubsPolicy: HubPolicyHandler = params => {
-  if (!hasAuthenticatedSession(params)) {
+  if (!params.userId) {
     return logHubReject('list', params, 'UNAUTHENTICATED')
+  }
+
+  if (
+    params.requestedState?.isPublished === true &&
+    params.requestedState?.isArchived === false
+  ) {
+    return { allowed: true }
   }
 
   if (params.isSuperAdmin) {
@@ -382,8 +390,15 @@ const listHubsPolicy: HubPolicyHandler = params => {
 }
 
 const readHubPolicy: HubPolicyHandler = params => {
-  if (!hasAuthenticatedSession(params)) {
+  if (!params.userId) {
     return logHubReject('read', params, 'UNAUTHENTICATED')
+  }
+
+  if (
+    params.requestedState?.isPublished === true &&
+    params.requestedState?.isArchived === false
+  ) {
+    return { allowed: true }
   }
 
   if (params.isSuperAdmin) {
@@ -465,17 +480,21 @@ const publishHubPolicy: HubPolicyHandler = params =>
 export const authorizeHubList = (
   actor: HubAuthActor,
   target: Pick<HubAuthTarget, 'resourceHubId'>,
+  requestedState?: HubRequestedListState,
 ): AuthorizationDecision =>
   listHubsPolicy({
     ...toHubPolicyBase(actor),
     action: 'listHubs',
     resourceHubId: target.resourceHubId,
+    requestedState,
   })
 
 export const authorizeHubRead = (
   actor: HubAuthActor,
   target: Required<Pick<HubAuthTarget, 'resourceHubId'>> & {
     resourceHubCode?: string | null
+    isPublished?: boolean
+    isArchived?: boolean
   },
 ): AuthorizationDecision =>
   readHubPolicy({
@@ -483,16 +502,22 @@ export const authorizeHubRead = (
     action: 'readHub',
     resourceHubId: target.resourceHubId,
     resourceHubCode: target.resourceHubCode,
+    requestedState: {
+      isPublished: target.isPublished,
+      isArchived: target.isArchived,
+    },
   })
 
 export const authorizeHubReadForProbe = (params: {
   user: { id: string; isAnonymous?: boolean }
   userRoles: UserRoleDisco[]
-  probe: { id: string; code: string }
+  probe: { id: string; code: string; isPublished: boolean; isArchived: boolean }
 }): AuthorizationDecision =>
   authorizeHubRead(toHubSubmissionActor(params.user, params.userRoles), {
     resourceHubId: params.probe.id,
     resourceHubCode: params.probe.code,
+    isPublished: params.probe.isPublished,
+    isArchived: params.probe.isArchived,
   })
 
 /* ----------------- */

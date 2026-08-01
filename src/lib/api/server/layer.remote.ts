@@ -108,6 +108,7 @@ import { getValidQueryParams as validateQueryParams } from '$lib/api'
 const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toLayerProfile(params.meta?.profile, 'list')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   const queryParams = validateQueryParams<LayerDB>(
     layer,
@@ -176,6 +177,7 @@ export const getLayers = getLayersQuery as typeof getLayersQuery &
 const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toLayerProfile(params.meta?.profile, 'detail')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
   const normalizedParams = {
     ...params,
     refKey: 'id' as const,

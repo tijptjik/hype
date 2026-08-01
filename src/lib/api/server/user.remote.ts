@@ -22,7 +22,6 @@ import {
   guardedCommand,
   guardedQuery,
 } from '$lib/api/server/remote'
-import { ensureAccountUser } from '$lib/api'
 import {
   isPrivilegedArchivedSearchRequested,
   toEntityResponseShape,
@@ -114,6 +113,8 @@ export const searchUsers = guardedQuery(
   UserSearchQueryParamsSchema,
   async (params, ctx) => {
     const { db, user, userRoles } = ctx
+
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
 
     // Apply role-based authorization.
     if (!canSearchUsers({ superAdmin: user.superAdmin, userRoles })) {
@@ -238,10 +239,17 @@ export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => 
 export const updateUserProfile = guardedCommand(
   UpdateUserParamsSchema,
   async (params, ctx) => {
-    ensureAccountUser(ctx.user)
     const { db, user: sessionUser } = ctx
     if (!sessionUser) {
       throw error(401, 'AUTH_REQUIRED')
+    }
+
+    const guestWritableFields = new Set(['locale', 'preferences', 'experimental'])
+    if (
+      sessionUser.isAnonymous &&
+      Object.keys(params.data).some(field => !guestWritableFields.has(field))
+    ) {
+      throw error(403, 'ACCOUNT_REQUIRED')
     }
 
     const existing = await loadUser(db, {}, [eq(user.id, params.id)])
