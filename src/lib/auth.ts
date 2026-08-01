@@ -4,6 +4,7 @@ import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { customSession, anonymous, username } from 'better-auth/plugins'
 // CONFIG
 import { authConfig } from './auth/config'
+import { isAuthProviderEnabled } from './auth/providers'
 // DB SCHEMA
 import * as schema from '$lib/db/schema/index'
 // DRIZZLE
@@ -104,7 +105,9 @@ function createAuthInstance(
     },
     // OAUTH
     socialProviders: {
-      ...(env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET
+      ...(isAuthProviderEnabled('google') &&
+      env.AUTH_GOOGLE_ID &&
+      env.AUTH_GOOGLE_SECRET
         ? {
             google: {
               clientId: env.AUTH_GOOGLE_ID,
