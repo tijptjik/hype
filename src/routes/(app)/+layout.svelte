@@ -7,6 +7,7 @@ import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 import { dismissActiveFeatureNavigation, handlePanelParams } from '$lib/navigation'
 import { useSession } from '$lib/auth/client'
+import { requestAccountUpgrade } from '$lib/auth/upgrade'
 import { useOmnibarModel } from '$lib/adapters/bars'
 import {
   createHubSubscriptionModelParams,
@@ -41,7 +42,6 @@ import Profile from '$lib/components/panels/Profile.svelte'
 // BITS
 import {
   AppHubSubscriptionOverlay,
-  AppLanding,
   AppMapOverlayBar,
   AppMain,
   AppNav,
@@ -320,6 +320,10 @@ function handleWindowKeydown(event: KeyboardEvent): void {
  */
 async function handleJoinSubscription(): Promise<void> {
   if (!hub?.id || isSubscriptionBusy) return
+  if ($session.data?.user?.isAnonymous === true) {
+    requestAccountUpgrade('subscription', page.url.href)
+    return
+  }
 
   isSubscriptionBusy = true
 
@@ -390,6 +394,10 @@ async function handleDismissSubscriptionPrompt(): Promise<void> {
 }
 
 function handleOpenHubSubscriptionOverlay(): void {
+  if ($session.data?.user?.isAnonymous === true) {
+    requestAccountUpgrade('subscription', page.url.href)
+    return
+  }
   isHubSubscriptionOverlayOpen = true
 }
 
@@ -478,7 +486,6 @@ $effect(() => {
 })
 </script>
 
-<!-- biome-ignore lint/a11y/noStaticElementInteractions: Svelte special element handles global keyboard shortcuts. -->
 <svelte:window onkeydown={handleWindowKeydown} />
 
 <AppShell>
@@ -524,7 +531,5 @@ $effect(() => {
         />
       </AppMain>
     </AppSurface>
-  {:else if !$session.isPending && !$session.data}
-    <AppLanding> {@render children()} </AppLanding>
   {/if}
 </AppShell>

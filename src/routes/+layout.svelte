@@ -9,7 +9,16 @@ import type { QueryClient } from '@tanstack/svelte-query'
 // BITS
 import { cx } from '$lib/bits/utils'
 // AUTH
-import { useSession } from '$lib/auth/client'
+import { signIn, useSession } from '$lib/auth/client'
+import {
+  bootstrapAnonymousSession,
+  shouldBootstrapAnonymous,
+} from '$lib/auth/bootstrap'
+import {
+  UPGRADE_ACCOUNT_EVENT,
+  type UpgradeReason,
+  toSafeReturnPath,
+} from '$lib/auth/upgrade'
 // I18N
 import { getLocaleKey } from '$lib/i18n'
 // CONTEXT
@@ -18,6 +27,7 @@ import { setPlaceCtx } from '$lib/context/place.svelte'
 import { setResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
 import App from '$lib/bits/patterns/layout/app/App.svelte'
+import UpgradeAccountDialog from '$lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
 // MAPLIBRE
 import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
@@ -45,6 +55,10 @@ const session = useSession()
 const responsive = setResponsiveCtx()
 let hasMounted = false
 let pendingAuthReinit: ReturnType<typeof setTimeout> | null = null
+let bootstrapError = $state<string | null>(null)
+let isUpgradeOpen = $state(false)
+let upgradeReason = $state<UpgradeReason>('account')
+let upgradeReturnTo = $state('/')
 
 // Set AppCtx in context
 const appCtx = setAppCtx(
@@ -124,17 +138,56 @@ $effect(() => {
 })
 
 // Load maplibre globally
+async function initializeAuthenticatedApp(): Promise<void> {
+  if (shouldBootstrapAnonymous(page.url.pathname)) {
+    await bootstrapAnonymousSession({
+      getSession: () => ({
+        isPending: $session.isPending,
+        userId: $session.data?.user?.id,
+      }),
+      signInAnonymous: async () => {
+        const result = await signIn.anonymous()
+        if (result.error) throw new Error(result.error.message)
+      },
+      refetchSession: () => $session.refetch(),
+    })
+  }
+
+  const currentUser = $session.data?.user
+  appCtx.setUser((currentUser as SessionUser | undefined) ?? null)
+  await appCtx.init(currentUser?.id ?? null)
+}
+
+async function retryBootstrap(): Promise<void> {
+  bootstrapError = null
+  try {
+    await initializeAuthenticatedApp()
+  } catch (error) {
+    bootstrapError = error instanceof Error ? error.message : 'Guest session failed'
+  }
+}
+
 onMount(async () => {
   hasMounted = true
 
   if (!appCtx.isInitialised) {
-    const currentUser = $session.data?.user
-    if (currentUser) {
-      appCtx.setUser(currentUser as SessionUser)
-      await appCtx.init(currentUser.id)
-    } else {
-      await appCtx.init(null)
-    }
+    await retryBootstrap()
+  }
+
+  const handleUpgradeRequest = (event: Event): void => {
+    const detail = (event as CustomEvent<{ reason?: UpgradeReason; returnTo?: string }>)
+      .detail
+    upgradeReason = detail?.reason ?? 'account'
+    upgradeReturnTo = toSafeReturnPath(detail?.returnTo)
+    isUpgradeOpen = true
+  }
+  window.addEventListener(UPGRADE_ACCOUNT_EVENT, handleUpgradeRequest)
+
+  const requestedUpgrade = page.url.searchParams.get('upgrade')
+  if (requestedUpgrade) {
+    upgradeReason = requestedUpgrade === 'admin' ? 'admin' : 'account'
+    upgradeReturnTo = toSafeReturnPath(page.url.searchParams.get('returnTo'))
+    isUpgradeOpen = true
   }
 
   scheduleResponsiveSync()
@@ -168,6 +221,7 @@ onMount(async () => {
 
     window.visualViewport?.removeEventListener('resize', scheduleResponsiveSync)
     window.visualViewport?.removeEventListener('scroll', scheduleResponsiveSync)
+    window.removeEventListener(UPGRADE_ACCOUNT_EVENT, handleUpgradeRequest)
   }
 })
 
@@ -281,3 +335,26 @@ watch(
     {@render children()}
   </App>
 {/if}
+
+{#if bootstrapError}
+  <div
+    class="fixed inset-0 z-[1100] flex items-center justify-center bg-black p-6 text-white"
+  >
+    <div class="max-w-sm text-center">
+      <p>We couldn't start your guest account. Your requested page is still here.</p>
+      <button
+        type="button"
+        class="mt-4 rounded-lg bg-white px-4 py-2 text-black"
+        onclick={retryBootstrap}
+      >
+        Try again
+      </button>
+    </div>
+  </div>
+{/if}
+
+<UpgradeAccountDialog
+  bind:open={isUpgradeOpen}
+  reason={upgradeReason}
+  returnTo={upgradeReturnTo}
+/>
