@@ -261,6 +261,17 @@ key: ${{ runner.os }}-test-${{ github.sha }}
 3. **Least Privilege**: Secrets only accessible to authorized workflows
 4. **Rotation Ready**: Easy to update via `wrangler secret put`
 
+### Guest Accounts and Transactional Email
+
+- Onboard `hype.hk` for Cloudflare Email Sending before enabling email/password
+  flows. The Worker binding is `EMAIL`; `AUTH_EMAIL_FROM` is the verified sender.
+- Configure `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` together. Apple and WeChat
+  remain disabled until explicit provider flags and complete credentials are added.
+- Set `ANONYMOUS_CLEANUP_TOKEN` with `wrangler secret put` in preview and production.
+- Schedule a daily authenticated `POST /api/maintenance/anonymous-cleanup` request.
+  Cleanup removes only guest users older than 45 days with no unexpired session and
+  logs aggregate counts without deleted identifiers.
+
 ### Access Control
 
 1. **Branch Protection**: Enforced workflow prevents bypassing
