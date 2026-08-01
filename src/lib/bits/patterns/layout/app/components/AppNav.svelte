@@ -5,6 +5,7 @@ import { page } from '$app/state'
 // AUTH
 import { canAccessAdminPanel } from '$lib/api/services/authz'
 import { useSession } from '$lib/auth/client'
+import { requestAccountUpgrade } from '$lib/auth/upgrade'
 // SERVICES
 import { initAddNewFeature } from '$lib/client/services/feature'
 // I18N
@@ -120,6 +121,10 @@ async function handleSelect(
   event: MouseEvent,
 ): Promise<void> {
   if (item.value === ADD_FEATURE_MENU_VALUE) {
+    if ($session.data?.user?.isAnonymous === true) {
+      requestAccountUpgrade('contribution', page.url.href)
+      return
+    }
     await initAddNewFeature(appCtx, omniCtx, event)
     return
   }
@@ -137,6 +142,10 @@ async function handleSelect(
   }
 
   if (item.value === SUBSCRIPTION_MENU_VALUE) {
+    if ($session.data?.user?.isAnonymous === true) {
+      requestAccountUpgrade('subscription', page.url.href)
+      return
+    }
     await subscriptionItem?.onSelect?.()
     return
   }
