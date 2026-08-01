@@ -5,7 +5,7 @@ import type { Handle } from '@sveltejs/kit'
 import { paraglideMiddleware } from '$lib/paraglide/server'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import * as schema from '$lib/db/schema/index'
 import { retryBusyRead } from '$lib/db/services/sqlite'
 // AUTH
@@ -35,7 +35,7 @@ const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtende
   isSubscriptionAvailable: hub?.isSubscriptionAvailable ?? false,
   subscriptionService: hub?.subscriptionService ?? null,
   subscriptionId: hub?.subscriptionId ?? null,
-  subscriptionPlacement: hub?.subscriptionPlacement ?? null,
+  subscriptionPlacement: hub?.subscriptionPlacement ?? undefined,
   i18n: hub?.i18n ?? EMPTY_HUB_I18N,
   isSuperAdmin: hub?.isSuperAdmin ?? false,
   isAdminRequest: hub?.isAdminRequest ?? false,
@@ -109,13 +109,18 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   })
 
   if (db && event.locals && hubOpts.code) {
+    const hubCode = hubOpts.code
     const hubDb = await retryBusyRead(() =>
       db.query.hub.findFirst({
         with: {
           i18n: true,
           image: true,
         },
-        where: eq(schema.hub.code, hubOpts.code),
+        where: and(
+          eq(schema.hub.code, hubCode),
+          eq(schema.hub.isPublished, true),
+          eq(schema.hub.isArchived, false),
+        ),
       }),
     )
     if (hubDb) {
@@ -126,13 +131,18 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else if (db && event.locals && hubOpts.domain) {
+    const hubDomain = hubOpts.domain
     const hubDb = await retryBusyRead(() =>
       db.query.hub.findFirst({
         with: {
           i18n: true,
           image: true,
         },
-        where: eq(schema.hub.domain, hubOpts.domain),
+        where: and(
+          eq(schema.hub.domain, hubDomain),
+          eq(schema.hub.isPublished, true),
+          eq(schema.hub.isArchived, false),
+        ),
       }),
     )
     if (hubDb) {
