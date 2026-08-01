@@ -4,6 +4,7 @@ import { onDestroy } from 'svelte'
 import { goto } from '$app/navigation'
 // AUTH
 import { signOut } from '$lib/auth/client'
+import { requestAccountUpgrade } from '$lib/auth/upgrade'
 // I18N
 import { m } from '$lib/i18n'
 // SERVICES
@@ -167,6 +168,10 @@ export function useProfileSectionModel(
 
   function handleOpenProfile(): void {
     const user = appCtx.getUser()
+    if (user && 'isAnonymous' in user && user.isAnonymous === true) {
+      requestAccountUpgrade('profile', window.location.href)
+      return
+    }
     appCtx.setPanelCtx(Panel.profile, 'username', user?.username)
     appCtx.togglePanel(Panel.profile)
   }
@@ -175,7 +180,7 @@ export function useProfileSectionModel(
     await signOut({
       fetchOptions: {
         onSuccess: () => {
-          goto('/')
+          goto('/?upgrade=account&signedOut=1')
         },
         onError: error => {
           console.error('Sign out failed:', error)
