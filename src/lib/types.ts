@@ -1991,6 +1991,7 @@ export type AuthorizationField =
 
 export const authorizationDenyCodes = [
   'UNAUTHENTICATED',
+  'ACCOUNT_REQUIRED',
   'REQUEST_STATE_REQUIRED',
   'INSUFFICIENT_ROLE',
   'HUB_SCOPE_FORBIDDEN',

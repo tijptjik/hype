@@ -662,9 +662,10 @@ export class AppCtx {
     this.state.prisms.organisation,
     this.state.prisms.project,
   ]
-  userFeaturesQueryKey = () => ['userFeatures']
+  userFeaturesQueryKey = () => ['userFeatures', this.user?.id ?? 'no-user']
   userQueryKey = () => [
     FirstClassResource.user,
+    this.getRoleScopeQueryKey(),
     this.state.panels.profile.ctx?.username || this.user?.id,
     ...(this.state.panels.profile.ctx?.observePrisms
       ? [
@@ -3477,6 +3478,20 @@ export class AppCtx {
 
   // USER DATA
   setUser = async (user: CurrentUser | SessionUser | null) => {
+    const previousUserId = this.user?.id ?? null
+    const nextUserId = user?.id ?? null
+
+    if (previousUserId !== nextUserId) {
+      // Identity-bound records must never survive guest/account transitions.
+      this.queryClient.removeQueries({ queryKey: ['userFeatures'], exact: false })
+      this.queryClient.removeQueries({
+        queryKey: [FirstClassResource.user],
+        exact: false,
+      })
+      this.cache.user.clear()
+      this.state.userFeatures = { wishlisted: [], visited: [] }
+    }
+
     this.user = user
     this.postUserMutation()
   }
