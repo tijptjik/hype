@@ -15,6 +15,7 @@ import DefaultMap from '$lib/components/panels/sections/DefaultMap.svelte'
 import Experimental from '$lib/components/panels/sections/Experimental.svelte'
 import Admin from '$lib/components/panels/sections/Admin.svelte'
 import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
+import AccountPassword from '$lib/bits/custom/AccountPassword.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -69,6 +70,8 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
 
   {#if isGuestAccount}
     <GuestAccountReminder reason="profile" />
+  {:else}
+    <AccountPassword />
   {/if}
   <ProfileSection {...profileSectionModel.getProfileProps()} />
   <div class="flex flex-col">
