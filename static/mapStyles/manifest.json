@@ -1,62 +1,62 @@
 {
   "hyper": {
-    "fileName": "hyper.e0abb60cbc18.json",
-    "publicPath": "/mapStyles/hyper.e0abb60cbc18.json",
-    "hash": "e0abb60cbc188dfdf52c3a72daba7e44852a528086b8f6d243542157a5591818"
+    "fileName": "hyper.a891c8e351d9.json",
+    "publicPath": "/mapStyles/hyper.a891c8e351d9.json",
+    "hash": "a891c8e351d9a3ad7e462332bd89fa176db7345ea516183a75a46adf5795981b"
   },
   "hyperLight": {
-    "fileName": "hyperLight.1eb792e1dc99.json",
-    "publicPath": "/mapStyles/hyperLight.1eb792e1dc99.json",
-    "hash": "1eb792e1dc990270b639b9ce876061a725adeea52a2534cbb6bb1ef8a48ac4cc"
+    "fileName": "hyperLight.28d500db761b.json",
+    "publicPath": "/mapStyles/hyperLight.28d500db761b.json",
+    "hash": "28d500db761bde0e4d6afa49590d8f52cabb57479bfe29861d1c24c4a73e515f"
   },
   "ghostery": {
-    "fileName": "ghostery.835bfc399a3d.json",
-    "publicPath": "/mapStyles/ghostery.835bfc399a3d.json",
-    "hash": "835bfc399a3d22272d47a1e4740c387408ba740e1e624c6cc8877c96b511f569"
+    "fileName": "ghostery.5d3b418776c3.json",
+    "publicPath": "/mapStyles/ghostery.5d3b418776c3.json",
+    "hash": "5d3b418776c3c43653e9d3e01a1ce4f38a99f6b6ac3795954985c99f56f4a44e"
   },
   "ghostery-legacy": {
-    "fileName": "ghostery-legacy.1818f6f4257d.json",
-    "publicPath": "/mapStyles/ghostery-legacy.1818f6f4257d.json",
-    "hash": "1818f6f4257d837288ea34d9308169fbf3a2fa37fbbcfe11b33380f95eae80be"
+    "fileName": "ghostery-legacy.54a201d6f3e7.json",
+    "publicPath": "/mapStyles/ghostery-legacy.54a201d6f3e7.json",
+    "hash": "54a201d6f3e7d18bcaf66cd59aeeb85e8bf18a6e017c692cf6eb92bc5578d75b"
   },
   "neonmaster": {
-    "fileName": "neonmaster.5850c308a769.json",
-    "publicPath": "/mapStyles/neonmaster.5850c308a769.json",
-    "hash": "5850c308a769ccb3cace3893beff958932a891898c16fd88f8e55b227947a4ab"
+    "fileName": "neonmaster.b35011eecd53.json",
+    "publicPath": "/mapStyles/neonmaster.b35011eecd53.json",
+    "hash": "b35011eecd5310ccca1b0a8a09ef38c25b4b4ae91bf803f69966499c237c8013"
   },
   "neorange": {
-    "fileName": "neorange.3823389f153c.json",
-    "publicPath": "/mapStyles/neorange.3823389f153c.json",
-    "hash": "3823389f153cbe15c1f452078820c19f16c1a658a4471d693b2b5671e00c38a6"
+    "fileName": "neorange.a1338f8a595c.json",
+    "publicPath": "/mapStyles/neorange.a1338f8a595c.json",
+    "hash": "a1338f8a595c03df8b6795ed3e3e83baadeb25e5477a7d927bd1865fafd9ca3d"
   },
   "breadline": {
-    "fileName": "breadline.96e06a94beff.json",
-    "publicPath": "/mapStyles/breadline.96e06a94beff.json",
-    "hash": "96e06a94beffd49fc8caf6befb80fc5e2324561555a25e41600c6ab40f4fe542"
+    "fileName": "breadline.636ddd68f15e.json",
+    "publicPath": "/mapStyles/breadline.636ddd68f15e.json",
+    "hash": "636ddd68f15e1b367ebdfa40bc7633fc7367a3cccbeb456e5aa241773d886d04"
   },
   "protomaps-light": {
-    "fileName": "protomaps-light.e63d0b58e07b.json",
-    "publicPath": "/mapStyles/protomaps-light.e63d0b58e07b.json",
-    "hash": "e63d0b58e07bec1256c256308d794ee764629bd8831a23a5b679e339bd0d3dc0"
+    "fileName": "protomaps-light.d6e45602c9ae.json",
+    "publicPath": "/mapStyles/protomaps-light.d6e45602c9ae.json",
+    "hash": "d6e45602c9aed2b4effcf0f9051758ea242470832f378b3cfb49269976b4068b"
   },
   "protomaps-dark": {
-    "fileName": "protomaps-dark.df91ac64b526.json",
-    "publicPath": "/mapStyles/protomaps-dark.df91ac64b526.json",
-    "hash": "df91ac64b5260dcb5d76a29298b918c7b5aa16e6efb5b7d492db5c4436930d0d"
+    "fileName": "protomaps-dark.d3d9e090ed60.json",
+    "publicPath": "/mapStyles/protomaps-dark.d3d9e090ed60.json",
+    "hash": "d3d9e090ed603d77fedd9ed9158778746aa1964f460a6c8c86eb1f473c92caf8"
   },
   "protomaps-white": {
-    "fileName": "protomaps-white.5680bb2b0b9d.json",
-    "publicPath": "/mapStyles/protomaps-white.5680bb2b0b9d.json",
-    "hash": "5680bb2b0b9d884a348b71283afb8c313258147b9ee1675d092a0346be82f1a4"
+    "fileName": "protomaps-white.fecd96218730.json",
+    "publicPath": "/mapStyles/protomaps-white.fecd96218730.json",
+    "hash": "fecd962187309cdd6c143481eed630206d4d23ac50862bfefc4a9a39dbeb3583"
   },
   "protomaps-grayscale": {
-    "fileName": "protomaps-grayscale.3ea860593cdf.json",
-    "publicPath": "/mapStyles/protomaps-grayscale.3ea860593cdf.json",
-    "hash": "3ea860593cdf7fa91c1850e205dec5852631fd4eec4f4a6ba502159e68b5ca13"
+    "fileName": "protomaps-grayscale.1b3ace4265f4.json",
+    "publicPath": "/mapStyles/protomaps-grayscale.1b3ace4265f4.json",
+    "hash": "1b3ace4265f467fa82c77096f0cd97b458fa40b0145e201b62d2202e3be2254a"
   },
   "protomaps-black": {
-    "fileName": "protomaps-black.108422fa25fc.json",
-    "publicPath": "/mapStyles/protomaps-black.108422fa25fc.json",
-    "hash": "108422fa25fc556110e69115a10ed02ccdb52c3eebe125147aa327a898e0c09f"
+    "fileName": "protomaps-black.febbcdf80004.json",
+    "publicPath": "/mapStyles/protomaps-black.febbcdf80004.json",
+    "hash": "febbcdf80004d936e3ec942ad144d7e7964c61cdc0539d3856ecb5dac00fc68a"
   }
 }

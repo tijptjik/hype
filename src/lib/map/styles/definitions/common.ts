@@ -33,7 +33,7 @@ export const BASE_VECTOR_STYLE: StyleSpecification = {
   sources: {
     'hongkong-latest': {
       type: 'vector',
-      url: 'https://tiles.hype.hk/basemap/hongkong-latest.json',
+      url: 'https://tiles.saanseoi.hk/hongkong-latest.json',
     },
   },
   glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
