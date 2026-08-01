@@ -5,6 +5,7 @@ import { m } from '$lib/i18n'
 import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
 // ADAPTERS
 import { useProfileSectionModel } from '$lib/adapters/panels'
+import { useSession } from '$lib/auth/client'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Settings.svelte'
@@ -13,6 +14,7 @@ import Contributor from '$lib/components/panels/sections/Contributor.svelte'
 import DefaultMap from '$lib/components/panels/sections/DefaultMap.svelte'
 import Experimental from '$lib/components/panels/sections/Experimental.svelte'
 import Admin from '$lib/components/panels/sections/Admin.svelte'
+import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -22,6 +24,8 @@ import type { PanelProps } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
+const session = useSession()
+const isGuestAccount = $derived($session.data?.user?.isAnonymous === true)
 
 // STATE
 let isInfoOpen = $state(false)
@@ -48,8 +52,8 @@ let panelProps: PanelProps = $derived({
 })
 
 const profileSectionModel = useProfileSectionModel(appCtx, () => ({
-  hideActions: false,
-  hideEditableFields: false,
+  hideActions: isGuestAccount,
+  hideEditableFields: isGuestAccount,
 }))
 </script>
 
@@ -63,6 +67,9 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   />
   <Info isOpen={isInfoOpen} />
 
+  {#if isGuestAccount}
+    <GuestAccountReminder reason="profile" />
+  {/if}
   <ProfileSection {...profileSectionModel.getProfileProps()} />
   <div class="flex flex-col">
     {#if panelProps.isAdmin}
@@ -70,7 +77,9 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
     {/if}
     <div class="shrink-0"><Language {...panelProps} /></div>
     {#if !panelProps.isAdmin}
-      <div class="shrink-0"><Contributor {...panelProps} /></div>
+      {#if !isGuestAccount}
+        <div class="shrink-0"><Contributor {...panelProps} /></div>
+      {/if}
       <div class="shrink-0"><DefaultMap {...panelProps} /></div>
       <div class="shrink-0"><Experimental {...panelProps} /></div>
     {/if}

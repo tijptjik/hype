@@ -11,11 +11,16 @@ import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Stars.svelte'
 import WantToVisit from '$lib/components/panels/sections/WantToVisit.svelte'
 import HaveVisited from '$lib/components/panels/sections/HaveVisited.svelte'
+import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
+// AUTH
+import { useSession } from '$lib/auth/client'
 // TYPES
 import type { PanelProps } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
+const session = useSession()
+const isGuestAccount = $derived($session.data?.user?.isAnonymous === true)
 
 // STATE
 let isInfoOpen = $state(false)
@@ -63,6 +68,9 @@ let panelProps: PanelProps = $derived({
     }}
   />
   <Info isOpen={isInfoOpen} />
+  {#if isGuestAccount}
+    <GuestAccountReminder />
+  {/if}
   <div class="flex h-full overflow-hidden">
     <div class="flex h-[calc(100dvh-140px)] w-full flex-col overflow-hidden">
       <WantToVisit />
