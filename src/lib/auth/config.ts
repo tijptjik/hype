@@ -16,6 +16,16 @@ export const authConfig = {
     },
   },
 
+  // RATE LIMITS
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      '/sign-in/anonymous': { window: 60, max: 10 },
+    },
+  },
+
   // SECURITY
   // Which origins can make auth requests?
   trustedOrigins: [

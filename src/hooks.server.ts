@@ -170,6 +170,8 @@ const handle_auth: Handle = async ({ event, resolve }) => {
       AUTH_SECRET: event.platform.env.AUTH_SECRET,
       AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
       AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
+      AUTH_EMAIL_FROM: event.platform.env.AUTH_EMAIL_FROM,
+      EMAIL: event.platform.env.EMAIL,
     })
 
     // SET LOCALS
@@ -217,24 +219,26 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
 // AUTH REDIRECT HOOK
 // ═══════════════════════
 /**
- * This hook redirects unauthenticated users to the home page
- * when they try to access protected routes.
+ * Protect account-only server routes while leaving normal app routes available
+ * for client-driven guest bootstrap.
  */
 const handle_auth_redirect: Handle = async ({ event, resolve }) => {
-  // Allow public endpoints and legal policy documents to remain reachable when logged out.
   if (isPublicUnauthenticatedPath(event.url.pathname)) {
     return resolve(event)
   }
 
-  // Check if user is authenticated
-  const isAuthenticated = event.locals.session && event.locals.user
+  const isAdminPath =
+    event.url.pathname === '/admin' || event.url.pathname.startsWith('/admin/')
+  const hasAccount = Boolean(
+    event.locals.session && event.locals.user && event.locals.user.isAnonymous !== true,
+  )
 
-  // Redirect unauthenticated users to home page
-  if (!isAuthenticated) {
+  if (isAdminPath && !hasAccount) {
+    const returnTo = `${event.url.pathname}${event.url.search}`
     return new Response(null, {
       status: 302,
       headers: {
-        location: '/',
+        location: `/?upgrade=admin&returnTo=${encodeURIComponent(returnTo)}`,
       },
     })
   }
