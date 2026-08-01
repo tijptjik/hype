@@ -8,6 +8,16 @@ describe('map styles', () => {
     expect(getDefaultMapStyleKey()).toBe('ghostery')
   })
 
+  it('loads the Hong Kong basemap from the SaanSeoi tile service', () => {
+    const style = buildMapStyle('ghostery') as {
+      sources?: Record<string, { url?: string }>
+    }
+
+    expect(style.sources?.['hongkong-latest']?.url).toBe(
+      'https://tiles.saanseoi.hk/hongkong-latest.json',
+    )
+  })
+
   it('defaults markers to image style and accepts dot override', () => {
     expect(getUserMarkerStyleVariant(null)).toBe('image')
     expect(getUserMarkerStyleVariant('anything-else')).toBe('image')

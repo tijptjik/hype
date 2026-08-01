@@ -102,6 +102,10 @@ export default defineConfig(async ({ command }) => ({
     tailwindcss(),
     ...(await localCloudflare(command)),
   ],
+  optimizeDeps: {
+    // MapLibre's worker is emitted as a Vite worker asset, not a JavaScript dependency.
+    exclude: ['maplibre-gl/dist/maplibre-gl-worker.mjs'],
+  },
   build: {
     target: 'es2020',
   },
