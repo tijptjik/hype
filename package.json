@@ -151,7 +151,7 @@
     "workerd"
   ],
   "dependencies": {
-    "@chenglou/pretext": "^0.0.7",
+    "@chenglou/pretext": "^0.0.8",
     "@emeraldpay/hashicon": "^0.5.2",
     "@inlang/paraglide-js": "^2.23.0",
     "@jsquash/avif": "^2.1.1",
@@ -162,7 +162,7 @@
     "@jsquash/webp": "^1.5.0",
     "@mapbox/tilebelt": "^2.0.3",
     "@placemarkio/geo-viewport": "^1.0.2",
-    "@sillvva/utils": "^0.8.5",
+    "@sillvva/utils": "^0.9.0",
     "@sveltejs/adapter-cloudflare": "^7.2.9",
     "@sveltejs/kit": "^2.70.2",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
@@ -191,7 +191,7 @@
     "postcss": "^8.5.25",
     "proj4": "^2.21.0",
     "runed": "^0.37.1",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.2",
     "smartcrop": "^2.0.5",
     "substack-subscriber": "^1.0.0",
     "svelte": "^5.56.8",
