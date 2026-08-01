@@ -2,6 +2,7 @@
 // SVELTE
 import { watch } from 'runed'
 import { onMount } from 'svelte'
+import { toast } from 'svelte-sonner'
 // STORES
 import { page } from '$app/state'
 // QUERY
@@ -20,7 +21,7 @@ import {
   toSafeReturnPath,
 } from '$lib/auth/upgrade'
 // I18N
-import { getLocaleKey } from '$lib/i18n'
+import { getLocaleKey, m } from '$lib/i18n'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
@@ -54,7 +55,7 @@ const queryClient = $derived(
 const session = useSession()
 const responsive = setResponsiveCtx()
 let hasMounted = false
-let pendingAuthReinit: ReturnType<typeof setTimeout> | null = null
+let pendingAuthReinit: number | null = null
 let bootstrapError = $state<string | null>(null)
 let isUpgradeOpen = $state(false)
 let upgradeReason = $state<UpgradeReason>('account')
@@ -167,12 +168,8 @@ async function retryBootstrap(): Promise<void> {
   }
 }
 
-onMount(async () => {
+onMount(() => {
   hasMounted = true
-
-  if (!appCtx.isInitialised) {
-    await retryBootstrap()
-  }
 
   const handleUpgradeRequest = (event: Event): void => {
     const detail = (event as CustomEvent<{ reason?: UpgradeReason; returnTo?: string }>)
@@ -190,26 +187,31 @@ onMount(async () => {
     isUpgradeOpen = true
   }
 
-  scheduleResponsiveSync()
-  window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
-  window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
+  void (async () => {
+    if (!appCtx.isInitialised) {
+      await retryBootstrap()
+    }
 
-  try {
-    // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
-    // and the max worker size in the free tier is 1 MB
-    const [, maplibreSource] = await Promise.all([
-      ensureMapLibreStyles(),
-      loadMapLibre(),
-    ])
-    const maplibre = monkeyPatchMapLibre(maplibreSource)
-    globalThis.maplibregl = maplibre
+    scheduleResponsiveSync()
+    window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
+    window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
 
-    // Store maplibre in the app context so components can access it
-    appCtx.maplibre = maplibre
-    appCtx.isMaplibreLoaded = true
-  } catch (error) {
-    console.error('Failed to load maplibre', error)
-  }
+    try {
+      // To minimize the payload in Cloudflare, mapping dependencies load client-side.
+      const [, maplibreSource] = await Promise.all([
+        ensureMapLibreStyles(),
+        loadMapLibre(),
+      ])
+      const maplibre = monkeyPatchMapLibre(maplibreSource)
+      ;(globalThis as typeof globalThis & { maplibregl: typeof maplibre }).maplibregl =
+        maplibre
+
+      appCtx.maplibre = maplibre
+      appCtx.isMaplibreLoaded = true
+    } catch (error) {
+      console.error('Failed to load maplibre', error)
+    }
+  })()
 
   return () => {
     clearPendingAuthReinit()
@@ -228,7 +230,11 @@ onMount(async () => {
 // Determine if we're in admin mode based on the route
 const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false)
 const localeKey = $derived(getLocaleKey())
-const isShelllessRoute = $derived(page.route.id?.startsWith('/policy') ?? false)
+const isShelllessRoute = $derived(
+  Boolean(
+    page.route.id?.startsWith('/policy') || page.route.id?.startsWith('/account'),
+  ),
+)
 const shelllessClass = $derived(
   cx(
     'bits-theme min-h-screen w-full overflow-y-auto bg-black',
@@ -290,10 +296,19 @@ watch(
 
     if (newUser && newUserId !== currentUserId) {
       // User login or user changed
+      const previousUser = appCtx.user
+      if (
+        previousUser &&
+        'isAnonymous' in previousUser &&
+        previousUser.isAnonymous === true &&
+        newUser.isAnonymous !== true
+      ) {
+        toast.success(m.guest__upgrade_success())
+      }
       scheduleAuthReinit(newUser as SessionUser)
     } else if (!newUser && currentUserId) {
-      // User logout
-      scheduleAuthReinit(null)
+      // Account logout immediately converges on a fresh guest session.
+      void retryBootstrap()
     }
   },
 )
