@@ -2055,6 +2055,7 @@ export type HubAuthorizeParams = {
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
   isAnonymous?: boolean
+  isSuperAdmin?: boolean
   action: HubAuthorizationAction
   resourceId?: string
   resourceHubId?: string | null

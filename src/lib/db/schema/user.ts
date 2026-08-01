@@ -34,8 +34,7 @@ export const user = sqliteTable('user', {
     .notNull()
     .default(SupportedLocales.en),
   attribution: text('attribution'),
-  // Anonymous users' activity is not stored, so if they don't link their accounts during a session,
-  // their session cannot be linked to their account.
+  // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
   isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
   // If a user is archived, their account is effectively disabled, and they are not allowed to login
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
