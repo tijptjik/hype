@@ -27,7 +27,6 @@ import { setOmniCtx } from '$lib/context/omni.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // SERVICES
-import { startCircularFlight } from '$lib/client/services/geospatial'
 import { getActiveMapStyleCode } from '$lib/client/services/map'
 import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
 import Filters from '$lib/components/panels/Filters.svelte'
@@ -164,8 +163,6 @@ beforeNavigate(({ from, to }) => {
   }
 })
 
-// CIRCULAR FLIGHT ANIMATION STATE
-let stopCircularFlight: (() => void) | null = $state(null)
 const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
 const menuReservedHeight = $derived(responsiveCtx.menuReservedHeight)
 const MAP_GESTURE_SURFACE_SELECTOR = '[data-map-gesture-surface="true"]'
@@ -254,30 +251,6 @@ $effect(() => {
 
   return () => {
     window.removeEventListener('popstate', handleBrowserNavigation)
-  }
-})
-
-// TODO sync map center and flight starting position.
-// CIRCULAR FLIGHT ANIMATION
-$effect(() => {
-  if (!$session.isPending) {
-    if (!$session.data) {
-      // User is not authenticated - start circular flight animation
-      if (!stopCircularFlight) {
-        setTimeout(() => {
-          const cleanup = startCircularFlight(appCtx, [114.17276, 22.29191], 5)
-          if (cleanup) {
-            stopCircularFlight = cleanup
-          }
-        }, 1000)
-      }
-    } else {
-      // User is authenticated - stop circular flight animation
-      if (stopCircularFlight) {
-        stopCircularFlight()
-        stopCircularFlight = null
-      }
-    }
   }
 })
 

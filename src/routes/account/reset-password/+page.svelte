@@ -33,7 +33,6 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
     window.setTimeout(() => void goto('/?upgrade=account'), 800)
   } catch {
     message = m.account__password_reset_invalid()
-  } finally {
     isBusy = false
   }
 }

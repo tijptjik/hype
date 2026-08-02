@@ -1,5 +1,7 @@
-// SVELTEKIT
+// SVELTE
 import { error, json } from '@sveltejs/kit'
+// AUTH
+import { isAPIError } from 'better-auth/api'
 // TYPES
 import type { RequestHandler } from './$types'
 
@@ -42,6 +44,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
       userId: locals.user.id,
       cause,
     })
-    throw error(400, 'PASSWORD_NOT_SET')
+    if (isAPIError(cause)) throw error(400, 'PASSWORD_NOT_SET')
+    throw error(500, 'PASSWORD_NOT_SET')
   }
 }
