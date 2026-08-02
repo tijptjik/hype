@@ -53,6 +53,9 @@ export const authConfig = {
   ],
 
   user: {
+    changeEmail: {
+      enabled: true,
+    },
     additionalFields: {
       locale: {
         type: 'string' as const,
