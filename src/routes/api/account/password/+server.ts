@@ -30,9 +30,25 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
     typeof body === 'object' && body !== null && 'newPassword' in body
       ? (body as { newPassword?: unknown }).newPassword
       : undefined
+  const email =
+    typeof body === 'object' && body !== null && 'email' in body
+      ? (body as { email?: unknown }).email
+      : undefined
   if (typeof newPassword !== 'string') throw error(400, 'INVALID_REQUEST')
+  if (email !== undefined && typeof email !== 'string')
+    throw error(400, 'INVALID_REQUEST')
 
   try {
+    // Request verification before changing the login email when the user overrides it.
+    if (email && email.trim().toLowerCase() !== locals.user.email.toLowerCase()) {
+      await locals.auth.api.changeEmail({
+        body: {
+          newEmail: email.trim(),
+          callbackURL: `${url.origin}/?panel=profile`,
+        },
+        headers: request.headers,
+      })
+    }
     await locals.auth.api.setPassword({
       body: { newPassword },
       headers: request.headers,
