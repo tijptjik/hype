@@ -11,6 +11,7 @@ import ContributionStats from '$lib/components/panels/sections/ContributionStats
 import ContributedFeatures from '$lib/components/panels/sections/ContributedFeatures.svelte'
 import ContributedImages from '$lib/components/panels/sections/ContributedImages.svelte'
 import ContributedReports from '$lib/components/panels/sections/ContributedReports.svelte'
+import LinkedAccounts from '$lib/components/panels/sections/LinkedAccounts.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -36,6 +37,7 @@ let panelProps: PanelProps = $derived({
 // Get the username from URL parameters
 let username = $derived(appCtx.state.panels.profile.ctx?.username)
 let userData = $derived(appCtx.state.panels.profile.ctx?.userData)
+let isOwnProfile = $derived(userData?.id === appCtx.getUser()?.id)
 const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   hideActions: true,
   hideEditableFields: true,
@@ -49,6 +51,9 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
     <ProfileSection {...profileSectionModel.getProfileProps()} />
     {#if userData}
       <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {#if isOwnProfile}
+          <LinkedAccounts accountUsername={appCtx.getUser()?.username ?? undefined} />
+        {/if}
         <ContributionStats {userData} />
         <ContributedFeatures {userData} />
         <ContributedImages {userData} />
