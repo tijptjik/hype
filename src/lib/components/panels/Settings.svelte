@@ -5,6 +5,7 @@ import { m } from '$lib/i18n'
 import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
 // ADAPTERS
 import { useProfileSectionModel } from '$lib/adapters/panels'
+// AUTH
 import { useSession } from '$lib/auth/client'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'

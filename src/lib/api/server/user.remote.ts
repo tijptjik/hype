@@ -245,6 +245,9 @@ export const updateUserProfile = guardedCommand(
     }
 
     const guestWritableFields = new Set(['locale', 'preferences', 'experimental'])
+    if (sessionUser.isAnonymous && params.id !== sessionUser.id) {
+      throw error(403, 'ACCOUNT_REQUIRED')
+    }
     if (
       sessionUser.isAnonymous &&
       Object.keys(params.data).some(field => !guestWritableFields.has(field))

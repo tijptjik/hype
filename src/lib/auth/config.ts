@@ -23,6 +23,10 @@ export const authConfig = {
     max: 100,
     customRules: {
       '/sign-in/anonymous': { window: 60, max: 10 },
+      // Keep the route identity explicit; the delegated Better Auth endpoint is
+      // included below because its internal request path is `/set-password`.
+      '/api/account/password': { window: 60, max: 5 },
+      '/set-password': { window: 60, max: 5 },
     },
   },
 

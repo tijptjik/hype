@@ -290,7 +290,7 @@ export const getProjectsWhichHaveLayers = getProjectsWhichHaveLayersQuery
 const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   // Resolve desired `profile`.
-  const profile = toProjectProfile(params.meta?.profile, 'admin')
+  const profile = toProjectProfile(params.meta?.profile, 'detail')
   if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   // Probe the requested project for flags.

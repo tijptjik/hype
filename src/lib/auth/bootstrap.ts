@@ -25,9 +25,15 @@ const defaultWait = (durationMs: number): Promise<void> =>
  * @returns `true` for interactive application routes only.
  */
 export function shouldBootstrapAnonymous(pathname: string): boolean {
-  return !['/admin', '/account', '/api', '/headless', '/policy', '/proxy'].some(
-    prefix => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  )
+  return ![
+    '/admin',
+    '/account',
+    '/api',
+    '/headless',
+    '/login',
+    '/policy',
+    '/proxy',
+  ].some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
 /**
@@ -57,6 +63,7 @@ export async function bootstrapAnonymousSession(
 
     let lastError: unknown
     for (let attempt = 1; attempt <= ANONYMOUS_BOOTSTRAP_ATTEMPTS; attempt += 1) {
+      if (options.getSession().userId) return
       try {
         await options.signInAnonymous()
         await options.refetchSession()

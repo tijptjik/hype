@@ -36,6 +36,8 @@ import {
   consumeEscapeForOpenPanels,
   shouldSkipGlobalKeydown,
 } from '$lib/client/keybindings'
+// AUTH
+import { requestAccountUpgrade } from '$lib/auth/upgrade'
 import {
   getFeatureIdsForProperties,
   sortProperties,
@@ -3378,6 +3380,13 @@ export class AppCtx {
       this.togglePanel(Panel.settings)
       keyMatched = true
     } else if (event.key === '5') {
+      const user = this.getUser()
+      if (user && 'isAnonymous' in user && user.isAnonymous === true) {
+        requestAccountUpgrade('profile', window.location.href)
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
       // If no username param is set, use the user's username
       this.setPanelCtx(
         Panel.profile,
@@ -3490,6 +3499,10 @@ export class AppCtx {
       })
       this.cache.user.clear()
       this.state.userFeatures = { wishlisted: [], visited: [] }
+      this.state.active.collection = null
+      if (this.state.panels.profile.ctx) {
+        this.state.panels.profile.ctx.userData = null
+      }
     }
 
     this.user = user

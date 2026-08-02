@@ -2065,6 +2065,7 @@ export type HubAuthorizeParams = {
     isPublished?: boolean
     isArchived?: boolean
   }
+  requestedProfile?: HubProfile
 }
 
 export type AuthorizationDecision = {

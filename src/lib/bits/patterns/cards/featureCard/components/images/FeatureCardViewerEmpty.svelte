@@ -1,9 +1,14 @@
 <script lang="ts">
+// CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
+// AUTH
 import { requestAccountUpgrade } from '$lib/auth/upgrade'
+// ENUMS
 import { FeatureCardMode } from '$lib/enums'
+// I18N
 import { m } from '$lib/i18n'
+// ICONS
 import CameraIcon from 'virtual:icons/lucide/camera'
 
 const cardCtx = getCardCtx()

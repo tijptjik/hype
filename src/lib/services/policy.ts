@@ -104,11 +104,11 @@ function substitutePolicyTemplateTokens(
 
   return template
     .replaceAll(
-      /\{\{\s*hub\.name(?:\s*\|\s*"([^"]*)")?\s*\}\}/g,
+      /\{\{\s*hub\.name(?:\s*(?:\\\||\|)\s*"([^"]*)")?\s*\}\}/g,
       (_, fallback) => partyName || fallback || 'HYPE',
     )
     .replaceAll(
-      /\{\{\s*hub\.legalContactAddress(?:\s*\|\s*"([^"]*)")?\s*\}\}/g,
+      /\{\{\s*hub\.legalContactAddress(?:\s*(?:\\\||\|)\s*"([^"]*)")?\s*\}\}/g,
       (_, fallback) => resolvedLegalContactAddress || fallback || 'legal@hype.hk',
     )
     .replaceAll(/\{\{\s*date\.today\(\)\s*\}\}/g, currentDateText)

@@ -6,14 +6,14 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { Panel as PanelType } from '$lib/enums'
 // BITS
 import { PanelRoot as Panel } from '$lib/bits'
+// AUTH
+import { useSession } from '$lib/auth/client'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Stars.svelte'
 import WantToVisit from '$lib/components/panels/sections/WantToVisit.svelte'
 import HaveVisited from '$lib/components/panels/sections/HaveVisited.svelte'
 import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
-// AUTH
-import { useSession } from '$lib/auth/client'
 // TYPES
 import type { PanelProps } from '$lib/types'
 

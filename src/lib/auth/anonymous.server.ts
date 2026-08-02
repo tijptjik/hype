@@ -145,7 +145,7 @@ export async function cleanupExpiredAnonymousUsers(
         sql`not exists (
           select 1 from ${session}
           where ${session.userId} = ${user.id}
-            and ${session.expiresAt} > ${now}
+            and ${session.expiresAt} > ${now.getTime()}
         )`,
       ),
     )

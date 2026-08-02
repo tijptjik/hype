@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
-// AUTH
+// PROJECT
 import { authClient } from '$lib/auth/client'
 // I18N
 import { m } from '$lib/i18n'
@@ -61,10 +61,14 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
 
 {#if !isLoading && (!hasPassword || wasPasswordAdded)}
   <section class="mx-4 my-3 rounded-xl border border-base-content/15 p-4">
-    <h2 class="font-medium">{m.account__add_password_title()}</h2>
-    <p class="mt-1 text-sm text-base-content/70">
-      {m.account__add_password_description()}
-    </p>
+    {#if wasPasswordAdded}
+      <h2 class="font-medium">{m.account__password_added()}</h2>
+    {:else}
+      <h2 class="font-medium">{m.account__add_password_title()}</h2>
+      <p class="mt-1 text-sm text-base-content/70">
+        {m.account__add_password_description()}
+      </p>
+    {/if}
     {#if !hasPassword}
       <form class="mt-3 flex flex-col gap-2" onsubmit={handleSubmit}>
         <input

@@ -25,7 +25,7 @@
   "guest__continue_as_guest": "Continue as a Guest",
   "bootstrap__error": "We couldn't start your guest account. Your requested page is still here.",
   "bootstrap__retry": "Try again",
-  "guest__use_existing_account": "Already have an account? Sign in",
+  "guest__use_existing_account": "Sign in",
   "guest__create_new_account": "Need an account? Create one",
   "guest__coming_soon": "Coming soon",
   "guest__close": "Close",

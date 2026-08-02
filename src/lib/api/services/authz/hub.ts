@@ -19,6 +19,7 @@ import type {
   HubAuthorizationAction,
   HubAuthorizationField,
   HubAuthorizeParams,
+  HubProfile,
   Id,
   UserRoleDisco,
 } from '$lib/types'
@@ -338,12 +339,13 @@ export const toHubAuthActor = (user: unknown): HubAuthActor => {
 }
 
 const toHubSubmissionActor = (
-  user: { id: string; isAnonymous?: boolean },
+  user: { id: string; isAnonymous?: boolean; superAdmin?: boolean },
   userRoles: UserRoleDisco[],
 ): HubAuthActor => ({
   ...toHubAuthActor({
     id: user.id,
     isAnonymous: user.isAnonymous,
+    superAdmin: user.superAdmin,
     roles: userRoles,
   }),
   userRoles,
@@ -363,6 +365,14 @@ const toHubPolicyBase = (
 const listHubsPolicy: HubPolicyHandler = params => {
   if (!params.userId) {
     return logHubReject('list', params, 'UNAUTHENTICATED')
+  }
+
+  if (
+    params.requestedProfile === 'admin' &&
+    !params.isSuperAdmin &&
+    !isRelevantHubAdmin(params.userRoles, params.resourceHubId)
+  ) {
+    return logHubReject('list', params, 'INSUFFICIENT_ROLE')
   }
 
   if (
@@ -392,6 +402,14 @@ const listHubsPolicy: HubPolicyHandler = params => {
 const readHubPolicy: HubPolicyHandler = params => {
   if (!params.userId) {
     return logHubReject('read', params, 'UNAUTHENTICATED')
+  }
+
+  if (
+    params.requestedProfile === 'admin' &&
+    !params.isSuperAdmin &&
+    !isRelevantHubAdmin(params.userRoles, params.resourceHubId)
+  ) {
+    return logHubReject('read', params, 'INSUFFICIENT_ROLE')
   }
 
   if (
@@ -481,12 +499,14 @@ export const authorizeHubList = (
   actor: HubAuthActor,
   target: Pick<HubAuthTarget, 'resourceHubId'>,
   requestedState?: HubRequestedListState,
+  requestedProfile?: HubProfile,
 ): AuthorizationDecision =>
   listHubsPolicy({
     ...toHubPolicyBase(actor),
     action: 'listHubs',
     resourceHubId: target.resourceHubId,
     requestedState,
+    requestedProfile,
   })
 
 export const authorizeHubRead = (
@@ -496,6 +516,7 @@ export const authorizeHubRead = (
     isPublished?: boolean
     isArchived?: boolean
   },
+  requestedProfile?: HubProfile,
 ): AuthorizationDecision =>
   readHubPolicy({
     ...toHubPolicyBase(actor),
@@ -506,19 +527,25 @@ export const authorizeHubRead = (
       isPublished: target.isPublished,
       isArchived: target.isArchived,
     },
+    requestedProfile,
   })
 
 export const authorizeHubReadForProbe = (params: {
   user: { id: string; isAnonymous?: boolean }
   userRoles: UserRoleDisco[]
   probe: { id: string; code: string; isPublished: boolean; isArchived: boolean }
+  requestedProfile?: HubProfile
 }): AuthorizationDecision =>
-  authorizeHubRead(toHubSubmissionActor(params.user, params.userRoles), {
-    resourceHubId: params.probe.id,
-    resourceHubCode: params.probe.code,
-    isPublished: params.probe.isPublished,
-    isArchived: params.probe.isArchived,
-  })
+  authorizeHubRead(
+    toHubSubmissionActor(params.user, params.userRoles),
+    {
+      resourceHubId: params.probe.id,
+      resourceHubCode: params.probe.code,
+      isPublished: params.probe.isPublished,
+      isArchived: params.probe.isArchived,
+    },
+    params.requestedProfile,
+  )
 
 /* ----------------- */
 // WRITE AUTHORIZATION

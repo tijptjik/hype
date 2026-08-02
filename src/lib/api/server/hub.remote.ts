@@ -154,11 +154,13 @@ const getHubsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => 
       userRoles,
       isAuthenticated: true,
       isAnonymous: user.isAnonymous,
+      isSuperAdmin: user.superAdmin === true,
     },
     {
       resourceHubId: event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
     },
     requestedListState,
+    profile,
   )
   if (!listDecision.allowed) {
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
@@ -209,6 +211,8 @@ export const getHubs = getHubsQuery as typeof getHubsQuery &
  */
 const getHubQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles } = ctx
+  // Resolve desired `profile` before authorization so the policy covers response shaping.
+  const profile = toHubProfile(params.meta?.profile, 'detail')
   let result = null
 
   // Resolve desired `query params`
@@ -218,7 +222,12 @@ const getHubQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const probe = await probeHubQuery(db, params)
   if (probe) {
     // Apply role-based authorization
-    const readDecision = authorizeHubReadForProbe({ user, userRoles, probe })
+    const readDecision = authorizeHubReadForProbe({
+      user,
+      userRoles,
+      probe,
+      requestedProfile: profile,
+    })
     if (!readDecision.allowed) {
       throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
@@ -227,8 +236,6 @@ const getHubQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
     // Load record from DB
     result = await loadHub(db, hubEntityWithRelations, conditions)
   }
-  // Resolve desired `profile`
-  const profile = toHubProfile(params.meta?.profile, 'detail')
   if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
   // Return loaded record with desired profile
   return toEntityResponseShape(result ?? null, profile)

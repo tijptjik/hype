@@ -180,7 +180,7 @@ export function useProfileSectionModel(
     await signOut({
       fetchOptions: {
         onSuccess: () => {
-          goto('/?upgrade=account&signedOut=1')
+          goto('/login')
         },
         onError: error => {
           console.error('Sign out failed:', error)

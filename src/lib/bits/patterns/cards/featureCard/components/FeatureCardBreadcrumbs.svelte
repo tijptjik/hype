@@ -6,6 +6,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getCardCtx } from '$lib/context/card.svelte'
+// AUTH
 import { requestAccountUpgrade } from '$lib/auth/upgrade'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
