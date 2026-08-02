@@ -172,7 +172,9 @@ function toggleMode(): void {
           disabled={!provider.enabled || isBusy}
           onclick={() => handleSocial(provider.id)}
         >
-          <Icon class="h-5 w-5" class:text-[#1877F2]={provider.id === 'facebook'} />
+          <Icon
+            class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
+          />
           <span>{provider.enabled ? provider.label : m.login__coming_soon()}</span>
         </button>
       {/each}
@@ -285,7 +287,9 @@ function toggleMode(): void {
               disabled={!provider.enabled || isBusy}
               onclick={() => handleSocial(provider.id)}
             >
-              <Icon class="h-5 w-5" class:text-[#1877F2]={provider.id === 'facebook'} />
+              <Icon
+                class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
+              />
             </button>
           {/each}
         </div>

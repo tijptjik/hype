@@ -167,8 +167,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
       {#each accounts as account (account.accountId)}
         {@const Icon = providerIcon(account.providerId)}
         <Icon
-          class="h-6 w-6"
-          class:text-[#1877F2]={account.providerId === 'facebook'}
+          class={account.providerId === 'facebook' ? 'h-6 w-6 text-[#1877F2]' : 'h-6 w-6'}
           aria-label={account.providerId}
         />
       {/each}
@@ -181,8 +180,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <div class="flex items-center justify-between text-sm">
             <span class="flex items-center gap-2"
               ><Icon
-                class="h-5 w-5"
-                class:text-[#1877F2]={account.providerId === 'facebook'}
+                class={account.providerId === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
               />{accountDisplayLabel(account.providerId)}</span
             >
             <button
