@@ -685,4 +685,23 @@ describe('user.remote', () => {
     expect(searchDb).toBe(db)
     expect(searchParams?.conditions).toEqual([])
   })
+
+  it('rejects a guest profile update targeting another user', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      session: { id: 's-1' },
+      user: { id: 'guest-1', isAnonymous: true, superAdmin: false },
+      userId: 'guest-1',
+      userRoles: [],
+      isAdminRequest: false,
+      request: { method: 'POST' },
+    })
+
+    await expect(
+      remote.updateUserProfile({
+        id: 'other-user',
+        data: { locale: 'en' },
+      }),
+    ).rejects.toMatchObject({ status: 403, message: 'ACCOUNT_REQUIRED' })
+  })
 })

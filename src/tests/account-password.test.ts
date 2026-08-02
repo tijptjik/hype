@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { APIError } from 'better-auth/api'
 import { POST } from '../routes/api/account/password/+server'
 
 interface PasswordRouteOptions {
@@ -68,7 +69,11 @@ describe('account password endpoint', () => {
   })
 
   it('does not replace an existing credential password', async () => {
-    const setPassword = vi.fn().mockRejectedValue(new Error('PASSWORD_ALREADY_SET'))
+    const setPassword = vi
+      .fn()
+      .mockRejectedValue(
+        new APIError('BAD_REQUEST', { message: 'PASSWORD_ALREADY_SET' }),
+      )
     const { event } = createEvent({ setPassword })
 
     await expect(POST(event as never)).rejects.toMatchObject({

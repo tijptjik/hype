@@ -3,6 +3,7 @@ import scheduler from '../../workers/maintenance-scheduler/src/index'
 
 const environment = {
   APP_BASE_URL: 'https://preview.hype.hk',
+  SCHEDULER_SECRET: 'scheduler-secret',
   ANONYMOUS_CLEANUP_TOKEN: 'cleanup-secret',
   MAP_REFRESH_TOKEN: 'refresh-secret',
   RENDER_REFRESH_KINDS: 'layers,projects',
@@ -17,7 +18,7 @@ describe('maintenance scheduler tasks', () => {
   it('runs authenticated guest cleanup on the daily cron', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response('{"deletedCount":2}'))
+      .mockImplementation(async () => new Response('{"deletedCount":2}'))
 
     await scheduler.scheduled(
       { cron: '15 3 * * *', scheduledTime: 0, noRetry: vi.fn() },
@@ -36,7 +37,7 @@ describe('maintenance scheduler tasks', () => {
   it('keeps hourly render refreshes on the existing endpoint', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response('{"enqueued":2}'))
+      .mockImplementation(async () => new Response('{"enqueued":2}'))
 
     await scheduler.scheduled(
       { cron: '0 * * * *', scheduledTime: 0, noRetry: vi.fn() },
@@ -60,6 +61,30 @@ describe('maintenance scheduler tasks', () => {
         environment,
       ),
     ).rejects.toThrow('Unknown maintenance schedule: 30 4 * * *')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('throws when a scheduled task returns a non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response('upstream failure', { status: 503 }),
+    )
+
+    await expect(
+      scheduler.scheduled(
+        { cron: '15 3 * * *', scheduledTime: 0, noRetry: vi.fn() },
+        environment,
+      ),
+    ).rejects.toThrow('Scheduled anonymous-cleanup failed (503')
+  })
+
+  it('requires the scheduler secret for manual runs', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const response = await scheduler.fetch(
+      new Request('https://scheduler.example/run', { method: 'POST' }),
+      environment,
+    )
+
+    expect(response.status).toBe(401)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
