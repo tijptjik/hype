@@ -106,6 +106,8 @@ wrangler secret put AUTH_SECRET --env production
 
 - `AUTH_SECRET` - Authentication secret
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` - Google OAuth credentials
+- `AUTH_FACEBOOK_ID` / `AUTH_FACEBOOK_SECRET` - Facebook OAuth credentials
+- Facebook data deletion callback: `https://hype.hk/api/auth/facebook/data-deletion`
 - `AZURE_TRANSLATION_KEY` - Azure translation API key
 - `SUPERADMIN_USERID` - Super admin user ID
 
@@ -276,8 +278,8 @@ key: ${{ runner.os }}-test-${{ github.sha }}
 - The Worker binding is `EMAIL` in every environment and requires no email API key.
   `AUTH_EMAIL_FROM` is the non-secret verified sender `account@hype.hk` in local,
   preview, and production configuration.
-- Configure `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` together. Apple and WeChat
-  remain disabled until explicit provider flags and complete credentials are added.
+- Configure the Google and Facebook OAuth ID/secret pairs together. WeChat remains
+  disabled until explicit provider flags and complete credentials are added.
 - Run `bun run auth:secrets:configure` after Wrangler authentication is configured.
   The script securely prompts for `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and
   `AUTH_GOOGLE_SECRET` for preview and production. It generates a different

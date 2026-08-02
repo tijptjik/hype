@@ -19,7 +19,7 @@ By using {{hub.name | "HYPE"}}, you acknowledge that your data is processed by b
 | ----------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
 | **HYPE**                | Data Controller (Account & Ecosystem) | Account management, authentication storage, cross-platform activity, ecosystem security       |
 | **{{hub.name \| "HYPE"}}**                            | Data Controller (Platform-Specific)                                                           | Platform usage, project participation, local moderation, partner communications |
-| **Google/Apple/WeChat** | Identity Provider (OAuth)             | Authentication verification; provides email, name, profile photo                              |
+| **Google/Facebook/WeChat** | Identity Provider (OAuth)             | Authentication verification; provides email, name, profile photo                              |
 | **Cloudflare**          | Sub-processor (Infrastructure)        | Data hosting (D1 database), image storage (R2), CDN delivery, DDoS protection, edge computing |
 
 Infrastructure Notice: All data you provide to {{hub.name | "HYPE"}} and HYPE is stored and processed using Cloudflare infrastructure (D1 for structured data, R2 for images and files). Cloudflare operates globally with edge locations worldwide. Data may be processed and stored in jurisdictions outside Hong Kong, including the United States and European Economic Area, subject to Cloudflare's Data Processing Terms and Standard Contractual Clauses where applicable.
