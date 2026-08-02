@@ -108,6 +108,31 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     schema,
   })
 
+  // Resolve the session early because this hook runs before handle_session_auth.
+  const adminHubCodes = new Set<string>()
+  try {
+    const auth = getAuthForRequest(event.request.headers, {
+      DB: event.platform?.env?.DB as MiniflareD1Database,
+      AUTH_SECRET: event.platform?.env?.AUTH_SECRET ?? '',
+      AUTH_GOOGLE_ID: event.platform?.env?.AUTH_GOOGLE_ID ?? '',
+      AUTH_GOOGLE_SECRET: event.platform?.env?.AUTH_GOOGLE_SECRET ?? '',
+      AUTH_EMAIL_FROM: event.platform?.env?.AUTH_EMAIL_FROM,
+      EMAIL: event.platform?.env?.EMAIL,
+    })
+    const sessionData = await auth.api.getSession({ headers: event.request.headers })
+    const sessionUser = sessionData?.user as SessionUser | undefined
+    for (const role of sessionUser?.roles ?? []) {
+      if (role.type === 'hub' && role.role === 'admin') {
+        const code = (role as unknown as { hub?: { code?: string } }).hub?.code
+        if (code) adminHubCodes.add(code)
+      }
+    }
+  } catch {
+    // Unavailable auth context must retain the guest-safe published hub filter.
+  }
+  const canResolveUnpublishedHub =
+    adminHubCodes.has('core') || adminHubCodes.has(hubOpts.code ?? '')
+
   if (db && event.locals && hubOpts.code) {
     const hubCode = hubOpts.code
     const hubDb = await retryBusyRead(() =>
@@ -116,11 +141,13 @@ const handle_hub: Handle = async ({ event, resolve }) => {
           i18n: true,
           image: true,
         },
-        where: and(
-          eq(schema.hub.code, hubCode),
-          eq(schema.hub.isPublished, true),
-          eq(schema.hub.isArchived, false),
-        ),
+        where: canResolveUnpublishedHub
+          ? eq(schema.hub.code, hubCode)
+          : and(
+              eq(schema.hub.code, hubCode),
+              eq(schema.hub.isPublished, true),
+              eq(schema.hub.isArchived, false),
+            ),
       }),
     )
     if (hubDb) {
@@ -138,14 +165,22 @@ const handle_hub: Handle = async ({ event, resolve }) => {
           i18n: true,
           image: true,
         },
-        where: and(
-          eq(schema.hub.domain, hubDomain),
-          eq(schema.hub.isPublished, true),
-          eq(schema.hub.isArchived, false),
-        ),
+        where:
+          adminHubCodes.size > 0
+            ? eq(schema.hub.domain, hubDomain)
+            : and(
+                eq(schema.hub.domain, hubDomain),
+                eq(schema.hub.isPublished, true),
+                eq(schema.hub.isArchived, false),
+              ),
       }),
     )
-    if (hubDb) {
+    const canUseDomainHub =
+      Boolean(hubDb) &&
+      (adminHubCodes.size === 0 ||
+        adminHubCodes.has('core') ||
+        adminHubCodes.has(hubDb?.code ?? ''))
+    if (hubDb && canUseDomainHub) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,
         'card',
