@@ -87,6 +87,8 @@ declare global {
         AUTH_SECRET: string
         AUTH_GOOGLE_ID: string
         AUTH_GOOGLE_SECRET: string
+        AUTH_FACEBOOK_ID: string
+        AUTH_FACEBOOK_SECRET: string
         AUTH_EMAIL_FROM?: string
         ANONYMOUS_CLEANUP_TOKEN?: string
         EMAIL?: SendEmail

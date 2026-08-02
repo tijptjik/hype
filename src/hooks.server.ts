@@ -116,6 +116,8 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       AUTH_SECRET: event.platform?.env?.AUTH_SECRET ?? '',
       AUTH_GOOGLE_ID: event.platform?.env?.AUTH_GOOGLE_ID ?? '',
       AUTH_GOOGLE_SECRET: event.platform?.env?.AUTH_GOOGLE_SECRET ?? '',
+      AUTH_FACEBOOK_ID: event.platform?.env?.AUTH_FACEBOOK_ID ?? '',
+      AUTH_FACEBOOK_SECRET: event.platform?.env?.AUTH_FACEBOOK_SECRET ?? '',
       AUTH_EMAIL_FROM: event.platform?.env?.AUTH_EMAIL_FROM,
       EMAIL: event.platform?.env?.EMAIL,
     })
@@ -215,6 +217,8 @@ const handle_auth: Handle = async ({ event, resolve }) => {
       AUTH_SECRET: event.platform.env.AUTH_SECRET,
       AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
       AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
+      AUTH_FACEBOOK_ID: event.platform.env.AUTH_FACEBOOK_ID,
+      AUTH_FACEBOOK_SECRET: event.platform.env.AUTH_FACEBOOK_SECRET,
       AUTH_EMAIL_FROM: event.platform.env.AUTH_EMAIL_FROM,
       EMAIL: event.platform.env.EMAIL,
     })
