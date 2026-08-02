@@ -34,6 +34,7 @@ describe('guest session bootstrap', () => {
     expect(shouldBootstrapAnonymous('/features/place-1?panel=stars')).toBe(true)
     expect(shouldBootstrapAnonymous('/admin/tasks')).toBe(false)
     expect(shouldBootstrapAnonymous('/login')).toBe(false)
+    expect(shouldBootstrapAnonymous('/screensaver')).toBe(true)
     expect(shouldBootstrapAnonymous('/api/health')).toBe(false)
     expect(shouldBootstrapAnonymous('/headless/map-layer-render/layer-1')).toBe(false)
     expect(shouldBootstrapAnonymous('/policy/privacy')).toBe(false)
