@@ -60,6 +60,8 @@ function createAuthInstance(
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
+    AUTH_FACEBOOK_ID: string
+    AUTH_FACEBOOK_SECRET: string
     AUTH_EMAIL_FROM?: string
     EMAIL?: App.Platform['env']['EMAIL']
   },
@@ -112,6 +114,16 @@ function createAuthInstance(
             google: {
               clientId: env.AUTH_GOOGLE_ID,
               clientSecret: env.AUTH_GOOGLE_SECRET,
+            },
+          }
+        : {}),
+      ...(isAuthProviderEnabled('facebook') &&
+      env.AUTH_FACEBOOK_ID &&
+      env.AUTH_FACEBOOK_SECRET
+        ? {
+            facebook: {
+              clientId: env.AUTH_FACEBOOK_ID,
+              clientSecret: env.AUTH_FACEBOOK_SECRET,
             },
           }
         : {}),
@@ -253,6 +265,8 @@ export const getAuthForRequest = (
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
+    AUTH_FACEBOOK_ID: string
+    AUTH_FACEBOOK_SECRET: string
     AUTH_EMAIL_FROM?: string
     EMAIL?: App.Platform['env']['EMAIL']
   },

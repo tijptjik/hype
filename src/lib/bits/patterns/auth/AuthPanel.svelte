@@ -2,7 +2,7 @@
 import { fade } from 'svelte/transition'
 
 // ICONS
-import Apple from 'virtual:icons/simple-icons/apple'
+import Facebook from 'virtual:icons/simple-icons/facebook'
 import Google from 'virtual:icons/logos/google-icon'
 import Wechat from 'virtual:icons/simple-icons/wechat'
 import Mail from 'virtual:icons/lucide/mail'
@@ -40,11 +40,13 @@ const safeCallbackUrl = $derived(toSafeReturnPath(returnTo))
 
 function providerIcon(providerId: string) {
   if (providerId === 'google') return Google
-  if (providerId === 'apple') return Apple
+  if (providerId === 'facebook') return Facebook
   return Wechat
 }
 
-async function handleSocial(providerId: 'google' | 'apple' | 'wechat'): Promise<void> {
+async function handleSocial(
+  providerId: 'google' | 'facebook' | 'wechat',
+): Promise<void> {
   if (isBusy) return
   isBusy = true
   errorMessage = ''
@@ -164,13 +166,13 @@ function toggleMode(): void {
         {@const Icon = providerIcon(provider.id)}
         <button
           class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white hover:bg-white/90 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/20 disabled:hover:bg-transparent disabled:hover:text-inherit"
-          class:bg-white={provider.id === 'google' && provider.enabled}
-          class:text-black={provider.id === 'google' && provider.enabled}
+          class:bg-white={provider.enabled}
+          class:text-black={provider.enabled}
           type="button"
-          disabled={provider.id !== 'google' || !provider.enabled || isBusy}
+          disabled={!provider.enabled || isBusy}
           onclick={() => handleSocial(provider.id)}
         >
-          <Icon class="h-5 w-5" />
+          <Icon class="h-5 w-5" class:text-[#1877F2]={provider.id === 'facebook'} />
           <span>{provider.enabled ? provider.label : m.login__coming_soon()}</span>
         </button>
       {/each}
@@ -280,10 +282,10 @@ function toggleMode(): void {
               type="button"
               aria-label={provider.label}
               title={provider.enabled ? provider.label : `${provider.label} · ${m.guest__coming_soon()}`}
-              disabled={provider.id !== 'google' || !provider.enabled || isBusy}
+              disabled={!provider.enabled || isBusy}
               onclick={() => handleSocial(provider.id)}
             >
-              <Icon class="h-5 w-5" />
+              <Icon class="h-5 w-5" class:text-[#1877F2]={provider.id === 'facebook'} />
             </button>
           {/each}
         </div>

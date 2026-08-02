@@ -1,7 +1,7 @@
 export const AUTH_PROVIDER_REGISTRY = [
   { id: 'email', label: 'Email and password', enabled: true },
   { id: 'google', label: 'Google', enabled: true },
-  { id: 'apple', label: 'Apple', enabled: false },
+  { id: 'facebook', label: 'Facebook', enabled: true },
   { id: 'wechat', label: 'WeChat', enabled: false },
 ] as const
 
