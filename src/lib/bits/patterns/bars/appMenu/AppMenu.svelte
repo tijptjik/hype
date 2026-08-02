@@ -1,6 +1,6 @@
 <script lang="ts" generics="T = string">
 // COMPONENTS
-import Button from '$lib/bits/core/button/Button.svelte'
+import { Button, SimpleTooltip } from '$lib/bits/core'
 import { Icon } from '$lib/bits/custom/icon'
 import { cx } from '$lib/bits/utils'
 // CONTEXT
@@ -138,19 +138,25 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
       class="block self-center"
     />
   {/snippet}
-  <Button
-    text={item.label}
-    icon={itemIcon}
-    style="transparent"
-    color={item.color ?? (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
-    size="md"
-    hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
-    class={getItemButtonClasses()}
-    labelClasses={getItemLabelClasses(item)}
-    iconClasses={getItemIconClasses(item)}
-    attrs={{ title: item.label }}
-    onClick={event => handleSelect(item, event)}
-  />
+  <SimpleTooltip disabled={!viewportState.isIconOnlyMenu}>
+    {#snippet trigger()}
+      <Button
+        text={item.label}
+        icon={itemIcon}
+        style="transparent"
+        color={item.color ?? (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
+        size="md"
+        hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
+        class={getItemButtonClasses()}
+        labelClasses={getItemLabelClasses(item)}
+        iconClasses={getItemIconClasses(item)}
+        onClick={event => handleSelect(item, event)}
+      />
+    {/snippet}
+    {#snippet children()}
+      {item.label}
+    {/snippet}
+  </SimpleTooltip>
 {/snippet}
 
 <nav class={navClasses} style={navStyles}>

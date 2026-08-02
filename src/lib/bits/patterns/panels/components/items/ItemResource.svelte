@@ -109,6 +109,24 @@ function hideTooltip(): void {
   toolTipActive = false
 }
 
+/**
+ * Activates a nested control when it receives an Enter or Space key.
+ *
+ * @param event - The keyboard event from the nested control.
+ * @param action - The control action to invoke.
+ * @returns The action promise, if one is returned.
+ */
+async function handleControlKeydown(
+  event: KeyboardEvent,
+  action: (event: KeyboardEvent) => void | Promise<void>,
+): Promise<void> {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+
+  event.preventDefault()
+  event.stopPropagation()
+  await action(event)
+}
+
 async function restoreFocus(): Promise<void> {
   await tick()
   const focusTarget = document.querySelector<HTMLElement>(
@@ -125,6 +143,7 @@ afterNavigate(async () => {
 })
 </script>
 
+<!-- biome-ignore lint/a11y/useSemanticElements: The row contains nested controls and must retain its layout container. -->
 <div
   bind:this={buttonEl}
   class="bits-theme group bits-panel-item-resource"
@@ -135,6 +154,7 @@ afterNavigate(async () => {
   data-resource-focus-key={focusRestoreKey}
   in:slide={{ axis: 'y', duration: itemSlideDuration }}
   out:slide={{ axis: 'y', duration: itemSlideDuration }}
+  role="button"
   onclick={panelProps.isAdmin ? onNavigate : onToggle}
   onkeydown={async (event) => {
     if (event.key === 'Enter') {
@@ -160,15 +180,15 @@ afterNavigate(async () => {
     }
   }}
   tabindex="0"
+  onmouseenter={showTooltip}
+  onmouseleave={hideTooltip}
+  onfocus={showTooltip}
+  onblur={hideTooltip}
 >
   <div
     class="group bits-panel-item-resource__main"
     class:bits-panel-item-resource__main--narrow={panelProps.isNarrow}
     class:bits-panel-item-resource__main--wide={!panelProps.isNarrow}
-    onmouseenter={showTooltip}
-    onmouseleave={hideTooltip}
-    onfocus={showTooltip}
-    onblur={hideTooltip}
   >
     {#if panelProps.isNarrow && isCurrentActive && isSelected}
       <Icon
@@ -178,8 +198,13 @@ afterNavigate(async () => {
         onclick={onToggle}
       />
     {:else}
+      <!-- biome-ignore lint/a11y/useSemanticElements: The dot is a nested control within the interactive resource row. -->
       <div
-        onclick={panelProps.isNarrow ? onNavigate : onToggle}
+        role="button"
+        tabindex="0"
+        onclick={panelProps.isNarrow ? (onNavigate ?? onToggle) : onToggle}
+        onkeydown={(event) =>
+          handleControlKeydown(event, panelProps.isNarrow ? (onNavigate ?? onToggle) : onToggle)}
         class="bits-panel-item-resource__dot"
         class:bits-panel-item-resource__dot--hidden={!panelProps.isNarrow && !isSelected && !isCurrentActive}
         class:bits-panel-item-resource__dot--narrow-unselected={panelProps.isNarrow && !isSelected}
@@ -201,7 +226,14 @@ afterNavigate(async () => {
   </div>
 
   {#if !panelProps.isNarrow}
-    <div class="bits-panel-item-resource__action" onclick={onToggle}>
+    <!-- biome-ignore lint/a11y/useSemanticElements: The action is a nested control within the interactive resource row. -->
+    <div
+      role="button"
+      tabindex="0"
+      class="bits-panel-item-resource__action"
+      onclick={onToggle}
+      onkeydown={(event) => handleControlKeydown(event, onToggle)}
+    >
       <Icon
         src={isSelected ? XMark : Funnel}
         class="bits-panel-item-resource__action-icon"
