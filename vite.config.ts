@@ -91,6 +91,7 @@ export default defineConfig(async ({ command }) => ({
     paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/lib/paraglide',
+      outputStructure: 'message-modules',
       strategy: ['cookie', 'preferredLanguage', 'baseLocale'],
       cookieName: 'lang',
     }),
