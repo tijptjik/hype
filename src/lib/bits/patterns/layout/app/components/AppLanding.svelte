@@ -7,6 +7,10 @@ import { cx } from '$lib/bits/utils'
 type AppLandingProps = {
   children: import('svelte').Snippet
   mapStyleCode?: string
+  pixelRatio?: number
+  antialias?: boolean
+  interactive?: boolean
+  showControls?: boolean
   class?: string
   style?: string
 }
@@ -14,6 +18,10 @@ type AppLandingProps = {
 let {
   children,
   mapStyleCode = 'ghostery',
+  pixelRatio,
+  antialias,
+  interactive,
+  showControls,
   class: className = '',
   style = '',
 }: AppLandingProps = $props()
@@ -24,5 +32,5 @@ let {
   {style}
 >
   {@render children()}
-  <MapCanvas {mapStyleCode} />
+  <MapCanvas {mapStyleCode} {pixelRatio} {antialias} {interactive} {showControls} />
 </main>

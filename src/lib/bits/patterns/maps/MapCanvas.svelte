@@ -45,6 +45,10 @@ import type { StyleSpecification } from 'maplibre-gl'
 type MapCanvasProps = {
   mapStyleCode?: string | null
   bottomInset?: number
+  pixelRatio?: number
+  antialias?: boolean
+  interactive?: boolean
+  showControls?: boolean
 }
 
 type GeolocateControlWithPrivateFields = GeolocateControl & {
@@ -52,7 +56,14 @@ type GeolocateControlWithPrivateFields = GeolocateControl & {
   _geolocateButton: HTMLButtonElement
 }
 
-let { mapStyleCode = null, bottomInset = 0 }: MapCanvasProps = $props()
+let {
+  mapStyleCode = null,
+  bottomInset = 0,
+  pixelRatio,
+  antialias = true,
+  interactive = true,
+  showControls = true,
+}: MapCanvasProps = $props()
 
 // ELEMENTS
 let mapContainer: HTMLDivElement
@@ -451,9 +462,10 @@ onMount(() => {
       hash: false,
       pitch: initialMapView.pitch,
       attributionControl: false,
-      pixelRatio: window.devicePixelRatio,
+      interactive,
+      pixelRatio: pixelRatio ?? window.devicePixelRatio,
       canvasContextAttributes: {
-        antialias: true,
+        antialias,
       },
     })
 
@@ -477,7 +489,7 @@ onMount(() => {
       queueMapResize()
 
       // CONTROLS : Add the controls to the map
-      if (appCtx.user) {
+      if (appCtx.user && showControls) {
         // Initialize and store the GeolocateControl
         // See https://github.com/mapbox/mapbox-gl-js/issues/13067#issuecomment-1925291846
         const geolocateControl = new appCtx.maplibre.GeolocateControl({
@@ -845,12 +857,21 @@ $effect(() => {
   data-testid="map"
   bind:this={mapContainer}
 >
-  {#if appCtx.user && appCtx.map && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.isPanelOpen(Panel.prisms)}
+  {#if showControls && appCtx.user && appCtx.map && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.isPanelOpen(Panel.prisms)}
+    <!-- biome-ignore lint/a11y/useSemanticElements: composite prompt contains a nested button, so this cannot be a native button. -->
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
       in:fade={{ duration: 800, delay: 3000, easing: cubicInOut }}
       out:fade={{ duration: 300, easing: cubicInOut }}
+      role="button"
+      tabindex="0"
       onclick={() => appCtx.openPanel(Panel.prisms, false)}
+      onkeydown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          appCtx.openPanel(Panel.prisms, false)
+        }
+      }}
     >
       <div
         class="group pointer-events-auto flex max-w-xs flex-col items-center gap-8 rounded-lg border-2 border-[#4987E2] bg-black p-8 px-8 font-mono shadow-[0_0_15px_rgba(0,0,255,0.5)]"
