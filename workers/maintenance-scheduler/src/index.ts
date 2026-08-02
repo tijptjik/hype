@@ -2,6 +2,7 @@
 
 type Env = {
   APP_BASE_URL: string
+  SCHEDULER_SECRET: string
   ANONYMOUS_CLEANUP_TOKEN: string
   MAP_REFRESH_TOKEN: string
   RENDER_REFRESH_KINDS?: string
@@ -10,6 +11,19 @@ type Env = {
 
 const RENDER_REFRESH_CRON = '0 * * * *'
 const ANONYMOUS_CLEANUP_CRON = '15 3 * * *'
+
+const hasValidSchedulerCredential = (request: Request, expected: string): boolean => {
+  const credential = request.headers.get('authorization')
+  const supplied = credential?.startsWith('Bearer ') ? credential.slice(7) : ''
+  const suppliedBytes = new TextEncoder().encode(supplied)
+  const expectedBytes = new TextEncoder().encode(expected)
+  let difference = suppliedBytes.length ^ expectedBytes.length
+  const length = Math.max(suppliedBytes.length, expectedBytes.length)
+  for (let index = 0; index < length; index += 1) {
+    difference |= (suppliedBytes[index] ?? 0) ^ (expectedBytes[index] ?? 0)
+  }
+  return difference === 0
+}
 
 /**
  * Builds the bounded render-refresh request URL for the current environment.
@@ -76,6 +90,9 @@ export default {
     }
 
     if (request.method === 'POST' && url.pathname === '/run') {
+      if (!hasValidSchedulerCredential(request, env.SCHEDULER_SECRET)) {
+        return new Response('Unauthorized', { status: 401 })
+      }
       const response = await triggerRenderRefresh(env)
       const body = await response.text()
 
