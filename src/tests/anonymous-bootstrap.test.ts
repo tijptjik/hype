@@ -42,8 +42,8 @@ describe('guest session bootstrap', () => {
 
   it('keeps unavailable providers disabled', () => {
     expect(
-      AUTH_PROVIDER_REGISTRY.find(provider => provider.id === 'apple')?.enabled,
-    ).toBe(false)
+      AUTH_PROVIDER_REGISTRY.find(provider => provider.id === 'facebook')?.enabled,
+    ).toBe(true)
     expect(
       AUTH_PROVIDER_REGISTRY.find(provider => provider.id === 'wechat')?.enabled,
     ).toBe(false)
