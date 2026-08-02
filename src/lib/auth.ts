@@ -1,6 +1,7 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
+import { passkey } from '@better-auth/passkey'
 import { customSession, anonymous, username } from 'better-auth/plugins'
 // CONFIG
 import { authConfig } from './auth/config'
@@ -163,6 +164,11 @@ function createAuthInstance(
     },
     // PLUGINS
     plugins: [
+      passkey({
+        rpID: new URL(baseURL).hostname,
+        rpName: 'HYPE',
+        origin: baseURL,
+      }),
       username({
         usernameValidator: async username => {
           if (username === 'admin') {

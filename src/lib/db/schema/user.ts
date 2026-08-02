@@ -160,6 +160,27 @@ export const verification = sqliteTable('verification', {
     .$onUpdateFn(() => new Date()),
 })
 
+/**
+ * WebAuthn passkeys registered for Better Auth users.
+ * @remarks
+ * Stores public credential material only; private keys remain in the user's authenticator.
+ */
+export const passkey = sqliteTable('passkey', {
+  id: text('id').primaryKey(),
+  name: text('name'),
+  publicKey: text('publicKey').notNull(),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  credentialID: text('credentialID').notNull(),
+  counter: integer('counter').notNull(),
+  deviceType: text('deviceType').notNull(),
+  backedUp: integer('backedUp', { mode: 'boolean' }).notNull(),
+  transports: text('transports'),
+  createdAt: integer('createdAt', { mode: 'timestamp_ms' }).$type<Date>(),
+  aaguid: text('aaguid'),
+})
+
 /* ============================================================================
  * USER INTERACTION
  * ============================================================================

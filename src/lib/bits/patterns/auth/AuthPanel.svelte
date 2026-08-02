@@ -6,6 +6,7 @@ import Facebook from 'virtual:icons/simple-icons/facebook'
 import Google from 'virtual:icons/logos/google-icon'
 import Wechat from 'virtual:icons/simple-icons/wechat'
 import Mail from 'virtual:icons/lucide/mail'
+import KeyRound from 'virtual:icons/lucide/key-round'
 // AUTH
 import { authClient, signIn, signUp } from '$lib/auth/client'
 import { toSafeReturnPath } from '$lib/auth/upgrade'
@@ -106,6 +107,21 @@ async function handleGuest(): Promise<void> {
   }
 }
 
+/** Signs in with a passkey registered to an existing HYPE account. */
+async function handlePasskey(): Promise<void> {
+  if (isBusy) return
+  isBusy = true
+  errorMessage = ''
+  try {
+    const result = await signIn.passkey({})
+    if (result.error) errorMessage = m.guest__auth_generic_error()
+  } catch {
+    errorMessage = m.guest__auth_generic_error()
+  } finally {
+    isBusy = false
+  }
+}
+
 async function handleVerificationResend(): Promise<void> {
   if (isBusy || !email.trim()) return
   isBusy = true
@@ -187,6 +203,15 @@ function toggleMode(): void {
       >
         <Mail class="h-5 w-5 text-white/70" />
         {m.guest__email()}
+      </button>
+      <button
+        class="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white hover:bg-white/5 disabled:opacity-40"
+        type="button"
+        disabled={isBusy}
+        onclick={handlePasskey}
+      >
+        <KeyRound class="h-5 w-5 text-white/70" />
+        {m.guest__sign_in_with_passkey()}
       </button>
     </div>
 
@@ -293,6 +318,14 @@ function toggleMode(): void {
             </button>
           {/each}
         </div>
+        <button
+          class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white/40 disabled:opacity-40"
+          type="button"
+          disabled={isBusy}
+          onclick={handlePasskey}
+        >
+          <KeyRound class="h-4 w-4" />{m.guest__sign_in_with_passkey()}
+        </button>
       </footer>
     </div>
   {/if}
