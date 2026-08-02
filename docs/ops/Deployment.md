@@ -265,14 +265,14 @@ key: ${{ runner.os }}-test-${{ github.sha }}
 
 - Onboard `hype.hk` for Cloudflare Email Sending before enabling email/password
   flows. In the Cloudflare dashboard, open **Compute & AI → Email Service → Email
-  Sending**, choose **Onboard Domain**, select `hype.hk`, and let Cloudflare add the
+  Sending**, first ensure the account has an Email Service plan, then choose
+  **Onboard Domain**, select `hype.hk`, and let Cloudflare add the
   bounce MX, SPF, DKIM, and DMARC records. Alternatively, use
-  `bunx wrangler email sending enable hype.hk` with an API token that can manage Email
-  Sending and DNS for the zone.
-- Confirm onboarding with `bunx wrangler email sending list hype.hk` and
-  `bunx wrangler email sending dns get hype.hk`. DNS verification may take several
-  minutes. Review the resulting DMARC policy against the domain's existing Google
-  Workspace mail flow before making it stricter.
+  the Cloudflare dashboard or the current Email Service API with an API token that
+  can manage Email Sending and DNS for the zone; the pinned Wrangler release does
+  not provide the `email sending enable`, `list`, or `dns get` commands.
+  DNS verification may take several minutes. Review the resulting DMARC policy
+  against the domain's existing Google Workspace mail flow before making it stricter.
 - The Worker binding is `EMAIL` in every environment and requires no email API key.
   `AUTH_EMAIL_FROM` is the non-secret verified sender `account@hype.hk` in local,
   preview, and production configuration.
@@ -284,6 +284,9 @@ key: ${{ runner.os }}-test-${{ github.sha }}
   `ANONYMOUS_CLEANUP_TOKEN` for each environment and uploads the same value to the app
   and maintenance-scheduler Workers without printing or storing it. Pass `preview` or
   `production` to configure only one environment.
+- Provision a separate `SCHEDULER_SECRET` in each maintenance-scheduler environment
+  and use it as the Bearer credential for manual `POST /run` requests; it must never
+  be reused as the application or cleanup token.
 - The maintenance-scheduler Worker refreshes map renders hourly and runs the
   authenticated guest cleanup daily at 03:15 UTC by posting to
   `/api/maintenance/anonymous-cleanup`.

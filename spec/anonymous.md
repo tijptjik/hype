@@ -115,7 +115,7 @@ must show the upgrade prompt before loading or mutating account-only data.
 ### Logout
 
 Logging out of an upgraded account removes its session and returns the user directly to
-a modified version of the current landing page. The application offers logins with 3 socials and email and password or continueing as a gust, which is a new anonymous user/session as part of normal bootstrap.
+a modified version of the current landing page. The application offers logins with 3 socials and email and password or continuing as a guest, which is a new anonymous user/session as part of normal bootstrap.
 
 ## Better Auth Configuration
 

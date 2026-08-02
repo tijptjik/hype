@@ -18,7 +18,7 @@ By using {{hub.name | "HYPE"}}, you acknowledge that your data is processed by b
 | Party                   | Role                                  | Responsibilities                                                                              |
 | ----------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
 | **HYPE**                | Data Controller (Account & Ecosystem) | Account management, authentication storage, cross-platform activity, ecosystem security       |
-| **{{hub.name            | "HYPE"}}**                            | Data Controller (Platform-Specific)                                                           | Platform usage, project participation, local moderation, partner communications |
+| **{{hub.name \| "HYPE"}}**                            | Data Controller (Platform-Specific)                                                           | Platform usage, project participation, local moderation, partner communications |
 | **Google/Apple/WeChat** | Identity Provider (OAuth)             | Authentication verification; provides email, name, profile photo                              |
 | **Cloudflare**          | Sub-processor (Infrastructure)        | Data hosting (D1 database), image storage (R2), CDN delivery, DDoS protection, edge computing |
 
@@ -59,7 +59,7 @@ When you open the interactive application without a signed-in account, HYPE auto
 
 The secure cookie is the only credential that reconnects the browser to this saved state. Clearing cookies or allowing the session and retention period to expire can make the state inaccessible. Guest accounts with no usable session are deleted after a 45-day inactivity grace period. When you upgrade using email/password or a support social login, the saved state is merged into the account you select and thereafter follows the account retention rules.
 
-### 3.3 Location Data
+### 3.4 Location Data
 
 - **Precise Location:** Only if you explicitly grant permission (e.g., when adding a place)
 - **General Location:** Derived from IP address for service optimisation and security
@@ -72,13 +72,13 @@ The secure cookie is the only credential that reconnects the browser to this sav
 | ------------------------------------------------- | ------------- | ------------------------------------------ |
 | Provide and maintain your HYPE Account            | HYPE          | Contract performance                       |
 | Enable single sign-on across platforms            | HYPE          | Contract performance                       |
-| Operate this Platform and display content         | {{hub.name    | "HYPE"}}                                   | Contract performance                       |
+| Operate this Platform and display content         | {{hub.name \| "HYPE"}}                                   | Contract performance                       |
 | Attribute your contributions across the ecosystem | Both          | Contract performance / Legitimate interest |
 | Moderate content and enforce Terms                | Both          | Legitimate interest / Legal obligation     |
 | Improve services and develop features             | HYPE          | Legitimate interest                        |
 | Send service notifications                        | HYPE          | Contract performance / Legitimate interest |
 | Comply with legal obligations                     | Both          | Legal obligation                           |
-| Send marketing newsletter to subscribers          | {{hub.name    | "HYPE"}}                                   | Contract performance / Legitimate interest |
+| Send marketing newsletter to subscribers          | {{hub.name \| "HYPE"}}                                   | Contract performance / Legitimate interest |
 
 ---
 
@@ -132,7 +132,7 @@ Under the **Hong Kong Personal Data (Privacy) Ordinance (Cap. 486)** and applica
 
 | Right                                 | How to Exercise                                                           |
 | ------------------------------------- | ------------------------------------------------------------------------- |
-| **Access** your personal data         | Contact HYPE for account data; contact {{hub.name                         | "HYPE"}} for platform-specific data |
+| **Access** your personal data         | Contact HYPE for account data; contact {{hub.name \| "HYPE"}} for platform-specific data |
 | **Correction** of inaccurate data     | Via account settings or contacting respective party                       |
 | **Deletion** of your account and data | Delete your HYPE Account (affects entire ecosystem) or request {{hub.name | "HYPE"}}-specific deletion          |
 | **Object** to certain processing      | Contact the relevant controller with your objection                       |
@@ -190,7 +190,7 @@ Continued use after changes constitutes acceptance.
 
 | Party        | Contact           | For Issues Relating To                                       |
 | ------------ | ----------------- | ------------------------------------------------------------ |
-| **{{hub.name | "HYPE"}}**        | [{{hub.legalContactAddress                                   | "privacy@hype.hk"}}] | Platform-specific data, project participation, local content |
+| **{{hub.name \| "HYPE"}}**        | [{{hub.legalContactAddress \| "privacy@hype.hk"}}] | Platform-specific data, project participation, local content |
 | **HYPE**     | [privacy@hype.hk] | Account data, ecosystem-wide activity, attribution, security |
 
 **Data Protection Officer (HYPE):**
