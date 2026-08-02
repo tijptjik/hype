@@ -11,6 +11,8 @@ enabled = true
 
 [env.preview]
 name = "hype-scheduler-preview"
+[env.preview.secrets]
+required = ["ANONYMOUS_CLEANUP_TOKEN", "MAP_REFRESH_TOKEN", "SCHEDULER_SECRET"]
 
 [env.preview.vars]
 APP_BASE_URL = "https://preview.hype.hk"
@@ -22,6 +24,8 @@ crons = ["0 * * * *", "15 3 * * *"]
 
 [env.production]
 name = "hype-scheduler-production"
+[env.production.secrets]
+required = ["ANONYMOUS_CLEANUP_TOKEN", "MAP_REFRESH_TOKEN", "SCHEDULER_SECRET"]
 
 [env.production.vars]
 APP_BASE_URL = "https://hype.hk"
