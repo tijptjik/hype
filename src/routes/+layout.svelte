@@ -168,6 +168,25 @@ async function retryBootstrap(): Promise<void> {
   }
 }
 
+async function handleRequestedUpgrade(): Promise<void> {
+  const requestedUpgrade = page.url.searchParams.get('upgrade')
+  const currentUser = $session.data?.user
+  if (!requestedUpgrade || (currentUser && currentUser.isAnonymous !== true)) return
+
+  upgradeReason = requestedUpgrade === 'admin' ? 'admin' : 'account'
+  upgradeReturnTo = toSafeReturnPath(page.url.searchParams.get('returnTo'))
+  isUpgradeOpen = true
+
+  const cleanUrl = new URL(page.url)
+  cleanUrl.searchParams.delete('upgrade')
+  cleanUrl.searchParams.delete('returnTo')
+  await goto(`${cleanUrl.pathname}${cleanUrl.search}`, {
+    replaceState: true,
+    keepFocus: true,
+    noScroll: true,
+  })
+}
+
 onMount(() => {
   hasMounted = true
 
@@ -180,17 +199,12 @@ onMount(() => {
   }
   window.addEventListener(UPGRADE_ACCOUNT_EVENT, handleUpgradeRequest)
 
-  const requestedUpgrade = page.url.searchParams.get('upgrade')
-  if (requestedUpgrade) {
-    upgradeReason = requestedUpgrade === 'admin' ? 'admin' : 'account'
-    upgradeReturnTo = toSafeReturnPath(page.url.searchParams.get('returnTo'))
-    isUpgradeOpen = true
-  }
-
   void (async () => {
     if (!appCtx.isInitialised) {
       await retryBootstrap()
     }
+
+    await handleRequestedUpgrade()
 
     scheduleResponsiveSync()
     window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
@@ -356,13 +370,13 @@ watch(
     class="fixed inset-0 z-[1100] flex items-center justify-center bg-black p-6 text-white"
   >
     <div class="max-w-sm text-center">
-      <p>We couldn't start your guest account. Your requested page is still here.</p>
+      <p>{m.bootstrap__error()}</p>
       <button
         type="button"
         class="mt-4 rounded-lg bg-white px-4 py-2 text-black"
         onclick={retryBootstrap}
       >
-        Try again
+        {m.bootstrap__retry()}
       </button>
     </div>
   </div>
