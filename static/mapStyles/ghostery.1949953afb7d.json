@@ -2415,8 +2415,7 @@
         "in",
         "kind",
         "minor_road",
-        "other",
-        "path"
+        "other"
       ],
       "layout": {
         "symbol-sort-key": [
@@ -2615,6 +2614,7 @@
           20,
           16.25
         ],
+        "symbol-spacing": 750,
         "text-transform": "none"
       },
       "paint": {
@@ -2635,8 +2635,7 @@
         "in",
         "kind",
         "minor_road",
-        "other",
-        "path"
+        "other"
       ],
       "layout": {
         "symbol-sort-key": [
@@ -2835,6 +2834,7 @@
           20,
           16.25
         ],
+        "symbol-spacing": 750,
         "text-transform": "none"
       },
       "paint": {
@@ -5872,6 +5872,7 @@
           20,
           20
         ],
+        "symbol-spacing": 750,
         "text-transform": "none"
       },
       "paint": {
@@ -6093,6 +6094,7 @@
           20,
           20
         ],
+        "symbol-spacing": 750,
         "text-transform": "none"
       },
       "paint": {

@@ -12,7 +12,7 @@
       "id": "background",
       "type": "background",
       "paint": {
-        "background-color": "#2b2b2b"
+        "background-color": "#34373d"
       }
     },
     {
@@ -26,7 +26,48 @@
       "source": "hongkong-latest",
       "source-layer": "earth",
       "paint": {
-        "fill-color": "#141414"
+        "fill-color": "#1f1f1f"
+      }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "hongkong-latest",
+      "source-layer": "landcover",
+      "paint": {
+        "fill-color": [
+          "match",
+          [
+            "get",
+            "kind"
+          ],
+          "grassland",
+          "rgba(30, 41, 31, 1)",
+          "barren",
+          "rgba(38, 38, 36, 1)",
+          "urban_area",
+          "rgba(28, 28, 28, 1)",
+          "farmland",
+          "rgba(31, 36, 32, 1)",
+          "glacier",
+          "rgba(43, 43, 43, 1)",
+          "scrub",
+          "rgba(34, 36, 30, 1)",
+          "rgba(28, 41, 37, 1)"
+        ],
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          5,
+          1,
+          7,
+          0
+        ]
       }
     },
     {
@@ -89,7 +130,7 @@
               ]
             ]
           ],
-          "#181818",
+          "#192a24",
           [
             "==",
             [
@@ -98,7 +139,7 @@
             ],
             "wood"
           ],
-          "#1a1a1a",
+          "#202121",
           [
             "in",
             [
@@ -114,7 +155,7 @@
               ]
             ]
           ],
-          "#1c1c1c",
+          "#222323",
           [
             "==",
             [
@@ -123,7 +164,7 @@
             ],
             "glacier"
           ],
-          "#191919",
+          "#1c1c1c",
           [
             "==",
             [
@@ -132,7 +173,7 @@
             ],
             "sand"
           ],
-          "#161616",
+          "#212123",
           [
             "in",
             [
@@ -148,8 +189,8 @@
               ]
             ]
           ],
-          "#191919",
-          "#141414"
+          "#222323",
+          "#1f1f1f"
         ]
       }
     },
@@ -166,7 +207,7 @@
         "playground"
       ],
       "paint": {
-        "fill-color": "#181818",
+        "fill-color": "#192a24",
         "fill-opacity": 0.7
       }
     },
@@ -181,7 +222,7 @@
         "hospital"
       ],
       "paint": {
-        "fill-color": "#1d1d1d"
+        "fill-color": "#252424"
       }
     },
     {
@@ -195,7 +236,7 @@
         "industrial"
       ],
       "paint": {
-        "fill-color": "#101010"
+        "fill-color": "#222222"
       }
     },
     {
@@ -211,7 +252,7 @@
         "college"
       ],
       "paint": {
-        "fill-color": "#111111"
+        "fill-color": "#262323"
       }
     },
     {
@@ -225,7 +266,7 @@
         "beach"
       ],
       "paint": {
-        "fill-color": "#1f1f1f"
+        "fill-color": "#28282a"
       }
     },
     {
@@ -239,7 +280,7 @@
         "zoo"
       ],
       "paint": {
-        "fill-color": "#191919"
+        "fill-color": "#222323"
       }
     },
     {
@@ -253,7 +294,7 @@
         "aerodrome"
       ],
       "paint": {
-        "fill-color": "#191919"
+        "fill-color": "#1e1e1e"
       }
     },
     {
@@ -267,7 +308,7 @@
         "runway"
       ],
       "paint": {
-        "line-color": "#323232",
+        "line-color": "#333333",
         "line-width": [
           "interpolate",
           [
@@ -298,7 +339,7 @@
         "taxiway"
       ],
       "paint": {
-        "line-color": "#323232",
+        "line-color": "#333333",
         "line-width": [
           "interpolate",
           [
@@ -332,7 +373,7 @@
         ]
       ],
       "paint": {
-        "fill-color": "#323232"
+        "fill-color": "#333333"
       }
     },
     {
@@ -346,7 +387,7 @@
       "source": "hongkong-latest",
       "source-layer": "water",
       "paint": {
-        "fill-color": "#333333"
+        "fill-color": "#31353f"
       }
     },
     {
@@ -361,7 +402,7 @@
         "stream"
       ],
       "paint": {
-        "line-color": "#333333",
+        "line-color": "#31353f",
         "line-width": 0.5
       }
     },
@@ -377,7 +418,7 @@
         "river"
       ],
       "paint": {
-        "line-color": "#333333",
+        "line-color": "#31353f",
         "line-width": [
           "interpolate",
           [
@@ -408,7 +449,7 @@
         "dam"
       ],
       "paint": {
-        "fill-color": "#191919"
+        "fill-color": "#1e1e1e"
       }
     },
     {
@@ -422,7 +463,7 @@
         "pier"
       ],
       "paint": {
-        "fill-color": "#0a0a0a"
+        "fill-color": "#333333"
       }
     },
     {
@@ -444,7 +485,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#101010",
+        "line-color": "#141414",
         "line-gap-width": [
           "interpolate",
           [
@@ -479,7 +520,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#101010",
+        "line-color": "#141414",
         "line-dasharray": [
           3,
           2
@@ -535,7 +576,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#101010",
+        "line-color": "#141414",
         "line-dasharray": [
           3,
           2
@@ -594,7 +635,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#101010",
+        "line-color": "#141414",
         "line-dasharray": [
           3,
           2
@@ -657,7 +698,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#101010",
+        "line-color": "#141414",
         "line-dasharray": [
           6,
           0.5
@@ -913,7 +954,7 @@
         "building_part"
       ],
       "paint": {
-        "fill-color": "#0a0a0a",
+        "fill-color": "#111111",
         "fill-opacity": 0.5
       }
     },
@@ -928,7 +969,7 @@
         "pier"
       ],
       "paint": {
-        "line-color": "#0a0a0a",
+        "line-color": "#333333",
         "line-width": [
           "interpolate",
           [
@@ -975,7 +1016,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1033,7 +1074,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1079,7 +1120,7 @@
         "is_link"
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1135,7 +1176,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1197,7 +1238,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1260,7 +1301,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#1f1f1f",
+        "line-color": "#333333",
         "line-width": [
           "interpolate",
           [
@@ -1287,7 +1328,7 @@
         "is_link"
       ],
       "paint": {
-        "line-color": "#1f1f1f",
+        "line-color": "#3d3d3d",
         "line-width": [
           "interpolate",
           [
@@ -1333,7 +1374,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#1f1f1f",
+        "line-color": "#333333",
         "line-width": [
           "interpolate",
           [
@@ -1387,9 +1428,9 @@
             "zoom"
           ],
           11,
-          "#292929",
+          "#3d3d3d",
           16,
-          "#1f1f1f"
+          "#333333"
         ],
         "line-width": [
           "interpolate",
@@ -1434,7 +1475,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1489,7 +1530,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#292929",
+        "line-color": "#3d3d3d",
         "line-width": [
           "interpolate",
           [
@@ -1537,7 +1578,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1596,7 +1637,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#292929",
+        "line-color": "#474747",
         "line-width": [
           "interpolate",
           [
@@ -1635,7 +1676,7 @@
           0.75
         ],
         "line-opacity": 0.5,
-        "line-color": "#292929",
+        "line-color": "#000000",
         "line-width": [
           "interpolate",
           [
@@ -1665,7 +1706,7 @@
         2
       ],
       "paint": {
-        "line-color": "#707070",
+        "line-color": "#5b6374",
         "line-width": 0.7,
         "line-dasharray": [
           "step",
@@ -1701,7 +1742,7 @@
         2
       ],
       "paint": {
-        "line-color": "#707070",
+        "line-color": "#5b6374",
         "line-width": 0.4,
         "line-dasharray": [
           "step",
@@ -1746,7 +1787,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#2b2b2b",
         "line-gap-width": [
           "interpolate",
           [
@@ -1781,7 +1822,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1833,7 +1874,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1887,7 +1928,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -1940,7 +1981,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#1f1f1f",
+        "line-color": "#333333",
         "line-dasharray": [
           2,
           1
@@ -1980,7 +2021,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#1f1f1f",
+        "line-color": "#333333",
         "line-width": [
           "interpolate",
           [
@@ -2019,7 +2060,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#1f1f1f",
+        "line-color": "#333333",
         "line-width": [
           "interpolate",
           [
@@ -2057,7 +2098,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#292929",
+        "line-color": "#3d3d3d",
         "line-width": [
           "interpolate",
           [
@@ -2101,7 +2142,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#141414",
+        "line-color": "#1f1f1f",
         "line-gap-width": [
           "interpolate",
           [
@@ -2158,7 +2199,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#292929",
+        "line-color": "#474747",
         "line-width": [
           "interpolate",
           [
@@ -2205,7 +2246,7 @@
       },
       "paint": {
         "text-color": "#525252",
-        "text-halo-color": "#141414",
+        "text-halo-color": "#1f1f1f",
         "text-halo-width": 1
       }
     },
@@ -3100,8 +3141,8 @@
         "text-letter-spacing": 0.2
       },
       "paint": {
-        "text-color": "#707070",
-        "text-halo-color": "#333333",
+        "text-color": "#717784",
+        "text-halo-color": "#31353f",
         "text-halo-width": 1
       }
     },
@@ -3136,8 +3177,7 @@
         "in",
         "kind",
         "minor_road",
-        "other",
-        "path"
+        "other"
       ],
       "layout": {
         "symbol-sort-key": [
@@ -4018,11 +4058,12 @@
             ]
           ]
         ],
-        "text-size": 12
+        "text-size": 12,
+        "symbol-spacing": 750
       },
       "paint": {
         "text-color": "#525252",
-        "text-halo-color": "#141414",
+        "text-halo-color": "#1f1f1f",
         "text-halo-width": 1
       }
     },
@@ -4932,9 +4973,9 @@
         "text-transform": "uppercase"
       },
       "paint": {
-        "text-color": "#707070",
+        "text-color": "#717784",
         "text-halo-width": 1,
-        "text-halo-color": "#333333"
+        "text-halo-color": "#31353f"
       }
     },
     {
@@ -5826,8 +5867,8 @@
         "text-max-width": 8
       },
       "paint": {
-        "text-color": "#5c5c5c",
-        "text-halo-color": "#141414",
+        "text-color": "#525252",
+        "text-halo-color": "#1f1f1f",
         "text-halo-width": 1
       }
     },
@@ -6735,8 +6776,8 @@
         "text-max-width": 9
       },
       "paint": {
-        "text-color": "#707070",
-        "text-halo-color": "#333333",
+        "text-color": "#717784",
+        "text-halo-color": "#31353f",
         "text-halo-width": 1
       }
     },
@@ -6837,7 +6878,7 @@
         "text-rotation-alignment": "viewport"
       },
       "paint": {
-        "text-color": "#5c5c5c"
+        "text-color": "#666666"
       }
     },
     {
@@ -7731,11 +7772,1118 @@
             ]
           ]
         ],
-        "text-size": 12
+        "text-size": 12,
+        "symbol-spacing": 750
       },
       "paint": {
-        "text-color": "#5c5c5c",
-        "text-halo-color": "#141414",
+        "text-color": "#666666",
+        "text-halo-color": "#1f1f1f",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "pois",
+      "type": "symbol",
+      "source": "hongkong-latest",
+      "source-layer": "pois",
+      "filter": [
+        "all",
+        [
+          "in",
+          [
+            "get",
+            "kind"
+          ],
+          [
+            "literal",
+            [
+              "beach",
+              "forest",
+              "marina",
+              "park",
+              "peak",
+              "zoo",
+              "garden",
+              "bench",
+              "aerodrome",
+              "station",
+              "bus_stop",
+              "ferry_terminal",
+              "stadium",
+              "university",
+              "library",
+              "school",
+              "animal",
+              "toilets",
+              "drinking_water",
+              "post_office",
+              "building",
+              "townhall",
+              "restaurant",
+              "fast_food",
+              "cafe",
+              "bar",
+              "supermarket",
+              "convenience",
+              "books",
+              "beauty",
+              "electronics",
+              "clothes",
+              "attraction",
+              "museum",
+              "theatre",
+              "artwork"
+            ]
+          ]
+        ],
+        [
+          ">=",
+          [
+            "zoom"
+          ],
+          [
+            "+",
+            [
+              "get",
+              "min_zoom"
+            ],
+            0
+          ]
+        ]
+      ],
+      "layout": {
+        "icon-image": [
+          "match",
+          [
+            "get",
+            "kind"
+          ],
+          "station",
+          "train_station",
+          "townhall",
+          "building",
+          [
+            "get",
+            "kind"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-justify": "auto",
+        "text-field": [
+          "case",
+          [
+            "all",
+            [
+              "any",
+              [
+                "has",
+                "name"
+              ],
+              [
+                "has",
+                "pgf:name"
+              ]
+            ],
+            [
+              "!",
+              [
+                "any",
+                [
+                  "has",
+                  "name2"
+                ],
+                [
+                  "has",
+                  "pgf:name2"
+                ]
+              ]
+            ],
+            [
+              "!",
+              [
+                "any",
+                [
+                  "has",
+                  "name3"
+                ],
+                [
+                  "has",
+                  "pgf:name3"
+                ]
+              ]
+            ]
+          ],
+          [
+            "case",
+            [
+              "has",
+              "script"
+            ],
+            [
+              "case",
+              [
+                "any",
+                [
+                  "is-supported-script",
+                  [
+                    "get",
+                    "name"
+                  ]
+                ],
+                [
+                  "has",
+                  "pgf:name"
+                ]
+              ],
+              [
+                "format",
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "name:en"
+                  ],
+                  [
+                    "get",
+                    "name:en"
+                  ]
+                ],
+                {},
+                "\n",
+                {},
+                [
+                  "case",
+                  [
+                    "all",
+                    [
+                      "!",
+                      [
+                        "has",
+                        "name:en"
+                      ]
+                    ],
+                    [
+                      "has",
+                      "name:en"
+                    ],
+                    [
+                      "!",
+                      [
+                        "has",
+                        "script"
+                      ]
+                    ]
+                  ],
+                  "",
+                  [
+                    "coalesce",
+                    [
+                      "get",
+                      "pgf:name"
+                    ],
+                    [
+                      "get",
+                      "name"
+                    ]
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                }
+              ],
+              [
+                "get",
+                "name:en"
+              ]
+            ],
+            [
+              "format",
+              [
+                "coalesce",
+                [
+                  "get",
+                  "name:en"
+                ],
+                [
+                  "get",
+                  "pgf:name"
+                ],
+                [
+                  "get",
+                  "name"
+                ]
+              ],
+              {}
+            ]
+          ],
+          [
+            "all",
+            [
+              "any",
+              [
+                "has",
+                "name"
+              ],
+              [
+                "has",
+                "pgf:name"
+              ]
+            ],
+            [
+              "any",
+              [
+                "has",
+                "name2"
+              ],
+              [
+                "has",
+                "pgf:name2"
+              ]
+            ],
+            [
+              "!",
+              [
+                "any",
+                [
+                  "has",
+                  "name3"
+                ],
+                [
+                  "has",
+                  "pgf:name3"
+                ]
+              ]
+            ]
+          ],
+          [
+            "case",
+            [
+              "all",
+              [
+                "has",
+                "script"
+              ],
+              [
+                "has",
+                "script2"
+              ]
+            ],
+            [
+              "format",
+              [
+                "get",
+                "name:en"
+              ],
+              {},
+              "\n",
+              {},
+              [
+                "coalesce",
+                [
+                  "get",
+                  "pgf:name"
+                ],
+                [
+                  "get",
+                  "name"
+                ]
+              ],
+              {
+                "text-font": [
+                  "case",
+                  [
+                    "==",
+                    [
+                      "get",
+                      "script"
+                    ],
+                    "Devanagari"
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Devanagari Regular v1"
+                    ]
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Regular"
+                    ]
+                  ]
+                ]
+              },
+              "\n",
+              {},
+              [
+                "coalesce",
+                [
+                  "get",
+                  "pgf:name2"
+                ],
+                [
+                  "get",
+                  "name2"
+                ]
+              ],
+              {
+                "text-font": [
+                  "case",
+                  [
+                    "==",
+                    [
+                      "get",
+                      "script2"
+                    ],
+                    "Devanagari"
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Devanagari Regular v1"
+                    ]
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Regular"
+                    ]
+                  ]
+                ]
+              }
+            ],
+            [
+              "case",
+              [
+                "has",
+                "script2"
+              ],
+              [
+                "format",
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "name:en"
+                  ],
+                  [
+                    "get",
+                    "pgf:name"
+                  ],
+                  [
+                    "get",
+                    "name"
+                  ]
+                ],
+                {},
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name2"
+                  ],
+                  [
+                    "get",
+                    "name2"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script2"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                }
+              ],
+              [
+                "format",
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "name:en"
+                  ],
+                  [
+                    "get",
+                    "pgf:name2"
+                  ],
+                  [
+                    "get",
+                    "name2"
+                  ]
+                ],
+                {},
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name"
+                  ],
+                  [
+                    "get",
+                    "name"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ],
+          [
+            "case",
+            [
+              "all",
+              [
+                "has",
+                "script"
+              ],
+              [
+                "has",
+                "script2"
+              ],
+              [
+                "has",
+                "script3"
+              ]
+            ],
+            [
+              "format",
+              [
+                "get",
+                "name:en"
+              ],
+              {},
+              "\n",
+              {},
+              [
+                "coalesce",
+                [
+                  "get",
+                  "pgf:name"
+                ],
+                [
+                  "get",
+                  "name"
+                ]
+              ],
+              {
+                "text-font": [
+                  "case",
+                  [
+                    "==",
+                    [
+                      "get",
+                      "script"
+                    ],
+                    "Devanagari"
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Devanagari Regular v1"
+                    ]
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Regular"
+                    ]
+                  ]
+                ]
+              },
+              "\n",
+              {},
+              [
+                "coalesce",
+                [
+                  "get",
+                  "pgf:name2"
+                ],
+                [
+                  "get",
+                  "name2"
+                ]
+              ],
+              {
+                "text-font": [
+                  "case",
+                  [
+                    "==",
+                    [
+                      "get",
+                      "script2"
+                    ],
+                    "Devanagari"
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Devanagari Regular v1"
+                    ]
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Regular"
+                    ]
+                  ]
+                ]
+              },
+              "\n",
+              {},
+              [
+                "coalesce",
+                [
+                  "get",
+                  "pgf:name3"
+                ],
+                [
+                  "get",
+                  "name3"
+                ]
+              ],
+              {
+                "text-font": [
+                  "case",
+                  [
+                    "==",
+                    [
+                      "get",
+                      "script3"
+                    ],
+                    "Devanagari"
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Devanagari Regular v1"
+                    ]
+                  ],
+                  [
+                    "literal",
+                    [
+                      "Noto Sans Regular"
+                    ]
+                  ]
+                ]
+              }
+            ],
+            [
+              "case",
+              [
+                "!",
+                [
+                  "has",
+                  "script"
+                ]
+              ],
+              [
+                "format",
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "name:en"
+                  ],
+                  [
+                    "get",
+                    "pgf:name"
+                  ],
+                  [
+                    "get",
+                    "name"
+                  ]
+                ],
+                {},
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name2"
+                  ],
+                  [
+                    "get",
+                    "name2"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script2"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                },
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name3"
+                  ],
+                  [
+                    "get",
+                    "name3"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script3"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                }
+              ],
+              [
+                "!",
+                [
+                  "has",
+                  "script2"
+                ]
+              ],
+              [
+                "format",
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "name:en"
+                  ],
+                  [
+                    "get",
+                    "pgf:name2"
+                  ],
+                  [
+                    "get",
+                    "name2"
+                  ]
+                ],
+                {},
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name"
+                  ],
+                  [
+                    "get",
+                    "name"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                },
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name3"
+                  ],
+                  [
+                    "get",
+                    "name3"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script3"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                }
+              ],
+              [
+                "format",
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "name:en"
+                  ],
+                  [
+                    "get",
+                    "pgf:name3"
+                  ],
+                  [
+                    "get",
+                    "name3"
+                  ]
+                ],
+                {},
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name"
+                  ],
+                  [
+                    "get",
+                    "name"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                },
+                "\n",
+                {},
+                [
+                  "coalesce",
+                  [
+                    "get",
+                    "pgf:name2"
+                  ],
+                  [
+                    "get",
+                    "name2"
+                  ]
+                ],
+                {
+                  "text-font": [
+                    "case",
+                    [
+                      "==",
+                      [
+                        "get",
+                        "script2"
+                      ],
+                      "Devanagari"
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Devanagari Regular v1"
+                      ]
+                    ],
+                    [
+                      "literal",
+                      [
+                        "Noto Sans Regular"
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            ]
+          ]
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          17,
+          10,
+          19,
+          16
+        ],
+        "text-max-width": 8,
+        "text-offset": [
+          1.1,
+          0
+        ],
+        "text-variable-anchor": [
+          "left",
+          "right"
+        ]
+      },
+      "paint": {
+        "text-color": [
+          "case",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "beach",
+                "forest",
+                "marina",
+                "park",
+                "peak",
+                "zoo",
+                "garden",
+                "bench"
+              ]
+            ]
+          ],
+          "#30C573",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "aerodrome",
+                "station",
+                "bus_stop",
+                "ferry_terminal"
+              ]
+            ]
+          ],
+          "#2B5CEA",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "stadium",
+                "university",
+                "library",
+                "school",
+                "animal",
+                "toilets",
+                "drinking_water",
+                "post_office",
+                "building",
+                "townhall"
+              ]
+            ]
+          ],
+          "#93939F",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "supermarket",
+                "convenience",
+                "books",
+                "beauty",
+                "electronics",
+                "clothes"
+              ]
+            ]
+          ],
+          "#4299BB",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "restaurant",
+                "fast_food",
+                "cafe",
+                "bar"
+              ]
+            ]
+          ],
+          "#F19B6E",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "attraction",
+                "museum",
+                "theatre",
+                "artwork"
+              ]
+            ]
+          ],
+          "#EF56BA",
+          "#1f1f1f"
+        ],
+        "text-halo-color": "#1f1f1f",
         "text-halo-width": 1
       }
     },
@@ -8677,8 +9825,8 @@
         "text-transform": "uppercase"
       },
       "paint": {
-        "text-color": "#5c5c5c",
-        "text-halo-color": "#141414",
+        "text-color": "#525252",
+        "text-halo-color": "#1f1f1f",
         "text-halo-width": 1
       }
     },
@@ -9607,7 +10755,7 @@
       },
       "paint": {
         "text-color": "#3d3d3d",
-        "text-halo-color": "#141414",
+        "text-halo-color": "#1f1f1f",
         "text-halo-width": 1
       }
     },
@@ -10759,8 +11907,8 @@
         "text-radial-offset": 0.3
       },
       "paint": {
-        "text-color": "#999999",
-        "text-halo-color": "#141414",
+        "text-color": "#7a7a7a",
+        "text-halo-color": "#212121",
         "text-halo-width": 1
       }
     },
@@ -10908,10 +12056,11 @@
         "text-transform": "uppercase"
       },
       "paint": {
-        "text-color": "#707070",
-        "text-halo-color": "#141414",
+        "text-color": "#5c5c5c",
+        "text-halo-color": "#1f1f1f",
         "text-halo-width": 1
       }
     }
-  ]
+  ],
+  "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/dark"
 }

@@ -3136,8 +3136,7 @@
         "in",
         "kind",
         "minor_road",
-        "other",
-        "path"
+        "other"
       ],
       "layout": {
         "symbol-sort-key": [
@@ -4018,7 +4017,8 @@
             ]
           ]
         ],
-        "text-size": 12
+        "text-size": 12,
+        "symbol-spacing": 750
       },
       "paint": {
         "text-color": "#999999",
@@ -7731,7 +7731,8 @@
             ]
           ]
         ],
-        "text-size": 12
+        "text-size": 12,
+        "symbol-spacing": 750
       },
       "paint": {
         "text-color": "#8f8f8f",

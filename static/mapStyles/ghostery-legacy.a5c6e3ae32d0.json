@@ -2262,8 +2262,7 @@
         "in",
         "kind",
         "minor_road",
-        "other",
-        "path"
+        "other"
       ],
       "layout": {
         "symbol-sort-key": [
@@ -2280,11 +2279,11 @@
             "zoom"
           ],
           16,
-          500,
+          750,
           18,
-          600,
+          750,
           20,
-          700
+          750
         ],
         "text-font": [
           "Noto Sans Regular"
@@ -3200,11 +3199,11 @@
             "zoom"
           ],
           12,
-          300,
+          750,
           16,
-          400,
+          750,
           20,
-          500
+          750
         ],
         "text-font": [
           "Noto Sans Medium"

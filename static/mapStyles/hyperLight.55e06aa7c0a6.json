@@ -3177,8 +3177,7 @@
         "in",
         "kind",
         "minor_road",
-        "other",
-        "path"
+        "other"
       ],
       "layout": {
         "symbol-sort-key": [
@@ -4059,7 +4058,8 @@
             ]
           ]
         ],
-        "text-size": 12
+        "text-size": 12,
+        "symbol-spacing": 750
       },
       "paint": {
         "text-color": "#91888b",
@@ -7772,7 +7772,8 @@
             ]
           ]
         ],
-        "text-size": 12
+        "text-size": 12,
+        "symbol-spacing": 750
       },
       "paint": {
         "text-color": "#938a8d",
@@ -12061,9 +12062,9 @@
       }
     }
   ],
-  "name": "Breadline",
+  "name": "Hyper Light",
   "metadata": {
-    "hype:style-variant": "Breadline"
+    "hype:style-variant": "Hyper Light"
   },
   "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/light"
 }
