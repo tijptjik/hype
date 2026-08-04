@@ -133,13 +133,13 @@ $effect(() => {
 // Reload linked sign-in methods once the active session identity is available.
 $effect(() => {
   const sessionUserId = $session.data?.user?.id
-  const requestId = ++accountLoadRequestId
   const hasSessionIdentityChanged = sessionUserId !== loadedSessionUserId
 
   // Do not track form input here: a keystroke must not reload and remount this section.
   if (!untrack(() => email) || hasSessionIdentityChanged) email = resolvedEmail
 
   if (isGuest) {
+    accountLoadRequestId += 1
     accounts = []
     passkeys = []
     providerEmails = {}
@@ -149,6 +149,7 @@ $effect(() => {
   }
 
   if (!sessionUserId) {
+    accountLoadRequestId += 1
     accounts = []
     passkeys = []
     providerEmails = {}
@@ -161,6 +162,7 @@ $effect(() => {
   // Keep the existing methods visible instead of refetching and remounting them.
   if (!hasSessionIdentityChanged) return
 
+  const requestId = ++accountLoadRequestId
   loadedSessionUserId = sessionUserId
   isLoading = true
   void loadSignInMethods(requestId)

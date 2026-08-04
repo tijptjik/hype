@@ -2212,8 +2212,6 @@ export class AppCtx {
   }
 
   postUserMutation = (): void => {
-    this.applyInitialLayerPrisms()
-
     // Set admin panel state based on user preferences
     if (this.isAdmin() && this.user && 'preferences' in this.user) {
       const isPrimaryPanelCollapsed =

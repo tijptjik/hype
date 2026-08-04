@@ -13,6 +13,11 @@ import {
 import type { Auth } from '$lib/auth'
 
 export const authClient = createAuthClient({
+  sessionOptions: {
+    // Account metadata lives in separate endpoints, so focus revalidation would
+    // otherwise cascade into redundant linked-account and passkey requests.
+    refetchOnWindowFocus: false,
+  },
   plugins: [
     anonymousClient(),
     usernameClient(),
