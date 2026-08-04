@@ -1,6 +1,5 @@
 // TYPES
-import type { Id } from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { HubLayerDefaultsContext, Id } from '$lib/types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 
@@ -18,7 +17,7 @@ export const CORE_DEFAULT_PROJECT_CODE = 'neon'
  * back to Neon Signs' default-visible layers because it has no persisted hub row.
  */
 export function getInitialHubLayerDefaultIds(
-  hub: Pick<HubOptsExtended, 'code' | 'isCore' | 'layerDefaults'> | null | undefined,
+  hub: HubLayerDefaultsContext | null | undefined,
   layers: ReadonlyArray<Pick<Layer, 'id' | 'projectId' | 'isDefaultVisible'>>,
   projects: ReadonlyArray<Pick<Project, 'id' | 'code'>>,
 ): Id[] {

@@ -22,6 +22,7 @@ import type {
   HubGetParamsByProfile,
   HubListByProfile,
   HubListParamsByProfile,
+  HubLayer,
   HubNew,
   HubProfile,
   HubRole,
@@ -1187,6 +1188,15 @@ export type HubUserStateFlags = {
   subscriptionPromptDismissed?: boolean
   subscriptionMember?: boolean
   hasAgreedToTerms?: boolean
+}
+
+/**
+ * Minimal hub configuration required to resolve an initial layer selection.
+ */
+export type HubLayerDefaultsContext = {
+  code?: string
+  isCore?: boolean
+  layerDefaults?: ReadonlyArray<Pick<HubLayer, 'layerId' | 'isDefaultVisible'>>
 }
 
 /* ----------------- */
