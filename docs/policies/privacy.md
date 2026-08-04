@@ -101,7 +101,18 @@ Your data is shared between **HYPE** and **{{hub.name | "HYPE"}}**, and potentia
 | Law enforcement                 | Legal compliance                       | As required by valid legal process                     |
 | Project collaborators           | Project-specific collaboration         | As specified by project terms                          |
 
-### 5.3 Pseudonymous/Anonymous Contributions
+### 5.3 Requests From Public Authorities
+
+We respond to requests for personal data from public authorities, including law-enforcement and regulatory bodies, only when required by applicable law or a valid, binding legal process. Before disclosing any personal data, we:
+
+- Review the request for legal validity, scope, and authority.
+- Challenge, seek clarification of, or narrow a request where we reasonably consider it unlawful, invalid, or overbroad.
+- Disclose only the minimum personal data necessary to comply with the valid request.
+- Document the request, our response, the legal basis for the decision, and the people involved in handling it.
+
+Where permitted by law and where doing so would not compromise an investigation or safety, we will notify the affected user before disclosure or as soon as we are permitted to do so.
+
+### 5.4 Pseudonymous/Anonymous Contributions
 
 If you set your attribution to a pseudonym or "anonymous":
 
