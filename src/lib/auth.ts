@@ -16,6 +16,7 @@ import type { UserRoleDisco, Locale } from '$lib/types'
 import type { UserExperimental, UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { user as userSchema } from '$lib/db/schema/user'
 import { migrateAnonymousUserState } from '$lib/auth/anonymous.server'
+import { createAuthDiagnosticId } from '$lib/auth/diagnostics.server'
 
 // ═══════════════════════════════════════════════════════════════
 // CACHE: AUTH INSTANCES BY BASE URL
@@ -173,6 +174,15 @@ function createAuthInstance(
           // a session before turning it into their first durable sign-in method.
           // Better Auth still resolves and requires that existing session.
           requireSession: false,
+          afterVerification: async ({ user }) => {
+            // Correlate registration with the subsequent custom account-promotion request.
+            console.info('[auth][passkey-registration]', {
+              outcome: 'verified',
+              origin: baseURL,
+              rpID: new URL(baseURL).hostname,
+              userIdHash: await createAuthDiagnosticId(user.id),
+            })
+          },
         },
       }),
       username({
