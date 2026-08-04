@@ -1,8 +1,15 @@
 import type { AppCtx } from '$lib/context/app.svelte'
 // API
 import { getImageSrc } from '$lib/client/services/image'
+// DEBUG
+import {
+  isMarkerBootstrapDebugEnabled,
+  logMarkerBootstrap,
+} from '$lib/debug/markerBootstrap'
 // STYLES
 import '$lib/styles/map.css'
+// TYPES
+import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 // ═══════════════════════
@@ -24,6 +31,67 @@ export const USER_MARKER_STYLE_PARAM = 'markerStyle'
 export const MARKER_STYLE_VARIANTS = ['image', 'dot'] as const
 
 export type MarkerStyleVariant = (typeof MARKER_STYLE_VARIANTS)[number]
+
+type MarkerImageDiagnostics = {
+  created: number
+  decodeFailed: number
+  decoded: number
+  failed: number
+  loaded: number
+  startedAt: number
+}
+
+/**
+ * Summarizes whether loaded marker images are able to render in the current viewport.
+ *
+ * @returns Aggregate DOM and layout state for image-backed map markers.
+ */
+function getMarkerImageRenderState(): Record<string, number> {
+  const images = Array.from(
+    document.querySelectorAll<HTMLImageElement>('img.marker-image'),
+  )
+  let attached = 0
+  let inViewport = 0
+  let renderable = 0
+  let zeroSized = 0
+  let hidden = 0
+
+  for (const image of images) {
+    const marker = image.closest<HTMLElement>('.maplibregl-marker')
+    if (!marker?.isConnected) continue
+
+    attached += 1
+    const imageRect = image.getBoundingClientRect()
+    const markerStyle = window.getComputedStyle(marker)
+    const imageStyle = window.getComputedStyle(image)
+    const hasSize = imageRect.width > 0 && imageRect.height > 0
+    const isVisible =
+      markerStyle.display !== 'none' &&
+      markerStyle.visibility !== 'hidden' &&
+      Number(markerStyle.opacity) > 0 &&
+      imageStyle.display !== 'none' &&
+      imageStyle.visibility !== 'hidden' &&
+      Number(imageStyle.opacity) > 0
+    const isInViewport =
+      imageRect.right > 0 &&
+      imageRect.bottom > 0 &&
+      imageRect.left < window.innerWidth &&
+      imageRect.top < window.innerHeight
+
+    if (!hasSize) zeroSized += 1
+    if (!isVisible) hidden += 1
+    if (isInViewport) inViewport += 1
+    if (hasSize && isVisible && isInViewport) renderable += 1
+  }
+
+  return {
+    attached,
+    hidden,
+    inViewport,
+    renderable,
+    zeroSized,
+  }
+}
 
 /**
  * Normalizes a raw marker-style value to a supported variant.
@@ -93,6 +161,7 @@ function getFeatureMarkerImageSrc(feature: FeatureFromCollection): string | null
 function createFeatureMarkerElement(
   feature: FeatureFromCollection,
   markerStyle: MarkerStyleVariant,
+  diagnostics?: MarkerImageDiagnostics,
 ): HTMLDivElement {
   if (markerStyle === 'dot') {
     return createMarkerElement()
@@ -114,7 +183,6 @@ function createFeatureMarkerElement(
 
   const image = document.createElement('img')
   image.className = 'marker-image'
-  image.src = imageSrc
   image.alt = ''
   // MapLibre positions markers outside normal document flow, so native lazy loading
   // can indefinitely defer their first uncached image request.
@@ -122,6 +190,34 @@ function createFeatureMarkerElement(
   image.decoding = 'async'
   image.draggable = false
   image.dataset.type = 'marker'
+
+  if (diagnostics) {
+    diagnostics.created += 1
+    image.addEventListener('load', () => {
+      diagnostics.loaded += 1
+      void image.decode().then(
+        () => {
+          diagnostics.decoded += 1
+        },
+        () => {
+          diagnostics.decodeFailed += 1
+          logMarkerBootstrap('marker image decode failed', {
+            featureId: feature.id,
+            imageSrc,
+          })
+        },
+      )
+    })
+    image.addEventListener('error', () => {
+      diagnostics.failed += 1
+      logMarkerBootstrap('marker image request failed', {
+        featureId: feature.id,
+        imageSrc,
+      })
+    })
+  }
+
+  image.src = imageSrc
 
   const frame = document.createElement('div')
   frame.className = 'marker-image-frame'
@@ -150,6 +246,16 @@ export function updateMarkers(
   markerStyle: MarkerStyleVariant = 'image',
 ) {
   if (!appCtx.map) return
+  const diagnostics = isMarkerBootstrapDebugEnabled()
+    ? {
+        created: 0,
+        decodeFailed: 0,
+        decoded: 0,
+        failed: 0,
+        loaded: 0,
+        startedAt: performance.now(),
+      }
+    : undefined
   // Create a set of new feature IDs
   const newFeatureIds = new Set(features.map(f => f.id as string))
   // Remove markers that are no longer present
@@ -185,7 +291,7 @@ export function updateMarkers(
         appCtx.state.markers.delete(feature.id)
       }
       // Create new marker
-      const el = createFeatureMarkerElement(feature, markerStyle)
+      const el = createFeatureMarkerElement(feature, markerStyle, diagnostics)
       // Add data attributes to all elements in the marker
       const addDataToElements = (element: Element) => {
         element.setAttribute('data-type', 'marker')
@@ -203,6 +309,33 @@ export function updateMarkers(
       appCtx.state.markers.set(feature.id, marker)
     }
   })
+
+  if (diagnostics?.created) {
+    const reportMarkerImageState = (delayMs: number): void => {
+      window.setTimeout(() => {
+        logMarkerBootstrap('marker image batch state', {
+          delayMs,
+          created: diagnostics.created,
+          decodeFailed: diagnostics.decodeFailed,
+          decoded: diagnostics.decoded,
+          loaded: diagnostics.loaded,
+          failed: diagnostics.failed,
+          pending: diagnostics.created - diagnostics.loaded - diagnostics.failed,
+          elapsedMs: Math.round(performance.now() - diagnostics.startedAt),
+          renderState: getMarkerImageRenderState(),
+        })
+      }, delayMs)
+    }
+
+    logMarkerBootstrap('markers reconciled', {
+      featureCount: features.length,
+      markerStyle,
+      imageMarkersCreated: diagnostics.created,
+      markerCount: appCtx.state.markers.size,
+    })
+    reportMarkerImageState(1_000)
+    reportMarkerImageState(5_000)
+  }
   // Return cleanup function
   return () => {
     // Remove all markers and their event listeners
@@ -252,13 +385,13 @@ export function removeMarkerClass(
  * Adds a temporary address/geocode marker to the active map.
  *
  * @param maplibre - MapLibre namespace used to construct markers.
- * @param appCtx - App context containing the active map instance.
+ * @param map - Map instance on which to place the marker.
  * @param lngLat - Marker coordinates in `[lng, lat]` order.
  * @returns Newly created marker instance.
  */
 export function addAddressMarker(
   maplibre: any,
-  appCtx: AppCtx,
+  map: MaplibreMap,
   lngLat: [number, number],
 ) {
   const el = createMarkerElement()
@@ -271,6 +404,6 @@ export function addAddressMarker(
     anchor: 'center',
   })
     .setLngLat(lngLat)
-    .addTo(appCtx.map)
+    .addTo(map)
   return marker
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   bootstrapAnonymousSession,
+  isAuthEntryPath,
   shouldBootstrapAnonymous,
 } from '$lib/auth/bootstrap'
 import { AUTH_PROVIDER_REGISTRY } from '$lib/auth/providers'
@@ -38,6 +39,13 @@ describe('guest session bootstrap', () => {
     expect(shouldBootstrapAnonymous('/api/health')).toBe(false)
     expect(shouldBootstrapAnonymous('/headless/map-layer-render/layer-1')).toBe(false)
     expect(shouldBootstrapAnonymous('/policy/privacy')).toBe(false)
+  })
+
+  it('identifies auth entry routes that bypass the app readiness gate', () => {
+    expect(isAuthEntryPath('/signin')).toBe(true)
+    expect(isAuthEntryPath('/signup')).toBe(true)
+    expect(isAuthEntryPath('/')).toBe(false)
+    expect(isAuthEntryPath('/features/place-1')).toBe(false)
   })
 
   it('keeps unavailable providers disabled', () => {

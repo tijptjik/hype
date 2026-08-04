@@ -14,6 +14,11 @@ describe('isPublicUnauthenticatedPath', () => {
     expect(isPublicUnauthenticatedPath('/manifest.webmanifest')).toBe(true)
   })
 
+  it('keeps auth entry routes public', () => {
+    expect(isPublicUnauthenticatedPath('/signin')).toBe(true)
+    expect(isPublicUnauthenticatedPath('/signup')).toBe(true)
+  })
+
   it('requires authentication for app routes', () => {
     expect(isPublicUnauthenticatedPath('/map')).toBe(false)
     expect(isPublicUnauthenticatedPath('/admin')).toBe(false)

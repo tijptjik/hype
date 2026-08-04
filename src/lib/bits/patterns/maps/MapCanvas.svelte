@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTEKIT
+import { browser } from '$app/environment'
 import { page } from '$app/state'
 import { onDestroy, onMount, tick } from 'svelte'
 import { watch } from 'runed'
@@ -678,6 +680,8 @@ onMount(() => {
 })
 
 onDestroy(() => {
+  if (!browser) return
+
   detachMapUrlTracking?.()
   detachMapUrlTracking = null
   if (mapResizeFrame !== 0) {

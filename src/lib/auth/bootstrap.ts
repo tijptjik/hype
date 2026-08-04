@@ -1,6 +1,10 @@
 export const ANONYMOUS_BOOTSTRAP_ATTEMPTS = 3
 export const ANONYMOUS_BOOTSTRAP_TIMEOUT_MS = 8_000
 
+const SIGN_OUT_INTENT_STORAGE_KEY = 'hype:sign-out-intent'
+
+const AUTH_ENTRY_PATHS = new Set(['/signin', '/signup'])
+
 let anonymousSignInInFlight: Promise<void> | null = null
 
 type SessionSnapshot = {
@@ -17,6 +21,53 @@ type AnonymousBootstrapOptions = {
 
 const defaultWait = (durationMs: number): Promise<void> =>
   new Promise(resolve => window.setTimeout(resolve, durationMs))
+
+/**
+ * Marks the current browser session as intentionally signing out.
+ *
+ * @returns Nothing.
+ * @remarks This prevents the root session watcher from racing a sign-out redirect
+ * by creating an anonymous session before the sign-in page is reached.
+ */
+export function markSignOutIntent(): void {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.setItem(SIGN_OUT_INTENT_STORAGE_KEY, '1')
+}
+
+/**
+ * Clears a pending intentional sign-out marker.
+ *
+ * @returns Nothing.
+ */
+export function clearSignOutIntent(): void {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.removeItem(SIGN_OUT_INTENT_STORAGE_KEY)
+}
+
+/**
+ * Consumes the pending intentional sign-out marker, if present.
+ *
+ * @returns Whether a sign-out initiated the current no-session state.
+ */
+export function consumeSignOutIntent(): boolean {
+  if (typeof window === 'undefined') return false
+
+  const hasIntent = window.sessionStorage.getItem(SIGN_OUT_INTENT_STORAGE_KEY) === '1'
+  if (hasIntent) clearSignOutIntent()
+  return hasIntent
+}
+
+/**
+ * Returns whether a route must render before the application resource bootstrap ends.
+ *
+ * @param pathname - The browser pathname to evaluate.
+ * @returns `true` for shared sign-in and sign-up entry routes.
+ * @remarks Auth entry routes contain their own map landing surface and must never be
+ * hidden behind account, guest, or feature-resource initialization.
+ */
+export function isAuthEntryPath(pathname: string): boolean {
+  return AUTH_ENTRY_PATHS.has(pathname)
+}
 
 /**
  * Returns whether the current route should create a guest account in the browser.

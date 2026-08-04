@@ -98,13 +98,14 @@ const handle_cors = (async ({ event, resolve }) => {
 // SCANNER PROBE HOOK
 // ═══════════════════════
 /**
- * Rejects high-confidence credential-file and unused GraphQL probes before
- * they reach the hub, authentication, and database hooks.
+ * Rejects high-confidence credential-file and unused GraphQL probes with a
+ * bad-request response before they reach the hub, authentication, and
+ * database hooks.
  */
 const handle_scanner_probe: Handle = ({ event, resolve }) => {
-  // Return a normal not-found response without revealing that a guard matched.
+  // Return a bad-request response before any application hooks process a probe.
   if (isScannerProbePath(event.url.pathname)) {
-    return new Response(null, { status: 404 })
+    return new Response(null, { status: 400 })
   }
 
   return resolve(event)
@@ -150,24 +151,27 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     schema,
   })
 
-  // Resolve the session early because this hook runs before handle_session_auth.
+  // Only protected routes need an early session to resolve unpublished admin hubs.
+  // Auth entry routes resolve the session once in handle_session_auth below.
   let adminHubCodes = new Set<string>()
-  try {
-    const auth = getAuthForRequest(event.request.headers, {
-      DB: event.platform?.env?.DB as MiniflareD1Database,
-      AUTH_SECRET: event.platform?.env?.AUTH_SECRET ?? '',
-      AUTH_GOOGLE_ID: event.platform?.env?.AUTH_GOOGLE_ID ?? '',
-      AUTH_GOOGLE_SECRET: event.platform?.env?.AUTH_GOOGLE_SECRET ?? '',
-      AUTH_FACEBOOK_ID: event.platform?.env?.AUTH_FACEBOOK_ID ?? '',
-      AUTH_FACEBOOK_SECRET: event.platform?.env?.AUTH_FACEBOOK_SECRET ?? '',
-      AUTH_EMAIL_FROM: event.platform?.env?.AUTH_EMAIL_FROM,
-      EMAIL: event.platform?.env?.EMAIL,
-    })
-    const sessionData = await auth.api.getSession({ headers: event.request.headers })
-    const sessionUser = sessionData?.user as SessionUser | undefined
-    adminHubCodes = getAdminHubCodes(sessionUser?.roles)
-  } catch {
-    // Unavailable auth context must retain the guest-safe published hub filter.
+  if (!isPublicUnauthenticatedPath(event.url.pathname)) {
+    try {
+      const auth = getAuthForRequest(event.request.headers, {
+        DB: event.platform?.env?.DB as MiniflareD1Database,
+        AUTH_SECRET: event.platform?.env?.AUTH_SECRET ?? '',
+        AUTH_GOOGLE_ID: event.platform?.env?.AUTH_GOOGLE_ID ?? '',
+        AUTH_GOOGLE_SECRET: event.platform?.env?.AUTH_GOOGLE_SECRET ?? '',
+        AUTH_FACEBOOK_ID: event.platform?.env?.AUTH_FACEBOOK_ID ?? '',
+        AUTH_FACEBOOK_SECRET: event.platform?.env?.AUTH_FACEBOOK_SECRET ?? '',
+        AUTH_EMAIL_FROM: event.platform?.env?.AUTH_EMAIL_FROM,
+        EMAIL: event.platform?.env?.EMAIL,
+      })
+      const sessionData = await auth.api.getSession({ headers: event.request.headers })
+      const sessionUser = sessionData?.user as SessionUser | undefined
+      adminHubCodes = getAdminHubCodes(sessionUser?.roles)
+    } catch {
+      // Unavailable auth context must retain the guest-safe published hub filter.
+    }
   }
   const canResolveUnpublishedHub =
     adminHubCodes.has('core') || adminHubCodes.has(hubOpts.code ?? '')

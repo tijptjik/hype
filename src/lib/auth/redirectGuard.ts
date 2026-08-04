@@ -18,6 +18,8 @@ export function isPublicUnauthenticatedPath(
     safePathname.startsWith('/policy/') ||
     safePathname === '/' ||
     safePathname === '' ||
+    safePathname === '/signin' ||
+    safePathname === '/signup' ||
     safePathname === '/manifest.webmanifest'
   )
 }

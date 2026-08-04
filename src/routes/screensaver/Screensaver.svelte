@@ -26,7 +26,6 @@ $effect(() => {
   const layerId = page.url.searchParams.get('layerId')?.trim() ?? ''
   const projectId = page.url.searchParams.get('projectId')?.trim() ?? ''
   const projectCode = page.url.searchParams.get('project')?.trim() ?? ''
-  if (!layerId && !projectId && !projectCode) return
 
   const resolvedProjectId =
     projectId ||
@@ -43,11 +42,13 @@ $effect(() => {
         .filter(layer => layer.projectId === resolvedProjectId)
         .map(layer => layer.id)
 
-  if (selectedLayerIds.length === 0) return
   appliedTarget = targetKey
 
-  // Select the requested layers before refreshing so the feature query is scoped to them.
+  // Keep the base map empty until a valid explicit screensaver target resolves.
   appCtx.state.prisms.layer = selectedLayerIds
+  if (selectedLayerIds.length === 0) return
+
+  // Select the requested layers before refreshing so the feature query is scoped to them.
   void appCtx
     .postLayerMutation(false)
     .then(() => appCtx.refreshFeatures())

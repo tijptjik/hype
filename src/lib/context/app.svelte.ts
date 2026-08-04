@@ -34,6 +34,8 @@ import {
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
 import { runRemoteQuery, toSafeListResponse } from '$lib/remote'
+// DEBUG
+import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
@@ -787,10 +789,10 @@ export class AppCtx {
     })
   }
 
-  init = async (userId: Id | null): Promise<void> => {
-    // Only initialize if user is authenticated
+  init = async (userId: Id | null, loadFeatures: boolean = true): Promise<void> => {
+    // Unauthenticated routes initialise without account data.
     if (!userId) {
-      // Initialize empty data structures for unauthenticated users
+      // Initialize empty data structures for unauthenticated users.
       this.state.resources.organisation = []
       this.state.resources.project = []
       this.state.resources.layer = []
@@ -807,20 +809,49 @@ export class AppCtx {
     // Initialize stats cache
     this.initStatsCache()
     // Use parallel fetching for initial load
-    await this.initialFetch()
+    await this.initialFetch(true, loadFeatures)
     // Prevent init from running again, unless the user (re)authenticates
     // see reinitializeWithAuth()
     this.isInitialised = true
   }
 
-  initialFetch = async (): Promise<void> => {
+  /**
+   * Hydrates map resources that are safe to show before a user authenticates.
+   *
+   * @param loadFeatures - Whether to request the public feature collection.
+   * @returns Nothing after the public hierarchy and optional feature collection settle.
+   * @remarks Errors are logged here because the login dialog and base map must remain
+   * usable even when a non-essential public resource request fails.
+   */
+  bootstrapPublicMapResources = async (loadFeatures: boolean = true): Promise<void> => {
+    try {
+      this.initStatsCache()
+      await this.initialFetch(false, loadFeatures)
+    } catch (error) {
+      console.error('[AppCtx] Public map bootstrap failed:', error)
+    }
+  }
+
+  /**
+   * Loads application resources in dependency order.
+   *
+   * @param includeUserData - Whether to request identity-bound profile and preference data.
+   * @param loadFeatures - Whether to request the initial feature collection.
+   * @returns Nothing after the requested resource stages settle.
+   */
+  initialFetch = async (
+    includeUserData: boolean = true,
+    loadFeatures: boolean = true,
+  ): Promise<void> => {
     // Bootstrap lightweight user-scoped reads first so session-dependent UI can hydrate
     // without immediately fanning out into the heavier resource tree.
-    const lightSteps = [
-      ['userProfile', () => this.refreshUserProfile(false)],
-      ['userFeatures', () => this.refreshUserFeatures(false)],
-      ['userLayers', () => this.hydrateCurrentUserLayers()],
-    ] as const
+    const lightSteps = includeUserData
+      ? ([
+          ['userProfile', () => this.refreshUserProfile(false)],
+          ['userFeatures', () => this.refreshUserFeatures(false)],
+          ['userLayers', () => this.hydrateCurrentUserLayers()],
+        ] as const)
+      : []
 
     const lightResults = await Promise.allSettled(lightSteps.map(([, load]) => load()))
     for (const [index, result] of lightResults.entries()) {
@@ -861,8 +892,17 @@ export class AppCtx {
     await this.postLayerMutation(false)
 
     const featureSteps = [
-      ['features', () => this.refreshFeatures(false)],
-      ['tasks', () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve())],
+      ...(loadFeatures
+        ? ([['features', () => this.refreshFeatures(false)]] as const)
+        : []),
+      ...(includeUserData
+        ? ([
+            [
+              'tasks',
+              () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve()),
+            ],
+          ] as const)
+        : []),
     ] as const
 
     for (const [label, load] of featureSteps) {
@@ -1872,6 +1912,14 @@ export class AppCtx {
     })
     this.state.resources.feature = features
     this.syncCacheMap(this.cache.feature, features)
+
+    logMarkerBootstrap('feature data committed', {
+      featureCount: features.length,
+      imageBackedFeatureCount: features.filter(feature => Boolean(feature.image))
+        .length,
+      pointFeatureCount: features.filter(feature => feature.geometry?.type === 'Point')
+        .length,
+    })
 
     // Pre-populate stats cache for this feature
     features.forEach(feature => {

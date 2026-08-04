@@ -20,7 +20,6 @@ const selectAdapter = () => {
           '/.aws/*',
           '/.env',
           '/.ftpconfig',
-          '/.git/*',
           '/.idea/*',
           '/.vscode/*',
           '/.well-known/ALFA_DATA/alfacgiapi/',

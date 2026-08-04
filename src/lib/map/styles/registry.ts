@@ -7,7 +7,7 @@ import {
 import { applySpriteVariant, type MapStyleDefinition } from './definitions/common'
 // TYPES
 import type { StyleSpecification } from 'maplibre-gl'
-import type { LocaleKey } from '../../types'
+import type { LocaleKey, MapStyleCatalogKey } from '../../types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -23,6 +23,7 @@ import type { LocaleKey } from '../../types'
 //
 // 2. STYLE / ASSET BUILDING
 //    - buildMapStyle
+//    - buildCatalogMapStyle
 //    - getMapStyleAssetRecord
 //    - listMapStyleAssetRecords
 
@@ -105,7 +106,28 @@ export const buildMapStyle = (
     locale?: LocaleKey
   },
 ): StyleSpecification => {
-  const definition = getMapStyleDefinition(key)
+  return buildCatalogMapStyle(key, options)
+}
+
+/**
+ * Builds one runtime style specification from any catalog entry.
+ *
+ * @param key - Catalog style key, including internal styles such as `hyperAdmin`.
+ * @param options - Optional label and locale overrides.
+ * @returns Built style specification with its configured sprite policy applied.
+ */
+export const buildCatalogMapStyle = (
+  key: MapStyleCatalogKey,
+  options?: {
+    noLabels?: boolean
+    locale?: LocaleKey
+  },
+): StyleSpecification => {
+  const definition = MAP_STYLE_CATALOG.find(entry => entry.key === key)
+  if (!definition) {
+    throw new Error(`Unknown map style catalog key: ${key}`)
+  }
+
   return applySpriteVariant(definition.buildStyle(options), {
     basemapVariant: definition.basemapVariant,
     showSymbols: definition.showSymbols,

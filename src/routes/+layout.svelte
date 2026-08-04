@@ -3,6 +3,8 @@
 import { watch } from 'runed'
 import { onMount } from 'svelte'
 import { toast } from 'svelte-sonner'
+// SVELTEKIT
+import { goto } from '$app/navigation'
 // STORES
 import { page } from '$app/state'
 // QUERY
@@ -13,8 +15,12 @@ import { cx } from '$lib/bits/utils'
 import { signIn, useSession } from '$lib/auth/client'
 import {
   bootstrapAnonymousSession,
+  consumeSignOutIntent,
+  isAuthEntryPath,
   shouldBootstrapAnonymous,
 } from '$lib/auth/bootstrap'
+// DEBUG
+import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 import {
   UPGRADE_ACCOUNT_EVENT,
   isGuestUser,
@@ -62,6 +68,17 @@ let isUpgradeOpen = $state(false)
 let upgradeReason = $state<UpgradeReason>('account')
 let upgradeReturnTo = $state('/')
 
+/**
+ * Determines whether the current surface should fetch feature data during bootstrap.
+ *
+ * @returns Whether the initial feature collection should be requested.
+ * @remarks Screensaver resolves an explicit layer target after the hierarchy is ready,
+ * so it must never briefly fetch or render the hub's default datasets.
+ */
+function shouldLoadInitialFeatures(): boolean {
+  return page.url.pathname !== '/screensaver'
+}
+
 // Set AppCtx in context
 const appCtx = setAppCtx(
   queryClient,
@@ -82,7 +99,7 @@ async function refreshAppForSessionUser(user: SessionUser): Promise<void> {
   clearPendingAuthReinit()
   appCtx.setUser(user)
   appCtx.isInitialised = false
-  await appCtx.init(user.id)
+  await appCtx.init(user.id, shouldLoadInitialFeatures())
 }
 
 // Reinitialize the app context after an auth identity change, including logout.
@@ -163,6 +180,11 @@ $effect(() => {
 
 // Load maplibre globally
 async function initializeAuthenticatedApp(): Promise<void> {
+  logMarkerBootstrap('application bootstrap started', {
+    pathname: page.url.pathname,
+    hasSessionUser: Boolean($session.data?.user),
+    isSessionPending: $session.isPending,
+  })
   if (shouldBootstrapAnonymous(page.url.pathname)) {
     await bootstrapAnonymousSession({
       getSession: () => ({
@@ -179,7 +201,15 @@ async function initializeAuthenticatedApp(): Promise<void> {
 
   const currentUser = $session.data?.user
   appCtx.setUser((currentUser as SessionUser | undefined) ?? null)
-  await appCtx.init(currentUser?.id ?? null)
+  await appCtx.init(currentUser?.id ?? null, shouldLoadInitialFeatures())
+  if (!currentUser && isAuthEntryPath(page.url.pathname)) {
+    void appCtx.bootstrapPublicMapResources(shouldLoadInitialFeatures())
+  }
+  logMarkerBootstrap('application bootstrap finished', {
+    hasSessionUser: Boolean(currentUser),
+    isAnonymous: currentUser?.isAnonymous ?? null,
+    appInitialised: appCtx.isInitialised,
+  })
 }
 
 async function retryBootstrap(): Promise<void> {
@@ -272,6 +302,10 @@ const isShelllessRoute = $derived(
     page.route.id?.startsWith('/policy') || page.route.id?.startsWith('/account'),
   ),
 )
+// Sign-in and sign-up provide a map-backed landing surface of their own. Render it
+// immediately instead of waiting for account or public map resources to finish loading.
+const isAuthEntryRoute = $derived(isAuthEntryPath(page.url.pathname))
+const isAppReady = $derived(isAuthEntryRoute || appCtx.isInitialised)
 const shelllessClass = $derived(
   cx(
     'bits-theme min-h-screen w-full overflow-y-auto bg-black',
@@ -323,6 +357,11 @@ watch(
 watch(
   () => $session.data?.user,
   newUser => {
+    logMarkerBootstrap('session watcher observed user', {
+      hasSessionUser: Boolean(newUser),
+      isAnonymous: newUser?.isAnonymous ?? null,
+      hasMounted,
+    })
     if (!hasMounted) {
       return
     }
@@ -343,7 +382,15 @@ watch(
       }
       scheduleAuthReinit(newUser as SessionUser)
     } else if (!newUser && currentUserId) {
-      // Account logout immediately converges on a fresh guest session.
+      if (consumeSignOutIntent()) {
+        // Let an explicit sign-out reach the sign-in page before another guest is created.
+        void appCtx.setUser(null)
+        appCtx.isInitialised = false
+        logMarkerBootstrap('intentional sign-out suppressed automatic guest bootstrap')
+        return
+      }
+
+      // Session expiry and other passive logout paths converge on a fresh guest session.
       void retryBootstrap()
     }
   },
@@ -376,7 +423,7 @@ watch(
 {:else}
   <App
     {queryClient}
-    isReady={appCtx.isInitialised}
+    isReady={isAppReady}
     {localeKey}
     {title}
     siteName={site_name}

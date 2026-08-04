@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { getUserMarkerStyleVariant } from '$lib/map/markers'
-import { buildMapStyle, getDefaultMapStyleKey } from '$lib/map/styles'
+import {
+  buildCatalogMapStyle,
+  buildMapStyle,
+  getDefaultMapStyleKey,
+} from '$lib/map/styles'
 
 describe('map styles', () => {
   it('defaults to the Ghostery style', () => {
@@ -15,6 +19,14 @@ describe('map styles', () => {
 
     expect(style.sources?.['hongkong-latest']?.url).toBe(
       'https://tiles.saanseoi.hk/hongkong-latest.json',
+    )
+  })
+
+  it('adds the Protomaps sprite to the admin map style', () => {
+    const style = buildCatalogMapStyle('hyperAdmin') as { sprite?: string }
+
+    expect(style.sprite).toBe(
+      'https://protomaps.github.io/basemaps-assets/sprites/v4/dark',
     )
   })
 

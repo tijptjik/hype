@@ -72,6 +72,7 @@ const handleToggleAdminPanel = (): void => {
                 resource={organisation}
                 selectedClass="bg-primary"
                 isSelected={selectedOrganisations.includes(organisation.id)}
+                alwaysShowDot
                 onNavigate={async (e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -114,6 +115,7 @@ const handleToggleAdminPanel = (): void => {
                 }}
                 selectedClass="bg-accent"
                 isSelected={selectedProjects.includes(project.id)}
+                alwaysShowDot
                 onNavigate={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -141,51 +143,48 @@ const handleToggleAdminPanel = (): void => {
             {/snippet}
           </Projects>
         </div>
-        <div
-          class="admin-sections__section-shell admin-sections__section-shell--layers"
-        >
-          <div class="admin-sections__section admin-sections__section--layers">
-            <Layers {...panelProps}>
-              {#snippet filteredItem(
-                layer: Layer,
-                selectedLayers: Id[],
-                hierarchy: ResourceContext
-              )}
-                <PanelPattern.Item.ItemResource
-                  resource={layer}
-                  hierarchy={{
-                    organisation: hierarchy.organisation,
-                    project: hierarchy.project
-                  }}
-                  selectedClass="bg-secondary"
-                  isSelected={selectedLayers.includes(layer.id)}
-                  onNavigate={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (
-                      panelProps.active?.resourceType === FirstClassResource.layer &&
-                      panelProps.active?.resourceId === layer.id
-                    ) {
-                      appCtx.toggleLayer(layer.id);
-                    } else {
-                      navigateOnAdminById(
-                        adminCtx,
-                        FirstClassResource.layer,
-                        layer.id,
-                        getSupportedFacetForResource(FirstClassResource.layer, panelProps.active?.facet)
-                      );
-                    }
-                  }}
-                  onToggle={(e) => {
-                    e.stopPropagation();
+        <div class="admin-sections__section admin-sections__section--layers">
+          <Layers {...panelProps}>
+            {#snippet filteredItem(
+              layer: Layer,
+              selectedLayers: Id[],
+              hierarchy: ResourceContext
+            )}
+              <PanelPattern.Item.ItemResource
+                resource={layer}
+                hierarchy={{
+                  organisation: hierarchy.organisation,
+                  project: hierarchy.project
+                }}
+                selectedClass="bg-secondary"
+                isSelected={selectedLayers.includes(layer.id)}
+                alwaysShowDot
+                onNavigate={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (
+                    panelProps.active?.resourceType === FirstClassResource.layer &&
+                    panelProps.active?.resourceId === layer.id
+                  ) {
                     appCtx.toggleLayer(layer.id);
-                  }}
-                  resourceType={FirstClassResource.layer}
-                  {...panelProps}
-                />
-              {/snippet}
-            </Layers>
-          </div>
+                  } else {
+                    navigateOnAdminById(
+                      adminCtx,
+                      FirstClassResource.layer,
+                      layer.id,
+                      getSupportedFacetForResource(FirstClassResource.layer, panelProps.active?.facet)
+                    );
+                  }
+                }}
+                onToggle={(e) => {
+                  e.stopPropagation();
+                  appCtx.toggleLayer(layer.id);
+                }}
+                resourceType={FirstClassResource.layer}
+                {...panelProps}
+              />
+            {/snippet}
+          </Layers>
         </div>
       </div>
       <div class="flex w-full shrink-0 flex-col items-end">
