@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { updateMarkers } from '$lib/map/markers'
+import { clearMarkers, updateMarkers } from '$lib/map/markers'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 class TestMarker {
   element: HTMLElement
+  removed = false
 
   constructor({ element }: { element: HTMLElement }) {
     this.element = element
@@ -22,12 +23,14 @@ class TestMarker {
     return this.element
   }
 
-  remove(): void {}
+  remove(): void {
+    this.removed = true
+  }
 }
 
 describe('map markers', () => {
   it('eagerly loads image-backed markers on their first map render', () => {
-    const markers = new Map()
+    const markers = new Map<string, TestMarker>()
     const appCtx = {
       map: {},
       state: { markers },
@@ -51,5 +54,18 @@ describe('map markers', () => {
       .querySelector<HTMLImageElement>('img.marker-image')
 
     expect(markerImage?.loading).toBe('eager')
+  })
+
+  it('clears detached marker objects before a replacement map mounts', () => {
+    const marker = new TestMarker({ element: document.createElement('div') })
+    const markers = new Map<string, TestMarker>([['feature-1', marker]])
+    const appCtx = {
+      state: { markers },
+    }
+
+    clearMarkers(appCtx as never)
+
+    expect(marker.removed).toBe(true)
+    expect(markers.size).toBe(0)
   })
 })

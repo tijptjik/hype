@@ -824,9 +824,11 @@ export class AppCtx {
    * usable even when a non-essential public resource request fails.
    */
   bootstrapPublicMapResources = async (loadFeatures: boolean = true): Promise<void> => {
+    const publicRoleScope = this.getRoleScopeQueryKey()
+
     try {
       this.initStatsCache()
-      await this.initialFetch(false, loadFeatures)
+      await this.initialFetch(false, loadFeatures, publicRoleScope)
     } catch (error) {
       console.error('[AppCtx] Public map bootstrap failed:', error)
     }
@@ -837,11 +839,14 @@ export class AppCtx {
    *
    * @param includeUserData - Whether to request identity-bound profile and preference data.
    * @param loadFeatures - Whether to request the initial feature collection.
+   * @param expectedRoleScope - Optional identity scope that must still be current before
+   * feature data is committed.
    * @returns Nothing after the requested resource stages settle.
    */
   initialFetch = async (
     includeUserData: boolean = true,
     loadFeatures: boolean = true,
+    expectedRoleScope?: string,
   ): Promise<void> => {
     // Bootstrap lightweight user-scoped reads first so session-dependent UI can hydrate
     // without immediately fanning out into the heavier resource tree.
@@ -893,7 +898,9 @@ export class AppCtx {
 
     const featureSteps = [
       ...(loadFeatures
-        ? ([['features', () => this.refreshFeatures(false)]] as const)
+        ? ([
+            ['features', () => this.refreshFeatures(false, expectedRoleScope)],
+          ] as const)
         : []),
       ...(includeUserData
         ? ([
@@ -1904,12 +1911,34 @@ export class AppCtx {
     await this.postLayerMutation(isCascading, shouldAutoSelectSingleLayer)
   }
 
-  refreshFeatures = async (_isCascading: boolean = true): Promise<void> => {
+  /**
+   * Refreshes the feature collection for the current hierarchy and user scope.
+   *
+   * @param _isCascading - Reserved for the resource refresh contract.
+   * @param expectedRoleScope - Optional scope captured before the request started.
+   * @returns Nothing after current-scope feature data has been committed.
+   * @remarks A background public-map request must not overwrite the image-bearing
+   * collection fetched after an anonymous or account session is established.
+   */
+  refreshFeatures = async (
+    _isCascading: boolean = true,
+    expectedRoleScope?: string,
+  ): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.feature)
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<FeatureFromCollection[]>,
     })
+
+    if (expectedRoleScope && expectedRoleScope !== this.getRoleScopeQueryKey()) {
+      logMarkerBootstrap('stale feature data ignored after identity change', {
+        expectedRoleScope,
+        currentRoleScope: this.getRoleScopeQueryKey(),
+        featureCount: features.length,
+      })
+      return
+    }
+
     this.state.resources.feature = features
     this.syncCacheMap(this.cache.feature, features)
 

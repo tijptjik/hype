@@ -13,6 +13,7 @@ import { cubicInOut } from 'svelte/easing'
 import { Button } from '$lib/bits'
 // LIB
 import {
+  clearMarkers,
   getUserMarkerStyleVariant,
   updateMarkers,
   USER_MARKER_STYLE_PARAM,
@@ -663,6 +664,8 @@ onMount(() => {
     isDisposed = true
     detachMapUrlTracking?.()
     detachMapUrlTracking = null
+
+    clearMarkers(appCtx)
 
     if (activeMapInstance) {
       activeMapInstance.remove()

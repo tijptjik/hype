@@ -22,6 +22,7 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 //
 // 2. MARKER LIFECYCLE
 //    - updateMarkers
+//    - clearMarkers
 //    - addMarkerClass
 //    - removeMarkerClass
 //    - addAddressMarker
@@ -338,12 +339,23 @@ export function updateMarkers(
   }
   // Return cleanup function
   return () => {
-    // Remove all markers and their event listeners
-    for (const [_, marker] of appCtx.state.markers.entries()) {
-      marker.remove() // This also removes the event listeners
-    }
-    appCtx.state.markers.clear()
+    clearMarkers(appCtx)
   }
+}
+
+/**
+ * Removes every marker tracked by an application map context.
+ *
+ * @param appCtx - App context whose current MapLibre marker objects should be removed.
+ * @returns Nothing after marker DOM and cache entries are cleared.
+ * @remarks MapLibre markers are external DOM nodes. They must be cleared when a map
+ * canvas unmounts so a replacement canvas does not reuse detached marker objects.
+ */
+export function clearMarkers(appCtx: AppCtx): void {
+  for (const marker of appCtx.state.markers.values()) {
+    marker.remove()
+  }
+  appCtx.state.markers.clear()
 }
 
 /**
@@ -397,7 +409,6 @@ export function addAddressMarker(
   const el = createMarkerElement()
   el.classList.add('marker-address')
   el.setAttribute('data-feature-property', 'geoCodeCoordinates')
-  // @ts-expect-error
   const marker = new maplibre.Marker({
     element: el,
     color: '#ef4444',
