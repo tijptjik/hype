@@ -2520,6 +2520,17 @@ export type FeatureCardTransitionState = {
   sourceKind: FeatureCardTransitionSourceKind
 }
 
+export type FeatureCardActionDisplay = {
+  key: string
+  label: string
+  detail?: string
+}
+
+export type FeatureCardVisitState = {
+  isVisited: boolean
+  visitedAt: string | null
+}
+
 export type PlanScheduleStop = {
   time: string
   featureId: Id

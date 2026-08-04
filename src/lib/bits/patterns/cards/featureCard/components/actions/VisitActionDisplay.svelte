@@ -4,20 +4,16 @@ import { onDestroy, tick } from 'svelte'
 // BITS
 import { Icon } from '$lib/bits'
 import { cx } from '$lib/bits/utils'
+// TYPES
+import type { FeatureCardActionDisplay } from '$lib/types'
 // ICONS
 import Check from 'virtual:icons/lucide/check'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 
-type ActionDisplay = {
-  key: string
-  label: string
-  detail?: string
-}
-
 interface Props {
-  value: ActionDisplay
-  hoverValue?: ActionDisplay
+  value: FeatureCardActionDisplay
+  hoverValue?: FeatureCardActionDisplay
   onClick?: (event: MouseEvent) => void
 }
 
@@ -31,8 +27,8 @@ let isInitialised = $state(false)
 let isRootHovered = $state(false)
 let hasLeftRootAfterSwap = $state(true)
 let isCrossfading = $state(false)
-let previousValue = $state<ActionDisplay | null>(null)
-let renderedValue = $state<ActionDisplay>({ key: '', label: '' })
+let previousValue = $state<FeatureCardActionDisplay | null>(null)
+let renderedValue = $state<FeatureCardActionDisplay>({ key: '', label: '' })
 let renderedValueKey = $state('')
 let baseValueKey = $state('')
 
@@ -64,7 +60,7 @@ function clearTransitionFrame(): void {
  *
  * @param nextValue Desired display value.
  */
-function showValue(nextValue: ActionDisplay): void {
+function showValue(nextValue: FeatureCardActionDisplay): void {
   if (nextValue.key === renderedValueKey) return
 
   clearCleanupTimer()
@@ -115,7 +111,7 @@ onDestroy(() => {
 })
 </script>
 
-{#snippet swapItem(item: ActionDisplay, isPrevious: boolean)}
+{#snippet swapItem(item: FeatureCardActionDisplay, isPrevious: boolean)}
   <span
     class={cx(
       'flex min-w-0 flex-col items-start gap-1 text-left leading-none transition-opacity duration-160',

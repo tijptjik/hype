@@ -15,27 +15,17 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 import type { UserFeature } from '$lib/db/zod/schema/user.types'
+import type { FeatureCardActionDisplay, FeatureCardVisitState } from '$lib/types'
 // LOCAL
 import VisitActionDisplay from './VisitActionDisplay.svelte'
-
-type VisitState = {
-  isVisited: boolean
-  visitedAt: string | null
-}
-
-type VisitDisplay = {
-  key: string
-  label: string
-  detail?: string
-}
 
 let { feature }: { feature: Feature | UserContributedFeature } = $props()
 
 const appCtx = getAppCtx()
 
 let isSubmitting = $state(false)
-let optimisticVisitState = $state<VisitState | null>(null)
-let settledVisitState = $state<VisitState | null>(null)
+let optimisticVisitState = $state<FeatureCardVisitState | null>(null)
+let settledVisitState = $state<FeatureCardVisitState | null>(null)
 let isVisitError = $state(false)
 let visitErrorMessage = $state('')
 
@@ -50,7 +40,7 @@ const visitedFeature = $derived(
     : undefined,
 )
 const isVisited = $derived(Boolean(visitedFeature))
-const currentVisitState = $derived<VisitState>({
+const currentVisitState = $derived<FeatureCardVisitState>({
   isVisited,
   visitedAt: visitedFeature?.visitedAt ?? null,
 })
@@ -68,7 +58,7 @@ const activeVisitState = $derived(
  * @param state Visit state to render.
  * @returns Main label and optional timestamp line.
  */
-function getVisitValue(state: VisitState): VisitDisplay {
+function getVisitValue(state: FeatureCardVisitState): FeatureCardActionDisplay {
   if (!state.isVisited || !state.visitedAt) {
     return { key: 'check-in', label: m.noble_fine_ibex_pinch() }
   }
@@ -89,7 +79,9 @@ function getVisitValue(state: VisitState): VisitDisplay {
  * @param state Visit state to render.
  * @returns Hover affordance and no timestamp detail.
  */
-function getVisitHoverValue(state: VisitState): VisitDisplay | undefined {
+function getVisitHoverValue(
+  state: FeatureCardVisitState,
+): FeatureCardActionDisplay | undefined {
   if (!state.isVisited) return undefined
 
   return {
@@ -98,7 +90,7 @@ function getVisitHoverValue(state: VisitState): VisitDisplay | undefined {
   }
 }
 
-const visitDisplay = $derived<VisitDisplay>(
+const visitDisplay = $derived<FeatureCardActionDisplay>(
   isVisitError
     ? { key: `visit-error:${visitErrorMessage}`, label: visitErrorMessage }
     : getVisitValue(activeVisitState),
