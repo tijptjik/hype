@@ -87,4 +87,37 @@ describe('maintenance scheduler tasks', () => {
     expect(response.status).toBe(401)
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ['empty', ''],
+    ['missing', undefined],
+  ])('rejects manual runs when the scheduler secret is %s', async (_state, secret) => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const response = await scheduler.fetch(
+      new Request('https://scheduler.example/run', {
+        method: 'POST',
+        headers: { authorization: 'Bearer ' },
+      }),
+      { ...environment, SCHEDULER_SECRET: secret } as typeof environment,
+    )
+
+    expect(response.status).toBe(401)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('allows manual runs with the configured scheduler secret', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response('{"enqueued":2}'))
+    const response = await scheduler.fetch(
+      new Request('https://scheduler.example/run', {
+        method: 'POST',
+        headers: { authorization: 'Bearer scheduler-secret' },
+      }),
+      environment,
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
 })

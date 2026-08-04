@@ -12,9 +12,20 @@ type Env = {
 const RENDER_REFRESH_CRON = '0 * * * *'
 const ANONYMOUS_CLEANUP_CRON = '15 3 * * *'
 
-const hasValidSchedulerCredential = (request: Request, expected: string): boolean => {
+/**
+ * Checks a manual scheduler request against the configured scheduler secret.
+ *
+ * @param request - Incoming request that may contain a Bearer credential.
+ * @param expected - Configured scheduler secret, if the binding is available.
+ * @returns Whether both credentials are present and match in constant time.
+ */
+const hasValidSchedulerCredential = (request: Request, expected?: string): boolean => {
   const credential = request.headers.get('authorization')
-  const supplied = credential?.startsWith('Bearer ') ? credential.slice(7) : ''
+  if (!expected || !credential) {
+    return false
+  }
+
+  const supplied = credential.startsWith('Bearer ') ? credential.slice(7) : ''
   const suppliedBytes = new TextEncoder().encode(supplied)
   const expectedBytes = new TextEncoder().encode(expected)
   let difference = suppliedBytes.length ^ expectedBytes.length

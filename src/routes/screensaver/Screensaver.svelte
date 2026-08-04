@@ -47,7 +47,13 @@ $effect(() => {
 
   // Select the requested layers before refreshing so the feature query is scoped to them.
   appCtx.state.prisms.layer = selectedLayerIds
-  void appCtx.postLayerMutation(false).then(() => appCtx.refreshFeatures())
+  void appCtx
+    .postLayerMutation(false)
+    .then(() => appCtx.refreshFeatures())
+    .catch(error => {
+      console.error('[Screensaver] Failed to apply screensaver layers:', error)
+      appliedTarget = null
+    })
 })
 </script>
 
