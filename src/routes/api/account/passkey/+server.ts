@@ -4,7 +4,7 @@ import { error, json } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 // DB
-import { passkey, user } from '$lib/db/schema'
+import { passkey } from '$lib/db/schema'
 // TYPES
 import type { RequestHandler } from './$types'
 
@@ -23,15 +23,17 @@ export const POST: RequestHandler = async ({ request, url, locals, platform }) =
   if (locals.user.isAnonymous !== true) return json({ status: true })
   if (!platform?.env?.DB) throw error(500, 'DATABASE_UNAVAILABLE')
 
-  const db = drizzle(platform.env.DB, { schema: { passkey, user } })
+  const db = drizzle(platform.env.DB, { schema: { passkey } })
   const registeredPasskey = await db.query.passkey.findFirst({
     where: eq(passkey.userId, locals.user.id),
     columns: { id: true },
   })
   if (!registeredPasskey) throw error(400, 'PASSKEY_REQUIRED')
 
-  // A passkey is the guest's durable authentication method from this point onward.
-  await db.update(user).set({ isAnonymous: false }).where(eq(user.id, locals.user.id))
-
-  return json({ status: true })
+  // Better Auth rewrites the signed cookie cache with the updated user data.
+  return locals.auth.api.updateUser({
+    body: { isAnonymous: false },
+    headers: request.headers,
+    asResponse: true,
+  })
 }

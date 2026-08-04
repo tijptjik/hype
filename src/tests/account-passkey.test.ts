@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbMocks = vi.hoisted(() => {
   const findFirst = vi.fn()
-  const where = vi.fn().mockResolvedValue(undefined)
-  const set = vi.fn(() => ({ where }))
-  const update = vi.fn(() => ({ set }))
   const drizzle = vi.fn(() => ({
     query: { passkey: { findFirst } },
-    update,
   }))
-  return { drizzle, findFirst, set, update, where }
+  return { drizzle, findFirst }
 })
+
+const authMocks = vi.hoisted(() => ({
+  updateUser: vi.fn(),
+}))
 
 vi.mock('drizzle-orm/d1', () => ({ drizzle: dbMocks.drizzle }))
 
@@ -45,20 +45,36 @@ function createEvent(options: PasskeyRouteOptions = {}) {
     locals: {
       session: { id: 'session-1' },
       user: { id: 'user-1', isAnonymous: options.isAnonymous ?? true },
+      auth: { api: { updateUser: authMocks.updateUser } },
     },
     platform: { env: { DB: {} } },
   }
 }
 
 describe('account passkey endpoint', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authMocks.updateUser.mockResolvedValue(
+      new Response(JSON.stringify({ status: true }), {
+        headers: { 'set-cookie': 'better-auth.session_data=refreshed' },
+      }),
+    )
+  })
 
   it('promotes a guest only when a passkey is registered', async () => {
     const response = await POST(createEvent() as never)
 
     expect(response.status).toBe(200)
     expect(dbMocks.findFirst).toHaveBeenCalled()
-    expect(dbMocks.set).toHaveBeenCalledWith({ isAnonymous: false })
+    expect(authMocks.updateUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: { isAnonymous: false },
+        asResponse: true,
+      }),
+    )
+    expect(response.headers.get('set-cookie')).toBe(
+      'better-auth.session_data=refreshed',
+    )
   })
 
   it('rejects promotion without a registered passkey', async () => {
@@ -68,7 +84,7 @@ describe('account passkey endpoint', () => {
       status: 400,
       body: { message: 'PASSKEY_REQUIRED' },
     })
-    expect(dbMocks.set).not.toHaveBeenCalled()
+    expect(authMocks.updateUser).not.toHaveBeenCalled()
   })
 
   it('rejects cross-origin requests before reading account data', async () => {

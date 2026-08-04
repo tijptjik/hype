@@ -1,5 +1,5 @@
 // AUTH
-import { authClient } from '$lib/auth/client'
+import { authClient, useSession } from '$lib/auth/client'
 // TYPES
 import type { PasskeyAccountUpgradeInput } from '$lib/types'
 
@@ -27,7 +27,7 @@ export async function ensurePasskeyForCurrentUser(): Promise<void> {
  * Adds a passkey when needed and promotes the current guest into a durable account.
  *
  * @param input - Optional profile and email data to save while completing the upgrade.
- * @returns Nothing after the server has promoted the account and the session has refreshed.
+ * @returns Nothing after the server has promoted the account and session consumers have refreshed.
  * @remarks Retries reuse an existing passkey before updating the profile, promoting the account,
  * or requesting email verification.
  */
@@ -59,5 +59,6 @@ export async function completePasskeyAccountUpgrade(
     if (emailResult.error) throw new Error(emailResult.error.message)
   }
 
-  await authClient.getSession()
+  // Refresh the session atom so every active useSession consumer sees the new account.
+  await useSession().get().refetch()
 }
