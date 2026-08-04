@@ -8,6 +8,7 @@ let {
   avatarSrc = null,
   userDisplayName = null,
   userAttribution = null,
+  isGuest = false,
   hideActions = false,
   hideEditableFields = false,
   isEditingUsername = false,
@@ -19,19 +20,29 @@ let {
   usernameInputPlaceholder = '',
   openProfileText = '',
   logoutText = '',
+  upgradeText = '',
   onStartEditingUsername,
   onSaveUsername,
   onCancelEdit,
   onOpenProfile,
   onLogout,
+  onUpgrade,
 }: ProfileSectionProps = $props()
 </script>
 
-<div class="bits-theme relative flex w-full flex-col items-center overflow-hidden">
-  <ProfileSectionPrimitive.ProfileSectionBackground />
+<div
+  class={`bits-theme relative flex w-full flex-col items-center overflow-hidden ${
+    isGuest ? 'min-h-[17rem] justify-center' : ''
+  }`}
+>
+  <ProfileSectionPrimitive.ProfileSectionBackground {isGuest} />
 
-  <div class="flex flex-col items-center gap-3 py-4">
-    <ProfileSectionPrimitive.ProfileSectionAvatar {avatarSrc} />
+  <div
+    class={`flex flex-col items-center gap-3 ${
+      isGuest ? 'absolute inset-x-0 top-1/2 -translate-y-1/2' : 'py-4'
+    }`}
+  >
+    <ProfileSectionPrimitive.ProfileSectionAvatar {avatarSrc} {isGuest} />
     <ProfileSectionPrimitive.ProfileSectionUsername
       {userDisplayName}
       {userAttribution}
@@ -48,11 +59,14 @@ let {
       {onCancelEdit}
     />
     <ProfileSectionPrimitive.ProfileSectionActions
+      {isGuest}
       {hideActions}
       {openProfileText}
       {logoutText}
+      {upgradeText}
       {onOpenProfile}
       {onLogout}
+      {onUpgrade}
     />
   </div>
 </div>

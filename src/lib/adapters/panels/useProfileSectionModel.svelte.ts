@@ -104,6 +104,13 @@ export function useProfileSectionModel(
     return user.username ?? ('name' in user ? user.name : null) ?? m.anonymous()
   }
 
+  /** Returns whether the current session belongs to an anonymous guest. */
+  function isGuestUser(): boolean {
+    const user = appCtx.getUser()
+
+    return Boolean(user && 'isAnonymous' in user && user.isAnonymous === true)
+  }
+
   $effect(() => {
     if (editedUsername && validateUsernameIssues(editedUsername).issues.length > 0) {
       showTransientError()
@@ -195,6 +202,7 @@ export function useProfileSectionModel(
       avatarSrc: appCtx.getUser()?.image ?? null,
       userDisplayName: getUserDisplayName(),
       userAttribution: appCtx.getUser()?.attribution ?? null,
+      isGuest: isGuestUser(),
       isEditingUsername,
       isLoadingUsername,
       showSuccessIndicator,
@@ -206,11 +214,13 @@ export function useProfileSectionModel(
       usernameInputPlaceholder: m.warm_that_duck_slide(),
       openProfileText: m.whole_livid_alligator_commend(),
       logoutText: m.profile__logout(),
+      upgradeText: m.guest__upgrade_title(),
       onStartEditingUsername: handleStartEditingUsername,
       onSaveUsername: handleSaveUsername,
       onCancelEdit: handleCancelEdit,
       onOpenProfile: handleOpenProfile,
       onLogout: handleLogout,
+      onUpgrade: () => requestAccountUpgrade('account', window.location.href),
     }),
   }
 }

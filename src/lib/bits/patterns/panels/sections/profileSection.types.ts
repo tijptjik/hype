@@ -2,6 +2,7 @@ export interface ProfileSectionProps {
   avatarSrc?: string | null
   userDisplayName?: string | null
   userAttribution?: string | null
+  isGuest?: boolean
   hideActions?: boolean
   hideEditableFields?: boolean
   isEditingUsername?: boolean
@@ -13,9 +14,11 @@ export interface ProfileSectionProps {
   usernameInputPlaceholder?: string
   openProfileText?: string
   logoutText?: string
+  upgradeText?: string
   onStartEditingUsername?: () => void
   onSaveUsername?: () => void | Promise<void>
   onCancelEdit?: () => void
   onOpenProfile?: () => void
   onLogout?: () => void | Promise<void>
+  onUpgrade?: () => void
 }
