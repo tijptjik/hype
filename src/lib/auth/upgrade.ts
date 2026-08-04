@@ -27,6 +27,23 @@ export function isGuestUser<T extends object>(
 }
 
 /**
+ * Determines whether a session contains a confirmed durable account.
+ *
+ * @param user - Optional user state from a session or application context.
+ * @returns Whether the user explicitly has a non-anonymous account.
+ * @remarks A missing `isAnonymous` value is not enough to authorize a contribution.
+ */
+export function hasDurableAccount<T extends object>(
+  user: T | null | undefined,
+): user is T & { isAnonymous: false } {
+  return Boolean(
+    user &&
+      'isAnonymous' in user &&
+      (user as { isAnonymous?: unknown }).isAnonymous === false,
+  )
+}
+
+/**
  * Accepts only same-origin application paths for post-auth navigation.
  *
  * @param candidate - Untrusted return URL from query state or UI intent.

@@ -5,13 +5,7 @@ import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation'
 // GEO
 import { bbox } from '@turf/bbox'
 // I18N
-import {
-  getFallbackLocales,
-  getLocale,
-  getLocaleKey,
-  getI18n,
-  setLocale as setRuntimeLocale,
-} from '$lib/i18n'
+import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '$lib/i18n'
 // LIB
 import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/constants'
 import {
@@ -25,13 +19,7 @@ import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
 import { getProperties, getProperty } from '$lib/api/server/property.remote'
 import { getUser, getUserFeatures, getUserLayers } from '$lib/api/server/user.remote'
 // SERVICES
-import {
-  debouncedUpdateUserAttribution,
-  debouncedUpdateUserExperimental,
-  debouncedUpdateUserLayers,
-  debouncedUpdateUserPreferences,
-  updateLocale,
-} from '$lib/client/services/user'
+import { debouncedUpdateUserAttribution } from '$lib/client/services/user'
 import {
   consumeEscapeForOpenPanels,
   shouldSkipGlobalKeydown,
@@ -103,7 +91,6 @@ import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Hub, HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type {
   CurrentUser,
-  UserExperimental,
   UserFeature,
   UserLayer,
   UserPreferences,
@@ -3825,6 +3812,26 @@ export class AppCtx {
     return this.user
   }
 
+  /**
+   * Merges freshly saved self-profile fields into the reactive application user.
+   *
+   * @param profile - Persisted self-profile fields returned by a remote mutation.
+   * @returns Nothing after updating the local user snapshot.
+   */
+  applyUserProfile = (
+    profile: Partial<
+      Pick<CurrentUser, 'attribution' | 'experimental' | 'locale' | 'preferences'>
+    >,
+  ): void => {
+    if (!this.user) return
+
+    this.user = {
+      ...this.user,
+      ...profile,
+    } as CurrentUser | SessionUser | UserProfile
+    this.postUserMutation()
+  }
+
   resetUser = () => {
     this.user = null
   }
@@ -3883,50 +3890,6 @@ export class AppCtx {
     }
   }
 
-  setLocale = async (locale: Locale) => {
-    const user = this.user as CurrentUser
-
-    await updateLocale(user.id, locale)
-    // I18N : Persist Paraglide's locale, then hard reload to avoid re-rendering the full app tree in place.
-    await setRuntimeLocale(locale, { reload: false })
-
-    if (typeof window !== 'undefined') {
-      window.location.reload()
-      return
-    }
-
-    user.locale = locale
-  }
-
-  setFallbackLocales = (localeCode: Locale, checked: boolean) => {
-    const currentFallbacks =
-      (this.user as CurrentUser).preferences.fallbackLocales || []
-    if (checked) {
-      if (!currentFallbacks.includes(localeCode)) {
-        ;(this.user as CurrentUser).preferences.fallbackLocales = [
-          ...currentFallbacks,
-          localeCode,
-        ]
-      }
-    } else {
-      ;(this.user as CurrentUser).preferences.fallbackLocales = currentFallbacks.filter(
-        lc => lc !== localeCode,
-      )
-    }
-    debouncedUpdateUserPreferences(
-      (this.user as CurrentUser).id,
-      (this.user as CurrentUser).preferences as UserPreferences,
-    )
-  }
-
-  setAdvancedFeature = (code: keyof UserPreferences, value: boolean) => {
-    ;((this.user as CurrentUser).preferences[code] as boolean) = value
-    debouncedUpdateUserPreferences(
-      (this.user as CurrentUser).id,
-      (this.user as CurrentUser).preferences as UserPreferences,
-    )
-  }
-
   setUserAttribution = async (
     attribution: string,
     onSuccess?: (attribution: string) => void,
@@ -3949,82 +3912,43 @@ export class AppCtx {
     return this.getUserLayersForCurrentHub().map((layer: UserLayer) => layer.layerId)
   }
 
-  setUserLayer = (layerId: string, checked: boolean) => {
-    const hubId = this.getCurrentHubId()
-    const hubCode = this.hub?.code ?? null
-    if (!hubId && !hubCode) return
-    if (!hubId) return
-    const currentUserLayers = (this.user as CurrentUser).userLayers || []
-    const isCurrentHubLayer = (layer: UserLayer): boolean =>
-      hubId ? layer.hubId === hubId : layer.hubCode === hubCode
-    const currentHubLayers = currentUserLayers.filter(isCurrentHubLayer)
-    const otherHubLayers = currentUserLayers.filter(layer => !isCurrentHubLayer(layer))
+  /**
+   * Commits saved layer defaults to local user and map state.
+   *
+   * @param layers - Persisted default-visible layer rows returned by the remote mutation.
+   * @param hub - The hub identity used for the mutation, including code-only startup state.
+   * @returns Nothing after replacing the current hub's saved layer defaults.
+   */
+  applyUserLayerDefaults = (
+    layers: UserLayer[],
+    hub: { id?: Id | null; code?: string | null },
+  ): void => {
+    if (!this.user || !('userLayers' in this.user)) return
 
-    const nextCurrentHubLayers = checked
-      ? currentHubLayers.some(layer => layer.layerId === layerId)
-        ? currentHubLayers
-        : [
-            ...currentHubLayers,
-            {
-              userId: (this.user as CurrentUser).id,
-              hubId,
-              hubCode: hubCode ?? undefined,
-              layerId,
-              isDefaultVisible: true,
-            },
-          ]
-      : currentHubLayers.filter(layer => layer.layerId !== layerId)
-
-    ;(this.user as CurrentUser).userLayers = [
-      ...otherHubLayers,
-      ...nextCurrentHubLayers,
-    ]
-
-    this.setLayers(nextCurrentHubLayers.map(layer => layer.layerId))
-
-    debouncedUpdateUserLayers(
-      (this.user as CurrentUser).id,
-      {
-        id: hubId,
-        code: hubCode,
-      },
-      nextCurrentHubLayers,
-      {
-        onSuccess: layers => {
-          const resolvedHubId = layers[0]?.hubId ?? hubId
-          if (resolvedHubId && this.hub?.code) {
-            this.hubCodeToId.set(this.hub.code, resolvedHubId)
-          }
-
-          if (resolvedHubId && this.hub && !this.hub.id) {
-            this.hub = {
-              ...this.hub,
-              id: resolvedHubId,
-            }
-          }
-
-          if (!resolvedHubId) return
-
-          const retainedLayers = ((this.user as CurrentUser).userLayers || []).filter(
-            layer => layer.hubId !== resolvedHubId,
-          )
-
-          ;(this.user as CurrentUser).userLayers = [...retainedLayers, ...layers]
-        },
-      },
+    const resolvedHubId = layers[0]?.hubId ?? hub.id ?? null
+    const currentHubLayerIds = new Set(
+      this.state.resources.layer.map(layer => layer.id),
     )
-  }
 
-  setExperimental = (featureCode: keyof UserExperimental, checked: boolean) => {
-    const currentExperimental = (this.user as CurrentUser).experimental || {}
-    ;(this.user as CurrentUser).experimental = {
-      ...currentExperimental,
-      [featureCode]: checked,
+    // Replace only rows associated with this hub, including code-only bootstrap state.
+    const retainedLayers = this.user.userLayers.filter(layer => {
+      if (resolvedHubId && layer.hubId === resolvedHubId) return false
+      if (hub.code && layer.hubCode === hub.code) return false
+      return !currentHubLayerIds.has(layer.layerId)
+    })
+
+    if (resolvedHubId && hub.code) {
+      this.hubCodeToId.set(hub.code, resolvedHubId)
     }
-    debouncedUpdateUserExperimental(
-      (this.user as CurrentUser).id,
-      (this.user as CurrentUser).experimental as UserExperimental,
-    )
+    if (resolvedHubId && this.hub && !this.hub.id) {
+      this.hub = { ...this.hub, id: resolvedHubId }
+    }
+
+    this.user = {
+      ...this.user,
+      userLayers: [...retainedLayers, ...layers],
+    } as CurrentUser | SessionUser
+    this.setLayers(layers.map(layer => layer.layerId))
   }
 
   /**

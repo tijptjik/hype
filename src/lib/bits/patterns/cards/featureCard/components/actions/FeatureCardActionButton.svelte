@@ -8,10 +8,7 @@ import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // TYPES
 import type { Snippet } from 'svelte'
 // LOCAL
-import {
-  getFeatureCardResponsiveWidth,
-  shouldCollapseFeatureCardAction,
-} from '../../featureCard.utils'
+import { getFeatureCardResponsiveWidth } from '../../featureCard.utils'
 
 type FeatureCardActionVariant = 'default' | 'ghost' | 'secondary' | 'primary'
 
@@ -27,7 +24,7 @@ interface Props {
   onBlur?: (event: FocusEvent) => void
   disabled?: boolean
   variant?: FeatureCardActionVariant
-  hideLabelBelow?: number
+  isIconOnly?: boolean
   labelClasses?: string
   expandedClass?: string
   collapsedClass?: string
@@ -46,7 +43,7 @@ let {
   onBlur,
   disabled = false,
   variant = 'default',
-  hideLabelBelow = undefined,
+  isIconOnly = false,
   labelClasses = '',
   expandedClass = '',
   collapsedClass = '',
@@ -55,10 +52,6 @@ let {
 
 const responsiveCtx = getResponsiveCtx()
 const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
-const isCollapsed = $derived(
-  shouldCollapseFeatureCardAction(responsiveWidth, hideLabelBelow),
-)
-
 function getVariantClasses(resolvedVariant: FeatureCardActionVariant): string {
   if (resolvedVariant === 'ghost') {
     return cx(
@@ -114,17 +107,15 @@ function getVariantClasses(resolvedVariant: FeatureCardActionVariant): string {
 const rootClasses = $derived(
   cx(
     'shrink-0 rounded-full uppercase font-medium tracking-[0.16em] shadow-none backdrop-blur-[10px]',
-    '[--btn-size:2.75rem] [--btn-padding-x:1.3125rem] [--btn-base-label-size:0.8125rem]',
-    hideLabelBelow !== undefined
-      ? isCollapsed
-        ? cx('w-11 min-w-11 px-0 [--btn-label-multiplier:0]', collapsedClass)
-        : expandedClass
-          ? cx(
-              'px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]',
-              expandedClass,
-            )
-          : 'w-auto min-w-max px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]'
-      : 'w-11 min-w-11 px-0 [--btn-label-multiplier:0]',
+    '[--btn-size:2.75rem] [--btn-padding-x:1rem] [--btn-base-label-size:0.8125rem]',
+    isIconOnly
+      ? cx('w-11 min-w-11 px-0 [--btn-label-multiplier:0]', collapsedClass)
+      : expandedClass
+        ? cx(
+            'px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]',
+            expandedClass,
+          )
+        : 'w-auto min-w-max px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]',
     'disabled:opacity-40',
     getVariantClasses(variant),
     className,
@@ -132,11 +123,12 @@ const rootClasses = $derived(
 )
 
 const resolvedLabelClasses = $derived(cx('leading-none text-inherit', labelClasses))
+const resolvedTitle = $derived(isIconOnly ? (title ?? text) : undefined)
 </script>
 
 {#snippet actionContent()}
   {#if content}
-    {@render content(isCollapsed)}
+    {@render content(isIconOnly)}
   {/if}
 {/snippet}
 
@@ -148,10 +140,10 @@ const resolvedLabelClasses = $derived(cx('leading-none text-inherit', labelClass
   style="transparent"
   size="md"
   availableWidth={responsiveWidth}
-  {hideLabelBelow}
+  hideLabel={isIconOnly}
   class={rootClasses}
   labelClasses={resolvedLabelClasses}
-  attrs={{ title: title ?? text }}
+  attrs={{ title: resolvedTitle }}
   {disabled}
   {onClick}
   {onMouseEnter}

@@ -12,6 +12,7 @@ interface Props {
   leftActions?: import('svelte').Snippet
   rightActions?: import('svelte').Snippet
   centerRightActionsOnMobile?: boolean
+  leftActionsFillAvailableWidth?: boolean
   heightBudgetPx?: number | null
 }
 
@@ -20,6 +21,7 @@ let {
   leftActions,
   rightActions,
   centerRightActionsOnMobile = false,
+  leftActionsFillAvailableWidth = false,
   heightBudgetPx = null,
 }: Props = $props()
 
@@ -45,7 +47,9 @@ const layout = $derived(
     id="feature-card-actions"
     class={cx(
       responsiveCtx.isMobile
-        ? 'grid grid-cols-[1fr_auto_1fr] items-center gap-3'
+        ? leftActionsFillAvailableWidth
+          ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3'
+          : 'grid grid-cols-[1fr_auto_1fr] items-center gap-3'
         : 'flex items-center gap-3',
       layout.hasElevatedChrome ? 'min-h-11' : 'min-h-16',
       'px-[var(--feature-card-content-padding)]',
@@ -62,7 +66,7 @@ const layout = $derived(
         {@render leftActions()}
       {/if}
     </div>
-    {#if responsiveCtx.isMobile && !centerRightActionsOnMobile}
+    {#if responsiveCtx.isMobile && !centerRightActionsOnMobile && !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-center self-center"
       ></div>
@@ -79,7 +83,7 @@ const layout = $derived(
         {@render rightActions()}
       {/if}
     </div>
-    {#if !responsiveCtx.isMobile || centerRightActionsOnMobile}
+    {#if (!responsiveCtx.isMobile || centerRightActionsOnMobile) && !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-end self-center"
       ></div>

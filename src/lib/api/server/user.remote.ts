@@ -299,9 +299,14 @@ export const updateUserProfile = guardedCommand(
       throw error(500, 'USER_UPDATE_RELOAD_FAILED')
     }
 
-    return {
+    const response = {
       data: toUserProfileResponseShape(updatedWithRelations, 'self' as const),
     }
+
+    // Refresh only the user profile query instance requested by this mutation.
+    void requested(getUser, 1).refreshAll()
+
+    return response
   },
 )
 
@@ -375,7 +380,12 @@ export const setUserLayerDefaults = guardedCommand(
     }))
 
     const updated = await updateUserLayers(db, rows, targetUserId, resolvedHubId as Id)
-    return { data: updated }
+    const response = { data: updated }
+
+    // Refresh only the layer-default query instance requested by this mutation.
+    void requested(getUserLayers, 1).refreshAll()
+
+    return response
   },
 )
 

@@ -3,16 +3,18 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { passkey } from '@better-auth/passkey'
 import { customSession, anonymous, username } from 'better-auth/plugins'
+// DRIZZLE
+import { eq } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/d1'
 // CONFIG
 import { authConfig } from './auth/config'
 import { buildAuthEmail } from './auth/email'
 import { isAuthProviderEnabled } from './auth/providers'
 // DB SCHEMA
 import * as schema from '$lib/db/schema/index'
-// DRIZZLE
-import { drizzle } from 'drizzle-orm/d1'
 // TYPES
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { UserRoleDisco, Locale } from '$lib/types'
 import type { UserExperimental, UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -29,6 +31,25 @@ import { createAuthDiagnosticId } from '$lib/auth/diagnostics.server'
  * This allows us to support multiple domains with a single better-auth setup.
  */
 const authInstances = new Map<string, Auth>()
+
+/**
+ * Marks an email address as verified after its owner has redeemed a password-reset token.
+ *
+ * @param db - The D1-backed Drizzle database used by the active authentication instance.
+ * @param userId - The ID encoded in the single-use reset token redeemed by Better Auth.
+ * @returns Nothing after the user's verified-email state is persisted.
+ * @remarks A password-reset token is sent only to the account email address, so redeeming it
+ * proves mailbox control to the same standard as an email-verification link.
+ */
+export async function markEmailVerifiedAfterPasswordReset(
+  db: DrizzleD1Database<typeof schema>,
+  userId: string,
+): Promise<void> {
+  await db
+    .update(schema.user)
+    .set({ emailVerified: true })
+    .where(eq(schema.user.id, userId))
+}
 
 /**
  * Extract the base URL from request headers.
@@ -84,7 +105,7 @@ function createAuthInstance(
     // restart or a local dev reload. Send that failure back to a usable HYPE
     // entry point instead of Better Auth's internal error route.
     onAPIError: {
-      errorURL: `${baseURL}/login`,
+      errorURL: `${baseURL}/signin`,
     },
     // ENV
     secret: env.AUTH_SECRET,
@@ -151,6 +172,10 @@ function createAuthInstance(
       enabled: true,
       requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
+      onPasswordReset: async ({ user }) => {
+        // Redeeming the reset token proves the user controls their registered mailbox.
+        await markEmailVerifiedAfterPasswordReset(db, user.id)
+      },
       sendResetPassword: async ({ user, url }) => {
         if (!env.EMAIL || !env.AUTH_EMAIL_FROM) {
           throw new Error('Transactional email is not configured')

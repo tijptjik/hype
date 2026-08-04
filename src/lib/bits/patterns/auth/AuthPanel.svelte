@@ -29,11 +29,15 @@ let {
   showGuest = false,
   showAuthModeTitle = false,
   authMode = 'sign-in',
+  authModeTitle,
+  authModeToggleLabel,
   brandName = 'HYPE',
   modeToggleHref = '',
-  authPath = '/login',
+  authPath = '/signin',
   onModeChange,
   onGuest,
+  onSignUpComplete,
+  onPasskeyAccountComplete,
 }: {
   title?: string
   description?: string
@@ -41,11 +45,15 @@ let {
   showGuest?: boolean
   showAuthModeTitle?: boolean
   authMode?: 'sign-in' | 'sign-up'
+  authModeTitle?: string
+  authModeToggleLabel?: string
   brandName?: string
   modeToggleHref?: string
-  authPath?: '/login' | '/signup'
+  authPath?: '/signin' | '/signup'
   onModeChange?: (mode: 'sign-in' | 'sign-up') => void
   onGuest?: () => void | Promise<void>
+  onSignUpComplete?: (email: string) => void
+  onPasskeyAccountComplete?: () => void | Promise<void>
 } = $props()
 
 let email = $state('')
@@ -60,6 +68,7 @@ let isAwaitingVerification = $state(false)
 let verificationEmail = $state('')
 let showEmailAuth = $state(false)
 let showPasskeySignUp = $state(false)
+let isFinishingPasskeySetup = $state(false)
 let preferredName = $state('')
 let preferredUsername = $state('')
 let preferredEmail = $state('')
@@ -67,15 +76,23 @@ let preferredEmail = $state('')
 const safeCallbackUrl = $derived(toSafeReturnPath(returnTo))
 const authTitle = $derived(
   showAuthModeTitle
-    ? mode === 'sign-up'
-      ? m.login__sign_up_title({ brandName })
-      : m.login__sign_in_title({ brandName })
+    ? (authModeTitle ??
+        (mode === 'sign-up'
+          ? m.login__sign_up_title({ brandName })
+          : m.login__sign_in_title({ brandName })))
     : title,
 )
+const modeToggleLabel = $derived(
+  authModeToggleLabel ??
+    (mode === 'sign-in' ? m.login__sign_up_action() : m.guest__sign_in()),
+)
+const oauthErrorCode = $derived(page.url.searchParams.get('error'))
 const oauthErrorMessage = $derived(
-  page.url.searchParams.get('error') === 'account_not_linked'
+  oauthErrorCode === 'account_not_linked'
     ? m.account__social_account_not_linked()
-    : '',
+    : oauthErrorCode
+      ? m.guest__auth_generic_error()
+      : '',
 )
 
 $effect(() => {
@@ -89,6 +106,7 @@ $effect(() => {
     statusMessage = ''
     isAwaitingVerification = false
     verificationEmail = ''
+    isFinishingPasskeySetup = false
     if (showPasskeySignUp) showEmailAuth = false
     showPasskeySignUp = false
   }
@@ -157,11 +175,21 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
           })
 
     if (result.error) {
+      if (mode === 'sign-in' && result.error.code === 'EMAIL_NOT_VERIFIED') {
+        verificationEmail = normalizedEmail
+        isAwaitingVerification = true
+        statusMessage = m.guest__email_verification_required()
+        return
+      }
       errorMessage = m.guest__auth_generic_error()
       return
     }
 
     if (mode === 'sign-up') {
+      if (onSignUpComplete) {
+        onSignUpComplete(normalizedEmail)
+        return
+      }
       verificationEmail = normalizedEmail
       isAwaitingVerification = true
       statusMessage = m.guest__verification_sent()
@@ -216,6 +244,7 @@ function openEmailAuth(): void {
   statusMessage = ''
   isAwaitingVerification = false
   verificationEmail = ''
+  isFinishingPasskeySetup = false
 }
 
 /** Opens passkey account creation with optional profile details prefilled from email sign-up. */
@@ -247,6 +276,7 @@ async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
   isBusy = true
   errorMessage = ''
   statusMessage = ''
+  isFinishingPasskeySetup = false
   try {
     const sessionResult = await authClient.getSession()
     const sessionUser = sessionResult.data?.user
@@ -264,15 +294,29 @@ async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
       username: preferredUsername,
       email: preferredEmail,
       emailCallbackUrl: window.location.href,
+      onPasskeyReady: () => {
+        isFinishingPasskeySetup = true
+        statusMessage = m.guest__passkey_finishing_setup()
+      },
     })
+
+    if (onPasskeyAccountComplete) {
+      await onPasskeyAccountComplete()
+      return
+    }
+
     await goto(safeCallbackUrl)
   } catch (error) {
+    statusMessage = ''
     errorMessage =
       error instanceof PasskeySessionRefreshError
         ? m.account__passkey_session_refresh_error()
-        : m.account__passkey_add_error()
+        : isFinishingPasskeySetup
+          ? m.account__passkey_setup_error()
+          : m.account__passkey_add_error()
   } finally {
     isBusy = false
+    isFinishingPasskeySetup = false
   }
 }
 
@@ -318,21 +362,31 @@ async function handlePasswordResetRequest(): Promise<void> {
 </script>
 
 <section
-  class="w-96 max-w-full sm:min-w-fit rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
+  class="w-[27rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
 >
-  {#if showAuthModeTitle && modeToggleHref}
+  {#if showAuthModeTitle && (modeToggleHref || onModeChange)}
     <div class="flex items-center justify-center gap-3">
       <h1 class="shrink-0 whitespace-nowrap text-center text-2xl font-semibold">
         {authTitle}
       </h1>
       <span class="h-7 border-l border-white/30" aria-hidden="true"></span>
-      <a
-        class="shrink-0 whitespace-nowrap text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
-        href={modeToggleHref}
-        onclick={handleModeToggle}
-      >
-        {mode === 'sign-in' ? m.login__sign_up_action() : m.guest__sign_in()}
-      </a>
+      {#if modeToggleHref}
+        <a
+          class="shrink-0 whitespace-nowrap text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+          href={modeToggleHref}
+          onclick={handleModeToggle}
+        >
+          {modeToggleLabel}
+        </a>
+      {:else}
+        <button
+          class="shrink-0 whitespace-nowrap text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+          type="button"
+          onclick={() => onModeChange?.(mode === 'sign-in' ? 'sign-up' : 'sign-in')}
+        >
+          {modeToggleLabel}
+        </button>
+      {/if}
     </div>
   {:else}
     <h1 class="text-center text-2xl font-semibold">{authTitle}</h1>
@@ -344,7 +398,9 @@ async function handlePasswordResetRequest(): Promise<void> {
     <p class="mt-4 text-center text-sm text-red-300">{errorMessage}</p>
   {/if}
   {#if statusMessage}
-    <p class="mt-4 text-center text-sm text-emerald-300">{statusMessage}</p>
+    <p class="mt-4 text-center text-sm text-emerald-300" role="status">
+      {statusMessage}
+    </p>
   {/if}
 
   {#if !showEmailAuth}
@@ -416,7 +472,7 @@ async function handlePasswordResetRequest(): Promise<void> {
             bind:value={preferredEmail}
           />
           <button
-            class="mt-3 min-w-40 self-center whitespace-nowrap rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
+            class="mt-3 inline-flex min-w-40 self-center items-center justify-center whitespace-nowrap rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
             type="submit"
             disabled={isBusy}
             aria-busy={isBusy}

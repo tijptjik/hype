@@ -4,6 +4,7 @@ import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ANIMATIONS
 import { flip } from 'svelte/animate'
+import { slide } from 'svelte/transition'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'
@@ -112,6 +113,7 @@ function openVisitedFeature(
             type="button"
             class="min-h-21 flex w-full cursor-pointer flex-row items-start justify-between gap-4 bg-black px-4 py-2 text-left text-[#374151]"
             animate:flip={{ duration: 200 }}
+            in:slide={{ axis: 'y', duration: 200 }}
             onclick={() => {
                 openVisitedFeature(visited.featureId, visitedFeatures)
               }}

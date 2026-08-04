@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, tick } from 'svelte'
+import { untrack } from 'svelte'
+import { fade } from 'svelte/transition'
 // BITS
 import { Icon } from '$lib/bits'
 import { cx } from '$lib/bits/utils'
@@ -12,156 +13,189 @@ import Check from 'virtual:icons/lucide/check'
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 
 interface Props {
-  value: FeatureCardActionDisplay
-  hoverValue?: FeatureCardActionDisplay
+  currentValue: FeatureCardActionDisplay
+  currentHoverValue?: FeatureCardActionDisplay
+  optimisticValue: FeatureCardActionDisplay
+  optimisticHoverValue?: FeatureCardActionDisplay
+  settledValue: FeatureCardActionDisplay
+  settledHoverValue?: FeatureCardActionDisplay
+  isError?: boolean
+  errorMessage?: string
+  isIconOnly?: boolean
   onClick?: (event: MouseEvent) => void
 }
 
-let { value, hoverValue, onClick }: Props = $props()
+let {
+  currentValue,
+  currentHoverValue,
+  optimisticValue,
+  optimisticHoverValue,
+  settledValue,
+  settledHoverValue,
+  isError = false,
+  errorMessage = '',
+  isIconOnly,
+  onClick,
+}: Props = $props()
 
-const crossfadeDuration = 160
+const transitionDuration = 140
+const initialCurrentValue = untrack(() => currentValue)
+const initialSettledValue = untrack(() => settledValue)
 
-let cleanupTimer: ReturnType<typeof setTimeout> | undefined
-let transitionFrame: ReturnType<typeof requestAnimationFrame> | undefined
-let isInitialised = $state(false)
 let isRootHovered = $state(false)
 let hasLeftRootAfterSwap = $state(true)
-let isCrossfading = $state(false)
-let previousValue = $state<FeatureCardActionDisplay | null>(null)
-let renderedValue = $state<FeatureCardActionDisplay>({ key: '', label: '' })
-let renderedValueKey = $state('')
-let baseValueKey = $state('')
+let displayedValue = $state<FeatureCardActionDisplay>(initialCurrentValue)
+let displayedValueKey = $state(valueKey(initialCurrentValue))
+let lastCurrentValueKey = $state(valueKey(initialCurrentValue))
+let lastOptimisticValueKey = $state(valueKey(initialCurrentValue))
+let lastSettledValueKey = $state(valueKey(initialSettledValue))
 
-const shouldShowHoverValue = $derived(
-  isRootHovered && hasLeftRootAfterSwap && Boolean(hoverValue),
+const current = $derived(currentValue)
+const optimistic = $derived(optimisticValue)
+const settled = $derived(settledValue)
+const rootButtonTone = $derived(
+  isError
+    ? '[--btn-fg:var(--color-error)] [--btn-hover-fg:var(--color-error)]'
+    : cx(
+        displayedValue.state === 'check-in'
+          ? '[--btn-fg:var(--color-neutral-content)]'
+          : '[--btn-fg:var(--color-primary)]',
+        '[--btn-hover-fg:var(--color-primary)]',
+      ),
 )
-const targetValue = $derived(shouldShowHoverValue ? (hoverValue ?? value) : value)
+const shouldShowHoverValue = $derived(!isError && isRootHovered && hasLeftRootAfterSwap)
+const visibleValue = $derived(
+  isError && errorMessage
+    ? ({ key: 'error', label: errorMessage } satisfies FeatureCardActionDisplay)
+    : shouldShowHoverValue
+      ? getHoverValue(displayedValue)
+      : displayedValue,
+)
+const visibleValueKey = $derived(valueKey(visibleValue))
 
 /**
- * Clears a pending swap cleanup callback.
- */
-function clearCleanupTimer(): void {
-  if (!cleanupTimer) return
-  clearTimeout(cleanupTimer)
-  cleanupTimer = undefined
-}
-
-/**
- * Clears a scheduled swap frame.
- */
-function clearTransitionFrame(): void {
-  if (transitionFrame === undefined) return
-  cancelAnimationFrame(transitionFrame)
-  transitionFrame = undefined
-}
-
-/**
- * Crossfades to a new display value only when its key differs from the rendered one.
+ * Builds an equality key from the explicit identity and all supplied display fields.
  *
- * @param nextValue Desired display value.
+ * @param value Flexible fields for one action phase.
+ * @returns Stable key for deciding whether the entire action block needs a new fade.
+ */
+function valueKey(value: FeatureCardActionDisplay): string {
+  return Object.entries(value)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, entry]) => `${key}:${entry ?? ''}`)
+    .join('|')
+}
+
+/**
+ * Selects hover data for the currently promoted action phase.
+ *
+ * @param value The promoted base action fields.
+ * @returns Hover fields for the same phase, or the base fields when none exist.
+ */
+function getHoverValue(value: FeatureCardActionDisplay): FeatureCardActionDisplay {
+  const promotedKey = valueKey(value)
+
+  if (promotedKey === valueKey(current)) return currentHoverValue ?? value
+  if (promotedKey === valueKey(optimistic)) return optimisticHoverValue ?? value
+  if (promotedKey === valueKey(settled)) return settledHoverValue ?? value
+
+  return value
+}
+
+/**
+ * Promotes a base phase and requires a genuine pointer leave before hover copy appears.
+ *
+ * @param nextValue Current, optimistic, or settled action fields.
  */
 function showValue(nextValue: FeatureCardActionDisplay): void {
-  if (nextValue.key === renderedValueKey) return
+  const nextValueKey = valueKey(nextValue)
+  if (nextValueKey === displayedValueKey) return
 
-  clearCleanupTimer()
-  clearTransitionFrame()
-  previousValue = renderedValue
-  renderedValue = nextValue
-  renderedValueKey = nextValue.key
-  isCrossfading = false
-
-  void tick().then(() => {
-    transitionFrame = requestAnimationFrame(() => {
-      transitionFrame = undefined
-      isCrossfading = true
-    })
-  })
-
-  cleanupTimer = setTimeout(() => {
-    previousValue = null
-    isCrossfading = false
-    cleanupTimer = undefined
-  }, crossfadeDuration)
+  displayedValue = nextValue
+  displayedValueKey = nextValueKey
+  hasLeftRootAfterSwap = false
+  isRootHovered = false
 }
 
 $effect(() => {
-  if (!isInitialised) {
-    renderedValue = value
-    renderedValueKey = value.key
-    baseValueKey = value.key
-    isInitialised = true
+  const currentKey = valueKey(current)
+  const optimisticKey = valueKey(optimistic)
+  const settledKey = valueKey(settled)
+  const currentChanged = currentKey !== lastCurrentValueKey
+  const optimisticChanged = optimisticKey !== lastOptimisticValueKey
+  const settledChanged = settledKey !== lastSettledValueKey
+
+  lastCurrentValueKey = currentKey
+  lastOptimisticValueKey = optimisticKey
+  lastSettledValueKey = settledKey
+
+  if (isError) {
+    // Errors restore the settled action phase while the visible unit reports the failure.
+    showValue(settled)
     return
   }
 
-  // A changed base state replaces the action under the pointer, so require a real leave again.
-  if (value.key !== baseValueKey) {
-    baseValueKey = value.key
-    hasLeftRootAfterSwap = false
-    isRootHovered = false
+  // A new server value is authoritative and remains promoted after this effect reruns.
+  if (settledChanged) {
+    showValue(settled)
+    return
   }
-})
 
-$effect(() => {
-  showValue(targetValue)
-})
+  // Before the server responds, promote the caller's optimistic fields.
+  if (optimisticChanged) {
+    showValue(optimistic)
+    return
+  }
 
-onDestroy(() => {
-  clearCleanupTimer()
-  clearTransitionFrame()
+  if (currentChanged) showValue(current)
 })
 </script>
 
-{#snippet swapItem(item: FeatureCardActionDisplay, isPrevious: boolean)}
-  <span
-    class={cx(
-      'flex min-w-0 flex-col items-start gap-1 text-left leading-none transition-opacity duration-160',
-      isPrevious
-        ? cx(
-            'pointer-events-none absolute inset-x-0 top-0',
-            isCrossfading ? 'opacity-0' : 'opacity-100',
-          )
-        : previousValue && !isCrossfading
-          ? 'opacity-0'
-          : 'opacity-100',
-    )}
-    aria-hidden={isPrevious}
-  >
-    <span class="max-w-full truncate text-xs uppercase">{item.label}</span>
-    {#if item.detail}
-      <span
-        class="max-w-full truncate font-mono text-sm normal-case tracking-normal text-white"
+{#snippet visitValue(value: FeatureCardActionDisplay)}
+  <div class="flex h-10 min-w-0 flex-col justify-center text-left">
+    {#if value.detail}
+      <p class="h-4 max-w-full truncate whitespace-nowrap text-xs uppercase">
+        {value.label}
+      </p>
+      <p
+        class="mt-1 h-5 max-w-full truncate font-mono text-sm normal-case tracking-normal text-white"
       >
-        {item.detail}
-      </span>
+        {value.detail}
+      </p>
+    {:else}
+      <p class="h-4 max-w-full truncate whitespace-nowrap">
+        {value.label}
+      </p>
     {/if}
-  </span>
+  </div>
 {/snippet}
 
 {#snippet visitContent(isCollapsed: boolean)}
   <!-- Root: this action consumes only the flex space that remains before the directions portal. -->
-  <span class="flex min-w-0 flex-1 items-center gap-2">
+  <div class="flex min-w-0 flex-1 items-center gap-2">
     <!-- Icon: stable, fixed-position, and always primary. -->
     <Icon src={Check} class="h-6 w-6 shrink-0 text-primary" />
     {#if !isCollapsed}
-      <!-- Swap: both items share one fixed-height slot, so neither state can step vertically. -->
-      <span class="relative flex min-h-[1.875rem] min-w-0 flex-1 items-start">
-        {#if previousValue !== null}
-          {@render swapItem(previousValue, true)}
-        {/if}
-        {@render swapItem(renderedValue, false)}
-      </span>
+      <!-- One keyed transition fades the whole action unit, never its rows independently. -->
+      <div class="relative h-10 min-w-0 flex-1">
+        {#key visibleValueKey}
+          <div class="absolute inset-0" in:fade={{ duration: transitionDuration }}>
+            {@render visitValue(visibleValue)}
+          </div>
+        {/key}
+      </div>
     {/if}
-  </span>
+  </div>
 {/snippet}
 
 <FeatureCardActionButton
-  text={renderedValue.label}
-  title={renderedValue.label}
+  text={visibleValue.label}
+  title={visibleValue.label}
   content={visitContent}
   variant="secondary"
-  hideLabelBelow={544}
-  expandedClass="flex-1 min-w-0"
-  class="justify-start active:scale-100"
+  {isIconOnly}
+  expandedClass="flex-1 min-w-[9.5rem]"
+  class={cx('justify-start active:scale-100', rootButtonTone)}
   {onClick}
   onMouseEnter={() => {
     isRootHovered = true

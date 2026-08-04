@@ -9,7 +9,7 @@ const dbMocks = vi.hoisted(() => {
 })
 
 const authMocks = vi.hoisted(() => ({
-  updateUser: vi.fn(),
+  getSession: vi.fn(),
 }))
 
 vi.mock('drizzle-orm/d1', () => ({ drizzle: dbMocks.drizzle }))
@@ -45,7 +45,7 @@ function createEvent(options: PasskeyRouteOptions = {}) {
     locals: {
       session: { id: 'session-1' },
       user: { id: 'user-1', isAnonymous: options.isAnonymous ?? true },
-      auth: { api: { updateUser: authMocks.updateUser } },
+      auth: { api: { getSession: authMocks.getSession } },
     },
     platform: { env: { DB: {} } },
   }
@@ -54,26 +54,35 @@ function createEvent(options: PasskeyRouteOptions = {}) {
 describe('account passkey endpoint', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authMocks.updateUser.mockResolvedValue(
+    authMocks.getSession.mockResolvedValue(
       new Response(JSON.stringify({ status: true }), {
         headers: { 'set-cookie': 'better-auth.session_data=refreshed' },
       }),
     )
   })
 
-  it('refreshes a guest session only when a passkey is registered', async () => {
+  it('refreshes a guest session from the authoritative user record', async () => {
     const response = await POST(createEvent() as never)
 
     expect(response.status).toBe(200)
     expect(dbMocks.findFirst).toHaveBeenCalled()
-    expect(authMocks.updateUser).toHaveBeenCalledWith(
+    expect(authMocks.getSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: { isAnonymous: false },
         asResponse: true,
+        query: { disableCookieCache: true },
       }),
     )
     expect(response.headers.get('set-cookie')).toBe(
       'better-auth.session_data=refreshed',
+    )
+  })
+
+  it('refreshes the cache when request locals already show the promoted user', async () => {
+    const response = await POST(createEvent({ isAnonymous: false }) as never)
+
+    expect(response.status).toBe(200)
+    expect(authMocks.getSession).toHaveBeenCalledWith(
+      expect.objectContaining({ query: { disableCookieCache: true } }),
     )
   })
 
@@ -84,7 +93,7 @@ describe('account passkey endpoint', () => {
       status: 400,
       body: { message: 'PASSKEY_REQUIRED' },
     })
-    expect(authMocks.updateUser).not.toHaveBeenCalled()
+    expect(authMocks.getSession).not.toHaveBeenCalled()
   })
 
   it('rejects cross-origin requests before reading account data', async () => {

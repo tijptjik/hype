@@ -191,7 +191,7 @@ export function useProfileSectionModel(
     await signOut({
       fetchOptions: {
         onSuccess: () => {
-          goto('/login')
+          goto('/signin')
         },
         onError: error => {
           console.error('Sign out failed:', error)
@@ -228,7 +228,7 @@ export function useProfileSectionModel(
       onUpgrade: () => requestAccountUpgrade('account', window.location.href),
       onSignIn: () =>
         goto(
-          `/login?returnTo=${encodeURIComponent(toSafeReturnPath(window.location.href))}`,
+          `/signin?returnTo=${encodeURIComponent(toSafeReturnPath(window.location.href))}`,
         ),
     }),
   }

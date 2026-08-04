@@ -33,13 +33,19 @@ export async function ensurePasskeyForCurrentUser(): Promise<void> {
  * @returns Nothing after the session refresh and all session consumers have updated.
  * @throws {PasskeyRegistrationError} When the browser or authenticator cannot add a passkey.
  * @throws {PasskeySessionRefreshError} When the passkey was saved but the session could not refresh.
- * @remarks Retries reuse an existing passkey before updating the profile, promoting the account,
- * or requesting email verification.
+ * @remarks Retries reuse an existing passkey before refreshing the session, updating the
+ * profile, or requesting email verification. `input.onPasskeyReady` runs after the credential
+ * is accepted and before the remaining account setup calls begin.
  */
 export async function completePasskeyAccountUpgrade(
   input: PasskeyAccountUpgradeInput,
 ): Promise<void> {
   await ensurePasskeyForCurrentUser()
+  input.onPasskeyReady?.()
+
+  // Refresh the stale anonymous session cache before issuing any account update requests.
+  const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
+  if (!promotionResponse.ok) throw new PasskeySessionRefreshError()
 
   const profile: { name?: string; username?: string } = {}
   const name = input.name?.trim()
@@ -51,10 +57,6 @@ export async function completePasskeyAccountUpgrade(
     const profileResult = await authClient.updateUser(profile)
     if (profileResult.error) throw new Error(profileResult.error.message)
   }
-
-  // The server verifies the registered credential before refreshing the signed session cookie.
-  const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
-  if (!promotionResponse.ok) throw new PasskeySessionRefreshError()
 
   if (email) {
     const emailResult = await authClient.changeEmail({

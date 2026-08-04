@@ -1,7 +1,13 @@
 <script lang="ts">
+// THIRD PARTY
+import { toast } from 'svelte-sonner'
 // I18N
-import { getLocale, getLocaleKey } from '$lib/i18n'
+import { getLocale, getLocaleKey, setLocale as setRuntimeLocale } from '$lib/i18n'
 import { m } from '$lib/i18n'
+// API
+import { getUser, updateUserProfile } from '$lib/api/server/user.remote'
+// SERVICES
+import { refreshUserSession } from '$lib/client/services/user'
 // BITS
 import { Switch } from '$lib/bits'
 // COMPONENTS
@@ -61,16 +67,130 @@ let preferredOpen = $state(true)
 let additionalOpen = $state(true)
 let advancedOpen = $state(false)
 let pendingLocale = $state<Locale | null>(null)
+let isSavingPreferences = $state(false)
 
+/**
+ * Optimistically saves the preferred locale and refreshes the auth session before reload.
+ *
+ * @param locale - Supported locale selected by the user.
+ * @returns Nothing after the updated locale has been persisted or reverted.
+ */
 async function handleLocaleChange(locale: Locale): Promise<void> {
   if (pendingLocale || locale === currentLocale) return
 
+  const user = appCtx.getUser()
+  if (!user) return
+
+  const previousLocale = currentLocale
   pendingLocale = locale
-  await appCtx.setLocale(locale)
+  appCtx.applyUserProfile({ locale })
+  await setRuntimeLocale(locale, { reload: false })
+
+  try {
+    const response = await updateUserProfile({
+      id: user.id,
+      data: { locale },
+    }).updates(
+      getUser({
+        ref: user.id,
+        refKey: 'id',
+        meta: { profile: 'self' },
+      }),
+    )
+
+    appCtx.applyUserProfile(response?.data ?? { locale })
+    await refreshUserSession()
+
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
+  } catch (error) {
+    console.error('Error updating preferred language:', error)
+    appCtx.applyUserProfile({ locale: previousLocale })
+    await setRuntimeLocale(previousLocale, { reload: false })
+    toast.error('Failed to update preferred language')
+  } finally {
+    pendingLocale = null
+  }
+}
+
+/**
+ * Optimistically persists language display preferences through a remote command.
+ *
+ * @param nextPreferences - Complete next preference state to save.
+ * @returns Nothing after the local preferences settle to the server result.
+ */
+async function updatePreferences(nextPreferences: UserPreferences): Promise<void> {
+  if (isSavingPreferences) return
+
+  const user = appCtx.getUser()
+  if (!user) return
+
+  const previousPreferences = appCtx.getUserPreferences(false)
+  isSavingPreferences = true
+  appCtx.applyUserProfile({ preferences: nextPreferences })
+
+  try {
+    const response = await updateUserProfile({
+      id: user.id,
+      data: { preferences: JSON.stringify(nextPreferences) },
+    }).updates(
+      getUser({
+        ref: user.id,
+        refKey: 'id',
+        meta: { profile: 'self' },
+      }),
+    )
+
+    appCtx.applyUserProfile(response?.data ?? { preferences: nextPreferences })
+    await refreshUserSession()
+  } catch (error) {
+    console.error('Error updating language preferences:', error)
+    appCtx.applyUserProfile({ preferences: previousPreferences })
+    toast.error('Failed to update language preferences')
+  } finally {
+    isSavingPreferences = false
+  }
+}
+
+/**
+ * Returns the next fallback-locale preference state.
+ *
+ * @param locale - Locale to add or remove from fallbacks.
+ * @param checked - Whether the locale should be included.
+ * @returns Updated user preferences.
+ */
+function getNextFallbackPreferences(locale: Locale, checked: boolean): UserPreferences {
+  const fallbackLocales = userPreferences.fallbackLocales ?? []
+  const nextFallbackLocales = checked
+    ? [...new Set([...fallbackLocales, locale])]
+    : fallbackLocales.filter(fallbackLocale => fallbackLocale !== locale)
+
+  return { ...userPreferences, fallbackLocales: nextFallbackLocales }
+}
+
+/**
+ * Returns the next boolean language-preference state.
+ *
+ * @param code - Boolean preference to update.
+ * @param checked - Requested value.
+ * @returns Updated user preferences.
+ */
+function getNextAdvancedPreferences(
+  code: keyof Pick<
+    UserPreferences,
+    | 'allowMachineTranslation'
+    | 'isTranslateButtonVisible'
+    | 'preferFallbackInCurrentLocale'
+  >,
+  checked: boolean,
+): UserPreferences {
+  return { ...userPreferences, [code]: checked }
 }
 </script>
 
 <Section
+  {...panelProps}
   title={m.settings__language()}
   icon="/language.svg"
   position="right"
@@ -140,7 +260,11 @@ async function handleLocaleChange(locale: Locale): Promise<void> {
             <button
               type="button"
               class="flex min-w-0 grow cursor-pointer flex-col text-left"
-              onclick={() => appCtx.setFallbackLocales(locale, !isFallbackSelected)}
+              disabled={isSavingPreferences}
+              onclick={() =>
+                void updatePreferences(
+                  getNextFallbackPreferences(locale, !isFallbackSelected),
+                )}
             >
               <span class="font-normal text-base-content"
                 >{localeNames[localeKey][localeKey]}</span
@@ -157,8 +281,11 @@ async function handleLocaleChange(locale: Locale): Promise<void> {
               size="sm"
               color="primary"
               checked={isFallbackSelected}
+              disabled={isSavingPreferences}
               onCheckedChange={(checked) =>
-                appCtx.setFallbackLocales(locale, checked === true)}
+                void updatePreferences(
+                  getNextFallbackPreferences(locale, checked === true),
+                )}
             />
           </div>
         {/each}
@@ -193,10 +320,18 @@ async function handleLocaleChange(locale: Locale): Promise<void> {
               size="sm"
               color="primary"
               checked={setting.currentValue}
+              disabled={isSavingPreferences}
               onCheckedChange={(checked) =>
-                appCtx.setAdvancedFeature(
-                  setting.code as keyof UserPreferences,
-                  checked === true
+                void updatePreferences(
+                  getNextAdvancedPreferences(
+                    setting.code as keyof Pick<
+                      UserPreferences,
+                      | 'allowMachineTranslation'
+                      | 'isTranslateButtonVisible'
+                      | 'preferFallbackInCurrentLocale'
+                    >,
+                    checked === true,
+                  ),
                 )}
             />
           </div>

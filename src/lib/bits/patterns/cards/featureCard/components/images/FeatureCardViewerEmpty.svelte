@@ -3,7 +3,7 @@
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getAppCtx } from '$lib/context/app.svelte'
 // AUTH
-import { requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
 // I18N
@@ -16,7 +16,7 @@ const appCtx = getAppCtx()
 
 function handleAddPhoto(): void {
   const user = appCtx.getUser()
-  if (user && 'isAnonymous' in user && user.isAnonymous === true) {
+  if (!hasDurableAccount(user)) {
     requestAccountUpgrade('contribution', window.location.href)
     return
   }

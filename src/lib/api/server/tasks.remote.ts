@@ -102,6 +102,21 @@ import type {
 // - reviewTask
 // - reassignTaskLayer
 //
+
+/**
+ * Rejects contribution writes from an anonymous session.
+ *
+ * @param user - Authenticated user resolved for the remote request.
+ * @returns Nothing when the session belongs to a durable account.
+ * @remarks Treat a missing anonymous marker as untrusted so a partial or stale
+ * session object cannot turn a guest into a contributor.
+ */
+const assertContributionAccount = (
+  user: GuardedCommandContext['user'] | GuardedFormContext['user'],
+): void => {
+  if (user.isAnonymous !== false) throw error(403, 'ACCOUNT_REQUIRED')
+}
+
 /**
  * Returns a role-scoped task list for admin callers.
  *
@@ -269,6 +284,7 @@ export const beginMissingReportDraft = guardedCommand(
     input: BeginMissingReportDraftInput,
     ctx: GuardedCommandContext,
   ): Promise<{ data: unknown }> => {
+    assertContributionAccount(ctx.user)
     if (input.reason.trim().length < 5) {
       throw error(400, 'TASK_REASON_TOO_SHORT')
     }
@@ -301,6 +317,7 @@ export const beginNewFeatureDraft = guardedCommand(
     input: BeginNewFeatureDraftInput,
     ctx: GuardedCommandContext,
   ): Promise<{ data: unknown }> => {
+    assertContributionAccount(ctx.user)
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
     const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
     const draftFeature = {
@@ -405,6 +422,7 @@ export const beginNewPhotosDraft = guardedCommand(
     input: BeginNewPhotosDraftInput,
     ctx: GuardedCommandContext,
   ): Promise<{ data: unknown }> => {
+    assertContributionAccount(ctx.user)
     const createdTask = await createTask(ctx.db, {
       type: 'newPhoto',
       featureId: input.featureId,
@@ -429,6 +447,7 @@ export const beginNewPhotosDraft = guardedCommand(
 export const finalizeTaskDraft = guardedCommand(
   FinalizeTaskDraftSchema,
   async (params, ctx): Promise<{ data: unknown }> => {
+    assertContributionAccount(ctx.user)
     const draftTask = await ctx.db.query.task.findFirst({
       with: {
         images: true,
@@ -514,6 +533,7 @@ export const submitMissingReport = guardedForm(
     input: SubmitMissingReportInput,
     ctx: GuardedFormContext,
   ): Promise<{ data: unknown }> => {
+    assertContributionAccount(ctx.user)
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
       ctx.invalid(ctx.issue('At least one image is required as evidence'))
     }
@@ -560,6 +580,7 @@ export const submitNewFeature = guardedCommand(
     input: SubmitNewFeatureInput,
     ctx: GuardedCommandContext,
   ): Promise<{ data: unknown }> => {
+    assertContributionAccount(ctx.user)
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
       throw error(400, 'TASK_IMAGE_REQUIRED')
     }
@@ -594,6 +615,7 @@ export const submitNewPhotos = guardedCommand(
     input: SubmitNewPhotosInput,
     ctx: GuardedCommandContext,
   ): Promise<{ data: unknown }> => {
+    assertContributionAccount(ctx.user)
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
       throw error(400, 'TASK_IMAGE_REQUIRED')
     }

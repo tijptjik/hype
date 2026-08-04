@@ -1,39 +1,31 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, tick } from 'svelte'
+import { untrack } from 'svelte'
+import { fade } from 'svelte/transition'
 // BITS
 import { Icon } from '$lib/bits'
 import { cx } from '$lib/bits/utils'
+// TYPES
+import type { FeatureCardWishlistActionDisplay } from '$lib/types'
 // ICONS
 import Star from 'virtual:icons/lucide/star'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 
-type WishlistDisplayValue = {
-  icon: boolean
-  value: string
-  hoverValue: string
-}
-
 interface Props {
-  currentIcon: boolean
-  optimisticIcon: boolean
-  settledIcon: boolean
-  currentValue: string
-  currentHoverValue: string
-  optimisticValue: string
-  optimisticHoverValue: string
-  settledValue: string
-  settledHoverValue: string
+  currentValue: FeatureCardWishlistActionDisplay
+  currentHoverValue?: FeatureCardWishlistActionDisplay
+  optimisticValue: FeatureCardWishlistActionDisplay
+  optimisticHoverValue?: FeatureCardWishlistActionDisplay
+  settledValue: FeatureCardWishlistActionDisplay
+  settledHoverValue?: FeatureCardWishlistActionDisplay
   isError?: boolean
   errorMessage?: string
+  isIconOnly?: boolean
   onClick?: (event: MouseEvent) => void
 }
 
 let {
-  currentIcon,
-  optimisticIcon,
-  settledIcon,
   currentValue,
   currentHoverValue,
   optimisticValue,
@@ -42,42 +34,25 @@ let {
   settledHoverValue,
   isError = false,
   errorMessage = '',
+  isIconOnly,
   onClick,
 }: Props = $props()
 
-const crossfadeDuration = 160
+const transitionDuration = 140
+const initialCurrentValue = untrack(() => currentValue)
+const initialSettledValue = untrack(() => settledValue)
 
-let labelCleanupTimer: ReturnType<typeof setTimeout> | undefined
-let labelFrame: ReturnType<typeof requestAnimationFrame> | undefined
 let isRootHovered = $state(false)
 let hasLeftRootAfterSwap = $state(true)
-let isLabelCrossfading = $state(false)
-let previousLabel = $state<string | null>(null)
-let isInitialised = $state(false)
-let displayedLabel = $state('')
-let displayedValue = $state<WishlistDisplayValue>({
-  icon: false,
-  value: '',
-  hoverValue: '',
-})
-let displayedValueKey = $state('')
-let lastSettledValueKey = $state('')
+let displayedValue = $state<FeatureCardWishlistActionDisplay>(initialCurrentValue)
+let displayedValueKey = $state(valueKey(initialCurrentValue))
+let lastCurrentValueKey = $state(valueKey(initialCurrentValue))
+let lastOptimisticValueKey = $state(valueKey(initialCurrentValue))
+let lastSettledValueKey = $state(valueKey(initialSettledValue))
 
-const current = $derived<WishlistDisplayValue>({
-  icon: currentIcon,
-  value: currentValue,
-  hoverValue: currentHoverValue,
-})
-const optimistic = $derived<WishlistDisplayValue>({
-  icon: optimisticIcon,
-  value: optimisticValue,
-  hoverValue: optimisticHoverValue,
-})
-const settled = $derived<WishlistDisplayValue>({
-  icon: settledIcon,
-  value: settledValue,
-  hoverValue: settledHoverValue,
-})
+const current = $derived(currentValue)
+const optimistic = $derived(optimisticValue)
+const settled = $derived(settledValue)
 const rootButtonTone = $derived(
   isError
     ? '[--btn-fg:var(--color-error)] [--btn-hover-fg:var(--color-error)]'
@@ -89,76 +64,53 @@ const rootButtonTone = $derived(
       ),
 )
 const shouldShowHoverValue = $derived(!isError && isRootHovered && hasLeftRootAfterSwap)
-const targetLabel = $derived(
+const visibleValue = $derived(
   isError && errorMessage
-    ? errorMessage
+    ? ({
+        key: 'error',
+        icon: displayedValue.icon,
+        label: errorMessage,
+      } satisfies FeatureCardWishlistActionDisplay)
     : shouldShowHoverValue
-      ? displayedValue.hoverValue
-      : displayedValue.value,
+      ? getHoverValue(displayedValue)
+      : displayedValue,
 )
+const visibleValueKey = $derived(valueKey(visibleValue))
 
 /**
- * Builds the equality key used to decide whether a visual state needs a new crossfade.
+ * Builds an equality key from every display field.
  *
- * @param value Candidate display state.
- * @returns Stable visual-state key.
+ * @param value Candidate action phase.
+ * @returns Stable key used for phase promotion and the label fade.
  */
-function valueKey(value: WishlistDisplayValue): string {
-  return `${value.icon}:${value.value}:${value.hoverValue}`
+function valueKey(value: FeatureCardWishlistActionDisplay): string {
+  return `${value.key}|${value.icon}:${value.label}`
 }
 
 /**
- * Clears a pending label-transition cleanup callback.
- */
-function clearLabelCleanupTimer(): void {
-  if (!labelCleanupTimer) return
-  clearTimeout(labelCleanupTimer)
-  labelCleanupTimer = undefined
-}
-
-/**
- * Clears a scheduled label-transition frame.
- */
-function clearLabelFrame(): void {
-  if (labelFrame === undefined) return
-  cancelAnimationFrame(labelFrame)
-  labelFrame = undefined
-}
-
-/**
- * Crossfades only when the rendered label has genuinely changed.
+ * Selects hover data for the currently promoted action phase.
  *
- * @param nextLabel Label that should replace the visible one.
+ * @param value Promoted base action phase.
+ * @returns Hover phase for the same source, or the base phase when absent.
  */
-function showLabel(nextLabel: string): void {
-  if (nextLabel === displayedLabel) return
+function getHoverValue(
+  value: FeatureCardWishlistActionDisplay,
+): FeatureCardWishlistActionDisplay {
+  const promotedKey = valueKey(value)
 
-  clearLabelCleanupTimer()
-  clearLabelFrame()
-  previousLabel = displayedLabel
-  displayedLabel = nextLabel
-  isLabelCrossfading = false
+  if (promotedKey === valueKey(current)) return currentHoverValue ?? value
+  if (promotedKey === valueKey(optimistic)) return optimisticHoverValue ?? value
+  if (promotedKey === valueKey(settled)) return settledHoverValue ?? value
 
-  void tick().then(() => {
-    labelFrame = requestAnimationFrame(() => {
-      labelFrame = undefined
-      isLabelCrossfading = true
-    })
-  })
-
-  labelCleanupTimer = setTimeout(() => {
-    previousLabel = null
-    isLabelCrossfading = false
-    labelCleanupTimer = undefined
-  }, crossfadeDuration)
+  return value
 }
 
 /**
- * Promotes a visual state into the stable display without animating equal values.
+ * Promotes a base phase and requires a genuine pointer leave before hover copy appears.
  *
- * @param nextValue Candidate action state.
+ * @param nextValue Current, optimistic, or settled action phase.
  */
-function showValue(nextValue: WishlistDisplayValue): void {
+function showValue(nextValue: FeatureCardWishlistActionDisplay): void {
   const nextValueKey = valueKey(nextValue)
   if (nextValueKey === displayedValueKey) return
 
@@ -169,54 +121,41 @@ function showValue(nextValue: WishlistDisplayValue): void {
 }
 
 $effect(() => {
-  const settledValueKey = valueKey(settled)
+  const currentKey = valueKey(current)
+  const optimisticKey = valueKey(optimistic)
+  const settledKey = valueKey(settled)
+  const currentChanged = currentKey !== lastCurrentValueKey
+  const optimisticChanged = optimisticKey !== lastOptimisticValueKey
+  const settledChanged = settledKey !== lastSettledValueKey
 
-  if (!isInitialised) {
-    displayedValue = current
-    displayedValueKey = valueKey(current)
-    lastSettledValueKey = settledValueKey
-    displayedLabel = current.value
-    isInitialised = true
-    return
-  }
+  lastCurrentValueKey = currentKey
+  lastOptimisticValueKey = optimisticKey
+  lastSettledValueKey = settledKey
 
   if (isError) {
-    // Errors immediately restore the server-known state while the label explains the failure.
-    lastSettledValueKey = settledValueKey
+    // Errors restore the settled action phase while the visible label reports the failure.
     showValue(settled)
     return
   }
 
-  // A new server value is authoritative. It replaces an optimistic display only when it differs.
-  if (settledValueKey !== lastSettledValueKey) {
-    lastSettledValueKey = settledValueKey
+  if (settledChanged) {
     showValue(settled)
     return
   }
 
-  // Until the server responds, show the requested optimistic state over the last settled value.
-  if (valueKey(optimistic) !== lastSettledValueKey) {
+  if (optimisticChanged) {
     showValue(optimistic)
     return
   }
 
-  showValue(current)
-})
-
-$effect(() => {
-  showLabel(targetLabel)
-})
-
-onDestroy(() => {
-  clearLabelCleanupTimer()
-  clearLabelFrame()
+  if (currentChanged) showValue(current)
 })
 </script>
 
 {#snippet wishlistContent(isCollapsed: boolean)}
   <!-- Root: the fixed action slot owns hover colour and never moves the star icon. -->
-  <span class="flex min-w-0 flex-1 items-center gap-2">
-    <!-- Icon: it changes fill only; its position is independent of the label swap. -->
+  <div class="flex min-w-0 flex-1 items-center gap-2">
+    <!-- Icon: it changes fill only; its position is independent of the label fade. -->
     <Icon
       src={Star}
       class={cx(
@@ -226,41 +165,28 @@ onDestroy(() => {
       filled={displayedValue.icon}
     />
     {#if !isCollapsed}
-      <!-- Swap: a left-aligned, stacked A/B crossfade for the label only. -->
-      <span class="relative flex min-w-0 flex-1 justify-start text-left">
-        {#if previousLabel !== null}
-          <!-- SwapItem A: the outgoing label is removed after the crossfade completes. -->
-          <span
-            class={cx(
-              'pointer-events-none absolute left-0 whitespace-nowrap transition-opacity duration-160',
-              isLabelCrossfading ? 'opacity-0' : 'opacity-100',
-            )}
-            aria-hidden="true"
+      <!-- The keyed label remains in normal flow, so it always retains its measured width. -->
+      <div class="relative h-4 min-w-0 flex-1 text-left">
+        {#key visibleValueKey}
+          <div
+            class="max-w-full truncate whitespace-nowrap"
+            in:fade={{ duration: transitionDuration }}
           >
-            {previousLabel}
-          </span>
-        {/if}
-        <!-- SwapItem B: the incoming label occupies the same left-aligned anchor. -->
-        <span
-          class={cx(
-            'relative whitespace-nowrap transition-opacity duration-160',
-            previousLabel && !isLabelCrossfading ? 'opacity-0' : 'opacity-100',
-          )}
-        >
-          {displayedLabel}
-        </span>
-      </span>
+            {visibleValue.label}
+          </div>
+        {/key}
+      </div>
     {/if}
-  </span>
+  </div>
 {/snippet}
 
 <FeatureCardActionButton
-  text={displayedLabel}
-  title={displayedLabel}
+  text={visibleValue.label}
+  title={visibleValue.label}
   content={wishlistContent}
   variant="ghost"
-  hideLabelBelow={544}
-  expandedClass="min-w-[9.5rem] max-w-[9.5rem]"
+  {isIconOnly}
+  expandedClass="min-w-[10.5rem] max-w-[10.5rem]"
   class={cx('justify-start active:scale-100', rootButtonTone)}
   {onClick}
   onMouseEnter={() => {

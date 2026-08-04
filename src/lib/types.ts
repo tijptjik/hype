@@ -1266,6 +1266,7 @@ export type PasskeyAccountUpgradeInput = {
   username?: string
   email?: string
   emailCallbackUrl: string
+  onPasskeyReady?: () => void
 }
 
 /* ----------------- */
@@ -2520,11 +2521,16 @@ export type FeatureCardTransitionState = {
   sourceKind: FeatureCardTransitionSourceKind
 }
 
-export type FeatureCardActionDisplay = {
+export type FeatureCardActionDisplay<
+  Fields extends object = Record<string, string | undefined>,
+> = {
   key: string
   label: string
-  detail?: string
-}
+} & Fields
+
+export type FeatureCardWishlistActionDisplay = FeatureCardActionDisplay<{
+  icon: boolean
+}>
 
 export type FeatureCardVisitState = {
   isVisited: boolean

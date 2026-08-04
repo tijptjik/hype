@@ -17,6 +17,7 @@ import {
 } from '$lib/auth/bootstrap'
 import {
   UPGRADE_ACCOUNT_EVENT,
+  isGuestUser,
   type UpgradeReason,
   toSafeReturnPath,
 } from '$lib/auth/upgrade'
@@ -76,15 +77,37 @@ function clearPendingAuthReinit(): void {
   }
 }
 
+/** Rebuilds user-scoped application data after a confirmed authentication change. */
+async function refreshAppForSessionUser(user: SessionUser): Promise<void> {
+  clearPendingAuthReinit()
+  appCtx.setUser(user)
+  appCtx.isInitialised = false
+  await appCtx.init(user.id)
+}
+
 // Reinitialize the app context after an auth identity change, including logout.
-function scheduleAuthReinit(user: SessionUser | null): void {
+function scheduleAuthReinit(user: SessionUser): void {
   clearPendingAuthReinit()
 
   pendingAuthReinit = window.setTimeout(() => {
     pendingAuthReinit = null
-    appCtx.setUser(user)
-    void appCtx.init(user?.id ?? null)
+    void refreshAppForSessionUser(user)
   }, 0)
+}
+
+/** Waits until the shared session and application context both recognise an upgraded account. */
+async function confirmAccountUpgrade(): Promise<void> {
+  let user = $session.data?.user as SessionUser | undefined
+  if (!user || isGuestUser(user)) {
+    await $session.refetch()
+    user = $session.data?.user as SessionUser | undefined
+  }
+
+  if (!user || isGuestUser(user)) {
+    throw new Error('account promotion was not reflected in the session')
+  }
+
+  await refreshAppForSessionUser(user)
 }
 
 // Keep hub context available for both app and admin route trees.
@@ -308,15 +331,14 @@ watch(
     const currentUserId = appCtx.user?.id
     const newUserId = newUser?.id
 
-    if (newUser && newUserId !== currentUserId) {
-      // User login or user changed
-      const previousUser = appCtx.user
-      if (
-        previousUser &&
-        'isAnonymous' in previousUser &&
-        previousUser.isAnonymous === true &&
-        newUser.isAnonymous !== true
-      ) {
+    const previousUser = appCtx.user
+    const isGuestPromotion =
+      Boolean(previousUser && isGuestUser(previousUser)) &&
+      newUser?.isAnonymous !== true
+
+    if (newUser && (newUserId !== currentUserId || isGuestPromotion)) {
+      // A promoted guest retains its ID, so treat its anonymous-state change as an auth change.
+      if (isGuestPromotion) {
         toast.success(m.guest__upgrade_success())
       }
       scheduleAuthReinit(newUser as SessionUser)
@@ -386,4 +408,5 @@ watch(
   bind:open={isUpgradeOpen}
   reason={upgradeReason}
   returnTo={upgradeReturnTo}
+  onAccountReady={confirmAccountUpgrade}
 />

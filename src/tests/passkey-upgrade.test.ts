@@ -44,6 +44,40 @@ describe('completePasskeyAccountUpgrade', () => {
     expect(authMocks.refetch).toHaveBeenCalledOnce()
   })
 
+  it('notifies callers after the passkey is ready and before profile updates', async () => {
+    const steps: string[] = []
+    authMocks.updateUser.mockImplementation(async () => {
+      steps.push('profile')
+      return {}
+    })
+
+    await completePasskeyAccountUpgrade({
+      name: 'HYPE user',
+      onPasskeyReady: () => steps.push('passkey'),
+    })
+
+    expect(steps).toEqual(['passkey', 'profile'])
+  })
+
+  it('refreshes the promoted session before saving optional profile fields', async () => {
+    const steps: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        steps.push('session')
+        return { ok: true }
+      }),
+    )
+    authMocks.updateUser.mockImplementation(async () => {
+      steps.push('profile')
+      return {}
+    })
+
+    await completePasskeyAccountUpgrade({ name: 'HYPE user' })
+
+    expect(steps).toEqual(['session', 'profile'])
+  })
+
   it('reports a saved passkey whose session cache could not refresh', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
 

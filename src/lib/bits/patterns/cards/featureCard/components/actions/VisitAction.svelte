@@ -19,7 +19,12 @@ import type { FeatureCardActionDisplay, FeatureCardVisitState } from '$lib/types
 // LOCAL
 import VisitActionDisplay from './VisitActionDisplay.svelte'
 
-let { feature }: { feature: Feature | UserContributedFeature } = $props()
+interface Props {
+  feature: Feature | UserContributedFeature
+  isIconOnly?: boolean
+}
+
+let { feature, isIconOnly }: Props = $props()
 
 const appCtx = getAppCtx()
 
@@ -44,13 +49,8 @@ const currentVisitState = $derived<FeatureCardVisitState>({
   isVisited,
   visitedAt: visitedFeature?.visitedAt ?? null,
 })
-const activeVisitState = $derived(
-  isVisitError
-    ? (settledVisitState ?? currentVisitState)
-    : isSubmitting
-      ? (optimisticVisitState ?? currentVisitState)
-      : (settledVisitState ?? currentVisitState),
-)
+const optimisticVisitValue = $derived(optimisticVisitState ?? currentVisitState)
+const settledVisitValue = $derived(settledVisitState ?? currentVisitState)
 
 /**
  * Converts a visit state into its normal display value.
@@ -60,17 +60,36 @@ const activeVisitState = $derived(
  */
 function getVisitValue(state: FeatureCardVisitState): FeatureCardActionDisplay {
   if (!state.isVisited || !state.visitedAt) {
-    return { key: 'check-in', label: m.noble_fine_ibex_pinch() }
+    return {
+      key: 'check-in',
+      state: 'check-in',
+      label: m.noble_fine_ibex_pinch(),
+    }
   }
 
   return {
     key: `last-visited:${state.visitedAt}`,
+    state: 'last-visited',
     label: m.white_dizzy_clownfish_quiz(),
     detail: formatDistanceToNow(new Date(state.visitedAt), {
       addSuffix: true,
       locale: toDateFnsLocale(),
     }).replace('minute', 'min'),
   }
+}
+
+/**
+ * Converts an optimistic visit state into its immediate confirmation label.
+ *
+ * @param state Optimistic state requested by the user.
+ * @returns The short-lived action content before the server settles it.
+ */
+function getOptimisticVisitValue(
+  state: FeatureCardVisitState,
+): FeatureCardActionDisplay {
+  return state.isVisited
+    ? { key: 'visited', state: 'visited', label: m.feature_action_visited() }
+    : getVisitValue(state)
 }
 
 /**
@@ -86,18 +105,10 @@ function getVisitHoverValue(
 
   return {
     key: `remove-visit:${state.visitedAt ?? ''}`,
+    state: 'remove-visit',
     label: m.feature_action_remove_visit(),
   }
 }
-
-const visitDisplay = $derived<FeatureCardActionDisplay>(
-  isVisitError
-    ? { key: `visit-error:${visitErrorMessage}`, label: visitErrorMessage }
-    : getVisitValue(activeVisitState),
-)
-const visitHoverDisplay = $derived(
-  isVisitError ? undefined : getVisitHoverValue(activeVisitState),
-)
 
 function clearVisitError(): void {
   isVisitError = false
@@ -181,8 +192,15 @@ async function toggleVisited(): Promise<void> {
 </script>
 
 <VisitActionDisplay
-  value={visitDisplay}
-  hoverValue={visitHoverDisplay}
+  currentValue={getVisitValue(currentVisitState)}
+  currentHoverValue={getVisitHoverValue(currentVisitState)}
+  optimisticValue={getOptimisticVisitValue(optimisticVisitValue)}
+  optimisticHoverValue={getVisitHoverValue(optimisticVisitValue)}
+  settledValue={getVisitValue(settledVisitValue)}
+  settledHoverValue={getVisitHoverValue(settledVisitValue)}
+  isError={isVisitError}
+  errorMessage={visitErrorMessage}
+  {isIconOnly}
   onClick={() => {
     void toggleVisited()
   }}

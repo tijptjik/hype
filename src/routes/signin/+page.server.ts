@@ -16,7 +16,7 @@ function getReturnDestination(url: URL): string {
   try {
     const destination = new URL(candidate, url.origin)
     return destination.origin === url.origin &&
-      destination.pathname !== '/login' &&
+      destination.pathname !== '/signin' &&
       destination.pathname !== '/signup'
       ? `${destination.pathname}${destination.search}${destination.hash}`
       : '/'

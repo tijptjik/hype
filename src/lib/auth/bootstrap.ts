@@ -30,7 +30,7 @@ export function shouldBootstrapAnonymous(pathname: string): boolean {
     '/account',
     '/api',
     '/headless',
-    '/login',
+    '/signin',
     '/policy',
     '/proxy',
   ].some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`))

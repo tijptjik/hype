@@ -1,2 +1,2 @@
 // ROUTE
-export { load } from '../login/+page.server'
+export { load } from '../signin/+page.server'

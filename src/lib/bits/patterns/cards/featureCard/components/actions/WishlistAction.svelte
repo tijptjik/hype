@@ -15,10 +15,16 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 import type { UserFeature } from '$lib/db/zod/schema/user.types'
+import type { FeatureCardWishlistActionDisplay } from '$lib/types'
 // LOCAL
 import WishlistActionDisplay from './WishlistActionDisplay.svelte'
 
-let { feature }: { feature: Feature | UserContributedFeature } = $props()
+interface Props {
+  feature: Feature | UserContributedFeature
+  isIconOnly?: boolean
+}
+
+let { feature, isIconOnly }: Props = $props()
 
 const appCtx = getAppCtx()
 
@@ -48,8 +54,10 @@ const settledWishlistState = $derived(settledWishlisted ?? isWishlisted)
  * @param wishlisted Whether the feature belongs to the wishlist.
  * @returns Action label for the state.
  */
-function getWishlistValue(wishlisted: boolean): string {
-  return wishlisted ? m.feature_action_starred() : m.legal_silly_mammoth_link()
+function getWishlistValue(wishlisted: boolean): FeatureCardWishlistActionDisplay {
+  return wishlisted
+    ? { key: 'starred', icon: true, label: m.feature_action_starred() }
+    : { key: 'star', icon: false, label: m.legal_silly_mammoth_link() }
 }
 
 /**
@@ -58,8 +66,10 @@ function getWishlistValue(wishlisted: boolean): string {
  * @param wishlisted Whether the feature belongs to the wishlist.
  * @returns Hover action label for the state.
  */
-function getWishlistHoverValue(wishlisted: boolean): string {
-  return wishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()
+function getWishlistHoverValue(wishlisted: boolean): FeatureCardWishlistActionDisplay {
+  return wishlisted
+    ? { key: 'unstar', icon: true, label: m.weird_short_orangutan_kiss() }
+    : getWishlistValue(wishlisted)
 }
 
 $effect(() => {
@@ -80,8 +90,6 @@ function showWishlistError(message: string): void {
     clearWishlistError()
   }, 3000)
 }
-
-const wishlistActionText = $derived(getWishlistValue(settledWishlistState))
 
 async function toggleWishlisted(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
@@ -135,17 +143,15 @@ async function toggleWishlisted(): Promise<void> {
 </script>
 
 <WishlistActionDisplay
-  currentIcon={isWishlisted}
-  optimisticIcon={optimisticWishlistState}
-  settledIcon={settledWishlistState}
   currentValue={getWishlistValue(isWishlisted)}
   currentHoverValue={getWishlistHoverValue(isWishlisted)}
   optimisticValue={getWishlistValue(optimisticWishlistState)}
   optimisticHoverValue={getWishlistHoverValue(optimisticWishlistState)}
-  settledValue={wishlistActionText}
+  settledValue={getWishlistValue(settledWishlistState)}
   settledHoverValue={getWishlistHoverValue(settledWishlistState)}
   isError={isWishlistError}
   errorMessage={wishlistErrorMessage}
+  {isIconOnly}
   onClick={() => {
     void toggleWishlisted()
   }}

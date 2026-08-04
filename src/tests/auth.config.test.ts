@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { getTableColumns } from 'drizzle-orm'
+import { getAuthForRequest } from '$lib/auth'
 import { authConfig } from '$lib/auth/config'
 import { user } from '$lib/db/schema/user'
+import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 
 describe('authConfig user.additionalFields', () => {
   it('only persists fields that exist on the user table', () => {
@@ -27,5 +29,26 @@ describe('authConfig account.accountLinking', () => {
 describe('authConfig user.changeEmail', () => {
   it('stores an email supplied during passkey sign-up without verifying it', () => {
     expect(authConfig.user.changeEmail.updateEmailWithoutVerification).toBe(true)
+  })
+})
+
+describe('OAuth callback errors', () => {
+  it('returns to the local sign-in route when callback state cannot be recovered', () => {
+    const auth = getAuthForRequest(
+      new Headers({
+        host: 'localhost:5173',
+        'x-forwarded-proto': 'http',
+      }),
+      {
+        DB: {} as MiniflareD1Database,
+        AUTH_SECRET: 'test-secret-that-is-long-enough-for-better-auth',
+        AUTH_GOOGLE_ID: '',
+        AUTH_GOOGLE_SECRET: '',
+        AUTH_FACEBOOK_ID: '',
+        AUTH_FACEBOOK_SECRET: '',
+      },
+    )
+
+    expect(auth.options.onAPIError?.errorURL).toBe('http://localhost:5173/signin')
   })
 })
