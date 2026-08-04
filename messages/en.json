@@ -22,7 +22,7 @@
   "guest__reason_profile": "An account is required to view and manage your profile.",
   "guest__reason_admin": "Sign in with an authorised account to open the admin panel.",
   "guest__reason_subscription": "An account with an email address is required to subscribe.",
-  "guest__reason_sync": "Upgrade to keep your saved places when you change devices.",
+  "guest__reason_sync": "Keep your places safe and sync between devices.",
   "guest__email": "Email address",
   "guest__password": "Password",
   "guest__create_account": "Create account",
