@@ -12,6 +12,8 @@ import ContributedFeatures from '$lib/components/panels/sections/ContributedFeat
 import ContributedImages from '$lib/components/panels/sections/ContributedImages.svelte'
 import ContributedReports from '$lib/components/panels/sections/ContributedReports.svelte'
 import LinkedAccounts from '$lib/components/panels/sections/LinkedAccounts.svelte'
+// AUTH
+import { useSession } from '$lib/auth/client'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -21,6 +23,7 @@ import type { PanelProps } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
+const session = useSession()
 
 // STATE
 let { panelContainer = $bindable() }: { panelContainer?: HTMLDivElement } = $props()
@@ -38,6 +41,7 @@ let panelProps: PanelProps = $derived({
 let username = $derived(appCtx.state.panels.profile.ctx?.username)
 let userData = $derived(appCtx.state.panels.profile.ctx?.userData)
 let isOwnProfile = $derived(userData?.id === appCtx.getUser()?.id)
+let isGuestAccount = $derived($session.data?.user?.isAnonymous === true)
 const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   hideActions: true,
   hideEditableFields: true,
@@ -48,6 +52,9 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   <Panel bind:panelContainer {...panelProps}>
     <Header title={m.navbar__profile()} {...panelProps} />
 
+    {#if isOwnProfile && isGuestAccount}
+      <LinkedAccounts isGuest />
+    {/if}
     <ProfileSection {...profileSectionModel.getProfileProps()} />
     {#if userData}
       <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">

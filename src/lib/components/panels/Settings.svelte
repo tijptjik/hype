@@ -15,7 +15,6 @@ import Contributor from '$lib/components/panels/sections/Contributor.svelte'
 import DefaultMap from '$lib/components/panels/sections/DefaultMap.svelte'
 import Experimental from '$lib/components/panels/sections/Experimental.svelte'
 import Admin from '$lib/components/panels/sections/Admin.svelte'
-import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -68,9 +67,6 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   />
   <Info isOpen={isInfoOpen} />
 
-  {#if isGuestAccount}
-    <GuestAccountReminder reason="profile" />
-  {/if}
   <ProfileSection {...profileSectionModel.getProfileProps()} />
   <div class="flex flex-col">
     {#if panelProps.isAdmin}
