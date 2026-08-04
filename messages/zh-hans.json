@@ -217,6 +217,8 @@
   "map_style__genesis_description": "香港入夜：紫外城市街区、安全橙道路、酸性黄路径与电光蓝高楼。",
   "map_style__sin_name": "Sin",
   "map_style__sin_description": "更平静的夜间地图：梅子色地面、樱桃粉道路、钴蓝水域和柔和的电光细节。",
+  "map_style__rosepunk_name": "Rosé Punk",
+  "map_style__rosepunk_description": "梅黑色街景配玫瑰粉道路、青绿色水域和亮粉色城市光晕。",
   "map_style__breadline_name": "Breadline",
   "map_style__breadline_description": "适合城市导航的明亮底图。",
   "map_style__protomaps_light_name": "Protomaps Light",

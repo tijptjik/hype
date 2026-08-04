@@ -39,6 +39,11 @@
     "publicPath": "/mapStyles/sin.c57137fe1a80.json",
     "hash": "c57137fe1a802522cf2ffb7bcb7d62529c6058ebe3bbeb66493ddba0623a052b"
   },
+  "rosepunk": {
+    "fileName": "rosepunk.e7a82884fbe6.json",
+    "publicPath": "/mapStyles/rosepunk.e7a82884fbe6.json",
+    "hash": "e7a82884fbe683c050b75c30ed02bddbfd1e4051626517e5a50ed82a9ade0daf"
+  },
   "breadline": {
     "fileName": "breadline.d8c023451cc2.json",
     "publicPath": "/mapStyles/breadline.d8c023451cc2.json",

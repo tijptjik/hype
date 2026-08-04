@@ -6,6 +6,7 @@ import {
   buildMapStyle,
   getDefaultMapStyleKey,
 } from '$lib/map/styles'
+import { getMapStyleRenderAssetPath } from '$lib/map/styles/render.shared'
 
 describe('map styles', () => {
   it('defaults to the Ghostery style', () => {
@@ -19,6 +20,12 @@ describe('map styles', () => {
 
     expect(style.sources?.['hongkong-latest']?.url).toBe(
       'https://tiles.saanseoi.hk/hongkong-latest.json',
+    )
+  })
+
+  it('uses the stage-aware asset route for map-style previews', () => {
+    expect(getMapStyleRenderAssetPath('rosepunk')).toBe(
+      '/api/mapRenders/styles/rosepunk/asset',
     )
   })
 
@@ -55,6 +62,7 @@ describe('map styles', () => {
       'neorange',
       'genesis',
       'sin',
+      'rosepunk',
       'breadline',
       'protomaps-dark',
       'ghostery-legacy',
@@ -219,6 +227,39 @@ describe('map styles', () => {
       'rgba(56, 247, 255, 0.74)',
       20,
       'rgba(56, 247, 255, 1)',
+    ])
+  })
+
+  it('uses the Rosé Punk palette for roads, water, and building outlines', () => {
+    const style = buildMapStyle('rosepunk') as {
+      name?: string
+      layers?: Array<{
+        id?: string
+        paint?: Record<string, unknown>
+      }>
+    }
+
+    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
+    const highwayLayer = style.layers?.find(layer => layer.id === 'roads_highway')
+    const waterLayer = style.layers?.find(layer => layer.id === 'water')
+    const buildingOutline = style.layers?.find(
+      layer => layer.id === 'buildings_outline',
+    )
+
+    expect(style.name).toBe('Rosé Punk')
+    expect(roadsLayer?.paint?.['line-color']).toBe('#EB6F92')
+    expect(highwayLayer?.paint?.['line-color']).toBe('#F6C177')
+    expect(waterLayer?.paint?.['fill-color']).toBe('#31748F')
+    expect(buildingOutline?.paint?.['line-color']).toEqual([
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      16.5,
+      'rgba(156, 207, 216, 0.1)',
+      18,
+      'rgba(156, 207, 216, 0.4)',
+      20,
+      'rgba(156, 207, 216, 0.82)',
     ])
   })
 

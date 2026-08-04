@@ -217,6 +217,8 @@
   "map_style__genesis_description": "Hong Kong after dark: ultraviolet city blocks, safety-orange streets, acid paths and electric-blue towers.",
   "map_style__sin_name": "Sin",
   "map_style__sin_description": "A calmer night map with plum ground, cherry roads, cobalt water and soft electric detail.",
+  "map_style__rosepunk_name": "Rosé Punk",
+  "map_style__rosepunk_description": "Plum-black streetscape with rose roads, teal water, and hot-pink city glows.",
   "map_style__breadline_name": "Breadline",
   "map_style__breadline_description": "Bright basemap ideal for city navigation.",
   "map_style__protomaps_light_name": "Protomaps Light",

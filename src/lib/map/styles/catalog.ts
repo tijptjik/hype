@@ -7,6 +7,7 @@ import { buildHyperAdminStyle } from './definitions/hyperAdmin'
 import { buildNeonmasterStyle } from './definitions/neonmaster'
 import { buildneorangeStyle } from './definitions/neorange'
 import { buildGenesisStyle } from './definitions/genesis'
+import { buildRosepunkStyle } from './definitions/rosepunk'
 import { buildSinStyle } from './definitions/sin'
 import {
   NAMED_PROTOMAPS_FLAVORS,
@@ -124,6 +125,14 @@ export const MAP_STYLE_CATALOG = [
     name: getMapStyleCatalogCopy('sin', 'en').name,
     description: getMapStyleCatalogCopy('sin', 'en').description,
     buildStyle: buildSinStyle,
+    basemapVariant: 'dark',
+    showSymbols: true,
+  },
+  {
+    key: 'rosepunk',
+    name: getMapStyleCatalogCopy('rosepunk', 'en').name,
+    description: getMapStyleCatalogCopy('rosepunk', 'en').description,
+    buildStyle: buildRosepunkStyle,
     basemapVariant: 'dark',
     showSymbols: true,
   },

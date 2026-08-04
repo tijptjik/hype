@@ -1215,6 +1215,7 @@ export type MapStyleCatalogKey =
   | 'neorange'
   | 'genesis'
   | 'sin'
+  | 'rosepunk'
   | 'breadline'
   | 'protomaps-light'
   | 'protomaps-dark'
