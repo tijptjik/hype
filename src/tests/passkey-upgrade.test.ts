@@ -24,7 +24,10 @@ vi.mock('$lib/auth/client', () => ({
   useSession: () => ({ get: authMocks.getSession }),
 }))
 
-import { completePasskeyAccountUpgrade } from '$lib/auth/passkey-upgrade'
+import {
+  completePasskeyAccountUpgrade,
+  PasskeyAccountPromotionError,
+} from '$lib/auth/passkey-upgrade'
 
 describe('completePasskeyAccountUpgrade', () => {
   beforeEach(() => {
@@ -39,5 +42,14 @@ describe('completePasskeyAccountUpgrade', () => {
 
     expect(fetch).toHaveBeenCalledWith('/api/account/passkey', { method: 'POST' })
     expect(authMocks.refetch).toHaveBeenCalledOnce()
+  })
+
+  it('reports that promotion failed after a passkey was saved', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+
+    await expect(completePasskeyAccountUpgrade({})).rejects.toBeInstanceOf(
+      PasskeyAccountPromotionError,
+    )
+    expect(authMocks.refetch).not.toHaveBeenCalled()
   })
 })

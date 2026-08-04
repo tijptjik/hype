@@ -9,7 +9,10 @@ import Mail from 'virtual:icons/lucide/mail'
 import KeyRound from 'virtual:icons/lucide/key-round'
 // AUTH
 import { authClient, signIn, signUp } from '$lib/auth/client'
-import { completePasskeyAccountUpgrade } from '$lib/auth/passkey-upgrade'
+import {
+  completePasskeyAccountUpgrade,
+  PasskeyAccountPromotionError,
+} from '$lib/auth/passkey-upgrade'
 import { toSafeReturnPath } from '$lib/auth/upgrade'
 import { isAuthProviderEnabled, type AuthProviderId } from '$lib/auth/providers'
 // COMPONENTS
@@ -56,6 +59,7 @@ let isAwaitingVerification = $state(false)
 let verificationEmail = $state('')
 let showEmailAuth = $state(false)
 let showPasskeySignUp = $state(false)
+let hasPendingPasskeyPromotion = $state(false)
 let preferredName = $state('')
 let preferredUsername = $state('')
 let preferredEmail = $state('')
@@ -87,6 +91,7 @@ $effect(() => {
     verificationEmail = ''
     if (showPasskeySignUp) showEmailAuth = false
     showPasskeySignUp = false
+    hasPendingPasskeyPromotion = false
   }
   observedAuthMode = mode
 })
@@ -218,6 +223,7 @@ function openEmailAuth(): void {
 function openPasskeySignUp(): void {
   showEmailAuth = true
   showPasskeySignUp = true
+  hasPendingPasskeyPromotion = false
   preferredEmail = email.trim()
   errorMessage = ''
   statusMessage = ''
@@ -262,8 +268,13 @@ async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
       emailCallbackUrl: window.location.href,
     })
     await goto(safeCallbackUrl)
-  } catch {
-    errorMessage = m.account__passkey_add_error()
+  } catch (error) {
+    if (error instanceof PasskeyAccountPromotionError) {
+      hasPendingPasskeyPromotion = true
+      errorMessage = m.account__passkey_promotion_error()
+    } else {
+      errorMessage = m.account__passkey_add_error()
+    }
   } finally {
     isBusy = false
   }
@@ -413,7 +424,9 @@ async function handlePasswordResetRequest(): Promise<void> {
             type="submit"
             disabled={isBusy}
           >
-            {m.account__setup_passkey()}
+            {hasPendingPasskeyPromotion
+              ? m.account__finish_account_setup()
+              : m.account__setup_passkey()}
           </button>
         </form>
       {:else}

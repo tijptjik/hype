@@ -13,6 +13,7 @@ import KeyRound from 'virtual:icons/lucide/key-round'
 import { authClient, signIn, signUp, useSession } from '$lib/auth/client'
 import {
   completePasskeyAccountUpgrade,
+  PasskeyAccountPromotionError,
   PasskeyRegistrationError,
 } from '$lib/auth/passkey-upgrade'
 import { isAuthProviderEnabled } from '$lib/auth/providers'
@@ -74,6 +75,7 @@ let isBusy = $state(false)
 let newPassword = $state('')
 let showEmailSetup = $state(false)
 let showPasskeySetup = $state(false)
+let hasPendingPasskeyPromotion = $state(false)
 let errorMessage = $state('')
 let statusMessage = $state('')
 let passkeys = $state<Passkey[]>([])
@@ -113,6 +115,7 @@ $effect(() => {
   guestAuthMode
   showEmailSetup = false
   showPasskeySetup = false
+  hasPendingPasskeyPromotion = false
   // Preserve the OAuth callback error that is set by the effect above.
   if (!oauthErrorMessage) errorMessage = ''
   statusMessage = ''
@@ -298,10 +301,15 @@ async function handleGuestPasskeySubmit(event: SubmitEvent): Promise<void> {
 
     showPasskeySetup = false
   } catch (error) {
-    errorMessage =
-      error instanceof PasskeyRegistrationError && error.message
-        ? error.message
-        : m.account__passkey_add_error()
+    if (error instanceof PasskeyAccountPromotionError) {
+      hasPendingPasskeyPromotion = true
+      errorMessage = m.account__passkey_promotion_error()
+    } else {
+      errorMessage =
+        error instanceof PasskeyRegistrationError && error.message
+          ? error.message
+          : m.account__passkey_add_error()
+    }
   } finally {
     isBusy = false
   }
@@ -573,6 +581,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                   onclick={() => {
                     showEmailSetup = true
                     showPasskeySetup = false
+                    hasPendingPasskeyPromotion = false
                   }}
                 >
                   <Mail class="h-4 w-4" />{m.account__email()}
@@ -589,6 +598,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                     } else {
                       showPasskeySetup = true
                       showEmailSetup = false
+                      hasPendingPasskeyPromotion = false
                     }
                   }}
                 >
@@ -693,7 +703,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 type="submit"
                 disabled={isBusy}
               >
-                {m.account__setup_passkey()}
+                {hasPendingPasskeyPromotion
+                  ? m.account__finish_account_setup()
+                  : m.account__setup_passkey()}
               </button>
             </form>
           {/if}

@@ -6,6 +6,9 @@ import type { PasskeyAccountUpgradeInput } from '$lib/types'
 /** Error raised when registering a new passkey fails. */
 export class PasskeyRegistrationError extends Error {}
 
+/** Error raised when a saved passkey cannot yet promote a guest account. */
+export class PasskeyAccountPromotionError extends Error {}
+
 /**
  * Reuses an existing passkey or registers one for the current user.
  *
@@ -28,6 +31,8 @@ export async function ensurePasskeyForCurrentUser(): Promise<void> {
  *
  * @param input - Optional profile and email data to save while completing the upgrade.
  * @returns Nothing after the server has promoted the account and session consumers have refreshed.
+ * @throws {PasskeyRegistrationError} When the browser or authenticator cannot add a passkey.
+ * @throws {PasskeyAccountPromotionError} When the saved passkey cannot promote the guest account.
  * @remarks Retries reuse an existing passkey before updating the profile, promoting the account,
  * or requesting email verification.
  */
@@ -49,7 +54,7 @@ export async function completePasskeyAccountUpgrade(
 
   // The server verifies the new credential before making the guest account durable.
   const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
-  if (!promotionResponse.ok) throw new Error('account not upgraded')
+  if (!promotionResponse.ok) throw new PasskeyAccountPromotionError()
 
   if (email) {
     const emailResult = await authClient.changeEmail({
