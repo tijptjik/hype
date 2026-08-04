@@ -6,8 +6,8 @@ import type { PasskeyAccountUpgradeInput } from '$lib/types'
 /** Error raised when registering a new passkey fails. */
 export class PasskeyRegistrationError extends Error {}
 
-/** Error raised when a saved passkey cannot yet promote a guest account. */
-export class PasskeyAccountPromotionError extends Error {}
+/** Error raised when a saved passkey cannot refresh the current signed session. */
+export class PasskeySessionRefreshError extends Error {}
 
 /**
  * Reuses an existing passkey or registers one for the current user.
@@ -27,12 +27,12 @@ export async function ensurePasskeyForCurrentUser(): Promise<void> {
 }
 
 /**
- * Adds a passkey when needed and promotes the current guest into a durable account.
+ * Adds a passkey when needed and refreshes the promoted account's signed session.
  *
  * @param input - Optional profile and email data to save while completing the upgrade.
- * @returns Nothing after the server has promoted the account and session consumers have refreshed.
+ * @returns Nothing after the session refresh and all session consumers have updated.
  * @throws {PasskeyRegistrationError} When the browser or authenticator cannot add a passkey.
- * @throws {PasskeyAccountPromotionError} When the saved passkey cannot promote the guest account.
+ * @throws {PasskeySessionRefreshError} When the passkey was saved but the session could not refresh.
  * @remarks Retries reuse an existing passkey before updating the profile, promoting the account,
  * or requesting email verification.
  */
@@ -52,9 +52,9 @@ export async function completePasskeyAccountUpgrade(
     if (profileResult.error) throw new Error(profileResult.error.message)
   }
 
-  // The server verifies the new credential before making the guest account durable.
+  // The server verifies the registered credential before refreshing the signed session cookie.
   const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
-  if (!promotionResponse.ok) throw new PasskeyAccountPromotionError()
+  if (!promotionResponse.ok) throw new PasskeySessionRefreshError()
 
   if (email) {
     const emailResult = await authClient.changeEmail({

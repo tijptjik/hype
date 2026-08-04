@@ -11,12 +11,12 @@ import { createAuthDiagnosticId } from '$lib/auth/diagnostics.server'
 import type { RequestHandler } from './$types'
 
 /**
- * Converts a guest into a durable account after it has registered a passkey.
+ * Refreshes the signed session cache after passkey registration has promoted a guest.
  *
  * @param event - Same-origin request carrying the current Better Auth session.
- * @returns A success marker after a registered passkey has promoted the account.
- * @remarks The client cannot promote a guest directly: this route confirms the
- * passkey record server-side before removing the anonymous-account marker.
+ * @returns A success marker after Better Auth refreshes the account session.
+ * @remarks The passkey database trigger promotes the account atomically with credential
+ * insertion. This route only confirms that credential before refreshing the signed cookie.
  */
 export const POST: RequestHandler = async ({ request, url, locals, platform }) => {
   const origin = request.headers.get('origin')
@@ -50,7 +50,7 @@ export const POST: RequestHandler = async ({ request, url, locals, platform }) =
     userIdHash,
   })
 
-  // Better Auth rewrites the signed cookie cache with the updated user data.
+  // Better Auth rewrites the signed cookie cache with the trigger-updated user data.
   return locals.auth.api.updateUser({
     body: { isAnonymous: false },
     headers: request.headers,

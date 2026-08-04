@@ -61,7 +61,7 @@ describe('account passkey endpoint', () => {
     )
   })
 
-  it('promotes a guest only when a passkey is registered', async () => {
+  it('refreshes a guest session only when a passkey is registered', async () => {
     const response = await POST(createEvent() as never)
 
     expect(response.status).toBe(200)

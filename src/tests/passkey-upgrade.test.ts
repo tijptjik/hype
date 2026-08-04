@@ -26,7 +26,7 @@ vi.mock('$lib/auth/client', () => ({
 
 import {
   completePasskeyAccountUpgrade,
-  PasskeyAccountPromotionError,
+  PasskeySessionRefreshError,
 } from '$lib/auth/passkey-upgrade'
 
 describe('completePasskeyAccountUpgrade', () => {
@@ -44,11 +44,11 @@ describe('completePasskeyAccountUpgrade', () => {
     expect(authMocks.refetch).toHaveBeenCalledOnce()
   })
 
-  it('reports that promotion failed after a passkey was saved', async () => {
+  it('reports a saved passkey whose session cache could not refresh', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
 
     await expect(completePasskeyAccountUpgrade({})).rejects.toBeInstanceOf(
-      PasskeyAccountPromotionError,
+      PasskeySessionRefreshError,
     )
     expect(authMocks.refetch).not.toHaveBeenCalled()
   })
