@@ -4,15 +4,15 @@ import { page } from '$app/state'
 import { fade } from 'svelte/transition'
 
 // ICONS
-import Facebook from 'virtual:icons/simple-icons/facebook'
-import Google from 'virtual:icons/logos/google-icon'
-import Wechat from 'virtual:icons/simple-icons/wechat'
 import Mail from 'virtual:icons/lucide/mail'
 import KeyRound from 'virtual:icons/lucide/key-round'
 // AUTH
 import { authClient, signIn, signUp } from '$lib/auth/client'
 import { toSafeReturnPath } from '$lib/auth/upgrade'
-import { AUTH_PROVIDER_REGISTRY } from '$lib/auth/providers'
+import { isAuthProviderEnabled, type AuthProviderId } from '$lib/auth/providers'
+// COMPONENTS
+import AuthSocialButtons from './AuthSocialButtons.svelte'
+import AuthTextField from './AuthTextField.svelte'
 // I18N
 import { m } from '$lib/i18n'
 
@@ -21,25 +21,50 @@ let {
   description = '',
   returnTo = '/',
   showGuest = false,
+  showAuthModeTitle = false,
+  authMode = 'sign-in',
+  brandName = 'HYPE',
+  modeToggleHref = '',
+  authPath = '/login',
+  onModeChange,
   onGuest,
 }: {
   title?: string
   description?: string
   returnTo?: string
   showGuest?: boolean
+  showAuthModeTitle?: boolean
+  authMode?: 'sign-in' | 'sign-up'
+  brandName?: string
+  modeToggleHref?: string
+  authPath?: '/login' | '/signup'
+  onModeChange?: (mode: 'sign-in' | 'sign-up') => void
   onGuest?: () => void | Promise<void>
 } = $props()
 
 let email = $state('')
 let password = $state('')
-let mode = $state<'sign-in' | 'sign-up'>('sign-in')
+let observedAuthMode: 'sign-in' | 'sign-up' | undefined
+const mode = $derived(authMode)
 let isBusy = $state(false)
 let errorMessage = $state('')
 let statusMessage = $state('')
 let isAwaitingVerification = $state(false)
+let verificationEmail = $state('')
 let showEmailAuth = $state(false)
+let showPasskeySignUp = $state(false)
+let preferredName = $state('')
+let preferredUsername = $state('')
+let preferredEmail = $state('')
 
 const safeCallbackUrl = $derived(toSafeReturnPath(returnTo))
+const authTitle = $derived(
+  showAuthModeTitle
+    ? mode === 'sign-up'
+      ? m.login__sign_up_title({ brandName })
+      : m.login__sign_in_title({ brandName })
+    : title,
+)
 const oauthErrorMessage = $derived(
   page.url.searchParams.get('error') === 'account_not_linked'
     ? m.account__social_account_not_linked()
@@ -50,23 +75,45 @@ $effect(() => {
   if (oauthErrorMessage) errorMessage = oauthErrorMessage
 })
 
-function providerIcon(providerId: string) {
-  if (providerId === 'google') return Google
-  if (providerId === 'facebook') return Facebook
-  return Wechat
+// Changing routes may preserve this component through shallow navigation.
+$effect(() => {
+  if (observedAuthMode && observedAuthMode !== mode) {
+    errorMessage = ''
+    statusMessage = ''
+    isAwaitingVerification = false
+    verificationEmail = ''
+    if (showPasskeySignUp) showEmailAuth = false
+    showPasskeySignUp = false
+  }
+  observedAuthMode = mode
+})
+
+/** Keeps ordinary clicks within the auth shell while preserving standard link behavior. */
+function handleModeToggle(event: MouseEvent): void {
+  if (
+    !onModeChange ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return
+  }
+
+  event.preventDefault()
+  onModeChange(mode === 'sign-in' ? 'sign-up' : 'sign-in')
 }
 
-async function handleSocial(
-  providerId: 'google' | 'facebook' | 'wechat',
-): Promise<void> {
-  if (isBusy) return
+async function handleSocial(providerId: AuthProviderId): Promise<void> {
+  if (providerId === 'email' || !isAuthProviderEnabled(providerId) || isBusy) return
   isBusy = true
   errorMessage = ''
   try {
     await signIn.social({
       provider: providerId,
       callbackURL: safeCallbackUrl,
-      errorCallbackURL: `${window.location.origin}/login?returnTo=${encodeURIComponent(safeCallbackUrl)}`,
+      errorCallbackURL: `${window.location.origin}${authPath}?returnTo=${encodeURIComponent(safeCallbackUrl)}`,
     })
   } catch {
     errorMessage = m.guest__auth_generic_error()
@@ -99,9 +146,13 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
     }
 
     if (mode === 'sign-up') {
+      verificationEmail = email.trim()
       isAwaitingVerification = true
       statusMessage = m.guest__verification_sent()
+      return
     }
+
+    await goto(safeCallbackUrl)
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -141,18 +192,109 @@ async function handlePasskey(): Promise<void> {
   }
 }
 
-async function handleVerificationResend(): Promise<void> {
-  if (isBusy || !email.trim()) return
+/** Opens email/password authentication for the currently selected mode. */
+function openEmailAuth(): void {
+  showPasskeySignUp = false
+  showEmailAuth = true
+  errorMessage = ''
+  statusMessage = ''
+  isAwaitingVerification = false
+  verificationEmail = ''
+}
+
+/** Opens passkey account creation with optional profile details prefilled from email sign-up. */
+function openPasskeySignUp(): void {
+  showEmailAuth = true
+  showPasskeySignUp = true
+  preferredEmail = email.trim()
+  errorMessage = ''
+  statusMessage = ''
+  isAwaitingVerification = false
+  verificationEmail = ''
+}
+
+/** Starts the passkey flow appropriate to the selected authentication mode. */
+function handlePasskeyAction(): void {
+  if (mode === 'sign-up') {
+    openPasskeySignUp()
+    return
+  }
+
+  void handlePasskey()
+}
+
+/** Reuses an existing passkey so a retry can finish a partially completed setup. */
+async function ensurePasskeyForCurrentUser(): Promise<void> {
+  const existingPasskeys = await authClient.passkey.listUserPasskeys()
+  if (existingPasskeys.error) throw new Error(existingPasskeys.error.message)
+  if (existingPasskeys.data?.length) return
+
+  const passkeyResult = await authClient.passkey.addPasskey({ name: 'HYPE passkey' })
+  if (passkeyResult.error) throw new Error(passkeyResult.error.message)
+}
+
+/** Registers a passkey and promotes a temporary guest session into an account. */
+async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (isBusy) return
+
   isBusy = true
+  errorMessage = ''
+  statusMessage = ''
+  try {
+    const sessionResult = await authClient.getSession()
+    if (!sessionResult.data?.user) {
+      const guestResult = await signIn.anonymous()
+      if (guestResult.error) throw new Error(guestResult.error.message)
+    }
+
+    // Save optional profile data before creating a durable sign-in credential.
+    const profile: { name?: string; username?: string } = {}
+    if (preferredName.trim()) profile.name = preferredName.trim()
+    if (preferredUsername.trim()) profile.username = preferredUsername.trim()
+    if (Object.keys(profile).length > 0) {
+      const profileResult = await authClient.updateUser(profile)
+      if (profileResult.error) throw new Error(profileResult.error.message)
+    }
+
+    // A retry can promote a guest that already registered its passkey in an earlier attempt.
+    await ensurePasskeyForCurrentUser()
+
+    // The server verifies the new credential before making the guest account durable.
+    const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
+    if (!promotionResponse.ok) throw new Error('account not upgraded')
+
+    if (preferredEmail.trim()) {
+      const emailResult = await authClient.changeEmail({
+        newEmail: preferredEmail.trim(),
+        callbackURL: window.location.href,
+      })
+      if (emailResult.error) throw new Error(emailResult.error.message)
+    }
+
+    await authClient.getSession()
+    await goto(safeCallbackUrl)
+  } catch {
+    errorMessage = m.account__passkey_add_error()
+  } finally {
+    isBusy = false
+  }
+}
+
+async function handleVerificationResend(): Promise<void> {
+  if (isBusy || !verificationEmail) return
+  isBusy = true
+  errorMessage = ''
+  statusMessage = ''
   try {
     await authClient.sendVerificationEmail({
-      email: email.trim(),
+      email: verificationEmail,
       callbackURL: safeCallbackUrl,
     })
+    statusMessage = m.guest__verification_resent()
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
-    statusMessage = m.guest__verification_resent()
     isBusy = false
   }
 }
@@ -178,49 +320,45 @@ async function handlePasswordResetRequest(): Promise<void> {
     isBusy = false
   }
 }
-
-function toggleMode(): void {
-  mode = mode === 'sign-up' ? 'sign-in' : 'sign-up'
-  errorMessage = ''
-  statusMessage = ''
-  isAwaitingVerification = false
-}
 </script>
 
 <section
   class="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
 >
-  <h1 class="text-center text-2xl font-semibold">{title}</h1>
-  {#if description}
+  {#if showAuthModeTitle && modeToggleHref}
+    <div class="flex items-center justify-center gap-3">
+      <h1 class="text-center text-2xl font-semibold">{authTitle}</h1>
+      <span class="h-7 border-l border-white/30" aria-hidden="true"></span>
+      <a
+        class="text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+        href={modeToggleHref}
+        onclick={handleModeToggle}
+      >
+        {mode === 'sign-in' ? m.login__sign_up_action() : m.guest__sign_in()}
+      </a>
+    </div>
+  {:else}
+    <h1 class="text-center text-2xl font-semibold">{authTitle}</h1>
+  {/if}
+  {#if description && !showEmailAuth}
     <p class="mt-2 text-center text-sm leading-6 text-white/70">{description}</p>
+  {/if}
+  {#if errorMessage}
+    <p class="mt-4 text-center text-sm text-red-300">{errorMessage}</p>
+  {/if}
+  {#if statusMessage}
+    <p class="mt-4 text-center text-sm text-emerald-300">{statusMessage}</p>
   {/if}
 
   {#if !showEmailAuth}
     <div class="mt-6 grid grid-cols-2 gap-3">
-      {#each AUTH_PROVIDER_REGISTRY.filter(
-        provider => provider.id !== 'email' && provider.enabled,
-      ) as provider (provider.id)}
-        {@const Icon = providerIcon(provider.id)}
-        <button
-          class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white hover:bg-white/90 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/20 disabled:hover:bg-transparent disabled:hover:text-inherit"
-          class:bg-white={provider.enabled}
-          class:text-black={provider.enabled}
-          type="button"
-          disabled={!provider.enabled || isBusy}
-          onclick={() => handleSocial(provider.id)}
-        >
-          <Icon
-            class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
-          />
-          <span>{provider.enabled ? provider.label : m.login__coming_soon()}</span>
-        </button>
-      {/each}
+      <AuthSocialButtons disabled={isBusy} onSelect={handleSocial} />
 
       <button
         class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white/40 hover:bg-white/5 hover:text-white"
         type="button"
         aria-expanded={showEmailAuth}
-        onclick={() => (showEmailAuth = true)}
+        onclick={openEmailAuth}
       >
         <Mail class="h-5 w-5 text-white/70" />
         {m.guest__email()}
@@ -229,10 +367,10 @@ function toggleMode(): void {
         class="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white hover:bg-white/5 disabled:opacity-40"
         type="button"
         disabled={isBusy}
-        onclick={handlePasskey}
+        onclick={handlePasskeyAction}
       >
         <KeyRound class="h-5 w-5 text-white/70" />
-        {m.guest__sign_in_with_passkey()}
+        {m.account__passkey()}
       </button>
     </div>
 
@@ -255,100 +393,121 @@ function toggleMode(): void {
       </div>
     {/if}
   {:else}
-    <div class="mt-6" in:fade={{ duration: 180 }}>
-      <form class="flex flex-col gap-3" onsubmit={handleEmailSubmit}>
-        <label class="flex flex-col gap-1 text-sm"
-          >{m.guest__email()}
-          <input
-            class="rounded-lg border border-white/20 bg-white/8 px-3 py-2 text-white"
+    <div class="mt-4" in:fade={{ duration: 180 }}>
+      {#if showPasskeySignUp}
+        <form class="flex flex-col gap-3" onsubmit={handlePasskeySignUp}>
+          <p class="whitespace-pre-line text-center text-sm text-white/65">
+            {m.guest__passkey_setup_description()}
+          </p>
+          <AuthTextField
+            label={m.guest__preferred_name()}
+            autocomplete="name"
+            bind:value={preferredName}
+          />
+          <AuthTextField
+            label={m.guest__preferred_username()}
+            autocomplete="username"
+            maxlength={32}
+            bind:value={preferredUsername}
+          />
+          <AuthTextField
+            label={m.guest__email_optional()}
             type="email"
             autocomplete="email"
-            bind:value={email}
+            bind:value={preferredEmail}
+          />
+          <button
+            class="mt-3 min-w-40 self-center whitespace-nowrap rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
+            type="submit"
+            disabled={isBusy}
+          >
+            {m.account__setup_passkey()}
+          </button>
+        </form>
+      {:else}
+        <form class="flex flex-col gap-3" onsubmit={handleEmailSubmit}>
+          <AuthTextField
+            label={m.guest__email()}
+            type="email"
+            autocomplete="email"
             required
-          ></label
-        >
-        <label class="flex flex-col gap-1 text-sm"
-          >{m.guest__password()}
-          <input
-            class="rounded-lg border border-white/20 bg-white/8 px-3 py-2 text-white"
+            bind:value={email}
+          />
+          <AuthTextField
+            label={m.guest__password()}
             type="password"
             autocomplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
-            minlength="8"
-            maxlength="128"
-            bind:value={password}
+            minlength={8}
+            maxlength={128}
             required
-          ></label
-        >
-        {#if statusMessage}
-          <p class="text-sm text-emerald-300">{statusMessage}</p>
-        {/if}
-        <button
-          class="mt-3 w-1/3 self-center rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
-          type="submit"
-          disabled={isBusy}
-        >
-          {mode === 'sign-up' ? m.guest__create_account() : m.guest__sign_in()}
-        </button>
-      </form>
-      {#if isAwaitingVerification}
-        <button
-          class="mt-3 text-sm text-white/65 underline"
-          type="button"
-          disabled={isBusy}
-          onclick={handleVerificationResend}
-        >
-          {m.guest__resend_verification()}
-        </button>
+            bind:value={password}
+          />
+          <button
+            class="mt-3 min-w-40 self-center whitespace-nowrap rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
+            type="submit"
+            disabled={isBusy}
+          >
+            {mode === 'sign-up' ? m.guest__create_account() : m.guest__sign_in()}
+          </button>
+        </form>
       {/if}
-      {#if errorMessage}
-        <p class="mt-3 text-sm text-red-300">{errorMessage}</p>
-      {/if}
-      <footer class="mt-6 border-t border-white/10 pt-5 text-center">
-        <div class="flex justify-center gap-2 text-sm text-white/65">
-          {#if mode === 'sign-in'}
-            <button
-              type="button"
-              class="underline"
-              onclick={handlePasswordResetRequest}
-            >
-              {m.guest__forgot_password()}
-            </button>
-            <span aria-hidden="true">-</span>
-          {/if}
-          <button type="button" class="underline" onclick={toggleMode}>
-            {mode === 'sign-up' ? m.guest__use_existing_account() : m.login__create_account()}
+      {#if mode === 'sign-in' && !showPasskeySignUp}
+        <div class="mt-4 flex justify-center">
+          <button
+            type="button"
+            class="text-sm text-white/65 underline"
+            onclick={handlePasswordResetRequest}
+          >
+            {m.guest__forgot_password()}
           </button>
         </div>
-        <p class="mt-5 text-xs uppercase tracking-[0.16em] text-white/45">
-          {m.login__or_login_with()}
-        </p>
-        <div class="mt-3 flex justify-center gap-3">
-          {#each AUTH_PROVIDER_REGISTRY.filter(
-            provider => provider.id !== 'email' && provider.enabled,
-          ) as provider (provider.id)}
-            {@const Icon = providerIcon(provider.id)}
+      {/if}
+      {#if isAwaitingVerification && !showPasskeySignUp}
+        <div class="mt-3 flex justify-center">
+          <button
+            class="text-sm text-white/65 underline"
+            type="button"
+            disabled={isBusy}
+            onclick={handleVerificationResend}
+          >
+            {m.guest__resend_verification()}
+          </button>
+        </div>
+      {/if}
+      <footer class="mt-6 border-t border-white/10 text-center">
+        {#if showPasskeySignUp}
+          <p class="mt-4 text-xs uppercase tracking-[0.16em] text-white/45">
+            {m.login__or_sign_up_with()}
+          </p>
+          <div class="mt-3 flex justify-center gap-3">
+            <AuthSocialButtons compact disabled={isBusy} onSelect={handleSocial} />
             <button
               class="flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 transition hover:border-white hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
-              aria-label={provider.label}
-              title={provider.enabled ? provider.label : `${provider.label} · ${m.guest__coming_soon()}`}
-              disabled={!provider.enabled || isBusy}
-              onclick={() => handleSocial(provider.id)}
+              aria-label={m.account__email()}
+              title={m.account__email()}
+              disabled={isBusy}
+              onclick={openEmailAuth}
             >
-              <Icon
-                class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
-              />
+              <Mail class="h-4 w-4" />
             </button>
-          {/each}
-        </div>
-        <button
-          class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white/40 disabled:opacity-40"
-          type="button"
-          disabled={isBusy}
-          onclick={handlePasskey}
-        >
-          <KeyRound class="h-4 w-4" />{m.guest__sign_in_with_passkey()}
-        </button>
+          </div>
+        {:else}
+          <p class="mt-5 text-xs uppercase tracking-[0.16em] text-white/45">
+            {mode === 'sign-up' ? m.login__or_sign_up_with() : m.login__or_login_with()}
+          </p>
+          <div class="mt-3 flex justify-center gap-3">
+            <AuthSocialButtons compact disabled={isBusy} onSelect={handleSocial} />
+          </div>
+          <button
+            class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white/40 disabled:opacity-40"
+            type="button"
+            disabled={isBusy}
+            onclick={handlePasskeyAction}
+          >
+            <KeyRound class="h-4 w-4" />{m.account__passkey()}
+          </button>
+        {/if}
       </footer>
     </div>
   {/if}

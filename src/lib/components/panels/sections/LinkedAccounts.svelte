@@ -1,7 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
-import { onMount } from 'svelte'
 import { slide } from 'svelte/transition'
 // ICONS
 import Facebook from 'virtual:icons/simple-icons/facebook'
@@ -67,6 +66,7 @@ let preferredName = $state('')
 let preferredUsername = $state('')
 let preferredEmail = $state('')
 let providerEmails = $state<Record<string, string>>({})
+let accountLoadRequestId = 0
 // Anonymous users have an internal temporary email which must never appear as a suggested login address.
 let resolvedEmail = $derived(
   $session.data?.user?.isAnonymous ? '' : accountEmail || accountUsername,
@@ -107,30 +107,82 @@ $effect(() => {
   return () => window.clearTimeout(feedbackTimer)
 })
 
-onMount(() => {
+// Reload linked sign-in methods once the active session identity is available.
+$effect(() => {
+  const sessionUserId = $session.data?.user?.id
+  const requestId = ++accountLoadRequestId
+
   email = resolvedEmail
+
   if (isGuest) {
+    accounts = []
+    passkeys = []
+    providerEmails = {}
     isLoading = false
-  } else {
-    void Promise.all([loadAccounts(), loadPasskeys()])
+    return
   }
+
+  if (!sessionUserId) {
+    accounts = []
+    passkeys = []
+    providerEmails = {}
+    isLoading = true
+    return
+  }
+
+  isLoading = true
+  void loadSignInMethods(requestId)
 })
 
-/** Loads the providers currently linked to the signed-in user. */
-async function loadAccounts(): Promise<void> {
+/**
+ * Loads the linked accounts and passkeys for one specific session identity.
+ *
+ * @param requestId - Monotonic identifier used to discard stale session responses.
+ * @returns A promise that resolves after the current session's methods are loaded.
+ */
+async function loadSignInMethods(requestId: number): Promise<void> {
   try {
-    const result = await authClient.listAccounts()
-    if (!result.error && result.data) {
-      accounts = result.data
-      void loadProviderEmails(result.data)
-    }
+    await Promise.all([loadAccounts(requestId), loadPasskeys(requestId)])
+  } catch {
+    // A transient session read failure leaves the methods empty until the next session sync.
   } finally {
-    isLoading = false
+    if (requestId === accountLoadRequestId) {
+      isLoading = false
+    }
   }
 }
 
-/** Loads the verified email supplied by each linked social provider. */
-async function loadProviderEmails(currentAccounts: Account[]): Promise<void> {
+/**
+ * Loads the providers currently linked to the signed-in user.
+ *
+ * @param requestId - Monotonic identifier used to discard stale session responses.
+ * @returns A promise that resolves after the account request completes.
+ */
+async function loadAccounts(requestId: number = accountLoadRequestId): Promise<void> {
+  try {
+    const result = await authClient.listAccounts()
+    if (requestId !== accountLoadRequestId) return
+
+    if (!result.error && result.data) {
+      accounts = result.data
+      void loadProviderEmails(result.data, requestId)
+    }
+  } catch {
+    // The caller keeps the section available so a later session sync can retry.
+  }
+}
+
+/**
+ * Loads the verified email supplied by each linked social provider.
+ *
+ * @param currentAccounts - Provider accounts whose email addresses should be resolved.
+ * @param requestId - Monotonic identifier used to discard stale session responses.
+ * @returns A promise that resolves after the provider email requests complete.
+ */
+async function loadProviderEmails(
+  currentAccounts: Account[],
+  requestId: number = accountLoadRequestId,
+): Promise<void> {
   const socialAccounts = currentAccounts.filter(
     account => account.providerId !== 'credential',
   )
@@ -152,16 +204,25 @@ async function loadProviderEmails(currentAccounts: Account[]): Promise<void> {
     }),
   )
 
-  providerEmails = Object.fromEntries(
-    resolvedEmails.filter((entry): entry is [string, string] => entry !== null),
-  )
+  if (requestId === accountLoadRequestId) {
+    providerEmails = Object.fromEntries(
+      resolvedEmails.filter((entry): entry is [string, string] => entry !== null),
+    )
+  }
 }
 
-/** Loads passkeys currently registered for the signed-in user. */
-async function loadPasskeys(): Promise<void> {
+/**
+ * Loads passkeys currently registered for the signed-in user.
+ *
+ * @param requestId - Monotonic identifier used to discard stale session responses.
+ * @returns A promise that resolves after the passkey request completes.
+ */
+async function loadPasskeys(requestId: number = accountLoadRequestId): Promise<void> {
   try {
     const result = await authClient.passkey.listUserPasskeys()
-    if (!result.error && result.data) passkeys = result.data
+    if (requestId === accountLoadRequestId && !result.error && result.data) {
+      passkeys = result.data
+    }
   } catch {
     // Passkey support is optional when the browser or deployment is not configured.
   }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { load } from '../routes/login/+page.server'
+import { load as signUpLoad } from '../routes/signup/+page.server'
 
 /** Creates the minimum login load event needed to exercise session redirects. */
 function createEvent(options: { returnTo?: string; hasSession?: boolean } = {}) {
@@ -17,9 +18,13 @@ function createEvent(options: { returnTo?: string; hasSession?: boolean } = {}) 
 }
 
 /** Asserts that a login load event ends in the expected SvelteKit redirect. */
-function expectRedirect(event: ReturnType<typeof createEvent>, location: string): void {
+function expectRedirect(
+  event: ReturnType<typeof createEvent>,
+  location: string,
+  routeLoad: (event: never) => unknown = load,
+): void {
   try {
-    load(event as never)
+    routeLoad(event as never)
   } catch (error) {
     expect(error).toMatchObject({ status: 302, location })
     return
@@ -47,6 +52,11 @@ describe('login page load', () => {
 
   it('does not redirect when no session exists', () => {
     expect(load(createEvent({ hasSession: false }) as never)).toBeUndefined()
+  })
+
+  it('gives the shareable sign-up route the same session protections', () => {
+    expect(signUpLoad(createEvent({ hasSession: false }) as never)).toBeUndefined()
+    expectRedirect(createEvent(), '/', signUpLoad)
   })
 
   it('rejects an external return destination', () => {
