@@ -1,4 +1,5 @@
 // SVELTE
+import { requested } from '$app/server'
 import { error } from '@sveltejs/kit'
 // ZOD
 import {
@@ -458,9 +459,14 @@ export const addUserFeatureToList = guardedCommand(
           : undefined,
     })
 
-    return {
+    const response = {
       data: toUserFeatureListResponseShape([updated])[0] ?? null,
     }
+
+    // Refresh only the user-feature query instance requested by the client mutation.
+    void requested(getUserFeatures, 1).refreshAll()
+
+    return response
   },
 )
 
@@ -491,8 +497,13 @@ export const removeUserFeatureFromList = guardedCommand(
       list: params.list,
     })
 
-    return {
+    const response = {
       data: updated ? toUserFeatureListResponseShape([updated])[0] : null,
     }
+
+    // Refresh only the user-feature query instance requested by the client mutation.
+    void requested(getUserFeatures, 1).refreshAll()
+
+    return response
   },
 )

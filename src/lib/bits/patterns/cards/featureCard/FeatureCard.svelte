@@ -332,7 +332,7 @@ $effect(() => {
         {/snippet}
         {#snippet leftActions()}
           {#if mode === FeatureCardMode.Display}
-            <div class="flex items-center gap-2">
+            <div class="flex min-w-0 flex-1 items-center gap-2">
               <FeatureCardActionPrimitive.WishlistAction {feature} />
               <FeatureCardActionPrimitive.VisitAction {feature} />
             </div>

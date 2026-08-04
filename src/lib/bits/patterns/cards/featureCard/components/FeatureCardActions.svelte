@@ -52,7 +52,7 @@ const layout = $derived(
       layout.hasElevatedChrome ? 'py-0' : 'py-2',
     )}
   >
-    <div class="pointer-events-auto flex min-w-0 items-center self-center">
+    <div class="pointer-events-auto flex min-w-0 flex-1 items-center self-center">
       {#if leftActions}
         {@render leftActions()}
       {/if}
@@ -64,7 +64,7 @@ const layout = $derived(
     {/if}
     <div
       class={cx(
-        'pointer-events-auto flex min-w-0 items-center self-center',
+        'pointer-events-auto flex shrink-0 items-center self-center',
         responsiveCtx.isMobile && centerRightActionsOnMobile
           ? 'justify-center'
           : 'justify-end',

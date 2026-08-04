@@ -1,6 +1,4 @@
 <script lang="ts">
-// SVELTE
-import { crossfade, fade } from 'svelte/transition'
 // BITS
 import { Icon } from '$lib/bits'
 // THIRD PARTY
@@ -10,6 +8,7 @@ import { m } from '$lib/i18n'
 // API
 import {
   addUserFeatureToList,
+  getUserFeatures,
   removeUserFeatureFromList,
 } from '$lib/api/server/user.remote'
 // CONTEXT
@@ -25,13 +24,10 @@ import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 let { feature }: { feature: Feature | UserContributedFeature } = $props()
 
 const appCtx = getAppCtx()
-const [send, receive] = crossfade({
-  duration: 180,
-  fallback: node => fade(node, { duration: 180 }),
-})
 
 let isSubmitting = $state(false)
 let isStarActionHovered = $state(false)
+let hasLeftStarredButton = $state(true)
 
 const wishlistedFeature = $derived(
   'id' in feature
@@ -44,7 +40,13 @@ const visitedFeature = $derived(
     : undefined,
 )
 const isWishlisted = $derived(Boolean(wishlistedFeature))
-const transitionKey = $derived(`wishlist-${'id' in feature ? feature.id : ''}`)
+const wishlistActionText = $derived(
+  isWishlisted
+    ? isStarActionHovered
+      ? m.weird_short_orangutan_kiss()
+      : m.feature_action_starred()
+    : m.legal_silly_mammoth_link(),
+)
 
 async function toggleWishlisted(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
@@ -58,13 +60,32 @@ async function toggleWishlisted(): Promise<void> {
     visitedAt: visitedFeature?.visitedAt ?? null,
   } as UserFeature
 
+  // A replacement button appears under the pointer after an optimistic star. Require a real
+  // pointer leave before exposing the destructive follow-up action on that replacement.
+  if (nextIsWishlisted) {
+    hasLeftStarredButton = false
+    isStarActionHovered = false
+  }
+
   isSubmitting = true
   appCtx.applyUserFeatureState(feature.id, optimistic)
 
   try {
-    const response = nextIsWishlisted
-      ? await addUserFeatureToList({ featureId: feature.id, list: 'wishlist' })
-      : await removeUserFeatureFromList({ featureId: feature.id, list: 'wishlist' })
+    const mutation = nextIsWishlisted
+      ? addUserFeatureToList({ featureId: feature.id, list: 'wishlist' })
+      : removeUserFeatureFromList({ featureId: feature.id, list: 'wishlist' })
+    const response = await mutation.updates(
+      getUserFeatures({
+        userId: appCtx.user?.id,
+        sorting: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+      }).withOverride(current => ({
+        ...current,
+        data: [
+          optimistic,
+          ...(current.data ?? []).filter(item => item.featureId !== feature.id),
+        ],
+      })),
+    )
 
     appCtx.applyUserFeatureState(
       feature.id,
@@ -80,43 +101,34 @@ async function toggleWishlisted(): Promise<void> {
 }
 </script>
 
-{#snippet unstarredIcon()}
-  <Icon src={Star} class="h-6 w-6 text-neutral-content" />
+{#snippet wishlistIcon()}
+  <Icon
+    src={Star}
+    class={isWishlisted ? 'h-6 w-6 text-primary' : 'h-6 w-6 text-neutral-content'}
+    filled={isWishlisted}
+  />
 {/snippet}
 
-{#snippet starredIcon()}
-  <Icon src={Star} class="h-6 w-6 text-primary" filled />
-{/snippet}
-
-{#if isWishlisted}
-  <div in:receive={{ key: transitionKey }} out:send={{ key: transitionKey }}>
-    <FeatureCardActionButton
-      text={isStarActionHovered ? m.weird_short_orangutan_kiss() : m.feature_action_starred()}
-      title={m.weird_short_orangutan_kiss()}
-      icon={starredIcon}
-      variant="ghost"
-      hideLabelBelow={544}
-      onClick={() => {
-        void toggleWishlisted()
-      }}
-      onMouseEnter={() => (isStarActionHovered = true)}
-      onMouseLeave={() => (isStarActionHovered = false)}
-      onFocus={() => (isStarActionHovered = true)}
-      onBlur={() => (isStarActionHovered = false)}
-      disabled={isSubmitting}
-    />
-  </div>
-{:else}
-  <div in:receive={{ key: transitionKey }} out:send={{ key: transitionKey }}>
-    <FeatureCardActionButton
-      text={m.legal_silly_mammoth_link()}
-      icon={unstarredIcon}
-      variant="ghost"
-      hideLabelBelow={544}
-      onClick={() => {
-        void toggleWishlisted()
-      }}
-      disabled={isSubmitting}
-    />
-  </div>
-{/if}
+<FeatureCardActionButton
+  text={wishlistActionText}
+  title={isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
+  icon={wishlistIcon}
+  variant="ghost"
+  hideLabelBelow={544}
+  expandedClass="w-[calc(7ch+2.125rem)] min-w-[calc(7ch+2.125rem)]"
+  onClick={() => {
+    void toggleWishlisted()
+  }}
+  onMouseEnter={() => {
+    isStarActionHovered = isWishlisted && hasLeftStarredButton
+  }}
+  onMouseLeave={() => {
+    if (isWishlisted) hasLeftStarredButton = true
+    isStarActionHovered = false
+  }}
+  onFocus={() => {
+    isStarActionHovered = isWishlisted && hasLeftStarredButton
+  }}
+  onBlur={() => (isStarActionHovered = false)}
+  disabled={isSubmitting}
+/>
