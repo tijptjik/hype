@@ -15,7 +15,7 @@ import {
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
+import { isAnonymousUser, type AppCtx } from '$lib/context/app.svelte'
 import type { ProfileSectionProps } from '$lib/bits/patterns/panels/sections'
 import type { CurrentUser } from '$lib/db/zod/schema/user.types'
 
@@ -106,9 +106,7 @@ export function useProfileSectionModel(
 
   /** Returns whether the current session belongs to an anonymous guest. */
   function isGuestUser(): boolean {
-    const user = appCtx.getUser()
-
-    return Boolean(user && 'isAnonymous' in user && user.isAnonymous === true)
+    return isAnonymousUser(appCtx.getUser())
   }
 
   $effect(() => {
@@ -175,7 +173,7 @@ export function useProfileSectionModel(
 
   function handleOpenProfile(): void {
     const user = appCtx.getUser()
-    if (user && 'isAnonymous' in user && user.isAnonymous === true) {
+    if (isAnonymousUser(user)) {
       requestAccountUpgrade('profile', window.location.href)
       return
     }

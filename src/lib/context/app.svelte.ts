@@ -116,6 +116,18 @@ import type { ResponsiveCtx } from './responsive.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
 
+/**
+ * Determines whether a user represents an anonymous guest session.
+ *
+ * @param user - User state from the application context.
+ * @returns Whether the user is an anonymous guest.
+ */
+export function isAnonymousUser(
+  user: UserProfile | CurrentUser | SessionUser | null,
+): user is (UserProfile | CurrentUser | SessionUser) & { isAnonymous: true } {
+  return Boolean(user && 'isAnonymous' in user && user.isAnonymous === true)
+}
+
 export class AppCtx {
   // Tanstack Query Client instance
   queryClient!: QueryClient
@@ -3661,7 +3673,7 @@ export class AppCtx {
       keyMatched = true
     } else if (event.key === '5') {
       const user = this.getUser()
-      if (user && 'isAnonymous' in user && user.isAnonymous === true) {
+      if (isAnonymousUser(user)) {
         requestAccountUpgrade('profile', window.location.href)
         event.preventDefault()
         event.stopPropagation()

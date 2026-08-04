@@ -1,6 +1,7 @@
 <script lang="ts">
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
+// SVELTE
 import { fade } from 'svelte/transition'
 
 // ICONS
@@ -384,7 +385,9 @@ async function handlePasswordResetRequest(): Promise<void> {
     {#if showGuest}
       <div class="mt-3 flex flex-col items-center">
         <div class="h-1 border-l border-white/20" aria-hidden="true"></div>
-        <span class="py-1 text-xs font-medium tracking-[0.2em] text-white/50">OR</span>
+        <span class="py-1 text-xs font-medium tracking-[0.2em] text-white/50"
+          >{m.or()}</span
+        >
         <div class="mb-3 h-1 border-l border-white/20" aria-hidden="true"></div>
         <button
           class="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-medium text-white transition hover:bg-white/15 disabled:opacity-50"

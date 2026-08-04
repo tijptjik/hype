@@ -157,6 +157,7 @@ export function getUserLocationCoordinates(appCtx: AppCtx): [number, number] | n
  * @param radiusKm - Radius of the circular flight in kilometres.
  * @param durationMs - Duration of one complete orbit in milliseconds.
  * @returns A cleanup function, or `undefined` when no map is available.
+ * @remarks Non-positive `durationMs` values use the 120000ms default duration.
  */
 export function startCircularFlight(
   appCtx: AppCtx,

@@ -88,6 +88,20 @@ describe('maintenance scheduler tasks', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('rejects incorrect scheduler credentials for manual runs', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const response = await scheduler.fetch(
+      new Request('https://scheduler.example/run', {
+        method: 'POST',
+        headers: { authorization: 'Bearer incorrect-token' },
+      }),
+      environment,
+    )
+
+    expect(response.status).toBe(401)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['empty', ''],
     ['missing', undefined],

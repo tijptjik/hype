@@ -5,7 +5,7 @@ import type { Handle } from '@sveltejs/kit'
 import { paraglideMiddleware } from '$lib/paraglide/server'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray, or } from 'drizzle-orm'
 import * as schema from '$lib/db/schema/index'
 import { retryBusyRead } from '$lib/db/services/sqlite'
 // AUTH
@@ -13,13 +13,16 @@ import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
 import { isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
 // TYPES
-import type { LocaleKey, Session, SessionUser } from '$lib/types'
+import type { LocaleKey, Session, SessionUser, UserRoleDisco } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import { isAdminRequest } from '$lib/api'
 
 type HubShapeResult = { data: unknown }
 type HubServiceModule = typeof import('$lib/api/services/hub')
+type HubAdminRole = Extract<UserRoleDisco, { type: 'hub' }> & {
+  hub?: { code?: string | null }
+}
 
 const EMPTY_HUB_I18N: Record<LocaleKey, Record<string, never>> = {
   en: {},
@@ -41,6 +44,25 @@ const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtende
   isAdminRequest: hub?.isAdminRequest ?? false,
   isCore: hub?.isCore ?? hub?.code === 'core',
 })
+
+/**
+ * Returns the hub codes for which the requester has an administrator role.
+ *
+ * @param roles - Roles associated with the authenticated user.
+ * @returns A set of administrator hub codes.
+ */
+export function getAdminHubCodes(
+  roles: readonly UserRoleDisco[] | undefined,
+): Set<string> {
+  return new Set(
+    roles
+      ?.filter(
+        (role): role is HubAdminRole => role.type === 'hub' && role.role === 'admin',
+      )
+      .map(role => role.hub?.code)
+      .filter((code): code is string => typeof code === 'string' && code.length > 0),
+  )
+}
 
 // ═══════════════════════
 // CORS HOOK
@@ -109,7 +131,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   })
 
   // Resolve the session early because this hook runs before handle_session_auth.
-  const adminHubCodes = new Set<string>()
+  let adminHubCodes = new Set<string>()
   try {
     const auth = getAuthForRequest(event.request.headers, {
       DB: event.platform?.env?.DB as MiniflareD1Database,
@@ -123,12 +145,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     })
     const sessionData = await auth.api.getSession({ headers: event.request.headers })
     const sessionUser = sessionData?.user as SessionUser | undefined
-    for (const role of sessionUser?.roles ?? []) {
-      if (role.type === 'hub' && role.role === 'admin') {
-        const code = (role as unknown as { hub?: { code?: string } }).hub?.code
-        if (code) adminHubCodes.add(code)
-      }
-    }
+    adminHubCodes = getAdminHubCodes(sessionUser?.roles)
   } catch {
     // Unavailable auth context must retain the guest-safe published hub filter.
   }
@@ -161,15 +178,26 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     }
   } else if (db && event.locals && hubOpts.domain) {
     const hubDomain = hubOpts.domain
+    const isCoreAdmin = adminHubCodes.has('core')
     const hubDb = await retryBusyRead(() =>
       db.query.hub.findFirst({
         with: {
           i18n: true,
           image: true,
         },
-        where:
-          adminHubCodes.size > 0
-            ? eq(schema.hub.domain, hubDomain)
+        where: isCoreAdmin
+          ? eq(schema.hub.domain, hubDomain)
+          : adminHubCodes.size > 0
+            ? and(
+                eq(schema.hub.domain, hubDomain),
+                or(
+                  and(
+                    eq(schema.hub.isPublished, true),
+                    eq(schema.hub.isArchived, false),
+                  ),
+                  inArray(schema.hub.code, [...adminHubCodes]),
+                ),
+              )
             : and(
                 eq(schema.hub.domain, hubDomain),
                 eq(schema.hub.isPublished, true),
@@ -179,9 +207,9 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     )
     const canUseDomainHub =
       Boolean(hubDb) &&
-      (adminHubCodes.size === 0 ||
-        adminHubCodes.has('core') ||
-        adminHubCodes.has(hubDb?.code ?? ''))
+      (isCoreAdmin ||
+        adminHubCodes.has(hubDb?.code ?? '') ||
+        (hubDb?.isPublished && !hubDb?.isArchived))
     if (hubDb && canUseDomainHub) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,
@@ -317,12 +345,7 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
     let isSuperAdmin = false
 
     if (sessionUser?.roles && hub?.code) {
-      const adminHubCodes = new Set(
-        sessionUser.roles
-          .filter(role => role.type === 'hub' && role.role === 'admin')
-          .map(role => (role as unknown as { hub?: { code?: string } }).hub?.code)
-          .filter((code): code is string => Boolean(code)),
-      )
+      const adminHubCodes = getAdminHubCodes(sessionUser.roles)
 
       isHubAdminForActiveHub = adminHubCodes.has(hub.code)
       // Super admin = hub admin on the core hub.
