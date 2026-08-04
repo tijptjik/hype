@@ -32,7 +32,8 @@ export const POST: RequestHandler = async ({ request, url, locals, platform }) =
     columns: { id: true },
   })
   if (!registeredPasskey) {
-    console.warn('[auth][passkey-promotion]', {
+    console.warn({
+      event: 'auth.passkey.promotion',
       outcome: 'passkey-not-found',
       origin,
       host: url.hostname,
@@ -41,7 +42,8 @@ export const POST: RequestHandler = async ({ request, url, locals, platform }) =
     throw error(400, 'PASSKEY_REQUIRED')
   }
 
-  console.info('[auth][passkey-promotion]', {
+  console.info({
+    event: 'auth.passkey.promotion',
     outcome: 'passkey-found',
     origin,
     host: url.hostname,

@@ -176,7 +176,8 @@ function createAuthInstance(
           requireSession: false,
           afterVerification: async ({ user }) => {
             // Correlate registration with the subsequent custom account-promotion request.
-            console.info('[auth][passkey-registration]', {
+            console.info({
+              event: 'auth.passkey.registration',
               outcome: 'verified',
               origin: baseURL,
               rpID: new URL(baseURL).hostname,
