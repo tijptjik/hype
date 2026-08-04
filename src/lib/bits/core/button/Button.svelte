@@ -27,6 +27,10 @@ let {
   iconComponent: IconComponent,
   href,
   onClick,
+  onMouseEnter,
+  onMouseLeave,
+  onFocus,
+  onBlur,
   color = 'neutral',
   style = 'none',
   size = 'md',
@@ -125,6 +129,10 @@ function resolveTransition(
       aria-disabled={disabled ? 'true' : undefined}
       tabindex={disabled ? -1 : undefined}
       onclick={handleClick}
+      onmouseenter={onMouseEnter}
+      onmouseleave={onMouseLeave}
+      onfocus={onFocus}
+      onblur={onBlur}
     >
       {@render buttonContent()}
     </Button.Root>
@@ -138,6 +146,10 @@ function resolveTransition(
       tabindex={disabled ? -1 : 0}
       {disabled}
       onclick={handleClick}
+      onmouseenter={onMouseEnter}
+      onmouseleave={onMouseLeave}
+      onfocus={onFocus}
+      onblur={onBlur}
     >
       {@render buttonContent()}
     </Button.Root>

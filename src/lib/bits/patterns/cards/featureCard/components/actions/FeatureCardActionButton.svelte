@@ -20,6 +20,10 @@ interface Props {
   title?: string
   icon?: Snippet
   onClick?: (event: MouseEvent) => void
+  onMouseEnter?: (event: MouseEvent) => void
+  onMouseLeave?: (event: MouseEvent) => void
+  onFocus?: (event: FocusEvent) => void
+  onBlur?: (event: FocusEvent) => void
   disabled?: boolean
   variant?: FeatureCardActionVariant
   hideLabelBelow?: number
@@ -34,6 +38,10 @@ let {
   title,
   icon,
   onClick,
+  onMouseEnter,
+  onMouseLeave,
+  onFocus,
+  onBlur,
   disabled = false,
   variant = 'default',
   hideLabelBelow = undefined,
@@ -135,4 +143,8 @@ const resolvedLabelClasses = $derived(cx('leading-none text-inherit', labelClass
   attrs={{ title: title ?? text }}
   {disabled}
   {onClick}
+  {onMouseEnter}
+  {onMouseLeave}
+  {onFocus}
+  {onBlur}
 />
