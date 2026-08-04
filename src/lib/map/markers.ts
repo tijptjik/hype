@@ -116,7 +116,9 @@ function createFeatureMarkerElement(
   image.className = 'marker-image'
   image.src = imageSrc
   image.alt = ''
-  image.loading = 'lazy'
+  // MapLibre positions markers outside normal document flow, so native lazy loading
+  // can indefinitely defer their first uncached image request.
+  image.loading = 'eager'
   image.decoding = 'async'
   image.draggable = false
   image.dataset.type = 'marker'
