@@ -1,8 +1,9 @@
-// SVELTEKIT
+// SVELTE
 import { error, json } from '@sveltejs/kit'
-// DB
-import { drizzle } from 'drizzle-orm/d1'
+// DRIZZLE
 import { eq } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/d1'
+// DB
 import { passkey, user } from '$lib/db/schema'
 // TYPES
 import type { RequestHandler } from './$types'

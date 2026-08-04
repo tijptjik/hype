@@ -11,6 +11,22 @@ export type UpgradeReason =
   | 'sync'
 
 /**
+ * Determines whether a user represents an anonymous guest session.
+ *
+ * @param user - Optional user state from a session or application context.
+ * @returns Whether the user is an anonymous guest.
+ */
+export function isGuestUser<T extends object>(
+  user: T | null | undefined,
+): user is T & { isAnonymous: true } {
+  return Boolean(
+    user &&
+      'isAnonymous' in user &&
+      (user as { isAnonymous?: unknown }).isAnonymous === true,
+  )
+}
+
+/**
  * Accepts only same-origin application paths for post-auth navigation.
  *
  * @param candidate - Untrusted return URL from query state or UI intent.
@@ -45,4 +61,14 @@ export function requestAccountUpgrade(
       detail: { reason, returnTo: toSafeReturnPath(returnTo) },
     }),
   )
+}
+
+/**
+ * Opens the profile account-upgrade dialog.
+ *
+ * @param returnTo - Optional same-origin route to resume after authentication.
+ * @returns Nothing.
+ */
+export function requestProfileUpgrade(returnTo?: string | null): void {
+  requestAccountUpgrade('profile', returnTo)
 }

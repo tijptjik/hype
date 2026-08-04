@@ -3,6 +3,7 @@ import { error, json } from '@sveltejs/kit'
 // AUTH
 import {
   createFacebookDeletionConfirmationCode,
+  hashFacebookDeletionConfirmationCode,
   parseFacebookSignedRequest,
 } from '$lib/auth/facebook-data-deletion'
 // DB
@@ -56,6 +57,14 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
     appSecret,
     payload.user_id,
   )
+  await db
+    .insert(schema.facebookDeletionRequest)
+    .values({
+      confirmationCodeHash:
+        await hashFacebookDeletionConfirmationCode(confirmationCode),
+    })
+    .onConflictDoNothing()
+
   return json({
     url: `${url.origin}/api/auth/facebook/data-deletion/status?code=${confirmationCode}`,
     confirmation_code: confirmationCode,

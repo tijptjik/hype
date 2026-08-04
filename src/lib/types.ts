@@ -1261,6 +1261,12 @@ export type InputType = 'text' | 'number' | 'email' | 'password'
 
 export type Session = BetterAuthSessionSession
 export type SessionUser = BetterAuthSessionUser
+export type PasskeyAccountUpgradeInput = {
+  name?: string
+  username?: string
+  email?: string
+  emailCallbackUrl: string
+}
 
 /* ----------------- */
 // I18N

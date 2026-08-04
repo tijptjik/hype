@@ -7,12 +7,34 @@ const PULSE_LENGTH = 13
 const PULSE_SPEED = 48
 const PULSE_DECELERATION = 92
 const PULSE_ACCELERATION = 50
+const PULSE_MODE = {
+  cruise: 0,
+  decelerate: 1,
+  hold: 2,
+  accelerate: 3,
+} as const
 const STOP_SECTION_LENGTH = 72
 const STOP_CHANCE = 0.03
 const STOP_DURATION = 2000
 const TRACE_STEP = 3
 const EDGE_INSET = 18
 const MAX_TRACE_STEPS = 640
+
+type PulseMode = (typeof PULSE_MODE)[keyof typeof PULSE_MODE]
+type PulsePath = {
+  points: Array<[number, number]>
+  cumulativeDistances: number[]
+  totalLength: number
+}
+type Pulse = {
+  path: PulsePath
+  distance: number
+  speed: number
+  mode: PulseMode
+  holdUntil: number
+  nextStopAt: number
+  isActive: boolean
+}
 
 let mapElement: HTMLDivElement
 let cityImage: HTMLImageElement
@@ -200,57 +222,68 @@ function createRoadPath(
   return []
 }
 
-/** Returns the total length of a pixel-space polyline. */
-function getPathLength(path: Array<[number, number]>): number {
-  let length = 0
+/** Caches cumulative distances for one pixel-space polyline. */
+function createPulsePath(points: Array<[number, number]>): PulsePath {
+  const cumulativeDistances = [0]
 
-  for (let index = 1; index < path.length; index += 1) {
-    length += Math.hypot(
-      path[index][0] - path[index - 1][0],
-      path[index][1] - path[index - 1][1],
+  for (let index = 1; index < points.length; index += 1) {
+    const [previousX, previousY] = points[index - 1]
+    const [nextX, nextY] = points[index]
+    cumulativeDistances.push(
+      cumulativeDistances[index - 1] + Math.hypot(nextX - previousX, nextY - previousY),
     )
   }
 
-  return length
+  return {
+    points,
+    cumulativeDistances,
+    totalLength: cumulativeDistances[cumulativeDistances.length - 1],
+  }
 }
 
-/** Finds a point at a specific distance along a pixel-space polyline. */
-function getPointAtDistance(
-  path: Array<[number, number]>,
-  distance: number,
-): [number, number] {
-  let traversed = 0
+/** Finds a point at a specific distance using cached cumulative polyline distances. */
+function getPointAtDistance(path: PulsePath, distance: number): [number, number] {
+  if (path.points.length === 0) return [0, 0]
+  if (path.points.length === 1) return path.points[0]
 
-  for (let index = 1; index < path.length; index += 1) {
-    const [previousX, previousY] = path[index - 1]
-    const [nextX, nextY] = path[index]
-    const segmentLength = Math.hypot(nextX - previousX, nextY - previousY)
+  const targetDistance = Math.max(0, Math.min(path.totalLength, distance))
+  let low = 0
+  let high = path.cumulativeDistances.length - 1
 
-    if (traversed + segmentLength >= distance) {
-      const progress = (distance - traversed) / segmentLength
-      return [
-        previousX + (nextX - previousX) * progress,
-        previousY + (nextY - previousY) * progress,
-      ]
-    }
-
-    traversed += segmentLength
+  // Find the first point at or after the requested distance without retraversing the path.
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2)
+    if (path.cumulativeDistances[middle] < targetDistance) low = middle + 1
+    else high = middle
   }
 
-  return path[path.length - 1]
+  const segmentEnd = Math.max(1, low)
+  const segmentStart = segmentEnd - 1
+  const startDistance = path.cumulativeDistances[segmentStart]
+  const endDistance = path.cumulativeDistances[segmentEnd]
+  const segmentLength = endDistance - startDistance
+  const [previousX, previousY] = path.points[segmentStart] ?? [0, 0]
+  const [nextX, nextY] = path.points[segmentEnd] ?? [previousX, previousY]
+
+  if (segmentLength === 0) return [nextX, nextY]
+
+  const progress = (targetDistance - startDistance) / segmentLength
+  return [
+    previousX + (nextX - previousX) * progress,
+    previousY + (nextY - previousY) * progress,
+  ]
 }
 
 /** Draws one light segment exactly along the sampled road path. */
 function drawPulse(
   context: CanvasRenderingContext2D,
-  path: Array<[number, number]>,
+  path: PulsePath,
   headDistance: number,
 ): void {
-  if (path.length === 0) return
+  if (path.points.length === 0) return
 
-  const pathLength = getPathLength(path)
   const tailDistance = Math.max(0, headDistance - PULSE_LENGTH)
-  const endDistance = Math.min(pathLength, headDistance)
+  const endDistance = Math.min(path.totalLength, headDistance)
 
   if (endDistance <= 0) return
 
@@ -298,13 +331,14 @@ onMount(() => {
   let mapWidth = 0
   let mapHeight = 0
   let context: CanvasRenderingContext2D | null = null
-  const pulses = Array.from({ length: PULSE_COUNT }, () => ({
-    path: [] as Array<[number, number]>,
+  const pulses: Pulse[] = Array.from({ length: PULSE_COUNT }, () => ({
+    path: createPulsePath([]),
     distance: 0,
     speed: PULSE_SPEED,
-    mode: 0,
+    mode: PULSE_MODE.cruise,
     holdUntil: 0,
     nextStopAt: STOP_SECTION_LENGTH,
+    isActive: true,
   }))
   let hasInitializedPulses = false
   let animationFrame: number | undefined
@@ -352,10 +386,11 @@ onMount(() => {
 
     if (!hasInitializedPulses) {
       for (const [index, pulse] of pulses.entries()) {
-        pulse.path = createRoadPath(pixels, mapWidth, mapHeight)
-        pulse.distance = (getPathLength(pulse.path) * index) / PULSE_COUNT
+        pulse.path = createPulsePath(createRoadPath(pixels, mapWidth, mapHeight))
+        pulse.isActive = pulse.path.points.length > 0
+        pulse.distance = (pulse.path.totalLength * index) / PULSE_COUNT
         pulse.speed = PULSE_SPEED
-        pulse.mode = 0
+        pulse.mode = PULSE_MODE.cruise
         pulse.holdUntil = 0
         pulse.nextStopAt = pulse.distance + STOP_SECTION_LENGTH
       }
@@ -363,33 +398,37 @@ onMount(() => {
     }
 
     for (const pulse of pulses) {
-      if (pulse.distance >= getPathLength(pulse.path)) {
-        pulse.path = createRoadPath(pixels, mapWidth, mapHeight)
+      if (!pulse.isActive) continue
+
+      if (pulse.distance >= pulse.path.totalLength) {
+        pulse.path = createPulsePath(createRoadPath(pixels, mapWidth, mapHeight))
+        pulse.isActive = pulse.path.points.length > 0
+        if (!pulse.isActive) continue
         pulse.distance = 0
         pulse.speed = PULSE_SPEED
-        pulse.mode = 0
+        pulse.mode = PULSE_MODE.cruise
         pulse.holdUntil = 0
         pulse.nextStopAt = STOP_SECTION_LENGTH
       }
 
-      if (pulse.mode === 0) {
+      if (pulse.mode === PULSE_MODE.cruise) {
         pulse.distance += pulse.speed * elapsedSeconds
 
         if (pulse.distance >= pulse.nextStopAt) {
-          if (Math.random() < STOP_CHANCE) pulse.mode = 1
+          if (Math.random() < STOP_CHANCE) pulse.mode = PULSE_MODE.decelerate
           else pulse.nextStopAt += STOP_SECTION_LENGTH
         }
-      } else if (pulse.mode === 1) {
+      } else if (pulse.mode === PULSE_MODE.decelerate) {
         pulse.speed = Math.max(0, pulse.speed - PULSE_DECELERATION * elapsedSeconds)
         pulse.distance += pulse.speed * elapsedSeconds
 
         if (pulse.speed === 0) {
-          pulse.mode = 2
+          pulse.mode = PULSE_MODE.hold
           pulse.holdUntil = timestamp + STOP_DURATION
         }
-      } else if (pulse.mode === 2) {
-        if (timestamp >= pulse.holdUntil) pulse.mode = 3
-      } else {
+      } else if (pulse.mode === PULSE_MODE.hold) {
+        if (timestamp >= pulse.holdUntil) pulse.mode = PULSE_MODE.accelerate
+      } else if (pulse.mode === PULSE_MODE.accelerate) {
         pulse.speed = Math.min(
           PULSE_SPEED,
           pulse.speed + PULSE_ACCELERATION * elapsedSeconds,
@@ -397,12 +436,17 @@ onMount(() => {
         pulse.distance += pulse.speed * elapsedSeconds
 
         if (pulse.speed === PULSE_SPEED) {
-          pulse.mode = 0
+          pulse.mode = PULSE_MODE.cruise
           pulse.nextStopAt = pulse.distance + STOP_SECTION_LENGTH
         }
       }
 
       drawPulse(context, pulse.path, pulse.distance)
+    }
+
+    if (pulses.every(pulse => pulse.path.points.length === 0)) {
+      stopAnimation()
+      return
     }
 
     animationFrame = requestAnimationFrame(animate)

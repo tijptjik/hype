@@ -51,6 +51,7 @@ import type {
   Database,
   Prisms,
   QueryParams,
+  RelationShape,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
@@ -753,7 +754,13 @@ export const toUserSearchQueryPlan = async (
 
 /**
  * Extends the base user relation graph with contribution filters derived from prisms and hub scope.
- * Used by guarded `getUser` so contribution summaries only include currently visible resources.
+ *
+ * @param db - Database connection used to build visibility-constrained relation queries.
+ * @param params - Prism, hub, and request-visibility context for the relation graph.
+ * @returns Relations that include only live features on live layers, plus their associated prisms
+ * and hubs when those scopes are visible to the request.
+ * @remarks Used by guarded `getUser` so contribution summaries cannot expose archived, unpublished,
+ * draft, prism-excluded, or hub-out-of-scope resources.
  */
 export const toUserRelationsWithContributionConstraints = (
   db: Database,
@@ -763,7 +770,7 @@ export const toUserRelationsWithContributionConstraints = (
     sessionUser: SessionUser
     isAdminRequest: boolean
   },
-) => {
+): RelationShape => {
   // Contributions mirror the public map: only live features on live layers are eligible.
   const visibleLayerIds = db
     .select({ id: layer.id })

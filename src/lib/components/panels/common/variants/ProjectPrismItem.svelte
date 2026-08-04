@@ -4,7 +4,7 @@ import { slide } from 'svelte/transition'
 // ICONS
 import Funnel from 'virtual:icons/lucide/filter'
 import XMark from 'virtual:icons/lucide/x'
-// BITS
+// BITS COMPONENTS
 import { Icon } from '$lib/bits'
 // I18N
 import { getI18n } from '$lib/i18n'

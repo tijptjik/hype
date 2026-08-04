@@ -4,7 +4,12 @@ import { onDestroy } from 'svelte'
 import { goto } from '$app/navigation'
 // AUTH
 import { signOut } from '$lib/auth/client'
-import { requestAccountUpgrade, toSafeReturnPath } from '$lib/auth/upgrade'
+import {
+  isGuestUser as isGuestUserSession,
+  requestAccountUpgrade,
+  requestProfileUpgrade,
+  toSafeReturnPath,
+} from '$lib/auth/upgrade'
 // I18N
 import { m } from '$lib/i18n'
 // SERVICES
@@ -15,7 +20,6 @@ import {
 // ENUMS
 import { Panel } from '$lib/enums'
 // CONTEXT
-import { isAnonymousUser } from '$lib/context/app.svelte'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { ProfileSectionProps } from '$lib/bits/patterns/panels/sections'
@@ -108,7 +112,7 @@ export function useProfileSectionModel(
 
   /** Returns whether the current session belongs to an anonymous guest. */
   function isGuestUser(): boolean {
-    return isAnonymousUser(appCtx.getUser())
+    return isGuestUserSession(appCtx.getUser())
   }
 
   $effect(() => {
@@ -175,8 +179,8 @@ export function useProfileSectionModel(
 
   function handleOpenProfile(): void {
     const user = appCtx.getUser()
-    if (isAnonymousUser(user)) {
-      requestAccountUpgrade('profile', window.location.href)
+    if (isGuestUserSession(user)) {
+      requestProfileUpgrade(window.location.href)
       return
     }
     appCtx.setPanelCtx(Panel.profile, 'username', user?.username)

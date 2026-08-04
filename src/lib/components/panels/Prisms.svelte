@@ -22,14 +22,12 @@ import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.
 import OrganisationPrismItem from '$lib/components/panels/common/variants/OrganisationPrismItem.svelte'
 import ProjectPrismItem from '$lib/components/panels/common/variants/ProjectPrismItem.svelte'
 // ENUMS
-import { Panel as PanelType, PanelSide } from '$lib/enums'
+import { OmniMode, Panel as PanelType, PanelSide } from '$lib/enums'
 // TYPES
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { PanelProps, PanelPosition, Id, ResourceContext } from '$lib/types'
-// ENUMS
-import { OmniMode } from '$lib/enums'
 // CONTEXT
 import { getOmniCtx } from '$lib/context/omni.svelte'
 

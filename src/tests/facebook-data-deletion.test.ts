@@ -35,8 +35,24 @@ describe('Facebook data deletion signed requests', () => {
   })
 
   it('rejects a request signed with the wrong secret', async () => {
+    const payload = toBase64Url(
+      new TextEncoder().encode(JSON.stringify({ user_id: 'facebook-user-1' })),
+    )
+    const signingKey = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode('different-facebook-secret'),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    )
+    const signature = toBase64Url(
+      new Uint8Array(
+        await crypto.subtle.sign('HMAC', signingKey, new TextEncoder().encode(payload)),
+      ),
+    )
+
     await expect(
-      parseFacebookSignedRequest('invalid.invalid', 'facebook-secret'),
+      parseFacebookSignedRequest(`${signature}.${payload}`, 'facebook-secret'),
     ).resolves.toBeNull()
   })
 

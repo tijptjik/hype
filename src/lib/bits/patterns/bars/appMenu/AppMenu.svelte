@@ -138,7 +138,7 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
       class="block self-center"
     />
   {/snippet}
-  <SimpleTooltip disabled={!viewportState.isIconOnlyMenu}>
+  <SimpleTooltip disabled={!item.hideLabel && !viewportState.isIconOnlyMenu}>
     {#snippet trigger()}
       <Button
         text={item.label}

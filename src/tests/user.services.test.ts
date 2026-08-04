@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
+// API
 import {
   toUserProfileResponseShape,
   toUserRelationsWithContributionConstraints,
   userEntityWithRelations,
 } from '$lib/api/services/user'
-import { GetUserParamsSchema } from '$lib/db/zod/schema/user'
+// DB
 import { getUserFeaturesByUserId } from '$lib/db/services/user'
+import { GetUserParamsSchema } from '$lib/db/zod/schema/user'
+// TYPES
 import type { UserRaw } from '$lib/db/zod/schema/user.types'
 import type { SessionUser } from '$lib/types'
 

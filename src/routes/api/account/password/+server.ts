@@ -1,6 +1,6 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit'
-// AUTH
+// API
 import { isAPIError } from 'better-auth/api'
 // TYPES
 import type { RequestHandler } from './$types'

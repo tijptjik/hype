@@ -53,6 +53,13 @@ export type NamedProtomapsFlavor = (typeof NAMED_PROTOMAPS_FLAVORS)[number]
 // Keep road names legible without repeating the same label across a short stretch.
 const ROAD_LABEL_SYMBOL_SPACING = 750
 
+/**
+ * Clones a map style specification.
+ *
+ * @param style - Style specification to clone.
+ * @returns An independent style specification copy.
+ * @remarks Callers may safely mutate the returned copy.
+ */
 export const cloneStyle = (style: StyleSpecification): StyleSpecification =>
   structuredClone(style)
 

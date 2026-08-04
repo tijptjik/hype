@@ -71,12 +71,12 @@ export async function parseFacebookSignedRequest(
  * Creates a deterministic status token for a completed deletion request.
  *
  * @param appSecret - Facebook app secret used to protect the status token.
- * @param userId - HYPE user ID whose account was deleted.
+ * @param facebookAppScopedUserId - Facebook app-scoped user ID from `payload.user_id`.
  * @returns Hexadecimal confirmation code.
  */
 export async function createFacebookDeletionConfirmationCode(
   appSecret: string,
-  userId: string,
+  facebookAppScopedUserId: string,
 ): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',
@@ -88,7 +88,25 @@ export async function createFacebookDeletionConfirmationCode(
   const digest = await crypto.subtle.sign(
     'HMAC',
     key,
-    new TextEncoder().encode(`facebook-deletion:${userId}`),
+    new TextEncoder().encode(`facebook-deletion:${facebookAppScopedUserId}`),
+  )
+  return Array.from(new Uint8Array(digest), byte =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('')
+}
+
+/**
+ * Hashes a Facebook deletion confirmation code for persistence and lookup.
+ *
+ * @param confirmationCode - Public confirmation code issued to Meta.
+ * @returns Hexadecimal SHA-256 hash of the confirmation code.
+ */
+export async function hashFacebookDeletionConfirmationCode(
+  confirmationCode: string,
+): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(confirmationCode),
   )
   return Array.from(new Uint8Array(digest), byte =>
     byte.toString(16).padStart(2, '0'),

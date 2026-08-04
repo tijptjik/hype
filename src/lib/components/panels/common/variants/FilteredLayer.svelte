@@ -5,7 +5,7 @@ import { slide } from 'svelte/transition'
 import Crosshair from 'virtual:icons/lucide/crosshair'
 import { Icon } from '$lib/bits'
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n, m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
@@ -55,7 +55,9 @@ const layerName = $derived(
   <button
     type="button"
     class="flex min-w-0 flex-1 -translate-x-5 items-center gap-3 text-left focus:outline-none"
-    aria-label={isSelected ? `Deactivate ${layerName}` : `Activate ${layerName}`}
+    aria-label={isSelected
+        ? m.panel__deactivate_layer({ name: layerName })
+        : m.panel__activate_layer({ name: layerName })}
     onclick={onToggle}
   >
     <div
@@ -78,8 +80,8 @@ const layerName = $derived(
   <button
     type="button"
     class="inline-flex shrink-0 items-center justify-center text-base-content/45 hover:text-base-content/80 focus-visible:text-base-content/80"
-    aria-label={`Isolate ${layerName}`}
-    title={`Isolate ${layerName}`}
+    aria-label={m.panel__isolate_layer({ name: layerName })}
+    title={m.panel__isolate_layer({ name: layerName })}
     onclick={onIsolate}
   >
     <Icon src={Crosshair} class="h-5 w-5" aria-hidden="true" />

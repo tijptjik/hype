@@ -16,6 +16,7 @@ import ContributedReports from '$lib/components/panels/sections/ContributedRepor
 import LinkedAccounts from '$lib/components/panels/sections/LinkedAccounts.svelte'
 // AUTH
 import { useSession } from '$lib/auth/client'
+import { isGuestUser } from '$lib/auth/upgrade'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -45,7 +46,7 @@ let panelProps: PanelProps = $derived({
 let username = $derived(appCtx.state.panels.profile.ctx?.username)
 let userData = $derived(appCtx.state.panels.profile.ctx?.userData)
 let isOwnProfile = $derived(userData?.id === appCtx.getUser()?.id)
-let isGuestAccount = $derived($session.data?.user?.isAnonymous === true)
+let isGuestAccount = $derived(isGuestUser($session.data?.user))
 const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   hideActions: true,
   hideEditableFields: true,

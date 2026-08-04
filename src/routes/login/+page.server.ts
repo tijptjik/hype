@@ -1,4 +1,4 @@
-// SVELTEKIT
+// SVELTE
 import { redirect } from '@sveltejs/kit'
 // TYPES
 import type { PageServerLoad } from './$types'
@@ -15,7 +15,9 @@ function getReturnDestination(url: URL): string {
 
   try {
     const destination = new URL(candidate, url.origin)
-    return destination.origin === url.origin
+    return destination.origin === url.origin &&
+      destination.pathname !== '/login' &&
+      destination.pathname !== '/signup'
       ? `${destination.pathname}${destination.search}${destination.hash}`
       : '/'
   } catch {

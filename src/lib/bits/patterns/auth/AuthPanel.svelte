@@ -9,6 +9,7 @@ import Mail from 'virtual:icons/lucide/mail'
 import KeyRound from 'virtual:icons/lucide/key-round'
 // AUTH
 import { authClient, signIn, signUp } from '$lib/auth/client'
+import { completePasskeyAccountUpgrade } from '$lib/auth/passkey-upgrade'
 import { toSafeReturnPath } from '$lib/auth/upgrade'
 import { isAuthProviderEnabled, type AuthProviderId } from '$lib/auth/providers'
 // COMPONENTS
@@ -135,16 +136,21 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
   isBusy = true
   errorMessage = ''
   statusMessage = ''
+  const normalizedEmail = email.trim()
   try {
     const result =
       mode === 'sign-up'
         ? await signUp.email({
-            email,
+            email: normalizedEmail,
             password,
             name: name.trim(),
             callbackURL: safeCallbackUrl,
           })
-        : await signIn.email({ email, password, callbackURL: safeCallbackUrl })
+        : await signIn.email({
+            email: normalizedEmail,
+            password,
+            callbackURL: safeCallbackUrl,
+          })
 
     if (result.error) {
       errorMessage = m.guest__auth_generic_error()
@@ -152,7 +158,7 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
     }
 
     if (mode === 'sign-up') {
-      verificationEmail = email.trim()
+      verificationEmail = normalizedEmail
       isAwaitingVerification = true
       statusMessage = m.guest__verification_sent()
       return
@@ -229,16 +235,6 @@ function handlePasskeyAction(): void {
   void handlePasskey()
 }
 
-/** Reuses an existing passkey so a retry can finish a partially completed setup. */
-async function ensurePasskeyForCurrentUser(): Promise<void> {
-  const existingPasskeys = await authClient.passkey.listUserPasskeys()
-  if (existingPasskeys.error) throw new Error(existingPasskeys.error.message)
-  if (existingPasskeys.data?.length) return
-
-  const passkeyResult = await authClient.passkey.addPasskey({ name: 'HYPE passkey' })
-  if (passkeyResult.error) throw new Error(passkeyResult.error.message)
-}
-
 /** Registers a passkey and promotes a temporary guest session into an account. */
 async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
   event.preventDefault()
@@ -249,36 +245,22 @@ async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
   statusMessage = ''
   try {
     const sessionResult = await authClient.getSession()
-    if (!sessionResult.data?.user) {
+    const sessionUser = sessionResult.data?.user
+    if (sessionUser && sessionUser.isAnonymous !== true) {
+      throw new Error('current session is not anonymous')
+    }
+
+    if (!sessionUser) {
       const guestResult = await signIn.anonymous()
       if (guestResult.error) throw new Error(guestResult.error.message)
     }
 
-    // Save optional profile data before creating a durable sign-in credential.
-    const profile: { name?: string; username?: string } = {}
-    if (preferredName.trim()) profile.name = preferredName.trim()
-    if (preferredUsername.trim()) profile.username = preferredUsername.trim()
-    if (Object.keys(profile).length > 0) {
-      const profileResult = await authClient.updateUser(profile)
-      if (profileResult.error) throw new Error(profileResult.error.message)
-    }
-
-    // A retry can promote a guest that already registered its passkey in an earlier attempt.
-    await ensurePasskeyForCurrentUser()
-
-    // The server verifies the new credential before making the guest account durable.
-    const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
-    if (!promotionResponse.ok) throw new Error('account not upgraded')
-
-    if (preferredEmail.trim()) {
-      const emailResult = await authClient.changeEmail({
-        newEmail: preferredEmail.trim(),
-        callbackURL: window.location.href,
-      })
-      if (emailResult.error) throw new Error(emailResult.error.message)
-    }
-
-    await authClient.getSession()
+    await completePasskeyAccountUpgrade({
+      name: preferredName,
+      username: preferredUsername,
+      email: preferredEmail,
+      emailCallbackUrl: window.location.href,
+    })
     await goto(safeCallbackUrl)
   } catch {
     errorMessage = m.account__passkey_add_error()

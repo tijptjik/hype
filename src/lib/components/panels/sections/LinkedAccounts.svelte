@@ -10,6 +10,10 @@ import Mail from 'virtual:icons/lucide/mail'
 import KeyRound from 'virtual:icons/lucide/key-round'
 // AUTH
 import { authClient, signIn, signUp, useSession } from '$lib/auth/client'
+import {
+  completePasskeyAccountUpgrade,
+  PasskeyRegistrationError,
+} from '$lib/auth/passkey-upgrade'
 import { isAuthProviderEnabled } from '$lib/auth/providers'
 // I18N
 import { m } from '$lib/i18n'
@@ -67,6 +71,7 @@ let preferredUsername = $state('')
 let preferredEmail = $state('')
 let providerEmails = $state<Record<string, string>>({})
 let accountLoadRequestId = 0
+let previousSessionUserId: string | undefined
 // Anonymous users have an internal temporary email which must never appear as a suggested login address.
 let resolvedEmail = $derived(
   $session.data?.user?.isAnonymous ? '' : accountEmail || accountUsername,
@@ -111,8 +116,10 @@ $effect(() => {
 $effect(() => {
   const sessionUserId = $session.data?.user?.id
   const requestId = ++accountLoadRequestId
+  const hasSessionIdentityChanged = sessionUserId !== previousSessionUserId
 
-  email = resolvedEmail
+  if (!email || hasSessionIdentityChanged) email = resolvedEmail
+  previousSessionUserId = sessionUserId
 
   if (isGuest) {
     accounts = []
@@ -258,39 +265,25 @@ async function handleGuestPasskeySubmit(event: SubmitEvent): Promise<void> {
   errorMessage = ''
   statusMessage = ''
   try {
-    const passkeyResult = await authClient.passkey.addPasskey({ name: 'HYPE passkey' })
-    if (passkeyResult.error) {
-      errorMessage = passkeyResult.error.message || m.account__passkey_add_error()
-      return
-    }
-
-    const profile: { name?: string; username?: string } = {}
-    if (preferredName.trim()) profile.name = preferredName.trim()
-    if (preferredUsername.trim()) profile.username = preferredUsername.trim()
-    if (Object.keys(profile).length) {
-      const profileResult = await authClient.updateUser(profile)
-      if (profileResult.error) throw new Error(profileResult.error.message)
-    }
-
-    // Only a server-verified passkey can convert a disposable guest into an account.
-    const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
-    if (!promotionResponse.ok) throw new Error('account not upgraded')
+    await completePasskeyAccountUpgrade({
+      name: preferredName,
+      username: preferredUsername,
+      email: preferredEmail,
+      emailCallbackUrl: window.location.href,
+    })
 
     if (preferredEmail.trim()) {
-      const emailResult = await authClient.changeEmail({
-        newEmail: preferredEmail.trim(),
-        callbackURL: window.location.href,
-      })
-      if (emailResult.error) throw new Error(emailResult.error.message)
       statusMessage = m.guest__verification_sent()
     } else {
       statusMessage = m.account__passkey_added()
     }
 
     showPasskeySetup = false
-    await authClient.getSession()
-  } catch {
-    errorMessage = m.account__passkey_add_error()
+  } catch (error) {
+    errorMessage =
+      error instanceof PasskeyRegistrationError && error.message
+        ? error.message
+        : m.account__passkey_add_error()
   } finally {
     isBusy = false
   }
@@ -392,7 +385,10 @@ async function handleGuestSocial(providerId: SocialProvider): Promise<void> {
   isBusy = true
   errorMessage = ''
   try {
-    await signIn.social({ provider: providerId, callbackURL: window.location.href })
+    await signIn.social({
+      provider: providerId,
+      callbackURL: getAccountLinkCallbackUrl(),
+    })
   } catch {
     errorMessage = m.guest__auth_generic_error()
     isBusy = false
@@ -472,7 +468,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
     })
     if (!response.ok) throw new Error('password not set')
     newPassword = ''
-    accounts = [...accounts, { providerId: 'credential', accountId: 'credential' }]
+    await loadAccounts()
     showEmailSetup = false
     statusMessage = m.account__password_added()
   } catch {
@@ -667,6 +663,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           {/if}
           {#if errorMessage}
             <p
+              role="alert"
               transition:slide={{ duration: 220 }}
               class="text-center text-sm text-error"
             >
@@ -675,6 +672,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           {/if}
           {#if statusMessage}
             <p
+              role="status"
               transition:slide={{ duration: 220 }}
               class="text-center text-sm text-success"
             >
@@ -852,6 +850,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           {/if}
           {#if errorMessage}
             <p
+              role="alert"
               transition:slide={{ duration: 220 }}
               class="text-center text-sm text-error"
             >
@@ -860,6 +859,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           {/if}
           {#if statusMessage}
             <p
+              role="status"
               transition:slide={{ duration: 220 }}
               class="text-center text-sm text-success"
             >

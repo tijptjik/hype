@@ -38,7 +38,7 @@ import {
 } from '$lib/client/keybindings'
 import { getInitialHubLayerDefaultIds } from '$lib/client/services/layerDefaults'
 // AUTH
-import { requestAccountUpgrade } from '$lib/auth/upgrade'
+import { isGuestUser, requestProfileUpgrade } from '$lib/auth/upgrade'
 import {
   getFeatureIdsForProperties,
   sortProperties,
@@ -115,18 +115,6 @@ import type { PlaceCtx } from './place.svelte'
 import type { ResponsiveCtx } from './responsive.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
-
-/**
- * Determines whether a user represents an anonymous guest session.
- *
- * @param user - User state from the application context.
- * @returns Whether the user is an anonymous guest.
- */
-export function isAnonymousUser(
-  user: UserProfile | CurrentUser | SessionUser | null,
-): user is (UserProfile | CurrentUser | SessionUser) & { isAnonymous: true } {
-  return Boolean(user && 'isAnonymous' in user && user.isAnonymous === true)
-}
 
 export class AppCtx {
   // Tanstack Query Client instance
@@ -3673,8 +3661,8 @@ export class AppCtx {
       keyMatched = true
     } else if (event.key === '5') {
       const user = this.getUser()
-      if (isAnonymousUser(user)) {
-        requestAccountUpgrade('profile', window.location.href)
+      if (isGuestUser(user)) {
+        requestProfileUpgrade(window.location.href)
         event.preventDefault()
         event.stopPropagation()
         return
