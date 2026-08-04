@@ -14,8 +14,10 @@ import {
 } from '$lib/client/services/user'
 // ENUMS
 import { Panel } from '$lib/enums'
+// CONTEXT
+import { isAnonymousUser } from '$lib/context/app.svelte'
 // TYPES
-import { isAnonymousUser, type AppCtx } from '$lib/context/app.svelte'
+import type { AppCtx } from '$lib/context/app.svelte'
 import type { ProfileSectionProps } from '$lib/bits/patterns/panels/sections'
 import type { CurrentUser } from '$lib/db/zod/schema/user.types'
 

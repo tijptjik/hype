@@ -5,9 +5,10 @@ import type { Handle } from '@sveltejs/kit'
 import { paraglideMiddleware } from '$lib/paraglide/server'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
-import { and, eq, inArray, or } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import * as schema from '$lib/db/schema/index'
 import { retryBusyRead } from '$lib/db/services/sqlite'
+import { autochunk } from '$lib/utils/batch-query'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
@@ -179,7 +180,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   } else if (db && event.locals && hubOpts.domain) {
     const hubDomain = hubOpts.domain
     const isCoreAdmin = adminHubCodes.has('core')
-    const hubDb = await retryBusyRead(() =>
+    let hubDb = await retryBusyRead(() =>
       db.query.hub.findFirst({
         with: {
           i18n: true,
@@ -187,24 +188,38 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         },
         where: isCoreAdmin
           ? eq(schema.hub.domain, hubDomain)
-          : adminHubCodes.size > 0
-            ? and(
-                eq(schema.hub.domain, hubDomain),
-                or(
-                  and(
-                    eq(schema.hub.isPublished, true),
-                    eq(schema.hub.isArchived, false),
-                  ),
-                  inArray(schema.hub.code, [...adminHubCodes]),
-                ),
-              )
-            : and(
-                eq(schema.hub.domain, hubDomain),
-                eq(schema.hub.isPublished, true),
-                eq(schema.hub.isArchived, false),
-              ),
+          : and(
+              eq(schema.hub.domain, hubDomain),
+              eq(schema.hub.isPublished, true),
+              eq(schema.hub.isArchived, false),
+            ),
       }),
     )
+
+    if (!hubDb && !isCoreAdmin && adminHubCodes.size > 0) {
+      // A hub admin may resolve an unpublished or archived hub they administer.
+      const [adminHub] = await autochunk(
+        {
+          items: [...adminHubCodes],
+          otherParametersCount: 1,
+        },
+        hubCodeBatch =>
+          retryBusyRead(() =>
+            db.query.hub.findMany({
+              with: {
+                i18n: true,
+                image: true,
+              },
+              where: and(
+                eq(schema.hub.domain, hubDomain),
+                inArray(schema.hub.code, hubCodeBatch),
+              ),
+            }),
+          ),
+      )
+      hubDb = adminHub
+    }
+
     const canUseDomainHub =
       Boolean(hubDb) &&
       (isCoreAdmin ||
