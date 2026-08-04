@@ -496,7 +496,7 @@ onMount(() => {
 
 <style>
 .guest-map {
-  background: #0b0610;
+  background: #000;
 }
 
 .guest-map__city,

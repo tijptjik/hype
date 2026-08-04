@@ -577,7 +577,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 >
                   <KeyRound class="h-4 w-4" />
                   {isGuestSignIn
-                    ? m.guest__sign_in_with_passkey()
+                    ? m.account__passkey()
                     : m.account__setup_passkey()}
                 </button>
               {/if}
