@@ -40,6 +40,7 @@
   "guest__close": "关闭",
   "guest__auth_generic_error": "无法完成请求。请检查资料或重试。",
   "guest__email_required": "请先输入电子邮箱。",
+  "guest__name_required": "请先输入你的名字。",
   "guest__forgot_password": "忘记密码？",
   "guest__password_reset_requested": "如果该邮箱已有账户，我们会发送重置邮件。",
   "guest__upgrade_success": "你的收藏地点和设置现已关联到账户。",

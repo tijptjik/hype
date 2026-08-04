@@ -44,6 +44,7 @@ let {
 
 let email = $state('')
 let password = $state('')
+let name = $state('')
 let observedAuthMode: 'sign-in' | 'sign-up' | undefined
 const mode = $derived(authMode)
 let isBusy = $state(false)
@@ -125,6 +126,10 @@ async function handleSocial(providerId: AuthProviderId): Promise<void> {
 async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
   event.preventDefault()
   if (isBusy) return
+  if (mode === 'sign-up' && !name.trim()) {
+    errorMessage = m.guest__name_required()
+    return
+  }
 
   isBusy = true
   errorMessage = ''
@@ -135,7 +140,7 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
         ? await signUp.email({
             email,
             password,
-            name: email.split('@')[0] || 'HYPE user',
+            name: name.trim(),
             callbackURL: safeCallbackUrl,
           })
         : await signIn.email({ email, password, callbackURL: safeCallbackUrl })
@@ -323,14 +328,16 @@ async function handlePasswordResetRequest(): Promise<void> {
 </script>
 
 <section
-  class="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
+  class="w-full max-w-xl rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
 >
   {#if showAuthModeTitle && modeToggleHref}
     <div class="flex items-center justify-center gap-3">
-      <h1 class="text-center text-2xl font-semibold">{authTitle}</h1>
+      <h1 class="shrink-0 whitespace-nowrap text-center text-2xl font-semibold">
+        {authTitle}
+      </h1>
       <span class="h-7 border-l border-white/30" aria-hidden="true"></span>
       <a
-        class="text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+        class="shrink-0 whitespace-nowrap text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
         href={modeToggleHref}
         onclick={handleModeToggle}
       >
@@ -426,6 +433,14 @@ async function handlePasswordResetRequest(): Promise<void> {
         </form>
       {:else}
         <form class="flex flex-col gap-3" onsubmit={handleEmailSubmit}>
+          {#if mode === 'sign-up'}
+            <AuthTextField
+              label={m.field_name()}
+              autocomplete="name"
+              required
+              bind:value={name}
+            />
+          {/if}
           <AuthTextField
             label={m.guest__email()}
             type="email"
