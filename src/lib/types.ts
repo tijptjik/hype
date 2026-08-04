@@ -22,6 +22,7 @@ import type {
   HubGetParamsByProfile,
   HubListByProfile,
   HubListParamsByProfile,
+  HubLayer,
   HubNew,
   HubProfile,
   HubRole,
@@ -1189,6 +1190,15 @@ export type HubUserStateFlags = {
   hasAgreedToTerms?: boolean
 }
 
+/**
+ * Minimal hub configuration required to resolve an initial layer selection.
+ */
+export type HubLayerDefaultsContext = {
+  code?: string
+  isCore?: boolean
+  layerDefaults?: ReadonlyArray<Pick<HubLayer, 'layerId' | 'isDefaultVisible'>>
+}
+
 /* ----------------- */
 // I18N
 /* -------- */
@@ -1251,6 +1261,12 @@ export type InputType = 'text' | 'number' | 'email' | 'password'
 
 export type Session = BetterAuthSessionSession
 export type SessionUser = BetterAuthSessionUser
+export type PasskeyAccountUpgradeInput = {
+  name?: string
+  username?: string
+  email?: string
+  emailCallbackUrl: string
+}
 
 /* ----------------- */
 // I18N
@@ -1991,6 +2007,7 @@ export type AuthorizationField =
 
 export const authorizationDenyCodes = [
   'UNAUTHENTICATED',
+  'ACCOUNT_REQUIRED',
   'REQUEST_STATE_REQUIRED',
   'INSUFFICIENT_ROLE',
   'HUB_SCOPE_FORBIDDEN',
@@ -2054,6 +2071,7 @@ export type HubAuthorizeParams = {
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
   isAnonymous?: boolean
+  isSuperAdmin?: boolean
   action: HubAuthorizationAction
   resourceId?: string
   resourceHubId?: string | null
@@ -2063,6 +2081,7 @@ export type HubAuthorizeParams = {
     isPublished?: boolean
     isArchived?: boolean
   }
+  requestedProfile?: HubProfile
 }
 
 export type AuthorizationDecision = {

@@ -1,10 +1,27 @@
 <script lang="ts">
+// CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '$lib/context/app.svelte'
+// AUTH
+import { requestAccountUpgrade } from '$lib/auth/upgrade'
+// ENUMS
 import { FeatureCardMode } from '$lib/enums'
+// I18N
 import { m } from '$lib/i18n'
+// ICONS
 import CameraIcon from 'virtual:icons/lucide/camera'
 
 const cardCtx = getCardCtx()
+const appCtx = getAppCtx()
+
+function handleAddPhoto(): void {
+  const user = appCtx.getUser()
+  if (user && 'isAnonymous' in user && user.isAnonymous === true) {
+    requestAccountUpgrade('contribution', window.location.href)
+    return
+  }
+  cardCtx.setMode(FeatureCardMode.AddPhoto)
+}
 </script>
 
 <div
@@ -20,9 +37,7 @@ const cardCtx = getCardCtx()
   <button
     type="button"
     class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-white/92 backdrop-blur-sm"
-    onclick={() => {
-      cardCtx.setMode(FeatureCardMode.AddPhoto)
-    }}
+    onclick={handleAddPhoto}
   >
     <CameraIcon class="h-4 w-4" />
     {m.honest_fluffy_falcon_enjoy()}

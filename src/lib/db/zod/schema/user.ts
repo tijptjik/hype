@@ -1,5 +1,6 @@
 // ZOD
 import { z } from 'zod'
+import { ListQueryParamsSchema } from './api'
 // DRIZZLE
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
@@ -196,10 +197,12 @@ export const UserSelfProfileAPI = UserBase.pick({
   preferences: true,
   experimental: true,
   isAnonymous: true,
-} as const).extend({
-  preferences: JsonStringWithFallback(UserPreferencesSchema),
-  experimental: JsonStringWithFallback(UserExperimentalSchema),
-})
+} as const)
+  .extend({
+    preferences: JsonStringWithFallback(UserPreferencesSchema),
+    experimental: JsonStringWithFallback(UserExperimentalSchema),
+  })
+  .extend(UserContributionSummaryFields.shape)
 
 export const UserAdminProfileAPI = UserAdminListProfileAPI.extend({
   attribution: UserSelfProfileAPI.shape.attribution,
@@ -330,6 +333,7 @@ const UserRemoteMetaSchema = z
 export const GetUserParamsSchema = z.object({
   ref: z.string().min(1),
   refKey: z.enum(['id', 'username']).optional(),
+  prisms: ListQueryParamsSchema.shape.prisms,
   meta: UserRemoteMetaSchema,
 })
 

@@ -1,5 +1,10 @@
 import { error } from '@sveltejs/kit'
-import { shouldLogAuthzDeny, toActorPolicyBase, toAuthMessage } from '.'
+import {
+  shouldLogAuthzDeny,
+  toAccountRequirementCode,
+  toActorPolicyBase,
+  toAuthMessage,
+} from '.'
 import { getScopedHubAdminIds, isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 import { hasAuthenticatedSession } from './user'
 // TYPES
@@ -310,7 +315,7 @@ const evaluateOrganisationListStatePolicy = (
 /* -------- */
 
 const listOrganisationsPolicy: OrganisationPolicyHandler = params => {
-  if (!hasAuthenticatedSession(params) || !params.userId) {
+  if (!params.userId) {
     return logOrganisationReject('list', params, 'UNAUTHENTICATED')
   }
 
@@ -318,7 +323,7 @@ const listOrganisationsPolicy: OrganisationPolicyHandler = params => {
 }
 
 const readOrganisationPolicy: OrganisationPolicyHandler = params => {
-  if (!hasAuthenticatedSession(params) || !params.userId) {
+  if (!params.userId) {
     return logOrganisationReject('read', params, 'UNAUTHENTICATED')
   }
 
@@ -327,7 +332,7 @@ const readOrganisationPolicy: OrganisationPolicyHandler = params => {
 
 const createOrganisationPolicy: OrganisationPolicyHandler = params => {
   if (!hasAuthenticatedSession(params) || !params.userId) {
-    return logOrganisationReject('create', params, 'UNAUTHENTICATED')
+    return logOrganisationReject('create', params, toAccountRequirementCode(params))
   }
 
   if (isCoreHubAdmin(params.userRoles)) return { allowed: true }
@@ -343,7 +348,7 @@ const createOrganisationPolicy: OrganisationPolicyHandler = params => {
 
 const updateOrganisationPolicy: OrganisationPolicyHandler = params => {
   if (!hasAuthenticatedSession(params) || !params.userId) {
-    return logOrganisationReject('update', params, 'UNAUTHENTICATED')
+    return logOrganisationReject('update', params, toAccountRequirementCode(params))
   }
 
   const owner = isOrganisationOwner(params.userRoles, params.resourceId)
@@ -368,7 +373,7 @@ const updateOrganisationPolicy: OrganisationPolicyHandler = params => {
 
 const deleteOrganisationPolicy: OrganisationPolicyHandler = params => {
   if (!hasAuthenticatedSession(params) || !params.userId) {
-    return logOrganisationReject('delete', params, 'UNAUTHENTICATED')
+    return logOrganisationReject('delete', params, toAccountRequirementCode(params))
   }
 
   const owner = isOrganisationOwner(params.userRoles, params.resourceId)
@@ -382,7 +387,11 @@ const deleteOrganisationPolicy: OrganisationPolicyHandler = params => {
 
 const manageOrganisationRolesPolicy: OrganisationPolicyHandler = params => {
   if (!hasAuthenticatedSession(params) || !params.userId) {
-    return logOrganisationReject('manage-roles', params, 'UNAUTHENTICATED')
+    return logOrganisationReject(
+      'manage-roles',
+      params,
+      toAccountRequirementCode(params),
+    )
   }
 
   const owner = isOrganisationOwner(params.userRoles, params.resourceId)

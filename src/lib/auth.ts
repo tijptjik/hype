@@ -1,9 +1,11 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
+import { passkey } from '@better-auth/passkey'
 import { customSession, anonymous, username } from 'better-auth/plugins'
 // CONFIG
 import { authConfig } from './auth/config'
+import { isAuthProviderEnabled } from './auth/providers'
 // DB SCHEMA
 import * as schema from '$lib/db/schema/index'
 // DRIZZLE
@@ -13,6 +15,7 @@ import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import type { UserRoleDisco, Locale } from '$lib/types'
 import type { UserExperimental, UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { user as userSchema } from '$lib/db/schema/user'
+import { migrateAnonymousUserState } from '$lib/auth/anonymous.server'
 
 // ═══════════════════════════════════════════════════════════════
 // CACHE: AUTH INSTANCES BY BASE URL
@@ -58,6 +61,10 @@ function createAuthInstance(
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
+    AUTH_FACEBOOK_ID: string
+    AUTH_FACEBOOK_SECRET: string
+    AUTH_EMAIL_FROM?: string
+    EMAIL?: App.Platform['env']['EMAIL']
   },
   baseURL: string,
 ) {
@@ -82,7 +89,7 @@ function createAuthInstance(
           before: async user => {
             // Generate username if not provided
             const dbUser = user as Partial<typeof userSchema.$inferSelect>
-            if (!dbUser.username) {
+            if (!dbUser.username && dbUser.isAnonymous !== true) {
               const { generateUsernameFromId } = await import(
                 '$lib/utils/username-generator.server'
               )
@@ -101,13 +108,73 @@ function createAuthInstance(
     },
     // OAUTH
     socialProviders: {
-      google: {
-        clientId: env.AUTH_GOOGLE_ID,
-        clientSecret: env.AUTH_GOOGLE_SECRET,
+      ...(isAuthProviderEnabled('google') &&
+      env.AUTH_GOOGLE_ID &&
+      env.AUTH_GOOGLE_SECRET
+        ? {
+            google: {
+              clientId: env.AUTH_GOOGLE_ID,
+              clientSecret: env.AUTH_GOOGLE_SECRET,
+            },
+          }
+        : {}),
+      ...(isAuthProviderEnabled('facebook') &&
+      env.AUTH_FACEBOOK_ID &&
+      env.AUTH_FACEBOOK_SECRET
+        ? {
+            facebook: {
+              clientId: env.AUTH_FACEBOOK_ID,
+              clientSecret: env.AUTH_FACEBOOK_SECRET,
+            },
+          }
+        : {}),
+    },
+    // EMAIL + PASSWORD
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        if (!env.EMAIL || !env.AUTH_EMAIL_FROM) {
+          throw new Error('Transactional email is not configured')
+        }
+        await env.EMAIL.send({
+          to: user.email,
+          from: { email: env.AUTH_EMAIL_FROM, name: 'HYPE' },
+          subject: 'Reset your HYPE password',
+          text: `Reset your HYPE password: ${url}`,
+          html: `<p>Reset your HYPE password:</p><p><a href="${url}">${url}</a></p>`,
+        })
+      },
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        if (!env.EMAIL || !env.AUTH_EMAIL_FROM) {
+          throw new Error('Transactional email is not configured')
+        }
+        await env.EMAIL.send({
+          to: user.email,
+          from: { email: env.AUTH_EMAIL_FROM, name: 'HYPE' },
+          subject: 'Verify your HYPE email',
+          text: `Verify your HYPE email: ${url}`,
+          html: `<p>Verify your HYPE email:</p><p><a href="${url}">${url}</a></p>`,
+        })
       },
     },
     // PLUGINS
     plugins: [
+      passkey({
+        rpID: new URL(baseURL).hostname,
+        rpName: 'HYPE',
+        origin: baseURL,
+        registration: {
+          // A returning guest has no separate credential with which to refresh
+          // a session before turning it into their first durable sign-in method.
+          // Better Auth still resolves and requires that existing session.
+          requireSession: false,
+        },
+      }),
       username({
         usernameValidator: async username => {
           if (username === 'admin') {
@@ -128,17 +195,9 @@ function createAuthInstance(
         },
       }),
       anonymous({
-        disableDeleteAnonymousUser: true,
-        generateName: () => 'Anonymous',
-        onLinkAccount: async ({ anonymousUser }) => {
-          // Mark the user as no longer anonymous when linking accounts
-          const { user } = await import('$lib/db/schema/user')
-          const { eq } = await import('drizzle-orm')
-
-          await db
-            .update(user)
-            .set({ isAnonymous: false })
-            .where(eq(user.id, anonymousUser.user.id))
+        generateName: () => 'Guest account',
+        onLinkAccount: async ({ anonymousUser, newUser }) => {
+          await migrateAnonymousUserState(db, anonymousUser.user, newUser.user)
         },
       }),
 
@@ -146,8 +205,11 @@ function createAuthInstance(
         // Import these here to avoid circular dependencies
         const { getUserRoles } = await import('$lib/db/services/user')
 
-        // Roles drive authorization and belong on the session.
-        const roles: UserRoleDisco[] = await getUserRoles(db, user.id)
+        // Guest accounts cannot hold roles, so avoid an unnecessary D1 query.
+        const dbUser = user as typeof userSchema.$inferSelect
+        const roles: UserRoleDisco[] = dbUser.isAnonymous
+          ? []
+          : await getUserRoles(db, user.id)
         const superAdmin = roles.some(role => {
           if (role.type !== 'hub' || role.role !== 'admin') return false
           const hubRole = role as unknown as { hub?: { code?: string } }
@@ -159,7 +221,6 @@ function createAuthInstance(
         let experimental: UserExperimental
 
         try {
-          const dbUser = user as typeof userSchema.$inferSelect
           preferences = JSON.parse(dbUser.preferences)
         } catch {
           preferences = {
@@ -171,7 +232,6 @@ function createAuthInstance(
         }
 
         try {
-          const dbUser = user as typeof userSchema.$inferSelect
           experimental = JSON.parse(dbUser.experimental)
         } catch {
           experimental = {
@@ -217,6 +277,10 @@ export const getAuthForRequest = (
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
+    AUTH_FACEBOOK_ID: string
+    AUTH_FACEBOOK_SECRET: string
+    AUTH_EMAIL_FROM?: string
+    EMAIL?: App.Platform['env']['EMAIL']
   },
 ): Auth => {
   const baseURL = getBaseUrlFromRequestHeaders(headers)

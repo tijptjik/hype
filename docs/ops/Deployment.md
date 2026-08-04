@@ -106,6 +106,8 @@ wrangler secret put AUTH_SECRET --env production
 
 - `AUTH_SECRET` - Authentication secret
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` - Google OAuth credentials
+- `AUTH_FACEBOOK_ID` / `AUTH_FACEBOOK_SECRET` - Facebook OAuth credentials
+- Facebook data deletion callback: `https://hype.hk/api/auth/facebook/data-deletion`
 - `AZURE_TRANSLATION_KEY` - Azure translation API key
 - `SUPERADMIN_USERID` - Super admin user ID
 
@@ -260,6 +262,43 @@ key: ${{ runner.os }}-test-${{ github.sha }}
 2. **Environment Isolation**: Separate secrets per environment
 3. **Least Privilege**: Secrets only accessible to authorized workflows
 4. **Rotation Ready**: Easy to update via `wrangler secret put`
+
+### Guest Accounts and Transactional Email
+
+- Onboard `hype.hk` for Cloudflare Email Sending before enabling email/password
+  flows. In the Cloudflare dashboard, open **Compute & AI → Email Service → Email
+  Sending**, first ensure the account has an Email Service plan, then choose
+  **Onboard Domain**, select `hype.hk`, and let Cloudflare add the
+  bounce MX, SPF, DKIM, and DMARC records. Alternatively, use
+  the Cloudflare dashboard or the current Email Service API with an API token that
+  can manage Email Sending and DNS for the zone; the pinned Wrangler release does
+  not provide the `email sending enable`, `list`, or `dns get` commands.
+  DNS verification may take several minutes. Review the resulting DMARC policy
+  against the domain's existing Google Workspace mail flow before making it stricter.
+- The Worker binding is `EMAIL` in every environment and requires no email API key.
+  `AUTH_EMAIL_FROM` is the non-secret verified sender `account@hype.hk` in local,
+  preview, and production configuration.
+- Configure the Google and Facebook OAuth ID/secret pairs together. WeChat remains
+  disabled until explicit provider flags and complete credentials are added.
+- Run `bun run auth:secrets:configure` after Wrangler authentication is configured.
+  The script securely prompts for `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and
+  `AUTH_GOOGLE_SECRET` for preview and production. It generates a different
+  `ANONYMOUS_CLEANUP_TOKEN` for each environment and uploads the same value to the app
+  and maintenance-scheduler Workers without printing or storing it. Pass `preview` or
+  `production` to configure only one environment.
+- Provision a separate `SCHEDULER_SECRET` in each maintenance-scheduler environment
+  and use it as the Bearer credential for manual `POST /run` requests; it must never
+  be reused as the application or cleanup token.
+- The maintenance-scheduler Worker refreshes map renders hourly and runs the
+  authenticated guest cleanup daily at 03:15 UTC by posting to
+  `/api/maintenance/anonymous-cleanup`.
+  Cleanup removes only guest users older than 45 days with no unexpired session and
+  logs aggregate counts without deleted identifiers.
+- The scheduler environments deploy as `hype-scheduler-preview` and
+  `hype-scheduler-production`.
+  After confirming its cron triggers and logs, remove the superseded
+  `hype-render-scheduler-*` Workers in the Cloudflare dashboard to prevent duplicate
+  hourly render refreshes.
 
 ### Access Control
 

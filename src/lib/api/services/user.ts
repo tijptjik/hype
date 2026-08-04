@@ -22,6 +22,8 @@ import { applyPrismConstraints } from '$lib/db'
 import {
   feature,
   featureImage,
+  layer,
+  task,
   user,
   hubRole,
   organisation,
@@ -49,6 +51,7 @@ import type {
   Database,
   Prisms,
   QueryParams,
+  RelationShape,
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
@@ -132,6 +135,7 @@ export const userEntityWithRelations = {
     columns: {
       id: true,
       isPublished: true,
+      projectId: true,
     },
   },
   contributedImages: {
@@ -142,6 +146,14 @@ export const userEntityWithRelations = {
       featureImage: {
         columns: {
           isPublished: true,
+          featureId: true,
+        },
+        with: {
+          feature: {
+            columns: {
+              projectId: true,
+            },
+          },
         },
       },
     },
@@ -398,6 +410,7 @@ const toProfileData = (
     preferences: user.preferences,
     experimental: user.experimental,
     isAnonymous: user.isAnonymous,
+    ...contributionSummary,
   }
   const admin = {
     ...adminList,
@@ -741,7 +754,13 @@ export const toUserSearchQueryPlan = async (
 
 /**
  * Extends the base user relation graph with contribution filters derived from prisms and hub scope.
- * Used by guarded `getUser` so contribution summaries only include currently visible resources.
+ *
+ * @param db - Database connection used to build visibility-constrained relation queries.
+ * @param params - Prism, hub, and request-visibility context for the relation graph.
+ * @returns Relations that include only live features on live layers, plus their associated prisms
+ * and hubs when those scopes are visible to the request.
+ * @remarks Used by guarded `getUser` so contribution summaries cannot expose archived, unpublished,
+ * draft, prism-excluded, or hub-out-of-scope resources.
  */
 export const toUserRelationsWithContributionConstraints = (
   db: Database,
@@ -751,8 +770,18 @@ export const toUserRelationsWithContributionConstraints = (
     sessionUser: SessionUser
     isAdminRequest: boolean
   },
-) => {
-  const featureConstraints: SQL<unknown>[] = []
+): RelationShape => {
+  // Contributions mirror the public map: only live features on live layers are eligible.
+  const visibleLayerIds = db
+    .select({ id: layer.id })
+    .from(layer)
+    .where(and(eq(layer.isPublished, true), eq(layer.isArchived, false)))
+  const featureConstraints: SQL<unknown>[] = [
+    eq(feature.isPublished, true),
+    eq(feature.isArchived, false),
+    eq(feature.isDraft, false),
+    inArray(feature.layerId, visibleLayerIds),
+  ]
 
   if (
     params.prisms &&
@@ -809,10 +838,6 @@ export const toUserRelationsWithContributionConstraints = (
     }
   }
 
-  if (featureConstraints.length === 0) {
-    return userEntityWithRelations
-  }
-
   const constrainedFeatureIds = db
     .select({ id: feature.id })
     .from(feature)
@@ -848,6 +873,13 @@ export const toUserRelationsWithContributionConstraints = (
           where: inArray(featureImage.featureId, constrainedFeatureIds),
         },
       },
+    },
+    contributedTasks: {
+      columns: {
+        id: true,
+        type: true,
+      },
+      where: inArray(task.featureId, constrainedFeatureIds),
     },
   }
 }

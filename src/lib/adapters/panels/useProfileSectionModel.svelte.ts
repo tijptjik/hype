@@ -4,6 +4,12 @@ import { onDestroy } from 'svelte'
 import { goto } from '$app/navigation'
 // AUTH
 import { signOut } from '$lib/auth/client'
+import {
+  isGuestUser as isGuestUserSession,
+  requestAccountUpgrade,
+  requestProfileUpgrade,
+  toSafeReturnPath,
+} from '$lib/auth/upgrade'
 // I18N
 import { m } from '$lib/i18n'
 // SERVICES
@@ -13,6 +19,7 @@ import {
 } from '$lib/client/services/user'
 // ENUMS
 import { Panel } from '$lib/enums'
+// CONTEXT
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { ProfileSectionProps } from '$lib/bits/patterns/panels/sections'
@@ -103,6 +110,11 @@ export function useProfileSectionModel(
     return user.username ?? ('name' in user ? user.name : null) ?? m.anonymous()
   }
 
+  /** Returns whether the current session belongs to an anonymous guest. */
+  function isGuestUser(): boolean {
+    return isGuestUserSession(appCtx.getUser())
+  }
+
   $effect(() => {
     if (editedUsername && validateUsernameIssues(editedUsername).issues.length > 0) {
       showTransientError()
@@ -167,6 +179,10 @@ export function useProfileSectionModel(
 
   function handleOpenProfile(): void {
     const user = appCtx.getUser()
+    if (isGuestUserSession(user)) {
+      requestProfileUpgrade(window.location.href)
+      return
+    }
     appCtx.setPanelCtx(Panel.profile, 'username', user?.username)
     appCtx.togglePanel(Panel.profile)
   }
@@ -175,7 +191,7 @@ export function useProfileSectionModel(
     await signOut({
       fetchOptions: {
         onSuccess: () => {
-          goto('/')
+          goto('/login')
         },
         onError: error => {
           console.error('Sign out failed:', error)
@@ -190,6 +206,7 @@ export function useProfileSectionModel(
       avatarSrc: appCtx.getUser()?.image ?? null,
       userDisplayName: getUserDisplayName(),
       userAttribution: appCtx.getUser()?.attribution ?? null,
+      isGuest: isGuestUser(),
       isEditingUsername,
       isLoadingUsername,
       showSuccessIndicator,
@@ -201,11 +218,18 @@ export function useProfileSectionModel(
       usernameInputPlaceholder: m.warm_that_duck_slide(),
       openProfileText: m.whole_livid_alligator_commend(),
       logoutText: m.profile__logout(),
+      upgradeText: m.guest__create_account(),
+      signInText: m.guest__sign_in(),
       onStartEditingUsername: handleStartEditingUsername,
       onSaveUsername: handleSaveUsername,
       onCancelEdit: handleCancelEdit,
       onOpenProfile: handleOpenProfile,
       onLogout: handleLogout,
+      onUpgrade: () => requestAccountUpgrade('account', window.location.href),
+      onSignIn: () =>
+        goto(
+          `/login?returnTo=${encodeURIComponent(toSafeReturnPath(window.location.href))}`,
+        ),
     }),
   }
 }

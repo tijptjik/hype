@@ -13,3 +13,13 @@ describe('authConfig user.additionalFields', () => {
     ).toBe(true)
   })
 })
+
+describe('authConfig account.accountLinking', () => {
+  it('allows accounts with a different email address to be linked', () => {
+    expect(authConfig.account.accountLinking.allowDifferentEmails).toBe(true)
+  })
+
+  it('trusts Facebook for verified-account linking', () => {
+    expect(authConfig.account.accountLinking.trustedProviders).toContain('facebook')
+  })
+})

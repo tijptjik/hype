@@ -1,4 +1,4 @@
-import { shouldLogAuthzDeny, toActorPolicyBase } from '.'
+import { shouldLogAuthzDeny, toAccountRequirementCode, toActorPolicyBase } from '.'
 import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 import { hasAuthenticatedSession } from './user'
 import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
@@ -30,7 +30,7 @@ import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
 //    - authorizeTaskReadForProbe
 //    - authorizeTaskReassignForProbe
 
-type TaskPolicyCode = 'UNAUTHENTICATED' | 'INSUFFICIENT_ROLE'
+type TaskPolicyCode = 'UNAUTHENTICATED' | 'ACCOUNT_REQUIRED' | 'INSUFFICIENT_ROLE'
 
 export type TaskAuthActor = {
   userId?: string | null
@@ -197,7 +197,7 @@ export const authorizeTaskListForContext = (params: {
   }
 
   if (!hasAuthenticatedSession(actor)) {
-    return logTaskReject('list', 'UNAUTHENTICATED', {
+    return logTaskReject('list', toAccountRequirementCode(actor), {
       actor,
       isAdminRequest: true,
       target: {
@@ -255,7 +255,7 @@ export const authorizeTaskReadForProbe = (params: {
   }
 
   if (!hasAuthenticatedSession(actor)) {
-    return logTaskReject('read', 'UNAUTHENTICATED', {
+    return logTaskReject('read', toAccountRequirementCode(actor), {
       actor,
       target: params.probe,
       isAdminRequest: true,
@@ -299,7 +299,7 @@ export const authorizeTaskReassignForProbe = (params: {
   }
 
   if (!hasAuthenticatedSession(actor)) {
-    return logTaskReject('reassign', 'UNAUTHENTICATED', {
+    return logTaskReject('reassign', toAccountRequirementCode(actor), {
       actor,
       target: params.probe,
       isAdminRequest: true,

@@ -114,6 +114,8 @@ export const searchUsers = guardedQuery(
   async (params, ctx) => {
     const { db, user, userRoles } = ctx
 
+    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
+
     // Apply role-based authorization.
     if (!canSearchUsers({ superAdmin: user.superAdmin, userRoles })) {
       throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
@@ -187,6 +189,7 @@ export const getUserForAttribution = guardedBatchByIdQuery<
  * @param params - Lookup params validated by `GetUserParamsSchema`.
  * @param params.ref - User identifier or username value.
  * @param params.refKey - Optional lookup column (`id` or `username`).
+ * @param params.prisms - Optional active organisation, project, and layer scope.
  * @param params.meta - Optional request metadata.
  * @param params.meta.isAdminRequest - Explicit admin-origin hint used by guarded context resolution.
  * @param params.meta.profile - Optional response profile override.
@@ -200,13 +203,18 @@ export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => 
   if (!sessionUser) {
     throw error(401, 'AUTH_REQUIRED')
   }
+  const requestPrisms = params.prisms ?? getPrisms(event.url)
 
   const queryPlan = toUserReadQueryPlan(db, {
     lookup: params,
     sessionUser,
     userRoles,
     request: event.request,
-    prisms: getPrisms(event.url),
+    prisms: {
+      organisation: requestPrisms.organisation ?? [],
+      project: requestPrisms.project ?? [],
+      layer: requestPrisms.layer ?? [],
+    },
     hubOpts: event.locals.hub,
     isAdminRequest: ctx.isAdminRequest,
   })
@@ -240,6 +248,17 @@ export const updateUserProfile = guardedCommand(
     const { db, user: sessionUser } = ctx
     if (!sessionUser) {
       throw error(401, 'AUTH_REQUIRED')
+    }
+
+    const guestWritableFields = new Set(['locale', 'preferences', 'experimental'])
+    if (sessionUser.isAnonymous && params.id !== sessionUser.id) {
+      throw error(403, 'ACCOUNT_REQUIRED')
+    }
+    if (
+      sessionUser.isAnonymous &&
+      Object.keys(params.data).some(field => !guestWritableFields.has(field))
+    ) {
+      throw error(403, 'ACCOUNT_REQUIRED')
     }
 
     const existing = await loadUser(db, {}, [eq(user.id, params.id)])

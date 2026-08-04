@@ -34,8 +34,7 @@ export const user = sqliteTable('user', {
     .notNull()
     .default(SupportedLocales.en),
   attribution: text('attribution'),
-  // Anonymous users' activity is not stored, so if they don't link their accounts during a session,
-  // their session cannot be linked to their account.
+  // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
   isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
   // If a user is archived, their account is effectively disabled, and they are not allowed to login
   isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
@@ -159,6 +158,40 @@ export const verification = sqliteTable('verification', {
     .notNull()
     .$defaultFn(() => new Date())
     .$onUpdateFn(() => new Date()),
+})
+
+/**
+ * Completed Facebook account-deletion callbacks.
+ * @remarks
+ * Confirmation codes are stored only as hashes so the status endpoint can
+ * verify issued requests without retaining a reusable public code.
+ */
+export const facebookDeletionRequest = sqliteTable('facebookDeletionRequest', {
+  confirmationCodeHash: text('confirmationCodeHash').primaryKey(),
+  completedAt: integer('completedAt', { mode: 'timestamp_ms' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+})
+
+/**
+ * WebAuthn passkeys registered for Better Auth users.
+ * @remarks
+ * Stores public credential material only; private keys remain in the user's authenticator.
+ */
+export const passkey = sqliteTable('passkey', {
+  id: text('id').primaryKey(),
+  name: text('name'),
+  publicKey: text('publicKey').notNull(),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  credentialID: text('credentialID').notNull(),
+  counter: integer('counter').notNull(),
+  deviceType: text('deviceType').notNull(),
+  backedUp: integer('backedUp', { mode: 'boolean' }).notNull(),
+  transports: text('transports'),
+  createdAt: integer('createdAt', { mode: 'timestamp_ms' }).$type<Date>(),
+  aaguid: text('aaguid'),
 })
 
 /* ============================================================================

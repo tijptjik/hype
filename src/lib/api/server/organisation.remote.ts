@@ -135,6 +135,7 @@ const getOrganisationsQuery = guardedQuery(
     const { db, user, userRoles, isAdminRequest, event } = ctx
     // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'list')
+    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     // Resolve desired `query params`.
     const queryParams = validateQueryParams<OrganisationDB>(
@@ -195,6 +196,7 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
   async (params, ctx) => {
     const { db, user, userRoles, isAdminRequest, event } = ctx
     const profile = toOrganisationProfile(params.meta?.profile, 'list')
+    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     const queryParams = validateQueryParams<OrganisationDB>(
       organisation,
@@ -271,6 +273,7 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
     const { db, user, userRoles, isAdminRequest, event } = ctx
     // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'detail')
+    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     // Probe the requested organisation for flags.
     const probe = await probeOrganisationQuery(db, params)

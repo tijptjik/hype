@@ -269,6 +269,52 @@ describe('hub authorization policy matrix', () => {
     expect(deleteDecision.code).toBe('HUB_SCOPE_FORBIDDEN')
   })
 
+  it('does not expose the admin profile through public list authorization', () => {
+    const decision = authorizeHubList(
+      toActor(ACTORS.unrelated),
+      { resourceHubId: 'hub-a' },
+      { isPublished: true, isArchived: false },
+      'admin',
+    )
+
+    expect(decision).toEqual({ allowed: false, code: 'INSUFFICIENT_ROLE' })
+  })
+
+  it('does not expose the admin profile through public read authorization', () => {
+    const decision = authorizeHubRead(
+      toActor(ACTORS.unrelated),
+      {
+        resourceHubId: 'hub-a',
+        isPublished: true,
+        isArchived: false,
+      },
+      'admin',
+    )
+
+    expect(decision).toEqual({ allowed: false, code: 'INSUFFICIENT_ROLE' })
+  })
+
+  it('preserves admin profile access for a relevant hub admin', () => {
+    const listDecision = authorizeHubList(
+      toActor(ACTORS.hubAdminSame),
+      { resourceHubId: 'hub-a' },
+      { isPublished: true, isArchived: false },
+      'admin',
+    )
+    const readDecision = authorizeHubRead(
+      toActor(ACTORS.hubAdminSame),
+      {
+        resourceHubId: 'hub-a',
+        isPublished: true,
+        isArchived: false,
+      },
+      'admin',
+    )
+
+    expect(listDecision.allowed).toBe(true)
+    expect(readDecision.allowed).toBe(true)
+  })
+
   describe('updateHub field-level restrictions', () => {
     it('allows all hub form fields for core admin', () => {
       const decision = authorizeHubUpdate(

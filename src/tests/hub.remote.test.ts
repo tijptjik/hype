@@ -787,6 +787,32 @@ describe('hub.remote form image handling', () => {
     })
   })
 
+  it('allows a guest to dismiss a hub subscription prompt', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: {},
+      user: { id: 'guest-1', isAnonymous: true },
+      userRoles: [],
+    })
+    mockGetHubSubscriptionTarget.mockResolvedValue({ id: 'hub-1' })
+
+    const result = await remote.dismissSubscriptionPrompt({ hubId: 'hub-1' })
+
+    expect(mockUpsertHubUserState).toHaveBeenCalledWith(
+      {},
+      {
+        hubId: 'hub-1',
+        userId: 'guest-1',
+        subscriptionPromptDismissed: true,
+      },
+    )
+    expect(result).toEqual({
+      data: {
+        hubId: 'hub-1',
+        dismissed: true,
+      },
+    })
+  })
+
   it('passes the stored session cookie to the Substack subscriber adapter', async () => {
     mockGuardedContext.mockResolvedValue({
       db: {},

@@ -747,11 +747,11 @@ export const ghosteryRoadsLabelsMajor: AddLayerObject = {
       ['linear'],
       ['zoom'],
       12,
-      300, // Very frequent at lower zoom for highways
+      750, // Keep highway names from repeating across a short stretch.
       16,
-      400, // Still frequent at mid zoom
+      750, // Keep the same readable density at mid zoom.
       20,
-      500, // Moderate spacing at high zoom
+      750, // Preserve the restraint at detail zoom.
     ],
     'text-font': ['Noto Sans Medium'], // Slightly bolder for major roads
     'text-field': [
@@ -1026,7 +1026,8 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
   source: 'hongkong-latest',
   'source-layer': 'roads',
   minzoom: 16,
-  filter: ['in', 'kind', 'minor_road', 'other', 'path'],
+  // Sidewalks and crossings inherit their carriageway's name, so label only streets.
+  filter: ['in', 'kind', 'minor_road', 'other'],
   layout: {
     'symbol-sort-key': ['get', 'min_zoom'],
     'symbol-placement': 'line',
@@ -1035,11 +1036,11 @@ export const ghosteryRoadsLabelsMinor: AddLayerObject = {
       ['linear'],
       ['zoom'],
       16,
-      500, // More frequent for mobile viewing
+      750, // Keep local-street names from crowding the map.
       18,
-      600,
+      750,
       20,
-      700,
+      750,
     ],
     'text-font': ['Noto Sans Regular'],
     'text-field': [

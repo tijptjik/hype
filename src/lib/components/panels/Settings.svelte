@@ -1,13 +1,18 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // BITS
 import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
 // ADAPTERS
 import { useProfileSectionModel } from '$lib/adapters/panels'
+// AUTH
+import { useSession } from '$lib/auth/client'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Settings.svelte'
+import LinkedAccounts from '$lib/components/panels/sections/LinkedAccounts.svelte'
 import Language from '$lib/components/panels/sections/Language.svelte'
 import Contributor from '$lib/components/panels/sections/Contributor.svelte'
 import DefaultMap from '$lib/components/panels/sections/DefaultMap.svelte'
@@ -22,9 +27,13 @@ import type { PanelProps } from '$lib/types'
 
 // CONTEXT
 const appCtx = getAppCtx()
+const session = useSession()
+const isGuestAccount = $derived($session.data?.user?.isAnonymous === true)
 
 // STATE
 let isInfoOpen = $state(false)
+let isGuestUpgradeOpen = $state(false)
+let guestAuthMode = $state<'create' | 'sign-in'>('create')
 // svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement
 
@@ -48,8 +57,8 @@ let panelProps: PanelProps = $derived({
 })
 
 const profileSectionModel = useProfileSectionModel(appCtx, () => ({
-  hideActions: false,
-  hideEditableFields: false,
+  hideActions: isGuestAccount,
+  hideEditableFields: isGuestAccount,
 }))
 </script>
 
@@ -63,14 +72,31 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   />
   <Info isOpen={isInfoOpen} />
 
-  <ProfileSection {...profileSectionModel.getProfileProps()} />
+  <ProfileSection
+    {...profileSectionModel.getProfileProps()}
+    onUpgrade={() => {
+      guestAuthMode = 'create'
+      isGuestUpgradeOpen = true
+    }}
+    onSignIn={() => {
+      guestAuthMode = 'sign-in'
+      isGuestUpgradeOpen = true
+    }}
+  />
+  {#if isGuestAccount && isGuestUpgradeOpen}
+    <div transition:slide={{ duration: 220 }}>
+      <LinkedAccounts isGuest startGuestUpgradeOpen {guestAuthMode} />
+    </div>
+  {/if}
   <div class="flex flex-col">
     {#if panelProps.isAdmin}
       <div class="shrink-0"><Admin {...panelProps} /></div>
     {/if}
     <div class="shrink-0"><Language {...panelProps} /></div>
     {#if !panelProps.isAdmin}
-      <div class="shrink-0"><Contributor {...panelProps} /></div>
+      {#if !isGuestAccount}
+        <div class="shrink-0"><Contributor {...panelProps} /></div>
+      {/if}
       <div class="shrink-0"><DefaultMap {...panelProps} /></div>
       <div class="shrink-0"><Experimental {...panelProps} /></div>
     {/if}

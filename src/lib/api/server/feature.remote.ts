@@ -210,6 +210,7 @@ function chunkImportFeatureLookupIds(ids: string[]): string[][] {
 const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'list')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   const queryParams = validateQueryParams<FeatureDB>(
     feature,
@@ -285,6 +286,7 @@ export const getFeatures = getFeaturesQuery as typeof getFeaturesQuery &
 const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'detail')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
   const normalizedParams = {
     ...params,
     refKey: 'id' as const,

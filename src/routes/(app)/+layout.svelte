@@ -7,6 +7,7 @@ import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 import { dismissActiveFeatureNavigation, handlePanelParams } from '$lib/navigation'
 import { useSession } from '$lib/auth/client'
+import { requestAccountUpgrade } from '$lib/auth/upgrade'
 import { useOmnibarModel } from '$lib/adapters/bars'
 import {
   createHubSubscriptionModelParams,
@@ -26,7 +27,6 @@ import { setOmniCtx } from '$lib/context/omni.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // SERVICES
-import { startCircularFlight } from '$lib/client/services/geospatial'
 import { getActiveMapStyleCode } from '$lib/client/services/map'
 import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
 import Filters from '$lib/components/panels/Filters.svelte'
@@ -41,7 +41,6 @@ import Profile from '$lib/components/panels/Profile.svelte'
 // BITS
 import {
   AppHubSubscriptionOverlay,
-  AppLanding,
   AppMapOverlayBar,
   AppMain,
   AppNav,
@@ -164,8 +163,6 @@ beforeNavigate(({ from, to }) => {
   }
 })
 
-// CIRCULAR FLIGHT ANIMATION STATE
-let stopCircularFlight: (() => void) | null = $state(null)
 const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
 const menuReservedHeight = $derived(responsiveCtx.menuReservedHeight)
 const MAP_GESTURE_SURFACE_SELECTOR = '[data-map-gesture-surface="true"]'
@@ -257,30 +254,6 @@ $effect(() => {
   }
 })
 
-// TODO sync map center and flight starting position.
-// CIRCULAR FLIGHT ANIMATION
-$effect(() => {
-  if (!$session.isPending) {
-    if (!$session.data) {
-      // User is not authenticated - start circular flight animation
-      if (!stopCircularFlight) {
-        setTimeout(() => {
-          const cleanup = startCircularFlight(appCtx, [114.17276, 22.29191], 5)
-          if (cleanup) {
-            stopCircularFlight = cleanup
-          }
-        }, 1000)
-      }
-    } else {
-      // User is authenticated - stop circular flight animation
-      if (stopCircularFlight) {
-        stopCircularFlight()
-        stopCircularFlight = null
-      }
-    }
-  }
-})
-
 function handleWindowKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape' || event.defaultPrevented) {
     return
@@ -320,6 +293,10 @@ function handleWindowKeydown(event: KeyboardEvent): void {
  */
 async function handleJoinSubscription(): Promise<void> {
   if (!hub?.id || isSubscriptionBusy) return
+  if ($session.data?.user?.isAnonymous === true) {
+    requestAccountUpgrade('subscription', page.url.href)
+    return
+  }
 
   isSubscriptionBusy = true
 
@@ -390,6 +367,10 @@ async function handleDismissSubscriptionPrompt(): Promise<void> {
 }
 
 function handleOpenHubSubscriptionOverlay(): void {
+  if ($session.data?.user?.isAnonymous === true) {
+    requestAccountUpgrade('subscription', page.url.href)
+    return
+  }
   isHubSubscriptionOverlayOpen = true
 }
 
@@ -478,7 +459,6 @@ $effect(() => {
 })
 </script>
 
-<!-- biome-ignore lint/a11y/noStaticElementInteractions: Svelte special element handles global keyboard shortcuts. -->
 <svelte:window onkeydown={handleWindowKeydown} />
 
 <AppShell>
@@ -524,7 +504,5 @@ $effect(() => {
         />
       </AppMain>
     </AppSurface>
-  {:else if !$session.isPending && !$session.data}
-    <AppLanding> {@render children()} </AppLanding>
   {/if}
 </AppShell>

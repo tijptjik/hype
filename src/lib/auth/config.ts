@@ -16,6 +16,33 @@ export const authConfig = {
     },
   },
 
+  // RATE LIMITS
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      '/sign-in/anonymous': { window: 60, max: 10 },
+      // Keep the route identity explicit; the delegated Better Auth endpoint is
+      // included below because its internal request path is `/set-password`.
+      '/api/account/password': { window: 60, max: 5 },
+      '/set-password': { window: 60, max: 5 },
+    },
+  },
+
+  // ACCOUNT LINKING
+  account: {
+    accountLinking: {
+      // A person may use a provider identity with a different email address.
+      // Better Auth still prevents that identity from being linked to another HYPE user.
+      allowDifferentEmails: true,
+      // Facebook does not provide Better Auth with an `email_verified` claim.
+      // A locally verified HYPE email is still required before an implicit link,
+      // preventing an unverified local account from claiming a Facebook identity.
+      trustedProviders: ['facebook'],
+    },
+  },
+
   // SECURITY
   // Which origins can make auth requests?
   trustedOrigins: [
@@ -39,6 +66,9 @@ export const authConfig = {
   ],
 
   user: {
+    changeEmail: {
+      enabled: true,
+    },
     additionalFields: {
       locale: {
         type: 'string' as const,

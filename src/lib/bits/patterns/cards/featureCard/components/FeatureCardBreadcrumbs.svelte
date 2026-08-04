@@ -6,6 +6,8 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getCardCtx } from '$lib/context/card.svelte'
+// AUTH
+import { requestAccountUpgrade } from '$lib/auth/upgrade'
 // ENUMS
 import { FeatureCardMode } from '$lib/enums'
 // TYPES
@@ -27,13 +29,23 @@ let {
 
 const appCtx = getAppCtx()
 const cardCtx = getCardCtx()
+
+function openContributionMode(mode: FeatureCardMode): void {
+  const user = appCtx.getUser()
+  if (user && 'isAnonymous' in user && user.isAnonymous === true) {
+    requestAccountUpgrade('contribution', window.location.href)
+    return
+  }
+  cardCtx.setMode(mode)
+}
+
 const actionItems = [
   {
     label: m.such_that_rabbit_pull(),
     icon: TriangleAlert,
     iconClass: 'text-error',
     onSelect: () => {
-      cardCtx.setMode(FeatureCardMode.Missing)
+      openContributionMode(FeatureCardMode.Missing)
     },
   },
   {
@@ -41,7 +53,7 @@ const actionItems = [
     icon: Camera,
     iconClass: 'text-info',
     onSelect: () => {
-      cardCtx.setMode(FeatureCardMode.AddPhoto)
+      openContributionMode(FeatureCardMode.AddPhoto)
     },
   },
 ]
@@ -81,10 +93,9 @@ const actionItems = [
       {/if}
     </div>
   {:then hierarchy}
-    {@const organisationName = appCtx.getContextualOrganisationName(
-      hierarchy.organisation!,
-      false,
-    )}
+    {@const organisationName = hierarchy.organisation
+      ? appCtx.getContextualOrganisationName(hierarchy.organisation, false)
+      : null}
     {@const projectName = appCtx.getContextualProjectName(hierarchy.project)}
     {@const layerName = hierarchy.layer
       ? appCtx.getContextualLayerName(hierarchy.layer)
