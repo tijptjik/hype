@@ -420,7 +420,7 @@ async function handlePasswordResetRequest(): Promise<void> {
         <form class="flex flex-col gap-3" onsubmit={handleEmailSubmit}>
           {#if mode === 'sign-up'}
             <AuthTextField
-              label={m.field_name()}
+              label={m.guest__preferred_name()}
               autocomplete="name"
               required
               bind:value={name}

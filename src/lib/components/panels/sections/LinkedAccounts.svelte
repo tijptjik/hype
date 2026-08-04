@@ -66,6 +66,7 @@ let statusMessage = $state('')
 let passkeys = $state<Passkey[]>([])
 let accountEmail = $derived($session.data?.user?.email ?? '')
 let email = $state('')
+let emailAccountName = $state('')
 let preferredName = $state('')
 let preferredUsername = $state('')
 let preferredEmail = $state('')
@@ -399,6 +400,11 @@ async function handleGuestSocial(providerId: SocialProvider): Promise<void> {
 async function handleGuestEmailSubmit(event: SubmitEvent): Promise<void> {
   event.preventDefault()
   if (isBusy) return
+  if (!isGuestSignIn && !emailAccountName.trim()) {
+    errorMessage = m.guest__name_required()
+    return
+  }
+
   isBusy = true
   errorMessage = ''
   statusMessage = ''
@@ -412,7 +418,7 @@ async function handleGuestEmailSubmit(event: SubmitEvent): Promise<void> {
       : await signUp.email({
           email,
           password: newPassword,
-          name: email.split('@')[0] || 'HYPE user',
+          name: emailAccountName.trim(),
           callbackURL: window.location.href,
         })
     if (result.error) throw new Error(result.error.message)
@@ -580,6 +586,19 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 
           {#if showEmailSetup}
             <form class="mt-2 flex flex-col gap-2" onsubmit={handleGuestEmailSubmit}>
+              {#if !isGuestSignIn}
+                <label class="text-sm" for="guest-account-name"
+                  >{m.guest__preferred_name()}</label
+                >
+                <input
+                  id="guest-account-name"
+                  class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+                  type="text"
+                  autocomplete="name"
+                  bind:value={emailAccountName}
+                  required
+                >
+              {/if}
               <label class="text-sm" for="guest-account-email"
                 >{m.guest__email()}</label
               >
@@ -605,7 +624,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 required
               >
               <button
-                class="rounded-lg bg-base-content px-3 py-2 text-sm font-medium text-base-100 disabled:opacity-50"
+                class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
                 type="submit"
                 disabled={isBusy}
               >
@@ -653,7 +672,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 bind:value={preferredEmail}
               >
               <button
-                class="rounded-lg bg-base-content px-3 py-2 text-sm font-medium text-base-100 disabled:opacity-50"
+                class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
                 type="submit"
                 disabled={isBusy}
               >
