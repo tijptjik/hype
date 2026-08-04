@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { untrack } from 'svelte'
 import { page } from '$app/state'
 import { slide } from 'svelte/transition'
 // ICONS
@@ -40,6 +41,18 @@ const socialProviders = SOCIAL_PROVIDERS.filter(provider =>
 
 const FEEDBACK_DURATION_MS = 10_000
 
+/**
+ * Returns whether an address is Better Auth's generated placeholder for an
+ * anonymous account rather than an email the person supplied.
+ *
+ * @param value - Stored user email address.
+ * @returns `true` when the address must not be presented as a login email.
+ */
+function isAnonymousPlaceholderEmail(value: string): boolean {
+  const normalizedValue = value.trim().toLowerCase()
+  return normalizedValue.startsWith('temp@') && normalizedValue.endsWith('.com')
+}
+
 let {
   accountUsername = '',
   isGuest = false,
@@ -65,6 +78,9 @@ let errorMessage = $state('')
 let statusMessage = $state('')
 let passkeys = $state<Passkey[]>([])
 let accountEmail = $derived($session.data?.user?.email ?? '')
+let visibleAccountEmail = $derived(
+  isAnonymousPlaceholderEmail(accountEmail) ? '' : accountEmail,
+)
 let email = $state('')
 let emailAccountName = $state('')
 let preferredName = $state('')
@@ -73,11 +89,11 @@ let preferredEmail = $state('')
 let providerEmails = $state<Record<string, string>>({})
 let accountLoadRequestId = 0
 let previousSessionUserId: string | undefined
-// Anonymous users have an internal temporary email which must never appear as a suggested login address.
+// Synthetic guest emails must never appear as suggested login addresses after account promotion.
 let resolvedEmail = $derived(
-  $session.data?.user?.isAnonymous ? '' : accountEmail || accountUsername,
+  $session.data?.user?.isAnonymous ? '' : visibleAccountEmail,
 )
-let linkedAccountLabel = $derived(accountEmail || accountUsername)
+let linkedAccountLabel = $derived(visibleAccountEmail || accountUsername)
 let isGuestSignIn = $derived(guestAuthMode === 'sign-in')
 const oauthErrorMessage = $derived(
   page.url.searchParams.get('error') === 'account_already_linked_to_different_user'
@@ -119,7 +135,8 @@ $effect(() => {
   const requestId = ++accountLoadRequestId
   const hasSessionIdentityChanged = sessionUserId !== previousSessionUserId
 
-  if (!email || hasSessionIdentityChanged) email = resolvedEmail
+  // Do not track form input here: a keystroke must not reload and remount this section.
+  if (!untrack(() => email) || hasSessionIdentityChanged) email = resolvedEmail
   previousSessionUserId = sessionUserId
 
   if (isGuest) {
@@ -486,7 +503,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 </script>
 
 {#if !isLoading}
-  <section class="border-b border-base-content/15 p-4">
+  <section in:slide={{ duration: 220 }} class="border-b border-base-content/15 p-4">
     {#if isGuest}
       {#if !startGuestUpgradeOpen}
         <div class="flex flex-col items-center text-center">
