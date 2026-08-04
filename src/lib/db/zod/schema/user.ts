@@ -196,10 +196,12 @@ export const UserSelfProfileAPI = UserBase.pick({
   preferences: true,
   experimental: true,
   isAnonymous: true,
-} as const).extend({
-  preferences: JsonStringWithFallback(UserPreferencesSchema),
-  experimental: JsonStringWithFallback(UserExperimentalSchema),
-})
+} as const)
+  .extend({
+    preferences: JsonStringWithFallback(UserPreferencesSchema),
+    experimental: JsonStringWithFallback(UserExperimentalSchema),
+  })
+  .extend(UserContributionSummaryFields.shape)
 
 export const UserAdminProfileAPI = UserAdminListProfileAPI.extend({
   attribution: UserSelfProfileAPI.shape.attribution,

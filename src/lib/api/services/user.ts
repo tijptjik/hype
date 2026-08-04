@@ -132,6 +132,7 @@ export const userEntityWithRelations = {
     columns: {
       id: true,
       isPublished: true,
+      projectId: true,
     },
   },
   contributedImages: {
@@ -142,6 +143,14 @@ export const userEntityWithRelations = {
       featureImage: {
         columns: {
           isPublished: true,
+          featureId: true,
+        },
+        with: {
+          feature: {
+            columns: {
+              projectId: true,
+            },
+          },
         },
       },
     },
@@ -398,6 +407,7 @@ const toProfileData = (
     preferences: user.preferences,
     experimental: user.experimental,
     isAnonymous: user.isAnonymous,
+    ...contributionSummary,
   }
   const admin = {
     ...adminList,
