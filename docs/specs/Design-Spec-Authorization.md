@@ -55,7 +55,8 @@ Working notes for designing a unified authorization system with hierarchical own
 - A usable Better Auth session may belong to either a guest (`isAnonymous === true`)
   or an upgraded account.
 - Guests may read only published, non-archived application resources and may write
-  their preferences, default layers, wishlist, and visited-place state.
+  their preferences, default layers, wishlist, visited-place state, and hub
+  subscription-prompt dismissal state.
 - Account-only writes return `ACCOUNT_REQUIRED`; missing sessions return
   `UNAUTHENTICATED`; role failures for upgraded users return `INSUFFICIENT_ROLE`.
 - Session existence alone is never proof of a durable account.

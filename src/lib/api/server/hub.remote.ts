@@ -591,7 +591,6 @@ export const dismissSubscriptionPrompt = guardedCommand(
   DismissHubSubscriptionPromptSchema,
   async (params, ctx) => {
     const { db, user } = ctx
-    if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
 
     const target = await getHubSubscriptionTarget(db, params.hubId)
     if (!target) {
