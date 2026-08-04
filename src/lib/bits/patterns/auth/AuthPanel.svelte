@@ -7,6 +7,7 @@ import { fade } from 'svelte/transition'
 // ICONS
 import Mail from 'virtual:icons/lucide/mail'
 import KeyRound from 'virtual:icons/lucide/key-round'
+import LoaderCircle from 'virtual:icons/lucide/loader-circle'
 // AUTH
 import { authClient, signIn, signUp } from '$lib/auth/client'
 import {
@@ -418,8 +419,14 @@ async function handlePasswordResetRequest(): Promise<void> {
             class="mt-3 min-w-40 self-center whitespace-nowrap rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
             type="submit"
             disabled={isBusy}
+            aria-busy={isBusy}
+            aria-label={m.account__setup_passkey()}
           >
-            {m.account__setup_passkey()}
+            {#if isBusy}
+              <LoaderCircle class="h-5 w-5 animate-spin" aria-hidden="true" />
+            {:else}
+              {m.account__setup_passkey()}
+            {/if}
           </button>
         </form>
       {:else}
