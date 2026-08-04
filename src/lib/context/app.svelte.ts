@@ -3779,7 +3779,7 @@ export class AppCtx {
       })
       this.cache.user.clear()
       this.state.userFeatures = { wishlisted: [], visited: [] }
-      this.state.active.collection = null
+      this.resetActiveCollection()
       if (this.state.panels.profile.ctx) {
         this.state.panels.profile.ctx.userData = null
       }

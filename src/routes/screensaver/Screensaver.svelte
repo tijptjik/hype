@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { untrack } from 'svelte'
 import { page } from '$app/state'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
@@ -31,8 +32,8 @@ $effect(() => {
     projectId ||
     appCtx.state.resources.project.find(project => project.code === projectCode)?.id ||
     ''
-  const targetKey = `${layerId}:${resolvedProjectId}:${projectCode}:${appCtx.state.resources.layer.length}`
-  if (appliedTarget === targetKey) return
+  const targetKey = `${layerId}:${resolvedProjectId}:${projectCode}`
+  if (untrack(() => appliedTarget) === targetKey) return
 
   const selectedLayerIds = layerId
     ? appCtx.state.resources.layer
