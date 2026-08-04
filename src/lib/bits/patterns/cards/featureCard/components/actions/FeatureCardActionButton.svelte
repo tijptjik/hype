@@ -19,6 +19,7 @@ interface Props {
   text: string
   title?: string
   icon?: Snippet
+  content?: Snippet<[boolean]>
   onClick?: (event: MouseEvent) => void
   onMouseEnter?: (event: MouseEvent) => void
   onMouseLeave?: (event: MouseEvent) => void
@@ -37,6 +38,7 @@ let {
   text,
   title,
   icon,
+  content,
   onClick,
   onMouseEnter,
   onMouseLeave,
@@ -116,10 +118,12 @@ const rootClasses = $derived(
     hideLabelBelow !== undefined
       ? isCollapsed
         ? cx('w-11 min-w-11 px-0 [--btn-label-multiplier:0]', collapsedClass)
-        : cx(
-            'w-auto min-w-max px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]',
-            expandedClass,
-          )
+        : expandedClass
+          ? cx(
+              'px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]',
+              expandedClass,
+            )
+          : 'w-auto min-w-max px-[calc(var(--btn-padding-x)-0.25rem)] [--btn-label-multiplier:1]'
       : 'w-11 min-w-11 px-0 [--btn-label-multiplier:0]',
     'disabled:opacity-40',
     getVariantClasses(variant),
@@ -130,9 +134,16 @@ const rootClasses = $derived(
 const resolvedLabelClasses = $derived(cx('leading-none text-inherit', labelClasses))
 </script>
 
+{#snippet actionContent()}
+  {#if content}
+    {@render content(isCollapsed)}
+  {/if}
+{/snippet}
+
 <Button
   {text}
   {icon}
+  content={content ? actionContent : undefined}
   color="neutral"
   style="transparent"
   size="md"

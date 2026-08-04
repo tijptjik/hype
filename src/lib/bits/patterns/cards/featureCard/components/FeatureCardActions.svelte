@@ -46,13 +46,18 @@ const layout = $derived(
     class={cx(
       responsiveCtx.isMobile
         ? 'grid grid-cols-[1fr_auto_1fr] items-center gap-3'
-        : 'flex items-center justify-between gap-3',
+        : 'flex items-center gap-3',
       layout.hasElevatedChrome ? 'min-h-11' : 'min-h-16',
       'px-[var(--feature-card-content-padding)]',
       layout.hasElevatedChrome ? 'py-0' : 'py-2',
     )}
   >
-    <div class="pointer-events-auto flex min-w-0 flex-1 items-center self-center">
+    <div
+      class={cx(
+        'pointer-events-auto flex min-w-0 items-center self-center',
+        !responsiveCtx.isMobile && 'flex-1',
+      )}
+    >
       {#if leftActions}
         {@render leftActions()}
       {/if}
@@ -64,7 +69,7 @@ const layout = $derived(
     {/if}
     <div
       class={cx(
-        'pointer-events-auto flex shrink-0 items-center self-center',
+        'pointer-events-auto flex min-w-0 shrink-0 items-center self-center',
         responsiveCtx.isMobile && centerRightActionsOnMobile
           ? 'justify-center'
           : 'justify-end',

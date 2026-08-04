@@ -38,6 +38,7 @@ export interface ButtonProps {
   hideLabelBelow?: number
   attrs?: Record<string, unknown>
   icon?: Snippet
+  content?: Snippet
   iconComponent?: Component | null
   href?: string
   onClick?: (event: MouseEvent) => void

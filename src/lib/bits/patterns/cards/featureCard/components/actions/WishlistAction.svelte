@@ -1,6 +1,5 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
@@ -16,18 +15,18 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 import type { UserFeature } from '$lib/db/zod/schema/user.types'
-// ICONS
-import Star from 'virtual:icons/lucide/star'
 // LOCAL
-import FeatureCardActionButton from './FeatureCardActionButton.svelte'
+import WishlistActionDisplay from './WishlistActionDisplay.svelte'
 
 let { feature }: { feature: Feature | UserContributedFeature } = $props()
 
 const appCtx = getAppCtx()
 
 let isSubmitting = $state(false)
-let isStarActionHovered = $state(false)
-let hasLeftStarredButton = $state(true)
+let optimisticWishlisted = $state<boolean | null>(null)
+let settledWishlisted = $state<boolean | null>(null)
+let isWishlistError = $state(false)
+let wishlistErrorMessage = $state('')
 
 const wishlistedFeature = $derived(
   'id' in feature
@@ -40,13 +39,49 @@ const visitedFeature = $derived(
     : undefined,
 )
 const isWishlisted = $derived(Boolean(wishlistedFeature))
-const wishlistActionText = $derived(
-  isWishlisted
-    ? isStarActionHovered
-      ? m.weird_short_orangutan_kiss()
-      : m.feature_action_starred()
-    : m.legal_silly_mammoth_link(),
-)
+const optimisticWishlistState = $derived(optimisticWishlisted ?? isWishlisted)
+const settledWishlistState = $derived(settledWishlisted ?? isWishlisted)
+
+/**
+ * Produces the non-hover label for a wishlist state.
+ *
+ * @param wishlisted Whether the feature belongs to the wishlist.
+ * @returns Action label for the state.
+ */
+function getWishlistValue(wishlisted: boolean): string {
+  return wishlisted ? m.feature_action_starred() : m.legal_silly_mammoth_link()
+}
+
+/**
+ * Produces the root-hover label for a wishlist state.
+ *
+ * @param wishlisted Whether the feature belongs to the wishlist.
+ * @returns Hover action label for the state.
+ */
+function getWishlistHoverValue(wishlisted: boolean): string {
+  return wishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()
+}
+
+$effect(() => {
+  if (isSubmitting || isWishlistError) return
+  optimisticWishlisted = isWishlisted
+  settledWishlisted = isWishlisted
+})
+
+function clearWishlistError(): void {
+  isWishlistError = false
+  wishlistErrorMessage = ''
+}
+
+function showWishlistError(message: string): void {
+  isWishlistError = true
+  wishlistErrorMessage = message
+  setTimeout(() => {
+    clearWishlistError()
+  }, 3000)
+}
+
+const wishlistActionText = $derived(getWishlistValue(settledWishlistState))
 
 async function toggleWishlisted(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
@@ -60,14 +95,9 @@ async function toggleWishlisted(): Promise<void> {
     visitedAt: visitedFeature?.visitedAt ?? null,
   } as UserFeature
 
-  // A replacement button appears under the pointer after an optimistic star. Require a real
-  // pointer leave before exposing the destructive follow-up action on that replacement.
-  if (nextIsWishlisted) {
-    hasLeftStarredButton = false
-    isStarActionHovered = false
-  }
-
   isSubmitting = true
+  clearWishlistError()
+  optimisticWishlisted = nextIsWishlisted
   appCtx.applyUserFeatureState(feature.id, optimistic)
 
   try {
@@ -87,48 +117,36 @@ async function toggleWishlisted(): Promise<void> {
       })),
     )
 
-    appCtx.applyUserFeatureState(
-      feature.id,
-      (response?.data as UserFeature | null) ?? null,
-    )
+    const settled = (response?.data as UserFeature | null) ?? null
+    settledWishlisted = Boolean(settled?.isWishlisted)
+    appCtx.applyUserFeatureState(feature.id, settled)
   } catch (error) {
     console.error('Error updating wishlist status:', error)
+    optimisticWishlisted = Boolean(previous?.isWishlisted)
+    settledWishlisted = Boolean(previous?.isWishlisted)
     appCtx.applyUserFeatureState(feature.id, previous)
-    toast.error('Failed to update wishlist status')
+    const message = 'Failed to update wishlist status'
+    showWishlistError(message)
+    toast.error(message)
   } finally {
     isSubmitting = false
   }
 }
 </script>
 
-{#snippet wishlistIcon()}
-  <Icon
-    src={Star}
-    class={isWishlisted ? 'h-6 w-6 text-primary' : 'h-6 w-6 text-neutral-content'}
-    filled={isWishlisted}
-  />
-{/snippet}
-
-<FeatureCardActionButton
-  text={wishlistActionText}
-  title={isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
-  icon={wishlistIcon}
-  variant="ghost"
-  hideLabelBelow={544}
-  expandedClass="w-[calc(7ch+2.125rem)] min-w-[calc(7ch+2.125rem)]"
+<WishlistActionDisplay
+  currentIcon={isWishlisted}
+  optimisticIcon={optimisticWishlistState}
+  settledIcon={settledWishlistState}
+  currentValue={getWishlistValue(isWishlisted)}
+  currentHoverValue={getWishlistHoverValue(isWishlisted)}
+  optimisticValue={getWishlistValue(optimisticWishlistState)}
+  optimisticHoverValue={getWishlistHoverValue(optimisticWishlistState)}
+  settledValue={wishlistActionText}
+  settledHoverValue={getWishlistHoverValue(settledWishlistState)}
+  isError={isWishlistError}
+  errorMessage={wishlistErrorMessage}
   onClick={() => {
     void toggleWishlisted()
   }}
-  onMouseEnter={() => {
-    isStarActionHovered = isWishlisted && hasLeftStarredButton
-  }}
-  onMouseLeave={() => {
-    if (isWishlisted) hasLeftStarredButton = true
-    isStarActionHovered = false
-  }}
-  onFocus={() => {
-    isStarActionHovered = isWishlisted && hasLeftStarredButton
-  }}
-  onBlur={() => (isStarActionHovered = false)}
-  disabled={isSubmitting}
 />

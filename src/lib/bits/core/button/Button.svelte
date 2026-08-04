@@ -24,6 +24,7 @@ let {
   hideLabelBelow,
   attrs = {},
   icon,
+  content,
   iconComponent: IconComponent,
   href,
   onClick,
@@ -93,28 +94,32 @@ function resolveTransition(
 </script>
 
 {#snippet buttonContent()}
-  {#if hasIcon}
-    <span class={cx(BUTTON_ICON_CLASSES, iconClasses)} aria-hidden="true">
-      {#if icon}
-        {@render icon()}
-      {:else if IconComponent}
-        <IconComponent />
-      {/if}
-    </span>
-  {/if}
-  {#if hasLabelText}
-    <span
-      class={cx(
-        BUTTON_LABEL_CLASSES,
-        labelClasses,
-        shouldHideLabel && 'max-w-0 translate-x-1 opacity-0',
-        hideLabelInstantly && 'transition-none',
-        style === 'link' && 'underline underline-offset-4',
-      )}
-      aria-hidden={shouldHideLabel}
-    >
-      {text}
-    </span>
+  {#if content}
+    {@render content()}
+  {:else}
+    {#if hasIcon}
+      <span class={cx(BUTTON_ICON_CLASSES, iconClasses)} aria-hidden="true">
+        {#if icon}
+          {@render icon()}
+        {:else if IconComponent}
+          <IconComponent />
+        {/if}
+      </span>
+    {/if}
+    {#if hasLabelText}
+      <span
+        class={cx(
+          BUTTON_LABEL_CLASSES,
+          labelClasses,
+          shouldHideLabel && 'max-w-0 translate-x-1 opacity-0',
+          hideLabelInstantly && 'transition-none',
+          style === 'link' && 'underline underline-offset-4',
+        )}
+        aria-hidden={shouldHideLabel}
+      >
+        {text}
+      </span>
+    {/if}
   {/if}
 {/snippet}
 

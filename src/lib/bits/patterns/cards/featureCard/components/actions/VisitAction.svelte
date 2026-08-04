@@ -1,6 +1,4 @@
 <script lang="ts">
-// BITS
-import { Icon } from '$lib/bits'
 // THIRD PARTY
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'svelte-sonner'
@@ -17,18 +15,29 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 import type { UserFeature } from '$lib/db/zod/schema/user.types'
-// ICONS
-import Check from 'virtual:icons/lucide/check'
 // LOCAL
-import FeatureCardActionButton from './FeatureCardActionButton.svelte'
+import VisitActionDisplay from './VisitActionDisplay.svelte'
+
+type VisitState = {
+  isVisited: boolean
+  visitedAt: string | null
+}
+
+type VisitDisplay = {
+  key: string
+  label: string
+  detail?: string
+}
 
 let { feature }: { feature: Feature | UserContributedFeature } = $props()
 
 const appCtx = getAppCtx()
 
 let isSubmitting = $state(false)
-let isLastVisitedHovered = $state(false)
-let hasLeftLastVisitedButton = $state(true)
+let optimisticVisitState = $state<VisitState | null>(null)
+let settledVisitState = $state<VisitState | null>(null)
+let isVisitError = $state(false)
+let visitErrorMessage = $state('')
 
 const wishlistedFeature = $derived(
   'id' in feature
@@ -41,10 +50,81 @@ const visitedFeature = $derived(
     : undefined,
 )
 const isVisited = $derived(Boolean(visitedFeature))
-const visitActionState = $derived(
-  isVisited ? (isSubmitting ? 'visited' : 'last-visited') : 'check-in',
+const currentVisitState = $derived<VisitState>({
+  isVisited,
+  visitedAt: visitedFeature?.visitedAt ?? null,
+})
+const activeVisitState = $derived(
+  isVisitError
+    ? (settledVisitState ?? currentVisitState)
+    : isSubmitting
+      ? (optimisticVisitState ?? currentVisitState)
+      : (settledVisitState ?? currentVisitState),
 )
 
+/**
+ * Converts a visit state into its normal display value.
+ *
+ * @param state Visit state to render.
+ * @returns Main label and optional timestamp line.
+ */
+function getVisitValue(state: VisitState): VisitDisplay {
+  if (!state.isVisited || !state.visitedAt) {
+    return { key: 'check-in', label: m.noble_fine_ibex_pinch() }
+  }
+
+  return {
+    key: `last-visited:${state.visitedAt}`,
+    label: m.white_dizzy_clownfish_quiz(),
+    detail: formatDistanceToNow(new Date(state.visitedAt), {
+      addSuffix: true,
+      locale: toDateFnsLocale(),
+    }).replace('minute', 'min'),
+  }
+}
+
+/**
+ * Converts a visit state into its root-hover display value.
+ *
+ * @param state Visit state to render.
+ * @returns Hover affordance and no timestamp detail.
+ */
+function getVisitHoverValue(state: VisitState): VisitDisplay | undefined {
+  if (!state.isVisited) return undefined
+
+  return {
+    key: `remove-visit:${state.visitedAt ?? ''}`,
+    label: m.feature_action_remove_visit(),
+  }
+}
+
+const visitDisplay = $derived<VisitDisplay>(
+  isVisitError
+    ? { key: `visit-error:${visitErrorMessage}`, label: visitErrorMessage }
+    : getVisitValue(activeVisitState),
+)
+const visitHoverDisplay = $derived(
+  isVisitError ? undefined : getVisitHoverValue(activeVisitState),
+)
+
+function clearVisitError(): void {
+  isVisitError = false
+  visitErrorMessage = ''
+}
+
+function showVisitError(message: string): void {
+  isVisitError = true
+  visitErrorMessage = message
+  setTimeout(() => {
+    clearVisitError()
+  }, 3000)
+}
+
+$effect(() => {
+  if (isSubmitting || isVisitError) return
+  optimisticVisitState = currentVisitState
+  settledVisitState = currentVisitState
+})
 async function toggleVisited(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
 
@@ -58,14 +138,9 @@ async function toggleVisited(): Promise<void> {
     visitedAt,
   } as UserFeature
 
-  // Do not turn a newly created visited button into "Remove Visit" while the pointer is still
-  // resting where the check-in button was. A real leave is required before that hover affordance.
-  if (nextIsVisited) {
-    hasLeftLastVisitedButton = false
-    isLastVisitedHovered = false
-  }
-
   isSubmitting = true
+  clearVisitError()
+  optimisticVisitState = { isVisited: nextIsVisited, visitedAt }
   appCtx.applyUserFeatureState(feature.id, optimistic)
 
   try {
@@ -89,79 +164,34 @@ async function toggleVisited(): Promise<void> {
       })),
     )
 
-    appCtx.applyUserFeatureState(
-      feature.id,
-      (response?.data as UserFeature | null) ?? null,
-    )
+    const settled = (response?.data as UserFeature | null) ?? null
+    settledVisitState = {
+      isVisited: Boolean(settled?.isVisited),
+      visitedAt: settled?.visitedAt ?? null,
+    }
+    appCtx.applyUserFeatureState(feature.id, settled)
   } catch (error) {
     console.error('Error updating visited status:', error)
+    const previousVisitState = {
+      isVisited: Boolean(previous?.isVisited),
+      visitedAt: previous?.visitedAt ?? null,
+    }
+    optimisticVisitState = previousVisitState
+    settledVisitState = previousVisitState
     appCtx.applyUserFeatureState(feature.id, previous)
-    toast.error('Failed to update visited status')
+    const message = 'Failed to update visited status'
+    showVisitError(message)
+    toast.error(message)
   } finally {
     isSubmitting = false
   }
 }
 </script>
 
-{#snippet checkIcon()}
-  <Icon src={Check} class="h-6 w-6 font-bold text-neutral-content" />
-{/snippet}
-
-{#snippet visitedIcon()}
-  <Icon src={Check} class="h-6 w-6 font-bold text-primary" />
-{/snippet}
-
-{#if visitActionState === 'last-visited' && visitedFeature?.visitedAt}
-  <button
-    type="button"
-    class="flex h-full w-[calc(12ch+2.125rem)] min-w-[calc(12ch+2.125rem)] flex-col items-start justify-center pl-2 text-left text-sm text-neutral-content transition-colors hover:text-primary focus-visible:outline-none focus-visible:text-primary"
-    title={m.feature_action_remove_visit()}
-    onmouseenter={() => {
-      isLastVisitedHovered = hasLeftLastVisitedButton
-    }}
-    onmouseleave={() => {
-      hasLeftLastVisitedButton = true
-      isLastVisitedHovered = false
-    }}
-    onfocus={() => {
-      isLastVisitedHovered = hasLeftLastVisitedButton
-    }}
-    onblur={() => (isLastVisitedHovered = false)}
-    onclick={() => {
-      void toggleVisited()
-    }}
-  >
-    {#if isLastVisitedHovered}
-      <p class="text-xs uppercase">{m.feature_action_remove_visit()}</p>
-    {:else}
-      <p class="text-xs uppercase">{m.white_dizzy_clownfish_quiz()}</p>
-      <p class="font-mono text-white">
-        {formatDistanceToNow(new Date(visitedFeature.visitedAt), {
-          addSuffix: true,
-          locale: toDateFnsLocale(),
-        }).replace('minute', 'min')}
-      </p>
-    {/if}
-  </button>
-{:else if visitActionState === 'visited'}
-  <FeatureCardActionButton
-    text={m.feature_action_visited()}
-    icon={visitedIcon}
-    variant="secondary"
-    hideLabelBelow={544}
-    expandedClass="w-[calc(12ch+2.125rem)] min-w-[calc(12ch+2.125rem)]"
-    disabled
-  />
-{:else}
-  <FeatureCardActionButton
-    text={m.noble_fine_ibex_pinch()}
-    icon={checkIcon}
-    variant="secondary"
-    hideLabelBelow={544}
-    expandedClass="w-[calc(12ch+2.125rem)] min-w-[calc(12ch+2.125rem)]"
-    onClick={() => {
-      void toggleVisited()
-    }}
-    disabled={isSubmitting}
-  />
-{/if}
+<VisitActionDisplay
+  value={visitDisplay}
+  hoverValue={visitHoverDisplay}
+  onClick={() => {
+    void toggleVisited()
+  }}
+/>
