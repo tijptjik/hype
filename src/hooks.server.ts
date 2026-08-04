@@ -3,6 +3,8 @@ import { sequence } from '@sveltejs/kit/hooks'
 import type { Handle } from '@sveltejs/kit'
 // I18N
 import { paraglideMiddleware } from '$lib/paraglide/server'
+// SECURITY
+import { isScannerProbePath } from '$lib/utils/scannerProbe'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
 import { and, eq, inArray } from 'drizzle-orm'
@@ -90,6 +92,22 @@ const handle_cors = (async ({ event, resolve }) => {
   }
   return resolve(event)
 }) satisfies Handle
+
+// ═══════════════════════
+// SCANNER PROBE HOOK
+// ═══════════════════════
+/**
+ * Rejects high-confidence credential-file and unused GraphQL probes before
+ * they reach the hub, authentication, and database hooks.
+ */
+const handle_scanner_probe: Handle = ({ event, resolve }) => {
+  // Return a normal not-found response without revealing that a guard matched.
+  if (isScannerProbePath(event.url.pathname)) {
+    return new Response(null, { status: 404 })
+  }
+
+  return resolve(event)
+}
 
 // ═══════════════════════
 // HUB HOOK
@@ -405,6 +423,7 @@ const translation: Handle = ({ event, resolve }) =>
  */
 
 const handle = sequence(
+  handle_scanner_probe,
   handle_cors,
   handle_hub,
   handle_auth,
