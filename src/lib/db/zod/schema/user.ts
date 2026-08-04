@@ -1,5 +1,6 @@
 // ZOD
 import { z } from 'zod'
+import { ListQueryParamsSchema } from './api'
 // DRIZZLE
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
@@ -332,6 +333,7 @@ const UserRemoteMetaSchema = z
 export const GetUserParamsSchema = z.object({
   ref: z.string().min(1),
   refKey: z.enum(['id', 'username']).optional(),
+  prisms: ListQueryParamsSchema.shape.prisms,
   meta: UserRemoteMetaSchema,
 })
 

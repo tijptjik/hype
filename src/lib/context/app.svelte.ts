@@ -1130,6 +1130,9 @@ export class AppCtx {
       getUser({
         ref: userRef,
         refKey,
+        ...(this.state.panels.profile.ctx?.observePrisms
+          ? { prisms: this.state.prisms }
+          : {}),
         meta: {
           profile,
         },

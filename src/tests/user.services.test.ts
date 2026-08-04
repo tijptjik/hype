@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   toUserProfileResponseShape,
+  toUserRelationsWithContributionConstraints,
   userEntityWithRelations,
 } from '$lib/api/services/user'
+import { GetUserParamsSchema } from '$lib/db/zod/schema/user'
 import { getUserFeaturesByUserId } from '$lib/db/services/user'
 import type { UserRaw } from '$lib/db/zod/schema/user.types'
+import type { SessionUser } from '$lib/types'
 
 const contributedUser = {
   id: 'user-1',
@@ -74,6 +77,47 @@ describe('user contribution profiles', () => {
       newPhotoCount: 1,
       newFeatureCount: 0,
     })
+  })
+
+  it('accepts active prism filters for contribution profile reads', () => {
+    expect(
+      GetUserParamsSchema.parse({
+        ref: 'user-1',
+        prisms: {
+          organisation: ['organisation-1'],
+          project: ['project-1'],
+          layer: ['layer-1'],
+        },
+      }).prisms,
+    ).toEqual({
+      organisation: ['organisation-1'],
+      project: ['project-1'],
+      layer: ['layer-1'],
+    })
+  })
+
+  it('applies public layer and feature visibility to every contribution type', () => {
+    let whereCallCount = 0
+    const where = () => {
+      whereCallCount += 1
+      return {}
+    }
+    const db = {
+      select: () => ({ from: () => ({ where }) }),
+    }
+
+    const relations = toUserRelationsWithContributionConstraints(
+      db as unknown as Parameters<typeof toUserRelationsWithContributionConstraints>[0],
+      {
+        sessionUser: { id: 'user-1', superAdmin: true } as unknown as SessionUser,
+        isAdminRequest: true,
+      },
+    )
+
+    expect(whereCallCount).toBe(2)
+    expect(relations.contributedFeatures).toHaveProperty('where')
+    expect(relations.contributedImages).toHaveProperty('with.featureImage.where')
+    expect(relations.contributedTasks).toHaveProperty('where')
   })
 })
 

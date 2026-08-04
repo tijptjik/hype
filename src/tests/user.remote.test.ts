@@ -9,6 +9,8 @@ const {
   mockSearchUsersByConditions,
   mockToUserSearchTextCondition,
   mockToEntityResponseShape,
+  mockToUserReadQueryPlan,
+  mockLoadUser,
   mockToAuthMessage,
 } = vi.hoisted(() => ({
   mockGetRequestEvent: vi.fn(),
@@ -17,13 +19,15 @@ const {
   mockSearchUsersByConditions: vi.fn(),
   mockToUserSearchTextCondition: vi.fn(),
   mockToEntityResponseShape: vi.fn(),
+  mockToUserReadQueryPlan: vi.fn(),
+  mockLoadUser: vi.fn(),
   mockToAuthMessage: vi.fn((code: string) => code),
 }))
 
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
   query: (_schema: unknown, handler: unknown) =>
-    withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
+    withRemoteMeta(handler as (...args: unknown[]) => unknown, 'query'),
 }))
 
 vi.mock('@sveltejs/kit', () => ({
@@ -90,6 +94,7 @@ vi.mock('$lib/api/services/user', () => ({
   isPrivilegedArchivedSearchRequested: (state: { isArchived: boolean | null }) =>
     state.isArchived === true || state.isArchived === null,
   toEntityResponseShape: mockToEntityResponseShape,
+  toUserReadQueryPlan: mockToUserReadQueryPlan,
   toEntityRoleExistsCondition: vi.fn(() => ({ fn: 'exists' })),
   toParentChainCondition: vi.fn(async () => ({ fn: 'parent-chain' })),
   toRequestedSearchState: (conditions: { isArchived?: unknown }) => ({
@@ -217,7 +222,7 @@ vi.mock('$lib/db/services/user', () => ({
   searchUsersByConditions: mockSearchUsersByConditions,
   toUserSearchTextCondition: mockToUserSearchTextCondition,
   toSearchCondition: mockToUserSearchTextCondition,
-  getUser: vi.fn(),
+  getUser: mockLoadUser,
   getUserFeaturesByUserId: vi.fn(),
   getUserLayersByUserId: vi.fn(),
   removeUserFeatureListState: vi.fn(),
@@ -308,6 +313,7 @@ describe('user.remote', () => {
       locals: { user: { id: 'u-1' } },
       platform: { env: {} },
       request: { method: 'POST' },
+      url: new URL('https://example.com/'),
     })
 
     mockSetupRequestHandler.mockResolvedValue({
@@ -324,6 +330,12 @@ describe('user.remote', () => {
       fn: 'or',
       args: [],
     })
+    mockToUserReadQueryPlan.mockReturnValue({
+      conditions: [],
+      profile: 'detail',
+      withRelations: {},
+    })
+    mockLoadUser.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -382,6 +394,30 @@ describe('user.remote', () => {
     await remote.getUserForAttribution({ id: 'u-1' })
 
     expect(mockToEntityResponseShape).toHaveBeenCalledWith(row, 'attribution')
+  })
+
+  it('getUser forwards explicit active prisms to the contribution query plan', async () => {
+    await remote.getUser({
+      ref: 'u-1',
+      refKey: 'id',
+      prisms: {
+        organisation: ['organisation-1'],
+        project: ['project-1'],
+        layer: ['layer-1'],
+      },
+      meta: { profile: 'detail' },
+    })
+
+    expect(mockToUserReadQueryPlan).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        prisms: {
+          organisation: ['organisation-1'],
+          project: ['project-1'],
+          layer: ['layer-1'],
+        },
+      }),
+    )
   })
 
   it('searchUsers caps limit at 100 and parses count rows', async () => {

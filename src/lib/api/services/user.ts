@@ -22,6 +22,8 @@ import { applyPrismConstraints } from '$lib/db'
 import {
   feature,
   featureImage,
+  layer,
+  task,
   user,
   hubRole,
   organisation,
@@ -762,7 +764,17 @@ export const toUserRelationsWithContributionConstraints = (
     isAdminRequest: boolean
   },
 ) => {
-  const featureConstraints: SQL<unknown>[] = []
+  // Contributions mirror the public map: only live features on live layers are eligible.
+  const visibleLayerIds = db
+    .select({ id: layer.id })
+    .from(layer)
+    .where(and(eq(layer.isPublished, true), eq(layer.isArchived, false)))
+  const featureConstraints: SQL<unknown>[] = [
+    eq(feature.isPublished, true),
+    eq(feature.isArchived, false),
+    eq(feature.isDraft, false),
+    inArray(feature.layerId, visibleLayerIds),
+  ]
 
   if (
     params.prisms &&
@@ -819,10 +831,6 @@ export const toUserRelationsWithContributionConstraints = (
     }
   }
 
-  if (featureConstraints.length === 0) {
-    return userEntityWithRelations
-  }
-
   const constrainedFeatureIds = db
     .select({ id: feature.id })
     .from(feature)
@@ -858,6 +866,13 @@ export const toUserRelationsWithContributionConstraints = (
           where: inArray(featureImage.featureId, constrainedFeatureIds),
         },
       },
+    },
+    contributedTasks: {
+      columns: {
+        id: true,
+        type: true,
+      },
+      where: inArray(task.featureId, constrainedFeatureIds),
     },
   }
 }
