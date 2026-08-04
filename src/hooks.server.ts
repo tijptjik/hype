@@ -43,6 +43,7 @@ const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtende
   subscriptionId: hub?.subscriptionId ?? null,
   subscriptionPlacement: hub?.subscriptionPlacement ?? undefined,
   i18n: hub?.i18n ?? EMPTY_HUB_I18N,
+  image: hub?.image,
   isSuperAdmin: hub?.isSuperAdmin ?? false,
   isAdminRequest: hub?.isAdminRequest ?? false,
   isCore: hub?.isCore ?? hub?.code === 'core',
@@ -273,16 +274,20 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     }
 
     // AUTH - Get auth instance for this request's base URL
-    const auth = getAuthForRequest(event.request.headers, {
-      DB: event.platform.env.DB,
-      AUTH_SECRET: event.platform.env.AUTH_SECRET,
-      AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
-      AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
-      AUTH_FACEBOOK_ID: event.platform.env.AUTH_FACEBOOK_ID,
-      AUTH_FACEBOOK_SECRET: event.platform.env.AUTH_FACEBOOK_SECRET,
-      AUTH_EMAIL_FROM: event.platform.env.AUTH_EMAIL_FROM,
-      EMAIL: event.platform.env.EMAIL,
-    })
+    const auth = getAuthForRequest(
+      event.request.headers,
+      {
+        DB: event.platform.env.DB,
+        AUTH_SECRET: event.platform.env.AUTH_SECRET,
+        AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
+        AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
+        AUTH_FACEBOOK_ID: event.platform.env.AUTH_FACEBOOK_ID,
+        AUTH_FACEBOOK_SECRET: event.platform.env.AUTH_FACEBOOK_SECRET,
+        AUTH_EMAIL_FROM: event.platform.env.AUTH_EMAIL_FROM,
+        EMAIL: event.platform.env.EMAIL,
+      },
+      event.locals.hub,
+    )
 
     // SET LOCALS
     event.locals.auth = auth

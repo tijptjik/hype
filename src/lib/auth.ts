@@ -5,6 +5,7 @@ import { passkey } from '@better-auth/passkey'
 import { customSession, anonymous, username } from 'better-auth/plugins'
 // CONFIG
 import { authConfig } from './auth/config'
+import { buildAuthEmail } from './auth/email'
 import { isAuthProviderEnabled } from './auth/providers'
 // DB SCHEMA
 import * as schema from '$lib/db/schema/index'
@@ -14,6 +15,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import type { UserRoleDisco, Locale } from '$lib/types'
 import type { UserExperimental, UserPreferences } from '$lib/db/zod/schema/user.types'
+import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { user as userSchema } from '$lib/db/schema/user'
 import { migrateAnonymousUserState } from '$lib/auth/anonymous.server'
 import { createAuthDiagnosticId } from '$lib/auth/diagnostics.server'
@@ -55,6 +57,7 @@ export function getBaseUrlFromRequestHeaders(headers: Headers): string {
  *
  * @param env - Environment variables containing D1 binding, auth secrets, and OAuth credentials
  * @param baseURL - The base URL for this auth instance (e.g., https://example.com)
+ * @param hub - Resolved hub context used to brand transactional email.
  */
 function createAuthInstance(
   env: {
@@ -68,6 +71,7 @@ function createAuthInstance(
     EMAIL?: App.Platform['env']['EMAIL']
   },
   baseURL: string,
+  hub?: HubOptsExtended,
 ) {
   const db = drizzle(env.DB, { schema })
 
@@ -76,6 +80,12 @@ function createAuthInstance(
     ...authConfig,
     // BASE URL (dynamic per domain)
     baseURL,
+    // OAuth callbacks can lose their short-lived state cookie after a browser
+    // restart or a local dev reload. Send that failure back to a usable HYPE
+    // entry point instead of Better Auth's internal error route.
+    onAPIError: {
+      errorURL: `${baseURL}/login`,
+    },
     // ENV
     secret: env.AUTH_SECRET,
     // DB
@@ -145,12 +155,18 @@ function createAuthInstance(
         if (!env.EMAIL || !env.AUTH_EMAIL_FROM) {
           throw new Error('Transactional email is not configured')
         }
+        const { fromName, ...email } = buildAuthEmail({
+          kind: 'password-reset',
+          actionUrl: url,
+          baseURL,
+          hub,
+          recipientName: user.name,
+        })
+
         await env.EMAIL.send({
           to: user.email,
-          from: { email: env.AUTH_EMAIL_FROM, name: 'HYPE' },
-          subject: 'Reset your HYPE password',
-          text: `Reset your HYPE password: ${url}`,
-          html: `<p>Reset your HYPE password:</p><p><a href="${url}">${url}</a></p>`,
+          from: { email: env.AUTH_EMAIL_FROM, name: fromName },
+          ...email,
         })
       },
     },
@@ -160,12 +176,18 @@ function createAuthInstance(
         if (!env.EMAIL || !env.AUTH_EMAIL_FROM) {
           throw new Error('Transactional email is not configured')
         }
+        const { fromName, ...email } = buildAuthEmail({
+          kind: 'verification',
+          actionUrl: url,
+          baseURL,
+          hub,
+          recipientName: user.name,
+        })
+
         await env.EMAIL.send({
           to: user.email,
-          from: { email: env.AUTH_EMAIL_FROM, name: 'HYPE' },
-          subject: 'Verify your HYPE email',
-          text: `Verify your HYPE email: ${url}`,
-          html: `<p>Verify your HYPE email:</p><p><a href="${url}">${url}</a></p>`,
+          from: { email: env.AUTH_EMAIL_FROM, name: fromName },
+          ...email,
         })
       },
     },
@@ -281,10 +303,12 @@ function createAuthInstance(
 
 /**
  * Get or create an auth instance for the current request.
- * Auth instances are cached by base URL to support multiple domains.
+ * Auth instances are cached by base URL and hub code to support multiple domains
+ * and local hub switching during development.
  *
  * @param headers - The request headers to extract the base URL from
  * @param env - Environment variables containing D1 binding, auth secrets, and OAuth credentials
+ * @param hub - Resolved hub context used to brand transactional email.
  * @returns An auth instance configured for this request's domain
  */
 export const getAuthForRequest = (
@@ -299,18 +323,20 @@ export const getAuthForRequest = (
     AUTH_EMAIL_FROM?: string
     EMAIL?: App.Platform['env']['EMAIL']
   },
+  hub?: HubOptsExtended,
 ): Auth => {
   const baseURL = getBaseUrlFromRequestHeaders(headers)
+  const cacheKey = `${baseURL}:${hub?.code ?? 'core'}`
 
   // Return cached instance if available
-  const cachedAuth = authInstances.get(baseURL)
+  const cachedAuth = authInstances.get(cacheKey)
   if (cachedAuth) {
     return cachedAuth
   }
 
   // Create new instance for this base URL
-  const auth = createAuthInstance(env, baseURL)
-  authInstances.set(baseURL, auth)
+  const auth = createAuthInstance(env, baseURL, hub)
+  authInstances.set(cacheKey, auth)
 
   return auth
 }
