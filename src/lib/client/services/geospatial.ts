@@ -150,58 +150,68 @@ export function getUserLocationCoordinates(appCtx: AppCtx): [number, number] | n
 
 /**
  * Starts a circular flight animation around a center point.
- * Completes a 5km circle in exactly 1 minute and loops continuously.
+ * Completes a 5km circle in two minutes by default and loops continuously.
+ *
+ * @param appCtx - Application context containing the active map.
+ * @param center - Center coordinate for the circular flight.
+ * @param radiusKm - Radius of the circular flight in kilometres.
+ * @param durationMs - Duration of one complete orbit in milliseconds.
+ * @returns A cleanup function, or `undefined` when no map is available.
+ * @remarks Non-positive `durationMs` values use the 120000ms default duration.
  */
 export function startCircularFlight(
   appCtx: AppCtx,
   center: [number, number],
   radiusKm: number = 5,
+  durationMs: number = 120000,
 ): (() => void) | void {
-  if (!appCtx.map) return
+  const map = appCtx.map
+  if (!map) return
 
-  const TOTAL_DURATION = 120000 // 1 minute in milliseconds
+  const totalDuration = durationMs > 0 ? durationMs : 120000
+  const longitudeRadius = radiusKm / 111.32
+  const latitudeRadius = longitudeRadius / Math.cos((center[1] * Math.PI) / 180)
+  const bearingDegreesPerRadian = 180 / Math.PI
   let startTime: number | null = null
-  let animationId: number
+  let animationId: number | null = null
+  let isStopped = false
 
   const animate = (currentTime: number) => {
-    if (!startTime) startTime = currentTime
+    if (isStopped || appCtx.map !== map) return
+    if (startTime === null) startTime = currentTime
 
-    // Calculate elapsed time and progress (0 to 1)
-    const elapsed = (currentTime - startTime) % TOTAL_DURATION
-    const progress = elapsed / TOTAL_DURATION
-
-    // Calculate angle based on progress (0 to 2π radians)
+    // Keep the camera update on one browser frame and avoid work until the map is ready.
+    const elapsed = (currentTime - startTime) % totalDuration
+    const progress = elapsed / totalDuration
     const angleRad = progress * 2 * Math.PI
 
-    // Calculate new position using proper geographic calculations
-    const newLng = center[0] + (radiusKm / 111.32) * Math.cos(angleRad)
-    const newLat =
-      center[1] +
-      (radiusKm / (111.32 * Math.cos((center[1] * Math.PI) / 180))) * Math.sin(angleRad)
-
-    // Calculate bearing as direction of travel (tangent to circle)
-    // Add π/2 to get tangent direction, then convert to degrees
-    const bearingRad = angleRad + Math.PI / 2
-    const bearingDeg = (bearingRad * 180) / Math.PI
-
-    // Use jumpTo for immediate, smooth positioning without animation conflicts
-    appCtx.map?.jumpTo({
-      center: [newLng, newLat],
+    map.jumpTo({
+      center: [
+        center[0] + longitudeRadius * Math.cos(angleRad),
+        center[1] + latitudeRadius * Math.sin(angleRad),
+      ],
       zoom: 14,
-      bearing: bearingDeg,
+      bearing: (angleRad + Math.PI / 2) * bearingDegreesPerRadian,
       pitch: 45,
     })
 
-    // Continue animation
     animationId = requestAnimationFrame(animate)
   }
 
-  // Start animation
-  animationId = requestAnimationFrame(animate)
+  const start = (): void => {
+    if (!isStopped) animationId = requestAnimationFrame(animate)
+  }
 
-  // Return cleanup function (optional, for stopping the animation)
+  if (map.loaded()) {
+    start()
+  } else {
+    map.once('load', start)
+  }
+
   return () => {
-    if (animationId) {
+    isStopped = true
+    map.off('load', start)
+    if (animationId !== null) {
       cancelAnimationFrame(animationId)
     }
   }

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit'
-import { shouldLogAuthzDeny, toActorPolicyBase } from '.'
+import { shouldLogAuthzDeny, toAccountRequirementCode, toActorPolicyBase } from '.'
 import { getScopedHubAdminIds, isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 import { hasAnyOrganisationRole, isOrganisationOwner } from './organisation'
 import { hasAuthenticatedSession } from './user'
@@ -531,7 +531,7 @@ const evaluateProjectReadStatePolicy = (
 /* -------- */
 
 const listProjectsPolicy: ProjectPolicyHandler = params => {
-  if (!hasAuthenticatedSession(params)) {
+  if (!params.userId) {
     return logProjectReject('list', params, 'UNAUTHENTICATED')
   }
 
@@ -539,7 +539,7 @@ const listProjectsPolicy: ProjectPolicyHandler = params => {
 }
 
 const readProjectPolicy: ProjectPolicyHandler = params => {
-  if (!hasAuthenticatedSession(params)) {
+  if (!params.userId) {
     return logProjectReject('read', params, 'UNAUTHENTICATED')
   }
 
@@ -548,7 +548,7 @@ const readProjectPolicy: ProjectPolicyHandler = params => {
 
 const createProjectPolicy: ProjectPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
-    return logProjectReject('create', params, 'UNAUTHENTICATED')
+    return logProjectReject('create', params, toAccountRequirementCode(params))
   }
   if (params.isSuperAdmin) return { allowed: true }
 
@@ -563,7 +563,7 @@ const createProjectPolicy: ProjectPolicyHandler = params => {
 
 const updateProjectPolicy: ProjectPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
-    return logProjectReject('update', params, 'UNAUTHENTICATED')
+    return logProjectReject('update', params, toAccountRequirementCode(params))
   }
   if (params.isSuperAdmin) return { allowed: true }
 
@@ -608,7 +608,11 @@ const publishProjectPolicy: ProjectPolicyHandler = params =>
 
 const manageCapabilitiesPolicy: ProjectPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
-    return logProjectReject('manage-capabilities', params, 'UNAUTHENTICATED')
+    return logProjectReject(
+      'manage-capabilities',
+      params,
+      toAccountRequirementCode(params),
+    )
   }
   if (params.isSuperAdmin) return { allowed: true }
 
@@ -624,7 +628,11 @@ const manageCapabilitiesPolicy: ProjectPolicyHandler = params => {
 
 const assignCapabilitiesPolicy: ProjectPolicyHandler = params => {
   if (!hasAuthenticatedSession(params)) {
-    return logProjectReject('assign-capabilities', params, 'UNAUTHENTICATED')
+    return logProjectReject(
+      'assign-capabilities',
+      params,
+      toAccountRequirementCode(params),
+    )
   }
   if (params.isSuperAdmin) return { allowed: true }
 

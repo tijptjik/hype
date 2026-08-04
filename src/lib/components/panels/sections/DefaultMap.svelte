@@ -1,7 +1,11 @@
 <script lang="ts">
+// THIRD PARTY
+import { toast } from 'svelte-sonner'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
+// API
+import { getUserLayers, setUserLayerDefaults } from '$lib/api/server/user.remote'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // BITS
@@ -21,6 +25,7 @@ const DESCRIPTION_PREVIEW_THRESHOLD = 180
 
 let expandedLayerIds = $state(new Set<string>())
 let optimisticUserLayerIds = $state<Set<string> | null>(null)
+let isSavingLayers = $state(false)
 
 const persistedUserLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
 const userLayerIds = $derived(optimisticUserLayerIds ?? persistedUserLayerIds)
@@ -77,9 +82,16 @@ const toggleDescriptionExpanded = (layerId: string): void => {
 }
 
 /**
- * Optimistically toggles a saved default layer before app context state settles.
+ * Optimistically saves this hub's default-visible layers through a remote command.
  */
-const toggleUserLayer = (layerId: string, checked: boolean): void => {
+const toggleUserLayer = async (layerId: string, checked: boolean): Promise<void> => {
+  if (isSavingLayers) return
+
+  const user = appCtx.getUser()
+  const hub = appCtx.hub
+  if (!user || !hub || (!hub.id && !hub.code)) return
+
+  const previousUserLayerIds = new Set(userLayerIds)
   const nextUserLayerIds = new Set(userLayerIds)
 
   if (checked) {
@@ -89,7 +101,32 @@ const toggleUserLayer = (layerId: string, checked: boolean): void => {
   }
 
   optimisticUserLayerIds = nextUserLayerIds
-  appCtx.setUserLayer(layerId, checked)
+  isSavingLayers = true
+
+  try {
+    const response = await setUserLayerDefaults({
+      userId: user.id,
+      hubId: hub.id ?? undefined,
+      hubCode: hub.code ?? undefined,
+      layers: [...nextUserLayerIds].map(layerId => ({
+        layerId,
+        isDefaultVisible: true,
+      })),
+    }).updates(
+      getUserLayers({
+        userId: user.id,
+        hubId: hub.id ?? undefined,
+      }),
+    )
+
+    appCtx.applyUserLayerDefaults(response?.data ?? [], hub)
+  } catch (error) {
+    console.error('Error updating default map layers:', error)
+    optimisticUserLayerIds = previousUserLayerIds
+    toast.error('Failed to update default map layers')
+  } finally {
+    isSavingLayers = false
+  }
 }
 </script>
 
@@ -176,8 +213,8 @@ const toggleUserLayer = (layerId: string, checked: boolean): void => {
           size="sm"
           color="primary"
           checked={userLayerIds.has(layer.id)}
-          disabled={!canSaveUserLayers}
-          onCheckedChange={(checked) => toggleUserLayer(layer.id, checked === true)}
+          disabled={!canSaveUserLayers || isSavingLayers}
+          onCheckedChange={(checked) => void toggleUserLayer(layer.id, checked === true)}
         />
       </div>
     {/each}

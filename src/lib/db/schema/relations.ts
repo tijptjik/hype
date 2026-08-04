@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm'
 
 // Import all table definitions
-import { user, userFeature, userLayer } from './user'
+import { passkey, user, userFeature, userLayer } from './user'
 import { hub, hubI18n, hubRole, hubUserState, hubLayer } from './hub'
 import { organisation, organisationI18n, organisationRole } from './organisation'
 import { project, projectI18n, projectRole } from './project'
@@ -40,8 +40,17 @@ export const userRelations = relations(user, ({ many }) => ({
   contributedFeatures: many(feature, { relationName: 'contributorFeatures' }),
   contributedTasks: many(task, { relationName: 'contributorTasks' }),
   reviewedTasks: many(task, { relationName: 'reviewerTasks' }),
+  passkeys: many(passkey),
   userFeatures: many(userFeature),
   userLayers: many(userLayer),
+}))
+
+/** Links WebAuthn passkeys to the user who registered them. */
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+  user: one(user, {
+    fields: [passkey.userId],
+    references: [user.id],
+  }),
 }))
 
 /**

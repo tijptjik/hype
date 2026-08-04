@@ -12,6 +12,7 @@ interface Props {
   leftActions?: import('svelte').Snippet
   rightActions?: import('svelte').Snippet
   centerRightActionsOnMobile?: boolean
+  leftActionsFillAvailableWidth?: boolean
   heightBudgetPx?: number | null
 }
 
@@ -20,6 +21,7 @@ let {
   leftActions,
   rightActions,
   centerRightActionsOnMobile = false,
+  leftActionsFillAvailableWidth = false,
   heightBudgetPx = null,
 }: Props = $props()
 
@@ -45,26 +47,33 @@ const layout = $derived(
     id="feature-card-actions"
     class={cx(
       responsiveCtx.isMobile
-        ? 'grid grid-cols-[1fr_auto_1fr] items-center gap-3'
-        : 'flex items-center justify-between gap-3',
+        ? leftActionsFillAvailableWidth
+          ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3'
+          : 'grid grid-cols-[1fr_auto_1fr] items-center gap-3'
+        : 'flex items-center gap-3',
       layout.hasElevatedChrome ? 'min-h-11' : 'min-h-16',
       'px-[var(--feature-card-content-padding)]',
       layout.hasElevatedChrome ? 'py-0' : 'py-2',
     )}
   >
-    <div class="pointer-events-auto flex min-w-0 items-center self-center">
+    <div
+      class={cx(
+        'pointer-events-auto flex min-w-0 items-center self-center',
+        !responsiveCtx.isMobile && 'flex-1',
+      )}
+    >
       {#if leftActions}
         {@render leftActions()}
       {/if}
     </div>
-    {#if responsiveCtx.isMobile && !centerRightActionsOnMobile}
+    {#if responsiveCtx.isMobile && !centerRightActionsOnMobile && !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-center self-center"
       ></div>
     {/if}
     <div
       class={cx(
-        'pointer-events-auto flex min-w-0 items-center self-center',
+        'pointer-events-auto flex min-w-0 shrink-0 items-center self-center',
         responsiveCtx.isMobile && centerRightActionsOnMobile
           ? 'justify-center'
           : 'justify-end',
@@ -74,7 +83,7 @@ const layout = $derived(
         {@render rightActions()}
       {/if}
     </div>
-    {#if !responsiveCtx.isMobile || centerRightActionsOnMobile}
+    {#if (!responsiveCtx.isMobile || centerRightActionsOnMobile) && !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-end self-center"
       ></div>

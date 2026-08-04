@@ -2,6 +2,7 @@
 // SVELTE
 import { watch } from 'runed'
 import { onMount } from 'svelte'
+import { toast } from 'svelte-sonner'
 // STORES
 import { page } from '$app/state'
 // QUERY
@@ -9,15 +10,26 @@ import type { QueryClient } from '@tanstack/svelte-query'
 // BITS
 import { cx } from '$lib/bits/utils'
 // AUTH
-import { useSession } from '$lib/auth/client'
+import { signIn, useSession } from '$lib/auth/client'
+import {
+  bootstrapAnonymousSession,
+  shouldBootstrapAnonymous,
+} from '$lib/auth/bootstrap'
+import {
+  UPGRADE_ACCOUNT_EVENT,
+  isGuestUser,
+  type UpgradeReason,
+  toSafeReturnPath,
+} from '$lib/auth/upgrade'
 // I18N
-import { getLocaleKey } from '$lib/i18n'
+import { getLocaleKey, m } from '$lib/i18n'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
 import { setResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
 import App from '$lib/bits/patterns/layout/app/App.svelte'
+import UpgradeAccountDialog from '$lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
 // MAPLIBRE
 import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
@@ -44,7 +56,11 @@ const queryClient = $derived(
 const session = useSession()
 const responsive = setResponsiveCtx()
 let hasMounted = false
-let pendingAuthReinit: ReturnType<typeof setTimeout> | null = null
+let pendingAuthReinit: number | null = null
+let bootstrapError = $state<string | null>(null)
+let isUpgradeOpen = $state(false)
+let upgradeReason = $state<UpgradeReason>('account')
+let upgradeReturnTo = $state('/')
 
 // Set AppCtx in context
 const appCtx = setAppCtx(
@@ -61,15 +77,37 @@ function clearPendingAuthReinit(): void {
   }
 }
 
+/** Rebuilds user-scoped application data after a confirmed authentication change. */
+async function refreshAppForSessionUser(user: SessionUser): Promise<void> {
+  clearPendingAuthReinit()
+  appCtx.setUser(user)
+  appCtx.isInitialised = false
+  await appCtx.init(user.id)
+}
+
 // Reinitialize the app context after an auth identity change, including logout.
-function scheduleAuthReinit(user: SessionUser | null): void {
+function scheduleAuthReinit(user: SessionUser): void {
   clearPendingAuthReinit()
 
   pendingAuthReinit = window.setTimeout(() => {
     pendingAuthReinit = null
-    appCtx.setUser(user)
-    void appCtx.init(user?.id ?? null)
+    void refreshAppForSessionUser(user)
   }, 0)
+}
+
+/** Waits until the shared session and application context both recognise an upgraded account. */
+async function confirmAccountUpgrade(): Promise<void> {
+  let user = $session.data?.user as SessionUser | undefined
+  if (!user || isGuestUser(user)) {
+    await $session.refetch()
+    user = $session.data?.user as SessionUser | undefined
+  }
+
+  if (!user || isGuestUser(user)) {
+    throw new Error('account promotion was not reflected in the session')
+  }
+
+  await refreshAppForSessionUser(user)
 }
 
 // Keep hub context available for both app and admin route trees.
@@ -124,39 +162,93 @@ $effect(() => {
 })
 
 // Load maplibre globally
-onMount(async () => {
+async function initializeAuthenticatedApp(): Promise<void> {
+  if (shouldBootstrapAnonymous(page.url.pathname)) {
+    await bootstrapAnonymousSession({
+      getSession: () => ({
+        isPending: $session.isPending,
+        userId: $session.data?.user?.id,
+      }),
+      signInAnonymous: async () => {
+        const result = await signIn.anonymous()
+        if (result.error) throw new Error(result.error.message)
+      },
+      refetchSession: () => $session.refetch(),
+    })
+  }
+
+  const currentUser = $session.data?.user
+  appCtx.setUser((currentUser as SessionUser | undefined) ?? null)
+  await appCtx.init(currentUser?.id ?? null)
+}
+
+async function retryBootstrap(): Promise<void> {
+  bootstrapError = null
+  try {
+    await initializeAuthenticatedApp()
+  } catch (error) {
+    bootstrapError = error instanceof Error ? error.message : 'Guest session failed'
+  }
+}
+
+async function handleRequestedUpgrade(): Promise<void> {
+  const requestedUpgrade = page.url.searchParams.get('upgrade')
+  const currentUser = $session.data?.user
+  if (!requestedUpgrade || (currentUser && currentUser.isAnonymous !== true)) return
+
+  upgradeReason = requestedUpgrade === 'admin' ? 'admin' : 'account'
+  upgradeReturnTo = toSafeReturnPath(page.url.searchParams.get('returnTo'))
+  isUpgradeOpen = true
+
+  const cleanUrl = new URL(page.url)
+  cleanUrl.searchParams.delete('upgrade')
+  cleanUrl.searchParams.delete('returnTo')
+  await goto(`${cleanUrl.pathname}${cleanUrl.search}`, {
+    replaceState: true,
+    keepFocus: true,
+    noScroll: true,
+  })
+}
+
+onMount(() => {
   hasMounted = true
 
-  if (!appCtx.isInitialised) {
-    const currentUser = $session.data?.user
-    if (currentUser) {
-      appCtx.setUser(currentUser as SessionUser)
-      await appCtx.init(currentUser.id)
-    } else {
-      await appCtx.init(null)
+  const handleUpgradeRequest = (event: Event): void => {
+    const detail = (event as CustomEvent<{ reason?: UpgradeReason; returnTo?: string }>)
+      .detail
+    upgradeReason = detail?.reason ?? 'account'
+    upgradeReturnTo = toSafeReturnPath(detail?.returnTo)
+    isUpgradeOpen = true
+  }
+  window.addEventListener(UPGRADE_ACCOUNT_EVENT, handleUpgradeRequest)
+
+  void (async () => {
+    if (!appCtx.isInitialised) {
+      await retryBootstrap()
     }
-  }
 
-  scheduleResponsiveSync()
-  window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
-  window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
+    await handleRequestedUpgrade()
 
-  try {
-    // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they are heavy
-    // and the max worker size in the free tier is 1 MB
-    const [, maplibreSource] = await Promise.all([
-      ensureMapLibreStyles(),
-      loadMapLibre(),
-    ])
-    const maplibre = monkeyPatchMapLibre(maplibreSource)
-    globalThis.maplibregl = maplibre
+    scheduleResponsiveSync()
+    window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
+    window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
 
-    // Store maplibre in the app context so components can access it
-    appCtx.maplibre = maplibre
-    appCtx.isMaplibreLoaded = true
-  } catch (error) {
-    console.error('Failed to load maplibre', error)
-  }
+    try {
+      // To minimize the payload in Cloudflare, mapping dependencies load client-side.
+      const [, maplibreSource] = await Promise.all([
+        ensureMapLibreStyles(),
+        loadMapLibre(),
+      ])
+      const maplibre = monkeyPatchMapLibre(maplibreSource)
+      ;(globalThis as typeof globalThis & { maplibregl: typeof maplibre }).maplibregl =
+        maplibre
+
+      appCtx.maplibre = maplibre
+      appCtx.isMaplibreLoaded = true
+    } catch (error) {
+      console.error('Failed to load maplibre', error)
+    }
+  })()
 
   return () => {
     clearPendingAuthReinit()
@@ -168,13 +260,18 @@ onMount(async () => {
 
     window.visualViewport?.removeEventListener('resize', scheduleResponsiveSync)
     window.visualViewport?.removeEventListener('scroll', scheduleResponsiveSync)
+    window.removeEventListener(UPGRADE_ACCOUNT_EVENT, handleUpgradeRequest)
   }
 })
 
 // Determine if we're in admin mode based on the route
 const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false)
 const localeKey = $derived(getLocaleKey())
-const isShelllessRoute = $derived(page.route.id?.startsWith('/policy') ?? false)
+const isShelllessRoute = $derived(
+  Boolean(
+    page.route.id?.startsWith('/policy') || page.route.id?.startsWith('/account'),
+  ),
+)
 const shelllessClass = $derived(
   cx(
     'bits-theme min-h-screen w-full overflow-y-auto bg-black',
@@ -234,12 +331,20 @@ watch(
     const currentUserId = appCtx.user?.id
     const newUserId = newUser?.id
 
-    if (newUser && newUserId !== currentUserId) {
-      // User login or user changed
+    const previousUser = appCtx.user
+    const isGuestPromotion =
+      Boolean(previousUser && isGuestUser(previousUser)) &&
+      newUser?.isAnonymous !== true
+
+    if (newUser && (newUserId !== currentUserId || isGuestPromotion)) {
+      // A promoted guest retains its ID, so treat its anonymous-state change as an auth change.
+      if (isGuestPromotion) {
+        toast.success(m.guest__upgrade_success())
+      }
       scheduleAuthReinit(newUser as SessionUser)
     } else if (!newUser && currentUserId) {
-      // User logout
-      scheduleAuthReinit(null)
+      // Account logout immediately converges on a fresh guest session.
+      void retryBootstrap()
     }
   },
 )
@@ -281,3 +386,27 @@ watch(
     {@render children()}
   </App>
 {/if}
+
+{#if bootstrapError}
+  <div
+    class="fixed inset-0 z-[1100] flex items-center justify-center bg-black p-6 text-white"
+  >
+    <div class="max-w-sm text-center">
+      <p>{m.bootstrap__error()}</p>
+      <button
+        type="button"
+        class="mt-4 rounded-lg bg-white px-4 py-2 text-black"
+        onclick={retryBootstrap}
+      >
+        {m.bootstrap__retry()}
+      </button>
+    </div>
+  </div>
+{/if}
+
+<UpgradeAccountDialog
+  bind:open={isUpgradeOpen}
+  reason={upgradeReason}
+  returnTo={upgradeReturnTo}
+  onAccountReady={confirmAccountUpgrade}
+/>

@@ -3,23 +3,29 @@ import { sequence } from '@sveltejs/kit/hooks'
 import type { Handle } from '@sveltejs/kit'
 // I18N
 import { paraglideMiddleware } from '$lib/paraglide/server'
+// SECURITY
+import { isScannerProbePath } from '$lib/utils/scannerProbe'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import * as schema from '$lib/db/schema/index'
 import { retryBusyRead } from '$lib/db/services/sqlite'
+import { autochunk } from '$lib/utils/batch-query'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
 import { isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
 // TYPES
-import type { LocaleKey, Session, SessionUser } from '$lib/types'
+import type { LocaleKey, Session, SessionUser, UserRoleDisco } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import { isAdminRequest } from '$lib/api'
 
 type HubShapeResult = { data: unknown }
 type HubServiceModule = typeof import('$lib/api/services/hub')
+type HubAdminRole = Extract<UserRoleDisco, { type: 'hub' }> & {
+  hub?: { code?: string | null }
+}
 
 const EMPTY_HUB_I18N: Record<LocaleKey, Record<string, never>> = {
   en: {},
@@ -35,12 +41,32 @@ const toHubLocalsShape = (hub?: Partial<HubOptsExtended> | null): HubOptsExtende
   isSubscriptionAvailable: hub?.isSubscriptionAvailable ?? false,
   subscriptionService: hub?.subscriptionService ?? null,
   subscriptionId: hub?.subscriptionId ?? null,
-  subscriptionPlacement: hub?.subscriptionPlacement ?? null,
+  subscriptionPlacement: hub?.subscriptionPlacement ?? undefined,
   i18n: hub?.i18n ?? EMPTY_HUB_I18N,
+  image: hub?.image,
   isSuperAdmin: hub?.isSuperAdmin ?? false,
   isAdminRequest: hub?.isAdminRequest ?? false,
   isCore: hub?.isCore ?? hub?.code === 'core',
 })
+
+/**
+ * Returns the hub codes for which the requester has an administrator role.
+ *
+ * @param roles - Roles associated with the authenticated user.
+ * @returns A set of administrator hub codes.
+ */
+export function getAdminHubCodes(
+  roles: readonly UserRoleDisco[] | undefined,
+): Set<string> {
+  return new Set(
+    roles
+      ?.filter(
+        (role): role is HubAdminRole => role.type === 'hub' && role.role === 'admin',
+      )
+      .map(role => role.hub?.code)
+      .filter((code): code is string => typeof code === 'string' && code.length > 0),
+  )
+}
 
 // ═══════════════════════
 // CORS HOOK
@@ -67,6 +93,22 @@ const handle_cors = (async ({ event, resolve }) => {
   }
   return resolve(event)
 }) satisfies Handle
+
+// ═══════════════════════
+// SCANNER PROBE HOOK
+// ═══════════════════════
+/**
+ * Rejects high-confidence credential-file and unused GraphQL probes before
+ * they reach the hub, authentication, and database hooks.
+ */
+const handle_scanner_probe: Handle = ({ event, resolve }) => {
+  // Return a normal not-found response without revealing that a guard matched.
+  if (isScannerProbePath(event.url.pathname)) {
+    return new Response(null, { status: 404 })
+  }
+
+  return resolve(event)
+}
 
 // ═══════════════════════
 // HUB HOOK
@@ -108,14 +150,43 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     schema,
   })
 
+  // Resolve the session early because this hook runs before handle_session_auth.
+  let adminHubCodes = new Set<string>()
+  try {
+    const auth = getAuthForRequest(event.request.headers, {
+      DB: event.platform?.env?.DB as MiniflareD1Database,
+      AUTH_SECRET: event.platform?.env?.AUTH_SECRET ?? '',
+      AUTH_GOOGLE_ID: event.platform?.env?.AUTH_GOOGLE_ID ?? '',
+      AUTH_GOOGLE_SECRET: event.platform?.env?.AUTH_GOOGLE_SECRET ?? '',
+      AUTH_FACEBOOK_ID: event.platform?.env?.AUTH_FACEBOOK_ID ?? '',
+      AUTH_FACEBOOK_SECRET: event.platform?.env?.AUTH_FACEBOOK_SECRET ?? '',
+      AUTH_EMAIL_FROM: event.platform?.env?.AUTH_EMAIL_FROM,
+      EMAIL: event.platform?.env?.EMAIL,
+    })
+    const sessionData = await auth.api.getSession({ headers: event.request.headers })
+    const sessionUser = sessionData?.user as SessionUser | undefined
+    adminHubCodes = getAdminHubCodes(sessionUser?.roles)
+  } catch {
+    // Unavailable auth context must retain the guest-safe published hub filter.
+  }
+  const canResolveUnpublishedHub =
+    adminHubCodes.has('core') || adminHubCodes.has(hubOpts.code ?? '')
+
   if (db && event.locals && hubOpts.code) {
+    const hubCode = hubOpts.code
     const hubDb = await retryBusyRead(() =>
       db.query.hub.findFirst({
         with: {
           i18n: true,
           image: true,
         },
-        where: eq(schema.hub.code, hubOpts.code),
+        where: canResolveUnpublishedHub
+          ? eq(schema.hub.code, hubCode)
+          : and(
+              eq(schema.hub.code, hubCode),
+              eq(schema.hub.isPublished, true),
+              eq(schema.hub.isArchived, false),
+            ),
       }),
     )
     if (hubDb) {
@@ -126,16 +197,54 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else if (db && event.locals && hubOpts.domain) {
-    const hubDb = await retryBusyRead(() =>
+    const hubDomain = hubOpts.domain
+    const isCoreAdmin = adminHubCodes.has('core')
+    let hubDb = await retryBusyRead(() =>
       db.query.hub.findFirst({
         with: {
           i18n: true,
           image: true,
         },
-        where: eq(schema.hub.domain, hubOpts.domain),
+        where: isCoreAdmin
+          ? eq(schema.hub.domain, hubDomain)
+          : and(
+              eq(schema.hub.domain, hubDomain),
+              eq(schema.hub.isPublished, true),
+              eq(schema.hub.isArchived, false),
+            ),
       }),
     )
-    if (hubDb) {
+
+    if (!hubDb && !isCoreAdmin && adminHubCodes.size > 0) {
+      // A hub admin may resolve an unpublished or archived hub they administer.
+      const [adminHub] = await autochunk(
+        {
+          items: [...adminHubCodes],
+          otherParametersCount: 1,
+        },
+        hubCodeBatch =>
+          retryBusyRead(() =>
+            db.query.hub.findMany({
+              with: {
+                i18n: true,
+                image: true,
+              },
+              where: and(
+                eq(schema.hub.domain, hubDomain),
+                inArray(schema.hub.code, hubCodeBatch),
+              ),
+            }),
+          ),
+      )
+      hubDb = adminHub
+    }
+
+    const canUseDomainHub =
+      Boolean(hubDb) &&
+      (isCoreAdmin ||
+        adminHubCodes.has(hubDb?.code ?? '') ||
+        (hubDb?.isPublished && !hubDb?.isArchived))
+    if (hubDb && canUseDomainHub) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,
         'card',
@@ -165,12 +274,20 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     }
 
     // AUTH - Get auth instance for this request's base URL
-    const auth = getAuthForRequest(event.request.headers, {
-      DB: event.platform.env.DB,
-      AUTH_SECRET: event.platform.env.AUTH_SECRET,
-      AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
-      AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
-    })
+    const auth = getAuthForRequest(
+      event.request.headers,
+      {
+        DB: event.platform.env.DB,
+        AUTH_SECRET: event.platform.env.AUTH_SECRET,
+        AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
+        AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
+        AUTH_FACEBOOK_ID: event.platform.env.AUTH_FACEBOOK_ID,
+        AUTH_FACEBOOK_SECRET: event.platform.env.AUTH_FACEBOOK_SECRET,
+        AUTH_EMAIL_FROM: event.platform.env.AUTH_EMAIL_FROM,
+        EMAIL: event.platform.env.EMAIL,
+      },
+      event.locals.hub,
+    )
 
     // SET LOCALS
     event.locals.auth = auth
@@ -217,24 +334,26 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
 // AUTH REDIRECT HOOK
 // ═══════════════════════
 /**
- * This hook redirects unauthenticated users to the home page
- * when they try to access protected routes.
+ * Protect account-only server routes while leaving normal app routes available
+ * for client-driven guest bootstrap.
  */
 const handle_auth_redirect: Handle = async ({ event, resolve }) => {
-  // Allow public endpoints and legal policy documents to remain reachable when logged out.
   if (isPublicUnauthenticatedPath(event.url.pathname)) {
     return resolve(event)
   }
 
-  // Check if user is authenticated
-  const isAuthenticated = event.locals.session && event.locals.user
+  const isAdminPath =
+    event.url.pathname === '/admin' || event.url.pathname.startsWith('/admin/')
+  const hasAccount = Boolean(
+    event.locals.session && event.locals.user && event.locals.user.isAnonymous !== true,
+  )
 
-  // Redirect unauthenticated users to home page
-  if (!isAuthenticated) {
+  if (isAdminPath && !hasAccount) {
+    const returnTo = `${event.url.pathname}${event.url.search}`
     return new Response(null, {
       status: 302,
       headers: {
-        location: '/',
+        location: `/?upgrade=admin&returnTo=${encodeURIComponent(returnTo)}`,
       },
     })
   }
@@ -264,12 +383,7 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
     let isSuperAdmin = false
 
     if (sessionUser?.roles && hub?.code) {
-      const adminHubCodes = new Set(
-        sessionUser.roles
-          .filter(role => role.type === 'hub' && role.role === 'admin')
-          .map(role => (role as unknown as { hub?: { code?: string } }).hub?.code)
-          .filter((code): code is string => Boolean(code)),
-      )
+      const adminHubCodes = getAdminHubCodes(sessionUser.roles)
 
       isHubAdminForActiveHub = adminHubCodes.has(hub.code)
       // Super admin = hub admin on the core hub.
@@ -314,6 +428,7 @@ const translation: Handle = ({ event, resolve }) =>
  */
 
 const handle = sequence(
+  handle_scanner_probe,
   handle_cors,
   handle_hub,
   handle_auth,

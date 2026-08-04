@@ -1,0 +1,75 @@
+import { describe, expect, it } from 'vitest'
+
+import { isScannerProbePath } from '$lib/utils/scannerProbe'
+
+describe('isScannerProbePath', () => {
+  it.each([
+    '/.env',
+    '/.env.local',
+    '/.aws/credentials',
+    '/.ssh/id_ed25519',
+    '/.codex/config.toml',
+    '/server/.env.production',
+    '/@fs/proc/self/environ',
+    '/config/env.php',
+    '/config/env.json',
+    '/backend/config.json',
+    '/application.properties',
+    '/firebase-service-account.json',
+    '/aws/credentials',
+    '/env.txt',
+    '/api/env',
+    '/credentials.ini',
+    '/config/credentials.json',
+    '/.git/config',
+    '/actuator/env',
+    '/cgi-bin/test',
+    '/_debugbar/open',
+    '/_ignition/health-check',
+    '/debug/pprof/',
+    '/api/exec',
+    '/api/v0/run_sql',
+    '/__env.js',
+    '/docker-compose.yaml',
+    '/gcp-credentials.json',
+    '/id_ed25519',
+    '/private-key',
+    '/serviceAccountKey.json',
+    '/service_account.json',
+    '/terraform.tfstate',
+    '/web.config',
+    '/graphql',
+    '/graphql/console',
+    '/v1/graphql',
+    '/api/graphql',
+    '/wp-admin',
+    '/wp-admin/plugins.php',
+    '/wp-login.php',
+    '/wp-content/plugins/example/readme.txt',
+    '/wp-includes/version.php',
+    '/administrator/index.php',
+    '/phpmyadmin/index.php',
+    '/pma/',
+    '/adminer.php',
+    '/cpanel/',
+    '/webmail/',
+    '/typo3/install.php',
+    '/magento/admin',
+  ])('recognises the scanner probe %s', pathname => {
+    expect(isScannerProbePath(pathname)).toBe(true)
+  })
+
+  it.each([
+    '/',
+    '/map',
+    '/api/health',
+    '/api/account/passkey',
+    '/api/auth/callback/google',
+    '/admin',
+    '/manifest.webmanifest',
+    '/.well-known/security.txt',
+    '/api/graphql-export',
+  ])('allows the application path %s', pathname => {
+    expect(isScannerProbePath(pathname)).toBe(false)
+  })
+})

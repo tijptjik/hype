@@ -52,10 +52,14 @@ Working notes for designing a unified authorization system with hierarchical own
   keep policy changes type-safe, reviewable, and testable in PRs.
 
 ## Actor Model
-- Current state: "known user" and "authenticated user" are equivalent.
-- Roadmap: add limited anonymous read-only access using Better Auth anonymous
-  support; do not implement this in the current phase.
-- Current implementation scope assumes authenticated actors for write actions.
+- A usable Better Auth session may belong to either a guest (`isAnonymous === true`)
+  or an upgraded account.
+- Guests may read only published, non-archived application resources and may write
+  their preferences, default layers, wishlist, visited-place state, and hub
+  subscription-prompt dismissal state.
+- Account-only writes return `ACCOUNT_REQUIRED`; missing sessions return
+  `UNAUTHENTICATED`; role failures for upgraded users return `INSUFFICIENT_ROLE`.
+- Session existence alone is never proof of a durable account.
 
 ## Hub Admin Scope Semantics
 - `hubRole.admin` at `hub.code === 'core'` is global super-allow across all hubs

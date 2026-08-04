@@ -1,82 +1,158 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
 import { m } from '$lib/i18n'
+// API
+import {
+  addUserFeatureToList,
+  getUserFeatures,
+  removeUserFeatureFromList,
+} from '$lib/api/server/user.remote'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
-// SERVICES
-import { toggleWishlistStatus } from '$lib/client/services/userFeatures'
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
-// ICONS
-import Star from 'virtual:icons/lucide/star'
+import type { UserFeature } from '$lib/db/zod/schema/user.types'
+import type { FeatureCardWishlistActionDisplay } from '$lib/types'
 // LOCAL
-import FeatureCardActionButton from './FeatureCardActionButton.svelte'
+import WishlistActionDisplay from './WishlistActionDisplay.svelte'
 
-let { feature }: { feature: Feature | UserContributedFeature } = $props()
+interface Props {
+  feature: Feature | UserContributedFeature
+  isIconOnly?: boolean
+}
+
+let { feature, isIconOnly }: Props = $props()
 
 const appCtx = getAppCtx()
 
 let isSubmitting = $state(false)
+let optimisticWishlisted = $state<boolean | null>(null)
+let settledWishlisted = $state<boolean | null>(null)
+let isWishlistError = $state(false)
+let wishlistErrorMessage = $state('')
 
 const wishlistedFeature = $derived(
   'id' in feature
     ? appCtx.getWishlistUserFeatures().find(uf => uf.featureId === feature.id)
     : undefined,
 )
-const isWishlisted = $derived(Boolean(wishlistedFeature))
 const visitedFeature = $derived(
   'id' in feature
     ? appCtx.getVisitedUserFeatures().find(uf => uf.featureId === feature.id)
     : undefined,
 )
+const isWishlisted = $derived(Boolean(wishlistedFeature))
+const optimisticWishlistState = $derived(optimisticWishlisted ?? isWishlisted)
+const settledWishlistState = $derived(settledWishlisted ?? isWishlisted)
+
+/**
+ * Produces the non-hover label for a wishlist state.
+ *
+ * @param wishlisted Whether the feature belongs to the wishlist.
+ * @returns Action label for the state.
+ */
+function getWishlistValue(wishlisted: boolean): FeatureCardWishlistActionDisplay {
+  return wishlisted
+    ? { key: 'starred', icon: true, label: m.feature_action_starred() }
+    : { key: 'star', icon: false, label: m.legal_silly_mammoth_link() }
+}
+
+/**
+ * Produces the root-hover label for a wishlist state.
+ *
+ * @param wishlisted Whether the feature belongs to the wishlist.
+ * @returns Hover action label for the state.
+ */
+function getWishlistHoverValue(wishlisted: boolean): FeatureCardWishlistActionDisplay {
+  return wishlisted
+    ? { key: 'unstar', icon: true, label: m.weird_short_orangutan_kiss() }
+    : getWishlistValue(wishlisted)
+}
+
+$effect(() => {
+  if (isSubmitting || isWishlistError) return
+  optimisticWishlisted = isWishlisted
+  settledWishlisted = isWishlisted
+})
+
+function clearWishlistError(): void {
+  isWishlistError = false
+  wishlistErrorMessage = ''
+}
+
+function showWishlistError(message: string): void {
+  isWishlistError = true
+  wishlistErrorMessage = message
+  setTimeout(() => {
+    clearWishlistError()
+  }, 3000)
+}
 
 async function toggleWishlisted(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
 
+  const previous = wishlistedFeature ?? visitedFeature ?? null
+  const nextIsWishlisted = !isWishlisted
+  const optimistic = {
+    featureId: feature.id,
+    isWishlisted: nextIsWishlisted,
+    isVisited: Boolean(visitedFeature),
+    visitedAt: visitedFeature?.visitedAt ?? null,
+  } as UserFeature
+
   isSubmitting = true
+  clearWishlistError()
+  optimisticWishlisted = nextIsWishlisted
+  appCtx.applyUserFeatureState(feature.id, optimistic)
 
   try {
-    await toggleWishlistStatus(
-      appCtx.user?.id,
-      feature.id,
-      isWishlisted,
-      visitedFeature?.isVisited || false,
-      visitedFeature?.visitedAt || null,
+    const mutation = nextIsWishlisted
+      ? addUserFeatureToList({ featureId: feature.id, list: 'wishlist' })
+      : removeUserFeatureFromList({ featureId: feature.id, list: 'wishlist' })
+    const response = await mutation.updates(
+      getUserFeatures({
+        userId: appCtx.user?.id,
+        sorting: { sortBy: 'modifiedAt', sortOrder: 'desc' },
+      }).withOverride(current => ({
+        ...current,
+        data: [
+          optimistic,
+          ...(current.data ?? []).filter(item => item.featureId !== feature.id),
+        ],
+      })),
     )
 
-    await appCtx.invalidateAndRefresh('userFeatures')
+    const settled = (response?.data as UserFeature | null) ?? null
+    settledWishlisted = Boolean(settled?.isWishlisted)
+    appCtx.applyUserFeatureState(feature.id, settled)
   } catch (error) {
     console.error('Error updating wishlist status:', error)
-    toast.error('Failed to update wishlist status')
+    optimisticWishlisted = Boolean(previous?.isWishlisted)
+    settledWishlisted = Boolean(previous?.isWishlisted)
+    appCtx.applyUserFeatureState(feature.id, previous)
+    const message = 'Failed to update wishlist status'
+    showWishlistError(message)
+    toast.error(message)
   } finally {
     isSubmitting = false
   }
 }
 </script>
 
-{#snippet wishlistIcon()}
-  {#if isSubmitting}
-    <span class="loading loading-ring loading-md text-current"></span>
-  {:else}
-    <Icon
-      src={Star}
-      class={isWishlisted ? 'h-6 w-6 text-primary' : 'h-6 w-6 text-neutral-content'}
-      theme="solid"
-    />
-  {/if}
-{/snippet}
-
-<FeatureCardActionButton
-  text={isWishlisted ? m.weird_short_orangutan_kiss() : m.legal_silly_mammoth_link()}
-  icon={wishlistIcon}
-  variant="ghost"
-  hideLabelBelow={544}
+<WishlistActionDisplay
+  currentValue={getWishlistValue(isWishlisted)}
+  currentHoverValue={getWishlistHoverValue(isWishlisted)}
+  optimisticValue={getWishlistValue(optimisticWishlistState)}
+  optimisticHoverValue={getWishlistHoverValue(optimisticWishlistState)}
+  settledValue={getWishlistValue(settledWishlistState)}
+  settledHoverValue={getWishlistHoverValue(settledWishlistState)}
+  isError={isWishlistError}
+  errorMessage={wishlistErrorMessage}
+  {isIconOnly}
   onClick={() => {
     void toggleWishlisted()
   }}
-  disabled={isSubmitting}
 />

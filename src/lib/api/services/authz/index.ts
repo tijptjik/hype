@@ -39,6 +39,17 @@ export const toActorPolicyBase = (actor: AuthzActorBase): AuthzActorBase => ({
 })
 
 /**
+ * Distinguishes a guest session from a missing session for account-only actions.
+ *
+ * @param actor - Actor rejected by an account-only operation.
+ * @returns Stable machine-readable denial code.
+ */
+export const toAccountRequirementCode = (
+  actor: Pick<AuthzActorBase, 'isAnonymous'>,
+): 'ACCOUNT_REQUIRED' | 'UNAUTHENTICATED' =>
+  actor.isAnonymous === true ? 'ACCOUNT_REQUIRED' : 'UNAUTHENTICATED'
+
+/**
  * Builds a stable signature for role membership comparisons.
  * Used to cheaply detect role-set changes across submissions.
  */
@@ -242,6 +253,7 @@ export const isReservedCode = (value: string): boolean =>
  */
 export const toIssueDetailMessage = (code: string): string => {
   if (code === 'UNAUTHENTICATED') return m.admin__authz_unauthenticated()
+  if (code === 'ACCOUNT_REQUIRED') return m.guest__reason_sync()
   if (code === 'HUB_SCOPE_FORBIDDEN') return m.admin__authz_hub_scope_forbidden()
   if (code === 'REQUEST_STATE_REQUIRED') return m.admin__authz_request_state_required()
   if (code === 'INSUFFICIENT_ROLE') return m.admin__authz_insufficient_role()
@@ -270,6 +282,7 @@ export const toFormIssueMessage = (code: string): string => {
 export const toAuthMessage = (code: string): string => {
   if (
     code === 'UNAUTHENTICATED' ||
+    code === 'ACCOUNT_REQUIRED' ||
     code === 'HUB_SCOPE_FORBIDDEN' ||
     code === 'REQUEST_STATE_REQUIRED' ||
     code === 'INSUFFICIENT_ROLE' ||

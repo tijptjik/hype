@@ -1,39 +1,25 @@
-import { setUserLayerDefaults, updateUserProfile } from '$lib/api/server/user.remote'
+import { updateUserProfile } from '$lib/api/server/user.remote'
+import { useSession } from '$lib/auth/client'
 import { m } from '$lib/i18n'
 import { normalizeUsername, validateUsername } from '$lib/utils/username'
 // TYPES
-import type { Id, Locale } from '$lib/types'
-import type { UserLayer, UserPreferences } from '$lib/db/zod/schema/user.types'
+import type { Id } from '$lib/types'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 import type { RemoteFormIssue } from '@sveltejs/kit'
 
 /**
- * Update the user's preferred locale on the server and refresh the auth session.
- * @param userId - The user's ID
- * @param locale - The new locale
- * @remarks Callers remain responsible for updating the runtime locale and navigation.
+ * Refreshes the shared Better Auth session atom after a successful user-profile mutation.
+ *
+ * @returns Nothing after the session refresh succeeds or its failure is logged.
+ * @remarks
+ * Session refresh is intentionally non-fatal: callers have already received a confirmed
+ * database response and should not roll that change back if the client cache is unavailable.
  */
-export const updateLocale = async (userId: Id, locale: Locale) => {
-  if (!userId) return
-
-  // API : Update user's preferred locale
+export const refreshUserSession = async (): Promise<void> => {
   try {
-    await updateUserProfile({
-      id: userId,
-      data: { locale },
-    })
-
-    // AUTH : Signal to client that it should refresh its session
-    const { authClient } = await import('$lib/auth/client')
-    try {
-      // Force session refresh by calling getSession with disableCookieCache
-      await authClient.getSession({
-        query: { disableCookieCache: true },
-      })
-    } catch (error) {
-      console.warn('⚠️ Failed to refresh session after locale update:', error)
-    }
+    await useSession().get().refetch()
   } catch (error) {
-    console.error('Failed to update preferred language:', error)
+    console.warn('Failed to refresh user session after profile update:', error)
   }
 }
 
@@ -180,69 +166,4 @@ export const debouncedUpdateUsername = async (
     normalizedUsername,
     issues,
   }
-}
-
-export const debouncedUpdateUserLayers = (
-  userId: Id,
-  hub: {
-    id?: Id | null
-    code?: string | null
-  },
-  userLayers: Array<{
-    layerId: Id
-    hubId?: Id | null
-    isDefaultVisible: boolean
-  }>,
-  options: {
-    onSuccess?: (layers: UserLayer[]) => void
-  } = {},
-) => {
-  // ASSERT : We have hub identity so the server can resolve where to persist defaults.
-  if (!userLayers || (!hub.id && !hub.code)) return
-
-  const existingTimer = debouncedTimers.get('userLayers')
-  if (existingTimer) {
-    clearTimeout(existingTimer)
-  }
-
-  const timer = setTimeout(async () => {
-    try {
-      const response = await setUserLayerDefaults({
-        userId,
-        hubId: hub.id ?? undefined,
-        hubCode: hub.code ?? undefined,
-        layers: userLayers.map(layer => ({
-          layerId: layer.layerId,
-          hubId: layer.hubId ?? undefined,
-          isDefaultVisible: Boolean(layer.isDefaultVisible),
-        })),
-      })
-      options.onSuccess?.((response?.data ?? []) as UserLayer[])
-    } finally {
-      debouncedTimers.delete('userLayers')
-    }
-  }, 750)
-
-  debouncedTimers.set('userLayers', timer)
-}
-
-export const debouncedUpdateUserExperimental = (
-  userId: Id,
-  experimental: {
-    contributorMode?: boolean
-    noLabelsMode?: boolean
-    [key: string]: boolean | undefined
-  },
-) => {
-  // ASSERT : We have experimental features
-  if (!experimental) return
-
-  debouncedUpdateUser(
-    userId,
-    { experimental: JSON.stringify(experimental) },
-    {
-      delay: 750,
-      timerKey: 'experimental',
-    },
-  )
 }

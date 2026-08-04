@@ -1,7 +1,12 @@
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
 import { error } from '@sveltejs/kit'
 import { removeExcludedColumns, toTriStateBoolean } from '$lib/api'
-import { shouldLogAuthzDeny, toActorPolicyBase, toAuthMessage } from '.'
+import {
+  shouldLogAuthzDeny,
+  toAccountRequirementCode,
+  toActorPolicyBase,
+  toAuthMessage,
+} from '.'
 import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 import { applyPrismConstraints } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
@@ -17,7 +22,11 @@ import type {
   UserRoleDisco,
 } from '$lib/types'
 
-type LayerPolicyCode = 'UNAUTHENTICATED' | 'INSUFFICIENT_ROLE' | 'FIELD_FORBIDDEN'
+type LayerPolicyCode =
+  | 'UNAUTHENTICATED'
+  | 'ACCOUNT_REQUIRED'
+  | 'INSUFFICIENT_ROLE'
+  | 'FIELD_FORBIDDEN'
 
 export type LayerVisibilityPolicy =
   | 'all_states'
@@ -832,7 +841,7 @@ export const authorizeLayerCreateForSubmission = (params: {
   })
 
   if (!hasAuthenticatedSession(actor)) {
-    return logLayerReject('create', 'UNAUTHENTICATED', {
+    return logLayerReject('create', toAccountRequirementCode(actor), {
       actor,
       target: params.resource,
     })
@@ -877,7 +886,7 @@ export const authorizeLayerUpdateForSubmission = (params: {
   })
 
   if (!hasAuthenticatedSession(actor)) {
-    return logLayerReject('update', 'UNAUTHENTICATED', {
+    return logLayerReject('update', toAccountRequirementCode(actor), {
       actor,
       target: params.resource,
     })
@@ -943,7 +952,7 @@ export const authorizeLayerPublishForSubmission = (params: {
   })
 
   if (!hasAuthenticatedSession(actor)) {
-    return logLayerReject('publish', 'UNAUTHENTICATED', {
+    return logLayerReject('publish', toAccountRequirementCode(actor), {
       actor,
       target: params.resource,
     })

@@ -95,7 +95,7 @@ export const setupRequestHandler = async (event: {
   const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true'
 
   const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger)
-  const userRoles = await getUserRoles(db, user.id as Id)
+  const userRoles = user.isAnonymous ? [] : await getUserRoles(db, user.id as Id)
   return {
     db,
     session,
@@ -121,7 +121,7 @@ export const getDatabase = async (
   const enableLogger = platform?.env?.PUBLIC_DRIZZLE_LOGGER === 'true'
 
   const db = client(platform.env.DB as unknown as MiniflareD1Database, enableLogger)
-  const userRoles = await getUserRoles(db, user.id as Id)
+  const userRoles = user.isAnonymous ? [] : await getUserRoles(db, user.id as Id)
   return {
     db,
     session,

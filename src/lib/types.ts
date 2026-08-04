@@ -22,6 +22,7 @@ import type {
   HubGetParamsByProfile,
   HubListByProfile,
   HubListParamsByProfile,
+  HubLayer,
   HubNew,
   HubProfile,
   HubRole,
@@ -1189,6 +1190,15 @@ export type HubUserStateFlags = {
   hasAgreedToTerms?: boolean
 }
 
+/**
+ * Minimal hub configuration required to resolve an initial layer selection.
+ */
+export type HubLayerDefaultsContext = {
+  code?: string
+  isCore?: boolean
+  layerDefaults?: ReadonlyArray<Pick<HubLayer, 'layerId' | 'isDefaultVisible'>>
+}
+
 /* ----------------- */
 // I18N
 /* -------- */
@@ -1251,6 +1261,13 @@ export type InputType = 'text' | 'number' | 'email' | 'password'
 
 export type Session = BetterAuthSessionSession
 export type SessionUser = BetterAuthSessionUser
+export type PasskeyAccountUpgradeInput = {
+  name?: string
+  username?: string
+  email?: string
+  emailCallbackUrl: string
+  onPasskeyReady?: () => void
+}
 
 /* ----------------- */
 // I18N
@@ -1991,6 +2008,7 @@ export type AuthorizationField =
 
 export const authorizationDenyCodes = [
   'UNAUTHENTICATED',
+  'ACCOUNT_REQUIRED',
   'REQUEST_STATE_REQUIRED',
   'INSUFFICIENT_ROLE',
   'HUB_SCOPE_FORBIDDEN',
@@ -2054,6 +2072,7 @@ export type HubAuthorizeParams = {
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
   isAnonymous?: boolean
+  isSuperAdmin?: boolean
   action: HubAuthorizationAction
   resourceId?: string
   resourceHubId?: string | null
@@ -2063,6 +2082,7 @@ export type HubAuthorizeParams = {
     isPublished?: boolean
     isArchived?: boolean
   }
+  requestedProfile?: HubProfile
 }
 
 export type AuthorizationDecision = {
@@ -2499,6 +2519,22 @@ export type FeatureCardTransitionState = {
   sourceRadiusPx: number
   targetRadiusPx: number
   sourceKind: FeatureCardTransitionSourceKind
+}
+
+export type FeatureCardActionDisplay<
+  Fields extends object = Record<string, string | undefined>,
+> = {
+  key: string
+  label: string
+} & Fields
+
+export type FeatureCardWishlistActionDisplay = FeatureCardActionDisplay<{
+  icon: boolean
+}>
+
+export type FeatureCardVisitState = {
+  isVisited: boolean
+  visitedAt: string | null
 }
 
 export type PlanScheduleStop = {

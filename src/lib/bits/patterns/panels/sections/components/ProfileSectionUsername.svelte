@@ -48,6 +48,7 @@ let wasEditingUsername = $state(false)
 let usernameValue = $state('')
 const usernameActionIconSize = 'sm'
 const MIN_USERNAME_INPUT_WIDTH_CH = 8
+const USERNAME_INPUT_HORIZONTAL_PADDING = '1rem'
 
 $effect(() => {
   if (!isEditingUsername || wasEditingUsername || !usernameInput) {
@@ -157,7 +158,7 @@ function handleUsernameAction(): void {
           'placeholder:text-center placeholder:text-white/60 focus:outline-none disabled:pointer-events-none',
           isEditingUsername ? 'min-w-24' : 'min-w-0 cursor-default',
         )}
-        style={`width:${usernameInputWidthCh}ch;`}
+        style={`width:calc(${usernameInputWidthCh}ch + ${USERNAME_INPUT_HORIZONTAL_PADDING});`}
         oninput={handleUsernameInput}
         onkeydown={handleUsernameKeydown}
         placeholder={usernameInputPlaceholder}

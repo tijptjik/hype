@@ -42,6 +42,8 @@ const responsiveCtx = (() => {
 })()
 const mode = $derived(cardCtx.state.mode)
 const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+// The action row must fit the current app-main space, including any open panels.
+const isFeatureActionIconOnly = $derived(responsiveCtx.getEffectiveAppMainWidth() < 620)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
@@ -322,7 +324,10 @@ $effect(() => {
       </div>
     </FeatureCardContainer>
     <div bind:this={actionsElement}>
-      <FeatureCardActions centerRightActionsOnMobile={mode !== FeatureCardMode.Display}>
+      <FeatureCardActions
+        centerRightActionsOnMobile={mode !== FeatureCardMode.Display}
+        leftActionsFillAvailableWidth={mode === FeatureCardMode.Display}
+      >
         {#snippet topActions()}
           {#if mode !== FeatureCardMode.Display}
             <div bind:this={validationElement} class="min-w-0">
@@ -332,15 +337,24 @@ $effect(() => {
         {/snippet}
         {#snippet leftActions()}
           {#if mode === FeatureCardMode.Display}
-            <div class="flex items-center gap-2">
-              <FeatureCardActionPrimitive.WishlistAction {feature} />
-              <FeatureCardActionPrimitive.VisitAction {feature} />
+            <div class="flex min-w-0 flex-1 items-center gap-1">
+              <FeatureCardActionPrimitive.WishlistAction
+                {feature}
+                isIconOnly={isFeatureActionIconOnly}
+              />
+              <FeatureCardActionPrimitive.VisitAction
+                {feature}
+                isIconOnly={isFeatureActionIconOnly}
+              />
             </div>
           {/if}
         {/snippet}
         {#snippet rightActions()}
           {#if mode === FeatureCardMode.Display}
-            <FeatureCardActionPrimitive.DirectionsAction {feature} />
+            <FeatureCardActionPrimitive.DirectionsAction
+              {feature}
+              isIconOnly={isFeatureActionIconOnly}
+            />
           {:else if mode === FeatureCardMode.New}
             <FeatureCardActionPrimitive.SubmitNewFeatureAction />
           {:else if mode === FeatureCardMode.Missing}

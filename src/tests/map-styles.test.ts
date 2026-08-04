@@ -34,6 +34,66 @@ describe('map styles', () => {
     expect(symbolLayer).toBeUndefined()
   })
 
+  it('spaces repeated street names farther apart across Protomaps-derived styles', () => {
+    const styleKeys = [
+      'hyper',
+      'hyperLight',
+      'ghostery',
+      'neonmaster',
+      'neorange',
+      'breadline',
+      'protomaps-dark',
+      'ghostery-legacy',
+    ] as const
+
+    for (const key of styleKeys) {
+      const style = buildMapStyle(key) as {
+        layers?: Array<{
+          id?: string
+          filter?: unknown[]
+          layout?: Record<string, unknown>
+        }>
+      }
+      const majorRoadLabels = style.layers?.find(
+        layer => layer.id === 'roads_labels_major',
+      )
+      const minorRoadLabels = style.layers?.find(
+        layer => layer.id === 'roads_labels_minor',
+      )
+
+      expect(minorRoadLabels?.filter).toEqual(['in', 'kind', 'minor_road', 'other'])
+
+      if (key === 'ghostery-legacy') {
+        expect(majorRoadLabels?.layout?.['symbol-spacing']).toEqual([
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12,
+          750,
+          16,
+          750,
+          20,
+          750,
+        ])
+        expect(minorRoadLabels?.layout?.['symbol-spacing']).toEqual([
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          16,
+          750,
+          18,
+          750,
+          20,
+          750,
+        ])
+        continue
+      }
+
+      expect(majorRoadLabels?.layout?.['symbol-spacing']).toBe(750)
+      expect(minorRoadLabels?.layout?.['symbol-spacing']).toBe(750)
+    }
+  })
+
   it('returns a fresh clone for each request', () => {
     const firstStyle = buildMapStyle('ghostery-legacy') as {
       layers?: Array<{ layout?: Record<string, unknown> }>

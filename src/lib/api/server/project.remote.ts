@@ -152,6 +152,7 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   const { db, user, userRoles, event } = ctx
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'list')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   // Resolve desired `query params`.
   const queryParams = validateQueryParams<ProjectDB>(
@@ -213,6 +214,7 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
   async (params, ctx) => {
     const { db, user, userRoles, event } = ctx
     const profile = toProjectProfile(params.meta?.profile, 'list')
+    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     const queryParams = validateQueryParams<ProjectDB>(
       project,
@@ -288,7 +290,8 @@ export const getProjectsWhichHaveLayers = getProjectsWhichHaveLayersQuery
 const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   // Resolve desired `profile`.
-  const profile = toProjectProfile(params.meta?.profile, 'admin')
+  const profile = toProjectProfile(params.meta?.profile, 'detail')
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   // Probe the requested project for flags.
   const probe = await probeProjectQuery(db, {

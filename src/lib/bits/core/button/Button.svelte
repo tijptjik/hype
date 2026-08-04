@@ -24,9 +24,14 @@ let {
   hideLabelBelow,
   attrs = {},
   icon,
+  content,
   iconComponent: IconComponent,
   href,
   onClick,
+  onMouseEnter,
+  onMouseLeave,
+  onFocus,
+  onBlur,
   color = 'neutral',
   style = 'none',
   size = 'md',
@@ -89,28 +94,32 @@ function resolveTransition(
 </script>
 
 {#snippet buttonContent()}
-  {#if hasIcon}
-    <span class={cx(BUTTON_ICON_CLASSES, iconClasses)} aria-hidden="true">
-      {#if icon}
-        {@render icon()}
-      {:else if IconComponent}
-        <IconComponent />
-      {/if}
-    </span>
-  {/if}
-  {#if hasLabelText}
-    <span
-      class={cx(
-        BUTTON_LABEL_CLASSES,
-        labelClasses,
-        shouldHideLabel && 'max-w-0 translate-x-1 opacity-0',
-        hideLabelInstantly && 'transition-none',
-        style === 'link' && 'underline underline-offset-4',
-      )}
-      aria-hidden={shouldHideLabel}
-    >
-      {text}
-    </span>
+  {#if content}
+    {@render content()}
+  {:else}
+    {#if hasIcon}
+      <span class={cx(BUTTON_ICON_CLASSES, iconClasses)} aria-hidden="true">
+        {#if icon}
+          {@render icon()}
+        {:else if IconComponent}
+          <IconComponent />
+        {/if}
+      </span>
+    {/if}
+    {#if hasLabelText}
+      <span
+        class={cx(
+          BUTTON_LABEL_CLASSES,
+          labelClasses,
+          shouldHideLabel && 'max-w-0 translate-x-1 opacity-0',
+          hideLabelInstantly && 'transition-none',
+          style === 'link' && 'underline underline-offset-4',
+        )}
+        aria-hidden={shouldHideLabel}
+      >
+        {text}
+      </span>
+    {/if}
   {/if}
 {/snippet}
 
@@ -125,6 +134,10 @@ function resolveTransition(
       aria-disabled={disabled ? 'true' : undefined}
       tabindex={disabled ? -1 : undefined}
       onclick={handleClick}
+      onmouseenter={onMouseEnter}
+      onmouseleave={onMouseLeave}
+      onfocus={onFocus}
+      onblur={onBlur}
     >
       {@render buttonContent()}
     </Button.Root>
@@ -138,6 +151,10 @@ function resolveTransition(
       tabindex={disabled ? -1 : 0}
       {disabled}
       onclick={handleClick}
+      onmouseenter={onMouseEnter}
+      onmouseleave={onMouseLeave}
+      onfocus={onFocus}
+      onblur={onBlur}
     >
       {@render buttonContent()}
     </Button.Root>

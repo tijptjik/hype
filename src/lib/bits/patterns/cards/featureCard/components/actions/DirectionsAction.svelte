@@ -11,7 +11,12 @@ import MapIcon from 'virtual:icons/lucide/map'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 
-let { feature }: { feature: Feature | UserContributedFeature } = $props()
+interface Props {
+  feature: Feature | UserContributedFeature
+  isIconOnly?: boolean
+}
+
+let { feature, isIconOnly }: Props = $props()
 
 function getDirections(): void {
   const [longitude, latitude] = (feature.geometry as Point).coordinates
@@ -28,7 +33,7 @@ function getDirections(): void {
   text={m.alive_large_hawk_hunt()}
   icon={directionsIcon}
   variant="primary"
-  hideLabelBelow={256}
+  {isIconOnly}
   expandedClass="min-w-[11.5rem] max-w-[11.5rem]"
   onClick={getDirections}
 />
