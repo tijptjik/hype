@@ -1993,6 +1993,40 @@ export class AppCtx {
     this.postUserFeaturesMutation()
   }
 
+  /**
+   * Reconciles one wishlist or visit mutation into the local user-feature cache.
+   *
+   * @param featureId - The feature whose saved state changed.
+   * @param updated - The remaining server state, or `null` when no saved state remains.
+   * @returns Nothing.
+   * @remarks
+   * This is used for optimistic actions as well as their server confirmations, keeping every
+   * visible feature card in sync without waiting for a full user-feature refetch.
+   */
+  applyUserFeatureState = (featureId: Id, updated: UserFeature | null): void => {
+    const queryKey = this.userFeaturesQueryKey()
+    const cached = this.queryClient.getQueryData<UserFeature[]>(queryKey)
+    const current = cached ?? [
+      ...this.state.userFeatures.wishlisted,
+      ...this.state.userFeatures.visited.filter(
+        visited =>
+          !this.state.userFeatures.wishlisted.some(
+            wishlisted => wishlisted.featureId === visited.featureId,
+          ),
+      ),
+    ]
+    const next = current.filter(item => item.featureId !== featureId)
+
+    if (updated) next.unshift(updated)
+
+    this.queryClient.setQueryData(queryKey, next)
+    this.state.userFeatures = {
+      wishlisted: next.filter(item => item.isWishlisted),
+      visited: next.filter(item => item.isVisited),
+    }
+    this.postUserFeaturesMutation()
+  }
+
   refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.user)
     const user = await this.queryClient.fetchQuery({
