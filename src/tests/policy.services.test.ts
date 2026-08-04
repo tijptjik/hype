@@ -22,6 +22,12 @@ describe('policy defaults', () => {
       'This Privacy Policy explains how **Central Archive** ("**we**", "**us**", "**our**")',
     )
     expect(policy).toContain('[legal@archive.hk]')
+    expect(policy).toContain('### 5.3 Requests From Public Authorities')
+    expect(policy).toContain(
+      'Review the request for legal validity, scope, and authority.',
+    )
+    expect(policy).toContain('Disclose only the minimum personal data necessary')
+    expect(policy).toContain('Document the request, our response, the legal basis')
   })
 
   it('falls back to HYPE when no localized hub name is available', () => {

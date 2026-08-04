@@ -168,6 +168,12 @@ function createAuthInstance(
         rpID: new URL(baseURL).hostname,
         rpName: 'HYPE',
         origin: baseURL,
+        registration: {
+          // A returning guest has no separate credential with which to refresh
+          // a session before turning it into their first durable sign-in method.
+          // Better Auth still resolves and requires that existing session.
+          requireSession: false,
+        },
       }),
       username({
         usernameValidator: async username => {

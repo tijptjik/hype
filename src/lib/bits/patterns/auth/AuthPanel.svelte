@@ -1,4 +1,6 @@
 <script lang="ts">
+import { goto } from '$app/navigation'
+import { page } from '$app/state'
 import { fade } from 'svelte/transition'
 
 // ICONS
@@ -38,6 +40,15 @@ let isAwaitingVerification = $state(false)
 let showEmailAuth = $state(false)
 
 const safeCallbackUrl = $derived(toSafeReturnPath(returnTo))
+const oauthErrorMessage = $derived(
+  page.url.searchParams.get('error') === 'account_not_linked'
+    ? m.account__social_account_not_linked()
+    : '',
+)
+
+$effect(() => {
+  if (oauthErrorMessage) errorMessage = oauthErrorMessage
+})
 
 function providerIcon(providerId: string) {
   if (providerId === 'google') return Google
@@ -52,7 +63,11 @@ async function handleSocial(
   isBusy = true
   errorMessage = ''
   try {
-    await signIn.social({ provider: providerId, callbackURL: safeCallbackUrl })
+    await signIn.social({
+      provider: providerId,
+      callbackURL: safeCallbackUrl,
+      errorCallbackURL: `${window.location.origin}/login?returnTo=${encodeURIComponent(safeCallbackUrl)}`,
+    })
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -114,7 +129,11 @@ async function handlePasskey(): Promise<void> {
   errorMessage = ''
   try {
     const result = await signIn.passkey({})
-    if (result.error) errorMessage = m.guest__auth_generic_error()
+    if (result.error) {
+      errorMessage = m.guest__auth_generic_error()
+      return
+    }
+    await goto(safeCallbackUrl)
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -178,7 +197,9 @@ function toggleMode(): void {
 
   {#if !showEmailAuth}
     <div class="mt-6 grid grid-cols-2 gap-3">
-      {#each AUTH_PROVIDER_REGISTRY.filter(provider => provider.id !== 'email') as provider (provider.id)}
+      {#each AUTH_PROVIDER_REGISTRY.filter(
+        provider => provider.id !== 'email' && provider.enabled,
+      ) as provider (provider.id)}
         {@const Icon = providerIcon(provider.id)}
         <button
           class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white hover:bg-white/90 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/20 disabled:hover:bg-transparent disabled:hover:text-inherit"
@@ -302,7 +323,9 @@ function toggleMode(): void {
           {m.login__or_login_with()}
         </p>
         <div class="mt-3 flex justify-center gap-3">
-          {#each AUTH_PROVIDER_REGISTRY.filter(provider => provider.id !== 'email') as provider (provider.id)}
+          {#each AUTH_PROVIDER_REGISTRY.filter(
+            provider => provider.id !== 'email' && provider.enabled,
+          ) as provider (provider.id)}
             {@const Icon = providerIcon(provider.id)}
             <button
               class="flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 transition hover:border-white hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40"

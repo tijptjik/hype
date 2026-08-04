@@ -7,15 +7,27 @@ import { requestAccountUpgrade, type UpgradeReason } from '$lib/auth/upgrade'
 import { m } from '$lib/i18n'
 
 let { reason = 'sync' }: { reason?: UpgradeReason } = $props()
+
+let isDismissed = $state(false)
 </script>
 
-<aside class="mx-4 my-3 rounded-xl border border-base-content/15 bg-base-100/60 p-4">
-  <p class="text-sm leading-5 text-base-content/75">{m.guest__reminder()}</p>
-  <Button
-    text={m.guest__upgrade_action()}
-    color="primary"
-    size="sm"
-    class="mt-3"
-    onClick={() => requestAccountUpgrade(reason, window.location.href)}
-  />
-</aside>
+{#if !isDismissed}
+  <aside class="mx-4 my-3 rounded-xl bg-base-100/60 p-4">
+    <p class="text-sm leading-5 text-base-content/75">{m.guest__reminder()}</p>
+    <div class="mt-3 flex justify-end gap-2">
+      <Button
+        text={m.guest__close()}
+        color="neutral"
+        style="ghost"
+        size="sm"
+        onClick={() => (isDismissed = true)}
+      />
+      <Button
+        text={m.guest__upgrade_action()}
+        color="primary"
+        size="sm"
+        onClick={() => requestAccountUpgrade(reason, window.location.href)}
+      />
+    </div>
+  </aside>
+{/if}

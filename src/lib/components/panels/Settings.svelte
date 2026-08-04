@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // BITS
@@ -10,6 +12,7 @@ import { useSession } from '$lib/auth/client'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Settings.svelte'
+import LinkedAccounts from '$lib/components/panels/sections/LinkedAccounts.svelte'
 import Language from '$lib/components/panels/sections/Language.svelte'
 import Contributor from '$lib/components/panels/sections/Contributor.svelte'
 import DefaultMap from '$lib/components/panels/sections/DefaultMap.svelte'
@@ -29,6 +32,8 @@ const isGuestAccount = $derived($session.data?.user?.isAnonymous === true)
 
 // STATE
 let isInfoOpen = $state(false)
+let isGuestUpgradeOpen = $state(false)
+let guestAuthMode = $state<'create' | 'sign-in'>('create')
 // svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement
 
@@ -67,7 +72,22 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
   />
   <Info isOpen={isInfoOpen} />
 
-  <ProfileSection {...profileSectionModel.getProfileProps()} />
+  <ProfileSection
+    {...profileSectionModel.getProfileProps()}
+    onUpgrade={() => {
+      guestAuthMode = 'create'
+      isGuestUpgradeOpen = true
+    }}
+    onSignIn={() => {
+      guestAuthMode = 'sign-in'
+      isGuestUpgradeOpen = true
+    }}
+  />
+  {#if isGuestAccount && isGuestUpgradeOpen}
+    <div transition:slide={{ duration: 220 }}>
+      <LinkedAccounts isGuest startGuestUpgradeOpen {guestAuthMode} />
+    </div>
+  {/if}
   <div class="flex flex-col">
     {#if panelProps.isAdmin}
       <div class="shrink-0"><Admin {...panelProps} /></div>

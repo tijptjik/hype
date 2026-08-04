@@ -1,38 +1,52 @@
 <script lang="ts">
 // SVELTE
+import { page } from '$app/state'
 import { onMount } from 'svelte'
+import { slide } from 'svelte/transition'
 // ICONS
 import Facebook from 'virtual:icons/simple-icons/facebook'
 import Google from 'virtual:icons/logos/google-icon'
 import Wechat from 'virtual:icons/simple-icons/wechat'
 import Mail from 'virtual:icons/lucide/mail'
 import KeyRound from 'virtual:icons/lucide/key-round'
-import Pencil from 'virtual:icons/lucide/pencil'
 // AUTH
 import { authClient, signIn, signUp, useSession } from '$lib/auth/client'
+import { isAuthProviderEnabled } from '$lib/auth/providers'
 // I18N
 import { m } from '$lib/i18n'
 
 type Account = { providerId: string; accountId: string }
 type Passkey = { id: string; name?: string; credentialID: string }
 type SocialProvider = 'facebook' | 'google' | 'wechat'
+type GuestAuthMode = 'create' | 'sign-in'
+type SocialAccountInfo = { user?: { email?: string | null } }
 
-const socialProviders: Array<{
-  id: SocialProvider
-  label: string
-  icon: typeof Google
-}> = [
+const SOCIAL_PROVIDERS = [
   { id: 'google', label: 'Google', icon: Google },
   { id: 'facebook', label: 'Facebook', icon: Facebook },
   { id: 'wechat', label: 'WeChat', icon: Wechat },
-]
+] as const satisfies ReadonlyArray<{
+  id: SocialProvider
+  label: string
+  icon: typeof Google
+}>
+
+const socialProviders = SOCIAL_PROVIDERS.filter(provider =>
+  isAuthProviderEnabled(provider.id),
+)
+
+const FEEDBACK_DURATION_MS = 10_000
 
 let {
   accountUsername = '',
   isGuest = false,
+  startGuestUpgradeOpen = false,
+  guestAuthMode = 'create',
 }: {
   accountUsername?: string
   isGuest?: boolean
+  startGuestUpgradeOpen?: boolean
+  guestAuthMode?: GuestAuthMode
 } = $props()
 
 const session = useSession()
@@ -43,13 +57,55 @@ let isEditing = $state(false)
 let isBusy = $state(false)
 let newPassword = $state('')
 let showEmailSetup = $state(false)
+let showPasskeySetup = $state(false)
 let errorMessage = $state('')
 let statusMessage = $state('')
 let passkeys = $state<Passkey[]>([])
-let isAwaitingVerification = $state(false)
 let accountEmail = $derived($session.data?.user?.email ?? '')
 let email = $state('')
-let resolvedEmail = $derived(accountEmail || accountUsername)
+let preferredName = $state('')
+let preferredUsername = $state('')
+let preferredEmail = $state('')
+let providerEmails = $state<Record<string, string>>({})
+// Anonymous users have an internal temporary email which must never appear as a suggested login address.
+let resolvedEmail = $derived(
+  $session.data?.user?.isAnonymous ? '' : accountEmail || accountUsername,
+)
+let linkedAccountLabel = $derived(accountEmail || accountUsername)
+let isGuestSignIn = $derived(guestAuthMode === 'sign-in')
+const oauthErrorMessage = $derived(
+  page.url.searchParams.get('error') === 'account_already_linked_to_different_user'
+    ? m.account__account_already_linked()
+    : '',
+)
+
+$effect(() => {
+  if (oauthErrorMessage) errorMessage = oauthErrorMessage
+})
+
+$effect(() => {
+  if (startGuestUpgradeOpen) isEditing = true
+})
+
+$effect(() => {
+  guestAuthMode
+  showEmailSetup = false
+  showPasskeySetup = false
+  // Preserve the OAuth callback error that is set by the effect above.
+  if (!oauthErrorMessage) errorMessage = ''
+  statusMessage = ''
+})
+
+$effect(() => {
+  if (!errorMessage && !statusMessage) return
+
+  const feedbackTimer = window.setTimeout(() => {
+    errorMessage = ''
+    statusMessage = ''
+  }, FEEDBACK_DURATION_MS)
+
+  return () => window.clearTimeout(feedbackTimer)
+})
 
 onMount(() => {
   email = resolvedEmail
@@ -64,10 +120,41 @@ onMount(() => {
 async function loadAccounts(): Promise<void> {
   try {
     const result = await authClient.listAccounts()
-    if (!result.error && result.data) accounts = result.data
+    if (!result.error && result.data) {
+      accounts = result.data
+      void loadProviderEmails(result.data)
+    }
   } finally {
     isLoading = false
   }
+}
+
+/** Loads the verified email supplied by each linked social provider. */
+async function loadProviderEmails(currentAccounts: Account[]): Promise<void> {
+  const socialAccounts = currentAccounts.filter(
+    account => account.providerId !== 'credential',
+  )
+  const resolvedEmails = await Promise.all(
+    socialAccounts.map(async account => {
+      try {
+        const result = await authClient.accountInfo({
+          query: {
+            accountId: account.accountId,
+            providerId: account.providerId,
+          },
+        })
+        const providerEmail = (result.data as SocialAccountInfo | null)?.user?.email
+        return providerEmail ? [accountKey(account), providerEmail] : null
+      } catch {
+        // A provider may not expose an email or its authorization may have expired.
+        return null
+      }
+    }),
+  )
+
+  providerEmails = Object.fromEntries(
+    resolvedEmails.filter((entry): entry is [string, string] => entry !== null),
+  )
 }
 
 /** Loads passkeys currently registered for the signed-in user. */
@@ -88,11 +175,99 @@ async function handleAddPasskey(): Promise<void> {
   statusMessage = ''
   try {
     const result = await authClient.passkey.addPasskey({ name: 'HYPE passkey' })
-    if (result.error) throw new Error(result.error.message)
+    if (result.error) {
+      errorMessage = result.error.message || m.account__passkey_add_error()
+      return
+    }
     await loadPasskeys()
     statusMessage = m.account__passkey_added()
   } catch {
     errorMessage = m.account__passkey_add_error()
+  } finally {
+    isBusy = false
+  }
+}
+
+/** Adds a passkey and upgrades the guest session into a reusable HYPE account. */
+async function handleGuestPasskeySubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (isBusy) return
+
+  isBusy = true
+  errorMessage = ''
+  statusMessage = ''
+  try {
+    const passkeyResult = await authClient.passkey.addPasskey({ name: 'HYPE passkey' })
+    if (passkeyResult.error) {
+      errorMessage = passkeyResult.error.message || m.account__passkey_add_error()
+      return
+    }
+
+    const profile: { name?: string; username?: string } = {}
+    if (preferredName.trim()) profile.name = preferredName.trim()
+    if (preferredUsername.trim()) profile.username = preferredUsername.trim()
+    if (Object.keys(profile).length) {
+      const profileResult = await authClient.updateUser(profile)
+      if (profileResult.error) throw new Error(profileResult.error.message)
+    }
+
+    // Only a server-verified passkey can convert a disposable guest into an account.
+    const promotionResponse = await fetch('/api/account/passkey', { method: 'POST' })
+    if (!promotionResponse.ok) throw new Error('account not upgraded')
+
+    if (preferredEmail.trim()) {
+      const emailResult = await authClient.changeEmail({
+        newEmail: preferredEmail.trim(),
+        callbackURL: window.location.href,
+      })
+      if (emailResult.error) throw new Error(emailResult.error.message)
+      statusMessage = m.guest__verification_sent()
+    } else {
+      statusMessage = m.account__passkey_added()
+    }
+
+    showPasskeySetup = false
+    await authClient.getSession()
+  } catch {
+    errorMessage = m.account__passkey_add_error()
+  } finally {
+    isBusy = false
+  }
+}
+
+/** Signs the guest into an existing account using a registered passkey. */
+async function handleGuestPasskeySignIn(): Promise<void> {
+  if (isBusy) return
+  isBusy = true
+  errorMessage = ''
+  statusMessage = ''
+  try {
+    const result = await signIn.passkey({})
+    if (result.error) {
+      errorMessage = result.error.message || m.guest__auth_generic_error()
+      return
+    }
+    window.location.reload()
+  } catch {
+    errorMessage = m.guest__auth_generic_error()
+  } finally {
+    isBusy = false
+  }
+}
+
+/** Removes one passkey while keeping another authentication method available. */
+async function handleRemovePasskey(passkey: Passkey): Promise<void> {
+  if (isBusy || (accounts.length === 0 && passkeys.length <= 1)) return
+  isBusy = true
+  errorMessage = ''
+  statusMessage = ''
+  try {
+    const result = await authClient.passkey.deletePasskey({ id: passkey.id })
+    if (result.error) throw new Error(result.error.message)
+    passkeys = passkeys.filter(item => item.id !== passkey.id)
+    statusMessage = m.account__passkey_removed()
+  } catch {
+    errorMessage = m.account__passkey_remove_error()
   } finally {
     isBusy = false
   }
@@ -108,17 +283,28 @@ function providerIcon(providerId: string) {
 
 /** Returns a readable label for an account provider in the expanded editor. */
 function providerLabel(providerId: string): string {
-  if (providerId === 'credential') return m.guest__email()
+  if (providerId === 'credential') return m.account__email()
   if (providerId === 'google') return 'Google'
   if (providerId === 'facebook') return 'Facebook'
   if (providerId === 'wechat') return 'WeChat'
   return providerId
 }
 
-/** Returns the identity label shown for a linked social account. */
-function accountDisplayLabel(providerId: string): string {
-  if (providerId === 'credential') return m.guest__email()
-  return accountEmail || accountUsername || providerLabel(providerId)
+/** Returns a stable local key for a linked provider account. */
+function accountKey(account: Account): string {
+  return `${account.providerId}:${account.accountId}`
+}
+
+/** Returns a privacy-preserving identifier for a registered passkey. */
+function passkeyIdentifier(passkey: Passkey): string {
+  return `****${passkey.credentialID.slice(-4)}`
+}
+
+/** Returns the current page URL without an expired OAuth linking error. */
+function getAccountLinkCallbackUrl(): string {
+  const callbackUrl = new URL(window.location.href)
+  callbackUrl.searchParams.delete('error')
+  return callbackUrl.toString()
 }
 
 /** Starts the provider OAuth flow and links it to the current account. */
@@ -127,9 +313,11 @@ async function handleLink(providerId: SocialProvider): Promise<void> {
   isBusy = true
   errorMessage = ''
   try {
+    const callbackURL = getAccountLinkCallbackUrl()
     await authClient.linkSocial({
       provider: providerId,
-      callbackURL: window.location.href,
+      callbackURL,
+      errorCallbackURL: callbackURL,
     })
   } catch {
     errorMessage = m.account__link_error()
@@ -150,7 +338,7 @@ async function handleGuestSocial(providerId: SocialProvider): Promise<void> {
   }
 }
 
-/** Creates an email account while preserving the current guest session's state. */
+/** Creates an account or signs in, preserving the current guest session's state. */
 async function handleGuestEmailSubmit(event: SubmitEvent): Promise<void> {
   event.preventDefault()
   if (isBusy) return
@@ -158,14 +346,23 @@ async function handleGuestEmailSubmit(event: SubmitEvent): Promise<void> {
   errorMessage = ''
   statusMessage = ''
   try {
-    const result = await signUp.email({
-      email,
-      password: newPassword,
-      name: email.split('@')[0] || 'HYPE user',
-      callbackURL: window.location.href,
-    })
+    const result = isGuestSignIn
+      ? await signIn.email({
+          email,
+          password: newPassword,
+          callbackURL: window.location.href,
+        })
+      : await signUp.email({
+          email,
+          password: newPassword,
+          name: email.split('@')[0] || 'HYPE user',
+          callbackURL: window.location.href,
+        })
     if (result.error) throw new Error(result.error.message)
-    isAwaitingVerification = true
+    if (isGuestSignIn) {
+      window.location.reload()
+      return
+    }
     statusMessage = m.guest__verification_sent()
     newPassword = ''
   } catch {
@@ -188,6 +385,9 @@ async function handleUnlink(account: Account): Promise<void> {
     })
     if (result.error) throw new Error(result.error.message)
     accounts = accounts.filter(item => item.accountId !== account.accountId)
+    const { [accountKey(account)]: _removedEmail, ...remainingProviderEmails } =
+      providerEmails
+    providerEmails = remainingProviderEmails
     statusMessage = m.account__account_unlinked()
   } catch {
     errorMessage = m.account__unlink_error()
@@ -225,58 +425,100 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 {#if !isLoading}
   <section class="border-b border-base-content/15 p-4">
     {#if isGuest}
-      <div class="flex flex-col items-center text-center">
-        <div class="flex w-full items-center justify-between">
-          <h2
-            class="text-sm font-semibold uppercase tracking-wide text-base-content/65"
-          >
-            {m.guest__guest_account()}
-          </h2>
-          <button
-            class="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-content transition hover:bg-primary/90"
-            type="button"
-            aria-expanded={isEditing}
-            onclick={() => {
-              isEditing = !isEditing
-              errorMessage = ''
-              statusMessage = ''
-            }}
-          >
-            {m.guest__upgrade_title()}
-          </button>
+      {#if !startGuestUpgradeOpen}
+        <div class="flex flex-col items-center text-center">
+          <div class="flex w-full items-center justify-between">
+            <h2
+              class="text-sm font-semibold uppercase tracking-wide text-base-content/65"
+            >
+              {m.guest__guest_account()}
+            </h2>
+            <button
+              class="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-content transition hover:bg-primary/90"
+              type="button"
+              aria-expanded={isEditing}
+              onclick={() => {
+                isEditing = !isEditing
+                errorMessage = ''
+                statusMessage = ''
+              }}
+            >
+              {m.guest__upgrade_title()}
+            </button>
+          </div>
         </div>
-        <p class="mt-3 max-w-sm text-sm leading-5 text-base-content/75">
-          {m.guest__reminder()}
-        </p>
-      </div>
+      {/if}
 
       {#if isEditing}
-        <div class="mt-4 flex flex-col gap-2 border-t border-base-content/10 pt-4">
-          <h3 class="text-center text-sm font-medium text-base-content/70">
-            {m.guest__upgrade_title()}
-          </h3>
-          <div class="flex flex-wrap justify-center gap-2">
-            {#each socialProviders as provider (provider.id)}
-              {@const ProviderIcon = provider.icon}
-              <button
-                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
-                type="button"
-                disabled={isBusy}
-                onclick={() => handleGuestSocial(provider.id)}
-              >
-                <ProviderIcon class="h-4 w-4" />{provider.label}
-              </button>
-            {/each}
-            {#if !showEmailSetup}
-              <button
-                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
-                type="button"
-                disabled={isBusy}
-                onclick={() => (showEmailSetup = true)}
-              >
-                <Mail class="h-4 w-4" />{m.guest__email()}
-              </button>
-            {/if}
+        <div
+          class={`flex flex-col gap-4 ${
+            startGuestUpgradeOpen ? '' : 'mt-4 border-t border-base-content/10 pt-4'
+          }`}
+        >
+          <div class="flex flex-col gap-2">
+            <h3 class="text-center text-sm font-medium text-base-content/70">
+              {isGuestSignIn
+                ? m.guest__sign_in_social_account()
+                : m.guest__linked_account()}
+            </h3>
+            <div class="flex flex-wrap justify-center gap-2">
+              {#each socialProviders as provider (provider.id)}
+                {@const ProviderIcon = provider.icon}
+                <button
+                  class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                  type="button"
+                  disabled={isBusy}
+                  onclick={() => handleGuestSocial(provider.id)}
+                >
+                  <ProviderIcon
+                    class={`h-4 w-4 ${provider.id === 'facebook' ? 'text-[#1877f2]' : ''}`}
+                  />{provider.label}
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h3 class="text-center text-sm font-medium text-base-content/70">
+              {isGuestSignIn
+                ? m.guest__sign_in_standard_method()
+                : m.guest__login_methods()}
+            </h3>
+            <div class="flex flex-wrap justify-center gap-2">
+              {#if !showEmailSetup}
+                <button
+                  class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                  type="button"
+                  disabled={isBusy}
+                  onclick={() => {
+                    showEmailSetup = true
+                    showPasskeySetup = false
+                  }}
+                >
+                  <Mail class="h-4 w-4" />{m.account__email()}
+                </button>
+              {/if}
+              {#if !showPasskeySetup}
+                <button
+                  class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                  type="button"
+                  disabled={isBusy}
+                  onclick={() => {
+                    if (isGuestSignIn) {
+                      void handleGuestPasskeySignIn()
+                    } else {
+                      showPasskeySetup = true
+                      showEmailSetup = false
+                    }
+                  }}
+                >
+                  <KeyRound class="h-4 w-4" />
+                  {isGuestSignIn
+                    ? m.guest__sign_in_with_passkey()
+                    : m.account__setup_passkey()}
+                </button>
+              {/if}
+            </div>
           </div>
 
           {#if showEmailSetup}
@@ -299,7 +541,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 id="guest-account-password"
                 class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
                 type="password"
-                autocomplete="new-password"
+                autocomplete={isGuestSignIn ? 'current-password' : 'new-password'}
                 minlength="8"
                 maxlength="128"
                 bind:value={newPassword}
@@ -310,63 +552,99 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 type="submit"
                 disabled={isBusy}
               >
-                {m.guest__create_account()}
+                {isGuestSignIn ? m.guest__sign_in() : m.guest__create_account()}
               </button>
             </form>
           {/if}
-          {#if isAwaitingVerification}
-            <p class="text-sm text-success">{m.guest__verification_sent()}</p>
+          {#if showPasskeySetup}
+            <form class="flex flex-col gap-2" onsubmit={handleGuestPasskeySubmit}>
+              <h4 class="text-center text-sm font-medium text-base-content/70">
+                {m.guest__passkey_setup_title()}
+              </h4>
+              <p class="text-center text-sm text-base-content/65">
+                {m.guest__passkey_setup_description()}
+              </p>
+              <label class="text-sm" for="guest-passkey-name"
+                >{m.guest__preferred_name()}</label
+              >
+              <input
+                id="guest-passkey-name"
+                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+                type="text"
+                autocomplete="name"
+                bind:value={preferredName}
+              >
+              <label class="text-sm" for="guest-passkey-username"
+                >{m.guest__preferred_username()}</label
+              >
+              <input
+                id="guest-passkey-username"
+                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+                type="text"
+                autocomplete="username"
+                maxlength="32"
+                bind:value={preferredUsername}
+              >
+              <label class="text-sm" for="guest-passkey-email"
+                >{m.guest__email_optional()}</label
+              >
+              <input
+                id="guest-passkey-email"
+                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+                type="email"
+                autocomplete="email"
+                bind:value={preferredEmail}
+              >
+              <button
+                class="rounded-lg bg-base-content px-3 py-2 text-sm font-medium text-base-100 disabled:opacity-50"
+                type="submit"
+                disabled={isBusy}
+              >
+                {m.account__setup_passkey()}
+              </button>
+            </form>
           {/if}
           {#if errorMessage}
-            <p class="text-sm text-error">{errorMessage}</p>
+            <p
+              transition:slide={{ duration: 220 }}
+              class="text-center text-sm text-error"
+            >
+              {errorMessage}
+            </p>
           {/if}
           {#if statusMessage}
-            <p class="text-sm text-success">{statusMessage}</p>
+            <p
+              transition:slide={{ duration: 220 }}
+              class="text-center text-sm text-success"
+            >
+              {statusMessage}
+            </p>
           {/if}
         </div>
       {/if}
     {:else}
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-base-content/65">
-          {m.account__linked_accounts_title()}
-        </h2>
-        <button
-          class="rounded p-1 text-base-content/65 transition hover:bg-base-content/10 hover:text-base-content"
-          type="button"
-          aria-label={m.forms__edit()}
-          aria-expanded={isEditing}
-          onclick={() => {
-          isEditing = !isEditing
-          errorMessage = ''
-          statusMessage = ''
-        }}
-        >
-          <Pencil class="h-4 w-4" />
-        </button>
-      </div>
-
-      <div class="mt-2 flex min-h-8 items-center gap-3">
-        {#each accounts as account (account.accountId)}
-          {@const Icon = providerIcon(account.providerId)}
-          <Icon
-            class={account.providerId === 'facebook' ? 'h-6 w-6 text-[#1877F2]' : 'h-6 w-6'}
-            aria-label={account.providerId}
-          />
-        {/each}
-      </div>
-
-      {#if isEditing}
-        <div class="mt-3 flex flex-col gap-2 border-t border-base-content/10 pt-3">
-          {#each accounts as account (account.accountId)}
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+          <h3 class="text-sm font-medium text-base-content/70">
+            {m.account__social_accounts()}
+          </h3>
+          {#each accounts.filter(account => account.providerId !== 'credential') as account (account.accountId)}
             {@const Icon = providerIcon(account.providerId)}
-            <div class="flex items-center justify-between text-sm">
-              <span class="flex items-center gap-2"
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><Icon
                   class={account.providerId === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
-                />{accountDisplayLabel(account.providerId)}</span
+                /><span class="min-w-0 text-base-content"
+                  >{providerLabel(account.providerId)}
+                  {#if providerEmails[accountKey(account)]}
+                    <span class="text-base-content/55"
+                      >({providerEmails[accountKey(account)]})</span
+                    >
+                  {/if}</span
+                ></span
               >
               <button
-                class="text-error disabled:opacity-40"
+                class="shrink-0 rounded border border-error/40 px-2 py-1 text-error transition hover:bg-error/10 disabled:opacity-40"
                 type="button"
                 disabled={isBusy || accounts.length <= 1}
                 onclick={() => handleUnlink(account)}
@@ -375,53 +653,106 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               </button>
             </div>
           {/each}
-          {#each passkeys as registeredPasskey (registeredPasskey.id)}
-            <KeyRound class="h-6 w-6" aria-label={m.account__passkey()} />
-          {/each}
-
-          <h3 class="mt-3 text-sm font-medium text-base-content/70">
-            {m.account__link_another_account()}
-          </h3>
-          <div
-            class="flex items-center justify-between gap-3 rounded border border-base-content/15 p-2 text-sm"
-          >
-            <span class="flex items-center gap-2"
-              ><KeyRound class="h-4 w-4" />{m.account__passkey()}</span
-            >
-            <button
-              class="rounded border border-base-content/20 px-2 py-1 disabled:opacity-50"
-              type="button"
-              disabled={isBusy}
-              onclick={handleAddPasskey}
-            >
-              {passkeys.length ? m.account__add_passkey() : m.account__setup_passkey()}
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            {#each socialProviders as provider (provider.id)}
-              {@const ProviderIcon = provider.icon}
-              {#if !accounts.some(account => account.providerId === provider.id)}
+          {#each socialProviders as provider (provider.id)}
+            {@const ProviderIcon = provider.icon}
+            {#if !accounts.some(account => account.providerId === provider.id)}
+              <div class="flex items-center justify-between gap-3 text-sm">
+                <span class="flex min-w-0 flex-1 items-center gap-2.5"
+                  ><ProviderIcon
+                    class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
+                  /><span class="text-base-content">{provider.label}</span></span
+                >
                 <button
-                  class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm"
+                  class="shrink-0 rounded border border-base-content/20 px-2 py-1 text-base-content transition hover:bg-base-content/10 disabled:opacity-40"
                   type="button"
                   disabled={isBusy}
                   onclick={() => handleLink(provider.id)}
                 >
-                  <ProviderIcon class="h-4 w-4" />{provider.label}
+                  {m.account__link()}
                 </button>
-              {/if}
-            {/each}
-            {#if !accounts.some(account => account.providerId === 'credential') && !showEmailSetup}
+              </div>
+            {/if}
+          {/each}
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <h3 class="text-sm font-medium text-base-content/70">
+            {m.account__standard_login_methods()}
+          </h3>
+          {#each accounts.filter(account => account.providerId === 'credential') as account (account.accountId)}
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="flex min-w-0 flex-1 items-center gap-2.5"
+                ><Mail class="h-5 w-5" />
+                <span class="min-w-0 text-base-content"
+                  >{m.account__email()}
+                  {#if linkedAccountLabel}
+                    <span class="text-base-content/55">({linkedAccountLabel})</span>
+                  {/if}</span
+                ></span
+              >
               <button
-                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm"
+                class="shrink-0 rounded border border-error/40 px-2 py-1 text-error transition hover:bg-error/10 disabled:opacity-40"
+                type="button"
+                disabled={isBusy || accounts.length <= 1}
+                onclick={() => handleUnlink(account)}
+              >
+                {m.account__unlink()}
+              </button>
+            </div>
+          {/each}
+          {#if passkeys.length}
+            {#each passkeys as passkey (passkey.id)}
+              <div class="flex items-center justify-between gap-3 text-sm">
+                <span class="flex min-w-0 flex-1 items-center gap-2.5"
+                  ><KeyRound class="h-4 w-4" />
+                  <span class="min-w-0 text-base-content"
+                    >{m.account__passkey()}
+                    <span class="text-base-content/55"
+                      >({passkeyIdentifier(passkey)})</span
+                    ></span
+                  ></span
+                >
+                <button
+                  class="shrink-0 rounded border border-error/40 px-2 py-1 text-error transition hover:bg-error/10 disabled:opacity-40"
+                  type="button"
+                  disabled={isBusy || (accounts.length === 0 && passkeys.length <= 1)}
+                  onclick={() => handleRemovePasskey(passkey)}
+                >
+                  {m.account__unlink()}
+                </button>
+              </div>
+            {/each}
+          {:else}
+            <div class="flex items-center justify-between text-sm">
+              <span class="flex items-center gap-2.5"
+                ><KeyRound class="h-4 w-4" />{m.account__passkey()}</span
+              >
+              <button
+                class="rounded border border-base-content/20 px-2 py-1 text-base-content transition hover:bg-base-content/10 disabled:opacity-40"
+                type="button"
+                disabled={isBusy}
+                onclick={handleAddPasskey}
+              >
+                {m.account__setup_passkey()}
+              </button>
+            </div>
+          {/if}
+          {#if !accounts.some(account => account.providerId === 'credential') && !showEmailSetup}
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="flex min-w-0 flex-1 items-center gap-2.5"
+                ><Mail class="h-5 w-5" />
+                <span class="text-base-content">{m.account__email()}</span></span
+              >
+              <button
+                class="shrink-0 rounded border border-base-content/20 px-2 py-1 text-base-content transition hover:bg-base-content/10 disabled:opacity-40"
                 type="button"
                 disabled={isBusy}
                 onclick={() => (showEmailSetup = true)}
               >
-                <Mail class="h-4 w-4" />{m.guest__email()}
+                {m.account__add_password_action()}
               </button>
-            {/if}
-          </div>
+            </div>
+          {/if}
 
           {#if !accounts.some(account => account.providerId === 'credential') && showEmailSetup}
             <form class="mt-2 flex flex-col gap-2" onsubmit={handlePasswordSubmit}>
@@ -459,13 +790,23 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             </form>
           {/if}
           {#if errorMessage}
-            <p class="text-sm text-error">{errorMessage}</p>
+            <p
+              transition:slide={{ duration: 220 }}
+              class="text-center text-sm text-error"
+            >
+              {errorMessage}
+            </p>
           {/if}
           {#if statusMessage}
-            <p class="text-sm text-success">{statusMessage}</p>
+            <p
+              transition:slide={{ duration: 220 }}
+              class="text-center text-sm text-success"
+            >
+              {statusMessage}
+            </p>
           {/if}
         </div>
-      {/if}
+      </div>
     {/if}
   </section>
 {/if}

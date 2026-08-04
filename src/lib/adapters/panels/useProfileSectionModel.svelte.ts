@@ -4,7 +4,7 @@ import { onDestroy } from 'svelte'
 import { goto } from '$app/navigation'
 // AUTH
 import { signOut } from '$lib/auth/client'
-import { requestAccountUpgrade } from '$lib/auth/upgrade'
+import { requestAccountUpgrade, toSafeReturnPath } from '$lib/auth/upgrade'
 // I18N
 import { m } from '$lib/i18n'
 // SERVICES
@@ -214,13 +214,18 @@ export function useProfileSectionModel(
       usernameInputPlaceholder: m.warm_that_duck_slide(),
       openProfileText: m.whole_livid_alligator_commend(),
       logoutText: m.profile__logout(),
-      upgradeText: m.guest__upgrade_title(),
+      upgradeText: m.guest__create_account(),
+      signInText: m.guest__sign_in(),
       onStartEditingUsername: handleStartEditingUsername,
       onSaveUsername: handleSaveUsername,
       onCancelEdit: handleCancelEdit,
       onOpenProfile: handleOpenProfile,
       onLogout: handleLogout,
       onUpgrade: () => requestAccountUpgrade('account', window.location.href),
+      onSignIn: () =>
+        goto(
+          `/login?returnTo=${encodeURIComponent(toSafeReturnPath(window.location.href))}`,
+        ),
     }),
   }
 }

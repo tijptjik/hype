@@ -21,12 +21,14 @@ let {
   openProfileText = '',
   logoutText = '',
   upgradeText = '',
+  signInText = '',
   onStartEditingUsername,
   onSaveUsername,
   onCancelEdit,
   onOpenProfile,
   onLogout,
   onUpgrade,
+  onSignIn,
 }: ProfileSectionProps = $props()
 </script>
 
@@ -64,9 +66,11 @@ let {
       {openProfileText}
       {logoutText}
       {upgradeText}
+      {signInText}
       {onOpenProfile}
       {onLogout}
       {onUpgrade}
+      {onSignIn}
     />
   </div>
 </div>

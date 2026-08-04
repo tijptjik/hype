@@ -15,10 +15,12 @@ export interface ProfileSectionProps {
   openProfileText?: string
   logoutText?: string
   upgradeText?: string
+  signInText?: string
   onStartEditingUsername?: () => void
   onSaveUsername?: () => void | Promise<void>
   onCancelEdit?: () => void
   onOpenProfile?: () => void
   onLogout?: () => void | Promise<void>
   onUpgrade?: () => void
+  onSignIn?: () => void | Promise<void>
 }
