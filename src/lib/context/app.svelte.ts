@@ -36,6 +36,7 @@ import {
   consumeEscapeForOpenPanels,
   shouldSkipGlobalKeydown,
 } from '$lib/client/keybindings'
+import { getInitialHubLayerDefaultIds } from '$lib/client/services/layerDefaults'
 // AUTH
 import { requestAccountUpgrade } from '$lib/auth/upgrade'
 import {
@@ -937,11 +938,11 @@ export class AppCtx {
   }
 
   private getHubDefaultLayerIds = (): Id[] => {
-    const hubDefaults = this.hub?.layerDefaults ?? []
-    return hubDefaults
-      .filter(layerDefault => layerDefault.isDefaultVisible)
-      .map(layerDefault => layerDefault.layerId)
-      .filter(layerId => this.state.resources.layer.some(layer => layer.id === layerId))
+    return getInitialHubLayerDefaultIds(
+      this.hub,
+      this.state.resources.layer,
+      this.state.resources.project,
+    )
   }
 
   private applyInitialLayerPrisms = (): void => {
