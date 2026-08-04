@@ -83,6 +83,12 @@ function createAuthInstance(
       provider: 'sqlite',
       schema,
     }),
+    // ADVANCES SETTINGS
+    advanced: {
+      ipAddress: {
+        ipAddressHeaders: ['cf-connecting-ip'],
+      },
+    },
     // DATABASE HOOKS
     databaseHooks: {
       user: {
