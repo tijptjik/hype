@@ -68,6 +68,10 @@ export const authConfig = {
   user: {
     changeEmail: {
       enabled: true,
+      // A passkey can authenticate a new account before its optional email is
+      // verified. Save that email immediately, while Better Auth keeps its
+      // `emailVerified` flag false and sends the normal verification message.
+      updateEmailWithoutVerification: true,
     },
     additionalFields: {
       locale: {

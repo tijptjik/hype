@@ -23,3 +23,9 @@ describe('authConfig account.accountLinking', () => {
     expect(authConfig.account.accountLinking.trustedProviders).toContain('facebook')
   })
 })
+
+describe('authConfig user.changeEmail', () => {
+  it('stores an email supplied during passkey sign-up without verifying it', () => {
+    expect(authConfig.user.changeEmail.updateEmailWithoutVerification).toBe(true)
+  })
+})
