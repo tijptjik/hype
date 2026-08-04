@@ -311,7 +311,7 @@ async function handlePasswordResetRequest(): Promise<void> {
 </script>
 
 <section
-  class="w-full max-w-xl rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
+  class="w-96 max-w-full sm:min-w-fit rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
 >
   {#if showAuthModeTitle && modeToggleHref}
     <div class="flex items-center justify-center gap-3">
@@ -367,7 +367,7 @@ async function handlePasswordResetRequest(): Promise<void> {
     {#if showGuest}
       <div class="mt-3 flex flex-col items-center">
         <div class="h-1 border-l border-white/20" aria-hidden="true"></div>
-        <span class="py-1 text-xs font-medium tracking-[0.2em] text-white/50"
+        <span class="py-1 text-xs font-medium tracking-[0.2em] text-white/50 uppercase"
           >{m.or()}</span
         >
         <div class="mb-3 h-1 border-l border-white/20" aria-hidden="true"></div>
