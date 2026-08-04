@@ -68,6 +68,13 @@ Run all commands with Bun:
 - Run `bun run test:run` before pushing.
 - Coverage uses V8 + `lcov` output; include tests for new behavior and bug fixes.
 
+### Browser UI verification (Playwright)
+- Use the installed `playwright` package directly with Bun for manual UI checks; do not add a dependency solely for this.
+- Start the app with `bun run dev -- --host 127.0.0.1 --port 4173`, then stop it after the check.
+- Launch Chromium with `args: ['--disable-web-security']` for local map verification: the development origin otherwise cannot load the external map tiles because of CORS.
+- For a feature-card action check at a 1280px viewport: load `http://127.0.0.1:4173`, wait for map content, click the marker near `(300, 80)`, select **Show Details**, then inspect `#feature-card-actions [data-button-root=true]` for visible text, titles, and bounding boxes.
+- Verify animated states after the transition duration (at least 250ms), and verify hover guards by moving the pointer off the action root and back onto it before asserting the hover label.
+
 ## Package and Library specific instructions
 
 - `ts` TypeScript guidance:
