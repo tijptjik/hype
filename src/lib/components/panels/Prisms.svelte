@@ -12,7 +12,6 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { navigate } from '$lib/navigation'
 // BITS
 import { PanelRoot as Panel } from '$lib/bits'
-import * as PanelPattern from '$lib/bits/patterns/panels'
 // COMPONENTS
 import Header from '$lib/components/panels/common/Header.svelte'
 import Info from '$lib/components/panels/info/Maps.svelte'
@@ -20,9 +19,10 @@ import Organisations from '$lib/components/panels/sections/Organisations.svelte'
 import Projects from '$lib/components/panels/sections/Projects.svelte'
 import Layers from '$lib/components/panels/sections/Layers.svelte'
 import FilteredLayer from '$lib/components/panels/common/variants/FilteredLayer.svelte'
+import OrganisationPrismItem from '$lib/components/panels/common/variants/OrganisationPrismItem.svelte'
 import ProjectPrismItem from '$lib/components/panels/common/variants/ProjectPrismItem.svelte'
 // ENUMS
-import { FirstClassResource, Panel as PanelType, PanelSide } from '$lib/enums'
+import { Panel as PanelType, PanelSide } from '$lib/enums'
 // TYPES
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
@@ -82,17 +82,33 @@ let panelProps: PanelProps = $derived({
       <div class="prisms-sections__section prisms-sections__section--bounded">
         <Organisations {...panelProps}>
           {#snippet filteredItem(resource: Organisation, selectedOrganisations: Id[])}
-            <PanelPattern.Item.ItemResource
-              resourceType={FirstClassResource.organisation}
+            <OrganisationPrismItem
               {resource}
-              selectedClass="bg-primary"
-              isSelected={selectedOrganisations.includes(resource.id)}
-              onToggle={async (e) => {
+              isPrismActive={selectedOrganisations.includes(resource.id)}
+              isDefaultLayersActive={appCtx.isOrganisationDefaultLayersActive(resource.id)}
+              onPrimaryAction={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                await appCtx.toggleOrganisation(resource.id);
+                if (selectedOrganisations.includes(resource.id)) {
+                  await appCtx.deactivateOrganisation(resource.id);
+                } else if (
+                  selectedOrganisations.length === 0 &&
+                  appCtx.isOrganisationDefaultLayersActive(resource.id)
+                ) {
+                  await appCtx.deactivateOrganisationLayers(resource.id);
+                } else {
+                  await appCtx.activateOrganisationWithDefaultLayers(resource.id);
+                }
               }}
-              {...panelProps}
+              onTogglePrism={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (selectedOrganisations.includes(resource.id)) {
+                  await appCtx.toggleOrganisation(resource.id);
+                } else {
+                  await appCtx.activateOrganisationPrismWithDefaultLayers(resource.id);
+                }
+              }}
             />
           {/snippet}
         </Organisations>
@@ -109,21 +125,30 @@ let panelProps: PanelProps = $derived({
               hierarchy={{
                 organisation: hierarchy.organisation
               }}
-              isSelected={selectedProjects.includes(resource.id)}
-              isReplaceState={appCtx.isProjectReplaceState(resource.id)}
-              onPrimaryAction={(e) => {
+              isPrismActive={selectedProjects.includes(resource.id)}
+              isDefaultLayersActive={appCtx.isProjectDefaultLayersActive(resource.id)}
+              onPrimaryAction={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (appCtx.isProjectReplaceState(resource.id)) {
-                  appCtx.replaceWithProjectDefaultLayers(resource.id);
+                if (selectedProjects.includes(resource.id)) {
+                  await appCtx.deactivateProject(resource.id);
+                } else if (
+                  selectedProjects.length === 0 &&
+                  appCtx.isProjectDefaultLayersActive(resource.id)
+                ) {
+                  await appCtx.deactivateProjectLayers(resource.id);
                 } else {
-                  appCtx.addProjectDefaultLayers(resource.id);
+                  await appCtx.activateProjectWithDefaultLayers(resource.id);
                 }
               }}
-              onToggleFilter={(e) => {
+              onTogglePrism={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                appCtx.toggleProject(resource.id);
+                if (selectedProjects.includes(resource.id)) {
+                  await appCtx.toggleProject(resource.id);
+                } else {
+                  await appCtx.activateProjectPrismWithDefaultLayers(resource.id);
+                }
               }}
               {...panelProps}
             />
@@ -142,16 +167,27 @@ let panelProps: PanelProps = $derived({
               {hierarchy}
               selectedClass="bg-secondary"
               isSelected={selectedLayers.includes(layer.id)}
-              onclick={(e: MouseEvent | KeyboardEvent) => {
+              onToggle={async (e: MouseEvent | KeyboardEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
-                appCtx.toggleLayer(layer.id);
+                await appCtx.toggleLayer(layer.id);
                 // Close the card if it belonged to a layer which is no longer active
                 const activeFeature = appCtx.getActiveFeature();
                 if (
                   activeFeature &&
                   !appCtx.state.prisms.layer.includes(activeFeature.layerId)
                 ) {
+                  navigate('/');
+                  omniCtx.setMode(OmniMode.search);
+                }
+              }}
+              onIsolate={async (e: MouseEvent | KeyboardEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                await appCtx.isolateLayer(layer.id);
+                // Close the card if its layer was excluded by the isolated layer.
+                const activeFeature = appCtx.getActiveFeature();
+                if (activeFeature && activeFeature.layerId !== layer.id) {
                   navigate('/');
                   omniCtx.setMode(OmniMode.search);
                 }
@@ -176,13 +212,15 @@ let panelProps: PanelProps = $derived({
 }
 
 .prisms-sections__section {
+  display: flex;
   min-height: 0;
+  flex-direction: column;
   overflow: hidden;
 }
 
 .prisms-sections__section--bounded {
   max-height: 33.333%;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
 }
 
 .prisms-sections__section--layers {
@@ -191,7 +229,7 @@ let panelProps: PanelProps = $derived({
 }
 
 .prisms-sections__section > :global(section) {
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 </style>

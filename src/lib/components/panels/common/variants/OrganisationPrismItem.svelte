@@ -10,26 +10,21 @@ import { Icon } from '$lib/bits'
 import { getI18n } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
-// COMPONENTS
-import ResourceHierarchyPath from '../ResourceHierarchyPath.svelte'
 // TYPES
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { PanelProps, ResourceContext } from '$lib/types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 
 const appCtx = getAppCtx()
 
 type Props = {
-  resource: Project
-  hierarchy: ResourceContext
+  resource: Organisation
   isPrismActive: boolean
   isDefaultLayersActive: boolean
   onPrimaryAction: (event: MouseEvent | KeyboardEvent) => void | Promise<void>
   onTogglePrism: (event: MouseEvent | KeyboardEvent) => void | Promise<void>
-} & PanelProps
+}
 
 const {
   resource,
-  hierarchy,
   isPrismActive,
   isDefaultLayersActive,
   onPrimaryAction,
@@ -38,7 +33,9 @@ const {
 
 const name = $derived(getI18n(resource, 'name', appCtx.getUserPreferences()))
 const primaryActionLabel = $derived(
-  isPrismActive ? `Remove ${name} project prism` : `Activate ${name} default layers`,
+  isPrismActive
+    ? `Remove ${name} organisation prism`
+    : `Activate ${name} default layers`,
 )
 </script>
 
@@ -56,23 +53,20 @@ const primaryActionLabel = $derived(
   >
     <div
       class="h-2 w-2 shrink-0 rounded-full {isDefaultLayersActive
-        ? 'bg-accent'
+        ? 'bg-primary'
         : 'bg-base-content/30'}"
       aria-hidden="true"
     ></div>
-    <div class="min-w-0">
-      <ResourceHierarchyPath hierarchy={{ organisation: hierarchy.organisation }} />
-      <p class="font-light">{name}</p>
-    </div>
+    <p class="min-w-0 font-light">{name}</p>
   </button>
 
   <button
     type="button"
     class="group/funnel inline-flex shrink-0 items-center justify-center {isPrismActive
-      ? 'text-accent'
+      ? 'text-primary'
       : 'text-base-content/45 hover:text-base-content/80 focus-visible:text-base-content/80'}"
-    aria-label={isPrismActive ? `Remove ${name} project prism` : `Add ${name} project prism`}
-    title={isPrismActive ? `Remove ${name} project prism` : `Add ${name} project prism`}
+    aria-label={isPrismActive ? `Remove ${name} organisation prism` : `Add ${name} organisation prism`}
+    title={isPrismActive ? `Remove ${name} organisation prism` : `Add ${name} organisation prism`}
     onclick={onTogglePrism}
   >
     <Icon

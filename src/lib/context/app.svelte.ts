@@ -1491,31 +1491,172 @@ export class AppCtx {
     await this.togglePrism(FirstClassResource.organisation, id)
   }
 
+  /**
+   * Returns the IDs of an organisation's layers that should be visible by default.
+   *
+   * @param organisationId - The organisation whose default layer IDs are required.
+   * @returns The organisation's default-visible layer IDs.
+   */
+  getOrganisationDefaultVisibleLayerIds = (organisationId: Id): Id[] =>
+    this.state.resources.layer
+      .filter(
+        layer => layer.organisationId === organisationId && layer.isDefaultVisible,
+      )
+      .map(layer => layer.id)
+
+  /**
+   * Determines whether every default-visible layer for an organisation is active.
+   *
+   * @param organisationId - The organisation whose default layers are checked.
+   * @returns Whether the organisation has default layers and every one is active.
+   */
+  isOrganisationDefaultLayersActive = (organisationId: Id): boolean => {
+    const defaultLayerIds = this.getOrganisationDefaultVisibleLayerIds(organisationId)
+    return (
+      defaultLayerIds.length > 0 &&
+      defaultLayerIds.every(layerId => this.state.prisms.layer.includes(layerId))
+    )
+  }
+
+  /**
+   * Activates an organisation's default-visible layers without changing prism scope.
+   *
+   * @param organisationId - The organisation whose default layers should be activated.
+   * @returns A promise that resolves after dependent layer state is updated.
+   */
+  addOrganisationDefaultLayers = async (organisationId: Id): Promise<void> => {
+    const defaultLayerIds = this.getOrganisationDefaultVisibleLayerIds(organisationId)
+    if (defaultLayerIds.length === 0) return
+
+    this.state.prisms.layer = Array.from(
+      new Set([...this.state.prisms.layer, ...defaultLayerIds]),
+    )
+    await this.postLayerMutation(true)
+  }
+
+  /**
+   * Activates an organisation's defaults and joins its prism when organisation scope is active.
+   *
+   * @param organisationId - The organisation whose default layers should be activated.
+   * @returns A promise that resolves after organisation and layer state are updated.
+   */
+  activateOrganisationWithDefaultLayers = async (organisationId: Id): Promise<void> => {
+    if (this.state.prisms.organisation.length > 0) {
+      await this.activateOrganisationPrismWithDefaultLayers(organisationId)
+      return
+    }
+
+    await this.addOrganisationDefaultLayers(organisationId)
+  }
+
+  /**
+   * Activates an organisation prism and enables the organisation's default-visible layers.
+   *
+   * @param organisationId - The organisation prism and default layers to activate.
+   * @returns A promise that resolves after organisation and layer state are updated.
+   */
+  activateOrganisationPrismWithDefaultLayers = async (
+    organisationId: Id,
+  ): Promise<void> => {
+    this.state.prisms.organisation = Array.from(
+      new Set([...this.state.prisms.organisation, organisationId]),
+    )
+
+    // Load the newly scoped organisation's descendants before selecting its defaults.
+    await this.refreshProjects(false)
+    await this.refreshProperties()
+    await this.refreshLayers(false)
+    await this.addOrganisationDefaultLayers(organisationId)
+  }
+
+  /**
+   * Removes an organisation prism and every active descendant prism and layer.
+   *
+   * @param organisationId - The organisation to deactivate.
+   * @returns A promise that resolves after the expanded organisation scope is loaded.
+   */
+  deactivateOrganisation = async (organisationId: Id): Promise<void> => {
+    const projectIds = new Set(
+      this.state.resources.project
+        .filter(project => project.organisationId === organisationId)
+        .map(project => project.id),
+    )
+    const layerIds = new Set(
+      this.state.resources.layer
+        .filter(layer => layer.organisationId === organisationId)
+        .map(layer => layer.id),
+    )
+
+    // Remove the organisation and all of its descendants before expanding the scope.
+    this.state.prisms.organisation = this.state.prisms.organisation.filter(
+      id => id !== organisationId,
+    )
+    this.state.prisms.project = this.state.prisms.project.filter(
+      projectId => !projectIds.has(projectId),
+    )
+    this.state.prisms.layer = this.state.prisms.layer.filter(
+      layerId => !layerIds.has(layerId),
+    )
+
+    await this.refreshProjects(false)
+    await this.refreshProperties()
+    await this.refreshLayers(true, false)
+  }
+
+  /**
+   * Deactivates every active layer that belongs to an organisation without changing prism scope.
+   *
+   * @param organisationId - The organisation whose active layers should be disabled.
+   * @returns A promise that resolves after dependent layer state is updated.
+   */
+  deactivateOrganisationLayers = async (organisationId: Id): Promise<void> => {
+    const organisationLayerIds = new Set(
+      this.state.resources.layer
+        .filter(layer => layer.organisationId === organisationId)
+        .map(layer => layer.id),
+    )
+
+    this.state.prisms.layer = this.state.prisms.layer.filter(
+      layerId => !organisationLayerIds.has(layerId),
+    )
+    await this.postLayerMutation(true, false)
+  }
+
   toggleProject = async (id: Id): Promise<void> => {
     await this.togglePrism(FirstClassResource.project, id)
   }
 
+  /**
+   * Returns the IDs of a project's layers that should be visible by default.
+   *
+   * @param projectId - The project whose default layer IDs are required.
+   * @returns The project's default-visible layer IDs.
+   */
   getProjectDefaultVisibleLayerIds = (projectId: Id): Id[] =>
     this.state.resources.layer
       .filter(layer => layer.projectId === projectId && layer.isDefaultVisible)
       .map(layer => layer.id)
 
-  isProjectReplaceState = (projectId: Id): boolean => {
+  /**
+   * Determines whether every default-visible layer for a project is active.
+   *
+   * @param projectId - The project whose default layers are checked.
+   * @returns Whether the project has default layers and every one is active.
+   */
+  isProjectDefaultLayersActive = (projectId: Id): boolean => {
     const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
-    if (defaultLayerIds.length === 0) return false
-
-    const activeLayerIds = this.state.prisms.layer.filter(layerId =>
-      this.state.resources.layer.some(
-        layer => layer.projectId === projectId && layer.id === layerId,
-      ),
+    return (
+      defaultLayerIds.length > 0 &&
+      defaultLayerIds.every(layerId => this.state.prisms.layer.includes(layerId))
     )
-
-    if (activeLayerIds.length !== defaultLayerIds.length) return false
-
-    const defaultSet = new Set(defaultLayerIds)
-    return activeLayerIds.every(layerId => defaultSet.has(layerId))
   }
 
+  /**
+   * Activates a project's default-visible layers without changing its prism scope.
+   *
+   * @param projectId - The project whose default layers should be activated.
+   * @returns A promise that resolves after dependent layer state is updated.
+   */
   addProjectDefaultLayers = async (projectId: Id): Promise<void> => {
     const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
     if (defaultLayerIds.length === 0) return
@@ -1526,14 +1667,128 @@ export class AppCtx {
     await this.postLayerMutation(true)
   }
 
-  replaceWithProjectDefaultLayers = async (projectId: Id): Promise<void> => {
+  /**
+   * Activates a project's defaults and joins its prism when project scope is active.
+   *
+   * @param projectId - The project whose default layers should be activated.
+   * @returns A promise that resolves after project and layer state are updated.
+   */
+  activateProjectWithDefaultLayers = async (projectId: Id): Promise<void> => {
+    const isProjectScopeActive = this.state.prisms.project.length > 0
+
+    if (isProjectScopeActive) {
+      await this.activateProjectPrismWithDefaultLayers(projectId)
+      return
+    }
+
+    await this.addProjectDefaultLayers(projectId)
+  }
+
+  /**
+   * Activates a project prism and enables the project's default-visible layers.
+   *
+   * @param projectId - The project prism and default layers to activate.
+   * @returns A promise that resolves after project and layer state are updated.
+   */
+  activateProjectPrismWithDefaultLayers = async (projectId: Id): Promise<void> => {
+    this.state.prisms.project = Array.from(
+      new Set([...this.state.prisms.project, projectId]),
+    )
+
+    // Load the newly scoped project's layers before selecting its defaults.
+    await this.refreshProperties()
+    await this.refreshLayers(false)
+    await this.addProjectDefaultLayers(projectId)
+  }
+
+  /**
+   * Isolates a project prism and replaces the active layers with its defaults.
+   *
+   * @param projectId - The project to make the sole active prism.
+   * @returns A promise that resolves after the project scope and layer state update.
+   */
+  isolateProject = async (projectId: Id): Promise<void> => {
+    this.state.prisms.project = [projectId]
+
+    // Load the isolated project's resources before deriving its default layers.
+    await this.refreshProperties()
+    await this.refreshLayers(false)
+
     const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
     this.state.prisms.layer = [...defaultLayerIds]
     await this.postLayerMutation(true)
   }
 
+  /**
+   * Removes a project prism and every active layer that belongs to it.
+   *
+   * @param projectId - The project to deactivate.
+   * @returns A promise that resolves after the expanded project scope is loaded.
+   */
+  deactivateProject = async (projectId: Id): Promise<void> => {
+    const projectLayerIds = new Set(
+      this.state.resources.layer
+        .filter(layer => layer.projectId === projectId)
+        .map(layer => layer.id),
+    )
+
+    // Remove both project-level and visible-layer state before expanding the scope.
+    this.state.prisms.project = this.state.prisms.project.filter(id => id !== projectId)
+    this.state.prisms.layer = this.state.prisms.layer.filter(
+      layerId => !projectLayerIds.has(layerId),
+    )
+
+    await this.refreshProperties()
+    await this.refreshLayers(true, false)
+  }
+
+  /**
+   * Deactivates every active layer that belongs to a project without changing prism scope.
+   *
+   * @param projectId - The project whose active layers should be disabled.
+   * @returns A promise that resolves after dependent layer state is updated.
+   */
+  deactivateProjectLayers = async (projectId: Id): Promise<void> => {
+    const projectLayerIds = new Set(
+      this.state.resources.layer
+        .filter(layer => layer.projectId === projectId)
+        .map(layer => layer.id),
+    )
+
+    this.state.prisms.layer = this.state.prisms.layer.filter(
+      layerId => !projectLayerIds.has(layerId),
+    )
+    await this.postLayerMutation(true, false)
+  }
+
+  /**
+   * Toggles a layer's visible state and reconciles its dependent filters.
+   *
+   * @param id - The layer to toggle.
+   * @returns A promise that resolves after dependent layer state is updated.
+   */
   toggleLayer = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.layer, id)
+    const layerIds = this.state.prisms.layer
+    const layerIndex = layerIds.indexOf(id)
+
+    if (layerIndex === -1) {
+      layerIds.push(id)
+    } else {
+      layerIds.splice(layerIndex, 1)
+    }
+
+    await this.postLayerMutation(true)
+  }
+
+  /**
+   * Makes a layer the sole active layer.
+   *
+   * @param id - The layer to isolate.
+   * @returns A promise that resolves after dependent layer state is updated.
+   */
+  isolateLayer = async (id: Id): Promise<void> => {
+    this.state.prisms.layer = [id]
+    await this.postLayerMutation(true)
   }
 
   toggleFeature = async (id: Id): Promise<void> => {
@@ -1595,7 +1850,17 @@ export class AppCtx {
     }
   }
 
-  refreshLayers = async (isCascading: boolean = true): Promise<void> => {
+  /**
+   * Refreshes layers for the active hierarchy and reconciles layer filter state.
+   *
+   * @param isCascading - Whether dependent feature and profile data should refresh.
+   * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
+   * @returns A promise that resolves once the layer state has been reconciled.
+   */
+  refreshLayers = async (
+    isCascading: boolean = true,
+    shouldAutoSelectSingleLayer: boolean = true,
+  ): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.layer)
     this.state.resources.layer = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
@@ -1606,7 +1871,7 @@ export class AppCtx {
     // Sync layer prisms to remove any layerIds which are no londer valid resources given the parent prism selection.
     this.syncLayerPrisms()
     // Also calls this.refreshFeatures()
-    await this.postLayerMutation(isCascading)
+    await this.postLayerMutation(isCascading, shouldAutoSelectSingleLayer)
   }
 
   refreshFeatures = async (_isCascading: boolean = true): Promise<void> => {
@@ -1887,9 +2152,20 @@ export class AppCtx {
     }
   }
 
-  postLayerMutation = async (isCascading: boolean = true): Promise<void> => {
+  /**
+   * Reconciles property filters and dependent data after an active-layer change.
+   *
+   * @param isCascading - Whether dependent feature and profile data should refresh.
+   * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
+   * @returns A promise that resolves once dependent layer state is up to date.
+   */
+  postLayerMutation = async (
+    isCascading: boolean = true,
+    shouldAutoSelectSingleLayer: boolean = true,
+  ): Promise<void> => {
     // Auto-select single layer if there's only one available and none selected
     if (
+      shouldAutoSelectSingleLayer &&
       this.state.resources.layer.length === 1 &&
       this.state.prisms.layer.length === 0
     ) {
