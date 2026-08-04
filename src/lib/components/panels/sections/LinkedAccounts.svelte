@@ -89,7 +89,7 @@ let preferredUsername = $state('')
 let preferredEmail = $state('')
 let providerEmails = $state<Record<string, string>>({})
 let accountLoadRequestId = 0
-let previousSessionUserId: string | undefined
+let loadedSessionUserId: string | undefined
 // Synthetic guest emails must never appear as suggested login addresses after account promotion.
 let resolvedEmail = $derived(
   $session.data?.user?.isAnonymous ? '' : visibleAccountEmail,
@@ -134,16 +134,16 @@ $effect(() => {
 $effect(() => {
   const sessionUserId = $session.data?.user?.id
   const requestId = ++accountLoadRequestId
-  const hasSessionIdentityChanged = sessionUserId !== previousSessionUserId
+  const hasSessionIdentityChanged = sessionUserId !== loadedSessionUserId
 
   // Do not track form input here: a keystroke must not reload and remount this section.
   if (!untrack(() => email) || hasSessionIdentityChanged) email = resolvedEmail
-  previousSessionUserId = sessionUserId
 
   if (isGuest) {
     accounts = []
     passkeys = []
     providerEmails = {}
+    loadedSessionUserId = undefined
     isLoading = false
     return
   }
@@ -152,10 +152,16 @@ $effect(() => {
     accounts = []
     passkeys = []
     providerEmails = {}
+    loadedSessionUserId = undefined
     isLoading = true
     return
   }
 
+  // A session refresh can update its atom without changing the signed-in user.
+  // Keep the existing methods visible instead of refetching and remounting them.
+  if (!hasSessionIdentityChanged) return
+
+  loadedSessionUserId = sessionUserId
   isLoading = true
   void loadSignInMethods(requestId)
 })
@@ -494,6 +500,8 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
     })
     if (!response.ok) throw new Error('password not set')
     newPassword = ''
+    // The endpoint may have changed the email too, so replace the session atom's cached user.
+    await useSession().get().refetch()
     await loadAccounts()
     showEmailSetup = false
     statusMessage = m.account__password_added()
@@ -505,88 +513,87 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 }
 </script>
 
-{#if !isLoading}
-  <section in:slide={{ duration: 220 }} class="border-b border-base-content/15 p-4">
-    {#if isGuest}
-      {#if !startGuestUpgradeOpen}
-        <div class="flex flex-col items-center text-center">
-          <div class="flex w-full items-center justify-between">
-            <h2
-              class="text-sm font-semibold uppercase tracking-wide text-base-content/65"
-            >
-              {m.guest__guest_account()}
-            </h2>
-            <button
-              class="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-content transition hover:bg-primary/90"
-              type="button"
-              aria-expanded={isEditing}
-              onclick={() => {
+<section in:slide={{ duration: 220 }} class="border-b border-base-content/15 p-4">
+  {#if isGuest}
+    {#if !startGuestUpgradeOpen}
+      <div class="flex flex-col items-center text-center">
+        <div class="flex w-full items-center justify-between">
+          <h2
+            class="text-sm font-semibold uppercase tracking-wide text-base-content/65"
+          >
+            {m.guest__guest_account()}
+          </h2>
+          <button
+            class="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-content transition hover:bg-primary/90"
+            type="button"
+            aria-expanded={isEditing}
+            onclick={() => {
                 isEditing = !isEditing
                 errorMessage = ''
                 statusMessage = ''
               }}
-            >
-              {m.guest__upgrade_title()}
-            </button>
-          </div>
+          >
+            {m.guest__upgrade_title()}
+          </button>
         </div>
-      {/if}
+      </div>
+    {/if}
 
-      {#if isEditing}
-        <div
-          class={`flex flex-col gap-4 ${
+    {#if isEditing}
+      <div
+        class={`flex flex-col gap-4 ${
             startGuestUpgradeOpen ? '' : 'mt-4 border-t border-base-content/10 pt-4'
           }`}
-        >
-          <div class="flex flex-col gap-2">
-            <h3 class="text-center text-sm font-medium text-base-content/70">
-              {isGuestSignIn
+      >
+        <div class="flex flex-col gap-2">
+          <h3 class="text-center text-sm font-medium text-base-content/70">
+            {isGuestSignIn
                 ? m.guest__sign_in_social_account()
                 : m.guest__linked_account()}
-            </h3>
-            <div class="flex flex-wrap justify-center gap-2">
-              {#each socialProviders as provider (provider.id)}
-                {@const ProviderIcon = provider.icon}
-                <button
-                  class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
-                  type="button"
-                  disabled={isBusy}
-                  onclick={() => handleGuestSocial(provider.id)}
-                >
-                  <ProviderIcon
-                    class={`h-4 w-4 ${provider.id === 'facebook' ? 'text-[#1877f2]' : ''}`}
-                  />{provider.label}
-                </button>
-              {/each}
-            </div>
+          </h3>
+          <div class="flex flex-wrap justify-center gap-2">
+            {#each socialProviders as provider (provider.id)}
+              {@const ProviderIcon = provider.icon}
+              <button
+                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                type="button"
+                disabled={isBusy}
+                onclick={() => handleGuestSocial(provider.id)}
+              >
+                <ProviderIcon
+                  class={`h-4 w-4 ${provider.id === 'facebook' ? 'text-[#1877f2]' : ''}`}
+                />{provider.label}
+              </button>
+            {/each}
           </div>
+        </div>
 
-          <div class="flex flex-col gap-2">
-            <h3 class="text-center text-sm font-medium text-base-content/70">
-              {isGuestSignIn
+        <div class="flex flex-col gap-2">
+          <h3 class="text-center text-sm font-medium text-base-content/70">
+            {isGuestSignIn
                 ? m.guest__sign_in_standard_method()
                 : m.guest__login_methods()}
-            </h3>
-            <div class="flex flex-wrap justify-center gap-2">
-              {#if !showEmailSetup}
-                <button
-                  class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
-                  type="button"
-                  disabled={isBusy}
-                  onclick={() => {
+          </h3>
+          <div class="flex flex-wrap justify-center gap-2">
+            {#if !showEmailSetup}
+              <button
+                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                type="button"
+                disabled={isBusy}
+                onclick={() => {
                     showEmailSetup = true
                     showPasskeySetup = false
                   }}
-                >
-                  <Mail class="h-4 w-4" />{m.account__email()}
-                </button>
-              {/if}
-              {#if !showPasskeySetup}
-                <button
-                  class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
-                  type="button"
-                  disabled={isBusy}
-                  onclick={() => {
+              >
+                <Mail class="h-4 w-4" />{m.account__email()}
+              </button>
+            {/if}
+            {#if !showPasskeySetup}
+              <button
+                class="flex items-center gap-2 rounded border border-base-content/20 px-2 py-1 text-sm disabled:opacity-50"
+                type="button"
+                disabled={isBusy}
+                onclick={() => {
                     if (isGuestSignIn) {
                       void handleGuestPasskeySignIn()
                     } else {
@@ -594,134 +601,177 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                       showEmailSetup = false
                     }
                   }}
-                >
-                  <KeyRound class="h-4 w-4" />
-                  {isGuestSignIn
+              >
+                <KeyRound class="h-4 w-4" />
+                {isGuestSignIn
                     ? m.account__passkey()
                     : m.account__setup_passkey()}
-                </button>
-              {/if}
-            </div>
-          </div>
-
-          {#if showEmailSetup}
-            <form class="mt-2 flex flex-col gap-2" onsubmit={handleGuestEmailSubmit}>
-              {#if !isGuestSignIn}
-                <label class="text-sm" for="guest-account-name"
-                  >{m.guest__preferred_name()}</label
-                >
-                <input
-                  id="guest-account-name"
-                  class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
-                  type="text"
-                  autocomplete="name"
-                  bind:value={emailAccountName}
-                  required
-                >
-              {/if}
-              <label class="text-sm" for="guest-account-email"
-                >{m.guest__email()}</label
-              >
-              <input
-                id="guest-account-email"
-                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
-                type="email"
-                autocomplete="email"
-                bind:value={email}
-                required
-              >
-              <label class="text-sm" for="guest-account-password"
-                >{m.guest__password()}</label
-              >
-              <input
-                id="guest-account-password"
-                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
-                type="password"
-                autocomplete={isGuestSignIn ? 'current-password' : 'new-password'}
-                minlength="8"
-                maxlength="128"
-                bind:value={newPassword}
-                required
-              >
-              <button
-                class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
-                type="submit"
-                disabled={isBusy}
-              >
-                {isGuestSignIn ? m.guest__sign_in() : m.guest__create_account()}
               </button>
-            </form>
-          {/if}
-          {#if showPasskeySetup}
-            <form class="flex flex-col gap-2" onsubmit={handleGuestPasskeySubmit}>
-              <h4 class="text-center text-sm font-medium text-base-content/70">
-                {m.guest__passkey_setup_title()}
-              </h4>
-              <p class="text-center text-sm text-base-content/65">
-                {m.guest__passkey_setup_description()}
-              </p>
-              <label class="text-sm" for="guest-passkey-name"
+            {/if}
+          </div>
+        </div>
+
+        {#if showEmailSetup}
+          <form class="mt-2 flex flex-col gap-2" onsubmit={handleGuestEmailSubmit}>
+            {#if !isGuestSignIn}
+              <label class="text-sm" for="guest-account-name"
                 >{m.guest__preferred_name()}</label
               >
               <input
-                id="guest-passkey-name"
+                id="guest-account-name"
                 class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
                 type="text"
                 autocomplete="name"
-                bind:value={preferredName}
+                bind:value={emailAccountName}
+                required
               >
-              <label class="text-sm" for="guest-passkey-username"
-                >{m.guest__preferred_username()}</label
-              >
-              <input
-                id="guest-passkey-username"
-                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
-                type="text"
-                autocomplete="username"
-                maxlength="32"
-                bind:value={preferredUsername}
-              >
-              <label class="text-sm" for="guest-passkey-email"
-                >{m.guest__email_optional()}</label
-              >
-              <input
-                id="guest-passkey-email"
-                class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
-                type="email"
-                autocomplete="email"
-                bind:value={preferredEmail}
-              >
-              <button
-                class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
-                type="submit"
-                disabled={isBusy}
-              >
-                {m.account__setup_passkey()}
-              </button>
-            </form>
-          {/if}
-          {#if errorMessage}
-            <p
-              role="alert"
-              transition:slide={{ duration: 220 }}
-              class="text-center text-sm text-error"
+            {/if}
+            <label class="text-sm" for="guest-account-email">{m.guest__email()}</label>
+            <input
+              id="guest-account-email"
+              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              type="email"
+              autocomplete="email"
+              bind:value={email}
+              required
             >
-              {errorMessage}
-            </p>
-          {/if}
-          {#if statusMessage}
-            <p
-              role="status"
-              transition:slide={{ duration: 220 }}
-              class="text-center text-sm text-success"
+            <label class="text-sm" for="guest-account-password"
+              >{m.guest__password()}</label
             >
-              {statusMessage}
+            <input
+              id="guest-account-password"
+              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              type="password"
+              autocomplete={isGuestSignIn ? 'current-password' : 'new-password'}
+              minlength="8"
+              maxlength="128"
+              bind:value={newPassword}
+              required
+            >
+            <button
+              class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
+              type="submit"
+              disabled={isBusy}
+            >
+              {isGuestSignIn ? m.guest__sign_in() : m.guest__create_account()}
+            </button>
+          </form>
+        {/if}
+        {#if showPasskeySetup}
+          <form class="flex flex-col gap-2" onsubmit={handleGuestPasskeySubmit}>
+            <h4 class="text-center text-sm font-medium text-base-content/70">
+              {m.guest__passkey_setup_title()}
+            </h4>
+            <p class="text-center text-sm text-base-content/65">
+              {m.guest__passkey_setup_description()}
             </p>
-          {/if}
+            <label class="text-sm" for="guest-passkey-name"
+              >{m.guest__preferred_name()}</label
+            >
+            <input
+              id="guest-passkey-name"
+              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              type="text"
+              autocomplete="name"
+              bind:value={preferredName}
+            >
+            <label class="text-sm" for="guest-passkey-username"
+              >{m.guest__preferred_username()}</label
+            >
+            <input
+              id="guest-passkey-username"
+              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              type="text"
+              autocomplete="username"
+              maxlength="32"
+              bind:value={preferredUsername}
+            >
+            <label class="text-sm" for="guest-passkey-email"
+              >{m.guest__email_optional()}</label
+            >
+            <input
+              id="guest-passkey-email"
+              class="rounded-lg border border-base-content/20 bg-base-100 px-3 py-2"
+              type="email"
+              autocomplete="email"
+              bind:value={preferredEmail}
+            >
+            <button
+              class="mt-3 self-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
+              type="submit"
+              disabled={isBusy}
+            >
+              {m.account__setup_passkey()}
+            </button>
+          </form>
+        {/if}
+        {#if errorMessage}
+          <p
+            role="alert"
+            transition:slide={{ duration: 220 }}
+            class="text-center text-sm text-error"
+          >
+            {errorMessage}
+          </p>
+        {/if}
+        {#if statusMessage}
+          <p
+            role="status"
+            transition:slide={{ duration: 220 }}
+            class="text-center text-sm text-success"
+          >
+            {statusMessage}
+          </p>
+        {/if}
+      </div>
+    {/if}
+  {:else}
+    <div class="flex flex-col gap-4">
+      {#if isLoading}
+        <div class="flex flex-col gap-2">
+          <h3 class="text-sm font-medium text-base-content/70">
+            {m.account__social_accounts()}
+          </h3>
+          {#each socialProviders as provider (provider.id)}
+            {@const ProviderIcon = provider.icon}
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="flex min-w-0 flex-1 items-center gap-2.5"
+                ><ProviderIcon
+                  class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
+                /><span class="text-base-content">{provider.label}</span></span
+              >
+              <span
+                aria-busy="true"
+                class="h-8 w-12 shrink-0 animate-pulse rounded border border-base-content/10 bg-base-content/10"
+                ><span class="sr-only">Loading linked sign-in methods</span></span
+              >
+            </div>
+          {/each}
         </div>
-      {/if}
-    {:else}
-      <div class="flex flex-col gap-4">
+
+        <div class="flex flex-col gap-2">
+          <h3 class="text-sm font-medium text-base-content/70">
+            {m.account__standard_login_methods()}
+          </h3>
+          {#each [
+              { label: m.account__email(), icon: Mail },
+              { label: m.account__passkey(), icon: KeyRound },
+            ] as method (method.label)}
+            {@const MethodIcon = method.icon}
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="flex min-w-0 flex-1 items-center gap-2.5"
+                ><MethodIcon class="h-4 w-4" />
+                <span class="text-base-content">{method.label}</span></span
+              >
+              <span
+                aria-busy="true"
+                class="h-8 w-12 shrink-0 animate-pulse rounded border border-base-content/10 bg-base-content/10"
+                ><span class="sr-only">Loading linked sign-in methods</span></span
+              >
+            </div>
+          {/each}
+        </div>
+      {:else}
         <div class="flex flex-col gap-2">
           <h3 class="text-sm font-medium text-base-content/70">
             {m.account__social_accounts()}
@@ -879,7 +929,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 required
               >
               <button
-                class="rounded-lg bg-base-content px-3 py-2 text-sm font-medium text-base-100 disabled:opacity-50"
+                class="mt-3 min-w-52 self-center rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-content disabled:opacity-50"
                 type="submit"
                 disabled={isBusy}
               >
@@ -906,7 +956,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             </p>
           {/if}
         </div>
-      </div>
-    {/if}
-  </section>
-{/if}
+      {/if}
+    </div>
+  {/if}
+</section>

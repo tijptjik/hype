@@ -39,21 +39,24 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
     throw error(400, 'INVALID_REQUEST')
 
   try {
+    let emailChangeResponse: Response | undefined
     // Request verification before changing the login email when the user overrides it.
     if (email && email.trim().toLowerCase() !== locals.user.email.toLowerCase()) {
-      await locals.auth.api.changeEmail({
+      // Preserve Better Auth's refreshed session cache so the browser receives the new email.
+      emailChangeResponse = await locals.auth.api.changeEmail({
         body: {
           newEmail: email.trim(),
           callbackURL: `${url.origin}/?panel=profile`,
         },
         headers: request.headers,
+        asResponse: true,
       })
     }
     await locals.auth.api.setPassword({
       body: { newPassword },
       headers: request.headers,
     })
-    return json({ status: true })
+    return json({ status: true }, { headers: emailChangeResponse?.headers })
   } catch (cause) {
     console.warn('[auth][set-password]', {
       outcome: 'rejected',
