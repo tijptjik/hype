@@ -53,6 +53,8 @@ describe('map styles', () => {
       'ghostery',
       'neonmaster',
       'neorange',
+      'genesis',
+      'sin',
       'breadline',
       'protomaps-dark',
       'ghostery-legacy',
@@ -218,6 +220,61 @@ describe('map styles', () => {
       20,
       'rgba(56, 247, 255, 1)',
     ])
+  })
+
+  it('keeps the original high-voltage road palette as Genesis', () => {
+    const style = buildMapStyle('genesis') as {
+      layers?: Array<{
+        id?: string
+        paint?: Record<string, unknown>
+        layout?: Record<string, unknown>
+      }>
+    }
+
+    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
+    const casingLayer = style.layers?.find(
+      layer => layer.id === 'roads_major_casing_late',
+    )
+    const buildingOutline = style.layers?.find(
+      layer => layer.id === 'buildings_outline',
+    )
+    const railLayer = style.layers?.find(layer => layer.id === 'roads_rail')
+
+    expect(roadsLayer?.paint?.['line-color']).toBe('#FF6A00')
+    expect(casingLayer?.paint?.['line-color']).toBe('#F5006C')
+    expect(buildingOutline?.paint?.['line-color']).toEqual([
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      16.5,
+      'rgba(69, 97, 255, 0.14)',
+      18,
+      'rgba(69, 97, 255, 0.58)',
+      20,
+      'rgba(69, 97, 255, 1)',
+    ])
+    expect(railLayer?.paint?.['line-color']).toBe('#F5006C')
+    expect(railLayer?.layout?.visibility).toBe('visible')
+  })
+
+  it('gives Sin a calmer cherry, cobalt and plum palette', () => {
+    const style = buildMapStyle('sin') as {
+      layers?: Array<{ id?: string; paint?: Record<string, unknown> }>
+    }
+
+    const backgroundLayer = style.layers?.find(layer => layer.id === 'background')
+    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
+    const highwayLayer = style.layers?.find(layer => layer.id === 'roads_highway')
+    const casingLayer = style.layers?.find(
+      layer => layer.id === 'roads_major_casing_late',
+    )
+    const waterLayer = style.layers?.find(layer => layer.id === 'water')
+
+    expect(backgroundLayer?.paint?.['background-color']).toBe('#25183F')
+    expect(roadsLayer?.paint?.['line-color']).toBe('#F26C97')
+    expect(highwayLayer?.paint?.['line-color']).toBe('#FFA45C')
+    expect(casingLayer?.paint?.['line-color']).toBe('#8F376E')
+    expect(waterLayer?.paint?.['fill-color']).toBe('#102C66')
   })
 
   it('removes hot pink labels from the ghostery style', () => {

@@ -1213,6 +1213,8 @@ export type MapStyleCatalogKey =
   | 'ghostery-legacy'
   | 'neonmaster'
   | 'neorange'
+  | 'genesis'
+  | 'sin'
   | 'breadline'
   | 'protomaps-light'
   | 'protomaps-dark'

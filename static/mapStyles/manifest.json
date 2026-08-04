@@ -29,6 +29,16 @@
     "publicPath": "/mapStyles/neorange.34ddd59d15c6.json",
     "hash": "34ddd59d15c61a91a80cdcc499bd5f1b96f771058c4d733bb53e2ff381e65dad"
   },
+  "genesis": {
+    "fileName": "genesis.8b15415d024e.json",
+    "publicPath": "/mapStyles/genesis.8b15415d024e.json",
+    "hash": "8b15415d024e4ee656c1ecbb73c23eeec40850f562c12d9f63e172e1916a6a79"
+  },
+  "sin": {
+    "fileName": "sin.c57137fe1a80.json",
+    "publicPath": "/mapStyles/sin.c57137fe1a80.json",
+    "hash": "c57137fe1a802522cf2ffb7bcb7d62529c6058ebe3bbeb66493ddba0623a052b"
+  },
   "breadline": {
     "fileName": "breadline.d8c023451cc2.json",
     "publicPath": "/mapStyles/breadline.d8c023451cc2.json",

@@ -6,6 +6,8 @@ import { buildHyperLightStyle } from './definitions/hyperLight'
 import { buildHyperAdminStyle } from './definitions/hyperAdmin'
 import { buildNeonmasterStyle } from './definitions/neonmaster'
 import { buildneorangeStyle } from './definitions/neorange'
+import { buildGenesisStyle } from './definitions/genesis'
+import { buildSinStyle } from './definitions/sin'
 import {
   NAMED_PROTOMAPS_FLAVORS,
   type MapStyleDefinition,
@@ -106,6 +108,22 @@ export const MAP_STYLE_CATALOG = [
     name: getMapStyleCatalogCopy('neorange', 'en').name,
     description: getMapStyleCatalogCopy('neorange', 'en').description,
     buildStyle: buildneorangeStyle,
+    basemapVariant: 'dark',
+    showSymbols: true,
+  },
+  {
+    key: 'genesis',
+    name: getMapStyleCatalogCopy('genesis', 'en').name,
+    description: getMapStyleCatalogCopy('genesis', 'en').description,
+    buildStyle: buildGenesisStyle,
+    basemapVariant: 'dark',
+    showSymbols: true,
+  },
+  {
+    key: 'sin',
+    name: getMapStyleCatalogCopy('sin', 'en').name,
+    description: getMapStyleCatalogCopy('sin', 'en').description,
+    buildStyle: buildSinStyle,
     basemapVariant: 'dark',
     showSymbols: true,
   },
