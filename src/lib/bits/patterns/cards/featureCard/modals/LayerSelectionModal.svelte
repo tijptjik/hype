@@ -1,8 +1,12 @@
 <script lang="ts">
+// THIRD PARTY
+import { toast } from 'svelte-sonner'
 // BITS UI
 import { Dialog } from 'bits-ui'
 // I18N
 import { getI18n, m } from '$lib/i18n'
+// AUTH
+import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
 // SERVICES
 import { upsertNewFeatureDraft } from '$lib/client/services/task'
 // CONTEXT
@@ -379,8 +383,20 @@ function handleOpenFindOther(): void {
   searchQuery = ''
 }
 
+/**
+ * Persists the selected hierarchy as a new-feature draft and advances the flow.
+ *
+ * @returns Nothing.
+ * @remarks The account guard covers stale client state after a guest session
+ * changes while this modal is already open.
+ */
 async function handleAccept(): Promise<void> {
   if (!isValid || isSaving) return
+
+  if (!hasDurableAccount(appCtx.getUser())) {
+    requestAccountUpgrade('contribution', window.location.href)
+    return
+  }
 
   isSaving = true
 
@@ -410,6 +426,9 @@ async function handleAccept(): Promise<void> {
     }
 
     appCtx.setNewFeatureMode(NewFeatureMode.card)
+  } catch (error) {
+    console.error('Error saving new-feature draft:', error)
+    toast.error(m.long_crazy_peacock_care())
   } finally {
     isSaving = false
   }
@@ -452,9 +471,11 @@ async function handleAccept(): Promise<void> {
           </button>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div
+          class={`min-h-0 flex-1 overflow-y-auto px-4 ${isFindOtherOpen ? 'pt-0 pb-4' : 'py-4'}`}
+        >
           {#if isFindOtherOpen}
-            <div class="space-y-4">
+            <div>
               <div
                 class="sticky top-0 z-10 -mx-4 space-y-4 border-b border-white/10 bg-black px-4 py-4"
               >
