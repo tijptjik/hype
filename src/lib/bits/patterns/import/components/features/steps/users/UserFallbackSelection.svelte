@@ -47,7 +47,9 @@ function handleUserSelect(user: UserValidationResult): void {
         <h4 class="text-xs font-bold uppercase tracking-wide text-base-content/55">
           {m.feature_import__users_no_column_title()}
         </h4>
-        <div class="truncate text-sm font-semibold text-base-content">
+        <div
+          class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold text-base-content"
+        >
           {m.feature_import__users_all_features_label()}
         </div>
         <p class="text-xs leading-relaxed text-base-content/60">
@@ -75,7 +77,9 @@ function handleUserSelect(user: UserValidationResult): void {
               <div class="text-sm font-semibold text-success">
                 {m.feature_import__users_selected_title()}
               </div>
-              <div class="truncate text-xs text-success/70">
+              <div
+                class="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-success/70"
+              >
                 {m.feature_import__users_selected_id({
                   id: userValidation.fallbackUserId,
                 })}

@@ -68,7 +68,9 @@ function handleCommit(): void {
           {localePrefix}
         </span>
       {/if}
-      <span class="min-w-0 truncate font-mono text-sm text-base-content/85">
+      <span
+        class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-base-content/85"
+      >
         {value}
       </span>
     </div>

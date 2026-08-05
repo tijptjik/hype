@@ -129,7 +129,10 @@ function handleResolutionReset(): void {
       </h4>
       <div class="flex items-center gap-2">
         <Icon src={XCircle} class="h-4 w-4 shrink-0 text-error" />
-        <span class="truncate font-mono text-sm" title={invalidValue}>
+        <span
+          class="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm"
+          title={invalidValue}
+        >
           {invalidValue}
         </span>
       </div>

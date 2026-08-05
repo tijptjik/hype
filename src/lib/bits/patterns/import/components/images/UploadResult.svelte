@@ -61,7 +61,9 @@ let shouldShowError = $derived(Boolean(result.error && result.status !== 'upload
       </div>
 
       <div class="min-w-0 space-y-1">
-        <div class="truncate font-medium">{result.file.name}</div>
+        <div class="overflow-hidden text-ellipsis whitespace-nowrap font-medium">
+          {result.file.name}
+        </div>
         <div
           class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs uppercase tracking-[0.16em] text-base-content/50"
         >

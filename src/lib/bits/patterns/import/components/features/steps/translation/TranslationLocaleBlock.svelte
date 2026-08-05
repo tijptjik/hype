@@ -55,7 +55,9 @@ const glyphClass = $derived(
           <div
             class="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.06] px-3 py-2"
           >
-            <span class="min-w-0 truncate font-mono text-xs text-base-content/75">
+            <span
+              class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-base-content/75"
+            >
               {column.header}
             </span>
             <Badge

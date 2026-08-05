@@ -37,7 +37,7 @@ const { errors } = form as Form
   >
     {#each messages as message}
       <div
-        class="badge badge-lg flex items-center justify-center gap-2 truncate border-1 border-error p-4 font-mono text-base-content"
+        class="badge badge-lg flex items-center justify-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap border-1 border-error p-4 font-mono text-base-content"
       >
         <Icon src={ExclamationTriangle} class="h-4 w-4 shrink-0 stroke-current" />
         <p class="text-sm">{message}</p>

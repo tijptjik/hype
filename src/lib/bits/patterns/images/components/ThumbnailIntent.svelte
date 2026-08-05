@@ -51,7 +51,9 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
       aria-label={m.gallery__change_image_intent()}
       title={intentErrorMessage ?? undefined}
     >
-      <span class="truncate">{intentDisplay[currentIntent]}</span>
+      <span class="overflow-hidden text-ellipsis whitespace-nowrap"
+        >{intentDisplay[currentIntent]}</span
+      >
     </Popover.Trigger>
 
     <Popover.Portal>

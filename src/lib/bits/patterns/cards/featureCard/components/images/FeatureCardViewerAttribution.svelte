@@ -251,12 +251,10 @@ $effect(() => {
 
 {#snippet metadataRow(
   icon: Component,
-  label: string,
   name: string | null,
   avatarSrc: string | null,
   date: string | null | undefined,
   delayClass: string,
-  dateDetails?: Record<string, string | null | undefined>,
   isDateLoading: boolean = false
 )}
   <div
@@ -279,7 +277,10 @@ $effect(() => {
         {/if}
       </div>
       <div class="min-w-0 pt-0.5 text-[0.98rem] leading-tight text-white">
-        <span class="block truncate font-semibold">{name || 'Unknown'}</span>
+        <span
+          class="block overflow-hidden text-ellipsis whitespace-nowrap font-semibold"
+          >{name || 'Unknown'}</span
+        >
       </div>
     </div>
     <div
@@ -309,29 +310,18 @@ $effect(() => {
       <div class="inline-grid w-full max-w-full grid-cols-1 gap-2">
         {@render metadataRow(
           MapPinIcon,
-          'Mapped by',
           featureContributorName,
           featureContributorImage,
           createdAt,
           'delay-75',
-          {
-            featureId,
-            featureCreatedAt: createdAt,
-          },
           isFeatureContributorDateLoading,
         )}
         {@render metadataRow(
           CameraIcon,
-          'Photo by',
           imageContributorName,
           imageContributorImage,
           photoDate,
           'delay-0',
-          {
-            publicId: currentImage.image.publicId,
-            metadataCapturedAt: imageModel.state.metadata?.capturedAt,
-            uploadCreatedAt: currentImage.image.createdAt,
-          },
           isImageContributorDateLoading,
         )}
       </div>

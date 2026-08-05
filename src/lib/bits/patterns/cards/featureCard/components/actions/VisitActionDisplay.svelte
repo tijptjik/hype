@@ -154,16 +154,18 @@ $effect(() => {
 {#snippet visitValue(value: FeatureCardActionDisplay)}
   <div class="flex h-10 min-w-0 flex-col justify-center text-left">
     {#if value.detail}
-      <p class="h-4 max-w-full truncate whitespace-nowrap text-xs uppercase">
+      <p
+        class="h-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase"
+      >
         {value.label}
       </p>
       <p
-        class="mt-1 h-5 max-w-full truncate font-mono text-sm normal-case tracking-normal text-white"
+        class="mt-1 h-5 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm normal-case tracking-normal text-white"
       >
         {value.detail}
       </p>
     {:else}
-      <p class="h-4 max-w-full truncate whitespace-nowrap">
+      <p class="h-4 max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
         {value.label}
       </p>
     {/if}

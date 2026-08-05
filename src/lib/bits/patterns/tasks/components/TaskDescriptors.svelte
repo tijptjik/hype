@@ -37,7 +37,10 @@ function getDisplayValue(value: string): string {
           {item.label}
         </div>
         <div
-          class={cx('text-md leading-6 text-white/88', item.wrap ? 'whitespace-pre-wrap' : 'truncate')}
+          class={cx(
+            'text-md leading-6 text-white/88',
+            item.wrap ? 'whitespace-pre-wrap' : 'overflow-hidden text-ellipsis whitespace-nowrap',
+          )}
         >
           {getDisplayValue(item.value)}
         </div>

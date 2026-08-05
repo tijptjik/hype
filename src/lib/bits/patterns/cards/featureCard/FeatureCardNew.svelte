@@ -184,6 +184,12 @@ function handleEditSelection(): void {
   appCtx.setNewFeatureMode(NewFeatureMode.parents)
 }
 
+/** Cancels the draft and returns the card to its normal map state. */
+function handleCancelNewFeature(): void {
+  if (cardCtx.isSubmitting) return
+  omniCtx.cancelNewFeature()
+}
+
 function handleRootContentVisibilityChange(visible: boolean): void {
   if (!visible) return
 
@@ -311,7 +317,13 @@ const imageProviderModel = useImageProviderModel(
               </div>
             {/snippet}
             {#snippet rightActions()}
-              <FeatureCardActionPrimitive.SubmitNewFeatureAction />
+              <div class="flex items-center gap-3">
+                <FeatureCardActionPrimitive.CancelAction
+                  onCancel={handleCancelNewFeature}
+                  disabled={cardCtx.isSubmitting}
+                />
+                <FeatureCardActionPrimitive.SubmitNewFeatureAction />
+              </div>
             {/snippet}
           </FeatureCardActions>
         </div>
