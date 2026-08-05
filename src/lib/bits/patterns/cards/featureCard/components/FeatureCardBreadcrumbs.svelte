@@ -84,9 +84,9 @@ const actionItems = [
     {@const organisationName = hierarchy.organisation
       ? appCtx.getContextualOrganisationName(hierarchy.organisation, false)
       : null}
-    {@const projectName = appCtx.getContextualProjectName(hierarchy.project)}
+    {@const projectName = appCtx.getContextualProjectName(hierarchy.project, false)}
     {@const layerName = hierarchy.layer
-      ? appCtx.getContextualLayerName(hierarchy.layer)
+      ? appCtx.getContextualLayerName(hierarchy.layer, false)
       : null}
     <div
       class="pointer-events-auto flex w-full items-center justify-between bg-black px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
@@ -95,14 +95,21 @@ const actionItems = [
         class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
       >
         <Icon src={Squares2x2} class="h-5 w-5 shrink-0" />
-        <span class="truncate">{organisationName}</span>
+        <span class="!block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+          >{organisationName}</span
+        >
         {#if hierarchy.project && projectName}
           <span class="shrink-0 text-gray-400">›</span>
-          <span class="truncate">{projectName}</span>
+          <span class="!block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+            >{projectName}</span
+          >
         {/if}
         {#if hierarchy.layer && layerName}
           <span class="shrink-0 text-gray-400">›</span>
-          <span class="hidden truncate w-120:inline">{layerName}</span>
+          <span
+            class="hidden w-120:inline overflow-hidden text-ellipsis whitespace-nowrap"
+            >{layerName}</span
+          >
         {/if}
       </div>
       {#if cardCtx.isNewMode && onEditSelection}
