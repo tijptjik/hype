@@ -4,6 +4,8 @@
   with selection capabilities and optional admin controls.
 -->
 <script lang="ts">
+// SVELTE
+import { flip } from 'svelte/animate'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
@@ -72,6 +74,19 @@ function filterOrganisations(
 const filteredOrganisations = $derived(
   filterOrganisations(visibleOrganisations, searchTerm),
 )
+const orderedFilteredOrganisations = $derived.by(() =>
+  [...filteredOrganisations].sort((left, right) => {
+    const leftActive =
+      selectedOrganisations.includes(left.id) ||
+      appCtx.isOrganisationDefaultLayersActive(left.id)
+    const rightActive =
+      selectedOrganisations.includes(right.id) ||
+      appCtx.isOrganisationDefaultLayersActive(right.id)
+
+    if (leftActive === rightActive) return 0
+    return leftActive ? -1 : 1
+  }),
+)
 let isDefaultOpen = $derived(
   typeof window !== 'undefined' ? document.body.clientHeight > 1000 : false,
 )
@@ -107,7 +122,7 @@ let collapsedOrganisations = $derived(
 
 {#snippet ManagedOrganisations(isOpen: boolean)}
   <Panel.Item.ManagedItems
-    items={isOpen ? filteredOrganisations : collapsedOrganisations}
+    items={isOpen ? orderedFilteredOrganisations : collapsedOrganisations}
     item={ManagedOrganisationItem}
     flipDurationMs={MANAGED_LIST_FLIP_DURATION_MS}
   />
@@ -131,8 +146,10 @@ let collapsedOrganisations = $derived(
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}
     <ResourceContainer>
-      {#each filteredOrganisations as resource (resource.id)}
-        {@render filteredItem(resource, selectedOrganisations)}
+      {#each orderedFilteredOrganisations as resource (resource.id)}
+        <div animate:flip={{ duration: MANAGED_LIST_FLIP_DURATION_MS }}>
+          {@render filteredItem(resource, selectedOrganisations)}
+        </div>
       {/each}
     </ResourceContainer>
   {/if}

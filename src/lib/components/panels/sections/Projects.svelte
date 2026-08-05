@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { flip } from 'svelte/animate'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
@@ -63,6 +65,18 @@ function filterProjects(projects: typeof appCtx.state.resources.project, term: s
 }
 
 const filteredProjects = $derived(filterProjects(visibleProjects, searchTerm))
+const orderedFilteredProjects = $derived.by(() =>
+  [...filteredProjects].sort((left, right) => {
+    const leftActive =
+      selectedProjects.includes(left.id) || appCtx.isProjectDefaultLayersActive(left.id)
+    const rightActive =
+      selectedProjects.includes(right.id) ||
+      appCtx.isProjectDefaultLayersActive(right.id)
+
+    if (leftActive === rightActive) return 0
+    return leftActive ? -1 : 1
+  }),
+)
 let isDefaultOpen = $derived(
   typeof document !== 'undefined' ? document.body.clientHeight > 1000 : false,
 )
@@ -98,7 +112,7 @@ let collapsedProjects = $derived(
 
 {#snippet ManagedProjects(isOpen: boolean)}
   <Panel.Item.ManagedItems
-    items={isOpen ? filteredProjects : collapsedProjects}
+    items={isOpen ? orderedFilteredProjects : collapsedProjects}
     item={ManagedProjectItem}
     flipDurationMs={MANAGED_LIST_FLIP_DURATION_MS}
   />
@@ -121,9 +135,11 @@ let collapsedProjects = $derived(
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}
     <ResourceContainer>
-      {#each filteredProjects as resource (resource.id)}
+      {#each orderedFilteredProjects as resource (resource.id)}
         {@const hierarchy = appCtx.getHierarchySync(resource)}
-        {@render filteredItem(resource, selectedProjects, hierarchy)}
+        <div animate:flip={{ duration: MANAGED_LIST_FLIP_DURATION_MS }}>
+          {@render filteredItem(resource, selectedProjects, hierarchy)}
+        </div>
       {/each}
     </ResourceContainer>
   {/if}

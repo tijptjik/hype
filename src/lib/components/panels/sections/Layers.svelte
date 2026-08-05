@@ -1,5 +1,7 @@
 <script lang="ts">
+// SVELTE
 import { browser } from '$app/environment'
+import { flip } from 'svelte/animate'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
@@ -136,7 +138,9 @@ let collapsedLayers = $derived(
     <ResourceContainer>
       {#each orderedFilteredLayers as layer (layer.id)}
         {@const hierarchy = appCtx.getHierarchySync(layer)}
-        {@render filteredItem(layer, selectedLayers, hierarchy)}
+        <div animate:flip={{ duration: MANAGED_LIST_FLIP_DURATION_MS }}>
+          {@render filteredItem(layer, selectedLayers, hierarchy)}
+        </div>
       {/each}
     </ResourceContainer>
   {/if}
