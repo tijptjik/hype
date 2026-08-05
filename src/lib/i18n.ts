@@ -337,7 +337,8 @@ function getLocaleEntry<T>(
  * @param obj - The object to get the translated value from.
  * @param field - The field to get the translated value from.
  * @param userPreferences - Optional user preferences; missing i18n settings are defaulted.
- * @param fallback - Optional fallback value
+ * @param fallback - Optional fallback value. An explicit empty string is preserved
+ *   so callers can continue their own fallback chain.
  * @returns The translated value of the field.
  */
 export function getI18n<T>(
@@ -353,7 +354,8 @@ export function getI18n<T>(
   skipGenFieldCheck?: boolean,
 ): string {
   const defaultFallback = '-'
-  if (!obj) return fallback || defaultFallback
+  const resolvedFallback = fallback ?? defaultFallback
+  if (!obj) return resolvedFallback
 
   // ASSERT : Text Object provided - else use the (default) fallback.
   let i18nObj: Record<string, T>
@@ -366,10 +368,6 @@ export function getI18n<T>(
   // CONFIG : Resolve runtime locale plus user-selected fallback locales.
   const resolvedUserPreferences = resolveUserPreferences(userPreferences)
   const localeOrder = getUserLocaleSearchOrder(resolvedUserPreferences)
-  const opts = {
-    fallback: fallback || defaultFallback,
-  }
-
   // indicator for machine-translated values
   const genField = `${field}Gen`
 
@@ -400,7 +398,7 @@ export function getI18n<T>(
 
   // SWTICH : CATCHALL CASE
   // If all prior attempts to get a translation (human, allowed machine, or newly generated machine) have failed or were skipped due to preferences, this is the last resort.
-  return opts?.fallback || defaultFallback
+  return resolvedFallback
 }
 
 /**

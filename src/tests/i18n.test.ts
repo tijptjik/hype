@@ -335,6 +335,27 @@ describe('getI18n', () => {
 
     expect(value).toBe('Fallback layer name')
   })
+
+  it('preserves an explicit empty fallback for caller-managed fallback chains', () => {
+    setLocale('en')
+
+    const value = getI18n(
+      {
+        i18n: {
+          en: {
+            name: 'Generated organisation name',
+            nameGen: true,
+          },
+        },
+      },
+      'name',
+      userPreferences,
+      '',
+    )
+
+    expect(value).toBe('')
+    expect(getI18n(undefined, 'name', userPreferences, '')).toBe('')
+  })
 })
 
 describe('normalizeI18nLocaleRecord', () => {
