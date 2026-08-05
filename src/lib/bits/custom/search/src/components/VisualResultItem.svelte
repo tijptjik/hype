@@ -16,6 +16,15 @@ let {
 const resolvedDiscriminator = $derived(descriminator?.trim() || null)
 const resolvedDisabledLabel = $derived(disabledMeta?.label?.trim() || null)
 const resolvedDisabledValue = $derived(disabledMeta?.value?.trim() || null)
+let imageFailed = $state(false)
+let lastPreviewImage = $state<string | null>(null)
+
+$effect(() => {
+  if (previewImage === lastPreviewImage) return
+
+  lastPreviewImage = previewImage
+  imageFailed = false
+})
 </script>
 
 <button
@@ -34,12 +43,15 @@ const resolvedDisabledValue = $derived(disabledMeta?.value?.trim() || null)
     class="bits-search-result-item__content bits-search-result-item__content--visual"
   >
     <div class={`bits-search-result-item__preview ${previewClass}`}>
-      {#if previewImage}
+      {#if previewImage && !imageFailed}
         <img
           src={previewImage}
           alt={title}
           class="bits-search-result-item__preview-image"
           loading="lazy"
+          onerror={() => {
+            imageFailed = true
+          }}
         >
       {:else}
         <div class="bits-search-result-item__preview-fallback">

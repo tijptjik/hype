@@ -4,6 +4,7 @@ import { m } from '$lib/i18n'
 import { MapStyleCard } from '$lib/bits/patterns/cards/mapStyleCard'
 import { REGISTERED_MAP_STYLE_CATALOG } from '$lib/map/styles/catalog'
 import { getMapStyleCatalogI18n } from '$lib/map/styles/i18n'
+import { getMapStyleRenderAssetPath } from '$lib/map/styles/render.shared'
 import * as FormMapStyleSectionPrimitive from './components'
 
 import type {
@@ -34,7 +35,9 @@ const fallbackMapStyles = $derived(
     (entry): MapStyleSelectionItem => ({
       id: entry.key,
       code: entry.key,
-      previewImagePath: null,
+      // New projects have no organisation scope yet, so resolve previews through
+      // the stage-aware asset route instead of falling back to colour swatches.
+      previewImagePath: getMapStyleRenderAssetPath(entry.key),
       i18n: getMapStyleCatalogI18n(entry.key),
     }),
   ),

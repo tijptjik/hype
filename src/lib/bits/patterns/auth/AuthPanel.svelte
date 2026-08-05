@@ -395,7 +395,9 @@ async function handlePasswordResetRequest(): Promise<void> {
     <p class="mt-2 text-center text-sm leading-6 text-white/70">{description}</p>
   {/if}
   {#if errorMessage}
-    <p class="mt-4 text-center text-sm text-red-300">{errorMessage}</p>
+    <p class="mt-4 whitespace-pre-line text-center text-sm text-red-300">
+      {errorMessage}
+    </p>
   {/if}
   {#if statusMessage}
     <p class="mt-4 text-center text-sm text-emerald-300" role="status">
