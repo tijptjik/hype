@@ -1,0 +1,51 @@
+#:schema ../../node_modules/wrangler/config-schema.json
+name = "hype-asset-memory-repair"
+main = "src/index.ts"
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
+send_metrics = false
+workers_dev = false
+
+[observability]
+enabled = true
+
+[images]
+binding = "IMAGES"
+
+[[r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+remote = true
+
+[[r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+remote = true
+
+[[durable_objects.bindings]]
+name = "REPAIR_LOCK"
+class_name = "AssetMemoryRepairLock"
+
+[[migrations]]
+tag = "asset-memory-repair-lock-v1"
+new_sqlite_classes = ["AssetMemoryRepairLock"]
+
+[env.production]
+name = "hype-asset-memory-repair-prod"
+
+[env.production.images]
+binding = "IMAGES"
+
+[[env.production.r2_buckets]]
+binding = "ASSET_RAW_PRODUCTION"
+bucket_name = "hype-assets-raw-prod"
+remote = true
+
+[[env.production.r2_buckets]]
+binding = "ASSET_PUBLIC_PRODUCTION"
+bucket_name = "hype-assets-prod"
+remote = true
+
+[[env.production.durable_objects.bindings]]
+name = "REPAIR_LOCK"
+class_name = "AssetMemoryRepairLock"

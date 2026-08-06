@@ -178,6 +178,9 @@ queue = "hype-asset-render-jobs-prod"
 max_batch_size = 4
 max_batch_timeout = 5
 
+[[env.production.tail_consumers]]
+service = "hype-asset-memory-repair-prod"
+
 [[env.production.routes]]
 pattern = "assets.hype.hk"
 custom_domain = true

@@ -54,6 +54,7 @@
     "deploy:preview": "bun run scripts/cloud/deploy-worker.ts preview",
     "deploy:asset-service:prod": "bun wrangler deploy -c workers/asset-service/wrangler.toml --env production",
     "deploy:asset-service:preview": "bun wrangler deploy -c workers/asset-service/wrangler.toml --env preview",
+    "deploy:asset-memory-repair:prod": "bun wrangler deploy -c workers/asset-memory-repair/wrangler.toml --env production",
     "deploy:render-service:prod": "bun wrangler deploy -c workers/map-render-service/wrangler.toml --env production",
     "deploy:render-service:preview": "bun wrangler deploy -c workers/map-render-service/wrangler.toml --env preview",
     "deploy:maintenance-scheduler:prod": "bun wrangler deploy -c workers/maintenance-scheduler/wrangler.toml --env production",
