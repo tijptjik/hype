@@ -14,6 +14,10 @@ ENVIRONMENT = "local"
 ASSET_DEBUG_MEMORY = "0"
 ASSET_DEBUG_MEMORY_MATCH = ""
 BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
+ENABLE_CLOUDFLARE_IMAGES_FALLBACK = "0"
+
+[images]
+binding = "IMAGES"
 
 [[analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
@@ -66,6 +70,10 @@ ENVIRONMENT = "preview"
 ASSET_DEBUG_MEMORY = "0"
 ASSET_DEBUG_MEMORY_MATCH = ""
 BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
+ENABLE_CLOUDFLARE_IMAGES_FALLBACK = "0"
+
+[env.preview.images]
+binding = "IMAGES"
 
 [[env.preview.analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
@@ -122,6 +130,10 @@ ENVIRONMENT = "production"
 ASSET_DEBUG_MEMORY = "1"
 ASSET_DEBUG_MEMORY_MATCH = "lix6swwj3bbky2hmp1s2"
 BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "0"
+ENABLE_CLOUDFLARE_IMAGES_FALLBACK = "1"
+
+[env.production.images]
+binding = "IMAGES"
 
 [[env.production.analytics_engine_datasets]]
 binding = "ASSET_ANALYTICS"
@@ -165,6 +177,9 @@ remote = true
 queue = "hype-asset-render-jobs-prod"
 max_batch_size = 4
 max_batch_timeout = 5
+
+[[env.production.tail_consumers]]
+service = "hype-asset-memory-repair-prod"
 
 [[env.production.routes]]
 pattern = "assets.hype.hk"

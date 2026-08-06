@@ -188,10 +188,12 @@ function handleKeydown(event: KeyboardEvent): void {
         <div class="flex w-full items-center justify-between gap-4">
           <div class="min-w-0">
             <p
-              class="flex items-center gap-3 truncate text-lg font-semibold uppercase tracking-[0.18em] text-white"
+              class="flex items-center gap-3 overflow-hidden text-ellipsis whitespace-nowrap text-lg font-semibold uppercase tracking-[0.18em] text-white"
             >
               <Icon src={MapPin} class="h-5 w-5 text-primary" />
-              <span class="truncate">{locationHeading}</span>
+              <span class="overflow-hidden text-ellipsis whitespace-nowrap"
+                >{locationHeading}</span
+              >
             </p>
           </div>
           <button

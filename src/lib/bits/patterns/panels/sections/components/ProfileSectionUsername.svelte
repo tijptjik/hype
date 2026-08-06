@@ -144,26 +144,29 @@ function handleUsernameAction(): void {
         {userDisplayName}
       </span>
     {:else}
-      <input
-        type="text"
-        bind:this={usernameInput}
-        value={usernameValue}
-        readonly={!isEditingUsername}
-        autocomplete="off"
-        autocapitalize="off"
-        autocorrect="off"
-        spellcheck="false"
-        class={cx(
-          'border-none bg-transparent px-2 text-center font-medium text-white outline-none transition-[width] duration-200 ease-[ease]',
-          'placeholder:text-center placeholder:text-white/60 focus:outline-none disabled:pointer-events-none',
-          isEditingUsername ? 'min-w-24' : 'min-w-0 cursor-default',
-        )}
-        style={`width:calc(${usernameInputWidthCh}ch + ${USERNAME_INPUT_HORIZONTAL_PADDING});`}
-        oninput={handleUsernameInput}
-        onkeydown={handleUsernameKeydown}
-        placeholder={usernameInputPlaceholder}
-        aria-readonly={!isEditingUsername}
-      >
+      {#if isEditingUsername}
+        <input
+          type="text"
+          bind:this={usernameInput}
+          value={usernameValue}
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          class={cx(
+            'min-w-24 border-none bg-transparent px-2 text-center font-medium text-white outline-none transition-[width] duration-200 ease-[ease]',
+            'placeholder:text-center placeholder:text-white/60 focus:outline-none disabled:pointer-events-none',
+          )}
+          style={`width:calc(${usernameInputWidthCh}ch + ${USERNAME_INPUT_HORIZONTAL_PADDING});`}
+          oninput={handleUsernameInput}
+          onkeydown={handleUsernameKeydown}
+          placeholder={usernameInputPlaceholder}
+        >
+      {:else}
+        <span class="min-w-0 px-2 text-center font-medium text-white">
+          {displayedUsername}
+        </span>
+      {/if}
 
       <Button
         text={isEditingUsername ? 'Save username' : 'Edit username'}

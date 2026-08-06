@@ -114,7 +114,9 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2 font-medium">
           <code class="font-mono text-sm text-base-content/70">{index + 1}</code>
-          <span class="truncate">{getFeatureResolutionDisplayName(result)}</span>
+          <span class="overflow-hidden text-ellipsis whitespace-nowrap"
+            >{getFeatureResolutionDisplayName(result)}</span
+          >
           {#if isIgnoredResult}
             <Badge
               text="IGNORE"

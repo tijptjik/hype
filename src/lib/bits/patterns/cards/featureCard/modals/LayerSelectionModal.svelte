@@ -1,8 +1,12 @@
 <script lang="ts">
+// THIRD PARTY
+import { toast } from 'svelte-sonner'
 // BITS UI
 import { Dialog } from 'bits-ui'
 // I18N
 import { getI18n, m } from '$lib/i18n'
+// AUTH
+import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
 // SERVICES
 import { upsertNewFeatureDraft } from '$lib/client/services/task'
 // CONTEXT
@@ -39,8 +43,13 @@ let isFindOtherOpen = $state(false)
 const newFeature = $derived(appCtx.getNewFeature())
 const appMainOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
 const activeLayers = $derived.by(() =>
+  // Prefer the reactive list data: caches can hold narrower payloads from prior lookups.
   appCtx.state.prisms.layer
-    .map(layerId => appCtx.cache.layer.get(layerId))
+    .map(
+      layerId =>
+        appCtx.state.resources.layer.find(layer => layer.id === layerId) ??
+        appCtx.cache.layer.get(layerId),
+    )
     .filter((layer): layer is Layer => Boolean(layer)),
 )
 type SearchResource =
@@ -63,32 +72,75 @@ type SearchResource =
       breadcrumb: string
     }
 
+/**
+ * Resolves a durable organisation label for the map-target chooser.
+ *
+ * @param organisation - Organisation whose label should be resolved.
+ * @returns The best available translated label or a safe identifying fallback.
+ */
 function getOrganisationLabel(organisation: Organisation | null | undefined): string {
   if (!organisation) return m.any_small_midge_aim()
 
+  // Use an empty fallback so a translation miss does not stop the label chain.
   return (
-    getI18n(organisation, 'nameShort', appCtx.getUserPreferences()) ||
-    getI18n(organisation, 'name', appCtx.getUserPreferences()) ||
+    getI18n(organisation, 'nameShort', appCtx.getUserPreferences(), '') ||
+    getI18n(organisation, 'name', appCtx.getUserPreferences(), '') ||
+    organisation.code ||
     m.any_small_midge_aim()
   )
 }
 
+/**
+ * Resolves a project label for the map-target chooser.
+ *
+ * @param project - Project whose label should be resolved.
+ * @returns The compact translated project name or a safe identifying fallback.
+ */
 function getProjectLabel(project: Project | null | undefined): string {
   if (!project) return m.deft_mealy_ant_vent()
 
+  // Search results include the organisation breadcrumb, so the compact project name is clear.
   return (
-    getI18n(project, 'nameShort', appCtx.getUserPreferences()) ||
-    getI18n(project, 'name', appCtx.getUserPreferences()) ||
+    getI18n(project, 'nameShort', appCtx.getUserPreferences(), '') ||
+    getI18n(project, 'name', appCtx.getUserPreferences(), '') ||
+    project.code ||
     m.deft_mealy_ant_vent()
   )
 }
 
+/**
+ * Resolves the compact project label used beside an organisation in the active
+ * layer hierarchy. This intentionally preserves labels such as "All".
+ *
+ * @param project - Project whose contextual label should be resolved.
+ * @returns The short project label or a safe identifying fallback.
+ */
+function getActiveLayerProjectLabel(project: Project | null | undefined): string {
+  if (!project) return m.deft_mealy_ant_vent()
+
+  // The organisation is displayed alongside this label, so a compact project name is clear.
+  return (
+    getI18n(project, 'nameShort', appCtx.getUserPreferences(), '') ||
+    getI18n(project, 'name', appCtx.getUserPreferences(), '') ||
+    project.code ||
+    m.deft_mealy_ant_vent()
+  )
+}
+
+/**
+ * Resolves a layer label for the map-target chooser.
+ *
+ * @param layer - Layer whose label should be resolved.
+ * @returns The best available translated label or a safe identifying fallback.
+ */
 function getLayerLabel(layer: Layer | null | undefined): string {
   if (!layer) return m.active_bold_cobra_grin()
 
+  // Use an empty fallback so a translation miss does not stop the label chain.
   return (
-    getI18n(layer, 'nameShort', appCtx.getUserPreferences()) ||
-    getI18n(layer, 'name', appCtx.getUserPreferences()) ||
+    getI18n(layer, 'nameShort', appCtx.getUserPreferences(), '') ||
+    getI18n(layer, 'name', appCtx.getUserPreferences(), '') ||
+    layer.code ||
     m.active_bold_cobra_grin()
   )
 }
@@ -96,8 +148,15 @@ function getLayerLabel(layer: Layer | null | undefined): string {
 const activeLayerItems = $derived.by(() =>
   activeLayers
     .map(layer => {
-      const project = appCtx.cache.project.get(layer.projectId)
-      const organisation = appCtx.cache.organisation.get(layer.organisationId)
+      // Resolve the hierarchy from reactive list data before falling back to potentially partial caches.
+      const project =
+        appCtx.state.resources.project.find(
+          project => project.id === layer.projectId,
+        ) ?? appCtx.cache.project.get(layer.projectId)
+      const organisation =
+        appCtx.state.resources.organisation.find(
+          organisation => organisation.id === layer.organisationId,
+        ) ?? appCtx.cache.organisation.get(layer.organisationId)
 
       if (!project || !organisation) return null
 
@@ -106,7 +165,7 @@ const activeLayerItems = $derived.by(() =>
         project,
         organisation,
         organisationName: getOrganisationLabel(organisation),
-        projectName: getProjectLabel(project),
+        projectName: getActiveLayerProjectLabel(project),
         layerName: getLayerLabel(layer),
       }
     })
@@ -324,8 +383,20 @@ function handleOpenFindOther(): void {
   searchQuery = ''
 }
 
+/**
+ * Persists the selected hierarchy as a new-feature draft and advances the flow.
+ *
+ * @returns Nothing.
+ * @remarks The account guard covers stale client state after a guest session
+ * changes while this modal is already open.
+ */
 async function handleAccept(): Promise<void> {
   if (!isValid || isSaving) return
+
+  if (!hasDurableAccount(appCtx.getUser())) {
+    requestAccountUpgrade('contribution', window.location.href)
+    return
+  }
 
   isSaving = true
 
@@ -355,6 +426,9 @@ async function handleAccept(): Promise<void> {
     }
 
     appCtx.setNewFeatureMode(NewFeatureMode.card)
+  } catch (error) {
+    console.error('Error saving new-feature draft:', error)
+    toast.error(m.long_crazy_peacock_care())
   } finally {
     isSaving = false
   }
@@ -397,53 +471,60 @@ async function handleAccept(): Promise<void> {
           </button>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div
+          class={`min-h-0 flex-1 overflow-y-auto px-4 ${isFindOtherOpen ? 'pt-0 pb-4' : 'py-4'}`}
+        >
           {#if isFindOtherOpen}
-            <div class="space-y-4">
+            <div>
               <div
-                class="sticky top-0 z-10 -mx-4 space-y-4 border-b border-white/10 bg-black px-4 pb-4"
+                class="sticky top-0 z-10 -mx-4 space-y-4 border-b border-white/10 bg-black px-4 py-4"
               >
-                <div
-                  class="flex flex-wrap justify-center gap-2 px-2 max-[420px]:flex-col max-[420px]:items-start"
-                >
-                  {#if selectedOrganisation}
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-2 rounded-full border border-primary bg-primary px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
-                      onclick={() => clearSelection('organisation')}
-                    >
-                      <Icon src={Users} class="h-4 w-4 text-white" />
-                      <span class="truncate">
-                        {getI18n(selectedOrganisation, 'nameShort', appCtx.getUserPreferences())}
-                      </span>
-                    </button>
-                  {/if}
-                  {#if selectedProject}
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-2 rounded-full border border-accent bg-accent px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
-                      onclick={() => clearSelection('project')}
-                    >
-                      <Icon src={LayoutGrid} class="h-4 w-4 text-white" />
-                      <span class="truncate">
-                        {getI18n(selectedProject, 'nameShort', appCtx.getUserPreferences())}
-                      </span>
-                    </button>
-                  {/if}
-                  {#if selectedLayer}
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-2 rounded-full border border-secondary bg-secondary px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
-                      onclick={() => clearSelection('layer')}
-                    >
-                      <Icon src={Layers3} class="h-4 w-4 text-white" />
-                      <span class="truncate">
-                        {getI18n(selectedLayer, 'nameShort', appCtx.getUserPreferences())}
-                      </span>
-                    </button>
-                  {/if}
-                </div>
-                <div class="px-2 pt-4">
+                {#if selectedOrganisation || selectedProject || selectedLayer}
+                  <div
+                    class="flex flex-wrap justify-center gap-2 px-2 max-[420px]:flex-col max-[420px]:items-start"
+                  >
+                    {#if selectedOrganisation}
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border border-primary bg-primary px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        onclick={() => clearSelection('organisation')}
+                      >
+                        <Icon src={Users} class="h-4 w-4 text-white" />
+                        <span
+                          class="!block overflow-hidden text-ellipsis whitespace-nowrap"
+                          >{getOrganisationLabel(selectedOrganisation)}</span
+                        >
+                      </button>
+                    {/if}
+                    {#if selectedProject}
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border border-accent bg-accent px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        onclick={() => clearSelection('project')}
+                      >
+                        <Icon src={LayoutGrid} class="h-4 w-4 text-white" />
+                        <span
+                          class="!block overflow-hidden text-ellipsis whitespace-nowrap"
+                          >{getProjectLabel(selectedProject)}</span
+                        >
+                      </button>
+                    {/if}
+                    {#if selectedLayer}
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border border-secondary bg-secondary px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        onclick={() => clearSelection('layer')}
+                      >
+                        <Icon src={Layers3} class="h-4 w-4 text-white" />
+                        <span
+                          class="!block overflow-hidden text-ellipsis whitespace-nowrap"
+                          >{getLayerLabel(selectedLayer)}</span
+                        >
+                      </button>
+                    {/if}
+                  </div>
+                {/if}
+                <div class="px-2">
                   <div class="relative">
                     <Icon
                       src={Search}
@@ -478,12 +559,13 @@ async function handleAccept(): Promise<void> {
                       <span class="min-w-0">
                         {#if item.breadcrumb}
                           <span
-                            class="block truncate text-[11px] uppercase tracking-[0.18em] text-white/42"
+                            class="!block overflow-hidden text-ellipsis whitespace-nowrap text-[11px] uppercase tracking-[0.18em] text-white/42"
                           >
                             {item.breadcrumb}
                           </span>
                         {/if}
-                        <span class="block truncate text-sm font-medium"
+                        <span
+                          class="!block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium"
                           >{item.label}</span
                         >
                       </span>
@@ -512,15 +594,24 @@ async function handleAccept(): Promise<void> {
                     >
                       <span class="flex min-w-0 items-center gap-2">
                         <Icon src={Users} class="h-4 w-4 shrink-0 text-primary" />
-                        <span class="truncate">{item.organisationName}</span>
+                        <span
+                          class="!block overflow-hidden text-ellipsis whitespace-nowrap"
+                          >{item.organisationName}</span
+                        >
                       </span>
                       <span class="flex min-w-0 items-center gap-2">
                         <Icon src={LayoutGrid} class="h-4 w-4 shrink-0 text-accent" />
-                        <span class="truncate">{item.projectName}</span>
+                        <span
+                          class="!block overflow-hidden text-ellipsis whitespace-nowrap"
+                          >{item.projectName}</span
+                        >
                       </span>
                       <span class="flex min-w-0 items-center gap-2">
                         <Icon src={Layers3} class="h-4 w-4 shrink-0 text-secondary" />
-                        <span class="truncate">{item.layerName}</span>
+                        <span
+                          class="!block overflow-hidden text-ellipsis whitespace-nowrap"
+                          >{item.layerName}</span
+                        >
                       </span>
                     </span>
                   </span>

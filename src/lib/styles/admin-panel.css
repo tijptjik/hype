@@ -8,27 +8,23 @@
 }
 
 .admin-sections__section {
+  display: flex;
   min-height: 0;
-  overflow: hidden;
-}
-
-.admin-sections__section-shell--layers {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex-direction: column;
   overflow: hidden;
 }
 
 .admin-sections__section--bounded {
   max-height: 33.333%;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
 }
 
 .admin-sections__section--layers {
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
 .admin-sections__section > section {
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }

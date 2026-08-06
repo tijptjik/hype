@@ -7,6 +7,8 @@ import { Dialog } from 'bits-ui'
 // AUTH
 import { authClient, signIn } from '$lib/auth/client'
 import { toSafeReturnPath } from '$lib/auth/upgrade'
+// DEBUG
+import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 // COMPONENTS
 import AccountCreatedDialogContent from './components/AccountCreatedDialogContent.svelte'
 import AuthPanel from './AuthPanel.svelte'
@@ -53,13 +55,31 @@ $effect(() => {
 async function continueAsGuest(): Promise<void> {
   // Better Auth rejects creating a second anonymous session; resume the current one instead.
   const sessionResult = await authClient.getSession()
+  logMarkerBootstrap('guest continue requested', {
+    hasSessionUser: Boolean(sessionResult.data?.user),
+    isAnonymous: sessionResult.data?.user?.isAnonymous ?? null,
+  })
   if (sessionResult.data?.user) {
+    logMarkerBootstrap('guest continue restored existing session')
     await goto(returnTo)
     return
   }
 
   const result = await signIn.anonymous()
-  if (result.error) throw new Error(result.error.message)
+  if (result.error) {
+    const authError = result.error as {
+      code?: string
+      message: string
+      status?: number
+    }
+    logMarkerBootstrap('guest session creation failed', {
+      code: authError.code ?? null,
+      message: authError.message,
+      status: authError.status ?? null,
+    })
+    throw new Error(authError.message)
+  }
+  logMarkerBootstrap('guest session created; navigating to app')
   await goto(returnTo)
 }
 </script>

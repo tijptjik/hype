@@ -34,6 +34,8 @@ import {
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
 import { runRemoteQuery, toSafeListResponse } from '$lib/remote'
+// DEBUG
+import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
@@ -577,6 +579,17 @@ export class AppCtx {
     return `${userId}::${roleSignature}`
   }
 
+  /**
+   * Determines whether work started for an identity scope can still update state.
+   *
+   * @param expectedRoleScope - Identity scope captured before an asynchronous request.
+   * @returns Whether the scope is unchanged, or no scope was supplied.
+   * @remarks Public-map bootstrap runs in the background on authentication routes. Its
+   * responses must not update the account-scoped hierarchy after sign-in completes.
+   */
+  private isExpectedRoleScopeCurrent = (expectedRoleScope?: string): boolean =>
+    !expectedRoleScope || expectedRoleScope === this.getRoleScopeQueryKey()
+
   private isCurrentUser = (
     user: UserProfile | CurrentUser | SessionUser | null,
   ): user is CurrentUser => {
@@ -787,10 +800,10 @@ export class AppCtx {
     })
   }
 
-  init = async (userId: Id | null): Promise<void> => {
-    // Only initialize if user is authenticated
+  init = async (userId: Id | null, loadFeatures: boolean = true): Promise<void> => {
+    // Unauthenticated routes initialise without account data.
     if (!userId) {
-      // Initialize empty data structures for unauthenticated users
+      // Initialize empty data structures for unauthenticated users.
       this.state.resources.organisation = []
       this.state.resources.project = []
       this.state.resources.layer = []
@@ -807,20 +820,56 @@ export class AppCtx {
     // Initialize stats cache
     this.initStatsCache()
     // Use parallel fetching for initial load
-    await this.initialFetch()
+    await this.initialFetch(true, loadFeatures)
     // Prevent init from running again, unless the user (re)authenticates
     // see reinitializeWithAuth()
     this.isInitialised = true
   }
 
-  initialFetch = async (): Promise<void> => {
+  /**
+   * Hydrates map resources that are safe to show before a user authenticates.
+   *
+   * @param loadFeatures - Whether to request the public feature collection.
+   * @returns Nothing after the public hierarchy and optional feature collection settle.
+   * @remarks Errors are logged here because the login dialog and base map must remain
+   * usable even when a non-essential public resource request fails.
+   */
+  bootstrapPublicMapResources = async (loadFeatures: boolean = true): Promise<void> => {
+    const publicRoleScope = this.getRoleScopeQueryKey()
+
+    try {
+      this.initStatsCache()
+      await this.initialFetch(false, loadFeatures, publicRoleScope)
+    } catch (error) {
+      console.error('[AppCtx] Public map bootstrap failed:', error)
+    }
+  }
+
+  /**
+   * Loads application resources in dependency order.
+   *
+   * @param includeUserData - Whether to request identity-bound profile and preference data.
+   * @param loadFeatures - Whether to request the initial feature collection.
+   * @param expectedRoleScope - Optional identity scope that must still be current before
+   * public-bootstrap data is committed.
+   * @returns Nothing after the requested resource stages settle.
+   */
+  initialFetch = async (
+    includeUserData: boolean = true,
+    loadFeatures: boolean = true,
+    expectedRoleScope?: string,
+  ): Promise<void> => {
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
     // Bootstrap lightweight user-scoped reads first so session-dependent UI can hydrate
     // without immediately fanning out into the heavier resource tree.
-    const lightSteps = [
-      ['userProfile', () => this.refreshUserProfile(false)],
-      ['userFeatures', () => this.refreshUserFeatures(false)],
-      ['userLayers', () => this.hydrateCurrentUserLayers()],
-    ] as const
+    const lightSteps = includeUserData
+      ? ([
+          ['userProfile', () => this.refreshUserProfile(false)],
+          ['userFeatures', () => this.refreshUserFeatures(false)],
+          ['userLayers', () => this.hydrateCurrentUserLayers()],
+        ] as const)
+      : []
 
     const lightResults = await Promise.allSettled(lightSteps.map(([, load]) => load()))
     for (const [index, result] of lightResults.entries()) {
@@ -832,16 +881,18 @@ export class AppCtx {
       )
     }
 
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
     // Bootstrap hierarchy second. Keep this stage narrower than the old fan-out because
     // local workerd D1 is sensitive to bursts of concurrent reads during app startup.
     const hierarchyPhases = [
       [
-        ['organisations', () => this.refreshOrganisations(false)],
-        ['projects', () => this.refreshProjects(false)],
+        ['organisations', () => this.refreshOrganisations(false, expectedRoleScope)],
+        ['projects', () => this.refreshProjects(false, expectedRoleScope)],
       ],
       [
-        ['layers', () => this.refreshLayers(false)],
-        ['properties', () => this.refreshProperties(false)],
+        ['layers', () => this.refreshLayers(false, true, expectedRoleScope)],
+        ['properties', () => this.refreshProperties(false, expectedRoleScope)],
       ],
     ] as const
 
@@ -855,14 +906,29 @@ export class AppCtx {
           result.reason,
         )
       }
+
+      if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
     }
 
-    this.applyInitialLayerPrisms()
-    await this.postLayerMutation(false)
+    this.applyInitialLayerPrisms(expectedRoleScope)
+    await this.postLayerMutation(false, true, expectedRoleScope)
+
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     const featureSteps = [
-      ['features', () => this.refreshFeatures(false)],
-      ['tasks', () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve())],
+      ...(loadFeatures
+        ? ([
+            ['features', () => this.refreshFeatures(false, expectedRoleScope)],
+          ] as const)
+        : []),
+      ...(includeUserData
+        ? ([
+            [
+              'tasks',
+              () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve()),
+            ],
+          ] as const)
+        : []),
     ] as const
 
     for (const [label, load] of featureSteps) {
@@ -932,7 +998,9 @@ export class AppCtx {
     )
   }
 
-  private applyInitialLayerPrisms = (): void => {
+  private applyInitialLayerPrisms = (expectedRoleScope?: string): void => {
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
     const hubId = this.getCurrentHubId()
     const hubCode = this.hub?.code ?? null
     if (!hubId && !hubCode) {
@@ -1805,12 +1873,25 @@ export class AppCtx {
     }
   }
 
-  refreshOrganisations = async (isCascading: boolean = true): Promise<void> => {
+  /**
+   * Refreshes organisations and reconciles their dependent filter scope.
+   *
+   * @param isCascading - Whether to refresh dependent projects.
+   * @param expectedRoleScope - Optional identity scope that must still be current.
+   * @returns Nothing after the organisation state is reconciled.
+   */
+  refreshOrganisations = async (
+    isCascading: boolean = true,
+    expectedRoleScope?: string,
+  ): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.organisation)
-    this.state.resources.organisation = await this.queryClient.fetchQuery({
+    const organisations = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Organisation[]>,
     })
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
+    this.state.resources.organisation = organisations
     // Efficiently sync organization cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.organisation, this.state.resources.organisation)
     // Efficiently sync organisation code-to-ID mapping
@@ -1818,16 +1899,29 @@ export class AppCtx {
     // Sync organisation prisms to remove any invalid organisation IDs
     this.syncOrganisationPrisms()
     if (isCascading) {
-      await this.refreshProjects()
+      await this.refreshProjects(true, expectedRoleScope)
     }
   }
 
-  refreshProjects = async (isCascading: boolean = true): Promise<void> => {
+  /**
+   * Refreshes projects and reconciles their dependent filter scope.
+   *
+   * @param isCascading - Whether to refresh dependent properties and layers.
+   * @param expectedRoleScope - Optional identity scope that must still be current.
+   * @returns Nothing after the project state is reconciled.
+   */
+  refreshProjects = async (
+    isCascading: boolean = true,
+    expectedRoleScope?: string,
+  ): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.project)
-    this.state.resources.project = await this.queryClient.fetchQuery({
+    const projects = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Project[]>,
     })
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
+    this.state.resources.project = projects
     // Efficiently sync project cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.project, this.state.resources.project)
     // Efficiently sync project code-to-ID mapping
@@ -1835,8 +1929,8 @@ export class AppCtx {
     // Sync project prisms to remove any invalid project IDs
     this.syncProjectPrisms()
     if (isCascading) {
-      await this.refreshProperties()
-      await this.refreshLayers()
+      await this.refreshProperties(true, expectedRoleScope)
+      await this.refreshLayers(true, true, expectedRoleScope)
     }
   }
 
@@ -1845,33 +1939,72 @@ export class AppCtx {
    *
    * @param isCascading - Whether dependent feature and profile data should refresh.
    * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
+   * @param expectedRoleScope - Optional identity scope that must still be current.
    * @returns A promise that resolves once the layer state has been reconciled.
    */
   refreshLayers = async (
     isCascading: boolean = true,
     shouldAutoSelectSingleLayer: boolean = true,
+    expectedRoleScope?: string,
   ): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.layer)
-    this.state.resources.layer = await this.queryClient.fetchQuery({
+    const layers = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Layer[]>,
     })
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
+    this.state.resources.layer = layers
     // Efficiently sync layer cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.layer, this.state.resources.layer)
     // Sync layer prisms to remove any layerIds which are no londer valid resources given the parent prism selection.
     this.syncLayerPrisms()
     // Also calls this.refreshFeatures()
-    await this.postLayerMutation(isCascading, shouldAutoSelectSingleLayer)
+    await this.postLayerMutation(
+      isCascading,
+      shouldAutoSelectSingleLayer,
+      expectedRoleScope,
+    )
   }
 
-  refreshFeatures = async (_isCascading: boolean = true): Promise<void> => {
+  /**
+   * Refreshes the feature collection for the current hierarchy and user scope.
+   *
+   * @param _isCascading - Reserved for the resource refresh contract.
+   * @param expectedRoleScope - Optional scope captured before the request started.
+   * @returns Nothing after current-scope feature data has been committed.
+   * @remarks A background public-map request must not overwrite the image-bearing
+   * collection fetched after an anonymous or account session is established.
+   */
+  refreshFeatures = async (
+    _isCascading: boolean = true,
+    expectedRoleScope?: string,
+  ): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.feature)
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<FeatureFromCollection[]>,
     })
+
+    if (expectedRoleScope && expectedRoleScope !== this.getRoleScopeQueryKey()) {
+      logMarkerBootstrap('stale feature data ignored after identity change', {
+        expectedRoleScope,
+        currentRoleScope: this.getRoleScopeQueryKey(),
+        featureCount: features.length,
+      })
+      return
+    }
+
     this.state.resources.feature = features
     this.syncCacheMap(this.cache.feature, features)
+
+    logMarkerBootstrap('feature data committed', {
+      featureCount: features.length,
+      imageBackedFeatureCount: features.filter(feature => Boolean(feature.image))
+        .length,
+      pointFeatureCount: features.filter(feature => feature.geometry?.type === 'Point')
+        .length,
+    })
 
     // Pre-populate stats cache for this feature
     features.forEach(feature => {
@@ -1954,12 +2087,24 @@ export class AppCtx {
     this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub)
   }
 
-  refreshProperties = async (_isCascading: boolean = true): Promise<void> => {
+  /**
+   * Refreshes property definitions for the active hierarchy.
+   *
+   * @param _isCascading - Reserved for the resource refresh contract.
+   * @param expectedRoleScope - Optional identity scope that must still be current.
+   * @returns Nothing after the property cache is reconciled.
+   */
+  refreshProperties = async (
+    _isCascading: boolean = true,
+    expectedRoleScope?: string,
+  ): Promise<void> => {
     const query = this.getRequiredQueryConfig(FirstClassResource.property)
     const properties = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Property[]>,
     })
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
     // Efficiently sync property cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.property, properties)
   }
@@ -2181,19 +2326,23 @@ export class AppCtx {
    *
    * @param isCascading - Whether dependent feature and profile data should refresh.
    * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
+   * @param expectedRoleScope - Optional identity scope that must still be current.
    * @returns A promise that resolves once dependent layer state is up to date.
    */
   postLayerMutation = async (
     isCascading: boolean = true,
     shouldAutoSelectSingleLayer: boolean = true,
+    expectedRoleScope?: string,
   ): Promise<void> => {
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+
     // Auto-select single layer if there's only one available and none selected
     if (
       shouldAutoSelectSingleLayer &&
       this.state.resources.layer.length === 1 &&
       this.state.prisms.layer.length === 0
     ) {
-      this.toggleLayer(this.state.resources.layer[0].id)
+      this.state.prisms.layer = [this.state.resources.layer[0].id]
     }
 
     const currentLayerIds = new Set(this.state.prisms.layer)
@@ -2947,17 +3096,19 @@ export class AppCtx {
     return getFeatureIdsForProperties(this)
   }
 
-  // Features, given the selected Neighbourhoods and Properties
+  // Features for active layers, given the selected Neighbourhoods and Properties.
   getVisibleFeatureIds = (): Id[] => {
-    // If no layers are selects, return none.
+    // Avoid showing stale markers while an active-layer feature refresh is in flight.
     if (this.state.prisms.layer.length === 0) {
       return []
     }
+
+    const activeLayerIds = new Set(this.state.prisms.layer)
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties),
       ),
-    )
+    ).filter(featureId => activeLayerIds.has(this.features.get(featureId)?.layerId))
   }
 
   // Features (for Active Layers) that are on the user's wishlist

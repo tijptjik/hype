@@ -52,13 +52,24 @@ export const getMapStyleRenderPublicPath = (code: string, hash: string): string 
   `/${getMapStyleRenderObjectKey(code, hash)}`
 
 /**
+ * Returns the stable API asset path for a built-in map-style render.
+ *
+ * @param code Map style code.
+ * @returns Asset route path that streams from local R2 or redirects to the target CDN.
+ */
+export const getMapStyleRenderAssetPath = (code: string): string =>
+  `/api/mapRenders/styles/${code}/asset`
+
+/**
  * Returns the local API asset path for a built-in map-style render.
  *
  * @param code Map style code.
  * @returns Local asset route path.
+ * @remarks Prefer `getMapStyleRenderAssetPath` for callers that also run in
+ * preview and production. The route itself resolves the correct storage target.
  */
 export const getMapStyleRenderLocalPath = (code: string): string =>
-  `/api/mapRenders/styles/${code}/asset`
+  getMapStyleRenderAssetPath(code)
 
 /**
  * Builds the immutable object key for a map-style render.

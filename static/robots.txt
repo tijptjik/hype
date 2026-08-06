@@ -1,2 +1,3 @@
+# Serve this file as a Cloudflare static asset, outside the SvelteKit worker.
 User-agent: *
-Allow: / 
+Allow: /

@@ -96,7 +96,7 @@ function reopenLocationPicker(): void {
         onclick={startEditing}
       >
         <p
-          class={`truncate text-sm leading-6 ${currentAddress ? 'text-white' : 'font-semibold text-white/45'}`}
+          class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-6 ${currentAddress ? 'text-white' : 'font-semibold text-white/45'}`}
         >
           {currentAddress || 'Click to set address'}
         </p>

@@ -74,7 +74,7 @@ $effect(() => {
 
 <div
   bind:this={containerElement}
-  class="pointer-events-auto min-h-0 overflow-hidden px-[var(--feature-card-content-padding)]"
+  class="pointer-events-auto min-h-0 overflow-hidden pr-[var(--feature-card-content-padding)] pl-[calc(var(--feature-card-content-padding)+4px)]"
 >
   <div
     class="grid items-start gap-x-3 gap-y-2 w-120:gap-x-4"

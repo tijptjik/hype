@@ -169,7 +169,7 @@ $effect(() => {
       <div class="relative h-4 min-w-0 flex-1 text-left">
         {#key visibleValueKey}
           <div
-            class="max-w-full truncate whitespace-nowrap"
+            class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
             in:fade={{ duration: transitionDuration }}
           >
             {visibleValue.label}

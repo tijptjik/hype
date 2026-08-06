@@ -293,7 +293,9 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
             <h4 class="text-xs font-bold uppercase tracking-wide text-base-content/55">
               {m.feature_import__layers_no_columns_title()}
             </h4>
-            <div class="truncate text-sm font-semibold text-base-content">
+            <div
+              class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold text-base-content"
+            >
               {m.feature_import__users_all_features_label()}
             </div>
             <p class="text-xs leading-relaxed text-base-content/60">
@@ -315,11 +317,15 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
                 {selectedLayer.i18n?.en?.name?.charAt(0)?.toUpperCase() || 'L'}
               </div>
               <div class="min-w-0">
-                <div class="truncate text-sm font-medium">
+                <div
+                  class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium"
+                >
                   {selectedLayer.i18n?.en?.name || 'Selected Layer'}
                 </div>
                 {#if selectedLayer.i18n?.en?.description}
-                  <div class="truncate text-xs text-success/70">
+                  <div
+                    class="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-success/70"
+                  >
                     {selectedLayer.i18n.en.description}
                   </div>
                 {/if}

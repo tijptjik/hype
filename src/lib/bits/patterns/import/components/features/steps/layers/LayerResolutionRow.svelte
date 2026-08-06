@@ -145,7 +145,11 @@ function handleLayerResolutionSearchFocus(): void {
               <code class="rounded bg-base-200 px-2 py-1 text-xs uppercase">
                 {part.key}
               </code>
-              <span class="truncate font-mono" title={part.value}>{part.value}</span>
+              <span
+                class="overflow-hidden text-ellipsis whitespace-nowrap font-mono"
+                title={part.value}
+                >{part.value}</span
+              >
             </div>
           {/each}
         </div>
@@ -167,11 +171,15 @@ function handleLayerResolutionSearchFocus(): void {
                 {resolvedLayer?.i18n?.en?.name?.charAt(0)?.toUpperCase() || 'L'}
               </div>
               <div class="min-w-0">
-                <div class="truncate text-sm font-medium">
+                <div
+                  class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium"
+                >
                   {resolvedLayer?.i18n?.en?.name || 'Selected Layer'}
                 </div>
                 {#if resolvedLayer?.i18n?.en?.description}
-                  <div class="truncate text-xs text-success/70">
+                  <div
+                    class="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-success/70"
+                  >
                     {resolvedLayer.i18n.en.description}
                   </div>
                 {/if}

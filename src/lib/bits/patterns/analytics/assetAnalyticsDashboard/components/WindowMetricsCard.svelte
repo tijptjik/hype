@@ -223,7 +223,7 @@ function getBreakdownItems(
           <article class="min-w-0">
             <div class="mb-4 flex items-center justify-between gap-3">
               <h3
-                class="truncate whitespace-nowrap font-mono text-sm font-semibold text-foreground"
+                class="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm font-semibold text-foreground"
               >
                 {breakdownSection.title()}
               </h3>
@@ -242,7 +242,7 @@ function getBreakdownItems(
                   <div class="space-y-1.5">
                     <div class="flex items-center justify-between gap-3">
                       <div
-                        class="min-w-0 flex-1 truncate whitespace-nowrap font-mono text-sm text-foreground"
+                        class="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm text-foreground"
                         title={`${item.label} • ${formatAnalyticsCount(item.requests)} requests`}
                       >
                         {item.label}

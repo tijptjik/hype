@@ -114,11 +114,11 @@
   }
 
   .bits-theme .bits-search-result-item__title {
-    @apply truncate text-sm font-semibold;
+    @apply overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold;
   }
 
   .bits-theme .bits-search-result-item__discriminator {
-    @apply max-w-40 shrink-0 truncate text-right text-xs text-neutral-content/80 pr-4;
+    @apply max-w-40 shrink-0 overflow-hidden text-ellipsis whitespace-nowrap text-right text-xs text-neutral-content/80 pr-4;
   }
 
   .bits-theme .bits-search-result-item--visual {
@@ -154,7 +154,7 @@
   }
 
   .bits-theme .bits-search-result-item--visual .bits-search-result-item__discriminator {
-    @apply max-w-none shrink-0 truncate pr-0 text-left text-sm text-neutral-content/62;
+    @apply max-w-none shrink-0 overflow-hidden text-ellipsis whitespace-nowrap pr-0 text-left text-sm text-neutral-content/62;
   }
 
   .bits-theme .bits-search-result-item__disabled-callout {

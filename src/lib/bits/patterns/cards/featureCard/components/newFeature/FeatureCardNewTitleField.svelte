@@ -88,7 +88,7 @@ function cancelEditing(): void {
         onclick={startEditing}
       >
         <p
-          class={`truncate text-base font-semibold ${currentTitle ? 'text-white' : 'text-white/45'}`}
+          class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold ${currentTitle ? 'text-white' : 'text-white/45'}`}
         >
           {currentTitle || m.empty_lofty_meerkat_support()}
         </p>

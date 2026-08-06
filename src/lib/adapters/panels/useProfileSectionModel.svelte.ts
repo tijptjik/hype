@@ -4,6 +4,7 @@ import { onDestroy } from 'svelte'
 import { goto } from '$app/navigation'
 // AUTH
 import { signOut } from '$lib/auth/client'
+import { clearSignOutIntent, markSignOutIntent } from '$lib/auth/bootstrap'
 import {
   isGuestUser as isGuestUserSession,
   requestAccountUpgrade,
@@ -188,12 +189,15 @@ export function useProfileSectionModel(
   }
 
   async function handleLogout(): Promise<void> {
+    // Prevent automatic guest bootstrap from racing the explicit sign-in redirect.
+    markSignOutIntent()
     await signOut({
       fetchOptions: {
         onSuccess: () => {
           goto('/signin')
         },
         onError: error => {
+          clearSignOutIntent()
           console.error('Sign out failed:', error)
         },
       },

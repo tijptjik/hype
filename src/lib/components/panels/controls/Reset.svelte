@@ -56,7 +56,7 @@ const resetText = $derived(getResetText())
       style="ghost"
       modifier="block"
       class="h-auto justify-start rounded-lg border-3 border-base-300 bg-black px-4 py-4 font-mono font-normal hover:text-white"
-      labelClasses="min-w-0 flex-1 max-w-none truncate text-left leading-tight"
+      labelClasses="min-w-0 flex-1 max-w-none overflow-hidden text-ellipsis whitespace-nowrap text-left leading-tight"
       onClick={() => appCtx.resetFilters()}
       transition={fade}
       transitionOpts={{ duration: 200 }}

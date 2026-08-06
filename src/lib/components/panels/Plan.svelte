@@ -664,7 +664,9 @@ onMount(() => {
                         <MapPinnedIcon class="h-3.5 w-3.5" />
                       </div>
                     {/if}
-                    <p class="truncate">{stop.addressLine}</p>
+                    <p class="overflow-hidden text-ellipsis whitespace-nowrap">
+                      {stop.addressLine}
+                    </p>
                   </div>
                   <div class="flex shrink-0 items-center">
                     <GripVerticalIcon

@@ -119,12 +119,12 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
   }
 
   if (!isPillMenu) {
-    return 'min-w-0 truncate text-xs uppercase tracking-wider text-white'
+    return 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider text-white'
   }
 
   const toneClass = trailingItems.includes(item) ? 'text-secondary' : 'text-white'
 
-  return `min-w-0 truncate text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)]`
+  return `min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)]`
 }
 </script>
 

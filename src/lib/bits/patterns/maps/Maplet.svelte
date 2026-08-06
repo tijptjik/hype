@@ -6,7 +6,7 @@ import { onDestroy, onMount, tick } from 'svelte'
 import { addAddressMarker } from '$lib/map/markers'
 import { getCoordinates } from '$lib/client/services/geospatial'
 import { getLocale } from '$lib/i18n'
-import { listMapStyleCatalog } from '$lib/map/styles'
+import { buildCatalogMapStyle, listMapStyleCatalog } from '$lib/map/styles'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/lucide/shrink'
 import ArrowsPointingOut from 'virtual:icons/lucide/expand'
@@ -16,7 +16,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES
 import type { LngLatLike, Map as MaplibreMap, Marker } from 'maplibre-gl'
-import type { Id, AddressMeta } from '$lib/types'
+import type { Id, AddressMeta, MapStyleCatalogKey } from '$lib/types'
 type MapProps = {
   coordinates: number[]
   initialCenter?: [number, number] | null
@@ -44,13 +44,13 @@ let mapProps: MapProps = $props()
 
 // STATE : MAP
 let mapContainer: HTMLDivElement
-let map = $derived(appCtx.map)
 let feature = $state()
 let isMapLoaded = $state(false)
 let hasSyncedViewport = $state(false)
 let lastCoordinateKey = $state('')
 let activeStyleToken = $state<string | null>(null)
-let activeMapInstance: MaplibreMap | null = null
+let activeMapInstance = $state<MaplibreMap | null>(null)
+let map = $derived(activeMapInstance)
 
 // STATE : DERIVED
 let markedAddressLngLat: [number, number] | null = $state(null)
@@ -59,22 +59,17 @@ let addressLngLat: [number, number] | null = $derived(
 )
 const activeLocale = $derived(getLocale())
 const resolvedMapStyleCode = $derived(mapProps.mapStyleCode?.trim() || 'hyperAdmin')
-const resolvedMapStyle = $derived.by(() => {
+const resolvedMapStyleKey = $derived.by(() => {
   const catalogEntry = listMapStyleCatalog().find(
     mapStyle => mapStyle.key === resolvedMapStyleCode,
   )
-  const fallbackEntry = listMapStyleCatalog().find(
-    mapStyle => mapStyle.key === 'hyperAdmin',
-  )
-  const targetEntry = catalogEntry ?? fallbackEntry
 
-  if (!targetEntry) {
-    throw new Error('Map style catalog is missing the hyperAdmin fallback')
-  }
-
-  return targetEntry.buildStyle({ locale: activeLocale })
+  return (catalogEntry?.key ?? 'hyperAdmin') as MapStyleCatalogKey
 })
-const activeStyleKey = $derived(`${resolvedMapStyleCode}:${activeLocale}`)
+const resolvedMapStyle = $derived(
+  buildCatalogMapStyle(resolvedMapStyleKey, { locale: activeLocale }),
+)
+const activeStyleKey = $derived(`${resolvedMapStyleKey}:${activeLocale}`)
 
 // STATE : UI
 let addressMarker: Marker | null = $state(null)
@@ -119,7 +114,18 @@ onMount(() => {
     appCtx.map = mapInstance
 
     mapInstance.on('load', () => {
-      isMapLoaded = true
+      if (activeMapInstance === mapInstance) {
+        isMapLoaded = true
+      }
+    })
+
+    mapInstance.on('remove', () => {
+      if (activeMapInstance === mapInstance) {
+        activeMapInstance = null
+      }
+      if (appCtx.map === mapInstance) {
+        appCtx.map = undefined
+      }
     })
 
     feature = new appCtx.maplibre.Marker({
@@ -154,12 +160,13 @@ onDestroy(() => {
     feature = null
   }
 
-  if (activeMapInstance) {
-    activeMapInstance.remove()
-    if (appCtx.map === activeMapInstance) {
+  const mapInstance = activeMapInstance
+  activeMapInstance = null
+  if (mapInstance) {
+    if (appCtx.map === mapInstance) {
       appCtx.map = undefined
     }
-    activeMapInstance = null
+    mapInstance.remove()
   }
 })
 
@@ -228,7 +235,7 @@ $effect(() => {
       addressMarker.remove()
     }
     // Add new marker
-    addressMarker = addAddressMarker(appCtx.maplibre, appCtx, addressLngLat)
+    addressMarker = addAddressMarker(appCtx.maplibre, map, addressLngLat)
     markedAddressLngLat = addressLngLat
   }
   if (adminCtx.activeResourceRef && adminCtx.activeResourceRef !== featureMarkerId) {
@@ -240,12 +247,12 @@ $effect(() => {
 })
 
 $effect(() => {
-  if (!appCtx.map || activeStyleToken === activeStyleKey) {
+  if (!map || activeStyleToken === activeStyleKey) {
     return
   }
 
   activeStyleToken = activeStyleKey
-  appCtx.map.setStyle(resolvedMapStyle)
+  map.setStyle(resolvedMapStyle)
 })
 </script>
 

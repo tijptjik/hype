@@ -1,3 +1,17 @@
+const AUTH_ENTRY_PATHS = new Set(['/signin', '/signup'])
+
+/**
+ * Returns whether a pathname is an authentication entry route.
+ *
+ * @param pathname - The request pathname from the incoming URL.
+ * @returns `true` when the route starts an authentication flow.
+ * @remarks These routes resolve their session in the regular session hook after
+ * the hub hook has completed.
+ */
+export function isAuthEntryPath(pathname: string | null | undefined): boolean {
+  return AUTH_ENTRY_PATHS.has(pathname || '')
+}
+
 /**
  * Returns whether a pathname should stay reachable without an authenticated session.
  *
@@ -18,6 +32,7 @@ export function isPublicUnauthenticatedPath(
     safePathname.startsWith('/policy/') ||
     safePathname === '/' ||
     safePathname === '' ||
+    isAuthEntryPath(safePathname) ||
     safePathname === '/manifest.webmanifest'
   )
 }

@@ -122,11 +122,11 @@
   }
 
   .bits-theme .bits-form__section-header-heading .bits-header__title {
-    @apply truncate font-bold uppercase;
+    @apply overflow-hidden text-ellipsis whitespace-nowrap font-bold uppercase;
   }
 
   .bits-theme .bits-form__section-header-heading .bits-header__subtitle {
-    @apply block truncate whitespace-nowrap;
+    @apply block overflow-hidden text-ellipsis whitespace-nowrap;
   }
 
   .bits-theme .bits-form__section-header-issues {

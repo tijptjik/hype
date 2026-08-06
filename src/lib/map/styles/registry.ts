@@ -4,10 +4,14 @@ import {
   REGISTERED_MAP_STYLE_CATALOG,
   type MapStyleCatalogEntry,
 } from './catalog'
-import { applySpriteVariant, type MapStyleDefinition } from './definitions/common'
+import {
+  applySpriteVariant,
+  applyWaterColorToBackground,
+  type MapStyleDefinition,
+} from './definitions/common'
 // TYPES
 import type { StyleSpecification } from 'maplibre-gl'
-import type { LocaleKey } from '../../types'
+import type { LocaleKey, MapStyleCatalogKey } from '../../types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -23,6 +27,7 @@ import type { LocaleKey } from '../../types'
 //
 // 2. STYLE / ASSET BUILDING
 //    - buildMapStyle
+//    - buildCatalogMapStyle
 //    - getMapStyleAssetRecord
 //    - listMapStyleAssetRecords
 
@@ -31,6 +36,7 @@ const REGISTERED_MAP_STYLE_DEFINITIONS = REGISTERED_MAP_STYLE_CATALOG.map(entry 
   label: entry.name,
   description: entry.description,
   basemapVariant: entry.basemapVariant,
+  markerTheme: entry.markerTheme,
   showSymbols: entry.showSymbols,
   buildStyle: entry.buildStyle,
 })) as Array<MapStyleDefinition<(typeof REGISTERED_MAP_STYLE_CATALOG)[number]['key']>>
@@ -105,11 +111,34 @@ export const buildMapStyle = (
     locale?: LocaleKey
   },
 ): StyleSpecification => {
-  const definition = getMapStyleDefinition(key)
-  return applySpriteVariant(definition.buildStyle(options), {
-    basemapVariant: definition.basemapVariant,
-    showSymbols: definition.showSymbols,
-  })
+  return buildCatalogMapStyle(key, options)
+}
+
+/**
+ * Builds one runtime style specification from any catalog entry.
+ *
+ * @param key - Catalog style key, including internal styles such as `hyperAdmin`.
+ * @param options - Optional label and locale overrides.
+ * @returns Built style specification with its configured sprite policy applied.
+ */
+export const buildCatalogMapStyle = (
+  key: MapStyleCatalogKey,
+  options?: {
+    noLabels?: boolean
+    locale?: LocaleKey
+  },
+): StyleSpecification => {
+  const definition = MAP_STYLE_CATALOG.find(entry => entry.key === key)
+  if (!definition) {
+    throw new Error(`Unknown map style catalog key: ${key}`)
+  }
+
+  return applyWaterColorToBackground(
+    applySpriteVariant(definition.buildStyle(options), {
+      basemapVariant: definition.basemapVariant,
+      showSymbols: definition.showSymbols,
+    }),
+  )
 }
 
 export type MapStyleAssetRecord = {
@@ -133,10 +162,12 @@ export const getMapStyleAssetRecord = async (
   key: MapStyleKey,
 ): Promise<MapStyleAssetRecord> => {
   const definition = getMapStyleDefinition(key)
-  const style = applySpriteVariant(definition.buildStyle(), {
-    basemapVariant: definition.basemapVariant,
-    showSymbols: definition.showSymbols,
-  })
+  const style = applyWaterColorToBackground(
+    applySpriteVariant(definition.buildStyle(), {
+      basemapVariant: definition.basemapVariant,
+      showSymbols: definition.showSymbols,
+    }),
+  )
   const json = `${JSON.stringify(style, null, 2)}\n`
   const hash = await toHash(json)
   const shortHash = hash.slice(0, 12)

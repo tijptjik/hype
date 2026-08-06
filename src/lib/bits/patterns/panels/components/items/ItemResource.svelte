@@ -33,6 +33,7 @@ type Props = {
   hierarchy?: { organisation?: unknown; project?: unknown; layer?: unknown }
   selectedClass?: string
   isSelected: boolean
+  alwaysShowDot?: boolean
   onToggle: (event: MouseEvent | KeyboardEvent) => void | Promise<void>
   onNavigate?: (event: MouseEvent | KeyboardEvent) => void | Promise<void>
 } & PanelProps
@@ -43,6 +44,7 @@ const {
   hierarchy = {},
   selectedClass = 'bg-blue-400',
   isSelected,
+  alwaysShowDot = false,
   onNavigate,
   onToggle,
   ...panelProps
@@ -210,7 +212,7 @@ afterNavigate(async () => {
         onclick={event =>
           handleControlClick(event, panelProps.isNarrow ? (onNavigate ?? onToggle) : onToggle)}
         onkeydown={stopControlKeydown}
-        class:bits-panel-item-resource__dot--hidden={!panelProps.isNarrow && !isSelected && !isCurrentActive}
+        class:bits-panel-item-resource__dot--hidden={!alwaysShowDot && !panelProps.isNarrow && !isSelected && !isCurrentActive}
         class:bits-panel-item-resource__dot--narrow-unselected={panelProps.isNarrow && !isSelected}
         class:bits-panel-item-resource__dot--active={isCurrentActive}
       ></button>

@@ -108,7 +108,7 @@ function cancelEditing(propertyId: Id): void {
                 <option value="">
                   {getI18n(property, 'placeholder', userPreferences)}
                 </option>
-                {#each propertyValues.entries() as [ id, localisedValue ]}
+                {#each propertyValues.entries() as [id, localisedValue]}
                   <option value={id}>{localisedValue}</option>
                 {/each}
               </select>
@@ -188,7 +188,7 @@ function cancelEditing(propertyId: Id): void {
                   onclick={() => startEditing(propertyId, property)}
                 >
                   <span
-                    class={`truncate text-sm ${displayValue ? 'text-white' : 'font-semibold text-white/45'}`}
+                    class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm ${displayValue ? 'text-white' : 'font-semibold text-white/45'}`}
                   >
                     {displayValue ||
                       `Enter ${getI18n(property, 'label', userPreferences)}`}

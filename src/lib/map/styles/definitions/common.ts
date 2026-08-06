@@ -2,7 +2,7 @@ import { layers, namedFlavor } from '@protomaps/basemaps'
 import type { StyleSpecification } from 'maplibre-gl'
 
 import { toProtomapLocale } from '$lib/i18n'
-import type { LocaleKey } from '../../../types'
+import type { LocaleKey, MapMarkerTheme } from '../../../types'
 
 export type StyleBuildOptions = {
   noLabels?: boolean
@@ -24,6 +24,7 @@ export type MapStyleDefinition<TCode extends string = string> = {
   label: string
   description: string
   basemapVariant: MapStyleVariant | null
+  markerTheme: MapMarkerTheme
   showSymbols: boolean
   buildStyle: (options?: StyleBuildOptions) => StyleSpecification
 }
@@ -242,5 +243,37 @@ export const applySpriteVariant = (
   }
 
   style.sprite = `https://protomaps.github.io/basemaps-assets/sprites/v4/${options.basemapVariant}`
+  return style
+}
+
+/**
+ * Makes the rendered map background match the style's primary water colour.
+ *
+ * @param style - Generated MapLibre style specification.
+ * @returns The style with its background layer matched to the water layer.
+ * @remarks Leaves styles with a non-solid water colour unchanged.
+ */
+export const applyWaterColorToBackground = (
+  style: StyleSpecification,
+): StyleSpecification => {
+  const waterLayer = style.layers?.find(layer => layer.id === 'water')
+  const waterColor = (waterLayer?.paint as Record<string, unknown> | undefined)?.[
+    'fill-color'
+  ]
+
+  if (!style.layers || typeof waterColor !== 'string') {
+    return style
+  }
+
+  // Keep MapLibre's opaque background layer consistent with the visible sea.
+  style.layers = style.layers.map(layer =>
+    layer.id === 'background'
+      ? {
+          ...layer,
+          paint: { ...(layer.paint ?? {}), 'background-color': waterColor },
+        }
+      : layer,
+  )
+
   return style
 }

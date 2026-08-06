@@ -92,7 +92,10 @@ const layout = $derived(
   }),
 )
 const contentSidePaddingPx = $derived(layout.contentPaddingXPx)
-const propertyContainerHorizontalPaddingPx = $derived(contentSidePaddingPx * 2)
+// Keep property fields aligned with the description's visual left edge.
+const propertyContainerHorizontalPaddingPx = $derived(
+  contentSidePaddingPx * 2 + CONTENT_DESCRIPTION_LEFT_OFFSET_PX,
+)
 
 let contentElement = $state<HTMLDivElement | null>(null)
 let contentWidth = $state(0)

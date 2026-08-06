@@ -7,6 +7,10 @@ This rollout standardizes image ingestion and delivery around a bounded raw size
 - derived delivery formats limited to `webp` and `jpeg`
 - production `f_auto` requests allowed to serve existing derived objects only
 
+For the current delivery and recovery procedures, see
+[`docs/ops/Asset-Image-Delivery.md`](../ops/Asset-Image-Delivery.md). This
+document retains the original rollout sequence and its migration rationale.
+
 ### Policy
 
 - `heic`, `heif`, `tif`, and `tiff` are converted to `jpeg` on the client before upload.
@@ -117,14 +121,30 @@ derivatives regenerate from the normalized raws. Do not wipe the raw bucket.
 This repository does not yet include an automated purge helper; perform the
 derived-bucket purge as an explicit operational step.
 
-### 6. Deploy The Production Worker Cutover
+### 6. Rewarm And Validate The Purged Derivatives
+
+After purging, repeat the canonical warmup and coverage validation before
+blocking production auto-transform misses. Otherwise, a valid cache miss would
+return `404` rather than regenerating its derived object.
+
+```bash
+bun run render:assets \
+  --db-stage production \
+  --db-remote \
+  --r2-stage production \
+  --r2-remote \
+  --concurrency 1 \
+  --variant-delay-ms 1000
+```
+
+### 7. Optionally Deploy The Production Worker Cutover
 
 Deploy the asset worker with:
 
 - `BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS = "1"`
 
-That setting is now configured in `workers/asset-service/wrangler.toml` for the
-production environment. Once deployed:
+The current production configuration leaves this setting at `"0"`. Change it to
+`"1"` only after the rewarm and validation above have completed. Once deployed:
 
 - production `f_auto` requests still serve existing derived objects
 - production `f_auto` misses return `404`
@@ -146,3 +166,77 @@ misses while preserving the new normalized-raw and pre-render strategy.
   support while being materially cheaper to encode than `avif` in this worker.
 - `jpeg` remains the universal compatibility fallback and should continue to be
   pre-rendered alongside `webp`.
+
+### First Fallback: Cloudflare Images Memory Fallback
+
+Production enables `ENABLE_CLOUDFLARE_IMAGES_FALLBACK` for a narrow subset of
+cache misses. The asset Worker reads JPEG, PNG, and WebP dimensions from their
+compressed headers and delegates only sources above `2,000,000` pixels to the
+Cloudflare Images binding. This protects the read path while the raw backfill is
+in progress or when a non-normalized source remains. The binding result is
+written to the normal derived bucket, so that transform is paid for only on its
+first cache miss.
+
+The fallback accepts sources up to 20 MB, which is the Images binding input
+limit. Preview and local keep the fallback disabled so the feature can be
+enabled deliberately per environment.
+
+### Second Fallback: Post-OOM Repair
+
+`workers/asset-memory-repair` is a production Tail Worker attached to
+`hype-asset-service-prod`. When a `GET` or `HEAD` asset transform terminates
+with the Worker `exceededMemory` outcome, it parses the request in memory,
+regenerates the exact missing derivative through the Images binding, and writes
+it to `hype-assets-prod`. The failed response cannot be recovered, but a retry
+will receive the normal immutable R2-derived hit.
+
+The worker only accepts `assets.hype.hk` requests for owned `h/` public ids and
+only repairs JPEG, PNG, WebP, or AVIF output from a compatible supported source
+object. It never logs the unredacted request URL. A Durable Object leases each
+derived R2 key while it is being repaired, preventing a burst of identical OOM
+events from creating multiple billed Images transformations.
+
+Deploy the repair Worker before the asset Worker so the configured Tail consumer
+exists:
+
+```bash
+bun run deploy:asset-memory-repair:prod
+bun run deploy:asset-service:prod
+```
+
+The Tail Worker has the same 20 MB Cloudflare Images input limit. It is a
+recovery path for a failed request, not a way to transform larger objects.
+
+### Third Fallback: Targeted Large-Source Repair
+
+For a known source above the Cloudflare Images input limit—including a 100 MB+
+object—use the targeted helper. It downloads only the selected object's working
+copy and metadata sidecars, converts it locally with Sharp, and uploads the
+replacement only after the local conversion succeeds. `--mode apply` requires
+an explicit canonical public id, so it cannot accidentally rewrite a bucket.
+
+```bash
+bun run r2:resize:raw --stage production \
+  --key h/organisations/example/image-id \
+  --max-dimension 2048 \
+  --concurrency 1
+```
+
+For TIFF sources, the helper preserves the original at `<public-id>.raw` and
+replaces the working object with a JPEG. It also updates the image metadata
+sidecars. Rewarm the canonical derivatives afterwards so production serves R2
+derived hits rather than attempting an on-demand transform:
+
+```bash
+bun run render:assets \
+  --db-stage production --db-remote \
+  --r2-stage production --r2-remote \
+  --raw-key h/organisations/example/image-id \
+  --concurrency 1 --variant-delay-ms 1000
+```
+
+The helper uses a temporary local staging directory and removes it after the
+upload. To review output before any R2 writes, run the same command with
+`r2:normalize:raw --mode prepare` instead of `r2:resize:raw`. Its practical
+limit is the operator machine's disk and memory, not the 20 MB Images binding
+limit.

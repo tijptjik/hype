@@ -1,4 +1,5 @@
 export {
+  buildCatalogMapStyle,
   buildMapStyle,
   getDefaultMapStyleKey,
   listMapStyleCatalog,

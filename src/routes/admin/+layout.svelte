@@ -2,6 +2,8 @@
 // SVELTE
 import { afterNavigate, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
+// TANSTACK
+import { isCancelledError, type QueryClient } from '@tanstack/svelte-query'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
@@ -25,7 +27,6 @@ import { Panel } from '$lib/enums'
 import MonitorIcon from 'virtual:icons/lucide/monitor'
 // TYPES
 import type { LayoutProps, LayoutData } from './$types'
-import type { QueryClient } from '@tanstack/svelte-query'
 
 type AdminRootProps = LayoutProps & {
   children: () => unknown
@@ -57,6 +58,7 @@ $effect(() => {
   appCtx.isInitialised
   if (appCtx.isInitialised && !adminCtx.isInitialised && !adminCtx.isInitializing) {
     void adminCtx.init().catch(error => {
+      if (isCancelledError(error)) return
       console.error('[AdminLayout] Failed to initialize admin context', error)
     })
   }

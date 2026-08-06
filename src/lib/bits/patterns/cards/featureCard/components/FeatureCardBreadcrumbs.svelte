@@ -1,6 +1,4 @@
 <script lang="ts">
-// SVELTE
-import { onMount } from 'svelte'
 // BITS
 import { Dropdown, Icon } from '$lib/bits'
 // I18N
@@ -17,6 +15,7 @@ import type { Feature } from '$lib/db/zod/schema/feature.types'
 import type { ResourceContext } from '$lib/types'
 // ICONS
 import Camera from 'virtual:icons/lucide/camera'
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 import MoreHorizontal from 'virtual:icons/lucide/ellipsis'
 import PencilSquare from 'virtual:icons/lucide/square-pen'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
@@ -33,21 +32,38 @@ let {
 const appCtx = getAppCtx()
 const cardCtx = getCardCtx()
 let resolvedHierarchy = $state<ResourceContext | null>(null)
-let hierarchyLoadError = $state(false)
-const hierarchy = $derived(resolvedHierarchy ?? appCtx.getHierarchySync(feature))
+let resolvedHierarchyFeatureId = $state<string | null>(null)
+let hierarchyLoadErrorFeatureId = $state<string | null>(null)
+const hierarchy = $derived(
+  resolvedHierarchyFeatureId === feature.id && resolvedHierarchy
+    ? resolvedHierarchy
+    : appCtx.getHierarchySync(feature),
+)
+const hierarchyLoadError = $derived(hierarchyLoadErrorFeatureId === feature.id)
 
-/** Resolves a complete feature hierarchy after the breadcrumb has mounted. */
-async function loadHierarchy(): Promise<void> {
-  try {
-    resolvedHierarchy = await appCtx.getHierarchy(feature)
-  } catch {
-    hierarchyLoadError = true
+// Resolve hierarchy on the client whenever the card is pointed at another feature.
+$effect(() => {
+  const resolvedFeature = feature
+  const resolvedFeatureId = resolvedFeature.id
+  let isCurrent = true
+
+  hierarchyLoadErrorFeatureId = null
+
+  void appCtx
+    .getHierarchy(resolvedFeature)
+    .then(hierarchy => {
+      if (!isCurrent) return
+      resolvedHierarchy = hierarchy
+      resolvedHierarchyFeatureId = resolvedFeatureId
+    })
+    .catch(() => {
+      if (!isCurrent) return
+      hierarchyLoadErrorFeatureId = resolvedFeatureId
+    })
+
+  return () => {
+    isCurrent = false
   }
-}
-
-// Hierarchy cache misses can issue remote queries, which must never run during SSR.
-onMount(() => {
-  void loadHierarchy()
 })
 
 function openContributionMode(mode: FeatureCardMode): void {
@@ -57,6 +73,26 @@ function openContributionMode(mode: FeatureCardMode): void {
     return
   }
   cardCtx.setMode(mode)
+}
+
+/**
+ * Omits the generic "All" scope label when its parent is already visible.
+ *
+ * @param label - Contextual project or layer label.
+ * @param hasParent - Whether the preceding scope is rendered in the breadcrumb.
+ * @returns The label to display, or null when the parent makes "All" redundant.
+ */
+function getDistinctScopeLabel(
+  label: string | null,
+  hasParent: boolean,
+): string | null {
+  if (!label || !hasParent) return label
+
+  return label
+    .trim()
+    .localeCompare(m.filters__all().trim(), undefined, { sensitivity: 'base' }) === 0
+    ? null
+    : label
 }
 
 const actionItems = [
@@ -84,10 +120,14 @@ const actionItems = [
     {@const organisationName = hierarchy.organisation
       ? appCtx.getContextualOrganisationName(hierarchy.organisation, false)
       : null}
-    {@const projectName = appCtx.getContextualProjectName(hierarchy.project)}
-    {@const layerName = hierarchy.layer
-      ? appCtx.getContextualLayerName(hierarchy.layer)
-      : null}
+    {@const projectName = getDistinctScopeLabel(
+      appCtx.getContextualProjectName(hierarchy.project, false),
+      Boolean(organisationName),
+    )}
+    {@const layerName = getDistinctScopeLabel(
+      hierarchy.layer ? appCtx.getContextualLayerName(hierarchy.layer, false) : null,
+      Boolean(organisationName || projectName),
+    )}
     <div
       class="pointer-events-auto flex w-full items-center justify-between bg-black px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
@@ -95,14 +135,31 @@ const actionItems = [
         class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
       >
         <Icon src={Squares2x2} class="h-5 w-5 shrink-0" />
-        <span class="truncate">{organisationName}</span>
-        {#if hierarchy.project && projectName}
-          <span class="shrink-0 text-gray-400">›</span>
-          <span class="truncate">{projectName}</span>
+        <span class="!block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+          >{organisationName}</span
+        >
+        {#if projectName}
+          {#if organisationName}
+            <Icon
+              src={ChevronRight}
+              class="h-3.5 w-3.5 shrink-0 text-neutral-content/55"
+              aria-hidden="true"
+            />
+          {/if}
+          <span class="!block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+            >{projectName}</span
+          >
         {/if}
-        {#if hierarchy.layer && layerName}
-          <span class="shrink-0 text-gray-400">›</span>
-          <span class="hidden truncate w-120:inline">{layerName}</span>
+        {#if (organisationName || projectName) && layerName}
+          <Icon
+            src={ChevronRight}
+            class="h-3.5 w-3.5 shrink-0 text-neutral-content/55"
+            aria-hidden="true"
+          />
+          <span
+            class="hidden w-120:inline overflow-hidden text-ellipsis whitespace-nowrap"
+            >{layerName}</span
+          >
         {/if}
       </div>
       {#if cardCtx.isNewMode && onEditSelection}

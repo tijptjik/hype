@@ -142,10 +142,10 @@ export const resourceRowMetaIconClass = cx(
 export const resourceRowMetaIconSvgClass = 'h-3.5 w-3.5'
 
 export const resourceRowMetaLabelClass =
-  'flex min-w-0 items-center justify-center truncate text-center text-sm text-base-content'
+  'flex min-w-0 items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap text-center text-sm text-base-content'
 
 export const resourceRowMetaLabelStatsClass =
-  'flex min-w-0 items-center justify-center truncate text-center text-[1.55rem] font-semibold leading-none tracking-tight text-base-content'
+  'flex min-w-0 items-center justify-center overflow-hidden text-ellipsis whitespace-nowrap text-center text-[1.55rem] font-semibold leading-none tracking-tight text-base-content'
 
 export function getResourceRowMetaItemClass(variant: ResourceRowMetaVariant): string {
   return variant === 'stats' ? resourceRowMetaItemStatsClass : resourceRowMetaItemClass

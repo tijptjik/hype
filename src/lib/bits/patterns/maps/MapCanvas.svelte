@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTEKIT
+import { browser } from '$app/environment'
 import { page } from '$app/state'
 import { onDestroy, onMount, tick } from 'svelte'
 import { watch } from 'runed'
@@ -11,6 +13,7 @@ import { cubicInOut } from 'svelte/easing'
 import { Button } from '$lib/bits'
 // LIB
 import {
+  clearMarkers,
   getUserMarkerStyleVariant,
   updateMarkers,
   USER_MARKER_STYLE_PARAM,
@@ -364,6 +367,38 @@ const resolveRuntimeMapStyle = async (
   return noLabels ? hideSymbolLayers(style) : style
 }
 
+/**
+ * Gets the solid colour used by a map style's sea layer.
+ *
+ * @param style - Loaded MapLibre style specification.
+ * @returns CSS colour for the canvas fallback, or the app's dark base colour.
+ */
+const getMapStyleSeaColor = (style: StyleSpecification): string => {
+  const waterLayer = style.layers?.find(layer => layer.id === 'water')
+  const seaColor = (waterLayer?.paint as Record<string, unknown> | undefined)?.[
+    'fill-color'
+  ]
+
+  return typeof seaColor === 'string' ? seaColor : '#101214'
+}
+
+/**
+ * Keeps the DOM and WebGL canvas fallback in sync with the active map style.
+ *
+ * @param style - Loaded MapLibre style specification.
+ * @param map - Current MapLibre instance, when it has been created.
+ * @returns Nothing.
+ */
+const applyMapCanvasBackground = (
+  style: StyleSpecification,
+  map?: MaplibreMap | null,
+): void => {
+  const seaColor = getMapStyleSeaColor(style)
+
+  mapContainer.style.backgroundColor = seaColor
+  map?.getCanvas().style.setProperty('background-color', seaColor)
+}
+
 const getCurrentMapStyleVariant = (
   map: MaplibreMap | null | undefined,
 ): string | null => {
@@ -396,6 +431,18 @@ const resolvedMapStyleEndpoint = $derived(getMapStyleEndpoint(resolvedMapStyleCo
 const resolvedMapStyleVariant = $derived(
   getMapStyleDefinition(resolvedMapStyleCode).label,
 )
+const projectMarkerThemes = $derived.by(() => {
+  const fallbackTheme = getMapStyleDefinition(getDefaultMapStyleKey()).markerTheme
+
+  return new Map(
+    appCtx.state.resources.project.map(project => [
+      project.id,
+      project.mapStyle?.code && isMapStyleKey(project.mapStyle.code)
+        ? getMapStyleDefinition(project.mapStyle.code).markerTheme
+        : fallbackTheme,
+    ]),
+  )
+})
 const activeStyleKey = $derived(
   `${resolvedMapStyleCode}:${activeLocale}:${appCtx.user?.experimental?.noLabelsMode ?? false}`,
 )
@@ -452,6 +499,8 @@ onMount(() => {
       return
     }
 
+    applyMapCanvasBackground(initialStyle)
+
     const map = new appCtx.maplibre.Map({
       container,
       style: initialStyle,
@@ -477,6 +526,7 @@ onMount(() => {
     activeMapInstance = map
     appCtx.map = map
     activeStyleToken = activeStyleKey
+    applyMapCanvasBackground(initialStyle, map)
     updateMapUrlTracking()
     queueMapResize()
 
@@ -662,6 +712,8 @@ onMount(() => {
     detachMapUrlTracking?.()
     detachMapUrlTracking = null
 
+    clearMarkers(appCtx)
+
     if (activeMapInstance) {
       activeMapInstance.remove()
       if (appCtx.map === activeMapInstance) {
@@ -678,6 +730,8 @@ onMount(() => {
 })
 
 onDestroy(() => {
+  if (!browser) return
+
   detachMapUrlTracking?.()
   detachMapUrlTracking = null
   if (mapResizeFrame !== 0) {
@@ -718,7 +772,12 @@ $effect(() => {
 })
 
 watch(
-  () => [appCtx.featuresVisible, appCtx.map, userMarkerStyleVariant],
+  () => [
+    appCtx.featuresVisible,
+    appCtx.map,
+    userMarkerStyleVariant,
+    projectMarkerThemes,
+  ],
   () => {
     if (!isAnimating && appCtx.maplibre && appCtx.isMaplibreLoaded) {
       updateMarkers(
@@ -726,6 +785,7 @@ watch(
         appCtx.getVisibleFeatures() as FeatureFromCollection[],
         appCtx.maplibre,
         userMarkerStyleVariant,
+        projectMarkerThemes,
       )
     }
   },
@@ -756,6 +816,7 @@ $effect(() => {
         return
       }
 
+      applyMapCanvasBackground(style, map)
       map.setStyle(style)
     })
     .catch(error => {

@@ -1,15 +1,17 @@
 import { AwsClient } from 'aws4fetch'
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import sharp from 'sharp'
 
 type Stage = 'local' | 'preview' | 'production'
-type Mode = 'prepare' | 'sync'
+type Mode = 'apply' | 'prepare' | 'sync'
 
 type CliOptions = {
   bucket: string
   concurrency: number
+  keys?: string[]
   limit?: number
   maxDimension: number
   mode: Mode
@@ -22,6 +24,12 @@ type CliOptions = {
 type ObjectSummary = {
   key: string
   size: number
+}
+
+type SourceObject = {
+  object: ObjectSummary
+  outputKey: string
+  recoveredFromRaw: boolean
 }
 
 type PreparedImageInfo = {
@@ -83,6 +91,9 @@ const METADATA_SUFFIX = '.json'
 //
 // 5. NORMALIZATION
 // - isOriginalImageKey
+// - matchesSelectedKey
+// - filterObjectsForKeys
+// - resolveSourceObjects
 // - toMetadataPublicId
 // - normalizeImageBuffer
 // - updateMetadataDocument
@@ -184,6 +195,16 @@ const parseArgs = (argv: string[]): CliOptions => {
         options.concurrency = Number.parseInt(argv[index + 1] ?? '', 10)
         index += 1
         break
+      case '--key': {
+        const key = argv[index + 1]?.trim()
+        if (!key) {
+          throw new Error('Missing value for --key')
+        }
+
+        options.keys = [...(options.keys ?? []), key]
+        index += 1
+        break
+      }
       case '--limit':
         options.limit = Number.parseInt(argv[index + 1] ?? '', 10)
         index += 1
@@ -223,8 +244,33 @@ const parseArgs = (argv: string[]): CliOptions => {
   }
 
   const mode = options.mode ?? 'prepare'
-  if (mode !== 'prepare' && mode !== 'sync') {
+  if (mode !== 'apply' && mode !== 'prepare' && mode !== 'sync') {
     throw new Error(`Invalid --mode value: ${String(mode)}`)
+  }
+
+  const keys = options.keys ? [...new Set(options.keys)] : undefined
+  if (keys && options.prefix) {
+    throw new Error('Cannot combine --key with --prefix')
+  }
+  if (keys && options.limit !== undefined) {
+    throw new Error('Cannot combine --key with --limit')
+  }
+
+  for (const key of keys ?? []) {
+    if (
+      !key.startsWith('h/') ||
+      key.endsWith('.raw') ||
+      key.endsWith(MANIFEST_SUFFIX) ||
+      key.endsWith(METADATA_SUFFIX)
+    ) {
+      throw new Error(
+        `Invalid --key value: ${key}. Provide the canonical image public id, for example h/organisations/example/image-id`,
+      )
+    }
+  }
+
+  if (mode === 'apply' && (!keys || keys.length === 0)) {
+    throw new Error('--mode apply requires at least one explicit --key')
   }
 
   const concurrency = options.concurrency ?? 4
@@ -246,6 +292,7 @@ const parseArgs = (argv: string[]): CliOptions => {
   return {
     bucket: options.bucket ?? DEFAULT_BUCKET_BY_STAGE[stage],
     concurrency,
+    ...(keys ? { keys } : {}),
     maxDimension,
     mode,
     ...(options.onlyFormat ? { onlyFormat: options.onlyFormat } : {}),
@@ -401,8 +448,83 @@ const inferContentTypeFromKey = (objectKey: string): string => {
 const isOriginalImageKey = (objectKey: string): boolean =>
   objectKey.startsWith('h/') &&
   !objectKey.endsWith('.raw') &&
-  !objectKey.endsWith(MANIFEST_SUFFIX) &&
-  !objectKey.endsWith(METADATA_SUFFIX)
+    !objectKey.endsWith(MANIFEST_SUFFIX) &&
+    !objectKey.endsWith(METADATA_SUFFIX)
+
+/**
+ * Checks whether an object key belongs to an operator-selected image.
+ *
+ * @param objectKey Raw bucket object key or prepared relative file path.
+ * @param keys Canonical public ids selected by the operator.
+ * @returns Whether the key is in the selected image set.
+ */
+const matchesSelectedKey = (objectKey: string, keys: string[]): boolean =>
+  keys.some(
+    key =>
+      objectKey === key ||
+      objectKey === `${key}.raw` ||
+      objectKey === `${key}${METADATA_SUFFIX}` ||
+      (objectKey.startsWith(`${key}.v`) && objectKey.endsWith(METADATA_SUFFIX)) ||
+      objectKey === `${key}${MANIFEST_SUFFIX}`,
+  )
+
+/**
+ * Selects one or more exact image objects and every sidecar required to keep
+ * their metadata and version lookup intact.
+ *
+ * @param objects Listed objects in the raw bucket.
+ * @param keys Canonical public ids selected by the operator.
+ * @returns Matching primary objects and sidecars.
+ */
+const filterObjectsForKeys = (
+  objects: ObjectSummary[],
+  keys: string[] | undefined,
+): ObjectSummary[] => {
+  if (!keys || keys.length === 0) {
+    return objects
+  }
+
+  return objects.filter(object => matchesSelectedKey(object.key, keys))
+}
+
+/**
+ * Resolves the working source for each selected public id. A missing primary
+ * object can be safely rebuilt from its retained `.raw` original.
+ *
+ * @param objects Exact primary/raw objects selected from R2.
+ * @param keys Explicit public ids selected by the operator.
+ * @returns Source objects with their primary-object output locations.
+ */
+const resolveSourceObjects = (
+  objects: ObjectSummary[],
+  keys: string[] | undefined,
+): SourceObject[] => {
+  const primaryObjects = objects.filter(object => isOriginalImageKey(object.key))
+
+  if (!keys) {
+    return primaryObjects.map(object => ({
+      object,
+      outputKey: object.key,
+      recoveredFromRaw: false,
+    }))
+  }
+
+  return keys.map(key => {
+    const primary = primaryObjects.find(object => object.key === key)
+    if (primary) {
+      return { object: primary, outputKey: key, recoveredFromRaw: false }
+    }
+
+    const raw = objects.find(object => object.key === `${key}.raw`)
+    if (raw) {
+      return { object: raw, outputKey: key, recoveredFromRaw: true }
+    }
+
+    throw new Error(
+      `Could not find ${key} or its retained ${key}.raw source object in the selected R2 objects`,
+    )
+  })
+}
 
 const toMetadataPublicId = (objectKey: string): string | null => {
   if (!objectKey.startsWith('h/') || objectKey.endsWith(MANIFEST_SUFFIX)) {
@@ -638,7 +760,7 @@ const updateMetadataDocument = (
           workingTranscodeSourceFormat: 'tiff',
         }
       : {}),
-    ...(prepared.originalPreservedAsRaw && prepared.originalObjectKey
+    ...(prepared.originalObjectKey
       ? {
           originalObjectKey: prepared.originalObjectKey,
           workingObjectKey:
@@ -679,40 +801,51 @@ const runPrepare = async (
   client: AwsClient,
   options: CliOptions,
 ): Promise<void> => {
-  const objects = await listObjects(
-    client,
-    options.bucket,
-    options.prefix,
-    options.limit,
-  )
-  const originalObjects = objects.filter(object => isOriginalImageKey(object.key))
-  const sidecarObjects = objects.filter(object => !isOriginalImageKey(object.key))
+  const objects = options.keys
+    ? Array.from(
+        new Map(
+          (
+            await Promise.all(
+              options.keys.map(key => listObjects(client, options.bucket, key)),
+            )
+          )
+            .flat()
+            .map(object => [object.key, object]),
+        ).values(),
+      )
+    : await listObjects(client, options.bucket, options.prefix, options.limit)
+  const selectedObjects = filterObjectsForKeys(objects, options.keys)
+  const sourceObjects = resolveSourceObjects(selectedObjects, options.keys)
+  const sidecarObjects = selectedObjects.filter(object => !isOriginalImageKey(object.key))
   const preparedInfo = new Map<string, PreparedImageInfo>()
 
   console.log(
-    `[r2:normalize] Preparing ${objects.length} objects from ${options.bucket} into ${options.outDir}`,
+    `[r2:normalize] Preparing ${selectedObjects.length} objects from ${options.bucket} into ${options.outDir}`,
   )
 
-  await mapWithConcurrency(originalObjects, options.concurrency, async object => {
-    const body = await fetchObject(client, options.bucket, object.key)
+  await mapWithConcurrency(sourceObjects, options.concurrency, async sourceObject => {
+    const body = await fetchObject(client, options.bucket, sourceObject.object.key)
     const normalized = await normalizeImageBuffer(body, options.maxDimension)
 
     if (options.onlyFormat === 'tiff' && !normalized.info.transcoded) {
       return
     }
 
-    if (normalized.info.originalPreservedAsRaw) {
-      normalized.info.originalObjectKey = `${object.key}.raw`
+    if (sourceObject.recoveredFromRaw) {
+      normalized.info.originalObjectKey = sourceObject.object.key
+      normalized.info.originalPreservedAsRaw = true
+    } else if (normalized.info.originalPreservedAsRaw) {
+      normalized.info.originalObjectKey = `${sourceObject.outputKey}.raw`
     }
 
-    preparedInfo.set(object.key, normalized.info)
+    preparedInfo.set(sourceObject.outputKey, normalized.info)
 
-    const outputPath = path.join(options.outDir, object.key)
+    const outputPath = path.join(options.outDir, sourceObject.outputKey)
     await ensureParentDir(outputPath)
     await writeFile(outputPath, normalized.body)
 
-    if (normalized.info.originalPreservedAsRaw) {
-      const rawOutputPath = path.join(options.outDir, `${object.key}.raw`)
+    if (normalized.info.originalPreservedAsRaw && !sourceObject.recoveredFromRaw) {
+      const rawOutputPath = path.join(options.outDir, `${sourceObject.outputKey}.raw`)
       await ensureParentDir(rawOutputPath)
       await writeFile(rawOutputPath, body)
     }
@@ -724,7 +857,7 @@ const runPrepare = async (
           : normalized.info.resized
             ? 'resized'
             : 'copied'
-      } ${object.key}`,
+      } ${sourceObject.outputKey}`,
     )
   })
 
@@ -761,7 +894,7 @@ const runPrepare = async (
   })
 
   console.log(
-    `[r2:normalize] Complete. Prepared ${originalObjects.length} originals and ${sidecarObjects.length} sidecars.`,
+    `[r2:normalize] Complete. Prepared ${sourceObjects.length} originals and ${sidecarObjects.length} sidecars.`,
   )
 }
 
@@ -773,15 +906,23 @@ const runSync = async (client: AwsClient, options: CliOptions): Promise<void> =>
   const allFiles = (await listLocalFiles(options.outDir)).filter(
     filePath => !filePath.endsWith('.raw.raw'),
   )
+  const selectedFiles = options.keys
+    ? allFiles.filter(filePath =>
+        matchesSelectedKey(
+          path.relative(options.outDir, filePath).split(path.sep).join('/'),
+          options.keys ?? [],
+        ),
+      )
+    : allFiles
   const files = options.prefix
-    ? allFiles.filter(filePath => {
+    ? selectedFiles.filter(filePath => {
         const relativePath = path
           .relative(options.outDir, filePath)
           .split(path.sep)
           .join('/')
         return relativePath.startsWith(options.prefix ?? '')
       })
-    : allFiles
+    : selectedFiles
   console.log(
     `[r2:normalize] Syncing ${files.length} prepared files from ${options.outDir} to ${options.bucket}`,
   )
@@ -810,6 +951,21 @@ const main = async (): Promise<void> => {
 
   if (options.mode === 'prepare') {
     await runPrepare(client, options)
+    return
+  }
+
+  if (options.mode === 'apply') {
+    const temporaryOutDir = await mkdtemp(path.join(tmpdir(), 'hype-r2-normalized-'))
+
+    try {
+      // Stage every replacement locally before making the explicitly requested R2 writes.
+      const applyOptions = { ...options, outDir: temporaryOutDir }
+      await runPrepare(client, applyOptions)
+      await runSync(client, applyOptions)
+    } finally {
+      await rm(temporaryOutDir, { force: true, recursive: true })
+    }
+
     return
   }
 

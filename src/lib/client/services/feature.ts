@@ -1,4 +1,6 @@
+import { browser } from '$app/environment'
 import { goto } from '$app/navigation'
+import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
 import type { Point } from 'geojson'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
@@ -96,12 +98,14 @@ function getNewFeatureEntryMode(newFeature: AppCtx['newFeature']): NewFeatureMod
 }
 
 /**
- * Initializes the admin add-feature flow from the current active layer selection.
+ * Initializes the add-feature flow from the current active layer selection.
  * @param appCtx App context containing active layer state and new-feature setters.
  * @param omniCtx Omni context controlling the global creation mode.
  * @param event Optional triggering UI event.
  * @param options Flow bootstrap options.
  * @returns Nothing.
+ * @remarks Contributions require a durable account. Guarding the shared entry
+ * point keeps direct routes and all creation controls aligned with the server.
  */
 export const initAddNewFeature = async (
   appCtx: AppCtx,
@@ -109,12 +113,18 @@ export const initAddNewFeature = async (
   event?: Event | null,
   options: InitAddNewFeatureOptions = {},
 ): Promise<void> => {
+  stopNewFeatureTriggerEvent(event)
+
+  if (!hasDurableAccount(appCtx.getUser())) {
+    requestAccountUpgrade('contribution', browser ? window.location.href : undefined)
+    return
+  }
+
   const activeLayers = appCtx.state.prisms.layer
   const singleActiveLayer =
     activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null
   const { navigateToRoute = true } = options
 
-  stopNewFeatureTriggerEvent(event)
   omniCtx.setMode(OmniMode.newFeature)
 
   if (appCtx.getNewFeature()) {

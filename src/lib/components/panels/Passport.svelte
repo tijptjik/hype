@@ -535,7 +535,9 @@ onMount(() => {
                       >
                         {stamp.title}
                       </h4>
-                      <p class="truncate text-[11px] leading-4 text-white/55">
+                      <p
+                        class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-4 text-white/55"
+                      >
                         {stamp.addressLine}
                       </p>
                     </div>

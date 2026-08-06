@@ -34,6 +34,16 @@ export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   const layers = appCtx.state.resources.layer
   const features = appCtx.state.resources.feature
 
+  const firstPrismProjectId = appCtx.state.prisms.project[0]
+  if (firstPrismProjectId) {
+    // Project prism order is the user's active selection order, so it must take
+    // precedence over a stale active-resource reference after a project is removed.
+    return (
+      projects.find(project => project.id === firstPrismProjectId)?.mapStyle?.code ??
+      null
+    )
+  }
+
   if (activeResourceType === 'layer' && activeResourceId) {
     const activeLayer = layers.find(layer => layer.id === activeResourceId)
     if (activeLayer) {
