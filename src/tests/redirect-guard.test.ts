@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
+import { isAuthEntryPath, isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
+
+describe('isAuthEntryPath', () => {
+  it('only identifies sign-in and sign-up routes', () => {
+    expect(isAuthEntryPath('/signin')).toBe(true)
+    expect(isAuthEntryPath('/signup')).toBe(true)
+    expect(isAuthEntryPath('/')).toBe(false)
+    expect(isAuthEntryPath('/policy/privacy')).toBe(false)
+    expect(isAuthEntryPath('/api/auth/session')).toBe(false)
+  })
+})
 
 describe('isPublicUnauthenticatedPath', () => {
   it('keeps policy pages publicly reachable', () => {

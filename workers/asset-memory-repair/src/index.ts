@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import { DurableObject } from 'cloudflare:workers'
+import { toCloudflareImagesTransformDimensions } from '../../../src/lib/images/cloudflare'
 
 // 1. TYPES
 // 2. CONSTANTS
@@ -312,14 +313,16 @@ const transformSource = async (
   source: ReadableStream<Uint8Array>,
   request: RepairRequest,
 ): Promise<ImageTransformationResult> => {
-  const targetWidth = request.width ?? request.height
-  const targetHeight = request.height ?? request.width
+  const dimensions = toCloudflareImagesTransformDimensions(
+    request.cropMode,
+    request.width,
+    request.height,
+  )
   const transformer = env.IMAGES.input(source)
   const transformed =
-    targetWidth || targetHeight
+    dimensions.width !== undefined || dimensions.height !== undefined
       ? transformer.transform({
-          ...(targetWidth ? { width: targetWidth } : {}),
-          ...(targetHeight ? { height: targetHeight } : {}),
+          ...dimensions,
           fit:
             request.cropMode === 'c_fill' || request.cropMode === 'c_thumb'
               ? 'cover'

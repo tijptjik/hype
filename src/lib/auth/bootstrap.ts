@@ -1,9 +1,9 @@
+import { isAuthEntryPath } from '$lib/auth/redirectGuard'
+
 export const ANONYMOUS_BOOTSTRAP_ATTEMPTS = 3
 export const ANONYMOUS_BOOTSTRAP_TIMEOUT_MS = 8_000
 
 const SIGN_OUT_INTENT_STORAGE_KEY = 'hype:sign-out-intent'
-
-const AUTH_ENTRY_PATHS = new Set(['/signin', '/signup'])
 
 let anonymousSignInInFlight: Promise<void> | null = null
 
@@ -65,9 +65,7 @@ export function consumeSignOutIntent(): boolean {
  * @remarks Auth entry routes contain their own map landing surface and must never be
  * hidden behind account, guest, or feature-resource initialization.
  */
-export function isAuthEntryPath(pathname: string): boolean {
-  return AUTH_ENTRY_PATHS.has(pathname)
-}
+export { isAuthEntryPath }
 
 /**
  * Returns whether the current route should create a guest account in the browser.

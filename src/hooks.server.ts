@@ -14,7 +14,7 @@ import { autochunk } from '$lib/utils/batch-query'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '$lib/auth'
-import { isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
+import { isAuthEntryPath, isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
 // TYPES
 import type { LocaleKey, Session, SessionUser, UserRoleDisco } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -151,10 +151,10 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     schema,
   })
 
-  // Only protected routes need an early session to resolve unpublished admin hubs.
   // Auth entry routes resolve the session once in handle_session_auth below.
+  // Every other route needs an early session to resolve unpublished admin hubs.
   let adminHubCodes = new Set<string>()
-  if (!isPublicUnauthenticatedPath(event.url.pathname)) {
+  if (!isAuthEntryPath(event.url.pathname)) {
     try {
       const auth = getAuthForRequest(event.request.headers, {
         DB: event.platform?.env?.DB as MiniflareD1Database,

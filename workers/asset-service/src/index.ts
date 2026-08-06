@@ -26,6 +26,7 @@ import {
   getImageWarmupPlan,
   IMAGE_WARMUP_ACCEPT_HEADER,
 } from '../../../src/lib/images/warmup'
+import { toCloudflareImagesTransformDimensions } from '../../../src/lib/images/cloudflare'
 import type { ImageWarmupJob } from '../../../src/lib/types'
 
 type ImageStage = 'local' | 'preview' | 'production'
@@ -627,14 +628,16 @@ const transformSourceWithCloudflareImages = async (
   source: SourceAsset,
   request: TransformRequest & { format: OutputFormat },
 ): Promise<TransformOutput> => {
-  const targetWidth = request.width ?? request.height
-  const targetHeight = request.height ?? request.width
+  const dimensions = toCloudflareImagesTransformDimensions(
+    request.cropMode,
+    request.width,
+    request.height,
+  )
   const transformer = env.IMAGES.input(toImageSourceStream(source.body))
   const transformed =
-    targetWidth || targetHeight
+    dimensions.width !== undefined || dimensions.height !== undefined
       ? transformer.transform({
-          ...(targetWidth ? { width: targetWidth } : {}),
-          ...(targetHeight ? { height: targetHeight } : {}),
+          ...dimensions,
           fit:
             request.cropMode === 'c_fill' || request.cropMode === 'c_thumb'
               ? 'cover'
