@@ -3024,17 +3024,19 @@ export class AppCtx {
     return getFeatureIdsForProperties(this)
   }
 
-  // Features, given the selected Neighbourhoods and Properties
+  // Features for active layers, given the selected Neighbourhoods and Properties.
   getVisibleFeatureIds = (): Id[] => {
-    // If no layers are selects, return none.
+    // Avoid showing stale markers while an active-layer feature refresh is in flight.
     if (this.state.prisms.layer.length === 0) {
       return []
     }
+
+    const activeLayerIds = new Set(this.state.prisms.layer)
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties),
       ),
-    )
+    ).filter(featureId => activeLayerIds.has(this.features.get(featureId)?.layerId))
   }
 
   // Features (for Active Layers) that are on the user's wishlist
