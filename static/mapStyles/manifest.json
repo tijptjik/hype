@@ -1,13 +1,18 @@
 {
   "hyper": {
-    "fileName": "hyper.7d36a200b567.json",
-    "publicPath": "/mapStyles/hyper.7d36a200b567.json",
-    "hash": "7d36a200b56700472747e1ae8633c8eef4263ea8344cd248ee75afc96a0fc81a"
+    "fileName": "hyper.081188cd68f0.json",
+    "publicPath": "/mapStyles/hyper.081188cd68f0.json",
+    "hash": "081188cd68f044d50f475d4976e0dbfe0a035269e34d14eac8a0ba290143d228"
   },
   "hyperLight": {
-    "fileName": "hyperLight.55e06aa7c0a6.json",
-    "publicPath": "/mapStyles/hyperLight.55e06aa7c0a6.json",
-    "hash": "55e06aa7c0a658bbb5ae5d9e63c9f13950b1033240ef883439998a4d099d9ca2"
+    "fileName": "hyperLight.1c5243ed19a4.json",
+    "publicPath": "/mapStyles/hyperLight.1c5243ed19a4.json",
+    "hash": "1c5243ed19a49fceb6386297bfeb73698581768211f9cc735ef2b0309ab0e2b8"
+  },
+  "hyperpop": {
+    "fileName": "hyperpop.29f3ad0bdc87.json",
+    "publicPath": "/mapStyles/hyperpop.29f3ad0bdc87.json",
+    "hash": "29f3ad0bdc87437e93202f100507b96ff01520a89a97288a5ae457e2feb6682e"
   },
   "ghostery": {
     "fileName": "ghostery.1949953afb7d.json",
@@ -30,39 +35,39 @@
     "hash": "34ddd59d15c61a91a80cdcc499bd5f1b96f771058c4d733bb53e2ff381e65dad"
   },
   "genesis": {
-    "fileName": "genesis.8b15415d024e.json",
-    "publicPath": "/mapStyles/genesis.8b15415d024e.json",
-    "hash": "8b15415d024e4ee656c1ecbb73c23eeec40850f562c12d9f63e172e1916a6a79"
+    "fileName": "genesis.421c65b7c8ba.json",
+    "publicPath": "/mapStyles/genesis.421c65b7c8ba.json",
+    "hash": "421c65b7c8ba954bdb706399da7faf0fba79105e0c4d0798035ef499b68f6a26"
   },
   "sin": {
-    "fileName": "sin.c57137fe1a80.json",
-    "publicPath": "/mapStyles/sin.c57137fe1a80.json",
-    "hash": "c57137fe1a802522cf2ffb7bcb7d62529c6058ebe3bbeb66493ddba0623a052b"
+    "fileName": "sin.c580a7b8190b.json",
+    "publicPath": "/mapStyles/sin.c580a7b8190b.json",
+    "hash": "c580a7b8190b7b7ab096725fa87bd56eb7401e7bd7288bd3d08c7e574aa2001e"
   },
   "rosepunk": {
-    "fileName": "rosepunk.e7a82884fbe6.json",
-    "publicPath": "/mapStyles/rosepunk.e7a82884fbe6.json",
-    "hash": "e7a82884fbe683c050b75c30ed02bddbfd1e4051626517e5a50ed82a9ade0daf"
+    "fileName": "rosepunk.e9c67508f3a8.json",
+    "publicPath": "/mapStyles/rosepunk.e9c67508f3a8.json",
+    "hash": "e9c67508f3a8cf1556ce07d3d874319a4db365934d564313117d01a24830a389"
   },
   "breadline": {
-    "fileName": "breadline.d8c023451cc2.json",
-    "publicPath": "/mapStyles/breadline.d8c023451cc2.json",
-    "hash": "d8c023451cc2565bbba0483474f24b4bfba93b4f38d57b5e524d97a44a461f1d"
+    "fileName": "breadline.6ce4b770c2c5.json",
+    "publicPath": "/mapStyles/breadline.6ce4b770c2c5.json",
+    "hash": "6ce4b770c2c50915885d82d4474d37e97029009511eb501e3db61de7e0718300"
   },
   "protomaps-light": {
-    "fileName": "protomaps-light.2d9eba0187b9.json",
-    "publicPath": "/mapStyles/protomaps-light.2d9eba0187b9.json",
-    "hash": "2d9eba0187b9f5ec42a2a24cb30183e56eef697b9c64fb5f581c8c92660e7117"
+    "fileName": "protomaps-light.816c0dc2c50e.json",
+    "publicPath": "/mapStyles/protomaps-light.816c0dc2c50e.json",
+    "hash": "816c0dc2c50eb779dbb822b99fe8f4317edcec88cfd0eae3fe332c9b21256faf"
   },
   "protomaps-dark": {
-    "fileName": "protomaps-dark.49f10428e4ab.json",
-    "publicPath": "/mapStyles/protomaps-dark.49f10428e4ab.json",
-    "hash": "49f10428e4aba17b6aaa07d541fe0e33824977c34f135f5431348f07dbaa69fb"
+    "fileName": "protomaps-dark.2e3f673d9e97.json",
+    "publicPath": "/mapStyles/protomaps-dark.2e3f673d9e97.json",
+    "hash": "2e3f673d9e979cfc1686659a7aaaee1986eea0fce9dcaa42fbdd0f81d0052ae7"
   },
   "protomaps-white": {
-    "fileName": "protomaps-white.a14b09e7cdcf.json",
-    "publicPath": "/mapStyles/protomaps-white.a14b09e7cdcf.json",
-    "hash": "a14b09e7cdcf578e78c20b54c0aee93a0ffd4a916dd21ff0e3bdeb415a16a2e3"
+    "fileName": "protomaps-white.b2525b9d420b.json",
+    "publicPath": "/mapStyles/protomaps-white.b2525b9d420b.json",
+    "hash": "b2525b9d420b97b4d724602f5bfc99b3ad019c39dbf80e1b5649f95169b680db"
   },
   "protomaps-grayscale": {
     "fileName": "protomaps-grayscale.ef6fbdc479ad.json",
@@ -70,8 +75,8 @@
     "hash": "ef6fbdc479ad383f5d36aa231d37bc52150957000f5e7b78d326634dd6ce02e7"
   },
   "protomaps-black": {
-    "fileName": "protomaps-black.3bea772f17f8.json",
-    "publicPath": "/mapStyles/protomaps-black.3bea772f17f8.json",
-    "hash": "3bea772f17f81c879d321947039f3ec71409a8342ce823ceef47848f4816fa3e"
+    "fileName": "protomaps-black.34d1a98eabc5.json",
+    "publicPath": "/mapStyles/protomaps-black.34d1a98eabc5.json",
+    "hash": "34d1a98eabc5549d9bb9d8af3a8bad92d06aa5a3f3792ed2b639558b89816cfa"
   }
 }
