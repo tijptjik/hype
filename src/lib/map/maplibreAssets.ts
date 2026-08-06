@@ -1,7 +1,10 @@
 import { dev } from '$app/environment'
 import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 
-const MAPLIBRE_VERSION = 'latest'
+// `latest` can resolve the entry module and its sibling shared module to different
+// CDN cache generations. MapLibre then fails during module initialisation before a
+// map can be created, so keep this aligned with the installed package version.
+export const MAPLIBRE_VERSION = '6.1.0'
 const MAPLIBRE_CDN_BASE = `https://cdn.jsdelivr.net/npm/maplibre-gl@${MAPLIBRE_VERSION}/dist`
 const MAPLIBRE_MODULE_URL = `${MAPLIBRE_CDN_BASE}/maplibre-gl.mjs`
 const MAPLIBRE_STYLE_ID = 'maplibre-gl-style'
