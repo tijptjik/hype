@@ -68,6 +68,7 @@
   position: relative;
   width: 64px;
   height: 64px;
+  isolation: isolate;
   overflow: hidden;
   border-radius: 9999px;
   background:
@@ -96,6 +97,113 @@
     border-color 0.2s ease-in-out,
     box-shadow 0.2s ease-in-out,
     opacity 0.2s ease-in-out;
+}
+
+/* Let map styles carry their own marker contrast instead of forcing every
+   basemap through the same white-ring thumbnail treatment. */
+.marker-theme--light .marker-inner--feature {
+  background: #f7f4ee;
+  box-shadow:
+    0 10px 22px rgba(24, 25, 30, 0.28),
+    0 0 0 2px rgba(24, 25, 30, 0.7);
+}
+
+.marker-theme--light .marker-image-frame {
+  border-color: #1d232a;
+}
+
+.marker-theme--ghostery .marker-inner--feature {
+  overflow: visible;
+  background: transparent;
+  box-shadow:
+    0 12px 24px rgba(7, 15, 30, 0.46),
+    0 0 10px rgba(255, 255, 255, 0.56),
+    0 0 22px rgba(255, 255, 255, 0.24);
+}
+
+.marker-theme--ghostery .marker-image {
+  position: relative;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.marker-theme--neon .marker-inner--feature {
+  box-shadow:
+    0 12px 24px rgba(12, 4, 20, 0.5),
+    0 0 0 2px rgba(255, 145, 64, 0.82),
+    0 0 22px rgba(231, 52, 201, 0.58);
+}
+
+/* The inner edge is solid for image contrast; the outer edge dissolves into
+   the Ghostery basemap rather than reading as a hard white border. */
+.marker-theme--ghostery .marker-image-frame {
+  z-index: 1;
+  display: block;
+  inset: -3px;
+  padding: 3px;
+  border: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle closest-side at center,
+    rgba(255, 255, 255, 1) calc(100% - 3px),
+    rgba(255, 255, 255, 0.25) 100%
+  );
+  box-shadow: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.marker-theme--neon .marker-image-frame {
+  display: none;
+}
+
+.marker-theme--rosepunk .marker-inner--feature {
+  box-shadow:
+    0 12px 24px rgba(41, 11, 39, 0.42),
+    0 0 0 2px rgba(255, 171, 224, 0.8),
+    0 0 18px rgba(224, 115, 255, 0.34);
+}
+
+.marker-theme--rosepunk .marker-image-frame {
+  border-color: #fff0fb;
+}
+
+/* A dark ring separates busy images from Hyperpop's neon streets, while a
+   violet glow keeps the marker tied to the saturated street network. */
+.marker-theme--hyperpop .marker-inner--feature {
+  width: 62px;
+  height: 62px;
+  overflow: visible;
+  border-radius: 9999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.marker-theme--hyperpop .marker-inner--feature::before {
+  position: absolute;
+  z-index: -1;
+  inset: -3px;
+  content: "";
+  border-radius: inherit;
+  background: #2f343c;
+  filter: drop-shadow(0 0 6px rgba(214, 83, 185, 0.68))
+    drop-shadow(0 0 14px rgba(112, 66, 240, 0.3));
+}
+
+.marker-theme--hyperpop .marker-image {
+  position: relative;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.marker-theme--hyperpop .marker-image-frame {
+  display: none;
 }
 
 .marker-fade-in {
@@ -168,6 +276,53 @@
   stroke-width: 1.5;
   opacity: 0.7;
   transition: opacity 0.2s ease-in-out;
+}
+
+.marker-theme--light .marker-circle {
+  fill: #1d232a;
+  stroke: #f7f4ee;
+}
+
+.marker-theme--ghostery .marker-circle {
+  fill: #4ab6ec;
+  stroke: #d7f5ff;
+}
+
+.marker-theme--neon .marker-circle {
+  fill: #f97316;
+  stroke: #fff2cb;
+}
+
+.marker-theme--rosepunk .marker-circle {
+  fill: #e57ac5;
+  stroke: #fff0fb;
+}
+
+.marker-theme--hyperpop .marker-circle {
+  fill: #f04d7f;
+  stroke: #d4dbff;
+  filter: drop-shadow(0 0 5px rgba(112, 66, 240, 0.95));
+}
+
+.marker-dot {
+  fill: #cb37c1;
+}
+
+.marker-theme--light .marker-dot {
+  fill: #f7f4ee;
+}
+
+.marker-theme--ghostery .marker-dot,
+.marker-theme--hyperpop .marker-dot {
+  fill: #d4dbff;
+}
+
+.marker-theme--neon .marker-dot {
+  fill: #fff2cb;
+}
+
+.marker-theme--rosepunk .marker-dot {
+  fill: #fff0fb;
 }
 
 .highlighted .marker-circle {
@@ -253,10 +408,6 @@
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.18),
     0 0 0 3px rgba(164, 255, 114, 0.4);
-}
-
-.marker-dot {
-  fill: #cb37c1;
 }
 
 /* Hover effects */
