@@ -205,6 +205,8 @@
   "map_style__hyper_description": "Default Hype basemap.",
   "map_style__hyper_light_name": "Hyper Light",
   "map_style__hyper_light_description": "Light variant of the Hype basemap.",
+  "map_style__hyperpop_name": "Hyperpop",
+  "map_style__hyperpop_description": "A sparse night map in Hype's pink, magenta and violet UI palette, with glowing periwinkle labels.",
   "map_style__ghostery_name": "Ghostery",
   "map_style__ghostery_description": "Basemap developed for Hong Kong Ghost Signs.",
   "map_style__ghostery_legacy_name": "Ghostery Legacy",

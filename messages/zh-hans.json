@@ -205,6 +205,8 @@
   "map_style__hyper_description": "默认 Hype 底图。",
   "map_style__hyper_light_name": "Hyper Light",
   "map_style__hyper_light_description": "Hype 底图的浅色变体。",
+  "map_style__hyperpop_name": "Hyperpop",
+  "map_style__hyperpop_description": "以 Hype 的粉红、洋红和紫色界面调色板打造的极简夜间地图，配有发光的长春花蓝标签。",
   "map_style__ghostery_name": "Ghostery",
   "map_style__ghostery_description": "为香港鬼招牌项目开发的底图。",
   "map_style__ghostery_legacy_name": "Ghostery Legacy",

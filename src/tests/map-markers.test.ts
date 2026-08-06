@@ -56,6 +56,39 @@ describe('map markers', () => {
     expect(markerImage?.loading).toBe('eager')
   })
 
+  it('rebuilds image markers when their map-style theme changes', () => {
+    const markers = new Map<string, TestMarker>()
+    const appCtx = { map: {}, state: { markers } }
+    const features = [
+      {
+        id: 'feature-1',
+        projectId: 'project-1',
+        geometry: { type: 'Point', coordinates: [114.17276, 22.29191] },
+        image: 'https://images.example.test/feature-1.jpg',
+      },
+    ] as unknown as FeatureFromCollection[]
+
+    updateMarkers(
+      appCtx as never,
+      features,
+      { Marker: TestMarker },
+      'image',
+      new Map([['project-1', 'dark']]),
+    )
+    const firstMarker = markers.get('feature-1')
+
+    updateMarkers(
+      appCtx as never,
+      features,
+      { Marker: TestMarker },
+      'image',
+      new Map([['project-1', 'hyperpop']]),
+    )
+
+    expect(firstMarker?.removed).toBe(true)
+    expect(markers.get('feature-1')?.getElement()).toHaveClass('marker-theme--hyperpop')
+  })
+
   it('clears detached marker objects before a replacement map mounts', () => {
     const marker = new TestMarker({ element: document.createElement('div') })
     const markers = new Map<string, TestMarker>([['feature-1', marker]])

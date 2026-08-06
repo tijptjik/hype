@@ -41,6 +41,11 @@ export const getMapStyleCatalogCopy = (
         name: m.map_style__hyper_light_name({}, { locale }),
         description: m.map_style__hyper_light_description({}, { locale }),
       }
+    case 'hyperpop':
+      return {
+        name: m.map_style__hyperpop_name({}, { locale }),
+        description: m.map_style__hyperpop_description({}, { locale }),
+      }
     case 'ghostery':
       return {
         name: m.map_style__ghostery_name({}, { locale }),
