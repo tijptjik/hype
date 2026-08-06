@@ -42,8 +42,10 @@ type Env = {
   ASSET_DEBUG_MEMORY?: string
   ASSET_DEBUG_MEMORY_MATCH?: string
   BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS?: string
+  ENABLE_CLOUDFLARE_IMAGES_FALLBACK?: string
   ASSET_ANALYTICS: AnalyticsEngineDataset
   ASSET_WARMUP_ANALYTICS: AnalyticsEngineDataset
+  IMAGES: ImagesBinding
   ASSET_RAW_DEV: R2Bucket
   ASSET_RAW_PREVIEW: R2Bucket
   ASSET_RAW_PRODUCTION: R2Bucket
@@ -122,6 +124,13 @@ type TransformDebugContext = {
 type TransformPipelineResult = {
   image: ImageData
   estimatedPeakPixelBytes: number
+}
+
+type TransformOutput = {
+  body: ArrayBuffer | ReadableStream<Uint8Array>
+  contentLength?: number
+  contentType: string
+  provider: 'cloudflare-images' | 'local'
 }
 
 type AssetTransformStageErrorDetails = {
@@ -299,6 +308,10 @@ const METADATA_SUFFIX = '.json'
 const MAX_CONCURRENT_TRANSFORMS = 2
 const TRANSFORM_QUEUE_RETRY_AFTER_SECONDS = 2
 const MAX_TRANSFORM_DIMENSION = 4096
+// Decode, crop, resize, and codec allocations make sources above this threshold
+// unsafe for the Worker pipeline even when the requested derivative is small.
+const MAX_LOCAL_TRANSFORM_SOURCE_PIXELS = 2_000_000
+const MAX_CLOUDFLARE_IMAGES_BINDING_INPUT_BYTES = 20 * 1024 * 1024
 const MAX_SMARTCROP_SOURCE_PIXELS = 4_000_000
 // Bias toward the staged downscale path before a full-frame decode/resize/encode
 // spikes worker memory on moderately large production images.
@@ -422,6 +435,262 @@ const shouldBlockProductionAutoTransformMiss = (
   request.requestedStage === 'production' &&
   request.format === 'auto' &&
   env.BLOCK_PRODUCTION_AUTO_TRANSFORM_MISS === '1'
+
+/**
+ * Reads raster dimensions from a source header without allocating decoded pixel
+ * buffers. It covers the formats handled by the normal production transform path.
+ *
+ * @param body Compressed source image bytes.
+ * @returns Source dimensions, or null when the format/header is unsupported.
+ */
+const readRasterDimensions = (
+  body: ArrayBuffer,
+): { width: number; height: number } | null => {
+  const bytes = new Uint8Array(body)
+
+  if (
+    bytes.length >= 24 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[12] === 0x49 &&
+    bytes[13] === 0x48 &&
+    bytes[14] === 0x44 &&
+    bytes[15] === 0x52
+  ) {
+    const width = new DataView(body).getUint32(16)
+    const height = new DataView(body).getUint32(20)
+    return width > 0 && height > 0 ? { width, height } : null
+  }
+
+  if (bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8) {
+    let offset = 2
+
+    while (offset + 8 <= bytes.length) {
+      while (offset < bytes.length && bytes[offset] !== 0xff) {
+        offset += 1
+      }
+      while (offset < bytes.length && bytes[offset] === 0xff) {
+        offset += 1
+      }
+
+      const marker = bytes[offset]
+      if (marker === undefined || marker === 0xd9 || marker === 0xda) break
+      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+        offset += 1
+        continue
+      }
+
+      const segmentLength = ((bytes[offset + 1] ?? 0) << 8) | (bytes[offset + 2] ?? 0)
+      if (segmentLength < 2 || offset + 1 + segmentLength > bytes.length) break
+
+      const isStartOfFrame =
+        (marker >= 0xc0 && marker <= 0xc3) ||
+        (marker >= 0xc5 && marker <= 0xc7) ||
+        (marker >= 0xc9 && marker <= 0xcb) ||
+        (marker >= 0xcd && marker <= 0xcf)
+      if (isStartOfFrame) {
+        const height = ((bytes[offset + 4] ?? 0) << 8) | (bytes[offset + 5] ?? 0)
+        const width = ((bytes[offset + 6] ?? 0) << 8) | (bytes[offset + 7] ?? 0)
+        return width > 0 && height > 0 ? { width, height } : null
+      }
+
+      offset += 1 + segmentLength
+    }
+
+    return null
+  }
+
+  if (
+    bytes.length >= 30 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    let offset = 12
+
+    while (offset + 8 <= bytes.length) {
+      const chunkType = String.fromCharCode(
+        bytes[offset] ?? 0,
+        bytes[offset + 1] ?? 0,
+        bytes[offset + 2] ?? 0,
+        bytes[offset + 3] ?? 0,
+      )
+      const chunkSize = new DataView(body).getUint32(offset + 4, true)
+      const dataOffset = offset + 8
+
+      if (dataOffset + chunkSize > bytes.length) break
+
+      if (chunkType === 'VP8X' && chunkSize >= 10) {
+        const width =
+          1 +
+          (bytes[dataOffset + 4] ?? 0) +
+          ((bytes[dataOffset + 5] ?? 0) << 8) +
+          ((bytes[dataOffset + 6] ?? 0) << 16)
+        const height =
+          1 +
+          (bytes[dataOffset + 7] ?? 0) +
+          ((bytes[dataOffset + 8] ?? 0) << 8) +
+          ((bytes[dataOffset + 9] ?? 0) << 16)
+        return width > 0 && height > 0 ? { width, height } : null
+      }
+
+      if (chunkType === 'VP8 ' && chunkSize >= 10) {
+        const width =
+          ((bytes[dataOffset + 6] ?? 0) | ((bytes[dataOffset + 7] ?? 0) << 8)) & 0x3fff
+        const height =
+          ((bytes[dataOffset + 8] ?? 0) | ((bytes[dataOffset + 9] ?? 0) << 8)) & 0x3fff
+        return width > 0 && height > 0 ? { width, height } : null
+      }
+
+      if (chunkType === 'VP8L' && chunkSize >= 5) {
+        const first = bytes[dataOffset + 1] ?? 0
+        const second = bytes[dataOffset + 2] ?? 0
+        const third = bytes[dataOffset + 3] ?? 0
+        const fourth = bytes[dataOffset + 4] ?? 0
+        const width = 1 + (first | ((second & 0x3f) << 8))
+        const height = 1 + ((second >> 6) | (third << 2) | ((fourth & 0x0f) << 10))
+        return width > 0 && height > 0 ? { width, height } : null
+      }
+
+      offset = dataOffset + chunkSize + (chunkSize % 2)
+    }
+  }
+
+  return null
+}
+
+/**
+ * Determines whether a transform should be sent to Cloudflare Images before
+ * the Worker attempts an unsafe full-frame decode.
+ *
+ * @param env Worker bindings and feature flags.
+ * @param source Source bytes and metadata.
+ * @param request Parsed transformation request.
+ * @returns Whether the Cloudflare Images fallback is safe and required.
+ */
+const shouldUseCloudflareImagesFallback = (
+  env: Env,
+  source: SourceAsset,
+  request: TransformRequest & { format: OutputFormat },
+): boolean => {
+  if (env.ENABLE_CLOUDFLARE_IMAGES_FALLBACK !== '1') return false
+  if (source.body.byteLength > MAX_CLOUDFLARE_IMAGES_BINDING_INPUT_BYTES) return false
+  if (
+    request.format !== 'jpeg' &&
+    request.format !== 'png' &&
+    request.format !== 'webp' &&
+    request.format !== 'avif'
+  ) {
+    return false
+  }
+
+  const dimensions = readRasterDimensions(source.body)
+  return (
+    dimensions !== null &&
+    dimensions.width * dimensions.height > MAX_LOCAL_TRANSFORM_SOURCE_PIXELS
+  )
+}
+
+/**
+ * Creates a one-shot stream over already loaded R2 source bytes without making
+ * a second copy in the Worker heap.
+ *
+ * @param body Source image bytes.
+ * @returns Readable stream accepted by the Images binding.
+ */
+const toImageSourceStream = (body: ArrayBuffer): ReadableStream<Uint8Array> =>
+  new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array(body))
+      controller.close()
+    },
+  })
+
+/**
+ * Transforms an already buffered source using Cloudflare Images, keeping all
+ * decoded pixel buffers outside the Worker isolate.
+ *
+ * @param env Worker bindings.
+ * @param source Source image bytes and metadata.
+ * @param request Parsed request with a resolved output format.
+ * @returns Streaming transformed output suitable for R2 persistence and delivery.
+ */
+const transformSourceWithCloudflareImages = async (
+  env: Env,
+  source: SourceAsset,
+  request: TransformRequest & { format: OutputFormat },
+): Promise<TransformOutput> => {
+  const targetWidth = request.width ?? request.height
+  const targetHeight = request.height ?? request.width
+  const transformer = env.IMAGES.input(toImageSourceStream(source.body))
+  const transformed =
+    targetWidth || targetHeight
+      ? transformer.transform({
+          ...(targetWidth ? { width: targetWidth } : {}),
+          ...(targetHeight ? { height: targetHeight } : {}),
+          fit:
+            request.cropMode === 'c_fill' || request.cropMode === 'c_thumb'
+              ? 'cover'
+              : 'contain',
+          gravity: request.gravity === 'g_auto' ? 'auto' : 'center',
+        })
+      : transformer
+  const output = await transformed.output({
+    format: `image/${request.format}` as
+      | 'image/avif'
+      | 'image/jpeg'
+      | 'image/png'
+      | 'image/webp',
+    ...(request.format === 'jpeg' ||
+    request.format === 'webp' ||
+    request.format === 'avif'
+      ? { quality: resolveQuality(request.quality, request.format) }
+      : {}),
+  })
+
+  return {
+    body: output.image(),
+    contentType: output.contentType(),
+    provider: 'cloudflare-images',
+  }
+}
+
+/**
+ * Splits a streaming fallback response so the client and R2 persistence can
+ * consume it independently, while ArrayBuffer results retain the normal path.
+ *
+ * @param body Encoded transform output.
+ * @param method HTTP request method.
+ * @returns Client response and derived-cache bodies.
+ */
+const splitTransformOutputBody = (
+  body: TransformOutput['body'],
+  method: string,
+): {
+  clientBody: ArrayBuffer | ReadableStream<Uint8Array> | null
+  derivedBody: ArrayBuffer | ReadableStream<Uint8Array>
+} => {
+  if (body instanceof ArrayBuffer) {
+    return {
+      clientBody: method === 'HEAD' ? null : body,
+      derivedBody: body,
+    }
+  }
+
+  if (method === 'HEAD') {
+    return { clientBody: null, derivedBody: body }
+  }
+
+  const [clientBody, derivedBody] = body.tee()
+  return { clientBody, derivedBody }
+}
 
 const ensureResizeReady = (() => {
   let ready: Promise<void> | null = null
@@ -2241,18 +2510,27 @@ const handleTransformRequest = async (
     }
 
     const transformStartedAt = Date.now()
-    let transformed: { body: ArrayBuffer; contentType: string }
+    const resolvedTransformRequest = {
+      ...transformRequest,
+      version: resolvedVersion,
+      format: outputFormat,
+    }
+    const usesCloudflareImagesFallback = shouldUseCloudflareImagesFallback(
+      env,
+      source,
+      resolvedTransformRequest,
+    )
+    let transformed: TransformOutput
 
     try {
-      transformed = await transformSourceAsset(
-        source,
-        {
-          ...transformRequest,
-          version: resolvedVersion,
-          format: outputFormat,
-        },
-        debug,
-      )
+      // Keep the costly, platform-billed path limited to sources that would exceed the local decoder budget.
+      transformed = usesCloudflareImagesFallback
+        ? await transformSourceWithCloudflareImages(
+            env,
+            source,
+            resolvedTransformRequest,
+          )
+        : await transformSourceAsset(source, resolvedTransformRequest, debug)
     } catch (error) {
       const stageError = error instanceof AssetTransformStageError ? error : null
 
@@ -2301,8 +2579,28 @@ const handleTransformRequest = async (
       })
     }
 
+    if (usesCloudflareImagesFallback) {
+      const dimensions = readRasterDimensions(source.body)
+      console.warn(
+        JSON.stringify({
+          event: 'asset-transform-cloudflare-images-fallback',
+          publicId: transformRequest.publicId,
+          sourceBytes: source.body.byteLength,
+          sourcePixels:
+            dimensions === null ? null : dimensions.width * dimensions.height,
+          sourceStage: source.stage,
+          transform: canonical,
+        }),
+      )
+    }
+
+    const { clientBody, derivedBody } = splitTransformOutputBody(
+      transformed.body,
+      request.method,
+    )
+
     const response = withImageDebugHeaders(
-      new Response(request.method === 'HEAD' ? null : transformed.body, {
+      new Response(clientBody, {
         headers: {
           'cache-control': CACHE_CONTROL_IMMUTABLE,
           'content-type': transformed.contentType,
@@ -2325,7 +2623,9 @@ const handleTransformRequest = async (
 
     maybeRecordAssetAnalytics(env, request, response, {
       cacheStatus: 'transform-miss',
-      contentLength: transformed.body.byteLength,
+      ...(transformed.contentLength !== undefined
+        ? { contentLength: transformed.contentLength }
+        : {}),
       outputFormat,
       publicId: transformRequest.publicId,
       requestedStage: transformRequest.requestedStage,
@@ -2338,7 +2638,7 @@ const handleTransformRequest = async (
     if (!bypassCacheReads) {
       ctx.waitUntil(
         Promise.all([
-          derivedBucket.put(derivedKey, transformed.body, {
+          derivedBucket.put(derivedKey, derivedBody, {
             httpMetadata: {
               contentType: transformed.contentType,
               cacheControl: CACHE_CONTROL_IMMUTABLE,
@@ -2349,6 +2649,7 @@ const handleTransformRequest = async (
               publicId: transformRequest.publicId,
               version: resolvedVersion ? String(resolvedVersion) : 'latest',
               canonicalTransform: canonical,
+              transformProvider: transformed.provider,
               generatedAt: new Date().toISOString(),
             },
           }),
@@ -2922,7 +3223,7 @@ const transformSourceAsset = async (
   source: SourceAsset,
   request: TransformRequest & { format: OutputFormat },
   debug: TransformDebugContext,
-): Promise<{ body: ArrayBuffer; contentType: string }> => {
+): Promise<TransformOutput> => {
   await ensureResizeReady()
 
   logTransformDebug(debug, 'transform-start', {
@@ -2940,12 +3241,16 @@ const transformSourceAsset = async (
       return {
         body: source.body,
         contentType: 'image/svg+xml',
+        contentLength: source.body.byteLength,
+        provider: 'local',
       }
     }
 
     return {
       body: source.body,
       contentType: 'image/svg+xml',
+      contentLength: source.body.byteLength,
+      provider: 'local',
     }
   }
 
@@ -2972,6 +3277,8 @@ const transformSourceAsset = async (
   return {
     body: encoded.body,
     contentType: encoded.contentType,
+    contentLength: encoded.body.byteLength,
+    provider: 'local',
   }
 }
 

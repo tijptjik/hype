@@ -66,6 +66,7 @@
     "stage:asset-worker:fixtures": "bun run scripts/cloud/stage-asset-worker-probe-fixtures.ts",
     "test:asset-worker:memory": "bun run scripts/cloud/probe-asset-worker-memory.ts",
     "r2:normalize:raw": "bun run scripts/cloud/normalize-r2-raw-images.ts",
+    "r2:resize:raw": "bun run scripts/cloud/normalize-r2-raw-images.ts --mode apply",
     "r2:sync:object": "bun run scripts/cloud/sync-r2-object-local.ts",
     "render:map": "bun run scripts/generate-map-renders.ts",
     "render:map:styles": "bun run i18n:build && bun run scripts/generate-map-style-renders.ts",
