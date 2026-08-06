@@ -11,6 +11,7 @@ import '$lib/styles/map.css'
 // TYPES
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { MapMarkerTheme } from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -33,6 +34,8 @@ export const MARKER_STYLE_VARIANTS = ['image', 'dot'] as const
 
 export type MarkerStyleVariant = (typeof MARKER_STYLE_VARIANTS)[number]
 
+const DEFAULT_MARKER_THEME: MapMarkerTheme = 'ghostery'
+
 type MarkerImageDiagnostics = {
   created: number
   decodeFailed: number
@@ -40,6 +43,23 @@ type MarkerImageDiagnostics = {
   failed: number
   loaded: number
   startedAt: number
+}
+
+type MarkerInstance = {
+  addTo: (map: MaplibreMap) => MarkerInstance
+  getElement: () => HTMLElement
+  remove: () => void
+  setLngLat: (lngLat: [number, number]) => MarkerInstance
+}
+
+type MapLibreMarkerFactory = {
+  Marker: new (options: {
+    anchor?: 'center'
+    clickTolerance?: number
+    color?: string
+    draggable?: boolean
+    element: HTMLElement
+  }) => MarkerInstance
 }
 
 /**
@@ -159,24 +179,45 @@ function getFeatureMarkerImageSrc(feature: FeatureFromCollection): string | null
   })
 }
 
+/**
+ * Resolves one feature's marker treatment from its parent project's map style.
+ *
+ * @param feature - Feature being rendered as a marker.
+ * @param markerThemesByProjectId - Project map-style themes indexed by project id.
+ * @returns Project-backed theme, or the default theme when project data is unavailable.
+ */
+function getFeatureMarkerTheme(
+  feature: FeatureFromCollection,
+  markerThemesByProjectId: ReadonlyMap<string, MapMarkerTheme>,
+): MapMarkerTheme {
+  return markerThemesByProjectId.get(feature.projectId) ?? DEFAULT_MARKER_THEME
+}
+
 function createFeatureMarkerElement(
   feature: FeatureFromCollection,
   markerStyle: MarkerStyleVariant,
+  markerTheme: MapMarkerTheme,
   diagnostics?: MarkerImageDiagnostics,
 ): HTMLDivElement {
   if (markerStyle === 'dot') {
-    return createMarkerElement()
+    const marker = createMarkerElement()
+    marker.classList.add(`marker-theme--${markerTheme}`)
+    marker.dataset.markerSignature = `dot:${markerTheme}`
+    return marker
   }
 
   const imageSrc = getFeatureMarkerImageSrc(feature)
   if (!imageSrc) {
-    return createMarkerElement()
+    const marker = createMarkerElement()
+    marker.classList.add(`marker-theme--${markerTheme}`)
+    marker.dataset.markerSignature = `dot:${markerTheme}`
+    return marker
   }
 
   const container = document.createElement('div')
-  container.className = 'marker-container marker-container--feature marker-fade-in'
+  container.className = `marker-container marker-container--feature marker-theme--${markerTheme} marker-fade-in`
   container.dataset.type = 'marker'
-  container.dataset.markerSignature = imageSrc
+  container.dataset.markerSignature = `${imageSrc}:${markerTheme}`
 
   const innerContainer = document.createElement('div')
   innerContainer.className = 'marker-inner marker-inner--feature'
@@ -238,13 +279,15 @@ function createFeatureMarkerElement(
  * @param features - Features that should currently render markers.
  * @param maplibre - MapLibre namespace used to construct markers.
  * @param markerStyle - Visual marker variant to render.
+ * @param markerThemesByProjectId - Palette-aware treatments supplied by each feature's project.
  * @returns Cleanup function that removes all managed markers.
  */
 export function updateMarkers(
   appCtx: AppCtx,
   features: FeatureFromCollection[],
-  maplibre: any,
+  maplibre: MapLibreMarkerFactory,
   markerStyle: MarkerStyleVariant = 'image',
+  markerThemesByProjectId: ReadonlyMap<string, MapMarkerTheme> = new Map(),
 ) {
   if (!appCtx.map) return
   const diagnostics = isMarkerBootstrapDebugEnabled()
@@ -275,12 +318,13 @@ export function updateMarkers(
   features.forEach(feature => {
     if (feature.geometry?.type === 'Point') {
       const [lng, lat] = feature.geometry.coordinates
+      const markerTheme = getFeatureMarkerTheme(feature, markerThemesByProjectId)
       const existingMarker = appCtx.state.markers.get(feature.id)
       if (existingMarker) {
         const nextMarkerSignature =
           markerStyle === 'dot'
-            ? 'dot'
-            : (getFeatureMarkerImageSrc(feature) ?? 'default')
+            ? `dot:${markerTheme}`
+            : `${getFeatureMarkerImageSrc(feature) ?? 'dot'}:${markerTheme}`
         const currentMarkerSignature =
           existingMarker.getElement().dataset.markerSignature ?? 'default'
         // Skip churn when the rendered marker image/dot state is unchanged.
@@ -292,7 +336,12 @@ export function updateMarkers(
         appCtx.state.markers.delete(feature.id)
       }
       // Create new marker
-      const el = createFeatureMarkerElement(feature, markerStyle, diagnostics)
+      const el = createFeatureMarkerElement(
+        feature,
+        markerStyle,
+        markerTheme,
+        diagnostics,
+      )
       // Add data attributes to all elements in the marker
       const addDataToElements = (element: Element) => {
         element.setAttribute('data-type', 'marker')
@@ -402,7 +451,7 @@ export function removeMarkerClass(
  * @returns Newly created marker instance.
  */
 export function addAddressMarker(
-  maplibre: any,
+  maplibre: MapLibreMarkerFactory,
   map: MaplibreMap,
   lngLat: [number, number],
 ) {

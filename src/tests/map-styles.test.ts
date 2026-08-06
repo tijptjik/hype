@@ -5,6 +5,7 @@ import {
   buildCatalogMapStyle,
   buildMapStyle,
   getDefaultMapStyleKey,
+  listMapStyleCatalog,
 } from '$lib/map/styles'
 import { getMapStyleRenderAssetPath } from '$lib/map/styles/render.shared'
 
@@ -21,6 +22,20 @@ describe('map styles', () => {
     expect(style.sources?.['hongkong-latest']?.url).toBe(
       'https://tiles.saanseoi.hk/hongkong-latest.json',
     )
+  })
+
+  it('matches each map background to its primary water colour', () => {
+    for (const { key } of listMapStyleCatalog()) {
+      const style = buildCatalogMapStyle(key) as {
+        layers?: Array<{ id?: string; paint?: Record<string, unknown> }>
+      }
+      const backgroundLayer = style.layers?.find(layer => layer.id === 'background')
+      const waterLayer = style.layers?.find(layer => layer.id === 'water')
+
+      expect(backgroundLayer?.paint?.['background-color']).toBe(
+        waterLayer?.paint?.['fill-color'],
+      )
+    }
   })
 
   it('uses the stage-aware asset route for map-style previews', () => {
@@ -43,6 +58,13 @@ describe('map styles', () => {
     expect(getUserMarkerStyleVariant('dot')).toBe('dot')
   })
 
+  it('assigns a marker theme to every map style', () => {
+    expect(listMapStyleCatalog().every(style => Boolean(style.markerTheme))).toBe(true)
+    expect(
+      listMapStyleCatalog().find(style => style.key === 'hyperpop')?.markerTheme,
+    ).toBe('hyperpop')
+  })
+
   it('hides symbol layers when labels are disabled', () => {
     const style = buildMapStyle('hyper', { noLabels: true }) as {
       layers?: Array<{ type?: string; layout?: Record<string, unknown> }>
@@ -57,6 +79,7 @@ describe('map styles', () => {
     const styleKeys = [
       'hyper',
       'hyperLight',
+      'hyperpop',
       'ghostery',
       'neonmaster',
       'neorange',
@@ -298,6 +321,116 @@ describe('map styles', () => {
     expect(railLayer?.layout?.visibility).toBe('visible')
   })
 
+  it('combines Genesis road geometry with the Hype UI palette in Hyperpop', () => {
+    const style = buildMapStyle('hyperpop') as {
+      name?: string
+      layers?: Array<{
+        id?: string
+        minzoom?: number
+        type?: string
+        'source-layer'?: string
+        filter?: unknown[]
+        paint?: Record<string, unknown>
+      }>
+    }
+
+    const majorRoad = style.layers?.find(layer => layer.id === 'roads_major')
+    const minorRoad = style.layers?.find(layer => layer.id === 'roads_minor')
+    const highway = style.layers?.find(layer => layer.id === 'roads_highway')
+    const path = style.layers?.find(layer => layer.id === 'roads_other')
+    const casing = style.layers?.find(layer => layer.id === 'roads_major_casing_late')
+    const buildingOutline = style.layers?.find(
+      layer => layer.id === 'buildings_outline',
+    )
+    const boundaries = style.layers?.find(layer => layer.id === 'boundaries')
+    const coastlineGutter = style.layers?.find(layer => layer.id === 'coastline_gutter')
+    const coastline = style.layers?.find(layer => layer.id === 'coastline')
+    const regionalBorderGutter = style.layers?.find(
+      layer => layer.id === 'regional_border_gutter',
+    )
+    const regionalBorder = style.layers?.find(layer => layer.id === 'regional_border')
+    const roadLabel = style.layers?.find(layer => layer.id === 'roads_labels_major')
+    const labelGlow = style.layers?.find(
+      layer => layer.id === 'roads_labels_major__glow',
+    )
+
+    expect(style.name).toBe('Hyperpop')
+    expect(majorRoad?.paint?.['line-color']).toBe('#f04d7f')
+    expect(minorRoad?.paint?.['line-color']).toBe('#d653b9')
+    expect(highway?.paint?.['line-color']).toBe('#d653b9')
+    expect(casing?.paint?.['line-color']).toBe('#7042f0')
+    expect(casing?.paint?.['line-gap-width']).toEqual([
+      'interpolate',
+      ['exponential', 1.6],
+      ['zoom'],
+      6,
+      0,
+      12,
+      1.6,
+      15,
+      3,
+      18,
+      13,
+    ])
+    expect(path?.minzoom).toBe(17)
+    expect(buildingOutline?.minzoom).toBe(17)
+    expect(buildingOutline?.paint?.['line-blur']).toBe(0.35)
+    expect(boundaries?.layout?.visibility).toBe('none')
+    expect(style.layers?.find(layer => layer.id === 'earth')?.filter).toEqual([
+      'all',
+      ['==', '$type', 'Polygon'],
+      ['==', 'kind', 'earth'],
+      ['==', 'saanseoi:base', true],
+    ])
+    expect(style.layers?.find(layer => layer.id === 'water')?.filter).toEqual([
+      'all',
+      ['==', '$type', 'Polygon'],
+      ['==', 'kind', 'ocean'],
+      ['==', 'sort_rank', 200],
+      ['==', 'saanseoi:base', true],
+    ])
+    expect(coastlineGutter?.type).toBe('line')
+    expect(coastlineGutter?.['source-layer']).toBe('water')
+    expect(coastlineGutter?.filter).toEqual([
+      'all',
+      ['==', '$type', 'LineString'],
+      ['==', 'kind', 'coastline'],
+      ['==', 'saanseoi:base', true],
+    ])
+    expect(coastlineGutter?.paint?.['line-color']).toBe('#101214')
+    expect(coastline?.type).toBe('line')
+    expect(coastline?.['source-layer']).toBe('water')
+    expect(coastline?.filter).toEqual([
+      'all',
+      ['==', '$type', 'LineString'],
+      ['==', 'kind', 'coastline'],
+      ['==', 'saanseoi:base', true],
+    ])
+    expect(coastline?.paint?.['line-color']).toBe('#7042f0')
+    expect(regionalBorderGutter?.type).toBe('line')
+    expect(regionalBorderGutter?.['source-layer']).toBe('boundaries')
+    expect(regionalBorderGutter?.filter).toEqual([
+      'all',
+      ['==', '$type', 'LineString'],
+      ['==', 'kind', 'region'],
+      ['==', 'kind_detail', 4],
+      ['==', 'saanseoi:region_border', true],
+    ])
+    expect(regionalBorderGutter?.paint?.['line-color']).toBe('#101214')
+    expect(regionalBorder?.type).toBe('line')
+    expect(regionalBorder?.['source-layer']).toBe('boundaries')
+    expect(regionalBorder?.filter).toEqual([
+      'all',
+      ['==', '$type', 'LineString'],
+      ['==', 'kind', 'region'],
+      ['==', 'kind_detail', 4],
+      ['==', 'saanseoi:region_border', true],
+    ])
+    expect(regionalBorder?.paint?.['line-color']).toBe('#7042f0')
+    expect(roadLabel?.paint?.['text-color']).toBe('#d4dbff')
+    expect(labelGlow?.paint?.['text-halo-color']).toBe('rgba(240, 77, 127, 0.72)')
+  })
+
   it('gives Sin a calmer cherry, cobalt and plum palette', () => {
     const style = buildMapStyle('sin') as {
       layers?: Array<{ id?: string; paint?: Record<string, unknown> }>
@@ -311,7 +444,7 @@ describe('map styles', () => {
     )
     const waterLayer = style.layers?.find(layer => layer.id === 'water')
 
-    expect(backgroundLayer?.paint?.['background-color']).toBe('#25183F')
+    expect(backgroundLayer?.paint?.['background-color']).toBe('#102C66')
     expect(roadsLayer?.paint?.['line-color']).toBe('#F26C97')
     expect(highwayLayer?.paint?.['line-color']).toBe('#FFA45C')
     expect(casingLayer?.paint?.['line-color']).toBe('#8F376E')

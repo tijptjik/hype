@@ -4,6 +4,7 @@ import { buildGhosteryLegacyStyle } from './definitions/ghostery-legacy'
 import { buildHyperStyle } from './definitions/hyper'
 import { buildHyperLightStyle } from './definitions/hyperLight'
 import { buildHyperAdminStyle } from './definitions/hyperAdmin'
+import { buildHyperpopStyle } from './definitions/hyperpop'
 import { buildNeonmasterStyle } from './definitions/neonmaster'
 import { buildneorangeStyle } from './definitions/neorange'
 import { buildGenesisStyle } from './definitions/genesis'
@@ -17,7 +18,7 @@ import {
 } from './definitions/common'
 import { buildProtomapsFlavorStyle } from './definitions/protomaps'
 import { getMapStyleCatalogCopy } from './i18n'
-import type { MapStyleCatalogKey } from '$lib/types'
+import type { MapMarkerTheme, MapStyleCatalogKey } from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -42,6 +43,7 @@ export type MapStyleCatalogEntry<TCode extends string = string> = Omit<
   hubCode?: string | null
   organisationCode?: string | null
   basemapVariant: MapStyleVariant | null
+  markerTheme: MapMarkerTheme
   showSymbols: boolean
 }
 
@@ -57,6 +59,12 @@ const PROTOMAPS_FLAVOR_ENTRIES = NAMED_PROTOMAPS_FLAVORS.map(flavorName => ({
   buildStyle: options =>
     buildProtomapsFlavorStyle(flavorName as NamedProtomapsFlavor, options),
   basemapVariant: flavorName as MapStyleVariant,
+  markerTheme:
+    flavorName === 'light' || flavorName === 'white'
+      ? 'light'
+      : flavorName === 'dark' || flavorName === 'black'
+        ? 'dark'
+        : 'ghostery',
   showSymbols: flavorName === 'light' || flavorName === 'dark',
 })) satisfies ReadonlyArray<MapStyleCatalogEntry>
 
@@ -67,6 +75,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('hyper', 'en').description,
     buildStyle: buildHyperStyle,
     basemapVariant: 'dark',
+    markerTheme: 'dark',
     showSymbols: true,
   },
   {
@@ -75,6 +84,16 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('hyperLight', 'en').description,
     buildStyle: buildHyperLightStyle,
     basemapVariant: 'light',
+    markerTheme: 'light',
+    showSymbols: true,
+  },
+  {
+    key: 'hyperpop',
+    name: getMapStyleCatalogCopy('hyperpop', 'en').name,
+    description: getMapStyleCatalogCopy('hyperpop', 'en').description,
+    buildStyle: buildHyperpopStyle,
+    basemapVariant: 'dark',
+    markerTheme: 'hyperpop',
     showSymbols: true,
   },
   {
@@ -85,6 +104,7 @@ export const MAP_STYLE_CATALOG = [
     default: true,
     hubCode: 'hkghostsigns',
     basemapVariant: 'dark',
+    markerTheme: 'ghostery',
     showSymbols: true,
   },
   {
@@ -94,6 +114,7 @@ export const MAP_STYLE_CATALOG = [
     buildStyle: buildGhosteryLegacyStyle,
     hubCode: 'hkghostsigns',
     basemapVariant: null,
+    markerTheme: 'ghostery',
     showSymbols: false,
   },
   {
@@ -102,6 +123,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('neonmaster', 'en').description,
     buildStyle: buildNeonmasterStyle,
     basemapVariant: 'dark',
+    markerTheme: 'neon',
     showSymbols: true,
   },
   {
@@ -110,6 +132,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('neorange', 'en').description,
     buildStyle: buildneorangeStyle,
     basemapVariant: 'dark',
+    markerTheme: 'neon',
     showSymbols: true,
   },
   {
@@ -118,6 +141,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('genesis', 'en').description,
     buildStyle: buildGenesisStyle,
     basemapVariant: 'dark',
+    markerTheme: 'dark',
     showSymbols: true,
   },
   {
@@ -126,6 +150,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('sin', 'en').description,
     buildStyle: buildSinStyle,
     basemapVariant: 'dark',
+    markerTheme: 'dark',
     showSymbols: true,
   },
   {
@@ -134,6 +159,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('rosepunk', 'en').description,
     buildStyle: buildRosepunkStyle,
     basemapVariant: 'dark',
+    markerTheme: 'rosepunk',
     showSymbols: true,
   },
   {
@@ -143,6 +169,7 @@ export const MAP_STYLE_CATALOG = [
     buildStyle: buildBreadlineStyle,
     hubCode: 'breadline',
     basemapVariant: 'light',
+    markerTheme: 'light',
     showSymbols: true,
   },
   ...PROTOMAPS_FLAVOR_ENTRIES,
@@ -153,6 +180,7 @@ export const MAP_STYLE_CATALOG = [
     buildStyle: buildHyperAdminStyle,
     register: false,
     basemapVariant: 'dark',
+    markerTheme: 'dark',
     showSymbols: true,
   },
 ] as const satisfies ReadonlyArray<MapStyleCatalogEntry>

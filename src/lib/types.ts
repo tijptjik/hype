@@ -1209,6 +1209,7 @@ export type LocaleExtended = LocaleKey | 'core'
 export type MapStyleCatalogKey =
   | 'hyper'
   | 'hyperLight'
+  | 'hyperpop'
   | 'ghostery'
   | 'ghostery-legacy'
   | 'neonmaster'
@@ -1223,6 +1224,21 @@ export type MapStyleCatalogKey =
   | 'protomaps-grayscale'
   | 'protomaps-black'
   | 'hyperAdmin'
+
+/**
+ * Visual treatment applied to DOM markers for a selected map style.
+ *
+ * Keep this separate from the user's image/dot preference: the preference
+ * selects a marker format, while the theme keeps that format legible within
+ * its map's palette.
+ */
+export type MapMarkerTheme =
+  | 'light'
+  | 'dark'
+  | 'ghostery'
+  | 'hyperpop'
+  | 'neon'
+  | 'rosepunk'
 
 export type TranslatedValue = {
   value: string

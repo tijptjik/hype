@@ -4,7 +4,11 @@ import {
   REGISTERED_MAP_STYLE_CATALOG,
   type MapStyleCatalogEntry,
 } from './catalog'
-import { applySpriteVariant, type MapStyleDefinition } from './definitions/common'
+import {
+  applySpriteVariant,
+  applyWaterColorToBackground,
+  type MapStyleDefinition,
+} from './definitions/common'
 // TYPES
 import type { StyleSpecification } from 'maplibre-gl'
 import type { LocaleKey, MapStyleCatalogKey } from '../../types'
@@ -32,6 +36,7 @@ const REGISTERED_MAP_STYLE_DEFINITIONS = REGISTERED_MAP_STYLE_CATALOG.map(entry 
   label: entry.name,
   description: entry.description,
   basemapVariant: entry.basemapVariant,
+  markerTheme: entry.markerTheme,
   showSymbols: entry.showSymbols,
   buildStyle: entry.buildStyle,
 })) as Array<MapStyleDefinition<(typeof REGISTERED_MAP_STYLE_CATALOG)[number]['key']>>
@@ -128,10 +133,12 @@ export const buildCatalogMapStyle = (
     throw new Error(`Unknown map style catalog key: ${key}`)
   }
 
-  return applySpriteVariant(definition.buildStyle(options), {
-    basemapVariant: definition.basemapVariant,
-    showSymbols: definition.showSymbols,
-  })
+  return applyWaterColorToBackground(
+    applySpriteVariant(definition.buildStyle(options), {
+      basemapVariant: definition.basemapVariant,
+      showSymbols: definition.showSymbols,
+    }),
+  )
 }
 
 export type MapStyleAssetRecord = {
@@ -155,10 +162,12 @@ export const getMapStyleAssetRecord = async (
   key: MapStyleKey,
 ): Promise<MapStyleAssetRecord> => {
   const definition = getMapStyleDefinition(key)
-  const style = applySpriteVariant(definition.buildStyle(), {
-    basemapVariant: definition.basemapVariant,
-    showSymbols: definition.showSymbols,
-  })
+  const style = applyWaterColorToBackground(
+    applySpriteVariant(definition.buildStyle(), {
+      basemapVariant: definition.basemapVariant,
+      showSymbols: definition.showSymbols,
+    }),
+  )
   const json = `${JSON.stringify(style, null, 2)}\n`
   const hash = await toHash(json)
   const shortHash = hash.slice(0, 12)
