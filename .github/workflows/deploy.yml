@@ -92,6 +92,9 @@ jobs:
     steps:
       - name: 'GIT :: Checkout'
         uses: actions/checkout@v4
+        with:
+          # The change check below compares the complete pushed range, not just HEAD^.
+          fetch-depth: 0
 
       - name: 'INSTALL :: Bun'
         uses: oven-sh/setup-bun@v2
@@ -111,6 +114,27 @@ jobs:
 
       - name: 'VERIFY :: SvelteKit Patch'
         run: bun run verify:sveltekit-patch
+
+      - name: 'CHECK :: Asset Memory Repair Changes'
+        id: asset-memory-repair-changes
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if git diff --quiet "$BEFORE_SHA" "$CURRENT_SHA" -- \
+            workers/asset-memory-repair \
+            package.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'DEPLOY :: Asset Memory Repair Worker'
+        if: steps.asset-memory-repair-changes.outputs.changed == 'true'
+        run: bun run deploy:asset-memory-repair:prod
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: 'CACHE :: Restore Build (from Preview)'
         uses: actions/cache@v3
