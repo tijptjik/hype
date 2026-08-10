@@ -116,6 +116,8 @@ function createAuthInstance(
     }),
     // ADVANCES SETTINGS
     advanced: {
+      // Preserve shared cookie attributes required for secure embedded sessions.
+      ...authConfig.advanced,
       ipAddress: {
         ipAddressHeaders: ['cf-connecting-ip'],
       },
