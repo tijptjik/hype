@@ -62,3 +62,31 @@ describe('OAuth callback errors', () => {
     expect(auth.options.onAPIError?.errorURL).toBe('http://localhost:5173/signin')
   })
 })
+
+describe('auth instance configuration', () => {
+  it('preserves embedded-session cookie attributes alongside request IP settings', () => {
+    const auth = getAuthForRequest(
+      new Headers({
+        host: 'localhost:5173',
+        'x-forwarded-proto': 'http',
+      }),
+      {
+        DB: {} as MiniflareD1Database,
+        AUTH_SECRET: 'test-secret-that-is-long-enough-for-better-auth',
+        AUTH_GOOGLE_ID: '',
+        AUTH_GOOGLE_SECRET: '',
+        AUTH_FACEBOOK_ID: '',
+        AUTH_FACEBOOK_SECRET: '',
+      },
+    )
+
+    expect(auth.options.advanced?.defaultCookieAttributes).toMatchObject({
+      sameSite: 'none',
+      secure: true,
+      partitioned: true,
+    })
+    expect(auth.options.advanced?.ipAddress?.ipAddressHeaders).toEqual([
+      'cf-connecting-ip',
+    ])
+  })
+})
