@@ -16,6 +16,16 @@ describe('authConfig user.additionalFields', () => {
   })
 })
 
+describe('authConfig embedded sessions', () => {
+  it('permits secure guest-session cookies in cross-site iframes', () => {
+    expect(authConfig.advanced.defaultCookieAttributes).toMatchObject({
+      sameSite: 'none',
+      secure: true,
+      partitioned: true,
+    })
+  })
+})
+
 describe('authConfig account.accountLinking', () => {
   it('allows accounts with a different email address to be linked', () => {
     expect(authConfig.account.accountLinking.allowDifferentEmails).toBe(true)
