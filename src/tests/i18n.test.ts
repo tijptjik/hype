@@ -9,9 +9,13 @@ import enMessages from '../../messages/en.json'
 import zhHantMessages from '../../messages/zh-hant.json'
 import zhHansMessages from '../../messages/zh-hans.json'
 
+const setTestLocale = (locale: Parameters<typeof setLocale>[0]): void => {
+  void setLocale(locale, { reload: false })
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
-  setLocale('en')
+  setTestLocale('en')
 })
 
 /**
@@ -205,7 +209,7 @@ describe('getI18n', () => {
   }
 
   it('hides generated values by default', () => {
-    setLocale('en')
+    setLocale('en', { reload: false })
 
     const value = getI18n(
       {
@@ -225,7 +229,7 @@ describe('getI18n', () => {
   })
 
   it('returns generated values when the gen-field check is skipped', () => {
-    setLocale('en')
+    setLocale('en', { reload: false })
 
     const value = getI18n(
       {
@@ -246,7 +250,7 @@ describe('getI18n', () => {
   })
 
   it('uses user fallback locales when the active locale is missing', () => {
-    setLocale('zh-hans')
+    setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -269,7 +273,7 @@ describe('getI18n', () => {
   })
 
   it('returns generated fallback-locale values when machine translation is allowed', () => {
-    setLocale('zh-hans')
+    setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -293,7 +297,7 @@ describe('getI18n', () => {
   })
 
   it('prefers placeholders over generated values when that setting is enabled', () => {
-    setLocale('zh-hans')
+    setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -318,7 +322,7 @@ describe('getI18n', () => {
   })
 
   it('returns the provided fallback when user preferences are omitted', () => {
-    setLocale('zh-hans')
+    setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -337,7 +341,7 @@ describe('getI18n', () => {
   })
 
   it('preserves an explicit empty fallback for caller-managed fallback chains', () => {
-    setLocale('en')
+    setLocale('en', { reload: false })
 
     const value = getI18n(
       {
