@@ -1,4 +1,4 @@
-import type { Map, LngLatLike } from 'maplibre-gl'
+import type { LngLatLike, Map as MapLibreMap } from 'maplibre-gl'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -96,7 +96,7 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
 
     */
     const cachedpanto = function (
-      this: Map,
+      this: MapLibreMap,
       lnglat: LngLatLike,
       options: MaplibreOptions = {},
     ) {
@@ -219,6 +219,8 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
         return null
       }
 
+      const isStyleLoaded = this.isStyleLoaded()
+
       // Filter and map sources with type checking
       const _sources = Object.entries(sources)
         .filter(([_, source]) => {
@@ -239,7 +241,9 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
         .map(([sourceId, _]) => {
           const source = this.getSource(sourceId)
           if (!source?.tiles?.[0]) {
-            console.warn(`Invalid tiles in source: ${sourceId}`)
+            if (isStyleLoaded) {
+              console.warn(`Invalid tiles in source: ${sourceId}`)
+            }
             return null
           }
           return source.tiles[0]
@@ -247,7 +251,9 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
         .filter((tile): tile is string => tile !== null)
 
       if (_sources.length === 0) {
-        console.warn('No valid tile sources found')
+        if (isStyleLoaded) {
+          console.warn('No valid tile sources found')
+        }
         return null
       }
       return _sources
@@ -274,8 +280,8 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
           : { x: 0, y: 0 }
         const mercatorCoord = _lib.MercatorCoordinate.fromLngLat(this.getCenter())
         const offsetMercator = new _lib.MercatorCoordinate(
-          offsetAsPoint.x / this.transform.width,
-          offsetAsPoint.y / this.transform.height,
+          offsetAsPoint.x / _dimensions[0],
+          offsetAsPoint.y / _dimensions[1],
         )
         const pointAtOffset = {
           x: mercatorCoord.x + offsetMercator.x,
@@ -314,6 +320,11 @@ export const monkeyPatchMapLibre = (maplibregl?: MapLibre): ExtendedMapLibre => 
 
     // build and manage the preloader worker
     const precache_run = function (this: typeof _lib.Map, o: MaplibreOptions) {
+      // Wait for MapLibre to resolve TileJSON metadata before prefetching tiles.
+      if (!o.sources?.length) {
+        return
+      }
+
       if (window === self && !this.precache_worker) {
         this.precache_worker = new Worker(
           new URL('./maplibrePreloadWorker.ts', import.meta.url),
