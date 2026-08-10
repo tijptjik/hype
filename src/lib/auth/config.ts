@@ -16,6 +16,20 @@ export const authConfig = {
     },
   },
 
+  // EMBEDDED HYPE SESSIONS
+  // Guest bootstrap runs inside partner iframes, where modern browsers reject
+  // Better Auth's default `SameSite=Lax` cookies. Authentication endpoints
+  // retain their trusted-origin checks; these attributes only allow the secure
+  // session credential to be stored and sent from that embedded context. The
+  // partition also keeps each embedding site in an isolated guest session.
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: 'none' as const,
+      secure: true,
+      partitioned: true,
+    },
+  },
+
   // RATE LIMITS
   rateLimit: {
     enabled: true,
