@@ -4,6 +4,8 @@ import { untrack } from 'svelte'
 import { page } from '$app/state'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
+// SERVICES
+import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
 // COMPONENTS
 import FlightSurface from '$lib/bits/patterns/layout/app/components/FlightSurface.svelte'
 
@@ -34,13 +36,12 @@ $effect(() => {
   const targetKey = `${layerId}:${resolvedProjectId}:${projectCode}`
   if (untrack(() => appliedTarget) === targetKey) return
 
-  const selectedLayerIds = layerId
-    ? appCtx.state.resources.layer
-        .filter(layer => layer.id === layerId)
-        .map(layer => layer.id)
-    : appCtx.state.resources.layer
-        .filter(layer => layer.projectId === resolvedProjectId)
-        .map(layer => layer.id)
+  const selectedLayerIds =
+    getMapResourceDeepLinkLayerIds(
+      page.url.searchParams,
+      appCtx.state.resources.layer,
+      appCtx.state.resources.project,
+    ) ?? []
 
   appliedTarget = targetKey
 
