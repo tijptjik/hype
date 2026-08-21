@@ -29,6 +29,8 @@ import {
 } from '$lib/auth/upgrade'
 // I18N
 import { getLocaleKey, m } from '$lib/i18n'
+// MAP
+import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
@@ -77,6 +79,57 @@ let upgradeReturnTo = $state('/')
  */
 function shouldLoadInitialFeatures(): boolean {
   return page.url.pathname !== '/screensaver'
+}
+
+/**
+ * Determines whether the current route can apply a map project or layer deep link.
+ *
+ * @returns Whether the route renders the public map shell.
+ */
+function canApplyMapResourceDeepLink(): boolean {
+  return page.url.pathname === '/' || page.url.pathname.startsWith('/features/')
+}
+
+/**
+ * Applies an initial map resource target and removes the consumed query parameters.
+ *
+ * @returns Nothing after the target selection and feature refresh settle.
+ * @remarks This intentionally runs only at bootstrap. Subsequent prism changes do
+ * not update the URL, so shared links establish an initial map state without
+ * turning prism selection into continuously synchronized navigation state.
+ */
+async function applyInitialMapResourceDeepLink(): Promise<void> {
+  if (!canApplyMapResourceDeepLink()) return
+
+  const selectedLayerIds = getMapResourceDeepLinkLayerIds(
+    page.url.searchParams,
+    appCtx.state.resources.layer,
+    appCtx.state.resources.project,
+  )
+  if (selectedLayerIds === null) return
+
+  // Replace the initial hub selection with the explicit map resource target.
+  appCtx.state.prisms.layer = selectedLayerIds
+
+  try {
+    if (selectedLayerIds.length > 0) {
+      await appCtx.postLayerMutation(false)
+      await appCtx.refreshFeatures(false)
+    }
+  } catch (error) {
+    console.error('[Map deep link] Failed to apply map resource target:', error)
+  } finally {
+    // Consume targeting parameters even if an optional feature refresh fails.
+    const cleanUrl = new URL(page.url)
+    cleanUrl.searchParams.delete('layerId')
+    cleanUrl.searchParams.delete('projectId')
+    cleanUrl.searchParams.delete('project')
+    await goto(`${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`, {
+      replaceState: true,
+      keepFocus: true,
+      noScroll: true,
+    })
+  }
 }
 
 // Set AppCtx in context
@@ -205,6 +258,7 @@ async function initializeAuthenticatedApp(): Promise<void> {
   if (!currentUser && isAuthEntryPath(page.url.pathname)) {
     void appCtx.bootstrapPublicMapResources(shouldLoadInitialFeatures())
   }
+  await applyInitialMapResourceDeepLink()
   logMarkerBootstrap('application bootstrap finished', {
     hasSessionUser: Boolean(currentUser),
     isAnonymous: currentUser?.isAnonymous ?? null,
