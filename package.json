@@ -173,7 +173,7 @@
     "workerd"
   ],
   "dependencies": {
-    "@better-auth/passkey": "1.6.25",
+    "@better-auth/passkey": "1.7.1",
     "@chenglou/pretext": "^0.0.8",
     "@emeraldpay/hashicon": "^0.5.2",
     "@jsquash/avif": "^2.1.1",
