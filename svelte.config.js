@@ -226,7 +226,6 @@ const selectAdapter = () => {
           '/resource/home/js/common.js',
           '/resources/css/headernav.css',
           '/resources/main/common.js',
-          '/robots.txt',
           '/room/getRoomBangFans',
           '/s_api/basic/download/info',
           '/saconfig/secure/yunwei.js',
