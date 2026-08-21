@@ -9,13 +9,15 @@ import enMessages from '../../messages/en.json'
 import zhHantMessages from '../../messages/zh-hant.json'
 import zhHansMessages from '../../messages/zh-hans.json'
 
-const setTestLocale = (locale: Parameters<typeof setLocale>[0]): void => {
-  void setLocale(locale, { reload: false })
+const setTestLocale = async (
+  locale: Parameters<typeof setLocale>[0],
+): Promise<void> => {
+  await setLocale(locale, { reload: false })
 }
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks()
-  setTestLocale('en')
+  await setTestLocale('en')
 })
 
 /**
@@ -208,8 +210,8 @@ describe('getI18n', () => {
     isTranslateButtonVisible: true,
   }
 
-  it('hides generated values by default', () => {
-    setLocale('en', { reload: false })
+  it('hides generated values by default', async () => {
+    await setLocale('en', { reload: false })
 
     const value = getI18n(
       {
@@ -228,8 +230,8 @@ describe('getI18n', () => {
     expect(value).toBe('No address')
   })
 
-  it('returns generated values when the gen-field check is skipped', () => {
-    setLocale('en', { reload: false })
+  it('returns generated values when the gen-field check is skipped', async () => {
+    await setLocale('en', { reload: false })
 
     const value = getI18n(
       {
@@ -249,8 +251,8 @@ describe('getI18n', () => {
     expect(value).toBe('123 Test Street')
   })
 
-  it('uses user fallback locales when the active locale is missing', () => {
-    setLocale('zh-hans', { reload: false })
+  it('uses user fallback locales when the active locale is missing', async () => {
+    await setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -272,8 +274,8 @@ describe('getI18n', () => {
     expect(value).toBe('繁體標題')
   })
 
-  it('returns generated fallback-locale values when machine translation is allowed', () => {
-    setLocale('zh-hans', { reload: false })
+  it('returns generated fallback-locale values when machine translation is allowed', async () => {
+    await setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -296,8 +298,8 @@ describe('getI18n', () => {
     expect(value).toBe('AI 繁體標題')
   })
 
-  it('prefers placeholders over generated values when that setting is enabled', () => {
-    setLocale('zh-hans', { reload: false })
+  it('prefers placeholders over generated values when that setting is enabled', async () => {
+    await setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -321,8 +323,8 @@ describe('getI18n', () => {
     expect(value).toBe('No title')
   })
 
-  it('returns the provided fallback when user preferences are omitted', () => {
-    setLocale('zh-hans', { reload: false })
+  it('returns the provided fallback when user preferences are omitted', async () => {
+    await setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
       {
@@ -340,8 +342,8 @@ describe('getI18n', () => {
     expect(value).toBe('Fallback layer name')
   })
 
-  it('preserves an explicit empty fallback for caller-managed fallback chains', () => {
-    setLocale('en', { reload: false })
+  it('preserves an explicit empty fallback for caller-managed fallback chains', async () => {
+    await setLocale('en', { reload: false })
 
     const value = getI18n(
       {
