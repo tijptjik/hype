@@ -1,5 +1,6 @@
+// THIRD-PARTY
 import { describe, expect, it } from 'vitest'
-// SERVICES
+// API
 import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
 
 describe('map resource deep links', () => {

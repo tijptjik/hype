@@ -1,10 +1,11 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// SVELTEKIT
 import { page } from '$app/state'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
-// SERVICES
+// API
 import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
 // COMPONENTS
 import FlightSurface from '$lib/bits/patterns/layout/app/components/FlightSurface.svelte'
