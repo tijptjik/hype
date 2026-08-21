@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config'
 import { sveltekit } from '@sveltejs/kit/vite'
 
 const isWatch = process.env.CI !== 'true' && process.env.VITEST_MODE !== 'run'
+const configDirectory = import.meta.dirname
 const suppressedVitestConsoleLogPatterns = [
   '[image.remote.rotateImage] applying rotation',
   '[image.remote.rotateImage] bucket original put failed; falling back to direct R2 API',
@@ -21,96 +22,126 @@ export default defineConfig({
     alias: [
       {
         find: /^\$lib$/,
-        replacement: resolve(__dirname, 'src/tests/mocks/lib-root.ts'),
+        replacement: resolve(configDirectory, 'src/tests/mocks/lib-root.ts'),
       },
       {
         find: /^\$lib\/(.*)$/,
-        replacement: `${resolve(__dirname, 'src/lib')}/$1`,
+        replacement: `${resolve(configDirectory, 'src/lib')}/$1`,
       },
       {
         find: '$app/server',
-        replacement: resolve(__dirname, 'src/tests/mocks/app-server.ts'),
+        replacement: resolve(configDirectory, 'src/tests/mocks/app-server.ts'),
       },
       {
         find: '$app/navigation',
-        replacement: resolve(__dirname, 'src/tests/mocks/app-navigation.ts'),
+        replacement: resolve(configDirectory, 'src/tests/mocks/app-navigation.ts'),
       },
       {
         find: '@sveltejs/kit/src/runtime/app/paths/internal/server.js',
         replacement: resolve(
-          __dirname,
+          configDirectory,
           'src/tests/mocks/sveltekit-paths-internal-server.ts',
         ),
       },
       {
         find: '$env/static/public',
-        replacement: resolve(__dirname, 'src/tests/mocks/env-static-public.ts'),
+        replacement: resolve(configDirectory, 'src/tests/mocks/env-static-public.ts'),
       },
       {
         find: '$env/dynamic/public',
-        replacement: resolve(__dirname, 'src/tests/mocks/env-dynamic-public.ts'),
+        replacement: resolve(configDirectory, 'src/tests/mocks/env-dynamic-public.ts'),
       },
       {
         find: '$lib/context/form.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/form-context.ts'),
+        replacement: resolve(configDirectory, 'src/tests/mocks/form-context.ts'),
       },
       {
         find: /^virtual:icons\/.*$/,
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Property.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Input.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Textarea.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Select.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Range.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Users.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Toggle.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: '$lib/components/forms/fields/Display.svelte',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-component.svelte'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/svelte-component.svelte',
+        ),
       },
       {
         find: /^sveltekit-superforms\/adapters$/,
         replacement: resolve(
-          __dirname,
+          configDirectory,
           'src/tests/mocks/sveltekit-superforms-adapters.ts',
         ),
       },
       {
         find: /^sveltekit-superforms\/client$/,
         replacement: resolve(
-          __dirname,
+          configDirectory,
           'src/tests/mocks/sveltekit-superforms-client.ts',
         ),
       },
       {
         find: /^sveltekit-superforms$/,
-        replacement: resolve(__dirname, 'src/tests/mocks/sveltekit-superforms.ts'),
+        replacement: resolve(
+          configDirectory,
+          'src/tests/mocks/sveltekit-superforms.ts',
+        ),
       },
       {
         find: 'svelte-sonner',
-        replacement: resolve(__dirname, 'src/tests/mocks/svelte-sonner.ts'),
+        replacement: resolve(configDirectory, 'src/tests/mocks/svelte-sonner.ts'),
       },
     ],
   },
