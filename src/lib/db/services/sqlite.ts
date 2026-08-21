@@ -17,8 +17,15 @@ export const isSqliteBusyError = (error: unknown): boolean => {
     if (!current || visited.has(current)) continue
     visited.add(current)
 
-    if (current instanceof Error) {
-      const message = current.message.toUpperCase()
+    if (typeof current === 'object') {
+      const errorLike = current as {
+        message?: unknown
+        cause?: unknown
+        error?: unknown
+        errors?: unknown
+      }
+      const message =
+        typeof errorLike.message === 'string' ? errorLike.message.toUpperCase() : ''
 
       if (
         message.includes('SQLITE_BUSY') ||
@@ -30,7 +37,9 @@ export const isSqliteBusyError = (error: unknown): boolean => {
         return true
       }
 
-      queue.push(current.cause)
+      // D1 and Drizzle can wrap a SQLite error in plain objects rather than Error causes.
+      queue.push(errorLike.cause, errorLike.error)
+      if (Array.isArray(errorLike.errors)) queue.push(...errorLike.errors)
     }
   }
 

@@ -861,11 +861,10 @@ export class AppCtx {
   ): Promise<void> => {
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    // Bootstrap lightweight user-scoped reads first so session-dependent UI can hydrate
-    // without immediately fanning out into the heavier resource tree.
+    // Bootstrap only map-relevant user state first. Self-profile hydration includes a
+    // contribution relation graph and is deferred until its panel needs it.
     const lightSteps = includeUserData
       ? ([
-          ['userProfile', () => this.refreshUserProfile(false)],
           ['userFeatures', () => this.refreshUserFeatures(false)],
           ['userLayers', () => this.hydrateCurrentUserLayers()],
         ] as const)
