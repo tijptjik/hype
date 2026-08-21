@@ -1,14 +1,12 @@
 <script lang="ts">
 // SVELTE
-import { watch } from 'runed'
 import { onMount } from 'svelte'
-import { toast } from 'svelte-sonner'
 // SVELTEKIT
 import { goto } from '$app/navigation'
-// STORES
 import { page } from '$app/state'
-// QUERY
-import type { QueryClient } from '@tanstack/svelte-query'
+// THIRD-PARTY
+import { watch } from 'runed'
+import { toast } from 'svelte-sonner'
 // BITS
 import { cx } from '$lib/bits/utils'
 // AUTH
@@ -29,7 +27,7 @@ import {
 } from '$lib/auth/upgrade'
 // I18N
 import { getLocaleKey, m } from '$lib/i18n'
-// MAP
+// API
 import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
@@ -43,11 +41,14 @@ import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
 import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
 // STYLES
 import '$lib/styles/app.css'
+// CONSTANTS
+import { FirstClassResource } from '$lib/enums'
+import { MOBILE_MAX_WIDTH } from '$lib/constants'
 // TYPES
+import type { QueryClient } from '@tanstack/svelte-query'
 import type { LayoutData, LayoutProps } from './$types'
 import type { SessionUser } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import { MOBILE_MAX_WIDTH } from '$lib/constants'
 
 // PROPS
 let { children, data }: LayoutProps = $props()
@@ -112,7 +113,12 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
   appCtx.state.prisms.layer = selectedLayerIds
 
   try {
-    if (selectedLayerIds.length > 0) {
+    if (selectedLayerIds.length === 0) {
+      // Reconcile filters without replacing the explicit empty selection.
+      await appCtx.postLayerMutation(false, false)
+      // Remove bootstrap features when an explicit target could not resolve.
+      appCtx.setSortedResourceState(FirstClassResource.feature, [])
+    } else {
       await appCtx.postLayerMutation(false)
       await appCtx.refreshFeatures(false)
     }
