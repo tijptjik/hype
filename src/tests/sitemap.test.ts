@@ -1,4 +1,6 @@
+// THIRD-PARTY
 import { describe, expect, it } from 'vitest'
+// LIBRARY
 import { getSitemapPaths, renderSitemap, toSitemapPath } from '$lib/server/sitemap'
 import { GET as getRobots } from '../routes/robots.txt/+server'
 
