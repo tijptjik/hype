@@ -41,6 +41,15 @@ describe('authConfig embedded sessions', () => {
   })
 })
 
+describe('authConfig session cache', () => {
+  it('keeps routine navigation off D1 for a bounded interval', () => {
+    expect(authConfig.session.cookieCache).toMatchObject({
+      enabled: true,
+      maxAge: 5 * 60,
+    })
+  })
+})
+
 describe('authConfig account.accountLinking', () => {
   it('allows accounts with a different email address to be linked', () => {
     expect(authConfig.account.accountLinking.allowDifferentEmails).toBe(true)

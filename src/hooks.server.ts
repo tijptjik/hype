@@ -151,10 +151,10 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     schema,
   })
 
-  // Auth entry routes resolve the session once in handle_session_auth below.
-  // Every other route needs an early session to resolve unpublished admin hubs.
+  // Public hub resolution must remain one D1 read. Only the admin interface needs an
+  // early session to see an unpublished hub before the regular session hook runs.
   let adminHubCodes = new Set<string>()
-  if (!isAuthEntryPath(event.url.pathname)) {
+  if (!isAuthEntryPath(event.url.pathname) && isAdminRequest(event.request)) {
     try {
       const auth = getAuthForRequest(event.request.headers, {
         DB: event.platform?.env?.DB as MiniflareD1Database,
