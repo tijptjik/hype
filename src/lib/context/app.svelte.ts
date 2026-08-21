@@ -3709,6 +3709,17 @@ export class AppCtx {
     this.state.panels[panel].isOpen = true
     this.responsiveCtx.setPanelOpen(panel, true)
 
+    // Contribution data is relation-heavy, so only load it when the profile panel needs it.
+    if (
+      panel === Panel.profile &&
+      this.state.panels.profile.ctx?.username &&
+      !this.state.panels.profile.ctx.userData
+    ) {
+      void this.refreshUserProfile(false).catch(error => {
+        console.error('[AppCtx] Profile panel hydration failed:', error)
+      })
+    }
+
     // Handle stateful parameters for specific panels
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
