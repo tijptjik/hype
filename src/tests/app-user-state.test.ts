@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 // CONTEXT
 import { AppCtx } from '$lib/context/app.svelte'
+// ENUMS
+import { Panel } from '$lib/enums'
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -27,6 +29,26 @@ function createDeferred<T>(): {
 }
 
 describe('AppCtx user updates', () => {
+  it('loads profile data only when the profile panel opens', async () => {
+    const appCtx = new AppCtx(
+      { removeQueries: vi.fn() } as unknown as QueryClient,
+      {} as PlaceCtx,
+      { id: 'user-1' } as CurrentUser,
+      { setPanelOpen: vi.fn() } as ResponsiveCtx,
+    )
+    const refreshUserProfile = vi.fn().mockResolvedValue(undefined)
+    appCtx.refreshUserProfile = refreshUserProfile
+    appCtx.state.panels.profile.ctx = {
+      username: 'user-1',
+      userData: null,
+      observePrisms: true,
+    }
+
+    appCtx.openPanel(Panel.profile, false)
+
+    await vi.waitFor(() => expect(refreshUserProfile).toHaveBeenCalledWith(false))
+  })
+
   it('preserves active layers when updating the current user profile', async () => {
     const user = {
       id: 'user-1',
