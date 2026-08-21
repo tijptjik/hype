@@ -241,7 +241,6 @@ const selectAdapter = () => {
           '/shop/wp-includes/wlwmanifest.xml',
           '/site.js',
           '/site/*',
-          '/sitemap.xml',
           '/skin/js/common.js',
           '/skin/main/onload.js',
           '/sql/*',
