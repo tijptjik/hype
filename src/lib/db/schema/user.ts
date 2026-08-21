@@ -1,4 +1,10 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
@@ -87,34 +93,42 @@ export const userActivity = sqliteTable('userActivity', {
  * @remarks
  * Links external authentication providers to user accounts
  */
-export const account = sqliteTable('account', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
-  userId: text('userId')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  accountId: text('accountId').notNull(),
-  providerId: text('providerId').notNull(),
-  accessToken: text('accessToken'),
-  refreshToken: text('refreshToken'),
-  accessTokenExpiresAt: integer('accessTokenExpiresAt', {
-    mode: 'timestamp_ms',
-  }).$type<Date>(),
-  refreshTokenExpiresAt: integer('refreshTokenExpiresAt', {
-    mode: 'timestamp_ms',
-  }).$type<Date>(),
-  scope: text('scope'),
-  idToken: text('idToken'),
-  password: text('password'),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date()),
-})
+export const account = sqliteTable(
+  'account',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    accountId: text('accountId').notNull(),
+    // Better Auth 1.7 scopes external account identities by issuer and account ID.
+    issuer: text('issuer').notNull(),
+    providerId: text('providerId').notNull(),
+    accessToken: text('accessToken'),
+    refreshToken: text('refreshToken'),
+    accessTokenExpiresAt: integer('accessTokenExpiresAt', {
+      mode: 'timestamp_ms',
+    }).$type<Date>(),
+    refreshTokenExpiresAt: integer('refreshTokenExpiresAt', {
+      mode: 'timestamp_ms',
+    }).$type<Date>(),
+    scope: text('scope'),
+    idToken: text('idToken'),
+    password: text('password'),
+    createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+  },
+  table => [
+    uniqueIndex('account_issuer_accountId_uidx').on(table.issuer, table.accountId),
+  ],
+)
 
 /**
  * User sessions. Compatible with Better-Auth.

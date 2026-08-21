@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { getTableColumns } from 'drizzle-orm'
+import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import { getAuthForRequest } from '$lib/auth'
 import { authConfig } from '$lib/auth/config'
-import { user } from '$lib/db/schema/user'
+import { account, user } from '$lib/db/schema/user'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 
 describe('authConfig user.additionalFields', () => {
@@ -12,6 +13,20 @@ describe('authConfig user.additionalFields', () => {
 
     expect(
       additionalFieldNames.every(fieldName => userColumnNames.has(fieldName)),
+    ).toBe(true)
+  })
+})
+
+describe('Better Auth 1.7 account identity', () => {
+  it('stores issuer-scoped identities with a unique account key', () => {
+    expect(getTableColumns(account).issuer.notNull).toBe(true)
+
+    expect(
+      getTableConfig(account).indexes.some(
+        index =>
+          index.config.name === 'account_issuer_accountId_uidx' &&
+          index.config.unique === true,
+      ),
     ).toBe(true)
   })
 })
