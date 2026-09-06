@@ -1,6 +1,9 @@
+// THIRD-PARTY
 import proj from 'proj4'
+// DATA
 import neighbourhoods from '$lib/map/neighbourhoods.json'
 import streetsData from '$lib/map/streets.json'
+// TYPES
 import type {
   AddressMeta,
   AddressProperties,
@@ -57,11 +60,18 @@ const countryIdentifiers = {
   ],
 }
 
+/**
+ * Resolves a country name or alias to its localized label.
+ * @param country Country name or alias.
+ * @param locale Output locale.
+ * @returns Localized label, or null for an unknown country.
+ */
 export const getNormalisedCountry = (
   country: keyof typeof countryNormalised,
   locale: LocaleKey = 'en',
 ): string | null => {
-  return countryNormalised[country]?.[locale] || null
+  const key = countryLookup.get(normalizeAddressToken(country))
+  return key ? countryNormalised[key]?.[locale] || null : null
 }
 
 // Area mappings
@@ -77,25 +87,18 @@ const areaIdentifiers = {
   NT: ['nt', 'ntr', 'newterritories', '新界'],
 }
 
-const getNormalisedAreaKey = (area: string): keyof typeof areaNormalised => {
-  if (!Object.keys(areaNormalised).includes(area)) {
-    area = area.toLowerCase().replace(/ /g, '')
-    if (areaIdentifiers.HK.includes(area)) {
-      return 'Hong Kong Island'
-    } else if (areaIdentifiers.KL.includes(area)) {
-      return 'Kowloon'
-    } else if (areaIdentifiers.NT.includes(area)) {
-      return 'New Territories'
-    }
-  }
-  return area as keyof typeof areaNormalised
-}
-
+/**
+ * Resolves an area name or alias to its localized label.
+ * @param area Area name or alias.
+ * @param locale Output locale.
+ * @returns Localized label, or null for an unknown area.
+ */
 export const getNormalisedArea = (
   area: keyof typeof areaNormalised,
   locale: LocaleKey = 'en',
 ): string | null => {
-  return areaNormalised[getNormalisedAreaKey(area)]?.[locale] || null
+  const key = areaLookup.get(normalizeAddressToken(area))
+  return key ? areaNormalised[key]?.[locale] || null : null
 }
 
 // District mappings
@@ -125,6 +128,8 @@ const districtIdentifiers = {
     'cw',
     'centralandwestern',
     'central&western',
+    'centralandwesterndistrict',
+    'central&westerndistrict',
     'centralandwestnerndistrict',
     'central&westnerndistrict',
     '中西區',
@@ -152,7 +157,14 @@ const districtIdentifiers = {
   TW: ['tw', 'tsuenwan', 'tsuenwandistrict', '荃灣區', '荃湾区'],
   TM: ['tm', 'tuenmun', 'tuenmundistrict', '屯門區', '屯门区'],
   WC: ['wc', 'wanchai', 'wanchaidistrict', '灣仔區', '湾仔区'],
-  WTS: ['wts', 'wongtaisin', 'wongtaitsindistrict', '黃大仙區', '黄大仙区'],
+  WTS: [
+    'wts',
+    'wongtaisin',
+    'wongtaisindistrict',
+    'wongtaitsindistrict',
+    '黃大仙區',
+    '黄大仙区',
+  ],
   YTM: ['ytm', 'yautsimmong', 'yautsimmongdistrict', '油尖旺區', '油尖旺区'],
   YL: ['yl', 'yuenlong', 'yuenlongdistrict', '元朗區', '元朗区'],
 }
@@ -177,28 +189,51 @@ export const districtCodeToName = {
   YL: 'Yuen Long',
 }
 
-const getNormalisedDistrictKey = (
-  district: string,
-): keyof typeof districtNormalised => {
-  if (!Object.keys(districtNormalised).includes(district)) {
-    district = district.toLowerCase().replace(/ /g, '')
-    Object.entries(districtIdentifiers).forEach(([key, values]) => {
-      if (values.includes(district)) {
-        const dCode = districtCodeToName[key as keyof typeof districtCodeToName]
-        district = dCode
-      }
-    })
+/**
+ * Indexes canonical names, translated labels, and aliases with one normalization rule.
+ * @param labels Canonical names and their localized labels; English labels are alias codes.
+ * @param identifiers Additional aliases grouped by their English label code.
+ * @returns Normalized tokens mapped to canonical names.
+ */
+function createAddressComponentLookup(
+  labels: Record<string, Record<LocaleKey, string>>,
+  identifiers: Record<string, string[]>,
+): Map<string, string> {
+  const lookup = new Map<string, string>()
+  for (const [name, translations] of Object.entries(labels)) {
+    for (const alias of [
+      name,
+      ...Object.values(translations),
+      ...(identifiers[translations.en] ?? []),
+    ]) {
+      lookup.set(normalizeAddressToken(alias), name)
+    }
   }
-  return district as keyof typeof districtNormalised
+  return lookup
 }
 
+const countryLookup = createAddressComponentLookup(
+  countryNormalised,
+  countryIdentifiers,
+)
+const areaLookup = createAddressComponentLookup(areaNormalised, areaIdentifiers)
+const districtLookup = createAddressComponentLookup(
+  districtNormalised,
+  districtIdentifiers,
+)
+
+/**
+ * Resolves a district name or alias to its localized label.
+ * @param district District name or alias.
+ * @param locale Output locale.
+ * @returns Localized label, or null for an unknown district.
+ */
 export const getNormalisedDistrict = (
   district: keyof typeof districtNormalised,
   locale: LocaleKey = 'en',
 ): string | null => {
-  const normalisedDistrictKey = getNormalisedDistrictKey(district)
-  const normalisedDistrict = districtNormalised[normalisedDistrictKey]?.[locale] || null
-  return normalisedDistrict
+  const key = districtLookup.get(normalizeAddressToken(district))
+  return key ? districtNormalised[key]?.[locale] || null : null
 }
 
 // Common address abbreviations
@@ -394,37 +429,19 @@ function getNeighbourhoodEntryByName(
   )
 }
 
-function extractCountryFromAddress(address: string): string | null {
-  const segments = address.split(',').map(segment => normalizeAddressToken(segment))
-  return segments.some(segment => countryIdentifiers.HKSAR.includes(segment))
-    ? 'Hong Kong'
-    : null
-}
-
-function extractAreaFromAddress(address: string): string | null {
-  const segments = address.split(',').map(segment => normalizeAddressToken(segment))
-
-  for (const [area, identifiers] of Object.entries(areaIdentifiers)) {
-    if (segments.some(segment => identifiers.includes(segment))) {
-      return getNormalisedAreaKey(area as keyof typeof areaIdentifiers)
-    }
-  }
-
-  return null
-}
-
-function extractDistrictFromAddress(address: string): string | null {
-  const segments = address.split(',').map(segment => normalizeAddressToken(segment))
-
-  for (const [districtCode, identifiers] of Object.entries(districtIdentifiers)) {
-    const districtName =
-      districtCodeToName[districtCode as keyof typeof districtCodeToName]
-    const normalizedDistrictName = normalizeAddressToken(districtName)
-    const hasMatch = segments.some(
-      segment => segment === normalizedDistrictName || identifiers.includes(segment),
-    )
-
-    if (hasMatch) return districtName
+/**
+ * Finds a recognized whole address component without matching building-name substrings.
+ * @param address Comma-separated address text.
+ * @param lookup Normalized component lookup.
+ * @returns First matching canonical name, or null.
+ */
+function extractAddressComponent(
+  address: string,
+  lookup: Map<string, string>,
+): string | null {
+  for (const segment of address.split(',')) {
+    const name = lookup.get(normalizeAddressToken(segment))
+    if (name) return name
   }
 
   return null
@@ -453,36 +470,17 @@ function extractNeighbourhoodFromAddress(
   return null
 }
 
-function isEnglishAddressSmallToLarge(address: string): boolean {
-  const segments = address.split(',').map(segment => normalizeAddressToken(segment))
-  const first = segments[0] ?? ''
-  const last = segments.at(-1) ?? ''
-
-  if (
-    countryIdentifiers.HKSAR.includes(first) ||
-    Object.values(areaIdentifiers).some(values => values.includes(first)) ||
-    Object.values(districtIdentifiers).some(values => values.includes(first))
-  ) {
-    return false
-  }
-
-  if (
-    countryIdentifiers.HKSAR.includes(last) ||
-    Object.values(areaIdentifiers).some(values => values.includes(last)) ||
-    Object.values(districtIdentifiers).some(values => values.includes(last))
-  ) {
-    return true
-  }
-
-  return true
-}
-
-function isChineseAddressLargeToSmall(address: string): boolean {
+/**
+ * Detects addresses that begin with a country, area, or district in any locale.
+ * @param address Comma-separated address text.
+ * @returns Whether broad administrative components precede the street.
+ */
+function isAddressLargeToSmall(address: string): boolean {
   const firstSegment = normalizeAddressToken(address.split(',')[0] ?? '')
   return (
-    countryIdentifiers.HKSAR.includes(firstSegment) ||
-    Object.values(areaIdentifiers).some(values => values.includes(firstSegment)) ||
-    Object.values(districtIdentifiers).some(values => values.includes(firstSegment))
+    countryLookup.has(firstSegment) ||
+    areaLookup.has(firstSegment) ||
+    districtLookup.has(firstSegment)
   )
 }
 
@@ -512,7 +510,7 @@ function removeCountryForQuery(
 ): string {
   return stripAddressComponent(
     address,
-    segment => countryIdentifiers.HKSAR.includes(segment),
+    segment => countryLookup.has(segment),
     isAddressLargeToSmall,
   )
 }
@@ -520,7 +518,7 @@ function removeCountryForQuery(
 function removeRegionForQuery(address: string, isAddressLargeToSmall: boolean): string {
   return stripAddressComponent(
     address,
-    segment => Object.values(areaIdentifiers).some(values => values.includes(segment)),
+    segment => areaLookup.has(segment),
     isAddressLargeToSmall,
   )
 }
@@ -531,8 +529,7 @@ function removeDistrictForQuery(
 ): string {
   return stripAddressComponent(
     address,
-    segment =>
-      Object.values(districtIdentifiers).some(values => values.includes(segment)),
+    segment => districtLookup.has(segment),
     isAddressLargeToSmall,
   )
 }
@@ -882,17 +879,15 @@ export function getAddressForQuery(
   locale: LocaleKey = 'en',
 ): ParsedAddressQueryComponents {
   const trimmedAddress = rawAddress.trim()
-  const isSmallToLarge =
-    locale === 'en'
-      ? isEnglishAddressSmallToLarge(trimmedAddress)
-      : !isChineseAddressLargeToSmall(trimmedAddress)
-  const isLargeToSmall = !isSmallToLarge
+  const isLargeToSmall = isAddressLargeToSmall(trimmedAddress)
+  const isSmallToLarge = !isLargeToSmall
 
   let cleanedAddress = removeCountryForQuery(trimmedAddress, isLargeToSmall)
+  // Resolve the area after removing the country: "Hong Kong" is also an island alias.
+  const explicitRegion = extractAddressComponent(cleanedAddress, areaLookup)
   cleanedAddress = removeRegionForQuery(cleanedAddress, isLargeToSmall)
 
-  const explicitDistrict = extractDistrictFromAddress(cleanedAddress)
-  const explicitRegion = extractAreaFromAddress(trimmedAddress)
+  const explicitDistrict = extractAddressComponent(cleanedAddress, districtLookup)
   cleanedAddress = removeDistrictForQuery(cleanedAddress, isLargeToSmall)
 
   const neighbourhood = extractNeighbourhoodFromAddress(
@@ -933,7 +928,7 @@ export function getAddressForQuery(
     neighbourhood: neighbourhood ?? undefined,
     district,
     area,
-    country: extractCountryFromAddress(trimmedAddress) ?? undefined,
+    country: extractAddressComponent(trimmedAddress, countryLookup) ?? undefined,
   }
   const queryAddress = getQueryAddress({
     premisesName,
@@ -1055,46 +1050,49 @@ export function getFirstLocation(locations: string): string {
   return locations.split(',')[0].trim()
 }
 
-export function removeCountry(str: string): string {
+/**
+ * Removes a recognized trailing component while preserving the remaining separators.
+ * @param str Comma-separated address text.
+ * @param lookup Normalized component lookup.
+ * @returns Address without the trailing component, or the original text if unknown.
+ */
+function removeTrailingAddressComponent(
+  str: string,
+  lookup: Map<string, string>,
+): string {
   const parts = str.split(',')
-  const lastPart = parts.pop()
-  if (lastPart && countryNormalised[lastPart.toLowerCase().trim()]) {
-    return parts.join(',').trim()
-  }
-  return str
-}
-
-export function removeArea(str: string): string {
-  const parts = str.split(',')
-  const lastPart = parts.pop()?.trim()
-
-  if (lastPart) {
-    const lastPartLower = lastPart.toLowerCase().replace(/\s+/g, '')
-
-    // Check against area identifiers (removing spaces for comparison)
-    if (
-      areaIdentifiers.HK.includes(lastPartLower) ||
-      areaIdentifiers.KL.includes(lastPartLower) ||
-      areaIdentifiers.NT.includes(lastPartLower)
-    ) {
-      return parts.join(',').trim()
-    }
-  }
-
-  return str
-}
-
-export function removeDistrict(str: string): string {
-  const parts = str.split(',')
-  const lastPart = parts[parts.length - 1]?.trim().toLowerCase()
-  // Check if the last part is a district identifier
-  if (
-    lastPart &&
-    Object.values(districtIdentifiers).some(identifiers =>
-      identifiers.includes(lastPart.replace(/ /g, '')),
-    )
-  ) {
+  const lastPart = normalizeAddressToken(parts.at(-1) ?? '')
+  if (lookup.has(lastPart)) {
     return parts.slice(0, -1).join(',').trim()
   }
   return str
+}
+
+/**
+ * Removes a trailing country name or alias.
+ * @param str Comma-separated address text.
+ * @returns Address without a recognized trailing country.
+ */
+export function removeCountry(str: string): string {
+  return removeTrailingAddressComponent(str, countryLookup)
+}
+
+/**
+ * Removes a trailing area name or alias.
+ * @param str Comma-separated address text.
+ * @returns Address without a recognized trailing area.
+ */
+export function removeArea(str: string): string {
+  // Check against area identifiers (removing spaces for comparison).
+  return removeTrailingAddressComponent(str, areaLookup)
+}
+
+/**
+ * Removes a trailing district name or alias.
+ * @param str Comma-separated address text.
+ * @returns Address without a recognized trailing district.
+ */
+export function removeDistrict(str: string): string {
+  // Check if the last part is a district identifier.
+  return removeTrailingAddressComponent(str, districtLookup)
 }
