@@ -242,8 +242,8 @@ export class ImageCtx {
   isAdminMode: boolean = false
   appCtx = getAppCtx()
 
-  // Add context tracking to prevent race conditions
-  private currentContextId: string | null = null
+  // Track refresh order as well as context transitions to prevent stale image commits.
+  private imageRefreshSerial = 0
 
   // ═══════════════════════
   // 1. CONSTRUCTOR & SETUP
@@ -335,9 +335,9 @@ export class ImageCtx {
       this.state.context?.ctxTypeSecondary !== context?.ctxTypeSecondary ||
       this.state.context?.ctxIdSecondary !== context?.ctxIdSecondary
 
-    // Generate context ID
-    const newContextId = context ? `${context.ctxType}-${context.ctxId}` : null
-    this.currentContextId = newContextId
+    // Supersede pending reads even when only secondary or preloaded images change.
+    this.imageRefreshSerial += 1
+    this.state.isFetchingImages = false
 
     if (isContextChange) {
       // Reset context-bound transient state before new async loads can write into it.
@@ -1749,96 +1749,98 @@ export class ImageCtx {
       return
     }
 
-    // Capture current context ID to validate later
-    const contextIdAtStart = this.currentContextId
+    // Capture this request's position so older reads cannot overwrite newer results.
+    const refreshSerial = ++this.imageRefreshSerial
     // Set fetching state to show loading immediately
     this.state.isFetchingImages = true
 
-    // Get the images for the primary resource
-    const images = await this.imagesQueryFn()
+    try {
+      // Get the images for the primary resource
+      const images = await this.imagesQueryFn()
 
-    // Validate context hasn't changed during async operation
-    if (this.currentContextId !== contextIdAtStart) {
-      this.state.isFetchingImages = false
-      return
-    }
-
-    // Filter out null/undefined images before processing
-    const validImages = images.filter(isValidImageEnvelope)
-    const imageIds = validImages.map((image: ImageCtxEnvelope) => image.image.id)
-
-    // Get the images for the secondary resource
-    if (this.state.context.ctxTypeSecondary) {
-      const extendedImages = await this.extendedImagesQueryFn()
-
-      // Validate context again after second async operation
-      if (this.currentContextId !== contextIdAtStart) {
-        this.state.isFetchingImages = false
+      // Validate context hasn't changed during async operation
+      if (this.imageRefreshSerial !== refreshSerial) {
         return
       }
 
-      // Filter out null/undefined extended images too
-      const validExtendedImages = extendedImages.filter(isValidImageEnvelope)
+      // Filter out null/undefined images before processing
+      const validImages = images.filter(isValidImageEnvelope)
+      const imageIds = validImages.map((image: ImageCtxEnvelope) => image.image.id)
 
-      // Merge only secondary-only images so the primary resource remains the canonical ordering source.
-      // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
-      // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
-      validExtendedImages.forEach((image: ImageCtxEnvelope) => {
-        if (!imageIds.includes(image.image.id)) {
-          validImages.push(image)
+      // Get the images for the secondary resource
+      if (this.state.context.ctxTypeSecondary) {
+        const extendedImages = await this.extendedImagesQueryFn()
+
+        // Validate context again after second async operation
+        if (this.imageRefreshSerial !== refreshSerial) {
+          return
+        }
+
+        // Filter out null/undefined extended images too
+        const validExtendedImages = extendedImages.filter(isValidImageEnvelope)
+
+        // Merge only secondary-only images so the primary resource remains the canonical ordering source.
+        // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
+        // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
+        validExtendedImages.forEach((image: ImageCtxEnvelope) => {
+          if (!imageIds.includes(image.image.id)) {
+            validImages.push(image)
+          }
+        })
+
+        if (
+          this.state.context.ctxTypeSecondary === 'task' &&
+          this.state.highlightedIds.length > 0
+        ) {
+          const secondaryTaskId = this.state.context.ctxIdSecondary
+          const secondaryTask = secondaryTaskId
+            ? await this.appCtx.getTaskById(secondaryTaskId)
+            : undefined
+
+          // Only new-feature review flows should collapse to task-highlighted images.
+          if (secondaryTask?.type === 'newFeature') {
+            const highlightedIds = new Set(this.state.highlightedIds)
+            const taskScopedImages = validImages.filter(image =>
+              highlightedIds.has(image.image.id),
+            )
+
+            validImages.length = 0
+            validImages.push(...taskScopedImages)
+          }
+        }
+      }
+
+      // Final context validation before applying results
+      if (this.imageRefreshSerial !== refreshSerial) {
+        return
+      }
+
+      await this.setImages(validImages)
+      if (this.imageRefreshSerial !== refreshSerial) return
+
+      // Set active image with loading state immediately to maintain loading display
+      if (validImages.length > 0 && !this.hasResolvedActiveImage() && !targetImageId) {
+        this.setActiveImageToTargetOrFirst()
+      } else if (targetImageId) {
+        this.target(targetImageId)
+      }
+
+      // Don't set loading status here - let Picture.svelte handle it via onLoad callbacks
+      // This prevents premature transitions before images are actually ready
+
+      // Set appropriate loading status based on mode
+      validImages.forEach((image: ImageCtxEnvelope) => {
+        const currentThumbnailStatus = this.getThumbnailLoadStatus(image.image.id)
+        if (currentThumbnailStatus !== 'loaded') {
+          this.setThumbnailLoadStatus(image.image.id, 'loading')
         }
       })
-
-      if (
-        this.state.context.ctxTypeSecondary === 'task' &&
-        this.state.highlightedIds.length > 0
-      ) {
-        const secondaryTaskId = this.state.context.ctxIdSecondary
-        const secondaryTask = secondaryTaskId
-          ? await this.appCtx.getTaskById(secondaryTaskId)
-          : undefined
-
-        // Only new-feature review flows should collapse to task-highlighted images.
-        if (secondaryTask?.type === 'newFeature') {
-          const highlightedIds = new Set(this.state.highlightedIds)
-          const taskScopedImages = validImages.filter(image =>
-            highlightedIds.has(image.image.id),
-          )
-
-          validImages.length = 0
-          validImages.push(...taskScopedImages)
-        }
+    } finally {
+      // Only the owning request may clear loading, including after a failed read.
+      if (this.imageRefreshSerial === refreshSerial) {
+        this.state.isFetchingImages = false
       }
     }
-
-    // Final context validation before applying results
-    if (this.currentContextId !== contextIdAtStart) {
-      this.state.isFetchingImages = false
-      return
-    }
-
-    await this.setImages(validImages)
-
-    // Set active image with loading state immediately to maintain loading display
-    if (validImages.length > 0 && !this.hasResolvedActiveImage() && !targetImageId) {
-      this.setActiveImageToTargetOrFirst()
-    } else if (targetImageId) {
-      this.target(targetImageId)
-    }
-
-    // Don't set loading status here - let Picture.svelte handle it via onLoad callbacks
-    // This prevents premature transitions before images are actually ready
-
-    // Set appropriate loading status based on mode
-    validImages.forEach((image: ImageCtxEnvelope) => {
-      const currentThumbnailStatus = this.getThumbnailLoadStatus(image.image.id)
-      if (currentThumbnailStatus !== 'loaded') {
-        this.setThumbnailLoadStatus(image.image.id, 'loading')
-      }
-    })
-
-    // Clear fetching state after successful completion
-    this.state.isFetchingImages = false
   }
 
   /**
