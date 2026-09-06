@@ -20,6 +20,24 @@ vi.mock('$lib/api/server/image.remote', async importOriginal => ({
 }))
 
 describe('image refresh ownership', () => {
+  it('skips image entries with missing image records or unusable IDs', async () => {
+    const ctx = new ImageCtx()
+    await Promise.resolve()
+    const malformed = [
+      null,
+      undefined,
+      {},
+      { image: null },
+      { image: {} },
+      { image: { id: '' } },
+      { image: { id: 42 } },
+    ]
+    await expect(
+      ctx.setImages(malformed as unknown as ImageCtxEnvelope[]),
+    ).resolves.toBeUndefined()
+    expect(ctx.getImages()).toEqual([])
+  })
+
   it.each(['rotate', 'intent'] as const)(
     'invalidates the original feature after %s without refreshing a new context',
     async action => {
