@@ -338,6 +338,11 @@ export const beginNewFeatureDraft = guardedCommand(
         throw error(403, 'TASK_DRAFT_FORBIDDEN')
       }
 
+      // Submitted contributions must not be reset to drafts by a stale editor.
+      if (!existingTask.isDraft || existingTask.isReviewed) {
+        throw error(409, 'TASK_DRAFT_ALREADY_SUBMITTED')
+      }
+
       if (existingTask.type !== 'newFeature') {
         throw error(400, 'TASK_TYPE_MISMATCH')
       }
