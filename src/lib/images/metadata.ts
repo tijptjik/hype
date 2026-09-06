@@ -358,6 +358,12 @@ const parseTiffPayload = (bytes: Uint8Array): ParsedMetadataPayload => {
       }
       if (tag === 0x9004 && typeof value === 'string') metadata.CreateDate = value
       if (tag === 0x0132 && typeof value === 'string') metadata.ModifyDate = value
+      // Retain EXIF timezone offsets alongside the timestamps they qualify.
+      if (tag === 0x9010 && typeof value === 'string') metadata.OffsetTime = value
+      if (tag === 0x9011 && typeof value === 'string')
+        metadata.OffsetTimeOriginal = value
+      if (tag === 0x9012 && typeof value === 'string')
+        metadata.OffsetTimeDigitized = value
       if (tag === 0x0001 && typeof value === 'string') metadata.GPSLatitudeRef = value
       if (tag === 0x0002 && Array.isArray(value)) {
         metadata.GPSLatitude = parseGpsCoordinate(value, metadata.GPSLatitudeRef) ?? ''

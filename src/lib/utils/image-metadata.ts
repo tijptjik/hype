@@ -1,3 +1,4 @@
+// THIRD-PARTY
 import Coordinates from 'coordinate-parser'
 
 export type ImageMetadataMap = Record<string, string>
@@ -28,13 +29,35 @@ const toTitleCaseIfAllCaps = (value: string): string =>
     ? value.toLowerCase().replace(/\b\p{L}/gu, match => match.toUpperCase())
     : value
 
-const parseExifDate = (dateStr: string): string => {
-  const normalized = dateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/u, '$1-$2-$3')
+/**
+ * Parses an EXIF timestamp without silently rolling impossible dates forward.
+ * @param dateStr EXIF or ISO timestamp.
+ * @param offset Optional EXIF timezone offset for a timestamp without its own zone.
+ * @returns ISO timestamp in UTC.
+ */
+const parseExifDate = (dateStr: string, offset?: string): string => {
+  let normalized = dateStr.trim().replace(/^(\d{4}):(\d{2}):(\d{2})/u, '$1-$2-$3')
+  const dateParts = normalized.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T]|$)/u)
+  if (dateParts) {
+    const [, year, month, day] = dateParts.map(Number)
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    if (month < 1 || month > 12 || day < 1 || day > daysInMonth) {
+      throw new Error('Invalid EXIF calendar date')
+    }
+  }
+  if (
+    offset &&
+    /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/u.test(normalized)
+  ) {
+    normalized = `${normalized.replace(' ', 'T')}${offset.trim()}`
+  }
   return new Date(normalized).toISOString()
 }
 
 /**
  * Converts GPS metadata into latitude/longitude strings when possible.
+ * @param metadata EXIF metadata, including optional hemisphere references.
+ * @returns Valid signed coordinates, or undefined values when parsing fails.
  */
 export function getCoordinatesFromMetadata(
   metadata: ImageMetadataMap,
@@ -43,32 +66,44 @@ export function getCoordinatesFromMetadata(
     const coordinates = new Coordinates(
       `${metadata.GPSLatitude.replace(' deg', '°')} ${metadata.GPSLongitude.replace(' deg', '°')}`,
     )
-    return {
-      latitude: coordinates.getLatitude().toString(),
-      longitude: coordinates.getLongitude().toString(),
+    let latitude = coordinates.getLatitude()
+    let longitude = coordinates.getLongitude()
+    // References may arrive after coordinate tags; normalize signs once all tags are read.
+    const latitudeRef = metadata.GPSLatitudeRef?.trim().toUpperCase()
+    const longitudeRef = metadata.GPSLongitudeRef?.trim().toUpperCase()
+    if (latitudeRef === 'S') latitude = -Math.abs(latitude)
+    if (latitudeRef === 'N') latitude = Math.abs(latitude)
+    if (longitudeRef === 'W') longitude = -Math.abs(longitude)
+    if (longitudeRef === 'E') longitude = Math.abs(longitude)
+    if (
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      Math.abs(latitude) <= 90 &&
+      Math.abs(longitude) <= 180
+    ) {
+      return { latitude: String(latitude), longitude: String(longitude) }
     }
-  } catch {
-    if (metadata.GPSLatitude && metadata.GPSLongitude) {
-      return {
-        latitude: String(metadata.GPSLatitude),
-        longitude: String(metadata.GPSLongitude),
-      }
-    }
-    return { latitude: undefined, longitude: undefined }
-  }
+  } catch {}
+  return { latitude: undefined, longitude: undefined }
 }
 
 /**
  * Extracts the capture date from EXIF-style metadata when one is explicitly present.
+ * @param metadata EXIF metadata with capture dates and optional timezone offsets.
+ * @returns The first valid capture timestamp in UTC, or undefined.
  */
 export function getCapturedAtFromMetadata(
   metadata: ImageMetadataMap,
 ): string | undefined {
-  const possibleFields = ['DateTimeOriginal', 'CreateDate', 'ModifyDate']
-  for (const field of possibleFields) {
+  const possibleFields = [
+    ['DateTimeOriginal', 'OffsetTimeOriginal'],
+    ['CreateDate', 'OffsetTimeDigitized'],
+    ['ModifyDate', 'OffsetTime'],
+  ] as const
+  for (const [field, offsetField] of possibleFields) {
     if (metadata[field]) {
       try {
-        return parseExifDate(metadata[field])
+        return parseExifDate(metadata[field], metadata[offsetField])
       } catch {}
     }
   }
