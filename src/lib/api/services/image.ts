@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, sql, type SQL } from 'drizzle-orm'
+import { and, eq, sql, type SQL } from 'drizzle-orm'
 // LIB
 import { isAdminRequest } from '$lib/api'
 // API
@@ -17,6 +17,8 @@ import {
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
+import { isRelevantHubAdmin } from '$lib/api/services/authz/hub'
+import { authorizeTaskReadForProbe } from '$lib/api/services/authz/task'
 // SCHEMA
 import {
   image,
@@ -25,6 +27,7 @@ import {
   organisation,
   hub,
   task,
+  taskImage,
 } from '$lib/db/schema/index'
 import {
   getImageById as loadImageById,
@@ -368,6 +371,15 @@ export const assertPermissionsToCreateImage = async (
 /**
  * Asserts permissions to update/delete an image.
  * This might depend on who uploaded it, or roles in the associated context.
+ * @param db Database handle.
+ * @param user Current account.
+ * @param request Incoming request.
+ * @param data Mutation payload.
+ * @param userRoles Persisted roles.
+ * @param refId Target image ID.
+ * @param ctxId Claimed resource ID.
+ * @param ctxType Claimed resource type.
+ * @returns Nothing when both role and resource membership checks pass.
  */
 export const assertPermissionsToUpdateImage = async (
   db: Database,
@@ -379,36 +391,88 @@ export const assertPermissionsToUpdateImage = async (
   ctxId: Id,
   ctxType: ImageContextResource | ImageContextResourceExtended,
 ) => {
+  if (!user?.id || user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   const commonAssertions = [
     () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
     () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id'),
   ]
+  const commonError = runAssertions(...commonAssertions)
+  if (commonError) return commonError
 
   // Implement logic to determine who can update/delete.
   // 1. Users with specific roles in the context (feature's project members/maintainers, organisation's owners, project's maintainers).
   // 2. SuperAdmins.
-  let contextAssertion = () => {} // Placeholder
+  let contextAssertion: () => void | Response
+  let contextCondition: SQL
 
   switch (ctxType) {
     case ImageContextResource.feature: {
       const projectId = (await getProjectForFeatureId(db, ctxId as Id))?.id
       contextAssertion = () =>
         assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId ?? '')
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${featureImage} WHERE ${featureImage.featureId} = ${ctxId} AND ${featureImage.imageId} = ${image.id})`
       break
     }
     case ImageContextResource.project:
       contextAssertion = () =>
         assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId)
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${project} WHERE ${project.id} = ${ctxId} AND ${project.imageId} = ${image.id})`
       break
     case ImageContextResource.organisation:
       contextAssertion = () =>
         assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId)
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${organisation} WHERE ${organisation.id} = ${ctxId} AND ${organisation.imageId} = ${image.id})`
       break
+    case ImageContextResource.hub:
+      contextAssertion = () => {
+        if (!isSuperAdmin(user) && !isRelevantHubAdmin(userRoles, ctxId)) {
+          throw error(403, 'INSUFFICIENT_ROLE')
+        }
+      }
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${hub} WHERE ${hub.id} = ${ctxId} AND ${hub.imageId} = ${image.id})`
+      break
+    case ImageContextResourceExtended.task: {
+      const [taskRow] = await db
+        .select({
+          id: task.id,
+          projectId: task.projectId,
+          organisationId: task.organisationId,
+          resourceHubId: organisation.hubId,
+        })
+        .from(task)
+        .innerJoin(organisation, eq(organisation.id, task.organisationId))
+        .where(eq(task.id, ctxId))
+        .limit(1)
+      contextAssertion = () => {
+        if (
+          !taskRow ||
+          !authorizeTaskReadForProbe({
+            user,
+            userRoles,
+            isAdminRequest: true,
+            probe: taskRow,
+          }).allowed
+        )
+          throw error(403, 'INSUFFICIENT_ROLE')
+      }
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${taskImage} WHERE ${taskImage.taskId} = ${ctxId} AND ${taskImage.imageId} = ${image.id})`
+      break
+    }
+    default:
+      throw error(400, 'UNSUPPORTED_IMAGE_CONTEXT')
   }
 
-  const assertionError = runAssertions(...commonAssertions, contextAssertion)
+  const assertionError = runAssertions(contextAssertion)
   if (assertionError) return assertionError
+
+  // A role in one resource never grants mutation rights over an unrelated image ID.
+  const [linkedImage] = await db
+    .select({ id: image.id })
+    .from(image)
+    .where(and(eq(image.id, refId), contextCondition))
+    .limit(1)
+  if (!linkedImage) throw error(403, 'IMAGE_CONTEXT_MISMATCH')
 }
 
 export const assertPermissionsToDeleteImage = async (
