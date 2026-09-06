@@ -325,11 +325,13 @@ describe('image.remote', () => {
   })
 
   it('denies getImageById when image read authz denies', async () => {
-    mockLoadImageById.mockResolvedValue({
-      id: 'img-1',
-      featureId: 'feature-1',
-      contributorId: 'u-1',
-    })
+    mockGetImagesByIds.mockResolvedValueOnce([
+      {
+        id: 'img-1',
+        featureId: 'feature-1',
+        contributorId: 'u-1',
+      },
+    ] as never)
     mockAuthorizeImageRead.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
@@ -342,6 +344,31 @@ describe('image.remote', () => {
 
   it('createImage rejects missing image payload', async () => {
     await expect(remote.createImage({})).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('returns the readable assignment when the first shared-image assignment is denied', async () => {
+    const denied = {
+      id: 'image',
+      featureId: 'restricted',
+      intent: 'canonical',
+      isPublished: false,
+    }
+    const allowed = {
+      id: 'image',
+      featureId: 'readable',
+      intent: 'general',
+      isPublished: true,
+    }
+    mockGetImagesByIds.mockResolvedValueOnce([denied, allowed] as never)
+    mockAuthorizeImageRead
+      .mockReturnValueOnce({ allowed: false } as never)
+      .mockReturnValueOnce({ allowed: true })
+    await remote.getImageById({ id: 'image' })
+    expect(mockToImageEntityResponseShape).toHaveBeenCalledWith(
+      allowed,
+      { ctxType: 'feature', ctxId: 'readable' },
+      expect.anything(),
+    )
   })
 
   it('createImage rejects missing ctxType/ctxId', async () => {
@@ -447,10 +474,12 @@ describe('image.remote', () => {
     }
     const ctx = await mockGuardedContext()
     mockGuardedContext.mockResolvedValue({ ...ctx, db })
-    mockLoadImageById.mockResolvedValueOnce({
-      id: 'image',
-      contributorId: 'another-user',
-    } as never)
+    mockGetImagesByIds.mockResolvedValueOnce([
+      {
+        id: 'image',
+        contributorId: 'another-user',
+      },
+    ] as never)
     await remote.getImageById({ id: 'image' })
     expect(mockAuthorizeImageRead).toHaveBeenCalledWith(
       expect.anything(),

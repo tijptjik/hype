@@ -1518,14 +1518,16 @@ export const getFeatureCanonicalImageOccupancy = guardedQuery(
 
 /**
  * Returns a single image by ID.
+ * @param params Requested image and profile.
+ * @param ctx Guarded remote context.
+ * @returns An image envelope using an authorized persisted assignment, or an empty result.
  */
 export const getImageById = guardedQuery(ImageByIdSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest } = ctx
   const profile = toDetailProfile(params.meta?.profile)
   const { conditions } = getImageEntityQueryContext(user, isAdminRequest, {})
-  conditions.push(eq(image.id, params.id))
-  const data = (await loadImageById(db, conditions)) as ImageDBFlat | undefined
-  if (!data) {
+  const candidates = await getImagesByIds(db, [params.id], conditions)
+  if (!candidates.length) {
     return toImageEntityResponseShape(
       null,
       {
@@ -1536,15 +1538,18 @@ export const getImageById = guardedQuery(ImageByIdSchema, async (params, ctx) =>
     )
   }
 
-  const context = await resolveAuthorizedImageContext(
-    db,
-    data,
-    toImageAccessActor(user, userRoles),
-    isAdminRequest,
-  )
-  if (!context) throw error(403, 'INSUFFICIENT_ROLE')
-
-  return toImageEntityResponseShape(data as unknown as Image, context, profile)
+  // Shared images may have several assignments; do not let an unreadable first row mask a readable one.
+  for (const data of candidates) {
+    const context = await resolveAuthorizedImageContext(
+      db,
+      data,
+      toImageAccessActor(user, userRoles),
+      isAdminRequest,
+    )
+    if (context)
+      return toImageEntityResponseShape(data as unknown as Image, context, profile)
+  }
+  throw error(403, 'INSUFFICIENT_ROLE')
 })
 
 export const getImageByIdByProfile = getImageById as typeof getImageById &
