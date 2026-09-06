@@ -65,6 +65,17 @@ export const filterUserFeaturesByHierarchy = (
   })
 }
 
+/**
+ * Updates both saved-list flags and returns the final persisted state.
+ *
+ * @param userId - User whose saved lists are updated.
+ * @param featureId - Feature whose wishlist and visit flags are updated.
+ * @param isWishlisted - Desired wishlist membership.
+ * @param isVisited - Desired visited membership.
+ * @param visitedAt - Optional visit timestamp.
+ * @returns The remaining saved row, or `null` after its final flag is removed.
+ * @remarks A null response represents deletion and must supersede intermediate rows.
+ */
 export const updateUserFeature = async (
   userId: Id,
   featureId: Id,
@@ -80,14 +91,14 @@ export const updateUserFeature = async (
       featureId,
       list: 'wishlist',
     })
-    result = (response?.data as UserFeature | null) ?? result
+    result = (response?.data as UserFeature | null) ?? null
   } else {
     const response = await removeUserFeatureFromList({
       userId,
       featureId,
       list: 'wishlist',
     })
-    result = (response?.data as UserFeature | null) ?? result
+    result = (response?.data as UserFeature | null) ?? null
   }
 
   if (isVisited) {
@@ -97,14 +108,15 @@ export const updateUserFeature = async (
       list: 'visited',
       visitedAt: visitedAt ?? new Date().toISOString(),
     })
-    result = (response?.data as UserFeature | null) ?? result
+    result = (response?.data as UserFeature | null) ?? null
   } else {
     const response = await removeUserFeatureFromList({
       userId,
       featureId,
       list: 'visited',
     })
-    result = (response?.data as UserFeature | null) ?? result
+    // The final removal can delete the row returned by the wishlist update above.
+    result = (response?.data as UserFeature | null) ?? null
   }
 
   return result
