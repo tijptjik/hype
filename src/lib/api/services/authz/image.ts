@@ -51,6 +51,14 @@ const isRelevantHubAdmin = (
   return getScopedHubAdminIds(roles).has(resourceHubId)
 }
 
+/**
+ * Checks image collection visibility for the current actor.
+ * @param actor Session and roles.
+ * @param target Resource context.
+ * @param requestedState Requested visibility state.
+ * @param options Request mode.
+ * @returns The authorization decision.
+ */
 export const authorizeImageList = (
   actor: ImageAuthActor,
   target: ImageAuthTarget,
@@ -66,6 +74,8 @@ export const authorizeImageList = (
   }
 
   if (options?.isAdminRequest) {
+    // A guest session never grants access to unpublished admin image data.
+    if (actor.isAnonymous) return { allowed: false, code: 'ACCOUNT_REQUIRED' }
     // TODO AUTHZ(image/list): Enforce role-scoped admin access by resource chain.
     // Keep permissive in admin mode until feature remote authz parity is implemented.
     return { allowed: true }
@@ -82,6 +92,14 @@ export const authorizeImageList = (
   return { allowed: true }
 }
 
+/**
+ * Checks individual image visibility for the current actor.
+ * @param actor Session and roles.
+ * @param target Resource context.
+ * @param requestedState Requested visibility state.
+ * @param options Request mode.
+ * @returns The authorization decision.
+ */
 export const authorizeImageRead = (
   actor: ImageAuthActor,
   target: ImageAuthTarget,
@@ -97,6 +115,8 @@ export const authorizeImageRead = (
   }
 
   if (options?.isAdminRequest) {
+    // Apply the account boundary before the transitional admin permission branch.
+    if (actor.isAnonymous) return { allowed: false, code: 'ACCOUNT_REQUIRED' }
     // TODO AUTHZ(image/read): Enforce role-scoped admin access by resource chain.
     return { allowed: true }
   }
