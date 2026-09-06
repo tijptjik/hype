@@ -6,12 +6,15 @@ export type ImageAuthActor = {
   userRoles: UserRoleDisco[]
   isAuthenticated?: boolean
   isAnonymous?: boolean
+  isSuperAdmin?: boolean
 }
 
 export type ImageAuthTarget = {
   ctxType: 'hub' | 'organisation' | 'project' | 'feature' | 'user' | 'task'
   ctxId: string
   resourceHubId?: string | null
+  projectId?: string | null
+  organisationId?: string | null
 }
 
 export type ImageRequestedState = {
@@ -52,6 +55,37 @@ const isRelevantHubAdmin = (
 }
 
 /**
+ * Resolves admin image visibility from the target's persisted resource chain.
+ * @param actor Current account and roles.
+ * @param target Resolved image context.
+ * @returns Whether an applicable administrative role or personal ownership exists.
+ */
+const canReadAdminImages = (
+  actor: ImageAuthActor,
+  target: ImageAuthTarget,
+): boolean => {
+  if (actor.isSuperAdmin || isRelevantHubAdmin(actor.userRoles, target.resourceHubId))
+    return true
+  if (target.ctxType === 'user') return target.ctxId === actor.userId
+  const organisationId =
+    target.organisationId ??
+    (target.ctxType === 'organisation' ? target.ctxId : undefined)
+  const projectId =
+    target.projectId ?? (target.ctxType === 'project' ? target.ctxId : undefined)
+  return actor.userRoles.some(
+    role =>
+      (role.type === 'organisation' &&
+        Boolean(organisationId) &&
+        role.organisationId === organisationId &&
+        role.role === 'owner') ||
+      (role.type === 'project' &&
+        Boolean(projectId) &&
+        role.projectId === projectId &&
+        ['owner', 'maintainer', 'member'].includes(role.role)),
+  )
+}
+
+/**
  * Checks image collection visibility for the current actor.
  * @param actor Session and roles.
  * @param target Resource context.
@@ -76,13 +110,16 @@ export const authorizeImageList = (
   if (options?.isAdminRequest) {
     // A guest session never grants access to unpublished admin image data.
     if (actor.isAnonymous) return { allowed: false, code: 'ACCOUNT_REQUIRED' }
-    // TODO AUTHZ(image/list): Enforce role-scoped admin access by resource chain.
-    // Keep permissive in admin mode until feature remote authz parity is implemented.
-    return { allowed: true }
+    // Admin mode does not itself grant access to a resource chain.
+    return canReadAdminImages(actor, target)
+      ? { allowed: true }
+      : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }
 
   if (target.ctxType === 'user') {
-    return { allowed: true }
+    return target.ctxId === actor.userId
+      ? { allowed: true }
+      : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }
 
   if (requestedState.isPublished === false) {
@@ -117,12 +154,16 @@ export const authorizeImageRead = (
   if (options?.isAdminRequest) {
     // Apply the account boundary before the transitional admin permission branch.
     if (actor.isAnonymous) return { allowed: false, code: 'ACCOUNT_REQUIRED' }
-    // TODO AUTHZ(image/read): Enforce role-scoped admin access by resource chain.
-    return { allowed: true }
+    // Resolve the same scoped policy for individual reads and collection reads.
+    return canReadAdminImages(actor, target)
+      ? { allowed: true }
+      : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }
 
   if (target.ctxType === 'user') {
-    return { allowed: true }
+    return target.ctxId === actor.userId
+      ? { allowed: true }
+      : { allowed: false, code: 'INSUFFICIENT_ROLE' }
   }
 
   if (requestedState.isPublished === false) {

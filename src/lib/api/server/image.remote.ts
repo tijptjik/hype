@@ -78,7 +78,7 @@ import {
   ImageEnv,
 } from '$lib/enums'
 // TYPES
-import type { Database, Id, EntityResponse } from '$lib/types'
+import type { Database, Id, EntityResponse, UserRoleDisco } from '$lib/types'
 import type {
   CreateImageParams,
   FinalizeImageUploadLink,
@@ -134,6 +134,7 @@ const FeatureCanonicalImagesSchema = z.object({
 // - updateFeatureImageFields
 // - resolveImageQueryContext
 // - probeContextState
+// - resolveAuthorizedImageContext
 //
 // 2. STORAGE & METADATA HELPERS
 // - attachImageLinks
@@ -181,9 +182,10 @@ type StorageApiCredentials = {
 
 type ImageAccessActor = {
   userId: Id
-  userRoles: string[]
+  userRoles: UserRoleDisco[]
   isAuthenticated: true
   isAnonymous: boolean
+  isSuperAdmin: boolean
 }
 
 type UpdateImageForContextParams = Parameters<typeof updateImageForContext>[0]
@@ -196,13 +198,14 @@ type UpdateImageForContextParams = Parameters<typeof updateImageForContext>[0]
  * @returns Authorization actor payload.
  */
 const toImageAccessActor = (
-  user: { id: Id; isAnonymous: boolean },
-  userRoles: string[],
+  user: { id: Id; isAnonymous: boolean; superAdmin?: boolean },
+  userRoles: UserRoleDisco[],
 ): ImageAccessActor => ({
   userId: user.id,
   userRoles,
   isAuthenticated: true,
   isAnonymous: user.isAnonymous,
+  isSuperAdmin: Boolean(user.superAdmin),
 })
 
 /**
@@ -347,12 +350,16 @@ const probeContextState = async (
   ctxId: Id,
 ): Promise<{
   resourceHubId?: string | null
+  projectId?: string | null
+  organisationId?: string | null
   requestedState: { isPublished?: boolean; isArchived?: boolean }
 }> => {
   if (ctxType === ImageContextResource.feature) {
     const [row] = await db
       .select({
         isPublished: feature.isPublished,
+        projectId: project.id,
+        organisationId: organisation.id,
         isArchived: feature.isArchived,
         resourceHubId: organisation.hubId,
       })
@@ -362,13 +369,20 @@ const probeContextState = async (
       .where(eq(feature.id, ctxId))
       .limit(1)
     if (!row) throw error(404, 'Context resource not found')
-    return { resourceHubId: row.resourceHubId, requestedState: row }
+    return {
+      resourceHubId: row.resourceHubId,
+      projectId: row.projectId,
+      organisationId: row.organisationId,
+      requestedState: row,
+    }
   }
 
   if (ctxType === ImageContextResource.project) {
     const [row] = await db
       .select({
         isPublished: project.isPublished,
+        projectId: project.id,
+        organisationId: organisation.id,
         isArchived: project.isArchived,
         resourceHubId: organisation.hubId,
       })
@@ -377,13 +391,19 @@ const probeContextState = async (
       .where(eq(project.id, ctxId))
       .limit(1)
     if (!row) throw error(404, 'Context resource not found')
-    return { resourceHubId: row.resourceHubId, requestedState: row }
+    return {
+      resourceHubId: row.resourceHubId,
+      projectId: row.projectId,
+      organisationId: row.organisationId,
+      requestedState: row,
+    }
   }
 
   if (ctxType === ImageContextResource.organisation) {
     const [row] = await db
       .select({
         isPublished: organisation.isPublished,
+        organisationId: organisation.id,
         isArchived: organisation.isArchived,
         resourceHubId: organisation.hubId,
       })
@@ -391,7 +411,11 @@ const probeContextState = async (
       .where(eq(organisation.id, ctxId))
       .limit(1)
     if (!row) throw error(404, 'Context resource not found')
-    return { resourceHubId: row.resourceHubId, requestedState: row }
+    return {
+      resourceHubId: row.resourceHubId,
+      organisationId: row.organisationId,
+      requestedState: row,
+    }
   }
 
   if (ctxType === ImageContextResource.hub) {
@@ -420,6 +444,8 @@ const probeContextState = async (
   const [row] = await db
     .select({
       isPublished: feature.isPublished,
+      projectId: project.id,
+      organisationId: organisation.id,
       isArchived: feature.isArchived,
       resourceHubId: organisation.hubId,
     })
@@ -431,7 +457,66 @@ const probeContextState = async (
     .limit(1)
 
   if (!row) throw error(404, 'Context resource not found')
-  return { resourceHubId: row.resourceHubId, requestedState: row }
+  return {
+    resourceHubId: row.resourceHubId,
+    projectId: row.projectId,
+    organisationId: row.organisationId,
+    requestedState: row,
+  }
+}
+
+/**
+ * Resolves a readable persisted context for an ID-based image result.
+ * @param db Database handle.
+ * @param row Image and any joined feature assignment.
+ * @param actor Current account and roles.
+ * @param isAdminRequest Request mode.
+ * @returns An authorized context, or null when no context is readable.
+ */
+const resolveAuthorizedImageContext = async (
+  db: Database,
+  row: ImageDBFlat,
+  actor: ImageAccessActor,
+  isAdminRequest: boolean,
+): Promise<Pick<ImageContextEnvelope<'detail'>, 'ctxType' | 'ctxId'> | null> => {
+  const candidates: Array<Pick<ImageContextEnvelope<'detail'>, 'ctxType' | 'ctxId'>> =
+    []
+  if (row.featureId) {
+    candidates.push({ ctxType: ImageContextResource.feature, ctxId: row.featureId })
+  } else {
+    // Single-image resources are identified from their stored links, never from the caller.
+    for (const [ctxType, table] of [
+      [ImageContextResource.project, project],
+      [ImageContextResource.organisation, organisation],
+      [ImageContextResource.hub, hub],
+    ] as const) {
+      const parents = await db
+        .select({ ctxId: table.id })
+        .from(table)
+        .where(eq(table.imageId, row.id))
+      candidates.push(...parents.map(parent => ({ ctxType, ctxId: parent.ctxId })))
+    }
+    if (!candidates.length && row.contributorId) {
+      candidates.push({ ctxType: ImageContextResource.user, ctxId: row.contributorId })
+    }
+  }
+  for (const candidate of candidates) {
+    const context = await probeContextState(db, candidate.ctxType, candidate.ctxId)
+    const decision = authorizeImageRead(
+      actor,
+      { ...candidate, ...context },
+      {
+        ...context.requestedState,
+        ...(candidate.ctxType === ImageContextResource.feature &&
+        row.isPublished === false
+          ? { isPublished: false }
+          : {}),
+      },
+      { isAdminRequest },
+    )
+    if (decision.allowed) return candidate
+  }
+  return null
 }
 
 /**
@@ -1313,6 +1398,8 @@ export const getImagesForContext = guardedQuery(
         ctxType: params.ctxType as ImageContextType,
         ctxId: params.ctxId,
         resourceHubId: context.resourceHubId,
+        projectId: context.projectId,
+        organisationId: context.organisationId,
       },
       context.requestedState,
       { isAdminRequest },
@@ -1387,16 +1474,30 @@ export const getImagesForIds = guardedQuery(ImagesByIdsSchema, async (params, ct
 
   const { conditions } = getImageByIdsQueryContext(user, isAdminRequest)
   const images = (await getImagesByIds(db, params.ids, conditions)) as Image[]
+  const readableImages: Image[] = []
+  const readableContexts = new Map<
+    Image,
+    Pick<ImageContextEnvelope<'detail'>, 'ctxType' | 'ctxId'>
+  >()
+  // A batch of IDs is not a personal collection: authorize each row's actual resource chain.
+  for (const imageRow of images) {
+    const context = await resolveAuthorizedImageContext(
+      db,
+      imageRow as ImageDBFlat,
+      toImageAccessActor(user, userRoles),
+      isAdminRequest,
+    )
+    if (!context) continue
+    readableImages.push(imageRow)
+    readableContexts.set(imageRow, context)
+  }
   return toImageListResponseShape(
-    images,
-    imageRow => ({
-      ctxType: (imageRow as Partial<ImageDBFlat>).featureId
-        ? ImageContextResource.feature
-        : ImageContextResource.user,
-      ctxId:
-        ((imageRow as Partial<ImageDBFlat>).featureId as Id | undefined) ??
-        (user.id as Id),
-    }),
+    readableImages,
+    imageRow => {
+      const context = readableContexts.get(imageRow)
+      if (!context) throw error(500, 'Missing authorized image context')
+      return context
+    },
     profile,
   )
 })
@@ -1435,34 +1536,15 @@ export const getImageById = guardedQuery(ImageByIdSchema, async (params, ctx) =>
     )
   }
 
-  const resolvedCtxType = (
-    data.featureId ? ImageContextResource.feature : ImageContextResource.user
-  ) as ImageContextType
-  const resolvedCtxId =
-    (data.featureId as Id | undefined) ??
-    (data.contributorId as Id | undefined) ??
-    (params.id as Id)
-
-  const context = await probeContextState(db, resolvedCtxType, resolvedCtxId)
-  const readDecision = authorizeImageRead(
+  const context = await resolveAuthorizedImageContext(
+    db,
+    data,
     toImageAccessActor(user, userRoles),
-    {
-      ctxType: resolvedCtxType as ImageContextType,
-      ctxId: resolvedCtxId,
-      resourceHubId: context.resourceHubId,
-    },
-    context.requestedState,
-    { isAdminRequest },
+    isAdminRequest,
   )
-  if (!readDecision.allowed) {
-    throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
-  }
+  if (!context) throw error(403, 'INSUFFICIENT_ROLE')
 
-  return toImageEntityResponseShape(
-    data as unknown as Image,
-    { ctxType: resolvedCtxType, ctxId: resolvedCtxId },
-    profile,
-  )
+  return toImageEntityResponseShape(data as unknown as Image, context, profile)
 })
 
 export const getImageByIdByProfile = getImageById as typeof getImageById &

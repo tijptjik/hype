@@ -394,6 +394,77 @@ describe('image.remote', () => {
     ).rejects.toMatchObject({ status: 404 })
   })
 
+  it('authorizes each ID-based result using its persisted resource chain', async () => {
+    const ctx = await mockGuardedContext()
+    mockGuardedContext.mockResolvedValue({
+      ...ctx,
+      db: buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub',
+        projectId: 'project',
+        organisationId: 'organisation',
+      }),
+    })
+    const denied = { id: 'denied', featureId: 'feature-a', isPublished: false }
+    const allowed = { id: 'allowed', featureId: 'feature-b', isPublished: false }
+    mockGetImagesByIds.mockResolvedValueOnce([denied, allowed] as never)
+    mockAuthorizeImageRead
+      .mockReturnValueOnce({ allowed: false } as never)
+      .mockReturnValueOnce({ allowed: true })
+    await remote.getImagesForIds({ ids: ['denied', 'allowed'] })
+    expect(mockToImageListResponseShape).toHaveBeenCalledWith(
+      [allowed],
+      expect.any(Function),
+      expect.anything(),
+    )
+    expect(mockAuthorizeImageRead).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        ctxType: 'feature',
+        ctxId: 'feature-a',
+        projectId: 'project',
+        organisationId: 'organisation',
+        resourceHubId: 'hub',
+      }),
+      expect.objectContaining({ isPublished: false }),
+      { isAdminRequest: true },
+    )
+  })
+
+  it('resolves a resource image from its parent link rather than treating it as the uploader collection', async () => {
+    const db = buildDbWithContextRow({
+      isPublished: false,
+      isArchived: false,
+      resourceHubId: 'hub',
+      projectId: 'project',
+      organisationId: 'organisation',
+    })
+    for (const parents of [[{ ctxId: 'project' }], [], []]) {
+      db.select.mockReturnValueOnce({
+        from: vi.fn(() => ({ where: vi.fn(async () => parents) })),
+      } as never)
+    }
+    const ctx = await mockGuardedContext()
+    mockGuardedContext.mockResolvedValue({ ...ctx, db })
+    mockLoadImageById.mockResolvedValueOnce({
+      id: 'image',
+      contributorId: 'another-user',
+    } as never)
+    await remote.getImageById({ id: 'image' })
+    expect(mockAuthorizeImageRead).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        ctxType: 'project',
+        ctxId: 'project',
+        projectId: 'project',
+        organisationId: 'organisation',
+      }),
+      expect.objectContaining({ isPublished: false }),
+      { isAdminRequest: true },
+    )
+  })
+
   it.each([false, true])(
     'deletes image associations atomically (failure: %s)',
     async fail => {
