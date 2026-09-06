@@ -5,7 +5,9 @@ import {
   featureI18n,
   image,
   featureImage,
+  hub,
   organisation,
+  project,
   task,
   taskImage,
 } from '$lib/db/schema/index'
@@ -342,6 +344,7 @@ const buildCompetingCanonicalDemotion = (
  * @param taskId - The ID of the task
  * @param isUndefinedOnly - Whether to only archive images with undefined intent
  * @returns The result of the operation
+ * @remarks Shared assignments and images remain available to their other consumers.
  * @throws {Error} If archiving fails
  */
 export const archiveImages = async (
@@ -360,22 +363,37 @@ export const archiveImages = async (
 
     // Process each image
     for (const ti of imagesToProcess) {
-      // Prepare the image update so removal and archival can commit together.
+      // Prepare the image update so removal and archival can commit together;
+      // evaluate remaining references at write time, after the scoped removal.
       const archival = db
         .update(image)
         .set({ isArchived: true })
-        .where(eq(image.id, ti.imageId))
-      // Delete feature image association
+        .where(
+          and(
+            eq(image.id, ti.imageId),
+            sql`not exists (select 1 from ${featureImage} where ${featureImage.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${project} where ${project.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${organisation} where ${organisation.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${hub} where ${hub.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${taskImage} where ${taskImage.imageId} = ${image.id} and ${taskImage.taskId} <> ${taskId})`,
+          ),
+        )
+      // Delete the feature image association only if no other task shares it.
       if (ti.featureId) {
         await db.batch([
-          db
-            .delete(featureImage)
-            .where(
-              and(
-                eq(featureImage.imageId, ti.imageId),
-                eq(featureImage.featureId, ti.featureId),
-              ),
+          db.delete(featureImage).where(
+            and(
+              eq(featureImage.imageId, ti.imageId),
+              eq(featureImage.featureId, ti.featureId),
+              sql`not exists (
+                  select 1 from ${taskImage}
+                  inner join ${task} on ${task.id} = ${taskImage.taskId}
+                  where ${taskImage.imageId} = ${featureImage.imageId}
+                    and ${task.featureId} = ${featureImage.featureId}
+                    and ${taskImage.taskId} <> ${taskId}
+                )`,
             ),
+          ),
           archival,
         ])
       } else {
