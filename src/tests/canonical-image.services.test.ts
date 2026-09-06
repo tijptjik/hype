@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { drizzle } from 'drizzle-orm/d1'
 import { updateFeatureImage } from '$lib/db/services/image'
-import { publishImages } from '$lib/db/services/task'
+import { archiveImages, publishImages } from '$lib/db/services/task'
 import type { Database } from '$lib/types'
 
 const stores: DatabaseSync[] = []
@@ -41,6 +41,44 @@ function setup() {
 }
 
 describe('canonical image replacement', () => {
+  it.each([false, true])(
+    'archives task images atomically (failure: %s)',
+    async fail => {
+      const { db, sqlite } = setup()
+      sqlite.exec(`CREATE TABLE image (id TEXT PRIMARY KEY, isArchived INTEGER, modifiedAt TEXT);
+      INSERT INTO image (id, isArchived) VALUES ('old', 0);`)
+      if (fail) {
+        sqlite.exec(`CREATE TRIGGER reject_archival BEFORE UPDATE ON image
+      BEGIN SELECT RAISE(ABORT, 'archive failed'); END;`)
+      }
+      vi.spyOn(db, 'select').mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        where: vi
+          .fn()
+          .mockResolvedValue([
+            { imageId: 'old', featureId: 'feature', intent: 'canonical' },
+          ]),
+      } as never)
+      if (fail) {
+        await expect(archiveImages(db, 'task')).rejects.toThrow('archive failed')
+      } else {
+        await expect(archiveImages(db, 'task')).resolves.toEqual({
+          success: true,
+          processedCount: 1,
+        })
+      }
+      expect(
+        sqlite.prepare("SELECT intent FROM featureImage WHERE imageId = 'old'").get(),
+      ).toEqual(fail ? { intent: 'canonical' } : undefined)
+      expect(
+        sqlite.prepare("SELECT isArchived FROM image WHERE id = 'old'").get(),
+      ).toEqual({
+        isArchived: fail ? 0 : 1,
+      })
+    },
+  )
+
   it.each([false, true])(
     'publishes task canonical images atomically (failure: %s)',
     async fail => {

@@ -353,20 +353,28 @@ export const archiveImages = async (
 
     // Process each image
     for (const ti of imagesToProcess) {
+      // Prepare the image update so removal and archival can commit together.
+      const archival = db
+        .update(image)
+        .set({ isArchived: true })
+        .where(eq(image.id, ti.imageId))
       // Delete feature image association
       if (ti.featureId) {
-        await db
-          .delete(featureImage)
-          .where(
-            and(
-              eq(featureImage.imageId, ti.imageId),
-              eq(featureImage.featureId, ti.featureId),
+        await db.batch([
+          db
+            .delete(featureImage)
+            .where(
+              and(
+                eq(featureImage.imageId, ti.imageId),
+                eq(featureImage.featureId, ti.featureId),
+              ),
             ),
-          )
+          archival,
+        ])
+      } else {
+        // Update image record when no feature association remains to remove.
+        await archival
       }
-
-      // Update image record
-      await db.update(image).set({ isArchived: true }).where(eq(image.id, ti.imageId))
     }
 
     return { success: true, processedCount: imagesToProcess.length }
