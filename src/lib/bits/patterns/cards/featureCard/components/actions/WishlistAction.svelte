@@ -91,13 +91,20 @@ function showWishlistError(message: string): void {
   }, 3000)
 }
 
+/**
+ * Saves the list change for the feature and account that initiated the action.
+ *
+ * @returns Nothing after the save and local state reconciliation finish.
+ */
 async function toggleWishlisted(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
+  const featureId = feature.id
+  const userId = appCtx.user?.id
 
   const previous = wishlistedFeature ?? visitedFeature ?? null
   const nextIsWishlisted = !isWishlisted
   const optimistic = {
-    featureId: feature.id,
+    featureId,
     isWishlisted: nextIsWishlisted,
     isVisited: Boolean(visitedFeature),
     visitedAt: visitedFeature?.visitedAt ?? null,
@@ -106,33 +113,38 @@ async function toggleWishlisted(): Promise<void> {
   isSubmitting = true
   clearWishlistError()
   optimisticWishlisted = nextIsWishlisted
-  appCtx.applyUserFeatureState(feature.id, optimistic)
+  appCtx.applyUserFeatureState(featureId, optimistic)
 
   try {
     const mutation = nextIsWishlisted
-      ? addUserFeatureToList({ featureId: feature.id, list: 'wishlist' })
-      : removeUserFeatureFromList({ featureId: feature.id, list: 'wishlist' })
+      ? addUserFeatureToList({ featureId, list: 'wishlist' })
+      : removeUserFeatureFromList({ featureId, list: 'wishlist' })
     const response = await mutation.updates(
       getUserFeatures({
-        userId: appCtx.user?.id,
+        userId,
         sorting: { sortBy: 'modifiedAt', sortOrder: 'desc' },
       }).withOverride(current => ({
         ...current,
         data: [
           optimistic,
-          ...(current.data ?? []).filter(item => item.featureId !== feature.id),
+          ...(current.data ?? []).filter(item => item.featureId !== featureId),
         ],
       })),
     )
 
+    // A response from a previous account must not populate the current account's cache.
+    if (appCtx.user?.id !== userId) return
     const settled = (response?.data as UserFeature | null) ?? null
+    appCtx.applyUserFeatureState(featureId, settled)
+    if (!('id' in feature) || feature.id !== featureId) return
     settledWishlisted = Boolean(settled?.isWishlisted)
-    appCtx.applyUserFeatureState(feature.id, settled)
   } catch (error) {
+    if (appCtx.user?.id !== userId) return
+    appCtx.applyUserFeatureState(featureId, previous)
+    if (!('id' in feature) || feature.id !== featureId) return
     console.error('Error updating wishlist status:', error)
     optimisticWishlisted = Boolean(previous?.isWishlisted)
     settledWishlisted = Boolean(previous?.isWishlisted)
-    appCtx.applyUserFeatureState(feature.id, previous)
     const message = 'Failed to update wishlist status'
     showWishlistError(message)
     toast.error(message)
