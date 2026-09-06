@@ -14,6 +14,7 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
+import type { UserFeature, UserProfile } from '$lib/db/zod/schema/user.types'
 
 /** Creates a promise whose completion is controlled by the test. */
 function createDeferred<T>(): {
@@ -67,6 +68,124 @@ describe('AppCtx user updates', () => {
     expect(appCtx.state.resources.feature.map(feature => feature.id)).toEqual([
       'new-feature',
     ])
+  })
+
+  it('does not restore feature data after the user identity changes', async () => {
+    const pendingFeatures = createDeferred<FeatureFromCollection[]>()
+    const appCtx = new AppCtx(
+      {
+        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
+          queryFn(),
+        ),
+        removeQueries: vi.fn(),
+      } as unknown as QueryClient,
+      { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
+      { id: 'old-user' } as CurrentUser,
+      {} as ResponsiveCtx,
+    )
+    appCtx.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => [FirstClassResource.feature],
+      queryFn: () => pendingFeatures.promise,
+    })
+
+    const refresh = appCtx.refreshFeatures()
+    await appCtx.setUser({ id: 'new-user' } as CurrentUser)
+
+    pendingFeatures.resolve([
+      { id: 'old-feature', layerId: 'old-layer', properties: [] },
+    ] as FeatureFromCollection[])
+    await refresh
+
+    expect(appCtx.state.resources.feature).toEqual([])
+  })
+
+  it('does not restore saved feature state after the user identity changes', async () => {
+    const pendingUserFeatures = createDeferred<UserFeature[]>()
+    const appCtx = new AppCtx(
+      {
+        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
+          queryFn(),
+        ),
+        removeQueries: vi.fn(),
+      } as unknown as QueryClient,
+      {} as PlaceCtx,
+      { id: 'old-user' } as CurrentUser,
+      {} as ResponsiveCtx,
+    )
+    appCtx.queryMap.set('userFeatures', {
+      queryKey: () => ['userFeatures', 'old-user'],
+      queryFn: () => pendingUserFeatures.promise,
+    })
+
+    const refresh = appCtx.refreshUserFeatures()
+    await appCtx.setUser({ id: 'new-user' } as CurrentUser)
+
+    pendingUserFeatures.resolve([
+      { featureId: 'old-feature', isWishlisted: true, isVisited: false },
+    ] as UserFeature[])
+    await refresh
+
+    expect(appCtx.state.userFeatures).toEqual({ wishlisted: [], visited: [] })
+  })
+
+  it('does not commit a profile response after the user identity changes', async () => {
+    const pendingProfile = createDeferred<UserProfile | null>()
+    const appCtx = new AppCtx(
+      {
+        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
+          queryFn(),
+        ),
+        removeQueries: vi.fn(),
+      } as unknown as QueryClient,
+      {} as PlaceCtx,
+      { id: 'old-user', username: 'old-user' } as CurrentUser,
+      {} as ResponsiveCtx,
+    )
+    appCtx.setPanelCtx(Panel.profile, 'username', 'old-user')
+    appCtx.queryMap.set(FirstClassResource.user, {
+      queryKey: () => [FirstClassResource.user, 'old-user'],
+      queryFn: () => pendingProfile.promise,
+    })
+
+    const refresh = appCtx.refreshUserProfile()
+    await appCtx.setUser({ id: 'new-user', username: 'new-user' } as CurrentUser)
+
+    pendingProfile.resolve({ id: 'old-user', username: 'old-user' } as UserProfile)
+    await refresh
+
+    expect(appCtx.getUser()?.id).toBe('new-user')
+    expect(appCtx.state.panels.profile.ctx?.userData).toBeNull()
+  })
+
+  it('does not let an older hierarchy refresh overwrite a newer one', async () => {
+    const first = createDeferred<Project[]>()
+    const second = createDeferred<Project[]>()
+    let queryCount = 0
+    const appCtx = new AppCtx(
+      {
+        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
+          queryFn(),
+        ),
+        removeQueries: vi.fn(),
+      } as unknown as QueryClient,
+      {} as PlaceCtx,
+      null,
+      {} as ResponsiveCtx,
+    )
+    appCtx.queryMap.set(FirstClassResource.project, {
+      queryKey: () => [FirstClassResource.project],
+      queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
+    })
+
+    const olderRefresh = appCtx.refreshProjects(false)
+    const newerRefresh = appCtx.refreshProjects(false)
+
+    second.resolve([{ id: 'new-project' }] as Project[])
+    await newerRefresh
+    first.resolve([{ id: 'old-project' }] as Project[])
+    await olderRefresh
+
+    expect(appCtx.state.resources.project).toEqual([{ id: 'new-project' }])
   })
 
   it('waits for dependent query invalidations before resolving', async () => {
