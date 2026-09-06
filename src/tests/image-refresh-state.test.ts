@@ -1,9 +1,33 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ImageCtx } from '$lib/context/image.svelte'
+import { deleteImage } from '$lib/api/server/image.remote'
 
 vi.mock('$lib/context/app.svelte', () => ({ getAppCtx: () => ({}) }))
+vi.mock('$lib/api/server/image.remote', async importOriginal => ({
+  ...(await importOriginal<typeof import('$lib/api/server/image.remote')>()),
+  deleteImage: vi.fn(),
+}))
 
 describe('image refresh ownership', () => {
+  it('does not restore a failed deletion into a different context', async () => {
+    const ctx = new ImageCtx()
+    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
+    let reject!: (error: Error) => void
+    vi.mocked(deleteImage).mockReturnValue(
+      new Promise((_resolve, rej) => {
+        reject = rej
+      }) as ReturnType<typeof deleteImage>,
+    )
+    const pending = ctx.delete('old-image', { ctxType: 'feature', ctxId: 'old' })
+    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+    const restore = vi.spyOn(ctx, 'setImages')
+    const reset = vi.spyOn(ctx, 'resetThumbnailLoadStatus')
+    reject(new Error('Delete failed'))
+    await pending
+    expect(restore).not.toHaveBeenCalled()
+    expect(reset).not.toHaveBeenCalled()
+  })
+
   it('does not reset the current selection when an older context finishes late', async () => {
     const ctx = new ImageCtx()
     // Let constructor initialization finish before simulating two context changes.
