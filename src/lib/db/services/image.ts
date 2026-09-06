@@ -35,7 +35,7 @@ import {
   ImageIntentPublic,
 } from '$lib/enums'
 // DB
-import { autochunk } from '$lib/utils/batch-query'
+import { autochunk, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
 // TYPES
 import type { Id, Database, EntityResponse } from '$lib/types'
 import type {
@@ -194,17 +194,33 @@ export const updateFeatureImage = async (
   )
 }
 
+/**
+ * Attaches images to a task without duplicating existing associations.
+ * @param db Database handle.
+ * @param taskId Task receiving the images.
+ * @param imageIds Image identifiers to attach.
+ * @returns Nothing after all associations have been persisted.
+ * @remarks Bounded inserts can be retried safely after a partially completed request.
+ */
 export const createTaskImagesFromImageIds = async (
   db: Database,
   taskId: string,
   imageIds: string[],
-) => {
-  await db.insert(taskImage).values(
-    imageIds.map(imageId => ({
-      taskId,
-      imageId,
-    })),
-  )
+): Promise<void> => {
+  const uniqueImageIds = [...new Set(imageIds)]
+  // Each join row binds two columns; leave every insert within the D1 budget.
+  const batchSize = Math.floor(SQL_BATCH_SIZE / 2)
+  for (let offset = 0; offset < uniqueImageIds.length; offset += batchSize) {
+    await db
+      .insert(taskImage)
+      .values(
+        uniqueImageIds.slice(offset, offset + batchSize).map(imageId => ({
+          taskId,
+          imageId,
+        })),
+      )
+      .onConflictDoNothing({ target: [taskImage.taskId, taskImage.imageId] })
+  }
 }
 
 /**
