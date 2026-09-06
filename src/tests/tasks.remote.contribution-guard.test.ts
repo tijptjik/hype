@@ -12,6 +12,7 @@ const reviewMocks = vi.hoisted(() => ({
   probeLayerForUpdate: vi.fn(),
   updateFeatureByIdWithConcurrency: vi.fn(),
   assertUserContributedFeatureDraftIsSubmittable: vi.fn(),
+  updateUserContributedFeatureDraft: vi.fn(),
 }))
 
 vi.mock('$lib/api/server/remote', () => {
@@ -81,6 +82,10 @@ import {
 
 const guestContext = { user: { isAnonymous: true } }
 const incompleteSessionContext = { user: {} }
+const editDraftHandler = beginNewFeatureDraft as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
 const finalizeHandler = finalizeTaskDraft as unknown as (
   input: unknown,
   ctx: unknown,
@@ -249,4 +254,77 @@ describe('task draft finalization recovery', () => {
       expect(draft.isDraft).toBe(false)
     },
   )
+})
+
+describe('submitted contribution edit guard', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it.each([
+    { isDraft: false, isReviewed: false },
+    { isDraft: false, isReviewed: true },
+    { isDraft: true, isReviewed: true },
+  ])('rejects editing a submitted or reviewed task: %j', async state => {
+    const ctx = {
+      user: { id: 'contributor', isAnonymous: false },
+      userId: 'contributor',
+      event: {},
+      db: {
+        query: {
+          task: {
+            findFirst: vi.fn().mockResolvedValue({
+              id: 'task',
+              contributorId: 'contributor',
+              type: 'newFeature',
+              featureId: 'feature',
+              ...state,
+            }),
+          },
+        },
+      },
+    }
+    await expect(
+      editDraftHandler({ task: { taskId: 'task', feature: {} } }, ctx),
+    ).rejects.toMatchObject({ status: 409, message: 'TASK_DRAFT_ALREADY_SUBMITTED' })
+    expect(reviewMocks.updateUserContributedFeatureDraft).not.toHaveBeenCalled()
+    expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+  })
+
+  it('allows the contributor to continue editing an unreviewed draft', async () => {
+    const ctx = {
+      user: { id: 'contributor', isAnonymous: false },
+      userId: 'contributor',
+      event: {},
+      db: {
+        query: {
+          task: {
+            findFirst: vi.fn().mockResolvedValue({
+              id: 'task',
+              contributorId: 'contributor',
+              type: 'newFeature',
+              featureId: 'feature',
+              isDraft: true,
+              isReviewed: false,
+            }),
+          },
+        },
+      },
+    }
+    reviewMocks.updateUserContributedFeatureDraft.mockResolvedValue({
+      id: 'feature',
+      organisationId: 'organisation',
+      projectId: 'project',
+      layerId: 'layer',
+    })
+    await expect(
+      editDraftHandler({ task: { taskId: 'task', feature: {} } }, ctx),
+    ).resolves.toMatchObject({ data: { featureId: 'feature' } })
+    expect(reviewMocks.updateUserContributedFeatureDraft).toHaveBeenCalledWith(
+      ctx.db,
+      'feature',
+      { contributorId: 'contributor', isDraft: true },
+      '',
+      '',
+    )
+    expect(reviewMocks.updateTask).toHaveBeenCalledOnce()
+  })
 })
