@@ -2168,19 +2168,19 @@ export class ImageCtx {
    * Marks cached feature image collections stale after admin image mutations so future
    * feature payloads rehydrate relation fields from the server instead of replaying
    * pre-mutation image arrays.
+   * @param context Resource context whose cached images should be invalidated.
+   * @returns Nothing after marking the cached collection stale.
    */
-  private invalidateFeatureImageCache(): void {
-    if (this.state.context?.ctxType !== 'feature' || !this.state.context?.ctxId) {
+  private invalidateFeatureImageCache(context = this.state.context): void {
+    if (context?.ctxType !== 'feature' || !context?.ctxId) {
       return
     }
 
-    const feature = this.appCtx.cache.feature.get(this.state.context.ctxId) as
-      | Feature
-      | undefined
+    const feature = this.appCtx.cache.feature.get(context.ctxId) as Feature | undefined
 
     if (!feature) return
 
-    this.appCtx.cache.feature.set(this.state.context.ctxId, {
+    this.appCtx.cache.feature.set(context.ctxId, {
       ...feature,
       images: undefined,
     })
@@ -2401,21 +2401,27 @@ export class ImageCtx {
   async handlePublishToggle() {
     if (!this.state.activeImage) return
     const ctx = this.getCtx()
+    const contextAtStart = this.state.context
+    const imageId = this.state.activeImage.image.id
+    const isPublished = !this.state.activeImage.isPublished
 
     const updatedImage = await setImagePublished({
-      id: this.state.activeImage.image.id,
+      id: imageId,
       ctxType: ctx.ctxType,
       ctxId: ctx.ctxId,
       featureId: ctx.ctxType === 'feature' ? ctx.ctxId : undefined,
-      isPublished: !this.state.activeImage.isPublished,
+      isPublished,
       meta: { isAdminRequest: true },
     })
     if (updatedImage?.data?.image?.id) {
-      this.toggleForActiveImage('isPublished')
-      await this.refreshImages(this.state.activeImage?.image.id)
+      // Invalidate the mutated resource before refetching its image collection.
+      this.invalidateFeatureImageCache(contextAtStart)
+      if (this.state.context !== contextAtStart) return
+      this.setForImage(imageId, 'isPublished', isPublished)
+      await this.refreshImages()
+      if (this.state.context !== contextAtStart) return
       // Re-sort images when publish status changes
       this.sortImagesInternal()
-      this.invalidateFeatureImageCache()
     }
   }
 
