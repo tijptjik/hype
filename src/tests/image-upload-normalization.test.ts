@@ -1,9 +1,43 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   createPreviewableUploadFile,
   normalizeUploadFileForAssetPipeline,
 } from '$lib/images/upload'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+const installLargeImageStub = (): HTMLCanvasElement => {
+  vi.stubGlobal(
+    'Image',
+    class {
+      onload: null | (() => void) = null
+      onerror: null | (() => void) = null
+      naturalWidth = 4096
+      naturalHeight = 2048
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.())
+      }
+    },
+  )
+  let nextUrl = 0
+  vi.stubGlobal('URL', {
+    createObjectURL: vi.fn(() => `blob:test-${nextUrl++}`),
+    revokeObjectURL: vi.fn(),
+  })
+  const canvas = document.createElement('canvas')
+  vi.spyOn(document, 'createElement').mockReturnValue(canvas)
+  vi.spyOn(canvas, 'getContext').mockReturnValue({
+    drawImage: vi.fn(),
+  } as unknown as CanvasRenderingContext2D)
+  vi.spyOn(canvas, 'toBlob').mockImplementation((callback, type) => {
+    callback(new Blob(['encoded'], { type }))
+  })
+  return canvas
+}
 
 const installImageFailureStub = (): void => {
   vi.stubGlobal(
@@ -31,6 +65,92 @@ const installImageFailureStub = (): void => {
 }
 
 describe('image upload normalization', () => {
+  it('renames resized AVIF uploads to JPEG while retaining original metadata', async () => {
+    installLargeImageStub()
+    const file = new File(['avif'], 'example.AVIF', {
+      type: 'image/avif',
+      lastModified: 123,
+    })
+    const result = await normalizeUploadFileForAssetPipeline(file)
+
+    expect(result.file.name).toBe('example.jpg')
+    expect(result.file.type).toBe('image/jpeg')
+    expect(result.file.lastModified).toBe(123)
+    expect(result.originalFilename).toBe('example.AVIF')
+    expect(result.originalExtension).toBe('avif')
+    expect(result.uploadedWidth).toBe(2048)
+    expect(result.uploadedHeight).toBe(1024)
+    expect(result.wasResized).toBe(true)
+  })
+
+  it('releases every image URL when resize cannot obtain a canvas context', async () => {
+    const canvas = installLargeImageStub()
+    vi.mocked(canvas.getContext).mockReturnValue(null)
+
+    await expect(
+      normalizeUploadFileForAssetPipeline(
+        new File(['jpeg'], 'example.jpg', { type: 'image/jpeg' }),
+      ),
+    ).rejects.toThrow('Could not initialize a 2D canvas context for image resize')
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(
+      vi.mocked(URL.createObjectURL).mock.calls.length,
+    )
+    for (const result of vi.mocked(URL.createObjectURL).mock.results) {
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith(result.value)
+    }
+  })
+
+  it.each(['image/avif', 'image/jpeg'])(
+    'rejects a throwing canvas encoder and releases URLs for %s',
+    async type => {
+      const canvas = installLargeImageStub()
+      vi.mocked(canvas.toBlob).mockImplementation(() => {
+        throw new Error('Encoder failed')
+      })
+
+      await expect(
+        normalizeUploadFileForAssetPipeline(new File(['image'], 'example', { type })),
+      ).rejects.toThrow('Encoder failed')
+      expect(URL.revokeObjectURL).toHaveBeenCalledTimes(
+        vi.mocked(URL.createObjectURL).mock.calls.length,
+      )
+    },
+  )
+
+  it('rejects AVIF drawing failures instead of leaving the upload pending', async () => {
+    const canvas = installLargeImageStub()
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Missing test canvas context')
+    vi.mocked(context.drawImage).mockImplementation(() => {
+      throw new Error('Drawing failed')
+    })
+
+    await expect(
+      normalizeUploadFileForAssetPipeline(
+        new File(['avif'], 'example.avif', { type: 'image/avif' }),
+      ),
+    ).rejects.toThrow('Drawing failed')
+    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(
+      vi.mocked(URL.createObjectURL).mock.calls.length,
+    )
+  })
+
+  it.each(['image/avif', 'image/jpeg'])(
+    'rejects empty encoder output and releases URLs for %s',
+    async type => {
+      const canvas = installLargeImageStub()
+      vi.mocked(canvas.toBlob).mockImplementation(callback => callback(null))
+
+      await expect(
+        normalizeUploadFileForAssetPipeline(new File(['image'], 'example', { type })),
+      ).rejects.toThrow('Canvas encoding did not produce an image blob')
+      expect(URL.revokeObjectURL).toHaveBeenCalledTimes(
+        vi.mocked(URL.createObjectURL).mock.calls.length,
+      )
+    },
+  )
+
   it('leaves non-HEIC uploads unchanged', async () => {
     installImageFailureStub()
     const file = new File(['jpeg'], 'example.jpg', { type: 'image/jpeg' })
