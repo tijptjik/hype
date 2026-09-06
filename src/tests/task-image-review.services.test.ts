@@ -29,6 +29,25 @@ function setup() {
 }
 
 describe('classified-only task image review', () => {
+  it('does not submit an empty batch when there are no task images', async () => {
+    const { db } = setup()
+    vi.spyOn(db, 'select').mockReturnValue({
+      from: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([]),
+    } as never)
+    const batch = vi.spyOn(db, 'batch')
+    expect(await publishImages(db, 'task', true, 'reviewer')).toEqual({
+      success: true,
+      processedCount: 0,
+    })
+    expect(await archiveImages(db, 'task', true)).toEqual({
+      success: true,
+      processedCount: 0,
+    })
+    expect(batch).not.toHaveBeenCalled()
+  })
+
   it('does not publish an image with null intent as classified', async () => {
     const { db, values } = setup()
     expect(await publishImages(db, 'task', true, 'reviewer')).toEqual({
