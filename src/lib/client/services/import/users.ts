@@ -15,6 +15,7 @@
 // - searchUsers
 // - handleUserSearch
 // - handleResolutionUserSearch
+// - beginUserSearch
 //
 // 2. USER MATCHING STATE
 // - updateUserSearchResults
@@ -63,6 +64,22 @@ type ImportUserSearchResult = {
 }
 
 type UserResolutionMap = Map<string, { userId: string; userData?: unknown }>
+
+const activeUserSearches = new WeakMap<ImportCtx, Map<string, symbol>>()
+
+/**
+ * Assigns a request token so only the newest search for a control can publish results.
+ * @param importCtx Active import context.
+ * @param key Search control identifier within the context.
+ * @returns Unique token for this request.
+ */
+function beginUserSearch(importCtx: ImportCtx, key: string): symbol {
+  const requests = activeUserSearches.get(importCtx) ?? new Map<string, symbol>()
+  const token = Symbol(key)
+  requests.set(key, token)
+  activeUserSearches.set(importCtx, requests)
+  return token
+}
 
 /********************
  *  0. USER CSV IMPORT PLACEHOLDER
@@ -251,8 +268,15 @@ export async function updateUserSearchResults(
   importCtx: ImportCtx,
   query: string,
 ): Promise<void> {
+  const token = beginUserSearch(importCtx, 'fallback')
   importCtx.setUserSearchQuery(query)
   const results = await handleUserSearch(query)
+  // Ignore responses superseded by another search or a completed selection.
+  if (
+    activeUserSearches.get(importCtx)?.get('fallback') !== token ||
+    importCtx.getUserSearchQuery() !== query
+  )
+    return
   importCtx.setUserSearchResults(results)
 }
 
@@ -319,18 +343,28 @@ export async function updateResolutionUserSearchResults(
   invalidValue: string,
   query: string,
 ): Promise<void> {
-  const queries = importCtx.getResolutionSearchQueries()
+  const key = `resolution:${invalidValue}`
+  const token = beginUserSearch(importCtx, key)
+  const queries = new Map(importCtx.getResolutionSearchQueries())
   queries.set(invalidValue, query)
   importCtx.setResolutionSearchQueries(new Map(queries))
 
-  const searchResults = importCtx.getResolutionSearchResults()
   if (query.length < 2) {
+    const searchResults = new Map(importCtx.getResolutionSearchResults())
     searchResults.delete(invalidValue)
     importCtx.setResolutionSearchResults(new Map(searchResults))
     return
   }
 
-  searchResults.set(invalidValue, await handleResolutionUserSearch(query))
+  const results = await handleResolutionUserSearch(query)
+  if (
+    activeUserSearches.get(importCtx)?.get(key) !== token ||
+    importCtx.getResolutionSearchQueries().get(invalidValue) !== query
+  )
+    return
+  // Merge into current state after awaiting so other rows and cleared results survive.
+  const searchResults = new Map(importCtx.getResolutionSearchResults())
+  searchResults.set(invalidValue, results)
   importCtx.setResolutionSearchResults(new Map(searchResults))
 }
 
@@ -374,8 +408,9 @@ export function setUserResolution(
   userData: unknown,
   resolutions: UserResolutionMap,
 ): UserResolutionMap {
-  resolutions.set(invalidValue, { userId, userData })
-  return new Map(resolutions)
+  const next = new Map(resolutions)
+  next.set(invalidValue, { userId, userData })
+  return next
 }
 
 /**
@@ -389,8 +424,9 @@ export function removeUserResolution(
   invalidValue: string,
   resolutions: UserResolutionMap,
 ): UserResolutionMap {
-  resolutions.delete(invalidValue)
-  return new Map(resolutions)
+  const next = new Map(resolutions)
+  next.delete(invalidValue)
+  return next
 }
 
 /**
@@ -547,7 +583,7 @@ export async function validateUsers(
 
   const uniqueValues = Array.from(userValues)
   const results: UserValidationResult[] = []
-  const userField = userColumns[0].field
+  const userField = userColumns[0]?.field
 
   for (let index = 0; index < uniqueValues.length; index++) {
     const value = uniqueValues[index]
@@ -592,6 +628,7 @@ export async function validateUsers(
  *
  * @param importCtx - Active import context.
  * @param validationResults - Completed user validation results.
+ * @returns Nothing.
  * @remarks Rows use the first valid mapped user value. If none exists, a selected
  * fallback user is applied when available.
  */
@@ -604,18 +641,6 @@ export function enrichFeaturesWithUserData(
   const headers = importCtx.getHeaders()
 
   const userColumns = columns.filter(column => column.modelType === 'User')
-  if (userColumns.length === 0) {
-    const userValidation = importCtx.getUserValidation()
-    if (userValidation.fallbackUserId) {
-      for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
-        const enriched = importCtx.getRowEnrichedData(rowIndex) || {}
-        enriched.user = { id: userValidation.fallbackUserId }
-        importCtx.setRowEnrichedData(rowIndex, enriched)
-      }
-    }
-    return
-  }
-
   const userValueToId = new Map<string, string>()
   validationResults.forEach(result => {
     if (result.isValid && result.userId) {
@@ -631,10 +656,13 @@ export function enrichFeaturesWithUserData(
   })
 
   const userColumnIndices = userColumns.map(column => headers.indexOf(column.header))
+  const { fallbackUserId } = importCtx.getUserValidation()
 
   for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
     const row = data[rowIndex]
-    const enriched = importCtx.getRowEnrichedData(rowIndex) || {}
+    const enriched = { ...importCtx.getRowEnrichedData(rowIndex) }
+    // Recompute contributor assignments after mappings, resolutions, or fallback change.
+    delete enriched.user
 
     // Use the first mapped user column with a validated or resolved user id.
     for (const columnIndex of userColumnIndices) {
@@ -648,11 +676,8 @@ export function enrichFeaturesWithUserData(
       }
     }
 
-    if (!enriched.user) {
-      const userValidation = importCtx.getUserValidation()
-      if (userValidation.fallbackUserId) {
-        enriched.user = { id: userValidation.fallbackUserId }
-      }
+    if (!enriched.user && fallbackUserId) {
+      enriched.user = { id: fallbackUserId }
     }
     importCtx.setRowEnrichedData(rowIndex, enriched)
   }
