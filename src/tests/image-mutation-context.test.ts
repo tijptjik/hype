@@ -54,6 +54,36 @@ describe('image mutation resource membership', () => {
         ] as never
         const user = { id: 'account', isAnonymous: false, superAdmin: false } as never
         const request = new Request('https://example.test/admin/images')
+        if (ctxType === 'feature' || ctxType === 'project') {
+          await expect(
+            assertPermissionsToDeleteImage(
+              db,
+              user,
+              request,
+              [{ type: 'project', role: 'owner', projectId: 'other-project' }] as never,
+              'linked',
+              'context',
+              ctxType as never,
+            ),
+          ).rejects.toMatchObject({ status: 403 })
+          await expect(
+            assertPermissionsToDeleteImage(
+              db,
+              user,
+              request,
+              [
+                {
+                  type: 'project',
+                  role: 'owner',
+                  projectId: ctxType === 'project' ? 'context' : 'project',
+                },
+              ] as never,
+              'linked',
+              'context',
+              ctxType as never,
+            ),
+          ).resolves.toBeUndefined()
+        }
         await expect(
           assertPermissionsToUpdateImage(
             db,

@@ -70,7 +70,7 @@ export const assertOrganisationOwner = (
 }
 
 /**
- * Assert that the user has a maintainer role for the specified project
+ * Assert that the user has maintainer-or-owner authority for the specified project
  * @param userRoles - Array of user roles
  * @param projectId - The project ID to check access for
  * @throws {Response} 403 error if user doesn't have access to the project
@@ -79,11 +79,12 @@ export const assertProjectMaintainer = (
   userRoles: UserRoleDisco[],
   projectId: string,
 ): void | Response => {
+  // Project owners inherit maintainer capabilities, as defined in the role hierarchy.
   const hasRole = userRoles.some(
     role =>
       role.type === 'project' &&
       role.projectId === projectId &&
-      role.role === 'maintainer',
+      (role.role === 'maintainer' || role.role === 'owner'),
   )
   if (!hasRole) {
     return error(403, m.missing_permissions())
