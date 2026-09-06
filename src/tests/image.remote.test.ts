@@ -548,107 +548,142 @@ describe('image.remote', () => {
     )
   })
 
-  it('finalizeImageUpload writes metadata sidecars after a confirmed upload', async () => {
-    const put = vi.fn(async () => undefined)
-    const head = vi.fn(async () => ({
-      size: 1234,
-      httpMetadata: { contentType: 'image/jpeg' },
-    }))
-    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1768)
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(null, { status: 200 }))
+  it.each(['new', 'retry-missing', 'retry-existing', 'failure'])(
+    'finalizeImageUpload keeps sidecars aligned with persisted state (%s)',
+    async scenario => {
+      const put = vi.fn(async () => undefined)
+      const head = vi.fn(async () => ({
+        size: 1234,
+        httpMetadata: { contentType: 'image/jpeg' },
+      }))
+      const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1768)
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response(null, { status: 200 }))
 
-    mockGuardedContext.mockResolvedValue({
-      db: buildDbWithContextRow({
-        isPublished: true,
-        isArchived: false,
-        resourceHubId: 'hub-a',
-      }),
-      user: { id: 'u-1', isAnonymous: false },
-      userId: 'u-1',
-      userRoles: [],
-      isAdminRequest: true,
-      event: {
-        request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-            ASSET_RAW_DEV: { head, put },
-            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
-            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
-            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
-          },
-          context: {
-            waitUntil: mockWaitUntil,
+      mockGuardedContext.mockResolvedValue({
+        db: buildDbWithContextRow({
+          isPublished: true,
+          isArchived: false,
+          resourceHubId: 'hub-a',
+        }),
+        user: { id: 'u-1', isAnonymous: false },
+        userId: 'u-1',
+        userRoles: [],
+        isAdminRequest: true,
+        event: {
+          request: new Request('https://example.test'),
+          locals: { hub: null },
+          platform: {
+            env: {
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+              ASSET_RAW_DEV: { head, put },
+              ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
+              ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
+              ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+            },
+            context: {
+              waitUntil: mockWaitUntil,
+            },
           },
         },
-      },
-    })
-    mockVerifyUploadToken.mockResolvedValue({
-      publicId: 'h/features/feature-1/image-a',
-      env: 'local',
-      ctxType: 'feature',
-      ctxId: 'feature-1',
-      filename: 'image.jpg',
-      contentType: 'image/jpeg',
-      size: 1234,
-      uploaderUserId: 'u-1',
-      exp: Date.now() + 1000,
-    })
-
-    const result = await remote.finalizeImageUpload({
-      token: 'signed-upload-token',
-      metadata: {
-        originalFilename: 'image.jpg',
-        originalExtension: 'jpg',
-        originalWidth: 100,
-        originalHeight: 200,
-        cameraModel: null,
-        capturedAt: null,
-        credit: null,
-        latitude: null,
-        longitude: null,
-        metadata: null,
-      },
-    })
-
-    expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
-    expect(createUploadedImage).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
+      })
+      mockVerifyUploadToken.mockResolvedValue({
         publicId: 'h/features/feature-1/image-a',
         env: 'local',
-      }),
-    )
-    expect(put).toHaveBeenCalledTimes(3)
-    expect(mockWaitUntil).toHaveBeenCalledTimes(2)
-    expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
-      event: expect.objectContaining({
-        request: expect.any(Request),
-      }),
-      env: 'local',
-      publicId: 'h/features/feature-1/image-a',
-      version: 1768,
-    })
-    expect(fetchSpy).not.toHaveBeenCalled()
-    expect(result).toMatchObject({
-      data: {
         ctxType: 'feature',
         ctxId: 'feature-1',
-      },
-    })
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        size: 1234,
+        uploaderUserId: 'u-1',
+        exp: Date.now() + 1000,
+      })
 
-    fetchSpy.mockRestore()
-    dateNowSpy.mockRestore()
-  })
+      const isRetry = scenario.startsWith('retry')
+      if (isRetry) {
+        mockToImageEnvelope.mockReturnValueOnce({
+          image: { id: 'img-1', version: 1000 },
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+        } as never)
+        mockReadMetadataDocument.mockResolvedValue({
+          document: scenario === 'retry-existing' ? { sourceVersion: 1000 } : null,
+          resolvedEnv: 'local',
+          resolvedVersion: 1000,
+        } as never)
+      }
+      if (scenario === 'failure')
+        mockCreateImageRecord.mockRejectedValueOnce(new Error('insert failed'))
+      const confirmation = remote.finalizeImageUpload({
+        token: 'signed-upload-token',
+        metadata: {
+          originalFilename: 'image.jpg',
+          originalExtension: 'jpg',
+          originalWidth: 100,
+          originalHeight: 200,
+          cameraModel: null,
+          capturedAt: null,
+          credit: null,
+          latitude: null,
+          longitude: null,
+          metadata: null,
+        },
+      })
+
+      if (scenario === 'failure') {
+        await expect(confirmation).rejects.toThrow('insert failed')
+        expect(put).not.toHaveBeenCalled()
+        expect(mockWaitUntil).not.toHaveBeenCalled()
+        fetchSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        return
+      }
+      const result = await confirmation
+
+      expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
+      expect(createUploadedImage).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          publicId: 'h/features/feature-1/image-a',
+          env: 'local',
+        }),
+      )
+      expect(put).toHaveBeenCalledTimes(scenario === 'retry-existing' ? 0 : 3)
+      if (scenario === 'retry-missing') {
+        expect(put).toHaveBeenCalledWith(
+          expect.stringContaining('.v1000'),
+          expect.stringContaining('"sourceVersion":1000'),
+          expect.anything(),
+        )
+      }
+      expect(mockWaitUntil).toHaveBeenCalledTimes(scenario === 'retry-existing' ? 1 : 2)
+      expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
+        event: expect.objectContaining({
+          request: expect.any(Request),
+        }),
+        env: 'local',
+        publicId: 'h/features/feature-1/image-a',
+        version: isRetry ? 1000 : 1768,
+      })
+      expect(fetchSpy).not.toHaveBeenCalled()
+      expect(result).toMatchObject({
+        data: {
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+        },
+      })
+
+      fetchSpy.mockRestore()
+      dateNowSpy.mockRestore()
+    },
+  )
 
   it.each([
     { failDatabase: false, sameAsset: false },
