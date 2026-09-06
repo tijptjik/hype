@@ -272,7 +272,7 @@ describe('image creation context authorization', () => {
         ],
       )
       if (scenario === 'valid') {
-        await expect(result).resolves.toBeUndefined()
+        await expect(result).resolves.toBe('draft-contribution')
         expect(findFirst).toHaveBeenCalledTimes(2)
       } else {
         await expect(result).rejects.toMatchObject({

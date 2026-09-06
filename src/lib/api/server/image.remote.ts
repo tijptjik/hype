@@ -1624,7 +1624,7 @@ export const finalizeImageUpload = guardedCommand(
       throw error(403, 'Upload token does not belong to the current user')
     }
 
-    await assertPermissionsToCreateImage(
+    const creationAccess = await assertPermissionsToCreateImage(
       db,
       user,
       event.request,
@@ -1719,6 +1719,18 @@ export const finalizeImageUpload = guardedCommand(
       })
     }
 
+    // Draft contributors cannot assign publication, reviewer metadata, or another author.
+    const featureImageData =
+      creationAccess === 'draft-contribution'
+        ? {
+            featureId: payload.ctxId,
+            intent: 'undefined' as const,
+            isPublished: false,
+            localIsPublished: null,
+            publishedAt: null,
+            publisherId: null,
+          }
+        : params.persist?.featureImage
     const imageData: ImageNew = {
       cdn: 'cloudflareR2',
       env: stage,
@@ -1726,12 +1738,13 @@ export const finalizeImageUpload = guardedCommand(
       publicId: payload.publicId,
       contentHash: params.metadata.contentHash ?? null,
       version,
-      contributorId: params.persist?.contributorId ?? user.id,
+      contributorId:
+        creationAccess === 'draft-contribution'
+          ? user.id
+          : (params.persist?.contributorId ?? user.id),
       ctxType: payload.ctxType as ImageContextResource,
       ctxId: payload.ctxId,
-      ...(params.persist?.featureImage
-        ? { featureImage: params.persist.featureImage }
-        : {}),
+      ...(featureImageData ? { featureImage: featureImageData } : {}),
     }
 
     if (payload.replaceImageId) {
@@ -1746,13 +1759,12 @@ export const finalizeImageUpload = guardedCommand(
         ctxId: payload.ctxId,
         data: {
           ...imageData,
-          ...(payload.ctxType === ImageContextResource.feature &&
-          params.persist?.featureImage
+          ...(payload.ctxType === ImageContextResource.feature && featureImageData
             ? {
                 imageId: payload.replaceImageId,
-                featureId: params.persist.featureImage.featureId,
-                intent: params.persist.featureImage.intent,
-                isPublished: params.persist.featureImage.isPublished,
+                featureId: featureImageData.featureId,
+                intent: featureImageData.intent,
+                isPublished: featureImageData.isPublished,
               }
             : {}),
         },
