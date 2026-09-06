@@ -22,6 +22,12 @@ function setup() {
     INSERT INTO featureImage(featureId,imageId,intent) VALUES
       ('feature','old','canonical'), ('feature','new','general'),
       ('other','other-image','canonical');`)
+  sqlite.exec(`CREATE TABLE project (id TEXT PRIMARY KEY, imageId TEXT);
+    CREATE TABLE organisation (id TEXT PRIMARY KEY, imageId TEXT);
+    CREATE TABLE hub (id TEXT PRIMARY KEY, imageId TEXT);
+    CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
+    CREATE TABLE task (id TEXT PRIMARY KEY, featureId TEXT);
+    INSERT INTO task VALUES ('task', 'feature');`)
   const db = drizzle({} as never) as Database
   vi.spyOn(db, 'batch').mockImplementation(async queries => {
     sqlite.exec('BEGIN')
@@ -41,12 +47,77 @@ function setup() {
 }
 
 describe('canonical image replacement', () => {
+  it.each(['feature', 'project', 'organisation', 'hub', 'task', 'same-feature-task'])(
+    'preserves a rejected task image still referenced by another %s',
+    async resource => {
+      const { db, sqlite } = setup()
+      sqlite.exec(`CREATE TABLE image (id TEXT PRIMARY KEY, isArchived INTEGER, modifiedAt TEXT);
+        INSERT INTO image (id, isArchived) VALUES ('old', 0);
+        INSERT INTO taskImage VALUES ('task', 'old');`)
+      const runBatch = vi.mocked(db.batch).getMockImplementation()
+      if (!runBatch) throw new Error('Missing SQLite batch implementation')
+      vi.mocked(db.batch).mockImplementation(async queries => {
+        // Model a shared reference arriving after review reads but before the write.
+        if (resource === 'feature') {
+          sqlite.exec(
+            "INSERT INTO featureImage(featureId, imageId, intent) VALUES ('other', 'old', 'general')",
+          )
+        } else if (resource === 'task' || resource === 'same-feature-task') {
+          sqlite.exec("INSERT INTO taskImage VALUES ('other-task', 'old')")
+          sqlite
+            .prepare('INSERT INTO task VALUES (?, ?)')
+            .run('other-task', resource === 'task' ? 'other' : 'feature')
+        } else {
+          // Resource names come only from the fixed test matrix above.
+          sqlite.exec(`INSERT INTO ${resource} VALUES ('other', 'old')`)
+        }
+        return runBatch(queries)
+      })
+      vi.spyOn(db, 'select').mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        where: vi
+          .fn()
+          .mockResolvedValue([
+            { imageId: 'old', featureId: 'feature', intent: 'undefined' },
+          ]),
+      } as never)
+      await expect(archiveImages(db, 'task', true)).resolves.toEqual({
+        success: true,
+        processedCount: 1,
+      })
+      const originalAssignment = sqlite
+        .prepare(
+          "SELECT intent FROM featureImage WHERE featureId = 'feature' AND imageId = 'old'",
+        )
+        .get()
+      if (resource === 'same-feature-task') {
+        expect(originalAssignment).toEqual({ intent: 'canonical' })
+      } else {
+        expect(originalAssignment).toBeUndefined()
+      }
+      expect(
+        sqlite.prepare("SELECT isArchived FROM image WHERE id = 'old'").get(),
+      ).toEqual({ isArchived: 0 })
+      if (resource === 'feature') {
+        expect(
+          sqlite
+            .prepare(
+              "SELECT intent FROM featureImage WHERE featureId = 'other' AND imageId = 'old'",
+            )
+            .get(),
+        ).toEqual({ intent: 'general' })
+      }
+    },
+  )
+
   it.each([false, true])(
     'archives task images atomically (failure: %s)',
     async fail => {
       const { db, sqlite } = setup()
       sqlite.exec(`CREATE TABLE image (id TEXT PRIMARY KEY, isArchived INTEGER, modifiedAt TEXT);
-      INSERT INTO image (id, isArchived) VALUES ('old', 0);`)
+      INSERT INTO image (id, isArchived) VALUES ('old', 0);
+      INSERT INTO taskImage VALUES ('task', 'old');`)
       if (fail) {
         sqlite.exec(`CREATE TRIGGER reject_archival BEFORE UPDATE ON image
       BEGIN SELECT RAISE(ABORT, 'archive failed'); END;`)
