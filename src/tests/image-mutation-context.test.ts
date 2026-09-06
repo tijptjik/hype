@@ -2,7 +2,10 @@
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, expect, it, vi } from 'vitest'
-import { assertPermissionsToDeleteImage } from '$lib/api/services/image'
+import {
+  assertPermissionsToDeleteImage,
+  assertPermissionsToUpdateImage,
+} from '$lib/api/services/image'
 import type { Database } from '$lib/types'
 
 vi.mock('$lib/db/services/project', () => ({
@@ -20,14 +23,14 @@ describe('image mutation resource membership', () => {
           CREATE TABLE project (id TEXT, imageId TEXT);
           CREATE TABLE organisation (id TEXT, imageId TEXT, hubId TEXT);
           CREATE TABLE hub (id TEXT, imageId TEXT);
-          CREATE TABLE task (id TEXT, projectId TEXT, organisationId TEXT);
+          CREATE TABLE task (id TEXT, projectId TEXT, organisationId TEXT, featureId TEXT);
           CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
           INSERT INTO image VALUES ('linked'), ('unrelated');
-          INSERT INTO featureImage VALUES ('context', 'linked');
+          INSERT INTO featureImage VALUES ('context', 'linked'), ('unrelated-feature', 'linked');
           INSERT INTO project VALUES ('context', 'linked');
           INSERT INTO organisation VALUES ('context', 'linked', 'context');
           INSERT INTO hub VALUES ('context', 'linked');
-          INSERT INTO task VALUES ('context', 'project', 'context');
+          INSERT INTO task VALUES ('context', 'project', 'context', 'context');
           INSERT INTO taskImage VALUES ('context', 'linked');`)
         const db = drizzle({
           prepare: (sql: string) => ({
@@ -51,6 +54,35 @@ describe('image mutation resource membership', () => {
         ] as never
         const user = { id: 'account', isAnonymous: false, superAdmin: false } as never
         const request = new Request('https://example.test/admin/images')
+        await expect(
+          assertPermissionsToUpdateImage(
+            db,
+            user,
+            request,
+            { id: 'linked', featureId: 'unrelated-feature' } as never,
+            roles,
+            'linked',
+            'context',
+            ctxType as never,
+          ),
+        ).rejects.toMatchObject({
+          status: 403,
+          body: { message: 'IMAGE_FEATURE_CONTEXT_MISMATCH' },
+        })
+        if (ctxType === 'feature' || ctxType === 'task') {
+          await expect(
+            assertPermissionsToUpdateImage(
+              db,
+              user,
+              request,
+              { id: 'linked', featureId: 'context' } as never,
+              roles,
+              'linked',
+              'context',
+              ctxType as never,
+            ),
+          ).resolves.toBeUndefined()
+        }
         await expect(
           assertPermissionsToDeleteImage(
             db,
