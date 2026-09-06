@@ -8,6 +8,7 @@ const reviewMocks = vi.hoisted(() => ({
   updateTask: vi.fn(),
   archiveImages: vi.fn(),
   publishImages: vi.fn(),
+  commitTaskImageReview: vi.fn(),
   probeFeatureForUpdate: vi.fn(),
   probeLayerForUpdate: vi.fn(),
   updateFeatureByIdWithConcurrency: vi.fn(),
@@ -129,7 +130,13 @@ describe('task contribution account guard', () => {
 describe('completed task write guard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    reviewMocks.probeTaskQuery.mockResolvedValue({ id: 'task' })
+    reviewMocks.probeTaskQuery.mockResolvedValue({
+      id: 'task',
+      projectId: 'project',
+      organisationId: 'org',
+      resourceHubId: 'hub',
+    })
+    reviewMocks.commitTaskImageReview.mockResolvedValue(true)
     reviewMocks.authorizeTaskReadForProbe.mockReturnValue({ allowed: true })
   })
 
@@ -179,17 +186,33 @@ describe('completed task write guard', () => {
       { id: 'task', action: 'acceptAll' },
       { db: 'db', user: {}, userId: 'reviewer', event: { locals: { hub: {} } } },
     )
-    expect(reviewMocks.publishImages).toHaveBeenCalledWith(
-      'db',
-      'task',
-      false,
-      'reviewer',
-    )
-    expect(reviewMocks.updateTask).toHaveBeenCalledWith(
-      'db',
-      expect.objectContaining({ isReviewed: true, reviewOutcome: 'accepted' }),
-      'task',
-    )
+    expect(reviewMocks.commitTaskImageReview).toHaveBeenCalledWith('db', {
+      task: pendingTask,
+      resourceHubId: 'hub',
+      action: 'acceptAll',
+      reviewerId: 'reviewer',
+      reason: undefined,
+    })
+    expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    expect(reviewMocks.publishImages).not.toHaveBeenCalled()
+  })
+
+  it('reports a stale image review without a second task update', async () => {
+    reviewMocks.loadTask.mockResolvedValue({
+      id: 'task',
+      type: 'newPhoto',
+      isDraft: false,
+      isReviewed: false,
+    })
+    reviewMocks.commitTaskImageReview.mockResolvedValueOnce(false)
+    await expect(
+      reviewHandler(
+        { id: 'task', action: 'acceptClassified' },
+        { db: 'db', user: {}, userId: 'reviewer', event: { locals: { hub: {} } } },
+      ),
+    ).rejects.toMatchObject({ status: 409, message: 'STALE_TASK_REVIEW' })
+    expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    expect(reviewMocks.archiveImages).not.toHaveBeenCalled()
   })
 
   it.each(['newFeature', 'newPhoto', 'reportedMissing'])(

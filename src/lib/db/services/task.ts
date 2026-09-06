@@ -1,3 +1,5 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, asc, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
@@ -36,6 +38,9 @@ import type {
   TaskDBRaw,
   TaskDBPartial,
   TaskNew,
+  TaskImageReviewCommit,
+  TaskImageReviewPlan,
+  TaskImageReviewRow,
 } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
@@ -57,6 +62,9 @@ import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // 2. CRUD :: IMAGE HANDLING
 //    - archiveImages
 //    - publishImages
+//    - commitTaskImageReview
+//    - prepareTaskImageArchives
+//    - prepareTaskImagePublications
 //
 // 3. CRUD :: ORCHESTRATION
 //    - createTaskWithDependencies
@@ -291,9 +299,7 @@ export const deleteTask = async (db: Database, ref: Id): Promise<TaskDB> =>
 const loadTaskImageReviewRows = async (
   db: Database,
   taskId: string,
-): Promise<
-  Array<{ imageId: string; intent: string | null; featureId: string | null }>
-> =>
+): Promise<TaskImageReviewRow[]> =>
   await db
     .select({
       imageId: taskImage.imageId,
@@ -316,12 +322,14 @@ const loadTaskImageReviewRows = async (
  * @param db - The database instance
  * @param featureId - The feature receiving the canonical image
  * @param nextCanonicalImageId - The image that should remain canonical
+ * @param guard - Optional write-time review guard
  * @returns An unexecuted update statement for an atomic publication batch.
  */
 const buildCompetingCanonicalDemotion = (
   db: Database,
   featureId: string,
   nextCanonicalImageId: string,
+  guard?: SQL<unknown>,
 ) => {
   // Canonical intent is exclusive per feature.
   return db
@@ -334,26 +342,32 @@ const buildCompetingCanonicalDemotion = (
         eq(featureImage.featureId, featureId),
         eq(featureImage.intent, 'canonical'),
         ne(featureImage.imageId, nextCanonicalImageId),
+        guard,
       ),
     )
 }
 
 /**
- * Archives images associated with a task, optionally only archiving images with undefined intent. This is used to archive (some) images of a task which was (partially) rejected.
+ * Prepares archival of images associated with a task, optionally only those with undefined intent.
+ * This is used to archive (some) images of a task which was (partially) rejected.
  * @param db - The database instance
  * @param taskId - The ID of the task
  * @param isUndefinedOnly - Whether to only archive images with undefined intent
- * @returns The result of the operation
- * @remarks All selected removals and archives commit together; shared uses remain intact.
+ * @param guard - Optional write-time review guard
+ * @param rows - Optional shared review snapshot
+ * @returns Unexecuted statements and the selected image count
+ * @remarks Shared uses remain intact; the caller owns the transaction.
  * @throws {Error} If archiving fails
  */
-export const archiveImages = async (
+const prepareTaskImageArchives = async (
   db: Database,
   taskId: string,
   isUndefinedOnly: boolean = false,
-): Promise<{ success: boolean; processedCount: number }> => {
+  guard?: SQL<unknown>,
+  rows?: TaskImageReviewRow[],
+): Promise<TaskImageReviewPlan> => {
   try {
-    const taskImages = await loadTaskImageReviewRows(db, taskId)
+    const taskImages = rows ?? (await loadTaskImageReviewRows(db, taskId))
 
     // Missing feature assignments have null intent and are also unclassified.
     // Filter images based on isUndefinedOnly parameter.
@@ -371,6 +385,7 @@ export const archiveImages = async (
         .where(
           and(
             eq(image.id, ti.imageId),
+            guard,
             sql`not exists (select 1 from ${featureImage} where ${featureImage.imageId} = ${image.id})`,
             sql`not exists (select 1 from ${project} where ${project.imageId} = ${image.id})`,
             sql`not exists (select 1 from ${organisation} where ${organisation.imageId} = ${image.id})`,
@@ -385,6 +400,7 @@ export const archiveImages = async (
             and(
               eq(featureImage.imageId, ti.imageId),
               eq(featureImage.featureId, ti.featureId),
+              guard,
               sql`not exists (
                   select 1 from ${taskImage}
                   inner join ${task} on ${task.id} = ${taskImage.taskId}
@@ -401,10 +417,7 @@ export const archiveImages = async (
         return [archival]
       }
     })
-    const [firstStatement, ...remainingStatements] = statements
-    if (firstStatement) await db.batch([firstStatement, ...remainingStatements])
-
-    return { success: true, processedCount: imagesToProcess.length }
+    return { statements, processedCount: imagesToProcess.length }
   } catch (error) {
     console.error('Failed to archive images:', error)
     throw error
@@ -412,23 +425,28 @@ export const archiveImages = async (
 }
 
 /**
- * Publishes images associated with a task. This is used to publish images of a task which was (partially) accepted. Optionally skipping images with undefined intent.
+ * Prepares publication of images associated with a task, optionally skipping undefined intent.
+ * This is used to publish images of a task which was (partially) accepted.
  * @param db - The database instance
  * @param taskId - The ID of the task
  * @param skipUndefined - Whether to skip images with undefined intent
  * @param publisherId - Reviewer responsible for publishing the selected images
- * @returns The result of the operation
- * @remarks All selected publications and canonical demotions commit together.
+ * @param guard - Optional write-time review guard
+ * @param rows - Optional shared review snapshot
+ * @returns Unexecuted statements and the selected image count
+ * @remarks The caller owns the publication and canonical-demotion transaction.
  * @throws {Error} If publishing fails
  */
-export const publishImages = async (
+const prepareTaskImagePublications = async (
   db: Database,
   taskId: string,
   skipUndefined: boolean = false,
   publisherId: Id,
-): Promise<{ success: boolean; processedCount: number }> => {
+  guard?: SQL<unknown>,
+  rows?: TaskImageReviewRow[],
+): Promise<TaskImageReviewPlan> => {
   try {
-    const taskImages = await loadTaskImageReviewRows(db, taskId)
+    const taskImages = rows ?? (await loadTaskImageReviewRows(db, taskId))
     const publishedAt = new Date().toISOString()
 
     // Missing feature assignments have null intent and must not be accepted as classified.
@@ -445,43 +463,191 @@ export const publishImages = async (
       }
 
       // Update or create feature image association
-      const publication = db
-        .insert(featureImage)
-        .values({
-          imageId: ti.imageId,
-          featureId: ti.featureId,
-          intent: ti.intent ?? 'undefined',
-          isPublished: true,
-          publisherId,
-          publishedAt,
-        })
-        .onConflictDoUpdate({
-          target: [featureImage.imageId, featureImage.featureId],
-          set: {
+      const insertQuery = guard
+        ? db.insert(featureImage).select(
+            db
+              .select({
+                // Insert-select fields must follow the complete table column order.
+                featureId: sql<string>`${ti.featureId}`.as('featureId'),
+                imageId: sql<string>`${ti.imageId}`.as('imageId'),
+                intent: sql<string>`${ti.intent ?? 'undefined'}`.as('intent'),
+                isPublished: sql<boolean>`1`.as('isPublished'),
+                localIsPublished: sql<boolean | null>`null`.as('localIsPublished'),
+                publishedAt: sql<string>`${publishedAt}`.as('publishedAt'),
+                publisherId: sql<string>`${publisherId}`.as('publisherId'),
+              })
+              .from(task)
+              .where(and(eq(task.id, taskId), guard)),
+          )
+        : db.insert(featureImage).values({
+            imageId: ti.imageId,
+            featureId: ti.featureId,
             intent: ti.intent ?? 'undefined',
             isPublished: true,
             publisherId,
             publishedAt,
-          },
-        })
+          })
+      const publication = insertQuery.onConflictDoUpdate({
+        target: [featureImage.imageId, featureImage.featureId],
+        set: {
+          intent: ti.intent ?? 'undefined',
+          isPublished: true,
+          publisherId,
+          publishedAt,
+        },
+      })
       // Keep canonical demotion and publication atomic if either statement fails.
       if (ti.intent === 'canonical') {
         return [
-          buildCompetingCanonicalDemotion(db, ti.featureId, ti.imageId),
+          buildCompetingCanonicalDemotion(db, ti.featureId, ti.imageId, guard),
           publication,
         ]
       } else {
         return [publication]
       }
     })
-    const [firstStatement, ...remainingStatements] = statements
-    if (firstStatement) await db.batch([firstStatement, ...remainingStatements])
-
-    return { success: true, processedCount: imagesToProcess.length }
+    return { statements, processedCount: imagesToProcess.length }
   } catch (error) {
     console.error('Failed to publish images:', error)
     throw error
   }
+}
+
+/**
+ * Archives selected task images in one transaction while preserving shared uses.
+ * @param db Database handle.
+ * @param taskId Task whose image assignments are being rejected.
+ * @param isUndefinedOnly Whether to select only unclassified images.
+ * @returns Selected image count and success state.
+ */
+export const archiveImages = async (
+  db: Database,
+  taskId: string,
+  isUndefinedOnly: boolean = false,
+): Promise<{ success: boolean; processedCount: number }> => {
+  const plan = await prepareTaskImageArchives(db, taskId, isUndefinedOnly)
+  const [first, ...rest] = plan.statements
+  try {
+    if (first) await db.batch([first, ...rest])
+  } catch (error) {
+    console.error('Failed to archive images:', error)
+    throw error
+  }
+  return { success: true, processedCount: plan.processedCount }
+}
+
+/**
+ * Publishes selected task images and canonical demotions in one transaction.
+ * @param db Database handle.
+ * @param taskId Task whose images are being accepted.
+ * @param skipUndefined Whether to select only classified images.
+ * @param publisherId Reviewer responsible for publication.
+ * @returns Selected image count and success state.
+ */
+export const publishImages = async (
+  db: Database,
+  taskId: string,
+  skipUndefined: boolean = false,
+  publisherId: Id,
+): Promise<{ success: boolean; processedCount: number }> => {
+  const plan = await prepareTaskImagePublications(
+    db,
+    taskId,
+    skipUndefined,
+    publisherId,
+  )
+  const [first, ...rest] = plan.statements
+  try {
+    if (first) await db.batch([first, ...rest])
+  } catch (error) {
+    console.error('Failed to publish images:', error)
+    throw error
+  }
+  return { success: true, processedCount: plan.processedCount }
+}
+
+/**
+ * Commits an image-only review and its task completion as one guarded transaction.
+ * @param db Database handle.
+ * @param input Authorized task snapshot and reviewer decision.
+ * @returns True for the winning review, false for a stale task snapshot.
+ * @remarks Every write checks the same pending task version and persisted resource scope.
+ */
+export const commitTaskImageReview = async (
+  db: Database,
+  input: TaskImageReviewCommit,
+): Promise<boolean> => {
+  const expected = input.task
+  if (
+    expected.type !== 'newPhoto' &&
+    !(expected.type === 'reportedMissing' && input.action === 'reject')
+  ) {
+    throw error(400, 'INVALID_TASK_ACTION')
+  }
+  const pending = and(
+    eq(task.id, expected.id),
+    eq(task.type, expected.type),
+    eq(task.featureId, expected.featureId),
+    eq(task.projectId, expected.projectId),
+    eq(task.organisationId, expected.organisationId),
+    eq(task.modifiedAt, expected.modifiedAt),
+    eq(task.isDraft, false),
+    eq(task.isReviewed, false),
+    taskFeatureScopeCondition(),
+    sql`exists (select 1 from ${organisation} where ${organisation.id} = ${expected.organisationId} and ${organisation.hubId} is ${input.resourceHubId})`,
+  )
+  const guard = sql`exists (select 1 from ${task} where ${pending})`
+
+  // Build both image phases without executing either; stale reviewers must write nothing.
+  const rows = await loadTaskImageReviewRows(db, expected.id)
+  const publications =
+    input.action === 'reject'
+      ? { statements: [], processedCount: 0 }
+      : await prepareTaskImagePublications(
+          db,
+          expected.id,
+          input.action === 'acceptClassified',
+          input.reviewerId,
+          guard,
+          rows,
+        )
+  const archives =
+    input.action === 'acceptAll'
+      ? { statements: [], processedCount: 0 }
+      : await prepareTaskImageArchives(
+          db,
+          expected.id,
+          input.action === 'acceptClassified',
+          guard,
+          rows,
+        )
+  const completion = db
+    .update(task)
+    .set({
+      isReviewed: true,
+      reviewerId: input.reviewerId,
+      reviewReason: input.reason?.trim() || null,
+      reviewOutcome: input.action === 'reject' ? 'rejected' : 'accepted',
+      reviewAction:
+        input.action === 'reject'
+          ? 'ignored'
+          : input.action === 'acceptAll'
+            ? 'added-all-photos'
+            : 'added-all-photos-with-intent',
+    })
+    .where(pending)
+    .returning({ id: task.id })
+
+  // Complete last so the pending-version guard stays true throughout the winning batch.
+  const [first, ...rest] = [
+    ...publications.statements,
+    ...archives.statements,
+    completion,
+  ]
+  if (!first) return false
+  const results = await db.batch([first, ...rest])
+  const completed = results.at(-1)
+  return Array.isArray(completed) && completed.length === 1
 }
 
 // ═══════════════════════
