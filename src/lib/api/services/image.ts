@@ -405,9 +405,11 @@ export const assertPermissionsToUpdateImage = async (
   // 2. SuperAdmins.
   let contextAssertion: () => void | Response
   let contextCondition: SQL
+  let allowedFeatureId: string | undefined
 
   switch (ctxType) {
     case ImageContextResource.feature: {
+      allowedFeatureId = ctxId
       const projectId = (await getProjectForFeatureId(db, ctxId as Id))?.id
       contextAssertion = () =>
         assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId ?? '')
@@ -436,6 +438,7 @@ export const assertPermissionsToUpdateImage = async (
       const [taskRow] = await db
         .select({
           id: task.id,
+          featureId: task.featureId,
           projectId: task.projectId,
           organisationId: task.organisationId,
           resourceHubId: organisation.hubId,
@@ -444,6 +447,7 @@ export const assertPermissionsToUpdateImage = async (
         .innerJoin(organisation, eq(organisation.id, task.organisationId))
         .where(eq(task.id, ctxId))
         .limit(1)
+      allowedFeatureId = taskRow?.featureId
       contextAssertion = () => {
         if (
           !taskRow ||
@@ -465,6 +469,11 @@ export const assertPermissionsToUpdateImage = async (
 
   const assertionError = runAssertions(contextAssertion)
   if (assertionError) return assertionError
+
+  // Shared images must not let a payload redirect an assignment edit to another feature.
+  if (data.featureId && data.featureId !== allowedFeatureId) {
+    throw error(403, 'IMAGE_FEATURE_CONTEXT_MISMATCH')
+  }
 
   // A role in one resource never grants mutation rights over an unrelated image ID.
   const [linkedImage] = await db
