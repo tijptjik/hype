@@ -310,6 +310,14 @@ export const getImageByIdsQueryContext = (
 
 /**
  * Asserts permissions to create an image for a given context (feature, project, etc.). Images are a second-class resource, and are always created in the context of a first-class resource : organisation, project, or feature. Images are only created directly from the admin interface, and not from the API. From the front-end, images are created indirectly by creating a task (newFeature, MissingReport or newPhoto) which in turn creates an image.
+ * @param db Database handle.
+ * @param user Current account.
+ * @param request Incoming request.
+ * @param userRoles Persisted roles.
+ * @param ctxType Target resource type.
+ * @param ctxId Target resource ID.
+ * @param links Requested task associations.
+ * @returns Nothing when the account can upload and attach every requested link.
  */
 export const assertPermissionsToCreateImage = async (
   db: Database,
@@ -320,32 +328,37 @@ export const assertPermissionsToCreateImage = async (
   ctxId: Id,
   links?: FinalizeImageUploadLink[],
 ) => {
-  const taskDraftLink = links?.find(
+  if (!user?.id || user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
+  const taskLinks = (links ?? []).filter(
     (link): link is Extract<FinalizeImageUploadLink, { type: 'taskImage' }> =>
       link.type === 'taskImage',
   )
 
-  if (taskDraftLink) {
+  let canContributeToDraft = taskLinks.length > 0
+  // Every requested link must belong to this feature, not just the first draft link.
+  for (const taskLink of taskLinks) {
     const draftTask = await db.query.task.findFirst({
-      where: eq(task.id, taskDraftLink.taskId as Id),
+      where: eq(task.id, taskLink.taskId as Id),
     })
-
     if (
-      draftTask &&
-      draftTask.isDraft &&
-      draftTask.contributorId === user.id &&
-      draftTask.featureId === ctxId
+      ctxType !== ImageContextResource.feature ||
+      !draftTask ||
+      draftTask.featureId !== ctxId ||
+      draftTask.isReviewed
     ) {
-      return
+      throw error(403, 'IMAGE_TASK_CONTEXT_MISMATCH')
     }
+    if (!draftTask.isDraft || draftTask.contributorId !== user.id)
+      canContributeToDraft = false
   }
+  if (canContributeToDraft) return
 
   const commonAssertions = [
     () => assertUserLoggedIn(user),
     () => assertAdminRequest(request),
   ]
 
-  let contextAssertion = () => {} // Placeholder for context-specific assertion
+  let contextAssertion: () => void | Response
 
   switch (ctxType) {
     case ImageContextResource.feature: {
@@ -362,6 +375,15 @@ export const assertPermissionsToCreateImage = async (
       contextAssertion = () =>
         assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId)
       break
+    case ImageContextResource.hub:
+      contextAssertion = () => {
+        if (!isSuperAdmin(user) && !isRelevantHubAdmin(userRoles, ctxId)) {
+          throw error(403, 'INSUFFICIENT_ROLE')
+        }
+      }
+      break
+    default:
+      throw error(400, 'UNSUPPORTED_IMAGE_CONTEXT')
   }
 
   const assertionError = runAssertions(...commonAssertions, contextAssertion)
