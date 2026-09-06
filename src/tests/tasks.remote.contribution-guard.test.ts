@@ -10,6 +10,8 @@ const reviewMocks = vi.hoisted(() => ({
   publishImages: vi.fn(),
   probeFeatureForUpdate: vi.fn(),
   probeLayerForUpdate: vi.fn(),
+  updateFeatureByIdWithConcurrency: vi.fn(),
+  assertUserContributedFeatureDraftIsSubmittable: vi.fn(),
 }))
 
 vi.mock('$lib/api/server/remote', () => {
@@ -59,7 +61,7 @@ vi.mock('$lib/db/zod/schema/task', () => ({
 vi.mock('$lib/db/services/task', () => reviewMocks)
 vi.mock('$lib/db/services/feature', () => reviewMocks)
 vi.mock('$lib/db/services/layer', () => reviewMocks)
-vi.mock('$lib/api/services/feature', () => ({}))
+vi.mock('$lib/api/services/feature', () => reviewMocks)
 vi.mock('$lib/api/services/task', () => ({
   getTaskWithRelations: vi.fn(),
   toEntityResponseShape: vi.fn(task => task),
@@ -79,6 +81,10 @@ import {
 
 const guestContext = { user: { isAnonymous: true } }
 const incompleteSessionContext = { user: {} }
+const finalizeHandler = finalizeTaskDraft as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
 const reviewHandler = reviewTask as unknown as (
   input: unknown,
   ctx: unknown,
@@ -182,4 +188,65 @@ describe('completed task write guard', () => {
       'task',
     )
   })
+})
+
+describe('task draft finalization recovery', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it.each(['conflict', 'failure', 'missing'])(
+    'keeps a task retryable after a feature %s',
+    async failure => {
+      const draft = {
+        id: 'task',
+        contributorId: 'contributor',
+        type: 'newFeature',
+        featureId: 'feature',
+        isDraft: true,
+        images: [{ imageId: 'image' }],
+      }
+      const ctx = {
+        user: { id: 'contributor', isAnonymous: false },
+        userId: 'contributor',
+        db: { query: { task: { findFirst: vi.fn(async () => ({ ...draft })) } } },
+      }
+      reviewMocks.updateTask.mockImplementation(async (_db, patch) => {
+        Object.assign(draft, patch)
+        return { ...draft }
+      })
+      reviewMocks.probeFeatureForUpdate.mockResolvedValue(
+        failure === 'missing' ? null : { id: 'feature', modifiedAt: 'version' },
+      )
+      if (failure === 'failure') {
+        reviewMocks.updateFeatureByIdWithConcurrency.mockRejectedValue(
+          new Error('write failed'),
+        )
+      } else {
+        reviewMocks.updateFeatureByIdWithConcurrency.mockResolvedValue(undefined)
+      }
+
+      await expect(finalizeHandler({ id: 'task' }, ctx)).rejects.toThrow()
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+      expect(draft.isDraft).toBe(true)
+
+      // A fresh request must retry the feature write rather than return early.
+      reviewMocks.probeFeatureForUpdate.mockResolvedValue({
+        id: 'feature',
+        modifiedAt: 'fresh',
+      })
+      reviewMocks.updateFeatureByIdWithConcurrency.mockResolvedValue({
+        id: 'feature',
+        isDraft: false,
+      })
+      await expect(finalizeHandler({ id: 'task' }, ctx)).resolves.toMatchObject({
+        data: { isDraft: false },
+      })
+      expect(reviewMocks.updateFeatureByIdWithConcurrency).toHaveBeenLastCalledWith(
+        ctx.db,
+        { id: 'feature', updatedAt: 'fresh', data: { isDraft: false } },
+      )
+      expect(draft.isDraft).toBe(false)
+    },
+  )
 })

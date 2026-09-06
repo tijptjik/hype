@@ -485,14 +485,6 @@ export const finalizeTaskDraft = guardedCommand(
       )
     }
 
-    const finalizedTask = await updateTask(
-      ctx.db,
-      {
-        isDraft: false,
-      },
-      params.id as Id,
-    )
-
     if (draftTask.type === 'newFeature' && draftTask.featureId) {
       const featureProbe = await probeFeatureForUpdate(
         ctx.db,
@@ -515,6 +507,15 @@ export const finalizeTaskDraft = guardedCommand(
         throw error(409, 'STALE_FEATURE_WRITE')
       }
     }
+
+    // Complete the task last so a failed feature write leaves finalization retryable.
+    const finalizedTask = await updateTask(
+      ctx.db,
+      {
+        isDraft: false,
+      },
+      params.id as Id,
+    )
 
     return { data: finalizedTask }
   },
