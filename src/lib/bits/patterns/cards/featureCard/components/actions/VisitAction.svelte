@@ -128,14 +128,21 @@ $effect(() => {
   optimisticVisitState = currentVisitState
   settledVisitState = currentVisitState
 })
+/**
+ * Saves the list change for the feature and account that initiated the action.
+ *
+ * @returns Nothing after the save and local state reconciliation finish.
+ */
 async function toggleVisited(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
+  const featureId = feature.id
+  const userId = appCtx.user?.id
 
   const previous = visitedFeature ?? wishlistedFeature ?? null
   const nextIsVisited = !isVisited
   const visitedAt = nextIsVisited ? new Date().toISOString() : null
   const optimistic = {
-    featureId: feature.id,
+    featureId,
     isWishlisted: Boolean(wishlistedFeature),
     isVisited: nextIsVisited,
     visitedAt,
@@ -144,36 +151,42 @@ async function toggleVisited(): Promise<void> {
   isSubmitting = true
   clearVisitError()
   optimisticVisitState = { isVisited: nextIsVisited, visitedAt }
-  appCtx.applyUserFeatureState(feature.id, optimistic)
+  appCtx.applyUserFeatureState(featureId, optimistic)
 
   try {
     const mutation = nextIsVisited
       ? addUserFeatureToList({
-          featureId: feature.id,
+          featureId,
           list: 'visited',
           visitedAt,
         })
-      : removeUserFeatureFromList({ featureId: feature.id, list: 'visited' })
+      : removeUserFeatureFromList({ featureId, list: 'visited' })
     const response = await mutation.updates(
       getUserFeatures({
-        userId: appCtx.user?.id,
+        userId,
         sorting: { sortBy: 'modifiedAt', sortOrder: 'desc' },
       }).withOverride(current => ({
         ...current,
         data: [
           optimistic,
-          ...(current.data ?? []).filter(item => item.featureId !== feature.id),
+          ...(current.data ?? []).filter(item => item.featureId !== featureId),
         ],
       })),
     )
 
+    // A response from a previous account must not populate the current account's cache.
+    if (appCtx.user?.id !== userId) return
     const settled = (response?.data as UserFeature | null) ?? null
+    appCtx.applyUserFeatureState(featureId, settled)
+    if (!('id' in feature) || feature.id !== featureId) return
     settledVisitState = {
       isVisited: Boolean(settled?.isVisited),
       visitedAt: settled?.visitedAt ?? null,
     }
-    appCtx.applyUserFeatureState(feature.id, settled)
   } catch (error) {
+    if (appCtx.user?.id !== userId) return
+    appCtx.applyUserFeatureState(featureId, previous)
+    if (!('id' in feature) || feature.id !== featureId) return
     console.error('Error updating visited status:', error)
     const previousVisitState = {
       isVisited: Boolean(previous?.isVisited),
@@ -181,7 +194,6 @@ async function toggleVisited(): Promise<void> {
     }
     optimisticVisitState = previousVisitState
     settledVisitState = previousVisitState
-    appCtx.applyUserFeatureState(feature.id, previous)
     const message = 'Failed to update visited status'
     showVisitError(message)
     toast.error(message)
