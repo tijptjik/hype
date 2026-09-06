@@ -30,7 +30,7 @@ const SUPPORTED_UPLOAD_IMAGE_ACCEPT_TOKENS = [
   ...SUPPORTED_UPLOAD_IMAGE_EXTENSIONS,
 ] as const
 
-const SUPPORTED_UPLOAD_IMAGE_CONTENT_TYPE_SET = new Set(
+const SUPPORTED_UPLOAD_IMAGE_CONTENT_TYPE_SET = new Set<string>(
   SUPPORTED_UPLOAD_IMAGE_CONTENT_TYPES,
 )
 
@@ -39,5 +39,10 @@ export const SUPPORTED_UPLOAD_IMAGE_ACCEPT = [...SUPPORTED_UPLOAD_IMAGE_ACCEPT_T
 export const SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE =
   SUPPORTED_UPLOAD_IMAGE_ACCEPT_TOKENS.join(',')
 
+/**
+ * Checks whether a MIME type is supported by the upload pipeline.
+ * @param value MIME type to check, ignoring surrounding whitespace and case.
+ * @returns Whether the MIME type is supported.
+ */
 export const isSupportedUploadImageContentType = (value: string): boolean =>
   SUPPORTED_UPLOAD_IMAGE_CONTENT_TYPE_SET.has(value.trim().toLowerCase())

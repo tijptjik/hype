@@ -1,3 +1,4 @@
+// TYPES
 import type { NormalizedImageUploadAsset } from '$lib/types'
 
 type Heic2AnyConverter = (params: {
@@ -68,6 +69,33 @@ const toJpegFilename = (name: string): string =>
     .replace(HEIC_FILE_EXTENSION_PATTERN, '.jpg')
     .replace(TIFF_FILE_EXTENSION_PATTERN, '.jpg')
     .replace(JXL_FILE_EXTENSION_PATTERN, '.jpg')
+    .replace(/\.avif$/i, '.jpg')
+
+/**
+ * Encodes canvas pixels and rejects failed or synchronously throwing encoders.
+ * @param canvas Canvas containing the output pixels.
+ * @param contentType Requested output MIME type.
+ * @param quality Encoder quality, when supported by the output format.
+ * @returns Encoded image blob.
+ */
+const encodeUploadCanvas = (
+  canvas: HTMLCanvasElement,
+  contentType: string,
+  quality?: number,
+): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob(
+      blob => {
+        if (!(blob instanceof Blob)) {
+          reject(new Error('Canvas encoding did not produce an image blob'))
+          return
+        }
+        resolve(blob)
+      },
+      contentType,
+      quality,
+    )
+  })
 
 const loadHeicConverter = async (): Promise<Heic2AnyConverter> => {
   const module = await import('heic2any')
@@ -130,24 +158,10 @@ const transcodeTiffToJpeg = async (file: File): Promise<File> => {
   const imageData = new ImageData(new Uint8ClampedArray(rgba), width, height)
   context.putImageData(imageData, 0, 0)
 
-  return await new Promise((resolve, reject) => {
-    context.canvas.toBlob(
-      blob => {
-        if (!(blob instanceof Blob)) {
-          reject(new Error('TIFF conversion did not produce a JPEG blob'))
-          return
-        }
-
-        resolve(
-          new File([blob], toJpegFilename(file.name), {
-            type: 'image/jpeg',
-            lastModified: file.lastModified,
-          }),
-        )
-      },
-      'image/jpeg',
-      0.92,
-    )
+  const blob = await encodeUploadCanvas(context.canvas, 'image/jpeg', 0.92)
+  return new File([blob], toJpegFilename(file.name), {
+    type: 'image/jpeg',
+    lastModified: file.lastModified,
   })
 }
 
@@ -162,41 +176,32 @@ const transcodeBrowserDecodableImageToJpeg = async (file: File): Promise<File> =
     const objectUrl = URL.createObjectURL(file)
     const image = new Image()
 
-    image.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = image.naturalWidth || image.width
-      canvas.height = image.naturalHeight || image.height
+    image.onload = async () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = image.naturalWidth || image.width
+        canvas.height = image.naturalHeight || image.height
 
-      const context = canvas.getContext('2d')
-      if (!context) {
-        URL.revokeObjectURL(objectUrl)
-        reject(
-          new Error('Could not initialize a 2D canvas context for JPEG conversion'),
-        )
-        return
-      }
-
-      context.drawImage(image, 0, 0, canvas.width, canvas.height)
-
-      canvas.toBlob(
-        blob => {
-          URL.revokeObjectURL(objectUrl)
-
-          if (!(blob instanceof Blob)) {
-            reject(new Error('Canvas conversion did not produce a JPEG blob'))
-            return
-          }
-
-          resolve(
-            new File([blob], toJpegFilename(file.name), {
-              type: 'image/jpeg',
-              lastModified: file.lastModified,
-            }),
+        const context = canvas.getContext('2d')
+        if (!context) {
+          throw new Error(
+            'Could not initialize a 2D canvas context for JPEG conversion',
           )
-        },
-        'image/jpeg',
-        0.92,
-      )
+        }
+
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        const blob = await encodeUploadCanvas(canvas, 'image/jpeg', 0.92)
+        resolve(
+          new File([blob], toJpegFilename(file.name), {
+            type: 'image/jpeg',
+            lastModified: file.lastModified,
+          }),
+        )
+      } catch (error) {
+        reject(error)
+      } finally {
+        URL.revokeObjectURL(objectUrl)
+      }
     }
 
     image.onerror = () => {
@@ -230,24 +235,10 @@ const transcodeJxlToJpeg = async (file: File): Promise<File> => {
   context.canvas.height = imageData.height
   context.putImageData(imageData, 0, 0)
 
-  return await new Promise((resolve, reject) => {
-    context.canvas.toBlob(
-      blob => {
-        if (!(blob instanceof Blob)) {
-          reject(new Error('JPEG XL conversion did not produce a JPEG blob'))
-          return
-        }
-
-        resolve(
-          new File([blob], toJpegFilename(file.name), {
-            type: 'image/jpeg',
-            lastModified: file.lastModified,
-          }),
-        )
-      },
-      'image/jpeg',
-      0.92,
-    )
+  const blob = await encodeUploadCanvas(context.canvas, 'image/jpeg', 0.92)
+  return new File([blob], toJpegFilename(file.name), {
+    type: 'image/jpeg',
+    lastModified: file.lastModified,
   })
 }
 
@@ -308,37 +299,29 @@ const resizeRasterUpload = async (
 
         const context = canvas.getContext('2d')
         if (!context) {
-          reject(new Error('Could not initialize a 2D canvas context for image resize'))
-          return
+          throw new Error('Could not initialize a 2D canvas context for image resize')
         }
 
         context.drawImage(image, 0, 0, targetWidth, targetHeight)
 
         const outputType = file.type || 'image/jpeg'
-        canvas.toBlob(
-          blob => {
-            URL.revokeObjectURL(objectUrl)
-
-            if (!(blob instanceof Blob)) {
-              reject(new Error('Canvas resize did not produce an image blob'))
-              return
-            }
-
-            resolve({
-              file: new File([blob], file.name, {
-                type: outputType,
-                lastModified: file.lastModified,
-              }),
-              width: targetWidth,
-              height: targetHeight,
-            })
-          },
+        const blob = await encodeUploadCanvas(
+          canvas,
           outputType,
           outputType === 'image/png' ? undefined : 0.9,
         )
+        resolve({
+          file: new File([blob], file.name, {
+            type: outputType,
+            lastModified: file.lastModified,
+          }),
+          width: targetWidth,
+          height: targetHeight,
+        })
       } catch (error) {
-        URL.revokeObjectURL(objectUrl)
         reject(error)
+      } finally {
+        URL.revokeObjectURL(objectUrl)
       }
     }
 
