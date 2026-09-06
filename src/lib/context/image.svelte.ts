@@ -79,10 +79,15 @@ async function createOptimisticPreviewUrl(file: File): Promise<string> {
   }
 }
 
+/**
+ * Checks whether an entry has an image record with a usable identity.
+ * @param image Candidate envelope from preloaded or remote image data.
+ * @returns Whether the entry can participate in viewer image lookup and selection.
+ */
 function isValidImageEnvelope(
   image: ImageCtxEnvelope | null | undefined,
 ): image is ImageCtxEnvelope {
-  return image != null && image.image.id != null
+  return typeof image?.image?.id === 'string' && image.image.id.length > 0
 }
 
 function getErrorMessage(error: unknown): string | null {
