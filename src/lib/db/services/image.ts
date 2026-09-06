@@ -377,6 +377,14 @@ export const getFeatureCanonicalImageOccupancy = async (
   return [...new Set(rows.map(row => row.featureId))]
 }
 
+/**
+ * Loads images and their assignments in bounded ID batches.
+ * @param db Database handle.
+ * @param imageIds Requested image IDs.
+ * @param conditions Additional visibility or query conditions.
+ * @returns Matching image-assignment rows across all batches.
+ * @remarks Duplicate input IDs are ignored; multiple feature assignments are preserved.
+ */
 export const getImagesByIds = async (
   db: Database,
   imageIds: string[],
@@ -384,30 +392,39 @@ export const getImagesByIds = async (
 ): Promise<ImageDBFlat[]> => {
   if (imageIds.length === 0) return []
 
-  // Always filter by the provided image IDs
-  const allConditions = [inArray(image.id, imageIds), ...conditions]
-
-  const results = await db
-    .select({
-      ...getTableColumns(image),
-      intent: featureImage.intent,
-      isPublished: featureImage.isPublished,
-      publishedAt: featureImage.publishedAt,
-      publisherId: featureImage.publisherId,
-      attribution: user.attribution,
-      // Feature context fields
-      organisationId: feature.organisationId,
-      projectId: feature.projectId,
-      layerId: feature.layerId,
-      featureId: feature.id,
-    })
+  // Budget the actual compiled filter parameters before allocating ID placeholders.
+  const otherParametersCount = db
+    .select({ id: image.id })
     .from(image)
-    .leftJoin(featureImage, eq(image.id, featureImage.imageId))
-    .leftJoin(feature, eq(featureImage.featureId, feature.id))
-    .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...allConditions))
+    .where(and(...conditions))
+    .toSQL().params.length
+  return await autochunk(
+    { items: [...new Set(imageIds)], otherParametersCount },
+    async idChunk => {
+      // Always filter by the provided image IDs and retain every caller-supplied condition.
+      const results = await db
+        .select({
+          ...getTableColumns(image),
+          intent: featureImage.intent,
+          isPublished: featureImage.isPublished,
+          publishedAt: featureImage.publishedAt,
+          publisherId: featureImage.publisherId,
+          attribution: user.attribution,
+          // Feature context fields
+          organisationId: feature.organisationId,
+          projectId: feature.projectId,
+          layerId: feature.layerId,
+          featureId: feature.id,
+        })
+        .from(image)
+        .leftJoin(featureImage, eq(image.id, featureImage.imageId))
+        .leftJoin(feature, eq(featureImage.featureId, feature.id))
+        .leftJoin(user, eq(image.contributorId, user.id))
+        .where(and(inArray(image.id, idChunk), ...conditions))
 
-  return results as ImageDBFlat[]
+      return results as ImageDBFlat[]
+    },
+  )
 }
 
 export const getImageForContextType = async (
