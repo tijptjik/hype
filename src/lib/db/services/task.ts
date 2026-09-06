@@ -15,6 +15,7 @@ import { insert, update, del } from '../crud'
 import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
 import { getTaskHubFilter } from './hub'
+import { assertTaskFeatureScope, taskFeatureScopeCondition } from './task-scope'
 import { uploadAndProcessImage } from '$lib/client/services/image'
 // FEATURE
 // ENUMS
@@ -91,7 +92,8 @@ export const listTasks = async (
 ): Promise<ListResponse<TaskDBRaw>> => {
   const startedAt = Date.now()
 
-  const scopedConditions = [...conditions]
+  // Stored task scopes must agree with the feature before related data is hydrated.
+  const scopedConditions = [...conditions, taskFeatureScopeCondition()]
   const hubFilter = getTaskHubFilter(db, opts)
   if (hubFilter) {
     scopedConditions.push(hubFilter)
@@ -202,13 +204,16 @@ export const loadTask = async (
 
   return (await db.query.task.findFirst({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
+    where: and(...conditions, taskFeatureScopeCondition()),
   })) as TaskDBRaw | undefined
 }
 
 /**
  * Probes minimal task fields required for read authorization decisions.
  * Used to evaluate access before hydrating the full task relation graph.
+ * @param db Database handle.
+ * @param params Task identifier to probe.
+ * @returns Scope-consistent authorization fields, or null for missing/inconsistent tasks.
  */
 export const probeTaskQuery = async (
   db: Database,
@@ -231,7 +236,7 @@ export const probeTaskQuery = async (
       })
       .from(task)
       .innerJoin(organisation, eq(task.organisationId, organisation.id))
-      .where(eq(task.id, params.ref))
+      .where(and(eq(task.id, params.ref), taskFeatureScopeCondition()))
       .limit(1),
   )
 
@@ -242,8 +247,10 @@ export const probeTaskQuery = async (
  * @returns The created task
  * @throws {Error} If task creation fails
  */
-export const createTask = async (db: Database, data: TaskNew): Promise<TaskDB> =>
-  await insert(db, task, data)
+export const createTask = async (db: Database, data: TaskNew): Promise<TaskDB> => {
+  await assertTaskFeatureScope(db, data)
+  return await insert(db, task, data)
+}
 
 /**
  * Updates an existing task in the database

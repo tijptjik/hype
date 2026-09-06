@@ -16,6 +16,7 @@ import {
 } from '$lib/auth/asserts'
 // DB
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { taskFeatureScopeCondition } from '$lib/db/services/task-scope'
 import { isSuperAdmin } from '$lib/client/services/auth'
 import { isRelevantHubAdmin } from '$lib/api/services/authz/hub'
 import { authorizeTaskReadForProbe } from '$lib/api/services/authz/task'
@@ -354,7 +355,7 @@ export const assertPermissionsToCreateImage = async (
   // Every requested link must belong to this feature, not just the first draft link.
   for (const taskLink of taskLinks) {
     const draftTask = await db.query.task.findFirst({
-      where: eq(task.id, taskLink.taskId as Id),
+      where: and(eq(task.id, taskLink.taskId as Id), taskFeatureScopeCondition()),
     })
     if (
       ctxType !== ImageContextResource.feature ||
@@ -483,7 +484,7 @@ export const assertPermissionsToUpdateImage = async (
         })
         .from(task)
         .innerJoin(organisation, eq(organisation.id, task.organisationId))
-        .where(eq(task.id, ctxId))
+        .where(and(eq(task.id, ctxId), taskFeatureScopeCondition()))
         .limit(1)
       allowedFeatureId = taskRow?.featureId
       contextAssertion = () => {
