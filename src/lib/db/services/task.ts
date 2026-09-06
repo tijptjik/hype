@@ -344,7 +344,7 @@ const buildCompetingCanonicalDemotion = (
  * @param taskId - The ID of the task
  * @param isUndefinedOnly - Whether to only archive images with undefined intent
  * @returns The result of the operation
- * @remarks Shared assignments and images remain available to their other consumers.
+ * @remarks All selected removals and archives commit together; shared uses remain intact.
  * @throws {Error} If archiving fails
  */
 export const archiveImages = async (
@@ -361,8 +361,8 @@ export const archiveImages = async (
       ? taskImages.filter(ti => (ti.intent ?? 'undefined') === 'undefined')
       : taskImages
 
-    // Process each image
-    for (const ti of imagesToProcess) {
+    // Prepare every image change before committing the archival operation atomically.
+    const statements = imagesToProcess.flatMap(ti => {
       // Prepare the image update so removal and archival can commit together;
       // evaluate remaining references at write time, after the scoped removal.
       const archival = db
@@ -380,7 +380,7 @@ export const archiveImages = async (
         )
       // Delete the feature image association only if no other task shares it.
       if (ti.featureId) {
-        await db.batch([
+        return [
           db.delete(featureImage).where(
             and(
               eq(featureImage.imageId, ti.imageId),
@@ -395,12 +395,14 @@ export const archiveImages = async (
             ),
           ),
           archival,
-        ])
+        ]
       } else {
         // Update image record when no feature association remains to remove.
-        await archival
+        return [archival]
       }
-    }
+    })
+    const [firstStatement, ...remainingStatements] = statements
+    if (firstStatement) await db.batch([firstStatement, ...remainingStatements])
 
     return { success: true, processedCount: imagesToProcess.length }
   } catch (error) {
@@ -414,7 +416,9 @@ export const archiveImages = async (
  * @param db - The database instance
  * @param taskId - The ID of the task
  * @param skipUndefined - Whether to skip images with undefined intent
+ * @param publisherId - Reviewer responsible for publishing the selected images
  * @returns The result of the operation
+ * @remarks All selected publications and canonical demotions commit together.
  * @throws {Error} If publishing fails
  */
 export const publishImages = async (
@@ -433,11 +437,11 @@ export const publishImages = async (
       ? taskImages.filter(ti => (ti.intent ?? 'undefined') !== 'undefined')
       : taskImages
 
-    // Process each image
-    for (const ti of imagesToProcess) {
+    // Prepare every image change before committing the publication operation atomically.
+    const statements = imagesToProcess.flatMap(ti => {
       if (!ti.featureId) {
         console.warn(`Skipping image ${ti.imageId} - no featureId found`)
-        continue
+        return []
       }
 
       // Update or create feature image association
@@ -462,14 +466,16 @@ export const publishImages = async (
         })
       // Keep canonical demotion and publication atomic if either statement fails.
       if (ti.intent === 'canonical') {
-        await db.batch([
+        return [
           buildCompetingCanonicalDemotion(db, ti.featureId, ti.imageId),
           publication,
-        ])
+        ]
       } else {
-        await publication
+        return [publication]
       }
-    }
+    })
+    const [firstStatement, ...remainingStatements] = statements
+    if (firstStatement) await db.batch([firstStatement, ...remainingStatements])
 
     return { success: true, processedCount: imagesToProcess.length }
   } catch (error) {

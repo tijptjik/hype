@@ -28,7 +28,16 @@ function setup() {
     CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
     CREATE TABLE task (id TEXT PRIMARY KEY, featureId TEXT);
     INSERT INTO task VALUES ('task', 'feature');`)
-  const db = drizzle({} as never) as Database
+  const db = drizzle({
+    prepare: (sql: string) => ({
+      bind: (...params: unknown[]) => ({
+        run: async () => {
+          sqlite.prepare(sql).run(...(params as never[]))
+          return { success: true }
+        },
+      }),
+    }),
+  } as never) as Database
   vi.spyOn(db, 'batch').mockImplementation(async queries => {
     sqlite.exec('BEGIN')
     try {
@@ -47,6 +56,70 @@ function setup() {
 }
 
 describe('canonical image replacement', () => {
+  it.each([
+    { operation: 'publish', fail: false },
+    { operation: 'publish', fail: true },
+    { operation: 'archive', fail: false },
+    { operation: 'archive', fail: true },
+  ])(
+    'commits or rolls back all selected images ($operation, failure: $fail)',
+    async ({ operation, fail }) => {
+      const { db, sqlite } = setup()
+      sqlite.exec(`CREATE TABLE image (id TEXT PRIMARY KEY, isArchived INTEGER, modifiedAt TEXT);
+        INSERT INTO image (id, isArchived) VALUES ('old', 0), ('new', 0);`)
+      const originalAssignments = sqlite
+        .prepare('SELECT * FROM featureImage ORDER BY featureId, imageId')
+        .all()
+      vi.spyOn(db, 'select').mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([
+          { imageId: 'new', featureId: 'feature', intent: 'canonical' },
+          { imageId: 'old', featureId: 'feature', intent: 'general' },
+        ]),
+      } as never)
+      if (fail && operation === 'publish') {
+        sqlite.exec(`CREATE TRIGGER reject_second_publication BEFORE INSERT ON featureImage
+          WHEN NEW.imageId = 'old'
+          BEGIN SELECT RAISE(ABORT, 'second image failed'); END;`)
+      } else if (fail) {
+        sqlite.exec(`CREATE TRIGGER reject_second_archival BEFORE UPDATE ON image
+          WHEN NEW.id = 'old'
+          BEGIN SELECT RAISE(ABORT, 'second image failed'); END;`)
+      }
+      const result =
+        operation === 'publish'
+          ? publishImages(db, 'task', false, 'publisher')
+          : archiveImages(db, 'task')
+      if (fail) {
+        await expect(result).rejects.toThrow('second image failed')
+        expect(
+          sqlite
+            .prepare('SELECT * FROM featureImage ORDER BY featureId, imageId')
+            .all(),
+        ).toEqual(originalAssignments)
+      } else {
+        await expect(result).resolves.toEqual({ success: true, processedCount: 2 })
+        expect(
+          sqlite
+            .prepare(
+              "SELECT imageId FROM featureImage WHERE featureId = 'feature' AND isPublished = 1 ORDER BY imageId",
+            )
+            .all(),
+        ).toEqual(
+          operation === 'publish' ? [{ imageId: 'new' }, { imageId: 'old' }] : [],
+        )
+      }
+      expect(db.batch).toHaveBeenCalledOnce()
+      expect(
+        sqlite.prepare('SELECT id, isArchived FROM image ORDER BY id').all(),
+      ).toEqual([
+        { id: 'new', isArchived: !fail && operation === 'archive' ? 1 : 0 },
+        { id: 'old', isArchived: !fail && operation === 'archive' ? 1 : 0 },
+      ])
+    },
+  )
+
   it.each(['feature', 'project', 'organisation', 'hub', 'task', 'same-feature-task'])(
     'preserves a rejected task image still referenced by another %s',
     async resource => {
