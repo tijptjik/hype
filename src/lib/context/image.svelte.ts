@@ -2489,6 +2489,7 @@ export class ImageCtx {
    * @returns Resolves after deletion-side effects have settled.
    */
   async delete(imageId: Id, ctx: ImageEditCtx) {
+    const contextAtStart = this.state.context
     const imagesBeforeDelete = this.getImages()
     const uploadQueueBeforeDelete = [...this.state.uploadQueue]
     const activeImageBeforeDelete = this.state.activeImage
@@ -2536,7 +2537,10 @@ export class ImageCtx {
       })
     } catch (error: unknown) {
       rollbackSingleResourceImageCache?.()
+      // Navigation can replace the viewer while this deletion is pending.
+      if (this.state.context !== contextAtStart) return
       await this.setImages(imagesBeforeDelete)
+      if (this.state.context !== contextAtStart) return
       this.setUploadQueue(uploadQueueBeforeDelete)
 
       if (activeImageBeforeDelete) {
@@ -2565,12 +2569,14 @@ export class ImageCtx {
       // Show error message on the thumbnail for 5 seconds
       this.setErrorMessage(imageId, errorMessage)
     } finally {
-      // These state updates should always run
-      this.removeFromPendingConfirmation(imageId)
-      this.removeFromDeletionQueue(imageId)
-      this.resetLoadStatus(imageId)
-      this.resetUploadStatus(imageId)
-      this.resetThumbnailLoadStatus(imageId)
+      // Cleanup belongs only to the viewer that initiated the deletion.
+      if (this.state.context === contextAtStart) {
+        this.removeFromPendingConfirmation(imageId)
+        this.removeFromDeletionQueue(imageId)
+        this.resetLoadStatus(imageId)
+        this.resetUploadStatus(imageId)
+        this.resetThumbnailLoadStatus(imageId)
+      }
     }
   }
 
