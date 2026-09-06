@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { drizzle } from 'drizzle-orm/d1'
 import { updateFeatureImage } from '$lib/db/services/image'
+import { publishImages } from '$lib/db/services/task'
 import type { Database } from '$lib/types'
 
 const stores: DatabaseSync[] = []
@@ -40,6 +41,43 @@ function setup() {
 }
 
 describe('canonical image replacement', () => {
+  it.each([false, true])(
+    'publishes task canonical images atomically (failure: %s)',
+    async fail => {
+      const { db, sqlite } = setup()
+      // Model a review read whose canonical choice was superseded before publication.
+      vi.spyOn(db, 'select').mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        leftJoin: vi.fn().mockReturnThis(),
+        where: vi
+          .fn()
+          .mockResolvedValue([
+            { imageId: 'new', featureId: 'feature', intent: 'canonical' },
+          ]),
+      } as never)
+      if (fail) {
+        sqlite.exec(`CREATE TRIGGER reject_publication BEFORE INSERT ON featureImage
+        WHEN NEW.imageId = 'new'
+        BEGIN SELECT RAISE(ABORT, 'publication failed'); END;`)
+        await expect(publishImages(db, 'task', false, 'publisher')).rejects.toThrow(
+          'publication failed',
+        )
+      } else {
+        await expect(publishImages(db, 'task', false, 'publisher')).resolves.toEqual({
+          success: true,
+          processedCount: 1,
+        })
+      }
+      expect(
+        sqlite
+          .prepare(
+            "SELECT imageId FROM featureImage WHERE featureId = 'feature' AND intent = 'canonical'",
+          )
+          .all(),
+      ).toEqual([{ imageId: fail ? 'old' : 'new' }])
+    },
+  )
+
   it('replaces only the requested feature canonical image', async () => {
     const { db, sqlite } = setup()
     const result = await updateFeatureImage(

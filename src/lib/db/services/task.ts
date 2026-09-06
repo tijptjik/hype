@@ -303,19 +303,19 @@ const loadTaskImageReviewRows = async (
     .where(eq(taskImage.taskId, taskId))
 
 /**
- * Demotes any existing canonical image so a new canonical assignment can be published safely.
+ * Builds a demotion statement to batch with the new canonical assignment.
  * @param db - The database instance
  * @param featureId - The feature receiving the canonical image
  * @param nextCanonicalImageId - The image that should remain canonical
- * @returns void
+ * @returns An unexecuted update statement for an atomic publication batch.
  */
-const clearCompetingCanonicalIntent = async (
+const buildCompetingCanonicalDemotion = (
   db: Database,
   featureId: string,
   nextCanonicalImageId: string,
-): Promise<void> => {
+) => {
   // Canonical intent is exclusive per feature.
-  await db
+  return db
     .update(featureImage)
     .set({
       intent: 'undefined',
@@ -405,12 +405,8 @@ export const publishImages = async (
         continue
       }
 
-      if (ti.intent === 'canonical') {
-        await clearCompetingCanonicalIntent(db, ti.featureId, ti.imageId)
-      }
-
       // Update or create feature image association
-      await db
+      const publication = db
         .insert(featureImage)
         .values({
           imageId: ti.imageId,
@@ -429,6 +425,15 @@ export const publishImages = async (
             publishedAt,
           },
         })
+      // Keep canonical demotion and publication atomic if either statement fails.
+      if (ti.intent === 'canonical') {
+        await db.batch([
+          buildCompetingCanonicalDemotion(db, ti.featureId, ti.imageId),
+          publication,
+        ])
+      } else {
+        await publication
+      }
     }
 
     return { success: true, processedCount: imagesToProcess.length }
