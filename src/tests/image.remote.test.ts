@@ -63,7 +63,13 @@ const {
       ctxId,
     }),
   ),
-  mockGetImageForContextType: vi.fn(async () => []),
+  mockGetImageForContextType: vi.fn(
+    async (
+      ..._args: Parameters<
+        typeof import('$lib/db/services/image').getImageForContextType
+      >
+    ) => [],
+  ),
   mockGetImagesByIds: vi.fn(async () => []),
   mockToImageEntityResponseShape: vi.fn((data: unknown, ctx: unknown) => ({
     data,
@@ -215,6 +221,11 @@ const buildDbWithContextRow = (row: Record<string, unknown>) => ({
     from: vi.fn(() => ({
       innerJoin: vi.fn(() => ({
         innerJoin: vi.fn(() => ({
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [row]),
+            })),
+          })),
           where: vi.fn(() => ({
             limit: vi.fn(async () => [row]),
           })),
@@ -315,6 +326,144 @@ describe('image.remote', () => {
       }),
     ).rejects.toMatchObject({ status: 403 })
   })
+
+  it.each(['other-feature', null, undefined])(
+    'rejects task narrowing outside the authorized feature (%s)',
+    async featureId => {
+      const ctx = await mockGuardedContext()
+      mockGuardedContext.mockResolvedValue({
+        ...ctx,
+        db: buildDbWithContextRow({
+          isPublished: true,
+          isArchived: false,
+          featureId,
+        }),
+      })
+      await expect(
+        remote.getImagesForContext({
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+          ctxNarrowingType: 'task',
+          ctxNarrowingId: 'task-1',
+        }),
+      ).rejects.toMatchObject({ status: 403 })
+      expect(mockGetImageForContextType).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['project', 'organisation', 'hub', 'user', 'task'])(
+    'rejects replacing a primary %s context with task narrowing',
+    async ctxType => {
+      await expect(
+        remote.getImagesForContext({
+          ctxType,
+          ctxId: 'parent-1',
+          ctxNarrowingType: 'task',
+          ctxNarrowingId: 'other-task',
+        }),
+      ).rejects.toMatchObject({ status: 400 })
+      expect(mockGetImageForContextType).not.toHaveBeenCalled()
+    },
+  )
+
+  it('rejects narrowing to a deleted task before fetching images', async () => {
+    const ctx = await mockGuardedContext()
+    const db = buildDbWithContextRow({ isPublished: true, isArchived: false })
+    db.select.mockReturnValueOnce(db.select()).mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({ limit: vi.fn(async () => []) })),
+      })),
+    } as never)
+    mockGuardedContext.mockResolvedValue({ ...ctx, db })
+    await expect(
+      remote.getImagesForContext({
+        ctxType: 'feature',
+        ctxId: 'feature-1',
+        ctxNarrowingType: 'task',
+        ctxNarrowingId: 'deleted-task',
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockGetImageForContextType).not.toHaveBeenCalled()
+  })
+
+  it.each([{ ctxNarrowingType: 'task' }, { ctxNarrowingId: 'task-1' }])(
+    'rejects incomplete narrowing (%j)',
+    async narrowing => {
+      await expect(
+        remote.getImagesForContext({
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+          ...narrowing,
+        }),
+      ).rejects.toMatchObject({ status: 400 })
+      expect(mockGetImageForContextType).not.toHaveBeenCalled()
+    },
+  )
+
+  it('keeps valid task narrowing bound to its feature in the final query', async () => {
+    const ctx = await mockGuardedContext()
+    mockGuardedContext.mockResolvedValue({
+      ...ctx,
+      db: buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        featureId: 'feature-1',
+      }),
+    })
+    await remote.getImagesForContext({
+      ctxType: 'feature',
+      ctxId: 'feature-1',
+      ctxNarrowingType: 'task',
+      ctxNarrowingId: 'task-1',
+    })
+    expect(mockGetImageQueryContext).toHaveBeenCalledWith(
+      expect.anything(),
+      true,
+      {},
+      'task-1',
+      'task',
+    )
+    const conditions = mockGetImageForContextType.mock.calls[0][2]
+    const { task } = await import('$lib/db/schema')
+    const { and } = await import('drizzle-orm')
+    const query = drizzle({} as never)
+      .select({ id: task.id })
+      .from(task)
+      .where(and(...conditions))
+      .toSQL()
+    expect(query.sql).toContain('"task"."featureId" = ?')
+    expect(query.params).toEqual(['feature-1'])
+    const sqlite = new DatabaseSync(':memory:')
+    try {
+      sqlite.exec(`CREATE TABLE task (id TEXT, featureId TEXT);
+        INSERT INTO task VALUES ('task-1', 'feature-1');`)
+      expect(sqlite.prepare(query.sql).all(...(query.params as never[]))).toHaveLength(
+        1,
+      )
+      // The final condition excludes a task reparented after the authorization probe.
+      sqlite.exec("UPDATE task SET featureId = 'other-feature'")
+      expect(sqlite.prepare(query.sql).all(...(query.params as never[]))).toHaveLength(
+        0,
+      )
+    } finally {
+      sqlite.close()
+    }
+  })
+
+  it.each(['feature', 'task'])(
+    'preserves primary %s reads without narrowing',
+    async ctxType => {
+      await remote.getImagesForContext({ ctxType, ctxId: 'context-1' })
+      expect(mockGetImageQueryContext).toHaveBeenCalledWith(
+        expect.anything(),
+        true,
+        {},
+        'context-1',
+        ctxType,
+      )
+      expect(mockGetImageForContextType).toHaveBeenCalled()
+    },
+  )
 
   it('denies getImageById when image read authz denies', async () => {
     mockGetImagesByIds.mockResolvedValueOnce([
