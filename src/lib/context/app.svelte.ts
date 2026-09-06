@@ -168,6 +168,7 @@ export class AppCtx {
 
   // Features map for current state (rebuilt when state.resources.feature changes)
   private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>()
+  private featureRefreshSerial = 0
   private organisationCodeToId = new Map<Code, Id>()
   private projectCodeToId = new Map<Code, Id>()
   private hubCodeToId = new Map<Code, Id>()
@@ -1502,16 +1503,19 @@ export class AppCtx {
       this.cache.user.clear()
     }
 
-    resourcesToInvalidate.forEach(async resource => {
-      await this.queryClient.invalidateQueries({
-        queryKey:
-          resource === 'userFeatures'
-            ? this.userFeaturesQueryKey()
-            : [FirstClassResource[resource]],
-        refetchType: 'all',
-        exact: false,
-      })
-    })
+    // Wait for every invalidation so callers do not refresh against stale query data.
+    await Promise.all(
+      resourcesToInvalidate.map(resource =>
+        this.queryClient.invalidateQueries({
+          queryKey:
+            resource === 'userFeatures'
+              ? this.userFeaturesQueryKey()
+              : [FirstClassResource[resource]],
+          refetchType: 'all',
+          exact: false,
+        }),
+      ),
+    )
   }
 
   togglePrism = async (resource: FirstClassResource, id: Id): Promise<void> => {
@@ -1979,11 +1983,21 @@ export class AppCtx {
     _isCascading: boolean = true,
     expectedRoleScope?: string,
   ): Promise<void> => {
+    const refreshSerial = ++this.featureRefreshSerial
     const query = this.getRequiredQueryConfig(FirstClassResource.feature)
     const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<FeatureFromCollection[]>,
     })
+
+    if (refreshSerial !== this.featureRefreshSerial) {
+      logMarkerBootstrap('stale feature data ignored after a newer refresh started', {
+        refreshSerial,
+        currentRefreshSerial: this.featureRefreshSerial,
+        featureCount: features.length,
+      })
+      return
+    }
 
     if (expectedRoleScope && expectedRoleScope !== this.getRoleScopeQueryKey()) {
       logMarkerBootstrap('stale feature data ignored after identity change', {
@@ -3949,6 +3963,23 @@ export class AppCtx {
   setUser = async (user: CurrentUser | SessionUser | null) => {
     const previousUserId = this.user?.id ?? null
     const nextUserId = user?.id ?? null
+    const previousAnonymous = this.user
+      ? 'isAnonymous' in this.user
+        ? Boolean(this.user.isAnonymous)
+        : false
+      : null
+    const nextAnonymous = user
+      ? 'isAnonymous' in user
+        ? Boolean(user.isAnonymous)
+        : false
+      : null
+    const identityChanged =
+      previousUserId !== nextUserId || previousAnonymous !== nextAnonymous
+
+    if (identityChanged) {
+      // Prevent an in-flight response from the previous identity from being committed.
+      this.featureRefreshSerial += 1
+    }
 
     if (previousUserId !== nextUserId) {
       // Identity-bound records must never survive guest/account transitions.
@@ -4127,6 +4158,8 @@ export class AppCtx {
 
   // Clear all cache maps (for actual data reset scenarios)
   clearAllCaches = (): void => {
+    // Invalidate in-flight feature reads before removing their committed state.
+    this.featureRefreshSerial += 1
     this.cache.organisation.clear()
     this.cache.project.clear()
     this.cache.layer.clear()

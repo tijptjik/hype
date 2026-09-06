@@ -27,7 +27,6 @@ let featureCount = $derived(
 // INTERACTIONS
 let handleToggle = () => {
   appCtx.placeCtx.toggleNeighbourhood(neighbourhoodRef)
-  appCtx.refreshFeatures()
   appCtx.zoomToAllVisibleFeatures()
   omniCtx.setMode(OmniMode.search)
 }
