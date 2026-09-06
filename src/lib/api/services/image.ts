@@ -317,7 +317,7 @@ export const getImageByIdsQueryContext = (
  * @param ctxType Target resource type.
  * @param ctxId Target resource ID.
  * @param links Requested task associations.
- * @returns Nothing when the account can upload and attach every requested link.
+ * @returns A draft-contribution marker for restricted uploads, otherwise nothing on admin access.
  */
 export const assertPermissionsToCreateImage = async (
   db: Database,
@@ -351,7 +351,7 @@ export const assertPermissionsToCreateImage = async (
     if (!draftTask.isDraft || draftTask.contributorId !== user.id)
       canContributeToDraft = false
   }
-  if (canContributeToDraft) return
+  if (canContributeToDraft) return 'draft-contribution' as const
 
   const commonAssertions = [
     () => assertUserLoggedIn(user),

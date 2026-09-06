@@ -548,7 +548,7 @@ describe('image.remote', () => {
     )
   })
 
-  it.each(['new', 'retry-missing', 'retry-existing', 'failure'])(
+  it.each(['new', 'retry-missing', 'retry-existing', 'failure', 'draft-contribution'])(
     'finalizeImageUpload keeps sidecars aligned with persisted state (%s)',
     async scenario => {
       const put = vi.fn(async () => undefined)
@@ -621,8 +621,24 @@ describe('image.remote', () => {
       }
       if (scenario === 'failure')
         mockCreateImageRecord.mockRejectedValueOnce(new Error('insert failed'))
+      if (scenario === 'draft-contribution') {
+        mockAssertPermissionsToCreateImage.mockResolvedValueOnce(
+          'draft-contribution' as never,
+        )
+      }
       const confirmation = remote.finalizeImageUpload({
         token: 'signed-upload-token',
+        persist: {
+          contributorId: 'other-account',
+          featureImage: {
+            featureId: 'feature-1',
+            intent: 'canonical',
+            isPublished: true,
+            localIsPublished: true,
+            publisherId: 'other-account',
+            publishedAt: '2026-01-01T00:00:00Z',
+          },
+        },
         metadata: {
           originalFilename: 'image.jpg',
           originalExtension: 'jpg',
@@ -646,6 +662,32 @@ describe('image.remote', () => {
         return
       }
       const result = await confirmation
+      if (scenario === 'draft-contribution') {
+        expect(createUploadedImage).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            contributorId: 'u-1',
+            featureImage: expect.objectContaining({
+              intent: 'undefined',
+              isPublished: false,
+              localIsPublished: null,
+              publisherId: null,
+              publishedAt: null,
+            }),
+          }),
+        )
+      } else if (scenario === 'new') {
+        expect(createUploadedImage).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            contributorId: 'other-account',
+            featureImage: expect.objectContaining({
+              intent: 'canonical',
+              isPublished: true,
+            }),
+          }),
+        )
+      }
 
       expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
       expect(createUploadedImage).toHaveBeenCalledWith(
