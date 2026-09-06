@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, sql, type SQL } from 'drizzle-orm'
+import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm'
 // LIB
 import { isAdminRequest } from '$lib/api'
 // API
@@ -172,6 +172,12 @@ export const imageEntityWithRelations = {
 /**
  * Get the query context for the image resource.
  * Filters the query based on user roles, context (featureId, projectId, etc.), and query parameters.
+ * @param user Current session user.
+ * @param adminContext Request or resolved admin-mode flag.
+ * @param params Requested filters.
+ * @param ctxId Parent resource identifier.
+ * @param ctxType Parent resource type.
+ * @returns Scoped query conditions and supported filters.
  */
 export const getImageQueryContext = (
   user: SessionUser,
@@ -210,8 +216,8 @@ export const getImageQueryContext = (
         sql`exists (select 1 from "user" where "user"."id" = ${image.contributorId} and "user"."isArchived" = false)`,
       )
     } else if (ctxType === ImageContextResourceExtended.task) {
-      // NO further restrictions on task images, as they are only accessible
-      // from the Admin view
+      // Task narrowing is also reachable from public queries; require reviewed publication.
+      conditions.push(eq(featureImage.isPublished, true))
     }
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
@@ -236,8 +242,12 @@ export const getImageQueryContext = (
 
 /**
  * Get the query context for a single image.
- * All images can be queried if their ID is known, except for images which have isArchived.
+ * Public feature assignments must be published; non-superadmins cannot read archived images.
  * This is used for the /images/[id] route.
+ * @param user Current session user.
+ * @param adminContext Request or resolved admin-mode flag.
+ * @param params Requested filters.
+ * @returns Query conditions and supported filters.
  */
 export const getImageEntityQueryContext = (
   user: SessionUser,
@@ -260,6 +270,12 @@ export const getImageEntityQueryContext = (
 
   if (!isAdmin) {
     params = removeExcludedColumns(params, excludeColumns)
+    // A single-image lookup must not choose an unpublished feature assignment.
+    const publishedAssignment = or(
+      isNull(featureImage.imageId),
+      eq(featureImage.isPublished, true),
+    )
+    if (publishedAssignment) conditions.push(publishedAssignment)
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
     if (!isSuperAdmin(user)) {
