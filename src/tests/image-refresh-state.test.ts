@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ImageCtx } from '$lib/context/image.svelte'
-import { deleteImage, setImagePublished } from '$lib/api/server/image.remote'
+import {
+  deleteImage,
+  setImagePublished,
+  setImageIntent,
+  rotateImage,
+} from '$lib/api/server/image.remote'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 vi.mock('$lib/context/app.svelte', () => ({
@@ -10,9 +15,44 @@ vi.mock('$lib/api/server/image.remote', async importOriginal => ({
   ...(await importOriginal<typeof import('$lib/api/server/image.remote')>()),
   deleteImage: vi.fn(),
   setImagePublished: vi.fn(),
+  setImageIntent: vi.fn(),
+  rotateImage: vi.fn(),
 }))
 
 describe('image refresh ownership', () => {
+  it.each(['rotate', 'intent'] as const)(
+    'invalidates the original feature after %s without refreshing a new context',
+    async action => {
+      const ctx = new ImageCtx()
+      await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
+      ctx.appCtx.cache.feature.set('old', { id: 'old', images: [] } as never)
+      ctx.appCtx.cache.feature.set('new', { id: 'new', images: [] } as never)
+      let resolve!: () => void
+      const pendingRemote = new Promise<void>(res => {
+        resolve = res
+      })
+      vi.mocked(rotateImage).mockReturnValue(
+        pendingRemote as ReturnType<typeof rotateImage>,
+      )
+      vi.mocked(setImageIntent).mockReturnValue(
+        pendingRemote as ReturnType<typeof setImageIntent>,
+      )
+      const refresh = vi.spyOn(ctx, 'refreshImages').mockResolvedValue(undefined)
+      const pending =
+        action === 'rotate'
+          ? ctx.handleRotate(90, 'old-image')
+          : ctx.handleSetIntent('old-image', 'general')
+      await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+      const update = vi.spyOn(ctx, 'setForImage')
+      resolve()
+      await pending
+      expect(refresh).not.toHaveBeenCalled()
+      expect(update).not.toHaveBeenCalled()
+      expect(ctx.appCtx.cache.feature.get('old')?.images).toBeUndefined()
+      expect(ctx.appCtx.cache.feature.get('new')?.images).toEqual([])
+    },
+  )
+
   it.each([false, true])(
     'keeps a publish response scoped when context changes: %s',
     async changeContext => {

@@ -2342,6 +2342,7 @@ export class ImageCtx {
     )
     const ctx = this.getCtx()
     const featureId = ctx.ctxType === 'feature' ? ctx.ctxId : undefined
+    const contextAtStart = this.state.context
 
     try {
       // Canonical is exclusive, so clear any competing canonical image before applying the new one.
@@ -2363,7 +2364,10 @@ export class ImageCtx {
             featureId,
             meta: { isAdminRequest: true },
           })
-          this.setForImage(currentCanonical.image.id, 'intent', 'undefined')
+          this.invalidateFeatureImageCache(contextAtStart)
+          if (this.state.context === contextAtStart) {
+            this.setForImage(currentCanonical.image.id, 'intent', 'undefined')
+          }
         }
       }
 
@@ -2377,11 +2381,14 @@ export class ImageCtx {
         ...(isPublished !== undefined ? { isPublished } : {}),
         meta: { isAdminRequest: true },
       })
+      // Navigation must not redirect this mutation's refresh into another resource.
+      this.invalidateFeatureImageCache(contextAtStart)
+      if (this.state.context !== contextAtStart) return
       this.setForImage(imageId, 'intent', newIntent)
       this.setForImage(imageId, 'isPublished', isPublished)
-      await this.refreshImages(imageId)
+      await this.refreshImages()
+      if (this.state.context !== contextAtStart) return
       this.sortImagesInternal() // Calls the private sortImages method
-      this.invalidateFeatureImageCache()
     } catch (error) {
       console.error('[ImageCtx.handleSetIntent] failed to persist intent', {
         imageId,
@@ -2439,6 +2446,7 @@ export class ImageCtx {
     if (!imageId) return
 
     const ctx = this.getCtx()
+    const contextAtStart = this.state.context
 
     try {
       await rotateImageRemote({
@@ -2449,8 +2457,10 @@ export class ImageCtx {
         meta: { isAdminRequest: true },
       })
 
-      await this.refreshImages(imageId)
-      this.invalidateFeatureImageCache()
+      // Refresh fresh metadata only in the viewer that initiated the rotation.
+      this.invalidateFeatureImageCache(contextAtStart)
+      if (this.state.context !== contextAtStart) return
+      await this.refreshImages()
     } catch (error) {
       toast.error('Failed to rotate image')
       throw error
