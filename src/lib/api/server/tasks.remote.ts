@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit'
 // I18N
 import { getLocale } from '$lib/i18n'
 // DRIZZLE
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 // API
 import { getValidQueryParams as validateQueryParams } from '$lib/api'
 import {
@@ -14,6 +14,7 @@ import {
   toAuthMessage,
 } from '$lib/api/services/authz'
 import { task as taskTable } from '$lib/db/schema'
+import { taskFeatureScopeCondition } from '$lib/db/services/task-scope'
 import {
   BeginMissingReportDraftSchema,
   BeginNewFeatureDraftSchema,
@@ -327,7 +328,10 @@ export const beginNewFeatureDraft = guardedCommand(
 
     if (input.task.taskId) {
       const existingTask = await ctx.db.query.task.findFirst({
-        where: eq(taskTable.id, input.task.taskId as Id),
+        where: and(
+          eq(taskTable.id, input.task.taskId as Id),
+          taskFeatureScopeCondition(),
+        ),
       })
 
       if (!existingTask) {
@@ -457,7 +461,7 @@ export const finalizeTaskDraft = guardedCommand(
       with: {
         images: true,
       },
-      where: eq(taskTable.id, params.id as Id),
+      where: and(eq(taskTable.id, params.id as Id), taskFeatureScopeCondition()),
     })
 
     if (!draftTask) {

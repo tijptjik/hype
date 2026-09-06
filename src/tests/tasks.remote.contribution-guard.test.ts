@@ -40,12 +40,10 @@ vi.mock('@sveltejs/kit', () => ({
 }))
 
 vi.mock('$lib/i18n', () => ({ getLocale: vi.fn() }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
 vi.mock('$lib/api', () => ({ getValidQueryParams: vi.fn() }))
 vi.mock('$lib/api/services/authz', () => ({
   authorizeTaskReadForProbe: reviewMocks.authorizeTaskReadForProbe,
 }))
-vi.mock('$lib/db/schema', () => ({ task: {} }))
 vi.mock('$lib/db/zod/schema/task', () => ({
   BeginMissingReportDraftSchema: {},
   BeginNewFeatureDraftSchema: {},

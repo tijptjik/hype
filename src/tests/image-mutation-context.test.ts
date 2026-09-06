@@ -21,14 +21,16 @@ describe('image mutation resource membership', () => {
       try {
         sqlite.exec(`CREATE TABLE image (id TEXT);
           CREATE TABLE featureImage (featureId TEXT, imageId TEXT);
-          CREATE TABLE project (id TEXT, imageId TEXT);
+          CREATE TABLE project (id TEXT, imageId TEXT, organisationId TEXT);
+          CREATE TABLE feature (id TEXT, projectId TEXT);
           CREATE TABLE organisation (id TEXT, imageId TEXT, hubId TEXT);
           CREATE TABLE hub (id TEXT, imageId TEXT);
           CREATE TABLE task (id TEXT, projectId TEXT, organisationId TEXT, featureId TEXT);
           CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
           INSERT INTO image VALUES ('linked'), ('unrelated');
           INSERT INTO featureImage VALUES ('context', 'linked'), ('unrelated-feature', 'linked');
-          INSERT INTO project VALUES ('context', 'linked');
+          INSERT INTO project VALUES ('context', 'linked', 'context'), ('project', null, 'context');
+          INSERT INTO feature VALUES ('context', 'project');
           INSERT INTO organisation VALUES ('context', 'linked', 'context');
           INSERT INTO hub VALUES ('context', 'linked');
           INSERT INTO task VALUES ('context', 'project', 'context', 'context');
@@ -170,6 +172,33 @@ describe('image mutation resource membership', () => {
               ),
             ).resolves.toBeUndefined()
           }
+          // A task's stored role scope cannot authorize an image on a foreign feature.
+          sqlite.exec(`INSERT INTO organisation VALUES ('foreign-org', null, 'foreign-hub');
+            INSERT INTO project VALUES ('foreign-project', null, 'foreign-org');
+            UPDATE feature SET projectId = 'foreign-project' WHERE id = 'context';`)
+          await expect(
+            assertPermissionsToDeleteImage(
+              db,
+              user,
+              request,
+              roles,
+              'linked',
+              'context',
+              ctxType as never,
+            ),
+          ).rejects.toMatchObject({ status: 403 })
+          await expect(
+            assertPermissionsToUpdateImage(
+              db,
+              user,
+              request,
+              { id: 'linked', featureId: 'context' } as never,
+              roles,
+              'linked',
+              'context',
+              ctxType as never,
+            ),
+          ).rejects.toMatchObject({ status: 403 })
         }
       } finally {
         sqlite.close()
