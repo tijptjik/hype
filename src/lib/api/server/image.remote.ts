@@ -314,27 +314,45 @@ const updateFeatureImageFields = async (params: {
 /**
  * Resolves whether the primary query should be narrowed to a task-specific image context.
  *
+ * @param db Database handle used to verify the task's persisted parent.
  * @param params Context query params.
  * @returns Effective context type and id used for the image query.
+ * @remarks Narrowing cannot replace the authorized resource with another resource.
  */
-const resolveImageQueryContext = (params: {
-  ctxType: ImageContextType
-  ctxId: Id
-  ctxNarrowingType?: ImageContextResourceExtended
-  ctxNarrowingId?: Id
-}): {
+const resolveImageQueryContext = async (
+  db: Database,
+  params: {
+    ctxType: ImageContextType
+    ctxId: Id
+    ctxNarrowingType?: ImageContextResourceExtended
+    ctxNarrowingId?: Id
+  },
+): Promise<{
   ctxType: ImageContextResource | ImageContextResourceExtended
   ctxId: Id
-} =>
-  params.ctxNarrowingType === ImageContextResourceExtended.task && params.ctxNarrowingId
-    ? {
-        ctxType: ImageContextResourceExtended.task,
-        ctxId: params.ctxNarrowingId,
-      }
-    : {
-        ctxType: params.ctxType,
-        ctxId: params.ctxId,
-      }
+}> => {
+  if (params.ctxNarrowingType === undefined && params.ctxNarrowingId === undefined) {
+    return { ctxType: params.ctxType, ctxId: params.ctxId }
+  }
+  if (
+    params.ctxType !== ImageContextResource.feature ||
+    params.ctxNarrowingType !== ImageContextResourceExtended.task ||
+    !params.ctxNarrowingId
+  ) {
+    throw error(400, 'Task narrowing requires a feature context and task ID')
+  }
+
+  // A narrowing task must belong to the feature whose read permission was checked.
+  const [parent] = await db
+    .select({ featureId: task.featureId })
+    .from(task)
+    .where(eq(task.id, params.ctxNarrowingId))
+    .limit(1)
+  if (!parent || parent.featureId !== params.ctxId) {
+    throw error(403, 'Task does not belong to the requested feature')
+  }
+  return { ctxType: ImageContextResourceExtended.task, ctxId: params.ctxNarrowingId }
+}
 
 /**
  * Loads publication/archive state for the image context's owning resource.
@@ -1387,6 +1405,10 @@ const createImageInContext = async (params: {
 
 /**
  * Returns image collections in context.
+ *
+ * @param params Primary context, optional task narrowing, and collection options.
+ * @returns Authorized image collection in the requested response profile.
+ * @remarks Task narrowing must remain inside the authorized feature.
  */
 export const getImagesForContext = guardedQuery(
   ImagesByContextSchema,
@@ -1417,7 +1439,7 @@ export const getImagesForContext = guardedQuery(
 
     // DEPRECATED: Legacy task-as-primary context. Remove after migration to
     // ctxType='feature' + ctxNarrowingType='task' + ctxNarrowingId.
-    const queryContext = resolveImageQueryContext({
+    const queryContext = await resolveImageQueryContext(db, {
       ctxType: params.ctxType as ImageContextType,
       ctxId: params.ctxId as Id,
       ctxNarrowingType: params.ctxNarrowingType as ImageContextResourceExtended,
@@ -1431,6 +1453,14 @@ export const getImagesForContext = guardedQuery(
       queryContext.ctxId,
       queryContext.ctxType,
     )
+
+    // Recheck the authorized parent at query time in case the task was reassigned.
+    if (
+      params.ctxType === ImageContextResource.feature &&
+      queryContext.ctxType === ImageContextResourceExtended.task
+    ) {
+      conditions.push(eq(task.featureId, params.ctxId))
+    }
 
     const images = (await getImageForContextType(
       db,
