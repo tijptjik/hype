@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  assertPermissionsToCreateImage,
   assertPermissionsToDeleteImage,
   assertPermissionsToUpdateImage,
 } from '$lib/api/services/image'
@@ -188,4 +189,96 @@ describe('image mutation resource membership', () => {
       ),
     ).rejects.toMatchObject({ status: 400 })
   })
+})
+
+describe('image creation context authorization', () => {
+  const account = { id: 'account', isAnonymous: false } as never
+  const adminRequest = new Request('https://example.test/admin/images')
+
+  it('requires scoped hub authority and rejects unsupported contexts', async () => {
+    const db = {} as Database
+    await expect(
+      assertPermissionsToCreateImage(
+        db,
+        account,
+        adminRequest,
+        [],
+        'hub' as never,
+        'hub',
+      ),
+    ).rejects.toMatchObject({ status: 403 })
+    await expect(
+      assertPermissionsToCreateImage(
+        db,
+        account,
+        adminRequest,
+        [{ type: 'hub', role: 'admin', hubId: 'other' }] as never,
+        'hub' as never,
+        'hub',
+      ),
+    ).rejects.toMatchObject({ status: 403 })
+    await expect(
+      assertPermissionsToCreateImage(
+        db,
+        account,
+        adminRequest,
+        [{ type: 'hub', role: 'admin', hubId: 'hub' }] as never,
+        'hub' as never,
+        'hub',
+      ),
+    ).resolves.toBeUndefined()
+    await expect(
+      assertPermissionsToCreateImage(
+        db,
+        account,
+        adminRequest,
+        [],
+        'user' as never,
+        'account',
+      ),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it.each(['valid', 'other-feature', 'reviewed', 'other-owner', 'wrong-context'])(
+    'validates every draft link before granting contributor access (%s)',
+    async scenario => {
+      const draft = {
+        featureId: 'feature',
+        contributorId: 'account',
+        isDraft: true,
+        isReviewed: false,
+      }
+      const secondDraft = {
+        ...draft,
+        ...(scenario === 'other-feature' ? { featureId: 'other' } : {}),
+        ...(scenario === 'reviewed' ? { isReviewed: true } : {}),
+        ...(scenario === 'other-owner' ? { contributorId: 'other' } : {}),
+      }
+      const findFirst = vi
+        .fn()
+        .mockResolvedValueOnce(draft)
+        .mockResolvedValueOnce(secondDraft)
+      const db = { query: { task: { findFirst } } } as unknown as Database
+      const result = assertPermissionsToCreateImage(
+        db,
+        account,
+        new Request('https://example.test/'),
+        [],
+        (scenario === 'wrong-context' ? 'hub' : 'feature') as never,
+        'feature',
+        [
+          { type: 'taskImage', taskId: 'first' },
+          { type: 'taskImage', taskId: 'second' },
+        ],
+      )
+      if (scenario === 'valid') {
+        await expect(result).resolves.toBeUndefined()
+        expect(findFirst).toHaveBeenCalledTimes(2)
+      } else {
+        await expect(result).rejects.toMatchObject({
+          status: scenario === 'other-owner' ? 401 : 403,
+        })
+      }
+    },
+  )
 })
