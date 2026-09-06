@@ -1719,18 +1719,6 @@ export const finalizeImageUpload = guardedCommand(
       })
     }
 
-    // Persist metadata sidecars off the critical response path once the image row
-    // and links can be committed safely.
-    enqueueMetadataSidecarPersistence({
-      bucket: originalsBucket,
-      publicId: payload.publicId,
-      version,
-      metadataDocument,
-      manifestDocument,
-      stage,
-      event,
-    })
-
     const imageData: ImageNew = {
       cdn: 'cloudflareR2',
       env: stage,
@@ -1769,6 +1757,17 @@ export const finalizeImageUpload = guardedCommand(
             : {}),
         },
       })
+      // Persist metadata sidecars off the critical response path once the image row
+      // and links can be committed safely.
+      enqueueMetadataSidecarPersistence({
+        bucket: originalsBucket,
+        publicId: payload.publicId,
+        version,
+        metadataDocument,
+        manifestDocument,
+        stage,
+        event,
+      })
       event.platform?.context.waitUntil(
         enqueueDerivedAssetWarmup({
           event,
@@ -1805,6 +1804,40 @@ export const finalizeImageUpload = guardedCommand(
       })
     }
 
+    // A retry reuses the stored row version; never publish a manifest for an uncommitted version.
+    const persistedVersion = created.data?.image?.version ?? version
+    const persistedTimestamp = new Date(persistedVersion).toISOString()
+    const previousMetadata =
+      persistedVersion !== version
+        ? await readMetadataDocument({
+            platform: event.platform,
+            env: stage,
+            publicId: payload.publicId,
+            version: persistedVersion,
+            fetchFn: event.fetch,
+          })
+        : null
+    // Recover missing sidecars on retry, but preserve metadata already written for this version.
+    if (!previousMetadata?.document) {
+      enqueueMetadataSidecarPersistence({
+        bucket: originalsBucket,
+        publicId: payload.publicId,
+        version: persistedVersion,
+        metadataDocument: {
+          ...metadataDocument,
+          sourceVersion: persistedVersion,
+          modifiedAt: persistedTimestamp,
+        },
+        manifestDocument: {
+          ...manifestDocument,
+          version: persistedVersion,
+          updatedAt: persistedTimestamp,
+        },
+        stage,
+        event,
+      })
+    }
+
     if (previousResourceImage && previousResourceImage.id !== created.data?.image?.id) {
       event.platform?.context.waitUntil(
         cleanupDetachedResourceImage({
@@ -1823,7 +1856,7 @@ export const finalizeImageUpload = guardedCommand(
         event,
         env: stage,
         publicId: payload.publicId,
-        version,
+        version: persistedVersion,
       }),
     )
     return created
