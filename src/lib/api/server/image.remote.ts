@@ -2054,6 +2054,10 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
 
 /**
  * Deletes an image in context.
+ * @param params Image identifier and authorization context.
+ * @param ctx Guarded remote context.
+ * @returns A success response after the database deletion commits.
+ * @remarks Association removal is atomic; storage cleanup is scheduled after commit.
  */
 export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx) => {
   const { db, user, userRoles, event } = ctx
@@ -2074,9 +2078,12 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
     throw error(404, 'Image not found')
   }
 
-  await db.delete(taskImage).where(eq(taskImage.imageId, params.id as Id))
-  await db.delete(featureImage).where(eq(featureImage.imageId, params.id as Id))
-  await db.delete(image).where(eq(image.id, params.id as Id))
+  // Preserve associations if any deletion fails, and only clean assets after commit.
+  await db.batch([
+    db.delete(taskImage).where(eq(taskImage.imageId, params.id as Id)),
+    db.delete(featureImage).where(eq(featureImage.imageId, params.id as Id)),
+    db.delete(image).where(eq(image.id, params.id as Id)),
+  ])
 
   event.platform?.context.waitUntil(
     cleanupImageAssets({

@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DatabaseSync } from 'node:sqlite'
+import { drizzle } from 'drizzle-orm/d1'
 import sharp from 'sharp'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -389,6 +391,67 @@ describe('image.remote', () => {
       }),
     ).rejects.toMatchObject({ status: 404 })
   })
+
+  it.each([false, true])(
+    'deletes image associations atomically (failure: %s)',
+    async fail => {
+      const sqlite = new DatabaseSync(':memory:')
+      try {
+        sqlite.exec(`CREATE TABLE image (id TEXT PRIMARY KEY);
+        CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
+        CREATE TABLE featureImage (featureId TEXT, imageId TEXT);
+        INSERT INTO image VALUES ('img-1');
+        INSERT INTO taskImage VALUES ('task', 'img-1');
+        INSERT INTO featureImage VALUES ('feature', 'img-1');`)
+        if (fail) {
+          sqlite.exec(`CREATE TRIGGER reject_delete BEFORE DELETE ON image
+          BEGIN SELECT RAISE(ABORT, 'delete failed'); END;`)
+        }
+        const db = drizzle({} as never)
+        // Execute real generated SQL using D1's documented batch rollback semantics.
+        vi.spyOn(db, 'batch').mockImplementation(async statements => {
+          sqlite.exec('BEGIN')
+          try {
+            for (const statement of statements) {
+              const query = statement.toSQL()
+              sqlite.prepare(query.sql).run(...(query.params as never[]))
+            }
+            sqlite.exec('COMMIT')
+            return [] as never
+          } catch (error) {
+            sqlite.exec('ROLLBACK')
+            throw error
+          }
+        })
+        const ctx = await mockGuardedContext()
+        mockGuardedContext.mockResolvedValue({ ...ctx, db })
+        mockLoadImageById.mockResolvedValue({
+          id: 'img-1',
+          publicId: 'image-key',
+          env: 'local',
+        } as never)
+        const deletion = remote.deleteImage({
+          id: 'img-1',
+          ctxId: 'feature',
+          ctxType: 'feature',
+        })
+        if (fail) {
+          await expect(deletion).rejects.toThrow('delete failed')
+          expect(mockWaitUntil).not.toHaveBeenCalled()
+        } else {
+          await expect(deletion).resolves.toMatchObject({ type: 'success' })
+          expect(mockWaitUntil).toHaveBeenCalledOnce()
+        }
+        for (const table of ['image', 'taskImage', 'featureImage']) {
+          expect(
+            sqlite.prepare(`SELECT count(*) AS count FROM ${table}`).get(),
+          ).toEqual({ count: fail ? 1 : 0 })
+        }
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
 
   it('authImageUpload returns a direct R2 upload session', async () => {
     const result = await remote.authImageUpload({
