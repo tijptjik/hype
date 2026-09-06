@@ -908,6 +908,9 @@ const cleanupDetachedResourceImage = async (params: {
   platform: App.Platform | undefined
   image: ImageDBFlat
 }): Promise<void> => {
+  // Retain the originals if database deletion fails, matching explicit image deletion.
+  await params.db.delete(image).where(eq(image.id, params.image.id))
+
   try {
     await cleanupImageAssets({
       platform: params.platform,
@@ -923,8 +926,6 @@ const cleanupDetachedResourceImage = async (params: {
       },
     )
   }
-
-  await params.db.delete(image).where(eq(image.id, params.image.id))
 }
 
 /**
