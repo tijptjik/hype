@@ -1,6 +1,6 @@
 // REMOTE
 import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
-import { error } from '@sveltejs/kit'
+import { error, isHttpError } from '@sveltejs/kit'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -501,7 +501,14 @@ const resolveAuthorizedImageContext = async (
     }
   }
   for (const candidate of candidates) {
-    const context = await probeContextState(db, candidate.ctxType, candidate.ctxId)
+    let context: Awaited<ReturnType<typeof probeContextState>>
+    try {
+      context = await probeContextState(db, candidate.ctxType, candidate.ctxId)
+    } catch (cause) {
+      // Concurrent parent removal must not hide unrelated readable images in a batch.
+      if (isHttpError(cause, 404)) continue
+      throw cause
+    }
     const decision = authorizeImageRead(
       actor,
       { ...candidate, ...context },
