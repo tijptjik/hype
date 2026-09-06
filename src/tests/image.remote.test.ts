@@ -641,9 +641,13 @@ describe('image.remote', () => {
     dateNowSpy.mockRestore()
   })
 
-  it.each([false, true])(
-    'finalizeImageUpload cleans detached assets only after database deletion (failure: %s)',
-    async failDatabase => {
+  it.each([
+    { failDatabase: false, sameAsset: false },
+    { failDatabase: true, sameAsset: false },
+    { failDatabase: false, sameAsset: true },
+  ])(
+    'finalizeImageUpload safely cleans detached images (%j)',
+    async ({ failDatabase, sameAsset }) => {
       const waitUntilPromises: Promise<unknown>[] = []
       const consoleErrorSpy = vi
         .spyOn(console, 'error')
@@ -729,7 +733,9 @@ describe('image.remote', () => {
       mockLoadImageById
         .mockResolvedValueOnce({
           id: 'img-old',
-          publicId: 'h/projects/project-1/image-old',
+          publicId: sameAsset
+            ? 'h/projects/project-1/image-a'
+            : 'h/projects/project-1/image-old',
           env: 'local',
           version: 12,
         })
@@ -766,6 +772,9 @@ describe('image.remote', () => {
         await expect(Promise.all(waitUntilPromises)).rejects.toThrow(
           'database delete failed',
         )
+        expect(deleteAssets).not.toHaveBeenCalled()
+      } else if (sameAsset) {
+        await expect(Promise.all(waitUntilPromises)).resolves.toBeDefined()
         expect(deleteAssets).not.toHaveBeenCalled()
       } else {
         // Storage-listing errors remain best-effort after the row has been removed.

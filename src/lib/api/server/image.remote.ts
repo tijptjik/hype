@@ -902,14 +902,19 @@ const loadCurrentResourceImage = async (
  *
  * @param params Cleanup inputs.
  * @returns Nothing.
+ * @remarks Preserve storage assets when the replacement row still uses them.
  */
 const cleanupDetachedResourceImage = async (params: {
   db: Database
   platform: App.Platform | undefined
   image: ImageDBFlat
+  preserveAssets?: boolean
 }): Promise<void> => {
   // Retain the originals if database deletion fails, matching explicit image deletion.
   await params.db.delete(image).where(eq(image.id, params.image.id))
+
+  // Retried confirmation can replace a row while retaining the same storage object.
+  if (params.preserveAssets) return
 
   try {
     await cleanupImageAssets({
@@ -1801,6 +1806,9 @@ export const finalizeImageUpload = guardedCommand(
           db,
           platform: event.platform,
           image: previousResourceImage,
+          preserveAssets:
+            previousResourceImage.publicId === payload.publicId &&
+            toImageStage(previousResourceImage.env) === stage,
         }),
       )
     }
