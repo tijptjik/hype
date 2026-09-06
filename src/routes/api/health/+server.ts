@@ -1,8 +1,13 @@
 import { error, type RequestHandler } from '@sveltejs/kit'
 import { JSONResponseOrError } from '$lib/api'
 
-function maskPrivateValues(obj: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {}
+/**
+ * Masks diagnostic values whose names identify credentials.
+ * @param obj Environment values selected for the public diagnostic response.
+ * @returns Values with credential-like entries redacted.
+ */
+function maskPrivateValues(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
 
   for (const key in obj) {
     if (
@@ -20,14 +25,13 @@ function maskPrivateValues(obj: Record<string, string>): Record<string, string> 
   return result
 }
 
-// @ts-expect-error
-export const GET: RequestHandler = async ({
-  locals,
-  platform,
-}: {
-  locals: App.Locals
-  platform: App.Platform
-}) => {
+/**
+ * Returns runtime diagnostics without requiring an authenticated session.
+ * @param event Request locals and platform bindings.
+ * @returns JSON diagnostics, or a service-unavailable error without platform bindings.
+ */
+export const GET: RequestHandler = async ({ locals, platform }) => {
+  if (!platform?.env) throw error(503, 'Platform bindings unavailable')
   // HTTP : 200 JSON or 404
   const vars = platform.env
   const env = {
@@ -48,8 +52,9 @@ export const GET: RequestHandler = async ({
       env,
       vars: maskPrivateValues(public_vars),
       secrets: Object.keys(secret_vars),
-      locals: Object.keys(locals).map(key => ({
-        [key]: Object.keys(locals[key]),
+      // Anonymous requests have undefined session/user locals; enumerate objects only.
+      locals: Object.entries(locals).map(([key, value]) => ({
+        [key]: value !== null && typeof value === 'object' ? Object.keys(value) : [],
       })),
     })
   } catch (e) {
