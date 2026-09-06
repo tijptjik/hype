@@ -193,6 +193,28 @@ describe('completed task write guard', () => {
       'task',
     )
   })
+
+  it.each(['newFeature', 'newPhoto', 'reportedMissing'])(
+    'rejects review of an unfinished %s draft before side effects',
+    async type => {
+      reviewMocks.loadTask.mockResolvedValue({
+        id: 'task',
+        type,
+        isDraft: true,
+        isReviewed: false,
+      })
+      await expect(
+        reviewHandler(
+          { id: 'task', action: 'reject' },
+          { user: {}, event: { locals: { hub: {} } } },
+        ),
+      ).rejects.toMatchObject({ status: 409, message: 'TASK_NOT_SUBMITTED' })
+      expect(reviewMocks.archiveImages).not.toHaveBeenCalled()
+      expect(reviewMocks.publishImages).not.toHaveBeenCalled()
+      expect(reviewMocks.probeFeatureForUpdate).not.toHaveBeenCalled()
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    },
+  )
 })
 
 describe('task draft finalization recovery', () => {

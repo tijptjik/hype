@@ -696,6 +696,11 @@ export const reviewTask = guardedCommand(
       throw error(409, 'TASK_ALREADY_REVIEWED')
     }
 
+    // Contributors must finish validation and uploads before moderation can begin.
+    if (rawTask.isDraft) {
+      throw error(409, 'TASK_NOT_SUBMITTED')
+    }
+
     const nextTaskPatch = {
       isReviewed: true,
       reviewerId: ctx.userId,
