@@ -106,7 +106,7 @@ const isUploadedObjectSnapshot = (
  * @param bucket Originals bucket bound for the current stage.
  * @param keys Object keys that may be overwritten by the upload.
  * @returns Existing object snapshots keyed by object key; `null` means absent.
- * @remarks Replacement uploads intentionally reuse the current public id, so
+ * @remarks Replacement uploads and retries reuse the current public id, so
  * rollback needs the previous bytes instead of blindly deleting written keys.
  */
 const readExistingObjectSnapshots = async (
@@ -227,19 +227,16 @@ const persistUploadedObjects = async (params: {
   bucket: OriginalsBucket
   publicId: string
   writes: UploadWrite[]
-  snapshotExistingObjects: boolean
 }): Promise<void> => {
   const writtenKeys: string[] = []
   let existingSnapshots: Map<string, UploadedObjectSnapshot | null> | null = null
 
   try {
-    if (params.snapshotExistingObjects) {
-      // Capture replacement targets before writes so rollback can restore them.
-      existingSnapshots = await readExistingObjectSnapshots(
-        params.bucket,
-        params.writes.map(write => write.key),
-      )
-    }
+    // Capture replacement and retry targets before writes so rollback can restore them.
+    existingSnapshots = await readExistingObjectSnapshots(
+      params.bucket,
+      params.writes.map(write => write.key),
+    )
 
     for (const write of params.writes) {
       await params.bucket.put(write.key, write.body, {
@@ -342,7 +339,6 @@ export const POST: RequestHandler = async ({ request, platform }) => {
     bucket: originalsBucket,
     publicId: payload.publicId,
     writes,
-    snapshotExistingObjects: Boolean(payload.replaceImageId),
   })
 
   return json({
