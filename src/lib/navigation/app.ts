@@ -373,9 +373,7 @@ const handleStatefulPanelParams = (
 ): void => {
   if (panelType === 'profile') {
     const username = searchParams.get('username')
-    if (username && appCtx.state.panels.profile.ctx) {
-      appCtx.state.panels.profile.ctx.username = username
-    }
+    appCtx.setPanelCtx(Panel.profile, 'username', username)
   }
 
   // Don't update URL when syncing FROM URL to prevent infinite loops

@@ -169,6 +169,7 @@ export class AppCtx {
   // Features map for current state (rebuilt when state.resources.feature changes)
   private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>()
   private featureRefreshSerial = 0
+  private resourceRefreshSerials = new Map<string, number>()
   private organisationCodeToId = new Map<Code, Id>()
   private projectCodeToId = new Map<Code, Id>()
   private hubCodeToId = new Map<Code, Id>()
@@ -591,6 +592,39 @@ export class AppCtx {
   private isExpectedRoleScopeCurrent = (expectedRoleScope?: string): boolean =>
     !expectedRoleScope || expectedRoleScope === this.getRoleScopeQueryKey()
 
+  /**
+   * Starts a resource refresh and returns its serial for stale-response checks.
+   *
+   * @param resource - Resource whose previous refreshes must be superseded.
+   * @returns The serial assigned to this refresh.
+   */
+  private beginResourceRefresh = (resource: string): number => {
+    const serial = (this.resourceRefreshSerials.get(resource) ?? 0) + 1
+    this.resourceRefreshSerials.set(resource, serial)
+    return serial
+  }
+
+  /**
+   * Determines whether a resource response is still the newest response.
+   *
+   * @param resource - Resource associated with the request.
+   * @param serial - Serial captured when the request started.
+   * @returns Whether the response may update application state.
+   */
+  private isCurrentResourceRefresh = (resource: string, serial: number): boolean =>
+    this.resourceRefreshSerials.get(resource) === serial
+
+  /**
+   * Invalidates all tracked list refreshes before identity or cache transitions.
+   *
+   * @returns Nothing.
+   */
+  private invalidateResourceRefreshes = (): void => {
+    for (const [resource, serial] of this.resourceRefreshSerials) {
+      this.resourceRefreshSerials.set(resource, serial + 1)
+    }
+  }
+
   private isCurrentUser = (
     user: UserProfile | CurrentUser | SessionUser | null,
   ): user is CurrentUser => {
@@ -972,15 +1006,21 @@ export class AppCtx {
   // Hydrate persisted layer defaults once during app bootstrap so hub prism setup
   // can resolve the initial active layers without coupling to profile panel refreshes.
   private hydrateCurrentUserLayers = async (): Promise<void> => {
-    if (!this.user?.id) {
+    const userId = this.user?.id
+    const roleScope = this.getRoleScopeQueryKey()
+    if (!userId) {
       return
     }
 
     const userLayersResponse = (await runRemoteQuery(
       getUserLayers({
-        userId: this.user.id,
+        userId,
       }),
     )) as { data?: UserLayer[] | null }
+
+    if (userId !== this.user?.id || roleScope !== this.getRoleScopeQueryKey()) {
+      return
+    }
 
     this.user = {
       ...(this.user ?? {}),
@@ -1887,11 +1927,17 @@ export class AppCtx {
     isCascading: boolean = true,
     expectedRoleScope?: string,
   ): Promise<void> => {
+    const refreshSerial = this.beginResourceRefresh(FirstClassResource.organisation)
     const query = this.getRequiredQueryConfig(FirstClassResource.organisation)
     const organisations = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Organisation[]>,
     })
+    if (
+      !this.isCurrentResourceRefresh(FirstClassResource.organisation, refreshSerial)
+    ) {
+      return
+    }
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     this.state.resources.organisation = organisations
@@ -1917,11 +1963,15 @@ export class AppCtx {
     isCascading: boolean = true,
     expectedRoleScope?: string,
   ): Promise<void> => {
+    const refreshSerial = this.beginResourceRefresh(FirstClassResource.project)
     const query = this.getRequiredQueryConfig(FirstClassResource.project)
     const projects = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Project[]>,
     })
+    if (!this.isCurrentResourceRefresh(FirstClassResource.project, refreshSerial)) {
+      return
+    }
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     this.state.resources.project = projects
@@ -1950,11 +2000,15 @@ export class AppCtx {
     shouldAutoSelectSingleLayer: boolean = true,
     expectedRoleScope?: string,
   ): Promise<void> => {
+    const refreshSerial = this.beginResourceRefresh(FirstClassResource.layer)
     const query = this.getRequiredQueryConfig(FirstClassResource.layer)
     const layers = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Layer[]>,
     })
+    if (!this.isCurrentResourceRefresh(FirstClassResource.layer, refreshSerial)) {
+      return
+    }
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     this.state.resources.layer = layers
@@ -2034,11 +2088,16 @@ export class AppCtx {
   }
 
   refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
+    const refreshSerial = this.beginResourceRefresh(FirstClassResource.task)
     const query = this.getRequiredQueryConfig(FirstClassResource.task)
-    this.state.resources.task = await this.queryClient.fetchQuery({
+    const tasks = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Task[]>,
     })
+    if (!this.isCurrentResourceRefresh(FirstClassResource.task, refreshSerial)) {
+      return
+    }
+    this.state.resources.task = tasks
     // Efficiently sync task cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.task, this.state.resources.task)
   }
@@ -2089,11 +2148,16 @@ export class AppCtx {
 
   refreshHubs = async (_isCascading: boolean = true): Promise<void> => {
     if (!this.isAdmin()) return
+    const refreshSerial = this.beginResourceRefresh(FirstClassResource.hub)
     const query = this.getRequiredQueryConfig(FirstClassResource.hub)
-    this.state.resources.hub = await this.queryClient.fetchQuery({
+    const hubs = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Hub[]>,
     })
+    if (!this.isCurrentResourceRefresh(FirstClassResource.hub, refreshSerial)) {
+      return
+    }
+    this.state.resources.hub = hubs
     // Efficiently sync hub cache (only add missing, remove stale)
     this.syncCacheMap(this.cache.hub, this.state.resources.hub)
     // Efficiently sync hub code-to-ID mapping
@@ -2111,11 +2175,15 @@ export class AppCtx {
     _isCascading: boolean = true,
     expectedRoleScope?: string,
   ): Promise<void> => {
+    const refreshSerial = this.beginResourceRefresh(FirstClassResource.property)
     const query = this.getRequiredQueryConfig(FirstClassResource.property)
     const properties = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<Property[]>,
     })
+    if (!this.isCurrentResourceRefresh(FirstClassResource.property, refreshSerial)) {
+      return
+    }
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     // Efficiently sync property cache (only add missing, remove stale)
@@ -2123,16 +2191,24 @@ export class AppCtx {
   }
 
   refreshUserFeatures = async (_isCascading: boolean = true): Promise<void> => {
+    const refreshSerial = this.beginResourceRefresh('userFeatures')
+    const userId = this.user?.id ?? null
     const query = this.getRequiredQueryConfig('userFeatures')
-    this.state.userFeatures = await this.queryClient
-      .fetchQuery({
-        queryKey: query.queryKey,
-        queryFn: query.queryFn as () => Promise<UserFeature[]>,
-      })
-      .then(uf => ({
-        wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
-        visited: (uf || []).filter((f: UserFeature) => f.isVisited),
-      }))
+    const userFeatures = await this.queryClient.fetchQuery({
+      queryKey: query.queryKey,
+      queryFn: query.queryFn as () => Promise<UserFeature[]>,
+    })
+    if (
+      !this.isCurrentResourceRefresh('userFeatures', refreshSerial) ||
+      userId !== (this.user?.id ?? null)
+    ) {
+      return
+    }
+
+    this.state.userFeatures = {
+      wishlisted: (userFeatures || []).filter((f: UserFeature) => f.isWishlisted),
+      visited: (userFeatures || []).filter((f: UserFeature) => f.isVisited),
+    }
 
     // If active collection is a walk, refresh it and handle navigation
     this.postUserFeaturesMutation()
@@ -2173,11 +2249,19 @@ export class AppCtx {
   }
 
   refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
+    const refreshSerial = this.beginResourceRefresh(FirstClassResource.user)
+    const userId = this.user?.id ?? null
     const query = this.getRequiredQueryConfig(FirstClassResource.user)
     const user = await this.queryClient.fetchQuery({
       queryKey: query.queryKey,
       queryFn: query.queryFn as () => Promise<UserProfile | null>,
     })
+    if (
+      !this.isCurrentResourceRefresh(FirstClassResource.user, refreshSerial) ||
+      userId !== (this.user?.id ?? null)
+    ) {
+      return
+    }
     const currentUsername = this.user?.username?.trim() || null
     const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
     const isSelfProfile =
@@ -3788,8 +3872,14 @@ export class AppCtx {
     value: string | undefined | null,
   ): void => {
     // Set username context if provided
-    if (value && this.state.panels[panel].ctx) {
-      this.state.panels[panel].ctx[key] = value
+    const context = this.state.panels[panel].ctx
+    if (value && context) {
+      if (context[key] !== value) {
+        // Do not display the previous profile while the new profile is loading.
+        context.userData = null
+        this.beginResourceRefresh(FirstClassResource.user)
+      }
+      context[key] = value
     }
   }
 
@@ -3962,6 +4052,7 @@ export class AppCtx {
   // USER DATA
   setUser = async (user: CurrentUser | SessionUser | null) => {
     const previousUserId = this.user?.id ?? null
+    const previousRoleScope = this.getRoleScopeQueryKey()
     const nextUserId = user?.id ?? null
     const previousAnonymous = this.user
       ? 'isAnonymous' in this.user
@@ -3979,6 +4070,7 @@ export class AppCtx {
     if (identityChanged) {
       // Prevent an in-flight response from the previous identity from being committed.
       this.featureRefreshSerial += 1
+      this.invalidateResourceRefreshes()
     }
 
     if (previousUserId !== nextUserId) {
@@ -3997,6 +4089,11 @@ export class AppCtx {
     }
 
     this.user = user
+    if (!identityChanged && previousRoleScope !== this.getRoleScopeQueryKey()) {
+      // Role changes also alter query scope and must supersede prior responses.
+      this.featureRefreshSerial += 1
+      this.invalidateResourceRefreshes()
+    }
     this.postUserMutation()
   }
 
@@ -4160,6 +4257,7 @@ export class AppCtx {
   clearAllCaches = (): void => {
     // Invalidate in-flight feature reads before removing their committed state.
     this.featureRefreshSerial += 1
+    this.invalidateResourceRefreshes()
     this.cache.organisation.clear()
     this.cache.project.clear()
     this.cache.layer.clear()
