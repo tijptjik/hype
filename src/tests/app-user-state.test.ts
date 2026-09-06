@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 // CONTEXT
 import { AppCtx } from '$lib/context/app.svelte'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { FirstClassResource, Panel } from '$lib/enums'
 // TYPES
 import type { QueryClient } from '@tanstack/svelte-query'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -29,6 +29,71 @@ function createDeferred<T>(): {
 }
 
 describe('AppCtx user updates', () => {
+  it('does not let an older feature refresh overwrite a newer one', async () => {
+    const first = createDeferred<FeatureFromCollection[]>()
+    const second = createDeferred<FeatureFromCollection[]>()
+    let queryCount = 0
+    const appCtx = new AppCtx(
+      {
+        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
+          queryFn(),
+        ),
+        removeQueries: vi.fn(),
+      } as unknown as QueryClient,
+      { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
+      null,
+      {} as ResponsiveCtx,
+    )
+    appCtx.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => [FirstClassResource.feature],
+      queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
+    })
+
+    const olderRefresh = appCtx.refreshFeatures()
+    const newerRefresh = appCtx.refreshFeatures()
+
+    second.resolve([
+      { id: 'new-feature', layerId: 'new-layer', properties: [] },
+    ] as FeatureFromCollection[])
+    await newerRefresh
+    expect(appCtx.state.resources.feature.map(feature => feature.id)).toEqual([
+      'new-feature',
+    ])
+
+    first.resolve([
+      { id: 'old-feature', layerId: 'old-layer', properties: [] },
+    ] as FeatureFromCollection[])
+    await olderRefresh
+    expect(appCtx.state.resources.feature.map(feature => feature.id)).toEqual([
+      'new-feature',
+    ])
+  })
+
+  it('waits for dependent query invalidations before resolving', async () => {
+    const appCtx = new AppCtx(
+      { removeQueries: vi.fn() } as unknown as QueryClient,
+      {} as PlaceCtx,
+      null,
+      {} as ResponsiveCtx,
+    )
+    const invalidation = createDeferred<void>()
+    const invalidateQueries = vi.fn().mockReturnValue(invalidation.promise)
+    appCtx.queryClient = { invalidateQueries } as unknown as QueryClient
+
+    let settled = false
+    const pending = appCtx.invalidate(FirstClassResource.project).then(() => {
+      settled = true
+    })
+
+    expect(invalidateQueries).toHaveBeenCalledTimes(2)
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    invalidation.resolve()
+    await pending
+    expect(settled).toBe(true)
+  })
+
   it('loads profile data only when the profile panel opens', async () => {
     const appCtx = new AppCtx(
       { removeQueries: vi.fn() } as unknown as QueryClient,
