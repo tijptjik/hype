@@ -39,6 +39,9 @@ const importKey = async (secret: string): Promise<CryptoKey> =>
 
 /**
  * Creates an HMAC-signed upload token for the direct-to-R2 upload flow.
+ * @param payload Upload claims to sign.
+ * @param secret Signing secret.
+ * @returns The signed token.
  */
 export const createUploadToken = async (
   payload: UploadTokenPayload,
@@ -52,17 +55,29 @@ export const createUploadToken = async (
 
 /**
  * Verifies and decodes an HMAC-signed upload token.
+ * @param token Untrusted upload token.
+ * @param secret Signing secret.
+ * @returns Valid upload claims, or null for malformed, invalid, or expired tokens.
  */
 export const verifyUploadToken = async (
   token: string,
   secret: string,
 ): Promise<UploadTokenPayload | null> => {
-  const [dataPart, signaturePart] = token.split('.')
-  if (!dataPart || !signaturePart) return null
+  const parts = token.split('.')
+  if (parts.length !== 2 || parts.some(part => !/^[A-Za-z0-9_-]+$/.test(part)))
+    return null
+  const [dataPart, signaturePart] = parts
 
-  const payloadBytes = fromBase64Url(dataPart)
+  // Invalid base64 is untrusted input, not a server failure.
+  let payloadBytes: Uint8Array
+  let signatureBytes: Uint8Array
+  try {
+    payloadBytes = fromBase64Url(dataPart)
+    signatureBytes = fromBase64Url(signaturePart)
+  } catch {
+    return null
+  }
   const payloadBuffer = Uint8Array.from(payloadBytes)
-  const signatureBytes = fromBase64Url(signaturePart)
   const signatureBuffer = Uint8Array.from(signatureBytes)
   const key = await importKey(secret)
   const verified = await crypto.subtle.verify(
@@ -73,9 +88,45 @@ export const verifyUploadToken = async (
   )
   if (!verified) return null
 
-  const payload = JSON.parse(
-    new TextDecoder().decode(payloadBytes),
-  ) as UploadTokenPayload
-  if (payload.exp < Date.now()) return null
-  return payload
+  // Authenticate the bytes before parsing, then validate claims before trusting them.
+  try {
+    const payload: unknown = JSON.parse(new TextDecoder().decode(payloadBytes))
+    if (!isUploadTokenPayload(payload) || payload.exp <= Date.now()) return null
+    return payload
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Checks the shape and numeric bounds of authenticated upload claims.
+ * @param value Decoded claims.
+ * @returns Whether all required claims are usable upload values.
+ */
+const isUploadTokenPayload = (value: unknown): value is UploadTokenPayload => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const claims = value as Record<string, unknown>
+  const textClaims = [
+    'publicId',
+    'env',
+    'ctxType',
+    'ctxId',
+    'filename',
+    'contentType',
+    'uploaderUserId',
+  ]
+  return (
+    textClaims.every(
+      key =>
+        typeof claims[key] === 'string' && (claims[key] as string).trim().length > 0,
+    ) &&
+    typeof claims.size === 'number' &&
+    Number.isSafeInteger(claims.size) &&
+    claims.size > 0 &&
+    typeof claims.exp === 'number' &&
+    Number.isSafeInteger(claims.exp) &&
+    claims.exp > 0 &&
+    (claims.replaceImageId === undefined ||
+      (typeof claims.replaceImageId === 'string' && claims.replaceImageId.length > 0))
+  )
 }
