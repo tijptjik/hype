@@ -2350,31 +2350,8 @@ export class ImageCtx {
     const contextAtStart = this.state.context
 
     try {
-      // Canonical is exclusive, so clear any competing canonical image before applying the new one.
-      // If trying to set as canonical, first check if another image is already canonical
-      if (newIntent === 'canonical') {
-        const images = this.getImages()
-        const currentCanonical = images.find(
-          (img: ImageCtxEnvelope) =>
-            img.image.id !== imageId && img.intent === 'canonical',
-        )
-
-        // If another image is already canonical, update its intent to undefined
-        if (currentCanonical) {
-          await setImageIntent({
-            id: currentCanonical.image.id,
-            ctxType: ctx.ctxType,
-            ctxId: ctx.ctxId,
-            intent: 'undefined',
-            featureId,
-            meta: { isAdminRequest: true },
-          })
-          this.invalidateFeatureImageCache(contextAtStart)
-          if (this.state.context === contextAtStart) {
-            this.setForImage(currentCanonical.image.id, 'intent', 'undefined')
-          }
-        }
-      }
+      // Canonical is exclusive: the server clears any competing assignment in the
+      // same transaction as promotion, so a failed save retains the previous image.
 
       // Update the intent of the image
       await setImageIntent({
