@@ -15,6 +15,7 @@ function setup() {
   const deleteWhere = vi.fn().mockResolvedValue(undefined)
   const archiveWhere = vi.fn().mockResolvedValue(undefined)
   const db = {
+    batch: async (queries: Promise<unknown>[]) => Promise.all(queries),
     select: () => ({
       from: vi.fn().mockReturnThis(),
       leftJoin: vi.fn().mockReturnThis(),
