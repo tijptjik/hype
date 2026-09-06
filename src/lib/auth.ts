@@ -10,6 +10,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { authConfig } from './auth/config'
 import { buildAuthEmail } from './auth/email'
 import { isAuthProviderEnabled } from './auth/providers'
+import { parseSessionSettings } from './auth/session-settings'
 // DB SCHEMA
 import * as schema from '$lib/db/schema/index'
 // TYPES
@@ -282,29 +283,11 @@ function createAuthInstance(
           return hubRole.hub?.code === 'core'
         })
 
-        // Parse JSON fields from strings to objects
-        let preferences: UserPreferences
-        let experimental: UserExperimental
-
-        try {
-          preferences = JSON.parse(dbUser.preferences)
-        } catch {
-          preferences = {
-            fallbackLocales: [],
-            allowMachineTranslation: false,
-            preferFallbackInCurrentLocale: false,
-            isTranslateButtonVisible: true,
-          }
-        }
-
-        try {
-          experimental = JSON.parse(dbUser.experimental)
-        } catch {
-          experimental = {
-            contributorMode: false,
-            noLabelsMode: false,
-          }
-        }
+        // Parse and validate JSON fields before clients dereference their settings.
+        const { preferences, experimental } = parseSessionSettings(
+          dbUser.preferences,
+          dbUser.experimental,
+        )
 
         // Return enriched session data
         return {
