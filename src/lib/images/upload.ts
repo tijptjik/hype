@@ -310,9 +310,15 @@ const resizeRasterUpload = async (
           outputType,
           outputType === 'image/png' ? undefined : 0.9,
         )
+        // Browsers may fall back to PNG when the requested encoder is unavailable.
+        const actualType = blob.type || outputType
+        const outputName =
+          actualType !== outputType && actualType === 'image/png'
+            ? `${file.name.replace(/\.[^.]+$/u, '')}.png`
+            : file.name
         resolve({
-          file: new File([blob], file.name, {
-            type: outputType,
+          file: new File([blob], outputName, {
+            type: actualType,
             lastModified: file.lastModified,
           }),
           width: targetWidth,
@@ -398,7 +404,11 @@ export async function normalizeUploadFileForAssetPipeline(
 ): Promise<NormalizedImageUploadAsset> {
   const originalDimensions = await getImageDimensions(file)
   const originalFilename = file.name
-  const originalExtension = file.name.split('.').pop()?.toLowerCase() ?? null
+  const extensionIndex = file.name.lastIndexOf('.')
+  const originalExtension =
+    extensionIndex > 0 && extensionIndex < file.name.length - 1
+      ? file.name.slice(extensionIndex + 1).toLowerCase()
+      : null
   let workingFile = await createPreviewableUploadFile(
     file,
     convert,

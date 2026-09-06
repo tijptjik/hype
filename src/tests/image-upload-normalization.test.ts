@@ -65,6 +65,32 @@ const installImageFailureStub = (): void => {
 }
 
 describe('image upload normalization', () => {
+  it('keeps PNG fallback bytes consistent with the resized MIME type and filename', async () => {
+    const canvas = installLargeImageStub()
+    vi.mocked(canvas.toBlob).mockImplementation(callback => {
+      callback(new Blob(['png'], { type: 'image/png' }))
+    })
+    const result = await normalizeUploadFileForAssetPipeline(
+      new File(['webp'], 'example.webp', { type: 'image/webp' }),
+    )
+    expect(result.file.type).toBe('image/png')
+    expect(result.file.name).toBe('example.png')
+    expect(result.originalFilename).toBe('example.webp')
+    expect(result.originalExtension).toBe('webp')
+  })
+
+  it.each(['photo', 'photo.', '.photo'])(
+    'does not invent an extension for %s',
+    async name => {
+      installImageFailureStub()
+      const result = await normalizeUploadFileForAssetPipeline(
+        new File(['jpeg'], name, { type: 'image/jpeg' }),
+      )
+      expect(result.originalExtension).toBeNull()
+      expect(result.originalFilename).toBe(name)
+    },
+  )
+
   it('renames resized AVIF uploads to JPEG while retaining original metadata', async () => {
     installLargeImageStub()
     const file = new File(['avif'], 'example.AVIF', {
