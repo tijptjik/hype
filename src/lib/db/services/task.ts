@@ -345,9 +345,10 @@ export const archiveImages = async (
   try {
     const taskImages = await loadTaskImageReviewRows(db, taskId)
 
-    // Filter images based on isUndefinedOnly parameter
+    // Missing feature assignments have null intent and are also unclassified.
+    // Filter images based on isUndefinedOnly parameter.
     const imagesToProcess = isUndefinedOnly
-      ? taskImages.filter(ti => ti.intent === 'undefined')
+      ? taskImages.filter(ti => (ti.intent ?? 'undefined') === 'undefined')
       : taskImages
 
     // Process each image
@@ -393,9 +394,10 @@ export const publishImages = async (
     const taskImages = await loadTaskImageReviewRows(db, taskId)
     const publishedAt = new Date().toISOString()
 
-    // Filter images based on skipUndefined parameter
+    // Missing feature assignments have null intent and must not be accepted as classified.
+    // Filter images based on skipUndefined parameter.
     const imagesToProcess = skipUndefined
-      ? taskImages.filter(ti => ti.intent !== 'undefined')
+      ? taskImages.filter(ti => (ti.intent ?? 'undefined') !== 'undefined')
       : taskImages
 
     // Process each image
