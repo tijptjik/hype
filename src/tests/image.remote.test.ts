@@ -106,14 +106,6 @@ vi.mock('$lib/api/server/remote', () => ({
   },
 }))
 
-vi.mock('@sveltejs/kit', () => ({
-  error: (status: number, message: string) => {
-    const err = new Error(message) as Error & { status: number }
-    err.status = status
-    throw err
-  },
-}))
-
 vi.mock('$lib/api/services/authz', () => ({
   authorizeImageList: mockAuthorizeImageList,
   authorizeImageRead: mockAuthorizeImageRead,
@@ -458,6 +450,42 @@ describe('image.remote', () => {
       { isAdminRequest: true },
     )
   })
+
+  it.each(['missing-parent', 'database-error'])(
+    'isolates stale batch rows without swallowing failures (%s)',
+    async scenario => {
+      const db = buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub',
+      })
+      const chain = {
+        innerJoin: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn(async () => []),
+      }
+      if (scenario === 'database-error')
+        chain.limit.mockRejectedValue(new Error('database failed'))
+      db.select.mockReturnValueOnce({ from: vi.fn(() => chain) } as never)
+      const ctx = await mockGuardedContext()
+      mockGuardedContext.mockResolvedValue({ ...ctx, db })
+      const stale = { id: 'stale', featureId: 'removed' }
+      const valid = { id: 'valid', featureId: 'present' }
+      mockGetImagesByIds.mockResolvedValueOnce([stale, valid] as never)
+      const result = remote.getImagesForIds({ ids: ['stale', 'valid'] })
+      if (scenario === 'database-error') {
+        await expect(result).rejects.toThrow('database failed')
+        expect(mockToImageListResponseShape).not.toHaveBeenCalled()
+      } else {
+        await result
+        expect(mockToImageListResponseShape).toHaveBeenCalledWith(
+          [valid],
+          expect.any(Function),
+          expect.anything(),
+        )
+      }
+    },
+  )
 
   it('resolves a resource image from its parent link rather than treating it as the uploader collection', async () => {
     const db = buildDbWithContextRow({
