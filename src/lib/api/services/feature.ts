@@ -991,13 +991,19 @@ const prepareUserContributedFeatureDraft = async (
 
 /**
  * Creates a user-contributed feature with translated fallback locales.
+ * @param db Database handle.
+ * @param newFeature Contribution payload and optional draft stage.
+ * @param region Translation service region.
+ * @param subscriptionKey Translation service credential.
+ * @returns The persisted feature row.
+ * @remarks Final submissions leave draft state but remain unpublished pending review.
  */
 export const createUserContributedFeature = async (
   db: Database,
   newFeature: UserContributedFeature,
   region: string,
   subscriptionKey: string,
-) => {
+): Promise<FeatureDB> => {
   const stage: UserContributedFeatureDraftStage =
     newFeature.isDraft === true ? 'draft' : 'final'
   const { validatedFeature, layerScope } = await prepareUserContributedFeatureDraft(
@@ -1015,7 +1021,8 @@ export const createUserContributedFeature = async (
     addressMeta: validatedFeature.addressMeta ?? {},
     isPublished: false,
     isArchived: false,
-    isDraft: true,
+    // Explicit drafts stay editable; immediate submissions are ready for review.
+    isDraft: stage === 'draft',
   })
 
   await createI18n(db, validatedFeature.i18n, created.id)
