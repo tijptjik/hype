@@ -1,14 +1,59 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ImageCtx } from '$lib/context/image.svelte'
-import { deleteImage } from '$lib/api/server/image.remote'
+import { deleteImage, setImagePublished } from '$lib/api/server/image.remote'
+import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
-vi.mock('$lib/context/app.svelte', () => ({ getAppCtx: () => ({}) }))
+vi.mock('$lib/context/app.svelte', () => ({
+  getAppCtx: () => ({ cache: { feature: new Map() } }),
+}))
 vi.mock('$lib/api/server/image.remote', async importOriginal => ({
   ...(await importOriginal<typeof import('$lib/api/server/image.remote')>()),
   deleteImage: vi.fn(),
+  setImagePublished: vi.fn(),
 }))
 
 describe('image refresh ownership', () => {
+  it.each([false, true])(
+    'keeps a publish response scoped when context changes: %s',
+    async changeContext => {
+      const ctx = new ImageCtx()
+      await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
+      ctx.state.activeImage = {
+        image: { id: 'original' },
+        isPublished: false,
+      } as ImageCtxEnvelope
+      let resolve!: (value: unknown) => void
+      vi.mocked(setImagePublished).mockReturnValue(
+        new Promise(res => {
+          resolve = res
+        }) as ReturnType<typeof setImagePublished>,
+      )
+      const refresh = vi.spyOn(ctx, 'refreshImages').mockResolvedValue(undefined)
+      const setImage = vi.spyOn(ctx, 'setForImage').mockImplementation(() => {})
+      const toggle = vi.spyOn(ctx, 'toggleForActiveImage')
+      const pending = ctx.handlePublishToggle()
+      if (changeContext) {
+        await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+      }
+      ctx.state.activeImage = {
+        image: { id: 'next' },
+        isPublished: false,
+      } as ImageCtxEnvelope
+      resolve({ data: { image: { id: 'original' } } })
+      await pending
+      expect(toggle).not.toHaveBeenCalled()
+      if (changeContext) {
+        expect(setImage).not.toHaveBeenCalled()
+        expect(refresh).not.toHaveBeenCalled()
+      } else {
+        expect(setImage).toHaveBeenCalledWith('original', 'isPublished', true)
+        expect(refresh).toHaveBeenCalledWith()
+      }
+      expect(ctx.state.activeImage.image.id).toBe('next')
+      expect(ctx.state.activeImage.isPublished).toBe(false)
+    },
+  )
+
   it('does not restore a failed deletion into a different context', async () => {
     const ctx = new ImageCtx()
     await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
