@@ -685,6 +685,11 @@ export const reviewTask = guardedCommand(
       throw error(404, 'TASK_NOT_FOUND')
     }
 
+    // A stale editor must not overwrite a completed review or its feature changes.
+    if (rawTask.isReviewed) {
+      throw error(409, 'TASK_ALREADY_REVIEWED')
+    }
+
     const nextTaskPatch = {
       isReviewed: true,
       reviewerId: ctx.userId,
@@ -844,6 +849,11 @@ export const reassignTaskLayer = guardedCommand(
     )
     if (!rawTask) {
       throw error(404, 'TASK_NOT_FOUND')
+    }
+
+    // Layer reassignment is restricted to pending tasks, matching the read-only editor.
+    if (rawTask.isReviewed) {
+      throw error(409, 'TASK_ALREADY_REVIEWED')
     }
 
     if (rawTask.type !== 'newFeature') {

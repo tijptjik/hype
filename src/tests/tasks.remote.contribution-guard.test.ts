@@ -1,5 +1,16 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const reviewMocks = vi.hoisted(() => ({
+  loadTask: vi.fn(),
+  probeTaskQuery: vi.fn(),
+  authorizeTaskReadForProbe: vi.fn(),
+  updateTask: vi.fn(),
+  archiveImages: vi.fn(),
+  publishImages: vi.fn(),
+  probeFeatureForUpdate: vi.fn(),
+  probeLayerForUpdate: vi.fn(),
+}))
 
 vi.mock('$lib/api/server/remote', () => {
   const withRemoteMetadata = (handler: unknown, type: 'command' | 'form' | 'query') =>
@@ -28,7 +39,9 @@ vi.mock('@sveltejs/kit', () => ({
 vi.mock('$lib/i18n', () => ({ getLocale: vi.fn() }))
 vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
 vi.mock('$lib/api', () => ({ getValidQueryParams: vi.fn() }))
-vi.mock('$lib/api/services/authz', () => ({}))
+vi.mock('$lib/api/services/authz', () => ({
+  authorizeTaskReadForProbe: reviewMocks.authorizeTaskReadForProbe,
+}))
 vi.mock('$lib/db/schema', () => ({ task: {} }))
 vi.mock('$lib/db/zod/schema/task', () => ({
   BeginMissingReportDraftSchema: {},
@@ -43,11 +56,14 @@ vi.mock('$lib/db/zod/schema/task', () => ({
   SubmitNewFeatureSchema: {},
   SubmitNewPhotosSchema: {},
 }))
-vi.mock('$lib/db/services/task', () => ({}))
-vi.mock('$lib/db/services/feature', () => ({}))
-vi.mock('$lib/db/services/layer', () => ({}))
+vi.mock('$lib/db/services/task', () => reviewMocks)
+vi.mock('$lib/db/services/feature', () => reviewMocks)
+vi.mock('$lib/db/services/layer', () => reviewMocks)
 vi.mock('$lib/api/services/feature', () => ({}))
-vi.mock('$lib/api/services/task', () => ({}))
+vi.mock('$lib/api/services/task', () => ({
+  getTaskWithRelations: vi.fn(),
+  toEntityResponseShape: vi.fn(task => task),
+}))
 
 import {
   beginMissingReportDraft,
@@ -57,10 +73,20 @@ import {
   submitMissingReport,
   submitNewFeature,
   submitNewPhotos,
+  reviewTask,
+  reassignTaskLayer,
 } from '$lib/api/server/tasks.remote'
 
 const guestContext = { user: { isAnonymous: true } }
 const incompleteSessionContext = { user: {} }
+const reviewHandler = reviewTask as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const reassignHandler = reassignTaskLayer as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
 const contributionHandlers = [
   beginMissingReportDraft,
   beginNewFeatureDraft,
@@ -88,5 +114,72 @@ describe('task contribution account guard', () => {
       status: 403,
       message: 'ACCOUNT_REQUIRED',
     })
+  })
+})
+
+describe('completed task write guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    reviewMocks.probeTaskQuery.mockResolvedValue({ id: 'task' })
+    reviewMocks.authorizeTaskReadForProbe.mockReturnValue({ allowed: true })
+  })
+
+  it.each(['newFeature', 'newPhoto', 'reportedMissing'])(
+    'rejects another review of a completed %s task before side effects',
+    async type => {
+      reviewMocks.loadTask.mockResolvedValue({ id: 'task', type, isReviewed: true })
+      await expect(
+        reviewHandler(
+          { id: 'task', action: 'reject' } as never,
+          {
+            user: {},
+            event: { locals: { hub: {} } },
+          } as never,
+        ),
+      ).rejects.toMatchObject({ status: 409, message: 'TASK_ALREADY_REVIEWED' })
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+      expect(reviewMocks.archiveImages).not.toHaveBeenCalled()
+      expect(reviewMocks.publishImages).not.toHaveBeenCalled()
+      expect(reviewMocks.probeFeatureForUpdate).not.toHaveBeenCalled()
+    },
+  )
+
+  it('rejects layer reassignment of a completed task before changing the feature', async () => {
+    reviewMocks.loadTask.mockResolvedValue({
+      id: 'task',
+      type: 'newFeature',
+      isReviewed: true,
+    })
+    await expect(
+      reassignHandler(
+        { id: 'task', layerId: 'layer' } as never,
+        {
+          user: {},
+          event: { locals: { hub: {} } },
+        } as never,
+      ),
+    ).rejects.toMatchObject({ status: 409, message: 'TASK_ALREADY_REVIEWED' })
+    expect(reviewMocks.probeLayerForUpdate).not.toHaveBeenCalled()
+    expect(reviewMocks.probeFeatureForUpdate).not.toHaveBeenCalled()
+  })
+
+  it('still publishes images and records a review for a pending task', async () => {
+    const pendingTask = { id: 'task', type: 'newPhoto', isReviewed: false }
+    reviewMocks.loadTask.mockResolvedValue(pendingTask)
+    await reviewHandler(
+      { id: 'task', action: 'acceptAll' },
+      { db: 'db', user: {}, userId: 'reviewer', event: { locals: { hub: {} } } },
+    )
+    expect(reviewMocks.publishImages).toHaveBeenCalledWith(
+      'db',
+      'task',
+      false,
+      'reviewer',
+    )
+    expect(reviewMocks.updateTask).toHaveBeenCalledWith(
+      'db',
+      expect.objectContaining({ isReviewed: true, reviewOutcome: 'accepted' }),
+      'task',
+    )
   })
 })
