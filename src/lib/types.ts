@@ -2272,6 +2272,30 @@ export type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied'
 // TASKS
 /* -------- */
 
+export type TaskImageReviewStatement = Parameters<Database['batch']>[0][number]
+
+export type TaskImageReviewRow = {
+  imageId: string
+  intent: string | null
+  featureId: string | null
+}
+
+export type TaskImageReviewPlan = {
+  statements: TaskImageReviewStatement[]
+  processedCount: number
+}
+
+export type TaskImageReviewCommit = {
+  task: Pick<
+    TaskDB,
+    'id' | 'featureId' | 'projectId' | 'organisationId' | 'modifiedAt' | 'type'
+  >
+  resourceHubId: string | null
+  action: 'reject' | 'acceptAll' | 'acceptClassified'
+  reviewerId: Id
+  reason?: string | null
+}
+
 export const taskTypes = Object.values(TaskTypeEnum)
 export type TaskType = `${TaskTypeEnum}`
 

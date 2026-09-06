@@ -34,8 +34,7 @@ import {
   listTasks,
   probeTaskQuery,
   updateTask,
-  archiveImages,
-  publishImages,
+  commitTaskImageReview,
   createTaskWithDependencies,
 } from '$lib/db/services/task'
 import {
@@ -685,7 +684,11 @@ export const reviewTask = guardedCommand(
     const rawTask = await loadTask(
       ctx.db,
       getTaskWithRelations('admin'),
-      [eq(taskTable.id, taskId)],
+      [
+        eq(taskTable.id, taskId),
+        eq(taskTable.projectId, probe.projectId),
+        eq(taskTable.organisationId, probe.organisationId),
+      ],
       {
         ...ctx.event.locals.hub,
         isSuperAdmin: Boolean(ctx.user.superAdmin),
@@ -705,6 +708,7 @@ export const reviewTask = guardedCommand(
       throw error(409, 'TASK_NOT_SUBMITTED')
     }
 
+    let imageReviewCommitted = false
     const nextTaskPatch = {
       isReviewed: true,
       reviewerId: ctx.userId,
@@ -740,33 +744,33 @@ export const reviewTask = guardedCommand(
       nextTaskPatch.reviewAction =
         params.action === 'reject' ? 'ignored' : 'added-feature'
     } else if (rawTask.type === 'newPhoto') {
-      switch (params.action) {
-        case 'reject':
-          await archiveImages(ctx.db, rawTask.id, false)
-          nextTaskPatch.reviewOutcome = 'rejected'
-          nextTaskPatch.reviewAction = 'ignored'
-          break
-        case 'acceptAll':
-          await publishImages(ctx.db, rawTask.id, false, ctx.userId)
-          nextTaskPatch.reviewOutcome = 'accepted'
-          nextTaskPatch.reviewAction = 'added-all-photos'
-          break
-        case 'acceptClassified':
-          await publishImages(ctx.db, rawTask.id, true, ctx.userId)
-          await archiveImages(ctx.db, rawTask.id, true)
-          nextTaskPatch.reviewOutcome = 'accepted'
-          nextTaskPatch.reviewAction = 'added-all-photos-with-intent'
-          break
-        default:
-          throw error(400, 'INVALID_TASK_ACTION')
+      if (
+        params.action !== 'reject' &&
+        params.action !== 'acceptAll' &&
+        params.action !== 'acceptClassified'
+      ) {
+        throw error(400, 'INVALID_TASK_ACTION')
       }
+      imageReviewCommitted = await commitTaskImageReview(ctx.db, {
+        task: rawTask,
+        resourceHubId: probe.resourceHubId,
+        action: params.action,
+        reviewerId: ctx.userId,
+        reason: params.reviewReason,
+      })
+      if (!imageReviewCommitted) throw error(409, 'STALE_TASK_REVIEW')
     } else if (rawTask.type === 'reportedMissing') {
       if (!rawTask.featureId) throw error(400, 'TASK_FEATURE_REQUIRED')
 
       if (params.action === 'reject') {
-        await archiveImages(ctx.db, rawTask.id, false)
-        nextTaskPatch.reviewOutcome = 'rejected'
-        nextTaskPatch.reviewAction = 'ignored'
+        imageReviewCommitted = await commitTaskImageReview(ctx.db, {
+          task: rawTask,
+          resourceHubId: probe.resourceHubId,
+          action: 'reject',
+          reviewerId: ctx.userId,
+          reason: params.reviewReason,
+        })
+        if (!imageReviewCommitted) throw error(409, 'STALE_TASK_REVIEW')
       } else {
         const featureProbe = await probeFeatureForUpdate(
           ctx.db,
@@ -806,7 +810,8 @@ export const reviewTask = guardedCommand(
       throw error(400, 'UNSUPPORTED_TASK_TYPE')
     }
 
-    await updateTask(ctx.db, nextTaskPatch, rawTask.id as Id)
+    // Image-only reviews already committed task completion alongside their side effects.
+    if (!imageReviewCommitted) await updateTask(ctx.db, nextTaskPatch, rawTask.id as Id)
 
     const updatedTask = await loadTask(
       ctx.db,
