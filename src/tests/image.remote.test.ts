@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import sharp from 'sharp'
 import { withRemoteMeta } from './remote-function-mock'
+import { createUploadedImage } from '$lib/db/services/image'
 
 const {
   mockAuthorizeImageList,
@@ -136,6 +137,7 @@ vi.mock('$lib/api/services/image', () => ({
 vi.mock('$lib/db/services/image', () => ({
   createFeatureImage: mockCreateFeatureImage,
   createImage: mockCreateImageRecord,
+  createUploadedImage: vi.fn(async () => mockCreateImageRecord()),
   getImageById: mockLoadImageById,
   toImageEnvelope: mockToImageEnvelope,
   getImageForContextType: mockGetImageForContextType,
@@ -619,6 +621,13 @@ describe('image.remote', () => {
     })
 
     expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
+    expect(createUploadedImage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicId: 'h/features/feature-1/image-a',
+        env: 'local',
+      }),
+    )
     expect(put).toHaveBeenCalledTimes(3)
     expect(mockWaitUntil).toHaveBeenCalledTimes(2)
     expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({

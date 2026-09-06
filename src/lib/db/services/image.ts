@@ -62,6 +62,7 @@ import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
 //
 // 1. CRUD :: CORE OPERATIONS
 //    - createImage
+//    - createUploadedImage
 //    - updateImage
 //
 // 2. CRUD :: RELATIONAL OPERATIONS
@@ -103,6 +104,36 @@ export const createImage = async (db: Database, data: ImageDBNew): Promise<Image
   await insert(db, image, data)
 
 /**
+ * Creates one image row per direct-upload storage identity, including concurrent retries.
+ * @param db Database handle.
+ * @param data Verified upload image data.
+ * @returns The inserted or previously persisted image.
+ * @remarks Existing metadata and moderation state are never overwritten by a retry.
+ */
+export const createUploadedImage = async (
+  db: Database,
+  data: ImageDBNew,
+): Promise<ImageDB> => {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(
+      JSON.stringify([data.env ?? ImageEnv.local, data.publicId]),
+    ),
+  )
+  const id = `upload-${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')}`
+  // The primary key arbitrates concurrent confirmations without a read-before-write race.
+  const [created] = await db
+    .insert(image)
+    .values({ ...data, id })
+    .onConflictDoNothing({ target: image.id })
+    .returning()
+  if (created) return created as ImageDB
+  const [existing] = await db.select().from(image).where(eq(image.id, id)).limit(1)
+  if (!existing) throw new Error('Uploaded image disappeared during confirmation')
+  return existing as ImageDB
+}
+
+/**
  * Updates an existing image in the database
  * @param db - The database instance
  * @param data - The updated image data
@@ -120,12 +151,42 @@ export const updateImage = async (
 // 2. CRUD :: RELATIONAL OPERATIONS
 // ═══════════════════════
 
+/**
+ * Creates a feature-image association, optionally preserving it on upload retries.
+ * @param db Database handle.
+ * @param newFeatureImage Association data.
+ * @param imageId Image to associate.
+ * @param preserveExisting Whether an existing assignment must remain unchanged.
+ * @returns The persisted association.
+ */
 export const createFeatureImage = async (
   db: Database,
   newFeatureImage: FeatureImage,
   imageId: Id,
-): Promise<FeatureImageDB> =>
-  await insertRelated(db, featureImage, newFeatureImage, 'imageId', imageId)
+  preserveExisting = false,
+): Promise<FeatureImageDB> => {
+  if (!preserveExisting)
+    return await insertRelated(db, featureImage, newFeatureImage, 'imageId', imageId)
+  // Retrying attachment must not reset a review decision made after the first insert.
+  const [created] = await db
+    .insert(featureImage)
+    .values({ ...newFeatureImage, imageId })
+    .onConflictDoNothing({ target: [featureImage.featureId, featureImage.imageId] })
+    .returning()
+  if (created) return created as FeatureImageDB
+  const [existing] = await db
+    .select()
+    .from(featureImage)
+    .where(
+      and(
+        eq(featureImage.featureId, newFeatureImage.featureId),
+        eq(featureImage.imageId, imageId),
+      ),
+    )
+    .limit(1)
+  if (!existing) throw new Error('Feature image disappeared during attachment')
+  return existing as FeatureImageDB
+}
 
 /**
  * Updates image assignment fields, replacing canonical intent atomically.

@@ -29,6 +29,7 @@ import {
 import {
   createFeatureImage,
   createImage as createImageRecord,
+  createUploadedImage,
   createTaskImagesFromImageIds,
   getFeatureCanonicalImageOccupancy as loadFeatureCanonicalImageOccupancy,
   getImageById as loadImageById,
@@ -1192,12 +1193,14 @@ const createImageInContext = async (params: {
   db: Database
   userId: Id
   imageData: ImageNew
+  retryableUpload?: boolean
 }): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
   const userWithAttribution = await getUserById(params.db, params.userId)
+  const createRecord = params.retryableUpload ? createUploadedImage : createImageRecord
 
   if (params.imageData.ctxType === ImageContextResource.feature) {
     const validatedData = ImageInsertWithFeatureAPI.parse(params.imageData)
-    const createdImage = await createImageRecord(params.db, validatedData)
+    const createdImage = await createRecord(params.db, validatedData)
     const createdFeatureImage = await createFeatureImage(
       params.db,
       {
@@ -1209,6 +1212,7 @@ const createImageInContext = async (params: {
         publisherId: validatedData.featureImage.publisherId ?? null,
       },
       createdImage.id,
+      params.retryableUpload ?? false,
     )
 
     const responseData = await toResponseShape(
@@ -1233,7 +1237,7 @@ const createImageInContext = async (params: {
     const validatedData = ImageInsertWithProjectOrOrganisationAPI.parse(
       params.imageData,
     )
-    const createdImage = await createImageRecord(params.db, validatedData)
+    const createdImage = await createRecord(params.db, validatedData)
 
     if (validatedData.ctxType === ImageContextResource.project) {
       await updateProjectById(
@@ -1265,7 +1269,7 @@ const createImageInContext = async (params: {
 
   if (params.imageData.ctxType === ImageContextResource.hub) {
     const validatedData = ImageInsertWithHubAPI.parse(params.imageData)
-    const createdImage = await createImageRecord(params.db, validatedData)
+    const createdImage = await createRecord(params.db, validatedData)
 
     await params.db
       .update(hub)
@@ -1779,6 +1783,7 @@ export const finalizeImageUpload = guardedCommand(
     const created = await createImageInContext({
       db,
       userId,
+      retryableUpload: true,
       imageData:
         payload.ctxType === ImageContextResource.feature
           ? {
