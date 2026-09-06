@@ -4,6 +4,26 @@ import { ImageCtx } from '$lib/context/image.svelte'
 vi.mock('$lib/context/app.svelte', () => ({ getAppCtx: () => ({}) }))
 
 describe('image refresh ownership', () => {
+  it('does not reset the current selection when an older context finishes late', async () => {
+    const ctx = new ImageCtx()
+    // Let constructor initialization finish before simulating two context changes.
+    await Promise.resolve()
+    let resolve!: () => void
+    vi.spyOn(ctx, 'setImages')
+      .mockReturnValueOnce(
+        new Promise<void>(res => {
+          resolve = res
+        }),
+      )
+      .mockResolvedValue(undefined)
+    const older = ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
+    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+    const reset = vi.spyOn(ctx, 'resetActiveImage')
+    resolve()
+    await older
+    expect(reset).not.toHaveBeenCalled()
+  })
+
   it('clears fetching state when the current request fails', async () => {
     const ctx = new ImageCtx()
     await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'feature' } })

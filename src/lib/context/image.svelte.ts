@@ -336,7 +336,7 @@ export class ImageCtx {
       this.state.context?.ctxIdSecondary !== context?.ctxIdSecondary
 
     // Supersede pending reads even when only secondary or preloaded images change.
-    this.imageRefreshSerial += 1
+    const contextSerial = ++this.imageRefreshSerial
     this.state.isFetchingImages = false
 
     if (isContextChange) {
@@ -362,11 +362,13 @@ export class ImageCtx {
     if (images && images.length > 0) {
       const validImages = images.filter(isValidImageEnvelope)
       await this.setImages(validImages)
+      if (this.imageRefreshSerial !== contextSerial) return
       // Set active image when we have preloaded images
       this.setActiveImageToTargetOrFirst()
       // CASE 2 : Images not preloaded except for the leading image
     } else if (image) {
       await this.setImages([image])
+      if (this.imageRefreshSerial !== contextSerial) return
       this.setActiveImageToTargetOrFirst()
       await this.refreshImages()
       // CASE 3 : Initial Context - we will have an async image set
@@ -375,6 +377,7 @@ export class ImageCtx {
     } else {
       // CASE 4 : Feature has no images, so just clear the image states.
       await this.setImages([])
+      if (this.imageRefreshSerial !== contextSerial) return
       this.resetTargetImage()
       this.resetActiveImage()
     }
