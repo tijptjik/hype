@@ -20,6 +20,27 @@ vi.mock('$lib/api/server/image.remote', async importOriginal => ({
 }))
 
 describe('image refresh ownership', () => {
+  it('submits canonical replacement without first clearing the existing canonical image', async () => {
+    const ctx = new ImageCtx()
+    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'feature' } })
+    vi.spyOn(ctx, 'getImages').mockReturnValue([
+      { image: { id: 'old' }, intent: 'canonical' } as ImageCtxEnvelope,
+    ])
+    vi.spyOn(ctx, 'refreshImages').mockResolvedValue(undefined)
+    vi.mocked(setImageIntent)
+      .mockClear()
+      .mockResolvedValue({} as never)
+    await ctx.handleSetIntent('new', 'canonical')
+    expect(setImageIntent).toHaveBeenCalledOnce()
+    expect(setImageIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'new',
+        intent: 'canonical',
+        featureId: 'feature',
+      }),
+    )
+  })
+
   it('skips image entries with missing image records or unusable IDs', async () => {
     const ctx = new ImageCtx()
     await Promise.resolve()

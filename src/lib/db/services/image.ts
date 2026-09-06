@@ -1,9 +1,13 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import {
   and,
   asc,
   desc,
   eq,
+  exists,
+  ne,
   getTableColumns,
   inArray,
   type AnyColumn,
@@ -123,6 +127,14 @@ export const createFeatureImage = async (
 ): Promise<FeatureImageDB> =>
   await insertRelated(db, featureImage, newFeatureImage, 'imageId', imageId)
 
+/**
+ * Updates image assignment fields, replacing canonical intent atomically.
+ * @param db Database connection.
+ * @param modifiedFeatureImage Assignment fields and owning feature ID.
+ * @param imageId Image assignment to update.
+ * @returns The persisted assignment.
+ * @remarks Canonical replacement must not demote the previous image if promotion fails.
+ */
 export const updateFeatureImage = async (
   db: Database,
   modifiedFeatureImage: ImageDBFlatUpdate,
@@ -139,6 +151,36 @@ export const updateFeatureImage = async (
   }
   if (modifiedFeatureImage.publishedAt !== undefined) {
     featureImageData.publishedAt = modifiedFeatureImage.publishedAt
+  }
+
+  if (featureImageData.intent === 'canonical') {
+    const target = and(
+      eq(featureImage.imageId, imageId),
+      eq(featureImage.featureId, modifiedFeatureImage.featureId),
+    )
+    // D1 batches roll back both statements if promotion fails; missing targets must
+    // leave the current canonical assignment intact as well.
+    const [, updated] = await db.batch([
+      db
+        .update(featureImage)
+        .set({ intent: 'undefined' })
+        .where(
+          and(
+            eq(featureImage.featureId, modifiedFeatureImage.featureId),
+            eq(featureImage.intent, 'canonical'),
+            ne(featureImage.imageId, imageId),
+            exists(
+              db
+                .select({ imageId: featureImage.imageId })
+                .from(featureImage)
+                .where(target),
+            ),
+          ),
+        ),
+      db.update(featureImage).set(featureImageData).where(target).returning(),
+    ])
+    if (!updated[0]) throw error(404, 'Feature image assignment not found')
+    return updated[0]
   }
 
   return await updateRelated(
