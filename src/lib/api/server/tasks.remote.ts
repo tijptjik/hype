@@ -35,6 +35,7 @@ import {
   probeTaskQuery,
   updateTask,
   commitTaskImageReview,
+  commitTaskFeatureReview,
   createTaskWithDependencies,
 } from '$lib/db/services/task'
 import {
@@ -64,8 +65,6 @@ import type {
   Id,
   ListResponse,
   TaskDB,
-  ReviewAction,
-  ReviewOutcome,
 } from '$lib/types'
 import type {
   BeginMissingReportDraftInput,
@@ -708,19 +707,6 @@ export const reviewTask = guardedCommand(
       throw error(409, 'TASK_NOT_SUBMITTED')
     }
 
-    let imageReviewCommitted = false
-    const nextTaskPatch = {
-      isReviewed: true,
-      reviewerId: ctx.userId,
-      reviewReason: params.reviewReason?.trim() || null,
-    } as {
-      isReviewed: boolean
-      reviewerId: Id
-      reviewReason: string | null
-      reviewOutcome?: ReviewOutcome
-      reviewAction?: ReviewAction
-    }
-
     if (rawTask.type === 'newFeature') {
       if (!rawTask.featureId) throw error(400, 'TASK_FEATURE_REQUIRED')
       if (params.action !== 'reject' && params.action !== 'accept') {
@@ -730,19 +716,15 @@ export const reviewTask = guardedCommand(
       const featureProbe = await probeFeatureForUpdate(ctx.db, rawTask.featureId as Id)
       if (!featureProbe) throw error(404, 'FEATURE_NOT_FOUND')
 
-      const persisted = await updateFeatureByIdWithConcurrency(ctx.db, {
-        id: featureProbe.id as Id,
-        updatedAt: featureProbe.modifiedAt,
-        data: {
-          isPendingReview: false,
-          isArchived: params.action === 'reject',
-        },
+      const persisted = await commitTaskFeatureReview(ctx.db, {
+        task: rawTask,
+        feature: featureProbe,
+        resourceHubId: probe.resourceHubId,
+        action: params.action,
+        reviewerId: ctx.userId,
+        reason: params.reviewReason,
       })
-      if (!persisted) throw error(409, 'STALE_FEATURE_WRITE')
-
-      nextTaskPatch.reviewOutcome = params.action === 'reject' ? 'rejected' : 'accepted'
-      nextTaskPatch.reviewAction =
-        params.action === 'reject' ? 'ignored' : 'added-feature'
+      if (!persisted) throw error(409, 'STALE_TASK_REVIEW')
     } else if (rawTask.type === 'newPhoto') {
       if (
         params.action !== 'reject' &&
@@ -751,26 +733,26 @@ export const reviewTask = guardedCommand(
       ) {
         throw error(400, 'INVALID_TASK_ACTION')
       }
-      imageReviewCommitted = await commitTaskImageReview(ctx.db, {
+      const persisted = await commitTaskImageReview(ctx.db, {
         task: rawTask,
         resourceHubId: probe.resourceHubId,
         action: params.action,
         reviewerId: ctx.userId,
         reason: params.reviewReason,
       })
-      if (!imageReviewCommitted) throw error(409, 'STALE_TASK_REVIEW')
+      if (!persisted) throw error(409, 'STALE_TASK_REVIEW')
     } else if (rawTask.type === 'reportedMissing') {
       if (!rawTask.featureId) throw error(400, 'TASK_FEATURE_REQUIRED')
 
       if (params.action === 'reject') {
-        imageReviewCommitted = await commitTaskImageReview(ctx.db, {
+        const persisted = await commitTaskImageReview(ctx.db, {
           task: rawTask,
           resourceHubId: probe.resourceHubId,
           action: 'reject',
           reviewerId: ctx.userId,
           reason: params.reviewReason,
         })
-        if (!imageReviewCommitted) throw error(409, 'STALE_TASK_REVIEW')
+        if (!persisted) throw error(409, 'STALE_TASK_REVIEW')
       } else {
         const featureProbe = await probeFeatureForUpdate(
           ctx.db,
@@ -778,41 +760,29 @@ export const reviewTask = guardedCommand(
         )
         if (!featureProbe) throw error(404, 'FEATURE_NOT_FOUND')
 
-        const featureData =
-          params.action === 'setIntangible'
-            ? { isIntangible: true }
-            : params.action === 'setUnpublished'
-              ? { isPublished: false, isVisitable: false }
-              : params.action === 'setArchived'
-                ? { isArchived: true, isPublished: false, isVisitable: false }
-                : null
-
-        if (!featureData) {
+        if (
+          params.action !== 'setIntangible' &&
+          params.action !== 'setUnpublished' &&
+          params.action !== 'setArchived'
+        ) {
           throw error(400, 'INVALID_TASK_ACTION')
         }
 
-        const persisted = await updateFeatureByIdWithConcurrency(ctx.db, {
-          id: featureProbe.id as Id,
-          updatedAt: featureProbe.modifiedAt,
-          data: featureData,
+        const persisted = await commitTaskFeatureReview(ctx.db, {
+          task: rawTask,
+          feature: featureProbe,
+          resourceHubId: probe.resourceHubId,
+          action: params.action,
+          reviewerId: ctx.userId,
+          reason: params.reviewReason,
         })
-        if (!persisted) throw error(409, 'STALE_FEATURE_WRITE')
-
-        nextTaskPatch.reviewOutcome = 'accepted'
-        nextTaskPatch.reviewAction =
-          params.action === 'setIntangible'
-            ? 'set-intangible'
-            : params.action === 'setUnpublished'
-              ? 'set-unpublished'
-              : 'set-archived'
+        if (!persisted) throw error(409, 'STALE_TASK_REVIEW')
       }
     } else {
       throw error(400, 'UNSUPPORTED_TASK_TYPE')
     }
 
-    // Image-only reviews already committed task completion alongside their side effects.
-    if (!imageReviewCommitted) await updateTask(ctx.db, nextTaskPatch, rawTask.id as Id)
-
+    // Every review branch has committed its resource changes and completion together.
     const updatedTask = await loadTask(
       ctx.db,
       getTaskWithRelations('admin'),

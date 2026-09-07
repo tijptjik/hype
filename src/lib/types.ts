@@ -2285,15 +2285,23 @@ export type TaskImageReviewPlan = {
   processedCount: number
 }
 
-export type TaskImageReviewCommit = {
+export type TaskReviewCommitContext = {
   task: Pick<
     TaskDB,
     'id' | 'featureId' | 'projectId' | 'organisationId' | 'modifiedAt' | 'type'
   >
   resourceHubId: string | null
-  action: 'reject' | 'acceptAll' | 'acceptClassified'
   reviewerId: Id
   reason?: string | null
+}
+
+export type TaskImageReviewCommit = TaskReviewCommitContext & {
+  action: 'reject' | 'acceptAll' | 'acceptClassified'
+}
+
+export type TaskFeatureReviewCommit = TaskReviewCommitContext & {
+  feature: Pick<FeatureDB, 'id' | 'modifiedAt'>
+  action: 'accept' | 'reject' | 'setIntangible' | 'setUnpublished' | 'setArchived'
 }
 
 export const taskTypes = Object.values(TaskTypeEnum)
