@@ -5,6 +5,7 @@ import { and, asc, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   featureI18n,
+  feature,
   image,
   featureImage,
   hub,
@@ -41,6 +42,8 @@ import type {
   TaskImageReviewCommit,
   TaskImageReviewPlan,
   TaskImageReviewRow,
+  TaskFeatureReviewCommit,
+  TaskReviewCommitContext,
 } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
@@ -63,6 +66,8 @@ import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 //    - archiveImages
 //    - publishImages
 //    - commitTaskImageReview
+//    - commitTaskFeatureReview
+//    - taskReviewPendingCondition
 //    - prepareTaskImageArchives
 //    - prepareTaskImagePublications
 //
@@ -567,6 +572,98 @@ export const publishImages = async (
 }
 
 /**
+ * Builds the shared optimistic and resource-scope guard for task review writes.
+ * @param input Authorized task snapshot and hub scope.
+ * @returns A condition matching only that pending task version and scope.
+ */
+const taskReviewPendingCondition = (input: TaskReviewCommitContext): SQL<unknown> => {
+  const expected = input.task
+  return sql`${and(
+    eq(task.id, expected.id),
+    eq(task.type, expected.type),
+    eq(task.featureId, expected.featureId),
+    eq(task.projectId, expected.projectId),
+    eq(task.organisationId, expected.organisationId),
+    eq(task.modifiedAt, expected.modifiedAt),
+    eq(task.isDraft, false),
+    eq(task.isReviewed, false),
+    taskFeatureScopeCondition(),
+    sql`exists (select 1 from ${organisation} where ${organisation.id} = ${expected.organisationId} and ${organisation.hubId} is ${input.resourceHubId})`,
+  )}`
+}
+
+/**
+ * Commits a feature-changing review and task completion in one transaction.
+ * @param db Database handle.
+ * @param input Authorized task/feature snapshots and reviewer decision.
+ * @returns True on commit, false if either snapshot or resource scope became stale.
+ * @remarks The adjacent feature update uses SQLite changes() to require a winning task write.
+ */
+export const commitTaskFeatureReview = async (
+  db: Database,
+  input: TaskFeatureReviewCommit,
+): Promise<boolean> => {
+  const isNewFeature = input.task.type === 'newFeature'
+  if (
+    input.feature.id !== input.task.featureId ||
+    (isNewFeature
+      ? input.action !== 'accept' && input.action !== 'reject'
+      : input.task.type !== 'reportedMissing' ||
+        (input.action !== 'setIntangible' &&
+          input.action !== 'setUnpublished' &&
+          input.action !== 'setArchived'))
+  ) {
+    throw error(400, 'INVALID_TASK_ACTION')
+  }
+  const featureData = isNewFeature
+    ? { isPendingReview: false, isArchived: input.action === 'reject' }
+    : input.action === 'setIntangible'
+      ? { isIntangible: true }
+      : input.action === 'setUnpublished'
+        ? { isPublished: false, isVisitable: false }
+        : { isArchived: true, isPublished: false, isVisitable: false }
+  const featureSnapshot = and(
+    eq(feature.id, input.feature.id),
+    eq(feature.modifiedAt, input.feature.modifiedAt),
+  )
+
+  // Claim completion only when both snapshots are current inside the same transaction.
+  const completion = db
+    .update(task)
+    .set({
+      isReviewed: true,
+      reviewerId: input.reviewerId,
+      reviewReason: input.reason?.trim() || null,
+      reviewOutcome: input.action === 'reject' ? 'rejected' : 'accepted',
+      reviewAction: isNewFeature
+        ? input.action === 'reject'
+          ? 'ignored'
+          : 'added-feature'
+        : input.action === 'setIntangible'
+          ? 'set-intangible'
+          : input.action === 'setUnpublished'
+            ? 'set-unpublished'
+            : 'set-archived',
+    })
+    .where(
+      and(
+        taskReviewPendingCondition(input),
+        sql`exists (select 1 from ${feature} where ${featureSnapshot})`,
+      ),
+    )
+    .returning({ id: task.id })
+  const mutation = db
+    .update(feature)
+    .set(featureData)
+    .where(and(featureSnapshot, sql`changes() = 1`))
+    .returning({ id: feature.id })
+
+  // Keep these statements adjacent: changes() must describe the task completion above.
+  const [completed, updated] = await db.batch([completion, mutation])
+  return completed.length === 1 && updated.length === 1
+}
+
+/**
  * Commits an image-only review and its task completion as one guarded transaction.
  * @param db Database handle.
  * @param input Authorized task snapshot and reviewer decision.
@@ -584,18 +681,7 @@ export const commitTaskImageReview = async (
   ) {
     throw error(400, 'INVALID_TASK_ACTION')
   }
-  const pending = and(
-    eq(task.id, expected.id),
-    eq(task.type, expected.type),
-    eq(task.featureId, expected.featureId),
-    eq(task.projectId, expected.projectId),
-    eq(task.organisationId, expected.organisationId),
-    eq(task.modifiedAt, expected.modifiedAt),
-    eq(task.isDraft, false),
-    eq(task.isReviewed, false),
-    taskFeatureScopeCondition(),
-    sql`exists (select 1 from ${organisation} where ${organisation.id} = ${expected.organisationId} and ${organisation.hubId} is ${input.resourceHubId})`,
-  )
+  const pending = taskReviewPendingCondition(input)
   const guard = sql`exists (select 1 from ${task} where ${pending})`
 
   // Build both image phases without executing either; stale reviewers must write nothing.

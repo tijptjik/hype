@@ -9,6 +9,7 @@ const reviewMocks = vi.hoisted(() => ({
   archiveImages: vi.fn(),
   publishImages: vi.fn(),
   commitTaskImageReview: vi.fn(),
+  commitTaskFeatureReview: vi.fn(),
   probeFeatureForUpdate: vi.fn(),
   probeLayerForUpdate: vi.fn(),
   updateFeatureByIdWithConcurrency: vi.fn(),
@@ -137,6 +138,7 @@ describe('completed task write guard', () => {
       resourceHubId: 'hub',
     })
     reviewMocks.commitTaskImageReview.mockResolvedValue(true)
+    reviewMocks.commitTaskFeatureReview.mockResolvedValue(true)
     reviewMocks.authorizeTaskReadForProbe.mockReturnValue({ allowed: true })
   })
 
@@ -196,6 +198,42 @@ describe('completed task write guard', () => {
     expect(reviewMocks.updateTask).not.toHaveBeenCalled()
     expect(reviewMocks.publishImages).not.toHaveBeenCalled()
   })
+
+  it.each(['newFeature', 'reportedMissing'] as const)(
+    'commits %s feature changes without separate task/feature writes',
+    async type => {
+      const pending = {
+        id: 'task',
+        featureId: 'feature',
+        type,
+        isDraft: false,
+        isReviewed: false,
+      }
+      const feature = { id: 'feature', modifiedAt: 'feature-v1' }
+      reviewMocks.loadTask.mockResolvedValue(pending)
+      reviewMocks.probeFeatureForUpdate.mockResolvedValue(feature)
+      const action = type === 'newFeature' ? 'accept' : 'setArchived'
+      await reviewHandler(
+        { id: 'task', action },
+        {
+          db: 'db',
+          user: {},
+          userId: 'reviewer',
+          event: { locals: { hub: {} } },
+        },
+      )
+      expect(reviewMocks.commitTaskFeatureReview).toHaveBeenCalledWith('db', {
+        task: pending,
+        feature,
+        resourceHubId: 'hub',
+        action,
+        reviewerId: 'reviewer',
+        reason: undefined,
+      })
+      expect(reviewMocks.updateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    },
+  )
 
   it('reports a stale image review without a second task update', async () => {
     reviewMocks.loadTask.mockResolvedValue({
