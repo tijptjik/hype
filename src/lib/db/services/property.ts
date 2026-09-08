@@ -39,6 +39,7 @@ import { PropertyRecordCreate, PropertyRecordUpdate } from '../zod'
 import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 import type { Locale, Database } from '$lib/types'
 import type {
   Property,
@@ -705,6 +706,8 @@ export const updatePropertyValueI18n = async (
  * @param properties Array of properties to upsert.
  * @param projectId The ID of the project to upsert properties for.
  * @returns Array of upserted properties.
+ * @remarks Base records, translations, values and stale-property deletions commit
+ * together. Retained identities are ownership-checked again inside the transaction.
  */
 export const upsertProjectProperties = async (
   db: Database,
@@ -713,225 +716,218 @@ export const upsertProjectProperties = async (
 ): Promise<Property[]> => {
   const existingProperties = await db.query.property.findMany({
     where: and(eq(property.scope, 'project'), eq(property.projectId, projectId)),
-    with: {
-      i18n: true,
-      values: {
-        with: {
-          i18n: true,
-        },
-      },
-    },
+    with: { values: true },
   })
+  const existingById = new Map(existingProperties.map(row => [row.id, row]))
 
-  const existingPropsMap = new Map(existingProperties.map(p => [p.id, p]))
-  const incomingPropsMap = new Map(
-    properties.filter(p => (p as Property).id).map(p => [(p as Property).id, p]),
-  )
-
-  const propsToDelete = existingProperties.filter(ep => !incomingPropsMap.has(ep.id))
-  const propsToCreate = properties.filter(
-    p => !(p as Property).id || !existingPropsMap.has((p as Property).id),
-  )
-  const propsToUpdate = properties.filter(
-    p => (p as Property).id && existingPropsMap.has((p as Property).id),
-  ) as Property[]
-
-  // Validate create payloads before mutating existing records.
-  // This prevents destructive deletes when incoming create rows are invalid.
-  const parsedCreateBasePayloads: Array<ReturnType<typeof PropertyRecordCreate.parse>> =
-    []
-  for (const propData of propsToCreate) {
-    const {
-      i18n: _i18nData,
-      values: _valuesData,
-      ...basePropData
-    } = propData as ProjectPropertyForm
-    const parsedBase = PropertyRecordCreate.parse({
-      ...basePropData,
+  // Validate every create/update before mutating existing records, avoiding destructive
+  // deletes or partial saves when any submitted base payload is invalid.
+  const prepared = properties.map(input => {
+    const { i18n, values, ...base } = input
+    const id = input.id || nanoid(12)
+    const existing = existingById.get(id)
+    const serverOwnedBase = {
+      ...base,
+      id,
       projectId,
       hubId: null,
+      organisationId: null,
       scope: 'project',
-      type: inferPropertyTypeFromComponent(
-        (basePropData as ProjectPropertyForm).component,
-      ),
-      isDefaultEnabled:
-        typeof (propData as ProjectPropertyForm).isDefaultEnabled === 'boolean'
-          ? (propData as ProjectPropertyForm).isDefaultEnabled
-          : false,
-    })
-    parsedCreateBasePayloads.push(parsedBase)
-  }
-
-  // Create
-  const createdResults: Property[] = []
-  for (const [index, propData] of propsToCreate.entries()) {
-    const {
-      i18n: i18nData,
-      values: valuesData,
-      ..._basePropData
-    } = propData as ProjectPropertyForm
-    const parsedBase = parsedCreateBasePayloads[index]
-    if (!parsedBase) {
-      throw new Error('FAILED_TO_RESOLVE_PARSED_PROPERTY_CREATE_PAYLOAD')
+      type: inferPropertyTypeFromComponent(input.component),
+      isDefaultEnabled: Boolean(input.isDefaultEnabled),
     }
-    const newBaseProp = await createBaseProperty(db, {
-      ...parsedBase,
-      projectId,
-      hubId: null,
-      scope: 'project',
-      type: inferPropertyTypeFromComponent((propData as ProjectPropertyForm).component),
-      isDefaultEnabled:
-        typeof (propData as ProjectPropertyForm).isDefaultEnabled === 'boolean'
-          ? (propData as ProjectPropertyForm).isDefaultEnabled
-          : false,
-    } as InferInsertModel<typeof property>)
-
-    const newTranslations = await createI18n(
-      db,
-      i18nData as Record<Locale, PropertyI18nNew>,
-      newBaseProp.id,
-    )
-
-    const newPropValuesWithTranslations: PropertyValue[] = []
-    if (valuesData) {
-      for (const valData of valuesData as PropertyValueNew[]) {
-        const { i18n: valI18nData, ...baseValData } = valData
-        const newPropVal = await insert<typeof propertyValue>(db, propertyValue, {
-          ...baseValData,
-          propertyId: newBaseProp.id,
-        } as PropertyValueNew)
-        const newValTranslations =
-          valI18nData && Object.keys(valI18nData).length > 0
-            ? await createPropertyValueI18n(
-                db,
-                valI18nData as Record<Locale, PropertyValueI18nNew>,
-                newPropVal.id,
-              )
-            : []
-        newPropValuesWithTranslations.push({
-          ...newPropVal,
-          i18n: transformI18nSafely(newValTranslations),
-        } as PropertyValue)
-      }
-    }
-    createdResults.push({
-      ...newBaseProp,
-      i18n: transformI18nSafely(newTranslations),
-      values: newPropValuesWithTranslations,
-    } as Property)
-  }
-
-  // Update
-  const updatedResults: Property[] = []
-  for (const propData of propsToUpdate) {
-    const { i18n: i18nData, values: valuesData, ...basePropData } = propData
-    const propertyId = propData.id
-    if (!propertyId) continue
-    const parsedBase = PropertyRecordUpdate.parse({
-      ...basePropData,
-      type: inferPropertyTypeFromComponent(basePropData.component),
-    }) // Validate
-    const updatedBaseProp = await updateBaseProperty(
-      db,
-      {
-        ...parsedBase,
-        projectId,
-        hubId: null,
-        scope: 'project',
-        type: inferPropertyTypeFromComponent(basePropData.component),
-        isDefaultEnabled:
-          typeof propData.isDefaultEnabled === 'boolean'
-            ? propData.isDefaultEnabled
-            : false,
-      } as InferInsertModel<typeof property>,
-      propertyId,
-    )
-    const normalizedPropertyI18n = normalizeI18nLocaleRecord(
-      (i18nData || {}) as Record<string, PropertyI18nPartial>,
-    )
-    const updatedTranslations = await updateI18n(
-      db,
-      normalizedPropertyI18n as Record<Locale, PropertyI18nPartial>,
-      propertyId,
-    )
-
-    const normalizedValuesData = Array.isArray(valuesData)
-      ? valuesData
+    const parsed = existing
+      ? PropertyRecordUpdate.parse(serverOwnedBase)
+      : PropertyRecordCreate.parse(serverOwnedBase)
+    const normalizedValues = Array.isArray(values)
+      ? values
           .map((value, index) => ({ value, index }))
           .sort((a, b) => {
-            const aRank =
+            const left =
               typeof a.value.rank === 'number' && Number.isFinite(a.value.rank)
                 ? a.value.rank
                 : Number.POSITIVE_INFINITY
-            const bRank =
+            const right =
               typeof b.value.rank === 'number' && Number.isFinite(b.value.rank)
                 ? b.value.rank
                 : Number.POSITIVE_INFINITY
-            if (aRank !== bRank) return aRank - bRank
-            return a.index - b.index
+            return left === right ? a.index - b.index : left - right
           })
           // Allocate identity before persistence so ID-less values retain their translations.
           .map(({ value }, rank) => ({ ...value, id: value.id || nanoid(12), rank }))
-      : []
+      : undefined
+    if (
+      normalizedValues &&
+      new Set(normalizedValues.map(value => value.id)).size !== normalizedValues.length
+    ) {
+      throw error(400, 'DUPLICATE_PROPERTY_VALUE_ID')
+    }
+    return {
+      id,
+      existing,
+      parsed,
+      values: normalizedValues,
+      i18n: normalizeI18nLocaleRecord(
+        (i18n ?? {}) as Record<string, PropertyI18nPartial>,
+      ),
+    }
+  })
+  const ids = prepared.map(row => row.id)
+  if (new Set(ids).size !== ids.length) throw error(400, 'DUPLICATE_PROPERTY_ID')
 
-    const incomingValuesById = new Map(
-      normalizedValuesData.map(value => [value.id, value]),
+  // Recheck ownership inside the batch before touching parents or their children.
+  // CASE short-circuits; malformed JSON aborts the transaction when a retained row moved.
+  const retainedIds = prepared.filter(row => row.existing).map(row => row.id)
+  const ownership = db
+    .select({
+      valid: sql<number>`case when count(*) = ${retainedIds.length} then 1
+      else json('PROPERTY_NOT_FOUND') end`,
+    })
+    .from(property)
+    .where(
+      and(
+        eq(property.scope, 'project'),
+        eq(property.projectId, projectId),
+        chunkedInArray(property.id, retainedIds),
+      ),
     )
-
-    const syncedValues = valuesData
-      ? await syncPropertyValues(db, normalizedValuesData, propertyId)
-      : []
-
-    const updatedPropValuesWithTranslations: PropertyValue[] = []
-    for (const syncedVal of syncedValues) {
-      // syncedVal is PropertyValueDB
-      const incomingValData = incomingValuesById.get(syncedVal.id) // incomingValData is the normalized PropertyValue input
-      let valTranslations: PropertyValueI18nDB[] = []
-      if (incomingValData?.i18n && Object.keys(incomingValData.i18n).length > 0) {
-        try {
-          valTranslations = await updatePropertyValueI18n(
-            db,
-            incomingValData.i18n as Record<Locale, PropertyValueI18nPartial>,
-            syncedVal.id,
-          )
-        } catch (_e) {
-          // Fallback: try to fetch existing translations if update failed
-          valTranslations = await db.query.propertyValueI18n.findMany({
-            where: eq(propertyValueI18n.propertyValueId, syncedVal.id),
-          })
-        }
-      } else {
-        await db
-          .delete(propertyValueI18n)
-          .where(eq(propertyValueI18n.propertyValueId, syncedVal.id))
-        valTranslations = []
-      }
-      updatedPropValuesWithTranslations.push({
-        ...syncedVal,
-        i18n: transformI18nSafely(valTranslations),
-      } as PropertyValue)
+  const writes: BatchItem<'sqlite'>[] = []
+  for (const row of prepared) {
+    // Create or update the base record without replacing its identity or dependent links.
+    if (row.existing) {
+      writes.push(
+        db
+          .update(property)
+          .set(row.parsed)
+          .where(
+            and(
+              eq(property.id, row.id),
+              eq(property.scope, 'project'),
+              eq(property.projectId, projectId),
+            ),
+          ),
+      )
+    } else {
+      writes.push(
+        db.insert(property).values(row.parsed as InferInsertModel<typeof property>),
+      )
     }
 
-    updatedResults.push({
-      ...updatedBaseProp,
-      i18n: transformI18nSafely(updatedTranslations),
-      values: updatedPropValuesWithTranslations,
-    } as Property)
-  }
+    // Replace property translations in the same transaction as their base record.
+    writes.push(db.delete(propertyI18n).where(eq(propertyI18n.propertyId, row.id)))
+    for (const [locale, translation] of Object.entries(row.i18n)) {
+      if (typeof translation.label !== 'string')
+        throw error(400, 'PROPERTY_LABEL_REQUIRED')
+      writes.push(
+        db.insert(propertyI18n).values({
+          ...translation,
+          label: translation.label,
+          propertyId: row.id,
+          locale,
+        }),
+      )
+    }
+    if (!row.values) continue
 
-  // Delete stale properties after successful create/update processing.
-  if (propsToDelete.length > 0) {
-    await delMany(
-      db,
-      property,
-      property.id,
-      propsToDelete.map(p => p.id),
+    const existingValueIds = new Set(row.existing?.values.map(value => value.id) ?? [])
+    const retainedValueIds = row.values
+      .filter(value => existingValueIds.has(value.id))
+      .map(value => value.id)
+    writes.push(
+      db
+        .select({
+          valid: sql<number>`case when count(*) = ${retainedValueIds.length} then 1
+        else json('PROPERTY_VALUE_NOT_FOUND') end`,
+        })
+        .from(propertyValue)
+        .where(
+          and(
+            eq(propertyValue.propertyId, row.id),
+            chunkedInArray(propertyValue.id, retainedValueIds),
+          ),
+        ),
     )
+    // Removed values cascade to translations and feature links only if the entire save succeeds.
+    writes.push(
+      db.delete(propertyValue).where(
+        and(
+          eq(propertyValue.propertyId, row.id),
+          not(
+            chunkedInArray(
+              propertyValue.id,
+              row.values.map(value => value.id),
+            ),
+          ),
+        ),
+      ),
+    )
+    for (const value of row.values) {
+      const { i18n, ...baseValue } = value
+      if (existingValueIds.has(value.id)) {
+        writes.push(
+          db
+            .update(propertyValue)
+            .set({ ...baseValue, propertyId: row.id })
+            .where(
+              and(eq(propertyValue.id, value.id), eq(propertyValue.propertyId, row.id)),
+            ),
+        )
+      } else {
+        writes.push(
+          db.insert(propertyValue).values({ ...baseValue, propertyId: row.id }),
+        )
+      }
+      // Do not fall back to old translations on a failed write: fail and roll back the whole save.
+      writes.push(
+        db
+          .delete(propertyValueI18n)
+          .where(eq(propertyValueI18n.propertyValueId, value.id)),
+      )
+      const translations = normalizeI18nLocaleRecord(
+        (i18n ?? {}) as Record<string, PropertyValueI18nPartial>,
+      )
+      for (const [locale, translation] of Object.entries(translations)) {
+        if (typeof translation.value !== 'string')
+          throw error(400, 'PROPERTY_VALUE_TRANSLATION_REQUIRED')
+        writes.push(
+          db.insert(propertyValueI18n).values({
+            ...translation,
+            value: translation.value,
+            propertyValueId: value.id,
+            locale,
+          }),
+        )
+      }
+    }
   }
 
-  return [...createdResults, ...updatedResults].sort((a, b) =>
-    a.key.localeCompare(b.key),
-  )
+  // Delete stale properties after successful create/update processing, within the same batch.
+  const deletion = db
+    .delete(property)
+    .where(
+      and(
+        eq(property.scope, 'project'),
+        eq(property.projectId, projectId),
+        not(chunkedInArray(property.id, ids)),
+      ),
+    )
+  const readback = db.query.property.findMany({
+    where: and(eq(property.scope, 'project'), eq(property.projectId, projectId)),
+    with: { i18n: true, values: { with: { i18n: true } } },
+    orderBy: [asc(property.key)],
+  })
+  // Each write is parameter-bounded, but all writes and hydrated readback share one transaction.
+  const results = await db.batch([ownership, ...writes, deletion, readback])
+  const rows = results.at(-1) as PropertyDBRaw[]
+  return rows.map(row => ({
+    ...row,
+    i18n: transformI18nSafely(row.i18n),
+    values:
+      row.values?.map(value => ({
+        ...value,
+        i18n: transformI18nSafely(value.i18n),
+      })) ?? [],
+  })) as Property[]
 }
 
 /**
