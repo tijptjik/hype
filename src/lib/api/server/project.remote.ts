@@ -43,6 +43,7 @@ import {
   normalizeProjectI18nForFormInput,
   authorizeProjectPublishForSubmission,
   authorizeProjectReadForProbe,
+  authorizeOrganisationReadForProbe,
   toProjectStableAuthzSignature,
   authorizeProjectUpdateForSubmission,
   ensureProjectCommandAllowed,
@@ -63,6 +64,7 @@ import {
   listProjects,
   mergeOrganisationCapabilities,
   probeOrganisationHubForProject,
+  probeOrganisationQuery,
   probeExistingProject,
   probeProjectQuery,
   probeProjectForUpdate,
@@ -373,6 +375,44 @@ export const getProjectMapStylesQuery = guardedQuery(
   async (params, ctx): Promise<{ data: MapStyleResolvedDB[] }> => {
     const { db, event } = ctx
     const environment = event.platform?.env?.ENVIRONMENT
+
+    if (params.projectId && params.organisationId) {
+      throw error(400, 'Only one map style scope may be requested')
+    }
+
+    if (params.projectId) {
+      const probe = await probeProjectQuery(db, {
+        ref: params.projectId,
+        refKey: 'id',
+      })
+      if (!probe) return { data: [] }
+
+      const decision = authorizeProjectReadForProbe({
+        user: ctx.user,
+        userRoles: ctx.userRoles,
+        probe,
+      })
+      if (!decision.allowed) {
+        throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+      }
+    } else if (params.organisationId) {
+      const probe = await probeOrganisationQuery(db, {
+        ref: params.organisationId,
+        refKey: 'id',
+      })
+      if (!probe) return { data: [] }
+
+      const decision = authorizeOrganisationReadForProbe({
+        user: ctx.user,
+        userRoles: ctx.userRoles,
+        probe,
+      })
+      if (!decision.allowed) {
+        throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+      }
+    } else {
+      return { data: [] }
+    }
 
     await syncMapStyleCatalog(db)
 

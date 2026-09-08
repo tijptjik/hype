@@ -19,6 +19,7 @@ import type { AuthorizationDecision, UserRoleDisco } from '$lib/types'
 // 3. AUTHORIZATION
 //    - authorizeFeatureListForContext
 //    - authorizeFeatureReadForProbe
+//    - authorizeFeatureAdminReadForProbe
 //    - canCreateFeatureForProject
 //    - authorizeFeatureCreateForSubmission
 //    - authorizeFeatureUpdateForSubmission
@@ -277,6 +278,53 @@ export const authorizeFeatureReadForProbe = (params: {
   }
 
   return logFeatureReject('read', 'INSUFFICIENT_ROLE', {
+    actor,
+    target: params.probe,
+    requestedState: {
+      isPublished: params.probe.isPublished,
+      isArchived: params.probe.isArchived,
+    },
+  })
+}
+
+/**
+ * Evaluates access to the admin feature representation for a persisted feature.
+ *
+ * @param params - Session actor, roles, and resolved feature ancestry.
+ * @returns Authorization decision for an admin-profile feature read.
+ * @remarks Published visibility alone is not sufficient for admin profile data;
+ * the caller must have management or translation scope on the target project.
+ */
+export const authorizeFeatureAdminReadForProbe = (params: {
+  user: {
+    id?: string | null
+    isAnonymous?: boolean | null
+    superAdmin?: boolean | null
+  }
+  userRoles: UserRoleDisco[]
+  probe: FeatureAuthTarget & { isPublished: boolean; isArchived: boolean }
+}): AuthorizationDecision => {
+  const actor = toFeatureAuthActor({
+    id: params.user.id,
+    isAnonymous: params.user.isAnonymous,
+    superAdmin: params.user.superAdmin,
+    roles: params.userRoles,
+  })
+
+  if (!hasAuthenticatedSession(actor)) {
+    return logFeatureReject('admin-read', toAccountRequirementCode(actor), {
+      actor,
+      target: params.probe,
+      requestedState: {
+        isPublished: params.probe.isPublished,
+        isArchived: params.probe.isArchived,
+      },
+    })
+  }
+
+  if (canTranslateFeatureProject(actor, params.probe)) return { allowed: true }
+
+  return logFeatureReject('admin-read', 'INSUFFICIENT_ROLE', {
     actor,
     target: params.probe,
     requestedState: {

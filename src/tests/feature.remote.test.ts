@@ -7,6 +7,7 @@ import { withRemoteMeta } from './remote-function-mock'
 const {
   mockAuthorizeFeatureListForContext,
   mockAuthorizeFeatureReadForProbe,
+  mockAuthorizeFeatureAdminReadForProbe,
   mockAuthorizeFeatureCreateForSubmission,
   mockAuthorizeFeatureUpdateForSubmission,
   mockAuthorizeFeaturePublishForSubmission,
@@ -38,6 +39,7 @@ const {
 } = vi.hoisted(() => ({
   mockAuthorizeFeatureListForContext: vi.fn(() => ({ allowed: true })),
   mockAuthorizeFeatureReadForProbe: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeFeatureAdminReadForProbe: vi.fn(() => ({ allowed: true })),
   mockAuthorizeFeatureCreateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeFeatureUpdateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeFeaturePublishForSubmission: vi.fn(() => ({ allowed: true })),
@@ -209,6 +211,7 @@ vi.mock('$lib/api/services/feature', () => ({
 }))
 
 vi.mock('$lib/api/services/authz', () => ({
+  authorizeFeatureAdminReadForProbe: mockAuthorizeFeatureAdminReadForProbe,
   authorizeFeatureCreateForSubmission: mockAuthorizeFeatureCreateForSubmission,
   authorizeFeatureDeleteForSubmission: mockAuthorizeFeatureDeleteForSubmission,
   authorizeFeatureListForContext: mockAuthorizeFeatureListForContext,
@@ -310,6 +313,7 @@ describe('feature.remote authz matrix', () => {
 
     mockAuthorizeFeatureListForContext.mockReturnValue({ allowed: true })
     mockAuthorizeFeatureReadForProbe.mockReturnValue({ allowed: true })
+    mockAuthorizeFeatureAdminReadForProbe.mockReturnValue({ allowed: true })
     mockAuthorizeFeatureCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeFeatureUpdateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeFeaturePublishForSubmission.mockReturnValue({ allowed: true })
@@ -454,6 +458,30 @@ describe('feature.remote authz matrix', () => {
       code: 'INSUFFICIENT_ROLE',
     })
     expect(mockLoadFeature).not.toHaveBeenCalled()
+  })
+
+  it('rejects import hydration without explicit admin intent', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+
+    await expect(remote.getFeatureForImport({ id: 'feature-1' })).rejects.toThrow(
+      'INSUFFICIENT_ROLE',
+    )
+    expect(mockProbeFeatureQuery).not.toHaveBeenCalled()
+  })
+
+  it('does not hydrate an out-of-scope feature into the admin profile', async () => {
+    mockAuthorizeFeatureAdminReadForProbe.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    const result = await remote.getFeatureForImport({ id: 'feature-1' })
+
+    expect(result).toEqual({ data: null })
+    expect(mockListFeatures).not.toHaveBeenCalled()
   })
 
   it('featureForm create denies when create authz denies', async () => {

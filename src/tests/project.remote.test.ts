@@ -22,11 +22,14 @@ const {
   mockAuthorizeProjectCreateForSubmission,
   mockAuthorizeProjectDeleteForSubmission,
   mockAuthorizeProjectPublishForSubmission,
+  mockAuthorizeProjectReadForProbe,
+  mockAuthorizeOrganisationReadForProbe,
   mockAuthorizeProjectManageRolesForSubmission,
   mockAuthorizeProjectAssignCapabilitiesForSubmission,
   mockAuthorizeProjectManageCapabilitiesForSubmission,
   mockValidateUniqueNonReservedCode,
   mockResolveProjectCommandProbe,
+  mockProbeProjectQuery,
   mockUpdateProjectPublishedStateById,
   mockUpdateProjectArchivedStateById,
   mockSetProjectMapStyleByCode,
@@ -55,6 +58,8 @@ const {
   mockAuthorizeProjectCreateForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectDeleteForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectPublishForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeOrganisationReadForProbe: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectAssignCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectManageCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
@@ -63,6 +68,13 @@ const {
     id: 'project-1',
     organisationId: 'org-1',
     hubId: 'hub-a',
+  })),
+  mockProbeProjectQuery: vi.fn(async () => ({
+    id: 'project-1',
+    organisationId: 'org-1',
+    hubId: 'hub-a',
+    isPublished: true,
+    isArchived: false,
   })),
   mockUpdateProjectPublishedStateById: vi.fn(async () => null),
   mockUpdateProjectArchivedStateById: vi.fn(async () => null),
@@ -74,7 +86,12 @@ const {
 
 vi.mock('$lib/api/server/remote', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
-    withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'query'),
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -294,7 +311,8 @@ vi.mock('$lib/api/services/authz', () => ({
   authorizeProjectManageRolesForSubmission:
     mockAuthorizeProjectManageRolesForSubmission,
   authorizeProjectPublishForSubmission: mockAuthorizeProjectPublishForSubmission,
-  authorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
+  authorizeProjectReadForProbe: mockAuthorizeProjectReadForProbe,
+  authorizeOrganisationReadForProbe: mockAuthorizeOrganisationReadForProbe,
   authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
   ensureProjectCommandAllowed: (
     decision: { allowed: boolean; code?: string },
@@ -342,7 +360,7 @@ vi.mock('$lib/db/services/project', () => ({
   })),
   probeOrganisationHubForProject: mockProbeOrganisationHubForProject,
   probeExistingProject: vi.fn(async () => null),
-  probeProjectQuery: vi.fn(async () => null),
+  probeProjectQuery: mockProbeProjectQuery,
   probeProjectForUpdate: mockProbeProjectForUpdate,
   resolveProjectCommandProbe: mockResolveProjectCommandProbe,
   syncUserRoles: mockSyncProjectUserRoles,
@@ -377,6 +395,7 @@ vi.mock('$lib/db/services/map', () => ({
   listMapStylesForProject: vi.fn(async () => []),
   getOrganisationMapStyleScope: vi.fn(async () => null),
   listMapStylesForScope: vi.fn(async () => []),
+  syncMapStyleCatalog: vi.fn(async () => undefined),
   setProjectMapStyleByCode: mockSetProjectMapStyleByCode,
 }))
 
@@ -881,6 +900,24 @@ describe('project.remote form organisation move authz', () => {
       expected: 'Deny (403 + authz code)',
       actual: 'Deny (403 + authz code)',
       code: 'INSUFFICIENT_ROLE',
+    })
+  })
+
+  it('authorizes project map-style reads against the persisted project scope', async () => {
+    mockAuthorizeProjectReadForProbe.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.getProjectMapStyles({ projectId: 'project-1' }),
+    ).rejects.toMatchObject({
+      status: 403,
+      body: { message: 'INSUFFICIENT_ROLE' },
+    })
+    expect(mockProbeProjectQuery).toHaveBeenCalledWith(expect.anything(), {
+      ref: 'project-1',
+      refKey: 'id',
     })
   })
 

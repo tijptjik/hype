@@ -33,6 +33,7 @@ import {
 } from '$lib/api/services/feature'
 // AUTHORIZATION
 import {
+  authorizeFeatureAdminReadForProbe,
   authorizeFeatureCreateForSubmission,
   authorizeFeatureDeleteForSubmission,
   authorizeFeatureListForContext,
@@ -356,6 +357,10 @@ export const getFeatureForImport = guardedBatchByIdQuery<
 >(ImportFeatureLookupSchema, async ({ ids, ctx }) => {
   const { db, user, userRoles, event } = ctx
 
+  if (!ctx.isAdminRequest) {
+    throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+  }
+
   const probes = await Promise.all(
     ids.map(id =>
       probeFeatureQuery(db, {
@@ -374,7 +379,7 @@ export const getFeatureForImport = guardedBatchByIdQuery<
     const probe = probeById.get(id)
     if (!probe) return false
 
-    const decision = authorizeFeatureReadForProbe({
+    const decision = authorizeFeatureAdminReadForProbe({
       user,
       userRoles,
       probe,
