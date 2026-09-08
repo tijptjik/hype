@@ -7,7 +7,7 @@ import {
   guardedQuery,
 } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 // I18N
 import { getLocale } from '$lib/i18n'
@@ -545,14 +545,69 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const resolvedOrganisationId = current.organisationId
   const resolvedProjectId = current.projectId
 
+  // Authorize scalar changes before loading the relation-heavy admin shape.
+  const submittedDataBeforeHydration: Record<string, unknown> = {
+    i18n: data.i18n,
+  }
+  if (submittedProperties.length > 0) {
+    submittedDataBeforeHydration.properties = submittedProperties
+  }
+  if (
+    JSON.stringify(data.geometry ?? null) !== JSON.stringify(current.geometry ?? null)
+  ) {
+    submittedDataBeforeHydration.geometry = data.geometry
+  }
+  if (
+    JSON.stringify(data.addressMeta ?? null) !==
+    JSON.stringify(current.addressMeta ?? null)
+  ) {
+    submittedDataBeforeHydration.addressMeta = data.addressMeta
+  }
+  if (Boolean(data.isIntangible) !== Boolean(current.isIntangible)) {
+    submittedDataBeforeHydration.isIntangible = data.isIntangible
+  }
+  if (Boolean(data.isVisitable) !== Boolean(current.isVisitable)) {
+    submittedDataBeforeHydration.isVisitable = data.isVisitable
+  }
+  if (Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)) {
+    submittedDataBeforeHydration.isPendingReview = data.isPendingReview
+  }
+
+  const preliminaryUpdateDecision = authorizeFeatureUpdateForSubmission({
+    user,
+    userRoles,
+    resource: {
+      id: current.id,
+      organisationId: current.organisationId,
+      projectId: current.projectId,
+      layerId: current.layerId,
+      resourceHubId: current.resourceHubId,
+    },
+    submittedData: submittedDataBeforeHydration,
+  })
+  if (!preliminaryUpdateDecision.allowed) {
+    invalid(
+      issue(
+        toIssueDetailMessage(preliminaryUpdateDecision.code ?? 'INSUFFICIENT_ROLE'),
+      ),
+    )
+  }
+
+  const currentWithRelations = requireValue(
+    await loadFeature(
+      db,
+      getFeatureWithRelations('admin') as never,
+      [eq(feature.id, current.id)],
+      {
+        ...ctx.event.locals.hub,
+        isSuperAdmin: user.superAdmin || false,
+        isAdminRequest: ctx.isAdminRequest,
+      },
+    ),
+    () => invalid(issue('FEATURE_NOT_FOUND')),
+  )
   const currentEntity = requireValue(
-    (
-      await getFeature({
-        ref: current.id,
-        refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
-      })
-    ).data,
+    (await toEntityResponseShape(currentWithRelations, 'admin')).data,
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
 
@@ -570,6 +625,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     JSON.stringify(current.addressMeta ?? null)
   const intangibleChanged = Boolean(data.isIntangible) !== Boolean(current.isIntangible)
   const visitableChanged = Boolean(data.isVisitable) !== Boolean(current.isVisitable)
+  const pendingReviewChanged =
+    Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
 
   const submittedDataForUpdate: Record<string, unknown> = {}
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
@@ -578,6 +635,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   if (addressChanged) submittedDataForUpdate.addressMeta = data.addressMeta
   if (intangibleChanged) submittedDataForUpdate.isIntangible = data.isIntangible
   if (visitableChanged) submittedDataForUpdate.isVisitable = data.isVisitable
+  if (pendingReviewChanged) {
+    submittedDataForUpdate.isPendingReview = data.isPendingReview
+  }
 
   const updateDecision = authorizeFeatureUpdateForSubmission({
     user,
