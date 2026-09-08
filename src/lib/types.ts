@@ -393,6 +393,12 @@ export type AssetAnalyticsSummaryResult =
       message: string
     }
 
+export type AssetAnalyticsScope = {
+  scopePrefixes: string[]
+  organisationIds: string[]
+  projectIds: string[]
+}
+
 /* ----------------- */
 // PROJECT LICENSE
 /* -------- */

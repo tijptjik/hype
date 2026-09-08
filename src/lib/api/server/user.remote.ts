@@ -281,11 +281,6 @@ export const updateUserProfile = guardedCommand(
       throw error(403, 'ACCOUNT_REQUIRED')
     }
 
-    const existing = await loadUser(db, {}, [eq(user.id, params.id)])
-    if (!existing) {
-      throw error(404, 'USER_NOT_FOUND')
-    }
-
     if (
       !canUpdateUserProfile(
         {
@@ -297,6 +292,11 @@ export const updateUserProfile = guardedCommand(
       )
     ) {
       throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    }
+
+    const existing = await loadUser(db, {}, [eq(user.id, params.id)])
+    if (!existing) {
+      throw error(404, 'USER_NOT_FOUND')
     }
 
     const newData = { ...params.data }
