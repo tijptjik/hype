@@ -193,6 +193,7 @@ export {
   canOverrideUserSearchArchivedFilter,
   canUpdateUserProfile,
 } from './user'
+export { resolveAnalyticsScope } from './analytics'
 
 const RESOURCE_CODE_SEGMENTS = [
   ...Object.values(FirstClassResource),

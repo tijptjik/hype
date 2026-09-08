@@ -428,6 +428,17 @@ describe('user.remote', () => {
     expect(mockLoadUser).not.toHaveBeenCalled()
   })
 
+  it('rejects non-self profile updates before loading the target user', async () => {
+    await expect(
+      remote.updateUserProfile({
+        id: 'u-2',
+        data: { locale: 'en' },
+      }),
+    ).rejects.toMatchObject({ status: 403, message: 'INSUFFICIENT_ROLE' })
+
+    expect(mockLoadUser).not.toHaveBeenCalled()
+  })
+
   it('searchUsers caps limit at 100 and parses count rows', async () => {
     const db = { __tag: 'db-caps-limit' }
     mockSearchUsersByConditions.mockResolvedValue({

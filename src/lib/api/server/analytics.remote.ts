@@ -5,7 +5,7 @@ import { FormBoolean } from '$lib/db/zod/form'
 import { guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
 // AUTHORIZATION
-import { toAuthMessage } from '$lib/api/services/authz'
+import { resolveAnalyticsScope, toAuthMessage } from '$lib/api/services/authz'
 import { canAccessAnalytics } from '$lib/api/services/authz/user'
 // SERVER
 import {
@@ -54,6 +54,20 @@ export const getAssetAnalyticsSummary = guardedQuery(
       throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
     }
 
+    const scope = await resolveAnalyticsScope({
+      db: ctx.db,
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      requestedScope: {
+        scopePrefixes: params.scopePrefixes ?? [],
+        organisationIds: params.organisationIds ?? [],
+        projectIds: params.projectIds ?? [],
+      },
+    })
+    if (!scope.allowed || !scope.scope) {
+      throw error(403, toAuthMessage(scope.code ?? 'INSUFFICIENT_ROLE'))
+    }
+
     return fetchAssetAnalyticsSummary({
       ...resolveAssetAnalyticsConfig({
         environment: ctx.event.platform?.env.ENVIRONMENT,
@@ -62,9 +76,9 @@ export const getAssetAnalyticsSummary = guardedQuery(
         privateReadToken: privateEnv.ASSET_ANALYTICS_READ_TOKEN,
         legacyPrivateReadToken: privateEnv.IMAGE_ANALYTICS_READ_TOKEN,
       }),
-      scopePrefixes: params.scopePrefixes,
-      organisationIds: params.organisationIds,
-      projectIds: params.projectIds,
+      scopePrefixes: scope.scope.scopePrefixes,
+      organisationIds: scope.scope.organisationIds,
+      projectIds: scope.scope.projectIds,
     })
   },
 )
