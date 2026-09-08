@@ -933,6 +933,9 @@ export const upsertProjectProperties = async (
  *
  * @param db - Database handle.
  * @param params - Project id, hub scope, and optional rank offset.
+ * @returns Nothing after all missing inherited assignments are inserted atomically.
+ * @remarks Existing assignments are preserved, including explicit disabled flags.
+ * New ranks follow both the requested offset and the last persisted assignment.
  */
 export const seedDefaultInheritedPropertiesForProject = async (
   db: Database,
@@ -942,41 +945,63 @@ export const seedDefaultInheritedPropertiesForProject = async (
     startingRank?: number
   },
 ): Promise<void> => {
-  const organisationId = await getProjectOrganisationId(db, params.projectId)
-  const coreHubId = await getCoreHubId(db)
-  const scopedHubIds = Array.from(
-    new Set(
-      [params.hubId, coreHubId].filter((hubId): hubId is string => Boolean(hubId)),
-    ),
-  )
-  if (scopedHubIds.length === 0 && !organisationId) return
+  const organisationIds = db
+    .select({ id: project.organisationId })
+    .from(project)
+    .where(eq(project.id, params.projectId))
+  const coreHubId = db
+    .select({ id: hub.id })
+    .from(hub)
+    .where(eq(hub.code, 'core'))
+    .limit(1)
+  const assignedIds = db
+    .select({ id: projectProperty.propertyId })
+    .from(projectProperty)
+    .where(eq(projectProperty.projectId, params.projectId))
+  const nextRank = db
+    .select({
+      rank: sql<number>`coalesce(max(${projectProperty.rank}) + 1, 0)`,
+    })
+    .from(projectProperty)
+    .where(eq(projectProperty.projectId, params.projectId))
 
-  const defaultProperties = await db.query.property.findMany({
-    columns: { id: true, isDefaultEnabled: true },
-    where: and(
-      or(
-        and(eq(property.scope, 'hub'), inArray(property.hubId, scopedHubIds)),
-        organisationId
-          ? and(
-              eq(property.scope, 'organisation'),
-              eq(property.organisationId, organisationId),
-            )
-          : undefined,
-      ),
-    ),
-    orderBy: [asc(property.key)],
-  })
-  if (defaultProperties.length === 0) return
-
-  await db.insert(projectProperty).values(
-    defaultProperties.map((item, index) => ({
-      projectId: params.projectId,
-      propertyId: item.id,
-      isEnabled: Boolean(item.isDefaultEnabled),
-      isDefaultEnabled: Boolean(item.isDefaultEnabled),
-      rank: (params.startingRank ?? 0) + index,
-    })),
-  )
+  // Select only missing defaults at write time; explicit choices and ranks remain untouched.
+  // INSERT SELECT has a fixed parameter count regardless of the inherited catalog size.
+  await db
+    .insert(projectProperty)
+    .select(
+      db
+        .select({
+          projectId: sql<string>`${params.projectId}`.as('projectId'),
+          propertyId: property.id,
+          isEnabled: property.isDefaultEnabled,
+          isDefaultEnabled: property.isDefaultEnabled,
+          rank: sql<number>`max(${params.startingRank ?? 0}, (${nextRank})) +
+        row_number() over (order by ${property.key}, ${property.id}) - 1`.as('rank'),
+        })
+        .from(property)
+        .where(
+          and(
+            not(inArray(property.id, assignedIds)),
+            or(
+              and(
+                eq(property.scope, 'hub'),
+                or(
+                  params.hubId ? eq(property.hubId, params.hubId) : undefined,
+                  inArray(property.hubId, coreHubId),
+                ),
+              ),
+              and(
+                eq(property.scope, 'organisation'),
+                inArray(property.organisationId, organisationIds),
+              ),
+            ),
+          ),
+        ),
+    )
+    .onConflictDoNothing({
+      target: [projectProperty.projectId, projectProperty.propertyId],
+    })
 }
 
 /**
