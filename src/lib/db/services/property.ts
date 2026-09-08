@@ -7,6 +7,7 @@ import { toPropertyResponseFromRaw } from '$lib/api/services/property'
 import {
   insert,
   update,
+  updateRelated,
   insertMany,
   insertManyRelated,
   replaceManyRelated,
@@ -549,6 +550,8 @@ export const updateI18n = async (
  * @param incomingValues Array of current property value data from the form/API.
  * @param propertyId The ID of the parent property.
  * @returns Array of all current propertyValue records for the property from DB.
+ * @remarks Parent linkage is server-owned. Updates and deletions recheck the target
+ * property at write time rather than trusting the earlier ownership snapshot.
  */
 export const syncPropertyValues = async (
   db: Database,
@@ -568,9 +571,16 @@ export const syncPropertyValues = async (
   const valuesToUpdate = incomingValues.filter(iv => iv.id && existingIds.has(iv.id))
   const valuesToCreate = incomingValues.filter(iv => !iv.id || !existingIds.has(iv.id))
 
-  // Delete removed values
+  // Delete removed values only while they still belong to the target property.
   if (idsToDelete.length > 0) {
-    await delMany(db, propertyValue, propertyValue.id, idsToDelete)
+    await delManyRelated(
+      db,
+      propertyValue,
+      propertyValue.propertyId,
+      propertyId,
+      propertyValue.id,
+      idsToDelete,
+    )
   }
 
   // Create new values
@@ -582,16 +592,18 @@ export const syncPropertyValues = async (
     await insertMany(db, propertyValue, dataToInsert)
   }
 
-  // Update existing values
+  // Update existing values without accepting a submitted parent or crossing a changed scope.
   await Promise.all(
     valuesToUpdate.map(async val => {
       const { i18n, ...baseValueData } = val // Exclude i18n for base propertyValue update
-      await update<typeof propertyValue>(
+      await updateRelated<typeof propertyValue>(
         db,
         propertyValue,
-        baseValueData,
+        { ...baseValueData, propertyId },
         propertyValue.id,
         val.id,
+        propertyValue.propertyId,
+        propertyId,
       )
     }),
   )
