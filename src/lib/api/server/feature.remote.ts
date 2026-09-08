@@ -549,9 +549,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const submittedDataBeforeHydration: Record<string, unknown> = {
     i18n: data.i18n,
   }
-  if (submittedProperties.length > 0) {
-    submittedDataBeforeHydration.properties = submittedProperties
-  }
+  // Property snapshots need persisted relations for comparison; the final gate below
+  // checks their actual changes so unchanged values do not block translators.
   if (
     JSON.stringify(data.geometry ?? null) !== JSON.stringify(current.geometry ?? null)
   ) {
@@ -682,7 +681,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   )
 
   await updateI18n(db, data.i18n, current.id as Id)
-  await updateProperties(db, submittedProperties, current.id as Id)
+  if (propertiesChanged) {
+    await updateProperties(db, submittedProperties, current.id as Id)
+  }
 
   return toCreatedResponseShape(persisted)
 })

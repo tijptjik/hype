@@ -210,7 +210,8 @@ vi.mock('$lib/api/services/feature', () => ({
   toRequestedListState: mockToRequestedListState,
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('$lib/api/services/authz', async importOriginal => ({
+  ...(await importOriginal<typeof import('$lib/api/services/authz')>()),
   authorizeFeatureAdminReadForProbe: mockAuthorizeFeatureAdminReadForProbe,
   authorizeFeatureCreateForSubmission: mockAuthorizeFeatureCreateForSubmission,
   authorizeFeatureDeleteForSubmission: mockAuthorizeFeatureDeleteForSubmission,
@@ -568,6 +569,62 @@ describe('feature.remote authz matrix', () => {
       actual: true,
     })
   })
+
+  it.each([false, true])(
+    'translator feature update checks actual property changes (changed=%s)',
+    async propertiesChanged => {
+      const { authorizeFeatureUpdateForSubmission } = await import(
+        '$lib/api/services/authz/feature'
+      )
+      mockAuthorizeFeatureUpdateForSubmission.mockImplementation(
+        authorizeFeatureUpdateForSubmission,
+      )
+      mockGuardedContext.mockResolvedValue({
+        ...(await mockGuardedContext()),
+        userRoles: [{ type: 'project', role: 'translator', projectId: 'project-1' }],
+      })
+      const properties = [{ propertyId: 'property-1', value: 'original' }]
+      mockLoadFeature.mockResolvedValue({
+        id: 'feature-1',
+        i18n: { en: { name: 'Feature' } },
+        properties,
+      })
+      const submission = remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'layer-1',
+            i18n: { en: { name: 'Translated feature' } },
+            properties: propertiesChanged
+              ? [{ propertyId: 'property-1', value: 'changed' }]
+              : properties,
+            geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+            addressMeta: { street: 'Main' },
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      )
+
+      if (propertiesChanged) {
+        await expect(submission).rejects.toThrow('FIELD_FORBIDDEN')
+        expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+        expect(mockUpdateProperties).not.toHaveBeenCalled()
+      } else {
+        await expect(submission).resolves.toMatchObject({ data: { id: 'feature-1' } })
+        expect(mockUpdateI18n).toHaveBeenCalled()
+        expect(mockUpdateProperties).not.toHaveBeenCalled()
+      }
+    },
+  )
 
   it('featureForm update authorizes before loading the relation graph', async () => {
     mockAuthorizeFeatureUpdateForSubmission.mockReturnValue({
