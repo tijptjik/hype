@@ -214,7 +214,8 @@ vi.mock('$lib/api/services/layer', async importOriginal => {
   }
 })
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('$lib/api/services/authz', async importOriginal => ({
+  ...(await importOriginal<typeof import('$lib/api/services/authz')>()),
   authorizeLayerCreateForSubmission: mockAuthorizeLayerCreateForSubmission,
   authorizeLayerDeleteForSubmission: mockAuthorizeLayerDeleteForSubmission,
   authorizeLayerListForContext: mockAuthorizeLayerListForContext,
@@ -384,6 +385,57 @@ describe('layer.remote authz matrix', () => {
       isArchived: true,
     })
   })
+
+  it.each([false, true])(
+    'translator layer update checks actual property changes (changed=%s)',
+    async propertiesChanged => {
+      const { authorizeLayerUpdateForSubmission } = await import(
+        '$lib/api/services/authz/layer'
+      )
+      mockAuthorizeLayerUpdateForSubmission.mockImplementation(
+        authorizeLayerUpdateForSubmission,
+      )
+      mockGuardedContext.mockResolvedValue({
+        ...(await mockGuardedContext()),
+        userRoles: [{ type: 'project', role: 'translator', projectId: 'project-1' }],
+      })
+      const properties = [{ propertyId: 'property-1', isVisible: true }]
+      mockLoadLayer.mockResolvedValue({
+        id: 'layer-1',
+        i18n: { en: { name: 'Layer' } },
+        properties,
+        isDefaultVisible: false,
+      })
+      const submission = remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'project-1',
+            metadata: { zoom: 10 },
+            isDefaultVisible: false,
+            i18n: { en: { name: 'Translated layer' } },
+            properties: propertiesChanged
+              ? [{ propertyId: 'property-1', isVisible: false }]
+              : properties,
+          },
+        },
+        throwingInvalid,
+      )
+      if (propertiesChanged) {
+        await expect(submission).rejects.toThrow('FIELD_FORBIDDEN')
+        expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
+        expect(mockUpdateI18n).not.toHaveBeenCalled()
+      } else {
+        await expect(submission).resolves.toMatchObject({ data: { id: 'layer-1' } })
+        expect(mockUpdateI18n).toHaveBeenCalled()
+      }
+      expect(mockUpdateProperties).not.toHaveBeenCalled()
+    },
+  )
 
   it('getLayers denies when list authz denies', async () => {
     mockAuthorizeLayerListForContext.mockReturnValue({

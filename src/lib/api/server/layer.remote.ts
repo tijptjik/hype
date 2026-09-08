@@ -325,7 +325,8 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Authorize from the scalar probe before loading the relation-heavy admin shape.
   const submittedDataForUpdate: Record<string, unknown> = { i18n: data.i18n }
-  if (hasSubmittedProperties) submittedDataForUpdate.properties = submittedProperties
+  // Property snapshots require the persisted relation comparison below; unchanged
+  // properties must not turn a translation edit into a restricted field update.
   if (
     toStableSignature(data.metadata ?? {}) !== toStableSignature(current.metadata ?? {})
   ) {
@@ -372,6 +373,24 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     hasSubmittedProperties &&
     toStableSignature(toComparableLayerProperties(submittedProperties)) !==
       toStableSignature(toComparableLayerProperties(currentEntity.properties ?? []))
+
+  // Authorize changed relation fields before any part of the submission is written.
+  if (propertiesChanged) {
+    const propertyDecision = authorizeLayerUpdateForSubmission({
+      user,
+      userRoles,
+      resource: {
+        id: current.id,
+        organisationId: current.organisationId,
+        projectId: current.projectId,
+        hubId: current.hubId,
+      },
+      submittedData: { ...submittedDataForUpdate, properties: submittedProperties },
+    })
+    if (!propertyDecision.allowed) {
+      invalid(issue(toIssueDetailMessage(propertyDecision.code ?? 'INSUFFICIENT_ROLE')))
+    }
+  }
 
   const updatedAt = requireValue(meta?.updatedAt, () =>
     invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
