@@ -1,5 +1,8 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, asc, eq, inArray, or } from 'drizzle-orm'
+import { and, asc, eq, inArray, or, not, sql, getTableColumns } from 'drizzle-orm'
+import { chunkedInArray, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
 // DB
 import { transformI18nSafely, toRelatedRecords } from '$lib/db'
 import { inferPropertyDiscriminatorFromComponent } from '$lib/api/services'
@@ -7,7 +10,6 @@ import { toPropertyResponseFromRaw } from '$lib/api/services/property'
 import {
   insert,
   update,
-  updateRelated,
   insertMany,
   insertManyRelated,
   replaceManyRelated,
@@ -79,6 +81,7 @@ import { retryBusyRead } from './sqlite'
 //    - updateBaseProperty
 //    - updateI18n
 //    - syncPropertyValues
+//    - isMissingPropertyValueOwnership
 //    - updatePropertyValueI18n
 //
 // 3.2 CRUD :: UPDATE (SYNC)
@@ -552,6 +555,7 @@ export const updateI18n = async (
  * @returns Array of all current propertyValue records for the property from DB.
  * @remarks Parent linkage is server-owned. Updates and deletions recheck the target
  * property at write time rather than trusting the earlier ownership snapshot.
+ * Deletions, creates, guarded updates, and readback share one atomic D1 batch.
  */
 export const syncPropertyValues = async (
   db: Database,
@@ -563,54 +567,99 @@ export const syncPropertyValues = async (
   })
 
   const existingIds = new Set(existingValues.map(v => v.id))
-  const incomingMap = new Map(incomingValues.map(v => [v.id, v]))
-
-  const idsToDelete = existingValues
-    .filter(ev => !incomingMap.has(ev.id))
-    .map(ev => ev.id)
+  const incomingIds = incomingValues
+    .map(value => value.id)
+    .filter(id => typeof id === 'string')
   const valuesToUpdate = incomingValues.filter(iv => iv.id && existingIds.has(iv.id))
   const valuesToCreate = incomingValues.filter(iv => !iv.id || !existingIds.has(iv.id))
 
   // Delete removed values only while they still belong to the target property.
-  if (idsToDelete.length > 0) {
-    await delManyRelated(
-      db,
-      propertyValue,
-      propertyValue.propertyId,
-      propertyId,
-      propertyValue.id,
-      idsToDelete,
+  // Evaluate the replacement set at write time so concurrent submissions cannot combine sets.
+  const deletion = db
+    .delete(propertyValue)
+    .where(
+      and(
+        eq(propertyValue.propertyId, propertyId),
+        not(chunkedInArray(propertyValue.id, incomingIds)),
+      ),
+    )
+
+  // Create new values in parameter-safe chunks within the same transaction.
+  const rowsPerInsert = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Object.keys(getTableColumns(propertyValue)).length),
+  )
+  const creates = []
+  for (let index = 0; index < valuesToCreate.length; index += rowsPerInsert) {
+    creates.push(
+      db
+        .insert(propertyValue)
+        .values(
+          valuesToCreate
+            .slice(index, index + rowsPerInsert)
+            .map(value => ({ ...value, propertyId })),
+        ),
     )
   }
 
-  // Create new values
-  if (valuesToCreate.length > 0) {
-    const dataToInsert = valuesToCreate.map(val => ({
-      ...val,
-      propertyId: propertyId,
-    })) as InferInsertModel<typeof propertyValue>[]
-    await insertMany(db, propertyValue, dataToInsert)
-  }
-
   // Update existing values without accepting a submitted parent or crossing a changed scope.
-  await Promise.all(
-    valuesToUpdate.map(async val => {
-      const { i18n, ...baseValueData } = val // Exclude i18n for base propertyValue update
-      await updateRelated<typeof propertyValue>(
-        db,
-        propertyValue,
-        { ...baseValueData, propertyId },
-        propertyValue.id,
-        val.id,
-        propertyValue.propertyId,
-        propertyId,
-      )
-    }),
-  )
-
-  return db.query.propertyValue.findMany({
-    where: eq(propertyValue.propertyId, propertyId),
+  const updates = valuesToUpdate.map(val => {
+    const { i18n, ...baseValueData } = val // Exclude i18n for base propertyValue update
+    return db
+      .insert(propertyValue)
+      .values({
+        ...baseValueData,
+        // The required parent lookup doubles as an in-transaction ownership assertion:
+        // a moved or deleted row yields NULL, so NOT NULL aborts the entire D1 batch.
+        propertyId: sql`(
+        select ${propertyValue.propertyId} from ${propertyValue}
+        where ${propertyValue.id} = ${val.id} and ${propertyValue.propertyId} = ${propertyId}
+      )`,
+      })
+      .onConflictDoUpdate({
+        target: propertyValue.id,
+        set: { ...baseValueData, propertyId },
+      })
   })
+
+  try {
+    // Keep deletion, creates, guarded updates, and readback in one atomic transaction.
+    const results = await db.batch([
+      deletion,
+      ...creates,
+      ...updates,
+      db.select().from(propertyValue).where(eq(propertyValue.propertyId, propertyId)),
+    ])
+    return results.at(-1) as PropertyValueDB[]
+  } catch (cause) {
+    if (isMissingPropertyValueOwnership(cause)) {
+      throw error(404, 'PROPERTY_VALUE_NOT_FOUND')
+    }
+    throw cause
+  }
+}
+
+/**
+ * Recognizes the required-parent constraint used by guarded value updates.
+ * @param cause - Error returned by SQLite, D1, or a Drizzle wrapper.
+ * @returns Whether an expected update target was missing from its authorized property.
+ * @remarks Match only this column's NOT NULL failure; other constraint failures retain
+ * their original error and all failures have already rolled back the batch.
+ */
+function isMissingPropertyValueOwnership(cause: unknown): boolean {
+  const visited = new Set<unknown>()
+  let current = cause
+  while (current && typeof current === 'object' && !visited.has(current)) {
+    visited.add(current)
+    if (
+      'message' in current &&
+      typeof current.message === 'string' &&
+      current.message.includes('NOT NULL constraint failed: propertyValue.propertyId')
+    )
+      return true
+    current = 'cause' in current ? current.cause : undefined
+  }
+  return false
 }
 
 /**
