@@ -731,13 +731,13 @@ export const replaceManyRelated = async <T extends DbTable>(
             .returning(),
         )
 
-  // Keep the replacement in one D1 batch whenever possible so a failed insert cannot
-  // leave the relation empty after its prior rows have been deleted.
+  // Keep every replacement statement in one D1 batch so a late failure cannot
+  // commit deletion or a partial replacement. Chunk SQL parameters, not this transaction.
   const deleteStatement = db
     .delete(table)
     .where(eq(foreignKeyColumn, foreignKeyValue))
     .returning()
-  const results = await executeD1Batch(db, [deleteStatement, ...insertStatements])
+  const results = await db.batch([deleteStatement, ...insertStatements])
 
   // The delete result is intentionally ignored; replacing an empty relation is valid.
   const insertedEntities = (results.slice(1) as InferSelectModel<T>[][]).flat()
