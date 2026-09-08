@@ -40,6 +40,7 @@ import {
   toIssueDetailMessage,
   toHubUserRoleSignature,
   authorizeHubList,
+  isRelevantHubAdmin,
 } from '$lib/api/services/authz'
 // SERVICES
 import {
@@ -718,7 +719,14 @@ export const joinSubscription = guardedCommand(
 export const getOrganisationLookupsForHub = guardedQuery(
   ListQueryParamsSchema,
   async (params, ctx) => {
-    const { db } = ctx
+    const { db, user, userRoles, isAdminRequest } = ctx
+    if (user.isAnonymous) {
+      throw error(403, 'ACCOUNT_REQUIRED')
+    }
+    if (!isAdminRequest) {
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    }
+
     // Resolve organisation ids from query conditions.
     const organisationIds = Array.isArray(params.conditions?.organisation)
       ? (params.conditions?.organisation as string[])
@@ -731,6 +739,16 @@ export const getOrganisationLookupsForHub = guardedQuery(
 
     // Load assignment flags for selected organisations.
     const result = await listOrganisations(db, organisationIds)
+
+    // The lookup exposes hub-assignment metadata only inside hub-admin scope.
+    if (
+      user.superAdmin !== true &&
+      result.some(
+        organisationRow => !isRelevantHubAdmin(userRoles, organisationRow.hubId),
+      )
+    ) {
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    }
 
     // Return lookup payload used by hub form reconciliation.
     return { data: result }
