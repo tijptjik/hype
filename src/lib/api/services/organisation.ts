@@ -1,5 +1,5 @@
 // DRIZZLE
-import { asc, eq, inArray, type SQL } from 'drizzle-orm'
+import { asc, eq, type SQL } from 'drizzle-orm'
 // LIB
 import {
   applyQueryFilters,
@@ -42,6 +42,7 @@ import type {
   OrganisationListByProfile,
   OrganisationProfile,
 } from '$lib/db/zod/schema/organisation.types'
+import { chunkedInArray } from '$lib/utils/batch-query'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -373,7 +374,7 @@ const buildVisibilityAndOwnershipConditions = (
     conditions.push(eq(organisation.id, '__none__' as Id))
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
-  conditions.push(inArray(organisation.id, allowedOrganisationIds))
+  conditions.push(chunkedInArray(organisation.id, allowedOrganisationIds))
 
   // Apply tri-state visibility semantics for admin owner queries.
   const isPublished = toTriStateBoolean(params.isPublished)

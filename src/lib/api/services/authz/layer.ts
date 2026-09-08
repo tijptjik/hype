@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
+import { and, eq, or, type SQL } from 'drizzle-orm'
 import { error } from '@sveltejs/kit'
 import { removeExcludedColumns, toTriStateBoolean } from '$lib/api'
 import {
@@ -21,6 +21,7 @@ import type {
   SessionUser,
   UserRoleDisco,
 } from '$lib/types'
+import { chunkedInArray } from '$lib/utils/batch-query'
 
 type LayerPolicyCode =
   | 'UNAUTHENTICATED'
@@ -509,10 +510,10 @@ export const buildLayerVisibilityAndOwnershipConditions = (
   ): SQL<unknown> | undefined => {
     const scopeConditions: SQL<unknown>[] = []
     if (organisationIds.length > 0) {
-      scopeConditions.push(inArray(layer.organisationId, organisationIds as Id[]))
+      scopeConditions.push(chunkedInArray(layer.organisationId, organisationIds))
     }
     if (projectIds.length > 0) {
-      scopeConditions.push(inArray(layer.projectId, projectIds as Id[]))
+      scopeConditions.push(chunkedInArray(layer.projectId, projectIds))
     }
     if (scopeConditions.length === 0) return undefined
     if (scopeConditions.length === 1) return scopeConditions[0]
