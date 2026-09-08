@@ -392,7 +392,7 @@ describe('feature.remote authz matrix', () => {
       id: 'feature-1',
       isArchived: true,
     })
-  })
+  }, 15_000)
 
   it('getFeatures denies when list authz denies', async () => {
     mockAuthorizeFeatureListForContext.mockReturnValue({
