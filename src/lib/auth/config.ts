@@ -12,8 +12,9 @@ export const authConfig = {
     cookieCache: {
       // signed cookie
       enabled: true,
-      // Keep normal navigation and the app's concurrent remote reads off D1. Sensitive
-      // server operations can opt out with Better Auth's `disableCookieCache` option.
+      // Cache the session payload to avoid repeated session-table reads. Account
+      // availability is still checked on every authenticated auth request. Sensitive
+      // operations can opt out with Better Auth's `disableCookieCache` option.
       maxAge: 5 * 60, // 5 min
     },
   },
