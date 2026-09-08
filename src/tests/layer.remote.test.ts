@@ -548,6 +548,36 @@ describe('layer.remote authz matrix', () => {
     expect(mockLoadLayer).not.toHaveBeenCalled()
   })
 
+  it('layerForm update authorizes before loading the relation graph', async () => {
+    mockAuthorizeLayerUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'project-1',
+            metadata: { zoom: 11 },
+            isDefaultVisible: true,
+            properties: [],
+            i18n: { en: { name: 'Layer' } },
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+
+    expect(mockLoadLayer).not.toHaveBeenCalled()
+    expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
+  })
+
   it('publishLayer denies when publish authz denies', async () => {
     mockAuthorizeLayerPublishForSubmission.mockReturnValue({
       allowed: false,

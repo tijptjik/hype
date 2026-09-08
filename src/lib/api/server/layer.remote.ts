@@ -51,7 +51,6 @@ import {
   cascadeLayerArchivedStateToDescendants,
   cascadeLayerPublishedStateToDescendants,
 } from '$lib/db/services/layer'
-import { probeProjectForUpdate } from '$lib/db/services/project'
 // SCHEMA
 import { layer } from '$lib/db/schema'
 import {
@@ -322,11 +321,33 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
   }
 
-  const projectScope = requireValue(
-    await probeProjectForUpdate(db, data.projectId as Id),
-    () => invalid(issue('PROJECT_NOT_FOUND')),
-  )
-  const resolvedOrganisationId = projectScope.organisationId
+  const resolvedOrganisationId = current.organisationId
+
+  // Authorize from the scalar probe before loading the relation-heavy admin shape.
+  const submittedDataForUpdate: Record<string, unknown> = { i18n: data.i18n }
+  if (hasSubmittedProperties) submittedDataForUpdate.properties = submittedProperties
+  if (
+    toStableSignature(data.metadata ?? {}) !== toStableSignature(current.metadata ?? {})
+  ) {
+    submittedDataForUpdate.metadata = data.metadata
+  }
+  if (Boolean(data.isDefaultVisible) !== Boolean(current.isDefaultVisible)) {
+    submittedDataForUpdate.isDefaultVisible = data.isDefaultVisible
+  }
+  const updateDecision = authorizeLayerUpdateForSubmission({
+    user,
+    userRoles,
+    resource: {
+      id: current.id,
+      organisationId: current.organisationId,
+      projectId: current.projectId,
+      hubId: current.hubId,
+    },
+    submittedData: submittedDataForUpdate,
+  })
+  if (!updateDecision.allowed) {
+    invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
+  }
 
   const currentWithRelations = requireValue(
     await loadLayer(
@@ -347,39 +368,10 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     () => invalid(issue('LAYER_NOT_FOUND')),
   )
 
-  const i18nChanged =
-    toStableSignature(data.i18n) !== toStableSignature(currentEntity.i18n ?? {})
   const propertiesChanged =
     hasSubmittedProperties &&
     toStableSignature(toComparableLayerProperties(submittedProperties)) !==
       toStableSignature(toComparableLayerProperties(currentEntity.properties ?? []))
-  const metadataChanged =
-    toStableSignature(data.metadata ?? {}) !== toStableSignature(current.metadata ?? {})
-  const defaultVisibilityChanged =
-    Boolean(data.isDefaultVisible) !== Boolean(currentEntity.isDefaultVisible)
-
-  const submittedDataForUpdate: Record<string, unknown> = {}
-  if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
-  if (propertiesChanged) submittedDataForUpdate.properties = submittedProperties
-  if (metadataChanged) submittedDataForUpdate.metadata = data.metadata
-  if (defaultVisibilityChanged) {
-    submittedDataForUpdate.isDefaultVisible = data.isDefaultVisible
-  }
-
-  const updateDecision = authorizeLayerUpdateForSubmission({
-    user,
-    userRoles,
-    resource: {
-      id: current.id,
-      organisationId: current.organisationId,
-      projectId: current.projectId,
-      hubId: current.hubId,
-    },
-    submittedData: submittedDataForUpdate,
-  })
-  if (!updateDecision.allowed) {
-    invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
-  }
 
   const updatedAt = requireValue(meta?.updatedAt, () =>
     invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
