@@ -118,4 +118,26 @@ describe('account password endpoint', () => {
     expect(setPassword).toHaveBeenCalledOnce()
     expect(response.headers.get('set-cookie')).toBe('better-auth.session_data=updated')
   })
+
+  it.each([400, 401, 403, 500])(
+    'does not create a password after an email-change HTTP %s response',
+    async status => {
+      const changeEmail = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ message: 'Email change rejected' }), {
+          status,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      const { event, setPassword } = createEvent({
+        changeEmail,
+        email: 'new@example.test',
+      })
+
+      const response = await POST(event as never)
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ message: 'PASSWORD_NOT_SET' })
+      expect(setPassword).not.toHaveBeenCalled()
+    },
+  )
 })

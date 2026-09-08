@@ -51,6 +51,11 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
         headers: request.headers,
         asResponse: true,
       })
+      // Raw responses carry API failures as HTTP status instead of throwing.
+      // Do not create credentials after the requested email change was rejected.
+      if (!emailChangeResponse.ok) {
+        return json({ message: 'PASSWORD_NOT_SET' }, { status: 400 })
+      }
     }
     await locals.auth.api.setPassword({
       body: { newPassword },
