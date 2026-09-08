@@ -10,6 +10,7 @@ const reviewMocks = vi.hoisted(() => ({
   publishImages: vi.fn(),
   commitTaskImageReview: vi.fn(),
   commitTaskFeatureReview: vi.fn(),
+  commitTaskFeatureDraftFinalization: vi.fn(),
   probeFeatureForUpdate: vi.fn(),
   probeLayerForUpdate: vi.fn(),
   updateFeatureByIdWithConcurrency: vi.fn(),
@@ -295,6 +296,7 @@ describe('task draft finalization recovery', () => {
       const ctx = {
         user: { id: 'contributor', isAnonymous: false },
         userId: 'contributor',
+        event: { locals: { hub: {} } },
         db: { query: { task: { findFirst: vi.fn(async () => ({ ...draft })) } } },
       }
       reviewMocks.updateTask.mockImplementation(async (_db, patch) => {
@@ -305,11 +307,11 @@ describe('task draft finalization recovery', () => {
         failure === 'missing' ? null : { id: 'feature', modifiedAt: 'version' },
       )
       if (failure === 'failure') {
-        reviewMocks.updateFeatureByIdWithConcurrency.mockRejectedValue(
+        reviewMocks.commitTaskFeatureDraftFinalization.mockRejectedValue(
           new Error('write failed'),
         )
       } else {
-        reviewMocks.updateFeatureByIdWithConcurrency.mockResolvedValue(undefined)
+        reviewMocks.commitTaskFeatureDraftFinalization.mockResolvedValue(false)
       }
 
       await expect(finalizeHandler({ id: 'task' }, ctx)).rejects.toThrow()
@@ -321,16 +323,20 @@ describe('task draft finalization recovery', () => {
         id: 'feature',
         modifiedAt: 'fresh',
       })
-      reviewMocks.updateFeatureByIdWithConcurrency.mockResolvedValue({
-        id: 'feature',
+      reviewMocks.commitTaskFeatureDraftFinalization.mockImplementation(async () => {
+        draft.isDraft = false
+        return true
+      })
+      reviewMocks.loadTask.mockResolvedValue({ ...draft, isDraft: false })
+      await expect(finalizeHandler({ id: 'task' }, ctx)).resolves.toMatchObject({
         isDraft: false,
       })
-      await expect(finalizeHandler({ id: 'task' }, ctx)).resolves.toMatchObject({
-        data: { isDraft: false },
-      })
-      expect(reviewMocks.updateFeatureByIdWithConcurrency).toHaveBeenLastCalledWith(
+      expect(reviewMocks.commitTaskFeatureDraftFinalization).toHaveBeenLastCalledWith(
         ctx.db,
-        { id: 'feature', updatedAt: 'fresh', data: { isDraft: false } },
+        {
+          task: expect.objectContaining({ id: 'task', featureId: 'feature' }),
+          feature: { id: 'feature', modifiedAt: 'fresh' },
+        },
       )
       expect(draft.isDraft).toBe(false)
     },

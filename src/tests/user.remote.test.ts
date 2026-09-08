@@ -420,6 +420,14 @@ describe('user.remote', () => {
     )
   })
 
+  it('rejects arbitrary user reads without the user-search capability', async () => {
+    await expect(
+      remote.getUser({ ref: 'u-2', refKey: 'id', meta: { profile: 'detail' } }),
+    ).rejects.toMatchObject({ status: 403, message: 'INSUFFICIENT_ROLE' })
+    expect(mockToUserReadQueryPlan).not.toHaveBeenCalled()
+    expect(mockLoadUser).not.toHaveBeenCalled()
+  })
+
   it('searchUsers caps limit at 100 and parses count rows', async () => {
     const db = { __tag: 'db-caps-limit' }
     mockSearchUsersByConditions.mockResolvedValue({
