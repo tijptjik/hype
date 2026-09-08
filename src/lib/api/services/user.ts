@@ -917,7 +917,7 @@ export const toUserReadQueryPlan = (
 } => {
   const { conditions } = getUserQueryContext(
     params.sessionUser,
-    params.request,
+    params.isAdminRequest,
     {},
     params.userRoles,
     false,
@@ -944,7 +944,7 @@ export const toUserReadQueryPlan = (
  * Non-super-admin callers are restricted from seeing archived users, and most callers are scoped to self-only visibility.
  *
  * @param currentUser - Current session user.
- * @param request - Request object used to distinguish admin from public flows.
+ * @param requestOrIntent - Legacy request or resolved guarded-remote admin intent.
  * @param params - Raw query parameters.
  * @param userRoles - Resolved role disco rows for the current user.
  * @param isCollection - Whether the query targets a collection rather than a single entity.
@@ -952,7 +952,7 @@ export const toUserReadQueryPlan = (
  */
 export const getUserQueryContext = (
   currentUser: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
   isCollection: boolean = true,
@@ -982,8 +982,13 @@ export const getUserQueryContext = (
     return userRoles.some(role => role.type === 'project' && role.role === 'maintainer')
   }
 
+  const adminRequest =
+    typeof requestOrIntent === 'boolean'
+      ? requestOrIntent
+      : isAdminRequest(requestOrIntent)
+
   // PUBLIC : public requests can only see their own user
-  if (!isAdminRequest(request)) {
+  if (!adminRequest) {
     params = removeExcludedColumns(params, excludeColumns)
     // Other roles can only see their own user
     conditions.push(eq(user.id, currentUser.id))

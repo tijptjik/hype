@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 // API
 import {
+  getUserQueryContext,
   toUserProfileResponseShape,
   toUserRelationsWithContributionConstraints,
   userEntityWithRelations,
@@ -121,6 +122,28 @@ describe('user contribution profiles', () => {
     expect(relations.contributedFeatures).toHaveProperty('where')
     expect(relations.contributedImages).toHaveProperty('with.featureImage.where')
     expect(relations.contributedTasks).toHaveProperty('where')
+  })
+})
+
+describe('getUserQueryContext', () => {
+  it('uses resolved admin intent instead of request URL inference', () => {
+    const user = {
+      id: 'user-1',
+      superAdmin: false,
+    } as unknown as SessionUser
+    const ownerRole = [
+      {
+        type: 'organisation',
+        role: 'owner',
+        organisationId: 'organisation-1',
+      },
+    ] as never
+
+    const publicContext = getUserQueryContext(user, false, {}, ownerRole)
+    const adminContext = getUserQueryContext(user, true, {}, ownerRole)
+
+    expect(publicContext.conditions).toHaveLength(2)
+    expect(adminContext.conditions).toHaveLength(1)
   })
 })
 
