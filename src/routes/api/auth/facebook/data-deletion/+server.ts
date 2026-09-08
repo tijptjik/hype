@@ -10,7 +10,7 @@ import { generateUsernameFromId } from '$lib/utils/username-generator.server'
 // DB
 import * as schema from '$lib/db/schema/index'
 // DRIZZLE
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 // TYPES
 import type { RequestHandler } from './$types'
@@ -46,103 +46,113 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
     columns: { id: true, userId: true },
   })
 
-  if (matchingAccount) {
-    await db.transaction(async tx => {
-      const [linkedAccounts, registeredPasskey, existingUser] = await Promise.all([
-        tx.query.account.findMany({
-          where: eq(schema.account.userId, matchingAccount.userId),
-          columns: { id: true },
-        }),
-        tx.query.passkey.findFirst({
-          where: eq(schema.passkey.userId, matchingAccount.userId),
-          columns: { id: true },
-        }),
-        tx.query.user.findFirst({
-          where: eq(schema.user.id, matchingAccount.userId),
-          columns: { id: true },
-        }),
-      ])
-
-      // Remove Facebook's token-bearing association before retaining any account state.
-      await tx.delete(schema.account).where(eq(schema.account.id, matchingAccount.id))
-
-      const hasAnotherSignInMethod =
-        linkedAccounts.some(account => account.id !== matchingAccount.id) ||
-        Boolean(registeredPasskey)
-      if (hasAnotherSignInMethod || !existingUser) return
-
-      // Keep the immutable user ID for submitted records, but scrub private account state.
-      const deletedUsername = await createDeletedUsername(
-        matchingAccount.userId,
-        username =>
-          tx.query.user.findFirst({
-            where: eq(schema.user.username, username),
-            columns: { id: true },
-          }),
-      )
-      await Promise.all([
-        tx
-          .update(schema.user)
-          .set({
-            name: 'Deleted User',
-            username: deletedUsername,
-            email: `deleted+${matchingAccount.userId}@hype.invalid`,
-            emailVerified: false,
-            image: null,
-            locale: 'en',
-            attribution: null,
-            isAnonymous: false,
-            isArchived: true,
-            preferences:
-              '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}',
-            experimental: '{"contributorMode":false, "noLabelsMode":false}',
-          })
-          .where(eq(schema.user.id, matchingAccount.userId)),
-        tx
-          .delete(schema.session)
-          .where(eq(schema.session.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.passkey)
-          .where(eq(schema.passkey.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.verification)
-          .where(eq(schema.verification.value, matchingAccount.userId)),
-        tx
-          .delete(schema.userActivity)
-          .where(eq(schema.userActivity.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.userFeature)
-          .where(eq(schema.userFeature.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.userLayer)
-          .where(eq(schema.userLayer.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.hubRole)
-          .where(eq(schema.hubRole.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.hubUserState)
-          .where(eq(schema.hubUserState.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.organisationRole)
-          .where(eq(schema.organisationRole.userId, matchingAccount.userId)),
-        tx
-          .delete(schema.projectRole)
-          .where(eq(schema.projectRole.userId, matchingAccount.userId)),
-      ])
-    })
-  }
-
   const confirmationCode = await createFacebookDeletionConfirmationCode(
     appSecret,
     payload.user_id,
   )
-  await db
+  const confirmation = db
     .insert(schema.facebookDeletionRequest)
     .values({
       confirmationCodeHash:
         await hashFacebookDeletionConfirmationCode(confirmationCode),
     })
     .onConflictDoNothing()
+
+  if (matchingAccount) {
+    // Recheck identity and credentials at write time, including stale callback retries.
+    const matchingLink = and(
+      eq(schema.account.id, matchingAccount.id),
+      eq(schema.account.userId, matchingAccount.userId),
+      eq(schema.account.providerId, 'facebook'),
+      eq(schema.account.accountId, payload.user_id),
+    )
+    const canAnonymize = sql`exists (
+        select 1 from ${schema.account} where ${matchingLink}
+      ) and not exists (
+        select 1 from ${schema.account}
+        where ${schema.account.userId} = ${matchingAccount.userId}
+          and ${schema.account.id} <> ${matchingAccount.id}
+      ) and not exists (
+        select 1 from ${schema.passkey}
+        where ${schema.passkey.userId} = ${matchingAccount.userId}
+      )`
+
+    // Keep the immutable user ID for submitted records, but scrub private account state.
+    const deletedUsername = await createDeletedUsername(
+      matchingAccount.userId,
+      username =>
+        db.query.user.findFirst({
+          where: eq(schema.user.username, username),
+          columns: { id: true },
+        }),
+    )
+    // D1 batches are atomic; keep the link until all guarded cleanup is complete.
+    await db.batch([
+      db
+        .update(schema.user)
+        .set({
+          name: 'Deleted User',
+          username: deletedUsername,
+          email: `deleted+${matchingAccount.userId}@hype.invalid`,
+          emailVerified: false,
+          image: null,
+          locale: 'en',
+          attribution: null,
+          isAnonymous: false,
+          isArchived: true,
+          preferences:
+            '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}',
+          experimental: '{"contributorMode":false, "noLabelsMode":false}',
+        })
+        .where(and(eq(schema.user.id, matchingAccount.userId), canAnonymize)),
+      db
+        .delete(schema.session)
+        .where(and(eq(schema.session.userId, matchingAccount.userId), canAnonymize)),
+      db
+        .delete(schema.passkey)
+        .where(and(eq(schema.passkey.userId, matchingAccount.userId), canAnonymize)),
+      db
+        .delete(schema.verification)
+        .where(
+          and(eq(schema.verification.value, matchingAccount.userId), canAnonymize),
+        ),
+      db
+        .delete(schema.userActivity)
+        .where(
+          and(eq(schema.userActivity.userId, matchingAccount.userId), canAnonymize),
+        ),
+      db
+        .delete(schema.userFeature)
+        .where(
+          and(eq(schema.userFeature.userId, matchingAccount.userId), canAnonymize),
+        ),
+      db
+        .delete(schema.userLayer)
+        .where(and(eq(schema.userLayer.userId, matchingAccount.userId), canAnonymize)),
+      db
+        .delete(schema.hubRole)
+        .where(and(eq(schema.hubRole.userId, matchingAccount.userId), canAnonymize)),
+      db
+        .delete(schema.hubUserState)
+        .where(
+          and(eq(schema.hubUserState.userId, matchingAccount.userId), canAnonymize),
+        ),
+      db
+        .delete(schema.organisationRole)
+        .where(
+          and(eq(schema.organisationRole.userId, matchingAccount.userId), canAnonymize),
+        ),
+      db
+        .delete(schema.projectRole)
+        .where(
+          and(eq(schema.projectRole.userId, matchingAccount.userId), canAnonymize),
+        ),
+      db.delete(schema.account).where(matchingLink),
+      confirmation,
+    ])
+  } else {
+    await confirmation
+  }
 
   return json({
     url: `${url.origin}/api/auth/facebook/data-deletion/status?code=${confirmationCode}`,
@@ -154,8 +164,9 @@ export const POST: RequestHandler = async ({ request, url, platform }) => {
  * Creates an available tombstone username while retaining the app's generated-name style.
  *
  * @param userId - Stable internal user identifier retained for public contributions.
- * @param findUserByUsername - Looks up an existing username inside the active transaction.
+ * @param findUserByUsername - Looks up a candidate username before the atomic batch.
  * @returns A valid, deterministic username not used by another user.
+ * @remarks A concurrent username collision fails and rolls back the entire batch.
  */
 async function createDeletedUsername(
   userId: string,
