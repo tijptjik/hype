@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, exists, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, exists, isNull, like, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   organisation,
@@ -36,6 +36,7 @@ import type {
   HubCommandProbe,
   Id,
 } from '$lib/types'
+import { chunkedInArray } from '$lib/utils/batch-query'
 import type {
   HubDB,
   HubDBNew,
@@ -634,7 +635,7 @@ export const listOrganisations = async (
       isHubExclusive: organisation.isHubExclusive,
     })
     .from(organisation)
-    .where(inArray(organisation.id, organisationIds))
+    .where(chunkedInArray(organisation.id, organisationIds))
 }
 
 /**

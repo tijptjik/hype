@@ -25,6 +25,7 @@ import {
   ProjectListProfileAPI,
 } from '$lib/db/zod/schema/project'
 import { isSuperAdmin } from '$lib/client/services/auth'
+import { autochunk, chunkedInArray } from '$lib/utils/batch-query'
 // SCHEMA
 import { project, property as propertyTable } from '$lib/db/schema/index'
 // ENUMS
@@ -555,10 +556,14 @@ export const resolveCanonicalScopeByPropertyId = async <
     return canonicalScopeByPropertyId
   }
 
-  const scopeRows = await db.query.property.findMany({
-    columns: { id: true, scope: true },
-    where: inArray(propertyTable.id, submittedPropertyIds),
-  })
+  const scopeRows = await autochunk(
+    { items: submittedPropertyIds },
+    async propertyIdChunk =>
+      await db.query.property.findMany({
+        columns: { id: true, scope: true },
+        where: inArray(propertyTable.id, propertyIdChunk),
+      }),
+  )
 
   for (const scopeRow of scopeRows) {
     canonicalScopeByPropertyId.set(scopeRow.id, scopeRow.scope)
@@ -869,10 +874,10 @@ const buildVisibilityAndOwnershipConditions = (
     const scopeConditions: SQL<unknown>[] = []
 
     if (projectIds.length > 0) {
-      scopeConditions.push(inArray(project.id, projectIds))
+      scopeConditions.push(chunkedInArray(project.id, projectIds))
     }
     if (organisationIds.length > 0) {
-      scopeConditions.push(inArray(project.organisationId, organisationIds))
+      scopeConditions.push(chunkedInArray(project.organisationId, organisationIds))
     }
 
     if (scopeConditions.length === 0) return undefined

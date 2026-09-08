@@ -7,6 +7,7 @@ import { isRelevantHubAdmin } from '$lib/api/services/authz'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
+import { chunkedInArray } from '$lib/utils/batch-query'
 import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
@@ -724,7 +725,7 @@ export const toQueryConditions = (
       const allowedLayerIds = db
         .select({ id: layer.id })
         .from(layer)
-        .where(inArray(layer.projectId, allowedProjectIds))
+        .where(chunkedInArray(layer.projectId, allowedProjectIds))
       conditions.push(inArray(feature.layerId, allowedLayerIds))
     }
   }

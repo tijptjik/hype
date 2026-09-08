@@ -1,7 +1,8 @@
 // DRIZZLE
-import { inArray, type SQL } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
 // API
 import { applyQueryFilters } from '..'
+import { chunkedInArray } from '$lib/utils/batch-query'
 // DB
 import { transformI18nSafely } from '$lib/db'
 // SCHEMA
@@ -108,18 +109,18 @@ export const toPropertyPrismConditions = async (params: {
   const scopedConditions = [...(params.conditions ?? [])]
 
   if (params.prisms.project.length > 0) {
-    scopedConditions.push(inArray(property.projectId, params.prisms.project))
+    scopedConditions.push(chunkedInArray(property.projectId, params.prisms.project))
     return scopedConditions
   }
 
   if (params.prisms.organisation.length > 0) {
     const projectsInOrgs = await params.db.query.project.findMany({
-      where: inArray(projectTable.organisationId, params.prisms.organisation),
+      where: chunkedInArray(projectTable.organisationId, params.prisms.organisation),
       columns: { id: true },
     })
     const projectIds = projectsInOrgs.map(project => project.id)
     if (projectIds.length > 0) {
-      scopedConditions.push(inArray(property.projectId, projectIds))
+      scopedConditions.push(chunkedInArray(property.projectId, projectIds))
     }
   }
 

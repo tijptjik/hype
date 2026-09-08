@@ -18,6 +18,7 @@ import {
 } from '$lib/api'
 import { isSuperAdmin } from '$lib/client/services/auth'
 import { applyPrismConstraints } from '$lib/db'
+import { chunkedInArray } from '$lib/utils/batch-query'
 // SCHEMA
 import {
   feature,
@@ -556,7 +557,7 @@ const toRoleConditions = (
   if (filter.anyRole) return []
   if (filter.role) return [eq(roleColumn, filter.role)]
   if ((filter.roles?.length ?? 0) > 0) {
-    return [inArray(roleColumn, filter.roles as [string, ...string[]])]
+    return [chunkedInArray(roleColumn, filter.roles ?? [])]
   }
   return []
 }
@@ -823,7 +824,7 @@ export const toUserRelationsWithContributionConstraints = (
         : scopedOrganisations.map(organisationRow => organisationRow.id)
 
       if (organisationIds.length > 0) {
-        featureConstraints.push(inArray(feature.organisationId, organisationIds))
+        featureConstraints.push(chunkedInArray(feature.organisationId, organisationIds))
       }
     } else {
       const featureHubFilter = getFeatureHubFilter(db, {
