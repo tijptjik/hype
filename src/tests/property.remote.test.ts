@@ -16,8 +16,11 @@ const {
   mockProbeProjectQuery,
   mockAuthorizeProjectReadForProbe,
   mockAuthorizeProjectUpdateForSubmission,
+  mockAuthorizeOrganisationUpdateForSubmission,
+  mockAuthorizeHubUpdateForSubmission,
   mockGuardedContext,
   mockProjectProbeRows,
+  mockPropertyScopeRows,
   mockRetryBusyRead,
 } = vi.hoisted(() => ({
   mockGetPrisms: vi.fn(() => ({ organisation: [], project: [], layer: [] })),
@@ -33,8 +36,11 @@ const {
   mockProbeProjectQuery: vi.fn(async () => null),
   mockAuthorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
   mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeOrganisationUpdateForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeHubUpdateForSubmission: vi.fn(() => ({ allowed: true })),
   mockGuardedContext: vi.fn(),
   mockProjectProbeRows: vi.fn(async () => []),
+  mockPropertyScopeRows: vi.fn(async () => []),
   mockRetryBusyRead: vi.fn(async (operation: () => Promise<unknown>) => operation()),
 }))
 
@@ -80,6 +86,9 @@ vi.mock('$lib/api/services/property', () => ({
 vi.mock('$lib/api/services/authz', () => ({
   authorizeProjectReadForProbe: mockAuthorizeProjectReadForProbe,
   authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
+  authorizeOrganisationUpdateForSubmission:
+    mockAuthorizeOrganisationUpdateForSubmission,
+  authorizeHubUpdateForSubmission: mockAuthorizeHubUpdateForSubmission,
   toAuthMessage: (code: string) => code,
 }))
 
@@ -122,6 +131,7 @@ describe('property.remote', () => {
       db: {
         select: vi.fn(() => ({
           from: vi.fn(() => ({
+            where: vi.fn(() => ({ limit: mockPropertyScopeRows })),
             innerJoin: vi.fn(() => ({
               where: mockProjectProbeRows,
             })),
@@ -137,6 +147,9 @@ describe('property.remote', () => {
       },
     })
     mockAuthorizeProjectReadForProbe.mockReturnValue({ allowed: true })
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationUpdateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })
   })
 
   it('filters getProperties rows to projects the actor can read', async () => {
@@ -251,6 +264,108 @@ describe('property.remote', () => {
     await expect(remote.getProperty({ id: 'prop-1' })).rejects.toMatchObject({
       status: 403,
     })
+  })
+
+  it('checks append access from the property scope probe without loading relations', async () => {
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.getPropertyValueAppendAccess({ id: 'prop-1' }),
+    ).resolves.toEqual({
+      data: { allowed: false, scope: 'project' },
+    })
+
+    expect(mockLoadProperty).not.toHaveBeenCalled()
+  })
+
+  it('denies append before hydrating property values', async () => {
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.appendPropertyValues({
+        data: {
+          propertyId: 'prop-1',
+          values: [{ value: 'new-value' }],
+        },
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+
+    expect(mockLoadProperty).not.toHaveBeenCalled()
+    expect(mockCreatePropertyValues).not.toHaveBeenCalled()
+  })
+
+  it('hydrates and appends values after scope authorization succeeds', async () => {
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockLoadProperty.mockResolvedValue({ id: 'prop-1', scope: 'project' })
+    mockCreatePropertyValues.mockResolvedValue([{ id: 'value-1' }])
+
+    const result = await remote.appendPropertyValues({
+      data: {
+        propertyId: 'prop-1',
+        values: [{ value: 'new-value' }],
+      },
+    })
+
+    expect(result).toEqual({ data: { row: { id: 'prop-1', scope: 'project' } } })
+    expect(mockLoadProperty).toHaveBeenCalledTimes(2)
+    expect(mockCreatePropertyValues).toHaveBeenCalledWith(
+      expect.anything(),
+      [{ value: 'new-value', propertyId: 'prop-1' }],
+      'prop-1',
+    )
   })
 
   it('returns [] for getProjectProperties when project is missing', async () => {
