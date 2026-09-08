@@ -216,17 +216,67 @@ const toProjectReadDecisionsByProjectId = async (params: {
   return decisionsByProjectId
 }
 
+type PropertyScopeProbe = {
+  id: string
+  scope: string
+  projectId: string | null
+  organisationId: string | null
+  hubId: string | null
+}
+
+type PropertyValueAppendAccess = {
+  allowed: boolean
+  scope: string
+  code?: string
+  failureCode?:
+    | 'PROJECT_ID_REQUIRED'
+    | 'PROJECT_NOT_FOUND'
+    | 'ORGANISATION_ID_REQUIRED'
+    | 'ORGANISATION_NOT_FOUND'
+    | 'HUB_ID_REQUIRED'
+    | 'HUB_NOT_FOUND'
+}
+
+/**
+ * Loads only the property ownership columns needed to make an append decision.
+ *
+ * @param db - Database handle.
+ * @param propertyId - Candidate property identifier.
+ * @returns The persisted property scope or `null` when it does not exist.
+ * @remarks
+ * Property values and translations are deliberately excluded until authorization
+ * succeeds so denied callers cannot trigger relation-heavy reads.
+ */
+const probePropertyScope = async (
+  db: Parameters<typeof probeProjectQuery>[0],
+  propertyId: string,
+): Promise<PropertyScopeProbe | null> => {
+  const [probe] = await retryBusyRead(() =>
+    db
+      .select({
+        id: property.id,
+        scope: property.scope,
+        projectId: property.projectId,
+        organisationId: property.organisationId,
+        hubId: property.hubId,
+      })
+      .from(property)
+      .where(eq(property.id, propertyId))
+      .limit(1),
+  )
+
+  return probe ?? null
+}
+
 const toPropertyValueAppendAccess = async (params: {
   db: Parameters<typeof probeProjectQuery>[0]
   propertyId: string
+  propertyScope?: PropertyScopeProbe | null
   user: { id: string; isAnonymous?: boolean; superAdmin?: boolean }
   userRoles: Parameters<typeof authorizeProjectReadForProbe>[0]['userRoles']
-}) => {
-  const existingProperty = await loadProperty(
-    params.db,
-    propertyCollectionWithRelations,
-    [eq(property.id, params.propertyId)],
-  )
+}): Promise<PropertyValueAppendAccess | null> => {
+  const existingProperty =
+    params.propertyScope ?? (await probePropertyScope(params.db, params.propertyId))
 
   if (!existingProperty) {
     return null
@@ -234,7 +284,11 @@ const toPropertyValueAppendAccess = async (params: {
 
   if (existingProperty.scope === 'project') {
     if (!existingProperty.projectId) {
-      return { allowed: false, scope: existingProperty.scope }
+      return {
+        allowed: false,
+        scope: existingProperty.scope,
+        failureCode: 'PROJECT_ID_REQUIRED',
+      }
     }
 
     const probe = await probeProjectQuery(params.db, {
@@ -242,23 +296,33 @@ const toPropertyValueAppendAccess = async (params: {
       refKey: 'id',
     })
     if (!probe) {
-      return { allowed: false, scope: existingProperty.scope }
+      return {
+        allowed: false,
+        scope: existingProperty.scope,
+        failureCode: 'PROJECT_NOT_FOUND',
+      }
     }
 
+    const decision = authorizeProjectUpdateForSubmission({
+      user: params.user,
+      userRoles: params.userRoles,
+      resource: probe,
+      submittedData: {},
+    })
     return {
-      allowed: authorizeProjectUpdateForSubmission({
-        user: params.user,
-        userRoles: params.userRoles,
-        resource: probe,
-        submittedData: {},
-      }).allowed,
+      allowed: decision.allowed,
+      code: decision.code,
       scope: existingProperty.scope,
     }
   }
 
   if (existingProperty.scope === 'organisation') {
     if (!existingProperty.organisationId) {
-      return { allowed: false, scope: existingProperty.scope }
+      return {
+        allowed: false,
+        scope: existingProperty.scope,
+        failureCode: 'ORGANISATION_ID_REQUIRED',
+      }
     }
 
     const [organisationProbe] = await params.db
@@ -271,22 +335,32 @@ const toPropertyValueAppendAccess = async (params: {
       .limit(1)
 
     if (!organisationProbe) {
-      return { allowed: false, scope: existingProperty.scope }
+      return {
+        allowed: false,
+        scope: existingProperty.scope,
+        failureCode: 'ORGANISATION_NOT_FOUND',
+      }
     }
 
+    const decision = authorizeOrganisationUpdateForSubmission({
+      user: params.user,
+      userRoles: params.userRoles,
+      resource: organisationProbe,
+      submittedData: {},
+    })
     return {
-      allowed: authorizeOrganisationUpdateForSubmission({
-        user: params.user,
-        userRoles: params.userRoles,
-        resource: organisationProbe,
-        submittedData: {},
-      }).allowed,
+      allowed: decision.allowed,
+      code: decision.code,
       scope: existingProperty.scope,
     }
   }
 
   if (!existingProperty.hubId) {
-    return { allowed: false, scope: existingProperty.scope }
+    return {
+      allowed: false,
+      scope: existingProperty.scope,
+      failureCode: 'HUB_ID_REQUIRED',
+    }
   }
 
   const [hubProbe] = await params.db
@@ -298,16 +372,22 @@ const toPropertyValueAppendAccess = async (params: {
     .limit(1)
 
   if (!hubProbe) {
-    return { allowed: false, scope: existingProperty.scope }
+    return {
+      allowed: false,
+      scope: existingProperty.scope,
+      failureCode: 'HUB_NOT_FOUND',
+    }
   }
 
+  const decision = authorizeHubUpdateForSubmission({
+    user: params.user,
+    userRoles: params.userRoles,
+    resource: hubProbe,
+    submittedData: {},
+  })
   return {
-    allowed: authorizeHubUpdateForSubmission({
-      user: params.user,
-      userRoles: params.userRoles,
-      resource: hubProbe,
-      submittedData: {},
-    }).allowed,
+    allowed: decision.allowed,
+    code: decision.code,
     scope: existingProperty.scope,
   }
 }
@@ -441,7 +521,10 @@ export const getPropertyValueAppendAccess = guardedQuery(
     }
 
     return {
-      data: access,
+      data: {
+        allowed: access.allowed,
+        scope: access.scope,
+      },
     }
   },
 )
@@ -571,89 +654,36 @@ export const appendPropertyValues = guardedCommand(
     const { db, user, userRoles } = ctx
     const { propertyId, values } = params.data
 
-    const existingProperty = await loadProperty(db, propertyCollectionWithRelations, [
-      eq(property.id, propertyId),
-    ])
+    const propertyScope = await probePropertyScope(db, propertyId)
 
-    if (!existingProperty) {
+    if (!propertyScope) {
       throw error(404, 'PROPERTY_NOT_FOUND')
     }
 
-    if (existingProperty.scope === 'project') {
-      if (!existingProperty.projectId) {
-        throw error(400, 'PROJECT_ID_REQUIRED')
-      }
+    const appendAccess = await toPropertyValueAppendAccess({
+      db,
+      propertyId,
+      propertyScope,
+      user,
+      userRoles,
+    })
+    if (!appendAccess) {
+      throw error(404, 'PROPERTY_NOT_FOUND')
+    }
+    if (appendAccess.failureCode) {
+      const failureStatus = appendAccess.failureCode.endsWith('_NOT_FOUND') ? 404 : 400
+      throw error(failureStatus, appendAccess.failureCode)
+    }
+    if (!appendAccess.allowed) {
+      throw error(403, toAuthMessage(appendAccess.code ?? 'INSUFFICIENT_ROLE'))
+    }
 
-      const probe = await probeProjectQuery(db, {
-        ref: existingProperty.projectId,
-        refKey: 'id',
-      })
-      if (!probe) {
-        throw error(404, 'PROJECT_NOT_FOUND')
-      }
-
-      const updateDecision = authorizeProjectUpdateForSubmission({
-        user,
-        userRoles,
-        resource: probe,
-        submittedData: {},
-      })
-      if (!updateDecision.allowed) {
-        throw error(403, toAuthMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
-      }
-    } else if (existingProperty.scope === 'organisation') {
-      if (!existingProperty.organisationId) {
-        throw error(400, 'ORGANISATION_ID_REQUIRED')
-      }
-
-      const [organisationProbe] = await db
-        .select({
-          id: organisation.id,
-          hubId: organisation.hubId,
-        })
-        .from(organisation)
-        .where(eq(organisation.id, existingProperty.organisationId))
-        .limit(1)
-
-      if (!organisationProbe) {
-        throw error(404, 'ORGANISATION_NOT_FOUND')
-      }
-
-      const updateDecision = authorizeOrganisationUpdateForSubmission({
-        user,
-        userRoles,
-        resource: organisationProbe,
-        submittedData: {},
-      })
-      if (!updateDecision.allowed) {
-        throw error(403, toAuthMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
-      }
-    } else if (existingProperty.scope === 'hub') {
-      if (!existingProperty.hubId) {
-        throw error(400, 'HUB_ID_REQUIRED')
-      }
-
-      const [hubProbe] = await db
-        .select({
-          id: hub.id,
-        })
-        .from(hub)
-        .where(eq(hub.id, existingProperty.hubId))
-        .limit(1)
-
-      if (!hubProbe) {
-        throw error(404, 'HUB_NOT_FOUND')
-      }
-
-      const updateDecision = authorizeHubUpdateForSubmission({
-        user,
-        userRoles,
-        resource: hubProbe,
-        submittedData: {},
-      })
-      if (!updateDecision.allowed) {
-        throw error(403, toAuthMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE'))
-      }
+    // Hydrate values and translations only after the owning scope has passed authz.
+    const existingProperty = await loadProperty(db, propertyCollectionWithRelations, [
+      eq(property.id, propertyId),
+    ])
+    if (!existingProperty) {
+      throw error(404, 'PROPERTY_NOT_FOUND')
     }
 
     const createdValues = await createPropertyValues(
