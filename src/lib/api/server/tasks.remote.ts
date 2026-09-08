@@ -13,7 +13,13 @@ import {
   authorizeTaskReassignForProbe,
   toAuthMessage,
 } from '$lib/api/services/authz'
-import { task as taskTable } from '$lib/db/schema'
+import {
+  feature,
+  layer,
+  organisation,
+  project,
+  task as taskTable,
+} from '$lib/db/schema'
 import { taskFeatureScopeCondition } from '$lib/db/services/task-scope'
 import {
   BeginMissingReportDraftSchema,
@@ -115,6 +121,73 @@ const assertContributionAccount = (
   user: GuardedCommandContext['user'] | GuardedFormContext['user'],
 ): void => {
   if (user.isAnonymous !== false) throw error(403, 'ACCOUNT_REQUIRED')
+}
+
+/**
+ * Verifies that a contribution target is a currently public feature in the
+ * submitted layer/project/organisation chain.
+ *
+ * @param db Database handle.
+ * @param target Submitted feature ancestry identifiers.
+ * @returns Resolves when the target is valid for public contribution.
+ * @throws 400 for an inconsistent or missing resource chain, otherwise 403 for
+ * a non-public target.
+ * @remarks The submitted layer id is checked against the persisted feature so
+ * callers cannot attach a contribution to an unrelated layer identifier.
+ */
+const assertPublicContributionTarget = async (
+  db: GuardedCommandContext['db'],
+  target: {
+    featureId: string
+    layerId: string
+    projectId: string
+    organisationId: string
+  },
+): Promise<void> => {
+  const [scope] = await db
+    .select({
+      featureId: feature.id,
+      featureLayerId: feature.layerId,
+      featureIsPublished: feature.isPublished,
+      featureIsArchived: feature.isArchived,
+      featureIsDraft: feature.isDraft,
+      layerIsPublished: layer.isPublished,
+      layerIsArchived: layer.isArchived,
+      projectIsPublished: project.isPublished,
+      projectIsArchived: project.isArchived,
+      organisationIsPublished: organisation.isPublished,
+      organisationIsArchived: organisation.isArchived,
+    })
+    .from(feature)
+    .innerJoin(layer, eq(feature.layerId, layer.id))
+    .innerJoin(project, eq(feature.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .where(
+      and(
+        eq(feature.id, target.featureId as Id),
+        eq(feature.layerId, target.layerId as Id),
+        eq(feature.projectId, target.projectId as Id),
+        eq(feature.organisationId, target.organisationId as Id),
+        eq(layer.projectId, target.projectId as Id),
+        eq(project.organisationId, target.organisationId as Id),
+      ),
+    )
+    .limit(1)
+
+  if (!scope) throw error(400, 'TASK_FEATURE_SCOPE_MISMATCH')
+  if (
+    !scope.featureIsPublished ||
+    scope.featureIsArchived ||
+    scope.featureIsDraft ||
+    !scope.layerIsPublished ||
+    scope.layerIsArchived ||
+    !scope.projectIsPublished ||
+    scope.projectIsArchived ||
+    !scope.organisationIsPublished ||
+    scope.organisationIsArchived
+  ) {
+    throw error(403, 'FEATURE_NOT_AVAILABLE')
+  }
 }
 
 /**
@@ -288,6 +361,7 @@ export const beginMissingReportDraft = guardedCommand(
     if (input.reason.trim().length < 5) {
       throw error(400, 'TASK_REASON_TOO_SHORT')
     }
+    await assertPublicContributionTarget(ctx.db, input)
 
     const createdTask = await createTask(ctx.db, {
       type: 'reportedMissing',
@@ -431,6 +505,7 @@ export const beginNewPhotosDraft = guardedCommand(
     ctx: GuardedCommandContext,
   ): Promise<{ data: unknown }> => {
     assertContributionAccount(ctx.user)
+    await assertPublicContributionTarget(ctx.db, input)
     const createdTask = await createTask(ctx.db, {
       type: 'newPhoto',
       featureId: input.featureId,
@@ -551,6 +626,7 @@ export const submitMissingReport = guardedForm(
     if (input.reason.trim().length < 5) {
       ctx.invalid(ctx.issue('Reason must be at least 5 characters long'))
     }
+    await assertPublicContributionTarget(ctx.db, input)
 
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
     const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
@@ -594,6 +670,7 @@ export const submitNewFeature = guardedCommand(
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
       throw error(400, 'TASK_IMAGE_REQUIRED')
     }
+    await assertPublicContributionTarget(ctx.db, input)
 
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
     const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
