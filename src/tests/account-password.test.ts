@@ -83,7 +83,9 @@ async function setup() {
     verification: [],
   }
   const hash = vi.fn(hashPassword)
-  const sendVerificationEmail = vi.fn(async () => {})
+  const sendVerificationEmail = vi
+    .fn(runtime.options.emailVerification?.sendVerificationEmail)
+    .mockResolvedValue(undefined)
   const auth = betterAuth({
     ...runtime.options,
     database: memoryAdapter(store),
@@ -159,7 +161,7 @@ describe('account password HTTP pipeline', () => {
     expect(rejected.status).toBe(400)
     expect(await rejected.json()).toMatchObject({ message: 'PASSWORD_NOT_SET' })
     expect(store.account[0].password).toBe(savedPassword)
-    expect(hash).toHaveBeenCalledTimes(2)
+    expect(hash).toHaveBeenCalledTimes(1)
   })
 
   it('shares the five-per-minute budget across direct and delegated HTTP requests', async () => {
@@ -173,7 +175,7 @@ describe('account password HTTP pipeline', () => {
     })
     expect(rejected.status).toBe(429)
     expect(Number(rejected.headers.get('x-retry-after'))).toBeGreaterThan(0)
-    expect(hash).toHaveBeenCalledTimes(5)
+    expect(hash).toHaveBeenCalledTimes(1)
     expect(sendVerificationEmail).not.toHaveBeenCalled()
     expect(store.user[0].email).toBe('user@example.com')
   })
@@ -225,6 +227,68 @@ describe('account password HTTP pipeline', () => {
     ).toBe(400)
     expect(store.account).toHaveLength(0)
     expect(hash).not.toHaveBeenCalled()
+  })
+
+  it('does not create a password when the requested email belongs to another account', async () => {
+    const { request, store, hash } = await setup()
+    store.user.push({ ...store.user[0], id: 'other', email: 'taken@example.com' })
+    const response = await request({
+      newPassword: password,
+      email: 'taken@example.com',
+    })
+    expect(response.status).toBe(400)
+    expect(store.user[0].email).toBe('user@example.com')
+    expect(store.account).toHaveLength(0)
+    expect(hash).not.toHaveBeenCalled()
+  })
+
+  it('does not create a password before a verified account completes its email change', async () => {
+    const { request, store, hash, sendVerificationEmail, auth } = await setup()
+    store.user[0].emailVerified = true
+    const response = await request({
+      newPassword: password,
+      email: 'pending@example.com',
+    })
+    expect(response.status).toBe(400)
+    expect(sendVerificationEmail).toHaveBeenCalledOnce()
+    expect(store.user[0].email).toBe('user@example.com')
+    expect(store.account).toHaveLength(0)
+    expect(hash).not.toHaveBeenCalled()
+    // Complete the real verification callback, then retry with the original session cookie.
+    const verification = await auth.handler(
+      new Request(sendVerificationEmail.mock.calls[0][0].url),
+    )
+    expect(verification.status).toBe(302)
+    expect(store.user[0].email).toBe('pending@example.com')
+    expect(
+      (await request({ newPassword: password, email: 'pending@example.com' })).status,
+    ).toBe(200)
+    expect(store.account).toHaveLength(1)
+    expect(hash).toHaveBeenCalledOnce()
+  })
+
+  it.each(['short', 'x'.repeat(129)])(
+    'does not change email when the password has invalid length',
+    async newPassword => {
+      const { request, store, hash, sendVerificationEmail } = await setup()
+      expect(
+        (await request({ newPassword, email: 'changed@example.com' })).status,
+      ).toBe(400)
+      expect(store.user[0].email).toBe('user@example.com')
+      expect(sendVerificationEmail).not.toHaveBeenCalled()
+      expect(store.account).toHaveLength(0)
+      expect(hash).not.toHaveBeenCalled()
+    },
+  )
+
+  it('does not change email when a password already exists', async () => {
+    const { request, store, sendVerificationEmail } = await setup()
+    expect((await request()).status).toBe(200)
+    expect(
+      (await request({ newPassword: password, email: 'changed@example.com' })).status,
+    ).toBe(400)
+    expect(store.user[0].email).toBe('user@example.com')
+    expect(sendVerificationEmail).not.toHaveBeenCalled()
   })
 
   it('does not create a credential when the email-change database write fails', async () => {

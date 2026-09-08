@@ -48,6 +48,20 @@ export function passwordSetup(): BetterAuthPlugin {
           }
           const { email, newPassword } = ctx.body
           try {
+            // Reject known credential failures before any email mutation or verification message.
+            const { minPasswordLength, maxPasswordLength } = ctx.context.password.config
+            if (
+              newPassword.length < minPasswordLength ||
+              newPassword.length > maxPasswordLength
+            ) {
+              throw new APIError('BAD_REQUEST', { message: 'PASSWORD_NOT_SET' })
+            }
+            const credential = await ctx.context.internalAdapter.findCredentialAccount(
+              user.id,
+            )
+            if (credential?.password) {
+              throw new APIError('BAD_REQUEST', { message: 'PASSWORD_NOT_SET' })
+            }
             let emailChangeResponse: Response | undefined
             // Request verification before changing the login email when the user overrides it.
             if (email && email.trim().toLowerCase() !== user.email.toLowerCase()) {
@@ -63,6 +77,14 @@ export function passwordSetup(): BetterAuthPlugin {
               // Raw responses carry API failures as HTTP status instead of throwing.
               // Do not create credentials after the requested email change was rejected.
               if (!emailChangeResponse.ok) {
+                throw new APIError('BAD_REQUEST', { message: 'PASSWORD_NOT_SET' })
+              }
+              // HTTP success may mean pending verification or an undisclosed email conflict.
+              // Only the current account's persisted address proves the requested change completed.
+              const currentUser = await ctx.context.internalAdapter.findUserById(
+                user.id,
+              )
+              if (currentUser?.email.toLowerCase() !== email.trim().toLowerCase()) {
                 throw new APIError('BAD_REQUEST', { message: 'PASSWORD_NOT_SET' })
               }
             }
