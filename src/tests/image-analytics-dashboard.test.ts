@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AssetAnalyticsDashboard from '$lib/bits/patterns/analytics/assetAnalyticsDashboard/AssetAnalyticsDashboard.svelte'
