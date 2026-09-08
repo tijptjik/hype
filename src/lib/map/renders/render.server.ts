@@ -1,9 +1,17 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 
 // DB
-import { feature, layer, mapStyles, project, projectMapStyles } from '$lib/db/schema'
+import {
+  feature,
+  layer,
+  mapStyles,
+  organisation,
+  project,
+  projectMapStyles,
+} from '$lib/db/schema'
 import { getFeatureWithRelations, toListResponseShape } from '$lib/api/services/feature'
 import { listFeatures } from '$lib/db/services/feature'
+import { autochunk } from '$lib/utils/batch-query'
 // TYPES
 import type { Database } from '$lib/types'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
@@ -112,22 +120,26 @@ const getLayerFeatures = async (
     return []
   }
 
-  const conditions = [eq(feature.isArchived, false), inArray(feature.layerId, layerIds)]
-
-  if (!options.includeUnpublished) {
-    conditions.unshift(eq(feature.isPublished, true))
-  }
-
-  return await db
-    .select({
-      id: feature.id,
-      layerId: feature.layerId,
-      modifiedAt: feature.modifiedAt,
-      geometry: feature.geometry,
-    })
-    .from(feature)
-    .where(and(...conditions))
-    .orderBy(feature.layerId, feature.id)
+  return await autochunk(
+    { items: layerIds, otherParametersCount: options.includeUnpublished ? 1 : 2 },
+    async layerIdChunk =>
+      await db
+        .select({
+          id: feature.id,
+          layerId: feature.layerId,
+          modifiedAt: feature.modifiedAt,
+          geometry: feature.geometry,
+        })
+        .from(feature)
+        .where(
+          and(
+            eq(feature.isArchived, false),
+            ...(options.includeUnpublished ? [] : [eq(feature.isPublished, true)]),
+            inArray(feature.layerId, layerIdChunk),
+          ),
+        )
+        .orderBy(feature.layerId, feature.id),
+  )
 }
 
 const getMapRenderFeatureRecords = async (
@@ -141,30 +153,34 @@ const getMapRenderFeatureRecords = async (
     return []
   }
 
-  const conditions = [eq(feature.isArchived, false), inArray(feature.layerId, layerIds)]
-
-  if (!options.includeUnpublished) {
-    conditions.unshift(eq(feature.isPublished, true))
-  }
-
-  const result = await listFeatures(
-    db,
-    getFeatureWithRelations('list'),
-    conditions,
-    {
-      id: null,
-      code: 'preview',
-      isCore: true,
-    } as never,
-    undefined,
-    {
-      sortBy: 'modifiedAt',
-      sortOrder: 'desc',
+  const rows = await autochunk(
+    { items: layerIds, otherParametersCount: options.includeUnpublished ? 1 : 2 },
+    async layerIdChunk => {
+      const conditions = [
+        eq(feature.isArchived, false),
+        ...(options.includeUnpublished ? [] : [eq(feature.isPublished, true)]),
+        inArray(feature.layerId, layerIdChunk),
+      ]
+      const result = await listFeatures(
+        db,
+        getFeatureWithRelations('list'),
+        conditions,
+        {
+          id: null,
+          code: 'preview',
+          isCore: true,
+        } as never,
+        undefined,
+        {
+          sortBy: 'modifiedAt',
+          sortOrder: 'desc',
+        },
+      )
+      const shaped = await toListResponseShape(result as never, 'list')
+      return shaped.data
     },
   )
-
-  const shaped = await toListResponseShape(result as never, 'list')
-  return shaped.data
+  return rows
 }
 
 /**
@@ -186,7 +202,21 @@ export const getLayerMapRenderData = async (
       rank: layer.rank,
     })
     .from(layer)
-    .where(and(eq(layer.id, layerId), eq(layer.isArchived, false)))
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    // Rendered assets are served through a public immutable URL, so unpublished
+    // layers and features must never enter the payload used to generate them.
+    .where(
+      and(
+        eq(layer.id, layerId),
+        eq(layer.isPublished, true),
+        eq(layer.isArchived, false),
+        eq(project.isPublished, true),
+        eq(project.isArchived, false),
+        eq(organisation.isPublished, true),
+        eq(organisation.isArchived, false),
+      ),
+    )
     .limit(1)
 
   const targetLayer = rows[0]
@@ -195,12 +225,8 @@ export const getLayerMapRenderData = async (
   }
 
   const styleCode = await getProjectMapStyleCode(db, targetLayer.projectId)
-  const features = await getLayerFeatures(db, [layerId], {
-    includeUnpublished: true,
-  })
-  const featureRecords = await getMapRenderFeatureRecords(db, [layerId], {
-    includeUnpublished: true,
-  })
+  const features = await getLayerFeatures(db, [layerId])
+  const featureRecords = await getMapRenderFeatureRecords(db, [layerId])
 
   return {
     styleCode,
@@ -236,7 +262,13 @@ export const getProjectMapRenderData = async (
       modifiedAt: project.modifiedAt,
     })
     .from(project)
-    .where(eq(project.id, projectId))
+    .where(
+      and(
+        eq(project.id, projectId),
+        eq(project.isPublished, true),
+        eq(project.isArchived, false),
+      ),
+    )
     .limit(1)
 
   const targetProject = projectRows[0]
