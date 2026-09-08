@@ -1,12 +1,13 @@
 // SVELTE
 import { error, json } from '@sveltejs/kit'
 // DRIZZLE
-import { eq, inArray } from 'drizzle-orm'
+import { eq, type AnyColumn } from 'drizzle-orm'
 // LIB
 import { ADMIN_PATH } from '$lib'
 // DB
 import client, { createJsonPathCondition, validateTableColumns } from '$lib/db'
 import { getUserRoles } from '$lib/db/services/user'
+import { chunkedInArray } from '$lib/utils/batch-query'
 // ENUMS
 import { RESERVED_PARAMETERS } from '$lib/enums'
 // TYPES
@@ -343,7 +344,7 @@ export const applyQueryFilters = <T extends Table>(
       }
 
       // Type assertion to ensure column exists on table and is a Drizzle column
-      const tableColumn = table[column as keyof T] as unknownColumn
+      const tableColumn = table[column as keyof T] as AnyColumn
 
       // TODO Deprecated - Backward compatibility for deprecated URL-based string booleans.
       if (value === 'true' || value === 'false') {
@@ -365,7 +366,7 @@ export const applyQueryFilters = <T extends Table>(
           return eq(tableColumn, normalizedArray[0])
         }
 
-        return inArray(tableColumn, normalizedArray)
+        return chunkedInArray(tableColumn, normalizedArray)
       }
 
       // Handle non-array values

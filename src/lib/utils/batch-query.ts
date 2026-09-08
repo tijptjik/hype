@@ -1,4 +1,39 @@
+import { inArray, or, sql, type AnyColumn, type SQL } from 'drizzle-orm'
+
 export const SQL_BATCH_SIZE = 100
+
+/**
+ * Builds an `IN` predicate whose bound values remain below D1's statement limit.
+ * @param column - Column to compare.
+ * @param values - Candidate values.
+ * @param otherParametersCount - Fixed parameters already present in the statement.
+ * @returns A single SQL predicate, or a never-match predicate for no values.
+ * @remarks The conservative 40-value ceiling leaves room for sibling predicates.
+ */
+export function chunkedInArray<T>(
+  column: AnyColumn,
+  values: readonly T[],
+  otherParametersCount = 0,
+): SQL<unknown> {
+  if (values.length === 0) return sql`0 = 1`
+
+  const availableSlots = Math.min(
+    40,
+    SQL_BATCH_SIZE - Math.max(0, otherParametersCount),
+  )
+  if (availableSlots <= 0) {
+    throw new Error(
+      `D1 batch query has no room for dynamic parameters after reserving ${otherParametersCount} fixed parameters.`,
+    )
+  }
+
+  const predicates = []
+  for (let index = 0; index < values.length; index += availableSlots) {
+    predicates.push(inArray(column, values.slice(index, index + availableSlots)))
+  }
+
+  return or(...predicates) ?? sql`0 = 1`
+}
 
 type BatchParams<T> = {
   items: T[]

@@ -16,6 +16,7 @@ import {
 } from 'drizzle-orm'
 // I18N
 import { toLocaleKey, toLocaleKebab } from '$lib/i18n'
+import { chunkedInArray } from '$lib/utils/batch-query'
 // SCHEMA
 import * as schema from './schema'
 // ENUMS
@@ -228,7 +229,7 @@ const createLevelQuery = (
 
   if (levelUp > 0) {
     conditions.push(
-      inArray(
+      chunkedInArray(
         getTable(slicedHierarchy, levelUp).id,
         prisms[slicedHierarchy[levelUp].name] || [],
       ),
@@ -250,7 +251,7 @@ const createLevelQuery = (
                   ],
                   getTable(slicedHierarchy, levelUp).id,
                 ),
-                inArray(
+                chunkedInArray(
                   getTable(slicedHierarchy, levelUp - 1).id,
                   prisms[slicedHierarchy[levelUp - 1].name] || [],
                 ),
@@ -287,7 +288,7 @@ const createLevelQuery = (
                   ],
                   getTable(slicedHierarchy, levelUp).id,
                 ),
-                inArray(
+                chunkedInArray(
                   getTable(slicedHierarchy, levelUp - 2).id,
                   prisms[slicedHierarchy[levelUp - 2].name] || [],
                 ),
@@ -377,10 +378,9 @@ export const createJsonPathCondition = (
 
   // Handle array of values
   if (Array.isArray(value)) {
-    return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) IN (${sql.join(
-      value.map(v => sql`${v}`),
-      sql`, `,
-    )})`
+    // Bind the complete list as one JSON value so attacker-controlled filter
+    // arrays cannot exceed D1's bound-parameter limit.
+    return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) IN (SELECT value FROM json_each(${JSON.stringify(value)}))`
   }
 
   // Backward compatibility for deprecated URL-based string booleans
