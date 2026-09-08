@@ -1,7 +1,5 @@
 // SVELTE
-import { error, json } from '@sveltejs/kit'
-// API
-import { isAPIError } from 'better-auth/api'
+import { error } from '@sveltejs/kit'
 // TYPES
 import type { RequestHandler } from './$types'
 
@@ -9,9 +7,9 @@ import type { RequestHandler } from './$types'
  * Adds the first email/password credential to an upgraded social-login account.
  *
  * @param event - Same-origin request carrying the current Better Auth session.
- * @returns A success marker after Better Auth creates the credential account.
- * @remarks Existing passwords cannot be replaced through this endpoint; Better Auth's
- * server-only `setPassword` API rejects accounts that already have a credential.
+ * @returns The rate-limited setup response, including any refreshed session cookies.
+ * @remarks Existing passwords cannot be replaced. Use the HTTP handler so the
+ * limiter runs before email changes or password hashing, never auth.api directly.
  */
 export const POST: RequestHandler = async ({ request, url, locals }) => {
   const origin = request.headers.get('origin')
@@ -19,56 +17,8 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
   if (!locals.session || !locals.user) throw error(401, 'UNAUTHENTICATED')
   if (locals.user.isAnonymous === true) throw error(403, 'ACCOUNT_REQUIRED')
 
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    throw error(400, 'INVALID_REQUEST')
-  }
-
-  const newPassword =
-    typeof body === 'object' && body !== null && 'newPassword' in body
-      ? (body as { newPassword?: unknown }).newPassword
-      : undefined
-  const email =
-    typeof body === 'object' && body !== null && 'email' in body
-      ? (body as { email?: unknown }).email
-      : undefined
-  if (typeof newPassword !== 'string') throw error(400, 'INVALID_REQUEST')
-  if (email !== undefined && typeof email !== 'string')
-    throw error(400, 'INVALID_REQUEST')
-
-  try {
-    let emailChangeResponse: Response | undefined
-    // Request verification before changing the login email when the user overrides it.
-    if (email && email.trim().toLowerCase() !== locals.user.email.toLowerCase()) {
-      // Preserve Better Auth's refreshed session cache so the browser receives the new email.
-      emailChangeResponse = await locals.auth.api.changeEmail({
-        body: {
-          newEmail: email.trim(),
-          callbackURL: `${url.origin}/?panel=profile`,
-        },
-        headers: request.headers,
-        asResponse: true,
-      })
-      // Raw responses carry API failures as HTTP status instead of throwing.
-      // Do not create credentials after the requested email change was rejected.
-      if (!emailChangeResponse.ok) {
-        return json({ message: 'PASSWORD_NOT_SET' }, { status: 400 })
-      }
-    }
-    await locals.auth.api.setPassword({
-      body: { newPassword },
-      headers: request.headers,
-    })
-    return json({ status: true }, { headers: emailChangeResponse?.headers })
-  } catch (cause) {
-    console.warn('[auth][set-password]', {
-      outcome: 'rejected',
-      userId: locals.user.id,
-      cause,
-    })
-    if (isAPIError(cause)) throw error(400, 'PASSWORD_NOT_SET')
-    throw error(500, 'PASSWORD_NOT_SET')
-  }
+  // Preserve the original headers (including trusted client IP) and response cookies.
+  return locals.auth.handler(
+    new Request(new URL('/api/auth/account-password', url), request),
+  )
 }

@@ -13,6 +13,7 @@ import { buildAuthEmail } from './auth/email'
 import { isAuthProviderEnabled } from './auth/providers'
 import { parseSessionSettings } from './auth/session-settings'
 import { requireAvailableAuthUser } from './auth/account-state.server'
+import { passwordSetup } from './auth/password-setup.server'
 // DB SCHEMA
 import * as schema from '$lib/db/schema/index'
 // TYPES
@@ -249,6 +250,7 @@ function createAuthInstance(
     },
     // PLUGINS
     plugins: [
+      passwordSetup(),
       passkey({
         rpID: new URL(baseURL).hostname,
         rpName: 'HYPE',
