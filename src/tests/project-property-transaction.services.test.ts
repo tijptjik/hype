@@ -8,6 +8,8 @@ import {
   seedDefaultInheritedPropertiesForProject,
   syncProjectInheritedProperties,
   upsertProjectProperties,
+  syncHubProperties,
+  syncOrganisationProperties,
 } from '$lib/db/services/property'
 import * as schema from '$lib/db/schema'
 import type { Database } from '$lib/types'
@@ -42,7 +44,10 @@ beforeEach(() => {
     // Enforce the actual property-child cascade edges exercised by these transaction tests.
     const columns = Object.values(getTableColumns(table)).map(column => {
       const parent =
-        (table === schema.propertyValue || table === schema.propertyI18n) &&
+        (table === schema.propertyValue ||
+          table === schema.propertyI18n ||
+          table === schema.hubProperty ||
+          table === schema.organisationProperty) &&
         column.name === 'propertyId'
           ? ' REFERENCES property(id) ON DELETE CASCADE'
           : table === schema.propertyValueI18n && column.name === 'propertyValueId'
@@ -54,6 +59,8 @@ beforeEach(() => {
   }
   sqlite.exec(`CREATE UNIQUE INDEX layer_property_unique ON layerProperty(layerId, propertyId);
     CREATE UNIQUE INDEX property_id ON property(id);
+    CREATE UNIQUE INDEX hub_property_key ON hubProperty(hubId, propertyId);
+    CREATE UNIQUE INDEX organisation_property_key ON organisationProperty(organisationId, propertyId);
     CREATE UNIQUE INDEX property_value_id ON propertyValue(id);
     CREATE UNIQUE INDEX property_value_i18n_key ON propertyValueI18n(propertyValueId, locale);
     CREATE UNIQUE INDEX project_property_unique ON projectProperty(projectId, propertyId);
@@ -127,6 +134,198 @@ function snapshot() {
       .all(),
   }
 }
+
+describe.each(['hub', 'organisation'] as const)(
+  '%s property catalog transactions',
+  scope => {
+    const ownerId = scope === 'hub' ? 'scoped' : 'org'
+    const retainedId = scope === 'hub' ? 'new' : 'old'
+    const linkTable = scope === 'hub' ? 'hubProperty' : 'organisationProperty'
+    const ownerColumn = scope === 'hub' ? 'hubId' : 'organisationId'
+
+    /** Calls the public catalog service for each supported parent scope. */
+    const save = (properties: Array<Record<string, unknown>>) =>
+      scope === 'hub'
+        ? syncHubProperties(db, { hubId: ownerId, properties })
+        : syncOrganisationProperties(db, { organisationId: ownerId, properties })
+
+    /** Captures every property subtree and catalog link for full rollback assertions. */
+    const catalogSnapshot = () => ({
+      properties: sqlite.prepare('SELECT * FROM property ORDER BY id').all(),
+      i18n: sqlite
+        .prepare('SELECT * FROM propertyI18n ORDER BY propertyId, locale')
+        .all(),
+      values: sqlite.prepare('SELECT * FROM propertyValue ORDER BY id').all(),
+      valueI18n: sqlite
+        .prepare('SELECT * FROM propertyValueI18n ORDER BY propertyValueId, locale')
+        .all(),
+      hubs: sqlite
+        .prepare('SELECT * FROM hubProperty ORDER BY hubId, propertyId')
+        .all(),
+      organisations: sqlite
+        .prepare(
+          'SELECT * FROM organisationProperty ORDER BY organisationId, propertyId',
+        )
+        .all(),
+    })
+
+    it('saves ranked hydrated properties with generated value IDs and server-owned parents', async () => {
+      const result = await save([
+        {
+          id: retainedId,
+          key: 'retained',
+          component: 'SelectField',
+          rank: 9,
+          createdAt: 'spoofed',
+          modifiedAt: 'spoofed',
+          i18n: {},
+          projectId: 'spoofed',
+          hubId: 'spoofed',
+          organisationId: 'spoofed',
+          values: [{ value: 'retained-value', i18n: { en: { value: 'Retained' } } }],
+        },
+        {
+          key: 'created',
+          component: 'SelectField',
+          rank: 1,
+          i18n: { en: { label: 'Created' } },
+          values: [{ value: 'new-value', i18n: { en: { value: 'New' } } }],
+        },
+      ])
+      expect(result.map(row => [row.key, row.rank])).toEqual([
+        ['created', 0],
+        ['retained', 1],
+      ])
+      expect(result[0].values?.[0].i18n?.en?.value).toBe('New')
+      expect(result[1].values?.[0].i18n?.en?.value).toBe('Retained')
+      expect(result[1]).toMatchObject({
+        scope,
+        projectId: null,
+        hubId: scope === 'hub' ? ownerId : null,
+        organisationId: scope === 'organisation' ? ownerId : null,
+        createdAt: '2026-09-08T00:00:00.000Z',
+      })
+      expect(result[1].modifiedAt).not.toBe('spoofed')
+      expect(
+        sqlite
+          .prepare(
+            `SELECT propertyId, rank FROM ${linkTable} WHERE ${ownerColumn} = ? ORDER BY rank`,
+          )
+          .all(ownerId),
+      ).toEqual(result.map(row => ({ propertyId: row.id, rank: row.rank })))
+      expect(batches).toHaveLength(1)
+    })
+
+    it('rolls back the catalog and its children when the final rank link fails', async () => {
+      sqlite.exec(`CREATE TRIGGER reject_rank BEFORE INSERT ON ${linkTable}
+      WHEN NEW.propertyId = '${retainedId}'
+      BEGIN SELECT RAISE(ABORT, 'injected rank failure'); END`)
+      const before = catalogSnapshot()
+      await expect(
+        save([
+          {
+            id: retainedId,
+            key: 'changed',
+            component: 'SelectField',
+            rank: 9,
+            i18n: {},
+            values: [{ value: 'changed', i18n: { en: { value: 'Changed' } } }],
+          },
+          {
+            id: 'created',
+            key: 'created',
+            component: 'SelectField',
+            rank: 0,
+            i18n: {},
+            values: [],
+          },
+        ]),
+      ).rejects.toThrow()
+      expect(catalogSnapshot()).toEqual(before)
+      expect(batches).toHaveLength(1)
+    })
+
+    it('rejects a property moved out of the catalog after the initial read', async () => {
+      let before = catalogSnapshot()
+      beforeBatch = () => {
+        sqlite
+          .prepare(`UPDATE property SET ${ownerColumn} = ? WHERE id = ?`)
+          .run('outside', retainedId)
+        before = catalogSnapshot()
+      }
+      await expect(
+        save([
+          {
+            id: retainedId,
+            key: 'changed',
+            component: 'SelectField',
+            i18n: {},
+            values: [],
+          },
+        ]),
+      ).rejects.toThrow()
+      expect(catalogSnapshot()).toEqual(before)
+    })
+
+    it('rejects a value owned by another property without changing either catalog', async () => {
+      sqlite.exec(
+        "INSERT INTO propertyValue VALUES ('foreign-value', 'local', 0, 'unchanged')",
+      )
+      const before = catalogSnapshot()
+      await expect(
+        save([
+          {
+            id: retainedId,
+            key: 'changed',
+            component: 'SelectField',
+            i18n: {},
+            values: [{ id: 'foreign-value', value: 'changed' }],
+          },
+        ]),
+      ).rejects.toThrow()
+      expect(catalogSnapshot()).toEqual(before)
+    })
+
+    it('clears only owned property records and the target catalog links', async () => {
+      const before = catalogSnapshot()
+      expect(await save([])).toEqual([])
+      expect(catalogSnapshot().properties).toEqual(
+        before.properties.filter(row => row.id !== retainedId),
+      )
+      expect(
+        sqlite
+          .prepare(`SELECT * FROM ${linkTable} WHERE ${ownerColumn} = ?`)
+          .all(ownerId),
+      ).toEqual([])
+      // Linked properties belonging to another owner remain intact after unlinking.
+      expect(catalogSnapshot().properties.some(row => row.id === 'linked-hub')).toBe(
+        true,
+      )
+      expect(catalogSnapshot().properties.some(row => row.id === 'linked-org')).toBe(
+        true,
+      )
+    })
+
+    it('keeps a large catalog and every rank write in one parameter-bounded batch', async () => {
+      const result = await save(
+        Array.from({ length: 150 }, (_, rank) => ({
+          id: `catalog-${rank}`,
+          key: `catalog${rank}`,
+          component: 'SelectField',
+          rank,
+          i18n: {},
+          values: [],
+        })),
+      )
+      expect(result).toHaveLength(150)
+      expect(result.map(row => row.rank)).toEqual(
+        Array.from({ length: 150 }, (_, i) => i),
+      )
+      expect(batches).toHaveLength(1)
+      expect(batches[0]).toBeGreaterThan(100)
+    })
+  },
+)
 
 describe('local project property value translations', () => {
   /** Captures the complete property subtree, including unrelated catalog records. */
