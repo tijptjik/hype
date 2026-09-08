@@ -523,6 +523,31 @@ describe('layer.remote authz matrix', () => {
     })
   })
 
+  it('layerForm update rejects reparenting before probing the target project', async () => {
+    await expect(
+      remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'foreign-project',
+            metadata: { zoom: 11 },
+            isDefaultVisible: false,
+            properties: [],
+            i18n: { en: { name: 'Layer' } },
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+
+    expect(mockProbeProjectForUpdate).not.toHaveBeenCalled()
+    expect(mockLoadLayer).not.toHaveBeenCalled()
+  })
+
   it('publishLayer denies when publish authz denies', async () => {
     mockAuthorizeLayerPublishForSubmission.mockReturnValue({
       allowed: false,

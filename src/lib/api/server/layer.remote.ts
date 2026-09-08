@@ -314,6 +314,14 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   const current = requireValue(await probeLayerForUpdate(db, targetLayerId), () =>
     invalid(issue('LAYER_NOT_FOUND')),
   )
+  // Layer updates do not support reparenting; reject a caller-controlled scope change.
+  if (
+    data.projectId !== current.projectId ||
+    (data.organisationId && data.organisationId !== current.organisationId)
+  ) {
+    invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
+  }
+
   const projectScope = requireValue(
     await probeProjectForUpdate(db, data.projectId as Id),
     () => invalid(issue('PROJECT_NOT_FOUND')),
