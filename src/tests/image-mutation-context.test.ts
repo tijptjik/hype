@@ -260,6 +260,26 @@ describe('image creation context authorization', () => {
       assertPermissionsToCreateImage(
         db,
         account,
+        true,
+        [{ type: 'hub', role: 'admin', hubId: 'hub' }] as never,
+        'hub' as never,
+        'hub',
+      ),
+    ).resolves.toBeUndefined()
+    await expect(
+      assertPermissionsToCreateImage(
+        db,
+        account,
+        false,
+        [{ type: 'hub', role: 'admin', hubId: 'hub' }] as never,
+        'hub' as never,
+        'hub',
+      ),
+    ).rejects.toMatchObject({ status: 401 })
+    await expect(
+      assertPermissionsToCreateImage(
+        db,
+        account,
         adminRequest,
         [],
         'user' as never,
