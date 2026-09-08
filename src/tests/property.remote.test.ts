@@ -172,6 +172,21 @@ describe('property.remote', () => {
     })
   })
 
+  it('chunks project probes for large property collections', async () => {
+    mockProjectProbeRows.mockResolvedValue([])
+    mockListProperties.mockResolvedValue(
+      Array.from({ length: 205 }, (_, index) => ({
+        id: `property-${index}`,
+        projectId: `project-${index}`,
+      })),
+    )
+
+    const result = await remote.getProperties({ conditions: {} })
+
+    expect(result).toEqual({ data: [] })
+    expect(mockProjectProbeRows).toHaveBeenCalledTimes(3)
+  })
+
   it('skips malformed property rows instead of failing the whole list', async () => {
     mockListProperties.mockResolvedValue([
       { id: 'prop-1', projectId: 'project-1' },

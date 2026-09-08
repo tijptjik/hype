@@ -41,6 +41,7 @@ import {
 import { FormBoolean } from '$lib/db/zod/form'
 // ZOD
 import { z } from 'zod'
+import { autochunk } from '$lib/utils/batch-query'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
 import type { Locale, Prisms, QueryParams } from '$lib/types'
@@ -183,18 +184,22 @@ const toProjectReadDecisionsByProjectId = async (params: {
     return decisionsByProjectId
   }
 
-  const probes = await retryBusyRead(() =>
-    params.db
-      .select({
-        id: project.id,
-        organisationId: project.organisationId,
-        hubId: organisation.hubId,
-        isPublished: project.isPublished,
-        isArchived: project.isArchived,
-      })
-      .from(project)
-      .innerJoin(organisation, eq(project.organisationId, organisation.id))
-      .where(inArray(project.id, projectIds)),
+  const probes = await autochunk(
+    { items: projectIds },
+    async projectIdBatch =>
+      await retryBusyRead(() =>
+        params.db
+          .select({
+            id: project.id,
+            organisationId: project.organisationId,
+            hubId: organisation.hubId,
+            isPublished: project.isPublished,
+            isArchived: project.isArchived,
+          })
+          .from(project)
+          .innerJoin(organisation, eq(project.organisationId, organisation.id))
+          .where(inArray(project.id, projectIdBatch)),
+      ),
   )
 
   for (const probe of probes) {
