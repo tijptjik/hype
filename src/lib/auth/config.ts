@@ -101,6 +101,8 @@ export const authConfig = {
       },
       isArchived: {
         type: 'boolean' as const,
+        // Account lifecycle state is changed only by trusted server workflows.
+        input: false as const,
         required: true,
         defaultValue: false,
       },
@@ -121,6 +123,8 @@ export const authConfig = {
       },
       isAnonymous: {
         type: 'boolean' as const,
+        // Promotion requires a verified credential, never a client profile update.
+        input: false as const,
         required: true,
         defaultValue: false,
       },

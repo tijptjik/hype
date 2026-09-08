@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getTableColumns } from 'drizzle-orm'
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
+import { parseUserInput, parseUserOutput } from 'better-auth/db'
 import { getAuthForRequest } from '$lib/auth'
 import { authConfig } from '$lib/auth/config'
 import { account, user } from '$lib/db/schema/user'
@@ -14,6 +15,57 @@ describe('authConfig user.additionalFields', () => {
     expect(
       additionalFieldNames.every(fieldName => userColumnNames.has(fieldName)),
     ).toBe(true)
+  })
+})
+
+describe('server-owned account state', () => {
+  /** Returns the real merged runtime options, including anonymous-plugin field overrides. */
+  function runtimeOptions() {
+    return getAuthForRequest(
+      new Headers({ host: 'localhost:5173', 'x-forwarded-proto': 'http' }),
+      {
+        DB: {} as MiniflareD1Database,
+        AUTH_SECRET: 'test-secret-that-is-long-enough-for-better-auth',
+        AUTH_GOOGLE_ID: '',
+        AUTH_GOOGLE_SECRET: '',
+        AUTH_FACEBOOK_ID: '',
+        AUTH_FACEBOOK_SECRET: '',
+      },
+    ).options
+  }
+
+  it.each(['isArchived', 'isAnonymous'] as const)(
+    'does not accept client-controlled %s in profile updates',
+    field => {
+      for (const options of [runtimeOptions(), authConfig]) {
+        expect(
+          parseUserInput(
+            options,
+            { [field]: false, attribution: 'Updated credit' },
+            'update',
+          ),
+        ).toEqual({ attribution: 'Updated credit' })
+        expect(() => parseUserInput(options, { [field]: true }, 'update')).toThrow()
+      }
+    },
+  )
+
+  it('uses server defaults for account state during sign-up', () => {
+    for (const options of [authConfig, runtimeOptions()]) {
+      expect(
+        parseUserInput(options, { isArchived: true, isAnonymous: true }, 'create'),
+      ).toMatchObject({ isArchived: false, isAnonymous: false })
+    }
+  })
+
+  it('still returns server-maintained flags and accepts ordinary profile settings', () => {
+    const options = runtimeOptions()
+    expect(
+      parseUserOutput(options, { id: 'user', isArchived: true, isAnonymous: true }),
+    ).toMatchObject({ id: 'user', isArchived: true, isAnonymous: true })
+    expect(
+      parseUserInput(options, { locale: 'zh-hant', attribution: 'Credit' }, 'update'),
+    ).toEqual({ locale: 'zh-hant', attribution: 'Credit' })
   })
 })
 
