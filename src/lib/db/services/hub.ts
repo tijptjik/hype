@@ -765,17 +765,21 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
- * syncUserRoles operation.
- * Used by hub DB workflows to keep persistence behavior centralized.
+ * Atomically replaces the administrators assigned to one hub.
+ * @param db - Database used by the authorized hub workflow.
+ * @param roles - Complete replacement assignment set.
+ * @param hubId - Hub whose assignments are being replaced.
+ * @returns Nothing after all replacement statements commit together.
+ * @remarks Any insertion failure preserves the previous assignments. Authorization
+ * and whether an empty assignment set is allowed remain caller responsibilities.
  */
 export const syncUserRoles = async (
   db: Parameters<typeof createHub>[0],
   roles: Array<{ userId: string; role: string }>,
   hubId: string,
 ): Promise<void> => {
-  await db.delete(hubRole).where(eq(hubRole.hubId, hubId))
-  if (roles.length === 0) return
-  await insertMany(db, hubRole, toUserRoles(roles, hubId))
+  // Chunk SQL bindings while keeping deletion and every insert in one D1 transaction.
+  await replaceManyRelated(db, hubRole, toUserRoles(roles, hubId), hubRole.hubId, hubId)
 }
 
 /**
@@ -882,7 +886,12 @@ export const syncOrganisations = async (
 }
 
 /**
- * Replaces persisted hub-layer default rows for one hub.
+ * Atomically replaces persisted hub-layer default rows for one hub.
+ * @param db - Database used by the authorized hub workflow.
+ * @param hubId - Hub whose defaults are being replaced.
+ * @param nextRows - Complete replacement set of layer visibility defaults.
+ * @returns Nothing after the replacement commits.
+ * @remarks A failed insertion preserves all existing defaults for the hub.
  */
 export const syncHubLayerDefaults = async (
   db: Parameters<typeof createHub>[0],
@@ -892,11 +901,8 @@ export const syncHubLayerDefaults = async (
     isDefaultVisible: boolean
   }>,
 ): Promise<void> => {
-  await db.delete(hubLayer).where(eq(hubLayer.hubId, hubId))
-
-  if (nextRows.length === 0) return
-
-  await insertMany(
+  // Keep deletion and all parameter-safe inserts in the same transaction.
+  await replaceManyRelated(
     db,
     hubLayer,
     nextRows.map(row => ({
@@ -904,6 +910,8 @@ export const syncHubLayerDefaults = async (
       layerId: row.layerId,
       isDefaultVisible: row.isDefaultVisible,
     })),
+    hubLayer.hubId,
+    hubId,
   )
 }
 
