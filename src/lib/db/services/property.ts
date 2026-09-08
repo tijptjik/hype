@@ -1,5 +1,7 @@
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
+// IDENTITY
+import { nanoid } from 'nanoid'
 // DRIZZLE
 import { and, asc, eq, inArray, or, not, sql, getTableColumns } from 'drizzle-orm'
 import { chunkedInArray, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
@@ -868,8 +870,13 @@ export const upsertProjectProperties = async (
             if (aRank !== bRank) return aRank - bRank
             return a.index - b.index
           })
-          .map(({ value }, rank) => ({ ...value, rank }))
+          // Allocate identity before persistence so ID-less values retain their translations.
+          .map(({ value }, rank) => ({ ...value, id: value.id || nanoid(12), rank }))
       : []
+
+    const incomingValuesById = new Map(
+      normalizedValuesData.map(value => [value.id, value]),
+    )
 
     const syncedValues = valuesData
       ? await syncPropertyValues(db, normalizedValuesData, propertyId)
@@ -878,7 +885,7 @@ export const upsertProjectProperties = async (
     const updatedPropValuesWithTranslations: PropertyValue[] = []
     for (const syncedVal of syncedValues) {
       // syncedVal is PropertyValueDB
-      const incomingValData = valuesData?.find(v => v.id === syncedVal.id) // incomingValData is PropertyValue from input
+      const incomingValData = incomingValuesById.get(syncedVal.id) // incomingValData is the normalized PropertyValue input
       let valTranslations: PropertyValueI18nDB[] = []
       if (incomingValData?.i18n && Object.keys(incomingValData.i18n).length > 0) {
         try {

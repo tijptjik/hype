@@ -7,9 +7,11 @@ import {
   listResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject,
   syncProjectInheritedProperties,
+  upsertProjectProperties,
 } from '$lib/db/services/property'
 import * as schema from '$lib/db/schema'
 import type { Database } from '$lib/types'
+import type { ProjectPropertyForm } from '$lib/db/zod/schema/property.types'
 
 let sqlite: DatabaseSync
 let db: Database
@@ -42,6 +44,8 @@ beforeEach(() => {
     sqlite.exec(`CREATE TABLE "${getTableName(table)}" (${columns.join(', ')})`)
   }
   sqlite.exec(`CREATE UNIQUE INDEX layer_property_unique ON layerProperty(layerId, propertyId);
+    CREATE UNIQUE INDEX property_value_id ON propertyValue(id);
+    CREATE UNIQUE INDEX property_value_i18n_key ON propertyValueI18n(propertyValueId, locale);
     CREATE UNIQUE INDEX project_property_unique ON projectProperty(projectId, propertyId);
     INSERT INTO hub (id, code) VALUES ('core', 'core'), ('scoped', 'scoped'), ('outside', 'outside');
     INSERT INTO organisation (id, hubId) VALUES ('org', 'scoped');
@@ -113,6 +117,68 @@ function snapshot() {
       .all(),
   }
 }
+
+describe('local project property value translations', () => {
+  it('keeps translations attached to new ID-less values after rank normalization', async () => {
+    sqlite.exec(
+      "INSERT INTO propertyValue (id, propertyId, rank, value) VALUES ('existing', 'local', 0, 'existing')",
+    )
+    const submitted = {
+      id: 'local',
+      scope: 'project',
+      projectId: 'project',
+      key: 'local',
+      component: 'SelectField',
+      i18n: {},
+      values: [
+        {
+          rank: 20,
+          value: 'second',
+          i18n: { en: { value: 'Second', valueGen: false } },
+        },
+        {
+          id: 'existing',
+          rank: 10,
+          value: 'existing',
+          i18n: { en: { value: 'Existing', valueGen: false } },
+        },
+        {
+          rank: 0,
+          value: 'first',
+          i18n: {
+            en: { value: 'First', valueGen: false },
+            zhHant: { value: '第一', valueGen: false },
+          },
+        },
+      ],
+    } as ProjectPropertyForm
+    const original = structuredClone(submitted)
+    const [result] = await upsertProjectProperties(db, [submitted], 'project')
+    const values = sqlite.prepare('SELECT * FROM propertyValue ORDER BY rank').all()
+    expect(values.map(row => [row.value, row.rank])).toEqual([
+      ['first', 0],
+      ['existing', 1],
+      ['second', 2],
+    ])
+    const translations = sqlite
+      .prepare(`SELECT propertyValue.value AS canonical,
+      propertyValueI18n.locale, propertyValueI18n.value AS translation
+      FROM propertyValueI18n JOIN propertyValue ON propertyValue.id = propertyValueI18n.propertyValueId
+      ORDER BY propertyValue.rank, propertyValueI18n.locale`)
+      .all()
+    expect(translations).toEqual([
+      { canonical: 'first', locale: 'en', translation: 'First' },
+      { canonical: 'first', locale: 'zh-hant', translation: '第一' },
+      { canonical: 'existing', locale: 'en', translation: 'Existing' },
+      { canonical: 'second', locale: 'en', translation: 'Second' },
+    ])
+    expect(result.values).toHaveLength(3)
+    expect(result.values?.find(row => row.value === 'first')?.i18n?.en?.value).toBe(
+      'First',
+    )
+    expect(submitted).toEqual(original)
+  })
+})
 
 describe('project inherited default seeding', () => {
   it('preserves explicit assignments, appends missing defaults and is safe to retry', async () => {
