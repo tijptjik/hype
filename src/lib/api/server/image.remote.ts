@@ -39,6 +39,7 @@ import {
   toImageEntityResponseShape,
   toImageListResponseShape,
 } from '$lib/db/services/image'
+import { taskFeatureScopeCondition } from '$lib/db/services/task-scope'
 import { updateOrganisationById } from '$lib/db/services/organisation'
 import { updateProjectById } from '$lib/db/services/project'
 import { getUserById } from '$lib/db/services/user'
@@ -485,7 +486,7 @@ const probeContextState = async (
     .innerJoin(feature, eq(task.featureId, feature.id))
     .innerJoin(project, eq(feature.projectId, project.id))
     .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    .where(eq(task.id, ctxId))
+    .where(and(eq(task.id, ctxId), taskFeatureScopeCondition()))
     .limit(1)
 
   if (!row) throw error(404, 'Context resource not found')
