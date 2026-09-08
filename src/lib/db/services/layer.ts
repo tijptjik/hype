@@ -66,6 +66,7 @@ import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
 //    - createProperties
 //
 // 2.1 CRUD :: READ
+//    - listLayerPropertyLinks (internal)
 //    - listLayers
 //    - getLayer
 //    - listAssignableTaskLayers
@@ -135,6 +136,10 @@ export const createI18n = async (
 /**
  * Creates layer-property link rows and returns hydrated link records.
  * Used when establishing property visibility/contributable configuration for a layer.
+ * @param db - Database used by the authorized layer workflow.
+ * @param layerId - Authoritative target layer for every submitted link.
+ * @param properties - Property links to insert.
+ * @returns Links hydrated with properties, translations, and values.
  */
 export const createProperties = async (
   db: Database,
@@ -146,12 +151,29 @@ export const createProperties = async (
       db,
       layerProperty,
       properties.map(prop => ({
-        layerId,
         ...prop,
+        layerId,
       })),
     )
   }
 
+  return await listLayerPropertyLinks(db, layerId)
+}
+
+// ═══════════════════════
+// 2.1 CRUD :: READ
+// ═══════════════════════
+
+/**
+ * Reads layer links with the shared nested property graph after creation or replacement.
+ * @param db - Database used for the committed-state readback.
+ * @param layerId - Layer whose links should be hydrated.
+ * @returns Property links including property and value translations.
+ */
+async function listLayerPropertyLinks(
+  db: Database,
+  layerId: string,
+): Promise<LayerPropertyDBRaw[]> {
   const rows = await db.query.layerProperty.findMany({
     where: eq(layerProperty.layerId, layerId),
     with: {
@@ -170,10 +192,6 @@ export const createProperties = async (
 
   return rows as LayerPropertyDBRaw[]
 }
-
-// ═══════════════════════
-// 2.1 CRUD :: READ
-// ═══════════════════════
 
 /**
  * Lists layers with optional role/hub filters, search, sorting, and pagination.
@@ -742,14 +760,26 @@ export const updateI18n = async (
 /**
  * Replaces all layer-property links for a layer.
  * Used by full replacement update flows.
+ * @param db - Database used by the authorized layer workflow.
+ * @param layerId - Authoritative target layer.
+ * @param properties - Complete replacement set of links.
+ * @returns Committed links hydrated with properties, translations, and values.
+ * @remarks Deletion and all insert chunks commit atomically; a failed insert preserves existing links.
  */
 export const updateProperties = async (
   db: Database,
   layerId: string,
   properties: LayerPropertyNew[],
 ): Promise<LayerPropertyDBRaw[]> => {
-  await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId))
-  return await createProperties(db, layerId, properties)
+  // Keep SQL parameter chunks inside one transaction before hydrating the committed graph.
+  await replaceManyRelated(
+    db,
+    layerProperty,
+    properties.map(prop => ({ ...prop, layerId })),
+    layerProperty.layerId,
+    layerId,
+  )
+  return await listLayerPropertyLinks(db, layerId)
 }
 
 // ═══════════════════════
