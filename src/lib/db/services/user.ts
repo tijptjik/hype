@@ -458,38 +458,8 @@ export const upsertUserFeatureState = async (
     visitedAt?: string | null
   },
 ): Promise<UserFeatureDB> => {
-  const [existing] = await db
-    .select()
-    .from(userFeature)
-    .where(
-      and(
-        eq(userFeature.userId, params.userId),
-        eq(userFeature.featureId, params.featureId),
-      ),
-    )
-    .limit(1)
-
-  if (existing) {
-    const [updated] = await db
-      .update(userFeature)
-      .set({
-        isVisited: params.isVisited ?? existing.isVisited,
-        isWishlisted: params.isWishlisted ?? existing.isWishlisted,
-        visitedAt:
-          params.visitedAt !== undefined ? params.visitedAt : existing.visitedAt,
-      })
-      .where(
-        and(
-          eq(userFeature.userId, params.userId),
-          eq(userFeature.featureId, params.featureId),
-        ),
-      )
-      .returning()
-
-    return updated as UserFeatureDB
-  }
-
-  const [created] = await db
+  // Merge only submitted fields in SQL so concurrent list actions cannot overwrite each other.
+  const [updated] = await db
     .insert(userFeature)
     .values({
       userId: params.userId,
@@ -498,9 +468,20 @@ export const upsertUserFeatureState = async (
       isWishlisted: params.isWishlisted ?? false,
       visitedAt: params.visitedAt ?? null,
     })
+    .onConflictDoUpdate({
+      target: [userFeature.userId, userFeature.featureId],
+      set: {
+        isVisited: params.isVisited ?? sql`${userFeature.isVisited}`,
+        isWishlisted: params.isWishlisted ?? sql`${userFeature.isWishlisted}`,
+        visitedAt:
+          params.visitedAt !== undefined
+            ? params.visitedAt
+            : sql`${userFeature.visitedAt}`,
+      },
+    })
     .returning()
 
-  return created as UserFeatureDB
+  return updated as UserFeatureDB
 }
 
 /**
@@ -510,6 +491,7 @@ export const upsertUserFeatureState = async (
  * @param db - Database handle.
  * @param params - User/feature ids and list flag to clear.
  * @returns Updated row, or `null` when deleted/missing.
+ * @remarks The targeted flag update and empty-row deletion share one atomic D1 batch.
  */
 export const removeUserFeatureListState = async (
   db: Database,
@@ -519,54 +501,35 @@ export const removeUserFeatureListState = async (
     list: 'wishlist' | 'visited'
   },
 ): Promise<UserFeatureDB | null> => {
-  const [existing] = await db
-    .select()
-    .from(userFeature)
-    .where(
-      and(
-        eq(userFeature.userId, params.userId),
-        eq(userFeature.featureId, params.featureId),
-      ),
-    )
-    .limit(1)
+  const target = and(
+    eq(userFeature.userId, params.userId),
+    eq(userFeature.featureId, params.featureId),
+  )
 
-  if (!existing) return null
-
-  const nextState =
-    params.list === 'wishlist'
-      ? {
-          isWishlisted: false,
-          isVisited: existing.isVisited,
-          visitedAt: existing.visitedAt,
-        }
-      : {
-          isWishlisted: existing.isWishlisted,
-          isVisited: false,
-          visitedAt: null,
-        }
-
-  if (!nextState.isWishlisted && !nextState.isVisited) {
-    await db
+  // Preserve the other flag at write time and prevent an add between update and cleanup.
+  const [updatedRows] = await db.batch([
+    db
+      .update(userFeature)
+      .set(
+        params.list === 'wishlist'
+          ? { isWishlisted: false }
+          : { isVisited: false, visitedAt: null },
+      )
+      .where(target)
+      .returning(),
+    db
       .delete(userFeature)
       .where(
         and(
-          eq(userFeature.userId, params.userId),
-          eq(userFeature.featureId, params.featureId),
+          target,
+          eq(userFeature.isWishlisted, false),
+          eq(userFeature.isVisited, false),
         ),
-      )
-    return null
-  }
-
-  const [updated] = await db
-    .update(userFeature)
-    .set(nextState)
-    .where(
-      and(
-        eq(userFeature.userId, params.userId),
-        eq(userFeature.featureId, params.featureId),
       ),
-    )
-    .returning()
+  ])
 
-  return updated as UserFeatureDB
+  const updated = updatedRows[0]
+  return updated && (updated.isWishlisted || updated.isVisited)
+    ? (updated as UserFeatureDB)
+    : null
 }
