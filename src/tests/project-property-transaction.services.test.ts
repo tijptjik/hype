@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   listResolvedProjectProperties,
+  seedDefaultInheritedPropertiesForProject,
   syncProjectInheritedProperties,
 } from '$lib/db/services/property'
 import * as schema from '$lib/db/schema'
@@ -13,9 +14,11 @@ import type { Database } from '$lib/types'
 let sqlite: DatabaseSync
 let db: Database
 let batches: number[]
+let writeParameterCounts: number[]
 let beforeBatch: (() => void) | undefined
 beforeEach(() => {
   batches = []
+  writeParameterCounts = []
   beforeBatch = undefined
   sqlite = new DatabaseSync(':memory:')
   // Include every real selected column so nested hydration runs through Drizzle SQL.
@@ -65,6 +68,8 @@ beforeEach(() => {
           sql,
           params,
           run: async () => {
+            writeParameterCounts.push(params.length)
+            if (params.length > 100) throw new Error('D1 parameter budget exceeded')
             sqlite.prepare(sql).run(...params)
             return { success: true, meta: {} }
           },
@@ -108,6 +113,120 @@ function snapshot() {
       .all(),
   }
 }
+
+describe('project inherited default seeding', () => {
+  it('preserves explicit assignments, appends missing defaults and is safe to retry', async () => {
+    const before = snapshot()
+    await seedDefaultInheritedPropertiesForProject(db, {
+      projectId: 'project',
+      hubId: 'scoped',
+      startingRank: 2,
+    })
+    const after = snapshot()
+    expect(after.assignments).toEqual([
+      {
+        projectId: 'other-project',
+        propertyId: 'other',
+        isEnabled: 1,
+        isDefaultEnabled: 1,
+        rank: 0,
+      },
+      {
+        projectId: 'project',
+        propertyId: 'core-prop',
+        isEnabled: 1,
+        isDefaultEnabled: 1,
+        rank: 10,
+      },
+      {
+        projectId: 'project',
+        propertyId: 'new',
+        isEnabled: 0,
+        isDefaultEnabled: 0,
+        rank: 11,
+      },
+      {
+        projectId: 'project',
+        propertyId: 'old',
+        isEnabled: 1,
+        isDefaultEnabled: 0,
+        rank: 9,
+      },
+    ])
+    expect(after.links).toEqual(before.links)
+    await seedDefaultInheritedPropertiesForProject(db, {
+      projectId: 'project',
+      hubId: 'scoped',
+      startingRank: 2,
+    })
+    expect(snapshot()).toEqual(after)
+  })
+
+  it('honors a rank offset above persisted ranks and keeps explicit disabled choices', async () => {
+    sqlite.exec("INSERT INTO projectProperty VALUES ('project', 'core-prop', 0, 0, 1)")
+    await seedDefaultInheritedPropertiesForProject(db, {
+      projectId: 'project',
+      hubId: 'scoped',
+      startingRank: 30,
+    })
+    expect(snapshot().assignments).toContainEqual({
+      projectId: 'project',
+      propertyId: 'core-prop',
+      isEnabled: 0,
+      isDefaultEnabled: 0,
+      rank: 1,
+    })
+    expect(snapshot().assignments).toContainEqual({
+      projectId: 'project',
+      propertyId: 'new',
+      isEnabled: 0,
+      isDefaultEnabled: 0,
+      rank: 30,
+    })
+  })
+
+  it('inserts large catalogs with a bounded parameter count and contiguous ranks', async () => {
+    const insert = sqlite.prepare(
+      "INSERT INTO property (id, key, scope, hubId, isDefaultEnabled) VALUES (?, ?, 'hub', 'scoped', 1)",
+    )
+    for (let i = 0; i < 250; i++) insert.run(`bulk-${i}`, `bulk-${i}`)
+    await seedDefaultInheritedPropertiesForProject(db, {
+      projectId: 'project',
+      hubId: 'scoped',
+    })
+    const ranks = snapshot()
+      .assignments.filter(row => row.projectId === 'project')
+      .map(row => row.rank)
+      .sort((a, b) => Number(a) - Number(b))
+    expect(ranks).toEqual(Array.from({ length: 253 }, (_, i) => i + 9))
+    expect(writeParameterCounts).toHaveLength(1)
+    expect(writeParameterCounts[0]).toBeLessThanOrEqual(100)
+  })
+
+  it('rolls back every seeded row on an insertion failure', async () => {
+    sqlite.exec(`CREATE TRIGGER reject_new_seed BEFORE INSERT ON projectProperty
+      WHEN NEW.propertyId = 'new'
+      BEGIN SELECT RAISE(ABORT, 'injected seed failure'); END`)
+    const before = snapshot()
+    await expect(
+      seedDefaultInheritedPropertiesForProject(db, {
+        projectId: 'project',
+        hubId: 'scoped',
+      }),
+    ).rejects.toThrow()
+    expect(snapshot()).toEqual(before)
+  })
+
+  it('does nothing without an owning organisation, supplied hub or core hub', async () => {
+    sqlite.exec("DELETE FROM hub WHERE code = 'core'")
+    const before = snapshot()
+    await seedDefaultInheritedPropertiesForProject(db, {
+      projectId: 'other-project',
+      hubId: null,
+    })
+    expect(snapshot()).toEqual(before)
+  })
+})
 
 describe('project property cascade transaction integrity', () => {
   it('matches the read resolver across local, inherited, linked and core catalogs', async () => {
