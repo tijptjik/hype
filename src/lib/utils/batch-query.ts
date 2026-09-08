@@ -1,14 +1,19 @@
-import { inArray, or, sql, type AnyColumn, type SQL } from 'drizzle-orm'
+import { sql, type AnyColumn, type SQL } from 'drizzle-orm'
 
 export const SQL_BATCH_SIZE = 100
 
 /**
- * Builds an `IN` predicate whose bound values remain below D1's statement limit.
+ * Builds an `IN` predicate using one bound JSON array, regardless of the value count.
  * @param column - Column to compare.
  * @param values - Candidate values.
  * @param otherParametersCount - Fixed parameters already present in the statement.
  * @returns A single SQL predicate, or a never-match predicate for no values.
- * @remarks The conservative 40-value ceiling leaves room for sibling predicates.
+ * @remarks The historical name is retained for callers. OR-ing smaller IN clauses
+ * does not reduce a statement's total bindings. D1's json_each keeps filtering,
+ * ordering, and pagination in one query without interpolating user data into SQL.
+ * Values use the column's driver encoder before JSON serialization, preserving
+ * boolean, timestamp, and JSON-column comparisons. Only finite numbers, strings,
+ * and null driver values are supported; unsupported encodings fail before execution.
  */
 export function chunkedInArray<T>(
   column: AnyColumn,
@@ -17,22 +22,33 @@ export function chunkedInArray<T>(
 ): SQL<unknown> {
   if (values.length === 0) return sql`0 = 1`
 
-  const availableSlots = Math.min(
-    40,
-    SQL_BATCH_SIZE - Math.max(0, otherParametersCount),
-  )
+  const availableSlots = SQL_BATCH_SIZE - Math.max(0, otherParametersCount)
   if (availableSlots <= 0) {
     throw new Error(
       `D1 batch query has no room for dynamic parameters after reserving ${otherParametersCount} fixed parameters.`,
     )
   }
 
-  const predicates = []
-  for (let index = 0; index < values.length; index += availableSlots) {
-    predicates.push(inArray(column, values.slice(index, index + availableSlots)))
-  }
+  // Match Drizzle's null bypass and column mapping before packing a single parameter.
+  const driverValues = values.map(value => {
+    const mapped = value === null ? null : column.mapToDriverValue(value)
+    if (
+      mapped === null ||
+      typeof mapped === 'string' ||
+      (typeof mapped === 'number' && Number.isFinite(mapped))
+    )
+      return mapped
+    throw new TypeError(
+      'D1 membership filters require scalar JSON-compatible driver values',
+    )
+  })
 
-  return or(...predicates) ?? sql`0 = 1`
+  // D1 binds JavaScript numbers as REAL. CASE also removes json_each.value's affinity
+  // so the target column applies the same coercion as it does to ordinary bound values.
+  return sql`${column} in (
+    select case when type in ('integer', 'real') then cast(value as real) else value end
+    from json_each(${JSON.stringify(driverValues)})
+  )`
 }
 
 type BatchParams<T> = {
