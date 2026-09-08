@@ -1,14 +1,17 @@
 // ENV
-import { and, asc, desc, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
 import {
-  hub,
-  hubRole,
-  organisationRole,
-  projectRole,
-  user,
-  userFeature,
-  userLayer,
-} from '../schema'
+  and,
+  asc,
+  desc,
+  type SQL,
+  eq,
+  inArray,
+  like,
+  sql,
+  or,
+  getTableColumns,
+} from 'drizzle-orm'
+import { hub, hubRole, user, userFeature, userLayer } from '../schema'
 import { isSqliteMissingSchemaError, retryBusyRead } from './sqlite'
 // TYPES
 import type { Id, UserRoleDisco, Database } from '$lib/types'
@@ -19,8 +22,8 @@ import type {
   UserLayerNew,
   UserPartial,
 } from '$lib/db/zod/schema/user.types'
-import { insertMany, update } from '../crud'
-import { autochunk } from '$lib/utils/batch-query'
+import { update } from '../crud'
+import { autochunk, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -421,7 +424,10 @@ export const updateUser = async (
  * @param db - Database handle.
  * @param userLayers - Layer preference rows to persist.
  * @param userId - Target user id.
+ * @param hubId - Target hub id.
  * @returns Persisted user-layer rows.
+ * @remarks Replacement is atomic across every insert chunk; supplied ownership fields
+ * are normalized to the target user and hub before writing.
  */
 export const updateUserLayers = async (
   db: Database,
@@ -429,16 +435,37 @@ export const updateUserLayers = async (
   userId: Id,
   hubId: Id,
 ): Promise<UserLayerDB[]> => {
-  // Delete existing layer preferences
-  await db
+  // Delete existing layer preferences only in the same atomic batch as their replacements.
+  const deletion = db
     .delete(userLayer)
     .where(and(eq(userLayer.userId, userId), eq(userLayer.hubId, hubId)))
 
-  // If no new preferences, we're done
-  if (!userLayers?.length) return []
+  // If no new preferences, the single deletion is already atomic.
+  if (!userLayers?.length) {
+    await deletion
+    return []
+  }
 
-  // Insert new layer preferences
-  return await insertMany(db, userLayer, userLayers)
+  // Insert new layer preferences in parameter-safe chunks without splitting the transaction.
+  const rowsPerInsert = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Object.keys(getTableColumns(userLayer)).length),
+  )
+  const inserts = []
+  for (let index = 0; index < userLayers.length; index += rowsPerInsert) {
+    inserts.push(
+      db
+        .insert(userLayer)
+        .values(
+          userLayers
+            .slice(index, index + rowsPerInsert)
+            .map(row => ({ ...row, userId, hubId })),
+        )
+        .returning(),
+    )
+  }
+  const [, ...inserted] = await db.batch([deletion, ...inserts])
+  return inserted.flat() as UserLayerDB[]
 }
 
 /**
