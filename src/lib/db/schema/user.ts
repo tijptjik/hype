@@ -103,8 +103,8 @@ export const account = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     accountId: text('accountId').notNull(),
-    // Better Auth 1.7 scopes external account identities by issuer and account ID.
-    issuer: text('issuer').notNull(),
+    // Preserve legacy 1.7.0–1.7.2 issuer values; 1.7.3 no longer writes this field.
+    issuer: text('issuer'),
     providerId: text('providerId').notNull(),
     accessToken: text('accessToken'),
     refreshToken: text('refreshToken'),
@@ -126,7 +126,10 @@ export const account = sqliteTable(
       .$onUpdateFn(() => new Date()),
   },
   table => [
-    uniqueIndex('account_issuer_accountId_uidx').on(table.issuer, table.accountId),
+    uniqueIndex('account_providerId_accountId_uidx').on(
+      table.providerId,
+      table.accountId,
+    ),
   ],
 )
 
