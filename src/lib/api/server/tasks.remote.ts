@@ -124,6 +124,67 @@ const assertContributionAccount = (
 }
 
 /**
+ * Verifies that a contribution target resolves to a currently public layer,
+ * project, and organisation chain.
+ *
+ * @param db Database handle.
+ * @param target Submitted layer ancestry identifiers.
+ * @returns Resolves when the target chain is valid for public contribution.
+ * @throws 400 for an inconsistent or missing resource chain, otherwise 403 for
+ * a non-public target.
+ */
+const assertPublicContributionScope = async (
+  db: GuardedCommandContext['db'],
+  target: {
+    layerId: string
+    projectId: string
+    organisationId: string
+  },
+): Promise<void> => {
+  const [scope] = await db
+    .select({
+      layerId: layer.id,
+      layerProjectId: layer.projectId,
+      layerOrganisationId: layer.organisationId,
+      layerIsPublished: layer.isPublished,
+      layerIsArchived: layer.isArchived,
+      projectId: project.id,
+      projectOrganisationId: project.organisationId,
+      projectIsPublished: project.isPublished,
+      projectIsArchived: project.isArchived,
+      organisationId: organisation.id,
+      organisationIsPublished: organisation.isPublished,
+      organisationIsArchived: organisation.isArchived,
+    })
+    .from(layer)
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    .where(
+      and(
+        eq(layer.id, target.layerId as Id),
+        eq(layer.projectId, target.projectId as Id),
+        eq(layer.organisationId, target.organisationId as Id),
+        eq(project.id, target.projectId as Id),
+        eq(project.organisationId, target.organisationId as Id),
+        eq(organisation.id, target.organisationId as Id),
+      ),
+    )
+    .limit(1)
+
+  if (!scope) throw error(400, 'TASK_FEATURE_SCOPE_MISMATCH')
+  if (
+    !scope.layerIsPublished ||
+    scope.layerIsArchived ||
+    !scope.projectIsPublished ||
+    scope.projectIsArchived ||
+    !scope.organisationIsPublished ||
+    scope.organisationIsArchived
+  ) {
+    throw error(403, 'FEATURE_NOT_AVAILABLE')
+  }
+}
+
+/**
  * Verifies that a contribution target is a currently public feature in the
  * submitted layer/project/organisation chain.
  *
@@ -169,6 +230,7 @@ const assertPublicContributionTarget = async (
         eq(feature.projectId, target.projectId as Id),
         eq(feature.organisationId, target.organisationId as Id),
         eq(layer.projectId, target.projectId as Id),
+        eq(layer.organisationId, target.organisationId as Id),
         eq(project.organisationId, target.organisationId as Id),
       ),
     )
@@ -392,6 +454,7 @@ export const beginNewFeatureDraft = guardedCommand(
     ctx: GuardedCommandContext,
   ): Promise<{ data: unknown }> => {
     assertContributionAccount(ctx.user)
+    await assertPublicContributionScope(ctx.db, input.task)
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
     const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
     const draftFeature = {
@@ -670,6 +733,7 @@ export const submitNewFeature = guardedCommand(
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
       throw error(400, 'TASK_IMAGE_REQUIRED')
     }
+    await assertPublicContributionScope(ctx.db, input.task)
 
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
     const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''

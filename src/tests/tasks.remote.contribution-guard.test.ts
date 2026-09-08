@@ -118,6 +118,47 @@ const contributionHandlers = [
   submitNewPhotos,
 ] as Array<(input: unknown, ctx: unknown) => Promise<unknown>>
 
+const publicContributionScope = {
+  featureId: 'feature',
+  featureLayerId: 'layer',
+  featureIsPublished: true,
+  featureIsArchived: false,
+  featureIsDraft: false,
+  layerId: 'layer',
+  layerProjectId: 'project',
+  layerOrganisationId: 'org',
+  layerIsPublished: true,
+  layerIsArchived: false,
+  projectId: 'project',
+  projectOrganisationId: 'org',
+  projectIsPublished: true,
+  projectIsArchived: false,
+  organisationId: 'org',
+  organisationIsPublished: true,
+  organisationIsArchived: false,
+}
+
+const createPublicScopeDb = (task: unknown) => {
+  const scopeQuery = {
+    from: vi.fn(),
+    innerJoin: vi.fn(),
+    where: vi.fn(),
+    limit: vi.fn().mockResolvedValue([publicContributionScope]),
+  }
+  scopeQuery.from.mockReturnValue(scopeQuery)
+  scopeQuery.innerJoin.mockReturnValue(scopeQuery)
+  scopeQuery.where.mockReturnValue(scopeQuery)
+
+  return {
+    select: vi.fn().mockReturnValue(scopeQuery),
+    query: {
+      task: {
+        findFirst: vi.fn().mockResolvedValue(task),
+      },
+    },
+  }
+}
+
 describe('task contribution account guard', () => {
   it('rejects every contribution path for an anonymous guest', async () => {
     for (const handler of contributionHandlers) {
@@ -364,22 +405,27 @@ describe('submitted contribution edit guard', () => {
       user: { id: 'contributor', isAnonymous: false },
       userId: 'contributor',
       event: {},
-      db: {
-        query: {
-          task: {
-            findFirst: vi.fn().mockResolvedValue({
-              id: 'task',
-              contributorId: 'contributor',
-              type: 'newFeature',
-              featureId: 'feature',
-              ...state,
-            }),
-          },
-        },
-      },
+      db: createPublicScopeDb({
+        id: 'task',
+        contributorId: 'contributor',
+        type: 'newFeature',
+        featureId: 'feature',
+        ...state,
+      }),
     }
     await expect(
-      editDraftHandler({ task: { taskId: 'task', feature: {} } }, ctx),
+      editDraftHandler(
+        {
+          task: {
+            taskId: 'task',
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            feature: {},
+          },
+        },
+        ctx,
+      ),
     ).rejects.toMatchObject({ status: 409, message: 'TASK_DRAFT_ALREADY_SUBMITTED' })
     expect(reviewMocks.updateUserContributedFeatureDraft).not.toHaveBeenCalled()
     expect(reviewMocks.updateTask).not.toHaveBeenCalled()
@@ -390,20 +436,14 @@ describe('submitted contribution edit guard', () => {
       user: { id: 'contributor', isAnonymous: false },
       userId: 'contributor',
       event: {},
-      db: {
-        query: {
-          task: {
-            findFirst: vi.fn().mockResolvedValue({
-              id: 'task',
-              contributorId: 'contributor',
-              type: 'newFeature',
-              featureId: 'feature',
-              isDraft: true,
-              isReviewed: false,
-            }),
-          },
-        },
-      },
+      db: createPublicScopeDb({
+        id: 'task',
+        contributorId: 'contributor',
+        type: 'newFeature',
+        featureId: 'feature',
+        isDraft: true,
+        isReviewed: false,
+      }),
     }
     reviewMocks.updateUserContributedFeatureDraft.mockResolvedValue({
       id: 'feature',
@@ -412,7 +452,18 @@ describe('submitted contribution edit guard', () => {
       layerId: 'layer',
     })
     await expect(
-      editDraftHandler({ task: { taskId: 'task', feature: {} } }, ctx),
+      editDraftHandler(
+        {
+          task: {
+            taskId: 'task',
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            feature: {},
+          },
+        },
+        ctx,
+      ),
     ).resolves.toMatchObject({ data: { featureId: 'feature' } })
     expect(reviewMocks.updateUserContributedFeatureDraft).toHaveBeenCalledWith(
       ctx.db,
@@ -473,7 +524,7 @@ describe('public contribution target guard', () => {
           photos: [{}],
         },
         {
-          db: {},
+          db: dbForScope([publicScope]),
           user: { id: 'contributor', isAnonymous: false },
           userId: 'contributor',
           event: {},
@@ -481,6 +532,34 @@ describe('public contribution target guard', () => {
       ),
     ).resolves.toEqual({ data: { id: 'task' } })
     expect(reviewMocks.createTaskWithDependencies).toHaveBeenCalledOnce()
+  })
+
+  it('rejects new-feature submissions whose parent scope is not public', async () => {
+    await expect(
+      submitNewFeatureHandler(
+        {
+          task: {
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            contributorId: 'spoofed',
+            type: 'newFeature',
+            feature: {},
+          },
+          photos: [{}],
+        },
+        {
+          db: dbForScope([]),
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: {},
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'TASK_FEATURE_SCOPE_MISMATCH',
+    })
+    expect(reviewMocks.createTaskWithDependencies).not.toHaveBeenCalled()
   })
 
   it('rejects new-photo submissions whose persisted feature scope is not public', async () => {
