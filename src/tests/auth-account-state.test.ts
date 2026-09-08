@@ -103,6 +103,32 @@ function cookies(response: Response): Headers {
 }
 
 describe('archived account session enforcement', () => {
+  it('issues the configured 30-day session while keeping a five-minute cookie cache', async () => {
+    const { auth, signIn, store } = setup()
+    const context = await auth.$context
+    expect(context.sessionConfig.expiresIn).toBe(30 * 24 * 60 * 60)
+    expect(context.sessionConfig.updateAge).toBe(24 * 60 * 60)
+    const response = await signIn()
+    expect(response.status).toBe(200)
+    const session = store.session[0]
+    const lifetime =
+      new Date(session.expiresAt as Date).getTime() -
+      new Date(session.createdAt as Date).getTime()
+    expect(Math.abs(lifetime - 30 * 24 * 60 * 60 * 1000)).toBeLessThan(1000)
+    const issued = response.headers.getSetCookie()
+    expect(
+      issued.some(
+        cookie =>
+          cookie.includes('session_token=') && cookie.includes('Max-Age=2592000'),
+      ),
+    ).toBe(true)
+    expect(
+      issued.some(
+        cookie => cookie.includes('session_data=') && cookie.includes('Max-Age=300'),
+      ),
+    ).toBe(true)
+  })
+
   it('rejects new sessions for archived accounts after valid credentials', async () => {
     const { signIn, store } = setup()
     sqlite.exec('UPDATE user SET isArchived = 1')

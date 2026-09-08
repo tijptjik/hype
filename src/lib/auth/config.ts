@@ -1,5 +1,6 @@
 // SHARED AUTH CONFIGURATION
 // This config is used by both development and runtime auth files
+import type { BetterAuthOptions } from 'better-auth'
 
 export const authConfig = {
   // ID
@@ -7,7 +8,7 @@ export const authConfig = {
 
   // SESSION
   session: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    expiresIn: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // update session age every 24 hours
     cookieCache: {
       // signed cookie
@@ -133,4 +134,4 @@ export const authConfig = {
       // Layer defaults are loaded separately from the session bootstrap path.
     },
   },
-}
+} satisfies BetterAuthOptions
