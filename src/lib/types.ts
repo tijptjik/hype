@@ -1292,6 +1292,11 @@ export type InputType = 'text' | 'number' | 'email' | 'password'
 
 export type Session = BetterAuthSessionSession
 export type SessionUser = BetterAuthSessionUser
+export type LinkedAuthAccount = {
+  id: string
+  providerId: string
+  accountId: string
+}
 export type PasskeyAccountUpgradeInput = {
   name?: string
   username?: string

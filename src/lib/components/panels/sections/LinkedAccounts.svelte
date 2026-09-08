@@ -17,10 +17,12 @@ import {
   PasskeySessionRefreshError,
 } from '$lib/auth/passkey-upgrade'
 import { isAuthProviderEnabled } from '$lib/auth/providers'
+import { toLinkedAccountSelector } from '$lib/auth/account-selector'
 // I18N
 import { m } from '$lib/i18n'
 
-type Account = { providerId: string; accountId: string }
+// TYPES
+import type { LinkedAuthAccount as Account } from '$lib/types'
 type Passkey = { id: string; name?: string; credentialID: string }
 type SocialProvider = 'facebook' | 'google' | 'wechat'
 type GuestAuthMode = 'create' | 'sign-in'
@@ -224,10 +226,7 @@ async function loadProviderEmails(
     socialAccounts.map(async account => {
       try {
         const result = await authClient.accountInfo({
-          query: {
-            accountId: account.accountId,
-            providerId: account.providerId,
-          },
+          query: toLinkedAccountSelector(account),
         })
         const providerEmail = (result.data as SocialAccountInfo | null)?.user?.email
         return providerEmail ? [accountKey(account), providerEmail] : null
@@ -375,7 +374,7 @@ function providerLabel(providerId: string): string {
 
 /** Returns a stable local key for a linked provider account. */
 function accountKey(account: Account): string {
-  return `${account.providerId}:${account.accountId}`
+  return account.id
 }
 
 /** Returns a privacy-preserving identifier for a registered passkey. */
@@ -463,19 +462,20 @@ async function handleGuestEmailSubmit(event: SubmitEvent): Promise<void> {
   }
 }
 
-/** Unlinks a provider while keeping at least one sign-in method available. */
+/**
+ * Unlinks a provider while keeping at least one sign-in method available.
+ * @param account - The local account row to unlink.
+ * @returns A promise that resolves after updating the linked-account list.
+ */
 async function handleUnlink(account: Account): Promise<void> {
   if (isBusy || accounts.length <= 1) return
   isBusy = true
   errorMessage = ''
   statusMessage = ''
   try {
-    const result = await authClient.unlinkAccount({
-      providerId: account.providerId,
-      accountId: account.accountId,
-    })
+    const result = await authClient.unlinkAccount(toLinkedAccountSelector(account))
     if (result.error) throw new Error(result.error.message)
-    accounts = accounts.filter(item => item.accountId !== account.accountId)
+    accounts = accounts.filter(item => item.id !== account.id)
     const { [accountKey(account)]: _removedEmail, ...remainingProviderEmails } =
       providerEmails
     providerEmails = remainingProviderEmails
@@ -778,7 +778,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <h3 class="text-sm font-medium text-base-content/70">
             {m.account__social_accounts()}
           </h3>
-          {#each accounts.filter(account => account.providerId !== 'credential') as account (account.accountId)}
+          {#each accounts.filter(account => account.providerId !== 'credential') as account (account.id)}
             {@const Icon = providerIcon(account.providerId)}
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
@@ -829,7 +829,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <h3 class="text-sm font-medium text-base-content/70">
             {m.account__standard_login_methods()}
           </h3>
-          {#each accounts.filter(account => account.providerId === 'credential') as account (account.accountId)}
+          {#each accounts.filter(account => account.providerId === 'credential') as account (account.id)}
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><Mail class="h-5 w-5" />
