@@ -14,9 +14,14 @@ let afterSnapshot: (() => void) | undefined
 beforeEach(() => {
   afterSnapshot = undefined
   sqlite = new DatabaseSync(':memory:')
-  sqlite.exec(`CREATE TABLE propertyValue (id TEXT PRIMARY KEY, propertyId TEXT NOT NULL,
+  sqlite.exec(`PRAGMA foreign_keys = ON;
+    CREATE TABLE property (id TEXT PRIMARY KEY);
+    INSERT INTO property VALUES ('property'), ('other-property');
+    CREATE TABLE propertyValue (id TEXT PRIMARY KEY, propertyId TEXT NOT NULL REFERENCES property(id),
     rank INTEGER NOT NULL DEFAULT 0, value TEXT);
-    INSERT INTO propertyValue VALUES ('owned', 'property', 0, 'original'), ('foreign', 'other-property', 0, 'private')`)
+    INSERT INTO propertyValue VALUES ('owned', 'property', 0, 'original'), ('foreign', 'other-property', 0, 'private');
+    CREATE TABLE propertyValueI18n (propertyValueId TEXT REFERENCES propertyValue(id) ON DELETE CASCADE, value TEXT);
+    INSERT INTO propertyValueI18n VALUES ('owned', 'translation')`)
   db = drizzle(
     {
       prepare: (sql: string) => ({
@@ -63,6 +68,132 @@ function row(id: string) {
 }
 
 describe('property-value ownership', () => {
+  it('preserves omitted fields and translations when updating an existing value', async () => {
+    expect(
+      await syncPropertyValues(
+        db,
+        [{ id: 'owned', rank: 3 }] as PropertyValue[],
+        'property',
+      ),
+    ).toEqual([{ id: 'owned', propertyId: 'property', rank: 3, value: 'original' }])
+    expect(sqlite.prepare('SELECT * FROM propertyValueI18n').all()).toEqual([
+      { propertyValueId: 'owned', value: 'translation' },
+    ])
+    expect(
+      await syncPropertyValues(
+        db,
+        [{ id: 'owned', value: null }] as PropertyValue[],
+        'property',
+      ),
+    ).toEqual([{ id: 'owned', propertyId: 'property', rank: 3, value: null }])
+  })
+
+  it('creates missing IDs across insert chunks and returns the complete committed set', async () => {
+    const result = await syncPropertyValues(
+      db,
+      Array.from({ length: 60 }, (_, rank) => ({
+        rank,
+        value: `new-${rank}`,
+      })) as PropertyValue[],
+      'property',
+    )
+    expect(result).toHaveLength(60)
+    expect(new Set(result.map(value => value.id)).size).toBe(60)
+    expect(result.every(value => value.propertyId === 'property')).toBe(true)
+    expect(sqlite.prepare('SELECT * FROM propertyValueI18n').all()).toEqual([])
+  })
+
+  it('rolls back deletion when a submitted new ID belongs to another property', async () => {
+    const before = sqlite.prepare('SELECT * FROM propertyValue').all()
+    await expect(
+      syncPropertyValues(
+        db,
+        [{ id: 'foreign', value: 'changed' }] as PropertyValue[],
+        'property',
+      ),
+    ).rejects.toThrow()
+    expect(sqlite.prepare('SELECT * FROM propertyValue').all()).toEqual(before)
+    expect(sqlite.prepare('SELECT * FROM propertyValueI18n').all()).toEqual([
+      { propertyValueId: 'owned', value: 'translation' },
+    ])
+  })
+
+  it('rolls back deletion and creation when a later update fails', async () => {
+    sqlite.exec(
+      "INSERT INTO propertyValue VALUES ('removed', 'property', 0, 'remove me')",
+    )
+    sqlite.exec(`CREATE TRIGGER fail_update BEFORE UPDATE ON propertyValue
+      WHEN NEW.id = 'owned' BEGIN SELECT RAISE(ABORT, 'injected failure'); END`)
+    const before = sqlite.prepare('SELECT * FROM propertyValue').all()
+    await expect(
+      syncPropertyValues(
+        db,
+        [
+          { id: 'owned', value: 'changed' },
+          { id: 'new', value: 'created' },
+        ] as PropertyValue[],
+        'property',
+      ),
+    ).rejects.toThrow()
+    expect(sqlite.prepare('SELECT * FROM propertyValue').all()).toEqual(before)
+  })
+
+  it('rolls back earlier insert chunks on a late creation failure', async () => {
+    sqlite.exec(`CREATE TRIGGER fail_insert BEFORE INSERT ON propertyValue
+      WHEN NEW.id = 'new-59' BEGIN SELECT RAISE(ABORT, 'injected failure'); END`)
+    const before = sqlite.prepare('SELECT * FROM propertyValue').all()
+    await expect(
+      syncPropertyValues(
+        db,
+        Array.from({ length: 60 }, (_, i) => ({
+          id: `new-${i}`,
+          value: 'new',
+        })) as PropertyValue[],
+        'property',
+      ),
+    ).rejects.toThrow()
+    expect(sqlite.prepare('SELECT * FROM propertyValue').all()).toEqual(before)
+  })
+
+  it('does not combine concurrent full replacement sets', async () => {
+    await Promise.all([
+      syncPropertyValues(
+        db,
+        [{ id: 'first', value: 'first' }] as PropertyValue[],
+        'property',
+      ),
+      syncPropertyValues(
+        db,
+        [{ id: 'second', value: 'second' }] as PropertyValue[],
+        'property',
+      ),
+    ])
+    expect(
+      sqlite
+        .prepare("SELECT id FROM propertyValue WHERE propertyId = 'property'")
+        .all(),
+    ).toEqual([{ id: 'second' }])
+  })
+
+  it('rolls back other changes when an expected update target disappears', async () => {
+    sqlite.exec(
+      "INSERT INTO propertyValue VALUES ('removed', 'property', 0, 'keep me')",
+    )
+    afterSnapshot = () => sqlite.exec("DELETE FROM propertyValue WHERE id = 'owned'")
+    await expect(
+      syncPropertyValues(
+        db,
+        [
+          { id: 'owned', value: 'changed' },
+          { id: 'new', value: 'new' },
+        ] as PropertyValue[],
+        'property',
+      ),
+    ).rejects.toMatchObject({ status: 404 })
+    expect(row('removed')).toMatchObject({ value: 'keep me' })
+    expect(row('new')).toBeUndefined()
+  })
+
   it('does not relocate an owned value using its submitted parent ID', async () => {
     const result = await syncPropertyValues(
       db,
