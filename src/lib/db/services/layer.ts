@@ -847,7 +847,7 @@ const upsertLayerProperties = async (
   }
 
   if (toInsert.length > 0) {
-    await insertMany(db, layerProperty, toInsert)
+    await insertMany(db, layerProperty, toInsert as never)
   }
 
   for (const updateOp of toUpdate) {
