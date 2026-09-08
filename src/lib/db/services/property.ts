@@ -21,6 +21,8 @@ import {
   hub,
   organisation,
   project,
+  layer,
+  layerProperty,
   property,
   projectProperty,
   hubProperty,
@@ -52,7 +54,6 @@ import type {
   PropertyValueNew,
   ProjectPropertyForm,
 } from '$lib/db/zod/schema/property.types'
-import { syncProperties } from './layer'
 import { retryBusyRead } from './sqlite'
 
 // ═══════════════════════
@@ -984,6 +985,9 @@ export const seedDefaultInheritedPropertiesForProject = async (
  *
  * @param db - Database handle.
  * @param params - Project id and submitted inherited property rows.
+ * @returns Nothing after project assignments and child-layer links commit together.
+ * @remarks The caller authorizes the project and property selection. Omitted flags
+ * retain their live values; existing child-layer visibility is not overwritten.
  */
 export const syncProjectInheritedProperties = async (
   db: Database,
@@ -1040,77 +1044,141 @@ export const syncProjectInheritedProperties = async (
       rank,
     }))
 
-  const currentRows = await db.query.projectProperty.findMany({
-    where: eq(projectProperty.projectId, params.projectId),
-  })
-  const currentByPropertyId = new Map(
-    currentRows.map(row => [row.propertyId, row] as const),
-  )
-  const currentIds = new Set(currentRows.map(row => row.propertyId))
-  const nextIds = new Set(submittedProjectProperties.map(row => row.id))
-
-  const idsToDelete = currentRows
-    .filter(row => !nextIds.has(row.propertyId))
-    .map(row => row.propertyId)
-
-  if (idsToDelete.length > 0) {
-    await delManyRelated(
-      db,
-      projectProperty,
-      projectProperty.projectId,
-      params.projectId,
-      projectProperty.propertyId,
-      idsToDelete,
-    )
-  }
-
-  const idsToCreate = submittedProjectProperties
-    .filter(row => !currentIds.has(row.id))
-    .map(row => row.id)
-
-  if (idsToCreate.length > 0) {
-    await insertMany(
-      db,
-      projectProperty,
-      submittedProjectProperties
-        .filter(row => idsToCreate.includes(row.id))
-        .map(row => ({
-          projectId: params.projectId,
-          propertyId: row.id,
-          isEnabled: row.isEnabled ?? true,
-          isDefaultEnabled: row.isDefaultEnabled ?? false,
-          rank: row.rank,
-        })),
-    )
-  }
-
-  await Promise.all(
-    submittedProjectProperties.map(row =>
-      db
-        .update(projectProperty)
-        .set({
-          rank: row.rank,
-          isEnabled:
-            row.isEnabled ?? currentByPropertyId.get(row.id)?.isEnabled ?? true,
-          isDefaultEnabled:
-            row.isDefaultEnabled ??
-            currentByPropertyId.get(row.id)?.isDefaultEnabled ??
-            false,
-        })
-        .where(
-          and(
-            eq(projectProperty.projectId, params.projectId),
-            eq(projectProperty.propertyId, row.id),
-          ),
+  // Preserve omitted flags from live rows and keep every assignment write in the same batch.
+  const detachAssignments = db.delete(projectProperty).where(
+    and(
+      eq(projectProperty.projectId, params.projectId),
+      not(
+        chunkedInArray(
+          projectProperty.propertyId,
+          submittedProjectProperties.map(row => row.id),
         ),
+      ),
     ),
   )
-
-  const resolvedProjectProperties = await listResolvedProjectProperties(
-    db,
-    params.projectId,
+  const assignments = submittedProjectProperties.map(row =>
+    db
+      .insert(projectProperty)
+      .values({
+        projectId: params.projectId,
+        propertyId: row.id,
+        isEnabled: row.isEnabled ?? true,
+        isDefaultEnabled: row.isDefaultEnabled ?? false,
+        rank: row.rank,
+      })
+      .onConflictDoUpdate({
+        target: [projectProperty.projectId, projectProperty.propertyId],
+        set: {
+          rank: row.rank,
+          isEnabled: row.isEnabled ?? sql`${projectProperty.isEnabled}`,
+          isDefaultEnabled:
+            row.isDefaultEnabled ?? sql`${projectProperty.isDefaultEnabled}`,
+        },
+      }),
   )
-  await syncProperties(db, params.projectId, resolvedProjectProperties)
+
+  // Match the read resolver's local, organisation, scoped-hub and core-hub catalogs.
+  // Resolve these scopes at execution time so the cascade uses the assignments just written.
+  const organisationIds = db
+    .select({ id: project.organisationId })
+    .from(project)
+    .where(eq(project.id, params.projectId))
+  const scopedHubIds = db
+    .select({ id: organisation.hubId })
+    .from(organisation)
+    .where(inArray(organisation.id, organisationIds))
+  const coreHubId = db
+    .select({ id: hub.id })
+    .from(hub)
+    .where(eq(hub.code, 'core'))
+    .limit(1)
+  const effectiveHubIds = db
+    .select({ id: hub.id })
+    .from(hub)
+    .where(or(inArray(hub.id, scopedHubIds), inArray(hub.id, coreHubId)))
+  const organisationCatalogIds = db
+    .select({ id: organisationProperty.propertyId })
+    .from(organisationProperty)
+    .where(inArray(organisationProperty.organisationId, organisationIds))
+  const hubCatalogIds = db
+    .select({ id: hubProperty.propertyId })
+    .from(hubProperty)
+    .where(inArray(hubProperty.hubId, effectiveHubIds))
+  const enabledProperties = db
+    .select({
+      id: property.id,
+      defaultEnabled:
+        sql<boolean>`coalesce(${projectProperty.isDefaultEnabled}, ${property.isDefaultEnabled}, 0)`.as(
+          'defaultEnabled',
+        ),
+    })
+    .from(property)
+    .leftJoin(
+      projectProperty,
+      and(
+        eq(projectProperty.propertyId, property.id),
+        eq(projectProperty.projectId, params.projectId),
+      ),
+    )
+    .where(
+      and(
+        or(
+          and(eq(property.scope, 'project'), eq(property.projectId, params.projectId)),
+          and(
+            eq(property.scope, 'organisation'),
+            inArray(property.organisationId, organisationIds),
+          ),
+          and(eq(property.scope, 'hub'), inArray(property.hubId, effectiveHubIds)),
+          inArray(property.id, organisationCatalogIds),
+          inArray(property.id, hubCatalogIds),
+        ),
+        or(
+          eq(property.scope, 'project'),
+          sql`coalesce(${projectProperty.isEnabled}, ${property.isDefaultEnabled}, 0) = 1`,
+        ),
+      ),
+    )
+    .as('enabledProjectProperties')
+  const layerIds = db
+    .select({ id: layer.id })
+    .from(layer)
+    .where(eq(layer.projectId, params.projectId))
+  const detachLayerLinks = db
+    .delete(layerProperty)
+    .where(
+      and(
+        inArray(layerProperty.layerId, layerIds),
+        not(
+          inArray(
+            layerProperty.propertyId,
+            db.select({ id: enabledProperties.id }).from(enabledProperties),
+          ),
+        ),
+      ),
+    )
+  const insertLayerLinks = db
+    .insert(layerProperty)
+    .select(
+      db
+        .select({
+          layerId: layer.id,
+          propertyId: enabledProperties.id,
+          isVisible: enabledProperties.defaultEnabled,
+          isUserContributable: enabledProperties.defaultEnabled,
+        })
+        .from(layer)
+        .innerJoin(enabledProperties, sql`true`)
+        .where(eq(layer.projectId, params.projectId)),
+    )
+    .onConflictDoNothing({ target: [layerProperty.layerId, layerProperty.propertyId] })
+
+  // Child-layer failures must also restore the parent assignments and their ordering.
+  await db.batch([
+    detachAssignments,
+    ...assignments,
+    detachLayerLinks,
+    insertLayerLinks,
+  ])
 }
 
 /**
