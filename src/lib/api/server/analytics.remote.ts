@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { env } from '$env/dynamic/private'
+import { FormBoolean } from '$lib/db/zod/form'
 // REMOTE
 import { guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
@@ -25,7 +26,7 @@ const assetAnalyticsSummaryParamsSchema = z.object({
   projectIds: z.array(z.string()).optional(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
