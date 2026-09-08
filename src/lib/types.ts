@@ -171,6 +171,12 @@ import type { setupRequestHandler } from '$lib/api'
 // Drizzle Database
 export type Database = DrizzleD1Database<typeof import('$lib/db/schema')>
 
+/** Server-owned parent scope for an atomic property catalog save. */
+export type PropertyCatalogTarget = {
+  scope: 'project' | 'hub' | 'organisation'
+  id: string
+}
+
 export type GuardedBaseContext = Awaited<ReturnType<typeof setupRequestHandler>> & {
   event: RequestEvent
 }
