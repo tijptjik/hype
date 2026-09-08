@@ -1,5 +1,8 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, eq, like, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, like, or, sql, getTableColumns, type SQL } from 'drizzle-orm'
+import { SQL_BATCH_SIZE } from '$lib/utils/batch-query'
 // CAPABILITIES
 import {
   getCapabilityKeysFromDefinitions,
@@ -25,13 +28,7 @@ import {
   toOrderByWithLocalizedFields,
   toRelatedRecords,
 } from '..'
-import {
-  insert,
-  update,
-  insertMany,
-  insertManyRelated,
-  replaceManyRelated,
-} from '../crud'
+import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { retryBusyRead } from './sqlite'
 // ZOD
 import { getProjectHubFilter } from './hub'
@@ -66,6 +63,7 @@ import type {
 //    - createProject
 //    - createI18n
 //    - createUserRoles
+//    - commitUserRoles
 //
 // 1.2 CRUD :: CREATE (SHAPING)
 //    - toUserRoles
@@ -144,37 +142,96 @@ export const createI18n = async (
 }
 
 /**
- * Ensures users are added as members to the organisation if they're not already.
+ * Commits project roles and any required parent organisation memberships atomically.
  * @param db - The database instance.
  * @param userRoles - Array of project role rows.
+ * @param projectId - Authorized target project id.
  * @param organisationId - The ID of the organisation.
+ * @param replace - Whether to replace existing project roles rather than append.
+ * @returns Persisted project-role rows.
+ * @remarks Existing organisation roles are never downgraded. The live parent lookup
+ * and required organisationId column abort nonempty writes if the project moved.
  */
-const ensureOrganisationMembership = async (
+const commitUserRoles = async (
   db: Database,
   userRoles: ProjectRoleNew[],
+  projectId: string,
   organisationId: string,
-) => {
-  const orgRoles = await db
-    .select({ userId: organisationRole.userId })
-    .from(organisationRole)
-    .where(eq(organisationRole.organisationId, organisationId))
+  replace: boolean,
+): Promise<ProjectRoleDB[]> => {
+  const scope = and(
+    eq(project.id, projectId),
+    eq(project.organisationId, organisationId),
+  )
+  const probe = db.select({ id: project.id }).from(project).where(scope).limit(1)
+  const parentId = sql`(select ${project.organisationId} from ${project} where ${scope})`
 
-  const existingOrgUserIds = orgRoles.map(role => role.userId)
-  const newOrgUsers = userRoles
-    .map(role => role.userId)
-    .filter(userId => !existingOrgUserIds.includes(userId))
-
-  if (newOrgUsers.length > 0) {
-    await insertMany(
-      db,
-      organisationRole,
-      newOrgUsers.map(userId => ({
-        userId,
-        organisationId,
-        role: 'member' as const,
-      })),
+  // Provision missing membership without overwriting existing privileges or racing a prior read.
+  const userIds = [...new Set(userRoles.map(role => role.userId))]
+  // The parent lookup uses two bindings instead of the organisationId column's usual one.
+  const membersPerInsert = Math.max(
+    1,
+    Math.floor(
+      SQL_BATCH_SIZE / (Object.keys(getTableColumns(organisationRole)).length + 1),
+    ),
+  )
+  const memberships = []
+  for (let index = 0; index < userIds.length; index += membersPerInsert) {
+    memberships.push(
+      db
+        .insert(organisationRole)
+        .values(
+          userIds.slice(index, index + membersPerInsert).map(userId => ({
+            userId,
+            organisationId: parentId,
+            role: 'member' as const,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [organisationRole.organisationId, organisationRole.userId],
+        }),
     )
   }
+
+  // Empty replacements must also respect the current project parent before deleting roles.
+  const deletions = replace
+    ? [
+        db
+          .delete(projectRole)
+          .where(
+            and(
+              eq(projectRole.projectId, projectId),
+              sql`exists (select 1 from ${project} where ${scope})`,
+            ),
+          ),
+      ]
+    : []
+
+  // Keep parameter-safe project inserts inside the same transaction as the parent grants.
+  const rolesPerInsert = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Object.keys(getTableColumns(projectRole)).length),
+  )
+  const assignments = []
+  for (let index = 0; index < userRoles.length; index += rolesPerInsert) {
+    assignments.push(
+      db
+        .insert(projectRole)
+        .values(
+          userRoles
+            .slice(index, index + rolesPerInsert)
+            .map(role => ({ ...role, projectId })),
+        )
+        .returning(),
+    )
+  }
+  const results = await db.batch([probe, ...memberships, ...deletions, ...assignments])
+  if (results[0].length === 0) {
+    throw error(404, 'PROJECT_NOT_FOUND')
+  }
+  return results
+    .slice(1 + memberships.length + deletions.length)
+    .flat() as ProjectRoleDB[]
 }
 
 /**
@@ -191,15 +248,7 @@ export const createUserRoles = async (
   projectId: string,
   organisationId: string,
 ): Promise<ProjectRoleNew[]> => {
-  await ensureOrganisationMembership(db, userRoles, organisationId)
-
-  return await insertManyRelated(
-    db,
-    projectRole,
-    userRoles as ProjectRoleDB[],
-    'projectId',
-    projectId,
-  )
+  return await commitUserRoles(db, userRoles, projectId, organisationId, false)
 }
 
 // ═══════════════════════
@@ -906,7 +955,7 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
- * Replaces all project role assignments after ensuring organisation membership.
+ * Atomically replaces project role assignments and ensures organisation membership.
  * @param db - The database instance.
  * @param userRoles - Persisted project role rows.
  * @param projectId - Target project id.
@@ -918,15 +967,8 @@ export const syncUserRoles = async (
   userRoles: ProjectRoleNew[],
   projectId: Id,
   organisationId: Id,
-) => {
-  await ensureOrganisationMembership(db, userRoles, organisationId)
-  return await replaceManyRelated(
-    db,
-    projectRole,
-    userRoles as ProjectRoleDB[],
-    projectRole.projectId,
-    projectId,
-  )
+): Promise<ProjectRoleDB[]> => {
+  return await commitUserRoles(db, userRoles, projectId, organisationId, true)
 }
 
 /**
