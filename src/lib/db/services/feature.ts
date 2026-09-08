@@ -516,6 +516,7 @@ export const probeFeatureForUpdate = async (db: Database, featureId: Id) => {
           isArchived: feature.isArchived,
           isIntangible: feature.isIntangible,
           isVisitable: feature.isVisitable,
+          isPendingReview: feature.isPendingReview,
           modifiedAt: feature.modifiedAt,
           resourceHubId: organisation.hubId,
         })

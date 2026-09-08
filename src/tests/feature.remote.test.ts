@@ -365,6 +365,7 @@ describe('feature.remote authz matrix', () => {
       contributorId: 'u-2',
       geometry: { type: 'Point', coordinates: [114.1, 22.3] },
       addressMeta: { street: 'Main' },
+      isPendingReview: false,
       isIntangible: false,
       isVisitable: true,
       modifiedAt: '2026-03-18T00:00:00.000Z',
@@ -566,6 +567,47 @@ describe('feature.remote authz matrix', () => {
       expected: true,
       actual: true,
     })
+  })
+
+  it('featureForm update authorizes before loading the relation graph', async () => {
+    mockAuthorizeFeatureUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'FIELD_FORBIDDEN',
+    })
+
+    await expect(
+      remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'layer-1',
+            contributorId: null,
+            i18n: { en: { name: 'Feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+            addressMeta: { street: 'Main' },
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: true,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+
+    expect(mockAuthorizeFeatureUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ isPendingReview: true }),
+      }),
+    )
+    expect(mockLoadFeature).not.toHaveBeenCalled()
+    expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
   it('featureForm update rejects reparenting before probing the target layer', async () => {
