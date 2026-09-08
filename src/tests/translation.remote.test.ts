@@ -39,6 +39,7 @@ describe('translation.remote', () => {
     remote = await import('$lib/api/server/translation.remote')
     vi.clearAllMocks()
     mockGuardedContext.mockResolvedValue({
+      user: { id: 'u-1', isAnonymous: false },
       event: {
         platform: {
           env: {
@@ -52,6 +53,7 @@ describe('translation.remote', () => {
 
   it('throws when azure translation key is missing', async () => {
     mockGuardedContext.mockResolvedValue({
+      user: { id: 'u-1', isAnonymous: false },
       event: {
         platform: {
           env: {
@@ -85,5 +87,28 @@ describe('translation.remote', () => {
       'key-1',
     )
     expect(result).toEqual(['hello-x', 'world-x'])
+  })
+
+  it('requires an upgraded account before spending translation quota', async () => {
+    mockGuardedContext.mockResolvedValue({
+      user: { id: 'guest-1', isAnonymous: true },
+      event: {
+        platform: {
+          env: {
+            AZURE_TRANSLATION_KEY: 'key-1',
+            PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+          },
+        },
+      },
+    })
+
+    await expect(
+      remote.translateText({
+        source: 'en',
+        target: 'zhHant',
+        texts: ['hello'],
+      }),
+    ).rejects.toMatchObject({ status: 403, message: 'ACCOUNT_REQUIRED' })
+    expect(mockTranslateWithAzure).not.toHaveBeenCalled()
   })
 })
