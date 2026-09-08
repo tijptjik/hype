@@ -487,14 +487,14 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('MISSING_FEATURE_ID'))
   }
 
-  const layerScope = requireValue(
-    await probeLayerForUpdate(db, data.layerId as Id),
-    () => invalid(issue('LAYER_NOT_FOUND')),
-  )
-  const resolvedOrganisationId = layerScope.organisationId
-  const resolvedProjectId = layerScope.projectId
-
   if (mode === 'create') {
+    const layerScope = requireValue(
+      await probeLayerForUpdate(db, data.layerId as Id),
+      () => invalid(issue('LAYER_NOT_FOUND')),
+    )
+    const resolvedOrganisationId = layerScope.organisationId
+    const resolvedProjectId = layerScope.projectId
+
     const createDecision = authorizeFeatureCreateForSubmission({
       user,
       userRoles,
@@ -533,6 +533,17 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     await probeFeatureForUpdate(db, targetFeatureId as Id),
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
+  // Feature updates do not support reparenting; reject caller-controlled scope changes.
+  if (
+    data.layerId !== current.layerId ||
+    data.projectId !== current.projectId ||
+    data.organisationId !== current.organisationId
+  ) {
+    invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
+  }
+
+  const resolvedOrganisationId = current.organisationId
+  const resolvedProjectId = current.projectId
 
   const currentEntity = requireValue(
     (

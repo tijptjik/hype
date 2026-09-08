@@ -529,6 +529,8 @@ describe('feature.remote authz matrix', () => {
           updatedAt: '2026-03-18T00:00:00.000Z',
         },
         data: {
+          organisationId: 'org-1',
+          projectId: 'project-1',
           layerId: 'layer-1',
           contributorId: null,
           i18n: { en: { name: 'Feature 2' } },
@@ -564,6 +566,37 @@ describe('feature.remote authz matrix', () => {
       expected: true,
       actual: true,
     })
+  })
+
+  it('featureForm update rejects reparenting before probing the target layer', async () => {
+    await expect(
+      remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'foreign-layer',
+            contributorId: null,
+            i18n: { en: { name: 'Feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+            addressMeta: {},
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+
+    expect(mockProbeLayerForUpdate).not.toHaveBeenCalled()
+    expect(mockLoadFeature).not.toHaveBeenCalled()
   })
 
   it('featureForm create allows a caller-supplied id', async () => {
