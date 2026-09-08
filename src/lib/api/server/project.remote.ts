@@ -64,7 +64,6 @@ import {
   listProjects,
   mergeOrganisationCapabilities,
   probeOrganisationHubForProject,
-  probeOrganisationQuery,
   probeExistingProject,
   probeProjectQuery,
   probeProjectForUpdate,
@@ -78,6 +77,7 @@ import {
   cascadeProjectArchivedStateToDescendants,
   cascadeProjectPublishedStateToDescendants,
 } from '$lib/db/services/project'
+import { probeOrganisationQuery } from '$lib/db/services/organisation'
 import { hasProjectLayersCondition } from '$lib/db/services/layer'
 import { syncProjectLayerPresentation } from '$lib/db/services/layer'
 import {
