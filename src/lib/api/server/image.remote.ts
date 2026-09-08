@@ -265,7 +265,7 @@ const resolveFeatureImageFeatureId = (params: {
 /**
  * Applies feature-image updates through the shared image context update pipeline.
  *
- * @param params Feature image mutation inputs.
+ * @param params Feature image mutation inputs, including resolved admin intent.
  * @returns Updated image response.
  */
 const updateFeatureImageFields = async (params: {
@@ -274,6 +274,7 @@ const updateFeatureImageFields = async (params: {
   userId: UpdateImageForContextParams['userId']
   userRoles: UpdateImageForContextParams['userRoles']
   event: UpdateImageForContextParams['event']
+  isAdminRequest: UpdateImageForContextParams['isAdminRequest']
   id: Id
   ctxType: ImageContextType
   ctxId: Id
@@ -299,6 +300,7 @@ const updateFeatureImageFields = async (params: {
     userId: params.userId,
     userRoles: params.userRoles,
     event: params.event,
+    isAdminRequest: params.isAdminRequest,
     id: params.id,
     ctxType: params.ctxType,
     ctxId: params.ctxId,
@@ -1650,7 +1652,7 @@ export const authImageUpload = guardedCommand(
     await assertPermissionsToCreateImage(
       db,
       user,
-      event.request,
+      ctx.isAdminRequest,
       userRoles,
       params.ctxType as ImageContextResource,
       params.ctxId as Id,
@@ -1675,7 +1677,7 @@ export const authImageUpload = guardedCommand(
       await assertPermissionsToDeleteImage(
         db,
         user,
-        event.request,
+        ctx.isAdminRequest,
         userRoles,
         params.replaceImageId as Id,
         params.ctxId as Id,
@@ -1751,7 +1753,7 @@ export const finalizeImageUpload = guardedCommand(
     const creationAccess = await assertPermissionsToCreateImage(
       db,
       user,
-      event.request,
+      ctx.isAdminRequest,
       userRoles,
       payload.ctxType as ImageContextResource,
       payload.ctxId as Id,
@@ -1878,6 +1880,7 @@ export const finalizeImageUpload = guardedCommand(
         userId,
         userRoles,
         event,
+        isAdminRequest: ctx.isAdminRequest,
         id: payload.replaceImageId as Id,
         ctxType: payload.ctxType as ImageContextType,
         ctxId: payload.ctxId,
@@ -2010,7 +2013,7 @@ export const createImage = guardedCommand(async (input, ctx) => {
     throw error(400, 'Missing image payload')
   }
 
-  const { db, user, userId, userRoles, event } = ctx
+  const { db, user, userId, userRoles } = ctx
   if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   const imageData: ImageNew = { ...data, contributorId: data.contributorId ?? userId }
 
@@ -2021,7 +2024,7 @@ export const createImage = guardedCommand(async (input, ctx) => {
   await assertPermissionsToCreateImage(
     db,
     user,
-    event.request,
+    ctx.isAdminRequest,
     userRoles,
     imageData.ctxType as ImageContextResource,
     imageData.ctxId as Id,
@@ -2041,6 +2044,7 @@ export const updateImage = guardedCommand(UpdateImageSchema, async (params, ctx)
     userId,
     userRoles,
     event,
+    isAdminRequest: ctx.isAdminRequest,
     id: params.id,
     ctxType: params.ctxType as ImageContextType,
     ctxId: params.ctxId,
@@ -2062,6 +2066,7 @@ export const setImageIntent = guardedCommand(
       userId,
       userRoles,
       event,
+      isAdminRequest: ctx.isAdminRequest,
       id: params.id,
       ctxType: params.ctxType as ImageContextType,
       ctxId: params.ctxId,
@@ -2090,6 +2095,7 @@ export const setImagePublished = guardedCommand(
       userId,
       userRoles,
       event,
+      isAdminRequest: ctx.isAdminRequest,
       id: params.id,
       ctxType: params.ctxType as ImageContextType,
       ctxId: params.ctxId,
@@ -2116,7 +2122,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   await assertPermissionsToUpdateImage(
     db,
     user,
-    event.request,
+    ctx.isAdminRequest,
     { id: params.id } as ImageDBFlat,
     userRoles,
     params.id as Id,
@@ -2214,6 +2220,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     userId,
     userRoles,
     event,
+    isAdminRequest: ctx.isAdminRequest,
     id: params.id,
     ctxType: params.ctxType as ImageContextType,
     ctxId: params.ctxId,
@@ -2249,7 +2256,7 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
   await assertPermissionsToDeleteImage(
     db,
     user,
-    event.request,
+    ctx.isAdminRequest,
     userRoles,
     params.id as Id,
     params.ctxId as Id,

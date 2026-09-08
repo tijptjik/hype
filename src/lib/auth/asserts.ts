@@ -39,11 +39,19 @@ export const assertUserLoggedIn = (user: SessionUser): void | Response => {
 
 /**
  * Assert that the request is from the admin dashboard
- * @param request - The request object
+ * @param requestOrIntent - The request object for legacy callers, or the
+ *   already-resolved admin intent from a guarded remote handler.
  * @throws {Response} 401 error if not an admin request
  */
-export const assertAdminRequest = (request: Request): void | Response => {
-  if (!isAdminRequest(request)) {
+export const assertAdminRequest = (
+  requestOrIntent: Request | boolean,
+): void | Response => {
+  const adminRequest =
+    typeof requestOrIntent === 'boolean'
+      ? requestOrIntent
+      : isAdminRequest(requestOrIntent)
+
+  if (!adminRequest) {
     return error(401, m.lucky_dark_larva_express())
   }
 }

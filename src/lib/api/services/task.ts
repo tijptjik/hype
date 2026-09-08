@@ -382,7 +382,7 @@ export const assertPermissionsToCreateTask = async (user: SessionUser) => {
 export const assertPermissionsToUpdateTask = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
   refId: Id,
@@ -390,7 +390,7 @@ export const assertPermissionsToUpdateTask = async (
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
+    () => assertAdminRequest(requestOrIntent),
     () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id'),
   ]
 
@@ -422,7 +422,7 @@ export const assertPermissionsToUpdateTask = async (
 export const assertPermissionsToDeleteTask = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
   refId: Id,
@@ -431,7 +431,7 @@ export const assertPermissionsToDeleteTask = async (
   return assertPermissionsToUpdateTask(
     db,
     user,
-    request,
+    requestOrIntent,
     params,
     userRoles,
     refId,

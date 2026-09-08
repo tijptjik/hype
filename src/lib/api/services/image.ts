@@ -329,7 +329,7 @@ export const getImageByIdsQueryContext = (
  * Asserts permissions to create an image for a given context (feature, project, etc.). Images are a second-class resource, and are always created in the context of a first-class resource : organisation, project, or feature. Images are only created directly from the admin interface, and not from the API. From the front-end, images are created indirectly by creating a task (newFeature, MissingReport or newPhoto) which in turn creates an image.
  * @param db Database handle.
  * @param user Current account.
- * @param request Incoming request.
+ * @param requestOrIntent Legacy request or resolved guarded-remote admin intent.
  * @param userRoles Persisted roles.
  * @param ctxType Target resource type.
  * @param ctxId Target resource ID.
@@ -339,7 +339,7 @@ export const getImageByIdsQueryContext = (
 export const assertPermissionsToCreateImage = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   userRoles: UserRoleDisco[],
   ctxType: ImageContextResource,
   ctxId: Id,
@@ -372,7 +372,7 @@ export const assertPermissionsToCreateImage = async (
 
   const commonAssertions = [
     () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
+    () => assertAdminRequest(requestOrIntent),
   ]
 
   let contextAssertion: () => void | Response
@@ -412,7 +412,7 @@ export const assertPermissionsToCreateImage = async (
  * This might depend on who uploaded it, or roles in the associated context.
  * @param db Database handle.
  * @param user Current account.
- * @param request Incoming request.
+ * @param requestOrIntent Legacy request or resolved guarded-remote admin intent.
  * @param data Mutation payload.
  * @param userRoles Persisted roles.
  * @param refId Target image ID.
@@ -423,7 +423,7 @@ export const assertPermissionsToCreateImage = async (
 export const assertPermissionsToUpdateImage = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   data: ImageDBFlat,
   userRoles: UserRoleDisco[],
   refId: Id,
@@ -433,7 +433,7 @@ export const assertPermissionsToUpdateImage = async (
   if (!user?.id || user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   const commonAssertions = [
     () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
+    () => assertAdminRequest(requestOrIntent),
     () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id'),
   ]
   const commonError = runAssertions(...commonAssertions)
@@ -526,7 +526,7 @@ export const assertPermissionsToUpdateImage = async (
 export const assertPermissionsToDeleteImage = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   userRoles: UserRoleDisco[],
   refId: Id,
   ctxId: Id,
@@ -535,7 +535,7 @@ export const assertPermissionsToDeleteImage = async (
   return assertPermissionsToUpdateImage(
     db,
     user,
-    request,
+    requestOrIntent,
     { id: refId } as ImageDBFlat,
     userRoles,
     refId,
@@ -621,12 +621,13 @@ export const updateImageForContext = async (args: {
   userId: Id
   userRoles: UserRoleDisco[]
   event: RequestEvent
+  isAdminRequest: boolean
   id: string
   ctxType: ImageContextType
   ctxId: string
   data: Record<string, unknown>
 }): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
-  const { db, user, userId, userRoles, event, id, ctxType, ctxId, data } = args
+  const { db, user, userId, userRoles, isAdminRequest, id, ctxType, ctxId, data } = args
   const userWithAttribution = await getUserById(db, userId)
 
   const payload = {
@@ -637,7 +638,7 @@ export const updateImageForContext = async (args: {
   await assertPermissionsToUpdateImage(
     db,
     user,
-    event.request,
+    isAdminRequest,
     payload,
     userRoles,
     id as Id,
