@@ -158,6 +158,7 @@ export {
   toFeatureSubmittedFields,
   authorizeFeatureListForContext,
   authorizeFeatureReadForProbe,
+  authorizeFeatureAdminReadForProbe,
   authorizeFeatureCreateForSubmission,
   authorizeFeatureUpdateForSubmission,
   authorizeFeaturePublishForSubmission,
