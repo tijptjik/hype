@@ -36,6 +36,7 @@ import {
   updateTask,
   commitTaskImageReview,
   commitTaskFeatureReview,
+  commitTaskFeatureDraftFinalization,
   createTaskWithDependencies,
 } from '$lib/db/services/task'
 import {
@@ -502,29 +503,30 @@ export const finalizeTaskDraft = guardedCommand(
         throw error(404, 'FEATURE_NOT_FOUND')
       }
 
-      const finalizedFeature = await updateFeatureByIdWithConcurrency(ctx.db, {
-        id: featureProbe.id as Id,
-        updatedAt: featureProbe.modifiedAt,
-        data: {
-          isDraft: false,
-        },
+      const finalized = await commitTaskFeatureDraftFinalization(ctx.db, {
+        task: draftTask,
+        feature: featureProbe,
       })
-
-      if (!finalizedFeature) {
-        throw error(409, 'STALE_FEATURE_WRITE')
+      if (!finalized) {
+        throw error(409, 'STALE_TASK_DRAFT')
       }
+    } else {
+      const finalizedTask = await updateTask(
+        ctx.db,
+        { isDraft: false },
+        params.id as Id,
+      )
+      return { data: finalizedTask }
     }
 
-    // Complete the task last so a failed feature write leaves finalization retryable.
-    const finalizedTask = await updateTask(
+    const finalizedTask = await loadTask(
       ctx.db,
-      {
-        isDraft: false,
-      },
-      params.id as Id,
+      getTaskWithRelations('admin'),
+      [eq(taskTable.id, params.id as Id)],
+      { ...ctx.event.locals.hub, isSuperAdmin: Boolean(ctx.user.superAdmin) },
     )
-
-    return { data: finalizedTask }
+    if (!finalizedTask) throw error(404, 'TASK_NOT_FOUND')
+    return toEntityResponseShape(finalizedTask, 'admin')
   },
 )
 
