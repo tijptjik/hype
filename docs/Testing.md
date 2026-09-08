@@ -46,3 +46,17 @@ duration fell from 95.36s to 68.25s, with environment setup falling from 25.54s 
 guarantee; the initial baseline overlapped part of an exploratory run. An
 externalized-dependency run passed in 91.67s and was not retained. Durations exclude
 the preceding i18n compilation and shell `sync` command.
+
+## Profiling individual tests
+
+Capture assertion durations with
+`bun run test:run --reporter=json --outputFile=/tmp/hype-test-durations.json`.
+Inspect `testResults[].assertionResults[].duration` for cases over 250ms. These
+durations include per-test hooks but exclude static module imports, so compare
+overall runtime as well before claiming a suite-wide speedup.
+
+The image-import failure tests advance fake timers through the real inter-batch
+delay. Feature and layer remote tests import their stateless handlers once per
+file and reset mocked dependencies between cases instead of rebuilding the module
+graph. Keep module resets in tests that actually depend on fresh module state or
+change mocks with `vi.doMock`.

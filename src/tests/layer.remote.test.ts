@@ -2,6 +2,9 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
+// API
+import * as remote from '$lib/api/server/layer.remote'
+import { authorizeLayerUpdateForSubmission } from '$lib/api/services/authz/layer'
 
 type MockDecision = {
   allowed: boolean
@@ -279,8 +282,6 @@ vi.mock('$lib/i18n', async importOriginal => {
   }
 })
 
-let remote: any
-
 const matrix = createAuthzMatrixReporter('layer.remote')
 
 const recordMatrix = (row: {
@@ -304,9 +305,8 @@ afterAll(() => {
 })
 
 describe('layer.remote authz matrix', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/layer.remote')
+  beforeEach(() => {
+    // Reuse the stateless handlers; reset their mocked dependencies for each case.
     vi.clearAllMocks()
 
     mockAuthorizeLayerListForContext.mockReturnValue({ allowed: true })
@@ -389,9 +389,6 @@ describe('layer.remote authz matrix', () => {
   it.each([false, true])(
     'translator layer update checks actual property changes (changed=%s)',
     async propertiesChanged => {
-      const { authorizeLayerUpdateForSubmission } = await import(
-        '$lib/api/services/authz/layer'
-      )
       mockAuthorizeLayerUpdateForSubmission.mockImplementation(
         authorizeLayerUpdateForSubmission,
       )

@@ -29,7 +29,7 @@ import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
 import type { BatchUploadResult } from '$lib/client/services/import/types'
 
 beforeEach(() => {
-  vi.useRealTimers()
+  vi.useFakeTimers()
   vi.resetAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.mocked(getFeatureForImport).mockImplementation(
@@ -76,7 +76,7 @@ describe('image import queue failures', () => {
       const complete = vi.fn<(results: BatchUploadResult[]) => void>()
       const onError = vi.fn()
 
-      await handleImageDrop(
+      const processing = handleImageDrop(
         {
           acceptedFiles: Array.from(
             { length: 6 },
@@ -90,6 +90,10 @@ describe('image import queue failures', () => {
         complete,
         onError,
       )
+
+      // Exercise the real inter-batch delay without spending 500ms of wall time.
+      await vi.runAllTimersAsync()
+      await processing
 
       expect(onError).not.toHaveBeenCalled()
       expect(complete).toHaveBeenCalledOnce()
