@@ -273,7 +273,7 @@ export const ProjectPropertiesQuery = z.object({
   projectId: z.string().min(1),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -281,7 +281,7 @@ export const ProjectPropertiesQuery = z.object({
 export const ProjectPropertiesFormMeta = z.object({
   projectId: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
-  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  isAdminRequest: FormBoolean.optional(),
 })
 
 export const ProjectPropertiesFormEntity = z.object({

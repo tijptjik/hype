@@ -38,6 +38,7 @@ import {
   ProjectPropertyValueFormData,
   ProjectPropertyFormData,
 } from '$lib/db/zod'
+import { FormBoolean } from '$lib/db/zod/form'
 // ZOD
 import { z } from 'zod'
 // TYPES
@@ -76,7 +77,7 @@ const PropertyEntityQuery = z.object({
   id: z.string().min(1),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -84,7 +85,7 @@ const PropertyEntityQuery = z.object({
 const CreateProjectPropertyCommand = z.object({
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
   data: ProjectPropertyFormData,
@@ -93,7 +94,7 @@ const CreateProjectPropertyCommand = z.object({
 const AppendPropertyValuesCommand = z.object({
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
   data: z.object({
@@ -106,7 +107,7 @@ const PropertyValueAppendAccessQuery = z.object({
   id: z.string().min(1),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })

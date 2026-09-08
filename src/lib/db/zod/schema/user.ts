@@ -1,6 +1,7 @@
 // ZOD
 import { z } from 'zod'
 import { ListQueryParamsSchema } from './api'
+import { FormBoolean } from '../form'
 // DRIZZLE
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
@@ -325,7 +326,7 @@ export const UserHydrationCardProfileAPI = UserCardProfileAPI.extend({
 
 const UserRemoteMetaSchema = z
   .object({
-    isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    isAdminRequest: FormBoolean.optional(),
     profile: UserProfile.optional(),
   })
   .optional()
@@ -348,7 +349,7 @@ export const GetUserLayersParamsSchema = z.object({
   hubId: z.string().min(1).optional(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -367,7 +368,7 @@ export const SetUserLayerDefaultsSchema = z
     layers: z.array(UserLayerDefaultsItemSchema).default([]),
     meta: z
       .object({
-        isAdminRequest: z.coerce.boolean<boolean>().optional(),
+        isAdminRequest: FormBoolean.optional(),
       })
       .optional(),
   })
@@ -398,7 +399,7 @@ export const GetUserFeaturesParamsSchema = z.object({
     .optional(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -417,7 +418,7 @@ export const AddUserFeatureToListSchema = z.object({
   visitedAt: z.string().optional().nullable(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -428,7 +429,7 @@ export const RemoveUserFeatureFromListSchema = z.object({
   list: z.enum(['wishlist', 'visited']),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
