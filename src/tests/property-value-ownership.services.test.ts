@@ -2,7 +2,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { propertyValue } from '$lib/db/schema'
+import * as schema from '$lib/db/schema'
 import { syncPropertyValues } from '$lib/db/services/property'
 import type { Database } from '$lib/types'
 import type { PropertyValue } from '$lib/db/zod/schema/property.types'
@@ -57,8 +57,8 @@ beforeEach(() => {
         }
       },
     } as never,
-    { schema: { propertyValue } },
-  ) as Database
+    { schema },
+  )
 })
 afterEach(() => sqlite.close())
 
