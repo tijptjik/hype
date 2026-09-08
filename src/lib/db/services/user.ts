@@ -19,7 +19,8 @@ import type {
   UserLayerNew,
   UserPartial,
 } from '$lib/db/zod/schema/user.types'
-import { update } from '../crud'
+import { insertMany, update } from '../crud'
+import { autochunk } from '$lib/utils/batch-query'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -122,18 +123,22 @@ export const getUsersForHydration = async (
 > => {
   if (ids.length === 0) return []
 
-  return await retryBusyRead(() =>
-    db
-      .select({
-        id: user.id,
-        name: user.name,
-        image: user.image,
-        attribution: user.attribution,
-        username: user.username,
-        isArchived: user.isArchived,
-      })
-      .from(user)
-      .where(inArray(user.id, ids)),
+  return await autochunk(
+    { items: [...new Set(ids)] },
+    async idChunk =>
+      await retryBusyRead(() =>
+        db
+          .select({
+            id: user.id,
+            name: user.name,
+            image: user.image,
+            attribution: user.attribution,
+            username: user.username,
+            isArchived: user.isArchived,
+          })
+          .from(user)
+          .where(inArray(user.id, idChunk)),
+      ),
   )
 }
 
@@ -433,7 +438,7 @@ export const updateUserLayers = async (
   if (!userLayers?.length) return []
 
   // Insert new layer preferences
-  return await db.insert(userLayer).values(userLayers).returning()
+  return await insertMany(db, userLayer, userLayers)
 }
 
 /**

@@ -25,7 +25,13 @@ import {
   toOrderByWithLocalizedFields,
   toRelatedRecords,
 } from '..'
-import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
+import {
+  insert,
+  update,
+  insertMany,
+  insertManyRelated,
+  replaceManyRelated,
+} from '../crud'
 import { retryBusyRead } from './sqlite'
 // ZOD
 import { getProjectHubFilter } from './hub'
@@ -159,7 +165,9 @@ const ensureOrganisationMembership = async (
     .filter(userId => !existingOrgUserIds.includes(userId))
 
   if (newOrgUsers.length > 0) {
-    await db.insert(organisationRole).values(
+    await insertMany(
+      db,
+      organisationRole,
       newOrgUsers.map(userId => ({
         userId,
         organisationId,

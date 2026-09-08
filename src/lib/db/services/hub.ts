@@ -22,7 +22,7 @@ import {
   toOrderByWithLocalizedFields,
   toRelatedRecords,
 } from '..'
-import { insertManyRelated, replaceManyRelated } from '../crud'
+import { insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 import { updateOrganisationById } from './organisation'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
@@ -149,7 +149,7 @@ export const createUserRoles = async (
   hubId: string,
 ): Promise<void> => {
   if (roles.length === 0) return
-  await db.insert(hubRole).values(toUserRoles(roles, hubId))
+  await insertMany(db, hubRole, toUserRoles(roles, hubId))
 }
 
 // ═══════════════════════
@@ -774,7 +774,7 @@ export const syncUserRoles = async (
 ): Promise<void> => {
   await db.delete(hubRole).where(eq(hubRole.hubId, hubId))
   if (roles.length === 0) return
-  await db.insert(hubRole).values(toUserRoles(roles, hubId))
+  await insertMany(db, hubRole, toUserRoles(roles, hubId))
 }
 
 /**
@@ -895,7 +895,9 @@ export const syncHubLayerDefaults = async (
 
   if (nextRows.length === 0) return
 
-  await db.insert(hubLayer).values(
+  await insertMany(
+    db,
+    hubLayer,
     nextRows.map(row => ({
       hubId,
       layerId: row.layerId,

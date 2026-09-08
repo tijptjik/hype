@@ -1,6 +1,7 @@
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 import { getTableName, and, inArray, eq, getTableColumns, sql } from 'drizzle-orm'
+import { chunkForD1, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
 // TYPES
 import type { Database, DbTable, Id } from '../types'
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
@@ -54,6 +55,54 @@ import type { InferSelectModel, InferInsertModel, SQL } from 'drizzle-orm'
 // ═══════════════════════
 
 /**
+ * Splits multi-row writes using a conservative table-wide parameter budget.
+ * @param table Table whose rows will be written.
+ * @param data Rows to split.
+ * @returns D1-safe row batches.
+ * @remarks D1 counts every bound value in an INSERT, including generated and nullable
+ * columns emitted by Drizzle. Using the full schema width avoids relying on a narrower
+ * call-site-specific estimate.
+ */
+const toD1WriteBatches = <T extends DbTable>(
+  table: T,
+  data: InferInsertModel<T>[],
+): InferInsertModel<T>[][] => {
+  const columnCount = Object.keys(getTableColumns(table)).length
+  const rowsPerBatch = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Math.max(1, columnCount)),
+  )
+  const batches: InferInsertModel<T>[][] = []
+
+  for (let index = 0; index < data.length; index += rowsPerBatch) {
+    batches.push(data.slice(index, index + rowsPerBatch))
+  }
+
+  return batches
+}
+
+/**
+ * Executes statements in D1-sized batches while keeping Drizzle's generic statement types local.
+ * @param db Database instance.
+ * @param statements Prepared Drizzle statements.
+ * @returns The result for each statement in submission order.
+ * @remarks Each D1 batch is atomic. Callers that need one transaction across every
+ * statement must keep the operation within D1's statement limit.
+ */
+const executeD1Batch = async <T>(db: Database, statements: T[]): Promise<unknown[]> => {
+  const results: unknown[] = []
+
+  for (let index = 0; index < statements.length; index += SQL_BATCH_SIZE) {
+    const batchResults = await db.batch(
+      statements.slice(index, index + SQL_BATCH_SIZE) as never,
+    )
+    results.push(...(batchResults as unknown[]))
+  }
+
+  return results
+}
+
+/**
  * Inserts a new record into the specified table
  * @param db Database instance
  * @param table Table to insert into
@@ -68,7 +117,10 @@ export const insert = async <T extends DbTable>(
   if (Array.isArray(data)) {
     return error(400, 'Single record insert expected, array provided')
   }
-  const [insertedEntity] = await db.insert(table).values(data).returning()
+  const [insertedEntity] = await db
+    .insert(table)
+    .values(data as never)
+    .returning()
 
   if (!insertedEntity) {
     return error(
@@ -95,8 +147,21 @@ export const insertMany = async <T extends DbTable>(
   if (!Array.isArray(data)) {
     return error(400, 'Array of records expected for batch insert')
   }
+  if (data.length === 0) {
+    return error(404, `${getTableName(table).toUpperCase()} not found`)
+  }
 
-  const insertedEntities = await db.insert(table).values(data).returning()
+  const insertedEntities = (
+    (await executeD1Batch(
+      db,
+      toD1WriteBatches(table, data).map(batch =>
+        db
+          .insert(table)
+          .values(batch as never)
+          .returning(),
+      ),
+    )) as InferSelectModel<T>[][]
+  ).flat()
 
   if (!insertedEntities.length) {
     return error(
@@ -134,7 +199,7 @@ export const update = async <T extends DbTable>(
 
   const [updatedEntity] = await db
     .update(table)
-    .set(data)
+    .set(data as never)
     .where(eq(whereColumn, whereValue))
     .returning()
 
@@ -168,11 +233,27 @@ export const updateMany = async <T extends DbTable>(
     return error(400, 'Array of records expected for batch update')
   }
 
-  const updatedEntities = await db
-    .update(table)
-    .set(data)
-    .where(inArray(whereColumn, whereValues))
-    .returning()
+  if (data.length !== whereValues.length) {
+    return error(400, 'Batch update data and target counts must match')
+  }
+
+  if (data.length === 0) {
+    return error(404, `${getTableName(table).toUpperCase()} not found`)
+  }
+
+  // Drizzle's update builder accepts one patch object, so pair each patch with its ID.
+  const updatedEntities = (
+    (await executeD1Batch(
+      db,
+      data.map((patch, index) =>
+        db
+          .update(table)
+          .set(patch as never)
+          .where(eq(whereColumn, whereValues[index]))
+          .returning(),
+      ),
+    )) as InferSelectModel<T>[][]
+  ).flat()
 
   if (!updatedEntities.length) {
     return error(
@@ -227,10 +308,10 @@ export const upsert = async <T extends DbTable>(
 
   const [upsertedEntity] = await db
     .insert(table)
-    .values(data)
+    .values(data as never)
     .onConflictDoUpdate({
       target: conflictColumns,
-      set: conflictUpdateAllExcept(table, conflictUpdateAllExceptColumns),
+      set: conflictUpdateAllExcept(table, conflictUpdateAllExceptColumns) as never,
     })
     .returning()
 
@@ -262,14 +343,32 @@ export const upsertMany = async <T extends DbTable>(
     return error(400, 'Array of records expected for batch upsert')
   }
 
-  const upsertedEntities = await db
-    .insert(table)
-    .values(data)
-    .onConflictDoUpdate({
-      target: conflictColumns,
-      set: data,
-    })
-    .returning()
+  const columns = getTableColumns(table)
+  const targetColumns = conflictColumns.map(
+    column => columns[column as keyof typeof columns],
+  )
+  if (targetColumns.some(column => !column)) {
+    return error(400, 'Unknown conflict column in batch upsert')
+  }
+  if (data.length === 0) {
+    return error(404, `${getTableName(table).toUpperCase()} not found`)
+  }
+
+  const upsertedEntities = (
+    (await executeD1Batch(
+      db,
+      toD1WriteBatches(table, data).map(batch =>
+        db
+          .insert(table)
+          .values(batch as never)
+          .onConflictDoUpdate({
+            target: targetColumns as never,
+            set: conflictUpdateAllExcept(table, conflictColumns) as never,
+          })
+          .returning(),
+      ),
+    )) as InferSelectModel<T>[][]
+  ).flat()
 
   if (!upsertedEntities.length) {
     return error(
@@ -325,10 +424,13 @@ export const delMany = async <T extends DbTable>(
   whereColumn: SQLiteColumn<any>,
   whereValues: Id[],
 ): Promise<InferSelectModel<T>[]> => {
-  const deletedEntities = await db
-    .delete(table)
-    .where(inArray(whereColumn, whereValues))
-    .returning()
+  const deletedEntities = (
+    await Promise.all(
+      chunkForD1({ items: whereValues }).map(valueBatch =>
+        db.delete(table).where(inArray(whereColumn, valueBatch)).returning(),
+      ),
+    )
+  ).flat()
 
   if (!deletedEntities.length) {
     return error(404, `${getTableName(table).toUpperCase()} not found`)
@@ -382,10 +484,13 @@ export const readMany = async <T extends DbTable>(
   whereColumn: SQLiteColumn<any>,
   whereValues: Id[],
 ): Promise<InferSelectModel<T>[]> => {
-  const entities = await db
-    .select()
-    .from(table)
-    .where(inArray(whereColumn, whereValues))
+  const entities = (
+    await Promise.all(
+      chunkForD1({ items: whereValues }).map(valueBatch =>
+        db.select().from(table).where(inArray(whereColumn, valueBatch)),
+      ),
+    )
+  ).flat()
 
   if (!entities.length) {
     return error(404, `${getTableName(table).toUpperCase()} not found`)
@@ -423,7 +528,7 @@ export const insertRelated = async <T extends DbTable>(
     .values({
       ...data,
       [foreignKeyColumn as string]: foreignKeyValue,
-    })
+    } as never)
     .returning()
 
   if (!insertedEntity) {
@@ -455,13 +560,26 @@ export const insertManyRelated = async <T extends DbTable>(
   if (!Array.isArray(data)) {
     return error(400, 'Array of records expected for batch insert')
   }
+  if (data.length === 0) {
+    return error(404, `${getTableName(table).toUpperCase()} not found`)
+  }
 
   const values = data.map(item => ({
     ...item,
     [foreignKeyColumn as string]: foreignKeyValue,
   }))
 
-  const insertedEntities = await db.insert(table).values(values).returning()
+  const insertedEntities = (
+    (await executeD1Batch(
+      db,
+      toD1WriteBatches(table, values).map(batch =>
+        db
+          .insert(table)
+          .values(batch as never)
+          .returning(),
+      ),
+    )) as InferSelectModel<T>[][]
+  ).flat()
 
   if (!insertedEntities.length) {
     return error(
@@ -503,7 +621,7 @@ export const updateRelated = async <T extends DbTable>(
 
   const [updatedEntity] = await db
     .update(table)
-    .set(data)
+    .set(data as never)
     .where(and(eq(whereColumn, whereValue), eq(foreignKeyColumn, foreignKeyValue)))
     .returning()
 
@@ -541,13 +659,31 @@ export const updateManyRelated = async <T extends DbTable>(
     return error(400, 'Array of records expected for batch update')
   }
 
-  const updatedEntities = await db
-    .update(table)
-    .set(data)
-    .where(
-      and(inArray(whereColumn, whereValues), eq(foreignKeyColumn, foreignKeyValue)),
-    )
-    .returning()
+  if (data.length !== whereValues.length) {
+    return error(400, 'Batch update data and target counts must match')
+  }
+
+  if (data.length === 0) {
+    return error(404, `${getTableName(table).toUpperCase()} not found`)
+  }
+
+  const updatedEntities = (
+    (await executeD1Batch(
+      db,
+      data.map((patch, index) =>
+        db
+          .update(table)
+          .set(patch as never)
+          .where(
+            and(
+              eq(whereColumn, whereValues[index]),
+              eq(foreignKeyColumn, foreignKeyValue),
+            ),
+          )
+          .returning(),
+      ),
+    )) as InferSelectModel<T>[][]
+  ).flat()
 
   if (!updatedEntities.length) {
     return error(
@@ -575,12 +711,39 @@ export const replaceManyRelated = async <T extends DbTable>(
   foreignKeyColumn: SQLiteColumn<any>,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>[]> => {
-  // First delete all existing records matching the foreign key
-  await delManyRelated(db, table, foreignKeyColumn, foreignKeyValue)
+  if (!Array.isArray(data)) {
+    return error(400, 'Array of records expected for batch replacement')
+  }
 
-  // Then insert all new records using the column name
-  const columnName = foreignKeyColumn.name as keyof InferInsertModel<T>
-  return await insertManyRelated(db, table, data, columnName, foreignKeyValue)
+  const insertStatements =
+    data.length === 0
+      ? []
+      : toD1WriteBatches(
+          table,
+          data.map(item => ({
+            ...item,
+            [foreignKeyColumn.name]: foreignKeyValue,
+          })),
+        ).map(batch =>
+          db
+            .insert(table)
+            .values(batch as never)
+            .returning(),
+        )
+
+  // Keep the replacement in one D1 batch whenever possible so a failed insert cannot
+  // leave the relation empty after its prior rows have been deleted.
+  const deleteStatement = db
+    .delete(table)
+    .where(eq(foreignKeyColumn, foreignKeyValue))
+    .returning()
+  const results = await executeD1Batch(db, [deleteStatement, ...insertStatements])
+
+  // The delete result is intentionally ignored; replacing an empty relation is valid.
+  const insertedEntities = (results.slice(1) as InferSelectModel<T>[][]).flat()
+
+  // Return the inserted rows using the column name
+  return insertedEntities as InferSelectModel<T>[]
 }
 
 // ═══════════════════════
@@ -641,10 +804,28 @@ export const delManyRelated = async <T extends DbTable>(
     conditions.push(inArray(whereColumn, whereValues))
   }
 
-  const deletedEntities = await db
-    .delete(table)
-    .where(and(...conditions))
-    .returning()
+  const deletedEntities =
+    whereColumn && whereValues
+      ? (
+          await Promise.all(
+            chunkForD1({ items: whereValues, otherParametersCount: 1 }).map(
+              valueBatch =>
+                db
+                  .delete(table)
+                  .where(
+                    and(
+                      eq(foreignKeyColumn, foreignKeyValue),
+                      inArray(whereColumn, valueBatch),
+                    ),
+                  )
+                  .returning(),
+            ),
+          )
+        ).flat()
+      : await db
+          .delete(table)
+          .where(and(...conditions))
+          .returning()
 
   // Allow deleting zero records without erroring
   // if (!deletedEntities.length) {
@@ -707,12 +888,21 @@ export const readManyRelated = async <T extends DbTable>(
   foreignKeyColumn: SQLiteColumn<any>,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>[]> => {
-  const entities = await db
-    .select()
-    .from(table)
-    .where(
-      and(inArray(whereColumn, whereValues), eq(foreignKeyColumn, foreignKeyValue)),
+  const entities = (
+    await Promise.all(
+      chunkForD1({ items: whereValues, otherParametersCount: 1 }).map(valueBatch =>
+        db
+          .select()
+          .from(table)
+          .where(
+            and(
+              inArray(whereColumn, valueBatch),
+              eq(foreignKeyColumn, foreignKeyValue),
+            ),
+          ),
+      ),
     )
+  ).flat()
 
   if (!entities.length) {
     return error(404, `${getTableName(table).toUpperCase()} not found`)
