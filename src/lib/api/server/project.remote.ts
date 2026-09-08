@@ -486,15 +486,6 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   const hasSubmittedUserRoles = Object.hasOwn(data, 'userRoles')
   const submittedRoles =
     hasSubmittedUserRoles && Array.isArray(data.userRoles) ? data.userRoles : []
-  const submittedProjectCapabilities = await mergeOrganisationCapabilities(
-    db,
-    data.organisationId as Id,
-    data.capabilities,
-  )
-  const submittedRolesWithCapabilities = sanitizeSubmittedRoleCapabilities(
-    submittedRoles,
-    submittedProjectCapabilities,
-  )
   const hasSubmittedProperties = Object.hasOwn(data, 'properties')
   const submittedProperties =
     hasSubmittedProperties && Array.isArray(data.properties) ? data.properties : []
@@ -527,15 +518,6 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     }))
   const normalizedSubmittedProperties =
     normalizeSubmittedPropertyRanks(submittedProperties)
-  const canonicalScopeByPropertyId = await resolveCanonicalScopeByPropertyId(
-    db,
-    normalizedSubmittedProperties,
-  )
-  const { local: submittedLocalProperties, inherited: submittedInheritedProperties } =
-    splitSubmittedPropertiesByScope(
-      normalizedSubmittedProperties,
-      canonicalScopeByPropertyId,
-    )
   const duplicateSubmittedRoleUserIds = hasSubmittedUserRoles
     ? getDuplicateValues(submittedRoles.map(role => role.userId))
     : []
@@ -584,6 +566,41 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // Create/update mode is explicit and validated above.
   const isCreateMode = mode === 'create'
 
+  /**
+   * Resolves DB-backed project capabilities and property scope only after the
+   * target project or organisation has passed its initial authorization check.
+   *
+   * @param organisationId - Persisted or authorized target organisation id.
+   * @returns Normalized capability, role, and property relation inputs.
+   */
+  const resolveSubmittedProjectRelations = async (organisationId: Id) => {
+    const submittedProjectCapabilities = await mergeOrganisationCapabilities(
+      db,
+      organisationId,
+      data.capabilities,
+    )
+    const submittedRolesWithCapabilities = sanitizeSubmittedRoleCapabilities(
+      submittedRoles,
+      submittedProjectCapabilities,
+    )
+    const canonicalScopeByPropertyId = await resolveCanonicalScopeByPropertyId(
+      db,
+      normalizedSubmittedProperties,
+    )
+    const { local: submittedLocalProperties, inherited: submittedInheritedProperties } =
+      splitSubmittedPropertiesByScope(
+        normalizedSubmittedProperties,
+        canonicalScopeByPropertyId,
+      )
+
+    return {
+      submittedProjectCapabilities,
+      submittedRolesWithCapabilities,
+      submittedLocalProperties,
+      submittedInheritedProperties,
+    }
+  }
+
   /* ----------------- */
   // CREATE FLOW
   /* -------- */
@@ -605,6 +622,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
+
+    const {
+      submittedProjectCapabilities,
+      submittedRolesWithCapabilities,
+      submittedLocalProperties,
+      submittedInheritedProperties,
+    } = await resolveSubmittedProjectRelations(data.organisationId as Id)
 
     await validateUniqueNonReservedCode({
       code: normalizedCode,
@@ -718,6 +742,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       ),
     )
   }
+
+  const {
+    submittedProjectCapabilities,
+    submittedRolesWithCapabilities,
+    submittedLocalProperties,
+    submittedInheritedProperties,
+  } = await resolveSubmittedProjectRelations(data.organisationId as Id)
 
   // Load the full persisted entity so field-level auth can compare against real DB state.
   const currentWithRelations = requireValue(
