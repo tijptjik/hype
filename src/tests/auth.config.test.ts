@@ -82,13 +82,13 @@ describe('server-owned account state', () => {
 })
 
 describe('Better Auth 1.7 account identity', () => {
-  it('stores issuer-scoped identities with a unique account key', () => {
-    expect(getTableColumns(account).issuer.notNull).toBe(true)
+  it('retains optional legacy issuers and uniquely scopes accounts by provider', () => {
+    expect(getTableColumns(account).issuer.notNull).toBe(false)
 
     expect(
       getTableConfig(account).indexes.some(
         index =>
-          index.config.name === 'account_issuer_accountId_uidx' &&
+          index.config.name === 'account_providerId_accountId_uidx' &&
           index.config.unique === true,
       ),
     ).toBe(true)
