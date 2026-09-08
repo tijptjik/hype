@@ -614,6 +614,28 @@ describe('project.remote form organisation move authz', () => {
     expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledTimes(1)
   })
 
+  it('authorizes scalar project changes before loading the relation graph', async () => {
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'FIELD_FORBIDDEN',
+    })
+
+    const payload = buildUpdatePayload('org-1')
+    payload.data.code = 'changed-code'
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'FIELD_FORBIDDEN',
+    )
+
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ code: 'changed-code' }),
+      }),
+    )
+    expect(mockLoadProject).not.toHaveBeenCalled()
+    expect(mockUpdateProjectByIdWithConcurrency).not.toHaveBeenCalled()
+  })
+
   it('normalizes submitted property ranks per type before persistence', async () => {
     const payload = buildUpdatePayload('org-1')
     payload.data.properties = [

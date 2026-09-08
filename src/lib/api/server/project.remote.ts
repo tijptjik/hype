@@ -682,6 +682,43 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('PROJECT_NOT_FOUND')),
   )
 
+  // Authorize persisted scalar changes before loading the relation-heavy admin shape.
+  const submittedDataBeforeHydration: Partial<
+    Record<ProjectAuthorizationField, unknown>
+  > = { i18n: data.i18n }
+  if (normalizedCode !== current.code)
+    submittedDataBeforeHydration.code = normalizedCode
+  if (data.organisationId !== current.organisationId) {
+    submittedDataBeforeHydration.organisationId = data.organisationId
+  }
+  if (
+    toProjectStableAuthzSignature(data.capabilities) !==
+    toProjectStableAuthzSignature(current.capabilities ?? {})
+  ) {
+    submittedDataBeforeHydration.capabilities = data.capabilities
+  }
+  if (meta?.licenseTouched === true) {
+    submittedDataBeforeHydration.license = data.license
+  }
+
+  const preliminaryUpdateDecision = authorizeProjectUpdateForSubmission({
+    user,
+    userRoles,
+    resource: {
+      id: current.id,
+      organisationId: current.organisationId,
+      hubId: current.hubId,
+    },
+    submittedData: submittedDataBeforeHydration,
+  })
+  if (!preliminaryUpdateDecision.allowed) {
+    invalid(
+      issue(
+        toIssueDetailMessage(preliminaryUpdateDecision.code ?? 'INSUFFICIENT_ROLE'),
+      ),
+    )
+  }
+
   // Load the full persisted entity so field-level auth can compare against real DB state.
   const currentWithRelations = requireValue(
     await loadProject<ProjectAdminDBRaw>(
