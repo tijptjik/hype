@@ -2304,6 +2304,11 @@ export type TaskFeatureReviewCommit = TaskReviewCommitContext & {
   action: 'accept' | 'reject' | 'setIntangible' | 'setUnpublished' | 'setArchived'
 }
 
+export type TaskFeatureDraftFinalizationCommit = {
+  task: Pick<TaskDB, 'id' | 'featureId' | 'contributorId' | 'modifiedAt'>
+  feature: Pick<FeatureDB, 'id' | 'modifiedAt'>
+}
+
 export const taskTypes = Object.values(TaskTypeEnum)
 export type TaskType = `${TaskTypeEnum}`
 
