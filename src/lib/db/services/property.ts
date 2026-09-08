@@ -11,6 +11,7 @@ import {
   insertManyRelated,
   replaceManyRelated,
   delMany,
+  delManyRelated,
 } from '../crud'
 // SCHEMA
 import {
@@ -992,14 +993,14 @@ export const syncProjectInheritedProperties = async (
     .map(row => row.propertyId)
 
   if (idsToDelete.length > 0) {
-    await db
-      .delete(projectProperty)
-      .where(
-        and(
-          eq(projectProperty.projectId, params.projectId),
-          inArray(projectProperty.propertyId, idsToDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      projectProperty,
+      projectProperty.projectId,
+      params.projectId,
+      projectProperty.propertyId,
+      idsToDelete,
+    )
   }
 
   const idsToCreate = submittedProjectProperties
@@ -1007,7 +1008,9 @@ export const syncProjectInheritedProperties = async (
     .map(row => row.id)
 
   if (idsToCreate.length > 0) {
-    await db.insert(projectProperty).values(
+    await insertMany(
+      db,
+      projectProperty,
       submittedProjectProperties
         .filter(row => idsToCreate.includes(row.id))
         .map(row => ({
@@ -1236,20 +1239,22 @@ export const syncHubProperties = async (
     .map(row => row.propertyId)
 
   if (idsToDelete.length > 0) {
-    await db
-      .delete(hubProperty)
-      .where(
-        and(
-          eq(hubProperty.hubId, params.hubId),
-          inArray(hubProperty.propertyId, idsToDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      hubProperty,
+      hubProperty.hubId,
+      params.hubId,
+      hubProperty.propertyId,
+      idsToDelete,
+    )
   }
 
   const idsToCreate = ordered.filter(row => !currentIds.has(row.id)).map(row => row.id)
 
   if (idsToCreate.length > 0) {
-    await db.insert(hubProperty).values(
+    await insertMany(
+      db,
+      hubProperty,
       ordered
         .filter(row => idsToCreate.includes(row.id))
         .map(row => ({
@@ -1474,20 +1479,22 @@ export const syncOrganisationProperties = async (
     .map(row => row.propertyId)
 
   if (idsToDelete.length > 0) {
-    await db
-      .delete(organisationProperty)
-      .where(
-        and(
-          eq(organisationProperty.organisationId, params.organisationId),
-          inArray(organisationProperty.propertyId, idsToDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      organisationProperty,
+      organisationProperty.organisationId,
+      params.organisationId,
+      organisationProperty.propertyId,
+      idsToDelete,
+    )
   }
 
   const idsToCreate = ordered.filter(row => !currentIds.has(row.id)).map(row => row.id)
 
   if (idsToCreate.length > 0) {
-    await db.insert(organisationProperty).values(
+    await insertMany(
+      db,
+      organisationProperty,
       ordered
         .filter(row => idsToCreate.includes(row.id))
         .map(row => ({

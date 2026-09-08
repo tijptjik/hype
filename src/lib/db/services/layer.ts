@@ -19,8 +19,15 @@ import {
   toOrderByWithLocalizedFields,
   toRelatedRecords,
 } from '..'
-import { insert, insertManyRelated, replaceManyRelated } from '../crud'
+import {
+  delManyRelated,
+  insert,
+  insertMany,
+  insertManyRelated,
+  replaceManyRelated,
+} from '../crud'
 import { retryBusyRead } from './sqlite'
+import { autochunk } from '$lib/utils/batch-query'
 // I18N
 import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
@@ -135,7 +142,9 @@ export const createProperties = async (
   properties: LayerPropertyNew[],
 ): Promise<LayerPropertyDBRaw[]> => {
   if (properties.length > 0) {
-    await db.insert(layerProperty).values(
+    await insertMany(
+      db,
+      layerProperty,
       properties.map(prop => ({
         layerId,
         ...prop,
@@ -520,18 +529,16 @@ export const syncProjectLayerPresentation = async (
 ): Promise<void> => {
   if (rows.length === 0) return
 
-  const existingRows = await db.query.layer.findMany({
-    where: and(
-      eq(layer.projectId, projectId),
-      inArray(
-        layer.id,
-        rows.map(row => row.id),
-      ),
-    ),
-    columns: {
-      id: true,
-    },
-  })
+  const existingRows = await autochunk(
+    { items: rows.map(row => row.id), otherParametersCount: 1 },
+    async rowIds =>
+      await db.query.layer.findMany({
+        where: and(eq(layer.projectId, projectId), inArray(layer.id, rowIds)),
+        columns: {
+          id: true,
+        },
+      }),
+  )
   const existingIds = new Set(existingRows.map(row => row.id))
 
   await Promise.all(
@@ -829,18 +836,18 @@ const upsertLayerProperties = async (
   }
 
   if (toDelete.length > 0) {
-    await db
-      .delete(layerProperty)
-      .where(
-        and(
-          eq(layerProperty.layerId, layerId),
-          inArray(layerProperty.propertyId, toDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      layerProperty,
+      layerProperty.layerId,
+      layerId,
+      layerProperty.propertyId,
+      toDelete,
+    )
   }
 
   if (toInsert.length > 0) {
-    await db.insert(layerProperty).values(toInsert)
+    await insertMany(db, layerProperty, toInsert)
   }
 
   for (const updateOp of toUpdate) {

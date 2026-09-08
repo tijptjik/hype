@@ -1,16 +1,7 @@
 // NANOID
 import { nanoid } from 'nanoid'
 // DRIZZLE
-import {
-  and,
-  eq,
-  exists,
-  inArray,
-  or,
-  sql,
-  type InferInsertModel,
-  type SQL,
-} from 'drizzle-orm'
+import { and, eq, exists, or, sql, type InferInsertModel, type SQL } from 'drizzle-orm'
 // DB
 import {
   firstOrNull,
@@ -19,7 +10,7 @@ import {
   toRelatedRecords,
   transformI18nSafely,
 } from '..'
-import { insert, insertManyRelated, replaceManyRelated } from '../crud'
+import { delManyRelated, insert, insertManyRelated, replaceManyRelated } from '../crud'
 import {
   feature,
   featureI18n,
@@ -783,23 +774,23 @@ export const updateProperties = async (
   )
 
   if (propertyIdsToDelete.length > 0) {
-    await db
-      .delete(featurePropertyI18n)
-      .where(
-        and(
-          eq(featurePropertyI18n.featureId, featureId),
-          inArray(featurePropertyI18n.propertyId, propertyIdsToDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      featurePropertyI18n,
+      featurePropertyI18n.featureId,
+      featureId,
+      featurePropertyI18n.propertyId,
+      propertyIdsToDelete,
+    )
 
-    await db
-      .delete(featureProperty)
-      .where(
-        and(
-          eq(featureProperty.featureId, featureId),
-          inArray(featureProperty.propertyId, propertyIdsToDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      featureProperty,
+      featureProperty.featureId,
+      featureId,
+      featureProperty.propertyId,
+      propertyIdsToDelete,
+    )
   }
 
   for (const propertyRow of properties) {
