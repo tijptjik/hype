@@ -43,6 +43,7 @@ import type {
   TaskImageReviewPlan,
   TaskImageReviewRow,
   TaskFeatureReviewCommit,
+  TaskFeatureDraftFinalizationCommit,
   TaskReviewCommitContext,
 } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -67,6 +68,7 @@ import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 //    - publishImages
 //    - commitTaskImageReview
 //    - commitTaskFeatureReview
+//    - commitTaskFeatureDraftFinalization
 //    - taskReviewPendingCondition
 //    - prepareTaskImageArchives
 //    - prepareTaskImagePublications
@@ -661,6 +663,53 @@ export const commitTaskFeatureReview = async (
   // Keep these statements adjacent: changes() must describe the task completion above.
   const [completed, updated] = await db.batch([completion, mutation])
   return completed.length === 1 && updated.length === 1
+}
+
+/**
+ * Finalizes a new-feature draft and its task together.
+ * @param db Database handle.
+ * @param input Current task and feature snapshots.
+ * @returns True on commit, false if either draft snapshot or scope became stale.
+ * @remarks The adjacent feature update uses SQLite changes() to require a winning task write.
+ */
+export const commitTaskFeatureDraftFinalization = async (
+  db: Database,
+  input: TaskFeatureDraftFinalizationCommit,
+): Promise<boolean> => {
+  if (input.task.featureId !== input.feature.id) {
+    throw error(400, 'TASK_FEATURE_REQUIRED')
+  }
+  const featureSnapshot = and(
+    eq(feature.id, input.feature.id),
+    eq(feature.modifiedAt, input.feature.modifiedAt),
+  )
+
+  // Claim task submission only while its linked feature remains the exact draft snapshot.
+  const completion = db
+    .update(task)
+    .set({ isDraft: false })
+    .where(
+      and(
+        eq(task.id, input.task.id),
+        eq(task.featureId, input.task.featureId),
+        eq(task.contributorId, input.task.contributorId),
+        eq(task.modifiedAt, input.task.modifiedAt),
+        eq(task.isDraft, true),
+        eq(task.isReviewed, false),
+        taskFeatureScopeCondition(),
+        sql`exists (select 1 from ${feature} where ${featureSnapshot})`,
+      ),
+    )
+    .returning({ id: task.id })
+  const featureFinalization = db
+    .update(feature)
+    .set({ isDraft: false })
+    .where(and(featureSnapshot, sql`changes() = 1`))
+    .returning({ id: feature.id })
+
+  // Keep these statements adjacent: changes() must describe task submission above.
+  const [completed, finalized] = await db.batch([completion, featureFinalization])
+  return completed.length === 1 && finalized.length === 1
 }
 
 /**
