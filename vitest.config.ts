@@ -146,13 +146,8 @@ export default defineConfig({
     ],
   },
   test: {
-    environment: 'jsdom',
-    environmentMatchGlobs: [
-      ['src/tests/*.remote.test.ts', 'node'],
-      ['src/tests/authorization*.test.ts', 'node'],
-      ['src/tests/*.services.test.ts', 'node'],
-      ['src/tests/image-analytics.server.test.ts', 'node'],
-    ],
+    // Most tests exercise services and pure utilities; DOM tests opt in per file.
+    environment: 'node',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     coverage: {
@@ -164,7 +159,6 @@ export default defineConfig({
     execArgv: ['--expose-gc'],
     isolate: true,
     maxWorkers: 1,
-    vmMemoryLimit: '300Mb',
     fileParallelism: false,
     testTimeout: 10000,
     hookTimeout: 5000,
@@ -180,7 +174,7 @@ export default defineConfig({
     typecheck: {
       tsconfig: './tsconfig.test.json',
     },
-    // Disable server completely for tests
+    // Transform dependencies through Vite so repeated imports share its cache.
     server: {
       deps: {
         inline: true,

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WishlistAction from '$lib/bits/patterns/cards/featureCard/components/actions/WishlistAction.svelte'

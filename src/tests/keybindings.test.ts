@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // TESTS
 import { describe, expect, it, vi } from 'vitest'
 // CONTEXT
