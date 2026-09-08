@@ -464,16 +464,16 @@ export const getProperties = getPropertiesQuery
 const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) => {
   const { db, user, userRoles } = ctx
 
-  const result = await loadProperty(db, propertyCollectionWithRelations, [
-    eq(property.id, params.id),
-  ])
-
-  if (!result) {
+  const propertyScope = await probePropertyScope(db, params.id)
+  if (!propertyScope) {
     return {
       data: null,
     }
   }
-  if (typeof result.projectId !== 'string' || result.projectId.length === 0) {
+  if (
+    typeof propertyScope.projectId !== 'string' ||
+    propertyScope.projectId.length === 0
+  ) {
     return {
       data: null,
     }
@@ -481,7 +481,7 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
 
   const readDecision = await toProjectReadDecision({
     db,
-    projectId: result.projectId,
+    projectId: propertyScope.projectId,
     user,
     userRoles,
   })
@@ -492,6 +492,16 @@ const getPropertyQuery = guardedQuery(PropertyEntityQuery, async (params, ctx) =
   }
   if (!readDecision.allowed) {
     throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+
+  // Hydrate property values only after the owning project passes read authorization.
+  const result = await loadProperty(db, propertyCollectionWithRelations, [
+    eq(property.id, params.id),
+  ])
+  if (!result) {
+    return {
+      data: null,
+    }
   }
 
   return {

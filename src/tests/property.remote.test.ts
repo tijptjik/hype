@@ -248,7 +248,15 @@ describe('property.remote', () => {
   })
 
   it('denies getProperty when linked project read authz denies', async () => {
-    mockLoadProperty.mockResolvedValue({ id: 'prop-1', projectId: 'project-1' })
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
     mockProbeProjectQuery.mockResolvedValue({
       id: 'project-1',
       organisationId: 'org-1',
@@ -264,6 +272,7 @@ describe('property.remote', () => {
     await expect(remote.getProperty({ id: 'prop-1' })).rejects.toMatchObject({
       status: 403,
     })
+    expect(mockLoadProperty).not.toHaveBeenCalled()
   })
 
   it('checks append access from the property scope probe without loading relations', async () => {
