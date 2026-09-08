@@ -405,6 +405,7 @@ export const probeLayerForUpdate = async (
   organisationId: string
   projectId: string
   metadata: LayerMetadata | null
+  isDefaultVisible: boolean
   hubId: string | null
   modifiedAt: string
 } | null> => {
@@ -415,6 +416,7 @@ export const probeLayerForUpdate = async (
         organisationId: layer.organisationId,
         projectId: layer.projectId,
         metadata: layer.metadata,
+        isDefaultVisible: layer.isDefaultVisible,
         hubId: organisation.hubId,
         modifiedAt: layer.modifiedAt,
       })
