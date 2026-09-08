@@ -23,14 +23,18 @@ import type {
   SessionUser,
 } from '$lib/types'
 
+/**
+ * Requires both parts of the request's authenticated session context.
+ *
+ * @param locals - Session and user resolved by the authentication hook.
+ * @returns The complete session context, including valid guest sessions.
+ * @remarks Account-only restrictions belong to the operation's authorization policy.
+ */
 export const getSessionOrError = async (
   locals: App.Locals,
 ): Promise<{ user: SessionUser; session: Session }> => {
-  if (!locals.session) {
-    return error(401, 'Authentication not available')
-  }
-  if (!locals.user) {
-    return error(401, 'No nice, no rice')
+  if (!locals.session || !locals.user) {
+    return error(401, 'UNAUTHENTICATED')
   }
   return { user: locals.user, session: locals.session }
 }
