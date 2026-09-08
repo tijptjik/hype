@@ -3,6 +3,9 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
+// API
+import * as remote from '$lib/api/server/feature.remote'
+import { authorizeFeatureUpdateForSubmission } from '$lib/api/services/authz/feature'
 
 const {
   mockAuthorizeFeatureListForContext,
@@ -282,8 +285,6 @@ vi.mock('$lib/i18n', async importOriginal => {
   }
 })
 
-let remote: Awaited<typeof import('$lib/api/server/feature.remote')>
-
 const matrix = createAuthzMatrixReporter('feature.remote')
 
 const recordMatrix = (row: {
@@ -307,9 +308,8 @@ afterAll(() => {
 })
 
 describe('feature.remote authz matrix', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/feature.remote')
+  beforeEach(() => {
+    // Reuse the stateless handlers; reset their mocked dependencies for each case.
     vi.clearAllMocks()
 
     mockAuthorizeFeatureListForContext.mockReturnValue({ allowed: true })
@@ -573,9 +573,6 @@ describe('feature.remote authz matrix', () => {
   it.each([false, true])(
     'translator feature update checks actual property changes (changed=%s)',
     async propertiesChanged => {
-      const { authorizeFeatureUpdateForSubmission } = await import(
-        '$lib/api/services/authz/feature'
-      )
       mockAuthorizeFeatureUpdateForSubmission.mockImplementation(
         authorizeFeatureUpdateForSubmission,
       )
