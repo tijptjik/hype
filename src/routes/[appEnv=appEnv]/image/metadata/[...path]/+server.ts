@@ -37,6 +37,10 @@ export const GET = async ({ params, platform }) => {
   if (!publicId) throw error(400, 'Missing publicId')
 
   const normalizedProfile = ImageMetadataProfileSchema.parse(profile)
+  if (normalizedProfile !== 'basic') {
+    throw error(403, 'Only basic metadata is publicly available')
+  }
+
   const { document } = await readMetadataDocument({
     platform,
     env: toImageStage(params.appEnv),

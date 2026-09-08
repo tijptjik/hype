@@ -744,7 +744,7 @@ export function useImageEditorGalleryModel(
         publicId: currentImage.publicId,
         env: currentImage.env ?? undefined,
         version: currentImage.version ?? undefined,
-        profile: 'admin',
+        profile: imageCtx.appCtx.isAdmin() ? 'admin' : 'basic',
         meta: imageCtx.appCtx.isAdmin() ? { isAdminRequest: true } : undefined,
       }),
     ).then(response => (response?.data as ImageMetadataFull | null) ?? null)

@@ -239,7 +239,7 @@ $effect(() => {
     publicId: image.publicId,
     env: image.env ?? undefined,
     version: image.version ?? undefined,
-    profile: 'admin',
+    profile: appCtx.isAdmin() ? 'admin' : 'basic',
     meta: appCtx.isAdmin() ? { isAdminRequest: true } : undefined,
   })
     .then(response => {

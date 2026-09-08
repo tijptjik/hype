@@ -2,7 +2,7 @@
 import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
 import { error, isHttpError } from '@sveltejs/kit'
 // DRIZZLE
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 // AUTHORIZATION
@@ -78,7 +78,13 @@ import {
   ImageEnv,
 } from '$lib/enums'
 // TYPES
-import type { Database, Id, EntityResponse, UserRoleDisco } from '$lib/types'
+import type {
+  Database,
+  EntityResponse,
+  GuardedQueryContext,
+  Id,
+  UserRoleDisco,
+} from '$lib/types'
 import type {
   CreateImageParams,
   FinalizeImageUploadLink,
@@ -94,13 +100,15 @@ import type {
   ImagesForIdsParamsByProfile,
   ImageUploadSession,
   ImageMetadataResponse,
+  GetImageMetadataParams,
 } from '$lib/db/zod/schema/image.types'
 import { createUploadToken, verifyUploadToken } from '$lib/images/auth'
 import {
   createPresignedR2UploadUrl,
   getDerivedBucketForStage,
-  getOriginalsBucketNameForStage,
   getOriginalsBucketForStage,
+  getOriginalsBucketNameForStage,
+  getReadableStages,
   readMetadataDocument,
   readR2ObjectViaApi,
   headR2ObjectViaApi,
@@ -122,6 +130,9 @@ const FeatureCanonicalImagesSchema = z.object({
     .optional(),
 })
 
+const normalizeMetadataPublicId = (publicId: string): string =>
+  publicId.trim().replace(/^\/+/, '')
+
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
@@ -135,6 +146,7 @@ const FeatureCanonicalImagesSchema = z.object({
 // - resolveImageQueryContext
 // - probeContextState
 // - resolveAuthorizedImageContext
+// - authorizeMetadataRead
 //
 // 2. STORAGE & METADATA HELPERS
 // - attachImageLinks
@@ -544,6 +556,56 @@ const resolveAuthorizedImageContext = async (
     if (decision.allowed) return candidate
   }
   return null
+}
+
+/**
+ * Authorizes a metadata sidecar against every persisted image assignment.
+ *
+ * @param params Metadata request parameters.
+ * @param ctx Guarded remote context.
+ * @returns A promise that resolves when at least one image assignment is readable.
+ * @throws 403 when the sidecar exists but no assignment is within the caller's scope.
+ * @remarks Full metadata profiles require explicit admin-origin intent; basic metadata
+ * follows the same published-resource policy as ordinary image reads.
+ */
+const authorizeMetadataRead = async (
+  params: Pick<GetImageMetadataParams, 'publicId' | 'env' | 'profile'>,
+  ctx: GuardedQueryContext,
+): Promise<void> => {
+  // Full sidecars are an admin-only representation; explicit remote intent is
+  // required before any image lookup can disclose whether the sidecar exists.
+  if (params.profile !== 'basic' && !ctx.isAdminRequest) {
+    throw error(403, 'INSUFFICIENT_ROLE')
+  }
+
+  const env = toImageStage(params.env ?? ctx.event.platform?.env.ENVIRONMENT)
+  const normalizedPublicId = normalizeMetadataPublicId(params.publicId)
+  const imageIdRows = await ctx.db
+    .select({ id: image.id })
+    .from(image)
+    .where(
+      and(
+        eq(image.publicId, normalizedPublicId),
+        inArray(image.env, getReadableStages(env)),
+      ),
+    )
+    .limit(1000)
+  const imageIds = imageIdRows.map(row => row.id as Id)
+  if (imageIds.length === 0) throw error(404, 'Image metadata not found')
+
+  const imageRows = await getImagesByIds(ctx.db, imageIds)
+  const actor = toImageAccessActor(ctx.user, ctx.userRoles)
+  for (const imageRow of imageRows) {
+    const context = await resolveAuthorizedImageContext(
+      ctx.db,
+      imageRow,
+      actor,
+      ctx.isAdminRequest,
+    )
+    if (context) return
+  }
+
+  throw error(403, 'INSUFFICIENT_ROLE')
 }
 
 /**
@@ -1549,8 +1611,35 @@ export const getImagesForIdsByProfile = getImagesForIds as typeof getImagesForId
 export const getFeatureCanonicalImageOccupancy = guardedQuery(
   FeatureCanonicalImagesSchema,
   async (params, ctx): Promise<{ data: string[] }> => {
+    if (!ctx.isAdminRequest) throw error(403, 'INSUFFICIENT_ROLE')
+
+    const actor = toImageAccessActor(ctx.user, ctx.userRoles)
+    const featureIds = [...new Set(params.featureIds as Id[])]
+    for (const featureId of featureIds) {
+      const context = await probeContextState(
+        ctx.db,
+        ImageContextResource.feature,
+        featureId,
+      )
+      const decision = authorizeImageList(
+        actor,
+        {
+          ctxType: ImageContextResource.feature,
+          ctxId: featureId,
+          resourceHubId: context.resourceHubId,
+          projectId: context.projectId,
+          organisationId: context.organisationId,
+        },
+        context.requestedState,
+        { isAdminRequest: true },
+      )
+      if (!decision.allowed) {
+        throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+      }
+    }
+
     return {
-      data: await loadFeatureCanonicalImageOccupancy(ctx.db, params.featureIds as Id[]),
+      data: await loadFeatureCanonicalImageOccupancy(ctx.db, featureIds),
     }
   },
 )
@@ -1603,6 +1692,7 @@ export const getMetadata = guardedQuery(
   GetImageMetadataSchema,
   async (params, ctx): Promise<ImageMetadataResponse> => {
     const startedAt = Date.now()
+    await authorizeMetadataRead(params, ctx)
     const env = toImageStage(
       params.env ?? ctx.event.platform?.env.ENVIRONMENT ?? ImageEnv.local,
     )

@@ -22,6 +22,7 @@ const {
   mockUpdateImageForContext,
   mockCreateFeatureImage,
   mockCreateImageRecord,
+  mockLoadFeatureCanonicalImageOccupancy,
   mockLoadImageById,
   mockToImageEnvelope,
   mockGetImageForContextType,
@@ -55,6 +56,7 @@ const {
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
   mockCreateFeatureImage: vi.fn(async () => ({ id: 'fi-1' })),
   mockCreateImageRecord: vi.fn(async () => ({ id: 'img-1', publicId: null })),
+  mockLoadFeatureCanonicalImageOccupancy: vi.fn(async () => ['feature-1']),
   mockLoadImageById: vi.fn(async () => null),
   mockToImageEnvelope: vi.fn(
     (data: unknown, _profile: string, ctxType: string, ctxId: string) => ({
@@ -136,6 +138,7 @@ vi.mock('$lib/db/services/image', () => ({
   createFeatureImage: mockCreateFeatureImage,
   createImage: mockCreateImageRecord,
   createUploadedImage: vi.fn(async () => mockCreateImageRecord()),
+  getFeatureCanonicalImageOccupancy: mockLoadFeatureCanonicalImageOccupancy,
   getImageById: mockLoadImageById,
   toImageEnvelope: mockToImageEnvelope,
   getImageForContextType: mockGetImageForContextType,
@@ -256,6 +259,10 @@ describe('image.remote', () => {
     vi.clearAllMocks()
     mockCreateImageRecord.mockReset()
     mockCreateImageRecord.mockResolvedValue({ id: 'img-1', publicId: null })
+    mockGetImagesByIds.mockReset()
+    mockGetImagesByIds.mockResolvedValue([])
+    mockLoadFeatureCanonicalImageOccupancy.mockReset()
+    mockLoadFeatureCanonicalImageOccupancy.mockResolvedValue(['feature-1'])
     mockLoadImageById.mockReset()
     mockLoadImageById.mockResolvedValue(null)
     mockWaitUntil.mockReset()
@@ -1155,6 +1162,28 @@ describe('image.remote', () => {
   )
 
   it('getMetadata reads the metadata sidecar for the requested public id and env', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      db: buildDbWithContextRow({
+        id: 'img-1',
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub-a',
+        projectId: 'project-1',
+        organisationId: 'org-1',
+      }),
+      userRoles: [{ type: 'organisation', organisationId: 'org-1', role: 'owner' }],
+    })
+    mockGetImagesByIds.mockResolvedValue([
+      {
+        id: 'img-1',
+        publicId: 'h/hkghostsigns/example-id',
+        env: 'production',
+        featureId: 'feature-1',
+        isPublished: true,
+        isArchived: false,
+      } as never,
+    ])
     mockReadMetadataDocument.mockResolvedValue({
       document: {
         originalFilename: 'sample',
@@ -1195,6 +1224,33 @@ describe('image.remote', () => {
       latitude: null,
       longitude: null,
     })
+  })
+
+  it('does not expose full metadata without explicit admin intent', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+
+    await expect(
+      remote.getMetadata({
+        publicId: 'h/hkghostsigns/example-id',
+        profile: 'full',
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+  })
+
+  it('requires admin intent before checking canonical image occupancy', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+
+    await expect(
+      remote.getFeatureCanonicalImageOccupancy({ featureIds: ['feature-1'] }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockLoadFeatureCanonicalImageOccupancy).not.toHaveBeenCalled()
   })
 
   it('rotateImage rewrites stored objects, bumps version, and warms fresh variants', async () => {
