@@ -139,6 +139,13 @@ An older account session must sign in again before adding a password. Throttled
 responses retain Better Auth's `429` status and `X-Retry-After` header; they must
 not change email, send verification mail, or hash a password.
 
+When password setup includes a different email address, a successful email-change
+HTTP response is not proof that the address changed. Password creation must wait
+until that address is persisted on the current user. Pending verification and
+unchanged/conflicting addresses return the generic `PASSWORD_NOT_SET` failure;
+after completing verification, retry password setup. Invalid password lengths and
+existing password credentials must be rejected before attempting an email change.
+
 ## Roles and authorization follow-through
 
 Authentication proves who the person is; it does not grant resource access.
