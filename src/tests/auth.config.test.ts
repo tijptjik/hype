@@ -60,9 +60,21 @@ describe('server-owned account state', () => {
 
   it('still returns server-maintained flags and accepts ordinary profile settings', () => {
     const options = runtimeOptions()
-    expect(
-      parseUserOutput(options, { id: 'user', isArchived: true, isAnonymous: true }),
-    ).toMatchObject({ id: 'user', isArchived: true, isAnonymous: true })
+    const user = {
+      id: 'user',
+      name: 'User',
+      email: 'user@example.com',
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isArchived: true,
+      isAnonymous: true,
+    }
+    expect(parseUserOutput(options, user)).toMatchObject({
+      id: 'user',
+      isArchived: true,
+      isAnonymous: true,
+    })
     expect(
       parseUserInput(options, { locale: 'zh-hant', attribution: 'Credit' }, 'update'),
     ).toEqual({ locale: 'zh-hant', attribution: 'Credit' })
@@ -94,7 +106,7 @@ describe('authConfig embedded sessions', () => {
 })
 
 describe('authConfig session cache', () => {
-  it('keeps routine navigation off D1 for a bounded interval', () => {
+  it('caches the session payload for a bounded interval', () => {
     expect(authConfig.session.cookieCache).toMatchObject({
       enabled: true,
       maxAge: 5 * 60,

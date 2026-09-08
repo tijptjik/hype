@@ -1,5 +1,6 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth'
+import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { passkey } from '@better-auth/passkey'
 import { customSession, anonymous, username } from 'better-auth/plugins'
@@ -11,6 +12,7 @@ import { authConfig } from './auth/config'
 import { buildAuthEmail } from './auth/email'
 import { isAuthProviderEnabled } from './auth/providers'
 import { parseSessionSettings } from './auth/session-settings'
+import { requireAvailableAuthUser } from './auth/account-state.server'
 // DB SCHEMA
 import * as schema from '$lib/db/schema/index'
 // TYPES
@@ -123,8 +125,26 @@ function createAuthInstance(
         ipAddressHeaders: ['cf-connecting-ip'],
       },
     },
+    // Recheck account availability even when Better Auth accepts a cached session payload.
+    hooks: {
+      before: createAuthMiddleware(async ctx => {
+        // Clearing a disabled account's session must remain possible.
+        if (ctx.path === '/sign-out') return
+        const current = await getSessionFromCtx(ctx, { disableRefresh: true })
+        if (current) await requireAvailableAuthUser(db, current.user.id)
+      }),
+    },
     // DATABASE HOOKS
     databaseHooks: {
+      session: {
+        create: {
+          before: async session => {
+            // All sign-in methods converge here after identifying the account owner.
+            await requireAvailableAuthUser(db, session.userId)
+            return { data: session }
+          },
+        },
+      },
       user: {
         create: {
           before: async user => {
