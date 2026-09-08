@@ -29,6 +29,7 @@ const {
   mockHasInvalidHubOrganisationAssignmentsForSubmission,
   mockGetHubSubscriptionTarget,
   mockUpsertHubUserState,
+  mockListOrganisations,
   mockGuardedContext,
 } = vi.hoisted(() => ({
   mockHubFormDataParse: vi.fn((input: unknown) => input),
@@ -60,12 +61,18 @@ const {
   mockHasInvalidHubOrganisationAssignmentsForSubmission: vi.fn(async () => false),
   mockGetHubSubscriptionTarget: vi.fn(async () => null),
   mockUpsertHubUserState: vi.fn(async () => undefined),
+  mockListOrganisations: vi.fn(async () => []),
   mockGuardedContext: vi.fn(),
 }))
 
 vi.mock('$lib/api/server/remote', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
-    withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'query'),
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -146,6 +153,16 @@ vi.mock('$lib/api/services/authz', () => ({
       .join('|'),
   authorizeHubList: () => ({ allowed: true }),
   authorizeHubReadForProbe: () => ({ allowed: true }),
+  isRelevantHubAdmin: (
+    roles: Array<{ type: string; role: string; hubId?: string }>,
+    hubId?: string | null,
+  ) =>
+    roles.some(
+      role =>
+        role.type === 'hub' &&
+        role.role === 'admin' &&
+        (role.hubId === hubId || role.hubId === 'core'),
+    ),
   authorizeHubCreateForSubmission: mockAuthorizeHubCreateForSubmission,
   authorizeHubUpdateForSubmission: mockAuthorizeHubUpdateForSubmission,
   authorizeHubManageRolesForSubmission: mockAuthorizeHubManageRolesForSubmission,
@@ -194,6 +211,7 @@ vi.mock('$lib/db/services/hub', () => ({
   syncOrganisations: mockSyncHubOrganisations,
   getHubSubscriptionTarget: mockGetHubSubscriptionTarget,
   upsertHubUserState: mockUpsertHubUserState,
+  listOrganisations: mockListOrganisations,
   listUserRoles: mockListHubRoleAssignments,
   listHubRoleAssignments: mockListHubRoleAssignments,
   listHubOrganisationLookups: vi.fn(async () => []),
@@ -324,6 +342,7 @@ describe('hub.remote form image handling', () => {
     mockHasInvalidHubOrganisationAssignmentsForSubmission.mockResolvedValue(false)
     mockGetHubSubscriptionTarget.mockResolvedValue(null)
     mockUpsertHubUserState.mockResolvedValue(undefined)
+    mockListOrganisations.mockResolvedValue([])
     mockSubscribeToSubstack.mockResolvedValue({ ok: true })
     mockProbeExistingHub.mockResolvedValue(null)
     mockListHubRoleAssignments.mockResolvedValue([])
@@ -811,6 +830,45 @@ describe('hub.remote form image handling', () => {
         dismissed: true,
       },
     })
+  })
+
+  it('requires explicit admin intent for organisation assignment lookups', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+      isAdminRequest: false,
+    })
+
+    await expect(
+      remote.getOrganisationLookupsForHub({
+        conditions: { organisation: ['org-1'] },
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockListOrganisations).not.toHaveBeenCalled()
+  })
+
+  it('restricts organisation assignment lookups to the requested hub scope', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false, superAdmin: false },
+      userRoles: [{ type: 'hub', role: 'admin', hubId: 'hub-1' }],
+      isAdminRequest: true,
+    })
+    mockListOrganisations.mockResolvedValue([
+      {
+        id: 'org-1',
+        hubId: 'hub-2',
+        isCoreInclusive: false,
+        isHubExclusive: false,
+      },
+    ])
+
+    await expect(
+      remote.getOrganisationLookupsForHub({
+        conditions: { organisation: ['org-1'] },
+      }),
+    ).rejects.toMatchObject({ status: 403 })
   })
 
   it('passes the stored session cookie to the Substack subscriber adapter', async () => {
