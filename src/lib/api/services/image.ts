@@ -628,7 +628,6 @@ export const updateImageForContext = async (args: {
   data: Record<string, unknown>
 }): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
   const { db, user, userId, userRoles, isAdminRequest, id, ctxType, ctxId, data } = args
-  const userWithAttribution = await getUserById(db, userId)
 
   const payload = {
     ...data,
@@ -646,6 +645,8 @@ export const updateImageForContext = async (args: {
     ctxType,
   )
 
+  // Read attribution only after the caller has passed the resource authorization check.
+  const userWithAttribution = await getUserById(db, userId)
   const imageToUpdate = ImageUpdate.parse(data)
   let updatedImage: ImageDBFlat | undefined
 
