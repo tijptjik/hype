@@ -204,6 +204,25 @@ export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => 
   if (!sessionUser) {
     throw error(401, 'AUTH_REQUIRED')
   }
+
+  const isSelfLookup =
+    params.ref === sessionUser.id ||
+    (params.refKey === 'username' && params.ref === sessionUser.username) ||
+    (!params.refKey && params.ref === sessionUser.username)
+
+  // The detailed user read is also a public remote entry point. Do not let an
+  // arbitrary authenticated account enumerate another user's profile or request
+  // the admin profile; the user-search capability is the scoped exception.
+  if (
+    !isSelfLookup &&
+    !canSearchUsers({
+      superAdmin: sessionUser.superAdmin,
+      userRoles,
+    })
+  ) {
+    throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+  }
+
   const requestPrisms = params.prisms ?? getPrisms(event.url)
 
   const queryPlan = toUserReadQueryPlan(db, {
