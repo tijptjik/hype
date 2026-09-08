@@ -23,6 +23,7 @@ beforeEach(() => {
   writeParameterCounts = []
   beforeBatch = undefined
   sqlite = new DatabaseSync(':memory:')
+  sqlite.exec('PRAGMA foreign_keys = ON')
   // Include every real selected column so nested hydration runs through Drizzle SQL.
   for (const table of [
     schema.project,
@@ -38,12 +39,21 @@ beforeEach(() => {
     schema.propertyValue,
     schema.propertyValueI18n,
   ]) {
-    const columns = Object.values(getTableColumns(table)).map(
-      column => `"${column.name}" ${column.getSQLType()}`,
-    )
+    // Enforce the actual property-child cascade edges exercised by these transaction tests.
+    const columns = Object.values(getTableColumns(table)).map(column => {
+      const parent =
+        (table === schema.propertyValue || table === schema.propertyI18n) &&
+        column.name === 'propertyId'
+          ? ' REFERENCES property(id) ON DELETE CASCADE'
+          : table === schema.propertyValueI18n && column.name === 'propertyValueId'
+            ? ' REFERENCES propertyValue(id) ON DELETE CASCADE'
+            : ''
+      return `"${column.name}" ${column.getSQLType()}${parent}`
+    })
     sqlite.exec(`CREATE TABLE "${getTableName(table)}" (${columns.join(', ')})`)
   }
   sqlite.exec(`CREATE UNIQUE INDEX layer_property_unique ON layerProperty(layerId, propertyId);
+    CREATE UNIQUE INDEX property_id ON property(id);
     CREATE UNIQUE INDEX property_value_id ON propertyValue(id);
     CREATE UNIQUE INDEX property_value_i18n_key ON propertyValueI18n(propertyValueId, locale);
     CREATE UNIQUE INDEX project_property_unique ON projectProperty(projectId, propertyId);
@@ -119,6 +129,235 @@ function snapshot() {
 }
 
 describe('local project property value translations', () => {
+  /** Captures the complete property subtree, including unrelated catalog records. */
+  const propertySnapshot = () => ({
+    properties: sqlite.prepare('SELECT * FROM property ORDER BY id').all(),
+    translations: sqlite
+      .prepare('SELECT * FROM propertyI18n ORDER BY propertyId, locale')
+      .all(),
+    values: sqlite.prepare('SELECT * FROM propertyValue ORDER BY id').all(),
+    valueTranslations: sqlite
+      .prepare('SELECT * FROM propertyValueI18n ORDER BY propertyValueId, locale')
+      .all(),
+  })
+
+  it('rejects a failed translation write and restores the entire prior subtree', async () => {
+    sqlite.exec(`INSERT INTO propertyValue VALUES ('existing', 'local', 0, 'original');
+      INSERT INTO propertyValueI18n VALUES ('existing', 'en', 'Original', 0);
+      INSERT INTO propertyI18n (propertyId, locale, label) VALUES ('local', 'en', 'Original label');
+      CREATE TRIGGER reject_translation BEFORE INSERT ON propertyValueI18n
+      WHEN NEW.value = 'Rejected'
+      BEGIN SELECT RAISE(ABORT, 'injected translation failure'); END`)
+    const before = propertySnapshot()
+    await expect(
+      upsertProjectProperties(
+        db,
+        [
+          {
+            id: 'local',
+            key: 'changed',
+            component: 'SelectField',
+            i18n: { en: { label: 'Changed' } },
+            values: [
+              { id: 'existing', value: 'changed', i18n: { en: { value: 'Rejected' } } },
+            ],
+          } as ProjectPropertyForm,
+        ],
+        'project',
+      ),
+    ).rejects.toThrow()
+    expect(propertySnapshot()).toEqual(before)
+    expect(batches).toHaveLength(1)
+  })
+
+  it('rolls back earlier creates and updates when a later property write fails', async () => {
+    sqlite.exec(`CREATE TRIGGER reject_later BEFORE INSERT ON property
+      WHEN NEW.id = 'later'
+      BEGIN SELECT RAISE(ABORT, 'injected property failure'); END`)
+    const before = propertySnapshot()
+    await expect(
+      upsertProjectProperties(
+        db,
+        [
+          {
+            id: 'local',
+            key: 'changed',
+            component: 'SelectField',
+            i18n: {},
+            values: [],
+          },
+          { id: 'first', key: 'first', component: 'SelectField', i18n: {}, values: [] },
+          { id: 'later', key: 'later', component: 'SelectField', i18n: {}, values: [] },
+        ] as unknown as ProjectPropertyForm[],
+        'project',
+      ),
+    ).rejects.toThrow()
+    expect(propertySnapshot()).toEqual(before)
+    expect(batches).toHaveLength(1)
+  })
+
+  it('creates a hydrated property subtree and preserves omitted values on retained properties', async () => {
+    sqlite.exec("INSERT INTO propertyValue VALUES ('existing', 'local', 0, 'keep')")
+    const result = await upsertProjectProperties(
+      db,
+      [
+        { id: 'local', key: 'local', component: 'SelectField', i18n: {} },
+        {
+          id: 'created',
+          key: 'created',
+          component: 'SelectField',
+          projectId: 'spoofed',
+          organisationId: 'spoofed',
+          hubId: 'spoofed',
+          i18n: { en: { label: 'Created' } },
+          values: [
+            { value: 'new', propertyId: 'spoofed', i18n: { en: { value: 'New' } } },
+          ],
+        },
+      ] as ProjectPropertyForm[],
+      'project',
+    )
+    expect(result.map(row => row.id)).toEqual(['created', 'local'])
+    expect(result[0]).toMatchObject({
+      projectId: 'project',
+      organisationId: null,
+      hubId: null,
+      i18n: { en: { label: 'Created' } },
+      values: [{ propertyId: 'created', value: 'new', i18n: { en: { value: 'New' } } }],
+    })
+    expect(result[1].values).toEqual([
+      expect.objectContaining({ id: 'existing', value: 'keep' }),
+    ])
+    expect(batches).toHaveLength(1)
+  })
+
+  it('rejects a supplied property ID owned outside the target project', async () => {
+    const before = propertySnapshot()
+    await expect(
+      upsertProjectProperties(
+        db,
+        [
+          {
+            id: 'old',
+            key: 'changed',
+            component: 'SelectField',
+            i18n: {},
+            values: [],
+          },
+        ] as unknown as ProjectPropertyForm[],
+        'project',
+      ),
+    ).rejects.toThrow()
+    expect(propertySnapshot()).toEqual(before)
+    expect(batches).toHaveLength(1)
+  })
+
+  it.each(['property', 'value'])(
+    'rejects a retained %s moved out of scope before the batch',
+    async target => {
+      sqlite.exec(
+        "INSERT INTO propertyValue VALUES ('existing', 'local', 0, 'original')",
+      )
+      let before = propertySnapshot()
+      beforeBatch = () => {
+        sqlite.exec(
+          target === 'property'
+            ? "UPDATE property SET projectId = 'other-project' WHERE id = 'local'"
+            : "UPDATE propertyValue SET propertyId = 'old' WHERE id = 'existing'",
+        )
+        before = propertySnapshot()
+      }
+      await expect(
+        upsertProjectProperties(
+          db,
+          [
+            {
+              id: 'local',
+              key: 'changed',
+              component: 'SelectField',
+              i18n: {},
+              values: [{ id: 'existing', value: 'changed' }],
+            } as ProjectPropertyForm,
+          ],
+          'project',
+        ),
+      ).rejects.toThrow()
+      expect(propertySnapshot()).toEqual(before)
+    },
+  )
+
+  it('does not claim another property value through a supplied ID', async () => {
+    sqlite.exec("INSERT INTO propertyValue VALUES ('foreign', 'old', 0, 'untouched')")
+    const before = propertySnapshot()
+    await expect(
+      upsertProjectProperties(
+        db,
+        [
+          {
+            id: 'local',
+            key: 'changed',
+            component: 'SelectField',
+            i18n: {},
+            values: [{ id: 'foreign', value: 'changed' }],
+          } as ProjectPropertyForm,
+        ],
+        'project',
+      ),
+    ).rejects.toThrow()
+    expect(propertySnapshot()).toEqual(before)
+  })
+
+  it('validates later rows before executing any earlier writes', async () => {
+    const before = propertySnapshot()
+    await expect(
+      upsertProjectProperties(
+        db,
+        [
+          { id: 'new-local', key: 'valid', component: 'SelectField', i18n: {} },
+          { id: 'local', key: 'invalid key', component: 'SelectField', i18n: {} },
+        ] as ProjectPropertyForm[],
+        'project',
+      ),
+    ).rejects.toThrow()
+    expect(propertySnapshot()).toEqual(before)
+    expect(batches).toEqual([])
+  })
+
+  it('clears only local properties and cascades child deletions atomically', async () => {
+    sqlite.exec(`INSERT INTO propertyValue VALUES ('local-value', 'local', 0, 'local'), ('foreign', 'old', 0, 'foreign');
+      INSERT INTO propertyValueI18n VALUES ('local-value', 'en', 'Local', 0), ('foreign', 'en', 'Foreign', 0)`)
+    expect(await upsertProjectProperties(db, [], 'project')).toEqual([])
+    expect(propertySnapshot().values.map(row => row.id)).toEqual(['foreign'])
+    expect(
+      propertySnapshot().valueTranslations.map(row => row.propertyValueId),
+    ).toEqual(['foreign'])
+    expect(propertySnapshot().properties).toHaveLength(6)
+  })
+
+  it('keeps a large value and translation replacement in one parameter-safe batch', async () => {
+    const [result] = await upsertProjectProperties(
+      db,
+      [
+        {
+          id: 'local',
+          key: 'local',
+          component: 'SelectField',
+          i18n: {},
+          values: Array.from({ length: 250 }, (_, rank) => ({
+            rank,
+            value: `value-${rank}`,
+            i18n: { en: { value: `Translation ${rank}` } },
+          })),
+        } as ProjectPropertyForm,
+      ],
+      'project',
+    )
+    expect(result.values).toHaveLength(250)
+    expect(propertySnapshot().valueTranslations).toHaveLength(250)
+    expect(batches).toHaveLength(1)
+    expect(batches[0]).toBeGreaterThan(100)
+  })
+
   it('keeps translations attached to new ID-less values after rank normalization', async () => {
     sqlite.exec(
       "INSERT INTO propertyValue (id, propertyId, rank, value) VALUES ('existing', 'local', 0, 'existing')",
