@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   removeUserFeatureListState,
+  updateUserLayers,
   upsertUserFeatureState,
 } from '$lib/db/services/user'
 import type { Database } from '$lib/types'
@@ -19,6 +20,10 @@ beforeEach(() => {
     isWishlisted INTEGER NOT NULL DEFAULT 0, visitedAt TEXT,
     createdAt TEXT NOT NULL DEFAULT 'created', modifiedAt TEXT NOT NULL DEFAULT 'modified',
     PRIMARY KEY (userId, featureId)
+  )`)
+  sqlite.exec(`CREATE TABLE userLayer (
+    userId TEXT, hubId TEXT, layerId TEXT, isDefaultVisible INTEGER,
+    PRIMARY KEY (userId, hubId, layerId)
   )`)
   // Exercise real Drizzle SQL and response mapping with the D1 atomic batch contract.
   db = drizzle({
@@ -37,9 +42,10 @@ beforeEach(() => {
     batch: async (statements: { sql: string; params: never[] }[]) => {
       sqlite.exec('BEGIN')
       try {
-        const results = statements.map(({ sql, params }) => ({
-          results: sqlite.prepare(sql).all(...params),
-        }))
+        const results = statements.map(({ sql, params }) => {
+          if (params.length > 100) throw new Error('D1 parameter budget exceeded')
+          return { results: sqlite.prepare(sql).all(...params) }
+        })
         sqlite.exec('COMMIT')
         return results
       } catch (error) {
@@ -57,6 +63,81 @@ function state() {
     .prepare('SELECT isWishlisted, isVisited, visitedAt FROM userFeature')
     .get()
 }
+
+/** Produces preferences with deliberately untrusted ownership fields. */
+function layerRows(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    userId: 'wrong-user',
+    hubId: 'wrong-hub',
+    layerId: `layer-${index}`,
+    isDefaultVisible: true,
+  }))
+}
+
+describe('atomic user-layer replacement', () => {
+  beforeEach(() => {
+    sqlite.exec(`INSERT INTO userLayer VALUES
+      ('user', 'hub', 'old-layer', 0),
+      ('other-user', 'hub', 'old-layer', 0),
+      ('user', 'other-hub', 'old-layer', 0)`)
+  })
+
+  it('replaces multiple insert chunks with target ownership and returns every row', async () => {
+    const rows = await updateUserLayers(db, layerRows(60), 'user', 'hub')
+    expect(rows).toHaveLength(60)
+    expect(
+      rows.every(
+        row => row.userId === 'user' && row.hubId === 'hub' && row.isDefaultVisible,
+      ),
+    ).toBe(true)
+    expect(sqlite.prepare('SELECT * FROM userLayer').all()).toHaveLength(62)
+  })
+
+  it('rolls back deletion and earlier chunks when a later insert fails', async () => {
+    sqlite.exec(`CREATE TRIGGER fail_insert BEFORE INSERT ON userLayer
+      WHEN NEW.layerId = 'layer-59'
+      BEGIN SELECT RAISE(ABORT, 'injected failure'); END`)
+    const before = sqlite.prepare('SELECT * FROM userLayer').all()
+    await expect(updateUserLayers(db, layerRows(60), 'user', 'hub')).rejects.toThrow()
+    expect(sqlite.prepare('SELECT * FROM userLayer').all()).toEqual(before)
+  })
+
+  it('preserves old preferences when duplicate replacement keys fail', async () => {
+    const [row] = layerRows(1)
+    const before = sqlite.prepare('SELECT * FROM userLayer').all()
+    await expect(updateUserLayers(db, [row, row], 'user', 'hub')).rejects.toThrow()
+    expect(sqlite.prepare('SELECT * FROM userLayer').all()).toEqual(before)
+  })
+
+  it('clears only the requested user and hub for an empty replacement', async () => {
+    expect(await updateUserLayers(db, [], 'user', 'hub')).toEqual([])
+    expect(
+      sqlite.prepare('SELECT userId, hubId FROM userLayer ORDER BY userId').all(),
+    ).toEqual([
+      { userId: 'other-user', hubId: 'hub' },
+      { userId: 'user', hubId: 'other-hub' },
+    ])
+  })
+
+  it('does not combine independent concurrent replacement sets', async () => {
+    await Promise.all([
+      updateUserLayers(db, layerRows(60), 'user', 'hub'),
+      updateUserLayers(
+        db,
+        [{ ...layerRows(1)[0], layerId: 'last-layer' }],
+        'user',
+        'hub',
+      ),
+    ])
+    expect(
+      sqlite
+        .prepare(
+          "SELECT layerId FROM userLayer WHERE userId = 'user' AND hubId = 'hub'",
+        )
+        .all(),
+    ).toEqual([{ layerId: 'last-layer' }])
+  })
+})
 
 describe('atomic saved-place state', () => {
   it('preserves omitted fields and accepts explicit false and null updates', async () => {
