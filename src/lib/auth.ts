@@ -55,20 +55,28 @@ export async function markEmailVerifiedAfterPasswordReset(
 }
 
 /**
- * Extract the base URL from request headers.
- * Uses x-forwarded-proto and x-forwarded-host headers if available (from reverse proxy),
- * otherwise falls back to development defaults.
+ * Extracts the authentication origin from the same host used for hub routing.
+ * @param headers - Incoming request headers at the Cloudflare ingress.
+ * @returns A validated HTTP(S) origin, preserving local development ports.
+ * @remarks Cloudflare overwrites X-Forwarded-Proto, but not X-Forwarded-Host.
+ * Never let a forwarded host redirect reset tokens or expand trusted auth origins.
+ * Missing protocol headers fall back to development/production defaults.
  */
 export function getBaseUrlFromRequestHeaders(headers: Headers): string {
   const proto =
     headers.get('x-forwarded-proto') ?? (import.meta.env.DEV ? 'http' : 'https')
-  const host = headers.get('x-forwarded-host') ?? headers.get('host')
+  const host = headers.get('host')
 
   if (!host) {
     throw new Error('Cannot determine host from request headers')
   }
 
-  return `${proto}://${host}`
+  // Accept only a host authority, not URL credentials, paths, or proxy header lists.
+  if ((proto !== 'http' && proto !== 'https') || /[\s/@\\?#,]/.test(host)) {
+    throw new Error('Invalid authentication origin headers')
+  }
+  const origin = new URL(`${proto}://${host}`)
+  return origin.origin
 }
 
 // ═══════════════════════════════════════════════════════════════
