@@ -2,7 +2,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
-import { createLocalAccountIssuer } from 'better-auth/db'
 import { hashPassword } from 'better-auth/crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAuthForRequest } from '$lib/auth'
@@ -68,7 +67,7 @@ function setup() {
         id: 'account',
         userId: 'user',
         providerId: 'credential',
-        issuer: createLocalAccountIssuer('credential'),
+        // Better Auth 1.7.3 identifies credentials by providerId and accountId.
         accountId: 'user',
         password: passwordHash,
         createdAt: new Date(),
