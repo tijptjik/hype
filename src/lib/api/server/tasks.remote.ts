@@ -670,7 +670,6 @@ export const submitNewFeature = guardedCommand(
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
       throw error(400, 'TASK_IMAGE_REQUIRED')
     }
-    await assertPublicContributionTarget(ctx.db, input)
 
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
     const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
@@ -706,6 +705,7 @@ export const submitNewPhotos = guardedCommand(
     if (!Array.isArray(input.photos) || input.photos.length === 0) {
       throw error(400, 'TASK_IMAGE_REQUIRED')
     }
+    await assertPublicContributionTarget(ctx.db, input)
 
     const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
     const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''

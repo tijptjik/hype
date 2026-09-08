@@ -16,6 +16,7 @@ const reviewMocks = vi.hoisted(() => ({
   updateFeatureByIdWithConcurrency: vi.fn(),
   assertUserContributedFeatureDraftIsSubmittable: vi.fn(),
   updateUserContributedFeatureDraft: vi.fn(),
+  createTaskWithDependencies: vi.fn(),
 }))
 
 vi.mock('$lib/api/server/remote', () => {
@@ -96,6 +97,14 @@ const reviewHandler = reviewTask as unknown as (
   ctx: unknown,
 ) => Promise<unknown>
 const reassignHandler = reassignTaskLayer as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const submitNewPhotosHandler = submitNewPhotos as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const submitNewFeatureHandler = submitNewFeature as unknown as (
   input: unknown,
   ctx: unknown,
 ) => Promise<unknown>
@@ -413,5 +422,109 @@ describe('submitted contribution edit guard', () => {
       '',
     )
     expect(reviewMocks.updateTask).toHaveBeenCalledOnce()
+  })
+})
+
+describe('public contribution target guard', () => {
+  const publicScope = {
+    featureId: 'feature',
+    featureLayerId: 'layer',
+    featureIsPublished: true,
+    featureIsArchived: false,
+    featureIsDraft: false,
+    layerIsPublished: true,
+    layerIsArchived: false,
+    projectIsPublished: true,
+    projectIsArchived: false,
+    organisationIsPublished: true,
+    organisationIsArchived: false,
+  }
+
+  const dbForScope = (scope: unknown[]) => {
+    const query = {
+      from: vi.fn(),
+      innerJoin: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn().mockResolvedValue(scope),
+    }
+    query.from.mockReturnValue(query)
+    query.innerJoin.mockReturnValue(query)
+    query.where.mockReturnValue(query)
+    return { select: vi.fn().mockReturnValue(query) }
+  }
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    reviewMocks.createTaskWithDependencies.mockResolvedValue({ id: 'task' })
+  })
+
+  it('keeps new-feature submissions on their separate creation path', async () => {
+    await expect(
+      submitNewFeatureHandler(
+        {
+          task: {
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            contributorId: 'spoofed',
+            type: 'newFeature',
+            feature: {},
+          },
+          photos: [{}],
+        },
+        {
+          db: {},
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: {},
+        },
+      ),
+    ).resolves.toEqual({ data: { id: 'task' } })
+    expect(reviewMocks.createTaskWithDependencies).toHaveBeenCalledOnce()
+  })
+
+  it('rejects new-photo submissions whose persisted feature scope is not public', async () => {
+    await expect(
+      submitNewPhotosHandler(
+        {
+          featureId: 'feature',
+          layerId: 'layer',
+          projectId: 'project',
+          organisationId: 'org',
+          photos: [{}],
+        },
+        {
+          db: dbForScope([]),
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: {},
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'TASK_FEATURE_SCOPE_MISMATCH',
+    })
+    expect(reviewMocks.createTaskWithDependencies).not.toHaveBeenCalled()
+  })
+
+  it('allows new-photo submissions only for the persisted public scope', async () => {
+    await expect(
+      submitNewPhotosHandler(
+        {
+          featureId: 'feature',
+          layerId: 'layer',
+          projectId: 'project',
+          organisationId: 'org',
+          photos: [{}],
+        },
+        {
+          db: dbForScope([publicScope]),
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: {},
+        },
+      ),
+    ).resolves.toEqual({ data: { id: 'task' } })
+    expect(reviewMocks.createTaskWithDependencies).toHaveBeenCalledOnce()
   })
 })
