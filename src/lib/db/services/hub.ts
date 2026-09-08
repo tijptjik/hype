@@ -23,7 +23,6 @@ import {
   toRelatedRecords,
 } from '..'
 import { insertMany, insertManyRelated, replaceManyRelated } from '../crud'
-import { updateOrganisationById } from './organisation'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
 import type {
@@ -835,8 +834,12 @@ export const upsertHubUserState = async (
 }
 
 /**
- * syncOrganisations operation.
- * Used by hub DB workflows to keep persistence behavior centralized.
+ * Atomically replaces a hub's organisation assignments and visibility flags.
+ * @param db - Database used by the authorized hub workflow.
+ * @param hubId - Hub whose assignment set is being replaced.
+ * @param nextRows - Complete authorized organisation assignment set.
+ * @returns Nothing after the entire assignment transaction commits.
+ * @remarks Missing targets or write failures roll back detachment and all assignments.
  */
 export const syncOrganisations = async (
   db: Parameters<typeof createHub>[0],
@@ -847,42 +850,34 @@ export const syncOrganisations = async (
     isHubExclusive: boolean
   }>,
 ): Promise<void> => {
-  const currentAssignments = await db
-    .select({ id: organisation.id })
+  const ids = [...new Set(nextRows.map(row => row.organisationId))]
+  // CASE short-circuits: invalid JSON deliberately aborts the batch only when a target is missing.
+  // Keep this existence check inside the transaction, not in a stale preflight read.
+  const targetCheck = db
+    .select({
+      valid: sql<number>`case when count(*) = ${ids.length} then 1
+      else json('HUB_ORGANISATION_NOT_FOUND') end`,
+    })
     .from(organisation)
+    .where(chunkedInArray(organisation.id, ids))
+  const detach = db
+    .update(organisation)
+    .set({ hubId: null, isCoreInclusive: true, isHubExclusive: false })
     .where(eq(organisation.hubId, hubId))
-
-  if (currentAssignments.length > 0) {
-    await Promise.all(
-      currentAssignments.map(row =>
-        updateOrganisationById(
-          db,
-          {
-            hubId: null,
-            isCoreInclusive: true,
-            isHubExclusive: false,
-          },
-          row.id,
-        ),
-      ),
-    )
-  }
-
-  if (nextRows.length === 0) return
-
-  await Promise.all(
-    nextRows.map(row =>
-      updateOrganisationById(
-        db,
-        {
-          hubId,
-          isCoreInclusive: row.isCoreInclusive,
-          isHubExclusive: row.isHubExclusive,
-        },
-        row.organisationId,
-      ),
-    ),
+  const assignments = nextRows.map(row =>
+    db
+      .update(organisation)
+      .set({
+        hubId,
+        isCoreInclusive: row.isCoreInclusive,
+        isHubExclusive: row.isHubExclusive,
+      })
+      .where(eq(organisation.id, row.organisationId)),
   )
+
+  // Each update has a bounded parameter count; do not split the transaction by statement count.
+  if (ids.length === 0) await db.batch([detach])
+  else await db.batch([targetCheck, detach, ...assignments])
 }
 
 /**
