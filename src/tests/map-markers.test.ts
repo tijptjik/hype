@@ -72,8 +72,8 @@ describe('map markers', () => {
     const original = renderer.getElement(row.id)!
     const image = original.querySelector('img')
     renderer.sync([], { retention })
-    expect(renderer.getElement(row.id)).toBeNull()
-    expect(original.hidden).toBe(true)
+    expect(renderer.getElement(row.id)).toBe(original)
+    expect(original.hidden).toBe(false)
     expect(TestMarker.instances[0].removals).toBe(0)
     renderer.sync([row], { retention })
     expect(renderer.getElement(row.id)).toBe(original)
@@ -95,6 +95,44 @@ describe('map markers', () => {
     expect(TestMarker.instances).toHaveLength(1)
     renderer.sync([], { retention })
     renderer.clear()
+    expect(renderer.getElement(row.id)).toBeNull()
+  })
+
+  it('reveals an approaching cached image during camera movement without another sync', () => {
+    let x = 5000
+    const camera = {
+      ...retentionMap,
+      project: () => ({ x, y: 100 }),
+    } as unknown as MapLibreMap
+    const renderer = createMarkerRenderer(camera, markerFactory)
+    const retention = { scope: 'public', budget: 1000 }
+    const row = feature('approaching')
+    renderer.sync([row], { retention })
+    const element = renderer.getElement(row.id)!
+    const image = element.querySelector('img')
+    renderer.sync([], { retention })
+    expect(renderer.getElement(row.id)).toBeNull()
+    x = 900
+    renderer.updateCamera()
+    expect(renderer.getElement(row.id)).toBe(element)
+    expect(element.hidden).toBe(false)
+    expect(element.querySelector('img')).toBe(image)
+    x = 400
+    renderer.updateCamera()
+    expect(TestMarker.instances).toHaveLength(1)
+    renderer.clear()
+    renderer.updateCamera()
+    expect(renderer.getElement(row.id)).toBeNull()
+  })
+
+  it('removes cached presentation immediately when its style changes', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const retention = { scope: 'public', budget: 1000 }
+    const row = feature('styled', [1, 1])
+    renderer.sync([row], { retention })
+    renderer.sync([], { retention })
+    renderer.sync([], { retention, markerStyle: 'dot' })
+    renderer.updateCamera()
     expect(renderer.getElement(row.id)).toBeNull()
   })
 

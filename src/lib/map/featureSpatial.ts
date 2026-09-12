@@ -128,7 +128,7 @@ export function createFeatureSpatialIndex(
 // +++ Viewport Queries
 
 /**
- * Normalizes a longitude while preserving the eastern antimeridian endpoint.
+ * Normalizes wrapped longitudes without rounding already normalized coordinates.
  * @param longitude Possibly wrapped map longitude.
  * @returns Longitude in the interval [-180, 180).
  */
@@ -164,7 +164,6 @@ export function getFeatureViewportQuery(
   const bufferedWidth = Math.min(360, width + longitudeBuffer * 2)
   const west =
     bufferedWidth === 360 ? -180 : normalizeLongitude(rawWest - longitudeBuffer)
-  const east = bufferedWidth === 360 ? 180 : normalizeLongitude(west + bufferedWidth)
   const queryBounds: [number, number, number, number] = [
     width === 360 ? -180 : normalizeLongitude(rawWest),
     rawSouth,

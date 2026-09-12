@@ -45,7 +45,7 @@ export const getMapRenderStage = (environment?: string | null): PreviewStage => 
  * @param stage Preview stage returned by `getMapRenderStage`.
  * @returns Storage mode for the current environment.
  */
-export const getMapRenderStorageMode = (stage: PreviewStage): MapRenderStorageMode =>
+export const getMapRenderStorageMode = (_stage: PreviewStage): MapRenderStorageMode =>
   'r2'
 
 /**

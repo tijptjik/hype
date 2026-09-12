@@ -7,6 +7,7 @@ import {
 } from '$lib/debug/markerBootstrap'
 // GEOMETRY
 import { getFeaturePointCoordinates } from './featureSpatial'
+import { isWithinMarkerRetentionPerimeter } from './markerRetention'
 // STYLES
 import '$lib/styles/map-markers.css'
 // TYPES
@@ -71,6 +72,14 @@ export type MarkerRenderState = {
   highlightedIds?: ReadonlySet<Id>
 }
 
+/** Scope changes invalidate cached marker presentation independently of entity freshness. */
+type MarkerRetentionOptions = { scope: string; budget: number }
+type RetainedMarker = {
+  marker: MarkerInstance
+  coordinates: [number, number]
+  attached: boolean
+}
+
 /**
  * Instance-owned marker renderer for one MapLibre map.
  */
@@ -82,9 +91,11 @@ export type MarkerRenderer = {
       markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
       selectedId?: Id | null
       highlightedIds?: ReadonlySet<Id>
+      retention?: MarkerRetentionOptions
     },
   ) => void
   getElement: (featureId: Id) => HTMLElement | null
+  updateCamera: () => void
   clear: () => void
 }
 
@@ -356,8 +367,24 @@ export function createMarkerRenderer(
   onElementChange?: (featureId: Id, element: HTMLElement | null) => void,
 ): MarkerRenderer {
   const markers = new Map<Id, MarkerInstance>()
+  const retained = new Map<Id, RetainedMarker>()
+  const positions = new Map<Id, [number, number]>()
+  let retentionScope: string | undefined
   const diagnosticsTimers = new Set<number>()
   let disposed = false
+
+  // Reattach approaching cached markers during movement, before the next query settles.
+  const updateCamera = (): void => {
+    if (disposed) return
+    for (const [id, entry] of retained) {
+      const near = isWithinMarkerRetentionPerimeter(map, entry.coordinates)
+      if (near === entry.attached) continue
+      if (near) entry.marker.addTo(map)
+      else entry.marker.remove()
+      entry.attached = near
+      onElementChange?.(id, near ? entry.marker.getElement() : null)
+    }
+  }
 
   const clear = (): void => {
     for (const timer of diagnosticsTimers) window.clearTimeout(timer)
@@ -368,6 +395,12 @@ export function createMarkerRenderer(
       onElementChange?.(id, null)
     }
     markers.clear()
+    for (const [id, entry] of retained) {
+      entry.marker.remove()
+      onElementChange?.(id, null)
+    }
+    retained.clear()
+    positions.clear()
   }
 
   const sync = (
@@ -377,9 +410,36 @@ export function createMarkerRenderer(
       markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
       selectedId?: Id | null
       highlightedIds?: ReadonlySet<Id>
+      retention?: MarkerRetentionOptions
     } = {},
   ): void => {
     if (disposed) return
+    const retention = options.retention
+    const nextRetentionScope = retention
+      ? JSON.stringify([
+          retention.scope,
+          options.markerStyle ?? 'image',
+          [...(options.markerThemesByProjectId ?? new Map())],
+        ])
+      : undefined
+    // Filter/auth/style transitions cannot leave old cached presentation available.
+    if (retentionScope !== nextRetentionScope) {
+      for (const [id, entry] of retained) {
+        entry.marker.remove()
+        onElementChange?.(id, null)
+      }
+      retained.clear()
+      // Existing active IDs will be refreshed below, but obsolete IDs must be discarded.
+      for (const [id, marker] of markers) {
+        if (features.some(feature => feature.id === id)) continue
+        cancelMarkerRemoval(marker)
+        marker.remove()
+        markers.delete(id)
+        positions.delete(id)
+        onElementChange?.(id, null)
+      }
+    }
+    retentionScope = nextRetentionScope
     const markerStyle = options.markerStyle ?? 'image'
     const markerThemesByProjectId = options.markerThemesByProjectId ?? new Map()
     const markerState: MarkerRenderState = {
@@ -405,6 +465,19 @@ export function createMarkerRenderer(
     for (const [id, marker] of markers.entries()) {
       if (newFeatureIds.has(id)) {
         cancelMarkerRemoval(marker)
+      } else if (retention && positions.has(id)) {
+        // Preserve the exact image node; nearby parked markers avoid MapLibre reattachment.
+        cancelMarkerRemoval(marker)
+        const coordinates = positions.get(id)!
+        const attached = isWithinMarkerRetentionPerimeter(map, coordinates)
+        // Map clipping hides offscreen elements; keeping them rendered prevents zoom pop-in.
+        marker.getElement().hidden = false
+        if (!attached) marker.remove()
+        retained.delete(id)
+        retained.set(id, { marker, coordinates, attached })
+        markers.delete(id)
+        positions.delete(id)
+        if (!attached) onElementChange?.(id, null)
       } else if (!pendingMarkerRemovals.has(marker)) {
         marker.getElement().classList.add('marker-fade-out')
         const timer = setTimeout(() => {
@@ -413,6 +486,7 @@ export function createMarkerRenderer(
           marker.remove()
           if (markers.get(id) === marker) {
             markers.delete(id)
+            positions.delete(id)
             onElementChange?.(id, null)
           }
         }, 300)
@@ -424,6 +498,16 @@ export function createMarkerRenderer(
       const coordinates = getFeaturePointCoordinates(feature.geometry)
       if (!coordinates) continue
       const markerTheme = getFeatureMarkerTheme(feature, markerThemesByProjectId)
+      const cached = retained.get(feature.id)
+      if (cached) {
+        retained.delete(feature.id)
+        cached.marker.getElement().hidden = false
+        cached.marker.setLngLat(coordinates)
+        if (!cached.attached) cached.marker.addTo(map)
+        markers.set(feature.id, cached.marker)
+        onElementChange?.(feature.id, cached.marker.getElement())
+      }
+      positions.set(feature.id, coordinates)
       const existingMarker = markers.get(feature.id)
       const nextSignature =
         markerStyle === 'dot'
@@ -463,6 +547,28 @@ export function createMarkerRenderer(
       onElementChange?.(feature.id, element)
     }
 
+    // Keep nearby cached presentation current; evict only when capacity requires it.
+    updateCamera()
+    const distant: Id[] = []
+    const nearby: Id[] = []
+    for (const [id, entry] of retained) {
+      const near = isWithinMarkerRetentionPerimeter(map, entry.coordinates)
+      applyMarkerState(entry.marker.getElement(), id, markerState)
+      const candidates = near ? nearby : distant
+      candidates.push(id)
+    }
+    const requestedBudget = retention?.budget ?? 0
+    const budget = Number.isFinite(requestedBudget)
+      ? Math.max(500, Math.min(1500, Math.floor(requestedBudget)))
+      : 1000
+    // Oldest distant entries go first, then oldest nearby entries; active markers are protected.
+    for (const id of [...distant, ...nearby]) {
+      if (markers.size + retained.size <= budget) break
+      retained.get(id)?.marker.remove()
+      retained.delete(id)
+      onElementChange?.(id, null)
+    }
+
     if (diagnostics?.created) {
       const reportMarkerImageState = (delayMs: number): void => {
         const timer = window.setTimeout(() => {
@@ -494,7 +600,14 @@ export function createMarkerRenderer(
 
   return {
     sync,
-    getElement: featureId => markers.get(featureId)?.getElement() ?? null,
+    updateCamera,
+    getElement: featureId => {
+      const cached = retained.get(featureId)
+      return (
+        markers.get(featureId)?.getElement() ??
+        (cached?.attached ? cached.marker.getElement() : null)
+      )
+    },
     clear: () => {
       disposed = true
       clear()

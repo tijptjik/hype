@@ -24,6 +24,8 @@ import {
   isMapStyleKey,
 } from '$lib/map/styles'
 import { getFeatureViewportQuery } from '$lib/map/featureSpatial'
+import { getMarkerRetentionBudget } from '$lib/map/markerRetention'
+import { featureQueryKey } from '$lib/client/services/featureQuery'
 import {
   applyMapCanvasBackground,
   resolveRuntimeMapStyle,
@@ -611,7 +613,7 @@ $effect(() => {
   }
 })
 
-// Refresh visible cells after camera movement, including pans that keep the same zoom level.
+// Reveal cached markers on movement and refresh visible cells at a bounded cadence.
 $effect(() => {
   const map = activeMapInstance
   if (!map) return
@@ -622,11 +624,29 @@ $effect(() => {
       map.getZoom(),
     )
   }
-  map.on('moveend', updateViewport)
+  let movementTimer: ReturnType<typeof setTimeout> | undefined
+  const onMove = (): void => {
+    markerRenderer?.updateCamera()
+    if (movementTimer !== undefined) return
+    movementTimer = setTimeout(() => {
+      movementTimer = undefined
+      updateViewport()
+    }, 300)
+  }
+  const onMoveEnd = (): void => {
+    clearTimeout(movementTimer)
+    movementTimer = undefined
+    markerRenderer?.updateCamera()
+    updateViewport()
+  }
+  map.on('move', onMove)
+  map.on('moveend', onMoveEnd)
   map.on('resize', updateViewport)
   updateViewport()
   return () => {
-    map.off('moveend', updateViewport)
+    clearTimeout(movementTimer)
+    map.off('move', onMove)
+    map.off('moveend', onMoveEnd)
     map.off('resize', updateViewport)
     appCtx.featureViewport = undefined
   }
@@ -689,6 +709,8 @@ $effect(() => {
 watch(
   () => [
     appCtx.featuresVisible,
+    appCtx.featureViewport,
+    featureQueryKey(appCtx.featureQueryInput()),
     activeMapInstance,
     userMarkerStyleVariant,
     projectMarkerThemes,
@@ -697,8 +719,14 @@ watch(
     isAnimating,
   ],
   () => {
-    if (!isAnimating && markerRenderer) {
+    if (markerRenderer) {
       markerRenderer.sync(appCtx.getVisibleFeatures() as FeatureFromCollection[], {
+        retention: appCtx.isAdmin()
+          ? undefined
+          : {
+              scope: featureQueryKey(appCtx.featureQueryInput()),
+              budget: getMarkerRetentionBudget(navigator),
+            },
         markerStyle: userMarkerStyleVariant,
         markerThemesByProjectId: projectMarkerThemes,
         selectedId: appCtx.state.active.feature?.id ?? null,
