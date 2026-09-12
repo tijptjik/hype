@@ -50,5 +50,3 @@
   - Use type guards/type predicates for runtime narrowing where needed.
   - Prefer discriminated unions for complex state machines.
   - Use utility types (`Partial`, `Readonly`, `Pick`, etc.) and `as const` for enum-like constants.
-  - Add new TypeScript types in `src/lib/types.ts`, not inline in feature files.
-  - Place new types under the correct existing heading in `src/lib/types.ts` (usually resource-based or domain-based) so related type changes can be reviewed together.

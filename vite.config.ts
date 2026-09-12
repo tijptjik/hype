@@ -105,8 +105,8 @@ export default defineConfig(async ({ command }) => ({
     ...(await localCloudflare(command)),
   ],
   optimizeDeps: {
-    // MapLibre's worker is emitted as a Vite worker asset, not a JavaScript dependency.
-    exclude: ['maplibre-gl/dist/maplibre-gl-worker.mjs'],
+    // Keep MapLibre and its worker query out of dependency optimization.
+    exclude: ['maplibre-gl'],
   },
   build: {
     target: 'es2020',

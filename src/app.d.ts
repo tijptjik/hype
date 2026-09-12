@@ -6,48 +6,10 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { MiniflareD1Database } from 'miniflare'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import 'unplugin-icons/types/svelte'
-import type {
-  LngLatLike,
-  CameraOptions,
-  AnimationOptions,
-  FitBoundsOptions,
-} from 'maplibre-gl'
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 
 // ENHANCEMENT: Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
-
-// Custom options for cached navigation methods
-interface CachedMapOptions {
-  run?: boolean
-  debug?: boolean
-  offset?: [number, number]
-  curve?: number
-  minZoom?: number
-  type?: 'pan' | 'zoom' | 'jump' | 'ease' | 'fly' | 'fitBounds'
-  [key: string]: unknown
-}
-
-// Extend Map interface with cached navigation methods
-declare module 'maplibre-gl' {
-  interface Map {
-    cachedPanTo(
-      lnglat: LngLatLike,
-      options?: CameraOptions & AnimationOptions & CachedMapOptions,
-    ): void
-    cachedZoomTo(
-      zoom: number,
-      options?: CameraOptions & AnimationOptions & CachedMapOptions,
-    ): void
-    cachedJumpTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void
-    cachedEaseTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void
-    cachedFlyTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void
-    cachedFitBounds(
-      bounds: [[number, number], [number, number]],
-      options?: FitBoundsOptions & AnimationOptions & CachedMapOptions,
-    ): void
-  }
-}
 
 declare global {
   namespace App {
