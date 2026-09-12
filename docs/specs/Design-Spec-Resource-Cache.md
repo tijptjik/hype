@@ -1,7 +1,7 @@
 # Resource loading and cache architecture
 
-Status: revised design, 2026-09-12. Implementation and measurements must be verified
-against the acceptance criteria below; this document does not imply completion.
+Status: implementation and verification record, 2026-09-12. See the validation
+record below for tested behavior and remaining coverage limits.
 
 ## Goals and scope
 
@@ -12,7 +12,7 @@ Migrate organisation, project, layer and feature payload profiles first. Other
 resources retain their existing payload contracts while losing the TanStack layer.
 Persistence, IndexedDB and cross-session offline support are deferred.
 
-## Findings in the existing application
+## Findings before migration
 
 - `AppCtx.initialFetch` waits for user state, then organisations/projects, then
   layers/properties, then features. Individual refresh methods also cascade.
@@ -51,26 +51,32 @@ Do not depend on private framework cache APIs.
 ### CacheCtx owns retained domain records
 
 Create one context per application instance, never a module-global user data store.
-Retain entities by resource type, ID and compatible payload shape. Metadata records
-scope generation, fetched time and invalidation generation. Compact writes must not
-pretend to refresh omitted detail fields. Prefer per-profile snapshots or explicit
-field completeness over a single `bestProjection` label and blind object merging.
+Retain entities by resource type and ID for synchronous presentation and hierarchy
+lookups. Detail handles are keyed separately by resource, identity, requested profile
+and scope, with fetched timestamps and a scope epoch. A compact entity in the
+presentation map is never sufficient evidence for a detail cache hit: required-data
+lookups go through the profile-specific handle. Merging a compact presentation row
+must not refresh the timestamp of an older detail handle.
 
-CacheCtx provides fetch-on-miss lookups, cross-page entity reuse and auth/surface
-invalidation. It does not own active remote-query results. AppCtx owns navigation,
-selection and filters and delegates resource access.
+CacheCtx owns scope invalidation, pins, profile-specific detail handles and shared
+list controllers. AppCtx owns navigation, selection and filters.
 
-### Query indexes: use them only for retained history
+### Query indexes: retain native handles
 
-The original normalized ID-index idea remains useful for inactive page history,
-where it avoids retaining duplicate payloads. It should not become a parallel live
-query cache. Active page membership/order comes directly from remote query results.
-A retained page snapshot contains IDs, cursor, scope, query arguments, profile,
-fetch time and invalidation generation. On reactivation, materialize only if all
-required records/profiles are available and compatible; otherwise fetch.
+Do not implement the old parallel `queryIndex` of live IDs. SvelteKit owns active
+payloads, membership, order, overrides and request deduplication. `ResourceList`
+retains native page handles, cursor traversal and view history. Returning to a view
+within one minute reuses those handles, including pages previously fetched. Retained
+entity maps support cross-page breadcrumb/identity reuse; their contents never
+represent a complete server collection.
 
-A mutation invalidates retained membership snapshots separately from entity fields.
-Never treat cached entities as the complete result set of a server-side search.
+A committed mutation invalidates retained view history and rebuilds first-page
+cursor boundaries. Following pages must be traversed again because an insertion,
+removal or reordered row can invalidate their old boundaries. Previously seen
+entities remain available in the session. Focus revalidation follows the same
+boundary reset, avoiding inconsistent combinations of newly refreshed first pages
+and older later pages. Transient errors retain a same-view presentation fallback;
+authorization/not-found failures discard that fallback.
 
 ## Profiles
 
@@ -223,6 +229,35 @@ backwards scrolling without redundant fetches, bounded DOM rows, remote search f
 an initially unloaded item, selected items outside page one, stale search responses,
 progressive features, auth changes during requests, and optimistic admin edits
 without hard refresh. Record any unavailable authenticated browser coverage.
+
+## Validation record and follow-ups
+
+- TanStack Query and its devtools have no remaining runtime imports or package
+  dependencies. TanStack Virtual remains intentionally installed.
+- Native query controllers, scope rejection, 25-ID batch partitioning, stale-search
+  suppression, stable cursor SQL and immutable optimistic projections have focused
+  regression coverage. Cursor tests include nulls, tied localized values, descending
+  order and insertions before the cursor.
+- A Chromium fixture using the actual shared virtual-list component retained 75
+  records after three 25-row loads, mounted 11 rows, triggered the next page at the
+  ten-row threshold and reused previous rows without another fetch when scrolling
+  back. It produced no page errors. This fixture isolates rendering from auth/D1.
+- An application browser trace started all three collection requests and default
+  metadata together. Full application/admin interaction coverage is separate from
+  the isolated component check; local D1 contention has interrupted guest bootstrap.
+- The warm local breadcrumb benchmark (8 organisations, 7 projects, 16 layers;
+  100 warmups and 1,000 repetitions) measured joined labels at median 0.01258 ms /
+  p95 0.01411 ms versus three batched reads at 0.01143 ms / 0.01281 ms. Payloads were
+  3,560 versus 2,212 bytes. Keep direct joins: the small CPU/payload difference avoids
+  two round trips. These figures exclude network latency and production D1/auth
+  work; repeat against representative production-scale data before claiming a
+  production speedup. Reproduce with `scripts/benchmark-resource-breadcrumbs.ts`.
+- Advanced admin index filters still evaluate loaded rows where no equivalent
+  server predicate exists. Search, publish/archive filters and sorting are remote;
+  image/authorship/translation predicates need a separate server-contract migration
+  before they can promise matches across unloaded pages.
+- `list/card/detail` are compatibility selectors during the profile migration;
+  they are not aliases for authorization roles. Offline persistence is deferred.
 
 ## References
 

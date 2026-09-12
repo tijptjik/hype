@@ -34,7 +34,18 @@ export function usePanelResources(
       : {}),
   })
   const viewKey = $derived(JSON.stringify(input))
-  const selected = $derived(slot === 'index' ? [] : app.state.prisms[type])
+  const selected = $derived(
+    slot === 'index'
+      ? []
+      : [
+          ...new Set([
+            ...app.state.prisms[type],
+            ...(app.getActiveResourceType() === type && app.getActiveResourceId()
+              ? [app.getActiveResourceId()!]
+              : []),
+          ]),
+        ],
+  )
   const pins = $derived(selected.map(id => app.cacheCtx.pin(type, id, input.meta)))
   $effect(() => {
     const next = input
