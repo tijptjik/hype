@@ -2115,6 +2115,7 @@ async function handleProjectStateToggle({
     )
 
     commitSettledProjectState(await refreshProject())
+    await adminCtx.appCtx.cacheCtx.reconcile('project')
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(project, 'nameShort')}`,
     )

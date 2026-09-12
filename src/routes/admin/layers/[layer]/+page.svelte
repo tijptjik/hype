@@ -863,6 +863,7 @@ async function handleLayerStateToggle({
       }).withOverride(overrideLayerEntityBoolean(field, nextState)),
     )
     commitLayerState(await refreshLayer())
+    await adminCtx.appCtx.cacheCtx.reconcile('layer')
     toast.success(nextState ? successWhenTrue : successWhenFalse)
   } catch {
     toast.error(m.long_crazy_peacock_care())

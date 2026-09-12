@@ -908,6 +908,7 @@ async function handleOrganisationStateToggle({
       ),
     )
     commitSettledOrganisationState(await refreshOrganisation())
+    await adminCtx.appCtx.cacheCtx.reconcile('organisation')
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(organisation, 'nameShort')}`,
     )
