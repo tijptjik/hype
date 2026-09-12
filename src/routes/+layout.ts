@@ -1,7 +1,5 @@
-import { browser } from '$app/environment'
 import { getLocaleKey } from '$lib/i18n'
 import { getTitleEnvironmentLabel, resolveTitle } from '$lib/navigation/title'
-import { QueryClient } from '@tanstack/svelte-query'
 // TYPES
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { TitleEnvironmentLabel } from '$lib/types'
@@ -22,24 +20,7 @@ export async function load({ data }) {
     (data.titleEnvironmentLabel as TitleEnvironmentLabel | undefined) ??
     getTitleEnvironmentLabel(undefined)
 
-  /**
-   * @deprecated Remove once we have fully moved to svelte remote functions
-   */
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        enabled: browser,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        gcTime: 1000 * 60 * 30, // 30 minutes
-        refetchOnWindowFocus: true,
-        refetchOnMount: true,
-        refetchOnReconnect: true,
-      },
-    },
-  })
-
   return {
-    queryClient,
     hub,
     hubUserState,
     title: resolveTitle(rawTitle, titleEnvironmentLabel),

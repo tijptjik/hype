@@ -5,7 +5,7 @@ import { getHubs } from '$lib/api/server/hub.remote'
 import { getFeatures } from '$lib/api/server/feature.remote'
 import { getTasks } from '$lib/api/server/tasks.remote'
 import {
-  runRemoteQuery,
+  refreshRemoteQuery as runRemoteQuery,
   toSafeListResponse,
   type ImperativeRemoteQuery,
 } from '$lib/remote'
@@ -14,7 +14,6 @@ import { toProjectLicenseFilterCache } from '$lib/client/services/licence'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
-import type { QueryClient } from '@tanstack/svelte-query'
 import type { AppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource, type HierarchicalResource } from '$lib/enums'
@@ -306,8 +305,7 @@ export class AdminCtx {
   // 8. UTILS :: LAYOUT
   // 9. STATS
 
-  // Tanstack Query Client instance
-  queryClient!: QueryClient
+  // Remote queries own transport caching and refreshes.
   // App Context
   appCtx!: AppCtx
   // Load State
@@ -318,8 +316,7 @@ export class AdminCtx {
   // CONSTRUCTOR
   // ═══════════════════════
 
-  constructor(queryClient: QueryClient, appCtx: AppCtx) {
-    this.queryClient = queryClient
+  constructor(appCtx: AppCtx) {
     this.appCtx = appCtx
 
     // Only initialize if appCtx is defined and has the required properties
@@ -520,77 +517,21 @@ export class AdminCtx {
    *
    * @returns Organisation cards for the current admin prism and sort state.
    */
-  organisationsQueryFn = async () => {
-    const result = toSafeListResponse<Organisation>(
-      (await runRemoteQuery(
-        getOrganisations({
-          conditions: this.appCtx.isSuperAdmin()
-            ? { isArchived: null, isPublished: null }
-            : { isArchived: false, isPublished: null },
-          prisms: this.appCtx.state.prisms,
-          sorting: this.appCtx.state.viewSorting.organisation,
-          meta: { isAdminRequest: true, profile: 'card' },
-        }),
-      )) as ListResponse<Organisation> | undefined,
-    )
-    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
-    this.appCtx.setListQueryMeta(this.appCtx.organisationsQueryKey(), result)
-    return result.data
-  }
+  organisationsQueryFn = async () => this.appCtx.organisationsQueryFn()
 
   /**
    * Fetches projects for the admin view and stores list metadata for later UI decisions.
    *
    * @returns Project cards for the current admin prism and sort state.
    */
-  projectsQueryFn = async () => {
-    const remoteList = this.appCtx.remoteMap[FirstClassResource.project].list
-    if (!remoteList) {
-      throw new Error('Project remote list function is not configured.')
-    }
-    const result = toSafeListResponse<Project>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: this.appCtx.isSuperAdmin()
-            ? { isArchived: null, isPublished: null }
-            : { isArchived: false, isPublished: null },
-          prisms: this.appCtx.state.prisms,
-          sorting: this.appCtx.state.viewSorting.project,
-          meta: { isAdminRequest: true, profile: 'card' },
-        }),
-      )) as ListResponse<Project> | undefined,
-    )
-    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
-    this.appCtx.setListQueryMeta(this.appCtx.projectsQueryKey(), result)
-    return result.data
-  }
+  projectsQueryFn = async () => this.appCtx.projectsQueryFn()
 
   /**
    * Fetches layers for the admin view and stores list metadata for later UI decisions.
    *
    * @returns Layer cards for the current admin prism and sort state.
    */
-  layersQueryFn = async () => {
-    const remoteList = this.appCtx.remoteMap[FirstClassResource.layer].list
-    if (!remoteList) {
-      throw new Error('Layer remote list function is not configured.')
-    }
-    const result = toSafeListResponse<Layer>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: this.appCtx.isSuperAdmin()
-            ? { isArchived: null, isPublished: null }
-            : { isArchived: false, isPublished: null },
-          prisms: this.appCtx.state.prisms,
-          sorting: this.appCtx.state.viewSorting.layer,
-          meta: { isAdminRequest: true, profile: 'card' },
-        }),
-      )) as ListResponse<Layer> | undefined,
-    )
-    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
-    this.appCtx.setListQueryMeta(this.appCtx.layersQueryKey(), result)
-    return result.data
-  }
+  layersQueryFn = async () => this.appCtx.layersQueryFn()
 
   /**
    * Fetches features for the admin view and stores list metadata for later UI decisions.
@@ -2237,7 +2178,6 @@ export class AdminCtx {
       )
 
       this.appCtx.setSortedResourceState(resource, sortedEntities)
-      this.queryClient.setQueryData(nextQueryKey, sortedEntities)
       // Keep cached metadata aligned with the new in-memory sort result.
       this.appCtx.setListQueryMeta(nextQueryKey, {
         data: sortedEntities,
@@ -2328,8 +2268,8 @@ export class AdminCtx {
 
 export const ADMINCTX_KEY = Symbol('adminCtx')
 
-export const setAdminCtx = (queryClient: QueryClient, appCtx: AppCtx) =>
-  setContext(ADMINCTX_KEY, new AdminCtx(queryClient, appCtx))
+export const setAdminCtx = (appCtx: AppCtx) =>
+  setContext(ADMINCTX_KEY, new AdminCtx(appCtx))
 
 export const getAdminCtx = (): AdminCtx => {
   const ctx = getContext<AdminCtx | undefined>(ADMINCTX_KEY)

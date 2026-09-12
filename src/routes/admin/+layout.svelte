@@ -3,7 +3,6 @@
 import { afterNavigate, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 // TANSTACK
-import { isCancelledError, type QueryClient } from '@tanstack/svelte-query'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
@@ -30,9 +29,7 @@ import type { LayoutProps, LayoutData } from './$types'
 
 type AdminRootProps = LayoutProps & {
   children: () => unknown
-  data: LayoutData & {
-    queryClient: QueryClient
-  }
+  data: LayoutData & {}
 }
 
 // PROPS
@@ -44,7 +41,7 @@ const appCtx = getAppCtx()
 
 // CONTEXT :: ADMIN
 // svelte-ignore state_referenced_locally
-const adminCtx = setAdminCtx(data.queryClient, appCtx)
+const adminCtx = setAdminCtx(appCtx)
 setHeaderCtrl()
 const headerModel = useAdminHeaderModel(appCtx, adminCtx)
 const headerProps = $derived(headerModel.getHeaderProps())
@@ -58,7 +55,6 @@ $effect(() => {
   appCtx.isInitialised
   if (appCtx.isInitialised && !adminCtx.isInitialised && !adminCtx.isInitializing) {
     void adminCtx.init().catch(error => {
-      if (isCancelledError(error)) return
       console.error('[AdminLayout] Failed to initialize admin context', error)
     })
   }

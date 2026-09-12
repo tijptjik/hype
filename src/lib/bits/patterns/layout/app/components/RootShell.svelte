@@ -1,13 +1,12 @@
 <script lang="ts">
 // QUERY
-import { QueryClientProvider } from '@tanstack/svelte-query'
 // BITS
 import { LoadScreen, Toaster } from '$lib/bits/custom'
 import { cx } from '$lib/bits/utils'
 // TYPES
 import type { AppShellProps } from '../app.types'
 
-let { queryClient, localeKey, isReady, children }: AppShellProps = $props()
+let { localeKey, isReady, children }: AppShellProps = $props()
 
 const classes = $derived(
   cx(
@@ -19,13 +18,11 @@ const classes = $derived(
 )
 </script>
 
-<QueryClientProvider client={queryClient}>
-  <div class={classes}>
-    <Toaster />
-    {#if isReady}
-      {@render children()}
-    {:else}
-      <LoadScreen color="accent" />
-    {/if}
-  </div>
-</QueryClientProvider>
+<div class={classes}>
+  <Toaster />
+  {#if isReady}
+    {@render children()}
+  {:else}
+    <LoadScreen color="accent" />
+  {/if}
+</div>

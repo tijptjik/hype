@@ -1,7 +1,6 @@
 // SVELTE
 import type { Component, Snippet } from 'svelte'
 // QUERY
-import type { QueryClient } from '@tanstack/svelte-query'
 // CUSTOM
 import type { LoadScreenColor, LoadScreenSurface } from '$lib/bits/custom/loading'
 // LAYOUT
@@ -29,7 +28,6 @@ export interface AppHeadFontsProps {
 export interface AppHeadRootProps extends AppHeadMetaProps, AppHeadFontsProps {}
 
 export interface AppShellProps {
-  queryClient: QueryClient
   localeKey: LocaleKey
   isReady: boolean
   pendingColor?: LoadScreenColor

@@ -4,7 +4,6 @@ import * as Head from './head/components'
 import type { AppProps } from './app.types'
 
 let {
-  queryClient,
   localeKey,
   isReady,
   title,
@@ -19,12 +18,6 @@ let {
 
 <Head.Root {title} {siteName} {siteDescription} {socialImage} {localeKey} />
 
-<AppPrimitive.RootShell
-  {queryClient}
-  {localeKey}
-  {isReady}
-  {pendingColor}
-  {pendingSurface}
->
+<AppPrimitive.RootShell {localeKey} {isReady} {pendingColor} {pendingSurface}>
   {@render children()}
 </AppPrimitive.RootShell>

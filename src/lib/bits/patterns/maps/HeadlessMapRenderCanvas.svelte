@@ -2,7 +2,6 @@
 // SVELTE
 import { onMount, tick } from 'svelte'
 // QUERY
-import { QueryClient } from '@tanstack/svelte-query'
 // GEO
 import bbox from '@turf/bbox'
 // CONTEXT
@@ -53,7 +52,7 @@ let {
   identifier: string
 } = $props()
 
-const appCtx = setAppCtx(new QueryClient(), setPlaceCtx(), null)
+const appCtx = setAppCtx(setPlaceCtx(), null)
 setOmniCtx(appCtx)
 
 let payload = $state<RenderPayload | null>(null)

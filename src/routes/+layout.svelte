@@ -45,7 +45,6 @@ import '$lib/styles/app.css'
 import { FirstClassResource } from '$lib/enums'
 import { MOBILE_MAX_WIDTH } from '$lib/constants'
 // TYPES
-import type { QueryClient } from '@tanstack/svelte-query'
 import type { LayoutData, LayoutProps } from './$types'
 import type { SessionUser } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
@@ -54,13 +53,6 @@ import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 let { children, data }: LayoutProps = $props()
 
 // CONTEXT
-const queryClient = $derived(
-  (
-    data as LayoutData & {
-      queryClient: QueryClient
-    }
-  ).queryClient,
-)
 
 const session = useSession()
 const responsive = setResponsiveCtx()
@@ -140,7 +132,6 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
 
 // Set AppCtx in context with the client owned by this layout instance.
 const appCtx = setAppCtx(
-  untrack(() => queryClient),
   setPlaceCtx(),
   $session.data?.user as SessionUser | null,
   responsive,
@@ -482,7 +473,6 @@ watch(
   <div class={shelllessClass}>{@render children()}</div>
 {:else}
   <App
-    {queryClient}
     isReady={isAppReady}
     {localeKey}
     {title}

@@ -52,14 +52,11 @@ import {
 import { PageState } from '$lib/enums'
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types'
-import type { QueryClient } from '@tanstack/svelte-query'
 import type { HubUserStateFlags } from '$lib/types'
 
 type AppRootProps = LayoutProps & {
   children: Snippet
-  data: LayoutData & {
-    queryClient: QueryClient
-  }
+  data: LayoutData & {}
 }
 
 // PROPS

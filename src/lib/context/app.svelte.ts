@@ -1,5 +1,8 @@
+import { CacheCtx } from './cache.svelte'
+import { getPinnedResource } from '$lib/api/server/resources.remote'
+import { getOrganisations } from '$lib/api/server/organisation.remote'
+import type { PanelResourceType, PanelResource, ResourcePageInput } from '$lib/types'
 // DATA
-import type { QueryClient } from '@tanstack/svelte-query'
 // NAVIGATION
 import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation'
 // GEO
@@ -33,7 +36,7 @@ import {
 } from '$lib/client/services/property'
 import { matchesResourceTextQuery } from '$lib/client/services/filters'
 import { primeFeatureStatsCache } from '$lib/client/services/stats'
-import { runRemoteQuery, toSafeListResponse } from '$lib/remote'
+import { refreshRemoteQuery as runRemoteQuery, toSafeListResponse } from '$lib/remote'
 // DEBUG
 import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 // CONTEXT
@@ -106,8 +109,7 @@ import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
 
 export class AppCtx {
-  // Tanstack Query Client instance
-  queryClient!: QueryClient
+  // Remote queries own transport caching and refreshes.
   // Place Context
   placeCtx!: PlaceCtx
   // Responsive Context
@@ -151,18 +153,8 @@ export class AppCtx {
   }
 
   // Cache for all resources
-  cache: Cache = {
-    organisation: new Map(),
-    project: new Map(),
-    layer: new Map(),
-    feature: new Map(),
-    task: new Map(),
-    hub: new Map(),
-    property: new SvelteMap(),
-    image: new SvelteMap(),
-    user: new SvelteMap(),
-    stats: new SvelteMap(),
-  }
+  readonly cacheCtx = new CacheCtx()
+  cache: Cache = this.cacheCtx.entities
 
   hub: HubOptsExtended | null = $state(null)
 
@@ -716,12 +708,10 @@ export class AppCtx {
 
   // Constructor
   constructor(
-    queryClient: QueryClient,
     placeCtx: PlaceCtx,
     user: SessionUser | null,
     responsiveCtx: ResponsiveCtx,
   ) {
-    this.queryClient = queryClient
     this.placeCtx = placeCtx
     this.responsiveCtx = responsiveCtx
     this.initializeNavigationFromUrl()
@@ -1089,72 +1079,42 @@ export class AppCtx {
     )
   }
 
+  /** Builds the complete identity of a compact panel view. */
+  panelResourceInput = (type: PanelResourceType, q = ''): ResourcePageInput => ({
+    type,
+    q: q.trim(),
+    prisms: {
+      organisation: [...this.state.prisms.organisation],
+      project: [...this.state.prisms.project],
+    },
+    meta: {
+      isAdminRequest: this.isAdmin(),
+      scope: `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}`,
+    },
+  })
+
+  /** Loads a first compact page independently of other hierarchy collections. */
+  loadPanelResource = async (type: PanelResourceType): Promise<PanelResource[]> => {
+    const list = this.cacheCtx.lists[type]
+    await list.load(this.panelResourceInput(type), true)
+    return list.rows
+  }
+
+  /** Retains loaded identities without using cache membership as list membership. */
+  retainPanelRows = (type: PanelResourceType, rows: PanelResource[]): void => {
+    const store = this.cache[type] as Map<string, PanelResource>
+    for (const row of rows) store.set(row.id, { ...store.get(row.id), ...row })
+  }
+
   organisationsQueryFn = async (): Promise<Organisation[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.organisation].list
-    if (!remoteList) {
-      throw new Error('Organisation remote list function is not configured.')
-    }
-    const result = toSafeListResponse<Organisation>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: {
-            isArchived: false,
-            isPublished: true,
-          },
-          prisms: this.state.prisms,
-          sorting: this.state.viewSorting.organisation,
-          meta: { isAdminRequest: false, profile: 'card' },
-        }),
-      )) as ListResponse<Organisation> | undefined,
-    )
-    this.setListQueryMeta(this.organisationsQueryKey(), result)
-    return result.data
+    return (await this.loadPanelResource('organisation')) as unknown as Organisation[]
   }
   projectsQueryFn = async (): Promise<Project[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.project].list
-    if (!remoteList) {
-      throw new Error('Project remote list function is not configured.')
-    }
-    const requestParams = {
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.project,
-      meta: { isAdminRequest: false, profile: 'card' },
-    }
-
-    const result = toSafeListResponse<Project>(
-      (await runRemoteQuery(remoteList(requestParams))) as
-        | ListResponse<Project>
-        | undefined,
-    )
-
-    this.setListQueryMeta(this.projectsQueryKey(), result)
-    return result.data
+    return (await this.loadPanelResource('project')) as unknown as Project[]
   }
 
   layersQueryFn = async (): Promise<Layer[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.layer].list
-    if (!remoteList) {
-      throw new Error('Layer remote list function is not configured.')
-    }
-    const result = toSafeListResponse<Layer>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: {
-            isArchived: false,
-            isPublished: true,
-          },
-          prisms: this.state.prisms,
-          sorting: this.state.viewSorting.layer,
-          meta: { isAdminRequest: false, profile: 'card' },
-        }),
-      )) as ListResponse<Layer> | undefined,
-    )
-    this.setListQueryMeta(this.layersQueryKey(), result)
-    return result.data
+    return (await this.loadPanelResource('layer')) as unknown as Layer[]
   }
 
   featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
@@ -1264,12 +1224,7 @@ export class AppCtx {
       return
     }
 
-    // Invalidate queries for this resource type
-    await this.queryClient.invalidateQueries({
-      queryKey,
-      refetchType: 'active',
-      exact: true,
-    })
+    // The targeted refresh below explicitly refreshes the remote query.
 
     // Refresh only the specific resource without cascading
     await this.refreshResourceTargeted(resource, resourceId)
@@ -1543,19 +1498,10 @@ export class AppCtx {
       this.cache.user.clear()
     }
 
-    // Wait for every invalidation so callers do not refresh against stale query data.
-    await Promise.all(
-      resourcesToInvalidate.map(resource =>
-        this.queryClient.invalidateQueries({
-          queryKey:
-            resource === 'userFeatures'
-              ? this.userFeaturesQueryKey()
-              : [FirstClassResource[resource]],
-          refetchType: 'all',
-          exact: false,
-        }),
-      ),
-    )
+    // Invalidate request generations; subsequent refreshes go directly to the server.
+    for (const resourceType of resourcesToInvalidate) {
+      this.beginResourceRefresh(resourceType)
+    }
   }
 
   togglePrism = async (resource: FirstClassResource, id: Id): Promise<void> => {
@@ -1929,10 +1875,7 @@ export class AppCtx {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.organisation)
     const query = this.getRequiredQueryConfig(FirstClassResource.organisation)
-    const organisations = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Organisation[]>,
-    })
+    const organisations = await (query.queryFn() as Promise<Organisation[]>)
     if (
       !this.isCurrentResourceRefresh(FirstClassResource.organisation, refreshSerial)
     ) {
@@ -1965,10 +1908,7 @@ export class AppCtx {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.project)
     const query = this.getRequiredQueryConfig(FirstClassResource.project)
-    const projects = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Project[]>,
-    })
+    const projects = await (query.queryFn() as Promise<Project[]>)
     if (!this.isCurrentResourceRefresh(FirstClassResource.project, refreshSerial)) {
       return
     }
@@ -2002,10 +1942,7 @@ export class AppCtx {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.layer)
     const query = this.getRequiredQueryConfig(FirstClassResource.layer)
-    const layers = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Layer[]>,
-    })
+    const layers = await (query.queryFn() as Promise<Layer[]>)
     if (!this.isCurrentResourceRefresh(FirstClassResource.layer, refreshSerial)) {
       return
     }
@@ -2039,10 +1976,9 @@ export class AppCtx {
   ): Promise<void> => {
     const refreshSerial = ++this.featureRefreshSerial
     const query = this.getRequiredQueryConfig(FirstClassResource.feature)
-    const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<FeatureFromCollection[]>,
-    })
+    const features: FeatureFromCollection[] = await (query.queryFn() as Promise<
+      FeatureFromCollection[]
+    >)
 
     if (refreshSerial !== this.featureRefreshSerial) {
       logMarkerBootstrap('stale feature data ignored after a newer refresh started', {
@@ -2090,10 +2026,7 @@ export class AppCtx {
   refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.task)
     const query = this.getRequiredQueryConfig(FirstClassResource.task)
-    const tasks = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Task[]>,
-    })
+    const tasks = await (query.queryFn() as Promise<Task[]>)
     if (!this.isCurrentResourceRefresh(FirstClassResource.task, refreshSerial)) {
       return
     }
@@ -2150,10 +2083,7 @@ export class AppCtx {
     if (!this.isAdmin()) return
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.hub)
     const query = this.getRequiredQueryConfig(FirstClassResource.hub)
-    const hubs = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Hub[]>,
-    })
+    const hubs = await (query.queryFn() as Promise<Hub[]>)
     if (!this.isCurrentResourceRefresh(FirstClassResource.hub, refreshSerial)) {
       return
     }
@@ -2177,10 +2107,7 @@ export class AppCtx {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.property)
     const query = this.getRequiredQueryConfig(FirstClassResource.property)
-    const properties = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Property[]>,
-    })
+    const properties = await (query.queryFn() as Promise<Property[]>)
     if (!this.isCurrentResourceRefresh(FirstClassResource.property, refreshSerial)) {
       return
     }
@@ -2194,10 +2121,7 @@ export class AppCtx {
     const refreshSerial = this.beginResourceRefresh('userFeatures')
     const userId = this.user?.id ?? null
     const query = this.getRequiredQueryConfig('userFeatures')
-    const userFeatures = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<UserFeature[]>,
-    })
+    const userFeatures = await (query.queryFn() as Promise<UserFeature[]>)
     if (
       !this.isCurrentResourceRefresh('userFeatures', refreshSerial) ||
       userId !== (this.user?.id ?? null)
@@ -2225,9 +2149,7 @@ export class AppCtx {
    * visible feature card in sync without waiting for a full user-feature refetch.
    */
   applyUserFeatureState = (featureId: Id, updated: UserFeature | null): void => {
-    const queryKey = this.userFeaturesQueryKey()
-    const cached = this.queryClient.getQueryData<UserFeature[]>(queryKey)
-    const current = cached ?? [
+    const current = [
       ...this.state.userFeatures.wishlisted,
       ...this.state.userFeatures.visited.filter(
         visited =>
@@ -2240,7 +2162,6 @@ export class AppCtx {
 
     if (updated) next.unshift(updated)
 
-    this.queryClient.setQueryData(queryKey, next)
     this.state.userFeatures = {
       wishlisted: next.filter(item => item.isWishlisted),
       visited: next.filter(item => item.isVisited),
@@ -2252,10 +2173,7 @@ export class AppCtx {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.user)
     const userId = this.user?.id ?? null
     const query = this.getRequiredQueryConfig(FirstClassResource.user)
-    const user = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<UserProfile | null>,
-    })
+    const user = await (query.queryFn() as Promise<UserProfile | null>)
     if (
       !this.isCurrentResourceRefresh(FirstClassResource.user, refreshSerial) ||
       userId !== (this.user?.id ?? null)
@@ -2358,64 +2276,24 @@ export class AppCtx {
 
   //* Removes organisation from prisms if they are no longer in the resources.
   // This should rarely happen as we always fetch all organisations. But it could happen in cases where an organisation is unpublished or deleted.
-  syncOrganisationPrisms = () => {
-    const filteredOrganisations = this.state.prisms.organisation.filter(
-      organisation => {
-        return this.state.resources.organisation.some(o => o.id === organisation)
-      },
-    )
-
-    // Only update if the array actually changed
-    if (
-      filteredOrganisations.length !== this.state.prisms.organisation.length ||
-      !filteredOrganisations.every(
-        (id, index) => id === this.state.prisms.organisation[index],
-      )
-    ) {
-      this.state.prisms.organisation = filteredOrganisations
-    }
+  syncOrganisationPrisms = (): void => {
+    // A selected identity may be outside the loaded page; absence is not a deletion.
   }
 
   //* Removes project from prisms if they are no longer in the resources.
   // This typically is required when an organisation prism is set, and a
   // previously active prism is no longer valid given that the related
   // organisation is not selected as a prism.
-  syncProjectPrisms = () => {
-    const filteredProjects = this.state.prisms.project.filter(project => {
-      return this.state.resources.project.some(p => p.id === project)
-    })
-
-    // Only update if the array actually changed
-    if (
-      filteredProjects.length !== this.state.prisms.project.length ||
-      !filteredProjects.every((id, index) => id === this.state.prisms.project[index])
-    ) {
-      this.state.prisms.project = filteredProjects
-    }
+  syncProjectPrisms = (): void => {
+    // A selected identity may be outside the loaded page; absence is not a deletion.
   }
 
   //* Removes layer from prisms if they are no longer in the resources.
   // This typically is required when a organisation or project prism is set,
   // and a previously active prism is no longer valid given that the related
   // project or organisation is not selected as a prism.
-  syncLayerPrisms = () => {
-    const filteredLayers = this.state.prisms.layer.filter(layer => {
-      return this.state.resources.layer.some(l => l.id === layer)
-    })
-
-    // Use Set comparison for proper array equality check
-    const currentSet = new Set(this.state.prisms.layer)
-    const filteredSet = new Set(filteredLayers)
-
-    // Check if sets are different (different lengths or different contents)
-    const shouldUpdate =
-      currentSet.size !== filteredSet.size ||
-      !Array.from(currentSet).every(id => filteredSet.has(id))
-
-    // Only update if the array actually changed
-    if (shouldUpdate) {
-      this.state.prisms.layer = filteredLayers
-    }
+  syncLayerPrisms = (): void => {
+    // A selected identity may be outside the loaded page; absence is not a deletion.
   }
 
   /**
@@ -3027,6 +2905,20 @@ export class AppCtx {
     } else {
       // Organisation - use itself
       organisation = resource as Organisation
+    }
+
+    if ('organisationId' in resource)
+      organisation =
+        this.cache.organisation.get(resource.organisationId) ?? organisation
+    if ('projectId' in resource)
+      project = this.cache.project.get(resource.projectId) ?? project
+    if ('ancestors' in resource && resource.ancestors) {
+      const ancestors = resource.ancestors as {
+        organisation?: Organisation
+        project?: Project
+      }
+      organisation = ancestors.organisation ?? organisation
+      project = ancestors.project ?? project
     }
 
     return {
@@ -4075,11 +3967,6 @@ export class AppCtx {
 
     if (previousUserId !== nextUserId) {
       // Identity-bound records must never survive guest/account transitions.
-      this.queryClient.removeQueries({ queryKey: ['userFeatures'], exact: false })
-      this.queryClient.removeQueries({
-        queryKey: [FirstClassResource.user],
-        exact: false,
-      })
       this.cache.user.clear()
       this.state.userFeatures = { wishlisted: [], visited: [] }
       this.resetActiveCollection()
@@ -4089,6 +3976,8 @@ export class AppCtx {
     }
 
     this.user = user
+    if (identityChanged || previousRoleScope !== this.getRoleScopeQueryKey())
+      this.cacheCtx.clear()
     if (!identityChanged && previousRoleScope !== this.getRoleScopeQueryKey()) {
       // Role changes also alter query scope and must supersede prior responses.
       this.featureRefreshSerial += 1
@@ -4255,6 +4144,7 @@ export class AppCtx {
 
   // Clear all cache maps (for actual data reset scenarios)
   clearAllCaches = (): void => {
+    this.cacheCtx.clear()
     // Invalidate in-flight feature reads before removing their committed state.
     this.featureRefreshSerial += 1
     this.invalidateResourceRefreshes()
@@ -4305,22 +4195,7 @@ export class AppCtx {
     this.state.resources.hub = []
     this.placeCtx.setNeighbourhoodFeatures([])
 
-    const resourceQueryPrefixes: Array<FirstClassResource | 'property'> = [
-      FirstClassResource.organisation,
-      FirstClassResource.project,
-      FirstClassResource.layer,
-      FirstClassResource.feature,
-      FirstClassResource.task,
-      FirstClassResource.hub,
-      'property',
-    ]
-
-    for (const queryKey of resourceQueryPrefixes) {
-      this.queryClient.removeQueries({
-        queryKey: [queryKey],
-        exact: false,
-      })
-    }
+    this.invalidateResourceRefreshes()
   }
 
   /**
@@ -4563,7 +4438,7 @@ export class AppCtx {
     cache: Map<Id, T>,
     newItems: T[],
   ): void => {
-    this.syncMap(cache, newItems, item => item.id)
+    for (const item of newItems) cache.set(item.id, { ...cache.get(item.id), ...item })
   }
 
   private syncCodeToIdMap = <T extends { id: Id; code: Code }>(
@@ -4648,12 +4523,11 @@ export const APPCTX_KEY = Symbol('mapContext')
 let appCtxSingleton: AppCtx | null = null
 
 export const setAppCtx = (
-  queryClient: QueryClient,
   placeCtx: PlaceCtx,
   user: SessionUser | null,
   responsiveCtx: ResponsiveCtx,
 ) => {
-  const context = new AppCtx(queryClient, placeCtx, user, responsiveCtx)
+  const context = new AppCtx(placeCtx, user, responsiveCtx)
   appCtxSingleton = context
   // Don't initialize immediately - let the session watcher handle it after mount
   return setContext(APPCTX_KEY, context)

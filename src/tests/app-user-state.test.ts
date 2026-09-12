@@ -4,7 +4,6 @@ import { AppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource, Panel } from '$lib/enums'
 // TYPES
-import type { QueryClient } from '@tanstack/svelte-query'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { CurrentUser } from '$lib/db/zod/schema/user.types'
@@ -35,12 +34,6 @@ describe('AppCtx user updates', () => {
     const second = createDeferred<FeatureFromCollection[]>()
     let queryCount = 0
     const appCtx = new AppCtx(
-      {
-        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
-          queryFn(),
-        ),
-        removeQueries: vi.fn(),
-      } as unknown as QueryClient,
       { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
       null,
       {} as ResponsiveCtx,
@@ -73,12 +66,6 @@ describe('AppCtx user updates', () => {
   it('does not restore feature data after the user identity changes', async () => {
     const pendingFeatures = createDeferred<FeatureFromCollection[]>()
     const appCtx = new AppCtx(
-      {
-        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
-          queryFn(),
-        ),
-        removeQueries: vi.fn(),
-      } as unknown as QueryClient,
       { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
       { id: 'old-user' } as CurrentUser,
       {} as ResponsiveCtx,
@@ -102,12 +89,6 @@ describe('AppCtx user updates', () => {
   it('does not restore saved feature state after the user identity changes', async () => {
     const pendingUserFeatures = createDeferred<UserFeature[]>()
     const appCtx = new AppCtx(
-      {
-        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
-          queryFn(),
-        ),
-        removeQueries: vi.fn(),
-      } as unknown as QueryClient,
       {} as PlaceCtx,
       { id: 'old-user' } as CurrentUser,
       {} as ResponsiveCtx,
@@ -131,12 +112,6 @@ describe('AppCtx user updates', () => {
   it('does not commit a profile response after the user identity changes', async () => {
     const pendingProfile = createDeferred<UserProfile | null>()
     const appCtx = new AppCtx(
-      {
-        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
-          queryFn(),
-        ),
-        removeQueries: vi.fn(),
-      } as unknown as QueryClient,
       {} as PlaceCtx,
       { id: 'old-user', username: 'old-user' } as CurrentUser,
       {} as ResponsiveCtx,
@@ -161,17 +136,7 @@ describe('AppCtx user updates', () => {
     const first = createDeferred<Project[]>()
     const second = createDeferred<Project[]>()
     let queryCount = 0
-    const appCtx = new AppCtx(
-      {
-        fetchQuery: vi.fn(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
-          queryFn(),
-        ),
-        removeQueries: vi.fn(),
-      } as unknown as QueryClient,
-      {} as PlaceCtx,
-      null,
-      {} as ResponsiveCtx,
-    )
+    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
     appCtx.queryMap.set(FirstClassResource.project, {
       queryKey: () => [FirstClassResource.project],
       queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
@@ -188,34 +153,17 @@ describe('AppCtx user updates', () => {
     expect(appCtx.state.resources.project).toEqual([{ id: 'new-project' }])
   })
 
-  it('waits for dependent query invalidations before resolving', async () => {
-    const appCtx = new AppCtx(
-      { removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      null,
-      {} as ResponsiveCtx,
-    )
-    const invalidation = createDeferred<void>()
-    const invalidateQueries = vi.fn().mockReturnValue(invalidation.promise)
-    appCtx.queryClient = { invalidateQueries } as unknown as QueryClient
-
-    let settled = false
-    const pending = appCtx.invalidate(FirstClassResource.project).then(() => {
-      settled = true
-    })
-
-    expect(invalidateQueries).toHaveBeenCalledTimes(2)
-    await Promise.resolve()
-    expect(settled).toBe(false)
-
-    invalidation.resolve()
-    await pending
-    expect(settled).toBe(true)
+  it('invalidates dependent resource caches before the next explicit refresh', async () => {
+    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
+    appCtx.cache.project.set('p', { id: 'p' } as Project)
+    appCtx.cache.property.set('v', { id: 'v' } as Property)
+    await appCtx.invalidate(FirstClassResource.project)
+    expect(appCtx.cache.project.size).toBe(0)
+    expect(appCtx.cache.property.size).toBe(0)
   })
 
   it('loads profile data only when the profile panel opens', async () => {
     const appCtx = new AppCtx(
-      { removeQueries: vi.fn() } as unknown as QueryClient,
       {} as PlaceCtx,
       { id: 'user-1' } as CurrentUser,
       { setPanelOpen: vi.fn() } as ResponsiveCtx,
@@ -246,12 +194,7 @@ describe('AppCtx user updates', () => {
         },
       ],
     } as CurrentUser
-    const appCtx = new AppCtx(
-      { removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      user,
-      {} as ResponsiveCtx,
-    )
+    const appCtx = new AppCtx({} as PlaceCtx, user, {} as ResponsiveCtx)
 
     appCtx.hub = { id: 'hub-1', code: 'test-hub' } as HubOptsExtended
     appCtx.state.resources.layer = [{ id: 'saved-layer' }] as Layer[]
@@ -264,7 +207,6 @@ describe('AppCtx user updates', () => {
 
   it('switches visible markers when active layers change before their feature refresh completes', () => {
     const appCtx = new AppCtx(
-      { removeQueries: vi.fn() } as unknown as QueryClient,
       {
         state: {
           contains: { feature: { neighbourhood: new Map() } },
@@ -298,13 +240,16 @@ describe('AppCtx user updates', () => {
       if (queryKey[0] === 'project') return projects.promise
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
-    const appCtx = new AppCtx(
-      { fetchQuery, removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      null,
-      {} as ResponsiveCtx,
-    )
+    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
 
+    appCtx.queryMap.set(FirstClassResource.organisation, {
+      queryKey: () => ['organisation'],
+      queryFn: () => fetchQuery({ queryKey: ['organisation'] }),
+    })
+    appCtx.queryMap.set(FirstClassResource.project, {
+      queryKey: () => ['project'],
+      queryFn: () => fetchQuery({ queryKey: ['project'] }),
+    })
     const bootstrap = appCtx.bootstrapPublicMapResources(false)
     await vi.waitFor(() => expect(fetchQuery).toHaveBeenCalledTimes(2))
 
@@ -336,13 +281,16 @@ describe('AppCtx user updates', () => {
       if (queryKey[0] === 'property') return properties.promise
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
-    const appCtx = new AppCtx(
-      { fetchQuery, removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      null,
-      {} as ResponsiveCtx,
-    )
+    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
 
+    appCtx.queryMap.set(FirstClassResource.layer, {
+      queryKey: () => ['layer'],
+      queryFn: () => fetchQuery({ queryKey: ['layer'] }),
+    })
+    appCtx.queryMap.set(FirstClassResource.property, {
+      queryKey: () => ['property'],
+      queryFn: () => fetchQuery({ queryKey: ['property'] }),
+    })
     const refreshLayers = appCtx.refreshLayers(false, true, 'anonymous::')
     const refreshProperties = appCtx.refreshProperties(false, 'anonymous::')
     await vi.waitFor(() => expect(fetchQuery).toHaveBeenCalledTimes(2))
