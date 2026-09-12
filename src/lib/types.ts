@@ -1064,6 +1064,8 @@ export type ActiveCollection = {
   type: 'neighbourhood' | 'walk' | 'feature' | 'search'
   i18n: Record<LocaleKey, { name: string }>
   items: (FeatureFromCollection | Feature)[]
+  /** Authoritative matching count for paginated feature collections. */
+  totalCount?: number | null
 } | null
 
 /* ----------------- */
@@ -3240,6 +3242,124 @@ export type ResourcePageInput = {
 export type ResourcePageFactory = (
   input: ResourcePageInput,
 ) => import('@sveltejs/kit').RemoteQuery<ResourcePage>
+
+/** Geographic membership for a bounded feature query; bounds use GeoJSON axis order. */
+export type FeatureSpatialIndex = {
+  geometry: string
+  longitude: number
+  latitude: number
+  cells: Record<string, string>
+}
+
+/** Explicit target and bounded traversal for resumable spatial-index backfills. */
+export type FeatureSpatialBackfillOptions = {
+  stage: 'local' | 'preview' | 'production'
+  remote: boolean
+  batchSize: number
+  maxBatches: number
+  afterId: string
+  dryRun: boolean
+}
+
+/** Raw persisted geometry is used to guard backfill writes against concurrent edits. */
+export type FeatureSpatialBackfillRow = { id: string; geometry: string }
+
+/** Geographic membership for a bounded feature query; bounds use GeoJSON axis order. */
+export type FeatureSpatialQuery = {
+  resolution: number
+  cells: string[]
+  bounds?: [number, number, number, number]
+}
+
+/** Filters compose identically for map, search, neighbourhood and user-list views. */
+export type FeatureQueryFilters = {
+  properties?: Record<string, Record<string, string[] | RangeFilterValue | boolean>>
+  neighbourhoods?: string[]
+  excludeNeighbourhoods?: string[]
+  list?: { userId?: string; listId: 'wishlist' | 'visited' }
+  isVisitable?: boolean
+  isIntangible?: boolean
+}
+
+/** Complete feature query identity; the server derives authorization independently of scope. */
+export type FeatureQueryInput = {
+  q?: string
+  prisms?: Partial<Prisms>
+  filters?: FeatureQueryFilters
+  spatial?: FeatureSpatialQuery
+  /** Already retained map markers omitted from this page, without changing query totals. */
+  excludeIds?: string[]
+  /** Map discovery can omit all count/revision/cache work while loading additional markers. */
+  includeCounts?: boolean
+  limit?: number
+  sorting?: { sortBy: 'id' | 'visitedAt'; sortOrder: 'asc' | 'desc' }
+  cursor?: { id: string; signature: string; value?: string | null } | null
+  meta: { isAdminRequest: boolean; scope: string }
+}
+
+/** Counts cover the entire filtered query, independently of page traversal. */
+export type FeatureQueryPage = {
+  data: FeatureFromCollection[]
+  totalCount: number | null
+  nextCursor: { id: string; signature: string; value?: string | null } | null
+  facets: { neighbourhoods: Record<string, number> } | null
+  /** Current actor's membership state for returned features, including rows beyond bootstrap. */
+  userFeatures?: import('$lib/db/zod/schema/user.types').UserFeature[]
+}
+
+/** Exact count metadata, stored together for an authorized feature-query fingerprint. */
+export type FeatureQueryCounts = {
+  totalCount: number
+  facets: { neighbourhoods: Record<string, number> }
+}
+
+/** The aggregate output shared by direct count queries and maintained rollup sums. */
+export type FeatureCountGroup = { neighbourhood: string | null; count: number }
+
+/** Native remote queries own page payloads and concurrent request deduplication. */
+export type FeatureQueryFactory = (
+  input: FeatureQueryInput,
+) => import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>
+
+/** Independent views share retained entities without replacing each other's membership. */
+export type FeatureQueryChannel =
+  | 'map'
+  | 'search'
+  | 'searchWishlist'
+  | 'collection'
+  | 'facets'
+  | 'wishlist'
+  | 'visited'
+
+/** Retained feature payloads expire using the collection freshness window. */
+export type FeatureQueryCachedEntity = {
+  row: FeatureFromCollection
+  fetchedAt: number
+  meta: FeatureQueryInput['meta']
+  listMemberships?: Record<string, number>
+}
+
+/** Retained native handles for a previously visited query. */
+export type FeatureQueryHistory = {
+  pages: import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>[]
+  fetchedAt: number
+}
+
+/** Known local membership facts used for immediate previews of a new query. */
+export type FeatureQueryMatchContext = {
+  listMembership?: (
+    row: FeatureFromCollection,
+    list: NonNullable<FeatureQueryFilters['list']>,
+  ) => boolean | undefined
+  organisationCode?: (id: string) => string | undefined
+  projectCode?: (id: string) => string | undefined
+}
+
+/** Explicit recent list edits distinguish an optimistic removal from unknown membership. */
+export type FeatureMembershipOverride = {
+  row: import('$lib/db/zod/schema/user.types').UserFeature | null
+  updatedAt: number
+}
 
 /** Native active admin feature collection retained for reactive mutation reconciliation. */
 export type FeatureCollectionHandle = import('@sveltejs/kit').RemoteQuery<{

@@ -64,10 +64,10 @@ export async function getWishlistedFeaturesAsync(
 }
 
 /**
- * Searches wishlisted features, neighbourhoods, and loaded features for one term.
+ * Projects query-backed search results and authoritative neighbourhood/list counts.
  *
  * @param term - Raw search term.
- * @param appCtx - App context containing search sources and locale helpers.
+ * @param appCtx - App context containing cached query pages and locale helpers.
  * @returns Search result groups matching the provided term.
  */
 export async function searchAllAsync(
@@ -76,15 +76,14 @@ export async function searchAllAsync(
 ): Promise<SearchResult[]> {
   const results: SearchResult[] = []
 
-  // Source 1 - Walks
-  const wishlistResults = await getWishlistedFeaturesAsync(appCtx)
-  const filteredWishlistResults = wishlistResults.filter((feature: FeatureExtended) =>
-    feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase()),
-  )
-  if (filteredWishlistResults.length > 0) {
+  // Source 1 - Walks: the matching count comes from the user's filtered list query.
+  const wishlistQuery = appCtx.cacheCtx.featureQueries.searchWishlist
+  const wishlistCount =
+    wishlistQuery.search === term.trim() ? wishlistQuery.totalCount : null
+  if (wishlistCount !== null && wishlistCount > 0) {
     results.push({
       name: m.omni__title_star_walks(),
-      count: filteredWishlistResults.length,
+      count: wishlistCount,
       collectionType: OmniCollection.walk,
       ref: 'stars',
     })
@@ -104,34 +103,17 @@ export async function searchAllAsync(
     }
   })
 
-  // Source 3 - Features
-  Array.from(appCtx.features.values())
-    .filter((feature): feature is FeatureFromCollection => {
-      // Search against the same locale-aware strings the user sees in the UI.
-      const title = getI18n(feature, 'title', appCtx.getUserPreferences())
-      const description = getI18n(feature, 'description', appCtx.getUserPreferences())
-      const displayAddress = getI18n(
-        feature,
-        'displayAddress',
-        appCtx.getUserPreferences(),
-      )
-      const lowerTerm = term.toLowerCase()
-      return (
-        (typeof title === 'string' && title.toLowerCase().includes(lowerTerm)) ||
-        (typeof description === 'string' &&
-          description.toLowerCase().includes(lowerTerm)) ||
-        (typeof displayAddress === 'string' &&
-          displayAddress.toLowerCase().includes(lowerTerm))
-      )
+  // Source 3 - Features: fresh cached previews are merged with bounded server pages.
+  const featureQuery = appCtx.cacheCtx.featureQueries.search
+  const features = featureQuery.search === term.trim() ? featureQuery.rows : []
+  features.forEach(feature => {
+    results.push({
+      name: getI18n(feature, 'title', appCtx.getUserPreferences()),
+      count: 1,
+      collectionType: OmniCollection.feature,
+      ref: feature.id,
     })
-    .forEach(feature => {
-      results.push({
-        name: getI18n(feature, 'title', appCtx.getUserPreferences()),
-        count: 1,
-        collectionType: OmniCollection.feature,
-        ref: feature.id,
-      })
-    })
+  })
 
   return results
 }
