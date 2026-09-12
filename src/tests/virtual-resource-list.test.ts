@@ -20,10 +20,13 @@ vi.mock('@tanstack/svelte-virtual', () => ({
 // jsdom does not implement scrolling; geometry itself is exercised in Chromium.
 beforeEach(() => {
   vi.useRealTimers()
+  // jsdom has no Web Animations API; real animation is verified in Chromium.
+  HTMLElement.prototype.getAnimations = vi.fn(() => [])
   HTMLElement.prototype.scrollTo = vi.fn()
 })
 afterEach(() => {
   cleanup()
+  delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations
   delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo
 })
 

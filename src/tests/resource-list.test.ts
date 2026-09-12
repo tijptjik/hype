@@ -116,3 +116,36 @@ describe('native resource page traversal', () => {
     expect(list.rows.map(row => row.id)).toEqual(['new'])
   })
 })
+
+it('latches displayed rows across prism changes until the replacement page resolves', async () => {
+  const first = controlledQuery(),
+    next = controlledQuery()
+  const list = new ResourceList(
+    vi.fn().mockReturnValueOnce(first.query).mockReturnValueOnce(next.query),
+  )
+  const initial = list.load(input)
+  first.resolve({ data: [row('a'), row('b')], nextCursor: null })
+  await initial
+  const pending = list.load({ ...input, prisms: { organisation: ['a'] } })
+  expect(list.loading).toBe(true)
+  expect(list.rows.map(row => row.id)).toEqual(['a', 'b'])
+  next.resolve({ data: [row('a')], nextCursor: null })
+  await pending
+  expect(list.rows.map(row => row.id)).toEqual(['a'])
+})
+
+it('does not latch rows across an authorization scope change', async () => {
+  const first = controlledQuery(),
+    next = controlledQuery()
+  const list = new ResourceList(
+    vi.fn().mockReturnValueOnce(first.query).mockReturnValueOnce(next.query),
+  )
+  const initial = list.load(input)
+  first.resolve({ data: [row('private')], nextCursor: null })
+  await initial
+  const pending = list.load({ ...input, meta: { ...input.meta, scope: 'other' } })
+  expect(list.rows).toEqual([])
+  next.resolve({ data: [], nextCursor: null })
+  await pending
+  expect(list.rows).toEqual([])
+})

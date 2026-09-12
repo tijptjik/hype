@@ -13,6 +13,7 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
+import type { SessionUser } from '$lib/types'
 import type { UserFeature, UserProfile } from '$lib/db/zod/schema/user.types'
 
 /** Creates a promise whose completion is controlled by the test. */
@@ -29,6 +30,24 @@ function createDeferred<T>(): {
 }
 
 describe('AppCtx user updates', () => {
+  it('keeps session role scope stable while user-layer preferences hydrate', async () => {
+    const user = {
+      id: 'member',
+      preferences: {},
+      roles: [{ type: 'organisation', organisationId: 'org', role: 'admin' }],
+    } as unknown as CurrentUser
+    const app = new AppCtx(
+      {} as PlaceCtx,
+      user as unknown as SessionUser,
+      {} as ResponsiveCtx,
+    )
+    const scopeBefore = app.organisationsQueryKey()
+    app.selectionLayers = [{ id: 'default-layer' }] as Layer[]
+    await app.setUser({ ...user, userLayers: [] })
+    expect(app.organisationsQueryKey()).toEqual(scopeBefore)
+    expect(app.selectionLayers.map(layer => layer.id)).toEqual(['default-layer'])
+  })
+
   it('does not let an older feature refresh overwrite a newer one', async () => {
     const first = createDeferred<FeatureFromCollection[]>()
     const second = createDeferred<FeatureFromCollection[]>()

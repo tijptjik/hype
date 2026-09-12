@@ -36,7 +36,10 @@ vi.mock('$lib/api/server/organisation.remote', () => ({
 }))
 vi.mock('$lib/api/server/project.remote', () => ({ getProjects: mocks.projects }))
 vi.mock('$lib/api/server/layer.remote', () => ({ getLayers: mocks.layers }))
-import { getResourcePage } from '$lib/api/server/resources.remote'
+import {
+  getDefaultLayerResources,
+  getResourcePage,
+} from '$lib/api/server/resources.remote'
 
 const meta = { isAdminRequest: false, scope: 'user:hub:locale' }
 describe('compact resource page boundary', () => {
@@ -93,5 +96,28 @@ describe('compact resource page boundary', () => {
       expect(params.conditions.id.length).toBeLessThanOrEqual(25)
     expect(resolve(inputs[50]).id).toBe('50')
     expect(mocks.layers.mock.calls.at(-1)?.[0].meta.isAdminRequest).toBe(true)
+  })
+})
+
+describe('default map selection boundary', () => {
+  it('loads all authorized choices across pages, including optional layers and descriptions', async () => {
+    mocks.layers.mockReset()
+    mocks.layers
+      .mockResolvedValueOnce({
+        data: [{ id: 'a', isDefaultVisible: true }],
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        data: [{ id: 'z', isDefaultVisible: false }],
+        hasMore: false,
+      })
+    const rows = await getDefaultLayerResources({ meta })
+    expect(rows.map(row => row.id)).toEqual(['a', 'z'])
+    expect(mocks.layers).toHaveBeenNthCalledWith(2, {
+      conditions: { isArchived: false, isPublished: true },
+      pagination: { limit: 250, afterId: 'a' },
+      sorting: { sortBy: 'id', sortOrder: 'asc' },
+      meta: { isAdminRequest: false, profile: 'default' },
+    })
   })
 })

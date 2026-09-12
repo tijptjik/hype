@@ -2,6 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMarkerRenderer } from '$lib/map/markers'
+import {
+  getMarkerRetentionBudget,
+  isWithinMarkerRetentionPerimeter,
+} from '$lib/map/markerRetention'
+import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 class TestMarker {
@@ -37,6 +42,14 @@ class TestMarker {
 
 const markerFactory = { Marker: TestMarker } as never
 const map = {} as never
+const retentionMap = {
+  getContainer: () => ({ clientWidth: 800, clientHeight: 600 }),
+  getCenter: () => ({ lng: 0 }),
+  project: ([longitude, latitude]: [number, number]) => ({
+    x: longitude * 100,
+    y: latitude,
+  }),
+} as unknown as MapLibreMap
 const feature = (id: string, coordinates: [number, number] = [114.17, 22.32]) =>
   ({
     id,
@@ -50,6 +63,68 @@ describe('map markers', () => {
     TestMarker.instances = []
   })
   afterEach(() => vi.useRealTimers())
+
+  it('keeps the same image and native marker through an offscreen return', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const retention = { scope: 'public:layers-a', budget: 1000 }
+    const row = feature('nearby', [1, 1])
+    renderer.sync([row], { retention })
+    const original = renderer.getElement(row.id)!
+    const image = original.querySelector('img')
+    renderer.sync([], { retention })
+    expect(renderer.getElement(row.id)).toBeNull()
+    expect(original.hidden).toBe(true)
+    expect(TestMarker.instances[0].removals).toBe(0)
+    renderer.sync([row], { retention })
+    expect(renderer.getElement(row.id)).toBe(original)
+    expect(original.querySelector('img')).toBe(image)
+    expect(original.hidden).toBe(false)
+    expect(TestMarker.instances).toHaveLength(1)
+  })
+
+  it('detaches distant markers but preserves their image nodes until capacity is needed', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const retention = { scope: 'public', budget: 1000 }
+    const row = feature('distant', [50, 1])
+    renderer.sync([row], { retention })
+    const original = renderer.getElement(row.id)
+    renderer.sync([], { retention })
+    expect(TestMarker.instances[0].removals).toBe(1)
+    renderer.sync([row], { retention })
+    expect(renderer.getElement(row.id)).toBe(original)
+    expect(TestMarker.instances).toHaveLength(1)
+    renderer.sync([], { retention })
+    renderer.clear()
+    expect(renderer.getElement(row.id)).toBeNull()
+  })
+
+  it('evicts distant cached markers before nearby ones and protects active markers', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const retention = { scope: 'public', budget: 500 }
+    const near = feature('near', [1, 1])
+    const far = feature('far', [50, 1])
+    renderer.sync([near], { retention, markerStyle: 'dot' })
+    const nearElement = renderer.getElement(near.id)
+    renderer.sync([far], { retention, markerStyle: 'dot' })
+    const farElement = renderer.getElement(far.id)
+    const active = Array.from({ length: 499 }, (_, i) => feature(`active-${i}`, [1, 1]))
+    renderer.sync(active, { retention, markerStyle: 'dot' })
+    renderer.sync([near], { retention, markerStyle: 'dot' })
+    expect(renderer.getElement(near.id)).toBe(nearElement)
+    renderer.sync([far], { retention, markerStyle: 'dot' })
+    expect(renderer.getElement(far.id)).not.toBe(farElement)
+  })
+
+  it('discards parked markers when filters or authorization scope changes', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const row = feature('scoped', [1, 1])
+    renderer.sync([row], { retention: { scope: 'user-a', budget: 1000 } })
+    const original = renderer.getElement(row.id)
+    renderer.sync([], { retention: { scope: 'user-a', budget: 1000 } })
+    renderer.sync([], { retention: { scope: 'user-b', budget: 1000 } })
+    renderer.sync([row], { retention: { scope: 'user-b', budget: 1000 } })
+    expect(renderer.getElement(row.id)).not.toBe(original)
+  })
 
   it('eagerly loads image-backed markers on their first map render', () => {
     const renderer = createMarkerRenderer(map, markerFactory)
@@ -139,5 +214,28 @@ describe('map markers', () => {
     vi.advanceTimersByTime(300)
     expect(marker.removals).toBe(1)
     expect(renderer.getElement('feature-1')).toBeNull()
+  })
+})
+
+describe('marker retention policy', () => {
+  it('uses conservative defaults and only raises the budget with both memory and CPU hints', () => {
+    expect(getMarkerRetentionBudget()).toBe(1000)
+    expect(getMarkerRetentionBudget({ hardwareConcurrency: 16 })).toBe(1000)
+    expect(getMarkerRetentionBudget({ deviceMemory: 4, hardwareConcurrency: 16 })).toBe(
+      750,
+    )
+    expect(getMarkerRetentionBudget({ deviceMemory: 8, hardwareConcurrency: 4 })).toBe(
+      750,
+    )
+    expect(getMarkerRetentionBudget({ deviceMemory: 8, hardwareConcurrency: 8 })).toBe(
+      1500,
+    )
+  })
+
+  it('uses two tile widths at each edge and accounts for wrapped longitudes', () => {
+    expect(isWithinMarkerRetentionPerimeter(retentionMap, [18.24, 1])).toBe(true)
+    expect(isWithinMarkerRetentionPerimeter(retentionMap, [18.25, 1])).toBe(false)
+    expect(isWithinMarkerRetentionPerimeter(retentionMap, [361, 1])).toBe(true)
+    expect(isWithinMarkerRetentionPerimeter(retentionMap, [1, -1025])).toBe(false)
   })
 })

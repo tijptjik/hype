@@ -38,6 +38,19 @@ describe('initial hub layer defaults', () => {
     ).toEqual(['other-default'])
   })
 
+  it('honors a hub default even when the layer is not default-visible', () => {
+    expect(
+      getInitialHubLayerDefaultIds(
+        {
+          code: 'custom',
+          layerDefaults: [{ layerId: 'neon-optional', isDefaultVisible: true }],
+        },
+        layers,
+        projects,
+      ),
+    ).toEqual(['neon-optional'])
+  })
+
   it('does not apply the core fallback to named hubs', () => {
     expect(
       getInitialHubLayerDefaultIds(
