@@ -203,6 +203,7 @@
     "svelte-fa": "^4.0.4",
     "svelte-file-dropzone": "^2.0.9",
     "svelte-gestures": "^5.2.2",
+    "svelte-maplibre-gl": "2.2.1",
     "svelte-portal": "^2.2.1",
     "svelte-range-slider-pips": "^4.1.1",
     "svelte-sonner": "^1.2.1",
