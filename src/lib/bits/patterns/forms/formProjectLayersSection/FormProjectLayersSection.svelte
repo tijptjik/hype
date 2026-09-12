@@ -1,9 +1,19 @@
 <script lang="ts">
+// THIRD-PARTY
+import { draggable, droppable, type DragDropState } from '@thisux/sveltednd'
+import '@thisux/sveltednd/dnd.css'
+import { getDropIndex } from '$lib/client/services/dragDrop'
+import EyeIcon from 'virtual:icons/lucide/eye'
+
+// BITS COMPONENTS
 import { SimpleTooltip } from '$lib/bits/core'
 import { Card, SectionHeader, Switch } from '$lib/bits/custom'
 import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+
+// I18N
 import { m } from '$lib/i18n'
-import EyeIcon from 'virtual:icons/lucide/eye'
+
+// TYPES
 import type { FormProjectLayersSectionProps } from './formProjectLayersSection.types'
 
 let {
@@ -18,23 +28,23 @@ let {
   class: className = '',
 }: FormProjectLayersSectionProps = $props()
 
-let draggedLayerId = $state<string | null>(null)
-
+const instanceId = $props.id()
+const container = `project-layers-${instanceId}`
 const isDisabled = $derived(!isEditing || isSubmitting)
 
-function handleDragStart(layerId: string): void {
+/**
+ * Move an existing layer within this section after a valid drop.
+ * @param state - The library's current drag state.
+ * @param targetLayerId - The layer receiving the drop.
+ * @returns Nothing.
+ */
+function handleDrop(state: DragDropState, targetLayerId: string): void {
   if (isDisabled) return
-  draggedLayerId = layerId
-}
-
-function handleDragEnd(): void {
-  draggedLayerId = null
-}
-
-function handleDrop(targetLayerId: string): void {
-  if (isDisabled || !draggedLayerId || draggedLayerId === targetLayerId) return
-  onMove(draggedLayerId, targetLayerId)
-  draggedLayerId = null
+  const ids = items.map(item => item.id)
+  const destination = getDropIndex(state, ids, targetLayerId, container)
+  if (destination === null) return
+  const sourceId = ids.find(id => id === (state.draggedItem as { id: string }).id)
+  if (sourceId) onMove(sourceId, ids[destination])
 }
 </script>
 
@@ -59,13 +69,21 @@ function handleDrop(targetLayerId: string): void {
   <div class="flex min-h-0 w-2xl flex-col gap-3">
     {#each items as item (item.id)}
       <div
-        class="cursor-grab"
-        class:opacity-55={draggedLayerId === item.id}
-        draggable={!isDisabled}
-        ondragstart={() => handleDragStart(item.id)}
-        ondragend={handleDragEnd}
-        ondragover={event => event.preventDefault()}
-        ondrop={() => handleDrop(item.id)}
+        class:cursor-grab={!isDisabled}
+        use:draggable={{
+          container: `${container}-${item.id}`,
+          containerGroup: container,
+          dragData: { id: item.id },
+          disabled: isDisabled,
+          interactive: ['button', 'input', 'label'],
+          attributes: { draggingClass: 'opacity-55' },
+        }}
+        use:droppable={{
+          container: `${container}-${item.id}`,
+          containerGroup: container,
+          disabled: isDisabled,
+          callbacks: { onDrop: state => handleDrop(state, item.id) },
+        }}
       >
         <ResourceCard.Root isDraggable={!isDisabled} reserveDragSpace={true}>
           <ResourceCard.Body code={item.projectNameShort} name={item.layerName} />
@@ -77,7 +95,10 @@ function handleDrop(targetLayerId: string): void {
             <div class="bits-form__parent-resource-actions">
               <SimpleTooltip>
                 {#snippet trigger()}
-                  <label class="bits-form__parent-resource-default">
+                  <label
+                    for={`${instanceId}-${item.id}-visible`}
+                    class="bits-form__parent-resource-default"
+                  >
                     <span class="bits-form__parent-resource-default-icon">
                       <EyeIcon />
                     </span>
@@ -85,6 +106,7 @@ function handleDrop(targetLayerId: string): void {
                       >{m.default_enabled()}</span
                     >
                     <Switch
+                      id={`${instanceId}-${item.id}-visible`}
                       checked={item.isDefaultVisible}
                       disabled={isDisabled}
                       size="sm"
