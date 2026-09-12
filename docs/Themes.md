@@ -28,6 +28,23 @@ returning users get the selected palette in the initial HTML. The root theme mod
 applies Settings changes immediately and stores a one-year host-scoped cookie.
 This is a device/browser preference, separate from domain-resource offline caching.
 
+## Component styling
+
+Keep layout, spacing, typography and simple states in inline Tailwind utilities.
+Use `cx()` when conditional utilities or caller classes need to override defaults;
+keep large style maps in a colocated `component.styles.ts` file. Do not add semantic
+classes just to name a bundle of utilities.
+
+`themes.css` owns global palette aliases, component color aliases and shared shadow
+variables at `:root` and every `[data-theme]` boundary. The legacy `glass-*`, `ok`
+and `pending` colors now derive from that palette, so nested previews and runtime
+selection use the same theme. `bits-theme` remains a scoped base/focus treatment;
+it is no longer required to make theme variables available.
+
+Shared component CSS retains selectors with coupled state, measurement or responsive
+behavior, plus effects that are clearer in CSS. Check their cascade before moving a
+base rule: an inline utility can override a modifier still in `@layer components`.
+
 ## Preview
 
 - `/themes`: interactive component studio with local sample rows, search, selection,
