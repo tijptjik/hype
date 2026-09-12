@@ -17,6 +17,7 @@
         "@mapbox/tilebelt": "^2.0.3",
         "@placemarkio/geo-viewport": "^1.0.2",
         "@sillvva/utils": "^0.9.0",
+        "@tanstack/svelte-virtual": "^3.13.38",
         "@thisux/sveltednd": "0.8.0",
         "@turf/bbox": "^7.4.0",
         "aws4fetch": "^1.0.20",
@@ -770,6 +771,10 @@
     "@tailwindcss/upgrade": ["@tailwindcss/upgrade@4.3.3", "", { "dependencies": { "@tailwindcss/node": "4.3.3", "@tailwindcss/oxide": "4.3.3", "dedent": "1.7.2", "enhanced-resolve": "^5.24.1", "globby": "^16.2.0", "jiti": "^2.7.0", "mri": "^1.2.0", "picocolors": "^1.1.1", "postcss": "^8.5.16", "postcss-import": "^16.1.1", "postcss-selector-parser": "^7.1.4", "prettier": "3.9.4", "semver": "^7.8.4", "tailwindcss": "4.3.3", "tree-sitter": "^0.22.4", "tree-sitter-typescript": "^0.23.2" }, "bin": { "upgrade": "./dist/index.mjs" } }, "sha512-bws1gEczbXKtvPLr0TD0bBvMlz9ovy6uUEjuo+WAeErluANu515sBEiE7c3GLu5ORw2yifPStKQAXEl0RilmFA=="],
 
     "@tailwindcss/vite": ["@tailwindcss/vite@4.3.3", "", { "dependencies": { "@tailwindcss/node": "4.3.3", "@tailwindcss/oxide": "4.3.3", "tailwindcss": "4.3.3" }, "peerDependencies": { "vite": "^5.2.0 || ^6 || ^7 || ^8" } }, "sha512-yYU8cogLeSh/ms2jh8Fj7jaba/EWa7Ja6GoUqYZaraEuCI5YS6ms6ObZgjjedm+jm6XZjdNRWBpPP6Z86oOxcw=="],
+
+    "@tanstack/svelte-virtual": ["@tanstack/svelte-virtual@3.13.38", "", { "dependencies": { "@tanstack/virtual-core": "3.17.10" }, "peerDependencies": { "svelte": "^3.48.0 || ^4.0.0 || ^5.0.0" } }, "sha512-Ag6deTh2jRZ6oWvYq8rajFblzdquefAaC6T4KWczBrwys9XfBQJ5nG4LzALvWMI5PnGTfpt1z97GvSQSOO6F7Q=="],
+
+    "@tanstack/virtual-core": ["@tanstack/virtual-core@3.17.10", "", {}, "sha512-eMorKWIi2nekElu+8DgSMJR4iR+sTDeh+W8VjKiMH79yUfEDJ3W9aL/96/wwbxNjyV6EfN39HKszSxjd90zAqQ=="],
 
     "@testing-library/dom": ["@testing-library/dom@10.4.1", "", { "dependencies": { "@babel/code-frame": "^7.10.4", "@babel/runtime": "^7.12.5", "@types/aria-query": "^5.0.1", "aria-query": "5.3.0", "dom-accessibility-api": "^0.5.9", "lz-string": "^1.5.0", "picocolors": "1.1.1", "pretty-format": "^27.0.2" } }, "sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg=="],
 
