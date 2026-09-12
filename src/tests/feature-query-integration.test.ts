@@ -84,12 +84,14 @@ function controlledPage() {
       totalCount: number | null = data.length,
       more = false,
     ) => {
+      const lastItem = data.at(-1)
       const value: FeatureQueryPage = {
         data,
         totalCount,
         facets:
           totalCount === null ? null : { neighbourhoods: { Bowrington: totalCount } },
-        nextCursor: more ? { id: data.at(-1)!.id, signature: 'signature' } : null,
+        nextCursor:
+          more && lastItem ? { id: lastItem.id, signature: 'signature' } : null,
       }
       Object.assign(query, { ready: true })
       current.current = value
@@ -127,7 +129,7 @@ beforeEach(() => {
   vi.mocked(getFeaturePage).mockReset()
 })
 afterEach(() => {
-  while (cleanups.length) cleanups.pop()!()
+  while (cleanups.length) cleanups.pop()?.()
 })
 
 describe('map query integration', () => {
@@ -159,7 +161,11 @@ describe('map query integration', () => {
         }),
       }),
     )
-    first.resolve([row('a')], null, true)
+    const feature = row('a')
+    feature.properties = [
+      { propertyId: 'category', propertyValueId: 'tea' },
+    ] as FeatureFromCollection['properties']
+    first.resolve([feature], null, true)
     await pending
     expect(getFeaturePage).toHaveBeenCalledOnce()
     expect(app.cacheCtx.featureQueries.map.totalCount).toBeNull()
@@ -297,7 +303,7 @@ describe('paginated collection activation', () => {
         }),
       }),
     )
-    expect(vi.mocked(getFeaturePage).mock.calls.at(-1)![0].spatial).toBeUndefined()
+    expect(vi.mocked(getFeaturePage).mock.calls.at(-1)?.[0].spatial).toBeUndefined()
     filtered.resolve([row('filtered', false)], 50)
     await settle()
     expect(app.state.active.collection?.items.map(feature => feature.id)).toEqual([

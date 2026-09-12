@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { latLngToCell } from 'h3-js'
 import { withRemoteMeta } from './remote-function-mock'
 
-const { ctx, authorize, queryPage, queryConditions } = vi.hoisted(() => ({
+const { ctx, authorize, queryPage, queryConditions, batchFactory } = vi.hoisted(() => ({
   ctx: {
     db: {},
     user: { id: 'me', superAdmin: false },
@@ -18,17 +18,21 @@ const { ctx, authorize, queryPage, queryConditions } = vi.hoisted(() => ({
     facets: { neighbourhoods: { Central: 2 } },
     nextCursor: { id: 'next', signature: '' },
   })),
-  queryConditions: vi.fn(() => ({ conditions: ['authorized'] })),
+  queryConditions: vi.fn((..._args: unknown[]) => ({ conditions: ['authorized'] })),
+  batchFactory: vi.fn(),
 }))
 vi.mock('$lib/api/server/remote', () => ({
-  guardedQuery: (
+  guardedBatchQuery: (
     schema: { parse: (input: unknown) => unknown },
-    handler: (input: unknown, ctx: unknown) => unknown,
-  ) =>
-    withRemoteMeta(
-      async (input: unknown) => handler(schema.parse(input), ctx),
-      'query',
-    ),
+    handler: (inputs: unknown[], ctx: unknown) => Promise<(input: unknown) => unknown>,
+  ) => {
+    batchFactory.mockImplementation(handler)
+    return withRemoteMeta(async (input: unknown) => {
+      const parsed = schema.parse(input)
+      const resolve = await batchFactory([parsed], ctx)
+      return resolve(parsed)
+    }, 'query_batch')
+  },
 }))
 vi.mock('$lib/api/services/authz', () => ({
   authorizeFeatureListForContext: authorize,
@@ -49,10 +53,50 @@ const input = { meta: { isAdminRequest: false, scope: 'cache' } }
 beforeEach(() => {
   vi.clearAllMocks()
   ctx.user.superAdmin = false
+  ctx.isAdminRequest = false
   authorize.mockReturnValue({ allowed: true, code: undefined })
 })
 
 describe('feature page remote boundary', () => {
+  it("keeps each item's admin intent when a native POST batch mixes scopes", async () => {
+    const admin = { meta: { isAdminRequest: true, scope: 'admin' } }
+    ctx.isAdminRequest = true
+    const resolve = await batchFactory([input, admin], ctx)
+    await resolve(input)
+    await resolve(admin)
+    expect(queryConditions.mock.calls.map(call => call[2])).toEqual([false, true])
+  })
+
+  it('passes bounded marker exclusions and count omission to the service', async () => {
+    const request = {
+      ...input,
+      includeCounts: false,
+      excludeIds: Array.from({ length: 500 }, (_, index) => `feature-${index}`),
+    }
+    await getFeaturePage(request)
+    expect(queryPage).toHaveBeenCalledWith(
+      ctx.db,
+      expect.objectContaining(request),
+      ['authorized'],
+      ctx.event.locals.hub,
+      'me',
+    )
+    await expect(
+      getFeaturePage({ ...request, excludeIds: [...request.excludeIds, 'too-many'] }),
+    ).rejects.toThrow()
+  })
+
+  it('binds cursors to excluded marker identities', async () => {
+    const request = { ...input, excludeIds: ['a'] }
+    await expect(
+      getFeaturePage({
+        ...request,
+        excludeIds: ['b'],
+        cursor: { id: 'next', signature: await featureQuerySignature(request) },
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(queryPage).not.toHaveBeenCalled()
+  })
   it('accepts more than 12 active filters and inactive controls', async () => {
     const properties = Object.fromEntries(
       Array.from({ length: 80 }, (_, index) => [
@@ -89,7 +133,7 @@ describe('feature page remote boundary', () => {
       'me',
     )
     expect(page.totalCount).toBe(2)
-    expect(page.nextCursor?.signature).toBe(featureQuerySignature(request))
+    expect(page.nextCursor?.signature).toBe(await featureQuerySignature(request))
     await getFeaturePage({ ...request, cursor: page.nextCursor })
     expect(queryPage).toHaveBeenCalledTimes(2)
   })
@@ -99,7 +143,7 @@ describe('feature page remote boundary', () => {
       getFeaturePage({
         ...input,
         q: 'changed',
-        cursor: { id: 'next', signature: featureQuerySignature(input) },
+        cursor: { id: 'next', signature: await featureQuerySignature(input) },
       }),
     ).rejects.toMatchObject({ status: 400 })
     expect(queryPage).not.toHaveBeenCalled()

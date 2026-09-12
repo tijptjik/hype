@@ -33,7 +33,8 @@ describe('project layer form state', () => {
         { id: 'first', rank: 3, isDefaultVisible: true },
       ],
     } as unknown as Project
-    const baseline = toProjectFormInput(project).data.layers!
+    const baseline = toProjectFormInput(project).data.layers
+    if (!baseline) throw new Error('Expected project layers in the form baseline')
     expect(baseline).toEqual([
       { id: 'first', rank: 0, isDefaultVisible: true },
       { id: 'second', rank: 1, isDefaultVisible: false },

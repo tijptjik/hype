@@ -3,6 +3,11 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WantToVisitSection from '$lib/bits/patterns/panels/sections/wantToVisit/WantToVisitSection.svelte'
 import HaveVisitedSection from '$lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
+import { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import { createFeatureQueryEffectRoot } from './fixtures/featureQueryHarness.svelte'
+import type { AppCtx } from '$lib/context/app.svelte'
+import type { OmniCtx } from '$lib/context/omni.svelte'
+import type { PanelProps } from '$lib/types'
 
 const mocks = vi.hoisted(() => {
   const feature = {
@@ -77,14 +82,32 @@ beforeEach(() => {
   mocks.app.loadFeatureQuery.mockClear()
   mocks.app.loadMoreFeatureQuery.mockClear()
 })
-afterEach(cleanup)
+let disposeModel: (() => void) | undefined
+afterEach(() => {
+  cleanup()
+  disposeModel?.()
+  disposeModel = undefined
+})
 
 describe.each([
   ['wishlist', WantToVisitSection],
   ['visited', HaveVisitedSection],
 ] as const)('%s remote feature panel', (channel, Component) => {
+  function renderPanel(): void {
+    let model: ReturnType<typeof useSavedFeatureListModel> | undefined
+    disposeModel = createFeatureQueryEffectRoot(() => {
+      model = useSavedFeatureListModel(
+        mocks.app as unknown as AppCtx,
+        {} as OmniCtx,
+        channel,
+      )
+    })
+    if (!model) throw new Error('Expected the saved feature list model')
+    render(Component, { model, panel: {} as PanelProps })
+  }
+
   it('renders server rows beyond map membership and exposes pagination using the server total', async () => {
-    render(Component)
+    renderPanel()
     expect(screen.getByText('Server-only feature')).toBeTruthy()
     // A single local row must not hide search when the server reports 23 matches.
     expect(screen.getByRole('textbox')).toBeTruthy()
@@ -93,7 +116,7 @@ describe.each([
   })
 
   it('sends search and list selectors to the server query without requiring map rows', async () => {
-    render(Component)
+    renderPanel()
     await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'new tea' } })
     await vi.waitFor(() =>
       expect(mocks.app.loadFeatureQuery).toHaveBeenLastCalledWith(

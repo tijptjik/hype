@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { RemoteQuery } from '@sveltejs/kit'
-import type { ResourcePage, PanelResource } from '$lib/types'
+import type { ResourcePage, PanelResource, FeatureQueryPage } from '$lib/types'
+import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import { withRemoteMeta } from './remote-function-mock'
 vi.mock('$lib/api/server/resources.remote', () => ({
   getResourcePage: withRemoteMeta(vi.fn(), 'query'),
   getPinnedResource: withRemoteMeta(vi.fn(), 'query'),
 }))
 import { CacheCtx } from '$lib/context/cache.svelte'
+import { FeatureQuery } from '$lib/context/feature-query.svelte'
 
 function page(data: PanelResource[]) {
   const value: ResourcePage = { data, nextCursor: null }
@@ -80,6 +82,44 @@ describe('native collection optimistic projections', () => {
     })
     expect(collection.transforms[0](collection.value).data[0].isPublished).toBe(false)
     expect(collection.value.data[0].isPublished).toBe(true)
+  })
+
+  it('hides accumulated map snapshots during a native override and restores them on rollback', async () => {
+    const cache = new CacheCtx()
+    const original: FeatureQueryPage = {
+      data: [row('feature') as unknown as FeatureFromCollection],
+      totalCount: null,
+      facets: null,
+      nextCursor: null,
+    }
+    const transforms: Array<(value: FeatureQueryPage) => FeatureQueryPage> = []
+    const query = Object.assign(Promise.resolve(original), {
+      current: original,
+      ready: false,
+      refresh: vi.fn(async () => {}),
+      withOverride: vi.fn(transform => {
+        transforms.push(transform)
+        return { query, transform }
+      }),
+    }) as unknown as RemoteQuery<FeatureQueryPage>
+    cache.featureQueries.map = new FeatureQuery(() => query, undefined, undefined, true)
+    await cache.featureQueries.map.load({
+      meta: { isAdminRequest: false, scope: 'public' },
+    })
+    expect(cache.featureQueries.map.rows).toHaveLength(1)
+
+    cache.optimisticUpdates('feature', {
+      meta: { id: 'feature' },
+      data: { isPublished: false },
+    })
+    Object.assign(query, { current: transforms[0](original) })
+    expect(cache.featureQueries.map.rows).toEqual([])
+
+    // Native rollback restores visibility without mutating the accumulated server snapshot.
+    Object.assign(query, { current: original })
+    expect(cache.featureQueries.map.rows.map(feature => feature.id)).toEqual([
+      'feature',
+    ])
   })
 
   it('does not add a pending organisation to descendant collections', () => {

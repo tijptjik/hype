@@ -119,6 +119,48 @@ function setup(withOrphan = false) {
 }
 
 describe('indexed feature queries', () => {
+  it('keeps large viewport cursor identities fixed-size and bound to the query', async () => {
+    const query = input({
+      excludeIds: Array.from({ length: 500 }, (_, index) => `feature-${index}`),
+      spatial: {
+        resolution: 7,
+        cells: Array.from({ length: 256 }, (_, index) => `cell-${index}`),
+      },
+      filters: {
+        properties: {
+          layer: Object.fromEntries(
+            Array.from({ length: 80 }, (_, index) => [
+              `property-${index}`,
+              ['selected'],
+            ]),
+          ),
+        },
+      },
+    })
+    const signature = await featureQuerySignature(query)
+    expect(signature).toMatch(/^[a-f0-9]{64}$/)
+    expect(
+      await featureQuerySignature({
+        ...query,
+        cursor: { id: 'page-end', signature },
+        limit: 5,
+        includeCounts: false,
+      }),
+    ).toBe(signature)
+    expect(await featureQuerySignature({ ...query, q: 'different' })).not.toBe(
+      signature,
+    )
+    expect(await featureQuerySignature({ ...query, excludeIds: [] })).not.toBe(
+      signature,
+    )
+    expect(
+      await featureQuerySignature({
+        ...query,
+        meta: { ...query.meta, scope: 'another-user' },
+      }),
+    ).not.toBe(signature)
+  })
+
   it('excludes retained markers from page data while keeping full counts and facets', async () => {
     const { db } = setup()
     const request = input({ q: 'North', excludeIds: ['a'] })
@@ -472,7 +514,7 @@ describe('indexed feature queries', () => {
     expect(first.data.map(row => row.id)).toEqual(['a'])
     expect(first.totalCount).toBe(2)
     expect(first.facets?.neighbourhoods).toEqual({ Central: 2 })
-    expect(first.nextCursor?.signature).toBe(featureQuerySignature(query))
+    expect(first.nextCursor?.signature).toBe(await featureQuerySignature(query))
     const second = await queryFeaturePage(
       db,
       { ...query, cursor: first.nextCursor },

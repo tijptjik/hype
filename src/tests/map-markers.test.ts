@@ -117,7 +117,8 @@ describe('map markers', () => {
       geometry: { type: 'Point', coordinates: [114.17, 22.32] },
     } as FeatureFromCollection
     updateMarkers(appCtx as never, [feature], { Marker: TestMarker }, 'dot')
-    const marker = markers.get(feature.id)!
+    const marker = markers.get(feature.id)
+    if (!marker) throw new Error('Expected the feature marker to be created')
     updateMarkers(appCtx as never, [], { Marker: TestMarker }, 'dot')
     expect(marker.getElement()).toHaveClass('marker-fade-out')
     vi.advanceTimersByTime(150)
@@ -163,7 +164,8 @@ describe('map markers', () => {
       geometry: { type: 'Point', coordinates: [114.17, 22.32] },
     } as FeatureFromCollection
     updateMarkers(appCtx as never, [feature], { Marker: TestMarker }, 'dot')
-    const marker = markers.get(feature.id)!
+    const marker = markers.get(feature.id)
+    if (!marker) throw new Error('Expected the feature marker to be created')
     updateMarkers(
       appCtx as never,
       [{ ...feature, geometry: { type: 'Point', coordinates: [114.27, 22.42] } }],

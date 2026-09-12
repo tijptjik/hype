@@ -68,16 +68,90 @@ function controlledQuery() {
 afterEach(() => vi.restoreAllMocks())
 
 describe('composed cached feature matching', () => {
-  it('finds translated literal text and respects known hierarchy codes', () => {
+  it('finds translated literal text and uses hierarchy IDs rather than labels or codes', () => {
     const feature = row('a', 'Tea 100%')
     const query = { ...input, q: '100%', prisms: { organisation: ['org'] } }
     expect(matchesFeatureQuery(feature, query)).toBe(false)
     expect(matchesFeatureQuery(feature, query, { organisationCode: () => 'org' })).toBe(
-      true,
+      false,
     )
+    expect(
+      matchesFeatureQuery(feature, {
+        ...query,
+        prisms: { organisation: ['organisation-a'] },
+      }),
+    ).toBe(true)
+    expect(
+      matchesFeatureQuery(feature, { ...query, prisms: { project: ['project-a'] } }),
+    ).toBe(true)
     expect(matchesFeatureQuery(feature, { ...input, q: 'coffee' })).toBe(false)
     expect(
       matchesFeatureQuery(feature, { ...input, prisms: { layer: ['elsewhere'] } }),
+    ).toBe(false)
+  })
+
+  it('uses the deepest selected child in each branch while keeping independent branches', () => {
+    const context = {
+      layerProjectId: (id: string) =>
+        ({ a1: 'project-a1', a2: 'project-a1', b1: 'project-b1' })[
+          id as 'a1' | 'a2' | 'b1'
+        ],
+      projectOrganisationId: (id: string) =>
+        ({ 'project-a1': 'org-a', 'project-a2': 'org-a', 'project-b1': 'org-b' })[
+          id as 'project-a1' | 'project-a2' | 'project-b1'
+        ],
+    }
+    const first = {
+      ...row('a'),
+      layerId: 'a1',
+      projectId: 'project-a1',
+      organisationId: 'org-a',
+    }
+    const sibling = { ...first, id: 'sibling', layerId: 'a2' }
+    const otherProject = {
+      ...first,
+      id: 'other-project',
+      layerId: 'a3',
+      projectId: 'project-a2',
+    }
+    const independent = {
+      ...first,
+      id: 'independent',
+      layerId: 'b1',
+      projectId: 'project-b1',
+      organisationId: 'org-b',
+    }
+    const mixed = {
+      ...input,
+      prisms: { organisation: ['org-a'], project: ['project-b1'], layer: ['a1'] },
+    }
+    expect(
+      [first, sibling, otherProject, independent]
+        .filter(feature => matchesFeatureQuery(feature, mixed, context))
+        .map(feature => feature.id),
+    ).toEqual(['a', 'independent'])
+    const projectNarrowing = {
+      ...input,
+      prisms: { organisation: ['org-a', 'org-b'], project: ['project-a1'] },
+    }
+    expect(
+      [first, sibling, otherProject, independent]
+        .filter(feature => matchesFeatureQuery(feature, projectNarrowing, context))
+        .map(feature => feature.id),
+    ).toEqual(['a', 'sibling', 'independent'])
+    expect(
+      matchesFeatureQuery(
+        sibling,
+        { ...input, prisms: { project: ['project-a1'], layer: ['a1'] } },
+        context,
+      ),
+    ).toBe(false)
+    expect(
+      matchesFeatureQuery(
+        sibling,
+        { ...input, prisms: { project: ['project-a1'], layer: ['unknown'] } },
+        context,
+      ),
     ).toBe(false)
   })
 
@@ -356,7 +430,7 @@ describe('native feature query retention', () => {
     expect(retained.preview(input, {})).toEqual([])
   })
 
-  it('limits displayed map markers across cached and returned matches', async () => {
+  it('keeps cached map markers before additional returned matches', async () => {
     const first = controlledQuery()
     const retained = new FeatureQueryRetention()
     retained.retain([row('a'), row('b')], input)
@@ -365,7 +439,7 @@ describe('native feature query retention', () => {
     expect(results.rows).toHaveLength(2)
     first.resolve(page([row('c'), row('d')], 50))
     await pending
-    expect(results.rows.map(item => item.id)).toEqual(['c', 'd'])
-    expect(results.totalCount).toBe(50)
+    expect(results.rows.map(item => item.id)).toEqual(['a', 'b', 'c', 'd'])
+    expect(results.totalCount).toBeNull()
   })
 })

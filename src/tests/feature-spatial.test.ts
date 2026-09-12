@@ -25,16 +25,19 @@ describe('feature H3 membership', () => {
       }
     }
     expect(boundary).toBeDefined()
-    const index = createFeatureSpatialIndex({ type: 'Point', coordinates: boundary })!
+    if (!boundary) throw new Error('Expected a point near an H3 cell boundary')
+    const index = createFeatureSpatialIndex({ type: 'Point', coordinates: boundary })
+    if (!index) throw new Error('Expected a spatial index for the boundary point')
     for (const resolution of FEATURE_H3_RESOLUTIONS)
       expect(index.cells[String(resolution)]).toBe(
-        latLngToCell(boundary![1], boundary![0], resolution),
+        latLngToCell(boundary[1], boundary[0], resolution),
       )
   })
 
   it('indexes legacy numeric strings without rewriting the source geometry', () => {
     const geometry = { type: 'Point', coordinates: ['114.17', '22.32'] }
-    const index = createFeatureSpatialIndex(geometry)!
+    const index = createFeatureSpatialIndex(geometry)
+    if (!index) throw new Error('Expected a spatial index for the numeric geometry')
     expect(index.longitude).toBe(114.17)
     expect(index.latitude).toBe(22.32)
     expect(index.geometry).toBe(JSON.stringify(geometry))
@@ -59,22 +62,22 @@ describe('feature viewport coverage', () => {
     expect(query.bounds?.[2]).toBeCloseTo(114.3)
     expect(query.bounds?.[1]).toBe(22.2)
     expect(query.bounds?.[3]).toBe(22.4)
+    const bounds = query.bounds
+    if (!bounds) throw new Error('Expected viewport bounds')
     expect(
       isFeaturePointWithinBounds(
         { type: 'Point', coordinates: [114.09, 22.3] },
-        query.bounds!,
+        bounds,
       ),
     ).toBe(false)
     expect(
-      isFeaturePointWithinBounds(
-        { type: 'Point', coordinates: [114.2, 22.3] },
-        query.bounds!,
-      ),
+      isFeaturePointWithinBounds({ type: 'Point', coordinates: [114.2, 22.3] }, bounds),
     ).toBe(true)
   })
 
   it('displays both sides of a wrapped viewport without including the opposite hemisphere', () => {
-    const bounds = getFeatureViewportQuery([179, -10, 181, 10], 5).bounds!
+    const bounds = getFeatureViewportQuery([179, -10, 181, 10], 5).bounds
+    if (!bounds) throw new Error('Expected wrapped viewport bounds')
     for (const longitude of [179.5, -179.5])
       expect(
         isFeaturePointWithinBounds(

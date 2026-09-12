@@ -10,13 +10,22 @@ const {
   mockRequested,
 } = vi.hoisted(() => ({
   mockGetRequestEvent: vi.fn(),
-  mockQuery: vi.fn((...args: unknown[]) => {
-    const handler = args.length === 1 ? args[0] : args[1]
-    // Lazily registered remote families must carry SvelteKit's runtime metadata.
-    return Object.assign(handler as (...args: unknown[]) => unknown, {
-      __: { type: 'query', id: '', name: '' },
-    })
-  }),
+  mockQuery: Object.assign(
+    vi.fn((...args: unknown[]) => {
+      const handler = args.length === 1 ? args[0] : args[1]
+      // Lazily registered remote families must carry SvelteKit's runtime metadata.
+      return Object.assign(handler as (...args: unknown[]) => unknown, {
+        __: { type: 'query', id: '', name: '' },
+      })
+    }),
+    {
+      batch: vi.fn((_schema: unknown, handler: unknown) =>
+        Object.assign(handler as (...args: unknown[]) => unknown, {
+          __: { type: 'query_batch', id: '', name: '' },
+        }),
+      ),
+    },
+  ),
   mockForm: vi.fn((...args: unknown[]) => {
     const handler = args.length === 1 ? args[0] : args[1]
     return handler
@@ -41,7 +50,12 @@ vi.mock('$lib/api', () => ({
   setupRequestHandler: mockSetupRequestHandler,
 }))
 
-import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
+import {
+  guardedBatchQuery,
+  guardedCommand,
+  guardedForm,
+  guardedQuery,
+} from '$lib/api/server/remote'
 
 describe('remote guard wrappers', () => {
   beforeEach(() => {
@@ -109,6 +123,30 @@ describe('remote guard wrappers', () => {
     })
 
     expect(result).toEqual({ ok: true })
+  })
+
+  it('guardedBatchQuery settles row promises before returning its resolver', async () => {
+    const handler = guardedBatchQuery(
+      z.object({ id: z.string() }),
+      async (outputs, ctx) => {
+        expect(ctx.user.id).toBe('u-1')
+        return async output => {
+          await Promise.resolve()
+          if (output.id === 'bad') throw new Error('ROW_FAILED')
+          return { id: output.id }
+        }
+      },
+    )
+
+    const resolver = await (
+      handler as (
+        inputs: unknown[],
+      ) => Promise<(input: { id: string }, index: number) => unknown>
+    )([{ id: 'good' }, { id: 'bad' }])
+
+    expect(resolver({ id: 'good' }, 0)).toEqual({ id: 'good' })
+    expect(resolver({ id: 'good' }, 0)).not.toBeInstanceOf(Promise)
+    expect(() => resolver({ id: 'bad' }, 1)).toThrow('ROW_FAILED')
   })
 
   it('guardedForm(schema, fn) forwards invalid helper and context', async () => {

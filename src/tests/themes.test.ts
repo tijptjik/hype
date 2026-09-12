@@ -21,7 +21,7 @@ describe('hub theme defaults', () => {
 
 /** Converts a hex palette token to WCAG relative luminance. */
 function luminance(hex: string): number {
-  const rgb = hex.match(/[\da-f]{2}/gi)!.map(value => {
+  const rgb = hex.match(/[\da-f]{2}/gi)?.map(value => {
     const channel = parseInt(value, 16) / 255
     return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
   })

@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { RemoteQuery } from '@sveltejs/kit'
 // CONTEXT
 import { AppCtx } from '$lib/context/app.svelte'
 // ENUMS
@@ -15,7 +14,6 @@ import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { UserFeature, UserProfile } from '$lib/db/zod/schema/user.types'
-import type { FeatureQueryPage } from '$lib/types'
 
 /** Creates a promise whose completion is controlled by the test. */
 function createDeferred<T>(): {
@@ -246,16 +244,9 @@ describe('AppCtx user updates', () => {
       { id: 'neon-feature', layerId: 'neon-signs', properties: [] },
     ] as unknown as FeatureFromCollection[]
 
-    appCtx.cacheCtx.featureQueries.map.pages = [
-      {
-        current: {
-          data: features,
-          totalCount: features.length,
-          nextCursor: null,
-          facets: { neighbourhoods: {} },
-        },
-      },
-    ] as RemoteQuery<FeatureQueryPage>[]
+    vi.spyOn(appCtx.cacheCtx.featureQueries.map, 'rows', 'get').mockReturnValue(
+      features,
+    )
     appCtx.state.prisms.layer = ['neon-signs']
     expect(appCtx.featuresVisible).toEqual(['neon-feature'])
 

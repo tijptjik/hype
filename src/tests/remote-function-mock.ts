@@ -1,4 +1,4 @@
-type RemoteType = 'command' | 'form' | 'query'
+type RemoteType = 'command' | 'form' | 'query' | 'query_batch'
 
 type RemoteFunction<T extends (...args: any[]) => any> = T & {
   __: {
