@@ -854,7 +854,7 @@ $effect(() => {
     prisms: adminCtx.appCtx.state.prisms,
     sorting: adminCtx.appCtx.state.viewSorting.feature,
     q: nextQuery,
-    meta: { isAdminRequest: true, profile: 'card' },
+    meta: { isAdminRequest: true, profile: 'admin' },
   })
     .then(result => {
       if (latestRemoteRequestId !== nextRequestId) return

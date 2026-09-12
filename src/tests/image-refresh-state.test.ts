@@ -72,10 +72,10 @@ describe('image refresh ownership', () => {
         resolve = res
       })
       vi.mocked(rotateImage).mockReturnValue(
-        pendingRemote as ReturnType<typeof rotateImage>,
+        pendingRemote as unknown as ReturnType<typeof rotateImage>,
       )
       vi.mocked(setImageIntent).mockReturnValue(
-        pendingRemote as ReturnType<typeof setImageIntent>,
+        pendingRemote as unknown as ReturnType<typeof setImageIntent>,
       )
       const refresh = vi.spyOn(ctx, 'refreshImages').mockResolvedValue(undefined)
       const pending =
@@ -104,7 +104,7 @@ describe('image refresh ownership', () => {
       } as ImageCtxEnvelope
       let resolve!: (value: unknown) => void
       vi.mocked(setImagePublished).mockReturnValue(
-        new Promise(res => {
+        new Promise<unknown>(res => {
           resolve = res
         }) as ReturnType<typeof setImagePublished>,
       )

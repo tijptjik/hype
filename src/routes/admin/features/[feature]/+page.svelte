@@ -1816,6 +1816,14 @@ async function getCreatableProjectRecords(
     meta: { isAdminRequest: true, profile: 'admin' as const },
   })
 
+  // Projects carry their organisation ID; resolve the owning hub from that resource.
+  const ancestors = await Promise.all(
+    [...new Set(result.data.map(project => project.organisationId))].map(
+      async id => [id, await adminCtx.appCtx.getOrganisationById(id)] as const,
+    ),
+  )
+  const organisations = new Map(ancestors)
+
   return (result.data ?? []).filter(project =>
     canCreateFeatureForProject({
       user: {
@@ -1828,7 +1836,7 @@ async function getCreatableProjectRecords(
         organisationId: project.organisationId,
         projectId: project.id,
         layerId: '',
-        resourceHubId: project.hubId ?? null,
+        resourceHubId: organisations.get(project.organisationId)?.hubId ?? null,
       },
     }),
   ) as ParentProjectRecord[]
