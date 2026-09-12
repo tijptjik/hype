@@ -26,12 +26,12 @@
    ═══════════════════════ */
 
 * {
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 *::-webkit-scrollbar {
-  display: none !important;
+  display: none;
 }
 
 /* ═══════════════════════
@@ -40,35 +40,33 @@
 
 /* Prevent text selection and dragging during Svrollbar interaction */
 body.svrollbar-scrolling {
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-  -webkit-user-drag: none !important;
-  -moz-user-drag: none !important;
-  user-drag: none !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
   /* Prevent pointer events on everything except the scrollbar */
-  pointer-events: none !important;
-}
-
-/* Re-enable pointer events on Svrollbar components during scrolling */
-body.svrollbar-scrolling [data-svrollbar] {
-  pointer-events: auto !important;
-}
-
-body.svrollbar-scrolling [data-svrollbar] * {
-  pointer-events: auto !important;
+  pointer-events: none;
 }
 
 /* Prevent text selection on all elements during scrollbar interaction */
 body.svrollbar-scrolling * {
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-  -webkit-user-drag: none !important;
-  -moz-user-drag: none !important;
-  user-drag: none !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
+}
+
+/* Re-enable pointer events on Svrollbar components during scrolling */
+body.svrollbar-scrolling [data-svrollbar] {
+  pointer-events: auto;
+}
+
+body.svrollbar-scrolling [data-svrollbar] * {
+  pointer-events: auto;
 }
 
 /* Prevent dragging of images and other elements */
@@ -76,10 +74,9 @@ body.svrollbar-scrolling img,
 body.svrollbar-scrolling svg,
 body.svrollbar-scrolling canvas,
 body.svrollbar-scrolling video {
-  -webkit-user-drag: none !important;
-  -moz-user-drag: none !important;
-  user-drag: none !important;
-  pointer-events: none !important;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
+  pointer-events: none;
 }
 
 /* Prevent text selection in specific components that were being dragged */
@@ -91,24 +88,22 @@ body.svrollbar-scrolling [class*="footer"],
 body.svrollbar-scrolling [class*="header"],
 body.svrollbar-scrolling [class*="panel"],
 body.svrollbar-scrolling [class*="container"] {
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-  -webkit-user-drag: none !important;
-  -moz-user-drag: none !important;
-  user-drag: none !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
 }
 
 /* Specifically target the CompletionFooter component */
 body.svrollbar-scrolling footer[class*="completion"],
 body.svrollbar-scrolling [data-testid*="completion"],
 body.svrollbar-scrolling .bg-base-300 {
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-  -webkit-user-drag: none !important;
-  -moz-user-drag: none !important;
-  user-drag: none !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
 }

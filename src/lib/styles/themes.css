@@ -44,20 +44,20 @@
 
 [data-theme="breadline-light"] {
   color-scheme: light;
-  --theme-canvas: #faf6ed;
-  --theme-panel: #fffdf7;
-  --theme-surface: #f1e9dc;
-  --theme-raised: #e8ddce;
-  --theme-text: #292720;
-  --theme-muted: #696454;
-  --theme-border: #d7cbb9;
-  --theme-primary: #b93f22;
+  --theme-canvas: #f8f4ed;
+  --theme-panel: #fffdfa;
+  --theme-surface: #f8ece2;
+  --theme-raised: #efddd0;
+  --theme-text: #173f4a;
+  --theme-muted: #5d777b;
+  --theme-border: #d5c8bc;
+  --theme-primary: #155e75;
   --theme-on-primary: #ffffff;
-  --theme-secondary: #155573;
+  --theme-secondary: #267a7a;
   --theme-on-secondary: #ffffff;
-  --theme-tertiary: #287975;
+  --theme-tertiary: #c0543d;
   --theme-on-tertiary: #ffffff;
-  --theme-info: #246886;
+  --theme-info: #155e75;
   --theme-success: #337444;
   --theme-warning: #846009;
   --theme-error: #b02d36;
@@ -65,20 +65,20 @@
 
 [data-theme="breadline-dark"] {
   color-scheme: dark;
-  --theme-canvas: #171c1a;
-  --theme-panel: #202823;
-  --theme-surface: #2b3630;
-  --theme-raised: #39473e;
-  --theme-text: #f5eedf;
-  --theme-muted: #c0c2b2;
-  --theme-border: #485a4d;
-  --theme-primary: #ff9976;
-  --theme-on-primary: #32170d;
-  --theme-secondary: #9dd7dc;
-  --theme-on-secondary: #102e32;
-  --theme-tertiary: #e1bd79;
-  --theme-on-tertiary: #30250e;
-  --theme-info: #8dc4e2;
+  --theme-canvas: #12252e;
+  --theme-panel: #173542;
+  --theme-surface: #1e4652;
+  --theme-raised: #285a63;
+  --theme-text: #f8f1e7;
+  --theme-muted: #b6ced0;
+  --theme-border: #47717a;
+  --theme-primary: #8bc8ca;
+  --theme-on-primary: #0a3f60;
+  --theme-secondary: #ff9275;
+  --theme-on-secondary: #32170d;
+  --theme-tertiary: #a6cbe0;
+  --theme-on-tertiary: #0a3f60;
+  --theme-info: #9bd0df;
   --theme-success: #a5d0a6;
   --theme-warning: #ecc778;
   --theme-error: #ff9390;

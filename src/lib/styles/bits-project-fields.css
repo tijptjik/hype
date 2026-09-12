@@ -93,20 +93,20 @@
     opacity: 0.5;
   }
 
-  .bits-theme .bits-project-field-card__body,
-  .bits-project-field-card__body {
+  .bits-project-field-card__body,
+  .bits-theme .bits-project-field-card__body {
     overflow: hidden;
     padding-top: 1rem;
     border-radius: 0.75rem;
   }
 
-  .bits-theme .bits-project-field-card__body-inner,
-  .bits-project-field-card__body-inner {
+  .bits-project-field-card__body-inner,
+  .bits-theme .bits-project-field-card__body-inner {
     min-height: 0;
   }
 
-  .bits-theme .bits-project-field-card__body--hidden,
-  .bits-project-field-card__body--hidden {
+  .bits-project-field-card__body--hidden,
+  .bits-theme .bits-project-field-card__body--hidden {
     padding-top: 0;
     height: 0;
     opacity: 0;

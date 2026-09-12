@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { StyleSpecification } from 'maplibre-gl'
 
 import {
   applyRuntimeBasemapSource,
@@ -6,7 +7,6 @@ import {
   resolveBasemapTileJsonUrl,
   SAANSEOI_HONG_KONG_TILEJSON_URL,
 } from '$lib/map/styles/source'
-import type { StyleSpecification } from 'maplibre-gl'
 
 describe('runtime basemap source policy', () => {
   it('falls back to the public legacy endpoint when no SaanSeoi key is configured', () => {

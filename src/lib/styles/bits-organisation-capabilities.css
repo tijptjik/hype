@@ -166,16 +166,4 @@
     @apply h-10 whitespace-nowrap;
     min-width: max-content;
   }
-
-  .bits-theme .bits-form__capabilities-empty {
-  }
-
-  .bits-theme .bits-form__capabilities-empty-title {
-  }
-
-  .bits-theme .bits-form__capabilities-empty-description {
-  }
-
-  .bits-theme .bits-form__capabilities-empty-cta {
-  }
 }

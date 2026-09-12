@@ -63,47 +63,47 @@
     outline-offset: 2px;
   }
 
-  .bits-theme .bits-pattern-header__title-menu-trigger-icon,
-  .bits-pattern-header__title-menu-trigger-icon {
+  .bits-pattern-header__title-menu-trigger-icon,
+  .bits-theme .bits-pattern-header__title-menu-trigger-icon {
     width: 1.15rem;
     height: 1.15rem;
   }
 
-  .bits-theme .bits-pattern-header__title-menu-content,
-  .bits-pattern-header__title-menu-content {
+  .bits-pattern-header__title-menu-content,
+  .bits-theme .bits-pattern-header__title-menu-content {
     @apply z-50 min-w-44 rounded-lg border p-1 shadow-none;
     border-color: color-mix(in oklab, white 16%, transparent);
     background: #000;
   }
 
-  .bits-theme .bits-pattern-header__title-menu-item,
-  .bits-pattern-header__title-menu-item {
+  .bits-pattern-header__title-menu-item,
+  .bits-theme .bits-pattern-header__title-menu-item {
     @apply flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium;
     cursor: pointer;
     color: color-mix(in oklab, var(--color-base-content) 92%, white 8%);
     transition: background-color 0.15s ease;
   }
 
-  .bits-theme .bits-pattern-header__title-menu-item:hover,
-  .bits-theme .bits-pattern-header__title-menu-item[data-highlighted],
   .bits-pattern-header__title-menu-item:hover,
-  .bits-pattern-header__title-menu-item[data-highlighted] {
+  .bits-pattern-header__title-menu-item[data-highlighted],
+  .bits-theme .bits-pattern-header__title-menu-item:hover,
+  .bits-theme .bits-pattern-header__title-menu-item[data-highlighted] {
     background: color-mix(in oklab, var(--color-base-300) 88%, transparent);
   }
 
-  .bits-theme .bits-pattern-header__title-menu-item--danger,
-  .bits-pattern-header__title-menu-item--danger {
+  .bits-pattern-header__title-menu-item--danger,
+  .bits-theme .bits-pattern-header__title-menu-item--danger {
     color: color-mix(in oklab, var(--color-base-content) 92%, white 8%);
   }
 
-  .bits-theme .bits-pattern-header__title-menu-item-icon,
-  .bits-pattern-header__title-menu-item-icon {
+  .bits-pattern-header__title-menu-item-icon,
+  .bits-theme .bits-pattern-header__title-menu-item-icon {
     @apply h-4 w-4 shrink-0;
     color: color-mix(in oklab, var(--color-error) 82%, white 18%);
   }
 
-  .bits-theme .bits-pattern-header__title-menu-item-icon--info,
-  .bits-pattern-header__title-menu-item-icon--info {
+  .bits-pattern-header__title-menu-item-icon--info,
+  .bits-theme .bits-pattern-header__title-menu-item-icon--info {
     color: color-mix(in oklab, var(--color-info) 82%, white 18%);
   }
 
@@ -185,7 +185,6 @@
     border-color: transparent;
   }
 
-  /* biome-ignore lint: intentional hidden placeholder for focus-driven search UI */
   .bits-theme .bits-pattern-header__search-input::placeholder {
     color: transparent;
   }

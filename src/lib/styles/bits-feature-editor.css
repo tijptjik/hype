@@ -1124,6 +1124,8 @@
     color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
   }
 
+  /* This standalone media placeholder has no overlap with the control icon rules above. */
+  /* biome-ignore lint/style/noDescendingSpecificity: Keep the placeholder icon sizing next to its media state. */
   .bits-feature-visual-media__empty svg {
     width: 2rem;
     height: 2rem;
