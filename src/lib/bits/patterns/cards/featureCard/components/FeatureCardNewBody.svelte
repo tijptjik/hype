@@ -2,7 +2,7 @@
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import Heart from 'virtual:icons/lucide/heart'
+import Heart from 'virtual:icons/proicons/heart'
 // COMPONENTS
 import FeatureCardContributionPanel from './contribution/FeatureCardContributionPanel.svelte'
 import FeatureCardAttributionField from './contribution/FeatureCardAttributionField.svelte'

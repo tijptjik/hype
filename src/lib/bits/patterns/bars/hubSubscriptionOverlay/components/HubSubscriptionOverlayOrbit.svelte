@@ -1,6 +1,6 @@
 <script lang="ts">
 // COMPONENTS
-import XIcon from 'virtual:icons/lucide/x'
+import XIcon from 'virtual:icons/proicons/cancel'
 // STYLES
 import {
   getDecorativeImageStyle,

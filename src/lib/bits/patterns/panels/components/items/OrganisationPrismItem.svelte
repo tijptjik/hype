@@ -2,8 +2,8 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // ICONS
-import Funnel from 'virtual:icons/lucide/filter'
-import XMark from 'virtual:icons/lucide/x'
+import Funnel from 'virtual:icons/proicons/filter'
+import XMark from 'virtual:icons/proicons/cancel'
 // BITS
 import { Icon } from '$lib/bits'
 // I18N

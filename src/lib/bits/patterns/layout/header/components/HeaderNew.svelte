@@ -3,7 +3,7 @@ import { fly } from 'svelte/transition'
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
 // ICONS
-import Plus from 'virtual:icons/lucide/plus'
+import Plus from 'virtual:icons/proicons/add'
 // TYPES
 import type { HeaderNewProps } from './headerPrimitives.types'
 // STYLES

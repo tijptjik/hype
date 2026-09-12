@@ -13,8 +13,8 @@ import { m } from '$lib/i18n'
 import { Switch } from '$lib/bits/custom/switch'
 import { Swap } from '$lib/bits/custom/swap'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import Pencil from 'virtual:icons/lucide/pencil'
+import Check from 'virtual:icons/proicons/checkmark'
+import Pencil from 'virtual:icons/proicons/pencil'
 // COMPONENTS
 import PropertyEditableRow from './PropertyEditableRow.svelte'
 // LIB

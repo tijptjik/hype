@@ -6,8 +6,8 @@ import { slide } from 'svelte/transition'
 // COMPONENTS
 import { Icon } from '$lib/bits'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
 
 let { isOpen = false } = $props<{
   isOpen?: boolean

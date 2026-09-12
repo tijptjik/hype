@@ -4,8 +4,8 @@ import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import ArrowDownAZ from 'virtual:icons/lucide/arrow-down-a-z'
-import X from 'virtual:icons/lucide/x'
+import ArrowDownAZ from 'virtual:icons/proicons/arrow-sort'
+import X from 'virtual:icons/proicons/cancel'
 import ListPlus from 'virtual:icons/lucide/list-plus'
 // COMPONENTS
 import { Button } from '$lib/bits/core'

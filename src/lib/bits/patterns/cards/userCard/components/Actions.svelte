@@ -2,7 +2,7 @@
 import { Button, Select } from '$lib/bits/core'
 import { Card } from '$lib/bits/custom'
 import { m } from '$lib/i18n'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 import type { OrganisationRoleType } from '$lib/enums'
 import type { UserCardActionsProps } from '../userCard.types'
 

@@ -4,8 +4,8 @@ import { Button } from '$lib/bits/core'
 import { Card } from '$lib/bits/custom'
 import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
 import type { OrganisationCapabilitiesListProps } from '../organisationCapabilities.types'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
-import ShieldCheckIcon from 'virtual:icons/lucide/shield-check'
+import Trash2Icon from 'virtual:icons/proicons/delete'
+import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
 
 let {
   selectedCapabilityKeys,

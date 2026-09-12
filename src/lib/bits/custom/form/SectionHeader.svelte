@@ -3,10 +3,10 @@ import { m } from '$lib/i18n'
 import Header from '$lib/bits/custom/header/Header.svelte'
 import * as SectionHeaderPrimitive from './src/sectionHeader/components'
 import type { SectionHeaderProps } from './sectionHeader.types'
-import Expand from 'virtual:icons/lucide/expand'
-import Shrink from 'virtual:icons/lucide/shrink'
-import Eye from 'virtual:icons/lucide/eye'
-import EyeOff from 'virtual:icons/lucide/eye-off'
+import Expand from 'virtual:icons/proicons/full-screen-maximize'
+import Shrink from 'virtual:icons/proicons/full-screen-minimize'
+import Eye from 'virtual:icons/proicons/eye'
+import EyeOff from 'virtual:icons/proicons/eye-off'
 
 let {
   title,

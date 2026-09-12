@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Icon } from '$lib/bits'
-import MagnifyingGlass from 'virtual:icons/lucide/search'
-import XMark from 'virtual:icons/lucide/x'
+import MagnifyingGlass from 'virtual:icons/proicons/search'
+import XMark from 'virtual:icons/proicons/cancel'
 import { slide } from 'svelte/transition'
 import { m } from '$lib/i18n'
 let {

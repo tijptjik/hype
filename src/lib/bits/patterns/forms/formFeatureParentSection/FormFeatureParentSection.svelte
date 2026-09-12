@@ -6,7 +6,7 @@ import {
   FormFeatureSubSectionHeader,
 } from '$lib/bits/patterns/forms/formFeatureSectionHeader'
 import { FormParentSection } from '$lib/bits/patterns/forms/formParentSection'
-import EraserIcon from 'virtual:icons/lucide/eraser'
+import EraserIcon from 'virtual:icons/proicons/eraser'
 import type { FormFeatureParentSectionProps } from './formFeatureParentSection.types'
 
 let {

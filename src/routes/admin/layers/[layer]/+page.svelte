@@ -87,7 +87,7 @@ import {
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
-import LayerIcon from 'virtual:icons/lucide/layers'
+import LayerIcon from 'virtual:icons/proicons/layers'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES

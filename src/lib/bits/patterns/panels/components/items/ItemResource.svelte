@@ -8,8 +8,8 @@ import Portal from 'svelte-portal'
 // I18N
 import { getI18n } from '$lib/i18n'
 // ICONS
-import Funnel from 'virtual:icons/lucide/filter'
-import XMark from 'virtual:icons/lucide/x'
+import Funnel from 'virtual:icons/proicons/filter'
+import XMark from 'virtual:icons/proicons/cancel'
 import { Icon } from '$lib/bits'
 // COMPONENTS
 import ResourceHierarchyPath from '$lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'

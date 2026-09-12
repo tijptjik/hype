@@ -8,7 +8,7 @@ import { cx } from '$lib/bits/utils'
 // TYPES
 import type { FeatureCardActionDisplay } from '$lib/types'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
+import Check from 'virtual:icons/proicons/checkmark'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 

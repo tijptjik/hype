@@ -17,7 +17,7 @@ import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
 import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
-import XCircle from 'virtual:icons/lucide/circle-x'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
 // TYPES
 import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 

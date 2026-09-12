@@ -5,9 +5,9 @@ import type { Component, Snippet } from 'svelte'
 // BITS
 import { Icon } from '$lib/bits'
 // ICONS
-import Heart from 'virtual:icons/lucide/heart'
-import Info from 'virtual:icons/lucide/info'
-import X from 'virtual:icons/lucide/x'
+import Heart from 'virtual:icons/proicons/heart'
+import Info from 'virtual:icons/proicons/info'
+import X from 'virtual:icons/proicons/cancel'
 
 let {
   viewport,

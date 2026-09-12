@@ -3,7 +3,7 @@
 import Button from '$lib/bits/core/button/Button.svelte'
 // COMPONENTS
 import { Icon } from '$lib/bits'
-import XCircle from 'virtual:icons/lucide/circle-x'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
 // CONTEXT
 // ENUMS
 import { Panel } from '$lib/enums'

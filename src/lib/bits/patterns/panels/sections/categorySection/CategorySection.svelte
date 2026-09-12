@@ -2,8 +2,8 @@
 // TRANSITIONS
 import { slide } from 'svelte/transition'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
 import { Icon } from '$lib/bits'
 import SelectedFilter from '$lib/bits/patterns/panels/components/items/SelectedFilter.svelte'
 // TYPES

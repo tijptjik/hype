@@ -6,7 +6,7 @@ import StatsPips from './components/StatsPips.svelte'
 // SERVICES
 import { calculateCategoricalStatuses } from '$lib/client/services/stats'
 // ICONS
-import TagsIcon from 'virtual:icons/lucide/tags'
+import TagsIcon from 'virtual:icons/proicons/tag-multiple'
 // TYPES
 import type { FeatureStatsProps } from './featureStats.types'
 

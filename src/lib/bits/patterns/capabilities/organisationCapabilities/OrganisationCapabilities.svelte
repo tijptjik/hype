@@ -10,8 +10,8 @@ import type { OrganisationCapabilitiesProps } from './organisationCapabilities.t
 import OrganisationCapabilitiesEmpty from './components/OrganisationCapabilitiesEmpty.svelte'
 import OrganisationCapabilitiesSearch from './components/OrganisationCapabilitiesSearch.svelte'
 import OrganisationCapabilitiesList from './components/OrganisationCapabilitiesList.svelte'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
-import XIcon from 'virtual:icons/lucide/x'
+import Trash2Icon from 'virtual:icons/proicons/delete'
+import XIcon from 'virtual:icons/proicons/cancel'
 
 let {
   selectedCapabilityKeys,

@@ -2,7 +2,7 @@
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
 // ICONS
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 // TYPES
 import type { HeaderTaskActionsProps } from './headerPrimitives.types'
 // STYLES

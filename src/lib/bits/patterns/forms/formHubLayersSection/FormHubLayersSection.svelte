@@ -5,8 +5,8 @@ import { Card, Icon, SectionHeader, Switch } from '$lib/bits/custom'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
 import { m } from '$lib/i18n'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
-import EyeIcon from 'virtual:icons/lucide/eye'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
+import EyeIcon from 'virtual:icons/proicons/eye'
 import type { FormHubLayersSectionProps } from './formHubLayersSection.types'
 
 let {

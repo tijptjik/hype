@@ -1,10 +1,10 @@
 <script lang="ts">
 // COMPONENTS
 import { Button } from '$lib/bits/core'
-import ArrowUpRight from 'virtual:icons/lucide/arrow-up-right'
-import Check from 'virtual:icons/lucide/check'
-import Clock from 'virtual:icons/lucide/clock'
-import MapPin from 'virtual:icons/lucide/map-pin'
+import ArrowUpRight from 'virtual:icons/proicons/arrow-export'
+import Check from 'virtual:icons/proicons/checkmark'
+import Clock from 'virtual:icons/proicons/clock'
+import MapPin from 'virtual:icons/proicons/location'
 
 type ColourSwatch = {
   name: string

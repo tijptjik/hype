@@ -7,7 +7,7 @@ import { m } from '$lib/i18n'
 import type { Point } from 'geojson'
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // ICONS
-import MapIcon from 'virtual:icons/lucide/map'
+import MapIcon from 'virtual:icons/proicons/map'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 

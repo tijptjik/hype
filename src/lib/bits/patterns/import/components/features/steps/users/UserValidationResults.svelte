@@ -4,8 +4,8 @@ import { m } from '$lib/i18n'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import ImportRow from '../../../shared/ImportRow.svelte'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
-import XCircle from 'virtual:icons/lucide/circle-x'
+import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
 // TYPES
 import type { UserValidationResult } from '$lib/client/services/import/types'
 

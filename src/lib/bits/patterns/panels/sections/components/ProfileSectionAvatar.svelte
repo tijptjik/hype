@@ -1,6 +1,6 @@
 <script lang="ts">
 // ICONS
-import UserRound from 'virtual:icons/lucide/user-round'
+import UserRound from 'virtual:icons/proicons/person'
 
 let {
   avatarSrc = null,

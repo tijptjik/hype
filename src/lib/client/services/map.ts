@@ -3,7 +3,7 @@ import { toast } from 'svelte-sonner'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import RefreshCwIcon from 'virtual:icons/lucide/refresh-cw'
+import RefreshCwIcon from 'virtual:icons/proicons/arrow-sync'
 // TYPES
 import type { HeaderTitleMenuItemConfig } from '$lib/bits/patterns/layout/header/header.types'
 import type { AppCtx } from '$lib/context/app.svelte'

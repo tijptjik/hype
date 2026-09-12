@@ -9,8 +9,8 @@ import { Icon } from '$lib/bits'
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getCardCtx } from '$lib/context/card.svelte'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/proicons/checkmark'
+import PencilSquare from 'virtual:icons/proicons/compose'
 
 const appCtx = getAppCtx()
 const cardCtx = getCardCtx()

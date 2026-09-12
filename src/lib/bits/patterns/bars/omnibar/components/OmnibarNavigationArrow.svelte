@@ -2,8 +2,8 @@
 // BITS
 import { Icon } from '$lib/bits'
 // ICONS
-import ChevronLeft from 'virtual:icons/lucide/chevron-left'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
+import ChevronLeft from 'virtual:icons/proicons/chevron-left'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
 // TYPES
 import type { OmnibarNavigationArrowProps } from './omnibarPrimitives.types'
 

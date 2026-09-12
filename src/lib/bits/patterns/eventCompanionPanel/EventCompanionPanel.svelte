@@ -18,12 +18,12 @@ import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
 // ENUMS
 import { Panel as PanelType } from '$lib/enums'
 // ICONS
-import CalendarHeartIcon from 'virtual:icons/lucide/calendar-heart'
-import FacebookIcon from 'virtual:icons/lucide/facebook'
-import GlobeIcon from 'virtual:icons/lucide/globe'
-import InstagramIcon from 'virtual:icons/lucide/instagram'
-import LinkedinIcon from 'virtual:icons/lucide/linkedin'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
+import CalendarHeartIcon from 'virtual:icons/proicons/calendar'
+import FacebookIcon from 'virtual:icons/proicons/facebook'
+import GlobeIcon from 'virtual:icons/proicons/globe'
+import InstagramIcon from 'virtual:icons/proicons/instagram'
+import LinkedinIcon from 'virtual:icons/simple-icons/linkedin'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'

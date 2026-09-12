@@ -5,7 +5,7 @@ import { m } from '$lib/i18n'
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 import FilterBar from '$lib/bits/patterns/panels/components/common/FilterBar.svelte'
 import { Icon } from '$lib/bits'
-import Squares2x2 from 'virtual:icons/lucide/layout-grid'
+import Squares2x2 from 'virtual:icons/proicons/grid'
 // TYPES
 import type { PanelProps } from '$lib/types'
 import type { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'

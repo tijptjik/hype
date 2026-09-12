@@ -3,8 +3,8 @@
 import { Button } from '$lib/bits/core'
 import { cx } from '$lib/bits/utils'
 // ICONS
-import ChevronLeftIcon from 'virtual:icons/lucide/chevron-left'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
+import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 // TYPES
 import type { FormFacetNavButtonProps } from '../formFacetNav.types'
 

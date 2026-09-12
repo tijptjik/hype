@@ -10,13 +10,13 @@ import UserAttributionCard from '$lib/bits/patterns/cards/userAttributionCard/Us
 import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
 import { resolveAvatarImageSrc } from '$lib/utils/avatar'
 import type { FormFeatureVisualSectionProps } from './formFeatureVisualSection.types'
-import ChevronLeftIcon from 'virtual:icons/lucide/chevron-left'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
-import ExpandIcon from 'virtual:icons/lucide/expand'
+import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
 import GhostIcon from 'virtual:icons/lucide/ghost'
-import InfoIcon from 'virtual:icons/lucide/info'
-import OctagonMinusIcon from 'virtual:icons/lucide/octagon-minus'
-import ShrinkIcon from 'virtual:icons/lucide/shrink'
+import InfoIcon from 'virtual:icons/proicons/info'
+import OctagonMinusIcon from 'virtual:icons/proicons/do-not-disturb'
+import ShrinkIcon from 'virtual:icons/proicons/full-screen-minimize'
 
 let {
   class: className = '',

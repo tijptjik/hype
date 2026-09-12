@@ -6,7 +6,7 @@ import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
 // I18n
 import { m } from '$lib/i18n'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
+import CameraIcon from 'virtual:icons/proicons/camera'
 
 let {
   onFiles,

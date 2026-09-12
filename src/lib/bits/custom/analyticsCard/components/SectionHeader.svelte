@@ -3,7 +3,7 @@
 import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
 import { cx } from '$lib/bits/utils'
 // ICONS
-import InfoIcon from 'virtual:icons/lucide/info'
+import InfoIcon from 'virtual:icons/proicons/info'
 // TYPES
 import type { AnalyticsCardSectionHeaderProps } from '../analyticsCard.types'
 

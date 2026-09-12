@@ -1,8 +1,8 @@
 <script lang="ts">
 import { Button } from '$lib/bits/core'
-import UserPlusIcon from 'virtual:icons/lucide/user-plus'
-import UserMinusIcon from 'virtual:icons/lucide/user-minus'
-import XIcon from 'virtual:icons/lucide/x'
+import UserPlusIcon from 'virtual:icons/proicons/person-add'
+import UserMinusIcon from 'virtual:icons/tabler/user-minus'
+import XIcon from 'virtual:icons/proicons/cancel'
 import { m } from '$lib/i18n'
 import type { FormUserRolesSectionActionsProps } from '../formUserRolesSection.types'
 

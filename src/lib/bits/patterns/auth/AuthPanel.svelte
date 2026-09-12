@@ -5,9 +5,9 @@ import { page } from '$app/state'
 import { fade } from 'svelte/transition'
 
 // ICONS
-import Mail from 'virtual:icons/lucide/mail'
-import KeyRound from 'virtual:icons/lucide/key-round'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import Mail from 'virtual:icons/proicons/mail'
+import KeyRound from 'virtual:icons/proicons/key'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 // AUTH
 import { authClient, signIn, signUp } from '$lib/auth/client'
 import {

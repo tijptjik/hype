@@ -38,14 +38,14 @@ import {
 import { getI18n, m } from '$lib/i18n'
 import { toast } from 'svelte-sonner'
 // ICONS
-import CheckBadgeIcon from 'virtual:icons/lucide/badge-check'
-import CheckIcon from 'virtual:icons/lucide/circle-check'
-import EyeOffIcon from 'virtual:icons/lucide/eye-off'
+import CheckBadgeIcon from 'virtual:icons/proicons/checkmark-starburst'
+import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
+import EyeOffIcon from 'virtual:icons/proicons/eye-off'
 import GhostIcon from 'virtual:icons/lucide/ghost'
-import InfoIcon from 'virtual:icons/lucide/info'
-import TaskIcon from 'virtual:icons/lucide/inbox'
-import TrashIcon from 'virtual:icons/lucide/trash-2'
-import XCircleIcon from 'virtual:icons/lucide/circle-x'
+import InfoIcon from 'virtual:icons/proicons/info'
+import TaskIcon from 'virtual:icons/proicons/archive'
+import TrashIcon from 'virtual:icons/proicons/delete'
+import XCircleIcon from 'virtual:icons/proicons/cancel-circle'
 // NAVIGATION
 import { goToNextTask, navigateOnAdmin } from '$lib/navigation'
 // PROVIDERS

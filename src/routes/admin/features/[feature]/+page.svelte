@@ -120,7 +120,7 @@ import {
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
-import FeatureIcon from 'virtual:icons/lucide/map-pin'
+import FeatureIcon from 'virtual:icons/proicons/location'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '$lib/constants'
 // ENUMS

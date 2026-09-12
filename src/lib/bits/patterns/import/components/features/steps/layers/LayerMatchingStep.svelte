@@ -27,7 +27,7 @@ import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
 import LayerResolutionPanel from './LayerResolutionPanel.svelte'
 import LayerValidationResults from './LayerValidationResults.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
-import XCircle from 'virtual:icons/lucide/circle-x'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
 // ENUMS
 import { SupportedLocales } from '$lib/enums'
 // TYPES

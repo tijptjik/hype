@@ -12,11 +12,11 @@ import {
   normalizeAssetAnalyticsPublicId,
 } from '../assetAnalyticsDashboard.utils'
 // ICONS
-import Camera from 'virtual:icons/lucide/camera'
-import Square2Stack from 'virtual:icons/lucide/copy'
-import Document from 'virtual:icons/lucide/file-text'
-import AtSymbol from 'virtual:icons/lucide/at-sign'
-import Calendar from 'virtual:icons/lucide/calendar'
+import Camera from 'virtual:icons/proicons/camera'
+import Square2Stack from 'virtual:icons/proicons/copy'
+import Document from 'virtual:icons/proicons/file-text'
+import AtSymbol from 'virtual:icons/proicons/mention'
+import Calendar from 'virtual:icons/proicons/calendar'
 
 let {
   publicId,

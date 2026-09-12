@@ -15,13 +15,13 @@ import { FirstClassResource } from '$lib/enums'
 // BITS
 import { AssetAnalyticsDashboard, AssetAnalyticsDashboardSkeleton } from '$lib/bits'
 // ICONS
-import ChartColumnIncreasing from 'virtual:icons/lucide/chart-column-increasing'
-import Database from 'virtual:icons/lucide/database'
-import Globe from 'virtual:icons/lucide/globe'
-import Image from 'virtual:icons/lucide/image'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
-import RefreshCw from 'virtual:icons/lucide/refresh-cw'
-import Users from 'virtual:icons/lucide/users'
+import ChartColumnIncreasing from 'virtual:icons/proicons/bar-chart'
+import Database from 'virtual:icons/proicons/database'
+import Globe from 'virtual:icons/proicons/globe'
+import Image from 'virtual:icons/proicons/photo'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
+import RefreshCw from 'virtual:icons/proicons/arrow-sync'
+import Users from 'virtual:icons/proicons/person-multiple'
 // TYPES
 import type { AssetAnalyticsSummaryResult } from '$lib/types'
 

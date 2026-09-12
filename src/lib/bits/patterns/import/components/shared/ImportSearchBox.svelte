@@ -3,7 +3,7 @@
 import { cx } from '$lib/bits/utils'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import MagnifyingGlass from 'virtual:icons/lucide/search'
+import MagnifyingGlass from 'virtual:icons/proicons/search'
 // TYPES
 import type { ImportSearchBoxItem, ImportSearchBoxProps } from './importSearch.types'
 

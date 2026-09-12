@@ -8,7 +8,7 @@ import { cx } from '$lib/bits/utils'
 // TYPES
 import type { FeatureCardWishlistActionDisplay } from '$lib/types'
 // ICONS
-import Star from 'virtual:icons/lucide/star'
+import Star from 'virtual:icons/proicons/star'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 

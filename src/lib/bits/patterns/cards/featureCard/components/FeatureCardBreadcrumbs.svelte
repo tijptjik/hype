@@ -14,12 +14,12 @@ import { FeatureCardMode } from '$lib/enums'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 import type { ResourceContext } from '$lib/types'
 // ICONS
-import Camera from 'virtual:icons/lucide/camera'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
-import MoreHorizontal from 'virtual:icons/lucide/ellipsis'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
-import Squares2x2 from 'virtual:icons/lucide/layout-grid'
-import TriangleAlert from 'virtual:icons/lucide/triangle-alert'
+import Camera from 'virtual:icons/proicons/camera'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
+import MoreHorizontal from 'virtual:icons/proicons/more'
+import PencilSquare from 'virtual:icons/proicons/compose'
+import Squares2x2 from 'virtual:icons/proicons/grid'
+import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 
 let {
   feature,

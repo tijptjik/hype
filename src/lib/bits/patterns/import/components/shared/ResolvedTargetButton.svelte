@@ -3,7 +3,7 @@
 import type { Snippet } from 'svelte'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
+import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
 
 type Props = {
   children: Snippet

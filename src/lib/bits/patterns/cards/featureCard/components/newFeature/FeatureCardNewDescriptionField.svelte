@@ -6,8 +6,8 @@ import { getLocale, m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/proicons/checkmark'
+import PencilSquare from 'virtual:icons/proicons/compose'
 
 const appCtx = getAppCtx()
 

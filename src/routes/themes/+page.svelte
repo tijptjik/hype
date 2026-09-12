@@ -4,12 +4,12 @@ import { Button } from '$lib/bits'
 import { ThemePicker } from '$lib/bits/patterns/themePicker'
 import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
 // ICONS
-import ArrowUpRight from 'virtual:icons/lucide/arrow-up-right'
-import Check from 'virtual:icons/lucide/check'
-import MapPin from 'virtual:icons/lucide/map-pin'
-import Clock from 'virtual:icons/lucide/clock'
-import Sun from 'virtual:icons/lucide/sun'
-import Moon from 'virtual:icons/lucide/moon'
+import ArrowUpRight from 'virtual:icons/proicons/arrow-export'
+import Check from 'virtual:icons/proicons/checkmark'
+import MapPin from 'virtual:icons/proicons/location'
+import Clock from 'virtual:icons/proicons/clock'
+import Sun from 'virtual:icons/proicons/brightness'
+import Moon from 'virtual:icons/proicons/moon'
 // THEME
 import { THEMES } from '$lib/themes/themes'
 // ENUMS
@@ -147,6 +147,11 @@ const panel: ResourcePanelModel = {
         href="/themes/colours"
         class="hidden items-center gap-2 text-xs text-muted-foreground hover:text-primary sm:flex"
         >Colour study <ArrowUpRight class="size-4" /></a
+      >
+      <a
+        href="/themes/icons"
+        class="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary"
+        >Icon study <ArrowUpRight class="size-4" /></a
       >
     </header>
 

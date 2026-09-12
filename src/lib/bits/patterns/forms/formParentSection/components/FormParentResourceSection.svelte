@@ -19,8 +19,8 @@ import { getImageSrc, getImageSrcOrHashicon } from '$lib/client/services/image'
 import { m } from '$lib/i18n'
 
 // ICONS
-import ReplaceIcon from 'virtual:icons/lucide/replace'
-import XIcon from 'virtual:icons/lucide/x'
+import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
+import XIcon from 'virtual:icons/proicons/cancel'
 
 // TYPES
 import type { FormParentResourceSectionProps } from './formParentResourceSection.types'

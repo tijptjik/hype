@@ -13,7 +13,7 @@ import ImportImageFlow from '$lib/bits/patterns/import/ImportImageFlow.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
-import Upload from 'virtual:icons/lucide/upload'
+import Upload from 'virtual:icons/proicons/arrow-upload'
 // TYPES
 import type {
   DropzoneEvent,

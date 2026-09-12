@@ -26,7 +26,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { setHeaderCtrl } from '$lib/context/header.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
-import MonitorIcon from 'virtual:icons/lucide/monitor'
+import MonitorIcon from 'virtual:icons/proicons/computer'
 // TYPES
 import type { LayoutProps, LayoutData } from './$types'
 

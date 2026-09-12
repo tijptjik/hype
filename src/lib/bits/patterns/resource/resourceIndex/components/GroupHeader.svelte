@@ -1,5 +1,5 @@
 <script lang="ts" generics="G extends Record<string, unknown>">
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 // BITS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 

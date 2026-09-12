@@ -15,8 +15,8 @@ import {
 import { createMapController, type MapController } from '$lib/map/controller'
 import MapSurface from '$lib/bits/custom/map/MapSurface.svelte'
 // ICONS
-import ArrowsPointingIn from 'virtual:icons/lucide/shrink'
-import ArrowsPointingOut from 'virtual:icons/lucide/expand'
+import ArrowsPointingIn from 'virtual:icons/proicons/full-screen-minimize'
+import ArrowsPointingOut from 'virtual:icons/proicons/full-screen-maximize'
 import { Icon } from '$lib/bits'
 // TYPES
 import * as maplibregl from 'maplibre-gl'

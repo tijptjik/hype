@@ -2,7 +2,7 @@
 // BITS COMPONENTS
 import Button from '$lib/bits/core/button/Button.svelte'
 // ICONS
-import XMark from 'virtual:icons/lucide/x'
+import XMark from 'virtual:icons/proicons/cancel'
 import { fade } from 'svelte/transition'
 
 let { text, active, onReset }: { text: string; active: boolean; onReset: () => void } =

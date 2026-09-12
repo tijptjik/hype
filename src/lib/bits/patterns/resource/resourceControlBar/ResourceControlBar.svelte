@@ -19,9 +19,9 @@ import {
   getResourceLocaleToggleItems,
 } from '$lib/client/services/filters'
 // ICONS
-import ChevronLeftIcon from 'virtual:icons/lucide/chevron-left'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
-import FunnelIcon from 'virtual:icons/lucide/funnel'
+import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
+import FunnelIcon from 'virtual:icons/proicons/filter'
 // TYPES
 import type {
   NavigableResource,

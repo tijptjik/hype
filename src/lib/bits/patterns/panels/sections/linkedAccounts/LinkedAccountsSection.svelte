@@ -7,8 +7,8 @@ import { slide } from 'svelte/transition'
 import Facebook from 'virtual:icons/simple-icons/facebook'
 import Google from 'virtual:icons/logos/google-icon'
 import Wechat from 'virtual:icons/simple-icons/wechat'
-import Mail from 'virtual:icons/lucide/mail'
-import KeyRound from 'virtual:icons/lucide/key-round'
+import Mail from 'virtual:icons/proicons/mail'
+import KeyRound from 'virtual:icons/proicons/key'
 // AUTH
 import { authClient, signIn, signUp, useSession } from '$lib/auth/client'
 import {

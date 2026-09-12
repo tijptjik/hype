@@ -7,11 +7,11 @@ import { m } from '$lib/i18n'
 import { Badge } from '$lib/bits/custom/badge'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
-import XCircle from 'virtual:icons/lucide/circle-x'
-import ArrowPath from 'virtual:icons/lucide/refresh-cw'
-import FileDiff from 'virtual:icons/lucide/file-diff'
-import MapPin from 'virtual:icons/lucide/map-pin'
+import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
+import ArrowPath from 'virtual:icons/proicons/arrow-sync'
+import FileDiff from 'virtual:icons/proicons/diff'
+import MapPin from 'virtual:icons/proicons/location'
 import FeatureResolutionPreview from './FeatureResolutionPreview.svelte'
 // SERVICES
 import {

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { SimpleTooltip } from '$lib/bits/core'
 import { toIssueChipParts } from '$lib/client/services/form'
-import TriangleAlert from 'virtual:icons/lucide/triangle-alert'
+import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 import type { SectionHeaderIssues } from './types'
 
 let { issues = [] }: SectionHeaderIssues = $props()

@@ -7,11 +7,11 @@ import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type { KeyMap, Resource, Task } from '$lib/types'
 import type { IndexCardProps } from '$lib/bits/patterns/cards/indexCard'
-import EyeIcon from 'virtual:icons/lucide/eye'
-import EyeOffIcon from 'virtual:icons/lucide/eye-off'
-import LayersIcon from 'virtual:icons/lucide/layers-3'
-import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import ProjectIcon from 'virtual:icons/lucide/layout-grid'
+import EyeIcon from 'virtual:icons/proicons/eye'
+import EyeOffIcon from 'virtual:icons/proicons/eye-off'
+import LayersIcon from 'virtual:icons/proicons/layers'
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
+import ProjectIcon from 'virtual:icons/proicons/grid'
 
 type UnknownRecord = Record<string, unknown>
 

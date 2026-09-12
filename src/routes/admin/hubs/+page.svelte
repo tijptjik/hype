@@ -18,10 +18,10 @@ import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
-import HubIcon from 'virtual:icons/lucide/building-2'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
+import HubIcon from 'virtual:icons/proicons/building-multiple'
+import StatusIcon from 'virtual:icons/proicons/target'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
 // TYPES
 import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Hub } from '$lib/db/zod/schema/hub.types'

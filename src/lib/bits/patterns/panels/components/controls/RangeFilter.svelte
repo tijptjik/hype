@@ -1,8 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronUp from 'virtual:icons/proicons/chevron-up'
 import { Icon } from '$lib/bits'
 import RangeSlider from 'svelte-range-slider-pips'
 // ADAPTERS

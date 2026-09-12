@@ -6,7 +6,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { m } from '$lib/i18n'
 // COMPONENTS
 import { Icon } from '$lib/bits'
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import { Scrollbar } from '$lib/bits/custom/scrollbar'
 // REMOTE
 import { getImagesForIds } from '$lib/api/server/image.remote'

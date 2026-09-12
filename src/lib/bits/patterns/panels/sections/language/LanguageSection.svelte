@@ -9,9 +9,9 @@ import { m } from '$lib/i18n'
 import { Switch } from '$lib/bits'
 // COMPONENTS
 import { Icon } from '$lib/bits'
-import Language from 'virtual:icons/lucide/languages'
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import Language from 'virtual:icons/tabler/language'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronUp from 'virtual:icons/proicons/chevron-up'
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
 import type { useLanguageSettingsModel } from '$lib/adapters/panels/useLanguageSettingsModel.svelte'

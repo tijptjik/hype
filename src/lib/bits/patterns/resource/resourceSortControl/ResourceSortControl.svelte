@@ -9,9 +9,9 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
-import ArrowDownIcon from 'virtual:icons/lucide/arrow-down'
-import ArrowUpDownIcon from 'virtual:icons/lucide/arrow-up-down'
-import ArrowUpIcon from 'virtual:icons/lucide/arrow-up'
+import ArrowDownIcon from 'virtual:icons/proicons/arrow-down'
+import ArrowUpDownIcon from 'virtual:icons/proicons/arrow-up-down'
+import ArrowUpIcon from 'virtual:icons/proicons/arrow-up'
 // TYPES
 import type { ResourceSortControlProps } from './resourceSortControl.types'
 

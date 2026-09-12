@@ -4,12 +4,12 @@ import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronUp from 'virtual:icons/proicons/chevron-up'
 import CopyCheck from 'virtual:icons/lucide/copy-check'
-import Languages from 'virtual:icons/lucide/languages'
-import Plus from 'virtual:icons/lucide/plus'
-import Trash2 from 'virtual:icons/lucide/trash-2'
+import Languages from 'virtual:icons/tabler/language'
+import Plus from 'virtual:icons/proicons/add'
+import Trash2 from 'virtual:icons/proicons/delete'
 // COMPONENTS
 import { Button, DestructiveDialog, SimpleTooltip } from '$lib/bits/core'
 import Switch from '$lib/bits/custom/switch/Switch.svelte'

@@ -1,7 +1,7 @@
 <script lang="ts">
 // ICONS
 import { Icon } from '$lib/bits'
-import XMark from 'virtual:icons/lucide/x'
+import XMark from 'virtual:icons/proicons/cancel'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'

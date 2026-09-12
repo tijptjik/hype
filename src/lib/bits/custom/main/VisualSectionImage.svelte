@@ -1,7 +1,7 @@
 <script lang="ts">
 import { cx } from '$lib/bits'
 import * as ImagePrimitive from '$lib/bits/patterns/images/components'
-import ImageIcon from 'virtual:icons/lucide/image'
+import ImageIcon from 'virtual:icons/proicons/photo'
 import type { MainVisualSectionImageProps } from './main.types'
 
 let {

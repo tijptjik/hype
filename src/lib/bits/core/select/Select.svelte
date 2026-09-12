@@ -2,8 +2,8 @@
 // BITS-UI
 import { Select as SelectPrimitive } from 'bits-ui'
 // ICONS
-import CheckIcon from 'virtual:icons/lucide/check'
-import ChevronsUpDownIcon from 'virtual:icons/lucide/chevrons-up-down'
+import CheckIcon from 'virtual:icons/proicons/checkmark'
+import ChevronsUpDownIcon from 'virtual:icons/proicons/arrow-up-down'
 // TYPES
 import type { SelectProps } from './select.types'
 

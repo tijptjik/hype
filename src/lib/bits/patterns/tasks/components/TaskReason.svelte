@@ -2,7 +2,7 @@
 // BITS COMPONENTS
 import { Button, Popover } from '$lib/bits/core'
 // ICONS
-import CircleHelpIcon from 'virtual:icons/lucide/circle-help'
+import CircleHelpIcon from 'virtual:icons/proicons/question-circle'
 
 let { reason }: { reason: string } = $props()
 </script>

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui'
 import { m } from '$lib/i18n'
-import XIcon from 'virtual:icons/lucide/x'
+import XIcon from 'virtual:icons/proicons/cancel'
 
 let {
   open: isOpen = $bindable(false),

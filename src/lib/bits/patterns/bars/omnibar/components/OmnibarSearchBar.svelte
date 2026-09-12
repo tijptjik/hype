@@ -10,7 +10,7 @@ import OmnibarResults from './OmnibarResults.svelte'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import MagnifyingGlass from 'virtual:icons/lucide/search'
+import MagnifyingGlass from 'virtual:icons/proicons/search'
 // STYLES
 import {
   getOmnibarResultsClasses,

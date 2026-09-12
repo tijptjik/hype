@@ -2,7 +2,7 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // ICONS
-import Crosshair from 'virtual:icons/lucide/crosshair'
+import Crosshair from 'virtual:icons/proicons/target'
 import { Icon } from '$lib/bits'
 // I18N
 import { getI18n, m } from '$lib/i18n'

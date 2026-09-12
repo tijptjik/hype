@@ -1,8 +1,8 @@
 <script lang="ts">
 // ICONS
-import Sun from 'virtual:icons/lucide/sun'
-import Moon from 'virtual:icons/lucide/moon'
-import Check from 'virtual:icons/lucide/check'
+import Sun from 'virtual:icons/proicons/brightness'
+import Moon from 'virtual:icons/proicons/moon'
+import Check from 'virtual:icons/proicons/checkmark'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES

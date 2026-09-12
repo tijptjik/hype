@@ -35,8 +35,8 @@ import type {
   LayerSubmitUpdatesParams,
 } from '$lib/db/zod/schema/layer.types'
 import type { FormDataUpdaterForm, Locale } from '$lib/types'
-import Blend from 'virtual:icons/lucide/blend'
-import TypeIcon from 'virtual:icons/lucide/type'
+import Blend from 'virtual:icons/proicons/shape-intersect'
+import TypeIcon from 'virtual:icons/proicons/text'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

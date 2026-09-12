@@ -123,10 +123,10 @@ import type { HubFacet } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
-import Blend from 'virtual:icons/lucide/blend'
-import HubIcon from 'virtual:icons/lucide/building-2'
-import RefreshCw from 'virtual:icons/lucide/refresh-cw'
-import Type from 'virtual:icons/lucide/type'
+import Blend from 'virtual:icons/proicons/shape-intersect'
+import HubIcon from 'virtual:icons/proicons/building-multiple'
+import RefreshCw from 'virtual:icons/proicons/arrow-sync'
+import Type from 'virtual:icons/proicons/text'
 // ENUMS
 import {
   classifierComponentTypes,

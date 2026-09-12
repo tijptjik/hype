@@ -18,17 +18,17 @@ import {
   viewerControlsEditButtonClass,
 } from './ViewerControls.styles'
 // ICONS
-import LoaderCircleIcon from 'virtual:icons/lucide/loader-circle'
-import RotateCcwIcon from 'virtual:icons/lucide/rotate-ccw'
-import RotateCwIcon from 'virtual:icons/lucide/rotate-cw'
-import SquarePenIcon from 'virtual:icons/lucide/square-pen'
-import EyeIcon from 'virtual:icons/lucide/eye'
-import EyeOffIcon from 'virtual:icons/lucide/eye-off'
-import ReplaceIcon from 'virtual:icons/lucide/replace'
-import DownloadIcon from 'virtual:icons/lucide/cloud-download'
-import ExpandIcon from 'virtual:icons/lucide/expand'
-import ShrinkIcon from 'virtual:icons/lucide/shrink'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import LoaderCircleIcon from 'virtual:icons/proicons/spinner'
+import RotateCcwIcon from 'virtual:icons/proicons/arrow-counterclockwise'
+import RotateCwIcon from 'virtual:icons/proicons/arrow-clockwise'
+import SquarePenIcon from 'virtual:icons/proicons/compose'
+import EyeIcon from 'virtual:icons/proicons/eye'
+import EyeOffIcon from 'virtual:icons/proicons/eye-off'
+import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
+import DownloadIcon from 'virtual:icons/proicons/cloud-arrow-down'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
+import ShrinkIcon from 'virtual:icons/proicons/full-screen-minimize'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 
 let {
   isPublished = false,

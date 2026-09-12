@@ -17,8 +17,8 @@ import { FirstClassResource } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import FunnelIcon from 'virtual:icons/lucide/funnel'
-import TaskIcon from 'virtual:icons/lucide/inbox'
+import FunnelIcon from 'virtual:icons/proicons/filter'
+import TaskIcon from 'virtual:icons/proicons/archive'
 // TYPES
 import { reviewActions } from '$lib/types'
 import type { Id, ResourceControlBarConfig, Task } from '$lib/types'

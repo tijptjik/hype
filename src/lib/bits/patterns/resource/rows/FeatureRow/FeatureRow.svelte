@@ -9,12 +9,12 @@ import { navigateOnAdmin } from '$lib/navigation'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
-import DatabaseIcon from 'virtual:icons/lucide/database'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import ImageIcon from 'virtual:icons/lucide/image'
-import TagsIcon from 'virtual:icons/lucide/tags'
-import PenIcon from 'virtual:icons/lucide/pen'
+import DatabaseIcon from 'virtual:icons/proicons/database'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import TagsIcon from 'virtual:icons/proicons/tag-multiple'
+import PenIcon from 'virtual:icons/proicons/pencil'
 // I18N
 import { m } from '$lib/i18n'
 // SERVICES

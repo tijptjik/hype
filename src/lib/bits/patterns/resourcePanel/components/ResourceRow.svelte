@@ -2,9 +2,9 @@
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import Funnel from 'virtual:icons/lucide/filter'
-import Crosshair from 'virtual:icons/lucide/crosshair'
-import X from 'virtual:icons/lucide/x'
+import Funnel from 'virtual:icons/proicons/filter'
+import Crosshair from 'virtual:icons/proicons/target'
+import X from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { ResourceRowProps } from './resourcePanelPrimitives.types'
 let { row, tone, narrow = false }: ResourceRowProps = $props()

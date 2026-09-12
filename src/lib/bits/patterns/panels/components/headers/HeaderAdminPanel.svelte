@@ -2,8 +2,8 @@
 // BITS
 import { Button } from '$lib/bits/core'
 // ICONS
-import Bolt from 'virtual:icons/lucide/zap'
-import Menu from 'virtual:icons/lucide/menu'
+import Bolt from 'virtual:icons/proicons/bolt'
+import Menu from 'virtual:icons/proicons/menu'
 
 type Props = {
   title: string

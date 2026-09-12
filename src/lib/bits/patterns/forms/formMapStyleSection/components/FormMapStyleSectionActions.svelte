@@ -1,8 +1,8 @@
 <script lang="ts">
 import { Button } from '$lib/bits/core'
 import { m } from '$lib/i18n'
-import ReplaceIcon from 'virtual:icons/lucide/replace'
-import XIcon from 'virtual:icons/lucide/x'
+import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
+import XIcon from 'virtual:icons/proicons/cancel'
 
 import type { FormMapStyleSectionActionsProps } from '../formMapStyleSection.types'
 

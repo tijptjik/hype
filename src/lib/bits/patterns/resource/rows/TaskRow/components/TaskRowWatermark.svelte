@@ -1,6 +1,6 @@
 <script lang="ts">
 import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 
 let {
   typeDisplay,

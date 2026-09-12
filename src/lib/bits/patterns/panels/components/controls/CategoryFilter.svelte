@@ -4,8 +4,8 @@ import { untrack } from 'svelte'
 // BITS COMPONENTS
 import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronUp from 'virtual:icons/proicons/chevron-up'
 import { Icon } from '$lib/bits'
 // ADAPTERS
 import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'

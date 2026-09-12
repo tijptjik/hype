@@ -1,5 +1,5 @@
 <script lang="ts">
-import ImageIcon from 'virtual:icons/lucide/image'
+import ImageIcon from 'virtual:icons/proicons/photo'
 import type { EmptyStateProps } from './imagePrimitives.types'
 
 let { title, description }: EmptyStateProps = $props()

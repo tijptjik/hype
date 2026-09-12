@@ -8,9 +8,9 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { NewFeatureMode } from '$lib/enums'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import GlobeAlt from 'virtual:icons/lucide/globe'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/proicons/checkmark'
+import GlobeAlt from 'virtual:icons/proicons/globe'
+import PencilSquare from 'virtual:icons/proicons/compose'
 
 const appCtx = getAppCtx()
 

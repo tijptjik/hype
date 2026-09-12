@@ -21,12 +21,12 @@ import { m } from '$lib/i18n'
 // AUTHORIZATION
 import { canCreateAnyProject, toProjectAuthActor } from '$lib/api/services/authz'
 // ICONS
-import ProjectIcon from 'virtual:icons/lucide/layout-grid'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import ImageIcon from 'virtual:icons/lucide/image'
-import CopyleftIcon from 'virtual:icons/lucide/copyright'
+import ProjectIcon from 'virtual:icons/proicons/grid'
+import StatusIcon from 'virtual:icons/proicons/target'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import CopyleftIcon from 'virtual:icons/proicons/copyright'
 // TYPES
 import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Project } from '$lib/db/zod/schema/project.types'

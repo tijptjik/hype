@@ -31,9 +31,9 @@ async function copyMapping(): Promise<void> {
       class="flex flex-col gap-4 border-b border-base-300 pb-6 lg:flex-row lg:items-end lg:justify-between"
     >
       <div class="space-y-2">
-        <h1 class="text-2xl font-semibold text-foreground">Lucide Usage Audit</h1>
+        <h1 class="text-2xl font-semibold text-foreground">Icon Usage Audit</h1>
         <p class="max-w-3xl text-sm text-foreground-alt">
-          This page audits every Lucide icon currently imported in the app, shows the
+          This page audits every interface icon currently imported in the app, shows the
           rendered icon, and tracks how many import sites and files use it.
         </p>
         <p class="text-xs uppercase tracking-[0.2em] text-foreground-alt">

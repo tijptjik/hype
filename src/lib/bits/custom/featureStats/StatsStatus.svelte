@@ -4,7 +4,7 @@ import { m } from '$lib/i18n'
 // SERVICES
 import { calculateStatusStatuses } from '$lib/client/services/stats'
 // ICONS
-import DatabaseIcon from 'virtual:icons/lucide/database'
+import DatabaseIcon from 'virtual:icons/proicons/database'
 // TYPES
 import type { FeatureStatsProps } from './featureStats.types'
 // COMPONENTS

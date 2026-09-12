@@ -1,8 +1,8 @@
 <script lang="ts">
 import { tick } from 'svelte'
-import SearchIcon from 'virtual:icons/lucide/search'
-import XIcon from 'virtual:icons/lucide/x'
-import LoaderCircleIcon from 'virtual:icons/lucide/loader-circle'
+import SearchIcon from 'virtual:icons/proicons/search'
+import XIcon from 'virtual:icons/proicons/cancel'
+import LoaderCircleIcon from 'virtual:icons/proicons/spinner'
 import type { SearchBarProps } from '../../search.types'
 
 let {

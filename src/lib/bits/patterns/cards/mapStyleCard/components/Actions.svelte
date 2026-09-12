@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Button } from '$lib/bits/core'
 import { Card } from '$lib/bits/custom'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 
 import type { MapStyleCardActionsProps } from '../mapStyleCard.types'
 

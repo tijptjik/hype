@@ -118,9 +118,9 @@ import type { OrganisationFacet } from '$lib/navigation'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
 // ICONS
-import Blend from 'virtual:icons/lucide/blend'
-import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import Type from 'virtual:icons/lucide/type'
+import Blend from 'virtual:icons/proicons/shape-intersect'
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
+import Type from 'virtual:icons/proicons/text'
 // ENUMS
 import {
   FirstClassResource,

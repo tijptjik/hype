@@ -3,10 +3,10 @@
 import Button from '$lib/bits/core/button/Button.svelte'
 import Select from '$lib/bits/core/select/Select.svelte'
 // ICONS
-import CheckIcon from 'virtual:icons/lucide/check'
-import ListChecksIcon from 'virtual:icons/lucide/list-checks'
-import ShuffleIcon from 'virtual:icons/lucide/shuffle'
-import XIcon from 'virtual:icons/lucide/x'
+import CheckIcon from 'virtual:icons/proicons/checkmark'
+import ListChecksIcon from 'virtual:icons/proicons/task-list'
+import ShuffleIcon from 'virtual:icons/proicons/arrow-left-right'
+import XIcon from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { ResourceBulkEditControlProps } from './components/resourceControlBarPrimitives.types'
 

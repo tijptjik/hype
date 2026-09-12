@@ -4,12 +4,12 @@ import { m } from '$lib/i18n'
 // SVELTE
 import { untrack } from 'svelte'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
-import Search from 'virtual:icons/lucide/search'
-import Users from 'virtual:icons/lucide/users'
-import Grid from 'virtual:icons/lucide/grid-2x2'
-import Layers from 'virtual:icons/lucide/layers'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
+import Search from 'virtual:icons/proicons/search'
+import Users from 'virtual:icons/proicons/person-multiple'
+import Grid from 'virtual:icons/proicons/grid'
+import Layers from 'virtual:icons/proicons/layers'
 // COMPONENTS
 import VirtualResourceList from '$lib/bits/custom/resources/VirtualResourceList.svelte'
 import ResourceRow from './ResourceRow.svelte'

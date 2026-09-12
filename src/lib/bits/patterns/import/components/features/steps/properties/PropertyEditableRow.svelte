@@ -2,8 +2,8 @@
 // BITS COMPONENTS
 import { Swap } from '$lib/bits/custom/swap'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import Pencil from 'virtual:icons/lucide/pencil'
+import Check from 'virtual:icons/proicons/checkmark'
+import Pencil from 'virtual:icons/proicons/pencil'
 
 type Props = {
   label: string

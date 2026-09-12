@@ -4,7 +4,7 @@ import { Button } from '$lib/bits/core'
 // BITS
 import { cx } from '$lib/bits/utils'
 // ICONS
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 // TYPES
 import type { HeaderFormActionsProps } from './headerPrimitives.types'
 // STYLES

@@ -1,5 +1,5 @@
 <script lang="ts">
-import AlertTriangleIcon from 'virtual:icons/lucide/triangle-alert'
+import AlertTriangleIcon from 'virtual:icons/proicons/alert-triangle'
 import { m } from '$lib/i18n'
 </script>
 

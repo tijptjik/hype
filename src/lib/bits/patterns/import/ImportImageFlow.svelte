@@ -9,7 +9,7 @@ import { m } from '$lib/i18n'
 import type { AdminCtx } from '$lib/context/admin.svelte'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import ArrowDownTray from 'virtual:icons/lucide/download'
+import ArrowDownTray from 'virtual:icons/proicons/arrow-download'
 // SERVICES
 import {
   downloadImageUploadResults,

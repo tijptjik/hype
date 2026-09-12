@@ -7,10 +7,10 @@ import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelM
 
 // COMPONENTS
 import { Icon } from '$lib/bits'
-import Camera from 'virtual:icons/lucide/camera'
-import MapPin from 'virtual:icons/lucide/map-pin'
+import Camera from 'virtual:icons/proicons/camera'
+import MapPin from 'virtual:icons/proicons/location'
 import CubeTransparent from 'virtual:icons/lucide/ghost'
-import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
+import ExclamationTriangle from 'virtual:icons/proicons/alert-triangle'
 import type { UserProfile } from '$lib/db/zod/schema/user.types'
 
 // PROPS

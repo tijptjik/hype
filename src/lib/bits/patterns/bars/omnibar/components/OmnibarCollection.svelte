@@ -5,7 +5,7 @@ import { Button } from '$lib/bits'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import XMark from 'virtual:icons/lucide/x'
+import XMark from 'virtual:icons/proicons/cancel'
 // STYLES
 import {
   getOmnibarCollectionPanelClasses,

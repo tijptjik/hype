@@ -12,12 +12,12 @@ import { navigateOnAdmin } from '$lib/navigation'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // ICONS
-import ChartColumnIncreasing from 'virtual:icons/lucide/chart-column-increasing'
-import CloudArrowUp from 'virtual:icons/lucide/cloud-upload'
-import BuildingLibrary from 'virtual:icons/lucide/landmark'
-import InboxArrowDown from 'virtual:icons/lucide/mailbox'
-import MapIcon from 'virtual:icons/lucide/map'
-import MapPin from 'virtual:icons/lucide/map-pin'
+import ChartColumnIncreasing from 'virtual:icons/proicons/bar-chart'
+import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
+import BuildingLibrary from 'virtual:icons/proicons/bank'
+import InboxArrowDown from 'virtual:icons/proicons/mail-open'
+import MapIcon from 'virtual:icons/proicons/map'
+import MapPin from 'virtual:icons/proicons/location'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES

@@ -4,8 +4,8 @@ import * as ResourcePanelPrimitive from './components'
 // BITS
 import { PanelRoot } from '$lib/bits/patterns/panels'
 import Info from '$lib/bits/patterns/panels/components/info/Maps.svelte'
-import InfoIcon from 'virtual:icons/lucide/info'
-import X from 'virtual:icons/lucide/x'
+import InfoIcon from 'virtual:icons/proicons/info'
+import X from 'virtual:icons/proicons/cancel'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES

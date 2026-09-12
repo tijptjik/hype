@@ -2,8 +2,8 @@
 import { goto } from '$app/navigation'
 // ICONS
 import { Icon } from '$lib/bits'
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
 
 type Props = {
   title: string

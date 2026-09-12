@@ -6,7 +6,7 @@ import StatsPips from './components/StatsPips.svelte'
 // SERVICES
 import { calculateFreeformStatuses } from '$lib/client/services/stats'
 // ICONS
-import PenIcon from 'virtual:icons/lucide/pen'
+import PenIcon from 'virtual:icons/proicons/pencil'
 // TYPES
 import type { FeatureStatsProps } from './featureStats.types'
 

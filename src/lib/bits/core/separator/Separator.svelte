@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Separator as SeparatorPrimitive } from 'bits-ui'
 // ICONS
-import Dot from 'virtual:icons/lucide/dot'
+import Dot from 'virtual:icons/proicons/circle-small'
 // STYLES
 import { cx } from '$lib/bits/utils'
 // TYPES

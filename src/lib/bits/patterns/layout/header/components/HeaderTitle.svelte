@@ -9,7 +9,7 @@ import { slide } from 'svelte/transition'
 // TYPES
 import type { HeaderTitleProps } from './headerPrimitives.types'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
 // STYLES
 import {
   HEADER_TITLE_MENU_CONTENT_CLASSES,

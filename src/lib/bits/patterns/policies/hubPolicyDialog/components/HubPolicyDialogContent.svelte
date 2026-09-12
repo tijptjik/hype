@@ -2,7 +2,7 @@
 // BITS-UI
 import { Dialog } from 'bits-ui'
 // ICONS
-import XIcon from 'virtual:icons/lucide/x'
+import XIcon from 'virtual:icons/proicons/cancel'
 // COMPONENTS
 import HubPolicyDocumentBody from './HubPolicyDocumentBody.svelte'
 // TYPES

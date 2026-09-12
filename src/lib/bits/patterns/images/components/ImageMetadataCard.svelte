@@ -8,12 +8,12 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { m } from '$lib/i18n'
 import { formatDate } from '$lib'
 // ICONS
-import AtSymbol from 'virtual:icons/lucide/at-sign'
-import Calendar from 'virtual:icons/lucide/calendar'
-import Camera from 'virtual:icons/lucide/camera'
-import MapPinned from 'virtual:icons/lucide/map-pinned'
-import Square2Stack from 'virtual:icons/lucide/copy'
-import Document from 'virtual:icons/lucide/file-text'
+import AtSymbol from 'virtual:icons/proicons/mention'
+import Calendar from 'virtual:icons/proicons/calendar'
+import Camera from 'virtual:icons/proicons/camera'
+import MapPinned from 'virtual:icons/proicons/location'
+import Square2Stack from 'virtual:icons/proicons/copy'
+import Document from 'virtual:icons/proicons/file-text'
 // TYPES
 import type {
   Image,

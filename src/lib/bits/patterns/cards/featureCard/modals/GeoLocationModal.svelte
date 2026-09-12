@@ -12,11 +12,11 @@ import { reverseGeocode } from '$lib/api/external/geocoding'
 // ENUMS
 import { NewFeatureMode } from '$lib/enums'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import GlobeAlt from 'virtual:icons/lucide/globe'
-import MapPin from 'virtual:icons/lucide/map-pin'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
-import X from 'virtual:icons/lucide/x'
+import Check from 'virtual:icons/proicons/checkmark'
+import GlobeAlt from 'virtual:icons/proicons/globe'
+import MapPin from 'virtual:icons/proicons/location'
+import PencilSquare from 'virtual:icons/proicons/compose'
+import X from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { LocaleKey } from '$lib/types'
 import type { Point } from 'geojson'

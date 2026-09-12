@@ -78,8 +78,8 @@ import { Icon } from '$lib/bits'
 import { getImageCtx } from '$lib/context/image.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 import { m } from '$lib/i18n'
 
 let {

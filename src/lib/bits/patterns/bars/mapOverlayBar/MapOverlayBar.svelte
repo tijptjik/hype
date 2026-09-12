@@ -8,7 +8,7 @@ import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
 import { Button, Icon, OverlayBar } from '$lib/bits'
 // ICONS
-import SwatchIcon from 'virtual:icons/lucide/swatch-book'
+import SwatchIcon from 'virtual:icons/proicons/color-palette'
 
 type MapOverlayBarProps = {
   offsetX?: number

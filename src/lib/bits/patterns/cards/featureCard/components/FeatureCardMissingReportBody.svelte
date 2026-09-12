@@ -4,7 +4,7 @@ import { m } from '$lib/i18n'
 // CONTEXT
 import { getCardCtx } from '$lib/context/card.svelte'
 // ICONS
-import TriangleAlert from 'virtual:icons/lucide/triangle-alert'
+import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 // LOCAL
 import FeatureCardContributionPanel from './contribution/FeatureCardContributionPanel.svelte'
 

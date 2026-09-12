@@ -8,9 +8,9 @@ import { Button } from '$lib/bits/core/button'
 // LIB
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import FolderOpenIcon from 'virtual:icons/lucide/folder-open'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import FolderOpenIcon from 'virtual:icons/proicons/folder-open'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 // LOCAL
 import { detectCameraAccess, requestCameraAccess } from '../cameraAccess'
 

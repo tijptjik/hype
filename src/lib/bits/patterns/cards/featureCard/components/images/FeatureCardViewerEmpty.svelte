@@ -9,7 +9,7 @@ import { FeatureCardMode } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
+import CameraIcon from 'virtual:icons/proicons/camera'
 
 const cardCtx = getCardCtx()
 const appCtx = getAppCtx()

@@ -6,7 +6,7 @@ import StatsPips from './components/StatsPips.svelte'
 // SERVICES
 import { calculateImageStatuses } from '$lib/client/services/stats'
 // ICONS
-import ImageIcon from 'virtual:icons/lucide/image'
+import ImageIcon from 'virtual:icons/proicons/photo'
 // TYPES
 import type { FeatureStatsProps } from './featureStats.types'
 

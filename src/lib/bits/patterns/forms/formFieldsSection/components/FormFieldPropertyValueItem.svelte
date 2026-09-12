@@ -2,7 +2,7 @@
 // THIRD-PARTY
 import { draggable, droppable, dndState } from '@thisux/sveltednd'
 // ICONS
-import Trash2 from 'virtual:icons/lucide/trash-2'
+import Trash2 from 'virtual:icons/proicons/delete'
 // TYPES
 import type { FormFieldPropertyValueItemProps } from '../formFieldsSection.types'
 

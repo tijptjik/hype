@@ -1,7 +1,7 @@
 <script lang="ts">
 // THIRD-PARTY
 import { draggable, droppable, dndState, type DragDropState } from '@thisux/sveltednd'
-import EyeIcon from 'virtual:icons/lucide/eye'
+import EyeIcon from 'virtual:icons/proicons/eye'
 
 // SERVICES
 import { getDropIndex } from '$lib/client/services/dragDrop'

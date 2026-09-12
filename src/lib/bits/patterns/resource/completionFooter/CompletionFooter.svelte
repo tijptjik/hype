@@ -8,11 +8,11 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 // SERVICES
 import { calculateOverallStats } from '$lib/client/services/stats'
 // ICONS
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import ImageIcon from 'virtual:icons/lucide/image'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import PenIcon from 'virtual:icons/lucide/pen'
-import TagsIcon from 'virtual:icons/lucide/tags'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import PenIcon from 'virtual:icons/proicons/pencil'
+import TagsIcon from 'virtual:icons/proicons/tag-multiple'
 // TYPES
 import type {
   CompletionFooterProps,

@@ -2,9 +2,9 @@
 // ICONS
 import { Icon } from '$lib/bits'
 import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
-import Check from 'virtual:icons/lucide/check'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
-import Star from 'virtual:icons/lucide/star'
+import Check from 'virtual:icons/proicons/checkmark'
+import PencilSquare from 'virtual:icons/proicons/compose'
+import Star from 'virtual:icons/proicons/star'
 // SERVICES
 import {
   getFeatureCardEditableProperties,

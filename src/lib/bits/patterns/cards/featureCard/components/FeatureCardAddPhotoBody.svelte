@@ -2,8 +2,8 @@
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import Camera from 'virtual:icons/lucide/camera'
-import ImageIcon from 'virtual:icons/lucide/image'
+import Camera from 'virtual:icons/proicons/camera'
+import ImageIcon from 'virtual:icons/proicons/photo'
 // LOCAL
 import FeatureCardAttributionField from './contribution/FeatureCardAttributionField.svelte'
 import FeatureCardContributionPanel from './contribution/FeatureCardContributionPanel.svelte'

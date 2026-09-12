@@ -4,7 +4,7 @@ import { m } from '$lib/i18n'
 // BITS
 import Button from '$lib/bits/core/button/Button.svelte'
 // ICONS
-import XIcon from 'virtual:icons/lucide/x'
+import XIcon from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { ResourceControlBarFilterResetProps } from './resourceControlBarPrimitives.types'
 

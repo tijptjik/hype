@@ -2,8 +2,8 @@
 // BITS
 import { Icon, ScrollableText } from '$lib/bits'
 // ICONS
-import XCircle from 'virtual:icons/lucide/circle-x'
-import QueueList from 'virtual:icons/lucide/panel-top-bottom-dashed'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
+import QueueList from 'virtual:icons/proicons/bullet-list-square'
 // TYPES
 import type { OmnibarNavigationHeaderProps } from './omnibarPrimitives.types'
 

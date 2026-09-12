@@ -6,10 +6,10 @@ import Icon from '$lib/bits/custom/icon/Icon.svelte'
 // BITS
 import { cx } from '$lib/bits/utils'
 // ICONS
-import PencilSquare from 'virtual:icons/lucide/square-pen'
-import Check from 'virtual:icons/lucide/check'
-import ArrowPath from 'virtual:icons/lucide/refresh-cw'
-import XMark from 'virtual:icons/lucide/x'
+import PencilSquare from 'virtual:icons/proicons/compose'
+import Check from 'virtual:icons/proicons/checkmark'
+import ArrowPath from 'virtual:icons/proicons/arrow-sync'
+import XMark from 'virtual:icons/proicons/cancel'
 
 type Props = {
   userDisplayName?: string | null

@@ -32,7 +32,7 @@ import { createMapController, type MapController } from '$lib/map/controller'
 import MapSurface from '$lib/bits/custom/map/MapSurface.svelte'
 import { GeolocateControl, NavigationControl } from 'svelte-maplibre-gl'
 // ICONS
-import Square3Stack3d from 'virtual:icons/lucide/layers-3'
+import Square3Stack3d from 'virtual:icons/proicons/layers'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getOmniCtx } from '$lib/context/omni.svelte'

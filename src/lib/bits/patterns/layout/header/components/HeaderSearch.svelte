@@ -3,8 +3,8 @@ import { onDestroy } from 'svelte'
 // BITS
 import { HEADER_SEARCH_CLEAR_CLASSES } from './headerPrimitives.styles'
 // ICONS
-import Search from 'virtual:icons/lucide/search'
-import X from 'virtual:icons/lucide/x'
+import Search from 'virtual:icons/proicons/search'
+import X from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { HeaderSearchProps } from './headerPrimitives.types'
 

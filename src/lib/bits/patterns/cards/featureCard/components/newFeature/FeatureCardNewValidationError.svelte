@@ -9,7 +9,7 @@ import { m } from '$lib/i18n'
 import { getCardCtx } from '$lib/context/card.svelte'
 import { getImageCtx } from '$lib/context/image.svelte'
 // ICONS
-import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
+import ExclamationTriangle from 'virtual:icons/proicons/alert-triangle'
 
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()

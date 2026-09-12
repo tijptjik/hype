@@ -24,11 +24,11 @@ import {
   toOrganisationAuthActor,
 } from '$lib/api/services/authz'
 // ICONS
-import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import ImageIcon from 'virtual:icons/lucide/image'
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
+import StatusIcon from 'virtual:icons/proicons/target'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import ImageIcon from 'virtual:icons/proicons/photo'
 // TYPES
 import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'

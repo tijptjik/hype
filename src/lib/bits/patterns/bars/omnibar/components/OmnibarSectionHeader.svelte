@@ -6,9 +6,9 @@ import { OmniCollection } from '$lib/enums'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import Building from 'virtual:icons/lucide/landmark'
-import MapIcon from 'virtual:icons/lucide/map'
-import MapPin from 'virtual:icons/lucide/map-pin'
+import Building from 'virtual:icons/proicons/bank'
+import MapIcon from 'virtual:icons/proicons/map'
+import MapPin from 'virtual:icons/proicons/location'
 // TYPES
 import type { OmnibarSectionHeaderProps } from './omnibarPrimitives.types'
 

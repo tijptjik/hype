@@ -3,9 +3,9 @@ import { slide } from 'svelte/transition'
 import { Button, SimpleTooltip } from '$lib/bits/core'
 import { Card, Switch } from '$lib/bits/custom'
 import { m } from '$lib/i18n'
-import Inbox from 'virtual:icons/lucide/inbox'
-import Plus from 'virtual:icons/lucide/plus'
-import X from 'virtual:icons/lucide/x'
+import Inbox from 'virtual:icons/proicons/archive'
+import Plus from 'virtual:icons/proicons/add'
+import X from 'virtual:icons/proicons/cancel'
 import type { LayerPropertyCardActionsProps } from '../layerPropertyCard.types'
 
 let {

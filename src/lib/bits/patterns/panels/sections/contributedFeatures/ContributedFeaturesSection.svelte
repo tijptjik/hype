@@ -10,8 +10,8 @@ import { Scrollbar } from '$lib/bits/custom/scrollbar'
 import { ScrollableText } from '$lib/bits'
 // ICONS
 import { Icon } from '$lib/bits'
-import MapPin from 'virtual:icons/lucide/map-pin'
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import MapPin from 'virtual:icons/proicons/location'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { UserProfile } from '$lib/db/zod/schema/user.types'

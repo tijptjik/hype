@@ -16,7 +16,7 @@ import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import UserIdentity from './UserIdentity.svelte'
 import UserSearchBox from './UserSearchBox.svelte'
-import XCircle from 'virtual:icons/lucide/circle-x'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
 // TYPES
 import type { UserValidationResult } from '$lib/client/services/import/types'
 

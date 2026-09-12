@@ -8,8 +8,8 @@ import { Button } from '$lib/bits/core'
 // CUSTOM
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // ICONS
-import ReplaceIcon from 'virtual:icons/lucide/replace'
-import XIcon from 'virtual:icons/lucide/x'
+import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
+import XIcon from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { FormFeatureSubSectionHeaderProps } from './formFeatureSectionHeader.types'
 

@@ -6,10 +6,10 @@ import { cx } from '$lib/bits/utils'
 // I18N
 import { m } from '$lib/i18n'
 // ICONS
-import CloudUploadIcon from 'virtual:icons/lucide/cloud-upload'
-import LoaderCircleIcon from 'virtual:icons/lucide/loader-circle'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
-import XIcon from 'virtual:icons/lucide/x'
+import CloudUploadIcon from 'virtual:icons/proicons/cloud-arrow-up'
+import LoaderCircleIcon from 'virtual:icons/proicons/spinner'
+import Trash2Icon from 'virtual:icons/proicons/delete'
+import XIcon from 'virtual:icons/proicons/cancel'
 
 let {
   class: className = '',

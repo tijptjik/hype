@@ -160,9 +160,9 @@ import {
 // UTILS
 import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
 // ICONS
-import Blend from 'virtual:icons/lucide/blend'
-import ProjectIcon from 'virtual:icons/lucide/layout-grid'
-import Type from 'virtual:icons/lucide/type'
+import Blend from 'virtual:icons/proicons/shape-intersect'
+import ProjectIcon from 'virtual:icons/proicons/grid'
+import Type from 'virtual:icons/proicons/text'
 // ENUMS
 import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
 // TYPES

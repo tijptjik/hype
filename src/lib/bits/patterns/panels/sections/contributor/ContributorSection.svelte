@@ -6,8 +6,8 @@ import { fade } from 'svelte/transition'
 import { m } from '$lib/i18n'
 // COMPONENTS
 import { Icon } from '$lib/bits'
-import Trophy from 'virtual:icons/lucide/trophy'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
+import Trophy from 'virtual:icons/proicons/trophy'
+import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 // TYPES
 import type { PanelProps } from '$lib/types'

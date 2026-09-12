@@ -9,7 +9,7 @@ import {
   clearCachedFeatureTranslationStats,
 } from '$lib/client/services/stats'
 // ICONS
-import LanguagesIcon from 'virtual:icons/lucide/languages'
+import LanguagesIcon from 'virtual:icons/tabler/language'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 // TYPES

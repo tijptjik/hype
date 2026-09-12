@@ -4,8 +4,8 @@ import { UserAttributionCard } from '$lib/bits'
 import { cx } from '$lib/bits/utils'
 import { getTaskReviewActionLabel } from '$lib/client/services/task'
 import { m } from '$lib/i18n'
-import CheckIcon from 'virtual:icons/lucide/circle-check'
-import XIcon from 'virtual:icons/lucide/circle-x'
+import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
+import XIcon from 'virtual:icons/proicons/cancel-circle'
 import TaskReason from './TaskReason.svelte'
 
 let {

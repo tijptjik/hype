@@ -4,8 +4,8 @@ import { cx } from '$lib/bits/utils'
 import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
 import type { TaskMapProps } from '../task.types'
 import type { MapController } from '$lib/map/controller'
-import ExpandIcon from 'virtual:icons/lucide/expand'
-import ShrinkIcon from 'virtual:icons/lucide/shrink'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
+import ShrinkIcon from 'virtual:icons/proicons/full-screen-minimize'
 
 type StartViewTransitionCapableDocument = Document & {
   startViewTransition?: (update: () => void | Promise<void>) => {

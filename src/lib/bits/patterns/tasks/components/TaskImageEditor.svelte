@@ -13,8 +13,8 @@ import {
 // CONTEXT
 import { getImageCtx } from '$lib/context/image.svelte'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 
 const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)

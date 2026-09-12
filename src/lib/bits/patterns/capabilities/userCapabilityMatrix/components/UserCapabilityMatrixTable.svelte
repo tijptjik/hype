@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Checkbox } from '$lib/bits/custom'
-import ChevronUpIcon from 'virtual:icons/lucide/chevron-up'
-import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
+import ChevronUpIcon from 'virtual:icons/proicons/chevron-up'
+import ChevronDownIcon from 'virtual:icons/proicons/chevron-down'
 import type { UserCapabilityMatrixProps } from '../userCapabilityMatrix.types'
 import type { CapabilityKey } from '$lib/types'
 

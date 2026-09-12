@@ -4,7 +4,7 @@ import type { Snippet } from 'svelte'
 // COMPONENTS
 import Icon from '$lib/bits/custom/icon/Icon.svelte'
 import ImportRow from './ImportRow.svelte'
-import ArrowRight from 'virtual:icons/lucide/arrow-right'
+import ArrowRight from 'virtual:icons/proicons/arrow-right'
 
 type Props = {
   children?: Snippet

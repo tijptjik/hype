@@ -2,7 +2,7 @@
 import { fade } from 'svelte/transition'
 // ICONS
 import ListPlus from 'virtual:icons/lucide/list-plus'
-import X from 'virtual:icons/lucide/x'
+import X from 'virtual:icons/proicons/cancel'
 import { Button } from '$lib/bits/core'
 import { m } from '$lib/i18n'
 // TYPES
