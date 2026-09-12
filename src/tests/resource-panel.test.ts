@@ -79,3 +79,13 @@ it('keeps layer additive, exclusive and collapsed-chip actions separate', async 
   await fireEvent.click(screen.getByRole('button', { name: 'Layer 0' }))
   expect(model.rows[0].onToggle).toHaveBeenCalledOnce()
 })
+
+it('uses compact names in collapsed tags while preserving full row names', async () => {
+  const model = section(1)
+  model.rows[0].shortName = 'All'
+  render(ResourceSection, { section: model })
+  expect(screen.getByText('Layer 0')).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Collapse Layers' }))
+  expect(screen.getByRole('button', { name: 'All' })).toBeTruthy()
+  expect(screen.queryByText('Layer 0')).toBeNull()
+})
