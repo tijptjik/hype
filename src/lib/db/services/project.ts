@@ -96,6 +96,7 @@ import type {
 //    - cascadeProjectPublishedStateToDescendants
 //    - updateProjectArchivedStateById
 //    - cascadeProjectArchivedStateToDescendants
+//    - buildProjectArchivedDescendantUpdates
 //    - updateI18n
 //
 // 3.2 CRUD :: UPDATE (SYNC)
@@ -830,7 +831,7 @@ export const cascadeProjectPublishedStateToDescendants = async (
 }
 
 /**
- * Toggles archived state for a project.
+ * Atomically toggles archived state for a project and its descendants.
  * @param db - The database instance.
  * @param params - Target id and next archived state.
  * @returns Updated id/state pair or `null`.
@@ -839,7 +840,7 @@ export const updateProjectArchivedStateById = async (
   db: Database,
   params: { id: Id; state: boolean },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
-  const [updated] = await db
+  const parentUpdate = db
     .update(project)
     .set({
       isArchived: params.state,
@@ -850,7 +851,15 @@ export const updateProjectArchivedStateById = async (
       isArchived: project.isArchived,
     })
 
-  return updated ?? null
+  // Commit the parent and descendants together so failed restoration cannot split state.
+  const [updated] = await db.batch([
+    parentUpdate,
+    ...buildProjectArchivedDescendantUpdates(db, {
+      projectId: params.id,
+      state: params.state,
+    }),
+  ])
+  return updated[0] ?? null
 }
 
 /**
@@ -874,8 +883,23 @@ export const cascadeProjectArchivedStateToDescendants = async (
     state: boolean
   },
 ): Promise<void> => {
+  const updates = buildProjectArchivedDescendantUpdates(db, params)
+  await updates[0]
+  await updates[1]
+}
+
+/**
+ * Builds descendant updates without executing them, allowing an atomic parent batch.
+ * @param db - The database instance.
+ * @param params - Project id and requested archive state.
+ * @returns Deferred layer and feature updates.
+ */
+function buildProjectArchivedDescendantUpdates(
+  db: Database,
+  params: { projectId: Id; state: boolean },
+) {
   // Preserve descendant archive snapshots until the organisation no longer hides them.
-  await db
+  const layers = db
     .update(layer)
     .set({
       localIsArchived: params.state
@@ -901,7 +925,7 @@ export const cascadeProjectArchivedStateToDescendants = async (
     })
     .where(eq(layer.projectId, params.projectId))
 
-  await db
+  const features = db
     .update(feature)
     .set({
       localIsArchived: params.state
@@ -926,6 +950,7 @@ export const cascadeProjectArchivedStateToDescendants = async (
           end`,
     })
     .where(eq(feature.projectId, params.projectId))
+  return [layers, features] as const
 }
 
 /**

@@ -3,6 +3,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
+const { mockRequested, mockRefreshAll } = vi.hoisted(() => {
+  const mockRefreshAll = vi.fn(async () => undefined)
+  return {
+    mockRefreshAll,
+    mockRequested: vi.fn(() => ({ refreshAll: mockRefreshAll })),
+  }
+})
+vi.mock('$app/server', () => ({ requested: mockRequested }))
+
 const {
   mockProjectFormDataParse,
   mockToLocaleRecordFromOrganisationFormI18n,
@@ -955,15 +964,29 @@ describe('project.remote form organisation move authz', () => {
     )
   })
 
-  it('cascades descendant archive state after a successful archive command', async () => {
-    await remote.archiveProject({ id: 'project-1', state: true })
+  it.each([true, false])(
+    'settles archive state %s after the atomic update',
+    async state => {
+      await remote.archiveProject({ id: 'project-1', state })
 
-    expect(mockCascadeProjectArchivedStateToDescendants).toHaveBeenCalledWith(
-      expect.any(Object),
-      {
-        projectId: 'project-1',
-        state: true,
-      },
+      expect(mockUpdateProjectArchivedStateById).toHaveBeenCalledWith(
+        expect.any(Object),
+        { id: 'project-1', state },
+      )
+      expect(mockCascadeProjectArchivedStateToDescendants).not.toHaveBeenCalled()
+      expect(mockRequested).toHaveBeenCalledWith(remote.getProject, 1)
+      expect(mockRequested).toHaveBeenCalledWith(remote.getProjects, 1)
+      expect(mockRefreshAll).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it('does not refresh queries when the atomic archive update fails', async () => {
+    mockUpdateProjectArchivedStateById.mockRejectedValueOnce(
+      new Error('cascade failed'),
     )
+    await expect(
+      remote.archiveProject({ id: 'project-1', state: false }),
+    ).rejects.toThrow('cascade failed')
+    expect(mockRequested).not.toHaveBeenCalled()
   })
 })
