@@ -25,11 +25,16 @@ export type OmnibarSectionProps = {
   collectionType: OmniCollection
   results: SearchResult[]
   limit: number
+  totalCount?: number | null
+  hasMore?: boolean
+  loading?: boolean
+  onLoadMore?: () => void
   onSelection: (ref: string) => void
 }
 
 export type OmnibarSectionHeaderProps = {
   collectionType: OmniCollection
+  totalCount?: number | null
 }
 
 export type OmnibarEntryProps = {
@@ -46,6 +51,9 @@ export type OmnibarCollectionProps = {
   navTitle?: string
   onSelectIndex?: (index: number) => void
   onCloseTray?: () => void
+  hasMore?: boolean
+  loading?: boolean
+  onLoadMore?: () => void
 }
 
 export type OmnibarResultsProps = {

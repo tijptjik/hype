@@ -7,8 +7,8 @@ import type { OmnibarSectionProps } from './omnibarPrimitives.types'
 let { results, limit, onSelection }: OmnibarSectionProps = $props()
 </script>
 
-<div class="flex shrink-0 select-none flex-col" role="group">
+<section class="flex shrink-0 select-none flex-col">
   {#each results.slice(0, limit) as result}
     <OmnibarEntry {result} {onSelection} />
   {/each}
-</div>
+</section>

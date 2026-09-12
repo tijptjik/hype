@@ -12,7 +12,7 @@ import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
 import type { OmnibarSectionHeaderProps } from './omnibarPrimitives.types'
 
-let { collectionType }: OmnibarSectionHeaderProps = $props()
+let { collectionType, totalCount }: OmnibarSectionHeaderProps = $props()
 
 const collectionIcons = {
   walk: MapIcon,
@@ -29,7 +29,7 @@ const collectionTitles: Record<OmniCollection, string> = {
 
 <div class="flex items-center justify-between px-4 py-2">
   <span class="text-xs uppercase tracking-widest text-base-content/60">
-    {collectionTitles[collectionType]}
+    {collectionTitles[collectionType]}{totalCount == null ? '' : ` (${totalCount})`}
   </span>
   <Icon
     src={collectionIcons[collectionType]}

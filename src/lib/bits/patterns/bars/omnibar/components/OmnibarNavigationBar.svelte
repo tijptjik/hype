@@ -91,6 +91,9 @@ const surfaceClasses = $derived(
         currentIndex={navigation.currentIndex}
         navTitle={navigation.navTitle}
         onSelectIndex={navigation.onSelectIndex}
+        hasMore={navigation.hasMore}
+        loading={navigation.loading}
+        onLoadMore={navigation.onLoadMore}
         onCloseTray={navigation.onCloseTray}
       />
     </div>
