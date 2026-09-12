@@ -82,6 +82,28 @@ describe('native resource page traversal', () => {
     expect(list.loading).toBe(false)
   })
 
+  it('revalidates a revisited view after one minute even when its arguments did not change', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000)
+    try {
+      const first = controlledQuery()
+      const list = new ResourceList(() => first.query)
+      const initial = list.load(input)
+      first.resolve({ data: [row('old')], nextCursor: null })
+      await initial
+      now.mockReturnValue(62_000)
+      vi.mocked(first.query.refresh).mockImplementation(async () => {
+        Object.assign(first.query, {
+          current: { data: [row('new')], nextCursor: null },
+        })
+      })
+      await list.load(input)
+      expect(first.query.refresh).toHaveBeenCalledOnce()
+      expect(list.rows.map(row => row.id)).toEqual(['new'])
+    } finally {
+      now.mockRestore()
+    }
+  })
+
   it('uses native refresh for an existing page and reads its current value', async () => {
     const first = controlledQuery()
     first.resolve({ data: [row('old')], nextCursor: null })

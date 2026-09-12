@@ -37,9 +37,11 @@ describe('native collection optimistic projections', () => {
       meta: { id: '8' },
       data: { code: 'renamed' },
     })
-    expect(pages[8].transforms[0](pages[8].value).data[0].code).toBe('renamed')
+    expect(pages[8].transforms[0](pages[8].value).data[0]).toMatchObject({
+      code: 'renamed',
+    })
     // Native settlement removes the override; no manual snapshot rollback can clobber another edit.
-    expect(pages[8].value.data[0].code).toBe('8')
+    expect(pages[8].value.data[0]).toMatchObject({ code: '8' })
     expect(pages[4].transforms).toHaveLength(0)
   })
   it('updates a visible descendant breadcrumb from its directly joined identity', () => {
@@ -67,6 +69,19 @@ describe('native collection optimistic projections', () => {
       ancestors: { organisation: { code: 'old' } },
     })
   })
+  it('updates the active native feature collection during form submission', () => {
+    const cache = new CacheCtx()
+    const collection = page([row('feature')])
+    cache.featureCollection =
+      collection.query as unknown as import('$lib/types').FeatureCollectionHandle
+    cache.optimisticUpdates('feature', {
+      meta: { id: 'feature' },
+      data: { isPublished: false },
+    })
+    expect(collection.transforms[0](collection.value).data[0].isPublished).toBe(false)
+    expect(collection.value.data[0].isPublished).toBe(true)
+  })
+
   it('does not add a pending organisation to descendant collections', () => {
     const cache = new CacheCtx()
     const descendant = page([row('p')])
@@ -76,5 +91,46 @@ describe('native collection optimistic projections', () => {
       data: { code: 'new' },
     })
     expect(descendant.transforms[0](descendant.value).data).toEqual([row('p')])
+  })
+})
+
+describe('profile-specific detail retention', () => {
+  it('retains a compatible snapshot on transient refresh failure and discards it on denial', async () => {
+    const cache = new CacheCtx()
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000)
+    const data = { id: 'detail', name: 'retained' }
+    const handle = Object.assign(Promise.resolve({ data }), {
+      current: { data } as { data: unknown } | undefined,
+      refresh: vi.fn(async () => {}),
+    })
+    const commit = vi.fn()
+    try {
+      await expect(
+        cache.ensureResource('organisation:detail:admin:scope', () => handle, commit),
+      ).resolves.toEqual(data)
+      now.mockReturnValue(302_000)
+      handle.refresh.mockImplementation(async () => {
+        handle.current = undefined
+        throw new Error('Transient')
+      })
+      await expect(
+        cache.ensureResource('organisation:detail:admin:scope', () => handle, commit),
+      ).resolves.toEqual(data)
+      await Promise.resolve()
+      await expect(
+        cache.ensureResource('organisation:detail:admin:scope', () => handle, commit),
+      ).resolves.toEqual(data)
+      handle.refresh.mockImplementation(async () => {
+        throw { status: 403 }
+      })
+      await cache.ensureResource(
+        'organisation:detail:admin:scope',
+        () => handle,
+        commit,
+      )
+      await vi.waitFor(() => expect(commit).toHaveBeenLastCalledWith(undefined))
+    } finally {
+      now.mockRestore()
+    }
   })
 })

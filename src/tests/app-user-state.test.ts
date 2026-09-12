@@ -63,6 +63,28 @@ describe('AppCtx user updates', () => {
     ])
   })
 
+  it('ignores a feature response when selected layers change before another refresh starts', async () => {
+    const pending = createDeferred<FeatureFromCollection[]>()
+    const appCtx = new AppCtx(
+      { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
+      null,
+      {} as ResponsiveCtx,
+    )
+    appCtx.state.prisms.layer = ['old-layer']
+    appCtx.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => [FirstClassResource.feature],
+      queryFn: () => pending.promise,
+    })
+    const refresh = appCtx.refreshFeatures()
+    appCtx.state.prisms.layer = ['new-layer']
+    pending.resolve([
+      { id: 'obsolete', layerId: 'old-layer', properties: [] },
+    ] as unknown as FeatureFromCollection[])
+    await refresh
+    expect(appCtx.state.resources.feature).toEqual([])
+    expect(appCtx.cache.feature.has('obsolete')).toBe(false)
+  })
+
   it('does not restore feature data after the user identity changes', async () => {
     const pendingFeatures = createDeferred<FeatureFromCollection[]>()
     const appCtx = new AppCtx(
