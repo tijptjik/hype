@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { slide } from 'svelte/transition'
-import { ThemePicker } from '$lib/bits/patterns/themePicker'
+import Theme from '$lib/bits/patterns/panels/sections/theme/ThemeSection.svelte'
 
 // I18N
 import { m } from '$lib/i18n'
@@ -88,9 +88,7 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
       </div>
     {/if}
     <div class="shrink-0"><Language model={model.language} {...panelProps} /></div>
-    <div class="shrink-0 border-b border-border p-4">
-      <ThemePicker value={model.theme} onSelect={model.onTheme} />
-    </div>
+    <div class="shrink-0"><Theme {model} {...panelProps} /></div>
     {#if !panelProps.isAdmin}
       {#if !isGuestAccount}
         <div class="shrink-0">

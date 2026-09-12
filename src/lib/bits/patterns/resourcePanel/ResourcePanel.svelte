@@ -4,8 +4,7 @@ import * as ResourcePanelPrimitive from './components'
 // BITS
 import { PanelRoot } from '$lib/bits/patterns/panels'
 import Info from '$lib/bits/patterns/panels/components/info/Maps.svelte'
-import InfoIcon from 'virtual:icons/proicons/info'
-import X from 'virtual:icons/proicons/cancel'
+import X from 'virtual:icons/proicons/cancel-circle'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES
@@ -20,7 +19,7 @@ let { model, footer }: ResourcePanelProps = $props()
       class="flex h-18 shrink-0 items-center justify-between gap-3 border-b border-border px-4"
     >
       {#if !model.panel.isNarrow}
-        <h2 class="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
+        <h2 class="text-lg font-medium uppercase tracking-widest text-primary">
           {model.title}
         </h2>
       {/if}
@@ -32,16 +31,16 @@ let { model, footer }: ResourcePanelProps = $props()
           aria-expanded={isInfoOpen}
           onclick={() => isInfoOpen = !isInfoOpen}
         >
-          <InfoIcon class="size-5" />
+          <span class="text-2xl font-medium" aria-hidden="true">?</span>
         </button>
       {/if}
       <button
         type="button"
-        class="rounded-full p-2 text-muted-foreground hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus"
+        class="rounded-full p-2 text-base-content hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus"
         aria-label={m.panel__close()}
         onclick={model.onClose}
       >
-        <X class="size-5" />
+        <X class="size-8" />
       </button>
     </header>
     <div class="max-h-[45%] shrink-0 overflow-y-auto"><Info isOpen={isInfoOpen} /></div>

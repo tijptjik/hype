@@ -18,7 +18,7 @@ const color = $derived(
 </script>
 
 <div
-  class="flex min-h-14 items-center gap-2 rounded-xl px-3 py-2 transition-colors {row.active ? 'bg-raised' : 'hover:bg-surface'}"
+  class="flex min-h-10 items-center gap-3 pl-5 pr-7 py-2 transition-colors {row.active ? 'bg-raised' : 'hover:bg-surface'}"
   data-resource-id={row.id}
 >
   <button
@@ -30,46 +30,63 @@ const color = $derived(
     onclick={row.onPrimary}
   >
     <span
-      class="size-2 shrink-0 rounded-full {row.enabled ? `bg-current ${color}` : 'bg-base-content/20'}"
+      class="size-2 shrink-0 rounded-full {row.enabled ? `bg-current ${color}` : 'bg-base-content/30'}"
       aria-hidden="true"
     ></span>
     {#if !narrow}
-      <span class="flex min-w-0 flex-col gap-1">
+      <span class="flex min-w-0 flex-col">
         {#if row.breadcrumbs.length}
           <span
-            class="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
-            >{row.breadcrumbs.join(' / ')}</span
+            class="flex min-w-0 items-center gap-0.5 font-mono text-xs uppercase tracking-widest"
           >
+            {#each row.breadcrumbs as breadcrumb, index}
+              {#if index}
+                <span aria-hidden="true">›</span>
+              {/if}
+              <span
+                class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap {index === 0 ? 'text-primary' : 'text-tertiary'}"
+                >{breadcrumb}</span
+              >
+            {/each}
+          </span>
         {/if}
-        <span class="text-sm font-medium leading-5">{row.name}</span>
+        <span class="text-base font-light leading-5">{row.name}</span>
       </span>
     {:else}
-      <span class="truncate text-xs">{row.name.slice(0, 2)}</span>
+      <span
+        class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs"
+        >{row.name.slice(0, 2)}</span
+      >
     {/if}
   </button>
   {#if !narrow}
-    <button
-      type="button"
-      class="rounded-lg p-2 focus-override outline-none hover:bg-raised focus-visible:text-primary {row.selected ? color : 'text-muted-foreground'}"
-      aria-label={row.toggleLabel}
-      aria-pressed={row.selected}
-      title={row.toggleLabel}
-      onclick={row.onToggle}
-    >
-      {#if row.selected}
-        <X class="size-4" />
-      {:else}
-        <Funnel class="size-4" />
-      {/if}
-    </button>
+    {#if !row.onIsolate}
+      <button
+        type="button"
+        class="group/funnel inline-flex size-6 shrink-0 items-center justify-center rounded-lg focus-override outline-none hover:bg-raised focus-visible:text-primary {row.selected ? color : 'text-base-content/45'}"
+        aria-label={row.toggleLabel}
+        aria-pressed={row.selected}
+        title={row.toggleLabel}
+        onclick={row.onToggle}
+      >
+        <Funnel
+          class="size-5 {row.selected ? 'group-hover/funnel:hidden group-focus-visible/funnel:hidden' : ''}"
+        />
+        {#if row.selected}
+          <X
+            class="hidden size-5 group-hover/funnel:block group-focus-visible/funnel:block"
+          />
+        {/if}
+      </button>
+    {/if}
     {#if row.onIsolate}
       <button
         type="button"
-        class="rounded-lg p-2 text-muted-foreground hover:bg-raised focus-override outline-none focus-visible:text-primary"
+        class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-base-content/45 hover:bg-raised focus-override outline-none focus-visible:text-primary"
         aria-label={m.panel__isolate_layer({ name: row.name })}
         onclick={row.onIsolate}
       >
-        <Crosshair class="size-4" />
+        <Crosshair class="size-5" />
       </button>
     {/if}
   {/if}

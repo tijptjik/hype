@@ -4,6 +4,8 @@ import type { PanelProps } from '$lib/types'
 export type ResourcePanelRow = {
   id: string
   name: string
+  /** Compact localized label for selected tags; rows keep their full name. */
+  shortName?: string
   breadcrumbs: string[]
   selected: boolean
   active: boolean
