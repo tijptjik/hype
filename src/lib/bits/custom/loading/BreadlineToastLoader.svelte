@@ -18,7 +18,7 @@ let {
   role="status"
   aria-label={label}
 >
-  <!-- Toastie crouches, jumps and lands on each cycle; reduced motion keeps him still. -->
+  <!-- Toastie jumps, then settles with arm follow-through and a wink; reduced motion keeps him still. -->
   <img
     src={toastieUrl}
     class="block h-full w-full object-contain"
