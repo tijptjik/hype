@@ -1,5 +1,6 @@
 import {
   integer,
+  index,
   primaryKey,
   sqliteTable,
   text,
@@ -242,7 +243,19 @@ export const userFeature = sqliteTable(
       .$onUpdate(() => new Date().toISOString())
       .notNull(),
   },
-  table => [primaryKey({ columns: [table.userId, table.featureId] })],
+  table => [
+    primaryKey({ columns: [table.userId, table.featureId] }),
+    index('user_feature_wishlist_idx').on(
+      table.userId,
+      table.isWishlisted,
+      table.featureId,
+    ),
+    index('user_feature_visited_idx').on(
+      table.userId,
+      table.isVisited,
+      table.featureId,
+    ),
+  ],
 )
 
 /**
