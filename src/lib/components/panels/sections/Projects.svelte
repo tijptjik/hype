@@ -97,6 +97,7 @@ let collapsedProjects = $derived(
     onNearEnd={isOpen ? () => panelResources.list.next() : undefined}
     loading={panelResources.list.loading}
     error={Boolean(panelResources.list.error)}
+    onVisibleItems={rows => { panelResources.list.visibleIds = new Set(rows.map(row => row.id)) }}
     onRetry={panelResources.retry}
     viewKey={panelResources.viewKey}
   />
@@ -124,6 +125,7 @@ let collapsedProjects = $derived(
       onNearEnd={() => panelResources.list.next()}
       loading={panelResources.list.loading}
       error={Boolean(panelResources.list.error)}
+      onVisibleItems={rows => { panelResources.list.visibleIds = new Set(rows.map(row => row.id)) }}
       onRetry={panelResources.retry}
       viewKey={panelResources.viewKey}
     />

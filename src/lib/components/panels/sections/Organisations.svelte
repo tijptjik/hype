@@ -24,7 +24,7 @@ import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Id, PanelProps } from '$lib/types'
 import type { Snippet } from 'svelte'
 
-// Initialize query client and map state
+// Connect retained remote resources and map state
 const appCtx = getAppCtx()
 
 const resourceType = FirstClassResource.organisation
@@ -103,6 +103,7 @@ let collapsedOrganisations = $derived(
     onNearEnd={isOpen ? () => panelResources.list.next() : undefined}
     loading={panelResources.list.loading}
     error={Boolean(panelResources.list.error)}
+    onVisibleItems={rows => { panelResources.list.visibleIds = new Set(rows.map(row => row.id)) }}
     onRetry={panelResources.retry}
     viewKey={panelResources.viewKey}
   />
@@ -131,6 +132,7 @@ let collapsedOrganisations = $derived(
       onNearEnd={() => panelResources.list.next()}
       loading={panelResources.list.loading}
       error={Boolean(panelResources.list.error)}
+      onVisibleItems={rows => { panelResources.list.visibleIds = new Set(rows.map(row => row.id)) }}
       onRetry={panelResources.retry}
       viewKey={panelResources.viewKey}
     />

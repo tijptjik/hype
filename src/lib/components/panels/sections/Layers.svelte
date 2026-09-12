@@ -20,7 +20,7 @@ import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { ResourceContext, Id, PanelProps } from '$lib/types'
 import type { Snippet } from 'svelte'
 
-// Initialize query client and map state
+// Connect retained remote resources and map state
 const appCtx = getAppCtx()
 const resourceType = FirstClassResource.layer
 
@@ -97,6 +97,7 @@ let collapsedLayers = $derived(
     onNearEnd={isOpen ? () => panelResources.list.next() : undefined}
     loading={panelResources.list.loading}
     error={Boolean(panelResources.list.error)}
+    onVisibleItems={rows => { panelResources.list.visibleIds = new Set(rows.map(row => row.id)) }}
     onRetry={panelResources.retry}
     viewKey={panelResources.viewKey}
   />
@@ -124,6 +125,7 @@ let collapsedLayers = $derived(
       onNearEnd={() => panelResources.list.next()}
       loading={panelResources.list.loading}
       error={Boolean(panelResources.list.error)}
+      onVisibleItems={rows => { panelResources.list.visibleIds = new Set(rows.map(row => row.id)) }}
       onRetry={panelResources.retry}
       viewKey={panelResources.viewKey}
     />

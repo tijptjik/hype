@@ -10,6 +10,7 @@ let {
   items,
   item,
   onNearEnd,
+  onVisibleItems,
   loading = false,
   error = false,
   onRetry,
@@ -18,6 +19,7 @@ let {
   items: T[]
   item: Snippet<[T]>
   onNearEnd?: () => void
+  onVisibleItems?: (items: T[]) => void
   loading?: boolean
   error?: boolean
   onRetry?: () => void
@@ -44,6 +46,8 @@ $effect(() => {
 })
 $effect(() => {
   const range = $virtualizer.range
+  if (range)
+    untrack(() => onVisibleItems?.(items.slice(range.startIndex, range.endIndex + 1)))
   if (
     !loading &&
     !error &&
