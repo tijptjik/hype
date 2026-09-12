@@ -14,7 +14,7 @@ let { issues = [] }: SectionHeaderIssues = $props()
       <span class="bits-form__section-header-issue-chip">
         <SimpleTooltip disabled={!chip.code}>
           {#snippet trigger()}
-            <span class="bits-form__section-header-issue-icon" aria-label={chip.code}>
+            <span class="bits-form__section-header-issue-icon">
               <TriangleAlert class="bits-form__section-header-issue-icon-svg" />
             </span>
           {/snippet}

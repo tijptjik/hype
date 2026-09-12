@@ -698,7 +698,7 @@ function setEditingField(
         <div>
           <h4 class="font-semibold">{m.form_errors()}</h4>
           <ul class="mt-2 text-sm">
-            {#each Object.entries(formErrors) as [ field, error ]}
+            {#each Object.entries(formErrors) as [field, error]}
               <li>{field}: {error}</li>
             {/each}
           </ul>

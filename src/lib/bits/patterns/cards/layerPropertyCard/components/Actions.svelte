@@ -28,7 +28,7 @@ let {
     <div class="bits-form__layer-card-flag">
       <SimpleTooltip>
         {#snippet trigger()}
-          <span aria-label="User Contributable">
+          <span>
             <Inbox class="bits-form__layer-card-flag-icon" aria-hidden="true" />
           </span>
         {/snippet}

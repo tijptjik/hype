@@ -183,17 +183,17 @@ $effect(() => {
         mountTransitionDuration={showModeUi ? 80 : 0}
         onInput={onSearchOrganisations}
         excludeIds={Array.from(organisationIds)}
-        getItemId={(organisation: any) => organisation.id}
+        getItemId={(organisation: HubOrganisationItem) => organisation.id}
         onSelect={handleAddOrganisation}
         resultMap={{
-          image: (organisation: any) => toImageSrc(organisation as HubOrganisationItem),
-          title: (organisation: any) =>
+          image: (organisation: HubOrganisationItem) => toImageSrc(organisation),
+          title: (organisation: HubOrganisationItem) =>
             organisation.i18n?.en?.name || organisation.code,
-          descriminator: (organisation: any) =>
+          descriminator: (organisation: HubOrganisationItem) =>
             toOrganisationSearchDiscriminator(organisation),
-          disabled: (organisation: any) =>
+          disabled: (organisation: HubOrganisationItem) =>
             isOrganisationSearchResultDisabled(organisation),
-          disabledMeta: (organisation: any) =>
+          disabledMeta: (organisation: HubOrganisationItem) =>
             toOrganisationSearchDisabledMeta(organisation),
         }}
       />

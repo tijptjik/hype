@@ -165,21 +165,24 @@ function handleDescriptionToggle(event: Event): void {
         </button>
       </div>
     {:else}
-      <div class="flex h-12 w-full items-center gap-2" onclick={handleEditMode}>
-        <h2
+      <button
+        type="button"
+        class="flex h-12 w-full appearance-none items-center gap-2 border-0 bg-transparent p-0 text-left"
+        onclick={handleEditMode}
+      >
+        <span
           class="w-full overflow-visible text-lg text-white"
           class:text-gray-500={!title.trim()}
           class:font-bold={!title.trim()}
         >
           {title || m.empty_lofty_meerkat_support()}
-        </h2>
-        <button
-          type="button"
+        </span>
+        <span
           class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
         >
           <Icon src={PencilSquare} class="h-5 w-5" />
-        </button>
-      </div>
+        </span>
+      </button>
     {/if}
   {:else}
     <ScrollableText

@@ -57,6 +57,7 @@ function handleFocusOut(event: FocusEvent): void {
 }
 </script>
 
+<!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the lazy popover open around its button. -->
 <div
   class={rootClasses}
   onmouseenter={handleOpenIntent}

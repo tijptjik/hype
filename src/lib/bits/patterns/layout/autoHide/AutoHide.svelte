@@ -153,9 +153,11 @@ onDestroy(() => {
 })
 </script>
 
+<!-- biome-ignore lint/a11y/noStaticElementInteractions: This wrapper observes pointer position to delay visual panel changes. -->
 <div
   bind:this={elementRef}
   class="bits-layout-autohide"
+  role="presentation"
   onmouseenter={handleMouseEnter}
   onmouseleave={handleMouseLeave}
 >

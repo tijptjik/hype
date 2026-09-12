@@ -162,7 +162,7 @@ $effect(() => {
                   >
                     <SimpleTooltip>
                       {#snippet trigger()}
-                        <label
+                        <div
                           class="bits-form__parent-resource-default bits-form__hub-layer-default"
                         >
                           <span
@@ -183,7 +183,7 @@ $effect(() => {
                             onCheckedChange={value =>
                               onToggleDefault(item.id, value === true)}
                           />
-                        </label>
+                        </div>
                       {/snippet}
                       {m.admin__forms_layer_visible_by_default()}
                     </SimpleTooltip>

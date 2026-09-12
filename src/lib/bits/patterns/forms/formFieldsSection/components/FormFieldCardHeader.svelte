@@ -146,7 +146,7 @@ function handleAddToProject(event: Event): void {
       {#if sourceTag.iconComponent}
         <SimpleTooltip disabled={!sourceTag.title}>
           {#snippet trigger()}
-            <span class={sourceTagIconClass} aria-label={sourceTag.title}>
+            <span class={sourceTagIconClass}>
               <sourceTag.iconComponent class="bits-project-field-card__source-icon" />
             </span>
           {/snippet}
@@ -156,7 +156,7 @@ function handleAddToProject(event: Event): void {
       {#if sourceTag.label}
         <SimpleTooltip disabled={!sourceTag.title}>
           {#snippet trigger()}
-            <span class={sourceTagLabelClass} aria-label={sourceTag.title}>
+            <span class={sourceTagLabelClass}>
               {sourceTag.label}
             </span>
           {/snippet}
@@ -203,12 +203,11 @@ function handleAddToProject(event: Event): void {
     {#if showTranslatableToggle}
       <div
         class="bits-project-field-card__toggle bits-project-field-card__toggle--inline"
-        aria-label={m.admin__forms_property_translatable()}
         transition:fade={{ duration: 180 }}
       >
         <SimpleTooltip disabled={!translatableHint}>
           {#snippet trigger()}
-            <span aria-label={translatableHint}>
+            <span>
               <Languages
                 class="bits-project-field-card__toggle-icon"
                 aria-hidden="true"
@@ -230,12 +229,11 @@ function handleAddToProject(event: Event): void {
     {#if showDefaultEnabledToggle}
       <div
         class="bits-project-field-card__toggle bits-project-field-card__toggle--inline"
-        aria-label={m.default_enabled()}
         transition:fade={{ duration: 180 }}
       >
         <SimpleTooltip disabled={!defaultEnabledHint}>
           {#snippet trigger()}
-            <span aria-label={defaultEnabledHint}>
+            <span>
               <CopyCheck
                 class="bits-project-field-card__toggle-icon"
                 aria-hidden="true"

@@ -81,8 +81,8 @@ function handleClickOutside(event: MouseEvent): void {
   if (
     input &&
     !input.contains(target) &&
-    (!editButton || !editButton.contains(target)) &&
-    (!saveButton || !saveButton.contains(target))
+    !editButton?.contains(target) &&
+    !saveButton?.contains(target)
   ) {
     cancelEdit()
   }

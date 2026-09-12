@@ -38,7 +38,7 @@ const wrapperClass = $derived(
 )
 </script>
 
-<label {...wrapperAttrs} class={wrapperClass} for={id}>
+<div {...wrapperAttrs} class={wrapperClass}>
   <Label
     for={id}
     text={label}
@@ -63,4 +63,4 @@ const wrapperClass = $derived(
     {contentClass}
     {onValueChange}
   />
-</label>
+</div>

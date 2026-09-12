@@ -22,7 +22,7 @@ let { title, icon, statuses, showTitle = true }: FeatureStatPipsProps = $props()
   </span>
 
   <div class="bits-feature-stat__pips">
-    {#each Object.entries(statuses) as [ label, status ]}
+    {#each Object.entries(statuses) as [label, status]}
       <SimpleTooltip>
         {#snippet trigger()}
           <div

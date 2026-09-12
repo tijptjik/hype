@@ -1,16 +1,14 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { m, getLocale, getLocaleKey, setLocale as setRuntimeLocale } from '$lib/i18n'
+import { m } from '$lib/i18n'
 // API
 import { getUser, updateUserProfile } from '$lib/api/server/user.remote'
 // SERVICES
 import { refreshUserSession } from '$lib/client/services/user'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type { Locale } from '$lib/types'
 import type {
-  UserPreferences,
   ExperimentalFeatureConfig,
   UserExperimental,
 } from '$lib/db/zod/schema/user.types'

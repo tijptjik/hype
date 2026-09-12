@@ -553,9 +553,9 @@ function applyDraftCustomPreset(
       isPublicDomain,
       isAllRightsReserved: !isPublicDomain,
       BY: isPublicDomain ? false : null,
-      SA: isPublicDomain ? false : true,
-      NC: isPublicDomain ? false : true,
-      ND: isPublicDomain ? false : true,
+      SA: !isPublicDomain,
+      NC: !isPublicDomain,
+      ND: !isPublicDomain,
     }
 
     if (target !== 'all') {
@@ -1002,10 +1002,7 @@ $effect(() => {
                     >
                       <SimpleTooltip>
                         {#snippet trigger()}
-                          <span
-                            class="bits-license__table-head-icon"
-                            aria-label={mediaConfigByType[mediaType].label}
-                          >
+                          <span class="bits-license__table-head-icon">
                             {#if mediaType === 'image'}
                               <ImageIcon />
                             {:else if mediaType === 'text'}
@@ -1351,7 +1348,7 @@ $effect(() => {
         {/if}
 
         <div class="bits-license__footer">
-          <div
+          <ol
             class="bits-license__stepper bits-license__stepper--footer"
             aria-label="License wizard steps"
           >
@@ -1366,7 +1363,7 @@ $effect(() => {
                   .join(' ')}
               ></span>
             {/each}
-          </div>
+          </ol>
           <div class="bits-license__dialog-actions">
             {#if wizardStep > 1}
               <Button

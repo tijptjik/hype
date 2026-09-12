@@ -385,6 +385,7 @@ onDestroy(() => {
 
       {#snippet rightRail(_item)}
         {#if displayedActiveImage}
+          <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
           <div
             class="group/metadata relative"
             onmouseleave={() => {

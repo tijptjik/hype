@@ -96,6 +96,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
 
   {#snippet rightRail(_item)}
     {#if model.state.activeImage}
+      <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
       <div
         class="group/metadata relative"
         onmouseleave={() => {

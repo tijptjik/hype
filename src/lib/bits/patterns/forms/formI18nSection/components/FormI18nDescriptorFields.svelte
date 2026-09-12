@@ -2,12 +2,29 @@
 import { m } from '$lib/i18n'
 import { getGenAiState, toggleGenAiField } from '$lib/client/services/form'
 import { TextArea, TextInput } from '$lib/bits/custom/form'
-import type { GenAiField, LocaleKey } from '$lib/types'
+import type { FormBooleanValue, GenAiField, LocaleKey } from '$lib/types'
 
 type DescriptorFieldConfig = {
   key: GenAiField
   label: string
   kind: 'input' | 'textarea'
+}
+
+type FormFieldControl = {
+  as: (type: string, value?: string) => Record<string, unknown>
+  issues: () => unknown
+}
+
+type DescriptorFormFields = Record<string, FormFieldControl>
+type DescriptorForm = {
+  fields: {
+    value: () => {
+      data?: {
+        i18n?: Record<string, Record<string, FormBooleanValue>>
+      }
+    }
+    set: (value: { i18n?: Record<string, Record<string, FormBooleanValue>> }) => void
+  }
 }
 
 const defaultFieldConfigs: DescriptorFieldConfig[] = [
@@ -24,8 +41,8 @@ let {
   isRequiredInPreflight,
   fieldConfigs = defaultFieldConfigs,
 }: {
-  form: any
-  fields: any
+  form: DescriptorForm
+  fields: DescriptorFormFields
   locale: LocaleKey
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean

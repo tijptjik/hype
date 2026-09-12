@@ -138,7 +138,7 @@ function handleUsernameAction(): void {
   <div class="relative flex min-w-0 items-center justify-center">
     {#if hideEditableFields}
       <span
-        class="tooltip font-medium text-white"
+        class="tooltip font-medium text-base-content"
         data-tip={userAttribution || 'No attribution set'}
       >
         {userDisplayName}
@@ -154,8 +154,8 @@ function handleUsernameAction(): void {
           autocorrect="off"
           spellcheck="false"
           class={cx(
-            'min-w-24 border-none bg-transparent px-2 text-center font-medium text-white outline-none transition-[width] duration-200 ease-[ease]',
-            'placeholder:text-center placeholder:text-white/60 focus:outline-none disabled:pointer-events-none',
+            'min-w-24 border-none bg-transparent px-2 text-center font-medium text-base-content outline-none transition-[width] duration-200 ease-[ease]',
+            'placeholder:text-center placeholder:text-base-content/60 focus:outline-none disabled:pointer-events-none',
           )}
           style={`width:calc(${usernameInputWidthCh}ch + ${USERNAME_INPUT_HORIZONTAL_PADDING});`}
           oninput={handleUsernameInput}
@@ -163,7 +163,7 @@ function handleUsernameAction(): void {
           placeholder={usernameInputPlaceholder}
         >
       {:else}
-        <span class="min-w-0 px-2 text-center font-medium text-white">
+        <span class="min-w-0 px-2 text-center font-medium text-base-content">
           {displayedUsername}
         </span>
       {/if}
@@ -178,7 +178,7 @@ function handleUsernameAction(): void {
         modifier="square"
         hideLabel={true}
         hideLabelInstantly={true}
-        class="min-h-0 h-4 w-4 rounded-none border-0 p-0 text-white/80 shadow-none [--btn-size:1rem] [--btn-icon-ratio:1] hover:text-white focus-visible:text-white"
+        class="min-h-0 h-4 w-4 rounded-none border-0 p-0 text-base-content/80 shadow-none [--btn-size:1rem] [--btn-icon-ratio:1] hover:text-base-content focus-visible:text-base-content"
         attrs={{
           title: isEditingUsername ? 'Save username' : 'Edit username',
         }}

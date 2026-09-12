@@ -127,14 +127,14 @@ const descriptionContentWidth = $derived(
 )
 const featureProperties = $derived(
   getFeatureCardDisplayProperties(appCtx, feature.layerId, feature).filter(
-    (property: any) =>
+    property =>
       property.property?.key !== 'grade' &&
       getFPI18n(property, userPreferences) !== '-' &&
       getFPI18n(property, userPreferences) !== m.great_crazy_squid_promise(),
   ),
 )
 const featurePropertyItems = $derived.by((): FeaturePropertyItem[] =>
-  featureProperties.map((property: any) => ({
+  featureProperties.map(property => ({
     id: property.propertyId,
     label: getI18n(property.property, 'label', userPreferences),
     value: getFPI18n(property, userPreferences),

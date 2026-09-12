@@ -9,11 +9,7 @@ import { refreshUserSession } from '$lib/client/services/user'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { Locale } from '$lib/types'
-import type {
-  UserPreferences,
-  ExperimentalFeatureConfig,
-  UserExperimental,
-} from '$lib/db/zod/schema/user.types'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 
 /**
  * Owns language preference mutations and optimistic rollback.

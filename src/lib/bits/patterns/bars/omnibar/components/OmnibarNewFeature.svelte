@@ -8,7 +8,7 @@ let { onCreateFeature }: OmnibarNewFeatureProps = $props()
 </script>
 
 <div
-  class="flex select-none flex-col divide-y divide-neutral-800 overscroll-contain bg-neutral-900 caret-transparent"
+  class="flex select-none flex-col divide-y divide-border overscroll-contain bg-panel caret-transparent"
 >
   <button
     type="button"

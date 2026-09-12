@@ -41,11 +41,11 @@ function handleClick(event: Event): void {
 }
 </script>
 
-<div
+<button
+  type="button"
   class={getRowThumbnailClass({ isClickable: !!onClick })}
   onclick={handleClick}
   tabindex="-1"
-  role="button"
 >
   {#if resolvedSrc}
     <img src={resolvedSrc} alt class={rowThumbnailImageClass}>
@@ -54,4 +54,4 @@ function handleClick(event: Event): void {
       <span class={rowThumbnailFallbackTextClass}></span>
     </div>
   {/if}
-</div>
+</button>

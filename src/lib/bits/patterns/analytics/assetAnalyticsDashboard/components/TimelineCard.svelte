@@ -232,6 +232,7 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
               <g>
                 {#each [...timelineSegments].reverse() as segment}
                   {#if segment.height > 0}
+                    <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hovering a chart segment supplies its tooltip. -->
                     <rect
                       {x}
                       y={segment.y}

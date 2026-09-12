@@ -428,8 +428,9 @@ onDestroy(() => {
     >
   {/each}
 
-  <div
+  <section
     bind:this={trackEl}
+    aria-label="Gallery thumbnails"
     onmouseenter={handleTrackPointerEnter}
     onmousemove={handleTrackPointerMove}
     onwheel={handleTrackWheel}
@@ -449,6 +450,7 @@ onDestroy(() => {
     )}
   >
     {#each items as item, index (item.renderKey ?? item.id)}
+      <!-- biome-ignore lint/a11y/noStaticElementInteractions: Thumbnail hover updates the visual preview without adding a separate control. -->
       <div
         data-gallery-thumb-id={item.id}
         data-gallery-thumb-index={index}
@@ -497,7 +499,7 @@ onDestroy(() => {
         {/if}
       </div>
     {/each}
-  </div>
+  </section>
 
   {#if footer}
     <div

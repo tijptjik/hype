@@ -178,6 +178,8 @@ async function toggleVisited(): Promise<void> {
     if (appCtx.user?.id !== userId) return
     const settled = (response?.data as UserFeature | null) ?? null
     appCtx.applyUserFeatureState(featureId, settled)
+    // Successful list edits revalidate active query pages and their authoritative totals.
+    void appCtx.cacheCtx.reconcile('feature')
     if (!('id' in feature) || feature.id !== featureId) return
     settledVisitState = {
       isVisited: Boolean(settled?.isVisited),

@@ -21,7 +21,7 @@ let {
   isNarrow = false,
   ...panelProps
 }: PanelProps & {
-  children: any
+  children: import('svelte').Snippet
   panelContainer?: HTMLDivElement
 } & PanelProps = $props()
 

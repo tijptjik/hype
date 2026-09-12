@@ -10,7 +10,7 @@ let { sections }: OmnibarResultsProps = $props()
 </script>
 
 <div
-  class="z-50 flex min-h-0 select-none flex-col divide-y divide-neutral-800 overscroll-contain bg-neutral-900 caret-transparent"
+  class="z-50 flex min-h-0 select-none flex-col divide-y divide-border overscroll-contain bg-panel caret-transparent"
   role="listbox"
   tabindex="-1"
 >

@@ -124,7 +124,7 @@ export interface HeaderAvatarConfig {
 }
 
 export interface HeaderLayoutRegionConfig {
-  component?: Component<any> | null
+  component?: Component<Record<string, unknown>> | null
   props?: Record<string, unknown>
   isVisible?: boolean
   height?: string

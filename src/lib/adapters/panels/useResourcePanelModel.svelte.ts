@@ -240,13 +240,7 @@ export function useResourcePanelModel(
         app.togglePanel(panelType)
       } else app.closePanel(panelType)
     },
-    get loadingMessage() {
-      return mode === 'prisms' && ['loading', 'partial'].includes(app.featureLoadState)
-        ? m.resource_features_loading({
-            count: String(app.state.resources.feature.length),
-          })
-        : undefined
-    },
+    // Map pages refresh silently while the user explores; only failures need panel feedback.
     get loadError() {
       return mode === 'prisms' && app.featureLoadState === 'error'
     },

@@ -66,7 +66,7 @@ function handleValueChange(nextValue: string): void {
 }
 </script>
 
-<label class={wrapperClass} for={id}>
+<div class={wrapperClass}>
   <Label
     for={id}
     text={label}
@@ -100,4 +100,4 @@ function handleValueChange(nextValue: string): void {
       </div>
     {/if}
   </div>
-</label>
+</div>

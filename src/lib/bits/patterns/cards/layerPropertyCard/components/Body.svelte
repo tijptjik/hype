@@ -23,7 +23,6 @@ const IconComponent = $derived(iconComponent)
           {#snippet trigger()}
             <span
               class={`bits-form__layer-card-type-icon-wrap bits-form__layer-card-type-icon-wrap--${scopeTone}`}
-              aria-label={iconTitle ?? undefined}
             >
               <IconComponent class="bits-form__layer-card-type-icon" />
             </span>

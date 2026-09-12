@@ -168,6 +168,7 @@ onDestroy(() => {
     </button>
   {/snippet}
 
+  <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hovering the popover content keeps it open while the pointer moves from its trigger. -->
   <div class="space-y-3" onmouseenter={openPopover} onmouseleave={closePopoverSoon}>
     {#if previewFailed}
       <div

@@ -3,6 +3,20 @@ import { m } from '$lib/i18n'
 import { TextInput, SectionHeader } from '$lib/bits/custom/form'
 import FormSection from './FormSection.svelte'
 
+type FormFieldControl = {
+  as: (type: string) => Record<string, unknown>
+  issues: () => unknown
+}
+
+type SpecifiersForm = {
+  fields: {
+    data: {
+      code: FormFieldControl
+      url: FormFieldControl
+    }
+  }
+}
+
 let {
   form,
   isEditing = false,
@@ -10,7 +24,7 @@ let {
   fields = ['code', 'url'],
   title = m.admin__forms_common_specifiers(),
 }: {
-  form: any
+  form: SpecifiersForm
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   fields?: Array<'code' | 'url'>

@@ -51,13 +51,13 @@ const surfaceClasses = $derived(
         oninput={event =>
           search.onSearchTermChange((event.currentTarget as HTMLInputElement).value)}
         onfocus={search.onOpenTray}
-        class="h-12 min-w-0 w-full appearance-none rounded-lg border-0 bg-panel pl-6 pr-10 text-sm caret-current focus:outline-none"
+        class="h-12 min-w-0 w-full appearance-none rounded-lg border-0 bg-panel pl-6 pr-10 text-sm text-base-content caret-current placeholder:text-muted-foreground focus:outline-none"
         use:focusOnSlash={() => void null}
         use:selectOnEnter={search.onSelectFirstResult}
         use:handleEscape={search.onClearSearchOrCloseTray}
       >
       <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-        <Icon src={MagnifyingGlass} class="h-6 w-6" />
+        <Icon src={MagnifyingGlass} tone="base" class="h-6 w-6" />
       </div>
     </div>
   </div>

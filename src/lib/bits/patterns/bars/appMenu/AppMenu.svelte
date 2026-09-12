@@ -93,23 +93,23 @@ function handleSelect(item: AppMenuItem<T>, event: MouseEvent): void {
   void onSelect?.(item, event)
 }
 
-function getItemIconTone(item: AppMenuItem<T>): 'primary' | 'white' | 'secondary' {
+function getItemIconTone(item: AppMenuItem<T>): 'primary' | 'base' | 'secondary' {
   if (!isPillMenu) return 'primary'
-  return trailingItems.includes(item) ? 'secondary' : 'white'
+  return trailingItems.includes(item) ? 'secondary' : 'base'
 }
 
 function getItemIconClasses(item: AppMenuItem<T>): string {
   const baseIconClass =
     isPillMenu && trailingItems.includes(item) ? 'text-secondary' : 'text-base-content'
-  return `${isPillMenu ? `${baseIconClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)]` : 'text-primary'} ${item.iconClasses ?? ''}`.trim()
+  return `${isPillMenu ? `${baseIconClass} transition-[filter,color] duration-150 ease-[ease]` : 'text-primary'} ${item.iconClasses ?? ''}`.trim()
 }
 
 function getItemButtonClasses(): string {
   return cx(
     menuButtonClasses,
     isPillMenu && 'group/app-menu-pill',
-    isPillMenu && 'hover:[--btn-transparent-hover-fg:var(--color-white)]',
-    isPillMenu && 'focus-visible:[--btn-transparent-hover-fg:var(--color-white)]',
+    isPillMenu && 'hover:[--btn-transparent-hover-fg:var(--color-primary)]',
+    isPillMenu && 'focus-visible:[--btn-transparent-hover-fg:var(--color-primary)]',
   )
 }
 
@@ -126,7 +126,7 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
     ? 'text-secondary'
     : 'text-base-content'
 
-  return `min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)]`
+  return `min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease]`
 }
 </script>
 

@@ -24,7 +24,12 @@ let {
   class={`bits-resource-filter-bar__filter ${className}`.trim()}
   bind:this={rootElement}
 >
-  <div class="bits-resource-filter-bar__filter-anchor" onmouseenter={onHover}>
+  <!-- biome-ignore lint/a11y/noStaticElementInteractions: The filter anchor observes hover to coordinate its menu. -->
+  <div
+    class="bits-resource-filter-bar__filter-anchor"
+    role="presentation"
+    onmouseenter={onHover}
+  >
     <Button
       text={label}
       style="outline"

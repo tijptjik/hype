@@ -7,9 +7,9 @@ import type { ResourceControlBarResultCountProps } from './resourceControlBarPri
 let { count, class: className = '' }: ResourceControlBarResultCountProps = $props()
 </script>
 
-<div
+<output
   class={`bits-resource-filter-bar__result-count ${className}`.trim()}
   aria-label={`Results: ${count}`}
 >
   <span class="bits-resource-filter-bar__result-count-value">{count}</span>
-</div>
+</output>
