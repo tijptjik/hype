@@ -15,7 +15,7 @@
   - `patterns/`: composed components built from `core` and `custom`.
 - Route files follow SvelteKit conventions (`+page.svelte`, `+server.ts`).
   - `+page.ts` are dropped in favour of svelte remote functions.
-  - Remote functions are stored in `src/api/server/<resourceType>.remote.ts`
+  - Remote functions are stored in `src/lib/api/server/<resourceType>.remote.ts`
 - Keep domain service modules grouped by entity (`src/lib/db/services/feature.ts`, etc.).
 
 ### Comments
@@ -50,3 +50,13 @@
   - Use type guards/type predicates for runtime narrowing where needed.
   - Prefer discriminated unions for complex state machines.
   - Use utility types (`Partial`, `Readonly`, `Pick`, etc.) and `as const` for enum-like constants.
+
+## GitHub work tracking
+
+- Breadline v4 tracker: https://github.com/tijptjik/hype/issues/178. Domain parent issues are #179–#187; use the matching parent and leaf issue for the work being changed.
+- When work belongs to a tracked issue, include the issue URL or number in the branch, pull request and relevant commit message. Use `Refs #N` for partial work and `Closes #N` only when the change fully completes the issue.
+- Keep implementation and acceptance TODO checkboxes accurate as evidence is produced. Link code, tests, migrations, browser checks and design decisions from the issue; leave incomplete or unverified items unchecked.
+- Record blockers and scope changes on the issue. Keep the domain parent checklist and milestone counts current using completed leaf issues / total leaf issues and verified acceptance TODOs / total acceptance TODOs. Do not double-count parent issues or canceled work.
+- GitHub issues, sub-issues and repository milestones are the public delivery record. Do not create or maintain a parallel progress ledger in `spec/breadline/breadline.v4.spec.progress.md`; technical specifications link to their tracking issues and document requirements and decisions.
+- Use the Breadline labels and milestone assigned to the issue. Keep issue bodies public-safe: never include credentials, personal contact details or raw migration exports.
+- Link each implementation to the technical domain document under `spec/breadline/proposal/` and update that document when the implementation path or blocker changes.

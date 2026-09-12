@@ -89,6 +89,7 @@ Stored in `wrangler.toml` and accessible in both server and client contexts:
 - `PUBLIC_HUB_CODE` - Hub override for development
 - `PUBLIC_AZURE_TRANSLATION_REGION` - Azure translation region
 - `PUBLIC_GIPHY_KEY` - Giphy API key
+- `PUBLIC_SAANSEOI_API_KEY` - Optional SaanSeoi basemap key; when unset, maps use the legacy Hype TileJSON endpoint
 
 #### **Secret Variables** (Sensitive)
 
