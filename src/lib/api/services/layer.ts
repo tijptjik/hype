@@ -1,3 +1,5 @@
+import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
+import type { CompactAncestorRow } from '$lib/types'
 // DRIZZLE
 import type { SQL } from 'drizzle-orm'
 // UTILS
@@ -24,6 +26,7 @@ import {
 import { probeProjectForUpdate } from '$lib/db/services/project'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
+  LayerCompactProfileAPI,
   LayerAdminProfileAPI,
   LayerCardProfileAPI,
   LayerDetailProfileAPI,
@@ -128,9 +131,21 @@ export const getLayerWithRelations = (
   profile: LayerProfile,
   isAdminUser: boolean,
 ): Record<string, boolean | object> => {
+  if (profile === 'compact')
+    return {
+      i18n: true,
+      organisation: compactAncestorRelations,
+      project: compactAncestorRelations,
+    }
   if (profile === 'admin') return layerEntityWithRelations
 
-  if (profile === 'detail' || profile === 'card') {
+  if (
+    profile === 'detail' ||
+    profile === 'full' ||
+    profile === 'card' ||
+    profile === 'default' ||
+    profile === 'map'
+  ) {
     return {
       i18n: true,
       properties: true,
@@ -150,7 +165,16 @@ export const getLayerWithRelations = (
 /********************
  *  PROFILE SHAPING
  ************/
-const layerProfiles = ['list', 'card', 'detail', 'admin'] as const
+const layerProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 /**
  * Normalizes arbitrary profile input into a supported layer profile.
@@ -232,9 +256,16 @@ const toProfileResponseShape = async (
     properties: normalizeLayerPropertiesForProfile(row.properties),
   }
 
+  if (profile === 'compact')
+    return LayerCompactProfileAPI.parse({
+      ...data,
+      ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
+    }) as unknown as Layer
   if (profile === 'list') return LayerListProfileAPI.parse(data) as Layer
-  if (profile === 'card') return LayerCardProfileAPI.parse(data) as Layer
-  if (profile === 'detail') return LayerDetailProfileAPI.parse(data) as Layer
+  if (profile === 'card' || profile === 'default' || profile === 'map')
+    return LayerCardProfileAPI.parse(data) as Layer
+  if (profile === 'detail' || profile === 'full')
+    return LayerDetailProfileAPI.parse(data) as Layer
   return LayerAdminProfileAPI.parse(data) as Layer
 }
 

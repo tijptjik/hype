@@ -1,3 +1,5 @@
+import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
+import type { CompactAncestorRow } from '$lib/types'
 // DRIZZLE
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
 // CAPABILITIES
@@ -19,6 +21,7 @@ import { applyTriStateBooleanCondition } from '$lib/db/query'
 import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
+  ProjectCompactProfileAPI,
   ProjectAdminProfileAPI,
   ProjectCardProfileAPI,
   ProjectDetailProfileAPI,
@@ -185,11 +188,22 @@ type ProjectRelationsByProfile<P extends ProjectProfile> = P extends 'admin'
 export const getProjectWithRelations = <P extends ProjectProfile>(
   profile: P,
 ): ProjectRelationsByProfile<P> => {
+  if (profile === 'compact')
+    return {
+      i18n: true,
+      organisation: compactAncestorRelations,
+    } as ProjectRelationsByProfile<P>
   if (profile === 'admin') {
     return projectEntityWithRelations as ProjectRelationsByProfile<P>
   }
 
-  if (profile === 'card' || profile === 'detail') {
+  if (
+    profile === 'card' ||
+    profile === 'default' ||
+    profile === 'map' ||
+    profile === 'detail' ||
+    profile === 'full'
+  ) {
     return projectCollectionWithRelations as ProjectRelationsByProfile<P>
   }
 
@@ -199,7 +213,16 @@ export const getProjectWithRelations = <P extends ProjectProfile>(
 /********************
  *  PROFILE SHAPING
  ************/
-const projectProfiles = ['list', 'card', 'detail', 'admin'] as const
+const projectProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 type ProjectResponseRow = ProjectDB & {
   i18n?: ProjectListDBRaw['i18n']
@@ -245,7 +268,14 @@ const toProfileResponseShape = async (
   properties: NonNullable<ProjectResponseRow['properties']> = [],
   profile: ProjectProfile = 'detail',
 ): Promise<ProjectEntityByProfile<ProjectProfile>> => {
-  const imageProfile = profile === 'admin' ? 'admin' : profile
+  const imageProfile =
+    profile === 'default' || profile === 'map'
+      ? 'card'
+      : profile === 'full'
+        ? 'detail'
+        : profile === 'compact'
+          ? 'list'
+          : profile
   const normalizedUserRoles = (userRoles ?? []).map(userRole => ({
     ...userRole,
     capabilities: userRole.capabilities ?? {},
@@ -302,10 +332,10 @@ const toProfileResponseShape = async (
   if (profile === 'admin') {
     return ProjectAdminProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
   }
-  if (profile === 'detail') {
+  if (profile === 'detail' || profile === 'full') {
     return ProjectDetailProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
   }
-  if (profile === 'card') {
+  if (profile === 'card' || profile === 'default' || profile === 'map') {
     return ProjectCardProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
   }
   return ProjectListProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>

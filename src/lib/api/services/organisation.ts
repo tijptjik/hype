@@ -15,6 +15,7 @@ import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import { isSuperAdmin } from '$lib/client/services/auth'
 import {
+  OrganisationCompactProfileAPI,
   OrganisationAdminProfileAPI,
   OrganisationCardProfileAPI,
   OrganisationDetailProfileAPI,
@@ -97,6 +98,7 @@ export const getOrganisationWithRelations = (
   profile: OrganisationProfile,
   isSuperAdmin: boolean,
 ) => {
+  if (profile === 'compact') return { i18n: true }
   if (profile === 'admin') {
     return {
       ...organisationWithRelations,
@@ -129,7 +131,13 @@ export const getOrganisationWithRelations = (
     }
   }
 
-  if (profile === 'card' || profile === 'detail') {
+  if (
+    profile === 'card' ||
+    profile === 'default' ||
+    profile === 'map' ||
+    profile === 'detail' ||
+    profile === 'full'
+  ) {
     return {
       i18n: true,
       image: true,
@@ -144,7 +152,16 @@ export const getOrganisationWithRelations = (
 /********************
  *  PROFILE SHAPING
  ************/
-const organisationProfiles = ['list', 'card', 'detail', 'admin'] as const
+const organisationProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 /**
  * Normalizes unknown profile input to a supported organisation profile value.
@@ -211,16 +228,25 @@ const toProfileResponseShape = async (
     image: organisation.image
       ? toImageEnvelope(
           toNormalizedImageRecord(organisation.image),
-          profile,
+          profile === 'default' || profile === 'map'
+            ? 'card'
+            : profile === 'full'
+              ? 'detail'
+              : profile === 'compact'
+                ? 'list'
+                : profile,
           ImageContextResource.organisation,
           organisation.id,
         )
       : null,
   }
 
+  if (profile === 'compact') return OrganisationCompactProfileAPI.parse(data)
   if (profile === 'list') return OrganisationListProfileAPI.parse(data)
-  if (profile === 'card') return OrganisationCardProfileAPI.parse(data)
-  if (profile === 'detail') return OrganisationDetailProfileAPI.parse(data)
+  if (profile === 'card' || profile === 'default' || profile === 'map')
+    return OrganisationCardProfileAPI.parse(data)
+  if (profile === 'detail' || profile === 'full')
+    return OrganisationDetailProfileAPI.parse(data)
   return OrganisationAdminProfileAPI.parse(data) as unknown as Organisation
 }
 

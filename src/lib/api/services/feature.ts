@@ -26,6 +26,7 @@ import { supportedLocaleKeys, toFormLocaleRecord, toLocaleKey } from '$lib/i18n'
 // SCHEMA
 import { feature, layer } from '$lib/db/schema/index'
 import {
+  FeatureCompactProfileAPI,
   FeatureAdminProfileAPI,
   FeatureCardProfileAPI,
   FeatureDraftEntityFormData,
@@ -242,10 +243,17 @@ type FeatureRelationsByProfile<P extends FeatureProfile> = P extends 'admin'
 export const getFeatureWithRelations = <P extends FeatureProfile>(
   profile: P,
 ): FeatureRelationsByProfile<P> => {
+  if (profile === 'compact') return { i18n: true } as FeatureRelationsByProfile<P>
   if (profile === 'admin') {
     return featureAdminRelations as FeatureRelationsByProfile<P>
   }
-  if (profile === 'card' || profile === 'detail') {
+  if (
+    profile === 'card' ||
+    profile === 'default' ||
+    profile === 'map' ||
+    profile === 'detail' ||
+    profile === 'full'
+  ) {
     return featureDetailRelations as FeatureRelationsByProfile<P>
   }
   return featureListRelations as FeatureRelationsByProfile<P>
@@ -255,7 +263,16 @@ export const getFeatureWithRelations = <P extends FeatureProfile>(
  *  PROFILE SHAPING
  ************/
 
-const featureProfiles = ['list', 'card', 'detail', 'admin'] as const
+const featureProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 type FeatureImageRelation = {
   featureId?: string
@@ -395,6 +412,11 @@ const toProfileResponseShape = async (
   row: FeatureResponseRow,
   profile: FeatureProfile,
 ): Promise<FeatureEntityByProfile<FeatureProfile>> => {
+  if (profile === 'compact')
+    return FeatureCompactProfileAPI.parse({
+      ...row,
+      i18n: transformI18nSafely(row.i18n ?? []),
+    })
   const imageProfile =
     profile === 'admin' ? 'admin' : profile === 'list' ? 'list' : 'detail'
   const filterUnpublished = profile !== 'admin'
@@ -413,7 +435,10 @@ const toProfileResponseShape = async (
     i18n: transformI18nSafely(row.i18n as never),
     properties: toPropertyShape(row.properties),
     image:
-      profile === 'list' || profile === 'card'
+      profile === 'list' ||
+      profile === 'card' ||
+      profile === 'default' ||
+      profile === 'map'
         ? imageState
         : (imageState as { image: unknown }).image,
   }
@@ -437,7 +462,7 @@ const toProfileResponseShape = async (
     ) as FeatureEntityByProfile<FeatureProfile>
   }
 
-  if (profile === 'card') {
+  if (profile === 'card' || profile === 'default' || profile === 'map') {
     const normalizedProperties = normalizeFeaturePropertiesForLayer(
       row.id,
       row.properties,
@@ -461,7 +486,7 @@ const toProfileResponseShape = async (
     ) as FeatureEntityByProfile<FeatureProfile>
   }
 
-  if (profile === 'detail') {
+  if (profile === 'detail' || profile === 'full') {
     const normalizedProperties = normalizeFeaturePropertiesForLayer(
       row.id,
       row.properties,
