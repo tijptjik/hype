@@ -1,14 +1,9 @@
 // I18N
 import { getLocaleKey } from '$lib/i18n'
-import { getOrganisations } from '$lib/api/server/organisation.remote'
 import { getHubs } from '$lib/api/server/hub.remote'
 import { getFeatures } from '$lib/api/server/feature.remote'
 import { getTasks } from '$lib/api/server/tasks.remote'
-import {
-  refreshRemoteQuery as runRemoteQuery,
-  toSafeListResponse,
-  type ImperativeRemoteQuery,
-} from '$lib/remote'
+import { refreshRemoteQuery as runRemoteQuery, toSafeListResponse } from '$lib/remote'
 // SERVICES
 import { toProjectLicenseFilterCache } from '$lib/client/services/licence'
 import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
@@ -52,6 +47,8 @@ import type {
   UserPreferences,
 } from '$lib/db/zod/schema/user.types'
 import type { UserRoleDisco } from '$lib/types'
+
+type LocalizedRecord = Record<string, unknown>
 
 // ═══════════════════════
 // 3-TIER FILTER SYSTEM
@@ -328,7 +325,7 @@ export class AdminCtx {
   // Initialize admin-specific query map on appCtx
   private initializeAdminQueryMap = (): void => {
     // Guard against undefined appCtx
-    if (!this.appCtx || !this.appCtx.queryMap) {
+    if (!this.appCtx?.queryMap) {
       console.warn('AdminCtx: Cannot initialize query map - appCtx not ready')
       return
     }
@@ -918,7 +915,7 @@ export class AdminCtx {
 
       // First, check if ANY locale has manual (non-generated) content for this field
       const hasAnyManualContent = Object.values(feature.i18n ?? {}).some(
-        (i18n: any) => {
+        (i18n: LocalizedRecord) => {
           const text = i18n?.[textField]
           const isGenerated = i18n?.[genField] ?? false
           return text && typeof text === 'string' && text.length > 0 && !isGenerated
@@ -1233,7 +1230,7 @@ export class AdminCtx {
 
       // First, check if ANY locale has manual (non-generated) content for this field
       const hasAnyManualContent = Object.values(organisation.i18n ?? {}).some(
-        (i18n: any) => {
+        (i18n: LocalizedRecord) => {
           const text = i18n?.[textField]
           const isGenerated = i18n?.[genField] ?? false
           return text && typeof text === 'string' && text.length > 0 && !isGenerated
@@ -1477,7 +1474,7 @@ export class AdminCtx {
 
       // First, check if ANY locale has manual (non-generated) content for this field
       const hasAnyManualContent = Object.values(project.i18n ?? {}).some(
-        (i18n: any) => {
+        (i18n: LocalizedRecord) => {
           const text = i18n?.[textField]
           const isGenerated = i18n?.[genField] ?? false
           return text && typeof text === 'string' && text.length > 0 && !isGenerated
@@ -1660,11 +1657,13 @@ export class AdminCtx {
       if (!isAnyLocaleFiltered) continue
 
       // First, check if ANY locale has manual (non-generated) content for this field
-      const hasAnyManualContent = Object.values(layer.i18n ?? {}).some((i18n: any) => {
-        const text = i18n?.[textField]
-        const isGenerated = i18n?.[genField] ?? false
-        return text && typeof text === 'string' && text.length > 0 && !isGenerated
-      })
+      const hasAnyManualContent = Object.values(layer.i18n ?? {}).some(
+        (i18n: LocalizedRecord) => {
+          const text = i18n?.[textField]
+          const isGenerated = i18n?.[genField] ?? false
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated
+        },
+      )
 
       // Calculate multi-locale translation status - ALL active locales must be translated for TRUE
       const calculateMultiLocaleTranslationStatus = (): boolean | null => {
@@ -1914,11 +1913,13 @@ export class AdminCtx {
       if (!isAnyLocaleFiltered) continue
 
       // First, check if ANY locale has manual (non-generated) content for this field
-      const hasAnyManualContent = Object.values(hub.i18n ?? {}).some((i18n: any) => {
-        const text = i18n?.[textField]
-        const isGenerated = i18n?.[genField] ?? false
-        return text && typeof text === 'string' && text.length > 0 && !isGenerated
-      })
+      const hasAnyManualContent = Object.values(hub.i18n ?? {}).some(
+        (i18n: LocalizedRecord) => {
+          const text = i18n?.[textField]
+          const isGenerated = i18n?.[genField] ?? false
+          return text && typeof text === 'string' && text.length > 0 && !isGenerated
+        },
+      )
 
       // Calculate multi-locale translation status - ALL active locales must be translated for TRUE
       const calculateMultiLocaleTranslationStatus = (): boolean | null => {

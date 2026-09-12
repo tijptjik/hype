@@ -57,6 +57,7 @@ type OmniSelectionOptions = {
   focus?: boolean
   focusFeature?: boolean
   highlight?: boolean
+  updateUrl?: boolean
   navOptions?: OmniNavOptions
 }
 

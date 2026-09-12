@@ -34,14 +34,15 @@ export function usePanelResources(
       : {}),
   })
   const viewKey = $derived(JSON.stringify(input))
+  const activeResourceId = $derived(app.getActiveResourceId())
   const selected = $derived(
     slot === 'index'
       ? []
       : [
           ...new Set([
             ...app.state.prisms[type],
-            ...(app.getActiveResourceType() === type && app.getActiveResourceId()
-              ? [app.getActiveResourceId()!]
+            ...(app.getActiveResourceType() === type && activeResourceId
+              ? [activeResourceId]
               : []),
           ]),
         ],

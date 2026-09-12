@@ -3,7 +3,6 @@ import {
   getDefaultLayerResources,
   getPinnedResource,
 } from '$lib/api/server/resources.remote'
-import { getOrganisations } from '$lib/api/server/organisation.remote'
 import type { PanelResourceType, PanelResource, ResourcePageInput } from '$lib/types'
 // DATA
 // NAVIGATION
@@ -46,13 +45,14 @@ import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
+// MARKERS
+import { isFeaturePointWithinBounds } from '$lib/map/featureSpatial'
 // ENUMS
 import {
   FirstClassResource,
   type HierarchicalResource,
   Panel,
   ResourcePath,
-  ResourceRefKey,
   type NewFeatureMode,
   supportedLocaleKeys,
 } from '$lib/enums'
@@ -70,6 +70,11 @@ import type {
   FilterState,
   FilteredResources,
   FilterTriState,
+  FeatureQueryChannel,
+  FeatureMembershipOverride,
+  FeatureQueryFilters,
+  FeatureQueryInput,
+  FeatureSpatialQuery,
   Id,
   LayoutMode,
   Locale,
@@ -159,6 +164,10 @@ export class AppCtx {
   )
   readonly cacheCtx = new CacheCtx()
   cache: Cache = this.cacheCtx.entities
+  featureViewport: FeatureSpatialQuery | undefined = $state.raw()
+  /** Optional membership/flag filters compose with viewport, properties and neighbourhoods. */
+  featureQueryFilters: FeatureQueryFilters = $state({})
+  private featureMembershipOverrides = new SvelteMap<Id, FeatureMembershipOverride>()
 
   hub: HubOptsExtended | null = $state(null)
 
@@ -204,7 +213,7 @@ export class AppCtx {
     // Applied at the server level to constrain the result set of first-class resources available
     prisms: { organisation: [], project: [], layer: [] },
     // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
-    // Applied in the app regardless of view - affects all features displayed on the map and in collections
+    // Sent to feature queries for every view, with cached matches providing immediate previews.
     filters: {
       organisation: { text: '', properties: {} },
       project: { text: '', properties: {} },
@@ -618,21 +627,14 @@ export class AppCtx {
     }
   }
 
-  private isCurrentUser = (
-    user: UserProfile | CurrentUser | SessionUser | null,
-  ): user is CurrentUser => {
-    return Boolean(user && 'preferences' in user && 'userLayers' in user)
-  }
-
+  /**
+   * Reads roles without depending on unrelated profile hydration.
+   * @returns Session or profile roles used to distinguish authorized query scopes.
+   */
   private getUserRoles = (): UserRoleDisco[] => {
-    const currentUser = this.isCurrentUser(this.user)
-      ? (this.user as CurrentUser)
-      : null
-    if (!currentUser) {
-      return []
-    }
-
-    const roles = currentUser.roles
+    // Session roles are authoritative before preference and user-layer hydration.
+    // Requiring those unrelated fields changes the scope during parallel bootstrap.
+    const roles = this.user && 'roles' in this.user ? this.user.roles : []
     return Array.isArray(roles) ? roles : []
   }
 
@@ -1167,58 +1169,157 @@ export class AppCtx {
     return (await this.loadPanelResource('layer')) as unknown as Layer[]
   }
 
-  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.feature].list
-    if (!remoteList) {
-      throw new Error('Feature remote list function is not configured.')
+  /**
+   * Builds the complete feature query for a view, optionally constrained to visible cells.
+   * @param overrides - Search, membership, spatial or page options for an independent view.
+   * @returns Serializable arguments shared by server reads and immediate cache previews.
+   */
+  featureQueryInput = (
+    overrides: Partial<FeatureQueryInput> = {},
+  ): FeatureQueryInput => ({
+    prisms: {
+      organisation: [...this.state.prisms.organisation],
+      project: [...this.state.prisms.project],
+      layer: [...this.state.prisms.layer],
+    },
+    limit: 100,
+    ...overrides,
+    q: (overrides.q ?? this.state.filters.feature.text ?? '').trim(),
+    filters: {
+      ...this.featureQueryFilters,
+      properties: JSON.parse(
+        JSON.stringify(this.state.filters.feature.properties ?? {}),
+      ),
+      neighbourhoods: [...this.placeCtx.state.filters.feature.neighbourhood.include],
+      excludeNeighbourhoods: [
+        ...this.placeCtx.state.filters.feature.neighbourhood.exclude,
+      ],
+      ...overrides.filters,
+    },
+    meta: {
+      isAdminRequest: false,
+      scope: `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}:${getLocaleKey()}`,
+    },
+  })
+
+  /**
+   * Gives cached previews the same known hierarchy and user membership facts as the UI.
+   * @returns Nothing after configuring each independent feature collection.
+   */
+  private configureFeatureQueries = (): void => {
+    for (const query of Object.values(this.cacheCtx.featureQueries)) {
+      query.setMatchContext({
+        layerProjectId: id => this.cache.layer.get(id)?.projectId,
+        projectOrganisationId: id => this.cache.project.get(id)?.organisationId,
+        listMembership: (row, list) => {
+          if (list.userId && list.userId !== this.user?.id) return undefined
+          return this.getFeatureListMembership(row.id, list.listId)
+        },
+      })
     }
-    const serial = this.featureRefreshSerial
-    const scope = this.getRoleScopeQueryKey()
-    const prisms = { ...this.state.prisms, layer: [...this.state.prisms.layer] }
-    const selection = JSON.stringify(prisms.layer)
-    const isCurrent = () =>
-      serial === this.featureRefreshSerial &&
-      scope === this.getRoleScopeQueryKey() &&
-      selection === JSON.stringify(this.state.prisms.layer)
-    if (!prisms.layer.length) {
+  }
+
+  /**
+   * Loads one page for an independently scoped feature view.
+   * @param channel - View whose page membership is being updated.
+   * @param input - Complete query identity; spatial scope is optional.
+   * @returns Completion of the first page, while fresh cached matches appear immediately.
+   */
+  loadFeatureQuery = async (
+    channel: FeatureQueryChannel,
+    input: FeatureQueryInput,
+  ): Promise<void> => {
+    this.configureFeatureQueries()
+    const query = this.cacheCtx.featureQueries[channel]
+    if (channel === 'map') this.featureLoadState = 'loading'
+    try {
+      await query.load(input)
+    } catch (error) {
+      if (channel === 'map' && query.isCurrent(input) && query.error === error)
+        this.featureLoadState = 'error'
+      throw error
+    }
+    // Superseded requests must not finish the newer view's loading indicator or retention.
+    if (
+      input.meta.scope !== this.featureQueryInput().meta.scope ||
+      !query.isCurrent(input)
+    )
+      return
+    if (channel === 'map' && !query.loading) this.featureLoadState = 'complete'
+    this.retainFeatureQueryRows(channel)
+  }
+
+  /**
+   * Retains navigable feature records and current-user membership from fetched pages.
+   * @param channel - Query whose current pages have settled.
+   * @returns Nothing; map display membership remains independent of retained identities.
+   */
+  retainFeatureQueryRows = (channel: FeatureQueryChannel): void => {
+    const query = this.cacheCtx.featureQueries[channel]
+    for (const row of query.rows) this.cache.feature.set(row.id, row)
+    while (this.cache.feature.size > 2_000) {
+      const oldest = this.cache.feature.keys().next().value
+      if (!oldest) break
+      const row = this.cache.feature.get(oldest)
+      if (!row) break
+      this.cache.feature.delete(oldest)
+      if (oldest === this.state.active.feature?.id) this.cache.feature.set(oldest, row)
+    }
+    const known = new Map<string, UserFeature>(
+      [...this.state.userFeatures.wishlisted, ...this.state.userFeatures.visited].map(
+        row => [row.featureId, row],
+      ),
+    )
+    for (const page of query.pages) {
+      if (!page.current?.userFeatures) continue
+      for (const row of page.current.data) {
+        if (!this.hasRecentFeatureMembershipOverride(row.id)) known.delete(row.id)
+      }
+      for (const row of page.current.userFeatures) {
+        if (!this.hasRecentFeatureMembershipOverride(row.featureId))
+          known.set(row.featureId, row)
+      }
+    }
+    this.state.userFeatures = {
+      wishlisted: [...known.values()].filter(row => row.isWishlisted),
+      visited: [...known.values()].filter(row => row.isVisited),
+    }
+  }
+
+  /**
+   * Appends one server page to an active feature view.
+   * @param channel - Independent list/search collection to extend.
+   * @returns Completion after new IDs and membership state are retained.
+   */
+  loadMoreFeatureQuery = async (channel: FeatureQueryChannel): Promise<void> => {
+    const scope = this.featureQueryInput().meta.scope
+    await this.cacheCtx.featureQueries[channel].next()
+    if (scope === this.featureQueryInput().meta.scope)
+      this.retainFeatureQueryRows(channel)
+  }
+
+  /**
+   * Loads one bounded map page instead of draining every selected layer's cursor.
+   * @returns Current viewport features, with additional pages available explicitly.
+   */
+  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
+    const query = this.cacheCtx.featureQueries.map
+    if (!this.state.prisms.layer.length) {
+      query.clear()
       this.featureLoadState = 'complete'
       return []
     }
-    this.featureLoadState = 'loading'
-    let afterId: string | undefined
-    const records = new Map<string, FeatureFromCollection>()
-    try {
-      while (true) {
-        if (!isCurrent()) return []
-        const result = toSafeListResponse<FeatureFromCollection>(
-          (await runRemoteQuery(
-            remoteList({
-              conditions: { isArchived: false, isPublished: true },
-              prisms,
-              sorting: { sortBy: 'id', sortOrder: 'asc' },
-              pagination: { limit: 250, afterId },
-              meta: { isAdminRequest: false, profile: 'default' },
-            }),
-          )) as ListResponse<FeatureFromCollection>,
-        )
-        if (!isCurrent()) return []
-        for (const feature of result.data) {
-          records.set(feature.id, feature)
-          this.cache.feature.set(feature.id, feature)
-          this.addFeatureToMap(feature)
-        }
-        this.state.resources.feature = [...records.values()]
-        this.featureLoadState = result.hasMore ? 'partial' : 'complete'
-        if (!result.hasMore || !result.data.length) break
-        afterId = result.data.at(-1)!.id
-        // Yield a frame between batches so map rendering can make visible progress.
-        await new Promise(resolve => setTimeout(resolve, 0))
-      }
-      return [...records.values()]
-    } catch (error) {
-      if (isCurrent()) this.featureLoadState = 'error'
-      throw error
-    }
+    // The map effect starts its first page once the camera provides a viewport.
+    if (!this.featureViewport) return []
+    await this.loadFeatureQuery(
+      'map',
+      this.featureQueryInput({
+        spatial: this.featureViewport,
+        includeCounts: false,
+      }),
+    )
+    // Native pages allow visible progress without automatically requesting the entire dataset.
+    return query.rows
   }
 
   propertiesQueryFn = async (): Promise<Property[]> => {
@@ -2085,7 +2186,8 @@ export class AppCtx {
     }
 
     this.state.resources.feature = features
-    this.syncCacheMap(this.cache.feature, features)
+    // Retain entities shared with search and list queries; viewport membership is independent.
+    for (const feature of features) this.cache.feature.set(feature.id, feature)
 
     logMarkerBootstrap('feature data committed', {
       featureCount: features.length,
@@ -2103,7 +2205,7 @@ export class AppCtx {
     // Rebuild the featureId to feature map
     this.rebuildFeaturesMap()
 
-    // Rebuild the neighbourhoodRef to featureIds map
+    // Keep local neighbourhood membership useful for previews; totals come from server facets.
     this.placeCtx.setNeighbourhoodFeatures(
       this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
     )
@@ -2235,6 +2337,10 @@ export class AppCtx {
    * visible feature card in sync without waiting for a full user-feature refetch.
    */
   applyUserFeatureState = (featureId: Id, updated: UserFeature | null): void => {
+    this.featureMembershipOverrides.set(featureId, {
+      row: updated,
+      updatedAt: Date.now(),
+    })
     const current = [
       ...this.state.userFeatures.wishlisted,
       ...this.state.userFeatures.visited.filter(
@@ -2252,7 +2358,39 @@ export class AppCtx {
       wishlisted: next.filter(item => item.isWishlisted),
       visited: next.filter(item => item.isVisited),
     }
+    this.configureFeatureQueries()
     this.postUserFeaturesMutation()
+  }
+
+  /**
+   * Tests whether a recent explicit mutation supplies authoritative optimistic membership.
+   * @param featureId - Feature whose membership is being read.
+   * @returns Whether the override remains within normal collection staleness.
+   */
+  private hasRecentFeatureMembershipOverride = (featureId: Id): boolean => {
+    const override = this.featureMembershipOverrides.get(featureId)
+    return Boolean(override && Date.now() - override.updatedAt < 60_000)
+  }
+
+  /**
+   * Resolves known list membership without treating an unhydrated row as a negative match.
+   * @param featureId - Feature whose membership is being read.
+   * @param listId - Current user's built-in list.
+   * @returns Known membership, or undefined when the cache has no answer.
+   */
+  getFeatureListMembership = (
+    featureId: Id,
+    listId: 'wishlist' | 'visited',
+  ): boolean | undefined => {
+    if (this.hasRecentFeatureMembershipOverride(featureId)) {
+      const row = this.featureMembershipOverrides.get(featureId)?.row
+      return Boolean(listId === 'wishlist' ? row?.isWishlisted : row?.isVisited)
+    }
+    const entries =
+      listId === 'wishlist'
+        ? this.state.userFeatures.wishlisted
+        : this.state.userFeatures.visited
+    return entries.some(row => row.featureId === featureId) || undefined
   }
 
   refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
@@ -2294,6 +2432,17 @@ export class AppCtx {
   postUserFeaturesMutation = (): void => {
     const activeCollection = this.getActiveCollection()
     if (activeCollection?.type !== 'walk') {
+      return
+    }
+
+    // Paged user lists keep their query predicates, ordering and server totals after an edit.
+    if (activeCollection.totalCount !== undefined) {
+      const query = this.cacheCtx.featureQueries.collection
+      this.state.active.collection = {
+        ...activeCollection,
+        items: query.rows,
+        totalCount: query.totalCount,
+      }
       return
     }
 
@@ -2624,7 +2773,7 @@ export class AppCtx {
   private fetchResourceById = async (
     resource: FirstClassResource,
     ref: Id,
-  ): Promise<any> => {
+  ): Promise<unknown> => {
     if (!ref || ref === 'undefined') return undefined
     const remoteGet = this.remoteMap[resource]?.get as
       | ((params: unknown) => import('$lib/types').ResourceDetailHandle['query'])
@@ -2957,7 +3106,7 @@ export class AppCtx {
 
   // Synchronous version that uses cache only (for UI components)
   getHierarchySync = (
-    resource: Feature | Layer | Project | Organisation | Task,
+    resource: Feature | FeatureFromCollection | Layer | Project | Organisation | Task,
   ): ResourceContext => {
     // Determine what type of resource we have and build hierarchy accordingly
     let layer: Layer | undefined
@@ -3175,6 +3324,9 @@ export class AppCtx {
 
   // Features for active layers, given the selected Neighbourhoods and Properties.
   getVisibleFeatureIds = (): Id[] => {
+    if (!this.isAdmin()) {
+      return this.getVisibleFeatures().map(row => row.id)
+    }
     // Avoid showing stale markers while an active-layer feature refresh is in flight.
     if (this.state.prisms.layer.length === 0) {
       return []
@@ -3185,7 +3337,10 @@ export class AppCtx {
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties),
       ),
-    ).filter(featureId => activeLayerIds.has(this.features.get(featureId)?.layerId))
+    ).filter(featureId => {
+      const layerId = this.features.get(featureId)?.layerId
+      return layerId !== undefined && activeLayerIds.has(layerId)
+    })
   }
 
   // Features (for Active Layers) that are on the user's wishlist
@@ -3224,6 +3379,7 @@ export class AppCtx {
       openCard?: boolean
       openCardDelay?: number
       isCardOpen?: boolean
+      updateUrl?: boolean
       navOptions?: CollectionNavOptions['navOptions']
     },
   ) => {
@@ -3249,6 +3405,7 @@ export class AppCtx {
     openCard?: boolean
     openCardDelay?: number
     isCardOpen?: boolean
+    updateUrl?: boolean
     navOptions?: CollectionNavOptions['navOptions']
   }) => {
     const optionsWithDefaults = {
@@ -3290,6 +3447,7 @@ export class AppCtx {
         openCard: optionsWithDefaults.openCard,
         openCardDelay: optionsWithDefaults.openCardDelay,
         isCardOpen: optionsWithDefaults.isCardOpen,
+        updateUrl: optionsWithDefaults.updateUrl,
         navOptions: optionsWithDefaults.navOptions,
       })
     }
@@ -3333,6 +3491,7 @@ export class AppCtx {
       openCard?: boolean | null
       openCardDelay?: number
       isCardOpen?: boolean
+      updateUrl?: boolean
       navOptions?: CollectionNavOptions['navOptions']
     },
   ) => {
@@ -3340,6 +3499,7 @@ export class AppCtx {
       focus: true,
       openCard: true,
       openCardDelay: 0,
+      updateUrl: true,
       ...options,
     }
 
@@ -3347,7 +3507,10 @@ export class AppCtx {
     this.preActiveFeatureMutation()
 
     // Set active state to new feature
-    const nextFeature = this.features.get(featureId)
+    const nextFeature =
+      this.cache.feature.get(featureId) ??
+      this.state.active.collection?.items.find(row => row.id === featureId) ??
+      this.features.get(featureId)
     if (!nextFeature) {
       this.isTransitioning = false
       return
@@ -3372,6 +3535,7 @@ export class AppCtx {
       openCard?: boolean | null
       openCardDelay?: number
       isCardOpen?: boolean
+      updateUrl?: boolean
       navOptions?: CollectionNavOptions['navOptions']
     },
   ) => {
@@ -3391,7 +3555,9 @@ export class AppCtx {
       } else {
         this.cancelPendingOpenCard()
       }
-      navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
+      if (optionsWithDefaults.updateUrl) {
+        navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
+      }
     }
     // Reset transition state
     setTimeout(() => {
@@ -3566,11 +3732,23 @@ export class AppCtx {
   // FEATURE COLLECTIONS -- Utils
 
   getFeaturesByIds = (ids: Id[]): (FeatureFromCollection | Feature)[] =>
-    ids.map(id => this.features.get(id)).filter(f => f !== undefined)
+    ids
+      .map(id => this.cache.feature.get(id) ?? this.features.get(id))
+      .filter(f => f !== undefined)
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
   getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
+    if (!this.isAdmin()) {
+      // Remove offscreen points and disabled layers before the debounced page has settled.
+      return this.cacheCtx.featureQueries.map.rows
+        .filter(row => this.state.prisms.layer.includes(row.layerId))
+        .filter(
+          row =>
+            !this.featureViewport?.bounds ||
+            isFeaturePointWithinBounds(row.geometry, this.featureViewport.bounds),
+        )
+    }
     return this.getFeaturesByIds(this.featuresVisible)
   }
 
@@ -4041,6 +4219,7 @@ export class AppCtx {
     this.user = user
     if (identityChanged || previousRoleScope !== this.getRoleScopeQueryKey()) {
       this.cacheCtx.clear()
+      this.featureMembershipOverrides.clear()
       this.selectionLayers = []
       this.featuresMap.clear()
       this.featureLoadState = 'idle'
@@ -4221,6 +4400,7 @@ export class AppCtx {
   // Clear all cache maps (for actual data reset scenarios)
   clearAllCaches = (): void => {
     this.cacheCtx.clear()
+    this.featureMembershipOverrides.clear()
     // Invalidate in-flight feature reads before removing their committed state.
     this.featureRefreshSerial += 1
     this.invalidateResourceRefreshes()
@@ -4563,7 +4743,7 @@ export class AppCtx {
       case FirstClassResource.layer:
         return this.cache.layer.get(id)
       case FirstClassResource.feature:
-        return this.features.get(id)
+        return this.cache.feature.get(id) ?? this.features.get(id)
       case FirstClassResource.task:
         return this.cache.task.get(id)
       case FirstClassResource.hub:
@@ -4587,7 +4767,7 @@ export class AppCtx {
       case FirstClassResource.layer:
         return this.cache.layer.get(ref as Id)
       case FirstClassResource.feature:
-        return this.features.get(ref as Id)
+        return this.cache.feature.get(ref as Id) ?? this.features.get(ref as Id)
       case FirstClassResource.task:
         return this.cache.task.get(ref as Id)
       case FirstClassResource.hub:

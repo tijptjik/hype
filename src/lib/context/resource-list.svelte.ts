@@ -26,7 +26,11 @@ export class ResourceList {
 
   /** Ordered current rows reflect native optimistic overrides without an AppCtx copy. */
   get rows(): PanelResource[] {
-    if (this.error && this.fallback.length) return this.fallback
+    if (
+      (this.error || (this.loading && !this.pages[0]?.current)) &&
+      this.fallback.length
+    )
+      return this.fallback
     const rows = new Map<string, PanelResource>()
     for (const page of this.pages)
       for (const row of page.current?.data ?? []) rows.set(row.id, row)
@@ -57,8 +61,11 @@ export class ResourceList {
       await this.pages[0]
       return
     }
-    const sameView = this.input && JSON.stringify(this.input) === key
-    this.fallback = sameView ? this.rows : []
+    // Keep the displayed collection latched during view changes, never across access scopes.
+    const sameScope =
+      this.input?.type === input.type &&
+      JSON.stringify(this.input?.meta) === JSON.stringify(input.meta)
+    this.fallback = sameScope ? this.rows : []
     const generation = ++this.generation
     this.input = input
     this.error = null

@@ -156,8 +156,7 @@ export class PlaceCtx {
     // Set the new map once
     this.state.contains.feature.neighbourhood = newNeighbourhoodMap
 
-    // Then, calculate all the stats once
-    this.calculateNeighbourhoodStats()
+    // Local membership supports immediate previews; counts are supplied by the query envelope.
   }
 
   toggleNeighbourhood(neighbourhood: string) {
@@ -191,16 +190,25 @@ export class PlaceCtx {
     return [neighbourhood]
   }
 
-  private calculateNeighbourhoodStats() {
+  /**
+   * Applies authoritative grouped counts without counting locally retained feature rows.
+   * @param counts - Counts per raw neighbourhood for the complete filtered query.
+   * @returns Nothing after parent neighbourhood totals are updated.
+   */
+  setNeighbourhoodCounts(counts: Record<string, number> | null): void {
     // Clear existing counts
     this.state.counts.feature.neighbourhood.clear()
+    if (!counts) return
+
+    for (const [neighbourhood, count] of Object.entries(counts)) {
+      this.state.counts.feature.neighbourhood.set(neighbourhood, count)
+    }
 
     // Calculate counts for all main neighbourhoods
     for (const [mainNeighbourhood] of this.neighbourhoodSubdivisions.entries()) {
       const expandedNeighbourhoods = this.expandNeighbourhood(mainNeighbourhood)
       const count = expandedNeighbourhoods.reduce((total, hood) => {
-        const features = this.state.contains.feature.neighbourhood.get(hood)
-        return total + (features ? features.size : 0)
+        return total + (counts[hood] ?? 0)
       }, 0)
 
       this.state.counts.feature.neighbourhood.set(mainNeighbourhood, count)

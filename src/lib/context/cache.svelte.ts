@@ -2,8 +2,10 @@
 import { SvelteMap } from 'svelte/reactivity'
 // REMOTE
 import { getResourcePage, getPinnedResource } from '$lib/api/server/resources.remote'
+import { getFeaturePage } from '$lib/api/server/featureQueries.remote'
 // CONTEXT
 import { ResourceList } from './resource-list.svelte'
+import { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'
 // TYPES
 import type {
   Cache,
@@ -39,6 +41,17 @@ export class CacheCtx {
     organisation: new ResourceList(getResourcePage),
     project: new ResourceList(getResourcePage),
     layer: new ResourceList(getResourcePage),
+  }
+
+  private readonly featureRetention = new FeatureQueryRetention()
+  readonly featureQueries = {
+    map: new FeatureQuery(getFeaturePage, this.featureRetention, undefined, true),
+    search: new FeatureQuery(getFeaturePage, this.featureRetention),
+    searchWishlist: new FeatureQuery(getFeaturePage, this.featureRetention),
+    collection: new FeatureQuery(getFeaturePage, this.featureRetention),
+    facets: new FeatureQuery(getFeaturePage, this.featureRetention),
+    wishlist: new FeatureQuery(getFeaturePage, this.featureRetention),
+    visited: new FeatureQuery(getFeaturePage, this.featureRetention),
   }
 
   private pins = new Map<
@@ -121,20 +134,40 @@ export class CacheCtx {
    * @returns Overrides released automatically by SvelteKit on settlement.
    */
   optimisticUpdates(type: string, input: ResourceOptimisticInput) {
-    if (type === 'feature' && this.featureCollection) {
+    if (type === 'feature') {
       const patch = input.data ?? {}
       const id = input.meta?.id
       const temporaryId = `pending:${crypto.randomUUID()}`
       return [
-        this.featureCollection.withOverride(current => {
-          if (!current) return current
-          const data = current.data.map(row =>
-            row.id === id ? { ...row, ...patch, id: row.id } : row,
-          )
-          if (!id && input.meta?.mode === 'create')
-            data.unshift({ ...patch, id: temporaryId } as (typeof data)[number])
-          return { ...current, data }
-        }),
+        ...(this.featureCollection
+          ? [
+              this.featureCollection.withOverride(current => {
+                if (!current) return current
+                const data = current.data.map(row =>
+                  row.id === id ? { ...row, ...patch, id: row.id } : row,
+                )
+                if (!id && input.meta?.mode === 'create')
+                  data.unshift({ ...patch, id: temporaryId } as (typeof data)[number])
+                return { ...current, data }
+              }),
+            ]
+          : []),
+        ...Object.entries(this.featureQueries).flatMap(([channel, query]) =>
+          query.pages.map(page =>
+            page.withOverride(current => {
+              if (!current) return current
+              return {
+                ...current,
+                data: current.data.flatMap(row => {
+                  if (row.id !== id) return [row]
+                  const updated = { ...row, ...patch, id: row.id }
+                  // Map snapshots need the patched record to hide it and support native rollback.
+                  return channel === 'map' || query.matches(updated) ? [updated] : []
+                }),
+              }
+            }),
+          ),
+        ),
       ]
     }
     if (!(type in this.lists)) return []
@@ -176,13 +209,18 @@ export class CacheCtx {
               if (!current) return current
               const data = current.data.flatMap(row => {
                 if (row.id !== id) {
+                  const ancestor =
+                    id &&
+                    (type === 'organisation' || type === 'project') &&
+                    'ancestors' in row
+                      ? row.ancestors?.[type]
+                      : undefined
                   if (
                     id &&
                     (type === 'organisation' || type === 'project') &&
                     'ancestors' in row &&
-                    row.ancestors?.[type]?.id === id
+                    ancestor?.id === id
                   ) {
-                    const ancestor = row.ancestors![type]!
                     return [
                       {
                         ...row,
@@ -230,6 +268,15 @@ export class CacheCtx {
    * @returns Completion of current-view refreshes; inactive views remain invalidated.
    */
   async reconcile(type: string): Promise<void> {
+    const featureRefreshes: Promise<void>[] = []
+    // Mutations invalidate shared previews and authoritative query counts together.
+    if (['feature', 'organisation', 'project', 'layer'].includes(type)) {
+      this.featureRetention.clear()
+      for (const query of Object.values(this.featureQueries)) query.invalidate()
+      featureRefreshes.push(
+        ...Object.values(this.featureQueries).map(query => query.revalidate()),
+      )
+    }
     const affected: PanelResourceType[] =
       type === 'organisation'
         ? ['organisation', 'project', 'layer']
@@ -239,11 +286,12 @@ export class CacheCtx {
             ? ['layer']
             : []
     this.details.clear()
-    await Promise.all(
-      affected
+    await Promise.all([
+      ...featureRefreshes,
+      ...affected
         .flatMap(key => [this.lists[key], this.indexLists[key]])
         .map(list => list.reconcile().catch(() => {})),
-    )
+    ])
   }
 
   /**
@@ -259,6 +307,8 @@ export class CacheCtx {
   clear(): void {
     this.epoch++
     this.featureCollection = undefined
+    this.featureRetention.clear()
+    for (const query of Object.values(this.featureQueries)) query.clear()
     this.details.clear()
     this.pins.clear()
     for (const store of Object.values(this.entities)) store.clear()
