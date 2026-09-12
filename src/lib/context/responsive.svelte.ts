@@ -5,7 +5,7 @@ import {
   getMenuClearanceHeight,
   getMenuReservedHeight,
 } from '$lib/bits/patterns/bars/appMenu/appMenu.layout'
-import { MOBILE_MAX_WIDTH, PANEL_WIDTH } from '$lib/constants'
+import { DUAL_PANEL_MIN_WIDTH, MOBILE_MAX_WIDTH, PANEL_WIDTH } from '$lib/constants'
 // ENUMS
 import { Panel, PanelLeft, PanelRight } from '$lib/enums'
 
@@ -73,6 +73,7 @@ export class ResponsiveCtx {
   })
   panelOpenState = $state<PanelOpenState>(createPanelOpenState())
   panelVisualOpenState = $state<PanelOpenState>(createPanelOpenState())
+  private lastOpenedPanel: Panel | null = null
 
   get isMobile(): boolean {
     return this.window.width < MOBILE_MAX_WIDTH
@@ -199,10 +200,35 @@ export class ResponsiveCtx {
     return Math.max(0, this.main.width - leftPanelWidth - rightPanelWidth)
   }
 
+  /**
+   * Updates panel visibility and records real openings for viewport arbitration.
+   * @param panel - Panel whose visibility changed.
+   * @param isOpen - Whether the panel is open.
+   * @returns Nothing.
+   */
   setPanelOpen(panel: Panel, isOpen: boolean): void {
     if (this.panelOpenState[panel] !== isOpen) {
       this.panelOpenState[panel] = isOpen
+      if (isOpen) this.lastOpenedPanel = panel
     }
+  }
+
+  /**
+   * Finds the older side to close when the viewport cannot fit both panels.
+   * @param width - Layout viewport width in pixels, matching the opening guard.
+   * @returns Open panels opposite the most recently opened panel.
+   * @remarks Unmeasured and wide viewports, and a single open side, need no changes.
+   */
+  getPanelsToCloseForViewport(width: number): Panel[] {
+    if (width <= 0 || width >= DUAL_PANEL_MIN_WIDTH) return []
+    if (!this.isLeftPanelOpen() || !this.isRightPanelOpen()) return []
+
+    // Preserve the latest opening; a resize never reopens previously closed panels.
+    const keepLeft =
+      this.lastOpenedPanel !== null && this.isPanelOnLeft(this.lastOpenedPanel)
+    return (keepLeft
+      ? this.getOpenRightPanels()
+      : this.getOpenLeftPanels()) as unknown as Panel[]
   }
 
   setPanelOpenVisually(panel: Panel, isOpen: boolean): void {

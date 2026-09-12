@@ -8,7 +8,7 @@ import { useSettingsPanelModel } from '$lib/adapters/panels/useSettingsPanelMode
 import { getThemeModel } from '$lib/themes/theme.svelte'
 // SVELTE
 import { browser } from '$app/environment'
-import type { Snippet } from 'svelte'
+import { untrack, type Snippet } from 'svelte'
 // NAVIGATION
 import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
@@ -153,6 +153,16 @@ $effect(() => {
 $effect(() => {
   if (profileShell.open) void loadProfilePanel().catch(() => {})
 })
+// Reapply the opening guard on viewport resize while preserving the newest panel.
+$effect(() => {
+  const width = responsiveCtx.window.width
+  untrack(() => {
+    for (const panel of responsiveCtx.getPanelsToCloseForViewport(width)) {
+      appCtx.closePanel(panel)
+    }
+  })
+})
+
 // Set Hub context in AppCtx
 $effect(() => {
   appCtx.setHub(hub)
