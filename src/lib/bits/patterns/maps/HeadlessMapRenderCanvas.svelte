@@ -7,6 +7,7 @@ import bbox from '@turf/bbox'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setOmniCtx } from '$lib/context/omni.svelte'
+import { setResponsiveCtx } from '$lib/context/responsive.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
@@ -52,7 +53,7 @@ let {
   identifier: string
 } = $props()
 
-const appCtx = setAppCtx(setPlaceCtx(), null)
+const appCtx = setAppCtx(setPlaceCtx(), null, setResponsiveCtx())
 setOmniCtx(appCtx)
 
 let payload = $state<RenderPayload | null>(null)
