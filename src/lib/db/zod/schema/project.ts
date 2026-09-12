@@ -411,6 +411,7 @@ export const ProjectListProfileAPI = ProjectListFields.extend({
 })
 
 export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({
+  ancestors: CompactAncestorsSchema.optional(),
   ...ProjectCardFields.shape,
   image: ImageContextEnvelopeAPI.nullish(),
 })

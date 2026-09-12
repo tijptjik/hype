@@ -28,6 +28,7 @@ export const ListQueryParamsSchema = z.object({
       limit: z.number().int().positive().optional(),
       offset: z.number().int().nonnegative().optional(),
       afterId: z.string().min(1).optional(),
+      afterValue: z.union([z.string(), z.number(), z.null()]).optional(),
     })
     .optional(),
   sorting: z

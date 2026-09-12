@@ -5,6 +5,8 @@ import {
   asc,
   desc,
   eq,
+  gt,
+  lt,
   exists,
   inArray,
   not,
@@ -529,6 +531,8 @@ type LocalizedOrderByParams = {
   parentIdColumn: AnyColumn
   foreignKeyColumn: AnyColumn
   localeColumn: AnyColumn
+  cursor?: { id: string; value: string | number | null }
+  conditions?: SQL<unknown>[]
 }
 
 /**
@@ -548,10 +552,30 @@ export const toOrderByWithLocalizedFields = ({
   parentIdColumn,
   foreignKeyColumn,
   localeColumn,
+  cursor,
+  conditions,
 }: LocalizedOrderByParams): SQL<unknown>[] => {
   const resolvedSortBy = sortBy || fallbackSortBy
   const resolvedSortOrder = sortOrder || 'desc'
   const localizedSortColumn = localizedSortColumns[resolvedSortBy]
+
+  // Cursor comparisons use the same expression and unique ID tie-breaker as ordering.
+  const order = (raw: SQL | AnyColumn): SQL[] => {
+    const value = sql`coalesce(${raw}, '')`
+    if (cursor && conditions) {
+      const comparison = resolvedSortOrder === 'desc' ? lt : gt
+      conditions.push(
+        or(
+          comparison(value, cursor.value ?? ''),
+          and(eq(value, cursor.value ?? ''), gt(parentIdColumn, cursor.id)),
+        )!,
+      )
+    }
+    return [
+      resolvedSortOrder === 'desc' ? desc(value) : asc(value),
+      asc(parentIdColumn),
+    ]
+  }
 
   if (localizedSortColumn && locale) {
     const localizedValueQuery = db
@@ -562,10 +586,7 @@ export const toOrderByWithLocalizedFields = ({
 
     const localizedValue = sql<string>`coalesce((${localizedValueQuery}), '')`
 
-    return [
-      resolvedSortOrder === 'desc' ? desc(localizedValue) : asc(localizedValue),
-      desc(fallbackColumn),
-    ]
+    return order(localizedValue)
   }
 
   const sortColumn = baseTable[resolvedSortBy as keyof typeof baseTable]
@@ -573,12 +594,7 @@ export const toOrderByWithLocalizedFields = ({
     throw new Error(`Invalid sort column: ${resolvedSortBy}`)
   }
 
-  return [
-    resolvedSortOrder === 'desc'
-      ? desc(sortColumn as AnyColumn)
-      : asc(sortColumn as AnyColumn),
-    desc(fallbackColumn),
-  ]
+  return order(sortColumn as AnyColumn)
 }
 
 // ═══════════════════════

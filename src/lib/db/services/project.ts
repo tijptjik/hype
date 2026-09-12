@@ -300,7 +300,12 @@ export async function listProjects<
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number; offset?: number; afterId?: string },
+  pagination?: {
+    limit?: number
+    offset?: number
+    afterId?: string
+    afterValue?: string | number | null
+  },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
@@ -312,7 +317,8 @@ export async function listProjects<
 ): Promise<ListResponse<TRow>> {
   const startedAt = Date.now()
   // Keyset pages advance using a unique immutable ID, independently of row offsets.
-  if (pagination?.afterId) conditions.push(gt(project.id, pagination.afterId))
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    conditions.push(gt(project.id, pagination.afterId))
   if (!query?.ignoreHubFilter) {
     const hubFilter = getProjectHubFilter(db, opts)
     if (hubFilter) {
@@ -380,6 +386,11 @@ export async function listProjects<
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
+    conditions,
+    cursor:
+      pagination?.afterId && pagination.afterValue !== undefined
+        ? { id: pagination.afterId, value: pagination.afterValue }
+        : undefined,
     db,
     locale: query?.locale,
     sortBy,

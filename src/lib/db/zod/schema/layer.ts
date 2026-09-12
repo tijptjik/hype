@@ -237,6 +237,7 @@ export const LayerListProfileAPI = LayerListFields.extend({
 })
 
 export const LayerCardProfileAPI = LayerListProfileAPI.extend({
+  ancestors: CompactAncestorsSchema.optional(),
   ...LayerCardFields.shape,
 })
 

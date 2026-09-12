@@ -140,10 +140,13 @@ export const ImageDetailProfileAPI = ImageCardProfileAPI
 export const ImageAdminProfileAPI = ImageDetailProfileAPI
 
 export const ImageContextEnvelopeAPI = z.object({
-  ctxType: z.string(),
+  ctxType: z.union([
+    z.enum(ImageContextResource),
+    z.enum(ImageContextResourceExtended),
+  ]),
   ctxId: z.string(),
   image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  intent: z.enum(ImageIntent).nullish(),
   isPublished: z.boolean().nullish(),
   publishedAt: z.string().nullish(),
 })

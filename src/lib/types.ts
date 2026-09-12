@@ -3276,15 +3276,30 @@ export type PanelResource =
   | import('$lib/db/zod/schema/layer.types').LayerEntityByProfile<'compact'>
 export type ResourcePage = {
   data: PanelResource[]
-  nextCursor: { id: string; signature: string } | null
+  nextCursor: { id: string; signature: string; value?: string | number | null } | null
 }
 export type ResourcePageInput = {
   type: PanelResourceType
+  profile?: 'compact' | 'default'
+  sorting?: { sortBy: string; sortOrder: 'asc' | 'desc' }
+  conditions?: { isPublished?: boolean | null; isArchived?: boolean | null }
   q?: string
-  cursor?: { id: string; signature: string } | null
+  cursor?: { id: string; signature: string; value?: string | number | null } | null
   prisms?: { organisation?: string[]; project?: string[]; layer?: string[] }
   meta: { isAdminRequest: boolean; scope: string }
 }
 export type ResourcePageFactory = (
   input: ResourcePageInput,
 ) => import('@sveltejs/kit').RemoteQuery<ResourcePage>
+
+export type ResourceDetailHandle = {
+  query: Promise<{ data?: unknown }> & {
+    refresh?: () => Promise<void>
+    current?: { data?: unknown }
+  }
+  fetchedAt: number
+}
+export type ResourceOptimisticInput = {
+  meta?: { id?: string; mode?: string }
+  data?: Record<string, unknown>
+}

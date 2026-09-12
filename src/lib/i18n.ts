@@ -345,7 +345,7 @@ export function getI18n<T>(
   obj:
     | Resource
     | Neighbourhood
-    | { i18n: Record<LocaleKey, T> | null }
+    | { i18n?: Partial<Record<LocaleKey, T>> | null }
     | Record<LocaleKey, T>
     | undefined,
   field: string,

@@ -59,9 +59,9 @@ export type FeatureAdminProfile = z.infer<typeof FeatureAdminProfileAPI>
 
 export type FeatureEntityByProfile<P extends FeatureProfile> = P extends 'compact'
   ? z.infer<typeof FeatureCompactProfileAPI>
-  : P extends 'list'
+  : P extends 'list' | 'default' | 'map'
     ? FeatureListProfile
-    : P extends 'card' | 'default' | 'map'
+    : P extends 'card'
       ? FeatureCardProfile
       : P extends 'detail' | 'full'
         ? FeatureDetailProfile
@@ -69,9 +69,9 @@ export type FeatureEntityByProfile<P extends FeatureProfile> = P extends 'compac
 
 export type FeatureListByProfile<P extends FeatureProfile> = P extends 'compact'
   ? z.infer<typeof FeatureCompactProfileAPI>
-  : P extends 'list'
+  : P extends 'list' | 'default' | 'map'
     ? FeatureListProfile
-    : P extends 'card' | 'default' | 'map'
+    : P extends 'card'
       ? FeatureCardProfile
       : P extends 'detail' | 'full'
         ? FeatureDetailProfile
@@ -111,7 +111,7 @@ export type FeatureCardDBRaw = z.infer<typeof FeatureCardRow>
 export type FeatureAdminDBRaw = z.infer<typeof FeatureAdminRow>
 export type FeatureQueryRowByProfile<P extends FeatureProfile> = P extends 'admin'
   ? FeatureAdminDBRaw
-  : P extends 'card' | 'default' | 'map' | 'detail'
+  : P extends 'card' | 'detail'
     ? FeatureCardDBRaw
     : FeatureListDBRaw
 

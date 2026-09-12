@@ -351,6 +351,7 @@ export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
 })
 
 export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
+  hub: z.object({ id: z.string(), code: z.string() }).nullish(),
   userRoles: z
     .array(OrganisationRoleBase.extend({ user: UserBasic.nullish() }))
     .default([]),

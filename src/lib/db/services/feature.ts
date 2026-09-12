@@ -331,7 +331,12 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number | null; offset?: number | null; afterId?: string },
+  pagination?: {
+    limit?: number | null
+    offset?: number | null
+    afterId?: string
+    afterValue?: string | number | null
+  },
   sorting?: { sortBy?: string | null; sortOrder?: 'asc' | 'desc' | null },
   query?: {
     q?: string | null
@@ -341,7 +346,8 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
 ): Promise<ListResponse<TRow>> => {
   const startedAt = Date.now()
   // Keyset pages advance using a unique immutable ID, independently of row offsets.
-  if (pagination?.afterId) conditions.push(gt(feature.id, pagination.afterId))
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    conditions.push(gt(feature.id, pagination.afterId))
   const allConditions = [...conditions]
   const hubFilter = getFeatureHubFilter(db, opts)
 
@@ -372,6 +378,11 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
+    conditions,
+    cursor:
+      pagination?.afterId && pagination.afterValue !== undefined
+        ? { id: pagination.afterId, value: pagination.afterValue }
+        : undefined,
     db,
     locale: query?.locale,
     sortBy,

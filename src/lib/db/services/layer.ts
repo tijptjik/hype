@@ -195,7 +195,12 @@ export const listLayers = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number; offset?: number; afterId?: string },
+  pagination?: {
+    limit?: number
+    offset?: number
+    afterId?: string
+    afterValue?: string | number | null
+  },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
@@ -207,7 +212,8 @@ export const listLayers = async (
 ): Promise<ListResponse<LayerDBRaw>> => {
   const startedAt = Date.now()
   // Keyset pages advance using a unique immutable ID, independently of row offsets.
-  if (pagination?.afterId) conditions.push(gt(layer.id, pagination.afterId))
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    conditions.push(gt(layer.id, pagination.afterId))
 
   if (!query?.ignoreHubFilter) {
     const hubFilter = getLayerHubFilter(db, opts)
@@ -268,6 +274,11 @@ export const listLayers = async (
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
+    conditions,
+    cursor:
+      pagination?.afterId && pagination.afterValue !== undefined
+        ? { id: pagination.afterId, value: pagination.afterValue }
+        : undefined,
     db,
     locale: query?.locale,
     sortBy,
