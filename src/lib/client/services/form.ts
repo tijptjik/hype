@@ -544,7 +544,13 @@ export function createResourceFormConfig<Input>({
     key,
     schema,
     data,
-    onsubmitupdates: submitUpdates,
+    onsubmitupdates: async ctx => [
+      ...((await submitUpdates(ctx)) ?? []),
+      ...adminCtx.appCtx.cacheCtx.optimisticUpdates(
+        resourceType,
+        ctx.data as import('$lib/types').ResourceOptimisticInput,
+      ),
+    ],
     resourceResult: {
       ...createCodeRefResourceResult({
         adminCtx,
