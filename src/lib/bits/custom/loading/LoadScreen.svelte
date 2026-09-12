@@ -40,6 +40,10 @@ const classes = $derived(
   background: var(--color-base-300);
 }
 
+:global(html[data-theme^="breadline-"]) .bits-load-screen {
+  background: var(--color-surface);
+}
+
 .bits-load-screen__center {
   position: absolute;
   left: 50%;
