@@ -1,4 +1,3 @@
-import type { AppCtx } from '$lib/context/app.svelte'
 // API
 import { getImageSrc } from '$lib/client/services/image'
 // DEBUG
@@ -6,12 +5,15 @@ import {
   isMarkerBootstrapDebugEnabled,
   logMarkerBootstrap,
 } from '$lib/debug/markerBootstrap'
+// GEOMETRY
+import { getFeaturePointCoordinates } from './featureSpatial'
 // STYLES
-import '$lib/styles/map.css'
+import '$lib/styles/map-markers.css'
 // TYPES
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { MapMarkerTheme } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { MapMarkerTheme } from './styles/catalog'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -22,10 +24,8 @@ import type { MapMarkerTheme } from '$lib/types'
 //    - createMarkerElement
 //
 // 2. MARKER LIFECYCLE
-//    - updateMarkers
-//    - clearMarkers
-//    - addMarkerClass
-//    - removeMarkerClass
+//    - cancelMarkerRemoval
+//    - createMarkerRenderer
 //    - addAddressMarker
 
 export const USER_MARKER_STYLE_PARAM = 'markerStyle'
@@ -60,6 +60,47 @@ type MapLibreMarkerFactory = {
     draggable?: boolean
     element: HTMLElement
   }) => MarkerInstance
+}
+
+/**
+ * Selection data supplied by the application adapter to the marker renderer.
+ * Native marker objects remain private to the renderer.
+ */
+export type MarkerRenderState = {
+  selectedId?: Id | null
+  highlightedIds?: ReadonlySet<Id>
+}
+
+/**
+ * Instance-owned marker renderer for one MapLibre map.
+ */
+export type MarkerRenderer = {
+  sync: (
+    features: FeatureFromCollection[],
+    options?: {
+      markerStyle?: MarkerStyleVariant
+      markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
+      selectedId?: Id | null
+      highlightedIds?: ReadonlySet<Id>
+    },
+  ) => void
+  getElement: (featureId: Id) => HTMLElement | null
+  clear: () => void
+}
+
+// Track the actual marker object so pending removal never belongs to its replacement.
+const pendingMarkerRemovals = new WeakMap<
+  MarkerInstance,
+  ReturnType<typeof setTimeout>
+>()
+
+const applyMarkerState = (
+  element: HTMLElement,
+  featureId: Id,
+  state: MarkerRenderState,
+): void => {
+  element.classList.toggle('active', state.selectedId === featureId)
+  element.classList.toggle('highlighted', state.highlightedIds?.has(featureId) ?? false)
 }
 
 /**
@@ -173,6 +214,12 @@ export function createMarkerElement(): HTMLDivElement {
   return container
 }
 
+/**
+ * Resolves the transformed image URL used by an image-backed feature marker.
+ *
+ * @param feature - Feature whose canonical image should be displayed.
+ * @returns Derived image URL, or `null` when the feature has no image.
+ */
 function getFeatureMarkerImageSrc(feature: FeatureFromCollection): string | null {
   return getImageSrc(feature.image, {
     transformation: 'c_fill,h_128,w_128',
@@ -193,6 +240,15 @@ function getFeatureMarkerTheme(
   return markerThemesByProjectId.get(feature.projectId) ?? DEFAULT_MARKER_THEME
 }
 
+/**
+ * Builds one marker element for the requested presentation variant.
+ *
+ * @param feature - Feature represented by the marker.
+ * @param markerStyle - Image or dot presentation mode.
+ * @param markerTheme - Palette treatment for the marker.
+ * @param diagnostics - Optional image bootstrap counters.
+ * @returns Marker DOM element ready for MapLibre placement.
+ */
 function createFeatureMarkerElement(
   feature: FeatureFromCollection,
   markerStyle: MarkerStyleVariant,
@@ -273,173 +329,177 @@ function createFeatureMarkerElement(
 }
 
 /**
- * Reconciles the rendered marker cache against the current feature set.
- *
- * @param appCtx - App context containing the active map and marker cache.
- * @param features - Features that should currently render markers.
- * @param maplibre - MapLibre namespace used to construct markers.
- * @param markerStyle - Visual marker variant to render.
- * @param markerThemesByProjectId - Palette-aware treatments supplied by each feature's project.
- * @returns Cleanup function that removes all managed markers.
+ * Cancels a marker's pending fade removal when it becomes visible or is explicitly cleared.
+ * @param marker Marker object whose lifecycle is changing.
+ * @returns Nothing after removing its pending timer and fade state.
  */
-export function updateMarkers(
-  appCtx: AppCtx,
-  features: FeatureFromCollection[],
+function cancelMarkerRemoval(marker: MarkerInstance): void {
+  const timer = pendingMarkerRemovals.get(marker)
+  if (timer !== undefined) {
+    clearTimeout(timer)
+    pendingMarkerRemovals.delete(marker)
+  }
+  marker.getElement().classList.remove('marker-fade-out')
+}
+
+/**
+ * Creates an instance-owned renderer for native MapLibre markers.
+ *
+ * @param map - Map instance that owns the markers.
+ * @param maplibre - MapLibre namespace used to construct markers.
+ * @param onElementChange - Optional transition handoff for marker DOM elements.
+ * @returns Renderer with declarative reconciliation and explicit element lookup.
+ */
+export function createMarkerRenderer(
+  map: MaplibreMap,
   maplibre: MapLibreMarkerFactory,
-  markerStyle: MarkerStyleVariant = 'image',
-  markerThemesByProjectId: ReadonlyMap<string, MapMarkerTheme> = new Map(),
-) {
-  if (!appCtx.map) return
-  const diagnostics = isMarkerBootstrapDebugEnabled()
-    ? {
-        created: 0,
-        decodeFailed: 0,
-        decoded: 0,
-        failed: 0,
-        loaded: 0,
-        startedAt: performance.now(),
-      }
-    : undefined
-  // Create a set of new feature IDs
-  const newFeatureIds = new Set(features.map(f => f.id as string))
-  // Remove markers that are no longer present
-  for (const [id, marker] of appCtx.state.markers.entries()) {
-    if (!newFeatureIds.has(id)) {
-      marker.getElement().classList.add('marker-fade-out')
-      // Remove marker after animation completes
-      setTimeout(() => {
-        marker.remove()
-        appCtx.state.markers.delete(id)
-      }, 300) // Match this with CSS transition duration
+  onElementChange?: (featureId: Id, element: HTMLElement | null) => void,
+): MarkerRenderer {
+  const markers = new Map<Id, MarkerInstance>()
+  const diagnosticsTimers = new Set<number>()
+  let disposed = false
+
+  const clear = (): void => {
+    for (const timer of diagnosticsTimers) window.clearTimeout(timer)
+    diagnosticsTimers.clear()
+    for (const [id, marker] of markers) {
+      cancelMarkerRemoval(marker)
+      marker.remove()
+      onElementChange?.(id, null)
     }
+    markers.clear()
   }
 
-  // Add or update markers
-  features.forEach(feature => {
-    if (feature.geometry?.type === 'Point') {
-      const [lng, lat] = feature.geometry.coordinates
-      const markerTheme = getFeatureMarkerTheme(feature, markerThemesByProjectId)
-      const existingMarker = appCtx.state.markers.get(feature.id)
-      if (existingMarker) {
-        const nextMarkerSignature =
-          markerStyle === 'dot'
-            ? `dot:${markerTheme}`
-            : `${getFeatureMarkerImageSrc(feature) ?? 'dot'}:${markerTheme}`
-        const currentMarkerSignature =
-          existingMarker.getElement().dataset.markerSignature ?? 'default'
-        // Skip churn when the rendered marker image/dot state is unchanged.
-        if (currentMarkerSignature === nextMarkerSignature) {
-          return
+  const sync = (
+    features: FeatureFromCollection[],
+    options: {
+      markerStyle?: MarkerStyleVariant
+      markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
+      selectedId?: Id | null
+      highlightedIds?: ReadonlySet<Id>
+    } = {},
+  ): void => {
+    if (disposed) return
+    const markerStyle = options.markerStyle ?? 'image'
+    const markerThemesByProjectId = options.markerThemesByProjectId ?? new Map()
+    const markerState: MarkerRenderState = {
+      selectedId: options.selectedId,
+      highlightedIds: options.highlightedIds,
+    }
+    const diagnostics = isMarkerBootstrapDebugEnabled()
+      ? {
+          created: 0,
+          decodeFailed: 0,
+          decoded: 0,
+          failed: 0,
+          loaded: 0,
+          startedAt: performance.now(),
         }
+      : undefined
+    const pointFeatures = features.filter(feature =>
+      getFeaturePointCoordinates(feature.geometry),
+    )
+    const newFeatureIds = new Set(pointFeatures.map(feature => feature.id as Id))
 
-        existingMarker.remove()
-        appCtx.state.markers.delete(feature.id)
+    // Keep fade deadlines attached to the marker object, never to a feature id.
+    for (const [id, marker] of markers.entries()) {
+      if (newFeatureIds.has(id)) {
+        cancelMarkerRemoval(marker)
+      } else if (!pendingMarkerRemovals.has(marker)) {
+        marker.getElement().classList.add('marker-fade-out')
+        const timer = setTimeout(() => {
+          if (pendingMarkerRemovals.get(marker) !== timer) return
+          pendingMarkerRemovals.delete(marker)
+          marker.remove()
+          if (markers.get(id) === marker) {
+            markers.delete(id)
+            onElementChange?.(id, null)
+          }
+        }, 300)
+        pendingMarkerRemovals.set(marker, timer)
       }
-      // Create new marker
-      const el = createFeatureMarkerElement(
+    }
+
+    for (const feature of pointFeatures) {
+      const coordinates = getFeaturePointCoordinates(feature.geometry)
+      if (!coordinates) continue
+      const markerTheme = getFeatureMarkerTheme(feature, markerThemesByProjectId)
+      const existingMarker = markers.get(feature.id)
+      const nextSignature =
+        markerStyle === 'dot'
+          ? `dot:${markerTheme}`
+          : `${getFeatureMarkerImageSrc(feature) ?? 'dot'}:${markerTheme}`
+
+      if (existingMarker) {
+        const element = existingMarker.getElement()
+        cancelMarkerRemoval(existingMarker)
+        existingMarker.setLngLat(coordinates)
+        if (element.dataset.markerSignature === nextSignature) {
+          applyMarkerState(element, feature.id, markerState)
+          continue
+        }
+        existingMarker.remove()
+        markers.delete(feature.id)
+        onElementChange?.(feature.id, null)
+      }
+
+      const element = createFeatureMarkerElement(
         feature,
         markerStyle,
         markerTheme,
         diagnostics,
       )
-      // Add data attributes to all elements in the marker
-      const addDataToElements = (element: Element) => {
-        element.setAttribute('data-type', 'marker')
-        element.setAttribute('data-feature-id', feature.id as string)
-        Array.from(element.children).forEach(addDataToElements)
+      const addDataToElements = (node: Element): void => {
+        node.setAttribute('data-type', 'marker')
+        node.setAttribute('data-feature-id', feature.id as string)
+        Array.from(node.children).forEach(addDataToElements)
       }
-      addDataToElements(el)
-      const marker = new maplibre.Marker({
-        element: el,
-        anchor: 'center',
+      addDataToElements(element)
+      applyMarkerState(element, feature.id, markerState)
+      const marker = new maplibre.Marker({ element, anchor: 'center' })
+        .setLngLat(coordinates)
+        .addTo(map)
+      markers.set(feature.id, marker)
+      onElementChange?.(feature.id, element)
+    }
+
+    if (diagnostics?.created) {
+      const reportMarkerImageState = (delayMs: number): void => {
+        const timer = window.setTimeout(() => {
+          diagnosticsTimers.delete(timer)
+          logMarkerBootstrap('marker image batch state', {
+            delayMs,
+            created: diagnostics.created,
+            decodeFailed: diagnostics.decodeFailed,
+            decoded: diagnostics.decoded,
+            loaded: diagnostics.loaded,
+            failed: diagnostics.failed,
+            pending: diagnostics.created - diagnostics.loaded - diagnostics.failed,
+            elapsedMs: Math.round(performance.now() - diagnostics.startedAt),
+            renderState: getMarkerImageRenderState(),
+          })
+        }, delayMs)
+        diagnosticsTimers.add(timer)
+      }
+      logMarkerBootstrap('markers reconciled', {
+        featureCount: features.length,
+        markerStyle,
+        imageMarkersCreated: diagnostics.created,
+        markerCount: markers.size,
       })
-        .setLngLat([lng, lat])
-        .addTo(appCtx.map)
-      // Add marker to appCtx
-      appCtx.state.markers.set(feature.id, marker)
+      reportMarkerImageState(1_000)
+      reportMarkerImageState(5_000)
     }
-  })
-
-  if (diagnostics?.created) {
-    const reportMarkerImageState = (delayMs: number): void => {
-      window.setTimeout(() => {
-        logMarkerBootstrap('marker image batch state', {
-          delayMs,
-          created: diagnostics.created,
-          decodeFailed: diagnostics.decodeFailed,
-          decoded: diagnostics.decoded,
-          loaded: diagnostics.loaded,
-          failed: diagnostics.failed,
-          pending: diagnostics.created - diagnostics.loaded - diagnostics.failed,
-          elapsedMs: Math.round(performance.now() - diagnostics.startedAt),
-          renderState: getMarkerImageRenderState(),
-        })
-      }, delayMs)
-    }
-
-    logMarkerBootstrap('markers reconciled', {
-      featureCount: features.length,
-      markerStyle,
-      imageMarkersCreated: diagnostics.created,
-      markerCount: appCtx.state.markers.size,
-    })
-    reportMarkerImageState(1_000)
-    reportMarkerImageState(5_000)
   }
-  // Return cleanup function
-  return () => {
-    clearMarkers(appCtx)
+
+  return {
+    sync,
+    getElement: featureId => markers.get(featureId)?.getElement() ?? null,
+    clear: () => {
+      disposed = true
+      clear()
+    },
   }
-}
-
-/**
- * Removes every marker tracked by an application map context.
- *
- * @param appCtx - App context whose current MapLibre marker objects should be removed.
- * @returns Nothing after marker DOM and cache entries are cleared.
- * @remarks MapLibre markers are external DOM nodes. They must be cleared when a map
- * canvas unmounts so a replacement canvas does not reuse detached marker objects.
- */
-export function clearMarkers(appCtx: AppCtx): void {
-  for (const marker of appCtx.state.markers.values()) {
-    marker.remove()
-  }
-  appCtx.state.markers.clear()
-}
-
-/**
- * Adds a CSS class to one rendered marker.
- *
- * @param appCtx - App context containing the marker cache.
- * @param featureId - Feature id whose marker should be updated.
- * @param className - CSS class to add.
- * @returns Nothing.
- */
-export function addMarkerClass(
-  appCtx: AppCtx,
-  featureId: string,
-  className: string = 'active',
-) {
-  if (!appCtx.map) return
-  // Set active state to new feature
-  appCtx.state.markers.get(featureId)?.getElement().classList.add(className)
-}
-
-/**
- * Removes a CSS class from one rendered marker.
- *
- * @param appCtx - App context containing the marker cache.
- * @param featureId - Feature id whose marker should be updated.
- * @param className - CSS class to remove.
- * @returns Nothing.
- */
-export function removeMarkerClass(
-  appCtx: AppCtx,
-  featureId: string,
-  className: string = 'active',
-) {
-  if (!appCtx.map) return
-  appCtx.state.markers.get(featureId)?.getElement().classList.remove(className)
 }
 
 /**
@@ -454,7 +514,7 @@ export function addAddressMarker(
   maplibre: MapLibreMarkerFactory,
   map: MaplibreMap,
   lngLat: [number, number],
-) {
+): MarkerInstance {
   const el = createMarkerElement()
   el.classList.add('marker-address')
   el.setAttribute('data-feature-property', 'geoCodeCoordinates')

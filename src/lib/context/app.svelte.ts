@@ -46,8 +46,6 @@ import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
-// MARKERS
-import { removeMarkerClass, addMarkerClass } from '$lib/map/markers'
 // ENUMS
 import {
   FirstClassResource,
@@ -119,10 +117,8 @@ export class AppCtx {
   responsiveCtx!: ResponsiveCtx
   // Maplibre Map instance
   map: MaplibreMap | undefined = $state()
-  // Maplibre library instance (loaded globally)
-  maplibre: unknown = $state(null)
-  // Whether maplibre has been loaded
-  isMaplibreLoaded: boolean = $state(false)
+  /** DOM handoff for map marker transitions; native marker objects remain renderer-owned. */
+  markerElements = new Map<Id, HTMLElement>()
   // User data (reactive)
   user: UserProfile | CurrentUser | SessionUser | null = $state(null)
   // Whether the map has been initialised
@@ -196,8 +192,6 @@ export class AppCtx {
     ) as Record<FirstClassResource, ResourceSortState>
 
   state: AppContextState = $state({
-    // Markers -- Which features are shown on the map
-    markers: new Map(),
     // Active -- Which feature or collection is in focus on the map
     active: {
       feature: null,
@@ -555,7 +549,6 @@ export class AppCtx {
   newFeatureMode: NewFeatureMode | null = $state(null)
 
   // Silly state to track if the map has been zoomed to a marker
-  zoomToMarkerOnly: boolean = $state(false)
 
   // ═══════════════════════
   // QUERY KEYS
@@ -3307,9 +3300,6 @@ export class AppCtx {
     this.unhighlightAllFeatures()
     // Reset active collection
     this.state.active.collection = null
-    // Remove 'active' class from the active feature
-    this.state.active.feature?.id &&
-      removeMarkerClass(this, this.state.active.feature.id)
     // Reset active feature
     this.state.active.feature = null
   }
@@ -3333,10 +3323,6 @@ export class AppCtx {
    * Clears the active feature while preserving the active collection context.
    */
   resetActiveFeature = (): void => {
-    if (this.state.active.feature) {
-      removeMarkerClass(this, this.state.active.feature.id)
-    }
-
     this.state.active.feature = null
   }
 
@@ -3376,9 +3362,7 @@ export class AppCtx {
   private preActiveFeatureMutation = () => {
     // Remove active state from previous feature
     this.isTransitioning = true
-    if (this.state.active.feature) {
-      removeMarkerClass(this, this.state.active.feature.id)
-    }
+    // Marker presentation is derived by the map renderer from active state.
   }
 
   private postActiveFeatureMutation = (
@@ -3397,9 +3381,6 @@ export class AppCtx {
       openCardDelay: 0,
       ...options,
     }
-    // TODO : Add "active" class to the feature on the map
-    addMarkerClass(this, featureId)
-
     if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
       if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
         this.cancelPendingOpenCard()
@@ -3419,25 +3400,14 @@ export class AppCtx {
   }
 
   highlightActiveCollection = (options: { focus: boolean } = { focus: false }) => {
-    // Remove "highlighted" class from all features
-    this.unhighlightAllFeatures()
-    // Add "highlighted" class to all features in the active collection
-    const features = this.getActiveCollection()?.items || []
-    if (features.length > 0) {
-      features.forEach(f => {
-        addMarkerClass(this, f.id, 'highlighted')
-      })
-    }
+    // Marker presentation is derived by the map renderer from this collection.
     if (options.focus) {
       this.zoomToActiveCollection()
     }
   }
 
   unhighlightAllFeatures = (): void => {
-    // Remove "highlighted" class from all features
-    this.state.resources.feature.forEach(f => {
-      removeMarkerClass(this, f.id, 'highlighted')
-    })
+    // Marker presentation is derived by the map renderer from active collection state.
   }
 
   // MAP OPERATIONS -- REBOUNDING
@@ -3486,7 +3456,7 @@ export class AppCtx {
       // Convert to WGS84 and get bounds
       const bounds = bbox(featureCollection)
 
-      this.map.cachedFitBounds(
+      this.map.fitBounds(
         [
           [bounds[0], bounds[1]], // southwestern corner
           [bounds[2], bounds[3]], // northeastern corner
@@ -3496,7 +3466,6 @@ export class AppCtx {
           padding,
           maxZoom: 18,
           duration: 2500,
-          run: true,
         },
       )
     } catch (error) {
@@ -3522,7 +3491,7 @@ export class AppCtx {
 
     const bounds = bbox(featureCollection)
 
-    this.map.cachedFitBounds(
+    this.map.fitBounds(
       [
         [bounds[0], bounds[1]], // southwestern corner
         [bounds[2], bounds[3]], // northeastern corner
@@ -3537,7 +3506,6 @@ export class AppCtx {
         },
         maxZoom: 20,
         duration: 2500,
-        run: true,
       },
     )
   }
