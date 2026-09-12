@@ -1191,7 +1191,6 @@ $effect(() => {
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/snippet}
 
-        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
         {#snippet children(locale)}
           <FormI18nDescriptorFields
             form={formCtx.form}

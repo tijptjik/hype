@@ -27,7 +27,7 @@ let enabled = $state(['central', 'wan-chai'])
 let notice = $state('All changes here are local to this preview.')
 let reserved = $state(false)
 let compare = $state(false)
-const current = $derived(THEMES.find(theme => theme.id === selected)!)
+const current = $derived(THEMES.find(theme => theme.id === selected) ?? THEMES[0])
 const locations = [
   {
     id: 'central',
@@ -141,6 +141,12 @@ const panel: ResourcePanelModel = {
         href="/admin/styles/button"
         class="hidden items-center gap-2 text-xs text-muted-foreground hover:text-primary sm:flex"
         >Button library <ArrowUpRight class="size-4" /></a
+      >
+      <a
+        data-sveltekit-reload
+        href="/themes/colours"
+        class="hidden items-center gap-2 text-xs text-muted-foreground hover:text-primary sm:flex"
+        >Colour study <ArrowUpRight class="size-4" /></a
       >
     </header>
 

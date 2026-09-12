@@ -9,7 +9,6 @@ import { m } from '$lib/i18n'
 import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
 import { useResourcePanelModel } from '$lib/adapters/panels/useResourcePanelModel.svelte'
 import { AdminMenu } from '$lib/bits'
-import Settings from '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
 // BITS
 import { AdminShell } from '$lib/bits'
 // ADAPTERS
@@ -47,6 +46,33 @@ const appCtx = getAppCtx()
 // svelte-ignore state_referenced_locally
 const adminCtx = setAdminCtx(appCtx)
 const settingsModel = useSettingsPanelModel(appCtx, getThemeModel(), adminCtx)
+type SettingsPanelComponent =
+  typeof import('$lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
+let SettingsPanel = $state<SettingsPanelComponent | null>(null)
+let settingsPanelLoadError = $state<unknown>(null)
+let settingsPanelPromise: Promise<SettingsPanelComponent> | null = null
+
+/** Loads the admin settings panel on first open and retains it thereafter. */
+function loadSettingsPanel(): Promise<SettingsPanelComponent> {
+  settingsPanelPromise ??= import(
+    '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
+  )
+    .then(module => {
+      SettingsPanel = module.default
+      settingsPanelLoadError = null
+      return module.default
+    })
+    .catch(error => {
+      settingsPanelPromise = null
+      settingsPanelLoadError = error
+      throw error
+    })
+  return settingsPanelPromise
+}
+
+$effect(() => {
+  if (settingsModel.open) void loadSettingsPanel().catch(() => {})
+})
 const sidebarModel = useResourcePanelModel(appCtx, 'admin', adminCtx)
 setHeaderCtrl()
 const headerModel = useAdminHeaderModel(appCtx, adminCtx)
@@ -102,7 +128,31 @@ afterNavigate(() => {
   {/snippet}
 
   {#snippet settings()}
-    <Settings model={settingsModel} />
+    {#if SettingsPanel}
+      <SettingsPanel model={settingsModel} />
+    {:else if settingsModel.open}
+      <div
+        class="bits-theme flex h-full w-full items-center justify-center bg-panel shadow-xl"
+        role="status"
+        aria-label={m.resource_loading()}
+      >
+        {#if settingsPanelLoadError}
+          <div class="max-w-xs p-6 text-center">
+            <p>{m.bootstrap__error()}</p>
+            <button
+              type="button"
+              class="mt-4 rounded-lg bg-base-content px-4 py-2 text-base-100"
+              onclick={() => void loadSettingsPanel().catch(() => {})}
+            >
+              {m.bootstrap__retry()}
+            </button>
+          </div>
+        {:else}
+          <span class="loading loading-ring loading-lg" aria-hidden="true"></span>
+          <span class="sr-only">{m.resource_loading()}</span>
+        {/if}
+      </div>
+    {/if}
   {/snippet}
 
   {@render children()}

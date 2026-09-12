@@ -59,7 +59,6 @@ function onButtonClick(variant: string) {
     </svg>
   {/snippet}
 
-  <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
   {#snippet buttonDemoColumn(title: string, shellClasses: string, titleClasses: string)}
     <section class={shellClasses}>
       <div class="space-y-1">

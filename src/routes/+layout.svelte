@@ -311,7 +311,8 @@ async function handleRequestedUpgrade(): Promise<void> {
 
 onMount(() => {
   // The component studio has local sample data and needs no map/resource bootstrap.
-  if (page.url.pathname === '/themes') return
+  if (page.url.pathname === '/themes' || page.url.pathname.startsWith('/themes/'))
+    return
   hasMounted = true
   let disposed = false
 
@@ -358,6 +359,7 @@ const localeKey = $derived(getLocaleKey())
 const isShelllessRoute = $derived(
   Boolean(
     page.url.pathname === '/themes' ||
+      page.url.pathname.startsWith('/themes/') ||
       page.route.id?.startsWith('/policy') ||
       page.route.id?.startsWith('/account'),
   ),
