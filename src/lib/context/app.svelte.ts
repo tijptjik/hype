@@ -127,6 +127,7 @@ export class AppCtx {
   user: UserProfile | CurrentUser | SessionUser | null = $state(null)
   // Whether the map has been initialised
   isInitialised: boolean = $state(false)
+  isLoadingResources = $state(false)
   // Whether the app is transitioning between states
   isTransitioning: boolean = $state(false)
   // Whether the app is in mobile mode
@@ -852,7 +853,12 @@ export class AppCtx {
     // Initialize stats cache
     this.initStatsCache()
     // Use parallel fetching for initial load
-    await this.initialFetch(true, loadFeatures)
+    this.isLoadingResources = true
+    try {
+      await this.initialFetch(true, loadFeatures)
+    } finally {
+      this.isLoadingResources = false
+    }
     // Prevent init from running again, unless the user (re)authenticates
     // see reinitializeWithAuth()
     this.isInitialised = true
@@ -871,7 +877,12 @@ export class AppCtx {
 
     try {
       this.initStatsCache()
-      await this.initialFetch(false, loadFeatures, publicRoleScope)
+      this.isLoadingResources = true
+      try {
+        await this.initialFetch(false, loadFeatures, publicRoleScope)
+      } finally {
+        this.isLoadingResources = false
+      }
     } catch (error) {
       console.error('[AppCtx] Public map bootstrap failed:', error)
     }
@@ -891,6 +902,7 @@ export class AppCtx {
     loadFeatures: boolean = true,
     expectedRoleScope?: string,
   ): Promise<void> => {
+    expectedRoleScope ??= this.getRoleScopeQueryKey()
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     // Bootstrap only map-relevant user state first. Self-profile hydration includes a
@@ -1087,12 +1099,36 @@ export class AppCtx {
   loadPinnedLayers = async (scope?: string): Promise<void> => {
     const expected = scope ?? this.getRoleScopeQueryKey()
     const meta = this.panelResourceInput('layer').meta
+    const selection = JSON.stringify(this.state.prisms.layer)
     const rows = await Promise.all(
-      this.state.prisms.layer.map(id => getPinnedResource({ type: 'layer', id, meta })),
+      this.state.prisms.layer.map(id =>
+        getPinnedResource({ type: 'layer', id, profile: 'default', meta }),
+      ),
     )
-    if (!this.isExpectedRoleScopeCurrent(expected)) return
+    if (
+      !this.isExpectedRoleScopeCurrent(expected) ||
+      selection !== JSON.stringify(this.state.prisms.layer)
+    )
+      return
     const available = rows.filter((row): row is PanelResource => row !== null)
     this.retainPanelRows('layer', available)
+    const projectIds = [
+      ...new Set(available.flatMap(row => ('projectId' in row ? [row.projectId] : []))),
+    ]
+    const projects = await Promise.all(
+      projectIds.map(id =>
+        getPinnedResource({ type: 'project', id, profile: 'default', meta }),
+      ),
+    )
+    if (
+      !this.isExpectedRoleScopeCurrent(expected) ||
+      selection !== JSON.stringify(this.state.prisms.layer)
+    )
+      return
+    this.retainPanelRows(
+      'project',
+      projects.filter((row): row is PanelResource => row !== null),
+    )
     const ids = new Set(available.map(row => row.id))
     this.state.prisms.layer = this.state.prisms.layer.filter(id => ids.has(id))
   }
@@ -1100,6 +1136,7 @@ export class AppCtx {
   /** Builds the complete identity of a compact panel view. */
   panelResourceInput = (type: PanelResourceType, q = ''): ResourcePageInput => ({
     type,
+    conditions: { isArchived: false, isPublished: this.isAdmin() ? null : true },
     q: q.trim(),
     prisms: {
       organisation: [...this.state.prisms.organisation],
@@ -1107,21 +1144,23 @@ export class AppCtx {
     },
     meta: {
       isAdminRequest: this.isAdmin(),
-      scope: `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}`,
+      scope: `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}:${getLocaleKey()}`,
     },
   })
 
   /** Loads a first compact page independently of other hierarchy collections. */
   loadPanelResource = async (type: PanelResourceType): Promise<PanelResource[]> => {
     const list = this.cacheCtx.lists[type]
-    await list.load(this.panelResourceInput(type), true)
+    await list.load(this.panelResourceInput(type, list.search), true)
     return list.rows
   }
 
   /** Retains loaded identities without using cache membership as list membership. */
   retainPanelRows = (type: PanelResourceType, rows: PanelResource[]): void => {
     const store = this.cache[type] as Map<string, PanelResource>
-    for (const row of rows) store.set(row.id, { ...store.get(row.id), ...row })
+    for (const row of rows)
+      if (!row.id.startsWith('pending:'))
+        store.set(row.id, { ...store.get(row.id), ...row })
   }
 
   organisationsQueryFn = async (): Promise<Organisation[]> => {
@@ -1143,6 +1182,11 @@ export class AppCtx {
     const serial = this.featureRefreshSerial
     const scope = this.getRoleScopeQueryKey()
     const prisms = { ...this.state.prisms, layer: [...this.state.prisms.layer] }
+    const selection = JSON.stringify(prisms.layer)
+    const isCurrent = () =>
+      serial === this.featureRefreshSerial &&
+      scope === this.getRoleScopeQueryKey() &&
+      selection === JSON.stringify(this.state.prisms.layer)
     if (!prisms.layer.length) {
       this.featureLoadState = 'complete'
       return []
@@ -1152,6 +1196,7 @@ export class AppCtx {
     const records = new Map<string, FeatureFromCollection>()
     try {
       while (true) {
+        if (!isCurrent()) return []
         const result = toSafeListResponse<FeatureFromCollection>(
           (await runRemoteQuery(
             remoteList({
@@ -1163,11 +1208,7 @@ export class AppCtx {
             }),
           )) as ListResponse<FeatureFromCollection>,
         )
-        if (
-          serial !== this.featureRefreshSerial ||
-          scope !== this.getRoleScopeQueryKey()
-        )
-          return []
+        if (!isCurrent()) return []
         for (const feature of result.data) {
           records.set(feature.id, feature)
           this.cache.feature.set(feature.id, feature)
@@ -1182,7 +1223,7 @@ export class AppCtx {
       }
       return [...records.values()]
     } catch (error) {
-      if (serial === this.featureRefreshSerial) this.featureLoadState = 'error'
+      if (isCurrent()) this.featureLoadState = 'error'
       throw error
     }
   }
@@ -1567,9 +1608,9 @@ export class AppCtx {
       await this.refreshProperties()
       await this.refreshLayers()
     } else if (resource === FirstClassResource.layer) {
-      // Only refresh features if user is authenticated
+      // Public maps also need to follow active-layer changes.
+      await this.refreshFeatures()
       if (this.user?.id) {
-        await this.refreshFeatures()
         if (this.isAdmin()) {
           await this.refreshTasks()
         }
@@ -1672,12 +1713,12 @@ export class AppCtx {
    */
   deactivateOrganisation = async (organisationId: Id): Promise<void> => {
     const projectIds = new Set(
-      this.state.resources.project
+      [...this.cache.project.values()]
         .filter(project => project.organisationId === organisationId)
         .map(project => project.id),
     )
     const layerIds = new Set(
-      this.state.resources.layer
+      [...this.cache.layer.values()]
         .filter(layer => layer.organisationId === organisationId)
         .map(layer => layer.id),
     )
@@ -1706,7 +1747,7 @@ export class AppCtx {
    */
   deactivateOrganisationLayers = async (organisationId: Id): Promise<void> => {
     const organisationLayerIds = new Set(
-      this.state.resources.layer
+      [...this.cache.layer.values()]
         .filter(layer => layer.organisationId === organisationId)
         .map(layer => layer.id),
     )
@@ -1822,7 +1863,7 @@ export class AppCtx {
    */
   deactivateProject = async (projectId: Id): Promise<void> => {
     const projectLayerIds = new Set(
-      this.state.resources.layer
+      [...this.cache.layer.values()]
         .filter(layer => layer.projectId === projectId)
         .map(layer => layer.id),
     )
@@ -1845,7 +1886,7 @@ export class AppCtx {
    */
   deactivateProjectLayers = async (projectId: Id): Promise<void> => {
     const projectLayerIds = new Set(
-      this.state.resources.layer
+      [...this.cache.layer.values()]
         .filter(layer => layer.projectId === projectId)
         .map(layer => layer.id),
     )
@@ -2023,12 +2064,16 @@ export class AppCtx {
     expectedRoleScope?: string,
   ): Promise<void> => {
     const refreshSerial = ++this.featureRefreshSerial
+    const selection = JSON.stringify(this.state.prisms.layer)
     const query = this.getRequiredQueryConfig(FirstClassResource.feature)
     const features: FeatureFromCollection[] = await (query.queryFn() as Promise<
       FeatureFromCollection[]
     >)
 
-    if (refreshSerial !== this.featureRefreshSerial) {
+    if (
+      refreshSerial !== this.featureRefreshSerial ||
+      selection !== JSON.stringify(this.state.prisms.layer)
+    ) {
       logMarkerBootstrap('stale feature data ignored after a newer refresh started', {
         refreshSerial,
         currentRefreshSerial: this.featureRefreshSerial,
@@ -2359,14 +2404,12 @@ export class AppCtx {
   ): Promise<void> => {
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    // Auto-select single layer if there's only one available and none selected
-    if (
-      shouldAutoSelectSingleLayer &&
-      this.state.resources.layer.length === 1 &&
-      this.state.prisms.layer.length === 0
-    ) {
-      this.state.prisms.layer = [this.state.resources.layer[0].id]
-    }
+    // A page (or search result) cannot establish that only one layer exists.
+    // Default selection is resolved from the independent default-layer metadata.
+    void shouldAutoSelectSingleLayer
+    this.featureRefreshSerial++
+    await this.loadPinnedLayers(expectedRoleScope)
+    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     const currentLayerIds = new Set(this.state.prisms.layer)
     const existingFilterLayerIds = new Set(
@@ -2390,9 +2433,9 @@ export class AppCtx {
     })
 
     if (isCascading) {
-      // Only refresh features if user is authenticated
+      // Public maps also need to follow active-layer changes.
+      await this.refreshFeatures()
       if (this.user?.id) {
-        await this.refreshFeatures()
         if (this.isAdmin()) {
           await this.refreshTasks()
         }
@@ -2585,33 +2628,37 @@ export class AppCtx {
   }
 
   // Helper method to fetch resource by ID with cache miss handling
-  private fetchResourceById = async (resource: FirstClassResource, ref: Id) => {
-    if (!ref || ref === 'undefined') {
-      return undefined
-    }
-
-    const remoteGet = this.remoteMap[resource]?.get
-
-    try {
-      if (remoteGet) {
-        const response = (await runRemoteQuery(
-          remoteGet({
-            ref,
-            refKey: 'id',
-          }),
-        )) as { data?: unknown }
-        return response?.data
-      }
-
-      const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
-      const response = await fetch(
-        `/api/${ResourcePath[resource]}/${ref}${refKey === 'code' ? '?byId=true' : ''}`,
-      )
-      if (!response.ok) return undefined
-      return await response.json()
-    } catch {
-      return undefined
-    }
+  private fetchResourceById = async (
+    resource: FirstClassResource,
+    ref: Id,
+  ): Promise<any> => {
+    if (!ref || ref === 'undefined') return undefined
+    const remoteGet = this.remoteMap[resource]?.get as
+      | ((params: unknown) => import('$lib/types').ResourceDetailHandle['query'])
+      | undefined
+    if (!remoteGet) return undefined
+    const scope = this.getRoleScopeQueryKey()
+    const key = JSON.stringify([
+      resource,
+      ref,
+      'default',
+      scope,
+      this.hub?.id,
+      this.isAdmin(),
+    ])
+    return this.cacheCtx.ensureResource(
+      key,
+      () =>
+        remoteGet({
+          ref,
+          refKey: 'id',
+          meta: { isAdminRequest: this.isAdmin(), profile: 'default', scope },
+        }),
+      data => {
+        if (data && scope === this.getRoleScopeQueryKey())
+          (this.cache[resource] as Map<string, unknown>).set(ref, data)
+      },
+    )
   }
 
   getOrganisationById = async (
@@ -2620,7 +2667,7 @@ export class AppCtx {
   ): Promise<Organisation | undefined> => {
     // Check cache first
     let org = this.cache.organisation.get(id)
-    if (org) return org
+    if (org && !fetchOnCacheMiss) return org
 
     if (fetchOnCacheMiss) {
       org = await this.fetchResourceById(FirstClassResource.organisation, id)
@@ -2639,7 +2686,7 @@ export class AppCtx {
   ): Promise<Project | undefined> => {
     // Check cache first
     let project = this.cache.project.get(id)
-    if (project) return project
+    if (project && !fetchOnCacheMiss) return project
 
     if (fetchOnCacheMiss) {
       project = await this.fetchResourceById(FirstClassResource.project, id)
@@ -2658,7 +2705,7 @@ export class AppCtx {
   ): Promise<Layer | undefined> => {
     // Check cache first
     let layer = this.cache.layer.get(id)
-    if (layer) return layer
+    if (layer && !fetchOnCacheMiss) return layer
 
     if (fetchOnCacheMiss) {
       layer = await this.fetchResourceById(FirstClassResource.layer, id)
@@ -2677,7 +2724,7 @@ export class AppCtx {
   ): Promise<FeatureFromCollection | Feature | undefined> => {
     // Check cache first
     let feature = this.cache.feature.get(id)
-    if (feature) return feature
+    if (feature && !fetchOnCacheMiss) return feature
 
     if (fetchOnCacheMiss) {
       feature = await this.fetchResourceById(FirstClassResource.feature, id)
@@ -4024,8 +4071,21 @@ export class AppCtx {
     }
 
     this.user = user
-    if (identityChanged || previousRoleScope !== this.getRoleScopeQueryKey())
+    if (identityChanged || previousRoleScope !== this.getRoleScopeQueryKey()) {
       this.cacheCtx.clear()
+      this.selectionLayers = []
+      this.featuresMap.clear()
+      this.featureLoadState = 'idle'
+      for (const resource of [
+        'organisation',
+        'project',
+        'layer',
+        'feature',
+        'task',
+        'hub',
+      ] as const)
+        this.state.resources[resource] = []
+    }
     if (!identityChanged && previousRoleScope !== this.getRoleScopeQueryKey()) {
       // Role changes also alter query scope and must supersede prior responses.
       this.featureRefreshSerial += 1
