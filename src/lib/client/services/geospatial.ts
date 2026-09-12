@@ -2,6 +2,8 @@
 import { getI18n, getLocaleKey, toLocaleKey } from '$lib/i18n'
 // DATA
 import neighbourhoods from '$lib/map/neighbourhoods.json'
+// MAPLIBRE
+import type { LngLatLike } from 'maplibre-gl'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type {
@@ -10,7 +12,6 @@ import type {
   NeighbourhoodResource,
   NeighbourhoodJSON,
 } from '$lib/types'
-import type { LngLatLike } from 'maplibre-gl'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -38,8 +39,6 @@ import type { LngLatLike } from 'maplibre-gl'
 //      Extracts the current user location as an `[lng, lat]` tuple
 //
 // 4. ANIMATION
-//    - startCircularFlight(appCtx: AppCtx, center: [number, number], radiusKm?: number)
-//      Starts circular flight animation around center point
 //
 // ═══════════════════════
 
@@ -142,77 +141,4 @@ export function getUserLocationCoordinates(appCtx: AppCtx): [number, number] | n
   if (!userLocation) return null
 
   return [userLocation.coords.longitude, userLocation.coords.latitude]
-}
-
-// ═══════════════════════
-// 3. ANIMATION
-// ═══════════════════════
-
-/**
- * Starts a circular flight animation around a center point.
- * Completes a 5km circle in two minutes by default and loops continuously.
- *
- * @param appCtx - Application context containing the active map.
- * @param center - Center coordinate for the circular flight.
- * @param radiusKm - Radius of the circular flight in kilometres.
- * @param durationMs - Duration of one complete orbit in milliseconds.
- * @returns A cleanup function, or `undefined` when no map is available.
- * @remarks Non-positive `durationMs` values use the 120000ms default duration.
- */
-export function startCircularFlight(
-  appCtx: AppCtx,
-  center: [number, number],
-  radiusKm: number = 5,
-  durationMs: number = 120000,
-): (() => void) | void {
-  const map = appCtx.map
-  if (!map) return
-
-  const totalDuration = durationMs > 0 ? durationMs : 120000
-  const longitudeRadius = radiusKm / 111.32
-  const latitudeRadius = longitudeRadius / Math.cos((center[1] * Math.PI) / 180)
-  const bearingDegreesPerRadian = 180 / Math.PI
-  let startTime: number | null = null
-  let animationId: number | null = null
-  let isStopped = false
-
-  const animate = (currentTime: number) => {
-    if (isStopped || appCtx.map !== map) return
-    if (startTime === null) startTime = currentTime
-
-    // Keep the camera update on one browser frame and avoid work until the map is ready.
-    const elapsed = (currentTime - startTime) % totalDuration
-    const progress = elapsed / totalDuration
-    const angleRad = progress * 2 * Math.PI
-
-    map.jumpTo({
-      center: [
-        center[0] + longitudeRadius * Math.cos(angleRad),
-        center[1] + latitudeRadius * Math.sin(angleRad),
-      ],
-      zoom: 14,
-      bearing: (angleRad + Math.PI / 2) * bearingDegreesPerRadian,
-      pitch: 45,
-    })
-
-    animationId = requestAnimationFrame(animate)
-  }
-
-  const start = (): void => {
-    if (!isStopped) animationId = requestAnimationFrame(animate)
-  }
-
-  if (map.loaded()) {
-    start()
-  } else {
-    map.once('load', start)
-  }
-
-  return () => {
-    isStopped = true
-    map.off('load', start)
-    if (animationId !== null) {
-      cancelAnimationFrame(animationId)
-    }
-  }
 }

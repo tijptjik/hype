@@ -1,6 +1,7 @@
 <script lang="ts">
 // MAPS
 import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
+import type { MapController } from '$lib/map/controller'
 // BITS
 import { cx } from '$lib/bits/utils'
 
@@ -11,6 +12,8 @@ type AppLandingProps = {
   antialias?: boolean
   interactive?: boolean
   showControls?: boolean
+  onMapReady?: (controller: MapController | null) => void
+  bindAppMap?: boolean
   class?: string
   style?: string
 }
@@ -22,6 +25,8 @@ let {
   antialias,
   interactive,
   showControls,
+  onMapReady,
+  bindAppMap,
   class: className = '',
   style = '',
 }: AppLandingProps = $props()
@@ -32,5 +37,13 @@ let {
   {style}
 >
   {@render children()}
-  <MapCanvas {mapStyleCode} {pixelRatio} {antialias} {interactive} {showControls} />
+  <MapCanvas
+    {mapStyleCode}
+    {pixelRatio}
+    {antialias}
+    {interactive}
+    {showControls}
+    {onMapReady}
+    {bindAppMap}
+  />
 </main>

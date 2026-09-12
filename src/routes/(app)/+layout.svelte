@@ -238,7 +238,6 @@ beforeNavigate(({ from, to }) => {
 })
 
 const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
-const menuReservedHeight = $derived(responsiveCtx.menuReservedHeight)
 const MAP_GESTURE_SURFACE_SELECTOR = '[data-map-gesture-surface="true"]'
 
 // PROFILE PANEL SCROLL POSITION
@@ -538,7 +537,7 @@ $effect(() => {
 <AppShell>
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
     <AppSurface>
-      <MapCanvas mapStyleCode={activeMapStyleCode} bottomInset={menuReservedHeight} />
+      <MapCanvas mapStyleCode={activeMapStyleCode} />
       <!-- Panels -->
       <ResourcePanel model={prismsModel} />
       <Stars shell={starsShell} model={starsModel} />

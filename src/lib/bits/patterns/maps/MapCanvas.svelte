@@ -2,7 +2,7 @@
 // SVELTEKIT
 import { browser } from '$app/environment'
 import { page } from '$app/state'
-import { onDestroy, onMount, tick } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 import { watch } from 'runed'
 // I18N
 import { getLocale, m } from '$lib/i18n'
@@ -13,16 +13,24 @@ import { cubicInOut } from 'svelte/easing'
 import { Button } from '$lib/bits'
 // LIB
 import {
-  clearMarkers,
+  createMarkerRenderer,
   getUserMarkerStyleVariant,
-  updateMarkers,
   USER_MARKER_STYLE_PARAM,
+  type MarkerRenderer,
 } from '$lib/map/markers'
 import {
   getDefaultMapStyleKey,
   getMapStyleDefinition,
   isMapStyleKey,
 } from '$lib/map/styles'
+import { getFeatureViewportQuery } from '$lib/map/featureSpatial'
+import {
+  applyMapCanvasBackground,
+  resolveRuntimeMapStyle,
+} from '$lib/map/styles/runtime'
+import { createMapController, type MapController } from '$lib/map/controller'
+import MapSurface from '$lib/bits/custom/map/MapSurface.svelte'
+import { GeolocateControl, NavigationControl } from 'svelte-maplibre-gl'
 // ICONS
 import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 // CONTEXT
@@ -33,39 +41,54 @@ import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 import { Panel } from '$lib/enums'
 // TYPES
 import type {
-  EventData,
-  GeolocateControl,
   LngLatLike,
   Map as MaplibreMap,
   MapMouseEvent,
   Point,
   PointLike,
 } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
 import type { Point as GeoJSONPoint } from 'geojson'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { StyleSpecification } from 'maplibre-gl'
+import type { FeatureQueryChannel } from '$lib/types'
 
+/**
+ * Application map adapter. Context and route policy stay at this boundary;
+ * `MapSurface` remains a context-free rendering primitive.
+ */
 type MapCanvasProps = {
   mapStyleCode?: string | null
-  bottomInset?: number
   pixelRatio?: number
   antialias?: boolean
   interactive?: boolean
   showControls?: boolean
+  onMapReady?: (controller: MapController | null) => void
+  bindAppMap?: boolean
 }
 
-type GeolocateControlWithPrivateFields = GeolocateControl & {
+type GeolocateControlWithPrivateFields = import('maplibre-gl').GeolocateControl & {
   _updateCamera: () => void
   _geolocateButton: HTMLButtonElement
 }
 
+type GeolocateControlProps = {
+  position: 'bottom-right'
+  positionOptions: PositionOptions
+  trackUserLocation: boolean
+  showUserHeading: boolean
+  showUserLocation: boolean
+  autoTrigger: boolean
+}
+
 let {
   mapStyleCode = null,
-  bottomInset = 0,
   pixelRatio,
   antialias = true,
   interactive = true,
   showControls = true,
+  onMapReady,
+  bindAppMap = true,
 }: MapCanvasProps = $props()
 
 // ELEMENTS
@@ -79,16 +102,19 @@ const responsiveCtx = getResponsiveCtx()
 // STATE
 let lastHorizontalOffset = $state(0)
 let isAnimating = $state(false)
-let activeStyleToken = $state<string | null>(null)
 let isTrackingMapUrl = $state(false)
 let detachMapUrlTracking: (() => void) | null = null
 let styleRequestSerial = 0
-let activeMapInstance: MaplibreMap | null = null
+let activeMapInstance: MaplibreMap | undefined = $state(undefined)
+let initialStyle = $state<StyleSpecification | null>(null)
 let portalRecenterTimeout = 0
 let mapResizeFrame = 0
 let portalRecenterFrame = 0
 let geolocationWatchId: number | null = null
 let featureCardDescriptionExpanded = $state(false)
+let markerRenderer: MarkerRenderer | null = null
+let markerRendererMap: MaplibreMap | undefined
+let mapStyleAbortController: AbortController | null = null
 
 const MAP_TRACKING_PARAM = 'mapTracking'
 const MAP_LNG_PARAM = 'lng'
@@ -143,23 +169,20 @@ const formatMapViewNumber = (value: number, digits: number): string =>
 const isMapTrackingEnabled = (url: URL): boolean =>
   url.searchParams.get(MAP_TRACKING_PARAM) === 'true'
 
-const syncMapViewToUrl = (): void => {
-  if (!appCtx.map || !isTrackingMapUrl || typeof window === 'undefined') {
+const syncMapViewToUrl = (map: MaplibreMap | undefined): void => {
+  if (!map || !isTrackingMapUrl || typeof window === 'undefined') {
     return
   }
 
-  const center = appCtx.map.getCenter()
+  const center = map.getCenter()
   const url = new URL(window.location.href)
 
   url.searchParams.set(MAP_TRACKING_PARAM, 'true')
   url.searchParams.set(MAP_LNG_PARAM, formatMapViewNumber(center.lng, 5))
   url.searchParams.set(MAP_LAT_PARAM, formatMapViewNumber(center.lat, 5))
-  url.searchParams.set(MAP_ZOOM_PARAM, formatMapViewNumber(appCtx.map.getZoom(), 2))
-  url.searchParams.set(
-    MAP_BEARING_PARAM,
-    formatMapViewNumber(appCtx.map.getBearing(), 1),
-  )
-  url.searchParams.set(MAP_PITCH_PARAM, formatMapViewNumber(appCtx.map.getPitch(), 1))
+  url.searchParams.set(MAP_ZOOM_PARAM, formatMapViewNumber(map.getZoom(), 2))
+  url.searchParams.set(MAP_BEARING_PARAM, formatMapViewNumber(map.getBearing(), 1))
+  url.searchParams.set(MAP_PITCH_PARAM, formatMapViewNumber(map.getPitch(), 1))
 
   window.history.replaceState(window.history.state, '', url.toString())
 }
@@ -182,7 +205,7 @@ const clearTrackedMapViewFromUrl = (): void => {
 
 const updateMapUrlTracking = (): void => {
   const shouldTrackMapUrl = isMapTrackingEnabled(page.url)
-  const map = appCtx.map
+  const map = activeMapInstance
 
   if (!map) {
     isTrackingMapUrl = shouldTrackMapUrl
@@ -202,22 +225,23 @@ const updateMapUrlTracking = (): void => {
     return
   }
 
-  const onMoveEnd = () => syncMapViewToUrl()
+  const onMoveEnd = () => syncMapViewToUrl(map)
   map.on('moveend', onMoveEnd)
   detachMapUrlTracking = () => {
     map.off('moveend', onMoveEnd)
   }
-  syncMapViewToUrl()
+  syncMapViewToUrl(map)
 }
 
 const queueMapResize = (): void => {
-  if (!appCtx.map || mapResizeFrame !== 0) {
+  const map = activeMapInstance
+  if (!map || mapResizeFrame !== 0) {
     return
   }
 
   mapResizeFrame = requestAnimationFrame(() => {
     mapResizeFrame = 0
-    appCtx.map?.resize()
+    map.resize()
   })
 }
 
@@ -230,13 +254,6 @@ const schedulePortalRecenter = (): void => {
     portalRecenterFrame = 0
     recenterActiveFeatureToPortal()
   })
-}
-
-const isMapContainerElement = (value: unknown): value is HTMLDivElement => {
-  return (
-    value instanceof HTMLDivElement ||
-    Boolean(value && typeof value === 'object' && value.nodeType === 1)
-  )
 }
 
 function isPointGeometry(
@@ -304,7 +321,7 @@ function recenterActiveFeatureToPortal(
   window.clearTimeout(portalRecenterTimeout)
 
   portalRecenterTimeout = window.setTimeout(() => {
-    const map = appCtx.map
+    const map = activeMapInstance
     const activeFeature = appCtx.getActiveFeature()
     const offset = getFeaturePortalOffset()
 
@@ -331,94 +348,6 @@ function recenterActiveFeatureToPortal(
   }, delay)
 }
 
-const hideSymbolLayers = (style: StyleSpecification): StyleSpecification => {
-  if (!style.layers) {
-    return style
-  }
-
-  style.layers = style.layers.map(layer =>
-    layer.type === 'symbol'
-      ? {
-          ...layer,
-          layout: {
-            ...(layer.layout ?? {}),
-            visibility: 'none',
-          },
-        }
-      : layer,
-  )
-
-  return style
-}
-
-const getMapStyleEndpoint = (mapStyleCode: string): string =>
-  `/api/mapStyles/${mapStyleCode}`
-
-const resolveRuntimeMapStyle = async (
-  endpoint: string,
-  noLabels: boolean,
-): Promise<StyleSpecification> => {
-  const response = await fetch(`${endpoint}?inline=1`)
-  if (!response.ok) {
-    throw new Error(`Failed to load map style from ${endpoint}`)
-  }
-
-  const style = (await response.json()) as StyleSpecification
-  return noLabels ? hideSymbolLayers(style) : style
-}
-
-/**
- * Gets the solid colour used by a map style's sea layer.
- *
- * @param style - Loaded MapLibre style specification.
- * @returns CSS colour for the canvas fallback, or the app's dark base colour.
- */
-const getMapStyleSeaColor = (style: StyleSpecification): string => {
-  const waterLayer = style.layers?.find(layer => layer.id === 'water')
-  const seaColor = (waterLayer?.paint as Record<string, unknown> | undefined)?.[
-    'fill-color'
-  ]
-
-  return typeof seaColor === 'string' ? seaColor : '#101214'
-}
-
-/**
- * Keeps the DOM and WebGL canvas fallback in sync with the active map style.
- *
- * @param style - Loaded MapLibre style specification.
- * @param map - Current MapLibre instance, when it has been created.
- * @returns Nothing.
- */
-const applyMapCanvasBackground = (
-  style: StyleSpecification,
-  map?: MaplibreMap | null,
-): void => {
-  const seaColor = getMapStyleSeaColor(style)
-
-  mapContainer.style.backgroundColor = seaColor
-  map?.getCanvas().style.setProperty('background-color', seaColor)
-}
-
-const getCurrentMapStyleVariant = (
-  map: MaplibreMap | null | undefined,
-): string | null => {
-  if (!map) {
-    return null
-  }
-
-  const currentStyle = map.getStyle()
-  const styleMetadata =
-    currentStyle?.metadata && typeof currentStyle.metadata === 'object'
-      ? (currentStyle.metadata as Record<string, unknown>)
-      : null
-
-  return (
-    (typeof styleMetadata?.['hype:style-variant'] === 'string'
-      ? styleMetadata['hype:style-variant']
-      : null) ?? (typeof currentStyle?.name === 'string' ? currentStyle.name : null)
-  )
-}
-
 // STATE : DERIVED
 const userMarkerStyleVariant = $derived(
   getUserMarkerStyleVariant(page.url.searchParams.get(USER_MARKER_STYLE_PARAM)),
@@ -426,10 +355,6 @@ const userMarkerStyleVariant = $derived(
 const activeLocale = $derived(getLocale())
 const resolvedMapStyleCode = $derived(
   mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : getDefaultMapStyleKey(),
-)
-const resolvedMapStyleEndpoint = $derived(getMapStyleEndpoint(resolvedMapStyleCode))
-const resolvedMapStyleVariant = $derived(
-  getMapStyleDefinition(resolvedMapStyleCode).label,
 )
 const projectMarkerThemes = $derived.by(() => {
   const fallbackTheme = getMapStyleDefinition(getDefaultMapStyleKey()).markerTheme
@@ -443,290 +368,185 @@ const projectMarkerThemes = $derived.by(() => {
     ]),
   )
 })
-const activeStyleKey = $derived(
-  `${resolvedMapStyleCode}:${activeLocale}:${appCtx.user?.experimental?.noLabelsMode ?? false}`,
-)
+// MAP SURFACE LIFECYCLE
+let geolocateControl: GeolocateControlWithPrivateFields | undefined = $state(undefined)
+let geolocationFixStarted = false
+let geolocationLoadMap: MaplibreMap | null = null
+let geolocationLoadHandler: (() => void) | null = null
+let mapListenersAttached = false
+let mapClickHandler: ((event: MapMouseEvent) => void) | null = null
 
-// WATCHERS
-// Watch for changes in features
-onMount(() => {
-  let isDisposed = false
+const setupMap = (map: MaplibreMap): void => {
+  activeMapInstance = map
+  if (bindAppMap) appCtx.map = map
+  if (initialStyle) applyMapCanvasBackground(mapContainer, initialStyle, map)
+  if (!markerRenderer || markerRendererMap !== map) {
+    markerRenderer?.clear()
+    markerRenderer = createMarkerRenderer(map, maplibregl, (featureId, element) => {
+      if (element) appCtx.markerElements.set(featureId, element)
+      else appCtx.markerElements.delete(featureId)
+    })
+    markerRendererMap = map
+  }
+  updateMapUrlTracking()
+  queueMapResize()
 
-  const initialiseMap = async (): Promise<void> => {
-    // To minimize the payload in Cloudflare, we are manually inserting mapping dependencies here as they
-    // are heavy and the max worker size in the free tier is 1 MB
-
-    // Wait for maplibre to be loaded globally.
-    while (!isDisposed && (!appCtx.isMaplibreLoaded || !appCtx.maplibre)) {
-      await new Promise(resolve => setTimeout(resolve, 10))
-    }
-
-    if (isDisposed) {
-      return
-    }
-
-    // Wait for `bind:this` to settle before handing the element to MapLibre.
-    await tick()
-
-    if (isDisposed) {
-      return
-    }
-
-    const container = mapContainer
-    if (!isMapContainerElement(container)) {
-      console.error('Map container not available for map initialisation', {
-        container,
+  const onClick = (event: MapMouseEvent): void => {
+    event.originalEvent.preventDefault()
+    event.originalEvent.stopPropagation()
+    const target = event.originalEvent.target as HTMLElement
+    if (target.dataset.type === 'marker') {
+      const featureId = target.dataset.featureId
+      if (!featureId) return
+      const isCardAlreadyOpen = omniCtx.state.isCardOpen
+      if (!isCardAlreadyOpen) {
+        omniCtx.prepareCardTransitionFromMarker(
+          featureId,
+          target.closest('[data-feature-id]') as HTMLElement | null,
+        )
+      }
+      omniCtx.handleFeatureSelection(featureId, {
+        focus: false,
+        openCard: true,
+        openCardDelay: 0,
+        navOptions: { paramsToDrop: ['imageId'] },
       })
       return
     }
+    if (omniCtx.state.isCardOpen) omniCtx.close()
+    else if (omniCtx.state.mode === 'search' && omniCtx.state.isTrayOpen)
+      omniCtx.closeTray()
+    else if (responsiveCtx.isLeftPanelOpen() || responsiveCtx.isRightPanelOpen()) {
+      appCtx.closeAllPanels()
+    }
+  }
+  if (!mapListenersAttached) {
+    mapListenersAttached = true
+    mapClickHandler = onClick
+    map.on('click', onClick)
+  }
 
-    const initialMapView = isMapTrackingEnabled(page.url)
-      ? getTrackedMapViewFromUrl(page.url)
-      : DEFAULT_MAP_VIEW
-
-    let initialStyle: StyleSpecification
-    try {
-      initialStyle = await resolveRuntimeMapStyle(
-        resolvedMapStyleEndpoint,
-        appCtx.user?.experimental?.noLabelsMode ?? false,
+  if (appCtx.user && showControls && typeof navigator !== 'undefined') {
+    // Keep the established first-fix policy and private-control workaround intact.
+    const configureGeolocation = (): void => {
+      if (!geolocateControl || geolocationFixStarted) return
+      const control = geolocateControl
+      geolocationFixStarted = true
+      const updateCamera = control._updateCamera
+      control._updateCamera = () => {}
+      control.once('geolocate', () => {
+        control._updateCamera = updateCamera
+      })
+      control.trigger()
+      window.setTimeout(() => control._geolocateButton.click(), 200)
+      let hasReceivedFirstFix = false
+      geolocationWatchId = navigator.geolocation.watchPosition(
+        geoLocation => {
+          const { latitude, longitude } = geoLocation.coords
+          const inHongKong =
+            latitude >= 22.1193278 &&
+            latitude <= 22.4393278 &&
+            longitude >= 114.0028131 &&
+            longitude <= 114.3228131
+          if (!inHongKong) {
+            console.warn(
+              'User location outside Hong Kong bounds, disabling location tracking',
+            )
+            return
+          }
+          appCtx.state.userLocation = geoLocation
+          const isViewingFeature = window.location.pathname.includes('/features/')
+          if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
+            hasReceivedFirstFix = true
+            const offset = responsiveCtx.getAppMainOffsetX()
+            if (offset !== 0) {
+              const point = map.project({ lng: longitude, lat: latitude })
+              const adjustment = offset * -0.0215
+              const adjusted = map.unproject([point.x + adjustment, point.y])
+              map.flyTo({
+                center: [adjusted.lng, adjusted.lat],
+                zoom: 19,
+                duration: 2500,
+              })
+            } else
+              map.flyTo({ center: [longitude, latitude], zoom: 19, duration: 2500 })
+          }
+        },
+        error => console.error('Error getting geolocation:', error),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity },
       )
-    } catch (error) {
-      console.error('Failed to resolve initial map style', error)
-      return
     }
-
-    if (isDisposed) {
-      return
+    if (map.loaded()) {
+      configureGeolocation()
+    } else if (geolocationLoadMap !== map) {
+      geolocationLoadMap = map
+      geolocationLoadHandler = () => {
+        geolocationLoadMap = null
+        geolocationLoadHandler = null
+        configureGeolocation()
+      }
+      map.once('load', geolocationLoadHandler)
     }
-
-    applyMapCanvasBackground(initialStyle)
-
-    const map = new appCtx.maplibre.Map({
-      container,
-      style: initialStyle,
-      center: initialMapView.center,
-      bearing: initialMapView.bearing,
-      zoom: initialMapView.zoom,
-      minZoom: MIN_MAP_ZOOM,
-      hash: false,
-      pitch: initialMapView.pitch,
-      attributionControl: false,
-      interactive,
-      pixelRatio: pixelRatio ?? window.devicePixelRatio,
-      canvasContextAttributes: {
-        antialias,
-      },
-    })
-
-    if (isDisposed) {
-      map.remove()
-      return
-    }
-
-    activeMapInstance = map
-    appCtx.map = map
-    activeStyleToken = activeStyleKey
-    applyMapCanvasBackground(initialStyle, map)
-    updateMapUrlTracking()
-    queueMapResize()
-
-    map.on('load', () => {
-      const map = appCtx.map
-      if (!map) {
-        return
-      }
-
-      queueMapResize()
-
-      // CONTROLS : Add the controls to the map
-      if (appCtx.user && showControls) {
-        // Initialize and store the GeolocateControl
-        // See https://github.com/mapbox/mapbox-gl-js/issues/13067#issuecomment-1925291846
-        const geolocateControl = new appCtx.maplibre.GeolocateControl({
-          positionOptions: {
-            timeout: 5000,
-            enableHighAccuracy: true,
-            maximumAge: Infinity,
-          },
-          trackUserLocation: true,
-          showUserHeading: true,
-          showUserLocation: true,
-        }) as GeolocateControlWithPrivateFields
-
-        // store the original _updateCamera implementation to restore later
-        const updateCamera = geolocateControl._updateCamera
-        // replace updateCamera method with noop operation, so that we can control
-        // the initial flyTo of the user's location.
-        geolocateControl._updateCamera = () => {}
-        map.addControl(geolocateControl, 'bottom-right')
-        map.on('load', () => {
-          // after first geolocate...
-          geolocateControl.once('geolocate', () => {
-            // restore update camera for future use
-            geolocateControl._updateCamera = updateCamera
-          })
-          // trigger to get the dot on the map
-          geolocateControl.trigger()
-        })
-
-        // Programmatically click on the navigation control
-        setTimeout(() => {
-          geolocateControl._geolocateButton.click()
-        }, 200)
-
-        let hasReceivedFirstFix = false
-
-        // WATCHER : Watch for changes in the user's location
-        geolocationWatchId = navigator.geolocation.watchPosition(
-          geoLocation => {
-            const { latitude, longitude } = geoLocation.coords
-
-            // Hong Kong bounding box check
-            const HK_BOUNDS = {
-              north: 22.4393278,
-              south: 22.1193278,
-              east: 114.3228131,
-              west: 114.0028131,
-            }
-
-            const isInHongKong =
-              latitude >= HK_BOUNDS.south &&
-              latitude <= HK_BOUNDS.north &&
-              longitude >= HK_BOUNDS.west &&
-              longitude <= HK_BOUNDS.east
-
-            if (!isInHongKong) {
-              // User is outside Hong Kong - disable location tracking
-              console.warn(
-                'User location outside Hong Kong bounds, disabling location tracking',
-              )
-              return
-            }
-
-            appCtx.state.userLocation = geoLocation
-
-            // Fly to user location on first GPS fix if no active feature
-            const isViewingFeature = window.location.pathname.includes('/features/')
-            if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
-              hasReceivedFirstFix = true
-
-              // Calculate horizontal offset for panels already open
-              const currentHorizontalOffset = responsiveCtx.getAppMainOffsetX()
-
-              if (currentHorizontalOffset !== 0) {
-                const originalCenter = { lng: longitude, lat: latitude }
-                const centerInPx = map.project(originalCenter)
-
-                // Apply empirically derived adjustment factor for GPS centering
-                // This accounts for the difference between panel positioning and GPS fix centering
-                const adjustmentFactor = -0.0215
-                const pixelAdjustment = currentHorizontalOffset * adjustmentFactor
-
-                const adjustedPoint = new appCtx.maplibre.Point(
-                  centerInPx.x + pixelAdjustment,
-                  centerInPx.y,
-                )
-                const adjustedCenter = map.unproject(adjustedPoint)
-
-                map.flyTo({
-                  center: [adjustedCenter.lng, adjustedCenter.lat],
-                  zoom: 19,
-                  duration: 2500,
-                })
-              } else {
-                // No offset needed, center normally
-                map.flyTo({
-                  center: [longitude, latitude],
-                  zoom: 19,
-                  duration: 2500,
-                })
-              }
-            }
-          },
-          error => {
-            // TODO: Add a fallback to the default location
-            console.error('Error getting geolocation:', error)
-          },
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity },
-        )
-
-        map.addControl(
-          new appCtx.maplibre.NavigationControl({
-            showZoom: false,
-            showCompass: true,
-            showPitch: true,
-            showRotate: true,
-          }),
-          'bottom-right',
-        )
-      }
-    })
-
-    // LISTENERS : Add the listeners to the map
-    map.on('click', (e: MapMouseEvent & EventData) => {
-      e.originalEvent.preventDefault()
-      e.originalEvent.stopPropagation()
-      const target = e.originalEvent.target as HTMLElement
-      if (target.dataset.type === 'marker') {
-        const featureId = target.dataset.featureId
-        if (!featureId) return
-
-        // If card is already open, disable automatic centering to let FeaturePortal handle animation
-        const isCardAlreadyOpen = omniCtx.state.isCardOpen
-        if (!isCardAlreadyOpen) {
-          const markerElement = target.closest(
-            '[data-feature-id]',
-          ) as HTMLElement | null
-          omniCtx.prepareCardTransitionFromMarker(featureId, markerElement)
-        }
-        omniCtx.handleFeatureSelection(featureId, {
-          focus: false, // Don't auto-center as card is already open,
-          openCard: true,
-          openCardDelay: 0,
-          navOptions: {
-            paramsToDrop: ['imageId'],
-          },
-        })
-      } else {
-        // Priority 1: Close feature card if open
-        if (omniCtx.state.isCardOpen) {
-          omniCtx.close()
-        }
-        // Priority 2: Close tray if open in search mode
-        else if (omniCtx.state.mode === 'search' && omniCtx.state.isTrayOpen) {
-          omniCtx.closeTray()
-        }
-        // Priority 3: Close panels if open
-        else if (responsiveCtx.isLeftPanelOpen() || responsiveCtx.isRightPanelOpen()) {
-          appCtx.closeAllPanels()
-        }
-      }
-    })
-    // TODO Add Attribution
   }
+}
 
-  void initialiseMap()
-
+$effect(() => {
+  const map = activeMapInstance
+  const controller = map ? createMapController(() => activeMapInstance ?? null) : null
+  onMapReady?.(controller)
   return () => {
-    isDisposed = true
-    detachMapUrlTracking?.()
-    detachMapUrlTracking = null
+    onMapReady?.(null)
+  }
+})
 
-    clearMarkers(appCtx)
-
-    if (activeMapInstance) {
-      activeMapInstance.remove()
-      if (appCtx.map === activeMapInstance) {
-        appCtx.map = undefined
-      }
-      activeMapInstance = null
-    }
-
-    if (geolocationWatchId !== null) {
-      navigator.geolocation.clearWatch(geolocationWatchId)
-      geolocationWatchId = null
+$effect(() => {
+  const map = activeMapInstance
+  if (map) setupMap(map)
+  return () => {
+    if (map && mapListenersAttached) {
+      mapListenersAttached = false
+      if (mapClickHandler) map.off('click', mapClickHandler)
+      mapClickHandler = null
     }
   }
+})
+
+$effect(() => {
+  if (activeMapInstance && geolocateControl) {
+    // The control is created by svelte-maplibre-gl after the map context is ready.
+    setupMap(activeMapInstance)
+  }
+})
+
+$effect(() => {
+  const map = activeMapInstance
+  if (!map || !initialStyle) return
+  applyMapCanvasBackground(mapContainer, initialStyle, map)
+})
+
+$effect(() => {
+  const serial = ++styleRequestSerial
+  mapStyleAbortController?.abort()
+  const abortController = new AbortController()
+  mapStyleAbortController = abortController
+  void resolveRuntimeMapStyle(resolvedMapStyleCode, {
+    locale: activeLocale,
+    noLabels:
+      (appCtx.user as { experimental?: { noLabelsMode?: boolean } } | null)
+        ?.experimental?.noLabelsMode ?? false,
+    signal: abortController.signal,
+  })
+    .then(style => {
+      if (serial === styleRequestSerial && !abortController.signal.aborted) {
+        initialStyle = style
+      }
+    })
+    .catch(error => {
+      if ((error as Error)?.name !== 'AbortError') {
+        console.error('Failed to resolve map style', error)
+      }
+    })
+  return () => abortController.abort()
 })
 
 onDestroy(() => {
@@ -743,6 +563,26 @@ onDestroy(() => {
     portalRecenterFrame = 0
   }
   window.clearTimeout(portalRecenterTimeout)
+  if (geolocationWatchId !== null && typeof navigator !== 'undefined') {
+    navigator.geolocation.clearWatch(geolocationWatchId)
+    geolocationWatchId = null
+  }
+  if (geolocationLoadMap && geolocationLoadHandler) {
+    geolocationLoadMap.off('load', geolocationLoadHandler)
+  }
+  geolocationLoadMap = null
+  geolocationLoadHandler = null
+  markerRenderer?.clear()
+  markerRenderer = null
+  markerRendererMap = undefined
+  appCtx.markerElements.clear()
+  if (bindAppMap && activeMapInstance && appCtx.map === activeMapInstance) {
+    appCtx.map = undefined
+  }
+  activeMapInstance = undefined
+  geolocateControl = undefined
+  geolocationFixStarted = false
+  mapListenersAttached = false
 })
 
 $effect(() => {
@@ -771,65 +611,111 @@ $effect(() => {
   }
 })
 
+// Refresh visible cells after camera movement, including pans that keep the same zoom level.
+$effect(() => {
+  const map = activeMapInstance
+  if (!map) return
+  const updateViewport = (): void => {
+    const bounds = map.getBounds()
+    appCtx.featureViewport = getFeatureViewportQuery(
+      [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
+      map.getZoom(),
+    )
+  }
+  map.on('moveend', updateViewport)
+  map.on('resize', updateViewport)
+  updateViewport()
+  return () => {
+    map.off('moveend', updateViewport)
+    map.off('resize', updateViewport)
+    appCtx.featureViewport = undefined
+  }
+})
+
+// The same property/list flags are composed with spatial scope before fetching a bounded map page.
+$effect(() => {
+  const input = appCtx.featureQueryInput({
+    spatial: appCtx.featureViewport,
+    includeCounts: false,
+  })
+  if (!activeMapInstance || appCtx.isAdmin() || !appCtx.isInitialised) return
+  if (!input.prisms?.layer?.length) {
+    untrack(() => appCtx.cacheCtx.featureQueries.map.clear())
+    appCtx.featureLoadState = 'complete'
+    return
+  }
+  const timer = setTimeout(() => {
+    void appCtx.loadFeatureQuery('map', input).catch(error => {
+      console.error('[Map features] Query failed:', error)
+    })
+  }, 120)
+  return () => clearTimeout(timer)
+})
+
+// Neighbourhood counts describe the filtered collection independently of the current camera.
+$effect(() => {
+  const input = appCtx.featureQueryInput({ limit: 1 })
+  if (appCtx.isAdmin() || !appCtx.isInitialised) return
+  if (!input.prisms?.layer?.length) {
+    untrack(() => appCtx.cacheCtx.featureQueries.facets.clear())
+    return
+  }
+  const timer = setTimeout(() => {
+    void appCtx.loadFeatureQuery('facets', input).catch(error => {
+      console.error('[Feature counts] Query failed:', error)
+    })
+  }, 120)
+  return () => clearTimeout(timer)
+})
+
+$effect(() => {
+  const counts = appCtx.cacheCtx.featureQueries.facets.facets?.neighbourhoods ?? null
+  untrack(() => appCtx.placeCtx.setNeighbourhoodCounts(counts))
+})
+
+// Reuse the normal collection freshness window when returning to the map tab.
+$effect(() => {
+  const onFocus = (): void => {
+    for (const [channel, query] of Object.entries(appCtx.cacheCtx.featureQueries)) {
+      void query
+        .revalidate()
+        .then(() => appCtx.retainFeatureQueryRows(channel as FeatureQueryChannel))
+    }
+  }
+  window.addEventListener('focus', onFocus)
+  return () => window.removeEventListener('focus', onFocus)
+})
+
 watch(
   () => [
     appCtx.featuresVisible,
-    appCtx.map,
+    activeMapInstance,
     userMarkerStyleVariant,
     projectMarkerThemes,
+    appCtx.state.active.feature?.id ?? null,
+    appCtx.state.active.collection?.items.map(item => item.id).join(','),
+    isAnimating,
   ],
   () => {
-    if (!isAnimating && appCtx.maplibre && appCtx.isMaplibreLoaded) {
-      updateMarkers(
-        appCtx,
-        appCtx.getVisibleFeatures() as FeatureFromCollection[],
-        appCtx.maplibre,
-        userMarkerStyleVariant,
-        projectMarkerThemes,
-      )
+    if (!isAnimating && markerRenderer) {
+      markerRenderer.sync(appCtx.getVisibleFeatures() as FeatureFromCollection[], {
+        markerStyle: userMarkerStyleVariant,
+        markerThemesByProjectId: projectMarkerThemes,
+        selectedId: appCtx.state.active.feature?.id ?? null,
+        highlightedIds: new Set(
+          appCtx.state.active.collection?.items.map(item => item.id) ?? [],
+        ),
+      })
     }
   },
 )
-
-$effect(() => {
-  const map = appCtx.map
-  const currentMapStyleVariant = getCurrentMapStyleVariant(map)
-  const shouldApplyStyle =
-    Boolean(map) &&
-    (activeStyleToken !== activeStyleKey ||
-      currentMapStyleVariant !== resolvedMapStyleVariant)
-
-  if (!shouldApplyStyle || !map) {
-    return
-  }
-
-  activeStyleToken = activeStyleKey
-
-  const currentSerial = ++styleRequestSerial
-
-  void resolveRuntimeMapStyle(
-    resolvedMapStyleEndpoint,
-    appCtx.user?.experimental?.noLabelsMode ?? false,
-  )
-    .then(style => {
-      if (styleRequestSerial !== currentSerial) {
-        return
-      }
-
-      applyMapCanvasBackground(style, map)
-      map.setStyle(style)
-    })
-    .catch(error => {
-      console.error('Failed to update map style', error)
-    })
-})
 
 $effect(() => {
   updateMapUrlTracking()
 })
 
 $effect(() => {
-  const map = appCtx.map
+  const map = activeMapInstance
   const activeFeatureId = appCtx.getActiveFeature()?.id ?? null
   const isCardOpen = omniCtx.state.isCardOpen
 
@@ -874,17 +760,17 @@ let horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
 // Ensure that the center of the map is in the center of the viewport,
 // even after a panel is triggered.
 $effect(() => {
-  const map = appCtx.map
+  const map = activeMapInstance
 
   if (horizontalOffset !== lastHorizontalOffset && map && !isAnimating) {
     isAnimating = true
     const coordinates = map.getCenter()
     const centerInPx: Point = map.project(coordinates)
-    const newPoint: PointLike = new appCtx.maplibre.Point(
+    const newPoint: PointLike = [
       centerInPx.x +
         (horizontalOffset === 0 ? lastHorizontalOffset : -horizontalOffset),
       centerInPx.y,
-    )
+    ]
     const newCenter: LngLatLike = map.unproject(newPoint)
 
     lastHorizontalOffset = horizontalOffset
@@ -918,7 +804,43 @@ $effect(() => {
   data-testid="map"
   bind:this={mapContainer}
 >
-  {#if showControls && appCtx.user && appCtx.map && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.isPanelOpen(Panel.prisms)}
+  {#if initialStyle}
+    <MapSurface
+      bind:map={activeMapInstance}
+      class="absolute inset-0"
+      style={initialStyle}
+      center={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).center}
+      bearing={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).bearing}
+      zoom={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).zoom}
+      pitch={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).pitch}
+      minZoom={MIN_MAP_ZOOM}
+      hash={false}
+      attributionControl={false}
+      {interactive}
+      pixelRatio={pixelRatio ?? (browser ? window.devicePixelRatio : 1)}
+      canvasContextAttributes={{ antialias }}
+    >
+      {#if showControls && appCtx.user}
+        <GeolocateControl
+          bind:control={geolocateControl}
+          {...({
+            position: 'bottom-right',
+            positionOptions: { timeout: 5000, enableHighAccuracy: true, maximumAge: Infinity },
+            trackUserLocation: true,
+            showUserHeading: true,
+            showUserLocation: true,
+            autoTrigger: false,
+          } satisfies GeolocateControlProps)}
+        />
+        <NavigationControl
+          position="bottom-right"
+          showZoom={false}
+          showCompass={true}
+        />
+      {/if}
+    </MapSurface>
+  {/if}
+  {#if showControls && appCtx.user && activeMapInstance && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.isPanelOpen(Panel.prisms)}
     <!-- biome-ignore lint/a11y/useSemanticElements: composite prompt contains a nested button, so this cannot be a native button. -->
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
