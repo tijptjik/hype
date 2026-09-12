@@ -12,7 +12,10 @@ export class ResourceList {
   pages: RemoteQuery<ResourcePage>[] = $state.raw([])
   loading = $state(false)
   error: unknown = $state(null)
+  visibleIds = new Set<string>()
   private generation = 0
+  private fallback: PanelResource[] = []
+  private validatedAt = 0
   private input: ResourcePageInput | undefined
   private history = new Map<
     string,
@@ -23,6 +26,7 @@ export class ResourceList {
 
   /** Ordered current rows reflect native optimistic overrides without an AppCtx copy. */
   get rows(): PanelResource[] {
+    if (this.error && this.fallback.length) return this.fallback
     const rows = new Map<string, PanelResource>()
     for (const page of this.pages)
       for (const row of page.current?.data ?? []) rows.set(row.id, row)
@@ -43,12 +47,19 @@ export class ResourceList {
     const key = JSON.stringify(input)
     if (!force && this.input && JSON.stringify(this.input) === key && this.pages.length)
       return
+    if (!force && this.loading && this.input && JSON.stringify(this.input) === key) {
+      await this.pages[0]
+      return
+    }
+    const sameView = this.input && JSON.stringify(this.input) === key
+    this.fallback = sameView ? this.rows : []
     const generation = ++this.generation
     this.input = input
     this.error = null
     const retained = this.history.get(key)
     if (!force && retained && Date.now() - retained.fetchedAt < 60_000) {
       this.pages = retained.pages
+      this.validatedAt = retained.fetchedAt
       this.loading = false
       return
     }
@@ -56,12 +67,19 @@ export class ResourceList {
     this.pages = [page]
     this.loading = true
     try {
-      if (force || page.ready) await page.refresh()
+      if (page.ready) await page.refresh()
       else await page
       if (generation !== this.generation) return
-      this.history.set(key, { pages: this.pages, fetchedAt: Date.now() })
+      this.validatedAt = Date.now()
+      this.history.set(key, { pages: this.pages, fetchedAt: this.validatedAt })
     } catch (error) {
-      if (generation === this.generation) this.error = error
+      if (generation === this.generation) {
+        if ([401, 403, 404].includes((error as { status?: number })?.status ?? 0)) {
+          this.fallback = []
+          this.history.delete(key)
+        }
+        this.error = error
+      }
       throw error
     } finally {
       if (generation === this.generation) this.loading = false
@@ -77,6 +95,7 @@ export class ResourceList {
     if (this.loading || !this.input || !cursor) return
     const generation = this.generation
     const input = this.input
+    this.fallback = this.rows
     this.loading = true
     this.error = null
     try {
@@ -95,6 +114,63 @@ export class ResourceList {
     }
   }
 
+  /** Revalidates visible collection data on focus after its one-minute freshness window. */
+  async revalidate(): Promise<void> {
+    if (this.loading || Date.now() - this.validatedAt < 60_000 || !this.pages.length)
+      return
+    if (this.input) await this.load(this.input, true).catch(() => {})
+  }
+
+  get search(): string {
+    return this.input?.q ?? ''
+  }
+
+  /** Applies known list membership rules during an optimistic edit. */
+  matches(row: PanelResource): boolean {
+    const { conditions, q, prisms } = this.input ?? {}
+    for (const field of ['isArchived', 'isPublished'] as const) {
+      if (typeof conditions?.[field] === 'boolean' && row[field] !== conditions[field])
+        return false
+    }
+    if (
+      'organisationId' in row &&
+      prisms?.organisation?.length &&
+      !prisms.organisation.includes(row.organisationId)
+    )
+      return false
+    if (
+      'projectId' in row &&
+      prisms?.project?.length &&
+      !prisms.project.includes(row.projectId)
+    )
+      return false
+    if (
+      q &&
+      !JSON.stringify(row.i18n ?? {})
+        .toLocaleLowerCase()
+        .includes(q.toLocaleLowerCase()) &&
+      !('code' in row && row.code.toLocaleLowerCase().includes(q.toLocaleLowerCase()))
+    )
+      return false
+    return true
+  }
+
+  /** Checks whether a pending create belongs in this unfiltered first page. */
+  acceptsPending(patch: Record<string, unknown>): boolean {
+    if (!this.input || this.input.q) return false
+    const { organisation, project } = this.input.prisms ?? {}
+    return (
+      (!organisation?.length || organisation.includes(String(patch.organisationId))) &&
+      (!project?.length || project.includes(String(patch.projectId)))
+    )
+  }
+
+  /** Rebuilds cursor boundaries after a committed membership or ordering change. */
+  async reconcile(): Promise<void> {
+    this.history.clear()
+    if (this.input) await this.load(this.input, true)
+  }
+
   /** Invalidates retained membership after mutations, preserving visible native handles. */
   invalidate(): void {
     this.history.clear()
@@ -103,7 +179,10 @@ export class ResourceList {
   /** Clears scope-sensitive handles and supersedes pending page requests. */
   clear(): void {
     this.generation++
+    this.visibleIds.clear()
     this.input = undefined
+    this.fallback = []
+    this.validatedAt = 0
     this.pages = []
     this.history.clear()
     this.loading = false
