@@ -2,6 +2,8 @@
   lang="ts"
   generics="TItem extends import('../formParentSection.types').ParentSectionItemBase"
 >
+// SVELTE
+import { untrack } from 'svelte'
 // BITS COMPONENTS
 import { Button } from '$lib/bits/core'
 import { Card, Search, SectionHeader } from '$lib/bits/custom'
@@ -52,7 +54,8 @@ let isResultsVisible = $state(false)
 let hasPendingRemoval = $state(false)
 let shouldFocusSearchOnOpen = $state(false)
 let previousParentId = $state('')
-let previousSearchScopeKey = $state(searchScopeKey)
+// Establish the initial scope without treating it as a scope change.
+let previousSearchScopeKey = $state(untrack(() => searchScopeKey))
 
 const showModeUi = $derived(isEditing && !isSubmitting)
 const currentParentId = $derived(parent?.id ?? '')

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { tick } from 'svelte'
+import { tick, untrack } from 'svelte'
 import { SimpleTooltip } from '$lib/bits/core'
 import type { IndexCardFooterProps } from '../indexCard.types'
 
@@ -8,7 +8,8 @@ const nonFocusableTooltipTriggerProps = { tabindex: -1 }
 
 let breadcrumbMeasureContainer: HTMLDivElement | null = $state(null)
 let breadcrumbSlotWidth = $state(0)
-let visibleBreadcrumbCount = $state(breadcrumbs.length)
+// Show the initial crumbs until layout measurements determine the visible count.
+let visibleBreadcrumbCount = $state(untrack(() => breadcrumbs.length))
 let measuredBreadcrumbGap = $state(0)
 let measuredBreadcrumbWidths = $state<number[]>([])
 let lastMeasuredBreadcrumbKey = ''

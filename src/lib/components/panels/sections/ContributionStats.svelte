@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
 // CONTEXT
@@ -8,7 +10,10 @@ import { getAppCtx } from '$lib/context/app.svelte'
 const appCtx = getAppCtx()
 
 const isSingleOrg = $derived((appCtx.hub as Hub)?.organisations?.length === 1)
-appCtx.state.panels.profile.ctx!.observePrisms = !isSingleOrg
+// Initialize the preference once; the checkbox owns subsequent changes.
+if (appCtx.state.panels.profile.ctx) {
+  appCtx.state.panels.profile.ctx.observePrisms = untrack(() => !isSingleOrg)
+}
 
 // COMPONENTS
 import { Icon } from '$lib/bits'
@@ -146,10 +151,11 @@ const statsConfig = [
           type="checkbox"
           class="toggle toggle-primary toggle-sm"
           checked={!isSingleOrg && isChecked}
-          onchange={(e) => {
-            appCtx.state.panels.profile.ctx!.observePrisms =
-              !appCtx.state.panels.profile.ctx!.observePrisms;
-            appCtx.refreshUserProfile();
+          onchange={() => {
+            const profileCtx = appCtx.state.panels.profile.ctx
+            if (!profileCtx) return
+            profileCtx.observePrisms = !profileCtx.observePrisms
+            appCtx.refreshUserProfile()
           }}
         >
         <span class="text-xs text-base-content/70">{m.filters__all()}</span>
@@ -174,6 +180,7 @@ const statsConfig = [
       {#each statsConfig as stat}
         <div class="flex flex-1 flex-col items-center justify-center gap-3">
           <button
+            type="button"
             class="relative flex h-24 w-full items-center justify-center overflow-hidden rounded-2xl {stat.bgColor} shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl active:scale-95"
             onclick={() => scrollToSection(stat.targetId)}
           >

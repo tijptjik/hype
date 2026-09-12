@@ -229,8 +229,7 @@ const sections = $derived.by((): SectionDescriptor[] => {
                       <div
                         class="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
                       >
-                        <svelte:component
-                          this={action.icon}
+                        <action.icon
                           class={`mt-1 h-5 w-5 shrink-0 ${action.toneClass}`}
                         />
                         <div class="min-w-0">

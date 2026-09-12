@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'
 import { Icon } from '$lib/bits'
@@ -29,10 +31,11 @@ let { property, layerId, defaultOpen = false }: Props = $props()
 let label = $derived(
   getI18n(property, 'label', appCtx.getUserPreferences(), property.key),
 )
-let min = $derived(property.min!)
-let max = $derived(property.max!)
+let min = $derived(property.min ?? 0)
+let max = $derived(property.max ?? 100)
 
-let isOpen = $state(defaultOpen)
+// Apply the default once so user toggles remain independent of prop updates.
+let isOpen = $state(untrack(() => defaultOpen))
 let selectedRange = $derived(
   appCtx.state.filters.feature.properties?.[layerId]?.[property.id],
 )
@@ -47,6 +50,7 @@ let displayText = $derived(displayRangeFilter(min, max, values))
 
 <div class="ml-4 min-h-10 shrink-0 rounded-l-md bg-[#0a0a0a]">
   <button
+    type="button"
     class="flex w-full shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
     onclick={() => (isOpen = !isOpen)}
   >

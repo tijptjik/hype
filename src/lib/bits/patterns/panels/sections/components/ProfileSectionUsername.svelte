@@ -43,7 +43,7 @@ let {
   onCancelEdit,
 }: Props = $props()
 
-let usernameInput: HTMLInputElement | undefined
+let usernameInput = $state<HTMLInputElement>()
 let wasEditingUsername = $state(false)
 let usernameValue = $state('')
 const usernameActionIconSize = 'sm'

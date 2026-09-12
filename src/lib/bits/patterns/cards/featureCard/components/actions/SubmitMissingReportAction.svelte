@@ -23,8 +23,9 @@ let { feature }: { feature: Feature } = $props()
 const appCtx = getAppCtx()
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
-const featureTitle =
-  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id
+const featureTitle = $derived(
+  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id,
+)
 
 async function handleSubmitMissingReport(): Promise<void> {
   if (imageCtx.getStagedQueue().length === 0) {

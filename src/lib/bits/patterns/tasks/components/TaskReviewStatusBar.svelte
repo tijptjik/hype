@@ -44,7 +44,7 @@ const outcomeToneClass = $derived(
       : 'border-white/12 bg-white/4 text-white/75',
 )
 
-const outcomeIcon = $derived(reviewOutcome === 'accepted' ? CheckIcon : XIcon)
+const OutcomeIcon = $derived(reviewOutcome === 'accepted' ? CheckIcon : XIcon)
 const connectorToneClass = $derived(
   reviewOutcome === 'accepted'
     ? 'after:bg-success/35'
@@ -81,7 +81,7 @@ const connectorClass =
       reviewReason && connectorToneClass,
     )}
   >
-    <svelte:component this={outcomeIcon} class="h-4 w-4" />
+    <OutcomeIcon class="h-4 w-4" />
     <span>{outcomeLabel}</span>
   </div>
 

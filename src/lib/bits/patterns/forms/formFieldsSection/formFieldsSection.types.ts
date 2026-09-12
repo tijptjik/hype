@@ -1,7 +1,7 @@
 import type { Id, Locale, LocaleKey } from '$lib/types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Snippet } from 'svelte'
-import type { DragDropOptions } from '@thisux/sveltednd'
+import type { DragDropOptions, DraggableOptions } from '@thisux/sveltednd'
 import type { Component } from 'svelte'
 
 export interface FormFieldsSectionActionHandlers {
@@ -205,7 +205,7 @@ export interface FormFieldPropertyValueItemProps {
   valueId: string
   propertyId: string
   onRemove: (propertyId: string, valueId: string) => void
-  draggableConfig: DragDropOptions<{ id: string }> & { interactive?: string[] }
+  draggableConfig: DraggableOptions<{ id: string }>
   droppableConfig: DragDropOptions<{ id: string }>
   content: Snippet
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { onMount, untrack } from 'svelte'
 // SVELTEKIT
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -138,9 +138,9 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
   }
 }
 
-// Set AppCtx in context
+// Set AppCtx in context with the client owned by this layout instance.
 const appCtx = setAppCtx(
-  queryClient,
+  untrack(() => queryClient),
   setPlaceCtx(),
   $session.data?.user as SessionUser | null,
   responsive,

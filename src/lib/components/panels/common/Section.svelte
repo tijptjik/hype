@@ -1,5 +1,7 @@
 <script lang="ts">
-import type { Component } from 'svelte'
+// SVELTE
+import { untrack } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 // COMPONENTS
 import * as Panel from '$lib/bits/patterns/panels'
 // SERVICES
@@ -33,13 +35,14 @@ let {
   iconColorClass?: string
   description?: string
   defaultOpen?: boolean
-  children?: any
-  collapsedContent?: any
-  managedContent?: any
+  children?: Snippet
+  collapsedContent?: Snippet
+  managedContent?: Snippet<[boolean]>
 } & PanelProps = $props()
 
 // STATE
-let isOpen = $state(defaultOpen)
+// Apply the default once so user toggles remain independent of prop updates.
+let isOpen = $state(untrack(() => defaultOpen))
 
 const onToggle = (e: MouseEvent) => {
   e.stopPropagation()
@@ -62,7 +65,6 @@ const onNavigate = (e: MouseEvent) => {
     } else {
       navigateOnAdmin(panelProps.adminCtx, resourceType ?? false)
     }
-  } else {
   }
 }
 </script>

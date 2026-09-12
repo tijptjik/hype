@@ -1,6 +1,6 @@
 <script lang="ts">
 import { fly } from 'svelte/transition'
-import { tick } from 'svelte'
+import { tick, untrack } from 'svelte'
 // COMPONENTS
 import * as HeaderPrimitive from './components'
 // TYPES
@@ -43,7 +43,10 @@ const showControlBar = $derived(
   Boolean(controlBar?.component) && (controlBar?.isVisible ?? true),
 )
 
-let renderedControlBar = $state<HeaderProps['controlBar'] | null>(controlBar)
+// Retain the rendered bar until its exit transition completes.
+let renderedControlBar = $state<HeaderProps['controlBar'] | null>(
+  untrack(() => controlBar),
+)
 let isControlBarExpanded = $state(false)
 let wasControlBarVisible = $state(false)
 const controlBarHeight = $derived(

@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 // BITS COMPONENTS
 import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
@@ -47,7 +49,8 @@ let selectedPropertyValueIds = $derived(
   appCtx.state.filters.feature.properties?.[layerId]?.[property.id] ?? [],
 )
 
-let isOpen = $state(defaultOpen)
+// Apply the default once so user toggles remain independent of prop updates.
+let isOpen = $state(untrack(() => defaultOpen))
 
 function toggleValue(value: PropertyValue) {
   toggleCategoricalPropertyValue(appCtx, layerId, property.id, value.id)
@@ -80,15 +83,12 @@ let displayText = $derived(
     >
       {#each propertyValues as value (value.id)}
         {@const optionLabel = localisedOptions.get(value.id) || '?'}
-        <label
+        <button
+          type="button"
+          aria-label={optionLabel}
+          aria-pressed={selectedPropertyValueIds.includes(value.id)}
           class="group label flex w-full cursor-pointer items-center justify-start gap-3 px-6 pr-2 first:pt-4 last:pb-4 focus:outline-none focus:ring-0"
-          tabindex="0"
-          onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              toggleValue(value)
-            }
-          }}
+          onclick={() => toggleValue(value)}
         >
           <div
             class="h-2 w-2 shrink-0 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selectedPropertyValueIds.includes(
@@ -97,19 +97,13 @@ let displayText = $derived(
               ? 'bg-sky-600 group-hover:bg-sky-600/60 group-focus-visible:bg-sky-600/60'
               : 'border-1 border-base-content/60 bg-transparent'}"
           ></div>
-          <input
-            type="checkbox"
-            checked={selectedPropertyValueIds.includes(value.id)}
-            class="checkbox checkbox-sm hidden"
-            onchange={() => toggleValue(value)}
-          >
           <ScrollableText
             text={optionLabel}
             class="min-w-0 flex-1"
             containerClass="label-text block w-full"
             textClass="text-md font-medium"
           />
-        </label>
+        </button>
       {/each}
     </div>
   {/if}

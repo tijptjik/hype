@@ -25,8 +25,9 @@ const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
 
 const attribution = $derived(appCtx.getUser()?.attribution || m.anonymous())
-const featureTitle =
-  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id
+const featureTitle = $derived(
+  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id,
+)
 
 async function submitNewPhotos(): Promise<void> {
   if (imageCtx.getStagedImages().length === 0) {
