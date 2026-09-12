@@ -23,7 +23,7 @@ const color = $derived(
 >
   <button
     type="button"
-    class="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-offset-4 focus-visible:outline-2 focus-visible:outline-focus"
+    class="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-override outline-none focus-visible:text-primary"
     aria-label={row.primaryLabel}
     aria-current={row.active ? 'page' : undefined}
     title={narrow ? row.name : undefined}
@@ -50,7 +50,7 @@ const color = $derived(
   {#if !narrow}
     <button
       type="button"
-      class="rounded-lg p-2 outline-offset-2 hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus {row.selected ? color : 'text-muted-foreground'}"
+      class="rounded-lg p-2 focus-override outline-none hover:bg-raised focus-visible:text-primary {row.selected ? color : 'text-muted-foreground'}"
       aria-label={row.toggleLabel}
       aria-pressed={row.selected}
       title={row.toggleLabel}
@@ -65,7 +65,7 @@ const color = $derived(
     {#if row.onIsolate}
       <button
         type="button"
-        class="rounded-lg p-2 text-muted-foreground hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus"
+        class="rounded-lg p-2 text-muted-foreground hover:bg-raised focus-override outline-none focus-visible:text-primary"
         aria-label={m.panel__isolate_layer({ name: row.name })}
         onclick={row.onIsolate}
       >

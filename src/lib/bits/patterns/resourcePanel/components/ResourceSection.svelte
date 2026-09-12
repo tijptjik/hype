@@ -52,7 +52,7 @@ const items = $derived(
   <div class="flex h-14 shrink-0 items-center gap-2 px-3">
     <button
       type="button"
-      class="rounded-lg p-1 text-muted-foreground hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus"
+      class="rounded-lg p-1 text-muted-foreground hover:bg-surface focus-override outline-none focus-visible:text-primary"
       aria-label={open ? m.panel__collapse({ name: section.title }) : m.panel__expand({ name: section.title })}
       aria-expanded={open}
       aria-controls={id}
@@ -67,7 +67,7 @@ const items = $derived(
     {#if !narrow}
       <button
         type="button"
-        class="flex-1 text-left text-xs font-semibold uppercase tracking-[0.14em]"
+        class="focus-override outline-none focus-visible:text-primary flex-1 text-left text-xs font-semibold uppercase tracking-[0.14em]"
         onclick={() => {
           if (section.onNavigate) {
             section.onNavigate()
@@ -96,7 +96,7 @@ const items = $derived(
       >
         <Search class="size-4" aria-hidden="true" />
         <input
-          class="h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
+          class="focus-override h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
           type="search"
           aria-label={m.panel__search({ name: section.title })}
           placeholder={m.panel__search({ name: section.title })}
@@ -125,7 +125,7 @@ const items = $derived(
         {#each items as row (row.id)}
           <button
             type="button"
-            class="rounded-full border border-border px-3 py-1 text-xs {color}"
+            class="focus-override outline-none focus-visible:text-primary focus-visible:border-primary rounded-full border border-border px-3 py-1 text-xs {color}"
             title={row.toggleLabel}
             onclick={row.onToggle}
           >
