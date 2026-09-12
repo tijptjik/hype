@@ -5,7 +5,6 @@ import { goto } from '$app/navigation'
 import { Dialog } from 'bits-ui'
 // COMPONENTS
 import AccountCreatedDialogContent from './components/AccountCreatedDialogContent.svelte'
-import AuthPanel from './AuthPanel.svelte'
 // AUTH
 import { toSafeReturnPath, type UpgradeReason } from '$lib/auth/upgrade'
 // I18N
@@ -27,6 +26,10 @@ let authMode = $state<'sign-in' | 'sign-up'>('sign-up')
 let dialogSession = $state(0)
 let isAccountComplete = $state(false)
 let wasOpen = false
+type AuthPanelComponent = typeof import('./AuthPanel.svelte').default
+let AuthPanel = $state<AuthPanelComponent | null>(null)
+let authPanelLoadError = $state<unknown>(null)
+let authPanelPromise: Promise<AuthPanelComponent> | null = null
 
 const safeReturnTo = $derived(toSafeReturnPath(returnTo))
 const reasonMessage = $derived(
@@ -40,6 +43,26 @@ const reasonMessage = $derived(
           ? m.guest__reason_subscription()
           : m.guest__reason_sync(),
 )
+
+/** Loads the account form only when the upgrade dialog is opened. */
+function loadAuthPanel(): Promise<AuthPanelComponent> {
+  authPanelPromise ??= import('./AuthPanel.svelte')
+    .then(module => {
+      AuthPanel = module.default
+      authPanelLoadError = null
+      return module.default
+    })
+    .catch(error => {
+      authPanelPromise = null
+      authPanelLoadError = error
+      throw error
+    })
+  return authPanelPromise
+}
+
+$effect(() => {
+  if (open) void loadAuthPanel().catch(() => {})
+})
 
 // Every account-guard request begins with account creation, even after reopening the dialog.
 $effect(() => {
@@ -87,7 +110,7 @@ async function handleCompletionClose(): Promise<void> {
       {/if}
       {#if isAccountComplete}
         <AccountCreatedDialogContent onClose={handleCompletionClose} />
-      {:else}
+      {:else if AuthPanel}
         {#key dialogSession}
           <AuthPanel
             title={m.guest__upgrade_title()}
@@ -106,6 +129,32 @@ async function handleCompletionClose(): Promise<void> {
             onPasskeyAccountComplete={handlePasskeyAccountComplete}
           />
         {/key}
+        <Dialog.Close
+          class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-white/60 transition-colors hover:text-white"
+          aria-label={m.guest__close()}
+          >×</Dialog.Close
+        >
+      {:else}
+        <div class="flex min-h-48 min-w-72 items-center justify-center p-8 text-center">
+          {#if authPanelLoadError}
+            <div>
+              <p>{m.bootstrap__error()}</p>
+              <button
+                type="button"
+                class="mt-4 rounded-lg bg-white px-4 py-2 text-black"
+                onclick={() => void loadAuthPanel().catch(() => {})}
+              >
+                {m.bootstrap__retry()}
+              </button>
+            </div>
+          {:else}
+            <span
+              class="loading loading-ring loading-lg"
+              role="status"
+              aria-label={m.resource_loading()}
+            ></span>
+          {/if}
+        </div>
         <Dialog.Close
           class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-white/60 transition-colors hover:text-white"
           aria-label={m.guest__close()}
