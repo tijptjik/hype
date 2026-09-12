@@ -29,7 +29,7 @@ const SIN_FUCHSIA = '#F5006C'
 const SIN_ORANGE = '#FF6A00'
 const SIN_YELLOW = '#F6FF00'
 const SIN_CYAN = '#00D9FF'
-const SIN_COBALT = '#4561FF'
+const _SIN_COBALT = '#4561FF'
 const SIN_IVORY = '#FFE99A'
 
 const HIDDEN_PROTOMAPS_LAYER_IDS = new Set([

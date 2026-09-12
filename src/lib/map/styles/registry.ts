@@ -2,7 +2,6 @@ import {
   getDefaultMapStyleCatalogEntry,
   MAP_STYLE_CATALOG,
   REGISTERED_MAP_STYLE_CATALOG,
-  type MapStyleCatalogEntry,
 } from './catalog'
 import {
   applySpriteVariant,
@@ -11,7 +10,8 @@ import {
 } from './definitions/common'
 // TYPES
 import type { StyleSpecification } from 'maplibre-gl'
-import type { LocaleKey, MapStyleCatalogKey } from '../../types'
+import type { LocaleKey } from '../../types'
+import type { MapStyleCatalogEntry, MapStyleCatalogKey } from './catalog'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -94,8 +94,9 @@ export const getDefaultMapStyleKey = (): MapStyleKey =>
  *
  * @returns Immutable map-style catalog.
  */
-export const listMapStyleCatalog = (): ReadonlyArray<MapStyleCatalogEntry> =>
-  MAP_STYLE_CATALOG
+export const listMapStyleCatalog = (): ReadonlyArray<
+  MapStyleCatalogEntry<MapStyleCatalogKey>
+> => MAP_STYLE_CATALOG
 
 /**
  * Builds one runtime style specification for the requested key.

@@ -1,5 +1,3 @@
-import type { StyleSpecification } from 'maplibre-gl'
-
 import { buildGenesisStyle } from './genesis'
 import type { StyleBuildOptions } from './common'
 
@@ -11,14 +9,12 @@ import type { StyleBuildOptions } from './common'
 // 2. LAYER TRANSFORMATION
 // 3. STYLE BUILDER
 
-type StyleLayer = NonNullable<StyleSpecification['layers']>[number]
-
 const SIN_VOID = '#25183F'
 const SIN_EARTH = '#191432'
 const SIN_HARBOUR = '#102C66'
 const SIN_BUILDING = '#151A47'
 const SIN_PARK = '#755889'
-const SIN_ROAD_ORANGE = '#FF785B'
+const _SIN_ROAD_ORANGE = '#FF785B'
 const SIN_ROAD_PINK = '#F26C97'
 const SIN_ROAD_BLUE = '#627FDA'
 const SIN_ROAD_PEACH = '#FFA45C'

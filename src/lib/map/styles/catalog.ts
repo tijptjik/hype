@@ -18,7 +18,35 @@ import {
 } from './definitions/common'
 import { buildProtomapsFlavorStyle } from './definitions/protomaps'
 import { getMapStyleCatalogCopy } from './i18n'
-import type { MapMarkerTheme, MapStyleCatalogKey } from '$lib/types'
+
+/** Keys available in the map-style catalog, including the internal admin style. */
+export type MapStyleCatalogKey =
+  | 'hyper'
+  | 'hyperLight'
+  | 'hyperpop'
+  | 'ghostery'
+  | 'ghostery-legacy'
+  | 'neonmaster'
+  | 'neorange'
+  | 'genesis'
+  | 'sin'
+  | 'rosepunk'
+  | 'breadline'
+  | 'protomaps-light'
+  | 'protomaps-dark'
+  | 'protomaps-white'
+  | 'protomaps-grayscale'
+  | 'protomaps-black'
+  | 'hyperAdmin'
+
+/** Visual treatment applied to image or dot markers for a map palette. */
+export type MapMarkerTheme =
+  | 'light'
+  | 'dark'
+  | 'ghostery'
+  | 'hyperpop'
+  | 'neon'
+  | 'rosepunk'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -48,8 +76,10 @@ export type MapStyleCatalogEntry<TCode extends string = string> = Omit<
 }
 
 // Derive the Protomaps family from one flavor list so metadata stays consistent across entries.
-const PROTOMAPS_FLAVOR_ENTRIES = NAMED_PROTOMAPS_FLAVORS.map(flavorName => ({
-  key: `protomaps-${flavorName}`,
+const PROTOMAPS_FLAVOR_ENTRIES: ReadonlyArray<
+  MapStyleCatalogEntry<MapStyleCatalogKey>
+> = NAMED_PROTOMAPS_FLAVORS.map(flavorName => ({
+  key: `protomaps-${flavorName}` as MapStyleCatalogKey,
   name: getMapStyleCatalogCopy(`protomaps-${flavorName}` as MapStyleCatalogKey, 'en')
     .name,
   description: getMapStyleCatalogCopy(
@@ -66,7 +96,7 @@ const PROTOMAPS_FLAVOR_ENTRIES = NAMED_PROTOMAPS_FLAVORS.map(flavorName => ({
         ? 'dark'
         : 'ghostery',
   showSymbols: flavorName === 'light' || flavorName === 'dark',
-})) satisfies ReadonlyArray<MapStyleCatalogEntry>
+}))
 
 export const MAP_STYLE_CATALOG = [
   {
@@ -184,8 +214,6 @@ export const MAP_STYLE_CATALOG = [
     showSymbols: true,
   },
 ] as const satisfies ReadonlyArray<MapStyleCatalogEntry>
-
-export type { MapStyleCatalogKey } from '$lib/types'
 
 export const REGISTERED_MAP_STYLE_CATALOG = MAP_STYLE_CATALOG.filter(
   (
