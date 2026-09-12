@@ -1,7 +1,7 @@
 <!--
   @component
-  Prisms panel component that displays hierarchical resources (organisations, projects, and layers)
-  with filtering and selection capabilities.
+  Hub information panel displaying the description, subscription controls and policies
+  with visibility and preferences supplied by the consuming route.
 -->
 <script lang="ts">
 // I18N
