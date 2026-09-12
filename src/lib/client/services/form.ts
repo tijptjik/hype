@@ -558,7 +558,10 @@ export function createResourceFormConfig<Input>({
         resourceType,
       }),
       getEntity,
-      refreshResource,
+      refreshResource: async ctx => {
+        await refreshResource(ctx)
+        if (ctx.success) await adminCtx.appCtx.cacheCtx.reconcile(resourceType)
+      },
     },
   }
 }
