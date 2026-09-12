@@ -1,20 +1,19 @@
 <script lang="ts">
 import { fly, slide } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
-import { getAppCtx } from '$lib/context/app.svelte'
 import { PANEL_WIDTH } from '$lib/constants'
 import type { PanelProps } from '$lib/types'
 import type { Snippet } from 'svelte'
 
-const appCtx = getAppCtx()
-
 type Props = PanelProps & {
+  isOpen?: boolean
   children: Snippet
   panelContainer?: HTMLDivElement
 }
 
 let {
   children,
+  isOpen = false,
   panelContainer = $bindable(),
   position = 'right',
   scrollable = true,
@@ -24,18 +23,9 @@ let {
   ...panelProps
 }: Props = $props()
 
-let shouldShowInline = $derived(
-  inline &&
-    (appCtx.isPanelOpen(panelProps.panelType) ||
-      appCtx.isPanelOpenVisually(panelProps.panelType) ||
-      isNarrow),
-)
-
-let shouldShowOverlay = $derived(
-  !inline &&
-    (appCtx.isPanelOpen(panelProps.panelType) ||
-      appCtx.isPanelOpenVisually(panelProps.panelType)),
-)
+// Visibility belongs to the route adapter; the shell owns only transitions and layout.
+let shouldShowInline = $derived(inline && (isOpen || isNarrow))
+let shouldShowOverlay = $derived(!inline && isOpen)
 </script>
 
 {#if shouldShowInline}
