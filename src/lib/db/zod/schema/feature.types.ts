@@ -13,6 +13,7 @@ import type {
 } from '$lib/types'
 import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
+  FeatureCompactProfileAPI,
   FeatureAdminProfileAPI,
   FeatureAdminRow,
   FeatureBase,
@@ -56,21 +57,25 @@ export type FeatureCardProfile = z.infer<typeof FeatureCardProfileAPI>
 export type FeatureDetailProfile = z.infer<typeof FeatureDetailProfileAPI>
 export type FeatureAdminProfile = z.infer<typeof FeatureAdminProfileAPI>
 
-export type FeatureEntityByProfile<P extends FeatureProfile> = P extends 'list'
-  ? FeatureListProfile
-  : P extends 'card'
-    ? FeatureCardProfile
-    : P extends 'detail'
-      ? FeatureDetailProfile
-      : FeatureAdminProfile
+export type FeatureEntityByProfile<P extends FeatureProfile> = P extends 'compact'
+  ? z.infer<typeof FeatureCompactProfileAPI>
+  : P extends 'list'
+    ? FeatureListProfile
+    : P extends 'card' | 'default' | 'map'
+      ? FeatureCardProfile
+      : P extends 'detail' | 'full'
+        ? FeatureDetailProfile
+        : FeatureAdminProfile
 
-export type FeatureListByProfile<P extends FeatureProfile> = P extends 'list'
-  ? FeatureListProfile
-  : P extends 'card'
-    ? FeatureCardProfile
-    : P extends 'detail'
-      ? FeatureDetailProfile
-      : FeatureAdminProfile
+export type FeatureListByProfile<P extends FeatureProfile> = P extends 'compact'
+  ? z.infer<typeof FeatureCompactProfileAPI>
+  : P extends 'list'
+    ? FeatureListProfile
+    : P extends 'card' | 'default' | 'map'
+      ? FeatureCardProfile
+      : P extends 'detail' | 'full'
+        ? FeatureDetailProfile
+        : FeatureAdminProfile
 
 export type FeatureGetParamsByProfile<P extends FeatureProfile> = Omit<
   FeatureGetParams,
@@ -106,7 +111,7 @@ export type FeatureCardDBRaw = z.infer<typeof FeatureCardRow>
 export type FeatureAdminDBRaw = z.infer<typeof FeatureAdminRow>
 export type FeatureQueryRowByProfile<P extends FeatureProfile> = P extends 'admin'
   ? FeatureAdminDBRaw
-  : P extends 'card' | 'detail'
+  : P extends 'card' | 'default' | 'map' | 'detail'
     ? FeatureCardDBRaw
     : FeatureListDBRaw
 

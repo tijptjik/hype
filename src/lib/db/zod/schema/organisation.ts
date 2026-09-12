@@ -306,7 +306,17 @@ export const RemoveOrganisationSchema = z.object({
 // 5. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const OrganisationProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const OrganisationProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 const OrganisationListFields = OrganisationBase.pick({
   id: true,
@@ -347,4 +357,15 @@ export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
   capabilities: CapabilityBase,
   properties: z.array(PropertyAdminProfileAPI).default([]),
   publisher: UserBasic.nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const OrganisationCompactProfileAPI = OrganisationBase.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  code: true,
+}).extend({
+  i18n: getLocales(OrganisationI18nBase.pick({ name: true, nameShort: true })),
 })

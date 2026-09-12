@@ -1,3 +1,4 @@
+import { CompactAncestorsSchema } from './api'
 // I18N
 import { m } from '$lib/i18n'
 // ZOD
@@ -191,7 +192,17 @@ export const RemoveLayerSchema = z.object({
 // 4. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const LayerProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const LayerProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 const LayerListFields = LayerRecord.pick({
   id: true,
@@ -243,4 +254,19 @@ export const LayerRaw = LayerRecord.extend({
   properties: z.array(LayerPropertyAdminProfileAPI).nullish(),
   publisher: UserBasic.nullish(),
   image: z.unknown().nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const LayerCompactProfileAPI = LayerRecord.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  organisationId: true,
+  projectId: true,
+  rank: true,
+  isDefaultVisible: true,
+}).extend({
+  ancestors: CompactAncestorsSchema.optional(),
+  i18n: getLocales(LayerI18nRecord.pick({ name: true, nameShort: true })),
 })

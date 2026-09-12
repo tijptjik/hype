@@ -391,7 +391,17 @@ export const RemoveFeatureSchema = z.object({
 // 4. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const FeatureProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const FeatureProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
   i18n: getLocales(FeaturePropertyI18nBase, []).nullish(),
@@ -446,4 +456,17 @@ export const FeatureAdminProfileAPI = FeatureBase.extend({
   publisher: UserBasic.nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   images: z.array(ImageContextEnvelopeAPI).nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const FeatureCompactProfileAPI = FeatureBase.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  organisationId: true,
+  projectId: true,
+  layerId: true,
+}).extend({
+  i18n: getLocales(FeatureI18nBase.pick({ title: true })),
 })

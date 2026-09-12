@@ -1,3 +1,4 @@
+import { CompactAncestorsSchema } from './api'
 // I18N
 import { m } from '$lib/i18n'
 import type { ProjectLicense, ProjectLicenseRights } from '$lib/types'
@@ -377,7 +378,17 @@ export const GetProjectMapStylesSchema = z.object({
 // 5. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const ProjectProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const ProjectProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 const ProjectListFields = ProjectBase.pick({
   id: true,
@@ -417,4 +428,17 @@ export const ProjectAdminProfileAPI = ProjectBase.extend({
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
   mapStyle: MapStyleResolved.nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const ProjectCompactProfileAPI = ProjectBase.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  code: true,
+  organisationId: true,
+}).extend({
+  ancestors: CompactAncestorsSchema.optional(),
+  i18n: getLocales(ProjectI18nBase.pick({ name: true, nameShort: true })),
 })

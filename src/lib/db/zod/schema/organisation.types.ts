@@ -9,6 +9,7 @@ import type {
 } from '$lib/types'
 import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
+  OrganisationCompactProfileAPI,
   OrganisationAdminProfileAPI,
   OrganisationBase,
   OrganisationCardProfileAPI,
@@ -58,21 +59,26 @@ export type OrganisationDetailProfile = z.infer<typeof OrganisationDetailProfile
 export type OrganisationAdminProfile = z.infer<typeof OrganisationAdminProfileAPI>
 
 export type OrganisationEntityByProfile<P extends OrganisationProfile> =
-  P extends 'list'
-    ? OrganisationListProfile
-    : P extends 'card'
-      ? OrganisationCardProfile
-      : P extends 'detail'
-        ? OrganisationDetailProfile
-        : OrganisationAdminProfile
+  P extends 'compact'
+    ? z.infer<typeof OrganisationCompactProfileAPI>
+    : P extends 'list'
+      ? OrganisationListProfile
+      : P extends 'card' | 'default' | 'map'
+        ? OrganisationCardProfile
+        : P extends 'detail' | 'full'
+          ? OrganisationDetailProfile
+          : OrganisationAdminProfile
 
-export type OrganisationListByProfile<P extends OrganisationProfile> = P extends 'list'
-  ? OrganisationListProfile
-  : P extends 'card'
-    ? OrganisationCardProfile
-    : P extends 'detail'
-      ? OrganisationDetailProfile
-      : OrganisationAdminProfile
+export type OrganisationListByProfile<P extends OrganisationProfile> =
+  P extends 'compact'
+    ? z.infer<typeof OrganisationCompactProfileAPI>
+    : P extends 'list'
+      ? OrganisationListProfile
+      : P extends 'card' | 'default' | 'map'
+        ? OrganisationCardProfile
+        : P extends 'detail' | 'full'
+          ? OrganisationDetailProfile
+          : OrganisationAdminProfile
 
 export type OrganisationGetParamsByProfile<P extends OrganisationProfile> = Omit<
   OrganisationGetParams,

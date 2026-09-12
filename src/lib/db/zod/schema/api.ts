@@ -4,7 +4,9 @@ import { z } from 'zod'
 export const RequestMetaSchema = z
   .object({
     isAdminRequest: z.boolean().optional(),
-    profile: z.enum(['list', 'card', 'detail', 'admin']).optional(),
+    profile: z
+      .enum(['compact', 'default', 'map', 'full', 'admin', 'list', 'card', 'detail'])
+      .optional(),
   })
   .optional()
 
@@ -25,6 +27,7 @@ export const ListQueryParamsSchema = z.object({
     .object({
       limit: z.number().int().positive().optional(),
       offset: z.number().int().nonnegative().optional(),
+      afterId: z.string().min(1).optional(),
     })
     .optional(),
   sorting: z
@@ -41,4 +44,18 @@ export const GetQueryParamsSchema = z.object({
   ref: z.string(),
   refKey: z.enum(['id', 'code']).optional(),
   meta: RequestMetaSchema,
+})
+
+/** Public identity sufficient for a breadcrumb, without a hydrated ancestor graph. */
+export const CompactAncestorSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  i18n: z.record(
+    z.string(),
+    z.object({ name: z.string().nullish(), nameShort: z.string().nullish() }),
+  ),
+})
+export const CompactAncestorsSchema = z.object({
+  organisation: CompactAncestorSchema.nullish(),
+  project: CompactAncestorSchema.nullish(),
 })

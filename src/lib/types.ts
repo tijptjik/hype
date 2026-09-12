@@ -3256,3 +3256,35 @@ export type SvelteVirtualListDebugInfo = {
   /** Average height of the processed items in pixels. */
   averageItemHeight: number
 }
+
+// RESOURCE LOADING
+/** Raw public ancestor labels joined directly from a resource's foreign keys. */
+export type CompactAncestorRow = {
+  organisation?: {
+    id: string
+    code: string
+    i18n?: Array<Record<string, unknown>>
+  } | null
+  project?: { id: string; code: string; i18n?: Array<Record<string, unknown>> } | null
+}
+
+/** Resources exposed by the independently paged hierarchy panels. */
+export type PanelResourceType = 'organisation' | 'project' | 'layer'
+export type PanelResource =
+  | import('$lib/db/zod/schema/organisation.types').OrganisationEntityByProfile<'compact'>
+  | import('$lib/db/zod/schema/project.types').ProjectEntityByProfile<'compact'>
+  | import('$lib/db/zod/schema/layer.types').LayerEntityByProfile<'compact'>
+export type ResourcePage = {
+  data: PanelResource[]
+  nextCursor: { id: string; signature: string } | null
+}
+export type ResourcePageInput = {
+  type: PanelResourceType
+  q?: string
+  cursor?: { id: string; signature: string } | null
+  prisms?: { organisation?: string[]; project?: string[]; layer?: string[] }
+  meta: { isAdminRequest: boolean; scope: string }
+}
+export type ResourcePageFactory = (
+  input: ResourcePageInput,
+) => import('@sveltejs/kit').RemoteQuery<ResourcePage>
