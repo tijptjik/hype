@@ -185,7 +185,10 @@ export function useOmnibarModel(
     }
 
     const collectionIndex = omniCtx.navIndex + 1
-    const collectionSize = collection.items.length
+    const collectionSize =
+      collection.totalCount === undefined
+        ? collection.items.length
+        : (collection.totalCount ?? '…')
 
     return `${collectionTitle} (${collectionIndex} of ${collectionSize})`
   }
@@ -220,7 +223,11 @@ export function useOmnibarModel(
       {
         collectionType: OmniCollection.feature,
         results: omniCtx.searchResults.feature ?? [],
-        limit: omniCtx.limits.feature ?? 0,
+        limit: Math.max(omniCtx.limits.feature ?? 0, omniCtx.searchFeatureLimit),
+        totalCount: appCtx.cacheCtx.featureQueries.search.totalCount,
+        hasMore: appCtx.cacheCtx.featureQueries.search.hasMore,
+        loading: appCtx.cacheCtx.featureQueries.search.loading,
+        onLoadMore: () => void omniCtx.loadMoreSearch(),
         onSelection: omniCtx.searchHandlers.feature,
       },
       {
@@ -278,7 +285,12 @@ export function useOmnibarModel(
           showCollectionSwitcher:
             omniCtx.state.mode !== OmniMode.feature && !omniCtx.isNewFeatureMode,
           leftDisabled: currentIndex <= 0,
-          rightDisabled: collectionLength === 0 || currentIndex >= collectionLength - 1,
+          rightDisabled:
+            collectionLength === 0 ||
+            (currentIndex >= collectionLength - 1 && !omniCtx.collectionHasMore),
+          hasMore: omniCtx.collectionHasMore,
+          loading: appCtx.cacheCtx.featureQueries.collection.loading,
+          onLoadMore: () => void omniCtx.loadMoreCollection(),
           collectionMetaText: getCollectionMetaText(),
           featureTitle: getFeatureTitle(),
           navTitle: omniCtx.navTitle,
