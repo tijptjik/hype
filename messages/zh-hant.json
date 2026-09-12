@@ -1240,5 +1240,7 @@
   "import_data_events": "活動",
   "resource_loading": "正在載入資源",
   "resource_retry": "重新載入",
-  "resource_no_results": "沒有結果"
+  "resource_no_results": "沒有結果",
+  "resource_load_more": "載入更多",
+  "resource_features_loading": "正在載入圖徵…已載入 {count} 個"
 }

@@ -1240,5 +1240,7 @@
   "import_data_events": "Events",
   "resource_loading": "Loading resources",
   "resource_retry": "Retry loading",
-  "resource_no_results": "No results"
+  "resource_no_results": "No results",
+  "resource_load_more": "Load more",
+  "resource_features_loading": "Loading features… {count} loaded"
 }

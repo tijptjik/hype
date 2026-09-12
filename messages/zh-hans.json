@@ -1240,5 +1240,7 @@
   "import_data_events": "活动",
   "resource_loading": "正在加载资源",
   "resource_retry": "重新加载",
-  "resource_no_results": "没有结果"
+  "resource_no_results": "没有结果",
+  "resource_load_more": "加载更多",
+  "resource_features_loading": "正在加载要素…已加载 {count} 个"
 }
