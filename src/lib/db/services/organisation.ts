@@ -1,3 +1,4 @@
+import { gt } from 'drizzle-orm'
 // DRIZZLE
 import { and, eq, like, sql, or } from 'drizzle-orm'
 // SCHEMA
@@ -203,7 +204,7 @@ export const listOrganisations = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number; offset?: number },
+  pagination?: { limit?: number; offset?: number; afterId?: string },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
@@ -214,6 +215,8 @@ export const listOrganisations = async (
   },
 ): Promise<ListResponse<OrganisationDBRaw>> => {
   const startedAt = Date.now()
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId) conditions.push(gt(organisation.id, pagination.afterId))
   // Core or non-core hub filtering
   if (!query?.ignoreHubFilter) {
     const hubFilter = getOrganisationHubFilter(db, opts)

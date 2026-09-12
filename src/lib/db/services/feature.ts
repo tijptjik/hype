@@ -1,3 +1,4 @@
+import { gt } from 'drizzle-orm'
 // NANOID
 import { nanoid } from 'nanoid'
 // DRIZZLE
@@ -330,7 +331,7 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number | null; offset?: number | null },
+  pagination?: { limit?: number | null; offset?: number | null; afterId?: string },
   sorting?: { sortBy?: string | null; sortOrder?: 'asc' | 'desc' | null },
   query?: {
     q?: string | null
@@ -339,6 +340,8 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   },
 ): Promise<ListResponse<TRow>> => {
   const startedAt = Date.now()
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId) conditions.push(gt(feature.id, pagination.afterId))
   const allConditions = [...conditions]
   const hubFilter = getFeatureHubFilter(db, opts)
 

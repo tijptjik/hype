@@ -1,3 +1,4 @@
+import { gt } from 'drizzle-orm'
 // DRIZZLE
 import { and, eq, inArray, not, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
@@ -194,7 +195,7 @@ export const listLayers = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number; offset?: number },
+  pagination?: { limit?: number; offset?: number; afterId?: string },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
@@ -205,6 +206,8 @@ export const listLayers = async (
   },
 ): Promise<ListResponse<LayerDBRaw>> => {
   const startedAt = Date.now()
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId) conditions.push(gt(layer.id, pagination.afterId))
 
   if (!query?.ignoreHubFilter) {
     const hubFilter = getLayerHubFilter(db, opts)

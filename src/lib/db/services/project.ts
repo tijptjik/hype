@@ -1,3 +1,4 @@
+import { gt } from 'drizzle-orm'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
 // DRIZZLE
@@ -299,7 +300,7 @@ export async function listProjects<
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number; offset?: number },
+  pagination?: { limit?: number; offset?: number; afterId?: string },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
@@ -310,6 +311,8 @@ export async function listProjects<
   },
 ): Promise<ListResponse<TRow>> {
   const startedAt = Date.now()
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId) conditions.push(gt(project.id, pagination.afterId))
   if (!query?.ignoreHubFilter) {
     const hubFilter = getProjectHubFilter(db, opts)
     if (hubFilter) {
