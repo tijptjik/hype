@@ -3292,7 +3292,13 @@ export type ResourcePageFactory = (
   input: ResourcePageInput,
 ) => import('@sveltejs/kit').RemoteQuery<ResourcePage>
 
+/** Native active admin feature collection retained for reactive mutation reconciliation. */
+export type FeatureCollectionHandle = import('@sveltejs/kit').RemoteQuery<{
+  data: FeatureFromCollection[]
+}>
+
 export type ResourceDetailHandle = {
+  snapshot?: unknown
   query: Promise<{ data?: unknown }> & {
     refresh?: () => Promise<void>
     current?: { data?: unknown }

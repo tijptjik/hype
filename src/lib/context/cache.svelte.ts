@@ -11,10 +11,12 @@ import type {
   ResourceDetailHandle,
   ResourceOptimisticInput,
   PanelResource,
+  FeatureCollectionHandle,
 } from '$lib/types'
 
 /** Session-local domain retention. SvelteKit owns active page payloads and request deduplication. */
 export class CacheCtx {
+  featureCollection: FeatureCollectionHandle | undefined = $state.raw()
   readonly entities: Cache = {
     organisation: new SvelteMap(),
     project: new SvelteMap(),
@@ -91,6 +93,8 @@ export class CacheCtx {
           (status === 401 || status === 403 || status === 404)
         ) {
           this.details.delete(key)
+          currentEntry.fetchedAt = 0
+          currentEntry.snapshot = undefined
           commit(undefined)
         }
         throw error
@@ -98,13 +102,14 @@ export class CacheCtx {
       const result = currentEntry.query.current ?? (await currentEntry.query)
       if (epoch !== this.epoch) return undefined
       currentEntry.fetchedAt = Date.now()
+      currentEntry.snapshot = result.data
       commit(result.data)
       return result.data
     }
     const current = currentEntry.query.current
-    if (current && currentEntry.fetchedAt) {
+    if (currentEntry.fetchedAt) {
       if (Date.now() - currentEntry.fetchedAt >= 300_000) void refresh().catch(() => {})
-      return current.data
+      return current ? current.data : currentEntry.snapshot
     }
     return await refresh()
   }
@@ -116,6 +121,22 @@ export class CacheCtx {
    * @returns Overrides released automatically by SvelteKit on settlement.
    */
   optimisticUpdates(type: string, input: ResourceOptimisticInput) {
+    if (type === 'feature' && this.featureCollection) {
+      const patch = input.data ?? {}
+      const id = input.meta?.id
+      const temporaryId = `pending:${crypto.randomUUID()}`
+      return [
+        this.featureCollection.withOverride(current => {
+          if (!current) return current
+          const data = current.data.map(row =>
+            row.id === id ? { ...row, ...patch, id: row.id } : row,
+          )
+          if (!id && input.meta?.mode === 'create')
+            data.unshift({ ...patch, id: temporaryId } as (typeof data)[number])
+          return { ...current, data }
+        }),
+      ]
+    }
     if (!(type in this.lists)) return []
     const resourceType = type as PanelResourceType
     const affected: PanelResourceType[] =
@@ -237,6 +258,7 @@ export class CacheCtx {
   /** Clears every retained scope-sensitive record and page before an identity transition. */
   clear(): void {
     this.epoch++
+    this.featureCollection = undefined
     this.details.clear()
     this.pins.clear()
     for (const store of Object.values(this.entities)) store.clear()

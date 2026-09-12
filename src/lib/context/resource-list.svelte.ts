@@ -45,7 +45,13 @@ export class ResourceList {
    */
   async load(input: ResourcePageInput, force = false): Promise<void> {
     const key = JSON.stringify(input)
-    if (!force && this.input && JSON.stringify(this.input) === key && this.pages.length)
+    if (
+      !force &&
+      this.input &&
+      JSON.stringify(this.input) === key &&
+      this.pages.length &&
+      Date.now() - this.validatedAt < 60_000
+    )
       return
     if (!force && this.loading && this.input && JSON.stringify(this.input) === key) {
       await this.pages[0]

@@ -539,17 +539,17 @@ export class AdminCtx {
    * @returns Feature cards for the current admin prism and sort state.
    */
   featuresQueryFn = async () => {
+    const query = getFeatures({
+      conditions: this.appCtx.isSuperAdmin()
+        ? { isArchived: null, isPublished: null }
+        : { isArchived: false, isPublished: null },
+      prisms: this.appCtx.state.prisms,
+      sorting: this.appCtx.state.viewSorting.feature,
+      meta: { isAdminRequest: true, profile: 'card' },
+    })
+    this.appCtx.cacheCtx.featureCollection = query
     const result = toSafeListResponse<FeatureFromCollection>(
-      (await runRemoteQuery(
-        getFeatures({
-          conditions: this.appCtx.isSuperAdmin()
-            ? { isArchived: null, isPublished: null }
-            : { isArchived: false, isPublished: null },
-          prisms: this.appCtx.state.prisms,
-          sorting: this.appCtx.state.viewSorting.feature,
-          meta: { isAdminRequest: true, profile: 'card' },
-        }),
-      )) as ListResponse<FeatureFromCollection> | undefined,
+      await runRemoteQuery(query),
     )
     // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
     this.appCtx.setListQueryMeta(this.appCtx.featuresQueryKey(), result)
