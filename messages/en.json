@@ -1242,5 +1242,9 @@
   "resource_retry": "Retry loading",
   "resource_no_results": "No results",
   "resource_load_more": "Load more",
-  "resource_features_loading": "Loading features… {count} loaded"
+  "resource_features_loading": "Loading features… {count} loaded",
+  "theme_title": "THEME",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_description": "Choose the colours that feel like home."
 }

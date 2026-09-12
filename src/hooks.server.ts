@@ -1,3 +1,4 @@
+import { resolveTheme, THEME_COOKIE } from '$lib/themes/themes'
 // SVELTE
 import { sequence } from '@sveltejs/kit/hooks'
 import type { Handle } from '@sveltejs/kit'
@@ -419,7 +420,15 @@ const translation: Handle = ({ event, resolve }) =>
     event.request = localizedRequest
     return resolve(event, {
       transformPageChunk: ({ html }) => {
-        return html.replace('%lang%', event.locals.user?.locale || locale)
+        return html
+          .replace('%lang%', event.locals.user?.locale || locale)
+          .replace(
+            '%theme%',
+            resolveTheme(
+              event.cookies.get(THEME_COOKIE),
+              event.locals.hub?.domain ?? event.url.hostname,
+            ),
+          )
       },
     })
   })

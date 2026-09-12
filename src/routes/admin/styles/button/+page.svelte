@@ -1,6 +1,9 @@
 <script lang="ts">
 // BITS COMPONENTS
 import { Button } from '$lib/bits'
+import { ThemePicker } from '$lib/bits/patterns/themePicker'
+import type { ThemeId } from '$lib/themes/themes.types'
+let previewTheme: ThemeId = $state('hype-dark')
 
 const BUTTON_COLORS = [
   'neutral',
@@ -25,7 +28,16 @@ function onButtonClick(variant: string) {
 }
 </script>
 
-<main class="h-full overflow-y-auto p-6">
+<main
+  data-theme={previewTheme}
+  class="bits-theme h-full overflow-y-auto bg-canvas p-6 text-base-content"
+>
+  <div class="mb-8 max-w-2xl">
+    <ThemePicker value={previewTheme} onSelect={theme => previewTheme = theme} />
+    <a href="/themes" class="mt-4 inline-block text-primary underline"
+      >Open the theme composition preview →</a
+    >
+  </div>
   {#snippet globeIcon()}
     <svg
       xmlns="http://www.w3.org/2000/svg"

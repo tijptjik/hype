@@ -1242,5 +1242,9 @@
   "resource_retry": "重新加载",
   "resource_no_results": "没有结果",
   "resource_load_more": "加载更多",
-  "resource_features_loading": "正在加载要素…已加载 {count} 个"
+  "resource_features_loading": "正在加载要素…已加载 {count} 个",
+  "theme_title": "主题",
+  "theme_light": "浅色",
+  "theme_dark": "深色",
+  "theme_description": "选择让你感到自在的配色。"
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount, untrack } from 'svelte'
+import { setThemeModel } from '$lib/themes/theme.svelte'
 // SVELTEKIT
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -132,6 +133,8 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
 }
 
 // Set AppCtx in context with the client owned by this layout instance.
+setThemeModel()
+
 const appCtx = setAppCtx(
   setPlaceCtx(),
   $session.data?.user as SessionUser | null,
@@ -372,7 +375,7 @@ const isAppReady = $derived(
 )
 const shelllessClass = $derived(
   cx(
-    'bits-theme min-h-screen w-full overflow-y-auto bg-black',
+    'bits-theme min-h-screen w-full overflow-y-auto bg-canvas text-base-content',
     localeKey === 'zhHant' ? 'font-(--font-hant)' : '',
     localeKey === 'zhHans' ? 'font-(--font-hans)' : '',
   ),

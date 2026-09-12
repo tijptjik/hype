@@ -1242,5 +1242,9 @@
   "resource_retry": "重新載入",
   "resource_no_results": "沒有結果",
   "resource_load_more": "載入更多",
-  "resource_features_loading": "正在載入圖徵…已載入 {count} 個"
+  "resource_features_loading": "正在載入圖徵…已載入 {count} 個",
+  "theme_title": "主題",
+  "theme_light": "淺色",
+  "theme_dark": "深色",
+  "theme_description": "選擇讓你感到自在的配色。"
 }

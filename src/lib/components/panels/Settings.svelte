@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { slide } from 'svelte/transition'
+import { ThemePicker } from '$lib/bits/patterns/themePicker'
+import { getThemeModel } from '$lib/themes/theme.svelte'
+const themeModel = getThemeModel()
 // I18N
 import { m } from '$lib/i18n'
 // BITS
@@ -71,6 +74,9 @@ const profileSectionModel = useProfileSectionModel(appCtx, () => ({
     {...panelProps}
   />
   <Info isOpen={isInfoOpen} />
+  <div class="border-b border-border p-4">
+    <ThemePicker value={themeModel.selected} onSelect={themeModel.select} />
+  </div>
 
   <ProfileSection
     {...profileSectionModel.getProfileProps()}
