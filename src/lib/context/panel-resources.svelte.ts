@@ -1,7 +1,6 @@
 // SVELTE
-import { untrack } from 'svelte'
+import { untrack, onMount } from 'svelte'
 // REMOTE
-import { getPinnedResource } from '$lib/api/server/resources.remote'
 // TYPES
 import type { AppCtx } from './app.svelte'
 import type { PanelResource, PanelResourceType } from '$lib/types'
@@ -17,14 +16,26 @@ export function usePanelResources(
   app: AppCtx,
   type: PanelResourceType,
   search: () => string,
+  slot: 'panel' | 'index' = 'panel',
 ) {
-  const list = app.cacheCtx.lists[type]
-  const input = $derived(app.panelResourceInput(type, search()))
+  const list =
+    slot === 'index' ? app.cacheCtx.indexLists[type] : app.cacheCtx.lists[type]
+  const input = $derived({
+    ...app.panelResourceInput(type, search()),
+    ...(slot === 'index'
+      ? {
+          profile: 'default' as const,
+          sorting: app.state.viewSorting[type],
+          conditions: {
+            isPublished: app.state.viewFilters[type].isPublished,
+            isArchived: app.state.viewFilters[type].isArchived,
+          },
+        }
+      : {}),
+  })
   const viewKey = $derived(JSON.stringify(input))
-  const selected = $derived(app.state.prisms[type])
-  const pins = $derived(
-    selected.map(id => getPinnedResource({ type, id, meta: input.meta })),
-  )
+  const selected = $derived(slot === 'index' ? [] : app.state.prisms[type])
+  const pins = $derived(selected.map(id => app.cacheCtx.pin(type, id, input.meta)))
   $effect(() => {
     const next = input
     const timer = setTimeout(
@@ -35,9 +46,23 @@ export function usePanelResources(
     )
     return () => clearTimeout(timer)
   })
+  onMount(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void list.revalidate()
+    }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  })
   const rows = $derived.by(() => {
     const byId = new Map<string, PanelResource>()
-    for (const pin of pins) if (pin.current) byId.set(pin.current.id, pin.current)
+    const pageRows = new Map(list.rows.map(row => [row.id, row]))
+    for (const pin of pins)
+      if (pin.current)
+        byId.set(pin.current.id, pageRows.get(pin.current.id) ?? pin.current)
     for (const row of list.rows) if (!byId.has(row.id)) byId.set(row.id, row)
     return [...byId.values()]
   })
