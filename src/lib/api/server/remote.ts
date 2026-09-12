@@ -18,14 +18,14 @@ import type {
 } from '$lib/types'
 
 // Only query definitions are shared here; results and authorization remain request-local.
-const refreshableQueries = new Set<RemoteQueryFunction<any, any>>()
+const refreshableQueries = new Set<RemoteQueryFunction<unknown, unknown>>()
 
 /**
  * Registers a native query family for bounded client-requested mutation refreshes.
  * @param remote - Native query function, including batched query families.
  * @returns The unchanged query function.
  */
-function registerQuery<T extends RemoteQueryFunction<any, any>>(remote: T): T {
+function registerQuery<T extends RemoteQueryFunction<unknown, unknown>>(remote: T): T {
   refreshableQueries.add(remote)
   return remote
 }
@@ -46,8 +46,12 @@ async function withRequestedRefreshes<T>(write: () => Promise<T>): Promise<T> {
     committed = isRedirect(error)
     throw error
   } finally {
-    if (committed)
+    if (committed) {
+      // Load feature query registration after initialization to avoid remote-module cycles.
+      // Only client-requested active pages refresh, including map filters and saved lists.
+      await import('./featureQueries.remote')
       for (const remote of refreshableQueries) void requested(remote, 32).refreshAll()
+    }
   }
 }
 
@@ -172,19 +176,50 @@ export function guardedQuery(
 // GUARDED BATCH QUERY
 /* -------- */
 
+/**
+ * Creates a guarded native batched query and eagerly resolves each row.
+ * @param schema - Validator used by SvelteKit for every batch item.
+ * @param fn - Shared batch handler that returns a resolver for each validated item.
+ * @returns A registered SvelteKit batched query function.
+ * @remarks SvelteKit serializes the value returned by each resolver synchronously,
+ * so this wrapper settles row promises before returning the resolver. Captured row
+ * errors are re-thrown from that synchronous resolver and retain per-item failures.
+ */
 export function guardedBatchQuery<Schema extends StandardSchemaV1, Output>(
   schema: Schema,
   fn: (
     outputs: Array<StandardSchemaV1.InferOutput<Schema>>,
     ctx: GuardedQueryContext,
   ) => Promise<
-    (output: StandardSchemaV1.InferOutput<Schema>) => Output | Promise<Output>
+    (
+      output: StandardSchemaV1.InferOutput<Schema>,
+      index: number,
+    ) => Output | Promise<Output>
   >,
 ) {
   return registerQuery(
     query.batch(schema, async outputs => {
       const ctx = await resolveGuardedContext(outputs)
-      return fn(outputs, ctx)
+      const resolver = await fn(outputs, ctx)
+      const settled = await Promise.all(
+        outputs.map(async (output, index) => {
+          try {
+            return {
+              ok: true as const,
+              value: await resolver(output, index),
+            }
+          } catch (error) {
+            return { ok: false as const, error }
+          }
+        }),
+      )
+
+      return (_output, index) => {
+        const result = settled[index]
+        if (!result) throw new Error(`Missing batch result at index ${index}`)
+        if (!result.ok) throw result.error
+        return result.value
+      }
     }) as RemoteQueryFunction<StandardSchemaV1.InferInput<Schema>, Awaited<Output>>,
   )
 }

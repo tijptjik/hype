@@ -1,4 +1,5 @@
 <script lang="ts">
+import 'svelte-maplibre-gl/vite'
 // SVELTE
 import { onMount, untrack } from 'svelte'
 import { setThemeModel } from '$lib/themes/theme.svelte'
@@ -37,9 +38,6 @@ import { setResponsiveCtx } from '$lib/context/responsive.svelte'
 // BITS
 import App from '$lib/bits/patterns/layout/app/App.svelte'
 import UpgradeAccountDialog from '$lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
-// MAPLIBRE
-import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
-import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
 // STYLES
 import '$lib/styles/app.css'
 // CONSTANTS
@@ -238,13 +236,19 @@ $effect(() => {
   scheduleResponsiveSync()
 })
 
-// Load maplibre globally
 async function initializeAuthenticatedApp(): Promise<void> {
   logMarkerBootstrap('application bootstrap started', {
     pathname: page.url.pathname,
     hasSessionUser: Boolean($session.data?.user),
     isSessionPending: $session.isPending,
   })
+
+  // The bootstrap below resolves hub-specific default layers. Set the server
+  // supplied hub before it starts so the first resource pass can establish the
+  // initial prism selection instead of racing the layout effect that renders it.
+  const rootHub = (data as LayoutData).hub as HubOptsExtended | undefined
+  if (rootHub) appCtx.setHub(rootHub)
+
   if (shouldBootstrapAnonymous(page.url.pathname)) {
     await bootstrapAnonymousSession({
       getSession: () => ({
@@ -309,6 +313,7 @@ onMount(() => {
   // The component studio has local sample data and needs no map/resource bootstrap.
   if (page.url.pathname === '/themes') return
   hasMounted = true
+  let disposed = false
 
   const handleUpgradeRequest = (event: Event): void => {
     const detail = (event as CustomEvent<{ reason?: UpgradeReason; returnTo?: string }>)
@@ -325,29 +330,15 @@ onMount(() => {
     }
 
     await handleRequestedUpgrade()
+    if (disposed) return
 
     scheduleResponsiveSync()
     window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
     window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
-
-    try {
-      // To minimize the payload in Cloudflare, mapping dependencies load client-side.
-      const [, maplibreSource] = await Promise.all([
-        ensureMapLibreStyles(),
-        loadMapLibre(),
-      ])
-      const maplibre = monkeyPatchMapLibre(maplibreSource)
-      ;(globalThis as typeof globalThis & { maplibregl: typeof maplibre }).maplibregl =
-        maplibre
-
-      appCtx.maplibre = maplibre
-      appCtx.isMaplibreLoaded = true
-    } catch (error) {
-      console.error('Failed to load maplibre', error)
-    }
   })()
 
   return () => {
+    disposed = true
     clearPendingAuthReinit()
 
     if (responsiveSyncFrame !== 0) {

@@ -1,6 +1,6 @@
 // SVELTE
 import { browser } from '$app/environment'
-import { getContext, setContext, tick } from 'svelte'
+import { getContext, setContext, tick, untrack } from 'svelte'
 // LIB
 import { isMobile } from '$lib'
 import { searchAllAsync } from '$lib/map/data'
@@ -34,6 +34,7 @@ import type {
   Locale,
   LocaleKey,
   OmniCollectionDescriptor,
+  FeatureQueryInput,
 } from '$lib/types'
 import type { AppCtx } from '$lib/context/app.svelte'
 // TYPES
@@ -79,6 +80,8 @@ export class OmniCtx {
   pageState: PageState = $state(PageState.NoTransition)
   isIntentionallyClosing: boolean = $state(false)
   activeCollectionDescriptor: OmniCollectionDescriptor | null = $state(null)
+  private pendingCollectionDescriptor: OmniCollectionDescriptor | null = null
+  private pendingCollectionOptions: OmniSelectionOptions | null = null
   cardTransition: FeatureCardTransitionState = $state({
     phase: 'idle',
     sourceRect: null,
@@ -99,15 +102,59 @@ export class OmniCtx {
   constructor(appCtx: AppCtx) {
     this.appCtx = appCtx
 
-    // Effect to update search results when dependencies change
+    // Each search activates an independent cached query; changing text never drains all pages.
     $effect(() => {
-      // Explicitly track all reactive dependencies
-      const searchTerm = this.state.searchTerm
-      this.appCtx.features.size // Track feature changes
-      this.appCtx.state.userFeatures.wishlisted.length // Track wishlist changes
+      const input = this.appCtx.featureQueryInput({ q: this.state.searchTerm })
+      if (!this.appCtx.isInitialised || this.appCtx.isAdmin()) return
+      if (!this.state.isTrayOpen) return
+      const timer = setTimeout(() => {
+        void this.appCtx.loadFeatureQuery('search', input).catch(console.error)
+        if (this.appCtx.user?.id) {
+          void this.appCtx
+            .loadFeatureQuery('searchWishlist', {
+              ...input,
+              limit: 1,
+              filters: { ...input.filters, list: { listId: 'wishlist' } },
+            })
+            .catch(console.error)
+        }
+      }, 120)
+      return () => clearTimeout(timer)
+    })
 
-      // Schedule async update outside reactive context
-      setTimeout(() => this.updateSearchResults(searchTerm), 0)
+    // Explicitly track cached and returned pages so optimistic results appear before the network.
+    $effect(() => {
+      const searchTerm = this.state.searchTerm
+      this.appCtx.cacheCtx.featureQueries.search.rows
+      this.appCtx.cacheCtx.featureQueries.searchWishlist.totalCount
+      this.appCtx.placeCtx.neighbourhoodFeatureCounts.size
+      const timer = setTimeout(() => this.updateSearchResults(searchTerm), 0)
+      return () => clearTimeout(timer)
+    })
+
+    // Active collections use current filters and retain query ordering across refreshes.
+    $effect(() => {
+      const descriptor = this.activeCollectionDescriptor
+      if (
+        !descriptor ||
+        (descriptor.kind === 'walk' && !['stars', 'visited'].includes(descriptor.ref))
+      )
+        return
+      const input = this.collectionQueryInput(descriptor)
+      untrack(() => {
+        void this.appCtx.loadFeatureQuery('collection', input).catch(console.error)
+      })
+    })
+
+    // Native pages complete cold-start selection once; later refreshes preserve the camera.
+    $effect(() => {
+      const descriptor = this.activeCollectionDescriptor
+      const query = this.appCtx.cacheCtx.featureQueries.collection
+      const rows = query.rows
+      const totalCount = query.totalCount
+      untrack(() => {
+        if (descriptor) this.syncFeatureCollection(descriptor, rows, totalCount)
+      })
     })
 
     // Register custom event handlers
@@ -219,7 +266,22 @@ export class OmniCtx {
       this.searchResults.walk.length,
   )
 
+  searchFeatureLimit = $state(5)
+
+  /**
+   * Appends a server page when necessary, then reveals more matching search results.
+   * @returns Completion after the next visible group of search results is available.
+   */
+  async loadMoreSearch(): Promise<void> {
+    const query = this.appCtx.cacheCtx.featureQueries.search
+    if (this.searchFeatureLimit >= query.rows.length && query.hasMore) {
+      await this.appCtx.loadMoreFeatureQuery('search')
+    }
+    this.searchFeatureLimit += 25
+  }
+
   setSearchTerm(term: string) {
+    this.searchFeatureLimit = 5
     this.state.searchTerm = term
   }
 
@@ -249,10 +311,11 @@ export class OmniCtx {
   }
 
   // Async method to update search results
-  private async updateSearchResults(searchTerm: string) {
+  private async updateSearchResults(searchTerm: string): Promise<void> {
     try {
       const results = await searchAllAsync(searchTerm, this.appCtx)
-      this.searchResults = this.toGroups(results)
+      if (searchTerm === this.state.searchTerm)
+        this.searchResults = this.toGroups(results)
     } catch (error) {
       console.error('Error updating search results:', error)
       this.searchResults = { feature: [], neighbourhood: [], walk: [] }
@@ -567,7 +630,8 @@ export class OmniCtx {
   prepareCardTransitionFromMarker(featureId: Id, element?: HTMLElement | null): void {
     const sourceElement =
       element ??
-      (this.appCtx.state.markers.get(featureId)?.getElement() as HTMLElement | null)
+      (this.appCtx.markerElements.get(featureId) as HTMLElement | undefined) ??
+      null
 
     this.cardTransition.phase = 'idle'
     this.cardTransition.sourceRect = this.getCardTransitionRect(sourceElement)
@@ -686,8 +750,130 @@ export class OmniCtx {
         : '',
   )
 
-  navNext() {
+  async navNext(): Promise<void> {
+    const collection = this.appCtx.getActiveCollection()
+    if (
+      collection &&
+      this.navIndex >= collection.items.length - 1 &&
+      this.collectionHasMore
+    ) {
+      await this.loadMoreCollection()
+    }
     navigateCollection(this, 'next')
+  }
+
+  /** Whether the active built-in collection has another server page. */
+  get collectionHasMore(): boolean {
+    return (
+      this.appCtx.state.active.collection?.totalCount !== undefined &&
+      this.appCtx.cacheCtx.featureQueries.collection.hasMore
+    )
+  }
+
+  /**
+   * Appends a page without changing the selected feature or camera.
+   * @returns Completion after collection membership and its total are updated.
+   */
+  async loadMoreCollection(): Promise<void> {
+    const descriptor = this.activeCollectionDescriptor
+    if (!descriptor || !this.collectionHasMore) return
+    await this.appCtx.loadMoreFeatureQuery('collection')
+    if (JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor))
+      return
+    const collection = this.appCtx.state.active.collection
+    const query = this.appCtx.cacheCtx.featureQueries.collection
+    if (collection)
+      this.appCtx.state.active.collection = {
+        ...collection,
+        items: query.rows,
+        totalCount: query.totalCount,
+      }
+  }
+
+  /**
+   * Composes one built-in collection's membership with the current common filters.
+   * @param descriptor - Neighbourhood or saved list being browsed.
+   * @returns Complete query independent of the map viewport.
+   */
+  private collectionQueryInput(
+    descriptor: OmniCollectionDescriptor,
+  ): FeatureQueryInput {
+    return this.appCtx.featureQueryInput({
+      filters:
+        descriptor.kind === 'neighbourhood'
+          ? { neighbourhoods: [descriptor.ref] }
+          : { list: { listId: descriptor.ref === 'visited' ? 'visited' : 'wishlist' } },
+      ...(descriptor.kind === 'walk' && descriptor.ref === 'visited'
+        ? { sorting: { sortBy: 'visitedAt' as const, sortOrder: 'desc' as const } }
+        : {}),
+    })
+  }
+
+  /**
+   * Initializes a paginated neighbourhood or saved-list collection using fresh cache previews.
+   * @param descriptor - Collection membership to request independently of viewport loading.
+   * @param options - Existing selection, camera and card behavior.
+   * @returns Nothing; server pages update the same active collection in the background.
+   */
+  private loadFeatureCollection(
+    descriptor: OmniCollectionDescriptor,
+    options: OmniSelectionOptions,
+  ): void {
+    const input = this.collectionQueryInput(descriptor)
+    const pending = this.appCtx.loadFeatureQuery('collection', input)
+    const query = this.appCtx.cacheCtx.featureQueries.collection
+    const initial =
+      descriptor.kind === 'neighbourhood'
+        ? this.toNeighbourhoodCollection(descriptor.ref, query.rows)
+        : this.toWalkCollection(descriptor.ref, query.rows)
+    if (initial) initial.totalCount = query.totalCount
+    // Preserve cold-start selection intent across intervening filter requests for this collection.
+    this.pendingCollectionDescriptor = initial?.items.length ? null : descriptor
+    this.pendingCollectionOptions = initial?.items.length ? null : options
+    initializeCollection(this, initial, OmniMode.navigation, options)
+    void pending
+      .then(() => {
+        if (
+          JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor)
+        )
+          return
+        this.syncFeatureCollection(descriptor, query.rows, query.totalCount)
+      })
+      .catch(error => console.error('[Feature collection] Query failed:', error))
+  }
+
+  /**
+   * Reconciles the current query page and completes a pending first selection once rows exist.
+   * @param descriptor - Collection whose current filtered query produced these rows.
+   * @param rows - Fresh cached preview or native server page membership.
+   * @param totalCount - Authoritative server total, or null before it is known.
+   * @returns Nothing; later page updates preserve the user's current selection and camera.
+   */
+  private syncFeatureCollection(
+    descriptor: OmniCollectionDescriptor,
+    rows: FeatureFromCollection[],
+    totalCount: number | null,
+  ): void {
+    const current = this.appCtx.state.active.collection
+    const query = this.appCtx.cacheCtx.featureQueries.collection
+    if (
+      !current ||
+      current.totalCount === undefined ||
+      current.id !== descriptor.ref ||
+      !query.isCurrent(this.collectionQueryInput(descriptor))
+    )
+      return
+    const updated = { ...current, items: rows, totalCount }
+    if (
+      rows.length &&
+      this.pendingCollectionOptions &&
+      JSON.stringify(this.pendingCollectionDescriptor) === JSON.stringify(descriptor)
+    ) {
+      const options = this.pendingCollectionOptions
+      this.pendingCollectionDescriptor = null
+      this.pendingCollectionOptions = null
+      this.appCtx.setActiveCollection(updated, options)
+    } else this.appCtx.state.active.collection = updated
   }
 
   navPrevious() {
@@ -731,14 +917,11 @@ export class OmniCtx {
       ...options,
     })
 
-    const featuresIds =
-      this.appCtx.placeCtx.getFeaturesForNeighbourhood(neighbourhoodRef) ?? []
-    const features = featuresIds.map(id =>
-      this.appCtx.getResourceByIdSync(FirstClassResource.feature, id),
-    ) as (FeatureFromCollection | Feature)[]
-    const collection = this.toNeighbourhoodCollection(neighbourhoodRef, features)
-
-    initializeCollection(this, collection, OmniMode.navigation, optionsWithDefaults)
+    // Neighbourhood membership and totals are resolved across the complete filtered dataset.
+    this.loadFeatureCollection(
+      { kind: 'neighbourhood', ref: neighbourhoodRef },
+      optionsWithDefaults,
+    )
   }
 
   initWalk(
@@ -767,6 +950,11 @@ export class OmniCtx {
       focusFeature: true,
       highlight: true,
       ...options,
+    }
+    // Built-in user lists use the same paginated feature-query path as neighbourhoods.
+    if (walkRef === 'stars' || walkRef === 'visited') {
+      this.loadFeatureCollection({ kind: 'walk', ref: walkRef }, optionsWithDefaults)
+      return
     }
     // Run the default selection initialization
     this.initSelection(false)
@@ -1064,6 +1252,8 @@ export class OmniCtx {
 
   clearActiveCollectionDescriptor(): void {
     this.activeCollectionDescriptor = null
+    this.pendingCollectionDescriptor = null
+    this.pendingCollectionOptions = null
   }
 }
 

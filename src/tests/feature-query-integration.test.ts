@@ -233,6 +233,30 @@ describe('map query integration', () => {
     expect(app.cacheCtx.featureQueries.search.totalCount).toBe(5_000)
     expect(getFeaturePage).toHaveBeenCalledOnce()
   })
+
+  it('keeps search available when no layer prism is active', async () => {
+    const app = createApp()
+    app.state.prisms.layer = []
+    app.isInitialised = true
+    const first = controlledPage()
+    vi.mocked(getFeaturePage).mockReturnValue(first.query)
+    const omni = createOmni(app)
+
+    omni.state.isTrayOpen = true
+    omni.setSearchTerm('mong')
+    flushSync()
+    await vi.advanceTimersByTimeAsync(150)
+
+    expect(getFeaturePage).toHaveBeenCalledOnce()
+    expect(getFeaturePage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        q: 'mong',
+        prisms: expect.objectContaining({ layer: [] }),
+      }),
+    )
+    first.resolve([], 0, false)
+    await settle()
+  })
 })
 
 describe('paginated collection activation', () => {

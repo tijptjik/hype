@@ -9,10 +9,7 @@ import { OmniCollection } from '$lib/enums'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { SearchResult } from '$lib/types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type {
-  FeatureExtended,
-  FeatureFromCollection,
-} from '$lib/db/zod/schema/feature.types'
+import type { FeatureExtended } from '$lib/db/zod/schema/feature.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -75,6 +72,12 @@ export async function searchAllAsync(
   appCtx: AppCtx,
 ): Promise<SearchResult[]> {
   const results: SearchResult[] = []
+  // Search labels must remain visible when the only matching title is a generated
+  // translation; the feature card uses the same policy for navigation chrome.
+  const searchPreferences = {
+    ...appCtx.getUserPreferences(),
+    allowMachineTranslation: true,
+  }
 
   // Source 1 - Walks: the matching count comes from the user's filtered list query.
   const wishlistQuery = appCtx.cacheCtx.featureQueries.searchWishlist
@@ -108,7 +111,7 @@ export async function searchAllAsync(
   const features = featureQuery.search === term.trim() ? featureQuery.rows : []
   features.forEach(feature => {
     results.push({
-      name: getI18n(feature, 'title', appCtx.getUserPreferences()),
+      name: getI18n(feature, 'title', searchPreferences),
       count: 1,
       collectionType: OmniCollection.feature,
       ref: feature.id,
