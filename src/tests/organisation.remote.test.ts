@@ -71,7 +71,7 @@ vi.mock(
     requested: () => ({ refreshAll: async () => {} }),
     getRequestEvent: mockGetRequestEvent,
     query: (_schema: unknown, handler: unknown) =>
-      withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
+      withRemoteMeta(handler as (...args: never[]) => unknown, 'query'),
     form: (_schema: unknown, handler: unknown) =>
       withRemoteMeta(async (input: unknown) => {
         const issue = (() => {
@@ -90,7 +90,7 @@ vi.mock(
         )
       }, 'form'),
     command: (_schema: unknown, handler: unknown) =>
-      withRemoteMeta(handler as (...args: any[]) => unknown, 'command'),
+      withRemoteMeta(handler as (...args: never[]) => unknown, 'command'),
   }),
   { virtual: true },
 )

@@ -174,8 +174,9 @@ describe('property.remote', () => {
         isArchived: false,
       },
     ])
-    mockAuthorizeProjectReadForProbe.mockImplementation(({ probe }: any) =>
-      probe.id === 'project-1' ? { allowed: true } : { allowed: false },
+    mockAuthorizeProjectReadForProbe.mockImplementation(
+      ({ probe }: { probe: { id: string } }) =>
+        probe.id === 'project-1' ? { allowed: true } : { allowed: false },
     )
 
     const result = await remote.getProperties({ conditions: {} })
@@ -214,7 +215,7 @@ describe('property.remote', () => {
         isArchived: false,
       },
     ])
-    mockToPropertyResponseShape.mockImplementation((row: any) => {
+    mockToPropertyResponseShape.mockImplementation((row: { id: string }) => {
       if (row.id === 'prop-2') {
         throw new Error('bad property payload')
       }

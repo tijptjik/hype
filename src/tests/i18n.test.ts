@@ -38,7 +38,7 @@ describe('I18N Message Validation', () => {
   }
 
   // HELPER FUNCTIONS
-  const getAllKeys = (obj: Record<string, any>, prefix = ''): string[] => {
+  const getAllKeys = (obj: Record<string, unknown>, prefix = ''): string[] => {
     const keys: string[] = []
 
     for (const [key, value] of Object.entries(obj)) {
@@ -56,7 +56,7 @@ describe('I18N Message Validation', () => {
     return keys.sort()
   }
 
-  const getEmptyKeys = (obj: Record<string, any>, prefix = ''): string[] => {
+  const getEmptyKeys = (obj: Record<string, unknown>, prefix = ''): string[] => {
     const emptyKeys: string[] = []
 
     for (const [key, value] of Object.entries(obj)) {
@@ -143,7 +143,7 @@ describe('I18N Message Validation', () => {
   })
 
   it('should have consistent structure depth across languages', () => {
-    const getMaxDepth = (obj: Record<string, any>, currentDepth = 0): number => {
+    const getMaxDepth = (obj: Record<string, unknown>, currentDepth = 0): number => {
       let maxDepth = currentDepth
 
       for (const value of Object.values(obj)) {

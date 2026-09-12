@@ -128,7 +128,7 @@ describe('remote guard wrappers', () => {
   it('guardedBatchQuery settles row promises before returning its resolver', async () => {
     const handler = guardedBatchQuery(
       z.object({ id: z.string() }),
-      async (outputs, ctx) => {
+      async (_outputs, ctx) => {
         expect(ctx.user.id).toBe('u-1')
         return async output => {
           await Promise.resolve()
@@ -139,7 +139,7 @@ describe('remote guard wrappers', () => {
     )
 
     const resolver = await (
-      handler as (
+      handler as unknown as (
         inputs: unknown[],
       ) => Promise<(input: { id: string }, index: number) => unknown>
     )([{ id: 'good' }, { id: 'bad' }])
@@ -165,8 +165,8 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedForm("unchecked", fn) works with unchecked input', async () => {
-    const handler = guardedForm('unchecked', async (input: any, ctx) => {
-      expect(input.freeform).toBe('x')
+    const handler = guardedForm('unchecked', async (input: unknown, ctx) => {
+      expect((input as { freeform?: string }).freeform).toBe('x')
       expect(ctx.user.id).toBe('u-1')
       return { ok: true }
     })
@@ -206,7 +206,7 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedCommand(fn) works without schema', async () => {
-    const handler = guardedCommand(async (input: any, ctx) => {
+    const handler = guardedCommand(async (input: { id: string }, ctx) => {
       expect(input.id).toBe('org-1')
       expect(ctx.user.id).toBe('u-1')
       return { ok: true }

@@ -1,15 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
+
+type ResourceBatch = (inputs: unknown[]) => unknown
+type LayerBatchParams = {
+  conditions: { id: string[] }
+  meta: { isAdminRequest: boolean; profile?: string }
+}
+
 const mocks = vi.hoisted(() => ({
   organisations: vi.fn(),
   projects: vi.fn(),
   layers: vi.fn(),
-  batch: null as any,
+  batch: null as ResourceBatch | null,
 }))
 vi.mock('$lib/api/server/remote', () => ({
-  guardedQuery: (schema: any, handler: any) =>
-    withRemoteMeta((input: unknown) => handler(schema.parse(input), {}), 'query'),
-  guardedBatchQuery: (schema: any, handler: any) => {
+  guardedQuery: (
+    schema: { parse: (input: unknown) => unknown },
+    handler: (input: unknown, ctx: unknown) => unknown,
+  ) => withRemoteMeta((input: unknown) => handler(schema.parse(input), {}), 'query'),
+  guardedBatchQuery: (
+    schema: { parse: (input: unknown) => unknown },
+    handler: (inputs: unknown[], ctx: unknown) => unknown,
+  ) => {
     mocks.batch = (inputs: unknown[]) =>
       handler(
         inputs.map(input => schema.parse(input)),
@@ -63,7 +75,7 @@ describe('compact resource page boundary', () => {
     expect(mocks.layers).toHaveBeenCalledTimes(2)
   })
   it('partitions batched identities by admin intent and payload profile and bounds ID batches', async () => {
-    mocks.layers.mockImplementation(async (params: any) => ({
+    mocks.layers.mockImplementation(async (params: LayerBatchParams) => ({
       data: params.conditions.id.map((id: string) => ({
         id,
         profile: params.meta.profile,
