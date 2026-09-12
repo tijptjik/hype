@@ -140,7 +140,6 @@ function getLayerLabel(layer: Layer | null | undefined): string {
   return (
     getI18n(layer, 'nameShort', appCtx.getUserPreferences(), '') ||
     getI18n(layer, 'name', appCtx.getUserPreferences(), '') ||
-    layer.code ||
     m.active_bold_cobra_grin()
   )
 }
