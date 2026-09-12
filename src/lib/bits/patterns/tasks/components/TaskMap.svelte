@@ -2,8 +2,8 @@
 import { tick } from 'svelte'
 import { cx } from '$lib/bits/utils'
 import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
 import type { TaskMapProps } from '../task.types'
+import type { MapController } from '$lib/map/controller'
 import ExpandIcon from 'virtual:icons/lucide/expand'
 import ShrinkIcon from 'virtual:icons/lucide/shrink'
 
@@ -20,8 +20,11 @@ let {
   class: className = '',
 }: TaskMapProps = $props()
 
-const appCtx = getAppCtx()
 let isFullscreen = $state(false)
+let taskMapController = $state<MapController | null>(null)
+const handleTaskMapReady = (controller: MapController | null): void => {
+  taskMapController = controller
+}
 
 async function runViewTransition(update: () => void | Promise<void>): Promise<void> {
   if (typeof document === 'undefined') {
@@ -53,7 +56,7 @@ async function toggleFullscreen(): Promise<void> {
     isFullscreen = !isFullscreen
   })
   await tick()
-  appCtx.map?.resize()
+  taskMapController?.resize()
 }
 
 function handleWindowKeydown(event: KeyboardEvent): void {
@@ -74,7 +77,13 @@ function handleWindowKeydown(event: KeyboardEvent): void {
   )}
   style={isFullscreen ? 'view-transition-name: task-map-stage;' : undefined}
 >
-  <Maplet {coordinates} draggable={false} {addressMeta} {mapStyleCode} />
+  <Maplet
+    {coordinates}
+    draggable={false}
+    {addressMeta}
+    {mapStyleCode}
+    onMapReady={handleTaskMapReady}
+  />
 
   <button
     type="button"

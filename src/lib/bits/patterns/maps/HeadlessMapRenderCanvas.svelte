@@ -1,77 +1,93 @@
 <script lang="ts">
 // SVELTE
 import { onMount, tick } from 'svelte'
-// QUERY
+import { page } from '$app/state'
 // GEO
 import bbox from '@turf/bbox'
-// CONTEXT
-import { setAppCtx } from '$lib/context/app.svelte'
-import { setOmniCtx } from '$lib/context/omni.svelte'
-import { setResponsiveCtx } from '$lib/context/responsive.svelte'
-import { setPlaceCtx } from '$lib/context/place.svelte'
-// ENUMS
-import { FirstClassResource } from '$lib/enums'
 // COMPONENTS
-import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
+import MapSurface from '$lib/bits/custom/map/MapSurface.svelte'
 // MAP
-import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
-import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
-import { getDefaultMapStyleKey } from '$lib/map/styles'
+import { createMarkerRenderer, type MarkerRenderer } from '$lib/map/markers'
+import { loadMapLibre } from '$lib/map/maplibreAssets'
+import { getDefaultMapStyleKey, isMapStyleKey } from '$lib/map/styles'
+import { resolveRuntimeMapStyle } from '$lib/map/styles/runtime'
+import {
+  MAP_RENDER_READY_TIMEOUT_MS,
+  waitForMapEvent,
+  waitForMarkerImages,
+} from '$lib/map/render-readiness'
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type {
   FitBoundsOptions,
   LngLatBoundsLike,
   Map as MaplibreMap,
+  ErrorEvent,
+  StyleSpecification,
 } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
+import type { FeatureCollection } from 'geojson'
 
 type HeadlessRenderKind = 'projects' | 'layers'
-
 type RenderPayload = {
   styleCode: string
   features: FeatureFromCollection[]
-  layers: Array<{
-    id: string
-    rank: number
-    modifiedAt: string
-  }>
+  layers: Array<{ id: string; rank: number; modifiedAt: string }>
   selectedLayerIds: string[]
 }
 
 const PREVIEW_PADDING_RATIO = 0.05
-const PREVIEW_READY_TIMEOUT_MS = 10_000
 const HK_BOUNDS = [
   [114.0028131, 22.1193278],
   [114.3228131, 22.4393278],
 ] as LngLatBoundsLike
 
-let {
-  kind,
-  identifier,
-}: {
-  kind: HeadlessRenderKind
-  identifier: string
-} = $props()
-
-const appCtx = setAppCtx(setPlaceCtx(), null, setResponsiveCtx())
-setOmniCtx(appCtx)
-
+let { kind, identifier }: { kind: HeadlessRenderKind; identifier: string } = $props()
+let map = $state<MaplibreMap | undefined>(undefined)
 let payload = $state<RenderPayload | null>(null)
+let style = $state<StyleSpecification | null>(null)
+let runtimeReady = $state(false)
 let previewReady = $state(false)
+let previewError = $state<string | null>(null)
 let renderKey = $state('')
+let markerRenderer: MarkerRenderer | null = null
+let styleAbortController: AbortController | null = null
+let renderRequestSerial = 0
+let styleRevision = $state(0)
+
+const previewWindow = (): Window & {
+  __HYPE_MAP_STYLE_PREVIEW_READY__?: boolean
+  __HYPE_MAP_STYLE_PREVIEW_ERROR__?: string
+} =>
+  window as Window & {
+    __HYPE_MAP_STYLE_PREVIEW_READY__?: boolean
+    __HYPE_MAP_STYLE_PREVIEW_ERROR__?: string
+  }
 
 const markReady = (): void => {
-  ;(
-    window as Window & { __HYPE_MAP_STYLE_PREVIEW_READY__?: boolean }
-  ).__HYPE_MAP_STYLE_PREVIEW_READY__ = true
+  previewError = null
+  previewWindow().__HYPE_MAP_STYLE_PREVIEW_ERROR__ = undefined
+  previewWindow().__HYPE_MAP_STYLE_PREVIEW_READY__ = true
   previewReady = true
 }
 
+const markError = (error: unknown): void => {
+  const message = error instanceof Error ? error.message : String(error)
+  previewError = message
+  previewWindow().__HYPE_MAP_STYLE_PREVIEW_READY__ = false
+  previewWindow().__HYPE_MAP_STYLE_PREVIEW_ERROR__ = message
+  console.error('Failed to render headless map preview', error)
+}
+
+const handleMapError = (event: ErrorEvent): void => {
+  if (!previewReady) markError(event.error ?? new Error('Map style failed to load'))
+}
+
 const resetReadySignal = (): void => {
-  ;(
-    window as Window & { __HYPE_MAP_STYLE_PREVIEW_READY__?: boolean }
-  ).__HYPE_MAP_STYLE_PREVIEW_READY__ = false
+  previewWindow().__HYPE_MAP_STYLE_PREVIEW_READY__ = false
+  previewWindow().__HYPE_MAP_STYLE_PREVIEW_ERROR__ = undefined
   previewReady = false
+  previewError = null
 }
 
 const getRenderPadding = (): FitBoundsOptions['padding'] => ({
@@ -82,18 +98,17 @@ const getRenderPadding = (): FitBoundsOptions['padding'] => ({
 })
 
 const fitRenderViewport = (
-  map: MaplibreMap,
+  mapInstance: MaplibreMap,
   features: FeatureFromCollection[],
 ): void => {
   if (features.length === 0) {
-    map.fitBounds(HK_BOUNDS, {
+    mapInstance.fitBounds(HK_BOUNDS, {
       padding: getRenderPadding(),
       duration: 0,
       maxZoom: 12,
     } satisfies FitBoundsOptions)
     return
   }
-
   const featureCollection = {
     type: 'FeatureCollection',
     features: features.map(feature => ({
@@ -102,19 +117,14 @@ const fitRenderViewport = (
       properties: feature.properties,
     })),
   } as const
-
-  const [west, south, east, north] = bbox(featureCollection)
-  const isSinglePoint = west === east && south === north
-
-  if (isSinglePoint) {
-    map.jumpTo({
-      center: [west, south],
-      zoom: 16,
-    })
+  const [west, south, east, north] = bbox(
+    featureCollection as unknown as FeatureCollection,
+  )
+  if (west === east && south === north) {
+    mapInstance.jumpTo({ center: [west, south], zoom: 16 })
     return
   }
-
-  map.fitBounds(
+  mapInstance.fitBounds(
     [
       [west, south],
       [east, north],
@@ -127,70 +137,6 @@ const fitRenderViewport = (
   )
 }
 
-const waitForMapEvent = (
-  map: MaplibreMap,
-  event: 'load' | 'idle',
-  timeoutMs: number,
-): Promise<void> =>
-  new Promise(resolve => {
-    let settled = false
-
-    const finish = (): void => {
-      if (settled) {
-        return
-      }
-
-      settled = true
-      window.clearTimeout(timeoutId)
-      map.off(event, finish)
-      resolve()
-    }
-
-    const timeoutId = window.setTimeout(finish, timeoutMs)
-    map.once(event, finish)
-  })
-
-const waitForMarkerImages = async (root: ParentNode): Promise<void> => {
-  const markerImages = Array.from(
-    root.querySelectorAll('img.marker-image'),
-  ) as HTMLImageElement[]
-
-  await Promise.all(
-    markerImages.map(
-      image =>
-        new Promise<void>(resolve => {
-          if (image.complete) {
-            resolve()
-            return
-          }
-
-          const cleanup = (): void => {
-            image.removeEventListener('load', cleanup)
-            image.removeEventListener('error', cleanup)
-            resolve()
-          }
-
-          image.addEventListener('load', cleanup, { once: true })
-          image.addEventListener('error', cleanup, { once: true })
-        }),
-    ),
-  )
-}
-
-const applyRenderPayload = (nextPayload: RenderPayload): void => {
-  appCtx.state.resources.project = []
-  appCtx.setSortedResourceState(FirstClassResource.layer, nextPayload.layers as never)
-  appCtx.setSortedResourceState(
-    FirstClassResource.feature,
-    nextPayload.features as never,
-  )
-  appCtx.state.prisms.organisation = []
-  appCtx.state.prisms.project = []
-  appCtx.state.prisms.layer = [...nextPayload.selectedLayerIds]
-  appCtx.state.filters.feature.properties = {}
-  appCtx.isInitialised = true
-}
-
 const loadRenderPayload = async (): Promise<void> => {
   const currentUrl = new URL(window.location.href)
   const payloadUrl = new URL(
@@ -198,84 +144,87 @@ const loadRenderPayload = async (): Promise<void> => {
     currentUrl.origin,
   )
   const token = currentUrl.searchParams.get('token')
-
-  if (token) {
-    payloadUrl.searchParams.set('token', token)
-  }
-
-  const response = await fetch(payloadUrl, {
-    cache: 'no-store',
-  })
-
-  if (!response.ok) {
+  if (token) payloadUrl.searchParams.set('token', token)
+  const response = await fetch(payloadUrl, { cache: 'no-store' })
+  if (!response.ok)
     throw new Error(`Failed to load ${kind} render payload (${response.status})`)
-  }
-
-  const nextPayload = (await response.json()) as RenderPayload
-  payload = nextPayload
-  applyRenderPayload(nextPayload)
+  payload = (await response.json()) as RenderPayload
 }
 
 onMount(() => {
   resetReadySignal()
-
   const run = async (): Promise<void> => {
-    const globalWithMaplibre = globalThis as typeof globalThis & {
-      maplibregl?: unknown
-    }
-    const [, loadedMaplibre] = await Promise.all([
-      ensureMapLibreStyles(),
-      loadMapLibre(),
-    ])
-    const maplibreSource = globalWithMaplibre.maplibregl ?? loadedMaplibre
-    const maplibre = monkeyPatchMapLibre(maplibreSource)
-    globalWithMaplibre.maplibregl = maplibre
-    appCtx.maplibre = maplibre
-    appCtx.isMaplibreLoaded = true
-
+    await loadMapLibre()
+    runtimeReady = true
     await loadRenderPayload()
   }
-
-  void run().catch(error => {
-    console.error('Failed to initialise headless map preview', error)
-    markReady()
-  })
+  void run().catch(markError)
+  return () => {
+    renderRequestSerial += 1
+    styleAbortController?.abort()
+    markerRenderer?.clear()
+    markerRenderer = null
+  }
 })
 
 $effect(() => {
-  const map = appCtx.map
   const nextPayload = payload
-
-  if (!map || !nextPayload) {
-    return
-  }
-
-  const nextRenderKey = JSON.stringify({
-    styleCode: nextPayload.styleCode,
-    selectedLayerIds: nextPayload.selectedLayerIds,
-    featureIds: nextPayload.features.map(feature => feature.id),
+  if (!nextPayload) return
+  const locale = page.url.searchParams.get('locale') ?? 'en'
+  const noLabels = page.url.searchParams.get('noLabels') === '1'
+  const styleCode = isMapStyleKey(nextPayload.styleCode)
+    ? nextPayload.styleCode
+    : getDefaultMapStyleKey()
+  styleAbortController?.abort()
+  const controller = new AbortController()
+  styleAbortController = controller
+  void resolveRuntimeMapStyle(styleCode, {
+    locale,
+    noLabels,
+    signal: controller.signal,
   })
+    .then(nextStyle => {
+      if (!controller.signal.aborted) {
+        style = nextStyle
+        styleRevision += 1
+      }
+    })
+    .catch(error => {
+      if ((error as Error)?.name !== 'AbortError') markError(error)
+    })
+  return () => controller.abort()
+})
 
-  if (renderKey === nextRenderKey) {
-    return
-  }
-
+$effect(() => {
+  if (!runtimeReady || !style || !map || !payload) return
+  const locale = page.url.searchParams.get('locale') ?? 'en'
+  const noLabels = page.url.searchParams.get('noLabels') === '1'
+  const nextRenderKey = JSON.stringify({
+    styleCode: payload.styleCode,
+    selectedLayerIds: payload.selectedLayerIds,
+    featureIds: payload.features.map(feature => feature.id),
+    locale,
+    noLabels,
+    styleRevision,
+  })
+  if (renderKey === nextRenderKey) return
+  const serial = ++renderRequestSerial
   renderKey = nextRenderKey
+  markerRenderer ??= createMarkerRenderer(map, maplibregl)
+  markerRenderer.sync(payload.features, { markerStyle: 'image' })
   resetReadySignal()
-
   void (async () => {
-    if (!map.loaded()) {
-      await waitForMapEvent(map, 'load', PREVIEW_READY_TIMEOUT_MS)
-    }
-
+    if (!map.loaded()) await waitForMapEvent(map, 'load', MAP_RENDER_READY_TIMEOUT_MS)
+    if (serial !== renderRequestSerial) return
     await tick()
-    fitRenderViewport(map, nextPayload.features)
-    await waitForMapEvent(map, 'idle', PREVIEW_READY_TIMEOUT_MS)
-    await waitForMarkerImages(document)
+    fitRenderViewport(map, payload.features)
+    await waitForMapEvent(map, 'idle', MAP_RENDER_READY_TIMEOUT_MS)
+    if (serial !== renderRequestSerial) return
+    await waitForMarkerImages(document, MAP_RENDER_READY_TIMEOUT_MS)
+    if (serial !== renderRequestSerial) return
     markReady()
   })().catch(error => {
-    console.error('Failed to render headless map preview', error)
-    markReady()
+    if (serial === renderRequestSerial) markError(error)
   })
 })
 </script>
@@ -293,21 +242,38 @@ $effect(() => {
 </svelte:head>
 
 <div class="headless-map-render">
-  <MapCanvas mapStyleCode={payload?.styleCode ?? getDefaultMapStyleKey()} />
+  {#if runtimeReady && style}
+    <MapSurface
+      bind:map
+      class="absolute inset-0"
+      {style}
+      center={[114.17276, 22.29191]}
+      zoom={14}
+      bearing={17.6}
+      pitch={45}
+      attributionControl={false}
+      interactive={false}
+      hash={false}
+      fadeDuration={0}
+      canvasContextAttributes={{ antialias: true, preserveDrawingBuffer: true }}
+      onerror={handleMapError}
+    />
+  {/if}
 </div>
 <div
   id="map-style-render-ready"
   data-ready={previewReady ? 'true' : 'false'}
+  data-error={previewError ?? undefined}
   aria-hidden="true"
   class="headless-map-render__ready"
 ></div>
 
 <style>
 .headless-map-render {
+  position: relative;
   width: 100vw;
   height: 100vh;
 }
-
 .headless-map-render__ready {
   position: fixed;
   left: 0;
