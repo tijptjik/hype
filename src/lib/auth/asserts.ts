@@ -226,7 +226,10 @@ export const assertProjectMaintainerOrMemberOrSuperAdmin = (
  * @param key - The key name for error message (defaults to 'Id')
  * @throws {Response} 401 error if ID is missing
  */
-export const assertId = (formData: any, key: string = 'Id'): void | Response => {
+export const assertId = (
+  formData: Record<string, unknown>,
+  key: string = 'Id',
+): void | Response => {
   if (!formData.id) {
     return error(401, m.field_is_required({ field: key }))
   }
@@ -240,7 +243,7 @@ export const assertId = (formData: any, key: string = 'Id'): void | Response => 
  * @throws {Response} 400 error if identifiers don't match
  */
 export const assertParamIdentifierEqualsFormIdentifier = (
-  formData: any,
+  formData: Record<string, unknown>,
   refId: Id | Code,
   refType: 'id' | 'code',
 ): void | Response => {
