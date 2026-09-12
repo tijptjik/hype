@@ -12,6 +12,9 @@ export type ResourceIndexProps<T extends Resource> = {
   row?: Snippet<[T, number, ResourceIndexRowSelectionState | null, boolean]>
   listContainer?: HTMLElement | null
   isInitialised?: boolean
+  onNearEnd?: () => void
+  hasMore?: boolean
+  isLoadingMore?: boolean
   applyBottomOverflow?: boolean
   getRowSelectionState?: (entity: T) => ResourceIndexRowSelectionState | null
   onRowSelectionToggle?: (entity: T) => void

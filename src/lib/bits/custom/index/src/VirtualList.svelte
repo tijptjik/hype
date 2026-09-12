@@ -1,6 +1,6 @@
 <script lang="ts" generics="T">
 // SVELTE
-import { tick } from 'svelte'
+import { tick, untrack } from 'svelte'
 import type { Snippet } from 'svelte'
 // BITS
 import { Scrollbar } from '$lib/bits/custom/scrollbar'
@@ -22,6 +22,7 @@ let {
   padding = 0,
   rowGap = 0,
   applyBottomOverflow = true,
+  onRangeChange,
 }: {
   items: Array<T>
   height: string
@@ -34,6 +35,7 @@ let {
   padding?: number
   rowGap?: number
   applyBottomOverflow?: boolean
+  onRangeChange?: (start: number, end: number) => void
 } = $props()
 
 let viewport = $state<HTMLElement | null>(null)
@@ -42,6 +44,14 @@ let renderedRows = $state<HTMLCollectionOf<Element> | null>(null)
 
 let start = $state(0)
 let end = $state(0)
+
+// Notify consumers using the visible range, before the overscan buffer is applied.
+$effect(() => {
+  const first = start,
+    last = end
+  items.length
+  untrack(() => onRangeChange?.(first, last))
+})
 
 const renderStart = $derived(Math.max(0, start - bufferBefore))
 const renderEnd = $derived(Math.min(items.length, end + bufferAfter))

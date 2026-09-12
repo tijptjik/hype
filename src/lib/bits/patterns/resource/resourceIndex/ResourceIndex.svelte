@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends Resource">
+import { m } from '$lib/i18n'
 import type { Snippet } from 'svelte'
 // COMPONENTS
 import ResourceCardRow from './components/ResourceCardRow.svelte'
@@ -38,6 +39,9 @@ let {
   row,
   listContainer = $bindable(),
   isInitialised = true,
+  onNearEnd,
+  hasMore = false,
+  isLoadingMore = false,
   applyBottomOverflow = true,
   getRowSelectionState,
   onRowSelectionToggle,
@@ -183,6 +187,9 @@ $effect(() => {
           bufferAfter={10}
           padding={RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX}
           {applyBottomOverflow}
+          onRangeChange={(_start, end) => {
+            if (hasMore && !isLoadingMore && entities.length - end * columnCount <= 10) onNearEnd?.()
+          }}
         />
       </div>
     {:else}
@@ -191,6 +198,16 @@ $effect(() => {
       >
         <ResourceEmptyState />
       </div>
+    {/if}
+    {#if hasMore}
+      <button
+        type="button"
+        class="shrink-0 px-3 py-2 text-sm"
+        disabled={isLoadingMore}
+        onclick={onNearEnd}
+      >
+        {isLoadingMore ? m.resource_loading() : m.resource_load_more()}
+      </button>
     {/if}
   {:else}
     <ResourceLoadingState />
