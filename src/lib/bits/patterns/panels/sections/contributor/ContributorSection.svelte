@@ -4,8 +4,6 @@ import { onDestroy } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
-// CONTEXT
-import type { AppCtx } from '$lib/context/app.svelte'
 // COMPONENTS
 import { Icon } from '$lib/bits'
 import Trophy from 'virtual:icons/lucide/trophy'
@@ -23,7 +21,11 @@ let {
   ...panelProps
 }: PanelProps & {
   attribution?: string | null
-  onAttribution: AppCtx['setUserAttribution']
+  onAttribution: (
+    attribution: string,
+    onSuccess?: (attribution: string) => void,
+    onError?: (error: unknown) => void,
+  ) => void | Promise<void>
 } = $props()
 
 // STATE
@@ -67,7 +69,7 @@ const handleKeydown = () => {
   title={m.settings_contributor_title()}
   iconGraphicClass="scale-125 origin-bottom-right mr-1"
   icon="/contributor.svg"
-  position="right"
+  {...panelProps}
 >
   <div
     class="my-2 ml-5 flex flex-row items-center gap-2 rounded-l-md rounded-r-none bg-base-200"

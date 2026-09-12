@@ -7,61 +7,37 @@ import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'
 import { Icon } from '$lib/bits'
-// SERVICES
-import {
-  toggleCategoricalPropertyValue,
-  displaySelectedProperties,
-  propertyValuesToLocalisedOptions,
-} from '$lib/client/services/property'
-// I18N
-import { getI18n } from '$lib/i18n'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+// ADAPTERS
+import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
 // TYPES
-import type { Id } from '$lib/types'
 import type { Property, PropertyValue } from '$lib/db/zod/schema/property.types'
-
-let appCtx = getAppCtx()
 
 type Props = {
   property: Property
-  layerId: Id
+  filter: ReturnType<ReturnType<typeof useFilterPanelModel>['propertyFilter']>
   defaultOpen?: boolean
 }
 
-let { property, layerId, defaultOpen = false }: Props = $props()
-
-// Derive label from property i18n
-let label = $derived(
-  getI18n(property, 'label', appCtx.getUserPreferences(), property.key),
-)
+let { property, filter, defaultOpen = false }: Props = $props()
 
 // Get property values from the property
 let propertyValues = $derived((property.values as PropertyValue[]) || [])
 
 // Create localized options map for display
-let localisedOptions = $derived(
-  propertyValuesToLocalisedOptions(appCtx, propertyValues),
-)
-
-// Derive selected values directly from context's propertyFilters using property ID
-let selectedPropertyValueIds = $derived(
-  appCtx.state.filters.feature.properties?.[layerId]?.[property.id] ?? [],
-)
+let label = $derived(filter.label)
+let localisedOptions = $derived(filter.options)
+let selectedPropertyValueIds = $derived(filter.selectedIds)
 
 // Apply the default once so user toggles remain independent of prop updates.
 let isOpen = $state(untrack(() => defaultOpen))
 
-function toggleValue(value: PropertyValue) {
-  toggleCategoricalPropertyValue(appCtx, layerId, property.id, value.id)
+function toggleValue(value: PropertyValue): void {
+  filter.toggle(value.id)
 }
-
-let displayText = $derived(
-  displaySelectedProperties(selectedPropertyValueIds, localisedOptions),
-)
+let displayText = $derived(filter.displayText)
 </script>
 
-<div class="ml-4 min-h-10 shrink-0 rounded-l-md bg-[#0a0a0a]">
+<div class="ml-4 min-h-10 shrink-0 rounded-l-md bg-surface">
   <button
     type="button"
     class="flex w-full shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-sky-600"

@@ -4,10 +4,6 @@ import { fade, slide } from 'svelte/transition'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 // I18N
 import { m } from '$lib/i18n'
-import { getI18n } from '$lib/i18n'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
 // COMPONENTS
 import { Icon } from '$lib/bits'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
@@ -17,12 +13,11 @@ import { getImagesForIds } from '$lib/api/server/image.remote'
 // SERVICES
 import { getURLfromImage } from '$lib/client/services/image'
 // NAVIGATION
-import { navigateToContributedImage } from '$lib/navigation'
 // TYPES
 import type { Id, ResourceContext } from '$lib/types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { UserPreferences, UserProfile } from '$lib/db/zod/schema/user.types'
+import type { UserProfile } from '$lib/db/zod/schema/user.types'
+import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
 import { untrack } from 'svelte'
 
 // MAGICAL CONSTANTS
@@ -30,15 +25,14 @@ const BATCH_SIZE = 24
 const TRIGGER_POSITION = 12 // Load next batch when 12th image becomes visible
 
 // CONTEXT
-const appCtx = getAppCtx()
-const omniCtx = getOmniCtx()
 
 // PROPS
 type Props = {
   userData: UserProfile
+  model: ReturnType<typeof useProfilePanelModel>
 }
 
-let { userData }: Props = $props()
+let { userData, model }: Props = $props()
 
 // SCROLLBAR
 let viewport: HTMLDivElement | null = $state(null)
@@ -240,8 +234,7 @@ async function getHierarchiesFromUserData(
 
   const hierarchyData = await Promise.all(
     Object.keys(userData.contributedImages).map(async id => {
-      const project = (await appCtx.getProjectById(id as Id)) as Project
-      const hierarchy = await appCtx.getHierarchy(project)
+      const hierarchy = await model.getProjectHierarchy(id as Id)
       return { id, hierarchy }
     }),
   )
@@ -482,18 +475,13 @@ const setupNextTrigger = () => {
                 <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
                   {#if hierarchies?.[projectId]?.organisation}
                     <span class="text-primary"
-                      >{appCtx.getContextualOrganisationName(
-                        hierarchies?.[projectId]?.organisation,
-                        false
-                      )}</span
+                      >{model.getOrganisationName(hierarchies?.[projectId]?.organisation)}</span
                     >
                   {/if}
-                  {#if appCtx.getContextualProjectName(hierarchies?.[projectId]?.project)}
+                  {#if model.getProjectName(hierarchies?.[projectId]?.project)}
                     <span class="px-0">›</span>
                     <span class="text-accent"
-                      >{appCtx.getContextualProjectName(
-                        hierarchies?.[projectId]?.project
-                      )}</span
+                      >{model.getProjectName(hierarchies?.[projectId]?.project)}</span
                     >
                   {/if}
                 </p>
@@ -520,16 +508,12 @@ const setupNextTrigger = () => {
                         e.stopPropagation();
                         const image = loadedImages.get(imageId);
                         if (image?.featureId) {
-                          navigateToContributedImage(
-                            appCtx,
-                            omniCtx,
+                          model.onContributedImage(
                             image.featureId,
                             projectId,
                             imageId,
-                            getI18n(hierarchies?.[projectId]?.project, 'name', {
-                              allowMachineTranslation: true
-                            } as UserPreferences) ?? '',
-                            userData.username,
+                            model.getProjectTitle(hierarchies?.[projectId]?.project),
+                            userData.username ?? '',
                             loadedImages,
                             projectImageIds
                           );
@@ -563,16 +547,12 @@ const setupNextTrigger = () => {
                               };
                               loadedImages.set(imageId as Id, processedImage);
 
-                              navigateToContributedImage(
-                                appCtx,
-                                omniCtx,
+                              model.onContributedImage(
                                 fallbackFeatureId,
                                 projectId,
                                 imageId,
-                                getI18n(hierarchies?.[projectId]?.project, 'name', {
-                                  allowMachineTranslation: true
-                                } as UserPreferences) ?? '',
-                                userData.username,
+                                model.getProjectTitle(hierarchies?.[projectId]?.project),
+                                userData.username ?? '',
                                 loadedImages,
                                 projectImageIds
                               );

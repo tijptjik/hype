@@ -5,47 +5,29 @@ import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronUp from 'virtual:icons/lucide/chevron-up'
 import { Icon } from '$lib/bits'
 import RangeSlider from 'svelte-range-slider-pips'
-// I18N
-import { getI18n } from '$lib/i18n'
-// SERVICES
-import {
-  setRangePropertyFilter,
-  displayRangeFilter,
-} from '$lib/client/services/property'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+// ADAPTERS
+import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
 // TYPES
-import type { Id } from '$lib/types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-let appCtx = getAppCtx()
 
 type Props = {
-  property: Property
-  layerId: Id
+  filter: ReturnType<ReturnType<typeof useFilterPanelModel>['propertyFilter']>
   defaultOpen: boolean
 }
 
-let { property, layerId, defaultOpen = false }: Props = $props()
+let { filter, defaultOpen = false }: Props = $props()
 
 // Derive values from property
-let label = $derived(
-  getI18n(property, 'label', appCtx.getUserPreferences(), property.key),
-)
-let min = $derived(property.min ?? 0)
-let max = $derived(property.max ?? 100)
+let label = $derived(filter.label)
+let min = $derived(filter.min)
+let max = $derived(filter.max)
 
 // Apply the default once so user toggles remain independent of prop updates.
 let isOpen = $state(untrack(() => defaultOpen))
-let selectedRange = $derived(
-  appCtx.state.filters.feature.properties?.[layerId]?.[property.id],
-)
-
-let values: [number, number] = $derived([
-  selectedRange?.rangeMin ?? min,
-  selectedRange?.rangeMax ?? max,
-])
-
-let displayText = $derived(displayRangeFilter(min, max, values))
+let values: [number, number] = $state(untrack(() => filter.rangeValues))
+$effect(() => {
+  values = filter.rangeValues
+})
+let displayText = $derived(filter.displayText)
 </script>
 
 <div class="ml-4 min-h-10 shrink-0 rounded-l-md bg-[#0a0a0a]">
@@ -81,9 +63,7 @@ let displayText = $derived(displayRangeFilter(min, max, values))
           pipstep={Math.max(1, Math.ceil((max - min) / 10))}
           pushy
           float
-          on:change={() => {
-            setRangePropertyFilter(appCtx, layerId, property.id, values);
-          }}
+          on:change={() => filter.setRange(values)}
         />
       </div>
     </div>

@@ -16,10 +16,17 @@ import { Panel as PanelType, PanelSide } from '$lib/enums'
 // TYPES
 import type { PanelProps } from '$lib/types'
 import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
+import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
 
 // CONTEXT
 
-let { shell }: { shell: ReturnType<typeof usePanelShellModel> } = $props()
+let {
+  shell,
+  model,
+}: {
+  shell: ReturnType<typeof usePanelShellModel>
+  model: ReturnType<typeof useFilterPanelModel>
+} = $props()
 
 // STATE
 let isInfoOpen = $state(false)
@@ -54,11 +61,11 @@ const panelProps = $derived(shell.panel)
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col">
     <div class="grow flex max-h-[40vh] min-h-0 shrink-0 flex-col">
-      <Neighbourhoods {...panelProps} />
+      <Neighbourhoods {model} {...panelProps} />
     </div>
     <div class="grow flex max-h-[calc(100vh-206px)] min-h-0 shrink-0 flex-col">
-      <Categories {...panelProps} />
+      <Categories {model} {...panelProps} />
     </div>
   </div>
-  <Reset />
+  <Reset text={model.resetText} active={model.hasActiveFilters} onReset={model.reset} />
 </Panel>

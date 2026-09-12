@@ -1,6 +1,8 @@
 <script lang="ts">
 // ADAPTERS
 import { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
 import { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
 import { useSettingsPanelModel } from '$lib/adapters/panels/useSettingsPanelModel.svelte'
 import { getThemeModel } from '$lib/themes/theme.svelte'
@@ -25,6 +27,8 @@ import {
 } from '$lib/client/services/hubSubscription'
 import { shouldSkipGlobalKeydown } from '$lib/client/keybindings'
 import { toast } from 'svelte-sonner'
+// I18N
+import { m } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 import { getResponsiveCtx } from '$lib/context/responsive.svelte'
@@ -42,8 +46,6 @@ import Hub from '$lib/bits/patterns/hubPanel/HubPanel.svelte'
 // import Plan from '$lib/bits/patterns/planPanel/PlanPanel.svelte'
 // import Passport from '$lib/bits/patterns/passportPanel/PassportPanel.svelte'
 // import EventCompanion from '$lib/bits/patterns/eventCompanionPanel/EventCompanionPanel.svelte'
-import Settings from '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
-import Profile from '$lib/bits/patterns/profilePanel/ProfilePanel.svelte'
 // BITS
 import {
   AppHubSubscriptionOverlay,
@@ -95,9 +97,62 @@ const settingsModel = useSettingsPanelModel(appCtx, getThemeModel())
 const filtersShell = usePanelShellModel(appCtx, Panel.filters)
 const starsShell = usePanelShellModel(appCtx, Panel.stars)
 const hubShell = usePanelShellModel(appCtx, Panel.hub)
-const profileModel = useProfilePanelModel(appCtx)
 const profileShell = usePanelShellModel(appCtx, Panel.profile)
 const responsiveCtx = getResponsiveCtx()
+
+type SettingsPanelComponent =
+  typeof import('$lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
+type ProfilePanelComponent =
+  typeof import('$lib/bits/patterns/profilePanel/ProfilePanel.svelte').default
+
+let SettingsPanel = $state<SettingsPanelComponent | null>(null)
+let ProfilePanel = $state<ProfilePanelComponent | null>(null)
+let settingsPanelLoadError = $state<unknown>(null)
+let profilePanelLoadError = $state<unknown>(null)
+let settingsPanelPromise: Promise<SettingsPanelComponent> | null = null
+let profilePanelPromise: Promise<ProfilePanelComponent> | null = null
+
+/** Loads the settings panel once, retaining the component for subsequent opens. */
+function loadSettingsPanel(): Promise<SettingsPanelComponent> {
+  settingsPanelPromise ??= import(
+    '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
+  )
+    .then(module => {
+      SettingsPanel = module.default
+      settingsPanelLoadError = null
+      return module.default
+    })
+    .catch(error => {
+      settingsPanelPromise = null
+      settingsPanelLoadError = error
+      throw error
+    })
+  return settingsPanelPromise
+}
+
+/** Loads the profile panel once, retaining the component for subsequent opens. */
+function loadProfilePanel(): Promise<ProfilePanelComponent> {
+  profilePanelPromise ??= import('$lib/bits/patterns/profilePanel/ProfilePanel.svelte')
+    .then(module => {
+      ProfilePanel = module.default
+      profilePanelLoadError = null
+      return module.default
+    })
+    .catch(error => {
+      profilePanelPromise = null
+      profilePanelLoadError = error
+      throw error
+    })
+  return profilePanelPromise
+}
+
+$effect(() => {
+  if (settingsModel.open) void loadSettingsPanel().catch(() => {})
+})
+
+$effect(() => {
+  if (profileShell.open) void loadProfilePanel().catch(() => {})
+})
 // Set Hub context in AppCtx
 $effect(() => {
   appCtx.setHub(hub)
@@ -105,6 +160,15 @@ $effect(() => {
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx)
+const profileModel = useProfilePanelModel(appCtx, omniCtx)
+const starsModel = {
+  wishlist: useSavedFeatureListModel(appCtx, omniCtx, 'wishlist'),
+  visited: useSavedFeatureListModel(appCtx, omniCtx, 'visited'),
+  get isGuestAccount() {
+    return $session.data?.user?.isAnonymous === true
+  },
+}
+const filtersModel = useFilterPanelModel(appCtx, omniCtx)
 const prismsModel = useResourcePanelModel(appCtx, 'prisms', undefined, omniCtx)
 const omnibarModel = useOmnibarModel(appCtx, omniCtx, responsiveCtx)
 const subscriptionOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
@@ -477,7 +541,7 @@ $effect(() => {
       <MapCanvas mapStyleCode={activeMapStyleCode} bottomInset={menuReservedHeight} />
       <!-- Panels -->
       <ResourcePanel model={prismsModel} />
-      <Stars shell={starsShell} />
+      <Stars shell={starsShell} model={starsModel} />
       <Hub
         shell={hubShell}
         preferences={appCtx.getUserPreferences()}
@@ -487,16 +551,64 @@ $effect(() => {
         {privacyPolicyDialogProps}
         {termsOfServiceDialogProps}
       />
-      <Filters shell={filtersShell} />
+      <Filters shell={filtersShell} model={filtersModel} />
       <!-- <Plan /> -->
       <!-- <Passport /> -->
       <!-- <EventCompanion /> -->
-      <Settings model={settingsModel} />
-      <Profile
-        model={profileModel}
-        shell={profileShell}
-        bind:panelContainer={profilePanelContainer}
-      />
+      {#if SettingsPanel}
+        <SettingsPanel model={settingsModel} />
+      {:else if settingsModel.open}
+        <div
+          class="bits-theme absolute right-0 top-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center bg-panel shadow-xl"
+          role="status"
+          aria-label={m.resource_loading()}
+        >
+          {#if settingsPanelLoadError}
+            <div class="max-w-xs p-6 text-center">
+              <p>{m.bootstrap__error()}</p>
+              <button
+                type="button"
+                class="mt-4 rounded-lg bg-base-content px-4 py-2 text-base-100"
+                onclick={() => void loadSettingsPanel().catch(() => {})}
+              >
+                {m.bootstrap__retry()}
+              </button>
+            </div>
+          {:else}
+            <span class="loading loading-ring loading-lg" aria-hidden="true"></span>
+            <span class="sr-only">{m.resource_loading()}</span>
+          {/if}
+        </div>
+      {/if}
+      {#if ProfilePanel}
+        <ProfilePanel
+          model={profileModel}
+          shell={profileShell}
+          bind:panelContainer={profilePanelContainer}
+        />
+      {:else if profileShell.open && profileModel.username}
+        <div
+          class="bits-theme absolute right-0 top-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center bg-panel shadow-xl"
+          role="status"
+          aria-label={m.resource_loading()}
+        >
+          {#if profilePanelLoadError}
+            <div class="max-w-xs p-6 text-center">
+              <p>{m.bootstrap__error()}</p>
+              <button
+                type="button"
+                class="mt-4 rounded-lg bg-base-content px-4 py-2 text-base-100"
+                onclick={() => void loadProfilePanel().catch(() => {})}
+              >
+                {m.bootstrap__retry()}
+              </button>
+            </div>
+          {:else}
+            <span class="loading loading-ring loading-lg" aria-hidden="true"></span>
+            <span class="sr-only">{m.resource_loading()}</span>
+          {/if}
+        </div>
+      {/if}
       <AppMain>
         <AppHubSubscriptionOverlay
           class="z-50"

@@ -1,17 +1,14 @@
 <script lang="ts">
 // TRANSITIONS
 import { slide } from 'svelte/transition'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
 // ICONS
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 import ChevronRight from 'virtual:icons/lucide/chevron-right'
 import { Icon } from '$lib/bits'
+import SelectedFilter from '$lib/bits/patterns/panels/components/items/SelectedFilter.svelte'
 // TYPES
 import type { Component } from 'svelte'
 import type { Snippet } from 'svelte'
-
-const appCtx = getAppCtx()
 
 const toggle = () => {
   isOpen = !isOpen
@@ -23,7 +20,8 @@ type Props = {
   icon: string | Component
   iconVerticalPaddingClass: string
   iconColorClass: string
-  collapsedContent: Snippet<[string, Record<string, unknown>]>
+  selectedSummary: string
+  hasActiveFilters: boolean
   isOpen: boolean
   hierarchy: {
     organisation?: string | null
@@ -31,7 +29,6 @@ type Props = {
     layer?: string | null
     layerId: string
   }
-  properties: Record<string, unknown>
 }
 
 let {
@@ -40,16 +37,11 @@ let {
   icon,
   iconVerticalPaddingClass,
   iconColorClass,
-  collapsedContent = () => null,
+  selectedSummary,
+  hasActiveFilters,
   isOpen = false,
   hierarchy,
-  properties,
 }: Props = $props()
-
-const filterCount = $derived(appCtx.getFilterCount())
-const hasActiveFilters = $derived(
-  filterCount.neighbourhoods > 0 || filterCount.properties > 0,
-)
 </script>
 
 <div
@@ -103,6 +95,6 @@ const hasActiveFilters = $derived(
   {#if isOpen}
     {@render children()}
   {:else}
-    {@render collapsedContent(hierarchy.layerId, properties)}
+    <SelectedFilter text={selectedSummary} />
   {/if}
 </div>

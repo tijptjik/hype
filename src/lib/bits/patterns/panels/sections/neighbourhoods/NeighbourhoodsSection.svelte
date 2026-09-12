@@ -1,75 +1,57 @@
 <script lang="ts">
 // I18N
 import { m } from '$lib/i18n'
-// SERVICES
-import {
-  filterPlaces,
-  getFilteredNeighbourhoods,
-  getNeighbourhoodsAsResources,
-} from '$lib/client/services/geospatial'
 // COMPONENTS
-import * as Panel from '$lib/bits/patterns/panels'
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 import FilterBar from '$lib/bits/patterns/panels/components/common/FilterBar.svelte'
 import FilteredNeighbourhood from '$lib/bits/patterns/panels/components/items/FilteredNeighbourhood.svelte'
 import ResourceContainer from '$lib/bits/patterns/panels/components/common/ResourceContainer.svelte'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-// TYPE
-import type { NeighbourhoodResource, PanelProps } from '$lib/types'
-// CONTEXT
-const appCtx = getAppCtx()
+// TYPES
+import type { PanelProps } from '$lib/types'
+import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
 
-// PROPS
-let { ...panelProps }: PanelProps = $props()
-
-// STATE
-let searchTerm = $state('')
-
-// DERIVED
-const allNeighbourhoods: NeighbourhoodResource[] = $derived(
-  getNeighbourhoodsAsResources(),
-)
-const neighbourhoodCounts = $derived(appCtx.placeCtx.neighbourhoodFeatureCounts)
-const selectedNeighbourhoodRefs = $derived(appCtx.placeCtx.getFilteredNeighbourhoods())
-const filteredNeighbourhoods = $derived(filterPlaces(appCtx, searchTerm))
+let {
+  model,
+  ...panelProps
+}: PanelProps & { model: ReturnType<typeof useFilterPanelModel> } = $props()
 </script>
 
-<!-- COMPONENTS -->
-
-{#snippet SelectedNeighbourhoods()}
-  <Panel.Item.SelectedResource
-    resourceType="neighbourhood"
-    resources={allNeighbourhoods}
-    selectedIds={selectedNeighbourhoodRefs}
-    colorClass="text-emerald-600"
-    {...panelProps}
-  />
+{#snippet selectedNeighbourhoods()}
+  <div class="flex flex-wrap gap-2 px-4 pb-3">
+    {#each model.selectedNeighbourhoods as neighbourhood (neighbourhood.id)}
+      <button
+        type="button"
+        class="rounded-full bg-primary/15 px-3 py-1 text-xs text-primary"
+        onclick={() => model.toggleNeighbourhood(neighbourhood.id)}
+      >
+        {neighbourhood.name}
+        ×
+      </button>
+    {/each}
+  </div>
 {/snippet}
-
-<!-- LAYOUT -->
 
 <Section
   title={m.filters__neighbourhoods()}
   icon="/neighbourhood.svg"
   iconGraphicClass="scale-125 origin-bottom-right"
   iconVerticalPaddingClass="pt-0"
-  collapsedContent={SelectedNeighbourhoods}
+  collapsedContent={selectedNeighbourhoods}
   {...panelProps}
 >
-  {#if Array.from(neighbourhoodCounts.values()).filter((count) => count > 0).length === 0}
-    {@render SelectedNeighbourhoods()}
+  {#if model.visibleNeighbourhoodCount === 0}
+    {@render selectedNeighbourhoods()}
   {/if}
-  {#if Array.from(neighbourhoodCounts.values()).filter((count) => count > 0).length > 4}
+  {#if model.visibleNeighbourhoodCount > 4}
     <FilterBar
-      bind:searchTerm
+      bind:searchTerm={() => model.searchTerm, model.setSearchTerm}
       position="right"
-      onReset={() => appCtx.placeCtx.resetNeighbourhoods()}
+      onReset={model.resetNeighbourhoods}
     />
   {/if}
   <ResourceContainer>
-    {#each filteredNeighbourhoods as [neighbourhoodRef, i18n]}
-      <FilteredNeighbourhood {neighbourhoodRef} {i18n} {selectedNeighbourhoodRefs} />
+    {#each model.neighbourhoods as row (row.id)}
+      <FilteredNeighbourhood {row} onToggle={model.toggleNeighbourhood} />
     {/each}
   </ResourceContainer>
 </Section>

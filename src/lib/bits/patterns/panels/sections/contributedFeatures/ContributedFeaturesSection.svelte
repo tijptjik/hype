@@ -3,14 +3,8 @@
 import { slide } from 'svelte/transition'
 // I18N
 import { m } from '$lib/i18n'
-import { getI18n } from '$lib/i18n'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
 // SERVICES
 import { formatDistanceToNow } from '$lib'
-// NAVIGATION
-import { navigateToContributedFeature } from '$lib/navigation'
 // COMPONENTS
 import { Scrollbar } from '$lib/bits/custom/scrollbar'
 import { ScrollableText } from '$lib/bits'
@@ -20,13 +14,16 @@ import MapPin from 'virtual:icons/lucide/map-pin'
 import ChevronDown from 'virtual:icons/lucide/chevron-down'
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { UserPreferences, UserProfile } from '$lib/db/zod/schema/user.types'
+import type { UserProfile } from '$lib/db/zod/schema/user.types'
+import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
 // PROPS
-let { userData }: { userData?: UserProfile } = $props()
-
-// CONTEXT
-const appCtx = getAppCtx()
-const omniCtx = getOmniCtx()
+let {
+  userData,
+  model,
+}: {
+  userData?: UserProfile
+  model: ReturnType<typeof useProfilePanelModel>
+} = $props()
 
 // SCROLLBAR
 let viewport: HTMLDivElement | null = $state(null)
@@ -61,12 +58,7 @@ const toggleGroup = (projectId: string) => {
 // UTIL :: I18N
 
 let getFeatureDisplayAddress = (feature: FeatureFromCollection) =>
-  getI18n(
-    feature,
-    'displayAddress',
-    { ...appCtx.getUserPreferences(), allowMachineTranslation: true },
-    m.feature__address_unknown(),
-  )
+  model.getFeatureAddress(feature) || m.feature__address_unknown()
 
 // UTIL :: DATE PROCESSING
 
@@ -113,7 +105,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
   const features = await Promise.all(
     featureIds.map(async featureId => {
       try {
-        return await appCtx.getFeatureById(featureId)
+        return await model.getFeatureById(featureId)
       } catch {
         return null
       }
@@ -126,7 +118,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
   let hierarchy = null
   const firstFeature = filtered[0]
   if (firstFeature) {
-    hierarchy = await appCtx.getHierarchy(firstFeature)
+    hierarchy = await model.getHierarchy(firstFeature)
   }
   return { features: filtered, hierarchy }
 }
@@ -166,18 +158,13 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                     >
                       {#if groupData.hierarchy?.organisation}
                         <span class="text-primary"
-                          >{appCtx.getContextualOrganisationName(
-                            groupData.hierarchy.organisation,
-                            false
-                          )}</span
+                          >{model.getOrganisationName(groupData.hierarchy.organisation)}</span
                         >
                       {/if}
-                      {#if appCtx.getContextualProjectName(groupData.hierarchy?.project)}
+                      {#if model.getProjectName(groupData.hierarchy?.project)}
                         <span class="px-0">›</span>
                         <span class="text-accent"
-                          >{appCtx.getContextualProjectName(
-                            groupData.hierarchy?.project
-                          )}</span
+                          >{model.getProjectName(groupData.hierarchy?.project)}</span
                         >
                       {/if}
                     </p>
@@ -201,15 +188,11 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                         href={`/features/${feature.id}`}
                         onclick={(e) => {
                           e.preventDefault();
-                          navigateToContributedFeature(
-                            appCtx,
-                            omniCtx,
+                          model.onContributedFeature(
                             feature.id,
                             projectId,
                             groupData.features,
-                            getI18n(groupData.hierarchy?.project, 'name', {
-                              allowMachineTranslation: true
-                            } as UserPreferences) ?? '',
+                            model.getProjectTitle(groupData.hierarchy?.project),
                             userData?.username ?? ''
                           );
                         }}
@@ -230,9 +213,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                             /></span
                           >
                           <ScrollableText
-                            text={appCtx.getContextualFeatureName(
-                              feature as FeatureFromCollection
-                            )}
+                            text={model.getFeatureName(feature as FeatureFromCollection)}
                           />
                         </div>
                         {#if shouldShowDate( groupData.features.filter((f) => f !== null && f !== undefined), index ) && feature.createdAt}

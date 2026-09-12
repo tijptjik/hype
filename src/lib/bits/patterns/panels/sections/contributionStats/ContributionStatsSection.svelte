@@ -1,19 +1,9 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
 // I18N
 import { m } from '$lib/i18n'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-
-// CONTEXT
-const appCtx = getAppCtx()
-
-const isSingleOrg = $derived((appCtx.hub as Hub)?.organisations?.length === 1)
-// Initialize the preference once; the checkbox owns subsequent changes.
-if (appCtx.state.panels.profile.ctx) {
-  appCtx.state.panels.profile.ctx.observePrisms = untrack(() => !isSingleOrg)
-}
+// ADAPTERS
+import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
 
 // COMPONENTS
 import { Icon } from '$lib/bits'
@@ -26,12 +16,13 @@ import type { UserProfile } from '$lib/db/zod/schema/user.types'
 // PROPS
 type Props = {
   userData?: UserProfile
+  model: ReturnType<typeof useProfilePanelModel>
 }
 
-let { userData }: Props = $props()
+let { userData, model }: Props = $props()
 
 // DERIVED STATE - Get data from cache
-let isChecked = $derived(!appCtx.state.panels.profile.ctx?.observePrisms)
+let isChecked = $derived(!model.observePrisms)
 let stats = $derived(
   userData
     ? {
@@ -144,19 +135,14 @@ const statsConfig = [
     <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
       {m.dry_still_myna_yell()}
     </h3>
-    {#if !isSingleOrg}
+    {#if !model.isSingleOrganisation}
       <div class="flex items-center gap-2">
         <span class="text-xs text-base-content/70">{m.aqua_cozy_nils_scoop()}</span>
         <input
           type="checkbox"
           class="toggle toggle-primary toggle-sm"
-          checked={!isSingleOrg && isChecked}
-          onchange={() => {
-            const profileCtx = appCtx.state.panels.profile.ctx
-            if (!profileCtx) return
-            profileCtx.observePrisms = !profileCtx.observePrisms
-            appCtx.refreshUserProfile()
-          }}
+          checked={!model.isSingleOrganisation && isChecked}
+          onchange={model.onToggleObservePrisms}
         >
         <span class="text-xs text-base-content/70">{m.filters__all()}</span>
       </div>

@@ -1,132 +1,93 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
-// ANIMATIONS
-import { flip } from 'svelte/animate'
-import { slide } from 'svelte/transition'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { Panel } from '$lib/enums'
 // COMPONENTS
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 import FilterBar from '$lib/bits/patterns/panels/components/common/FilterBar.svelte'
 import { Icon } from '$lib/bits'
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
-// SERVICES
-import { filterUserFeaturesByHierarchy } from '$lib/client/services/userFeatures'
-// NAVIGATION
-import { navigateToStarred } from '$lib/navigation'
 // TYPES
-import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
+import type { PanelProps } from '$lib/types'
+import type { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
 
-// CONTEXT
-const appCtx = getAppCtx()
-const omniCtx = getOmniCtx()
-
-// STATE
-let searchTerm = $state('')
-
-// PANEL PROPS
-let panelProps = $derived({
-  panelType: Panel.plan,
-  position: 'left' as const,
-  scrollable: false,
-  inline: appCtx.isAdmin(),
-  isNarrow: false,
-  isAdmin: false,
-})
-
-// Resolve synchronously so optimistic changes never reset this section to a loading state.
-const wishlistedFeatures = $derived.by((): UserFeatureWithHierarchy[] => {
-  const results: UserFeatureWithHierarchy[] = []
-
-  for (const wishlist of appCtx.state.userFeatures.wishlisted) {
-    const feature = appCtx.state.resources.feature.find(
-      item => item.id === wishlist.featureId,
-    )
-
-    // Skip saved items whose feature is not available in the current resource cache.
-    if (!feature) continue
-
-    results.push({
-      ...wishlist,
-      feature,
-      hierarchy: appCtx.getHierarchySync(feature),
-    } as UserFeatureWithHierarchy)
-  }
-
-  return results
-})
+let {
+  model,
+  panel,
+}: {
+  model: ReturnType<typeof useSavedFeatureListModel>
+  panel: PanelProps
+} = $props()
 </script>
 
 <Section
-  title={m.stars__want_to_visit()}
+  title={model.title}
   iconGraphicClass="scale-130 origin-bottom"
   icon="/compass.svg"
-  {...panelProps}
+  {...panel}
 >
-  {#if wishlistedFeatures.length > 5}
-    <FilterBar bind:searchTerm />
+  {#if model.search || (model.totalCount ?? 0) > 5}
+    <FilterBar bind:searchTerm={() => model.search, model.setSearch} />
   {/if}
-  {@const filteredFeatures = filterUserFeaturesByHierarchy(wishlistedFeatures, searchTerm)}
   <div class="flex min-h-0 flex-col">
-    {#if filteredFeatures.length === 0}
+    {#if model.loading && model.rows.length === 0}
+      <p role="status" class="px-8.5 py-2 text-sm text-base-content/60">
+        {m.resource_loading()}
+      </p>
+    {:else if model.rows.length === 0 && !model.error}
       <div class="flex flex-wrap justify-start gap-2 px-8.5 pt-2">
         <p class="text-sm text-base-content/60">{m.short_watery_marten_race()}</p>
       </div>
     {:else}
       <div class="flex-1 overflow-y-auto">
-        {#each filteredFeatures as wishlist (wishlist.featureId)}
-          {@const organisationName = getI18n(
-              wishlist.hierarchy.organisation,
-              'nameShort',
-              appCtx.getUserPreferences()
-            )}
-          {@const showOrganisation = wishlist.hierarchy.organisation}
-          {@const projectName = appCtx.getContextualProjectName(
-              wishlist.hierarchy.project
-            )}
-          {@const showProject = wishlist.hierarchy.project && projectName}
-          {@const layerName = wishlist.hierarchy.layer
-            ? appCtx.getContextualLayerName(wishlist.hierarchy.layer)
-            : null}
-          {@const showLayer = wishlist.hierarchy.layer && layerName}
-          {@const featureName = getI18n(
-            wishlist.feature,
-            'title',
-            appCtx.getUserPreferences()
-          )}
+        {#each model.rows as row (row.id)}
           <button
             type="button"
-            class="min-h-21 flex w-full cursor-pointer flex-row items-center justify-between gap-4 bg-panel px-4 py-2 text-left text-[#374151]"
-            animate:flip={{ duration: 200 }}
-            in:slide={{ axis: 'y', duration: 200 }}
-            onclick={() => {
-              navigateToStarred(appCtx, omniCtx, wishlist.featureId, wishlistedFeatures)
-            }}
+            class="min-h-21 flex w-full cursor-pointer flex-row items-center justify-between gap-4 bg-panel px-4 py-2 text-left text-base-content"
+            aria-label={row.title}
+            onclick={() => model.onOpen(row.id)}
           >
             <Icon src={Squares2x2} class="h-5 w-5 shrink-0" filled />
-            <div class="flex grow flex-col">
-              <p class="text-xs uppercase tracking-widest">
-                {#if showOrganisation}
-                  <span class="text-primary">{organisationName}</span>
+            <span class="flex min-w-0 grow flex-col">
+              <span class="text-xs uppercase tracking-widest">
+                {#if row.organisation}
+                  <span class="text-primary">{row.organisation}</span>
                 {/if}
-                {#if showProject}
-                  <span class="mx-1 text-secondary">›</span>
-                  <span class="text-secondary">{projectName}</span>
+                {#if row.project}
+                  <span class="mx-1 text-secondary">›</span
+                  ><span class="text-secondary">{row.project}</span>
                 {/if}
-                {#if showLayer}
-                  <span class="mx-1 text-secondary">›</span>
-                  <span class="text-secondary">{layerName}</span>
+                {#if row.layer}
+                  <span class="mx-1 text-secondary">›</span
+                  ><span class="text-secondary">{row.layer}</span>
                 {/if}
-              </p>
-              <p class="font-normal text-neutral-300">{featureName}</p>
-            </div>
+              </span>
+              <span class="font-normal">{row.title}</span>
+            </span>
           </button>
         {/each}
+        {#if model.hasMore}
+          <button
+            type="button"
+            class="w-full px-8.5 py-3 text-sm text-primary disabled:opacity-50"
+            disabled={model.loading}
+            onclick={model.loadMore}
+          >
+            {model.loading ? m.resource_loading() : m.resource_load_more()}
+          </button>
+        {/if}
       </div>
+    {/if}
+    {#if model.error}
+      <p role="alert" class="px-8.5 pt-2 text-sm text-base-content/60">
+        {m.honest_swift_lamb_sew()}
+      </p>
+      <button
+        type="button"
+        class="px-8.5 py-2 text-left text-sm text-primary"
+        onclick={model.retry}
+      >
+        {m.resource_retry()}
+      </button>
     {/if}
   </div>
 </Section>

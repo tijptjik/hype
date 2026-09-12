@@ -73,9 +73,9 @@ const isGuestAccount = $derived(model.isGuestAccount)
         {#if isOwnProfile}
           <LinkedAccounts accountUsername={model.accountUsername} />
         {/if}
-        <ContributionStats {userData} />
-        <ContributedFeatures {userData} />
-        <ContributedImages {userData} />
+        <ContributionStats {userData} {model} />
+        <ContributedFeatures {userData} {model} />
+        <ContributedImages {userData} {model} />
         <ContributedReports {userData} />
       </div>
     {:else}

@@ -6,8 +6,6 @@ import { m } from '$lib/i18n'
 import { Panel as PanelType } from '$lib/enums'
 // BITS
 import { PanelRoot as Panel } from '$lib/bits'
-// AUTH
-import { useSession } from '$lib/auth/client'
 // COMPONENTS
 import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
 import Info from '$lib/bits/patterns/panels/components/info/Stars.svelte'
@@ -17,13 +15,21 @@ import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
 // TYPES
 import type { PanelProps } from '$lib/types'
 import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
+import type { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
 
 // CONTEXT
 
-const session = useSession()
-const isGuestAccount = $derived($session.data?.user?.isAnonymous === true)
-
-let { shell }: { shell: ReturnType<typeof usePanelShellModel> } = $props()
+let {
+  shell,
+  model,
+}: {
+  shell: ReturnType<typeof usePanelShellModel>
+  model: {
+    isGuestAccount: boolean
+    wishlist: ReturnType<typeof useSavedFeatureListModel>
+    visited: ReturnType<typeof useSavedFeatureListModel>
+  }
+} = $props()
 
 // STATE
 let isInfoOpen = $state(false)
@@ -65,13 +71,13 @@ const panelProps = $derived(shell.panel)
     }}
   />
   <Info isOpen={isInfoOpen} />
-  {#if isGuestAccount}
+  {#if model.isGuestAccount}
     <GuestAccountReminder />
   {/if}
   <div class="flex h-full overflow-hidden">
     <div class="flex h-[calc(100dvh-140px)] w-full flex-col overflow-hidden">
-      <WantToVisit />
-      <HaveVisited />
+      <WantToVisit model={model.wishlist} panel={panelProps} />
+      <HaveVisited model={model.visited} panel={panelProps} />
     </div>
   </div>
 </Panel>
