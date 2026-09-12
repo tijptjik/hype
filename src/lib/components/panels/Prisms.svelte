@@ -201,6 +201,19 @@ let panelProps: PanelProps = $derived({
           {/snippet}
         </Layers>
       </div>
+      {#if appCtx.featureLoadState === 'loading' || appCtx.featureLoadState === 'partial'}
+        <p role="status" class="shrink-0 px-3 py-2 text-xs opacity-60">
+          {m.resource_features_loading({ count: String(appCtx.state.resources.feature.length) })}
+        </p>
+      {:else if appCtx.featureLoadState === 'error'}
+        <button
+          type="button"
+          class="shrink-0 px-3 py-2 text-xs"
+          onclick={() => appCtx.refreshFeatures(false).catch(() => {})}
+        >
+          {m.resource_retry()}
+        </button>
+      {/if}
     </div>
   </div>
 </Panel>
