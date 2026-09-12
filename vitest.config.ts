@@ -119,27 +119,6 @@ export default defineConfig({
         ),
       },
       {
-        find: /^sveltekit-superforms\/adapters$/,
-        replacement: resolve(
-          configDirectory,
-          'src/tests/mocks/sveltekit-superforms-adapters.ts',
-        ),
-      },
-      {
-        find: /^sveltekit-superforms\/client$/,
-        replacement: resolve(
-          configDirectory,
-          'src/tests/mocks/sveltekit-superforms-client.ts',
-        ),
-      },
-      {
-        find: /^sveltekit-superforms$/,
-        replacement: resolve(
-          configDirectory,
-          'src/tests/mocks/sveltekit-superforms.ts',
-        ),
-      },
-      {
         find: 'svelte-sonner',
         replacement: resolve(configDirectory, 'src/tests/mocks/svelte-sonner.ts'),
       },

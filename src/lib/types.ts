@@ -80,19 +80,7 @@ import type { Component, Snippet } from 'svelte'
 import type { RemoteFormIssue } from '@sveltejs/kit'
 import type { RequestEvent } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
-import type {
-  FormPath,
-  InputConstraints,
-  TaintedFields,
-  FormPathLeaves,
-  ValidateOptions,
-  FormPathType,
-  SuperValidated,
-  ValidationErrors,
-} from 'sveltekit-superforms'
-import type { enhance } from '$app/forms'
 import type { Marker } from 'maplibre-gl'
-import type { Writable } from 'svelte/store'
 import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type {
@@ -1321,36 +1309,6 @@ export type TranslationStates = Record<Locale, TranslationState>
 // FORMS
 /* -------- */
 
-export type SuperFormResult<T extends Record<string, unknown>> = {
-  form: Writable<T>
-  enhance: typeof enhance
-  constraints: Writable<InputConstraints<T>>
-  validate: (
-    path: FormPathLeaves<T>,
-    // opts?: ValidateOptions<FormPathType<T, FormPathLeaves<T>>, T, Record<string, unknown>>
-    opts?: ValidateOptions<
-      FormPathType<T, FormPathLeaves<T>>,
-      T,
-      Record<string, unknown>
-    >,
-  ) => Promise<string[] | undefined>
-  // validateForm!: () => Promise<SuperValidated<Record<string, unknown>, string, Form>>;
-  validateForm: () => Promise<SuperValidated<T>>
-  tainted: Writable<TaintedFields<T> | undefined>
-  // isTainted!: (path?: FormPath<T> | Record<string, unknown> | boolean | undefined) => boolean;
-  isTainted: (path?: FormPath<T> | boolean | undefined) => boolean
-  submit: (event: Event) => void
-  reset: (options?: {
-    keepMessage?: boolean
-    data?: Partial<T>
-    newState?: Partial<T>
-    id?: string
-  }) => void
-  errors: Writable<ValidationErrors<T>>
-  message: Writable<string | undefined>
-  posted: Writable<boolean>
-}
-
 export type LayerForm = LayerFormType
 export type OrganisationForm = OrganisationFormType
 export type ProjectForm = ProjectFormType
@@ -2385,15 +2343,6 @@ export type FormProps = OrganisationForm | ProjectForm | LayerForm | FeatureForm
 export type PageProps<T extends Resource> = {
   data: {
     [key: string]: T
-  }
-}
-
-export type FormPageProps<T extends Resource> = {
-  data: {
-    validatedForm: SuperValidated<T>
-    entity: Ref
-    image?: Image | null
-    images?: Image[] | null
   }
 }
 
