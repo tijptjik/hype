@@ -66,13 +66,13 @@ const filters = {
       filters: [
         createToggleFilter('isPublished', {
           label: m.published(),
-          falseLabel: m.filters__is(),
-          trueLabel: m.filters__not(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
         }),
         createToggleFilter('isArchived', {
           label: m.bad_swift_cheetah_surge(),
-          falseLabel: m.filters__is(),
-          trueLabel: m.filters__not(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
           superAdminOnly: true,
         }),
       ],
