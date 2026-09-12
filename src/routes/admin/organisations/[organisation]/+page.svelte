@@ -886,6 +886,10 @@ async function handleOrganisationStateToggle({
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
+      ...adminCtx.appCtx.cacheCtx.optimisticUpdates('organisation', {
+        meta: { id: organisationData.id },
+        data: { [field]: nextState },
+      }),
       getOrganisation({
         ref: organisationRef,
         refKey: 'code',

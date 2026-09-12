@@ -842,37 +842,33 @@ async function handleLayerStateToggle({
   setBusy: (value: boolean) => void
   mutate: (payload: { id: string; state: boolean }) => Promise<{ data: { id: string } }>
 }): Promise<void> {
-  await handleResourceBooleanStateToggle({
-    current: layer?.data,
-    field,
-    successWhenTrue,
-    successWhenFalse,
-    setBusy,
-    mutate,
-    applyOptimistic: nextState => {
-      const layerId = layer?.data?.id
-      if (!layerId) return
-
+  const current = layer?.data
+  if (!current) return
+  const nextState = !current[field]
+  setBusy(true)
+  try {
+    await (mutate as typeof publishLayer)({
+      id: current.id,
+      state: nextState,
+      meta: { isAdminRequest: true },
+    }).updates(
+      ...adminCtx.appCtx.cacheCtx.optimisticUpdates('layer', {
+        meta: { id: current.id },
+        data: { [field]: nextState },
+      }),
       getLayer({
         ref: layerRef,
         refKey: 'id',
         meta: { isAdminRequest: true, profile: 'admin' },
-      }).withOverride(overrideLayerEntityBoolean(field, nextState))
-
-      getLayers({
-        conditions: adminCtx.appCtx.isSuperAdmin()
-          ? { isArchived: null, isPublished: null }
-          : { isArchived: false, isPublished: null },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
-      }).withOverride(overrideLayerListItemBoolean(layerId, field, nextState))
-    },
-    refresh: () => refreshLayer(),
-    commit: commitLayerState,
-    onError: () => {
-      toast.error(m.long_crazy_peacock_care())
-    },
-  })
+      }).withOverride(overrideLayerEntityBoolean(field, nextState)),
+    )
+    commitLayerState(await refreshLayer())
+    toast.success(nextState ? successWhenTrue : successWhenFalse)
+  } catch {
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    setBusy(false)
+  }
 }
 
 async function onPublishToggle(): Promise<void> {

@@ -57,6 +57,7 @@ let { children, data }: LayoutProps = $props()
 const session = useSession()
 const responsive = setResponsiveCtx()
 let hasMounted = false
+let isBootstrapping = false
 let pendingAuthReinit: number | null = null
 let bootstrapError = $state<string | null>(null)
 let isUpgradeOpen = $state(false)
@@ -264,11 +265,15 @@ async function initializeAuthenticatedApp(): Promise<void> {
 }
 
 async function retryBootstrap(): Promise<void> {
+  if (isBootstrapping) return
+  isBootstrapping = true
   bootstrapError = null
   try {
     await initializeAuthenticatedApp()
   } catch (error) {
     bootstrapError = error instanceof Error ? error.message : 'Guest session failed'
+  } finally {
+    isBootstrapping = false
   }
 }
 
@@ -356,7 +361,9 @@ const isShelllessRoute = $derived(
 // Sign-in and sign-up provide a map-backed landing surface of their own. Render it
 // immediately instead of waiting for account or public map resources to finish loading.
 const isAuthEntryRoute = $derived(isAuthEntryPath(page.url.pathname))
-const isAppReady = $derived(isAuthEntryRoute || appCtx.isInitialised)
+const isAppReady = $derived(
+  isAuthEntryRoute || appCtx.isInitialised || appCtx.isLoadingResources,
+)
 const shelllessClass = $derived(
   cx(
     'bits-theme min-h-screen w-full overflow-y-auto bg-black',
@@ -413,7 +420,7 @@ watch(
       isAnonymous: newUser?.isAnonymous ?? null,
       hasMounted,
     })
-    if (!hasMounted) {
+    if (!hasMounted || isBootstrapping) {
       return
     }
 

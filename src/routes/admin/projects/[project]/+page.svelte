@@ -2098,6 +2098,10 @@ async function handleProjectStateToggle({
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
+      ...adminCtx.appCtx.cacheCtx.optimisticUpdates('project', {
+        meta: { id: projectData.id },
+        data: { [field]: nextState },
+      }),
       getProject({
         ref: projectRef,
         refKey: 'code',

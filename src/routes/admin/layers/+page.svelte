@@ -1,4 +1,5 @@
 <script lang="ts">
+import { usePanelResources } from '$lib/context/panel-resources.svelte'
 import { page } from '$app/state'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
@@ -172,8 +173,14 @@ const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.layer)
 
 // STATE
+const resourceList = usePanelResources(
+  adminCtx.appCtx,
+  'layer',
+  () => adminCtx.appCtx.state.filters.layer.text ?? '',
+  'index',
+)
 let entities: Layer[] = $derived(
-  adminCtx.getViewFilteredResource<Layer>(FirstClassResource.layer),
+  adminCtx.applyLayerViewFilters(resourceList.rows as unknown as Layer[]) as Layer[],
 )
 
 function getIndexModel(entity: Layer) {
@@ -204,7 +211,13 @@ $effect(() => {
 })
 </script>
 
-<ResourceIndex resource={FirstClassResource.layer} {entities}>
+<ResourceIndex
+  onNearEnd={() => resourceList.list.next()}
+  hasMore={resourceList.list.hasMore}
+  isLoadingMore={resourceList.list.loading}
+  resource={FirstClassResource.layer}
+  {entities}
+>
   {#snippet card(entity: Layer)}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
