@@ -76,7 +76,10 @@ import {
   resolveOrganisationActionPermissions,
 } from '$lib/api/services/authz'
 // SCHEMA
-import { OrganisationPreflightFormData } from '$lib/db/zod/schema/organisation'
+import {
+  OrganisationPreflightFormData,
+  OrganisationAdminProfileAPI,
+} from '$lib/db/zod/schema/organisation'
 import {
   CAPABILITY_I18N_BY_KEY,
   CAPABILITY_KEYS,
@@ -169,12 +172,17 @@ const currentLocaleKey = $derived(getLocaleKey())
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
-const cachedOrganisationForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(
+// A compact list row cannot initialize an administration editor.
+const cachedOrganisationForRef = $derived.by(() => {
+  const cached = adminCtx.appCtx.getResourceByRefSync(
     FirstClassResource.organisation,
     organisationRef,
-  ) as OrganisationDB | undefined,
-)
+  )
+  if (!cached || !('capabilities' in cached) || !('userRoles' in cached))
+    return undefined
+  const parsed = OrganisationAdminProfileAPI.safeParse(cached)
+  return parsed.success ? parsed.data : undefined
+})
 const cachedOrganisationState = $derived(
   cachedOrganisationForRef
     ? ({ data: cachedOrganisationForRef } as OrganisationGetState)

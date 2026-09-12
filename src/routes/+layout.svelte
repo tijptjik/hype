@@ -138,6 +138,12 @@ const appCtx = setAppCtx(
   responsive,
 )
 
+// Active admin feature collections read native overrides without waiting for a refetch.
+$effect(() => {
+  const current = appCtx.cacheCtx.featureCollection?.current
+  if (current && appCtx.isAdmin()) appCtx.state.resources.feature = current.data
+})
+
 function clearPendingAuthReinit(): void {
   if (pendingAuthReinit !== null) {
     clearTimeout(pendingAuthReinit)
