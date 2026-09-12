@@ -14,7 +14,6 @@ import * as PanelPattern from '$lib/bits/patterns/panels'
 // SERVICES
 import { getSupportedFacetForResource, navigateOnAdminById } from '$lib/navigation'
 // STYLES
-import '$lib/styles/admin-panel.css'
 // ENUMS
 import { Panel as PanelEnum, FirstClassResource } from '$lib/enums'
 // TYPES
@@ -61,8 +60,10 @@ const handleToggleAdminPanel = (): void => {
       onTogglePanel={handleToggleAdminPanel}
     />
     <div class="grow flex min-h-0 flex-col">
-      <div class="admin-sections">
-        <div class="admin-sections__section admin-sections__section--bounded">
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-contain">
+        <div
+          class="flex min-h-0 max-h-1/3 flex-[0_1_auto] flex-col overflow-hidden [&>section]:min-h-0 [&>section]:flex-1"
+        >
           <Organisations {...panelProps}>
             {#snippet filteredItem(
               organisation: Organisation,
@@ -101,7 +102,9 @@ const handleToggleAdminPanel = (): void => {
             {/snippet}
           </Organisations>
         </div>
-        <div class="admin-sections__section admin-sections__section--bounded">
+        <div
+          class="flex min-h-0 max-h-1/3 flex-[0_1_auto] flex-col overflow-hidden [&>section]:min-h-0 [&>section]:flex-1"
+        >
           <Projects {...panelProps}>
             {#snippet filteredItem(
               project: Project,
@@ -143,7 +146,9 @@ const handleToggleAdminPanel = (): void => {
             {/snippet}
           </Projects>
         </div>
-        <div class="admin-sections__section admin-sections__section--layers">
+        <div
+          class="flex min-h-0 flex-1 flex-col overflow-hidden [&>section]:min-h-0 [&>section]:flex-1"
+        >
           <Layers {...panelProps}>
             {#snippet filteredItem(
               layer: Layer,

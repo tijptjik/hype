@@ -1,28 +1,27 @@
 <script lang="ts">
 // SVELTE
 import { browser } from '$app/environment'
-import { flip } from 'svelte/animate'
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getI18n, m } from '$lib/i18n'
 // ICONS
 import Square3Stack3d from 'virtual:icons/lucide/layers-3'
 // COMPONENTS
 import * as Panel from '$lib/bits/patterns/panels'
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
-import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
+import VirtualResourceList from '$lib/bits/custom/resources/VirtualResourceList.svelte'
+import { usePanelResources } from '$lib/context/panel-resources.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
+import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { ResourceContext, Id, PanelProps } from '$lib/types'
 import type { Snippet } from 'svelte'
 
 // Initialize query client and map state
 const appCtx = getAppCtx()
-const MANAGED_LIST_FLIP_DURATION_MS = 150
 const resourceType = FirstClassResource.layer
 
 // PROPS
@@ -30,42 +29,21 @@ let {
   filteredItem,
   ...panelProps
 }: {
-  filteredItem: Snippet<[any, Id[], ResourceContext]>
+  filteredItem: Snippet<[Layer, Id[], ResourceContext]>
 } & PanelProps = $props()
 
 // STATE
+let searchTerm = $state('')
+const panelResources = usePanelResources(appCtx, 'layer', () => searchTerm)
 const selectedLayers = $derived(appCtx.state.prisms.layer)
 // Get cached features for counting
-const layers = $derived(appCtx.state.resources.layer)
+const layers = $derived(
+  panelResources.rows as unknown as typeof appCtx.state.resources.layer,
+)
 const visibleLayers = $derived(layers.filter(layer => layer.isArchived !== true))
 
-let searchTerm = $state('')
+const filteredLayers = $derived(visibleLayers)
 
-// Reset search term when projects change
-$effect(() => {
-  layers // track layers
-  searchTerm = ''
-})
-
-function filterLayers(layers: typeof appCtx.state.resources.layer, term: string) {
-  if (!term) return layers
-
-  const searchLower = term.toLowerCase()
-  return layers.filter(layer => {
-    if (!layer) return false
-    return (
-      getI18n(layer, 'name', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(layer, 'description', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower)
-    )
-  })
-}
-
-const filteredLayers = $derived(filterLayers(visibleLayers, searchTerm))
-let isDefaultOpen = $derived(browser ? window.innerHeight > 1000 : false)
 const orderedFilteredLayers = $derived.by(() =>
   [...filteredLayers].sort((left, right) => {
     const leftActive = selectedLayers.includes(left.id)
@@ -81,6 +59,7 @@ const orderedFilteredLayers = $derived.by(() =>
     )
   }),
 )
+let isDefaultOpen = $derived(browser ? window.innerHeight > 1000 : false)
 
 let handleReset = () => {
   if (selectedLayers.length === 0) {
@@ -112,10 +91,14 @@ let collapsedLayers = $derived(
 {/snippet}
 
 {#snippet ManagedLayers(isOpen: boolean)}
-  <Panel.Item.ManagedItems
+  <VirtualResourceList
     items={isOpen ? orderedFilteredLayers : collapsedLayers}
     item={ManagedLayerItem}
-    flipDurationMs={MANAGED_LIST_FLIP_DURATION_MS}
+    onNearEnd={isOpen ? () => panelResources.list.next() : undefined}
+    loading={panelResources.list.loading}
+    error={Boolean(panelResources.list.error)}
+    onRetry={panelResources.retry}
+    viewKey={panelResources.viewKey}
   />
 {/snippet}
 
@@ -131,17 +114,18 @@ let collapsedLayers = $derived(
   defaultOpen={isDefaultOpen}
   {...panelProps}
 >
-  {#if visibleLayers.length > 4 && !panelProps.isNarrow}
+  {#if !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}
-    <ResourceContainer>
-      {#each orderedFilteredLayers as layer (layer.id)}
-        {@const hierarchy = appCtx.getHierarchySync(layer)}
-        <div animate:flip={{ duration: MANAGED_LIST_FLIP_DURATION_MS }}>
-          {@render filteredItem(layer, selectedLayers, hierarchy)}
-        </div>
-      {/each}
-    </ResourceContainer>
+    <VirtualResourceList
+      items={orderedFilteredLayers}
+      item={ManagedLayerItem}
+      onNearEnd={() => panelResources.list.next()}
+      loading={panelResources.list.loading}
+      error={Boolean(panelResources.list.error)}
+      onRetry={panelResources.retry}
+      viewKey={panelResources.viewKey}
+    />
   {/if}
 </Section>

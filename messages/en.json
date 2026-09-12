@@ -1237,5 +1237,8 @@
   "import_data_subtitle": "Drop CSV with a header row",
   "import_data_images": "Users",
   "import_coming_soon": "Coming Soon",
-  "import_data_events": "Events"
+  "import_data_events": "Events",
+  "resource_loading": "Loading resources",
+  "resource_retry": "Retry loading",
+  "resource_no_results": "No results"
 }

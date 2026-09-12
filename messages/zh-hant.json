@@ -1237,5 +1237,8 @@
   "import_data_subtitle": "拖放含標題列的 CSV",
   "import_data_images": "使用者",
   "import_coming_soon": "即將推出",
-  "import_data_events": "活動"
+  "import_data_events": "活動",
+  "resource_loading": "正在載入資源",
+  "resource_retry": "重新載入",
+  "resource_no_results": "沒有結果"
 }

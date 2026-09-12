@@ -1,8 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { flip } from 'svelte/animate'
 // I18N
-import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
 import Squares2x2 from 'virtual:icons/lucide/layout-grid'
@@ -10,18 +8,19 @@ import Squares2x2 from 'virtual:icons/lucide/layout-grid'
 import * as Panel from '$lib/bits/patterns/panels'
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
-import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
+import VirtualResourceList from '$lib/bits/custom/resources/VirtualResourceList.svelte'
+import { usePanelResources } from '$lib/context/panel-resources.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
+import type { Project } from '$lib/db/zod/schema/project.types'
 import type { PanelProps, Id, ResourceContext } from '$lib/types'
 import type { Snippet } from 'svelte'
 
 // CONTEXT
 const appCtx = getAppCtx()
-const MANAGED_LIST_FLIP_DURATION_MS = 150
 
 const resourceType = FirstClassResource.project
 
@@ -30,41 +29,22 @@ let {
   filteredItem,
   ...panelProps
 }: {
-  filteredItem: Snippet<[any, Id[], ResourceContext]>
+  filteredItem: Snippet<[Project, Id[], ResourceContext]>
 } & PanelProps = $props()
 
 // Get cached features for counting
-const projects = $derived(appCtx.state.resources.project)
+let searchTerm = $state('')
+const panelResources = usePanelResources(appCtx, 'project', () => searchTerm)
+const projects = $derived(
+  panelResources.rows as unknown as typeof appCtx.state.resources.project,
+)
 const selectedProjects = $derived(appCtx.state.prisms.project)
 const visibleProjects = $derived(
   projects.filter(project => project.isArchived !== true),
 )
 
-let searchTerm = $state('')
+const filteredProjects = $derived(visibleProjects)
 
-// Reset search term when projects change
-$effect(() => {
-  projects // track projects
-  searchTerm = ''
-})
-
-function filterProjects(projects: typeof appCtx.state.resources.project, term: string) {
-  if (!term) return projects
-
-  const searchLower = term.toLowerCase()
-  return projects.filter(project => {
-    return (
-      getI18n(project, 'name', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(project, 'description', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower)
-    )
-  })
-}
-
-const filteredProjects = $derived(filterProjects(visibleProjects, searchTerm))
 const orderedFilteredProjects = $derived.by(() =>
   [...filteredProjects].sort((left, right) => {
     const leftActive =
@@ -111,10 +91,14 @@ let collapsedProjects = $derived(
 {/snippet}
 
 {#snippet ManagedProjects(isOpen: boolean)}
-  <Panel.Item.ManagedItems
+  <VirtualResourceList
     items={isOpen ? orderedFilteredProjects : collapsedProjects}
     item={ManagedProjectItem}
-    flipDurationMs={MANAGED_LIST_FLIP_DURATION_MS}
+    onNearEnd={isOpen ? () => panelResources.list.next() : undefined}
+    loading={panelResources.list.loading}
+    error={Boolean(panelResources.list.error)}
+    onRetry={panelResources.retry}
+    viewKey={panelResources.viewKey}
   />
 {/snippet}
 
@@ -130,17 +114,18 @@ let collapsedProjects = $derived(
   defaultOpen={isDefaultOpen}
   {...panelProps}
 >
-  {#if visibleProjects.length > 4 && !panelProps.isNarrow}
+  {#if !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}
-    <ResourceContainer>
-      {#each orderedFilteredProjects as resource (resource.id)}
-        {@const hierarchy = appCtx.getHierarchySync(resource)}
-        <div animate:flip={{ duration: MANAGED_LIST_FLIP_DURATION_MS }}>
-          {@render filteredItem(resource, selectedProjects, hierarchy)}
-        </div>
-      {/each}
-    </ResourceContainer>
+    <VirtualResourceList
+      items={orderedFilteredProjects}
+      item={ManagedProjectItem}
+      onNearEnd={() => panelResources.list.next()}
+      loading={panelResources.list.loading}
+      error={Boolean(panelResources.list.error)}
+      onRetry={panelResources.retry}
+      viewKey={panelResources.viewKey}
+    />
   {/if}
 </Section>

@@ -76,8 +76,10 @@ let panelProps: PanelProps = $derived({
       }}
     />
     <Info isOpen={isInfoOpen} />
-    <div class="prisms-sections">
-      <div class="prisms-sections__section prisms-sections__section--bounded">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-contain">
+      <div
+        class="flex min-h-0 max-h-1/3 flex-[0_1_auto] flex-col overflow-hidden [&>section]:min-h-0 [&>section]:flex-1"
+      >
         <Organisations {...panelProps}>
           {#snippet filteredItem(resource: Organisation, selectedOrganisations: Id[])}
             <OrganisationPrismItem
@@ -111,7 +113,9 @@ let panelProps: PanelProps = $derived({
           {/snippet}
         </Organisations>
       </div>
-      <div class="prisms-sections__section prisms-sections__section--bounded">
+      <div
+        class="flex min-h-0 max-h-1/3 flex-[0_1_auto] flex-col overflow-hidden [&>section]:min-h-0 [&>section]:flex-1"
+      >
         <Projects {...panelProps}>
           {#snippet filteredItem(
             resource: Project,
@@ -153,7 +157,9 @@ let panelProps: PanelProps = $derived({
           {/snippet}
         </Projects>
       </div>
-      <div class="prisms-sections__section prisms-sections__section--layers">
+      <div
+        class="flex min-h-0 flex-1 flex-col overflow-hidden [&>section]:min-h-0 [&>section]:flex-1"
+      >
         <Layers {...panelProps}>
           {#snippet filteredItem(
             layer: Layer,
@@ -198,36 +204,3 @@ let panelProps: PanelProps = $derived({
     </div>
   </div>
 </Panel>
-
-<style>
-.prisms-sections {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  overscroll-behavior: contain;
-}
-
-.prisms-sections__section {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.prisms-sections__section--bounded {
-  max-height: 33.333%;
-  flex: 0 1 auto;
-}
-
-.prisms-sections__section--layers {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.prisms-sections__section > :global(section) {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-</style>

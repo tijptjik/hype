@@ -1237,5 +1237,8 @@
   "import_data_subtitle": "拖放带有标题行的 CSV",
   "import_data_images": "用户",
   "import_coming_soon": "即将推出",
-  "import_data_events": "活动"
+  "import_data_events": "活动",
+  "resource_loading": "正在加载资源",
+  "resource_retry": "重新加载",
+  "resource_no_results": "没有结果"
 }

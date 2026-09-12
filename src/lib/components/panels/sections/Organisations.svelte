@@ -5,9 +5,7 @@
 -->
 <script lang="ts">
 // SVELTE
-import { flip } from 'svelte/animate'
 // I18N
-import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // ICONS
 import UserGroup from 'virtual:icons/lucide/users'
@@ -15,18 +13,19 @@ import UserGroup from 'virtual:icons/lucide/users'
 import * as Panel from '$lib/bits/patterns/panels'
 import Section from '$lib/components/panels/common/Section.svelte'
 import FilterBar from '$lib/components/panels/common/FilterBar.svelte'
-import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
+import VirtualResourceList from '$lib/bits/custom/resources/VirtualResourceList.svelte'
+import { usePanelResources } from '$lib/context/panel-resources.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Id, PanelProps } from '$lib/types'
 import type { Snippet } from 'svelte'
 
 // Initialize query client and map state
 const appCtx = getAppCtx()
-const MANAGED_LIST_FLIP_DURATION_MS = 150
 
 const resourceType = FirstClassResource.organisation
 
@@ -35,45 +34,22 @@ let {
   filteredItem,
   ...panelProps
 }: {
-  filteredItem: Snippet<[any, Id[]]>
+  filteredItem: Snippet<[Organisation, Id[]]>
 } & PanelProps = $props()
 
 // Get cached features for counting
-const organisations = $derived(appCtx.state.resources.organisation)
+let searchTerm = $state('')
+const panelResources = usePanelResources(appCtx, 'organisation', () => searchTerm)
+const organisations = $derived(
+  panelResources.rows as unknown as typeof appCtx.state.resources.organisation,
+)
 const selectedOrganisations = $derived(appCtx.state.prisms.organisation)
 const visibleOrganisations = $derived(
   organisations.filter(organisation => organisation.isArchived !== true),
 )
 
-let searchTerm = $state('')
+const filteredOrganisations = $derived(visibleOrganisations)
 
-$effect(() => {
-  organisations // track organisations
-  searchTerm = ''
-})
-
-function filterOrganisations(
-  organisations: typeof appCtx.state.resources.organisation,
-  term: string,
-) {
-  if (!term) return organisations
-
-  const searchLower = term.toLowerCase()
-  return organisations.filter(organisation => {
-    return (
-      getI18n(organisation, 'name', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(organisation, 'description', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower)
-    )
-  })
-}
-
-const filteredOrganisations = $derived(
-  filterOrganisations(visibleOrganisations, searchTerm),
-)
 const orderedFilteredOrganisations = $derived.by(() =>
   [...filteredOrganisations].sort((left, right) => {
     const leftActive =
@@ -121,10 +97,14 @@ let collapsedOrganisations = $derived(
 {/snippet}
 
 {#snippet ManagedOrganisations(isOpen: boolean)}
-  <Panel.Item.ManagedItems
+  <VirtualResourceList
     items={isOpen ? orderedFilteredOrganisations : collapsedOrganisations}
     item={ManagedOrganisationItem}
-    flipDurationMs={MANAGED_LIST_FLIP_DURATION_MS}
+    onNearEnd={isOpen ? () => panelResources.list.next() : undefined}
+    loading={panelResources.list.loading}
+    error={Boolean(panelResources.list.error)}
+    onRetry={panelResources.retry}
+    viewKey={panelResources.viewKey}
   />
 {/snippet}
 
@@ -141,16 +121,18 @@ let collapsedOrganisations = $derived(
   defaultOpen={panelProps.isAdmin ? isDefaultOpen : false}
   {...panelProps}
 >
-  {#if visibleOrganisations.length > 4 && !panelProps.isNarrow}
+  {#if !panelProps.isNarrow}
     <FilterBar bind:searchTerm onReset={handleReset} />
   {/if}
   {#if !(panelProps.isAdmin && panelProps.isNarrow)}
-    <ResourceContainer>
-      {#each orderedFilteredOrganisations as resource (resource.id)}
-        <div animate:flip={{ duration: MANAGED_LIST_FLIP_DURATION_MS }}>
-          {@render filteredItem(resource, selectedOrganisations)}
-        </div>
-      {/each}
-    </ResourceContainer>
+    <VirtualResourceList
+      items={orderedFilteredOrganisations}
+      item={ManagedOrganisationItem}
+      onNearEnd={() => panelResources.list.next()}
+      loading={panelResources.list.loading}
+      error={Boolean(panelResources.list.error)}
+      onRetry={panelResources.retry}
+      viewKey={panelResources.viewKey}
+    />
   {/if}
 </Section>
