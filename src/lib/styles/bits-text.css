@@ -39,14 +39,6 @@
     mask-image: none;
   }
 
-  .bits-theme .bits-scrollable-text__viewport {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
   .bits-theme .bits-scrollable-text__track {
     display: inline-flex;
     min-width: max-content;
@@ -57,14 +49,6 @@
 
   .bits-theme .bits-scrollable-text__content {
     display: inline-block;
-    min-width: max-content;
-  }
-
-  .bits-theme .bits-scrollable-text__separator {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    color: color-mix(in oklab, var(--color-base-content) 56%, transparent);
     min-width: max-content;
   }
 

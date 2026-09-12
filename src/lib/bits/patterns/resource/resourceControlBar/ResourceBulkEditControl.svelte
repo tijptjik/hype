@@ -157,7 +157,7 @@ $effect(() => {
           placeholder="Action"
           variant="default"
           class="bits-resource-bulk-edit__select text-sm"
-          triggerClass="bits-resource-bulk-edit__select-trigger h-9 px-2 text-sm"
+          triggerClass="min-w-37 w-max h-9 px-2 text-sm"
           contentClass="bits-resource-bulk-edit__select-content text-white"
           onValueChange={config.onOptionChange}
         />

@@ -43,25 +43,27 @@ const attributionIcon = $derived.by(() => {
   <div class="bits-license-card__content">
     <section class="bits-license-card__body" aria-label={`${mediaLabel} license terms`}>
       {#if showLicenseName}
-        <p class="bits-license-card__state">{mediaLicense}</p>
+        <p class="m-0">{mediaLicense}</p>
       {:else if isPublicDomain}
-        <p class="bits-license-card__state">Public Domain</p>
+        <p class="m-0">Public Domain</p>
       {:else if isAllRightsReserved}
-        <p class="bits-license-card__state">All Rights Reserved</p>
+        <p class="m-0">All Rights Reserved</p>
       {:else}
         <div class="bits-license-card__conditions">
           {#each conditions as condition (condition.key)}
             <SimpleTooltip>
               {#snippet trigger()}
                 <span
-                  class="bits-license-card__condition"
+                  class="inline-flex flex-none items-center justify-center w-9 h-9 rounded-[999px] bg-base-200/78 text-base-content"
                   role="img"
                   aria-label={condition.label}
                 >
                   <Icon src={condition.icon} size="xl" tone="inherit" />
                 </span>
               {/snippet}
-              <span class="bits-license-card__tooltip-title">{condition.label}</span>
+              <span class="block mb-1 font-bold text-foreground"
+                >{condition.label}</span
+              >
               <span>{condition.description}</span>
             </SimpleTooltip>
           {/each}
@@ -72,7 +74,7 @@ const attributionIcon = $derived.by(() => {
 
   {#if attributionLabel}
     <Card.Actions padding="sm" bg="panel" class="bits-license-card__actions">
-      <span class="bits-license-card__attribution">
+      <span class="inline-flex max-w-full min-w-0 items-center gap-2">
         <Icon src={attributionIcon} size="lg" tone="inherit" />
         <span
           class="bits-license-card__attribution-text overflow-hidden text-ellipsis whitespace-nowrap"

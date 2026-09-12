@@ -1,10 +1,4 @@
 @layer components {
-  .bits-theme .bits-project-fields {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
   .bits-theme .bits-project-fields__actions {
     display: flex;
     align-items: center;
@@ -36,32 +30,9 @@
     transition-delay: 0s;
   }
 
-  .bits-theme .bits-project-fields__action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
   .bits-theme .bits-project-fields__action-icon {
     width: 1rem;
     height: 1rem;
-  }
-
-  .bits-theme .bits-project-fields__list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .bits-theme .bits-project-fields__loading-shell {
-    min-height: 16rem;
-  }
-
-  .bits-theme .bits-project-fields__loading {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    width: 100%;
   }
 
   .bits-theme .bits-project-fields__item {
@@ -534,10 +505,6 @@
     white-space: nowrap;
   }
 
-  .bits-theme .bits-project-field-card__i18n {
-    width: 100%;
-  }
-
   .bits-theme .bits-project-field-card__i18n-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -551,12 +518,6 @@
     box-shadow:
       0 8px 18px color-mix(in oklab, #1b0f1a 24%, transparent),
       0 2px 6px color-mix(in oklab, #1b0f1a 16%, transparent);
-  }
-
-  .bits-theme .bits-project-field-card__i18n-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
   }
 
   .bits-theme .bits-project-field-card__range-row {
@@ -582,11 +543,6 @@
     min-height: 100%;
     gap: 0.5rem;
     flex-wrap: nowrap;
-  }
-
-  .bits-theme .bits-project-field-card__value-actions-shell {
-    position: relative;
-    min-height: 2.125rem;
   }
 
   .bits-theme .bits-project-field-card__value-actions-layer {

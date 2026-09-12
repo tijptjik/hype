@@ -51,7 +51,7 @@ const fieldClass = $derived(
 
 <article class={fieldClass}>
   <div class="bits-feature-field__content">
-    <div class="bits-feature-field__label">
+    <div class="flex flex-col gap-[0.2rem] max-w-32 min-w-0">
       <span class="bits-feature-field__title">{title}</span>
       <span class="bits-feature-field__subtitle">{property.key}</span>
     </div>

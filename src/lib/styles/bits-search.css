@@ -10,10 +10,6 @@
     @apply absolute left-0 right-0 top-full z-30 mt-2 px-2;
   }
 
-  .bits-theme .bits-search__results-list {
-    @apply flex flex-col gap-1;
-  }
-
   .bits-theme .bits-search__results-wrapper {
     @apply rounded-lg;
   }
@@ -23,18 +19,6 @@
   /* --------- */
   .bits-theme .bits-search-bar {
     @apply relative mb-3;
-  }
-
-  .bits-theme .bits-search-bar__input {
-    @apply h-12 w-full rounded-lg bg-glass-300 px-4 pr-11 text-sm outline-none;
-  }
-
-  .bits-theme .bits-search-bar__icons {
-    @apply pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center;
-  }
-
-  .bits-theme .bits-search-bar__clear {
-    @apply pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md leading-none hover:bg-base-300/60;
   }
 
   .bits-theme .bits-search-bar__icon {
@@ -137,10 +121,6 @@
     @apply h-full w-full object-cover;
   }
 
-  .bits-theme .bits-search-result-item__preview-fallback {
-    @apply flex h-full w-full items-center justify-center text-lg font-semibold uppercase text-neutral-content/70;
-  }
-
   .bits-theme .bits-search-result-item__copy {
     @apply flex min-w-0 flex-1 flex-col justify-center gap-1 px-4 py-3;
   }
@@ -155,16 +135,6 @@
 
   .bits-theme .bits-search-result-item--visual .bits-search-result-item__discriminator {
     @apply max-w-none shrink-0 overflow-hidden text-ellipsis whitespace-nowrap pr-0 text-left text-sm text-neutral-content/62;
-  }
-
-  .bits-theme .bits-search-result-item__disabled-callout {
-    @apply pointer-events-none absolute inset-y-0 right-3 flex flex-col items-end justify-center;
-    gap: 0.1rem;
-  }
-
-  .bits-theme .bits-search-result-item__disabled-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.16em];
-    color: color-mix(in oklab, var(--color-base-content) 58%, transparent);
   }
 
   .bits-theme .bits-search-result-item__disabled-value {

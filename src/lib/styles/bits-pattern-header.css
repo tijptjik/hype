@@ -155,10 +155,6 @@
     display: none;
   }
 
-  .bits-theme .bits-pattern-header__search {
-    @apply relative inline-flex min-w-44 items-center;
-  }
-
   .bits-theme .bits-pattern-header__search-icon {
     @apply absolute right-4 h-5 w-5;
     color: color-mix(in oklab, var(--color-base-content) 65%, black);
@@ -272,26 +268,6 @@
   }
 
   .bits-theme .bits-pattern-header__view-actions {
-    @apply flex items-center gap-0;
-  }
-
-  .bits-theme .bits-pattern-header__right-slot {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0rem;
-    margin-right: 1rem;
-    min-width: 0;
-  }
-
-  .bits-theme .bits-pattern-header__right-slot-item {
-    @apply flex items-center gap-0;
-    width: max-content;
-    max-width: 100%;
-    flex: 0 0 auto;
-  }
-
-  .bits-theme .bits-pattern-header__right-cluster {
     @apply flex items-center gap-0;
   }
 

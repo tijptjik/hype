@@ -16,8 +16,8 @@ let {
 </script>
 
 <div class={`bits-form__label ${className}`}>
-  <div class="bits-form__label-row">
-    <span class="bits-form__label-title">
+  <div class="flex items-start gap-1">
+    <span class="inline-flex items-start gap-0.5">
       <LabelPrimitive.Text for={htmlFor} {text} class={textClass} />
       <LabelPrimitive.Required {required} {isEditing} class={requiredClass} />
     </span>

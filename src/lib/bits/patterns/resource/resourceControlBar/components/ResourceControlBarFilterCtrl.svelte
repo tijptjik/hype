@@ -26,7 +26,7 @@ let {
 >
   <!-- biome-ignore lint/a11y/noStaticElementInteractions: The filter anchor observes hover to coordinate its menu. -->
   <div
-    class="bits-resource-filter-bar__filter-anchor"
+    class="flex items-center justify-center opacity-70 transition-opacity duration-300 hover:opacity-100"
     role="presentation"
     onmouseenter={onHover}
   >
@@ -47,9 +47,12 @@ let {
     </Button>
   </div>
 
-  <div class="bits-resource-filter-bar__filter-content">
+  <div class="relative flex flex-row items-center">
     {#if showMenu && !isCollapsed}
-      <div class="bits-resource-filter-bar__filter-menu" bind:this={menuElement}>
+      <div
+        class="absolute z-30 flex h-16 items-center gap-2 bg-base-200 whitespace-nowrap"
+        bind:this={menuElement}
+      >
         {#if menuContent}
           {@render menuContent()}
         {/if}

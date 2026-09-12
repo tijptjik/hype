@@ -63,15 +63,6 @@
     z-index: 2;
   }
 
-  .bits-theme .bits-form__i18n-locale-code {
-    @apply absolute right-5.5 top-4 text-2xl font-bold uppercase;
-    color: color-mix(in oklab, var(--color-white) 66%, transparent);
-  }
-
-  .bits-theme .bits-form__i18n-card-content {
-    @apply flex flex-col gap-4 pb-2 pt-2;
-  }
-
   .bits-theme
     .bits-form__i18n-card
     .bits-form__control-wrap:not(.bits-form__control-wrap--skeleton) {
@@ -99,10 +90,6 @@
     color: color-mix(in oklab, white 90%, transparent);
   }
 
-  .bits-theme .bits-form__i18n-card-footer {
-    @apply mt-auto pt-4;
-  }
-
   /* ----------------- */
   /* Translation Controls */
   /* --------- */
@@ -120,12 +107,6 @@
   .bits-theme
     .bits-form__i18n-translation-bar.bits-form__i18n-translation-bar--visible {
     @apply pointer-events-auto opacity-100;
-  }
-
-  .bits-theme .bits-form__i18n-translation-icon {
-    @apply inline-flex h-8 w-8 items-center justify-center text-sm;
-    color: color-mix(in oklab, var(--color-foreground) 55%, transparent);
-    background: var(--color-glass-300);
   }
 
   .bits-theme .bits-form__i18n-translation-status-icon {

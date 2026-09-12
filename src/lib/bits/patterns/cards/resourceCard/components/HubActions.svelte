@@ -53,7 +53,7 @@ const slotClass = $derived(
       class="bits-form__resource-card-hub-actions-slot-content bits-form__resource-card-hub-actions-slot-content--controls"
       aria-hidden={isRemoving && hasRemoveAction}
     >
-      <div class="bits-form__resource-card-hub-actions-controls">
+      <div class="flex flex-col items-center gap-2">
         <Switch
           topText="Hub Only"
           checked={isHubExclusive}

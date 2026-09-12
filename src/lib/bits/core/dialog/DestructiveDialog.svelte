@@ -40,7 +40,7 @@ async function handleConfirm(event: MouseEvent): Promise<void> {
       <Dialog.Description class="bits-dialog__description">
         {@render description()}
       </Dialog.Description>
-      <div class="bits-dialog__actions">
+      <div class="flex justify-end gap-2">
         <Button
           text={cancelText}
           color="neutral"

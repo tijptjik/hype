@@ -32,7 +32,7 @@ const rootClass = $derived(
   <SectionHeader
     {title}
     description={subtitle}
-    class="bits-project-capabilities__header"
+    class="min-h-16 h-16 items-center pt-0 pb-0"
   />
 
   {#if capabilityIssues.length > 0}

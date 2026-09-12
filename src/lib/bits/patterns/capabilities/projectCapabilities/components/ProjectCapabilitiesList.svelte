@@ -24,17 +24,17 @@ const enabledSet = $derived(new Set(enabledCapabilityKeys))
 
 <div class="bits-project-capabilities__list">
   {#each availableCapabilityKeys as capabilityKey (capabilityKey)}
-    <ResourceCard.Root class="bits-project-capabilities__card-root">
-      <Card.Media class="bits-project-capabilities__card-icon-wrap" size="md">
-        <div class="bits-project-capabilities__card-icon-shell" aria-hidden="true">
-          <ShieldCheckIcon class="bits-project-capabilities__card-icon" />
+    <ResourceCard.Root class="w-full">
+      <Card.Media class="bg-base-100/76" size="md">
+        <div class="flex w-full h-full items-center justify-center" aria-hidden="true">
+          <ShieldCheckIcon class="h-6 w-6 text-primary" />
         </div>
       </Card.Media>
       <ResourceCard.Body
         code={capabilityKey}
         name={capabilityLabelByKey[capabilityKey] ?? capabilityKey}
       />
-      <Card.Actions padding="sm" class="bits-project-capabilities__card-actions">
+      <Card.Actions padding="sm" class="min-w-max">
         <Switch
           checked={enabledSet.has(capabilityKey)}
           disabled={!isEditing}

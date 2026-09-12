@@ -14,7 +14,7 @@ let { items = [], class: className = '' }: ResourceControlBarLocaleToggleGroupPr
     orientation="vertical"
     class="bits-resource-filter-bar__locale-group-divider"
   />
-  <div class="bits-resource-filter-bar__locale-group-items">
+  <div class="flex flex-row gap-2">
     {#each items as item (item.localeKey)}
       <Button
         text={item.label}

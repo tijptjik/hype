@@ -219,7 +219,7 @@ afterNavigate(async () => {
     {/if}
 
     {#if !panelProps.isNarrow}
-      <div class="bits-panel-item-resource__copy">
+      <div class="flex min-w-0 overflow-visible flex-col items-start gap-0">
         <ResourceHierarchyPath {hierarchy} />
         <p
           class="bits-panel-item-resource__name"
@@ -234,16 +234,12 @@ afterNavigate(async () => {
   {#if !panelProps.isNarrow}
     <button
       type="button"
-      class="bits-panel-item-resource__action relative z-10 border-0 bg-transparent p-0"
+      class="shrink-0 text-sm text-base-content/20 group-hover:text-base-content/40 group-focus-visible:text-base-content/40 relative z-10 border-0 bg-transparent p-0"
       aria-label={name}
       onclick={event => handleControlClick(event, onToggle)}
       onkeydown={stopControlKeydown}
     >
-      <Icon
-        src={isSelected ? XMark : Funnel}
-        class="bits-panel-item-resource__action-icon"
-        aria-hidden="true"
-      />
+      <Icon src={isSelected ? XMark : Funnel} class="h-6 w-6" aria-hidden="true" />
     </button>
   {/if}
 </fieldset>
@@ -252,7 +248,7 @@ afterNavigate(async () => {
   <Portal target="body">
     <div
       transition:tooltipShift={{ duration: 160, offsetX: 10 }}
-      class="bits-theme bits-panel-item-resource__tooltip"
+      class="bits-theme pointer-events-auto fixed z-50 min-h-4 min-w-10 whitespace-nowrap rounded-r-md bg-panel px-3 py-2 text-center text-sm text-base-content"
       style="top: {tooltipPosition.top}px; left: {tooltipPosition.left}px;"
     >
       {name}

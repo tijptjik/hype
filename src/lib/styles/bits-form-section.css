@@ -129,18 +129,6 @@
     @apply block overflow-hidden text-ellipsis whitespace-nowrap;
   }
 
-  .bits-theme .bits-form__section-header-issues {
-    @apply flex flex-wrap items-center justify-center gap-2;
-  }
-
-  .bits-theme .bits-form__section-header-issue-chip {
-    @apply inline-flex items-stretch overflow-hidden rounded-md border-2 border-error/70;
-  }
-
-  .bits-theme .bits-form__section-header-issue-icon {
-    @apply inline-flex items-center justify-center bg-error px-3 py-1 text-white;
-  }
-
   .bits-theme .bits-form__section-header-issue-icon-svg {
     @apply h-[1.2rem] w-[1.2rem] text-white;
   }
@@ -148,30 +136,5 @@
   .bits-theme .bits-form__section-header-issue-icon-svg g,
   .bits-theme .bits-form__section-header-issue-icon-svg path {
     stroke-width: 3;
-  }
-
-  .bits-theme .bits-form__section-header-issue-detail {
-    @apply bg-glass-300 px-4 py-1 text-white tracking-wide;
-  }
-
-  .bits-theme .bits-form__empty-state {
-    @apply flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center;
-    min-height: 16rem;
-  }
-
-  .bits-theme .bits-form__empty-state-copy {
-    @apply flex w-full max-w-2xl flex-col items-center gap-3;
-  }
-
-  .bits-theme .bits-form__empty-state-title {
-    @apply text-2xl font-mono font-semibold;
-  }
-
-  .bits-theme .bits-form__empty-state-description {
-    @apply max-w-2xl;
-  }
-
-  .bits-theme .bits-form__empty-state-cta {
-    @apply mt-1;
   }
 }

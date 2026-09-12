@@ -310,11 +310,7 @@ onMount(() => {
         {@render children?.()}
       </div>
       {#if tailSpacer > 0}
-        <div
-          class="bits-main__section-tail-spacer"
-          aria-hidden="true"
-          style={tailSpacerStyle}
-        ></div>
+        <div class="flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
       {/if}
     </div>
   </section>
@@ -336,11 +332,7 @@ onMount(() => {
         {@render children?.()}
       </div>
       {#if tailSpacer > 0}
-        <div
-          class="bits-main__section-tail-spacer"
-          aria-hidden="true"
-          style={tailSpacerStyle}
-        ></div>
+        <div class="flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
       {/if}
     </div>
   </section>

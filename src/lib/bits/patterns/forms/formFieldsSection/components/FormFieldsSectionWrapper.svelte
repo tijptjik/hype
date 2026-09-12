@@ -43,7 +43,7 @@ const moveWindowSize = $derived(
 
 {#if isLoading}
   <section
-    class="bits-theme bits-form__section bits-project-fields__loading-shell"
+    class="bits-theme bits-form__section min-h-64"
     role="status"
     aria-live="polite"
     aria-busy="true"
@@ -54,19 +54,17 @@ const moveWindowSize = $derived(
   </section>
 {:else if items.length === 0}
   <section
-    class="bits-theme bits-form__section bits-project-fields__empty bits-form__empty-state"
+    class="bits-theme bits-form__section bits-project-fields__empty flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center min-h-64"
     role="status"
     aria-live="polite"
     in:fade={{ duration: 140 }}
     out:fade={{ duration: 120 }}
   >
-    <div class="bits-form__empty-state-copy">
-      <h3 class="bits-project-fields__empty-title bits-form__empty-state-title">
+    <div class="flex w-full max-w-2xl flex-col items-center gap-3">
+      <h3 class="bits-project-fields__empty-title text-2xl font-mono font-semibold">
         {m.admin__forms_project_fields_empty_title()}
       </h3>
-      <p
-        class="bits-project-fields__empty-description bits-form__empty-state-description"
-      >
+      <p class="bits-project-fields__empty-description max-w-2xl">
         {m.admin__forms_project_fields_empty_description()}
       </p>
     </div>
@@ -77,13 +75,13 @@ const moveWindowSize = $derived(
         iconComponent={ListPlus}
         disabled={disableEmptyAdd || !onAdd}
         onClick={event => onAdd?.(event)}
-        class="bits-project-fields__empty-add-btn bits-form__empty-state-cta"
+        class="bits-project-fields__empty-add-btn mt-1"
       />
     {/if}
   </section>
 {:else}
   <div
-    class="bits-project-fields__list"
+    class="flex flex-col gap-3"
     in:fade={{ duration: 160 }}
     out:fade={{ duration: 120 }}
   >

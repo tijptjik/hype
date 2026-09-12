@@ -18,7 +18,7 @@ let {
 <div class={`bits-task-row__watermark bits-task-row__watermark--${colorSuffix}`.trim()}>
   <SimpleTooltip disabled={!message} triggerProps={{ tabindex: -1 }}>
     {#snippet trigger()}
-      <div class="bits-task-row__watermark-label">
+      <div class="text-center">
         <span class="bits-task-row__watermark-text">{typeDisplay}</span>
       </div>
     {/snippet}
@@ -28,7 +28,7 @@ let {
 
 <div class={`bits-task-row__review bits-task-row__review--${colorSuffix}`.trim()}>
   {#if reviewActionDisplay}
-    <span class="bits-task-row__review-content">
+    <span class="flex items-center gap-2">
       <ChevronRightIcon class="bits-task-row__review-icon" />
       {reviewActionDisplay}
     </span>

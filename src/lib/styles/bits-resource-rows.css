@@ -97,27 +97,12 @@
     }
   }
 
-  .bits-resource-row__title {
-    min-width: 0;
-  }
-
-  .bits-resource-row__stats {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-  }
-
   .bits-resource-row__status {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding-inline: 0.75rem;
     flex-shrink: 0;
-  }
-
-  .bits-theme .bits-resource-status-badge__trigger {
-    display: inline-flex;
   }
 
   .bits-theme .bits-resource-status-badge {
@@ -269,10 +254,6 @@
     text-transform: uppercase;
   }
 
-  .bits-task-row__watermark-label {
-    text-align: center;
-  }
-
   .bits-task-row__watermark--error {
     color: var(--color-error);
   }
@@ -337,12 +318,6 @@
 
   .bits-task-row__review--base {
     color: var(--color-base-content);
-  }
-
-  .bits-task-row__review-content {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
   }
 
   .bits-task-row__review-icon {
@@ -416,16 +391,6 @@
     .bits-task-row__meta-item--reviewer {
       display: flex;
     }
-  }
-
-  .bits-task-row__meta-label {
-    margin: 0;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    text-align: center;
-    text-transform: uppercase;
-    white-space: nowrap;
-    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
   }
 
   .bits-task-row__meta-value {

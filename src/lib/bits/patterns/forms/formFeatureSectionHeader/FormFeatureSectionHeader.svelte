@@ -31,7 +31,7 @@ const rootClass = $derived(
     {/if}
   </div>
 
-  <div class="bits-feature-section-header__content">
+  <div class="flex flex-col items-center justify-center min-w-0 gap-0">
     <h2 class="bits-feature-section-header__title">{title}</h2>
     {#if subtitle}
       <p class="bits-feature-section-header__subtitle">{subtitle}</p>

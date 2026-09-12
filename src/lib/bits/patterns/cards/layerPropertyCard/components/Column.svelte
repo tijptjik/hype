@@ -60,7 +60,7 @@ let {
   <Wrapper>
     {#each rows as row (row.propertyId)}
       <div
-        class="bits-form__layer-card-item"
+        class="w-full"
         animate:flip={{
           duration: isFlipDisabled ? 0 : 220,
           easing: cubicInOut,

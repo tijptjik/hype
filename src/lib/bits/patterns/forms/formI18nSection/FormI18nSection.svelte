@@ -11,7 +11,7 @@ let {
   class: className = '',
   gridClass = '',
   cardClass = 'bits-form__i18n-card',
-  localeCodeClass = 'bits-form__i18n-locale-code',
+  localeCodeClass = 'absolute right-5.5 top-4 text-2xl font-bold uppercase text-white/66',
   onTranslate,
   onResetLocale,
   sectionKey,

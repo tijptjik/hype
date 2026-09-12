@@ -43,30 +43,27 @@ const onPrimaryAction = (event: MouseEvent): void => {
 }
 </script>
 
-<div class="bits-theme bits-panel-section-header-title">
+<div class="bits-theme flex flex-1 items-start">
   <button
     type="button"
-    class="bits-panel-section-header-title__chevron-button"
+    class="flex shrink-0 items-center justify-center pl-4 pr-3 focus:outline-none focus:ring-0"
     onclick={onToggle}
     aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title} section`}
   >
-    <Icon
-      src={isOpen ? ChevronDown : ChevronRight}
-      class="bits-panel-section-header-title__chevron"
-    />
+    <Icon src={isOpen ? ChevronDown : ChevronRight} class="h-[1.125rem] w-[1.125rem]" />
   </button>
   <button
     type="button"
-    class="bits-panel-section-header-title__action"
+    class="w-full text-left focus:outline-none focus:ring-0"
     onclick={onPrimaryAction}
     aria-label={`${title} section header`}
   >
-    <div class="bits-panel-section-header-title__stack">
-      <div class="bits-panel-section-header-title__row">
-        <h3 class="bits-panel-section-header-title__heading">{title}</h3>
+    <div class="w-full space-y-0.5">
+      <div class="flex w-full items-center">
+        <h3 class="text-sm uppercase tracking-widest">{title}</h3>
       </div>
       {#if description}
-        <p class="bits-panel-section-header-title__description">{description}</p>
+        <p class="text-left text-sm text-base-content/60">{description}</p>
       {/if}
     </div>
   </button>

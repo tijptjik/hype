@@ -17,7 +17,7 @@ const IconComponent = $derived(iconComponent)
 
 <Card.Body title={name || '-'} class={`bits-form__layer-card-body ${className}`}>
   {#snippet tags()}
-    <div class="bits-form__layer-card-meta">
+    <div class="inline-flex items-center gap-2 flex-wrap">
       {#if IconComponent}
         <SimpleTooltip disabled={!iconTitle}>
           {#snippet trigger()}

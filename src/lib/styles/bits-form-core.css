@@ -22,14 +22,6 @@
     @apply flex flex-col gap-0.5;
   }
 
-  .bits-theme .bits-form__label-row {
-    @apply flex items-start gap-1;
-  }
-
-  .bits-theme .bits-form__label-title {
-    @apply inline-flex items-start gap-0.5;
-  }
-
   .bits-theme .bits-form__label-text {
     @apply text-sm font-bold;
     color: color-mix(in oklab, #fcc 66%, transparent);
@@ -225,10 +217,6 @@
 
   .bits-theme .bits-form__gen-ai:active:not(:disabled) {
     background-color: color-mix(in oklab, var(--color-background-alt) 70%, black);
-  }
-
-  .bits-theme .bits-form__gen-ai-icon {
-    @apply mt-1 h-6 w-6;
   }
 
   .bits-theme .bits-form__gen-ai:disabled {

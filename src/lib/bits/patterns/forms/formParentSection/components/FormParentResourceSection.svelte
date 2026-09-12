@@ -300,7 +300,7 @@ $effect(() => {
             iconComponent={XIcon}
             onClick={handleRemoveParent}
             disabled={isSubmitting}
-            class="bits-form__parent-resource-card-remove-btn"
+            class="w-10 h-10"
           />
         </Card.Actions>
       {/if}

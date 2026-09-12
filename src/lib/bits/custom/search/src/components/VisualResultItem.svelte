@@ -54,7 +54,9 @@ $effect(() => {
           }}
         >
       {:else}
-        <div class="bits-search-result-item__preview-fallback">
+        <div
+          class="flex h-full w-full items-center justify-center text-lg font-semibold uppercase text-neutral-content/70"
+        >
           {title?.charAt(0) ?? '?'}
         </div>
       {/if}
@@ -71,8 +73,12 @@ $effect(() => {
   </div>
 
   {#if disabled && resolvedDisabledLabel}
-    <div class="bits-search-result-item__disabled-callout" aria-hidden="true">
-      <span class="bits-search-result-item__disabled-label"
+    <div
+      class="pointer-events-none absolute inset-y-0 right-3 flex flex-col items-end justify-center gap-[0.1rem]"
+      aria-hidden="true"
+    >
+      <span
+        class="text-[10px] font-semibold uppercase tracking-[0.16em] text-base-content/58"
         >{resolvedDisabledLabel}</span
       >
       {#if resolvedDisabledValue}

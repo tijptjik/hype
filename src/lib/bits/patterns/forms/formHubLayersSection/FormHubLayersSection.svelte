@@ -163,15 +163,15 @@ $effect(() => {
                     <SimpleTooltip>
                       {#snippet trigger()}
                         <div
-                          class="bits-form__parent-resource-default bits-form__hub-layer-default"
+                          class="bits-form__parent-resource-default inline-flex items-center gap-2 whitespace-nowrap"
                         >
                           <span
-                            class="bits-form__parent-resource-default-icon bits-form__hub-layer-default-icon"
+                            class="bits-form__parent-resource-default-icon flex-none"
                           >
                             <EyeIcon />
                           </span>
                           <span
-                            class="bits-form__parent-resource-default-label bits-form__hub-layer-default-label"
+                            class="bits-form__parent-resource-default-label flex-none"
                           >
                             {m.default_enabled()}
                           </span>

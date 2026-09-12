@@ -120,7 +120,7 @@ $effect(() => {
           <span
             class={[
               'bits-index-card__status',
-              'bits-index-card__status-shell',
+              'inline-flex items-center gap-[0.35rem]',
               status.tone === 'published' ? 'bits-index-card__status--published' : '',
               status.tone === 'draft' ? 'bits-index-card__status--draft' : '',
             ]
@@ -134,7 +134,7 @@ $effect(() => {
               </span>
             {/if}
             {#if status.label}
-              <span class="bits-index-card__status-label">{status.label}</span>
+              <span class="whitespace-nowrap">{status.label}</span>
             {/if}
           </span>
         {/snippet}
@@ -146,7 +146,7 @@ $effect(() => {
   <div class="bits-index-card__footer-right">
     <div
       bind:clientWidth={breadcrumbSlotWidth}
-      class="bits-index-card__breadcrumbs-slot"
+      class="relative flex justify-end w-full min-w-0"
     >
       <div class="bits-index-card__breadcrumbs bits-index-card__meta">
         {#each breadcrumbs.slice(0, visibleBreadcrumbCount) as breadcrumb, index (index)}
@@ -156,7 +156,7 @@ $effect(() => {
           >
             {#snippet trigger()}
               <span class="bits-index-card__crumb">
-                <span class="bits-index-card__crumb-label">{breadcrumb.label}</span>
+                <span class="whitespace-nowrap">{breadcrumb.label}</span>
                 {#if breadcrumb.icon}
                   {@const BreadcrumbIcon = breadcrumb.icon}
                   <span
@@ -182,7 +182,7 @@ $effect(() => {
       >
         {#each breadcrumbs as breadcrumb, index (index)}
           <span class="bits-index-card__crumb">
-            <span class="bits-index-card__crumb-label">{breadcrumb.label}</span>
+            <span class="whitespace-nowrap">{breadcrumb.label}</span>
             {#if breadcrumb.icon}
               {@const BreadcrumbIcon = breadcrumb.icon}
               <span

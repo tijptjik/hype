@@ -156,13 +156,15 @@ function getSelectedResourceName(
   class="bits-theme bits-panel-selected-resource"
   class:bits-panel-selected-resource--narrow={props.isNarrow}
 >
-  <div class="bits-panel-selected-resource__stack">
+  <div class="grid">
     <div
       class="bits-panel-selected-resource__state bits-panel-selected-resource__state--wide"
       data-active={!props.isNarrow}
       aria-hidden={props.isNarrow}
     >
-      <div class="bits-panel-selected-resource__wide-list">
+      <div
+        class="mb-0 flex max-h-[33vh] flex-wrap content-start items-start gap-x-0 gap-y-2 overflow-y-auto overscroll-contain px-6 pt-0"
+      >
         {#each resourcesToDisplay as id (id)}
           {@const resource = props.resources.find((item) => item.id === id)}
           {@const name = resource ? getSelectedResourceName(props.resourceType, resource) : id}
@@ -175,19 +177,18 @@ function getSelectedResourceName(
               handleToggle(id)
             }}
           >
-            <span class="bits-panel-selected-resource__wide-chip-label">{name}</span>
-            <Icon
-              size="lg"
-              src={XMark}
-              class="bits-panel-selected-resource__wide-chip-icon"
-            />
+            <span
+              class="min-w-0 justify-self-start whitespace-normal wrap-break-word leading-tight text-sm"
+              >{name}</span
+            >
+            <Icon size="lg" src={XMark} class="h-3 w-3 shrink-0 self-center -ml-1" />
           </button>
         {/each}
       </div>
 
       {#if shouldShowEmptyState}
-        <div class="bits-panel-selected-resource__empty">
-          <p class="bits-panel-selected-resource__empty-text">
+        <div class="flex flex-wrap justify-start gap-2 px-[1.625rem]">
+          <p class="pb-2 text-sm text-base-content/60">
             {@html getNoneSelectedMessage(props)}
           </p>
         </div>
@@ -199,7 +200,7 @@ function getSelectedResourceName(
       data-active={props.isNarrow}
       aria-hidden={!props.isNarrow}
     >
-      <div class="bits-panel-selected-resource__narrow-list">
+      <div class="flex w-auto min-w-12 flex-col items-center justify-start gap-[1px]">
         {#each resourcesToDisplay as id (id)}
           {@const resource = props.resources.find((item) => item.id === id)}
           {#if resource}

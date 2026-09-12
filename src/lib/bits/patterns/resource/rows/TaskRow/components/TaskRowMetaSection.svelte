@@ -29,7 +29,10 @@ const createdAtLabel = $derived.by(() => {
 
 <div class="bits-task-row__meta">
   <div class="bits-task-row__meta-item bits-task-row__meta-item--created">
-    <small class="bits-task-row__meta-label">{m.close_muddy_trout_clap()}</small>
+    <small
+      class="m-0 text-xs leading-4 text-center uppercase whitespace-nowrap text-base-content/60"
+      >{m.close_muddy_trout_clap()}</small
+    >
     <SimpleTooltip disabled={!createdAtLabel} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
         <p class="bits-task-row__meta-value">
@@ -43,7 +46,8 @@ const createdAtLabel = $derived.by(() => {
   </div>
 
   <div class="bits-task-row__meta-item bits-task-row__meta-item--contributor">
-    <small class="bits-task-row__meta-label"
+    <small
+      class="m-0 text-xs leading-4 text-center uppercase whitespace-nowrap text-base-content/60"
       >{m.profile__role_type__contributor()}</small
     >
     <SimpleTooltip disabled={!contributorAttribution} triggerProps={{ tabindex: -1 }}>
@@ -57,7 +61,10 @@ const createdAtLabel = $derived.by(() => {
   </div>
 
   <div class="bits-task-row__meta-item bits-task-row__meta-item--reviewer">
-    <small class="bits-task-row__meta-label">{m.stock_active_kestrel_offer()}</small>
+    <small
+      class="m-0 text-xs leading-4 text-center uppercase whitespace-nowrap text-base-content/60"
+      >{m.stock_active_kestrel_offer()}</small
+    >
     <SimpleTooltip disabled={!reviewerAttribution} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
         <p class="bits-task-row__meta-value bits-task-row__meta-value--wide">

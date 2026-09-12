@@ -18,7 +18,7 @@ const isDisabled = $derived(!isEditing || isSubmitting)
 
 <Card.Actions padding="md" class={`bits-map-style-card__actions ${className}`}>
   {#if isRemoving}
-    <div class="bits-form__parent-resource-item-remove">
+    <div class="flex items-center">
       <Button
         text="Clear style"
         style="ghost"

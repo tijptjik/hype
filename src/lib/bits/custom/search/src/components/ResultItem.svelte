@@ -69,8 +69,12 @@ $effect(() => {
   </div>
 
   {#if disabled && resolvedDisabledLabel}
-    <div class="bits-search-result-item__disabled-callout" aria-hidden="true">
-      <span class="bits-search-result-item__disabled-label"
+    <div
+      class="pointer-events-none absolute inset-y-0 right-3 flex flex-col items-end justify-center gap-[0.1rem]"
+      aria-hidden="true"
+    >
+      <span
+        class="text-[10px] font-semibold uppercase tracking-[0.16em] text-base-content/58"
         >{resolvedDisabledLabel}</span
       >
       {#if resolvedDisabledValue}

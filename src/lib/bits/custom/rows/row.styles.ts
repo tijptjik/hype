@@ -67,7 +67,7 @@ export function getRowRootClass({
   )
 }
 
-export const rowTitleSectionClass = 'bits-resource-row__title min-w-0 w-full'
+export const rowTitleSectionClass = 'min-w-0 min-w-0 w-full'
 
 export const rowTitleClass = 'flex items-center gap-4 text-left'
 
@@ -168,7 +168,7 @@ export function getResourceRowStatusClass({
   tone,
 }: ResourceRowStatusClassParams): string {
   return cx(
-    'bits-index-card__status bits-index-card__status-shell',
+    'bits-index-card__status inline-flex items-center gap-[0.35rem]',
     tone === 'published' && 'bits-index-card__status--published',
     tone === 'draft' && 'bits-index-card__status--draft',
   )

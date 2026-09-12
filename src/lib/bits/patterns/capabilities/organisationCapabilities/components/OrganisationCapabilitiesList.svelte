@@ -18,10 +18,10 @@ let {
 
 <div class="bits-form__parent-resource-list bits-form__capabilities-list pt-2">
   {#each selectedCapabilityKeys as capabilityKey (capabilityKey)}
-    <ResourceCard.Root class="bits-form__capabilities-card-root">
-      <Card.Media class="bits-form__capabilities-card-icon-wrap" size="md">
-        <div class="bits-form__capabilities-card-icon-shell" aria-hidden="true">
-          <ShieldCheckIcon class="bits-form__capabilities-card-icon" />
+    <ResourceCard.Root class="w-full">
+      <Card.Media class="bg-base-100/76" size="md">
+        <div class="flex w-full h-full items-center justify-center" aria-hidden="true">
+          <ShieldCheckIcon class="h-6 w-6 text-primary" />
         </div>
       </Card.Media>
       <ResourceCard.Body
@@ -29,7 +29,7 @@ let {
         name={getCapabilityDisplayLabel(capabilityKey)}
       />
       {#if isEditing && isRemoveMode}
-        <Card.Actions padding="sm" class="bits-form__capabilities-card-actions">
+        <Card.Actions padding="sm" class="min-w-max">
           <Button
             text={m.admin__forms_common_remove()}
             style="ghost"
@@ -38,7 +38,7 @@ let {
             modifier="square"
             iconComponent={Trash2Icon}
             onClick={() => onRemoveCapability(capabilityKey)}
-            class="bits-form__capabilities-remove-button"
+            class="h-10 w-10"
           />
         </Card.Actions>
       {/if}

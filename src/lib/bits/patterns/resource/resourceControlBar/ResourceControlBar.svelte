@@ -249,7 +249,7 @@ $effect(() => {
             !('type' in effectiveSectionConfig) &&
             effectiveSectionConfig.filters.some(filter => filter.type === 'translation')}
 
-          <div class="bits-resource-filter-bar__active-strip">
+          <div class="flex h-16 flex-row items-center justify-center gap-4">
             {#if activeSectionHasTranslations}
               <ResourceControlBarPrimitive.LocaleToggleGroup
                 items={getResourceLocaleToggleItems(adminCtx, filters.resource)}
@@ -270,7 +270,9 @@ $effect(() => {
               />
             {/if}
 
-            <div class="bits-resource-filter-bar__carousel-track">
+            <div
+              class="flex min-w-0 flex-row items-center justify-center gap-4 overflow-hidden"
+            >
               {#each visibleItems as item, idx (item.id)}
                 {#if item.type === 'select' && item.options && item.onSelectChange}
                   <ResourceControlBarPrimitive.FilterSelect

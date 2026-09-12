@@ -83,7 +83,7 @@ const hideLabels = $derived(labelledWidth > availableWidth)
 {/snippet}
 
 <section class="bits-project-field-card__values">
-  <div class="bits-project-field-card__value-actions-shell">
+  <div class="relative min-h-8.5">
     {#if isEditing}
       <div
         class="bits-project-field-card__value-actions-layer"

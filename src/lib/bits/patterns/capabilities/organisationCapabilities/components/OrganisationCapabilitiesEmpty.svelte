@@ -14,22 +14,20 @@ let {
 </script>
 
 <section
-  class="bits-theme bits-form__section bits-form__capabilities-empty bits-form__empty-state"
+  class="bits-theme bits-form__section bits-form__capabilities-empty flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center min-h-64"
 >
-  <div class="bits-form__empty-state-copy">
-    <h3 class="bits-form__capabilities-empty-title bits-form__empty-state-title">
+  <div class="flex w-full max-w-2xl flex-col items-center gap-3">
+    <h3 class="bits-form__capabilities-empty-title text-2xl font-mono font-semibold">
       {m.admin__forms_capabilities_empty_title()}
     </h3>
-    <p
-      class="bits-form__capabilities-empty-description bits-form__empty-state-description"
-    >
+    <p class="bits-form__capabilities-empty-description max-w-2xl">
       {m.admin__forms_capabilities_empty_description()}
     </p>
   </div>
   <Button
     text={m.admin__forms_capabilities_add()}
     color="primary"
-    class="bits-form__capabilities-empty-cta bits-form__empty-state-cta"
+    class="bits-form__capabilities-empty-cta mt-1"
     {disabled}
     onClick={onEnterEditMode}
   />

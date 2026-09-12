@@ -25,11 +25,14 @@ let {
   class={`bits-form__layer-card-actions-rail ${className}`}
 >
   <div class="bits-form__layer-card-actions">
-    <div class="bits-form__layer-card-flag">
+    <div class="flex items-center gap-2.5">
       <SimpleTooltip>
         {#snippet trigger()}
           <span>
-            <Inbox class="bits-form__layer-card-flag-icon" aria-hidden="true" />
+            <Inbox
+              class="w-[1.15rem] h-[1.15rem] text-foreground/72"
+              aria-hidden="true"
+            />
           </span>
         {/snippet}
         User Contributable
@@ -54,7 +57,7 @@ let {
           size="sm"
           color={isVisible ? 'dark' : 'success'}
           iconComponent={isVisible ? X : Plus}
-          class="bits-form__layer-card-action-btn"
+          class="w-8 h-8 shrink-0"
           onClick={() => onVisibleChange?.(!isVisible)}
         />
       </div>

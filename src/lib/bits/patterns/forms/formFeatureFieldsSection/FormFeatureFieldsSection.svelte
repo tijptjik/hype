@@ -13,7 +13,7 @@ let {
   class: className = '',
 }: FormFeatureFieldsSectionProps = $props()
 
-const rootClass = $derived(['bits-feature-fields', className].filter(Boolean).join(' '))
+const rootClass = $derived(['flex flex-col gap-4', className].filter(Boolean).join(' '))
 const gridClass = $derived(
   [
     'bits-feature-fields__grid',

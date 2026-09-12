@@ -12,11 +12,6 @@
     width: 100%;
   }
 
-  .bits-theme .bits-transition-stack {
-    position: relative;
-    min-width: 0;
-  }
-
   .bits-theme .bits-transition-stack__layer {
     min-width: 0;
   }

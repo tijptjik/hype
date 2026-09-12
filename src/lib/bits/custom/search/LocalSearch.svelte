@@ -164,9 +164,7 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-3 mt-1">
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
-          <div
-            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
-          >
+          <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             {#each results as item, index (index)}
               {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
                 <SearchPrimitive.VisualResultItem
@@ -202,9 +200,7 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-3 mt-1">
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
-          <div
-            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
-          >
+          <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             <div
               class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-[#242424] px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-neutral-content/80"
               aria-live="polite"

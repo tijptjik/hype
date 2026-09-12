@@ -139,7 +139,7 @@ function handleDescriptionClick(): void {
   description={model.description}
   onDescriptionClick={handleDescriptionClick}
 >
-  <div class="bits-resource-row__stats">
+  <div class="flex items-center justify-center min-w-0">
     <VirtualListPrimitive.Secondary>
       {#snippet children()}
         <div class="bits-resource-row-stats">
@@ -166,10 +166,10 @@ function handleDescriptionClick(): void {
               class={`${section.className} bits-resource-row-stats__placeholder-column`}
             >
               <div class="bits-theme bits-feature-stat bits-feature-stat--placeholder">
-                <span class="bits-feature-stat__title">
-                  <PlaceholderIcon class="bits-feature-stat__icon-svg" />
+                <span class="text-xs leading-4 text-base-content/60">
+                  <PlaceholderIcon class="w-4 h-4" />
                 </span>
-                <div class="bits-feature-stat__pips">
+                <div class="flex gap-1.5">
                   {#each toPlaceholderStatuses(section.statuses) as pipKey (pipKey)}
                     <span
                       class="bits-feature-stat__pip bits-feature-stat__pip--pending"

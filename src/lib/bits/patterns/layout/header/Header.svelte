@@ -116,10 +116,10 @@ const rootClass = $derived(
     {/snippet}
 
     {#snippet right({ showButtonText })}
-      <div class="bits-pattern-header__right-slot">
+      <div class="flex items-center justify-end gap-0 mr-4 min-w-0">
         {#if showFacets || showTaskActions || showFormActions}
           <div
-            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+            class="flex items-center gap-0 w-max max-w-full flex-none flex items-center gap-0"
             in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
             out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
           >
@@ -154,7 +154,7 @@ const rootClass = $derived(
 
         {#if showFilter || showViewActions}
           <div
-            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+            class="flex items-center gap-0 w-max max-w-full flex-none flex items-center gap-0"
             in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
             out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
           >

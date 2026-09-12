@@ -73,7 +73,7 @@ function handleRoleChange(nextValue: string): void {
         hideLabel={true}
         onClick={() => onRemove?.()}
         disabled={!isEditing || !isRemoving}
-        class="bits-form__user-card-actions-remove-button"
+        class="min-w-0 w-12 justify-center"
       />
     </div>
   </div>

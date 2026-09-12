@@ -36,7 +36,7 @@ let {
           style="ghost"
           size="sm"
           iconComponent={EraserIcon}
-          class="bits-feature-editor__collections-reset"
+          class="flex-none"
           onClick={onClearAll}
         />
       {/if}

@@ -99,7 +99,7 @@ $effect(() => {
             size="sm"
             iconComponent={isRemoveMode ? XIcon : Trash2Icon}
             onClick={onToggleRemoveMode}
-            class="bits-form__capabilities-remove-toggle"
+            class="h-10 whitespace-nowrap min-w-max"
           />
         {/if}
       {/snippet}

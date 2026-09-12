@@ -93,10 +93,6 @@
     height: auto;
   }
 
-  .bits-main__section-tail-spacer {
-    flex: 0 0 auto;
-  }
-
   .bits-main__section--fade {
     opacity: 1;
     transition-property: opacity;

@@ -43,9 +43,7 @@ let displayKey = $state(
 )
 let cleanupTimer: ReturnType<typeof setTimeout> | undefined
 
-const rootClass = $derived(
-  ['bits-transition-stack', className].filter(Boolean).join(' '),
-)
+const rootClass = $derived(['relative min-w-0', className].filter(Boolean).join(' '))
 const currentLayerClass = $derived(
   [
     'bits-transition-stack__layer',

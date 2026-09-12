@@ -243,7 +243,7 @@ onMount(() => {
   onpointerup={finishDrag}
   onpointercancel={finishDrag}
 >
-  <span class="bits-scrollable-text__viewport">
+  <span class="block w-full min-w-0 overflow-hidden whitespace-nowrap">
     {#if hasOverflow}
       <span class="bits-scrollable-text__track" style={trackStyle}>
         <span
@@ -253,7 +253,7 @@ onMount(() => {
         >
         <span
           bind:this={separatorElement}
-          class="bits-scrollable-text__separator"
+          class="inline-flex flex-none items-center text-base-content/56 min-w-max"
           aria-hidden="true"
         >
           {loopSeparator}

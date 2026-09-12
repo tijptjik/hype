@@ -85,7 +85,7 @@ function handleValueChange(nextValue: string): void {
               {#snippet children({ selected })}
                 <span class="bits-form__select-label text-white">{item.label}</span>
                 {#if selected}
-                  <CheckIcon class="bits-form__select-item-check-icon text-white" />
+                  <CheckIcon class="ml-auto h-4 w-4 shrink-0 text-white" />
                 {/if}
               {/snippet}
             </SelectPrimitive.Item>

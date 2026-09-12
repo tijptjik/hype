@@ -111,10 +111,6 @@
     );
   }
 
-  .bits-theme .bits-form__select-item-check-icon {
-    @apply ml-auto h-4 w-4 shrink-0;
-  }
-
   .bits-theme .bits-form__select-viewport {
     @apply bg-base-100 p-1;
     background-color: var(--color-base-100);

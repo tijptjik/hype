@@ -140,7 +140,7 @@ let draftCustomLicenseLabels = $state<FormProjectLicenseCustomLabels>({
 let draftAttribution = $state('')
 
 const rootClass = $derived(
-  ['bits-license', 'bits-form__section', className].filter(Boolean).join(' '),
+  ['w-full min-w-0', 'bits-form__section', className].filter(Boolean).join(' '),
 )
 const sortedLeafMediaTypes = $derived.by(() =>
   orderedLeafMediaTypes.filter(mediaType => leafMediaTypes.includes(mediaType)),
@@ -783,7 +783,7 @@ $effect(() => {
           <Dialog.Title class="bits-license__dialog-title">
             {m.admin__project_license_picker_title()}
           </Dialog.Title>
-          <div class="bits-license__dialog-topbar">
+          <div class="flex justify-end gap-3">
             <Button
               text={m.admin__project_license_restart()}
               size="sm"
@@ -828,7 +828,7 @@ $effect(() => {
                 {m.admin__project_license_yes()}
               </p>
 
-              <div class="bits-license__intent-grid-spacer" aria-hidden="true"></div>
+              <div class="min-h-6" aria-hidden="true"></div>
               <p class="bits-license__intent-subheading">
                 {m.admin__project_license_some_conditions()}
               </p>
@@ -1153,7 +1153,7 @@ $effect(() => {
               </p>
             </div>
 
-            <div class="bits-license__license-stage">
+            <div class="grid items-center justify-center w-full">
               <div
                 class={[
                   'bits-license__custom-grid',

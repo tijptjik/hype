@@ -101,7 +101,7 @@ onDestroy(() => {
 </script>
 
 {#if isFilterable}
-  <label class="bits-pattern-header__search" aria-label="Filter">
+  <label class="relative inline-flex min-w-44 items-center" aria-label="Filter">
     <input
       bind:this={inputElement}
       type="text"

@@ -21,7 +21,7 @@ type Props = Pick<
 
 let {
   targetLocale,
-  localeCodeClass = 'bits-form__i18n-locale-code',
+  localeCodeClass = 'absolute right-5.5 top-4 text-2xl font-bold uppercase text-white/66',
   onTranslate,
   onResetLocale,
   sectionKey,
@@ -111,7 +111,11 @@ $effect(() => {
     <div
       class={`bits-form__i18n-translation-bar ${isVisible ? 'bits-form__i18n-translation-bar--visible' : ''}`}
     >
-      <div class="bits-form__i18n-translation-icon"><Languages /></div>
+      <div
+        class="inline-flex h-8 w-8 items-center justify-center text-sm text-foreground/55 bg-glass-300"
+      >
+        <Languages />
+      </div>
       {#each sourceLocales as sourceLocale (sourceLocale)}
         <button
           type="button"

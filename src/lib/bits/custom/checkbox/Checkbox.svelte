@@ -98,7 +98,7 @@ function handleIndeterminateChange(nextIndeterminate: boolean) {
           {#if isIndeterminate}
             <svg
               viewBox="0 0 16 16"
-              class="bits-checkbox__icon-svg"
+              class="w-full h-full block"
               fill="none"
               aria-hidden="true"
               focusable="false"
@@ -113,7 +113,7 @@ function handleIndeterminateChange(nextIndeterminate: boolean) {
           {:else if isChecked}
             <svg
               viewBox="0 0 16 16"
-              class="bits-checkbox__icon-svg"
+              class="w-full h-full block"
               fill="none"
               aria-hidden="true"
               focusable="false"

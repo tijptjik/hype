@@ -153,14 +153,6 @@
     line-height: 1.35;
   }
 
-  .bits-theme .bits-index-card__actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    margin-top: 0.35rem;
-  }
-
   .bits-theme .bits-index-card__footer {
     display: flex;
     align-items: center;
@@ -190,14 +182,6 @@
     justify-content: flex-end;
   }
 
-  .bits-theme .bits-index-card__breadcrumbs-slot {
-    position: relative;
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    min-width: 0;
-  }
-
   .bits-theme .bits-index-card__meta,
   .bits-theme .bits-index-card__status {
     color: color-mix(in oklab, var(--color-neutral-content) 82%, white 8%);
@@ -206,12 +190,6 @@
     line-height: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-  }
-
-  .bits-theme .bits-index-card__status-shell {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
   }
 
   .bits-theme .bits-index-card__status-icon {
@@ -223,10 +201,6 @@
   .bits-theme .bits-index-card__status-icon :global(svg) {
     width: 100%;
     height: 100%;
-  }
-
-  .bits-theme .bits-index-card__status-label {
-    white-space: nowrap;
   }
 
   .bits-theme .bits-index-card__status--published {
@@ -288,9 +262,5 @@
   .bits-theme .bits-index-card__crumb-icon :global(svg) {
     width: 100%;
     height: 100%;
-  }
-
-  .bits-theme .bits-index-card__crumb-label {
-    white-space: nowrap;
   }
 }

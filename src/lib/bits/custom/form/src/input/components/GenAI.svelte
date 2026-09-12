@@ -35,9 +35,9 @@ function handleClick(event: MouseEvent): void {
       onclick={handleClick}
     >
       {#if isGenAI}
-        <Bot class="bits-form__gen-ai-icon" aria-hidden="true" />
+        <Bot class="mt-1 h-6 w-6" aria-hidden="true" />
       {:else}
-        <Smile class="bits-form__gen-ai-icon" aria-hidden="true" />
+        <Smile class="mt-1 h-6 w-6" aria-hidden="true" />
       {/if}
     </button>
   {/snippet}

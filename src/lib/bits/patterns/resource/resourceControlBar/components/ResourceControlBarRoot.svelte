@@ -323,10 +323,10 @@ $effect(() => {
 {/snippet}
 
 <div
-  class={`bits-theme bits-resource-filter-bar ${className}`.trim()}
+  class={`bits-theme relative flex h-16 w-full flex-row items-center justify-between gap-4 bg-base-200 ${className}`.trim()}
   bind:clientWidth={rootWidth}
 >
-  <div class="bits-resource-filter-bar__left">
+  <div class="flex min-w-0 items-center">
     <FilterCtrl
       label={filterLabel}
       icon={filterIcon}
@@ -342,7 +342,7 @@ $effect(() => {
     />
   </div>
 
-  <div class="bits-resource-filter-bar__right">
+  <div class="flex items-center gap-4 pr-8 text-base-content/60 whitespace-nowrap">
     {#if showBulkEdit && bulkContent}
       <SortCtrl bind:rootElement={bulkRootElement}>
         {@render bulkContent({

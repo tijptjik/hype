@@ -32,7 +32,9 @@ let {
   class: className = '',
 }: FormFieldsSectionProps = $props()
 
-const rootClass = $derived(['bits-project-fields', className].filter(Boolean).join(' '))
+const rootClass = $derived(
+  ['w-full flex flex-col', className].filter(Boolean).join(' '),
+)
 const hasIssues = $derived(issues.length > 0)
 
 let isCollapsedAll = $state(false)

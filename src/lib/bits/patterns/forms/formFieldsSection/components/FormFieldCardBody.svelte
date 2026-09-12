@@ -703,7 +703,7 @@ $effect(() => {
 
 <FormI18nSection
   title=""
-  class="bits-theme bits-project-field-card__i18n"
+  class="bits-theme w-full"
   gridClass="bits-project-field-card__i18n-grid"
   cardClass="bits-form__i18n-card bits-project-field-card__i18n-card"
   {locales}
@@ -723,7 +723,7 @@ $effect(() => {
     {@const labelGenName = getFieldName(['i18n', locale, 'labelGen'])}
     {@const placeholderGenName = getFieldName(['i18n', locale, 'placeholderGen'])}
 
-    <div class="bits-project-field-card__i18n-content">
+    <div class="flex flex-col gap-2.5">
       {#if labelGenName}
         <input
           type="hidden"

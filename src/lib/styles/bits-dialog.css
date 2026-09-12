@@ -40,8 +40,4 @@
     line-height: 1.45;
     color: color-mix(in oklab, var(--color-foreground) 90%, transparent);
   }
-
-  .bits-dialog__actions {
-    @apply flex justify-end gap-2;
-  }
 }
