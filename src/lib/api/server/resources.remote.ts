@@ -184,9 +184,10 @@ export const getPinnedResource = guardedBatchQuery(
 )
 
 /**
- * Loads only default-visible layer identities for selection rules, independently of panel pages.
+ * Loads available default-map choices independently of panel pages and prism filters.
  * @param input - Current authorized surface and cache scope.
- * @returns Complete default-layer identities, read in bounded keyset pages.
+ * @returns Complete authorized layer choices and descriptions, read in bounded keyset pages.
+ * @remarks Hub and user defaults may select layers whose own default-visible flag is false.
  */
 export const getDefaultLayerResources = guardedQuery(
   z.object({ meta }),
@@ -196,13 +197,12 @@ export const getDefaultLayerResources = guardedQuery(
     while (true) {
       const result = await getLayers({
         conditions: {
-          isDefaultVisible: true,
           isArchived: false,
           isPublished: input.meta.isAdminRequest ? null : true,
         },
         pagination: { limit: 250, afterId },
         sorting: { sortBy: 'id', sortOrder: 'asc' },
-        meta: { isAdminRequest: input.meta.isAdminRequest, profile: 'compact' },
+        meta: { isAdminRequest: input.meta.isAdminRequest, profile: 'default' },
       })
       rows.push(...(result.data as PanelResource[]))
       if (!result.hasMore || !result.data.length) break
