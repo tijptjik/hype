@@ -101,11 +101,11 @@ export function guardedQuery<Schema extends StandardSchemaV1, Output>(
     output: StandardSchemaV1.InferOutput<Schema>,
     ctx: GuardedQueryContext,
   ) => Promise<Output>,
-): RemoteQueryFunction<StandardSchemaV1.InferInput<Schema>, Promise<Output>>
+): RemoteQueryFunction<StandardSchemaV1.InferInput<Schema>, Output>
 
 export function guardedQuery<Output>(
   fn: (ctx: GuardedQueryContext) => Promise<Output>,
-): RemoteQueryFunction<void, Promise<Output>>
+): RemoteQueryFunction<void, Output>
 
 export function guardedQuery(
   schemaOrFn: StandardSchemaV1 | ((ctx: GuardedQueryContext) => Promise<unknown>),
