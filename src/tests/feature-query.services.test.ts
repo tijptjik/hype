@@ -1,0 +1,484 @@
+// @vitest-environment node
+import { DatabaseSync } from 'node:sqlite'
+import { readFileSync } from 'node:fs'
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/d1'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as schema from '$lib/db/schema'
+import { feature, featureNeighbourhood } from '$lib/db/schema'
+import {
+  buildFeatureQueryConditions,
+  buildFeatureQuerySource,
+  featureQuerySignature,
+  queryFeaturePage,
+} from '$lib/db/services/featureQuery'
+import { listFeatures } from '$lib/db/services/feature'
+import type { Database, FeatureQueryInput } from '$lib/types'
+
+vi.mock('$lib/api/services/feature', () => ({
+  getFeatureWithRelations: () => ({}),
+  toListResponseShape: async (result: unknown) => result,
+}))
+const stores: DatabaseSync[] = []
+afterEach(() => {
+  for (const store of stores.splice(0)) store.close()
+})
+const hub = { isSuperAdmin: true, isAdminRequest: true } as never
+const base = [
+  eq(feature.isPublished, true),
+  eq(feature.isArchived, false),
+  eq(feature.isDraft, false),
+]
+const input = (extra: Partial<FeatureQueryInput> = {}): FeatureQueryInput => ({
+  meta: { isAdminRequest: false, scope: 'test' },
+  ...extra,
+})
+
+/** Executes production Drizzle SQL on SQLite with D1's prepared-statement interface. */
+function setup(withOrphan = false) {
+  const sqlite = new DatabaseSync(':memory:')
+  stores.push(sqlite)
+  const columns = Object.values(getTableColumns(feature)).map(
+    column =>
+      `"${column.name}" ${column.getSQLType()}${column.primary ? ' PRIMARY KEY' : ''}`,
+  )
+  sqlite.exec(`CREATE TABLE feature (${columns.join(',')});
+    CREATE TABLE featureI18n(featureId TEXT, locale TEXT, title TEXT, description TEXT, displayAddress TEXT, addressProperties TEXT, PRIMARY KEY(featureId,locale));
+    CREATE TABLE featureProperty(featureId TEXT, propertyId TEXT, propertyValueId TEXT, value TEXT, PRIMARY KEY(featureId,propertyId));
+    CREATE TABLE userFeature(userId TEXT, featureId TEXT, isWishlisted INTEGER, isVisited INTEGER, visitedAt TEXT, createdAt TEXT, modifiedAt TEXT, PRIMARY KEY(userId,featureId));
+    CREATE TABLE featureSpatial(featureId TEXT, resolution INTEGER, cell TEXT, latitude REAL, longitude REAL, PRIMARY KEY(featureId,resolution));
+    CREATE INDEX featureSpatial_cell_layer_idx ON featureSpatial(resolution,cell,featureId,longitude,latitude);`)
+  if (withOrphan)
+    sqlite.exec(
+      `INSERT INTO featureI18n VALUES('orphan', 'en', 'Orphan title', NULL, NULL, '{}')`,
+    )
+  sqlite.exec('PRAGMA foreign_keys = ON')
+  sqlite.exec(readFileSync('migrations/0079_feature_query_indexes.sql', 'utf8'))
+  const prepare = (query: string, bindings: unknown[] = []) => ({
+    bind: (...params: unknown[]) => prepare(query, params),
+    all: async () => ({ results: sqlite.prepare(query).all(...(bindings as never[])) }),
+    raw: async () =>
+      sqlite
+        .prepare(query)
+        .all(...(bindings as never[]))
+        .map(row => Object.values(row)),
+    run: async () => ({
+      results: [],
+      meta: sqlite.prepare(query).run(...(bindings as never[])),
+    }),
+  })
+  const db = drizzle({ prepare } as never, { schema }) as Database
+  function add(
+    id: string,
+    title: string,
+    neighbourhood: string | null,
+    layerId = 'layer',
+    published = 1,
+  ) {
+    sqlite
+      .prepare(`INSERT INTO feature(id,layerId,projectId,organisationId,isPublished,isArchived,isDraft,isVisitable,isIntangible,geometry,addressMeta)
+      VALUES(?,?, 'project','org',?,0,0,1,0,'{"type":"Point","coordinates":[114,22]}','{}')`)
+      .run(id, layerId, published)
+    sqlite
+      .prepare('INSERT INTO featureI18n VALUES(?, ?, ?, null, null, ?)')
+      .run(id, 'en', title, JSON.stringify({ neighbourhood }))
+  }
+  add('a', 'North 茶餐廳 100%', 'Central')
+  add('b', 'North cafe', 'Central')
+  add('c', 'South place', 'Wan Chai')
+  add('d', 'North private', 'Central', 'layer', 0)
+  add('e', 'Other layer', null, 'other')
+  sqlite.exec(`INSERT INTO featureProperty VALUES('a','kind','cafe',NULL),('b','kind','bar',NULL),('a','number',NULL,'5'),('b','number',NULL,'garbage');
+    INSERT INTO userFeature(userId,featureId,isWishlisted,isVisited) VALUES('user','a',1,0),('user','c',0,1),('other','b',1,0);
+    INSERT INTO featureSpatial VALUES('a',7,'cell',22,114),('b',7,'cell',22,115),('c',7,'other',22,114);`)
+  return { db, sqlite, add }
+}
+
+describe('indexed feature queries', () => {
+  it('preserves legacy orphan translations without creating invalid index memberships', () => {
+    const { sqlite } = setup(true)
+    expect(
+      sqlite
+        .prepare("SELECT count(*) AS count FROM featureI18n WHERE featureId = 'orphan'")
+        .get()?.count,
+    ).toBe(1)
+    expect(
+      sqlite
+        .prepare(
+          "SELECT count(*) AS count FROM featureSearchGram WHERE featureId = 'orphan'",
+        )
+        .get()?.count,
+    ).toBe(0)
+  })
+
+  it('returns only the actor list states for feature IDs in this page', async () => {
+    const { db } = setup()
+    const page = await queryFeaturePage(db, input({ q: 'North' }), base, hub, 'user')
+    expect(
+      page.userFeatures?.map(row => [row.userId, row.featureId, row.isWishlisted]),
+    ).toEqual([['user', 'a', true]])
+  })
+
+  it('orders visited lists globally by visit date and traverses equal dates without duplicates', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(`UPDATE userFeature SET isVisited = 1, visitedAt = '2026-01-01' WHERE userId = 'user';
+      INSERT INTO userFeature(userId, featureId, isVisited, isWishlisted, visitedAt) VALUES('user','b',1,0,'2026-03-01'),('user','e',1,0,NULL);`)
+    const query = input({
+      limit: 1,
+      filters: { list: { userId: 'user', listId: 'visited' } },
+      sorting: { sortBy: 'visitedAt', sortOrder: 'desc' },
+    })
+    const collected: string[] = []
+    let cursor: FeatureQueryInput['cursor'] = null
+    do {
+      const page = await queryFeaturePage(db, { ...query, cursor }, base, hub)
+      expect(page.totalCount).toBe(4)
+      collected.push(...page.data.map(row => row.id))
+      cursor = page.nextCursor
+    } while (cursor)
+    expect(collected).toEqual(['b', 'a', 'c', 'e'])
+    const complete = await queryFeaturePage(db, { ...query, limit: 100 }, base, hub)
+    expect(complete.data.map(row => row.id)).toEqual(collected)
+  })
+
+  it('supports descending ID traversal', async () => {
+    const { db } = setup()
+    const query = input({ limit: 2, sorting: { sortBy: 'id', sortOrder: 'desc' } })
+    const first = await queryFeaturePage(db, query, base, hub)
+    const second = await queryFeaturePage(
+      db,
+      { ...query, cursor: first.nextCursor },
+      base,
+      hub,
+    )
+    expect([...first.data, ...second.data].map(row => row.id)).toEqual([
+      'e',
+      'c',
+      'b',
+      'a',
+    ])
+    expect(second.nextCursor).toBeNull()
+  })
+  it('keeps totals and facets stable through keyset pages and avoids empty trailing pages', async () => {
+    const { db } = setup()
+    const query = input({ q: 'North', limit: 1 })
+    const first = await queryFeaturePage(db, query, base, hub)
+    expect(first.data.map(row => row.id)).toEqual(['a'])
+    expect(first.totalCount).toBe(2)
+    expect(first.facets.neighbourhoods).toEqual({ Central: 2 })
+    expect(first.nextCursor?.signature).toBe(featureQuerySignature(query))
+    const second = await queryFeaturePage(
+      db,
+      { ...query, cursor: first.nextCursor },
+      base,
+      hub,
+    )
+    expect(second.data.map(row => row.id)).toEqual(['b'])
+    expect(second.totalCount).toBe(2)
+    expect(second.facets).toEqual(first.facets)
+    expect(second.nextCursor).toBeNull()
+  })
+
+  it.each(['茶', '茶餐', '茶餐廳', '100%', '%'])(
+    'uses literal substring semantics for %s',
+    async q => {
+      const { db } = setup()
+      expect(
+        (await queryFeaturePage(db, input({ q }), base, hub)).data.map(row => row.id),
+      ).toEqual(['a'])
+    },
+  )
+
+  it('updates and removes search postings and neighbourhood facets with source changes', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(
+      `UPDATE featureI18n SET title = 'Changed', addressProperties = '{"neighbourhood":"Wan Chai"}' WHERE featureId = 'a';`,
+    )
+    expect((await queryFeaturePage(db, input({ q: '茶' }), base, hub)).totalCount).toBe(
+      0,
+    )
+    expect(
+      (await queryFeaturePage(db, input({ q: 'Changed' }), base, hub)).facets
+        .neighbourhoods,
+    ).toEqual({ 'Wan Chai': 1 })
+    sqlite.exec(`DELETE FROM featureI18n WHERE featureId = 'a'`)
+    expect(
+      sqlite
+        .prepare(
+          "SELECT count(*) AS count FROM featureSearchGram WHERE featureId = 'a'",
+        )
+        .get()?.count,
+    ).toBe(0)
+  })
+
+  it('combines viewport, flags, user-list and property filters before counting', async () => {
+    const { db } = setup()
+    const page = await queryFeaturePage(
+      db,
+      input({
+        spatial: { resolution: 7, cells: ['cell'], bounds: [113, 21, 114.5, 23] },
+        filters: {
+          isVisitable: true,
+          list: { userId: 'user', listId: 'wishlist' },
+          properties: { layer: { kind: ['cafe'] } },
+        },
+      }),
+      base,
+      hub,
+    )
+    expect(page.data.map(row => row.id)).toEqual(['a'])
+    expect(page.totalCount).toBe(1)
+  })
+
+  it('applies properties only to their layer, rejects invalid numbers, skips inactive ranges', async () => {
+    const { db } = setup()
+    const selection = await queryFeaturePage(
+      db,
+      input({ filters: { properties: { layer: { kind: ['cafe'] } } } }),
+      base,
+      hub,
+    )
+    expect(selection.data.map(row => row.id)).toEqual(['a', 'e'])
+    const numeric = await queryFeaturePage(
+      db,
+      input({
+        filters: {
+          properties: {
+            layer: {
+              number: { globalMin: -1, globalMax: 10, rangeMin: 0, rangeMax: 6 },
+            },
+          },
+        },
+      }),
+      base,
+      hub,
+    )
+    expect(numeric.data.map(row => row.id)).toEqual(['a', 'e'])
+    const inactive = await queryFeaturePage(
+      db,
+      input({
+        filters: {
+          properties: {
+            layer: {
+              number: { globalMin: 0, globalMax: 10, rangeMin: 0, rangeMax: 10 },
+            },
+          },
+        },
+      }),
+      base,
+      hub,
+    )
+    expect(inactive.totalCount).toBe(4)
+  })
+
+  it('filters neighbourhood exclusions and keeps missing neighbourhoods in totalCount', async () => {
+    const { db } = setup()
+    const page = await queryFeaturePage(
+      db,
+      input({ filters: { excludeNeighbourhoods: ['Central'] } }),
+      base,
+      hub,
+    )
+    expect(page.data.map(row => row.id)).toEqual(['c', 'e'])
+    expect(page.totalCount).toBe(2)
+    expect(page.facets.neighbourhoods).toEqual({ 'Wan Chai': 1 })
+  })
+
+  it('keeps large cell and selected-value arrays within the D1 binding budget', () => {
+    const { db } = setup()
+    const query = input({
+      spatial: {
+        resolution: 7,
+        cells: Array.from({ length: 256 }, (_, i) => `cell${i}`),
+      },
+      filters: {
+        properties: {
+          layer: { kind: Array.from({ length: 1000 }, (_, i) => `kind${i}`) },
+        },
+      },
+    })
+    const built = db
+      .select({ count: sql`count(*)` })
+      .from(feature)
+      .where(and(...buildFeatureQueryConditions(db, query, base, hub)))
+      .toSQL()
+    expect(built.params.length).toBeLessThan(20)
+  })
+
+  it('omits numerous inactive defaults from SQL without requiring property rows', async () => {
+    const { db } = setup()
+    const defaults = Object.fromEntries(
+      Array.from({ length: 80 }, (_, index) => [
+        `default-${index}`,
+        index % 2 ? [] : { globalMin: 0, globalMax: 10, rangeMin: 0, rangeMax: 10 },
+      ]),
+    )
+    const request = input({ filters: { properties: { layer: defaults } } })
+    const ordinary = db
+      .select({ count: sql`count(*)` })
+      .from(feature)
+      .where(and(...buildFeatureQueryConditions(db, input(), base, hub)))
+      .toSQL()
+    const filtered = db
+      .select({ count: sql`count(*)` })
+      .from(feature)
+      .where(and(...buildFeatureQueryConditions(db, request, base, hub)))
+      .toSQL()
+    expect(filtered).toEqual(ordinary)
+    expect((await queryFeaturePage(db, request, base, hub)).totalCount).toBe(4)
+  })
+
+  it('combines more than 12 active selection, boolean and range predicates with one binding', async () => {
+    const { db, sqlite } = setup()
+    const layerFilters: NonNullable<
+      NonNullable<FeatureQueryInput['filters']>['properties']
+    >[string] = {}
+    const insertProperty = sqlite.prepare(
+      'INSERT INTO featureProperty VALUES (?, ?, ?, ?)',
+    )
+    for (let index = 0; index < 24; index++) {
+      layerFilters[`selection-${index}`] = ['selected']
+      layerFilters[`flag-${index}`] = true
+      layerFilters[`range-${index}`] = {
+        globalMin: 0,
+        globalMax: 10,
+        rangeMin: 4,
+        rangeMax: 6,
+      }
+      layerFilters[`inactive-${index}`] = []
+      for (const id of ['a', 'b']) {
+        insertProperty.run(id, `selection-${index}`, 'selected', null)
+        insertProperty.run(
+          id,
+          `flag-${index}`,
+          null,
+          id === 'b' && index === 23 ? 'false' : 'true',
+        )
+        insertProperty.run(id, `range-${index}`, null, '5')
+      }
+    }
+    const request = input({
+      q: 'North',
+      filters: { properties: { layer: layerFilters } },
+    })
+    const ordinary = db
+      .select({ count: sql`count(*)` })
+      .from(feature)
+      .where(and(...buildFeatureQueryConditions(db, input({ q: 'North' }), base, hub)))
+      .toSQL()
+    const filtered = db
+      .select({ count: sql`count(*)` })
+      .from(buildFeatureQuerySource(request))
+      .where(and(...buildFeatureQueryConditions(db, request, base, hub)))
+      .toSQL()
+    expect(filtered.params).toHaveLength(ordinary.params.length + 1)
+    const page = await queryFeaturePage(db, request, base, hub)
+    expect(page.data.map(row => row.id)).toEqual(['a'])
+    expect(page.totalCount).toBe(1)
+    expect(page.facets.neighbourhoods).toEqual({ Central: 1 })
+    const plan = sqlite
+      .prepare(`EXPLAIN QUERY PLAN ${filtered.sql}`)
+      .all(...(filtered.params as never[]))
+      .map(row => String(row.detail))
+      .join('\n')
+    expect(plan).toContain(
+      'SEARCH feature USING COVERING INDEX feature_query_id_idx (id=?',
+    )
+    expect(plan).toContain(
+      'SEARCH featureProperty USING INDEX sqlite_autoindex_featureProperty_1 (featureId=? AND propertyId=?)',
+    )
+    expect(plan).not.toContain('SCAN featureProperty')
+  })
+
+  it('binds unusual property and layer identifiers as data', async () => {
+    const { db, sqlite, add } = setup()
+    const layerId = 'layer".$[0]'
+    const propertyId = "property') OR 1=1 --"
+    add('f', 'Escaped identifiers', 'Central', layerId)
+    sqlite
+      .prepare('INSERT INTO featureProperty VALUES(?, ?, ?, NULL)')
+      .run('f', propertyId, 'yes')
+    const request = input({
+      q: 'Escaped',
+      filters: { properties: { [layerId]: { [propertyId]: ['yes'] } } },
+    })
+    expect(
+      (await queryFeaturePage(db, request, base, hub)).data.map(row => row.id),
+    ).toEqual(['f'])
+  })
+
+  it.each([
+    ['all', {}],
+    ['spatial', { spatial: { resolution: 7, cells: ['cell'] } }],
+    ['search', { q: 'North' }],
+    ['property', { filters: { properties: { layer: { kind: ['cafe'] } } } }],
+    ['list', { filters: { list: { userId: 'user', listId: 'wishlist' } } }],
+  ] as const)('uses indexed feature predicates for %s counts', (_name, extra) => {
+    const { db, sqlite, add } = setup()
+    for (let i = 0; i < 100; i++) add(`outside-${i}`, 'Unrelated', 'Outside', 'outside')
+    sqlite.exec('ANALYZE')
+    const queryInput = input(extra as never)
+    const query = db
+      .select({
+        count: sql`count(*)`,
+        neighbourhood: featureNeighbourhood.neighbourhood,
+      })
+      .from(buildFeatureQuerySource(queryInput))
+      .leftJoin(featureNeighbourhood, eq(featureNeighbourhood.featureId, feature.id))
+      .where(and(...buildFeatureQueryConditions(db, queryInput, base, hub)))
+      .groupBy(featureNeighbourhood.neighbourhood)
+      .toSQL()
+    const plan = sqlite
+      .prepare(`EXPLAIN QUERY PLAN ${query.sql}`)
+      .all(...(query.params as never[]))
+      .map(row => String(row.detail))
+    expect(
+      plan.some(
+        detail =>
+          /^SCAN feature(?:$|\s)/.test(detail) &&
+          !detail.includes('USING COVERING INDEX'),
+      ),
+    ).toBe(false)
+    expect(
+      plan.some(detail => /SEARCH feature USING (?:COVERING )?INDEX/.test(detail)),
+    ).toBe(true)
+    if (_name === 'spatial')
+      expect(plan.join('\n')).toContain('featureSpatial_cell_layer_idx')
+    if (_name === 'search')
+      expect(plan.join('\n')).toContain(
+        'SEARCH featureSearchGram USING PRIMARY KEY (gram=?)',
+      )
+    if (_name === 'list') expect(plan.join('\n')).toContain('user_feature_wishlist_idx')
+    if (_name === 'property')
+      expect(plan.join('\n')).toContain(
+        'SEARCH featureProperty USING INDEX sqlite_autoindex_featureProperty_1 (featureId=? AND propertyId=?)',
+      )
+  })
+
+  it('legacy feature pages count before both ID and sort-value cursors without mutating authorization', async () => {
+    const { db } = setup()
+    const conditions = [...base]
+    const page = await listFeatures(
+      db,
+      {},
+      conditions,
+      hub,
+      { limit: 1, afterId: 'a' },
+      { sortBy: 'id', sortOrder: 'asc' },
+    )
+    expect(page.totalCount).toBe(4)
+    expect(page.data.map(row => row.id)).toEqual(['b'])
+    expect(conditions).toHaveLength(3)
+    const last = await listFeatures(
+      db,
+      {},
+      conditions,
+      hub,
+      { limit: 1, afterId: 'c', afterValue: 'c' },
+      { sortBy: 'id', sortOrder: 'asc' },
+    )
+    expect(last.totalCount).toBe(4)
+    expect(last.data.map(row => row.id)).toEqual(['e'])
+    expect(last.hasMore).toBe(false)
+  })
+})

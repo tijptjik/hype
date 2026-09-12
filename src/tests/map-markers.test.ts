@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { clearMarkers, updateMarkers } from '$lib/map/markers'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
@@ -7,12 +7,15 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 class TestMarker {
   element: HTMLElement
   removed = false
+  coordinates: [number, number] | undefined
+  removals = 0
 
   constructor({ element }: { element: HTMLElement }) {
     this.element = element
   }
 
-  setLngLat(): this {
+  setLngLat(coordinates: [number, number]): this {
+    this.coordinates = coordinates
     return this
   }
 
@@ -26,10 +29,12 @@ class TestMarker {
 
   remove(): void {
     this.removed = true
+    this.removals++
   }
 }
 
 describe('map markers', () => {
+  afterEach(() => vi.useRealTimers())
   it('eagerly loads image-backed markers on their first map render', () => {
     const markers = new Map<string, TestMarker>()
     const appCtx = {
@@ -100,6 +105,85 @@ describe('map markers', () => {
     clearMarkers(appCtx as never)
 
     expect(marker.removed).toBe(true)
+    expect(markers.size).toBe(0)
+  })
+
+  it('cancels fading removal when a filter reversal makes the same marker visible again', () => {
+    vi.useFakeTimers()
+    const markers = new Map<string, TestMarker>()
+    const appCtx = { map: {}, state: { markers } }
+    const feature = {
+      id: 'feature-1',
+      geometry: { type: 'Point', coordinates: [114.17, 22.32] },
+    } as FeatureFromCollection
+    updateMarkers(appCtx as never, [feature], { Marker: TestMarker }, 'dot')
+    const marker = markers.get(feature.id)!
+    updateMarkers(appCtx as never, [], { Marker: TestMarker }, 'dot')
+    expect(marker.getElement()).toHaveClass('marker-fade-out')
+    vi.advanceTimersByTime(150)
+    updateMarkers(appCtx as never, [feature], { Marker: TestMarker }, 'dot')
+    vi.advanceTimersByTime(500)
+    expect(markers.get(feature.id)).toBe(marker)
+    expect(marker.removed).toBe(false)
+    expect(marker.getElement()).not.toHaveClass('marker-fade-out')
+  })
+
+  it('does not postpone removal when repeated query updates still omit the marker', () => {
+    vi.useFakeTimers()
+    const marker = new TestMarker({ element: document.createElement('div') })
+    const markers = new Map([['feature-1', marker]])
+    const appCtx = { map: {}, state: { markers } }
+    updateMarkers(appCtx as never, [], { Marker: TestMarker })
+    vi.advanceTimersByTime(150)
+    updateMarkers(appCtx as never, [], { Marker: TestMarker })
+    vi.advanceTimersByTime(150)
+    expect(markers.has('feature-1')).toBe(false)
+    expect(marker.removals).toBe(1)
+  })
+
+  it('cannot delete a replacement marker when an earlier object finishes fading', () => {
+    vi.useFakeTimers()
+    const original = new TestMarker({ element: document.createElement('div') })
+    const replacement = new TestMarker({ element: document.createElement('div') })
+    const markers = new Map([['feature-1', original]])
+    const appCtx = { map: {}, state: { markers } }
+    updateMarkers(appCtx as never, [], { Marker: TestMarker })
+    markers.set('feature-1', replacement)
+    vi.advanceTimersByTime(300)
+    expect(original.removed).toBe(true)
+    expect(replacement.removed).toBe(false)
+    expect(markers.get('feature-1')).toBe(replacement)
+  })
+
+  it('moves an unchanged dot marker when a refreshed feature has new coordinates', () => {
+    const markers = new Map<string, TestMarker>()
+    const appCtx = { map: {}, state: { markers } }
+    const feature = {
+      id: 'feature-1',
+      geometry: { type: 'Point', coordinates: [114.17, 22.32] },
+    } as FeatureFromCollection
+    updateMarkers(appCtx as never, [feature], { Marker: TestMarker }, 'dot')
+    const marker = markers.get(feature.id)!
+    updateMarkers(
+      appCtx as never,
+      [{ ...feature, geometry: { type: 'Point', coordinates: [114.27, 22.42] } }],
+      { Marker: TestMarker },
+      'dot',
+    )
+    expect(markers.get(feature.id)).toBe(marker)
+    expect(marker.coordinates).toEqual([114.27, 22.42])
+    expect(marker.removed).toBe(false)
+  })
+
+  it('clears pending removal timers before a replacement canvas starts', () => {
+    vi.useFakeTimers()
+    const marker = new TestMarker({ element: document.createElement('div') })
+    const markers = new Map([['feature-1', marker]])
+    const appCtx = { map: {}, state: { markers } }
+    updateMarkers(appCtx as never, [], { Marker: TestMarker })
+    clearMarkers(appCtx as never)
+    vi.advanceTimersByTime(300)
+    expect(marker.removals).toBe(1)
     expect(markers.size).toBe(0)
   })
 })

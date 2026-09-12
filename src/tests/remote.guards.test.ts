@@ -12,7 +12,10 @@ const {
   mockGetRequestEvent: vi.fn(),
   mockQuery: vi.fn((...args: unknown[]) => {
     const handler = args.length === 1 ? args[0] : args[1]
-    return handler
+    // Lazily registered remote families must carry SvelteKit's runtime metadata.
+    return Object.assign(handler as (...args: unknown[]) => unknown, {
+      __: { type: 'query', id: '', name: '' },
+    })
   }),
   mockForm: vi.fn((...args: unknown[]) => {
     const handler = args.length === 1 ? args[0] : args[1]

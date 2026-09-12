@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Panel query registration is isolated from this resource's authorization fixtures.
+// Panel and feature query registration is isolated from this resource's authorization fixtures.
 vi.mock('$lib/api/server/resources.remote', () => ({}))
+vi.mock('$lib/api/server/featureQueries.remote', () => ({}))
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
