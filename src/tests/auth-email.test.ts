@@ -44,7 +44,7 @@ describe('buildAuthEmail', () => {
       hub: {
         ...customHub,
         image: {
-          ctxType: 'hub',
+          ctxType: 'hub' as import('$lib/enums').ImageContextResource.hub,
           ctxId: 'hub-1',
           image: {
             id: 'image-1',

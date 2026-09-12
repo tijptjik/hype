@@ -189,7 +189,7 @@ describe('remote guard wrappers', () => {
       saved: true,
     }))
     await write({})
-    expect(mockRequested).toHaveBeenCalledWith(read, 12)
+    expect(mockRequested).toHaveBeenCalledWith(read, 32)
   })
 
   it('does not refresh queries when validation or authorization rejects the write', async () => {
