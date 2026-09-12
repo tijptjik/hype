@@ -1,5 +1,8 @@
 import { CacheCtx } from './cache.svelte'
-import { getPinnedResource } from '$lib/api/server/resources.remote'
+import {
+  getDefaultLayerResources,
+  getPinnedResource,
+} from '$lib/api/server/resources.remote'
 import { getOrganisations } from '$lib/api/server/organisation.remote'
 import type { PanelResourceType, PanelResource, ResourcePageInput } from '$lib/types'
 // DATA
@@ -153,6 +156,10 @@ export class AppCtx {
   }
 
   // Cache for all resources
+  selectionLayers: Layer[] = $state.raw([])
+  featureLoadState = $state<'idle' | 'loading' | 'partial' | 'complete' | 'error'>(
+    'idle',
+  )
   readonly cacheCtx = new CacheCtx()
   cache: Cache = this.cacheCtx.entities
 
@@ -895,47 +902,26 @@ export class AppCtx {
         ] as const)
       : []
 
-    const lightResults = await Promise.allSettled(lightSteps.map(([, load]) => load()))
-    for (const [index, result] of lightResults.entries()) {
-      if (result.status === 'fulfilled') continue
-
-      console.error(
-        `[AppCtx][initialFetch] Resource bootstrap failed (${lightSteps[index][0]}):`,
-        result.reason,
-      )
-    }
-
+    // Independent compact lists and default identities start together; none waits for ancestors.
+    const defaults = this.loadDefaultLayerResources(expectedRoleScope)
+    const hierarchy = Promise.allSettled([
+      this.refreshOrganisations(false, expectedRoleScope),
+      this.refreshProjects(false, expectedRoleScope),
+      this.refreshLayers(false, false, expectedRoleScope),
+    ])
+    const results = await Promise.allSettled([
+      defaults,
+      hierarchy,
+      ...lightSteps.map(([, load]) => load()),
+    ])
+    for (const result of results)
+      if (result.status === 'rejected')
+        console.error('[AppCtx] Initial resource loading failed', result.reason)
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    // Bootstrap hierarchy second. Keep this stage narrower than the old fan-out because
-    // local workerd D1 is sensitive to bursts of concurrent reads during app startup.
-    const hierarchyPhases = [
-      [
-        ['organisations', () => this.refreshOrganisations(false, expectedRoleScope)],
-        ['projects', () => this.refreshProjects(false, expectedRoleScope)],
-      ],
-      [
-        ['layers', () => this.refreshLayers(false, true, expectedRoleScope)],
-        ['properties', () => this.refreshProperties(false, expectedRoleScope)],
-      ],
-    ] as const
-
-    for (const phase of hierarchyPhases) {
-      const phaseResults = await Promise.allSettled(phase.map(([, load]) => load()))
-      for (const [index, result] of phaseResults.entries()) {
-        if (result.status === 'fulfilled') continue
-
-        console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${phase[index][0]}):`,
-          result.reason,
-        )
-      }
-
-      if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-    }
-
     this.applyInitialLayerPrisms(expectedRoleScope)
-    await this.postLayerMutation(false, true, expectedRoleScope)
+    await this.loadPinnedLayers(expectedRoleScope)
+    await this.postLayerMutation(false, false, expectedRoleScope)
 
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
@@ -943,6 +929,7 @@ export class AppCtx {
       ...(loadFeatures
         ? ([
             ['features', () => this.refreshFeatures(false, expectedRoleScope)],
+            ['properties', () => this.refreshProperties(false, expectedRoleScope)],
           ] as const)
         : []),
       ...(includeUserData
@@ -957,7 +944,9 @@ export class AppCtx {
 
     for (const [label, load] of featureSteps) {
       try {
-        await load()
+        void load().catch(error =>
+          console.error(`[AppCtx] ${label} loading failed`, error),
+        )
       } catch (error) {
         console.error(
           `[AppCtx][initialFetch] Resource bootstrap failed (${label}):`,
@@ -1023,8 +1012,12 @@ export class AppCtx {
   private getHubDefaultLayerIds = (): Id[] => {
     return getInitialHubLayerDefaultIds(
       this.hub,
-      this.state.resources.layer,
-      this.state.resources.project,
+      this.selectionLayers,
+      this.selectionLayers.flatMap(layer => {
+        const ancestors = (layer as unknown as { ancestors?: { project?: Project } })
+          .ancestors
+        return ancestors?.project ? [ancestors.project] : []
+      }),
     )
   }
 
@@ -1079,6 +1072,31 @@ export class AppCtx {
     )
   }
 
+  /** Loads the complete default selection metadata without loading the complete panel lists. */
+  loadDefaultLayerResources = async (scope?: string): Promise<void> => {
+    const expected = scope ?? this.getRoleScopeQueryKey()
+    const rows = await runRemoteQuery(
+      getDefaultLayerResources({ meta: this.panelResourceInput('layer').meta }),
+    )
+    if (!this.isExpectedRoleScopeCurrent(expected)) return
+    this.selectionLayers = rows as unknown as Layer[]
+    this.retainPanelRows('layer', rows)
+  }
+
+  /** Resolves selected layers outside page one through the shared native batch query. */
+  loadPinnedLayers = async (scope?: string): Promise<void> => {
+    const expected = scope ?? this.getRoleScopeQueryKey()
+    const meta = this.panelResourceInput('layer').meta
+    const rows = await Promise.all(
+      this.state.prisms.layer.map(id => getPinnedResource({ type: 'layer', id, meta })),
+    )
+    if (!this.isExpectedRoleScopeCurrent(expected)) return
+    const available = rows.filter((row): row is PanelResource => row !== null)
+    this.retainPanelRows('layer', available)
+    const ids = new Set(available.map(row => row.id))
+    this.state.prisms.layer = this.state.prisms.layer.filter(id => ids.has(id))
+  }
+
   /** Builds the complete identity of a compact panel view. */
   panelResourceInput = (type: PanelResourceType, q = ''): ResourcePageInput => ({
     type,
@@ -1122,21 +1140,51 @@ export class AppCtx {
     if (!remoteList) {
       throw new Error('Feature remote list function is not configured.')
     }
-    const result = toSafeListResponse<FeatureFromCollection>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: {
-            isArchived: false,
-            isPublished: true,
-          },
-          prisms: this.state.prisms,
-          sorting: this.state.viewSorting.feature,
-          meta: { isAdminRequest: false, profile: 'list' },
-        }),
-      )) as ListResponse<FeatureFromCollection> | undefined,
-    )
-    this.setListQueryMeta(this.featuresQueryKey(), result)
-    return result.data
+    const serial = this.featureRefreshSerial
+    const scope = this.getRoleScopeQueryKey()
+    const prisms = { ...this.state.prisms, layer: [...this.state.prisms.layer] }
+    if (!prisms.layer.length) {
+      this.featureLoadState = 'complete'
+      return []
+    }
+    this.featureLoadState = 'loading'
+    let afterId: string | undefined
+    const records = new Map<string, FeatureFromCollection>()
+    try {
+      while (true) {
+        const result = toSafeListResponse<FeatureFromCollection>(
+          (await runRemoteQuery(
+            remoteList({
+              conditions: { isArchived: false, isPublished: true },
+              prisms,
+              sorting: { sortBy: 'id', sortOrder: 'asc' },
+              pagination: { limit: 250, afterId },
+              meta: { isAdminRequest: false, profile: 'default' },
+            }),
+          )) as ListResponse<FeatureFromCollection>,
+        )
+        if (
+          serial !== this.featureRefreshSerial ||
+          scope !== this.getRoleScopeQueryKey()
+        )
+          return []
+        for (const feature of result.data) {
+          records.set(feature.id, feature)
+          this.cache.feature.set(feature.id, feature)
+          this.addFeatureToMap(feature)
+        }
+        this.state.resources.feature = [...records.values()]
+        this.featureLoadState = result.hasMore ? 'partial' : 'complete'
+        if (!result.hasMore || !result.data.length) break
+        afterId = result.data.at(-1)!.id
+        // Yield a frame between batches so map rendering can make visible progress.
+        await new Promise(resolve => setTimeout(resolve, 0))
+      }
+      return [...records.values()]
+    } catch (error) {
+      if (serial === this.featureRefreshSerial) this.featureLoadState = 'error'
+      throw error
+    }
   }
 
   propertiesQueryFn = async (): Promise<Property[]> => {
@@ -1545,7 +1593,7 @@ export class AppCtx {
    * @returns The organisation's default-visible layer IDs.
    */
   getOrganisationDefaultVisibleLayerIds = (organisationId: Id): Id[] =>
-    this.state.resources.layer
+    this.selectionLayers
       .filter(
         layer => layer.organisationId === organisationId && layer.isDefaultVisible,
       )
@@ -1680,7 +1728,7 @@ export class AppCtx {
    * @returns The project's default-visible layer IDs.
    */
   getProjectDefaultVisibleLayerIds = (projectId: Id): Id[] =>
-    this.state.resources.layer
+    this.selectionLayers
       .filter(layer => layer.projectId === projectId && layer.isDefaultVisible)
       .map(layer => layer.id)
 
