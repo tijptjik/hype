@@ -43,24 +43,9 @@
   --color-map-primary: #cb37c1;
   --color-map-base: #4987e2;
 
-  --color-glass-100: #7d475f;
-  --color-glass-200: #b07b8582;
-  --color-glass-300: #20191e8c;
-  --color-glass-300-solid: #20191e;
-  --color-glass-warning: #ff9b9b;
-  --color-glass-result: #3c2638e6;
-  --color-glass-neutral: #262626c7;
-  --color-glass-rejected: #ff7b7b;
-  --color-glass-accepted: #6ba279;
-  --color-glass-salmon: #ffad9a;
-  --color-glass-salmon-dark: #2b092282;
-  --color-glass-base: rgb(88 85 113 / 71%);
-  --color-light: rgb(255 173 154 / 1);
   --color-dark: #101214;
   --color-gradient-end: hsl(var(--fuchsia-800));
   --color-gradient-start: hsl(var(--rose-500));
-  --color-ok: rgb(62 173 142);
-  --color-pending: #e0c285;
 
   /* NAV Colour System */
   --color-accent-soft-hover-bg: color-mix(
