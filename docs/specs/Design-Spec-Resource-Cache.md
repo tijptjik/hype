@@ -82,13 +82,13 @@ authorization/not-found failures discard that fallback.
 
 Profiles describe payloads, not roles:
 
-| Profile | Contract |
-| --- | --- |
+| Profile   | Contract                                                                                                                                                                |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `compact` | Identity, localized names/short names, ancestor IDs and breadcrumb labels, plus explicitly required list-action flags. No images, property graphs or full descriptions. |
-| `default` | Ordinary display and application logic; point geometry for features and required map/filter fields. |
-| `map` | Default plus non-point geometry. Initially equivalent where resources have no additional geometry. |
-| `full` | All public details, including map geometry where applicable. |
-| `admin` | Full plus administration fields, individually authorized on the server. |
+| `default` | Ordinary display and application logic; point geometry for features and required map/filter fields.                                                                     |
+| `map`     | Default plus non-point geometry. Initially equivalent where resources have no additional geometry.                                                                      |
+| `full`    | All public details, including map geometry where applicable.                                                                                                            |
+| `admin`   | Full plus administration fields, individually authorized on the server.                                                                                                 |
 
 Define schemas and compatibility per resource. Use the chain only when actual
 schemas are supersets; do not claim admin implies another shape when fields are
@@ -243,8 +243,12 @@ without hard refresh. Record any unavailable authenticated browser coverage.
   ten-row threshold and reused previous rows without another fetch when scrolling
   back. It produced no page errors. This fixture isolates rendering from auth/D1.
 - An application browser trace started all three collection requests and default
-  metadata together. Full application/admin interaction coverage is separate from
-  the isolated component check; local D1 contention has interrupted guest bootstrap.
+  metadata together. Expanded sections rendered joined ancestor labels. Searching
+  “Ghost” issued a remote collection request and returned Hong Kong Ghost Signs while
+  active layers remained visible. Feature requests followed progressively. Early
+  runs encountered local D1 contention; successful runs still logged development
+  websocket and external tile-authentication errors. Authenticated admin mutation
+  interaction/rollback has automated projection coverage but no browser verification.
 - The warm local breadcrumb benchmark (8 organisations, 7 projects, 16 layers;
   100 warmups and 1,000 repetitions) measured joined labels at median 0.01258 ms /
   p95 0.01411 ms versus three batched reads at 0.01143 ms / 0.01281 ms. Payloads were
