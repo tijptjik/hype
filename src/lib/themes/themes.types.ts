@@ -1,4 +1,9 @@
-export type ThemeId = 'hype-dark' | 'hype-light' | 'breadline-light' | 'breadline-dark'
+export type ThemeId =
+  | 'hype-black'
+  | 'hype-dark'
+  | 'hype-light'
+  | 'breadline-light'
+  | 'breadline-dark'
 export type ThemeDefinition = {
   id: ThemeId
   name: string

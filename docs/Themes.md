@@ -5,7 +5,8 @@ Runtime `[data-theme]` scopes select the palette; `@theme inline` exposes utilit
 
 | Theme     | Identifier        | Appearance                           | Default            |
 | --------- | ----------------- | ------------------------------------ | ------------------ |
-| Nullspace | `hype-dark`       | Pink, lavender and mint on ink       | All other hubs     |
+| Nullspace | `hype-black`      | Pink, lavender and mint on true black | Explicit selection |
+| Nebula    | `hype-dark`       | Pink, lavender and mint on ink       | All other hubs     |
 | Oblivion  | `hype-light`      | Berry, violet and teal on pale lilac | Explicit selection |
 | Milque    | `breadline-light` | Coral, navy and teal on warm cream   | `breadline.hk`     |
 | Rye       | `breadline-dark`  | Coral, aqua and wheat on dark green  | Explicit selection |
@@ -48,7 +49,7 @@ base rule: an inline utility can override a modifier still in `@layer components
 ## Preview
 
 - `/themes`: interactive component studio with local sample rows, search, selection,
-  a collection card, action buttons, status/progress and a four-palette comparison.
+  a collection card, action buttons, status/progress and a five-palette comparison.
 - `/admin/styles/button`: existing button showcase with a local theme picker.
 
 Preview selection is local and does not overwrite Settings. Navigation across the

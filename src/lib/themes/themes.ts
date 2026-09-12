@@ -2,7 +2,8 @@
 import type { ThemeId, ThemeDefinition } from './themes.types'
 
 export const THEMES: readonly ThemeDefinition[] = [
-  { id: 'hype-dark', name: 'Nullspace', mode: 'dark', family: 'Hype' },
+  { id: 'hype-black', name: 'Nullspace', mode: 'dark', family: 'Hype' },
+  { id: 'hype-dark', name: 'Nebula', mode: 'dark', family: 'Hype' },
   { id: 'hype-light', name: 'Oblivion', mode: 'light', family: 'Hype' },
   { id: 'breadline-light', name: 'Milque', mode: 'light', family: 'Breadline' },
   { id: 'breadline-dark', name: 'Rye', mode: 'dark', family: 'Breadline' },
@@ -22,7 +23,7 @@ export function isThemeId(value: unknown): value is ThemeId {
  * Resolves an explicit preference before the hub's default theme.
  * @param preference - Optional persisted user selection.
  * @param hostname - Current host or configured hub domain.
- * @returns Milque for Breadline, otherwise Nullspace, unless explicitly selected.
+ * @returns Milque for Breadline, otherwise Nebula, unless explicitly selected.
  */
 export function resolveTheme(preference: unknown, hostname = ''): ThemeId {
   if (isThemeId(preference)) return preference

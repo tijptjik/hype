@@ -21,6 +21,27 @@
   --theme-error: #ff888a;
 }
 
+[data-theme="hype-black"] {
+  color-scheme: dark;
+  --theme-canvas: #000000;
+  --theme-panel: #000000;
+  --theme-surface: #0d0d0d;
+  --theme-raised: #1c1c1c;
+  --theme-text: #f4f0fa;
+  --theme-muted: #b6b6c8;
+  --theme-border: #333333;
+  --theme-primary: #fa659b;
+  --theme-on-primary: #200a15;
+  --theme-secondary: #9d9bff;
+  --theme-on-secondary: #171335;
+  --theme-tertiary: #72d8cf;
+  --theme-on-tertiary: #092622;
+  --theme-info: #82c4ff;
+  --theme-success: #76d9ad;
+  --theme-warning: #f2cc83;
+  --theme-error: #ff888a;
+}
+
 [data-theme="hype-light"] {
   color-scheme: light;
   --theme-canvas: #f5f3fa;

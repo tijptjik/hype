@@ -122,6 +122,8 @@
   &:where(
     .dark,
     .dark *,
+    [data-theme="hype-black"],
+    [data-theme="hype-black"] *,
     [data-theme="hype-dark"],
     [data-theme="hype-dark"] *,
     [data-theme="breadline-dark"],

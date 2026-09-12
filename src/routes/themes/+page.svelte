@@ -116,7 +116,7 @@ const panel: ResourcePanelModel = {
   ><title>Theme studio · Hype</title>
   <meta
     name="description"
-    content="Compare Nullspace, Oblivion, Milque and Rye across real Hype components."
+    content="Compare Nullspace, Nebula, Oblivion, Milque and Rye across real Hype components."
   ></svelte:head
 >
 
@@ -161,7 +161,7 @@ const panel: ResourcePanelModel = {
           Good things.<br><span class="text-muted-foreground">In every light.</span>
         </h1>
         <p class="mt-6 max-w-md text-sm leading-7 text-muted-foreground">
-          Four palettes, one familiar place. Explore a neighbourhood, plan a collection,
+          Five palettes, one familiar place. Explore a neighbourhood, plan a collection,
           and find the atmosphere that feels like you.
         </p>
         <div class="mt-6 flex items-center gap-3 text-sm">
@@ -178,7 +178,7 @@ const panel: ResourcePanelModel = {
         />
         <label
           class="mt-5 flex cursor-pointer items-center justify-between gap-4 border-t border-border pt-4 text-xs text-muted-foreground"
-          >Compare all four palettes<input
+          >Compare all five palettes<input
             type="checkbox"
             bind:checked={compare}
             class="size-4 accent-primary"
@@ -387,7 +387,7 @@ const panel: ResourcePanelModel = {
     <footer
       class="flex flex-wrap justify-between gap-3 py-8 text-[10px] uppercase tracking-widest text-muted-foreground"
     >
-      <span>Nullspace / Oblivion / Milque / Rye</span
+      <span>Nullspace / Nebula / Oblivion / Milque / Rye</span
       ><span>Preview only · No account changes</span>
     </footer>
   </div>
