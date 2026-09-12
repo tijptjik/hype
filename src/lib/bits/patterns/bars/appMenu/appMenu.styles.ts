@@ -7,7 +7,7 @@ const APP_MENU_NAV_PANEL_SHARED_CLASSES =
   'pointer-events-auto relative flex w-full min-w-0 items-center justify-between'
 
 const APP_MENU_NAV_PANEL_DESKTOP_CLASSES =
-  'md:inline-flex md:h-14 md:w-auto md:max-w-full md:items-center md:justify-center md:gap-1 md:rounded-full md:border md:border-[color-mix(in_oklab,var(--color-base-content)_12%,transparent)] md:bg-[color-mix(in_oklab,black_84%,var(--color-glass-result)_16%)] md:px-1.5 md:shadow-[0_18px_48px_rgb(0_0_0_/_0.34)] md:backdrop-blur-[14px] md:px-4'
+  'md:inline-flex md:h-14 md:w-auto md:max-w-full md:items-center md:justify-center md:gap-1 md:rounded-full md:border md:border-[color-mix(in_oklab,var(--color-base-content)_12%,transparent)] md:bg-panel/95 md:px-1.5 md:shadow-[0_18px_48px_rgb(0_0_0_/_0.34)] md:backdrop-blur-[14px] md:px-4'
 
 export function getAppMenuNavPanelClasses(hasElevatedChrome: boolean): string {
   return cx(
@@ -91,7 +91,7 @@ export function getAppMenuItemButtonClasses(
 }
 
 const APP_MENU_NAV_SHARED_CLASSES =
-  'fixed left-1/2 right-auto bottom-0 z-100 w-[calc(var(--app-menu-effective-width)-6rem)] max-w-[calc(var(--app-menu-effective-width)-6rem)] rounded-t-3xl border-2 border-b-0 border-base-300 bg-black px-4 caret-transparent transform-[translateX(calc(-50%+var(--app-menu-offset-x)))]'
+  'fixed left-1/2 right-auto bottom-0 z-100 w-[calc(var(--app-menu-effective-width)-6rem)] max-w-[calc(var(--app-menu-effective-width)-6rem)] rounded-t-3xl border-2 border-b-0 border-base-300 bg-panel px-4 caret-transparent transform-[translateX(calc(-50%+var(--app-menu-offset-x)))]'
 
 const APP_MENU_NAV_ICON_ONLY_MAX_WIDTH_CLASSES = 'max-w-80'
 

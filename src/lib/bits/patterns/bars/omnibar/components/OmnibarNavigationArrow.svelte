@@ -12,7 +12,7 @@ let { direction, disabled = false, onClick }: OmnibarNavigationArrowProps = $pro
 
 <button
   type="button"
-  class="group flex h-full w-12 flex-none touch-none items-center justify-center rounded-none bg-black transition-colors duration-300 focus:outline-none {direction === 'right'
+  class="group flex h-full w-12 flex-none touch-none items-center justify-center rounded-none bg-panel transition-colors duration-300 focus:outline-none {direction === 'right'
     ? 'w-140:rounded-r-md'
     : 'w-140:rounded-l-md'}"
   {disabled}

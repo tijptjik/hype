@@ -34,7 +34,10 @@ function onButtonClick(variant: string) {
 >
   <div class="mb-8 max-w-2xl">
     <ThemePicker value={previewTheme} onSelect={theme => previewTheme = theme} />
-    <a href="/themes" class="mt-4 inline-block text-primary underline"
+    <a
+      data-sveltekit-reload
+      href="/themes"
+      class="mt-4 inline-block text-primary underline"
       >Open the theme composition preview →</a
     >
   </div>

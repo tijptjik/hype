@@ -53,7 +53,7 @@
   /* Search Results */
   /* --------- */
   .bits-theme .bits-search-result-item {
-    @apply relative flex min-h-[4.5rem] w-full items-center gap-3 overflow-hidden rounded-md bg-[#242424] px-3 py-3 text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none focus-visible:bg-base-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-base-300;
+    @apply relative flex min-h-[4.5rem] w-full items-center gap-3 overflow-hidden rounded-md bg-panel px-3 py-3 text-left hover:bg-base-200 focus:bg-base-200 focus:outline-none focus-visible:bg-base-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-base-300;
   }
 
   .bits-theme .bits-search-result-item[data-staggered-entrance="true"] {
@@ -62,7 +62,7 @@
   }
 
   .bits-theme .bits-search-result-item:disabled {
-    @apply cursor-not-allowed hover:bg-[#242424] focus:bg-[#242424] focus-visible:bg-[#242424] focus-visible:ring-0;
+    @apply cursor-not-allowed hover:bg-panel focus:bg-panel focus-visible:bg-panel focus-visible:ring-0;
   }
 
   .bits-theme .bits-search-result-item__content {
@@ -92,7 +92,7 @@
   }
 
   .bits-theme .bits-search-result-item__avatar-skeleton {
-    @apply absolute inset-0 opacity-100 bg-[#4a4a4a];
+    @apply absolute inset-0 opacity-100 bg-raised;
   }
 
   .bits-theme
@@ -130,7 +130,7 @@
   }
 
   .bits-theme .bits-search-result-item__preview {
-    @apply h-24 w-24 shrink-0 overflow-hidden rounded-none border-r border-white/10 bg-black/50;
+    @apply h-24 w-24 shrink-0 overflow-hidden rounded-none border-r border-border bg-surface;
   }
 
   .bits-theme .bits-search-result-item__preview-image {

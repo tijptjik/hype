@@ -57,7 +57,9 @@ const FOCUS_VISIBLE_CLASSES = cx(
   'focus-visible:not-disabled:focus-visible:not-[aria-disabled=true]:border-[var(--btn-hover-border,var(--btn-border))]',
   'focus-visible:not-disabled:focus-visible:not-[aria-disabled=true]:bg-[var(--btn-hover-bg,var(--btn-bg))]',
   'focus-visible:not-disabled:focus-visible:not-[aria-disabled=true]:text-[var(--btn-hover-fg,var(--btn-fg))]',
-  'focus-visible:outline-none',
+  'focus-visible:outline-2',
+  'focus-visible:outline-offset-2',
+  'focus-visible:outline-focus',
 )
 
 const ARIA_DISABLED_CLASSES = cx(
@@ -120,7 +122,7 @@ const COLOR_VAR_MAP = {
     '--btn-transparent-fg': 'var(--color-base-content)',
     '--btn-transparent-hover-fg': 'var(--color-primary)',
     '--btn-transparent-active-fg':
-      'color-mix(in oklab, var(--color-primary) 84%, white)',
+      'color-mix(in oklab, var(--color-primary) 84%, var(--theme-text))',
   },
   light: {
     '--btn-color': 'var(--color-base-100)',
@@ -136,15 +138,15 @@ const COLOR_VAR_MAP = {
   },
   primary: {
     '--btn-color': 'var(--color-primary)',
-    '--btn-color-content': 'var(--color-white)',
+    '--btn-color-content': 'var(--color-primary-content)',
   },
   secondary: {
     '--btn-color': 'var(--color-secondary)',
-    '--btn-color-content': 'var(--color-white)',
+    '--btn-color-content': 'var(--color-secondary-content)',
   },
   accent: {
     '--btn-color': 'var(--color-accent)',
-    '--btn-color-content': 'var(--color-white)',
+    '--btn-color-content': 'var(--color-accent-content)',
   },
   info: {
     '--btn-color': 'var(--color-info)',
@@ -160,7 +162,7 @@ const COLOR_VAR_MAP = {
   },
   error: {
     '--btn-color': 'var(--color-error)',
-    '--btn-color-content': 'var(--color-white)',
+    '--btn-color-content': 'var(--color-error-content)',
   },
 } as const satisfies Record<ButtonColor, ButtonCssVars>
 
@@ -172,10 +174,10 @@ const STYLE_VAR_MAP = {
     '--btn-border': 'var(--btn-color)',
     '--btn-hover-bg': 'transparent',
     '--btn-hover-fg':
-      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 88%, white)',
+      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 88%, var(--theme-text))',
     '--btn-active-bg': 'transparent',
     '--btn-active-fg':
-      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 76%, white)',
+      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 76%, var(--theme-text))',
   },
   dash: {
     '--btn-bg': 'transparent',
@@ -183,10 +185,10 @@ const STYLE_VAR_MAP = {
     '--btn-border': 'var(--btn-color)',
     '--btn-hover-bg': 'transparent',
     '--btn-hover-fg':
-      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 88%, white)',
+      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 88%, var(--theme-text))',
     '--btn-active-bg': 'transparent',
     '--btn-active-fg':
-      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 76%, white)',
+      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 76%, var(--theme-text))',
   },
   soft: {
     '--btn-bg': 'color-mix(in oklab, var(--btn-color) 16%, transparent)',
@@ -210,7 +212,7 @@ const STYLE_VAR_MAP = {
     '--btn-hover-fg': 'var(--btn-transparent-hover-fg, var(--btn-color))',
     '--btn-active-bg': 'transparent',
     '--btn-active-fg':
-      'var(--btn-transparent-active-fg, color-mix(in oklab, var(--btn-color) 84%, white))',
+      'var(--btn-transparent-active-fg, color-mix(in oklab, var(--btn-color) 84%, var(--theme-text)))',
   },
   link: {
     '--btn-bg': 'transparent',
@@ -218,10 +220,10 @@ const STYLE_VAR_MAP = {
     '--btn-border': 'transparent',
     '--btn-hover-bg': 'transparent',
     '--btn-hover-fg':
-      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 88%, white)',
+      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 88%, var(--theme-text))',
     '--btn-active-bg': 'transparent',
     '--btn-active-fg':
-      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 76%, white)',
+      'color-mix(in oklab, var(--btn-outline-fg, var(--btn-color)) 76%, var(--theme-text))',
   },
 } as const satisfies Record<ButtonStyle, ButtonCssVars>
 
@@ -264,7 +266,7 @@ const MODIFIER_CLASS_MAP = {
 
 const GHOST_NEUTRAL_VARS = {
   '--btn-hover-fg': 'var(--color-primary)',
-  '--btn-active-fg': 'color-mix(in oklab, var(--color-primary) 84%, white)',
+  '--btn-active-fg': 'color-mix(in oklab, var(--color-primary) 84%, var(--theme-text))',
 } as const satisfies ButtonCssVars
 
 export const BUTTON_ICON_CLASSES = cx(

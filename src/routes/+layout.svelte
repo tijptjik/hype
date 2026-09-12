@@ -306,6 +306,8 @@ async function handleRequestedUpgrade(): Promise<void> {
 }
 
 onMount(() => {
+  // The component studio has local sample data and needs no map/resource bootstrap.
+  if (page.url.pathname === '/themes') return
   hasMounted = true
 
   const handleUpgradeRequest = (event: Event): void => {
@@ -364,7 +366,9 @@ const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false)
 const localeKey = $derived(getLocaleKey())
 const isShelllessRoute = $derived(
   Boolean(
-    page.route.id?.startsWith('/policy') || page.route.id?.startsWith('/account'),
+    page.url.pathname === '/themes' ||
+      page.route.id?.startsWith('/policy') ||
+      page.route.id?.startsWith('/account'),
   ),
 )
 // Sign-in and sign-up provide a map-backed landing surface of their own. Render it

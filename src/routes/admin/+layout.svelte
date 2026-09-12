@@ -6,11 +6,15 @@ import { page } from '$app/state'
 // I18N
 import { m } from '$lib/i18n'
 // COMPONENTS
-import Sidebar from '$lib/components/panels/Admin.svelte'
-import Settings from '$lib/components/panels/Settings.svelte'
+import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
+import { useResourcePanelModel } from '$lib/adapters/panels/useResourcePanelModel.svelte'
+import { AdminMenu } from '$lib/bits'
+import Settings from '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
 // BITS
 import { AdminShell } from '$lib/bits'
 // ADAPTERS
+import { useSettingsPanelModel } from '$lib/adapters/panels/useSettingsPanelModel.svelte'
+import { getThemeModel } from '$lib/themes/theme.svelte'
 import { useAdminHeaderModel } from '$lib/adapters/header'
 // NAVIGATION
 import {
@@ -42,6 +46,8 @@ const appCtx = getAppCtx()
 // CONTEXT :: ADMIN
 // svelte-ignore state_referenced_locally
 const adminCtx = setAdminCtx(appCtx)
+const settingsModel = useSettingsPanelModel(appCtx, getThemeModel(), adminCtx)
+const sidebarModel = useResourcePanelModel(appCtx, 'admin', adminCtx)
 setHeaderCtrl()
 const headerModel = useAdminHeaderModel(appCtx, adminCtx)
 const headerProps = $derived(headerModel.getHeaderProps())
@@ -88,11 +94,15 @@ afterNavigate(() => {
   {headerProps}
 >
   {#snippet sidebar()}
-    <Sidebar />
+    <ResourcePanel model={sidebarModel}
+      >{#snippet footer()}
+        <AdminMenu isNarrow={sidebarModel.panel.isNarrow} />
+      {/snippet}</ResourcePanel
+    >
   {/snippet}
 
   {#snippet settings()}
-    <Settings />
+    <Settings model={settingsModel} />
   {/snippet}
 
   {@render children()}

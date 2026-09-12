@@ -100,7 +100,7 @@ function getItemIconTone(item: AppMenuItem<T>): 'primary' | 'white' | 'secondary
 
 function getItemIconClasses(item: AppMenuItem<T>): string {
   const baseIconClass =
-    isPillMenu && trailingItems.includes(item) ? 'text-secondary' : 'text-white'
+    isPillMenu && trailingItems.includes(item) ? 'text-secondary' : 'text-base-content'
   return `${isPillMenu ? `${baseIconClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)]` : 'text-primary'} ${item.iconClasses ?? ''}`.trim()
 }
 
@@ -119,10 +119,12 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
   }
 
   if (!isPillMenu) {
-    return 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider text-white'
+    return 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider text-base-content'
   }
 
-  const toneClass = trailingItems.includes(item) ? 'text-secondary' : 'text-white'
+  const toneClass = trailingItems.includes(item)
+    ? 'text-secondary'
+    : 'text-base-content'
 
   return `min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)]`
 }
