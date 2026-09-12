@@ -274,6 +274,12 @@ export function normalizeProjectLayersForSubmit(
     }))
 }
 
+/**
+ * Builds the canonical editor baseline from committed project data.
+ * @param data - Committed project, or null for creation.
+ * @param defaults - Parent defaults for a new project.
+ * @returns Form input with the same layer ordering and ranks as the editable section.
+ */
 export function toProjectFormInput(
   data?: Project | null,
   defaults?: ProjectFormDefaults,
@@ -323,11 +329,18 @@ export function toProjectFormInput(
         capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
       })),
       properties: cloneProjectProperties(data.properties),
-      layers: (data.layers ?? []).map(layer => ({
-        id: layer.id,
-        rank: layer.rank ?? 0,
-        isDefaultVisible: Boolean(layer.isDefaultVisible),
-      })),
+      // Match the editable section's active, sorted, densely ranked layer projection.
+      layers: (data.layers ?? [])
+        .filter(layer => !layer.isArchived)
+        .sort(
+          (left, right) =>
+            (left.rank ?? 0) - (right.rank ?? 0) || left.id.localeCompare(right.id),
+        )
+        .map((layer, rank) => ({
+          id: layer.id,
+          rank,
+          isDefaultVisible: Boolean(layer.isDefaultVisible),
+        })),
     },
   }
 }

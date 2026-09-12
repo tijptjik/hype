@@ -318,7 +318,15 @@ export const ProjectEntityFormData = z.object({
   capabilities: ProjectCapabilitiesBase,
   userRoles: ProjectUserRolesFormData.optional(),
   properties: ProjectPropertiesFormData,
-  layers: z.array(ProjectLayerFormData).optional(),
+  layers: z
+    .array(ProjectLayerFormData)
+    .refine(
+      layers => layers.length === 0 || layers.some(layer => layer.isDefaultVisible),
+      {
+        message: 'At least one layer must be visible by default.',
+      },
+    )
+    .optional(),
 })
 
 export const ProjectFormMeta = z.object({

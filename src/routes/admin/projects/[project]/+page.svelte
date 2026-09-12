@@ -1846,10 +1846,14 @@ $effect(() => {
 
 // i18N CARDS
 
+/**
+ * Rechecks server issues after edits once validation has been shown.
+ * @returns Nothing.
+ */
 function revalidateAfterProgrammaticChange(): void {
   revalidateAfterSubmitAttempt({
     wasSubmitAttempted: formCtx.wasSubmitAttempted,
-    validate: formCtx.validate,
+    validate: () => formCtx.validate({ preflightOnly: false }),
   })
 }
 
@@ -2147,7 +2151,7 @@ async function onReset(): Promise<void> {
   formCtx.clearSubmitAttemptState()
   if (activeCommittedProjectData && activeCommittedProject) {
     project = activeCommittedProject
-    formCtx.form.fields.set(toProjectFormInput(activeCommittedProjectData))
+    formCtx.reset(toProjectFormInput(activeCommittedProjectData))
     syncLicenseEditorStateFromForm()
   } else {
     autoSeededOwnerOrganisationIds = new Set()
