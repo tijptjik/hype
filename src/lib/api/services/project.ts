@@ -21,7 +21,6 @@ import { applyTriStateBooleanCondition } from '$lib/db/query'
 import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
 import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
 import {
-  ProjectCompactProfileAPI,
   ProjectAdminProfileAPI,
   ProjectCardProfileAPI,
   ProjectDetailProfileAPI,

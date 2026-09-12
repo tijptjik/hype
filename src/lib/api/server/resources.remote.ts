@@ -12,7 +12,7 @@ import {
 import { getProjects } from './project.remote'
 import { getLayers } from './layer.remote'
 // TYPES
-import type { PanelResource, ResourcePage, ResourcePageInput } from '$lib/types'
+import type { PanelResource, ResourcePage } from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -206,7 +206,7 @@ export const getDefaultLayerResources = guardedQuery(
       })
       rows.push(...(result.data as PanelResource[]))
       if (!result.hasMore || !result.data.length) break
-      afterId = result.data.at(-1)!.id
+      afterId = result.data.at(-1)?.id
     }
     return rows
   },

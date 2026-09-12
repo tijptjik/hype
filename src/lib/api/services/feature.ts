@@ -1011,7 +1011,7 @@ const prepareUserContributedFeatureDraft = async (
 
   return {
     validatedFeature,
-    layerScope: layerScope!,
+    layerScope,
   }
 }
 
