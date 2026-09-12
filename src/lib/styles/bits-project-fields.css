@@ -636,7 +636,9 @@
       opacity 0.15s ease;
   }
 
-  .bits-theme .bits-project-field-card__value-item:focus-within {
+  /* Drag feedback uses the insertion line; suppress the editing focus border. */
+  .bits-theme
+  .bits-project-field-card__value-item:not([data-dnd-active="true"]):focus-within {
     border-color: color-mix(in oklab, var(--color-primary) 60%, transparent);
   }
 
@@ -703,7 +705,8 @@
     opacity: 0.45;
   }
 
-  .bits-theme .bits-project-field-card__value-item--drag-over {
+  .bits-theme
+    .bits-project-field-card__value-item--drag-over:not([data-dnd-active="true"]) {
     border-color: color-mix(in oklab, var(--color-primary) 70%, transparent);
   }
 
