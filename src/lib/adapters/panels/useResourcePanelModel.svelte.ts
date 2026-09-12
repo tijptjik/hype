@@ -2,6 +2,8 @@
 import { onMount } from 'svelte'
 // I18N
 import { getI18n, m } from '$lib/i18n'
+// LABELS
+import { getResourcePanelShortName } from './resourcePanelLabels'
 // CONTEXT
 import { usePanelResources } from '$lib/context/panel-resources.svelte'
 // NAVIGATION
@@ -57,7 +59,13 @@ export function useResourcePanelModel(
     }
   }
 
-  /** Executes the resource's primary map-selection or administration action. */
+  /**
+   * Executes the resource's primary map-selection or administration action.
+   * @param type - Resource level whose defaults or layer selection should change.
+   * @param id - Selected resource identity.
+   * @returns Completion of selection or navigation.
+   * @remarks Public row clicks leave organisation and project prism filters unchanged.
+   */
   async function primary(type: PanelResourceType, id: string): Promise<void> {
     if (mode === 'admin') {
       if (app.getActiveResourceType() === type && app.getActiveResourceId() === id)
@@ -72,42 +80,42 @@ export function useResourcePanelModel(
       return
     }
     if (type === 'organisation') {
-      if (app.state.prisms.organisation.includes(id))
-        await app.deactivateOrganisation(id)
-      else if (
-        !app.state.prisms.organisation.length &&
-        app.isOrganisationDefaultLayersActive(id)
-      )
+      if (app.isOrganisationDefaultLayersActive(id))
         await app.deactivateOrganisationLayers(id)
-      else await app.activateOrganisationWithDefaultLayers(id)
+      else await app.addOrganisationDefaultLayers(id)
     } else if (type === 'project') {
-      if (app.state.prisms.project.includes(id)) await app.deactivateProject(id)
-      else if (!app.state.prisms.project.length && app.isProjectDefaultLayersActive(id))
-        await app.deactivateProjectLayers(id)
-      else await app.activateProjectWithDefaultLayers(id)
+      if (app.isProjectDefaultLayersActive(id)) await app.deactivateProjectLayers(id)
+      else await app.addProjectDefaultLayers(id)
     } else {
       await app.toggleLayer(id)
       closeExcludedFeature()
     }
   }
 
-  /** Toggles a pin/prism without confusing selection with current page membership. */
+  /**
+   * Toggles a pin/prism without confusing selection with current page membership.
+   * @param type - Hierarchy level to filter, or active layer to toggle.
+   * @param id - Resource identity.
+   * @returns Completion of the dependent refresh.
+   * @remarks Organisation and project filters do not activate default layers.
+   */
   async function toggle(type: PanelResourceType, id: string): Promise<void> {
     if (type === 'organisation') {
-      if (mode === 'prisms' && !app.state.prisms.organisation.includes(id))
-        await app.activateOrganisationPrismWithDefaultLayers(id)
-      else await app.toggleOrganisation(id)
+      await app.toggleOrganisation(id)
     } else if (type === 'project') {
-      if (mode === 'prisms' && !app.state.prisms.project.includes(id))
-        await app.activateProjectPrismWithDefaultLayers(id)
-      else await app.toggleProject(id)
+      await app.toggleProject(id)
     } else {
       await app.toggleLayer(id)
       closeExcludedFeature()
     }
   }
 
-  /** Builds directly joined breadcrumb labels and action callbacks for one visible row. */
+  /**
+   * Builds directly joined breadcrumb labels and action callbacks for visible rows.
+   * @param type - Resource level to present.
+   * @param index - Corresponding query-list index.
+   * @returns Rows sorted with selected and enabled resources first.
+   */
   function rows(type: PanelResourceType, index: number): ResourcePanelRow[] {
     const selected = app.state.prisms[type]
     return lists[index].rows
@@ -123,7 +131,14 @@ export function useResourcePanelModel(
           type === 'layer' ? hierarchy.project : undefined,
         ]
           .filter(Boolean)
-          .map(ancestor => getI18n(ancestor, 'nameShort', app.getUserPreferences()))
+          .map(ancestor =>
+            getResourcePanelShortName(
+              ancestor,
+              app.getUserPreferences(),
+              ancestor?.code ?? '',
+            ),
+          )
+          .filter(label => label.length > 0)
         const pinned = selected.includes(resource.id)
         const active =
           app.getActiveResourceType() === type &&
@@ -137,6 +152,7 @@ export function useResourcePanelModel(
         return {
           id: resource.id,
           name,
+          shortName: getResourcePanelShortName(record, app.getUserPreferences(), name),
           breadcrumbs,
           selected: pinned,
           active,

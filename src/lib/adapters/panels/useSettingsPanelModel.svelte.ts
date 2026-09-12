@@ -73,6 +73,10 @@ export function useSettingsPanelModel(
       return theme.selected
     },
     onTheme: theme.select,
+    get mapTheme() {
+      return theme.mapSelected
+    },
+    onMapTheme: theme.selectMap,
     onClose: () => app.closePanel(Panel.settings),
   }
 }
