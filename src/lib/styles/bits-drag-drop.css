@@ -1,0 +1,33 @@
+@layer components {
+  /* Keep the row as the drop target while its controls and tooltips stop hovering.
+     Descendants with their own pointer-events rules must also stay suppressed. */
+  .bits-theme [data-dnd-item][data-dnd-active="true"] * {
+    pointer-events: none !important;
+  }
+
+  /* Override the library's unlayered blue edge indicators with shared theme states.
+     Important is required because unlayered vendor CSS outranks component layers. */
+  .bits-theme [data-dnd-item].drop-before::before,
+  .bits-theme [data-dnd-item].drop-after::after {
+    background-color: var(--color-base-content) !important;
+  }
+
+  /* Centre the 2px line in the list gap, accounting for bordered option rows. */
+  .bits-theme [data-dnd-item].drop-before::before {
+    top: calc(
+      -0.5 *
+      var(--bits-dnd-gap) -
+      var(--bits-dnd-border-width, 0px)
+    ) !important;
+    transform: translateY(-50%) !important;
+  }
+
+  .bits-theme [data-dnd-item].drop-after::after {
+    bottom: calc(
+      -0.5 *
+      var(--bits-dnd-gap) -
+      var(--bits-dnd-border-width, 0px)
+    ) !important;
+    transform: translateY(50%) !important;
+  }
+}

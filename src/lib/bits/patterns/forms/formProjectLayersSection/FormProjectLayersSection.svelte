@@ -1,9 +1,10 @@
 <script lang="ts">
 // THIRD-PARTY
-import { draggable, droppable, type DragDropState } from '@thisux/sveltednd'
-import '@thisux/sveltednd/dnd.css'
-import { getDropIndex } from '$lib/client/services/dragDrop'
+import { draggable, droppable, dndState, type DragDropState } from '@thisux/sveltednd'
 import EyeIcon from 'virtual:icons/lucide/eye'
+
+// SERVICES
+import { getDropIndex } from '$lib/client/services/dragDrop'
 
 // BITS COMPONENTS
 import { SimpleTooltip } from '$lib/bits/core'
@@ -43,8 +44,10 @@ function handleDrop(state: DragDropState, targetLayerId: string): void {
   const ids = items.map(item => item.id)
   const destination = getDropIndex(state, ids, targetLayerId, container)
   if (destination === null) return
-  const sourceId = ids.find(id => id === (state.draggedItem as { id: string }).id)
-  if (sourceId) onMove(sourceId, ids[destination])
+  const item = state.draggedItem
+  if (item && typeof item === 'object' && 'id' in item && typeof item.id === 'string') {
+    onMove(item.id, ids[destination])
+  }
 }
 </script>
 
@@ -66,9 +69,13 @@ function handleDrop(state: DragDropState, targetLayerId: string): void {
     </div>
   {/if}
 
-  <div class="flex min-h-0 w-2xl flex-col gap-3">
+  <div
+    class="flex min-h-0 w-2xl flex-col [--bits-dnd-gap:0.75rem] gap-[var(--bits-dnd-gap)]"
+  >
     {#each items as item (item.id)}
       <div
+        data-dnd-item
+        data-dnd-active={dndState.isDragging}
         class:cursor-grab={!isDisabled}
         use:draggable={{
           container: `${container}-${item.id}`,
@@ -93,7 +100,7 @@ function handleDrop(state: DragDropState, targetLayerId: string): void {
             class="bits-form__parent-resource-actions-rail"
           >
             <div class="bits-form__parent-resource-actions">
-              <SimpleTooltip>
+              <SimpleTooltip disabled={dndState.isDragging}>
                 {#snippet trigger()}
                   <label
                     for={`${instanceId}-${item.id}-visible`}

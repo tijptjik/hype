@@ -566,11 +566,12 @@
   }
 
   .bits-theme .bits-project-field-card__values {
+    --bits-dnd-gap: 0.5rem;
     --bits-project-field-value-row-height: 50px;
     --bits-project-field-value-content-height: 28px;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--bits-dnd-gap);
     overflow-anchor: none;
   }
 

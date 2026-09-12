@@ -23,7 +23,14 @@ const items = ['a', 'b'].map(id => ({
   isDefaultVisible: true,
 }))
 
-beforeEach(() => vi.useRealTimers())
+beforeEach(() => {
+  vi.useRealTimers()
+  // jsdom has no layout hit testing; auto-scroll can safely see empty space.
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: () => null,
+  })
+})
 afterEach(cleanup)
 
 describe('project layer drag and drop', () => {
@@ -42,10 +49,13 @@ describe('project layer drag and drop', () => {
       getData: (type: string) => payload.get(type) ?? '',
     }
     await fireEvent.dragStart(source, { dataTransfer })
+    expect(container.querySelectorAll('[data-dnd-active="true"]')).toHaveLength(2)
     await fireEvent.dragEnter(target, { dataTransfer })
+    await fireEvent.dragOver(target, { dataTransfer, clientY: 10 })
     await fireEvent.drop(target, { dataTransfer })
     expect(onMove).toHaveBeenCalledExactlyOnceWith('a', 'b')
     await fireEvent.dragEnd(source)
+    expect(container.querySelectorAll('[data-dnd-active="true"]')).toHaveLength(0)
   })
 
   it.each([{ isEditing: false }, { isSubmitting: true }])(

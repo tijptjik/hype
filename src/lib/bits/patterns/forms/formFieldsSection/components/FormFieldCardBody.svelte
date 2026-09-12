@@ -6,6 +6,8 @@ import { fade } from 'svelte/transition'
 import { m, toLocaleKebab, toLocaleKey } from '$lib/i18n'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
+// SERVICES
+import { getDropIndex } from '$lib/client/services/dragDrop'
 // COMPONENTS
 import { SelectField, Skeleton, TextInput } from '$lib/bits/custom/form'
 import { FormI18nSection } from '$lib/bits/patterns/forms/formI18nSection'
@@ -15,7 +17,11 @@ import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelt
 import type { SelectItem } from '$lib/bits/core/select/select.types'
 import type { FormIssueLike, Locale, LocaleKey } from '$lib/types'
 import type { FormFieldCardBodyProps } from '$lib/db/zod/schema/property.types'
-import type { DragDropState } from '@thisux/sveltednd'
+import type {
+  DragDropState,
+  DraggableOptions,
+  DragDropOptions,
+} from '@thisux/sveltednd'
 
 let {
   property,
@@ -56,6 +62,9 @@ const canShowValues = $derived(
 const valuesAreTranslatable = $derived(
   property.type !== 'classifier' || Boolean(property.isTranslatable),
 )
+const valueListId = $props.id()
+const valueContainerGroup = `field-values-${valueListId}`
+
 const sortedValues = $derived(
   (property.values || []).slice().sort((a, b) => a.rank - b.rank),
 )
@@ -473,21 +482,35 @@ function preventDropBeforeInput(event: InputEvent): void {
   preventDefaultAndPropagation(event)
 }
 
-function onValueDrop(state: DragDropState<{ id: string }>): void {
-  const valueId = state.draggedItem?.id
-  const nextIndex = Number(state.targetContainer)
-  if (!valueId || Number.isNaN(nextIndex)) return
-  onMoveValue(property.id, valueId, nextIndex)
+/**
+ * Reorder only values belonging to this field using the indicated drop edge.
+ * @param state - The active drag state.
+ * @param targetId - The option receiving the drop.
+ * @returns Nothing.
+ */
+function onValueDrop(state: DragDropState<{ id: string }>, targetId: string): void {
+  if (isValueDnDDisabled()) return
+  const nextIndex = getDropIndex(
+    state,
+    sortedValues.map(value => value.id),
+    targetId,
+    valueContainerGroup,
+  )
+  if (nextIndex === null) return
+  onLayoutMutationStart?.()
+  onMoveValue(property.id, state.draggedItem.id, nextIndex)
 }
 
 function isValueDnDDisabled(): boolean {
   return !isEditing || removeMode || optionRemoveMode
 }
 
-function getValueDraggableConfig(valueIndex: number, valueId: string) {
+function getValueDraggableConfig(valueId: string): DraggableOptions<{ id: string }> {
   return {
-    container: valueIndex.toString(),
+    container: `${valueContainerGroup}-${valueId}`,
+    containerGroup: valueContainerGroup,
     dragData: { id: valueId },
+    handle: '.bits-project-field-card__value-handle',
     disabled: isValueDnDDisabled(),
     interactive: [
       '.bits-project-field-card__value-editable',
@@ -499,12 +522,13 @@ function getValueDraggableConfig(valueIndex: number, valueId: string) {
   }
 }
 
-function getValueDroppableConfig(valueIndex: number) {
+function getValueDroppableConfig(valueId: string): DragDropOptions<{ id: string }> {
   return {
-    container: valueIndex.toString(),
+    container: `${valueContainerGroup}-${valueId}`,
+    containerGroup: valueContainerGroup,
     disabled: isValueDnDDisabled(),
     callbacks: {
-      onDrop: onValueDrop,
+      onDrop: state => onValueDrop(state, valueId),
     },
     attributes: {
       dragOverClass: 'bits-project-field-card__value-item--drag-over',
@@ -917,8 +941,8 @@ $effect(() => {
                   onLayoutMutationStart?.()
                   onRemoveValue(propertyId, valueId)
                 }}
-                draggableConfig={getValueDraggableConfig(valueIndex, value.id)}
-                droppableConfig={getValueDroppableConfig(valueIndex)}
+                draggableConfig={getValueDraggableConfig(value.id)}
+                droppableConfig={getValueDroppableConfig(value.id)}
               >
                 {#snippet content()}
                   {#if showCoreFields}
@@ -955,8 +979,11 @@ $effect(() => {
                   {/if}
 
                   {#if valuesAreTranslatable || showCoreFields}
+                    <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                     <div
                       class={`bits-project-field-card__value-editable ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                      role="textbox"
+                      aria-readonly={!isEditing}
                       contenteditable={isEditing && (!showCoreFields || !valuesAreTranslatable) ? 'plaintext-only' : isEditing}
                       tabindex={isEditing ? 0 : -1}
                       use:bindValueEditable={{

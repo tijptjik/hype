@@ -179,7 +179,7 @@
     "@placemarkio/geo-viewport": "^1.0.2",
     "@sillvva/utils": "^0.9.0",
     "@tanstack/svelte-query": "^5.90.2",
-    "@thisux/sveltednd": "0.0.20",
+    "@thisux/sveltednd": "0.8.0",
     "@turf/bbox": "^7.4.0",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.7.4",

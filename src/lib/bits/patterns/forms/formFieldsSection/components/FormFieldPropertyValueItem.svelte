@@ -1,5 +1,6 @@
 <script lang="ts">
-import { draggable, droppable } from '@thisux/sveltednd'
+// THIRD-PARTY
+import { draggable, droppable, dndState } from '@thisux/sveltednd'
 // ICONS
 import Trash2 from 'virtual:icons/lucide/trash-2'
 // TYPES
@@ -20,6 +21,9 @@ let {
 </script>
 
 <div
+  data-dnd-item
+  data-dnd-active={dndState.isDragging}
+  style="--bits-dnd-border-width: 1px"
   class={`bits-project-field-card__value-item ${!isEditing ? 'bits-project-field-card__value-item--readonly' : ''} ${isPlaceholder ? 'bits-project-field-card__value-item--placeholder' : ''} ${hasIssues ? 'bits-project-field-card__value-item--issue' : ''}`}
   aria-invalid={hasIssues}
   use:draggable={draggableConfig}
