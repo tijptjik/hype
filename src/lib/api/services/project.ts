@@ -105,6 +105,7 @@ import type {
  * Keeps common fetches small while preserving the fields needed for UI rendering.
  */
 const projectCollectionWithRelations = {
+  organisation: compactAncestorRelations,
   i18n: true,
   image: true,
   mapStyleAssignment: {
@@ -192,7 +193,7 @@ export const getProjectWithRelations = <P extends ProjectProfile>(
     return {
       i18n: true,
       organisation: compactAncestorRelations,
-    } as ProjectRelationsByProfile<P>
+    } as unknown as ProjectRelationsByProfile<P>
   if (profile === 'admin') {
     return projectEntityWithRelations as ProjectRelationsByProfile<P>
   }
@@ -282,6 +283,7 @@ const toProfileResponseShape = async (
   }))
 
   const data = {
+    ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
     ...row,
     i18n: transformI18nSafely(i18n ?? []),
     userRoles: normalizedUserRoles,

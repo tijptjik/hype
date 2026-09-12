@@ -247,13 +247,7 @@ export const getFeatureWithRelations = <P extends FeatureProfile>(
   if (profile === 'admin') {
     return featureAdminRelations as FeatureRelationsByProfile<P>
   }
-  if (
-    profile === 'card' ||
-    profile === 'default' ||
-    profile === 'map' ||
-    profile === 'detail' ||
-    profile === 'full'
-  ) {
+  if (profile === 'card' || profile === 'detail' || profile === 'full') {
     return featureDetailRelations as FeatureRelationsByProfile<P>
   }
   return featureListRelations as FeatureRelationsByProfile<P>
@@ -418,20 +412,26 @@ const toProfileResponseShape = async (
       i18n: transformI18nSafely(row.i18n ?? []),
     })
   const imageProfile =
-    profile === 'admin' ? 'admin' : profile === 'list' ? 'list' : 'detail'
+    profile === 'admin'
+      ? 'admin'
+      : ['list', 'default', 'map'].includes(profile)
+        ? 'list'
+        : 'detail'
   const filterUnpublished = profile !== 'admin'
   const imageState = toFeatureImageEnvelope(
     row.images as FeatureImageRelation[],
     row.id,
     imageProfile,
     {
-      includeAll: profile !== 'list' && profile !== 'card',
+      includeAll: ['full', 'detail', 'admin'].includes(profile),
       filterUnpublished,
     },
   )
 
   const base = {
     ...row,
+    geometry:
+      profile === 'default' && row.geometry?.type !== 'Point' ? null : row.geometry,
     i18n: transformI18nSafely(row.i18n as never),
     properties: toPropertyShape(row.properties),
     image:
@@ -443,7 +443,7 @@ const toProfileResponseShape = async (
         : (imageState as { image: unknown }).image,
   }
 
-  if (profile === 'list') {
+  if (profile === 'list' || profile === 'default' || profile === 'map') {
     const listData = {
       ...base,
       image: imageState,
@@ -462,7 +462,7 @@ const toProfileResponseShape = async (
     ) as FeatureEntityByProfile<FeatureProfile>
   }
 
-  if (profile === 'card' || profile === 'default' || profile === 'map') {
+  if (profile === 'card') {
     const normalizedProperties = normalizeFeaturePropertiesForLayer(
       row.id,
       row.properties,

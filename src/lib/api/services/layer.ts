@@ -148,6 +148,8 @@ export const getLayerWithRelations = (
   ) {
     return {
       i18n: true,
+      organisation: compactAncestorRelations,
+      project: compactAncestorRelations,
       properties: true,
       ...(isAdminUser
         ? {
@@ -251,6 +253,7 @@ const toProfileResponseShape = async (
   profile: LayerProfile,
 ): Promise<Layer> => {
   const data = {
+    ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
     ...row,
     i18n: transformI18nSafely(row.i18n),
     properties: normalizeLayerPropertiesForProfile(row.properties),
