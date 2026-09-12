@@ -1,3 +1,5 @@
+// SVELTE
+import { requested } from '$app/server'
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
@@ -74,7 +76,6 @@ import {
   updateProjectArchivedStateById,
   updateProjectByIdWithConcurrency,
   updateProjectPublishedStateById,
-  cascadeProjectArchivedStateToDescendants,
   cascadeProjectPublishedStateToDescendants,
 } from '$lib/db/services/project'
 import { probeOrganisationQuery } from '$lib/db/services/organisation'
@@ -1108,6 +1109,10 @@ export const publishProject = guardedCommand(
       state: params.state,
     })
 
+    // Settle client optimistic overrides with the complete persisted relation graph.
+    void requested(getProject, 1).refreshAll()
+    void requested(getProjects, 1).refreshAll()
+
     return toBooleanStateResponseShape(persisted, 'isPublished')
   },
 )
@@ -1153,10 +1158,10 @@ export const archiveProject = guardedCommand(
         throw error(404, 'PROJECT_NOT_FOUND')
       },
     )
-    await cascadeProjectArchivedStateToDescendants(db, {
-      projectId,
-      state: params.state,
-    })
+
+    // Settle client optimistic overrides with the complete persisted relation graph.
+    void requested(getProject, 1).refreshAll()
+    void requested(getProjects, 1).refreshAll()
 
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },
