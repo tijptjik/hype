@@ -421,7 +421,7 @@ const translation: Handle = ({ event, resolve }) =>
     return resolve(event, {
       transformPageChunk: ({ html }) => {
         return html
-          .replace('%lang%', event.locals.user?.locale || locale)
+          .replace('lang="en"', `lang="${event.locals.user?.locale || locale}"`)
           .replace(
             '%theme%',
             resolveTheme(

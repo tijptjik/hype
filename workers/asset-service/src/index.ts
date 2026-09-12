@@ -3511,7 +3511,7 @@ const applyTransforms = async (
 const maybeDownscaleForLowMemoryPath = async (
   image: ImageData,
   target: { width: number; height: number },
-  request: TransformRequest,
+  _request: TransformRequest,
   debug?: TransformDebugContext,
 ): Promise<ImageData> => {
   const shouldUseLowMemoryPath = toPixelCount(image) > MAX_LOW_MEMORY_SOURCE_PIXELS
