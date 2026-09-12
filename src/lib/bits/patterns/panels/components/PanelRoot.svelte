@@ -31,9 +31,9 @@ let shouldShowOverlay = $derived(!inline && isOpen)
 {#if shouldShowInline}
   <div
     id="{position}-panel"
-    class="bits-theme bits-panel-root bits-panel-root--inline"
-    class:bits-panel-root--scrollable={scrollable}
-    class:bits-panel-root--left={position === 'left'}
+    class="bits-theme flex h-full max-w-full shrink-0 select-none flex-col bg-panel shadow-xl transition-all duration-500"
+    class:overflow-y-auto={scrollable}
+    class:left-0={position === 'left'}
     style:width={isNarrow ? '80px' : isAdmin ? '380px' : '420px'}
     transition:slide={{
       duration: 500,
@@ -42,7 +42,7 @@ let shouldShowOverlay = $derived(!inline && isOpen)
     }}
   >
     <div
-      class="bits-panel-root__content"
+      class="h-full min-h-0"
       class:overflow-y-auto={scrollable}
       bind:this={panelContainer}
     >
@@ -52,10 +52,10 @@ let shouldShowOverlay = $derived(!inline && isOpen)
 {:else if shouldShowOverlay}
   <div
     id="{position}-panel"
-    class="bits-theme bits-panel-root bits-panel-root--overlay"
-    class:bits-panel-root--scrollable={scrollable}
-    class:bits-panel-root--left={position === 'left'}
-    class:bits-panel-root--right={position === 'right'}
+    class="bits-theme absolute top-0 z-50 flex h-full w-full select-none flex-col bg-panel shadow-xl md:w-[420px]"
+    class:overflow-y-auto={scrollable}
+    class:left-0={position === 'left'}
+    class:right-0={position === 'right'}
     transition:fly={{
       duration: 150,
       easing: cubicInOut,
@@ -63,7 +63,7 @@ let shouldShowOverlay = $derived(!inline && isOpen)
     }}
   >
     <div
-      class="bits-panel-root__content"
+      class="h-full min-h-0"
       class:overflow-y-auto={scrollable}
       bind:this={panelContainer}
     >

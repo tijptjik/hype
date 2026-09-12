@@ -1,7 +1,7 @@
 <script lang="ts">
 import { flip } from 'svelte/animate'
 import type { Snippet } from 'svelte'
-import ResourceContainer from '$lib/components/panels/common/ResourceContainer.svelte'
+import ResourceContainer from '$lib/bits/patterns/panels/components/common/ResourceContainer.svelte'
 
 type ManagedItem = {
   id: string
@@ -9,7 +9,7 @@ type ManagedItem = {
 
 type Props = {
   items: ManagedItem[]
-  item: Snippet<[any]>
+  item: Snippet<[ManagedItem]>
   flipDurationMs?: number
 }
 

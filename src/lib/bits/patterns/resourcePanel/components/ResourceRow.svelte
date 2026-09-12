@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n'
 // ICONS
 import Funnel from 'virtual:icons/lucide/filter'
 import Crosshair from 'virtual:icons/lucide/crosshair'
@@ -64,7 +66,7 @@ const color = $derived(
       <button
         type="button"
         class="rounded-lg p-2 text-muted-foreground hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus"
-        aria-label={`Isolate ${row.name}`}
+        aria-label={m.panel__isolate_layer({ name: row.name })}
         onclick={row.onIsolate}
       >
         <Crosshair class="size-4" />

@@ -134,7 +134,7 @@ function handleUsernameAction(): void {
   {/key}
 {/snippet}
 
-<div class="z-20 -mt-6 rounded-full bg-black/80 px-4 py-1">
+<div class="z-20 -mt-6 rounded-full bg-panel/80 px-4 py-1">
   <div class="relative flex min-w-0 items-center justify-center">
     {#if hideEditableFields}
       <span

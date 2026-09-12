@@ -66,19 +66,22 @@ function measure(node: HTMLDivElement): void {
 
 <div
   bind:this={container}
-  class="scrollbar-thin relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-black py-1"
+  class="scrollbar-thin relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-panel py-1"
   aria-busy={loading}
 >
   <div class="relative w-full" style:height={`${$virtualizer.getTotalSize()}px`}>
     {#each $virtualizer.getVirtualItems() as row (row.key)}
-      <div
-        data-index={row.index}
-        use:measure
-        class="absolute left-0 top-0 w-full"
-        style:transform={`translateY(${row.start}px)`}
-      >
-        {@render item(items[row.index])}
-      </div>
+      <!-- A search can shrink items before the virtualizer updates its measured range. -->
+      {#if items[row.index]}
+        <div
+          data-index={row.index}
+          use:measure
+          class="absolute left-0 top-0 w-full"
+          style:transform={`translateY(${row.start}px)`}
+        >
+          {@render item(items[row.index])}
+        </div>
+      {/if}
     {/each}
   </div>
   {#if loading}

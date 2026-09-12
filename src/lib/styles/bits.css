@@ -43,9 +43,9 @@
     --background: var(--color-transparent);
     --background-alt: var(--color-base-200);
     --foreground: var(--color-base-content);
-    --foreground-alt: color-mix(in oklab, var(--color-base-content) 70%, black);
+    --foreground-alt: var(--theme-muted);
     --muted: var(--color-base-300);
-    --muted-foreground: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    --muted-foreground: var(--theme-muted);
     --border: var(--color-base-content);
     --border-input: color-mix(in oklab, var(--color-base-content) 17%, transparent);
     --border-input-hover: color-mix(
@@ -61,7 +61,7 @@
     --accent: var(--color-accent);
     --accent-foreground: var(--color-accent-content);
     --destructive: var(--color-error);
-    --tertiary: var(--color-warning);
+    --tertiary: var(--theme-tertiary);
     --line: var(--color-base-300);
     --light: var(--color-light);
 

@@ -3,11 +3,14 @@
 import * as ResourcePanelPrimitive from './components'
 // BITS
 import { PanelRoot } from '$lib/bits/patterns/panels'
+import Info from '$lib/bits/patterns/panels/components/info/Maps.svelte'
+import InfoIcon from 'virtual:icons/lucide/info'
 import X from 'virtual:icons/lucide/x'
 // I18N
 import { m } from '$lib/i18n'
 // TYPES
 import type { ResourcePanelProps } from './resourcePanel.types'
+let isInfoOpen = $state(false)
 let { model, footer }: ResourcePanelProps = $props()
 </script>
 
@@ -21,15 +24,27 @@ let { model, footer }: ResourcePanelProps = $props()
           {model.title}
         </h2>
       {/if}
+      {#if model.panel.panelType === 'prisms'}
+        <button
+          type="button"
+          class="ml-auto rounded-full p-2 text-muted-foreground hover:bg-surface"
+          aria-label={m.menu_about()}
+          aria-expanded={isInfoOpen}
+          onclick={() => isInfoOpen = !isInfoOpen}
+        >
+          <InfoIcon class="size-5" />
+        </button>
+      {/if}
       <button
         type="button"
         class="rounded-full p-2 text-muted-foreground hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus"
-        aria-label="Close panel"
+        aria-label={m.panel__close()}
         onclick={model.onClose}
       >
         <X class="size-5" />
       </button>
     </header>
+    <div class="max-h-[45%] shrink-0 overflow-y-auto"><Info isOpen={isInfoOpen} /></div>
     <div class="flex min-h-0 flex-1 flex-col">
       {#each model.sections as section (section.id)}
         <ResourcePanelPrimitive.Section

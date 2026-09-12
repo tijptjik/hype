@@ -1,4 +1,9 @@
 <script lang="ts">
+// ADAPTERS
+import { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
+import { useSettingsPanelModel } from '$lib/adapters/panels/useSettingsPanelModel.svelte'
+import { getThemeModel } from '$lib/themes/theme.svelte'
 // SVELTE
 import { browser } from '$app/environment'
 import type { Snippet } from 'svelte'
@@ -29,15 +34,16 @@ import { Panel } from '$lib/enums'
 // SERVICES
 import { getActiveMapStyleCode } from '$lib/client/services/map'
 import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
-import Filters from '$lib/components/panels/Filters.svelte'
-import Prisms from '$lib/components/panels/Prisms.svelte'
-import Stars from '$lib/components/panels/Stars.svelte'
-import Hub from '$lib/components/panels/Hub.svelte'
-// import Plan from '$lib/components/panels/Plan.svelte'
-// import Passport from '$lib/components/panels/Passport.svelte'
-// import EventCompanion from '$lib/components/panels/EventCompanion.svelte'
-import Settings from '$lib/components/panels/Settings.svelte'
-import Profile from '$lib/components/panels/Profile.svelte'
+import Filters from '$lib/bits/patterns/filtersPanel/FiltersPanel.svelte'
+import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
+import { useResourcePanelModel } from '$lib/adapters/panels/useResourcePanelModel.svelte'
+import Stars from '$lib/bits/patterns/starsPanel/StarsPanel.svelte'
+import Hub from '$lib/bits/patterns/hubPanel/HubPanel.svelte'
+// import Plan from '$lib/bits/patterns/planPanel/PlanPanel.svelte'
+// import Passport from '$lib/bits/patterns/passportPanel/PassportPanel.svelte'
+// import EventCompanion from '$lib/bits/patterns/eventCompanionPanel/EventCompanionPanel.svelte'
+import Settings from '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
+import Profile from '$lib/bits/patterns/profilePanel/ProfilePanel.svelte'
 // BITS
 import {
   AppHubSubscriptionOverlay,
@@ -85,6 +91,12 @@ let navDest = $state('')
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx()
+const settingsModel = useSettingsPanelModel(appCtx, getThemeModel())
+const filtersShell = usePanelShellModel(appCtx, Panel.filters)
+const starsShell = usePanelShellModel(appCtx, Panel.stars)
+const hubShell = usePanelShellModel(appCtx, Panel.hub)
+const profileModel = useProfilePanelModel(appCtx)
+const profileShell = usePanelShellModel(appCtx, Panel.profile)
 const responsiveCtx = getResponsiveCtx()
 // Set Hub context in AppCtx
 $effect(() => {
@@ -93,6 +105,7 @@ $effect(() => {
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx)
+const prismsModel = useResourcePanelModel(appCtx, 'prisms', undefined, omniCtx)
 const omnibarModel = useOmnibarModel(appCtx, omniCtx, responsiveCtx)
 const subscriptionOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
 
@@ -463,21 +476,27 @@ $effect(() => {
     <AppSurface>
       <MapCanvas mapStyleCode={activeMapStyleCode} bottomInset={menuReservedHeight} />
       <!-- Panels -->
-      <Prisms />
-      <Stars />
+      <ResourcePanel model={prismsModel} />
+      <Stars shell={starsShell} />
       <Hub
+        shell={hubShell}
+        preferences={appCtx.getUserPreferences()}
         {hub}
         showSubscription={subscriptionVisibility.showHubPanelSubscription}
         subscriptionProps={hubPanelSubscriptionProps}
         {privacyPolicyDialogProps}
         {termsOfServiceDialogProps}
       />
-      <Filters />
+      <Filters shell={filtersShell} />
       <!-- <Plan /> -->
       <!-- <Passport /> -->
       <!-- <EventCompanion /> -->
-      <Settings />
-      <Profile bind:panelContainer={profilePanelContainer} />
+      <Settings model={settingsModel} />
+      <Profile
+        model={profileModel}
+        shell={profileShell}
+        bind:panelContainer={profilePanelContainer}
+      />
       <AppMain>
         <AppHubSubscriptionOverlay
           class="z-50"

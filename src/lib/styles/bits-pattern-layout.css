@@ -4,7 +4,7 @@
   }
 
   .bits-theme .bits-panel-root {
-    @apply flex h-full select-none flex-col bg-black caret-transparent shadow-xl;
+    @apply flex h-full select-none flex-col bg-panel caret-transparent shadow-xl;
   }
 
   .bits-theme .bits-panel-root--inline {
@@ -28,7 +28,7 @@
   }
 
   .bits-panel-section-header-root {
-    @apply flex w-full shrink-0 items-center justify-between bg-black text-base-content focus:outline-none focus:ring-0;
+    @apply flex w-full shrink-0 items-center justify-between bg-panel text-base-content focus:outline-none focus:ring-0;
   }
 
   .bits-panel-section-header {
@@ -96,7 +96,7 @@
   }
 
   .bits-panel-section-content {
-    @apply flex min-h-0 grow flex-col overflow-hidden bg-black caret-white;
+    @apply flex min-h-0 grow flex-col overflow-hidden bg-panel caret-base-content;
   }
 
   .bits-panel-section-content--collapsed {
@@ -194,7 +194,7 @@
   }
 
   .bits-panel-item-resource {
-    @apply flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 text-base-content caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0;
+    @apply flex cursor-pointer flex-row items-center justify-between gap-4 bg-panel py-2 text-base-content caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0;
   }
 
   .bits-panel-item-resource--narrow {
@@ -265,6 +265,10 @@
     background-color: var(--bits-panel-item-tone-bg, var(--color-base-content));
   }
 
+  .bits-panel-item-resource[data-active="true"] .bits-panel-item-resource__dot {
+    background-color: var(--bits-panel-item-tone-bg-hover, var(--color-base-content));
+  }
+
   .bits-panel-item-resource[data-selected="false"]:hover .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-selected="false"]:focus-visible
     .bits-panel-item-resource__dot {
@@ -274,7 +278,6 @@
   .bits-panel-item-resource[data-selected="true"]:hover .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-selected="true"]:focus-visible
     .bits-panel-item-resource__dot,
-  .bits-panel-item-resource[data-active="true"] .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-active="true"]:hover .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-active="true"]:focus-visible
     .bits-panel-item-resource__dot {
@@ -330,11 +333,11 @@
   }
 
   .bits-panel-item-resource__tooltip {
-    @apply pointer-events-auto fixed z-50 min-h-4 min-w-10 whitespace-nowrap rounded-r-md bg-black px-3 py-2 text-center text-sm text-base-content;
+    @apply pointer-events-auto fixed z-50 min-h-4 min-w-10 whitespace-nowrap rounded-r-md bg-panel px-3 py-2 text-center text-sm text-base-content;
   }
 
   .bits-panel-header-admin {
-    @apply flex h-18 shrink-0 flex-row items-center justify-between bg-black p-4;
+    @apply flex h-18 shrink-0 flex-row items-center justify-between bg-panel p-4;
   }
 
   .bits-panel-header-admin__title {

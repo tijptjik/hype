@@ -12,7 +12,7 @@ import Funnel from 'virtual:icons/lucide/filter'
 import XMark from 'virtual:icons/lucide/x'
 import { Icon } from '$lib/bits'
 // COMPONENTS
-import ResourceHierarchyPath from '$lib/components/panels/common/ResourceHierarchyPath.svelte'
+import ResourceHierarchyPath from '$lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS

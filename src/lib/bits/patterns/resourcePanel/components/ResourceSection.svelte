@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '$lib/i18n'
 // SVELTE
 import { untrack } from 'svelte'
 // ICONS
@@ -15,6 +17,14 @@ import ResourceRow from './ResourceRow.svelte'
 import type { ResourceSectionProps } from './resourcePanelPrimitives.types'
 let { section, narrow = false, admin = false }: ResourceSectionProps = $props()
 let open = $state(untrack(() => section.defaultOpen))
+let touched = $state(false)
+$effect(() => {
+  if (!touched) open = section.defaultOpen
+})
+function toggleOpen(): void {
+  touched = true
+  open = !open
+}
 const id = $props.id()
 const tone = $derived(
   section.id === 'organisation'
@@ -43,10 +53,10 @@ const items = $derived(
     <button
       type="button"
       class="rounded-lg p-1 text-muted-foreground hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus"
-      aria-label={`${open ? 'Collapse' : 'Expand'} ${section.title}`}
+      aria-label={open ? m.panel__collapse({ name: section.title }) : m.panel__expand({ name: section.title })}
       aria-expanded={open}
       aria-controls={id}
-      onclick={() => open = !open}
+      onclick={toggleOpen}
     >
       {#if open}
         <ChevronDown class="size-4" />
@@ -62,7 +72,7 @@ const items = $derived(
           if (section.onNavigate) {
             section.onNavigate()
           } else {
-            open = !open
+            toggleOpen()
           }
         }}
       >
@@ -88,8 +98,8 @@ const items = $derived(
         <input
           class="h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
           type="search"
-          aria-label={`Search ${section.title}`}
-          placeholder={`Search ${section.title.toLowerCase()}`}
+          aria-label={m.panel__search({ name: section.title })}
+          placeholder={m.panel__search({ name: section.title })}
           value={section.search}
           oninput={event => section.onSearch(event.currentTarget.value)}
           onkeydown={event => { if (event.key === 'Escape') { event.stopPropagation(); section.search ? section.onSearch('') : section.onReset() } }}

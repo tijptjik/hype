@@ -1,0 +1,55 @@
+<script lang="ts">
+// I18N
+import { m } from '$lib/i18n'
+// SERVICES
+import { getGroupedClassifierProperties } from '$lib/client/services/property'
+// COMPONENTS
+import * as Panel from '$lib/bits/patterns/panels'
+import CategorySection from '$lib/bits/patterns/panels/sections/categorySection/CategorySection.svelte'
+import CategoryFilter from '$lib/bits/patterns/panels/components/controls/CategoryFilter.svelte'
+import RangeFilter from '$lib/bits/patterns/panels/components/controls/RangeFilter.svelte'
+// CONTEXT
+import { getAppCtx } from '$lib/context/app.svelte'
+// TYPES
+import type { Id, PanelProps } from '$lib/types'
+import type { Property } from '$lib/db/zod/schema/property.types'
+
+// CONTEXT
+const appCtx = getAppCtx()
+
+// PROPS
+let { ...panelProps }: PanelProps = $props()
+</script>
+
+{#snippet SelectedCategories(layerId: Id, properties: Property[])}
+  <Panel.Item.SelectedFilter {layerId} {appCtx} {properties} />
+{/snippet}
+
+<!-- LAYOUT -->
+
+{#await getGroupedClassifierProperties(appCtx) then newLayerCategories}
+  {#each newLayerCategories as { hierarchy, properties }, index (hierarchy.layerId)}
+    <CategorySection
+      title={m.filters__categories()}
+      icon="/flowchart.svg"
+      iconVerticalPaddingClass="pt-2"
+      iconColorClass="text-blue-500"
+      isOpen={index === 0}
+      collapsedContent={SelectedCategories}
+      {properties}
+      {hierarchy}
+    >
+      <div class="space-y-2">
+        {#each properties as property (property.id)}
+          {@const layerId = hierarchy.layerId}
+          {#if property.component === 'RangeField'}
+            <RangeFilter {property} {layerId} defaultOpen={property.key === 'grade'} />
+          {:else}
+            <CategoryFilter {property} {layerId} />
+          {/if}
+        {/each}
+      </div>
+    </CategorySection>
+  {/each}
+{/await}
+<div class="grow h-21 w-full shrink-0"></div>

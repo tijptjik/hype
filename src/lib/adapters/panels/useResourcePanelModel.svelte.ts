@@ -143,9 +143,11 @@ export function useResourcePanelModel(
           enabled,
           primaryLabel:
             mode === 'admin'
-              ? `Open ${name}`
-              : `${enabled ? 'Deactivate' : 'Activate'} ${name}`,
-          toggleLabel: `${pinned ? 'Remove' : 'Add'} ${name} ${type === 'layer' ? 'layer' : 'prism'}`,
+              ? m.panel__open({ name })
+              : enabled
+                ? m.panel__deactivate_layer({ name })
+                : m.panel__activate_layer({ name }),
+          toggleLabel: pinned ? m.panel__unpin({ name }) : m.panel__pin({ name }),
           onPrimary: () => primary(type, resource.id),
           onToggle: () => toggle(type, resource.id),
           ...(mode === 'prisms' && type === 'layer'
@@ -214,7 +216,7 @@ export function useResourcePanelModel(
     get panel() {
       return {
         panelType,
-        position: 'left',
+        position: 'left' as const,
         inline: mode === 'admin' || app.isAdmin(),
         scrollable: false,
         isAdmin: mode === 'admin',

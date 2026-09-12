@@ -11,7 +11,7 @@ import {
 // TESTS
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import LinkedAccounts from '$lib/components/panels/sections/LinkedAccounts.svelte'
+import LinkedAccounts from '$lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
 import { m } from '$lib/i18n'
 
 const mocks = vi.hoisted(() => ({
