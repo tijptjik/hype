@@ -1,5 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Panel query registration is isolated from this resource's authorization fixtures.
+vi.mock('$lib/api/server/resources.remote', () => ({}))
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -64,6 +67,7 @@ const {
 vi.mock(
   '$app/server',
   () => ({
+    requested: () => ({ refreshAll: async () => {} }),
     getRequestEvent: mockGetRequestEvent,
     query: (_schema: unknown, handler: unknown) =>
       withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
@@ -91,6 +95,7 @@ vi.mock(
 )
 
 vi.mock('@sveltejs/kit', () => ({
+  isRedirect: () => false,
   error: (status: number, message: string) => {
     const err = new Error(message) as Error & { status: number }
     err.status = status

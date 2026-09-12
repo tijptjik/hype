@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
@@ -6,6 +7,7 @@ const {
   mockForm,
   mockCommand,
   mockSetupRequestHandler,
+  mockRequested,
 } = vi.hoisted(() => ({
   mockGetRequestEvent: vi.fn(),
   mockQuery: vi.fn((...args: unknown[]) => {
@@ -21,9 +23,11 @@ const {
     return handler
   }),
   mockSetupRequestHandler: vi.fn(),
+  mockRequested: vi.fn(() => ({ refreshAll: async () => {} })),
 }))
 
 vi.mock('$app/server', () => ({
+  requested: mockRequested,
   getRequestEvent: mockGetRequestEvent,
   query: mockQuery,
   form: mockForm,
@@ -58,7 +62,7 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedQuery(schema, fn) resolves guarded context and forwards output', async () => {
-    const handler = guardedQuery({}, async (output, ctx) => {
+    const handler = guardedQuery(z.object({}).passthrough(), async (output, ctx) => {
       expect(output).toEqual({ ref: 'org-1' })
       expect(ctx.user.id).toBe('u-1')
       expect(Array.isArray(ctx.userRoles)).toBe(true)
@@ -91,7 +95,7 @@ describe('remote guard wrappers', () => {
       request: { method: 'POST' },
     })
 
-    const handler = guardedQuery({}, async (_output, ctx) => {
+    const handler = guardedQuery(z.object({}).passthrough(), async (_output, ctx) => {
       expect(ctx.isAdminRequest).toBe(true)
       return { ok: true }
     })
@@ -105,7 +109,7 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedForm(schema, fn) forwards invalid helper and context', async () => {
-    const handler = guardedForm({}, async (output, ctx) => {
+    const handler = guardedForm(z.object({}).passthrough(), async (output, ctx) => {
       expect(output).toEqual({ data: { code: 'abc' } })
       expect(typeof ctx.invalid).toBe('function')
       expect(ctx.user.id).toBe('u-1')
@@ -147,7 +151,7 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedCommand(schema, fn) forwards output and context', async () => {
-    const handler = guardedCommand({}, async (output, ctx) => {
+    const handler = guardedCommand(z.object({}).passthrough(), async (output, ctx) => {
       expect(output).toEqual({ id: 'org-1' })
       expect(ctx.user.id).toBe('u-1')
       return { ok: true }
@@ -178,5 +182,21 @@ describe('remote guard wrappers', () => {
     expect(() => guardedQuery({})).toThrow('Invalid arguments')
     expect(() => guardedForm('unchecked')).toThrow('Invalid arguments')
     expect(() => guardedCommand({})).toThrow('Invalid arguments')
+  })
+  it('accepts bounded requested refreshes after a successful mutation', async () => {
+    const read = guardedQuery(z.object({}).passthrough(), async () => ({ data: [] }))
+    const write = guardedCommand(z.object({}).passthrough(), async () => ({
+      saved: true,
+    }))
+    await write({})
+    expect(mockRequested).toHaveBeenCalledWith(read, 12)
+  })
+
+  it('does not refresh queries when validation or authorization rejects the write', async () => {
+    const write = guardedCommand(z.object({}).passthrough(), async () => {
+      throw new Error('DENIED')
+    })
+    await expect(write({})).rejects.toThrow('DENIED')
+    expect(mockRequested).not.toHaveBeenCalled()
   })
 })
