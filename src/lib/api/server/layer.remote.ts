@@ -1,3 +1,6 @@
+import type { RemoteQuery } from '@sveltejs/kit'
+// Register panel query families for bounded single-flight mutation refreshes.
+import './resources.remote'
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
@@ -154,10 +157,9 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
   return toListResponseShape(result, profile)
 })
 
-export const getLayers = getLayersQuery as typeof getLayersQuery &
-  (<P extends LayerProfile = 'list'>(
-    params: LayerListParamsByProfile<P>,
-  ) => Promise<ListResponse<LayerListByProfile<P>>>)
+export const getLayers = getLayersQuery as unknown as <P extends LayerProfile = 'list'>(
+  params: LayerListParamsByProfile<P>,
+) => RemoteQuery<ListResponse<LayerListByProfile<P>>>
 
 /**
  * Returns a single role-aware layer record for guarded remote callers.
@@ -226,10 +228,9 @@ const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => 
   return toEntityResponseShape(result ?? null, profile)
 })
 
-export const getLayer = getLayerQuery as typeof getLayerQuery &
-  (<P extends LayerProfile = 'detail'>(
-    params: LayerGetParamsByProfile<P>,
-  ) => Promise<EntityResponse<LayerEntityByProfile<P>>>)
+export const getLayer = getLayerQuery as unknown as <P extends LayerProfile = 'detail'>(
+  params: LayerGetParamsByProfile<P>,
+) => RemoteQuery<EntityResponse<LayerEntityByProfile<P>>>
 
 /**
  * Creates or updates a layer and related records from remote form payload.

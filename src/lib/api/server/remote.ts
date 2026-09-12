@@ -1,5 +1,5 @@
-import { command, form, getRequestEvent, query } from '$app/server'
-import { invalid } from '@sveltejs/kit'
+import { command, form, getRequestEvent, query, requested } from '$app/server'
+import { invalid, isRedirect } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type {
   RemoteCommand,
@@ -16,6 +16,40 @@ import type {
   GuardedQueryContext,
   SetupRequestEvent,
 } from '$lib/types'
+
+// Only query definitions are shared here; results and authorization remain request-local.
+const refreshableQueries = new Set<RemoteQueryFunction<any, any>>()
+
+/**
+ * Registers a native query family for bounded client-requested mutation refreshes.
+ * @param remote - Native query function, including batched query families.
+ * @returns The unchanged query function.
+ */
+function registerQuery<T extends RemoteQueryFunction<any, any>>(remote: T): T {
+  refreshableQueries.add(remote)
+  return remote
+}
+
+/**
+ * Accepts explicit client refresh requests only after a successful write.
+ * @param write - Authorized mutation handler.
+ * @returns The mutation result; native query updates travel in the same response.
+ * @remarks No unrequested query runs. Validation failures never refresh collections.
+ */
+async function withRequestedRefreshes<T>(write: () => Promise<T>): Promise<T> {
+  let committed = false
+  try {
+    const result = await write()
+    committed = true
+    return result
+  } catch (error) {
+    committed = isRedirect(error)
+    throw error
+  } finally {
+    if (committed)
+      for (const remote of refreshableQueries) void requested(remote, 32).refreshAll()
+  }
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -114,17 +148,21 @@ export function guardedQuery(
     | undefined,
 ) {
   if (typeof maybeFn === 'function' && typeof schemaOrFn !== 'function') {
-    return query(schemaOrFn, async output => {
-      const ctx = await resolveGuardedContext(output)
-      return maybeFn(output, ctx)
-    })
+    return registerQuery(
+      query(schemaOrFn, async output => {
+        const ctx = await resolveGuardedContext(output)
+        return maybeFn(output, ctx)
+      }),
+    )
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
-    return query(async () => {
-      const ctx = await resolveGuardedContext()
-      return schemaOrFn(ctx)
-    })
+    return registerQuery(
+      query(async () => {
+        const ctx = await resolveGuardedContext()
+        return schemaOrFn(ctx)
+      }),
+    )
   }
 
   throw new Error('Invalid arguments')
@@ -143,10 +181,12 @@ export function guardedBatchQuery<Schema extends StandardSchemaV1, Output>(
     (output: StandardSchemaV1.InferOutput<Schema>) => Output | Promise<Output>
   >,
 ) {
-  return query.batch(schema, async outputs => {
-    const ctx = await resolveGuardedContext(outputs)
-    return fn(outputs, ctx)
-  })
+  return registerQuery(
+    query.batch(schema, async outputs => {
+      const ctx = await resolveGuardedContext(outputs)
+      return fn(outputs, ctx)
+    }) as RemoteQueryFunction<StandardSchemaV1.InferInput<Schema>, Awaited<Output>>,
+  )
 }
 
 /* ----------------- */
@@ -228,33 +268,39 @@ export function guardedForm(
   ) {
     return form(schemaOrFn, async (output, issue) => {
       const ctx = await resolveGuardedContext(output)
-      return maybeFn(output, {
-        ...ctx,
-        invalid,
-        issue: issue as GuardedIssue,
-      })
+      return withRequestedRefreshes(() =>
+        maybeFn(output, {
+          ...ctx,
+          invalid,
+          issue: issue as GuardedIssue,
+        }),
+      )
     })
   }
 
   if (schemaOrFn === 'unchecked' && typeof maybeFn === 'function') {
     return form('unchecked', async (input: unknown, issue) => {
       const ctx = await resolveGuardedContext(input)
-      return maybeFn(input, {
-        ...ctx,
-        invalid,
-        issue: issue as GuardedIssue,
-      })
+      return withRequestedRefreshes(() =>
+        maybeFn(input, {
+          ...ctx,
+          invalid,
+          issue: issue as GuardedIssue,
+        }),
+      )
     })
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return form('unchecked', async (_input: unknown, issue) => {
       const ctx = await resolveGuardedContext()
-      return schemaOrFn({
-        ...ctx,
-        invalid,
-        issue: issue as GuardedIssue,
-      })
+      return withRequestedRefreshes(() =>
+        schemaOrFn({
+          ...ctx,
+          invalid,
+          issue: issue as GuardedIssue,
+        }),
+      )
     })
   }
 
@@ -271,11 +317,11 @@ export function guardedCommand<Schema extends StandardSchemaV1, Output>(
     output: StandardSchemaV1.InferOutput<Schema>,
     ctx: GuardedCommandContext,
   ) => Promise<Output>,
-): RemoteCommand<StandardSchemaV1.InferInput<Schema>, Promise<Output>>
+): RemoteCommand<StandardSchemaV1.InferInput<Schema>, Output>
 
 export function guardedCommand<Input, Output>(
   fn: (input: Input, ctx: GuardedCommandContext) => Promise<Output>,
-): RemoteCommand<Input, Promise<Output>>
+): RemoteCommand<Input, Output>
 
 export function guardedCommand(
   schemaOrFn:
@@ -286,14 +332,14 @@ export function guardedCommand(
   if (typeof maybeFn === 'function' && typeof schemaOrFn !== 'function') {
     return command(schemaOrFn, async output => {
       const ctx = await resolveGuardedContext(output)
-      return maybeFn(output, ctx)
+      return withRequestedRefreshes(() => maybeFn(output, ctx))
     })
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return command('unchecked', async (input: unknown) => {
       const ctx = await resolveGuardedContext(input)
-      return schemaOrFn(input, ctx)
+      return withRequestedRefreshes(() => schemaOrFn(input, ctx))
     })
   }
 

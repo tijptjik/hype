@@ -1,3 +1,14 @@
+import type { RemoteQuery } from '@sveltejs/kit'
+import type {
+  ProjectProfile,
+  ProjectListParamsByProfile,
+  ProjectListByProfile,
+  ProjectGetParamsByProfile,
+  ProjectEntityByProfile,
+} from '$lib/db/zod/schema/project.types'
+import type { ListResponse, EntityResponse } from '$lib/types'
+// Register panel query families for bounded single-flight mutation refreshes.
+import './resources.remote'
 // SVELTE
 import { requested } from '$app/server'
 // REMOTE
@@ -210,7 +221,11 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   return toListResponseShape(result, user, profile)
 })
 
-export const getProjects = getProjectsQuery
+export const getProjects = getProjectsQuery as unknown as <
+  P extends ProjectProfile = 'list',
+>(
+  params: ProjectListParamsByProfile<P>,
+) => RemoteQuery<ListResponse<ProjectListByProfile<P>>>
 
 const getProjectsWhichHaveLayersQuery = guardedQuery(
   ListQueryParamsSchema,
@@ -274,7 +289,10 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
   },
 )
 
-export const getProjectsWhichHaveLayers = getProjectsWhichHaveLayersQuery
+export const getProjectsWhichHaveLayers =
+  getProjectsWhichHaveLayersQuery as unknown as <P extends ProjectProfile = 'list'>(
+    params: ProjectListParamsByProfile<P>,
+  ) => RemoteQuery<ListResponse<ProjectListByProfile<P>>>
 
 /**
  * Returns a role-aware project record for guarded remote callers.
@@ -369,7 +387,11 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   return toEntityResponseShape(normalizedResult ?? null, profile)
 })
 
-export const getProject = getProjectQuery
+export const getProject = getProjectQuery as unknown as <
+  P extends ProjectProfile = 'detail',
+>(
+  params: ProjectGetParamsByProfile<P>,
+) => RemoteQuery<EntityResponse<ProjectEntityByProfile<P>>>
 
 export const getProjectMapStylesQuery = guardedQuery(
   GetProjectMapStylesSchema,
@@ -1110,8 +1132,8 @@ export const publishProject = guardedCommand(
     })
 
     // Settle client optimistic overrides with the complete persisted relation graph.
-    void requested(getProject, 1).refreshAll()
-    void requested(getProjects, 1).refreshAll()
+    void requested(getProjectQuery, 1).refreshAll()
+    void requested(getProjectsQuery, 1).refreshAll()
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
   },
@@ -1160,8 +1182,8 @@ export const archiveProject = guardedCommand(
     )
 
     // Settle client optimistic overrides with the complete persisted relation graph.
-    void requested(getProject, 1).refreshAll()
-    void requested(getProjects, 1).refreshAll()
+    void requested(getProjectQuery, 1).refreshAll()
+    void requested(getProjectsQuery, 1).refreshAll()
 
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },

@@ -1,3 +1,4 @@
+import { getLocaleKey } from '$lib/i18n'
 // SVELTE
 import { error } from '@sveltejs/kit'
 // SCHEMA
@@ -23,8 +24,27 @@ const resourceType = z.enum(['organisation', 'project', 'layer'])
 const meta = z.object({ isAdminRequest: z.boolean(), scope: z.string().max(4096) })
 const pageInput = z.object({
   type: resourceType,
+  profile: z.enum(['compact', 'default']).optional(),
+  sorting: z
+    .object({
+      sortBy: z.string().trim().min(1).max(64),
+      sortOrder: z.enum(['asc', 'desc']),
+    })
+    .optional(),
+  conditions: z
+    .object({
+      isPublished: z.boolean().nullable().optional(),
+      isArchived: z.boolean().nullable().optional(),
+    })
+    .optional(),
   q: z.string().trim().max(200).optional(),
-  cursor: z.object({ id: z.string(), signature: z.string() }).nullish(),
+  cursor: z
+    .object({
+      id: z.string(),
+      signature: z.string(),
+      value: z.union([z.string(), z.number(), z.null()]).optional(),
+    })
+    .nullish(),
   prisms: z
     .object({
       organisation: z.array(z.string()).optional(),
@@ -46,6 +66,9 @@ export const getResourcePage = guardedQuery(
   async (input): Promise<ResourcePage> => {
     const signature = JSON.stringify({
       type: input.type,
+      profile: input.profile ?? 'compact',
+      sorting: input.sorting,
+      conditions: input.conditions,
       q: input.q ?? '',
       prisms: input.prisms ?? {},
       meta: input.meta,
@@ -54,14 +77,26 @@ export const getResourcePage = guardedQuery(
       throw error(400, 'CURSOR_SCOPE_MISMATCH')
     const params = {
       conditions: {
-        isArchived: false,
-        isPublished: input.meta.isAdminRequest ? null : true,
+        isArchived: input.meta.isAdminRequest
+          ? (input.conditions?.isArchived ?? null)
+          : false,
+        isPublished: input.meta.isAdminRequest
+          ? (input.conditions?.isPublished ?? null)
+          : true,
       },
       prisms: input.prisms,
-      pagination: { limit: 25, ...(input.cursor ? { afterId: input.cursor.id } : {}) },
-      sorting: { sortBy: 'id', sortOrder: 'asc' as const },
+      pagination: {
+        limit: 25,
+        ...(input.cursor
+          ? { afterId: input.cursor.id, afterValue: input.cursor.value }
+          : {}),
+      },
+      sorting: input.sorting ?? { sortBy: 'id', sortOrder: 'asc' as const },
       q: input.q,
-      meta: { isAdminRequest: input.meta.isAdminRequest, profile: 'compact' as const },
+      meta: {
+        isAdminRequest: input.meta.isAdminRequest,
+        profile: input.profile ?? ('compact' as const),
+      },
     }
     // Existing resource queries remain the single authorization and visibility boundary.
     const result =
@@ -73,11 +108,20 @@ export const getResourcePage = guardedQuery(
           ? await getProjects(params)
           : await getLayers(params)
     const data = result.data as PanelResource[]
+    const last = data.at(-1) as unknown as Record<string, unknown> | undefined
+    const sortBy = input.sorting?.sortBy ?? 'id'
+    const i18n = last?.i18n as Record<string, Record<string, unknown>> | undefined
+    const rawValue = ['name', 'nameShort', 'description'].includes(sortBy)
+      ? i18n?.[getLocaleKey()]?.[sortBy]
+      : last?.[sortBy]
+    const value =
+      typeof rawValue === 'number' || typeof rawValue === 'string' ? rawValue : ''
+
     return {
       data,
       nextCursor:
         result.hasMore && data.length
-          ? { id: data[data.length - 1].id, signature }
+          ? { id: data[data.length - 1].id, signature, value }
           : null,
     }
   },
@@ -90,12 +134,17 @@ export const getResourcePage = guardedQuery(
  * @remarks Partitions admin intent and resource type before querying; never ORs batch permissions.
  */
 export const getPinnedResource = guardedBatchQuery(
-  z.object({ type: resourceType, id: z.string(), meta }),
+  z.object({
+    type: resourceType,
+    id: z.string(),
+    profile: z.enum(['compact', 'default']).optional(),
+    meta,
+  }),
   async inputs => {
     const rows = new Map<string, PanelResource>()
     const groups = new Map<string, typeof inputs>()
     for (const input of inputs) {
-      const key = JSON.stringify([input.type, input.meta])
+      const key = JSON.stringify([input.type, input.profile, input.meta])
       groups.set(key, [...(groups.get(key) ?? []), input])
     }
     for (const group of groups.values()) {
@@ -112,7 +161,7 @@ export const getPinnedResource = guardedBatchQuery(
           pagination: { limit: 25 },
           meta: {
             isAdminRequest: first.meta.isAdminRequest,
-            profile: 'compact' as const,
+            profile: first.profile ?? ('compact' as const),
           },
         }
         const result =
@@ -123,12 +172,14 @@ export const getPinnedResource = guardedBatchQuery(
               : await getLayers(params)
         for (const row of result.data)
           rows.set(
-            JSON.stringify([first.type, row.id, first.meta]),
+            JSON.stringify([first.type, row.id, first.profile, first.meta]),
             row as PanelResource,
           )
       }
     }
-    return input => rows.get(JSON.stringify([input.type, input.id, input.meta])) ?? null
+    return input =>
+      rows.get(JSON.stringify([input.type, input.id, input.profile, input.meta])) ??
+      null
   },
 )
 
@@ -153,7 +204,7 @@ export const getDefaultLayerResources = guardedQuery(
         sorting: { sortBy: 'id', sortOrder: 'asc' },
         meta: { isAdminRequest: input.meta.isAdminRequest, profile: 'compact' },
       })
-      rows.push(...result.data)
+      rows.push(...(result.data as PanelResource[]))
       if (!result.hasMore || !result.data.length) break
       afterId = result.data.at(-1)!.id
     }

@@ -1,3 +1,6 @@
+import type { RemoteQuery } from '@sveltejs/kit'
+// Register panel query families for bounded single-flight mutation refreshes.
+import './resources.remote'
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
 import { error } from '@sveltejs/kit'
@@ -186,10 +189,11 @@ const getOrganisationsQuery = guardedQuery(
   },
 )
 
-export const getOrganisations = getOrganisationsQuery as typeof getOrganisationsQuery &
-  (<P extends OrganisationProfile = 'list'>(
-    params: OrganisationListParamsByProfile<P>,
-  ) => Promise<ListResponse<OrganisationListByProfile<P>>>)
+export const getOrganisations = getOrganisationsQuery as unknown as <
+  P extends OrganisationProfile = 'list',
+>(
+  params: OrganisationListParamsByProfile<P>,
+) => RemoteQuery<ListResponse<OrganisationListByProfile<P>>>
 
 const getOrganisationsWhichHaveLayersQuery = guardedQuery(
   ListQueryParamsSchema,
@@ -249,10 +253,11 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
 )
 
 export const getOrganisationsWhichHaveLayers =
-  getOrganisationsWhichHaveLayersQuery as typeof getOrganisationsWhichHaveLayersQuery &
-    (<P extends OrganisationProfile = 'list'>(
-      params: OrganisationListParamsByProfile<P>,
-    ) => Promise<ListResponse<OrganisationListByProfile<P>>>)
+  getOrganisationsWhichHaveLayersQuery as unknown as <
+    P extends OrganisationProfile = 'list',
+  >(
+    params: OrganisationListParamsByProfile<P>,
+  ) => RemoteQuery<ListResponse<OrganisationListByProfile<P>>>
 
 /**
  * Returns a role-aware organisation record for guarded remote callers.
@@ -330,10 +335,11 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
   }
 })
 
-export const getOrganisation = getOrganisationQuery as typeof getOrganisationQuery &
-  (<P extends OrganisationProfile = 'detail'>(
-    params: OrganisationGetParamsByProfile<P>,
-  ) => Promise<EntityResponse<OrganisationEntityByProfile<P>>>)
+export const getOrganisation = getOrganisationQuery as unknown as <
+  P extends OrganisationProfile = 'detail',
+>(
+  params: OrganisationGetParamsByProfile<P>,
+) => RemoteQuery<EntityResponse<OrganisationEntityByProfile<P>>>
 
 /* ----------------- */
 // REMOTE FORM

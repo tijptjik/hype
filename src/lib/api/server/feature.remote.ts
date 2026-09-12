@@ -1,3 +1,6 @@
+import type { RemoteQuery } from '@sveltejs/kit'
+// Register panel query families for bounded single-flight mutation refreshes.
+import './resources.remote'
 // REMOTE
 import {
   guardedBatchQuery,
@@ -264,10 +267,11 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   )) as ListResponse<FeatureListByProfile<typeof profile>>
 })
 
-export const getFeatures = getFeaturesQuery as typeof getFeaturesQuery &
-  (<P extends FeatureProfile = 'list'>(
-    params: FeatureListParamsByProfile<P>,
-  ) => Promise<ListResponse<FeatureListByProfile<P>>>)
+export const getFeatures = getFeaturesQuery as unknown as <
+  P extends FeatureProfile = 'list',
+>(
+  params: FeatureListParamsByProfile<P>,
+) => RemoteQuery<ListResponse<FeatureListByProfile<P>>>
 
 /**
  * Returns a single role-aware feature record for guarded remote callers.
@@ -336,10 +340,11 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   return toEntityResponseShape(result as never, profile)
 })
 
-export const getFeature = getFeatureQuery as typeof getFeatureQuery &
-  (<P extends FeatureProfile = 'detail'>(
-    params: FeatureGetParamsByProfile<P>,
-  ) => Promise<EntityResponse<FeatureEntityByProfile<P>>>)
+export const getFeature = getFeatureQuery as unknown as <
+  P extends FeatureProfile = 'detail',
+>(
+  params: FeatureGetParamsByProfile<P>,
+) => RemoteQuery<EntityResponse<FeatureEntityByProfile<P>>>
 
 /**
  * Batched admin lookup used by CSV import reconciliation.
