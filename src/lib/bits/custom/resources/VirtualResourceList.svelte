@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends Record<'id', string>">
 // SVELTE
 import { untrack, type Snippet } from 'svelte'
+import { flip } from 'svelte/animate'
 // VIRTUALIZATION
 import { createVirtualizer } from '@tanstack/svelte-virtual'
 // I18N
@@ -15,6 +16,8 @@ let {
   error = false,
   onRetry,
   viewKey = '',
+  animateRows = false,
+  estimateSize = 56,
 }: {
   items: T[]
   item: Snippet<[T]>
@@ -23,21 +26,29 @@ let {
   loading?: boolean
   error?: boolean
   onRetry?: () => void
+  animateRows?: boolean
+  estimateSize?: number
   viewKey?: string
 } = $props()
+const flow = $derived(animateRows && items.length <= 50)
 let container: HTMLDivElement | undefined = $state()
 const virtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
   count: 0,
   getScrollElement: () => container ?? null,
-  estimateSize: () => 56,
+  estimateSize: () => estimateSize,
   overscan: 3,
   getItemKey: index => items[index]?.id ?? index,
 })
 $effect(() => {
   const count = items.length
+  const keys = items.map(item => item.id)
   const element = container
   untrack(() =>
-    $virtualizer.setOptions({ count, getScrollElement: () => element ?? null }),
+    $virtualizer.setOptions({
+      count,
+      getItemKey: index => keys[index] ?? index,
+      getScrollElement: () => element ?? null,
+    }),
   )
 })
 $effect(() => {
@@ -45,6 +56,12 @@ $effect(() => {
   untrack(() => container?.scrollTo({ top: 0 }))
 })
 $effect(() => {
+  if (flow) {
+    const current = items
+    untrack(() => onVisibleItems?.(current))
+    if (!loading && !error && current.length) untrack(() => onNearEnd?.())
+    return
+  }
   const range = $virtualizer.range
   if (range)
     untrack(() => onVisibleItems?.(items.slice(range.startIndex, range.endIndex + 1)))
@@ -69,22 +86,27 @@ function measure(node: HTMLDivElement): void {
   class="scrollbar-thin relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-panel py-1"
   aria-busy={loading}
 >
-  <div class="relative w-full" style:height={`${$virtualizer.getTotalSize()}px`}>
-    {#each $virtualizer.getVirtualItems() as row (row.key)}
-      <!-- A search can shrink items before the virtualizer updates its measured range. -->
-      {#if items[row.index]}
+  {#if flow}
+    {#each items as row (row.id)}
+      <div animate:flip={{ duration: 200 }}>{@render item(row)}</div>
+    {/each}
+  {:else}
+    <div class="relative w-full" style:height={`${$virtualizer.getTotalSize()}px`}>
+      {#each $virtualizer.getVirtualItems().filter(row => items[row.index]) as row (row.key)}
+        <!-- A search can shrink items before the virtualizer updates its measured range. -->
         <div
           data-index={row.index}
           use:measure
-          class="absolute left-0 top-0 w-full"
-          style:transform={`translateY(${row.start}px)`}
+          animate:flip={{ duration: animateRows ? 200 : 0 }}
+          class="absolute left-0 w-full"
+          style:top={`${row.start}px`}
         >
           {@render item(items[row.index])}
         </div>
-      {/if}
-    {/each}
-  </div>
-  {#if loading}
+      {/each}
+    </div>
+  {/if}
+  {#if loading && !items.length}
     <div
       role="status"
       class="h-8 animate-pulse bg-base-200"
