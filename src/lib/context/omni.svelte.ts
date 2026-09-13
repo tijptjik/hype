@@ -1030,8 +1030,10 @@ export class OmniCtx {
     // Run the default selection initialization
     this.initSelection()
 
-    // Get the feature first
-    const feature = await this.appCtx.getFeatureById(featureId)
+    // Map and collection selections already retain a card-capable feature row, so
+    // activate it without putting the first card open behind a detail refresh.
+    const cachedFeature = await this.appCtx.getFeatureById(featureId, false)
+    const feature = cachedFeature ?? (await this.appCtx.getFeatureById(featureId))
     if (!feature) {
       console.error('Feature not found:', featureId)
       return
