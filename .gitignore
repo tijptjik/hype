@@ -18,6 +18,7 @@ scripts/.venv
 .env.*.local
 .dev.vars
 .dev.vars.*
+.local/breadline/
 
 # Runners
 vite.config.js.timestamp-*
