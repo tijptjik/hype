@@ -38,28 +38,89 @@ export const changesSchema = z.object({
     membershipGeometry: z.literal('stub'),
   }),
 })
-const member = z.object({
-  id: z.string(),
-  category: z.string().nullable(),
-  class: z.string().nullable(),
-  level: z.number().nullable(),
-  names: z.record(z.string(), z.unknown()),
+const identifier = z.object({ type: z.literal('divisions'), id: z.string() })
+const relationship = z.object({
+  data: z.array(identifier),
+  meta: z.object({ paths: z.array(z.array(identifier)) }).optional(),
 })
-export const geocodeSchema = z.object({
-  data: z
-    .object({
-      status: z.enum(['resolved', 'ambiguous', 'incomplete', 'not_found']),
-      memberships: z.array(member),
-      selectedAncestryIds: z.array(z.string()).nullable(),
-      path: z.array(z.string()).nullable(),
-      landform: z.object({
-        memberships: z.array(member),
-        paths: z.array(z.array(z.string())),
+const names = z.record(
+  z.string(),
+  z.object({
+    name: z.string().nullable(),
+    nameVariant: z.array(z.string()).nullable().optional(),
+    nameAlts: z.array(z.string()).nullable().optional(),
+    nameRules: z.array(z.unknown()).nullable().optional(),
+  }),
+)
+/** Public JSON:API contract; normalize once at the API boundary for refresh consumers. */
+export const geocodeSchema = z
+  .object({
+    jsonapi: z.object({ version: z.literal('1.1') }),
+    data: z
+      .array(
+        z.object({
+          type: z.literal('geocoding-results'),
+          id: z.string(),
+          attributes: z.object({
+            status: z.enum(['resolved', 'ambiguous', 'incomplete', 'not_found']),
+          }),
+          relationships: z.record(z.string(), relationship),
+        }),
+      )
+      .length(1),
+    included: z.array(
+      z.object({
+        type: z.literal('divisions'),
+        id: z.string(),
+        attributes: z.object({
+          category: z.string().nullable().optional(),
+          class: z.string().nullable().optional(),
+          level: z.number().int().min(0).max(6).nullable(),
+          i18n: names,
+        }),
       }),
-    })
-    .passthrough(),
-  meta: z.object({ release: z.object({ apiReleaseSet: z.string() }) }),
-})
+    ),
+    meta: z.object({ release: z.object({ apiReleaseSet: z.string() }) }),
+  })
+  .transform(response => {
+    const result = response.data[0]
+    const members = response.included.map(resource => ({
+      id: resource.id,
+      category: resource.attributes.category ?? null,
+      class: resource.attributes.class ?? null,
+      level: resource.attributes.level,
+      names: resource.attributes.i18n,
+    }))
+    const referenced = new Set(
+      Object.values(result.relationships).flatMap(value =>
+        value.data.map(ref => ref.id),
+      ),
+    )
+    if ([...referenced].some(id => !members.some(member => member.id === id)))
+      throw new Error('DIVISION_GEOCODE_MISSING_MEMBERSHIP')
+    const paths = (category: string): string[][] => {
+      const relation = result.relationships[category]
+      return relation
+        ? (relation.meta?.paths ?? [relation.data]).map(path => path.map(ref => ref.id))
+        : []
+    }
+    return {
+      data: {
+        status: result.attributes.status,
+        memberships: members.filter(member => referenced.has(member.id)),
+        selectedAncestryIds:
+          result.attributes.status === 'ambiguous' ? null : [...referenced],
+        path: null,
+        landform: {
+          memberships: members.filter(
+            member => member.category === 'landform' && referenced.has(member.id),
+          ),
+          paths: paths('landform'),
+        },
+      },
+      meta: response.meta,
+    }
+  })
 export type Change = z.infer<typeof changeSchema>
 export type GeocodeResponse = z.infer<typeof geocodeSchema>
 export type Polygon = z.infer<typeof polygonSchema>

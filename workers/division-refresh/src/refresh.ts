@@ -72,8 +72,8 @@ export async function refreshDivisions(
         // Resolve one concrete publication before bootstrapping all queued features.
         const result = await apiRead(
           api,
-          '/api/v1/divisions/geocode',
-          { lat: '22.3', lng: '114.2', locales: 'en,zh-hant' },
+          '/divisions/v1/geocode',
+          { lat: '22.3', lng: '114.2', locales: 'en,zh-hant', profile: 'full' },
           geocodeSchema,
         )
         await statement(
@@ -136,7 +136,7 @@ async function loadChanges(
   }
   if (state.targetRelease) params.toApiReleaseSet = state.targetRelease
   if (state.cursor) params['page[cursor]'] = state.cursor
-  const page = await apiRead(api, '/api/v1/divisions/changes', params, changesSchema)
+  const page = await apiRead(api, '/divisions/v1/changes', params, changesSchema)
   const meta = page.meta
   if (
     ![meta.fromApiReleaseSet.code, meta.fromApiReleaseSet.id].includes(
@@ -160,12 +160,13 @@ async function loadChanges(
     if (change.after)
       writes.push(
         statement(
-          `INSERT INTO divisionDefinition SELECT ?,?,? WHERE ${FENCE}
+          `INSERT INTO divisionDefinition SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM divisionDefinition WHERE id=?) AND ${FENCE}
       ON CONFLICT(id) DO UPDATE SET apiReleaseSet=excluded.apiReleaseSet,attributes=excluded.attributes`,
           [
             change.divisionId,
             meta.toApiReleaseSet.code,
             JSON.stringify(change.after.attributes),
+            change.divisionId,
           ],
         ),
       )
@@ -312,12 +313,13 @@ async function geocodeJobs(
       const response: GeocodeResponse | null = point
         ? await apiRead(
             api,
-            '/api/v1/divisions/geocode',
+            '/divisions/v1/geocode',
             {
               lat: String(point[1]),
               lng: String(point[0]),
               apiReleaseSet: release,
               locales: 'en,zh-hant',
+              profile: 'full',
             },
             geocodeSchema,
           )
