@@ -110,12 +110,3 @@ export interface ALSResult {
     }
   }>
 }
-
-export type Neighbourhood = {
-  neighbourhood: string
-  data: {
-    neighbourhood: string
-    area: string
-    district: string
-  }
-}

@@ -37,7 +37,6 @@ import {
 // ENUMS
 import { HierarchicalResource, ImageContextResource } from '$lib/enums'
 // CLIENT
-import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
 import type {
   Database,
@@ -162,7 +161,6 @@ function parseFeatureProfileWithFallback<T>(
 // - toRequestedListState
 // - toFeaturePrisms
 // - toQueryConditions
-// - withExpandedNeighbourhoods
 //
 // FEATURE CREATION WITH ENRICHMENT
 // - createUserContributedFeature
@@ -774,34 +772,6 @@ export const toQueryConditions = (
     conditions,
     filtersToApply,
   }
-}
-
-// TODO Remove this once neighbourhoods become first-class entities.
-/**
- * Expands neighbourhood filter values to include known subdivisions.
- */
-export function withExpandedNeighbourhoods(queryParams: QueryParams): QueryParams {
-  const params = { ...queryParams }
-  const neighbourhoodKey = 'addressProperties.neighbourhood'
-
-  if (!(neighbourhoodKey in params)) return params
-
-  const neighbourhoods = Array.isArray(params[neighbourhoodKey])
-    ? (params[neighbourhoodKey] as string[])
-    : [params[neighbourhoodKey] as string]
-
-  const expanded = new Set<string>()
-  const subdivisionMap = buildNeighbourhoodSubdivisionMap()
-
-  neighbourhoods.forEach(neighbourhood => {
-    expanded.add(neighbourhood)
-    subdivisionMap.get(neighbourhood)?.forEach(value => {
-      expanded.add(value)
-    })
-  })
-
-  params[neighbourhoodKey] = Array.from(expanded)
-  return params
 }
 
 /********************

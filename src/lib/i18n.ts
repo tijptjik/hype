@@ -8,7 +8,7 @@ import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'
 // TYPES
 import type { Locale, LocaleKey } from '$lib/types'
-import type { Neighbourhood } from '$lib/utils/geocoding.types'
+import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
 import type { Resource } from '$lib/types'
 import type {
   PropertyValueI18nDB,
@@ -347,7 +347,7 @@ function getLocaleEntry<T>(
 export function getI18n<T>(
   obj:
     | Resource
-    | Neighbourhood
+    | DivisionFacet
     | { i18n?: Partial<Record<LocaleKey, T>> | null }
     | Record<LocaleKey, T>
     | undefined,

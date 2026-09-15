@@ -100,6 +100,7 @@ function setup() {
     '0081_feature_search_fts',
     '0082_feature_division_refresh',
     '0083_feature_division_registry',
+    '0084_division_facets',
   ])
     sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
   const prepare = (sql: string, values: unknown[] = []) => ({
@@ -473,8 +474,11 @@ describe('division refresh', () => {
     })
     expect(s.count('featureDivisionMembership')).toBe(10)
     expect(
-      s.sqlite.prepare('SELECT neighbourhood FROM featureNeighbourhood').get()
-        ?.neighbourhood,
+      s.sqlite
+        .prepare(
+          "SELECT name FROM divisionI18n WHERE divisionId='hood' AND locale='en'",
+        )
+        .get()?.name,
     ).toBe('hood')
     expect(
       s.sqlite
@@ -542,8 +546,7 @@ describe('division refresh', () => {
       namedValues: JSON.stringify({ name: 'New name', nameAlts: ['Alias'] }),
     })
     expect(
-      s.sqlite.prepare('SELECT neighbourhood FROM featureNeighbourhood').get()
-        ?.neighbourhood,
+      s.sqlite.prepare("SELECT name FROM divisionI18n WHERE locale='en'").get()?.name,
     ).toBe('New name')
   })
 

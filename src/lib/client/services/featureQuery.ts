@@ -1,5 +1,3 @@
-// LEGACY LABEL COMPATIBILITY
-import neighbourhoods from '$lib/map/neighbourhoods.json'
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -12,7 +10,6 @@ import neighbourhoods from '$lib/map/neighbourhoods.json'
 // - featureListMembershipKey
 //
 // 2. CACHED MATCHING
-// - expandFeatureNeighbourhoods
 // - matchesFeaturePrisms
 // - matchesFeatureQuery
 // ---
@@ -21,7 +18,6 @@ import neighbourhoods from '$lib/map/neighbourhoods.json'
 import { latLngToCell } from 'h3-js'
 // SERVICES
 import { getFeaturePointCoordinates } from '$lib/map/featureSpatial'
-// DATA
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type {
@@ -87,21 +83,6 @@ export function featureListMembershipKey(
  *  2. CACHED MATCHING
  ************/
 // +++ Cached Matching
-
-/**
- * Expands legacy label selectors; new hierarchy filters use stable division IDs.
- * @param names - Selected parent or leaf compatibility labels.
- * @returns Unique labels for the existing navigation catalogue.
- */
-export function expandFeatureNeighbourhoods(names: readonly string[]): string[] {
-  const expanded = new Set(names)
-  for (const entry of Object.values(neighbourhoods)) {
-    const { name, neighbourhood } = entry.i18n.en
-    const parents = Array.isArray(neighbourhood) ? neighbourhood : [neighbourhood]
-    if (parents.some(parent => names.includes(parent))) expanded.add(name)
-  }
-  return [...expanded]
-}
 
 /**
  * Resolves selected resource IDs using the database's deepest-selected branch union.
@@ -184,21 +165,19 @@ export function matchesFeatureQuery(
     if (typeof filters?.[field] === 'boolean' && row[field] !== filters[field])
       return false
 
-  if (filters?.divisionIds?.length && !row.divisionMemberships?.some(member => member.selected && filters.divisionIds!.includes(member.divisionId)))
-    return false
-  const neighbourhood = row.division === undefined
-    ? row.i18n?.en?.addressProperties?.neighbourhood
-    : row.division?.i18n.find(value => value.locale === 'en')?.name
   if (
-    filters?.neighbourhoods?.length &&
-    (!neighbourhood ||
-      !expandFeatureNeighbourhoods(filters.neighbourhoods).includes(neighbourhood))
+    filters?.divisionIds?.length &&
+    !row.divisionMemberships?.some(
+      member => member.selected && filters.divisionIds!.includes(member.divisionId),
+    )
   )
     return false
   if (
-    neighbourhood &&
-    filters?.excludeNeighbourhoods?.length &&
-    expandFeatureNeighbourhoods(filters.excludeNeighbourhoods).includes(neighbourhood)
+    filters?.excludeDivisionIds?.length &&
+    row.divisionMemberships?.some(
+      member =>
+        member.selected && filters.excludeDivisionIds!.includes(member.divisionId),
+    )
   )
     return false
   if (filters?.list && context.listMembership?.(row, filters.list) !== true)

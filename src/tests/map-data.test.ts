@@ -30,7 +30,7 @@ describe('map search data', () => {
           },
         },
       },
-      placeCtx: { neighbourhoodFeatureCounts: new Map() },
+      placeCtx: { neighbourhoodFeatureCounts: new Map(), divisions: new Map() },
     } as unknown as AppCtx
 
     await expect(searchAllAsync('mong', appCtx)).resolves.toEqual([

@@ -12,10 +12,7 @@ import {
   setRangePropertyFilter,
   toggleCategoricalPropertyValue,
 } from '$lib/client/services/property'
-import {
-  filterPlaces,
-  getNeighbourhoodsAsResources,
-} from '$lib/client/services/geospatial'
+import { filterPlaces, getDivisionName } from '$lib/client/services/geospatial'
 // ENUMS
 import { FirstClassResource, OmniMode } from '$lib/enums'
 // TYPES
@@ -132,26 +129,17 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
         i18n,
         count: counts.get(id) ?? 0,
         selected: selectedNeighbourhoodRefs.includes(id),
-        name: getI18n(i18n, 'name', preferences, undefined, true),
-        district: getI18n(i18n, 'district', preferences, undefined, true),
-        area: getI18n(i18n, 'area', preferences, undefined, true).replace(
-          'Hong Kong',
-          'HK',
-        ),
+        name: getDivisionName(i18n, preferences),
+        level: i18n.level,
+        category: i18n.category,
       }))
     },
     get selectedNeighbourhoods() {
-      const resources = getNeighbourhoodsAsResources()
       const preferences = app.getUserPreferences()
-      return selectedNeighbourhoodRefs.map(id => ({
-        id,
-        name: getI18n(
-          resources.find(resource => resource.id === id),
-          'name',
-          preferences,
-          id,
-        ),
-      }))
+      return selectedNeighbourhoodRefs.map(id => {
+        const division = app.placeCtx.divisions.get(id)
+        return { id, name: division ? getDivisionName(division, preferences) : id }
+      })
     },
     get categories() {
       const filters = getPropertyFilterMap(app)

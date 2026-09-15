@@ -26,16 +26,12 @@ import {
   organisation,
   userFeature,
 } from '$lib/db/schema'
-import {
-  featureNeighbourhood,
-  featureSearchDocument,
-} from '$lib/db/schema/featureQuery'
+import { featureSearchDocument } from '$lib/db/schema/featureQuery'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { getFeatureQueryCounts } from './featureCounts'
 // UTILS
 import { chunkedInArray } from '$lib/utils/batch-query'
-import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
 import type { Database } from '$lib/types'
 import type {
@@ -50,7 +46,6 @@ import type { FeatureListDBRaw } from '$lib/db/zod/schema/feature.types'
 // TABLE OF CONTENTS
 // ═══════════════════════
 // 1. QUERY PREDICATES
-// - expandNeighbourhoods
 // - featureQuerySignature
 // - buildFeatureQuerySource
 // - buildFeaturePrismConditions
@@ -65,18 +60,6 @@ import type { FeatureListDBRaw } from '$lib/db/zod/schema/feature.types'
  *  1. QUERY PREDICATES
  ************/
 // +++ Query Predicates
-
-/**
- * Expands legacy label selectors; new hierarchy filters use stable division IDs.
- * @param values - Selected neighbourhood labels.
- * @returns Unique exact persisted English labels.
- */
-function expandNeighbourhoods(values: string[]): string[] {
-  const subdivisions = buildNeighbourhoodSubdivisionMap('en')
-  return [
-    ...new Set(values.flatMap(value => [value, ...(subdivisions.get(value) ?? [])])),
-  ]
-}
 
 /**
  * Binds a cursor to every filter and authorization cache discriminator.
@@ -117,7 +100,6 @@ export function buildFeatureQuerySource(input: FeatureQueryInput): SQL {
     input.spatial ||
     input.q ||
     input.filters?.list ||
-    input.filters?.neighbourhoods?.length ||
     input.filters?.divisionIds?.length
   return hasCandidates
     ? sql`${feature} indexed by feature_query_id_idx`
@@ -361,36 +343,11 @@ export function buildFeatureQueryConditions(
       select featureId from featureDivisionMembership where selected=1
       and divisionId in (select value from json_each(${JSON.stringify(filters.divisionIds)}))
     )`)
-  if (filters?.neighbourhoods?.length)
-    conditions.push(
-      inArray(
-        feature.id,
-        db
-          .select({ id: featureNeighbourhood.featureId })
-          .from(featureNeighbourhood)
-          .where(
-            chunkedInArray(
-              featureNeighbourhood.neighbourhood,
-              expandNeighbourhoods(filters.neighbourhoods),
-            ),
-          ),
-      ),
-    )
-  if (filters?.excludeNeighbourhoods?.length)
-    conditions.push(
-      notInArray(
-        feature.id,
-        db
-          .select({ id: featureNeighbourhood.featureId })
-          .from(featureNeighbourhood)
-          .where(
-            chunkedInArray(
-              featureNeighbourhood.neighbourhood,
-              expandNeighbourhoods(filters.excludeNeighbourhoods),
-            ),
-          ),
-      ),
-    )
+  if (filters?.excludeDivisionIds?.length)
+    conditions.push(sql`${feature.id} not in (
+      select featureId from featureDivisionMembership where selected=1
+      and divisionId in (select value from json_each(${JSON.stringify(filters.excludeDivisionIds)}))
+    )`)
   return conditions
 }
 
@@ -453,8 +410,7 @@ export function buildFeatureRollupConditions(
   )
     return null
 
-  if (input.filters?.neighbourhoods?.length) return null
-  if (input.filters?.excludeNeighbourhoods?.length) return null
+  if (input.filters?.excludeDivisionIds?.length) return null
   return conditions
 }
 
@@ -471,7 +427,7 @@ export function buildFeatureRollupConditions(
  * @param authorizedConditions - Visibility/prism/role predicates from the shared authorization service.
  * @param hub - Trusted request hub scope.
  * @param actorUserId - Trusted session user whose own list states accompany the page.
- * @returns Hydrated list records, matching total, English neighbourhood facets and next cursor.
+ * @returns Hydrated list records, matching total, localized division facets and next cursor.
  * @remarks Counts enumerate the matching indexed subset, independently of cursor and limit.
  * Only page IDs are hydrated with property/image relations; no dataset-wide feature hydration occurs.
  */

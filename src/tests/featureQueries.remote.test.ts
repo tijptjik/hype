@@ -15,7 +15,18 @@ const { ctx, authorize, queryPage, queryConditions, batchFactory } = vi.hoisted(
   queryPage: vi.fn(async () => ({
     data: [],
     totalCount: 2,
-    facets: { neighbourhoods: { Central: 2 } },
+    facets: {
+      divisions: {
+        central: {
+          id: 'central',
+          level: 5,
+          category: 'hood',
+          class: 'neighbourhood',
+          count: 2,
+          i18n: { en: { name: 'Central' } },
+        },
+      },
+    },
     nextCursor: { id: 'next', signature: '' },
   })),
   queryConditions: vi.fn((..._args: unknown[]) => ({ conditions: ['authorized'] })),

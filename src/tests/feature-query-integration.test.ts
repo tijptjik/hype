@@ -68,6 +68,10 @@ function row(id: string, isVisitable = true): FeatureFromCollection {
     imagePublishedCount: 0,
     geometry: { type: 'Point', coordinates: [114.173, 22.278] },
     properties: [],
+    divisionMemberships: [
+      { divisionId: 'causeway-bay', selected: true },
+      { divisionId: 'bowrington', selected: true },
+    ],
     i18n: { en: { title: id, addressProperties: { neighbourhood: 'Bowrington' } } },
   } as FeatureFromCollection
 }
@@ -95,7 +99,28 @@ function controlledPage() {
         data,
         totalCount,
         facets:
-          totalCount === null ? null : { neighbourhoods: { Bowrington: totalCount } },
+          totalCount === null
+            ? null
+            : {
+                divisions: {
+                  'causeway-bay': {
+                    id: 'causeway-bay',
+                    level: 5,
+                    category: 'hood',
+                    class: 'neighbourhood',
+                    count: totalCount,
+                    i18n: { en: { name: 'Causeway Bay' }, zhHant: { name: '銅鑼灣' } },
+                  },
+                  bowrington: {
+                    id: 'bowrington',
+                    level: 6,
+                    category: 'hood',
+                    class: 'microhood',
+                    count: totalCount,
+                    i18n: { en: { name: 'Bowrington' } },
+                  },
+                },
+              },
         nextCursor:
           more && lastItem ? { id: lastItem.id, signature: 'signature' } : null,
       }
@@ -356,7 +381,7 @@ describe('paginated collection activation', () => {
     await seedRequest
     expect(app.state.resources.feature).toEqual([])
     const omni = createOmni(app)
-    omni.initNeighbourhood('Causeway Bay', selectionOptions)
+    omni.initNeighbourhood('causeway-bay', selectionOptions)
     expect(app.state.active.collection?.items.map(feature => feature.id)).toEqual([
       'cached',
     ])
@@ -366,6 +391,7 @@ describe('paginated collection activation', () => {
     await settle()
     expect(app.state.active.feature?.id).toBe('cached')
     expect(app.state.active.collection?.totalCount).toBe(200)
+    expect(app.state.active.collection?.i18n.zhHant.name).toBe('銅鑼灣')
     expect(getFeaturePage).toHaveBeenCalledTimes(2)
   })
 
@@ -374,7 +400,7 @@ describe('paginated collection activation', () => {
     const first = controlledPage()
     vi.mocked(getFeaturePage).mockReturnValue(first.query)
     const omni = createOmni(app)
-    omni.initNeighbourhood('Causeway Bay', selectionOptions)
+    omni.initNeighbourhood('causeway-bay', selectionOptions)
     expect(app.state.active.collection?.items).toEqual([])
     first.resolve([row('server')], 200, true)
     await settle()
@@ -394,7 +420,7 @@ describe('paginated collection activation', () => {
       .mockReturnValueOnce(first.query)
       .mockReturnValueOnce(filtered.query)
     const omni = createOmni(app)
-    omni.initNeighbourhood('Causeway Bay', selectionOptions)
+    omni.initNeighbourhood('causeway-bay', selectionOptions)
     first.resolve([row('first')], 100)
     await settle()
     app.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
@@ -403,7 +429,7 @@ describe('paginated collection activation', () => {
     expect(getFeaturePage).toHaveBeenLastCalledWith(
       expect.objectContaining({
         filters: expect.objectContaining({
-          neighbourhoods: ['Causeway Bay'],
+          divisionIds: ['causeway-bay'],
           isVisitable: false,
         }),
       }),
@@ -426,7 +452,7 @@ describe('paginated collection activation', () => {
       .mockReturnValueOnce(first.query)
       .mockReturnValueOnce(filtered.query)
     const omni = createOmni(app)
-    omni.initNeighbourhood('Causeway Bay', selectionOptions)
+    omni.initNeighbourhood('causeway-bay', selectionOptions)
     flushSync()
     app.featureQueryFilters.isVisitable = false
     flushSync()

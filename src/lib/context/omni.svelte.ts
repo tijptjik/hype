@@ -7,8 +7,6 @@ import { searchAllAsync } from '$lib/map/data'
 // I18N
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
-// NEIGHBOURHOODS
-import neighbourhoods from '$lib/map/neighbourhoods.json'
 // NAVIGATION
 import {
   COLLECTION_QUERY_PARAM,
@@ -70,7 +68,6 @@ type OmniState = {
   // The index of the focused result
   focusedIndex: number
 }
-
 
 // CONSTANTS
 const MAX_RESULTS = 9
@@ -833,7 +830,7 @@ export class OmniCtx {
     return this.appCtx.featureQueryInput({
       filters:
         descriptor.kind === 'neighbourhood'
-          ? { neighbourhoods: [descriptor.ref] }
+          ? { divisionIds: [descriptor.ref] }
           : { list: { listId: descriptor.ref === 'visited' ? 'visited' : 'wishlist' } },
       ...(descriptor.kind === 'walk' && descriptor.ref === 'visited'
         ? { sorting: { sortBy: 'visitedAt' as const, sortOrder: 'desc' as const } }
@@ -895,7 +892,15 @@ export class OmniCtx {
       !query.isCurrent(this.collectionQueryInput(descriptor))
     )
       return
-    const updated = { ...current, items: rows, totalCount }
+    // Cold deep links obtain their localized division metadata with the first query page.
+    const updated = {
+      ...current,
+      ...(descriptor.kind === 'neighbourhood'
+        ? { i18n: this.toNeighbourhoodCollection(descriptor.ref, rows).i18n }
+        : {}),
+      items: rows,
+      totalCount,
+    }
     if (
       rows.length &&
       this.pendingCollectionOptions &&
@@ -1240,26 +1245,28 @@ export class OmniCtx {
   }
 
   /**
-   * Creates a neighbourhood collection from neighbourhood name and features
+   * Creates a division collection from registry metadata and matching features.
+   * @param neighbourhood Stable division ID.
+   * @param features Contained feature rows.
+   * @returns Collection with localized names for every available UI language.
    */
   toNeighbourhoodCollection(
     neighbourhood: string,
     features: (FeatureFromCollection | Feature)[],
   ): ActiveCollection {
     const selectedNeighbourhood =
-      neighbourhoods[neighbourhood as keyof typeof neighbourhoods]
+      this.appCtx.cacheCtx.featureQueries.collection.facets?.divisions[neighbourhood] ??
+      this.appCtx.placeCtx.divisions.get(neighbourhood)
 
     return {
       id: neighbourhood,
       type: 'neighbourhood',
       i18n: {
-        en: { name: neighbourhood },
-        zhHant: {
-          name: selectedNeighbourhood?.i18n?.zhHant?.name || neighbourhood,
-        },
-        zhHans: {
-          name: selectedNeighbourhood?.i18n?.zhHans?.name || neighbourhood,
-        },
+        en: selectedNeighbourhood?.i18n.en ?? { name: neighbourhood },
+        zhHant: selectedNeighbourhood?.i18n.zhHant ??
+          selectedNeighbourhood?.i18n.en ?? { name: neighbourhood },
+        zhHans: selectedNeighbourhood?.i18n.zhHans ??
+          selectedNeighbourhood?.i18n.en ?? { name: neighbourhood },
       },
       items: features,
     }

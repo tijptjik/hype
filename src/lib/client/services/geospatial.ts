@@ -1,139 +1,54 @@
 // I18N
-import { getI18n, getLocaleKey, toLocaleKey } from '$lib/i18n'
-// DATA
-import neighbourhoods from '$lib/map/neighbourhoods.json'
-// MAPLIBRE
+import { getI18n } from '$lib/i18n'
+// TYPES
 import type { LngLatLike } from 'maplibre-gl'
-// TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type { Locale, LocaleKey } from '$lib/types'
-// TYPES
-import type { Ref } from '$lib/types'
+import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
+import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 
-type NeighbourhoodJSON = Record<
-  Ref,
-  {
-    i18n: Record<LocaleKey, NeighbourhoodI18n>
-  }
->
-
-type NeighbourhoodI18n = {
-  name: string
-  neighbourhood: string
-  area: string
-  district: string
+/**
+ * Resolves a division label in the user's locale and preferred fallback languages.
+ * @param division Registry identity and translated source names.
+ * @param preferences User language preferences.
+ * @returns Localized name, then an available source name, then the stable ID.
+ */
+export function getDivisionName(
+  division: DivisionFacet,
+  preferences?: Partial<UserPreferences>,
+): string {
+  const fallback =
+    division.i18n.en?.name ??
+    Object.values(division.i18n).find(value => value?.name)?.name ??
+    division.id
+  return getI18n(division, 'name', preferences, fallback)
 }
 
-type NeighbourhoodResource = {
-  id: Ref
-  i18n: Record<LocaleKey, NeighbourhoodI18n>
-}
-
-
-// ═══════════════════════
-// TABLE OF CONTENTS
-// ═══════════════════════
-//
-// 1. GETTERS
-//    - getFilteredNeighbourhoods(appCtx: AppCtx): NeighbourhoodJSON
-//      Gets filtered neighbourhoods data based on current filters
-//
-// 2. FILTERS
-//    - filterPlaces(appCtx: AppCtx, term: string)
-//      Filters places by search term across name, district, and area
-//
-// 3. TRANSFORMATIONS
-//    - getNeighbourhoodsAsResources(): NeighbourhoodResource[]
-//      Converts neighbourhoods data to resource format
-//
-//    - buildNeighbourhoodSubdivisionMap(locale?: string): Map<string, string[]>
-//      Builds map of neighbourhoods to their subdivisions
-//
-//    - getCoordinates(lngLat: LngLatLike | null): [number, number] | null
-//      Extracts coordinates from various LngLatLike formats
-//
-//    - getUserLocationCoordinates(appCtx: AppCtx): [number, number] | null
-//      Extracts the current user location as an `[lng, lat]` tuple
-//
-// 4. ANIMATION
-//
-// ═══════════════════════
-
-export function getFilteredNeighbourhoods(appCtx: AppCtx): NeighbourhoodJSON {
-  const filteredNeighbourhoods = appCtx.placeCtx.getFilteredNeighbourhoods()
-  const result: NeighbourhoodJSON = {}
-
-  for (const key of filteredNeighbourhoods) {
-    if (key in neighbourhoods) {
-      result[key] = neighbourhoods[key as keyof typeof neighbourhoods]
-    }
-  }
-
-  return result
-}
-
-// ═══════════════════════
-// 1. FILTERS
-// ═══════════════════════
-
-export function filterPlaces(appCtx: AppCtx, term: string) {
-  if (!term) return Object.entries(neighbourhoods)
-  const searchLower = term.toLowerCase()
-  return Object.entries(neighbourhoods).filter(([_key, data]) => {
-    return (
-      getI18n(data, 'name', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(data, 'district', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower) ||
-      getI18n(data, 'area', appCtx.getUserPreferences())
-        .toLowerCase()
-        .includes(searchLower)
+/**
+ * Searches the registry divisions available to the current authorized collection.
+ * @param appCtx Active application and division facet state.
+ * @param term Localized search text.
+ * @returns Stable IDs with classification and translated names, ordered by level and name.
+ */
+export function filterPlaces(appCtx: AppCtx, term: string): [string, DivisionFacet][] {
+  const preferences = appCtx.getUserPreferences()
+  const label = (division: DivisionFacet) => getDivisionName(division, preferences)
+  return [...appCtx.placeCtx.divisions.entries()]
+    .filter(
+      ([id, division]) =>
+        (appCtx.placeCtx.neighbourhoodFeatureCounts.get(id) ?? 0) > 0 &&
+        label(division).toLocaleLowerCase().includes(term.toLocaleLowerCase()),
     )
-  })
+    .sort(
+      ([, a], [, b]) =>
+        (a.level ?? 99) - (b.level ?? 99) || label(a).localeCompare(label(b)),
+    )
 }
 
-// ═══════════════════════
-// 2. TRANSFORMATIONS
-// ═══════════════════════
-
-export function getNeighbourhoodsAsResources(): NeighbourhoodResource[] {
-  return Object.entries(neighbourhoods).map(([id, i18n]) => ({
-    ...i18n,
-    id,
-  }))
-}
-
-export function buildNeighbourhoodSubdivisionMap(
-  locale?: Locale | LocaleKey,
-): Map<string, string[]> {
-  const localeKey = locale ? toLocaleKey(locale) : getLocaleKey()
-
-  const subNeighbourhoodsMap = new Map<string, string[]>()
-
-  for (const [_key, data] of Object.entries(neighbourhoods)) {
-    const name = data.i18n[localeKey]?.name
-    const neighbourhood = data.i18n[localeKey]?.neighbourhood
-
-    if (!name || !neighbourhood) continue
-
-    // Handle neighbourhood as string or array
-    const neighbourhoodKeys = Array.isArray(neighbourhood)
-      ? neighbourhood
-      : [neighbourhood]
-
-    for (const hoodKey of neighbourhoodKeys) {
-      if (!subNeighbourhoodsMap.has(hoodKey)) {
-        subNeighbourhoodsMap.set(hoodKey, [])
-      }
-      subNeighbourhoodsMap.get(hoodKey)?.push(name)
-    }
-  }
-
-  return subNeighbourhoodsMap
-}
-
+/**
+ * Extracts a coordinate pair from MapLibre's supported coordinate forms.
+ * @param lngLat Map coordinate value.
+ * @returns Longitude and latitude, or null.
+ */
 export function getCoordinates(lngLat: LngLatLike | null): [number, number] | null {
   if (!lngLat) return null
   if (Array.isArray(lngLat)) {

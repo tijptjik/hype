@@ -2,7 +2,7 @@
 import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // SERVICES
-import { filterPlaces } from '$lib/client/services/geospatial'
+import { filterPlaces, getDivisionName } from '$lib/client/services/geospatial'
 /// ENUMS
 import { OmniCollection } from '$lib/enums'
 // TYPES
@@ -98,7 +98,7 @@ export async function searchAllAsync(
     const count = appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) ?? 0
     if (count > 0) {
       results.push({
-        name: getI18n(data, 'name', appCtx.getUserPreferences()),
+        name: getDivisionName(data, appCtx.getUserPreferences()),
         count,
         collectionType: OmniCollection.neighbourhood,
         ref: neighbourhoodRef,

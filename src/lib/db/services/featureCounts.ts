@@ -2,7 +2,8 @@
 import { and, eq, sql, type SQL } from 'drizzle-orm'
 // DB
 import { feature } from '$lib/db/schema/feature'
-import { featureNeighbourhood } from '$lib/db/schema/featureQuery'
+import { divisionDefinition } from '$lib/db/schema/division'
+import { featureDivisionMembership } from '$lib/db/schema/featureDivision'
 import {
   featureCountCache,
   featureCountRevision,
@@ -12,17 +13,20 @@ import {
 import { isSqliteBusyError, retryBusyRead } from './sqlite'
 // TYPES
 import type { Database } from '$lib/types'
-import type { FeatureQueryInput } from '$lib/api/services/featureQuery.types'
+import type {
+  DivisionFacet,
+  FeatureQueryInput,
+} from '$lib/api/services/featureQuery.types'
 // TYPES
 
 /** Exact count metadata, stored together for an authorized feature-query fingerprint. */
 type FeatureQueryCounts = {
   totalCount: number
-  facets: { neighbourhoods: Record<string, number> }
+  facets: { divisions: Record<string, DivisionFacet> }
 }
 
 /** The aggregate output shared by direct count queries and maintained rollup sums. */
-type FeatureCountGroup = { neighbourhood: string | null; count: number }
+type FeatureCountGroup = DivisionFacet
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -41,20 +45,18 @@ type FeatureCountGroup = { neighbourhood: string | null; count: number }
 
 /**
  * Converts grouped totals into the shared count envelope.
- * @param groups - Raw English neighbourhood bins, including the unknown bin.
- * @returns Exact total and named neighbourhood facets.
+ * @param groups - Independent selected division counts with localized registry names.
+ * @param totalCount - Feature total, counted independently of ancestor memberships.
+ * @returns Exact total and ID-keyed division facets.
  */
-function toFeatureQueryCounts(groups: FeatureCountGroup[]): FeatureQueryCounts {
+function toFeatureQueryCounts(
+  groups: FeatureCountGroup[],
+  totalCount: number,
+): FeatureQueryCounts {
   return {
-    totalCount: groups.reduce((total, group) => total + Number(group.count), 0),
+    totalCount,
     facets: {
-      neighbourhoods: Object.fromEntries(
-        groups
-          .filter(group => group.neighbourhood !== null && group.neighbourhood !== '')
-          .flatMap(group =>
-            group.neighbourhood ? [[group.neighbourhood, Number(group.count)]] : [],
-          ),
-      ),
+      divisions: Object.fromEntries(groups.map(group => [group.id, group])),
     },
   }
 }
@@ -69,7 +71,7 @@ async function fingerprintFeatureCountQuery(statement: {
   sql: string
   params: unknown[]
 }): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify({ version: 2, ...statement }))
+  const bytes = new TextEncoder().encode(JSON.stringify({ version: 3, ...statement }))
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   return [...new Uint8Array(digest)]
     .map(value => value.toString(16).padStart(2, '0'))
@@ -101,26 +103,41 @@ export async function getFeatureQueryCounts(
   source: SQL,
   rollupConditions: SQL[] | null,
 ): Promise<FeatureQueryCounts> {
-  // The rollup has one row per feature, but neighbourhood facets are ancestor memberships.
-  // Use it only for the total; the compatibility view supplies exact facet memberships.
-  const rollupTotal = rollupConditions
-    ? await retryBusyRead(() =>
-        db
-          .select({ totalCount: sql<number>`coalesce(sum("feature"."totalCount"), 0)` })
-          .from(sql`${featureCountRollup} as "feature"`)
-          .where(and(...rollupConditions)),
-      )
-    : null
-
+  // Group by stable identity; localized names are a scalar lookup, never a counting join.
   const aggregate = db
     .select({
-      neighbourhood: featureNeighbourhood.neighbourhood,
-      count: sql<number>`count(*)`,
+      id: divisionDefinition.id,
+      level: sql<
+        number | null
+      >`json_extract(${divisionDefinition.attributes}, '$.level')`,
+      category: sql<
+        string | null
+      >`json_extract(${divisionDefinition.attributes}, '$.category')`,
+      class: sql<
+        string | null
+      >`json_extract(${divisionDefinition.attributes}, '$.class')`,
+      i18n: sql<DivisionFacet['i18n']>`(select coalesce(json_group_object(
+        case locale when 'zh-hant' then 'zhHant' when 'zh-hans' then 'zhHans' else locale end,
+        json_object('name', name)), '{}') from divisionI18n
+        where divisionId = ${divisionDefinition.id} and name is not null and name != '')`.mapWith(
+        value => JSON.parse(String(value)),
+      ),
+      count: sql<number>`count(distinct ${feature.id})`,
     })
     .from(source)
-    .leftJoin(featureNeighbourhood, eq(featureNeighbourhood.featureId, feature.id))
+    .innerJoin(
+      featureDivisionMembership,
+      and(
+        eq(featureDivisionMembership.featureId, feature.id),
+        eq(featureDivisionMembership.selected, true),
+      ),
+    )
+    .innerJoin(
+      divisionDefinition,
+      eq(divisionDefinition.id, featureDivisionMembership.divisionId),
+    )
     .where(and(...conditions))
-    .groupBy(featureNeighbourhood.neighbourhood)
+    .groupBy(divisionDefinition.id)
   const targetUserId = input.filters?.list?.userId
   const userRevision = targetUserId
     ? sql<number>`coalesce((${db.select({ revision: featureCountUserRevision.revision }).from(featureCountUserRevision).where(eq(featureCountUserRevision.userId, targetUserId)).limit(1)}), 0)`
@@ -157,8 +174,24 @@ export async function getFeatureQueryCounts(
   )
   if (cached[0]) return cached[0]
 
-  const counts = toFeatureQueryCounts(await retryBusyRead(() => aggregate))
-  if (rollupTotal) counts.totalCount = Number(rollupTotal[0]?.totalCount ?? 0)
+  // Read totals after the revision snapshot. Ancestor counts must never be summed.
+  const totals = rollupConditions
+    ? await retryBusyRead(() =>
+        db
+          .select({ count: sql<number>`coalesce(sum("feature"."totalCount"), 0)` })
+          .from(sql`${featureCountRollup} as "feature"`)
+          .where(and(...rollupConditions)),
+      )
+    : await retryBusyRead(() =>
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(source)
+          .where(and(...conditions)),
+      )
+  const counts = toFeatureQueryCounts(
+    await retryBusyRead(() => aggregate),
+    Number(totals[0]?.count ?? 0),
+  )
   // Publish only under the revisions observed before the aggregate, never a newer revision.
   try {
     await db.run(sql`insert into ${featureCountCache}

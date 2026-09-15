@@ -9,7 +9,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 // DB
 import * as schema from '$lib/db/schema'
-import { feature, featureNeighbourhood } from '$lib/db/schema'
+import { feature, featureDivisionMembership } from '$lib/db/schema'
 import {
   buildFeatureQueryConditions,
   buildFeatureQuerySource,
@@ -82,6 +82,7 @@ function setup(withOrphan = false) {
   sqlite.exec(readFileSync('migrations/0081_feature_search_fts.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0082_feature_division_refresh.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0083_feature_division_registry.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0084_division_facets.sql', 'utf8'))
   const statements: string[] = []
   const prepare = (query: string, bindings: unknown[] = []) => ({
     bind: (...params: unknown[]) => prepare(query, params),
@@ -151,6 +152,53 @@ function setup(withOrphan = false) {
 }
 
 describe('indexed feature queries', () => {
+  it('keeps same-name divisions distinct and invalidates ancestor and translation changes', async () => {
+    const { db, sqlite } = setup()
+    sqlite.prepare('INSERT INTO divisionDefinition VALUES(?,?,?)').run(
+      'macro',
+      'r1',
+      JSON.stringify({
+        level: 4,
+        category: 'hood',
+        class: 'macrohood',
+        names: { en: { name: 'Central' } },
+      }),
+    )
+    sqlite.exec(
+      "INSERT INTO featureDivisionMembership VALUES('a','macro',1),('c','macro',0)",
+    )
+    const query = input({ filters: { divisionIds: ['Central', 'macro'] } })
+    const first = await queryFeaturePage(db, query, base, hub)
+    expect(first.totalCount).toBe(2)
+    expect(facetCounts(first)).toEqual({ Central: 2, macro: 1 })
+    expect(first.facets?.divisions.macro).toMatchObject({
+      level: 4,
+      class: 'macrohood',
+      i18n: { en: { name: 'Central' } },
+    })
+    sqlite.exec("INSERT INTO featureDivisionMembership VALUES('b','macro',1)")
+    expect(facetCounts(await queryFeaturePage(db, query, base, hub))).toEqual({
+      Central: 2,
+      macro: 2,
+    })
+    sqlite.exec(
+      "UPDATE divisionI18n SET name='Changed parent' WHERE divisionId='macro' AND locale='en'",
+    )
+    expect(
+      (await queryFeaturePage(db, query, base, hub)).facets?.divisions.macro.i18n.en
+        ?.name,
+    ).toBe('Changed parent')
+    sqlite.exec("DELETE FROM featureDivisionMembership WHERE divisionId='macro'")
+    expect(facetCounts(await queryFeaturePage(db, query, base, hub))).toEqual({
+      Central: 2,
+    })
+    expect(
+      sqlite
+        .prepare("SELECT name FROM sqlite_master WHERE name='featureNeighbourhood'")
+        .get(),
+    ).toBeUndefined()
+  })
+
   it('filters selected stable division IDs without double-counting ancestors or candidates', async () => {
     const { db, sqlite } = setup()
     sqlite.exec(
@@ -193,12 +241,30 @@ describe('indexed feature queries', () => {
 
     const page = await queryFeaturePage(
       db,
-      input({ filters: { neighbourhoods: ['Central'] } }),
+      input({ filters: { divisionIds: ['Central'] } }),
       base,
       hub,
     )
     expect(page.data.map(row => row.id)).toEqual(['a', 'b'])
-    expect(page.facets?.neighbourhoods).toEqual({ Central: 2 })
+    expect(facetCounts(page)).toEqual({ Central: 2, 'micro-central': 1 })
+    expect(page.totalCount).toBe(2)
+  })
+
+  it('filters and labels selected neighbourhood memberships in the requested locale', async () => {
+    const { db, sqlite } = setup()
+    sqlite
+      .prepare('INSERT INTO divisionI18n VALUES(?,?,?,?)')
+      .run('Central', 'zh-hant', '中環', JSON.stringify({ name: '中環' }))
+
+    const page = await queryFeaturePage(
+      db,
+      input({ filters: { divisionIds: ['Central'] } }),
+      base,
+      hub,
+    )
+    expect(page.data.map(row => row.id)).toEqual(['a', 'b'])
+    expect(facetCounts(page)).toEqual({ Central: 2 })
+    expect(page.facets?.divisions.Central.i18n.zhHant?.name).toBe('中環')
   })
 
   it('keeps large viewport cursor identities fixed-size and bound to the query', async () => {
@@ -249,7 +315,7 @@ describe('indexed feature queries', () => {
     const page = await queryFeaturePage(db, request, base, hub)
     expect(page.data.map(row => row.id)).toEqual(['b'])
     expect(page.totalCount).toBe(2)
-    expect(page.facets?.neighbourhoods).toEqual({ Central: 2 })
+    expect(facetCounts(page)).toEqual({ Central: 2 })
   })
 
   it('does no aggregate, revision or count-cache work when counts are omitted', async () => {
@@ -271,16 +337,16 @@ describe('indexed feature queries', () => {
     const { db, statements } = setup()
     const page = await queryFeaturePage(
       db,
-      input({ filters: { isVisitable: true, neighbourhoods: ['Central'] } }),
+      input({ filters: { isVisitable: true, divisionIds: ['Central'] } }),
       base,
       hub,
     )
     expect(page.totalCount).toBe(2)
-    expect(page.facets?.neighbourhoods).toEqual({ Central: 2 })
+    expect(facetCounts(page)).toEqual({ Central: 2 })
     expect(statements.some(statement => statement.includes('featureCountRollup'))).toBe(
       false,
     )
-    expect(statements.join('\n')).toContain('featureNeighbourhood')
+    expect(statements.join('\n')).toContain('featureDivisionMembership')
     expect(statements.join('\n')).toContain('featureCountCache')
   })
 
@@ -310,7 +376,8 @@ describe('indexed feature queries', () => {
     expect(
       statements.filter(
         statement =>
-          statement.includes('count(*)') && statement.includes('featureNeighbourhood'),
+          statement.includes('count(distinct') &&
+          statement.includes('featureDivisionMembership'),
       ),
     ).toHaveLength(1)
     expect(
@@ -333,7 +400,8 @@ describe('indexed feature queries', () => {
     expect(
       statements.filter(
         statement =>
-          statement.includes('count(*)') && statement.includes('featureNeighbourhood'),
+          statement.includes('count(distinct') &&
+          statement.includes('featureDivisionMembership'),
       ),
     ).toHaveLength(3)
     expect(
@@ -378,7 +446,8 @@ describe('indexed feature queries', () => {
     expect(
       statements.filter(
         statement =>
-          statement.includes('count(*)') && statement.includes('featureNeighbourhood'),
+          statement.includes('count(distinct') &&
+          statement.includes('featureDivisionMembership'),
       ),
     ).toHaveLength(1)
   })
@@ -497,11 +566,11 @@ describe('indexed feature queries', () => {
     } as never)
     expect(page.data.map(row => row.id)).toEqual(['a', 'b', 'c', 'f'])
     expect(page.totalCount).toBe(4)
-    expect(page.facets?.neighbourhoods).toEqual({ Central: 3, 'Wan Chai': 1 })
+    expect(facetCounts(page)).toEqual({ Central: 3, 'Wan Chai': 1 })
     expect(statements.some(statement => statement.includes('featureCountRollup'))).toBe(
       true,
     )
-    expect(statements.join('\n')).toContain('count(*)')
+    expect(statements.join('\n')).toContain('count(distinct')
     const search = input({ q: 'Branch' })
     expect(
       (
@@ -591,7 +660,7 @@ describe('indexed feature queries', () => {
     const first = await queryFeaturePage(db, query, base, hub)
     expect(first.data.map(row => row.id)).toEqual(['a'])
     expect(first.totalCount).toBe(2)
-    expect(first.facets?.neighbourhoods).toEqual({ Central: 2 })
+    expect(facetCounts(first)).toEqual({ Central: 2 })
     expect(first.nextCursor?.signature).toBe(await featureQuerySignature(query))
     const second = await queryFeaturePage(
       db,
@@ -700,7 +769,7 @@ describe('indexed feature queries', () => {
     const page = await queryFeaturePage(db, input({ q: 'North' }), authorized, hub)
     expect(page.data.map(row => row.id)).toEqual(['a', 'b'])
     expect(page.totalCount).toBe(2)
-    expect(page.facets?.neighbourhoods).toEqual({ Central: 2 })
+    expect(facetCounts(page)).toEqual({ Central: 2 })
     expect(authorized).toEqual(original)
   })
 
@@ -713,8 +782,7 @@ describe('indexed feature queries', () => {
       0,
     )
     expect(
-      (await queryFeaturePage(db, input({ q: 'Changed' }), base, hub)).facets
-        ?.neighbourhoods,
+      facetCounts(await queryFeaturePage(db, input({ q: 'Changed' }), base, hub)),
     ).toEqual({ Central: 1 })
     sqlite.exec(`DELETE FROM featureI18n WHERE featureId = 'a'`)
     expect(
@@ -815,13 +883,13 @@ describe('indexed feature queries', () => {
     const { db } = setup()
     const page = await queryFeaturePage(
       db,
-      input({ filters: { excludeNeighbourhoods: ['Central'] } }),
+      input({ filters: { excludeDivisionIds: ['Central'] } }),
       base,
       hub,
     )
     expect(page.data.map(row => row.id)).toEqual(['c', 'e'])
     expect(page.totalCount).toBe(2)
-    expect(page.facets?.neighbourhoods).toEqual({ 'Wan Chai': 1 })
+    expect(facetCounts(page)).toEqual({ 'Wan Chai': 1 })
   })
 
   it('keeps long searches and large filter arrays within the D1 binding budget', () => {
@@ -916,7 +984,7 @@ describe('indexed feature queries', () => {
     const page = await queryFeaturePage(db, request, base, hub)
     expect(page.data.map(row => row.id)).toEqual(['a'])
     expect(page.totalCount).toBe(1)
-    expect(page.facets?.neighbourhoods).toEqual({ Central: 1 })
+    expect(facetCounts(page)).toEqual({ Central: 1 })
     const plan = sqlite
       .prepare(`EXPLAIN QUERY PLAN ${filtered.sql}`)
       .all(...(filtered.params as never[]))
@@ -962,12 +1030,18 @@ describe('indexed feature queries', () => {
     const query = db
       .select({
         count: sql`count(*)`,
-        neighbourhood: featureNeighbourhood.neighbourhood,
+        divisionId: featureDivisionMembership.divisionId,
       })
       .from(buildFeatureQuerySource(queryInput))
-      .leftJoin(featureNeighbourhood, eq(featureNeighbourhood.featureId, feature.id))
+      .innerJoin(
+        featureDivisionMembership,
+        and(
+          eq(featureDivisionMembership.featureId, feature.id),
+          eq(featureDivisionMembership.selected, true),
+        ),
+      )
       .where(and(...buildFeatureQueryConditions(db, queryInput, base, hub)))
-      .groupBy(featureNeighbourhood.neighbourhood)
+      .groupBy(featureDivisionMembership.divisionId)
       .toSQL()
     const plan = sqlite
       .prepare(`EXPLAIN QUERY PLAN ${query.sql}`)
@@ -1028,3 +1102,15 @@ describe('indexed feature queries', () => {
     expect(last.hasMore).toBe(false)
   })
 })
+
+/** Extract ID-keyed totals while separate tests assert translated facet metadata. */
+function facetCounts(page: {
+  facets: import('$lib/api/services/featureQuery.types').FeatureQueryPage['facets']
+}): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(page.facets?.divisions ?? {}).map(([id, facet]) => [
+      id,
+      facet.count,
+    ]),
+  )
+}

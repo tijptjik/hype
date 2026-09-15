@@ -21,13 +21,87 @@ import type {
   ResourcePanelRow,
 } from '$lib/bits/patterns/resourcePanel'
 
+type ThemeColours = {
+  primary: string
+  secondary: string
+  tertiary: string
+}
+
+type ColourRole = {
+  key: keyof ThemeColours
+  name: string
+  description: string
+}
+
 let selected: ThemeId = $state('breadline-light')
 let query = $state('')
 let enabled = $state(['central', 'wan-chai'])
 let notice = $state('All changes here are local to this preview.')
 let reserved = $state(false)
 let compare = $state(false)
+let previewColours = $state<Record<ThemeId, ThemeColours>>({
+  'hype-black': { primary: '#FA659B', secondary: '#9D9BFF', tertiary: '#72D8CF' },
+  'hype-dark': { primary: '#FA659B', secondary: '#9D9BFF', tertiary: '#72D8CF' },
+  'hype-light': { primary: '#AF245A', secondary: '#5D46AE', tertiary: '#08776F' },
+  'breadline-light': { primary: '#155E75', secondary: '#267A7A', tertiary: '#C0543D' },
+  'breadline-dark': { primary: '#8BC8CA', secondary: '#FF9275', tertiary: '#A6CBE0' },
+})
 const current = $derived(THEMES.find(theme => theme.id === selected) ?? THEMES[0])
+const activeColours = $derived(previewColours[selected])
+const previewStyle = $derived(
+  `--theme-primary:${activeColours.primary};--theme-secondary:${activeColours.secondary};--theme-tertiary:${activeColours.tertiary};--theme-on-primary:${getReadableTextColour(activeColours.primary)};--theme-on-secondary:${getReadableTextColour(activeColours.secondary)};--theme-on-tertiary:${getReadableTextColour(activeColours.tertiary)};`,
+)
+const colourRoles: readonly ColourRole[] = [
+  { key: 'primary', name: 'Primary', description: 'Structure' },
+  { key: 'secondary', name: 'Secondary', description: 'Support' },
+  { key: 'tertiary', name: 'Tertiary', description: 'Signal' },
+]
+
+/** Returns a readable black or white label colour for a preview swatch. */
+function getReadableTextColour(hex: string): string {
+  const channels = hex
+    .replace('#', '')
+    .match(/.{2}/g)
+    ?.map(channel => parseInt(channel, 16))
+  if (channels?.length !== 3 || channels?.some(channel => Number.isNaN(channel))) {
+    return '#ffffff'
+  }
+  const [red, green, blue] = channels.map(channel => {
+    const value = channel / 255
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  })
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+  return luminance > 0.179 ? '#173f4a' : '#ffffff'
+}
+
+function updatePreviewColour(role: keyof ThemeColours, value: string): void {
+  previewColours[selected] = { ...previewColours[selected], [role]: value }
+}
+
+function resetPreviewColours(): void {
+  previewColours[selected] = {
+    ...previewColours[selected],
+    ...(
+      {
+        'hype-black': { primary: '#FA659B', secondary: '#9D9BFF', tertiary: '#72D8CF' },
+        'hype-dark': { primary: '#FA659B', secondary: '#9D9BFF', tertiary: '#72D8CF' },
+        'hype-light': { primary: '#AF245A', secondary: '#5D46AE', tertiary: '#08776F' },
+        'breadline-light': {
+          primary: '#155E75',
+          secondary: '#267A7A',
+          tertiary: '#C0543D',
+        },
+        'breadline-dark': {
+          primary: '#8BC8CA',
+          secondary: '#FF9275',
+          tertiary: '#A6CBE0',
+        },
+      } satisfies Record<ThemeId, ThemeColours>
+    )[selected],
+  }
+  notice = `${current.name} preview colours reset.`
+}
+
 const locations = [
   {
     id: 'central',
@@ -122,9 +196,10 @@ const panel: ResourcePanelModel = {
 
 <main
   data-theme={selected}
+  style={previewStyle}
   class="bits-theme min-h-screen bg-canvas text-base-content transition-colors duration-200"
 >
-  <div class="mx-auto max-w-[1600px] px-5 py-6 sm:px-10 lg:px-14">
+  <div class="mx-auto max-w-[1600px] px-4 py-5 sm:px-10 sm:py-6 lg:px-14">
     <header class="flex items-center justify-between border-b border-border pb-6">
       <a
         data-sveltekit-reload
@@ -178,9 +253,59 @@ const panel: ResourcePanelModel = {
       <div class="rounded-3xl border border-border bg-panel p-5 sm:p-6">
         <ThemePicker
           value={selected}
-          onSelect={theme => { selected = theme; notice = `${THEMES.find(item => item.id === theme)?.name} preview selected` }}
+          onSelect={theme => {
+            selected = theme
+            notice = `${THEMES.find(item => item.id === theme)?.name} preview selected`
+          }}
           label="Choose your atmosphere"
         />
+        <div class="mt-5 border-t border-border pt-5" data-colour-controls>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p
+                class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                Live colour sandbox
+              </p>
+              <p class="mt-2 text-xs leading-5 text-muted-foreground">
+                Tune {current.name} and watch the preview change immediately.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:border-primary hover:text-primary"
+              onclick={resetPreviewColours}
+            >
+              Reset
+            </button>
+          </div>
+          <div class="mt-4 grid grid-cols-3 gap-2">
+            {#each colourRoles as role}
+              <label
+                class="min-w-0 cursor-pointer rounded-xl border border-border bg-surface p-2 transition-colors hover:border-primary"
+              >
+                <input
+                  type="color"
+                  value={activeColours[role.key]}
+                  aria-label={`${role.name} colour`}
+                  class="h-10 w-full cursor-pointer rounded-lg border-0 bg-transparent p-0"
+                  oninput={event => updatePreviewColour(role.key, event.currentTarget.value)}
+                >
+                <span
+                  class="mt-2 block truncate text-[10px] font-semibold uppercase tracking-wider"
+                >
+                  {role.name}
+                </span>
+                <code class="mt-1 block truncate text-[10px] text-muted-foreground">
+                  {activeColours[role.key]}
+                </code>
+                <span class="mt-1 block text-[10px] text-muted-foreground"
+                  >{role.description}</span
+                >
+              </label>
+            {/each}
+          </div>
+        </div>
         <label
           class="mt-5 flex cursor-pointer items-center justify-between gap-4 border-t border-border pt-4 text-xs text-muted-foreground"
           >Compare all five palettes<input
@@ -209,6 +334,7 @@ const panel: ResourcePanelModel = {
       </div>
       <div class="grid lg:grid-cols-[380px_1fr]">
         <aside
+          data-demo-sidebar
           class="h-[430px] overflow-hidden border-b border-border lg:h-[590px] lg:border-b-0 lg:border-r"
         >
           <ResourcePanel model={panel} />
@@ -220,26 +346,63 @@ const panel: ResourcePanelModel = {
             <svg
               viewBox="0 0 760 200"
               class="h-48 w-full"
-              aria-label="Illustrated collection route through the neighbourhood"
+              aria-label="Illustrated train route through the neighbourhood"
               role="img"
             >
+              <title>Train route through the neighbourhood</title>
+              <defs>
+                <clipPath id="route-land">
+                  <path
+                    d="M80 200V121C138 72 218 66 282 111C340 152 399 105 464 96C541 86 602 51 686 104C719 125 742 147 760 169V200Z"
+                  />
+                </clipPath>
+              </defs>
               <rect width="760" height="200" fill="var(--theme-surface)" />
               <path
-                d="M0 120Q120 30 240 110T490 90T760 115V200H0Z"
+                d="M80 200V121C138 72 218 66 282 111C340 152 399 105 464 96C541 86 602 51 686 104C719 125 742 147 760 169V200Z"
                 fill="var(--theme-secondary)"
-                opacity=".13"
+                opacity=".11"
               />
-              <g fill="none" stroke="var(--theme-border)" stroke-width="14">
-                <path
-                  d="M-20 40L800 160M110-30L210 240M360-30L300 240M570-30L640 240"
-                />
-                <path d="M-20 165L800 15" />
+              <g
+                clip-path="url(#route-land)"
+                fill="none"
+                stroke="var(--theme-border)"
+                stroke-linecap="round"
+                stroke-width="14"
+                opacity=".8"
+              >
+                <path d="M30 154C148 146 203 92 316 104S506 164 730 126" />
+                <path d="M176 228C204 178 239 151 252 96S299 40 328 6" />
+                <path d="M442 226C446 174 475 141 512 111S568 64 582 0" />
+                <path d="M628 229C624 177 647 152 706 119S761 85 788 57" />
+              </g>
+              <g
+                clip-path="url(#route-land)"
+                fill="none"
+                stroke="var(--theme-panel)"
+                stroke-linecap="round"
+                stroke-width="3"
+                opacity=".65"
+              >
+                <path d="M30 154C148 146 203 92 316 104S506 164 730 126" />
+                <path d="M176 228C204 178 239 151 252 96S299 40 328 6" />
+                <path d="M442 226C446 174 475 141 512 111S568 64 582 0" />
+                <path d="M628 229C624 177 647 152 706 119S761 85 788 57" />
               </g>
               <path
-                d="M165 90L325 90L610 115"
+                d="M165 119C224 105 272 106 325 112C412 122 500 135 610 141"
+                fill="none"
+                stroke="var(--theme-primary)"
+                stroke-width="8"
+                stroke-linecap="round"
+                opacity=".24"
+              />
+              <path
+                d="M165 119C224 105 272 106 325 112C412 122 500 135 610 141"
                 stroke="var(--theme-primary)"
                 stroke-width="4"
-                stroke-dasharray="5 7"
+                stroke-dasharray="2 9"
+                stroke-linecap="round"
                 fill="none"
               />
               <g
@@ -247,14 +410,55 @@ const panel: ResourcePanelModel = {
                 stroke="var(--theme-primary)"
                 stroke-width="4"
               >
-                <circle cx="165" cy="90" r="10" />
-                <circle cx="325" cy="90" r="10" />
-                <circle cx="610" cy="115" r="10" />
+                <circle cx="165" cy="119" r="10" />
+                <circle cx="325" cy="112" r="10" />
+                <circle cx="610" cy="141" r="10" />
+              </g>
+              <g
+                transform="translate(422 125)"
+                fill="var(--theme-panel)"
+                stroke="var(--theme-primary)"
+                stroke-width="2.5"
+                aria-label="Train"
+              >
+                <rect x="-13" y="-9" width="26" height="18" rx="5" />
+                <rect
+                  x="-8"
+                  y="-5"
+                  width="6"
+                  height="5"
+                  rx="1"
+                  fill="var(--theme-tertiary)"
+                  stroke="none"
+                />
+                <rect
+                  x="2"
+                  y="-5"
+                  width="6"
+                  height="5"
+                  rx="1"
+                  fill="var(--theme-tertiary)"
+                  stroke="none"
+                />
+                <circle
+                  cx="-7"
+                  cy="10"
+                  r="2.5"
+                  fill="var(--theme-primary)"
+                  stroke="none"
+                />
+                <circle
+                  cx="7"
+                  cy="10"
+                  r="2.5"
+                  fill="var(--theme-primary)"
+                  stroke="none"
+                />
               </g>
               <g font-size="12" fill="var(--theme-text)" font-family="inherit">
-                <text x="120" y="65">Sheung Wan</text>
-                <text x="300" y="65">Central</text>
-                <text x="575" y="155">Wan Chai</text>
+                <text x="120" y="94">Sheung Wan</text>
+                <text x="300" y="87">Central</text>
+                <text x="575" y="178">Wan Chai</text>
               </g>
             </svg>
             <span
@@ -397,3 +601,9 @@ const panel: ResourcePanelModel = {
     </footer>
   </div>
 </main>
+
+<style>
+:global([data-demo-sidebar] [data-resource-id]) {
+  margin-inline: 0.75rem;
+}
+</style>

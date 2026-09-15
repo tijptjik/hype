@@ -19,7 +19,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import type { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { Neighbourhood } from '$lib/utils/geocoding.types'
+import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
 import type { Resource, ResourceContext } from '$lib/types'
 
 let pendingFocusRestoreKey: string | null = null
@@ -53,7 +53,7 @@ const {
 }: Props = $props()
 
 let name = $derived(
-  getI18n(resource as Resource | Neighbourhood, 'name', appCtx.getUserPreferences()),
+  getI18n(resource as Resource | DivisionFacet, 'name', appCtx.getUserPreferences()),
 )
 let isCurrentActive = $derived(
   panelProps.active?.resourceId === resource.id &&

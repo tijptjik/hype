@@ -25,6 +25,10 @@ const row = (id: string, title = id): FeatureFromCollection =>
     isPendingReview: false,
     imageCount: 0,
     imagePublishedCount: 0,
+    divisionMemberships: [
+      { divisionId: 'causeway-bay', selected: true },
+      { divisionId: 'bowrington', selected: true },
+    ],
     i18n: { en: { title, addressProperties: { neighbourhood: 'Bowrington' } } },
     isPublished: true,
     isArchived: false,
@@ -42,7 +46,18 @@ function page(
     data,
     totalCount,
     nextCursor: null,
-    facets: { neighbourhoods: { Bowrington: totalCount } },
+    facets: {
+      divisions: {
+        bowrington: {
+          id: 'bowrington',
+          level: 6,
+          category: 'hood',
+          class: 'microhood',
+          count: totalCount,
+          i18n: { en: { name: 'Bowrington' } },
+        },
+      },
+    },
   }
 }
 
@@ -168,7 +183,7 @@ describe('composed cached feature matching', () => {
     const query: FeatureQueryInput = {
       ...input,
       filters: {
-        neighbourhoods: ['Causeway Bay'],
+        divisionIds: ['causeway-bay'],
         properties: {
           'layer-a': {
             category: ['tea', 'coffee'],
@@ -182,7 +197,7 @@ describe('composed cached feature matching', () => {
     expect(
       matchesFeatureQuery(feature, {
         ...query,
-        filters: { ...query.filters, excludeNeighbourhoods: ['Bowrington'] },
+        filters: { ...query.filters, excludeDivisionIds: ['bowrington'] },
       }),
     ).toBe(false)
     feature.properties[1].value = '7'
@@ -280,7 +295,7 @@ describe('native feature query retention', () => {
     expect(results.rows.map(item => item.id)).toEqual(['a', 'c', 'b'])
     expect(results.rows[0].i18n?.en?.title).toBe('Tea updated')
     expect(results.totalCount).toBe(123)
-    expect(results.facets).toEqual({ neighbourhoods: { Bowrington: 123 } })
+    expect(results.facets).toEqual(page([], 123).facets)
   })
 
   it('isolates previews across authorization, admin, hub and locale scope changes', () => {

@@ -7,8 +7,7 @@ type NeighbourhoodRow = {
   count: number
   selected: boolean
   name: string
-  district: string
-  area: string
+  level: number | null
 }
 let { row, onToggle }: { row: NeighbourhoodRow; onToggle: (id: string) => void } =
   $props()
@@ -35,11 +34,9 @@ let { row, onToggle }: { row: NeighbourhoodRow; onToggle: (id: string) => void }
         class="size-2 shrink-0 rounded-full {row.selected ? 'bg-primary' : 'bg-transparent group-hover:bg-base-content/30'}"
       ></span>
       <span class="flex min-w-0 flex-col">
-        <span class="flex space-x-2 font-mono text-xs uppercase tracking-wide">
-          <span class="text-primary/80">{row.district}</span>
-          <span class="font-sans text-base-content/60">::</span>
-          <span class="text-accent">{row.area}</span>
-        </span>
+        {#if row.level !== null}
+          <span class="font-mono text-xs text-base-content/60">L{row.level}</span>
+        {/if}
         <span class="font-normal text-base-content">{row.name}</span>
       </span>
     </span>

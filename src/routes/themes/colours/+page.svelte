@@ -1,6 +1,5 @@
 <script lang="ts">
 // COMPONENTS
-import { Button } from '$lib/bits/core'
 import ArrowUpRight from 'virtual:icons/proicons/arrow-export'
 import Check from 'virtual:icons/proicons/checkmark'
 import Clock from 'virtual:icons/proicons/clock'
@@ -12,6 +11,19 @@ type ColourSwatch = {
   use: string
 }
 
+type ColourVariant = {
+  name: string
+  eyebrow: string
+  intent: string
+  primary: string
+  secondary: string
+  tertiary: string
+  primaryContent: string
+  secondaryContent: string
+  tertiaryContent: string
+  isCurrent?: boolean
+}
+
 const originalColours: ColourSwatch[] = [
   { name: 'Blueberry blue', value: '#0A3F60', use: 'Primary identity' },
   { name: 'Frosting blue', value: '#7EBCBD', use: 'Soft surfaces' },
@@ -19,9 +31,63 @@ const originalColours: ColourSwatch[] = [
 ]
 
 const newColours: ColourSwatch[] = [
-  { name: 'Blueberry blue', value: '#0B4F72', use: 'Primary text and actions' },
-  { name: 'Frosting teal', value: '#2F7F86', use: 'Secondary surfaces and detail' },
-  { name: 'Peachy coral', value: '#C94C35', use: 'Tertiary action and emphasis' },
+  { name: 'Peach-forward blue', value: '#155E75', use: 'Primary text and actions' },
+  { name: 'Peach-forward teal', value: '#267A7A', use: 'Secondary detail and support' },
+  {
+    name: 'Peach-forward coral',
+    value: '#C0543D',
+    use: 'Tertiary action and emphasis',
+  },
+]
+
+const colourVariants: ColourVariant[] = [
+  {
+    name: 'Peach-forward',
+    eyebrow: 'Current Milque',
+    intent:
+      'A warmer Milque direction with coral leading the moments that need attention.',
+    primary: '#155E75',
+    secondary: '#267A7A',
+    tertiary: '#C0543D',
+    primaryContent: '#FFFFFF',
+    secondaryContent: '#FFFFFF',
+    tertiaryContent: '#FFFFFF',
+    isCurrent: true,
+  },
+  {
+    name: 'Sea-glass bright',
+    eyebrow: 'Experiment A',
+    intent: 'Teal stays in charge while coral becomes the visible moment of action.',
+    primary: '#1A7476',
+    secondary: '#B95A45',
+    tertiary: '#467A9B',
+    primaryContent: '#FFFFFF',
+    secondaryContent: '#FFFFFF',
+    tertiaryContent: '#FFFFFF',
+  },
+  {
+    name: 'Rye editorial',
+    eyebrow: 'Experiment B',
+    intent: 'A deeper teal and quieter coral for a more measured, editorial interface.',
+    primary: '#2D565A',
+    secondary: '#9C4E41',
+    tertiary: '#5B6D91',
+    primaryContent: '#FFFFFF',
+    secondaryContent: '#FFFFFF',
+    tertiaryContent: '#FFFFFF',
+  },
+  {
+    name: 'Rye sun-warmed',
+    eyebrow: 'Experiment C',
+    intent:
+      'A brighter sky blue and warm coral bring more daylight to the same Rye structure.',
+    primary: '#306B68',
+    secondary: '#B9614B',
+    tertiary: '#486B85',
+    primaryContent: '#FFFFFF',
+    secondaryContent: '#FFFFFF',
+    tertiaryContent: '#FFFFFF',
+  },
 ]
 
 const oldPrimary = originalColours[0].value
@@ -33,7 +99,7 @@ const oldTertiary = originalColours[1].value
   <title>Milque colours · Hype</title>
   <meta
     name="description"
-    content="Compare the original Breadline palette with the revised Milque application palette."
+    content="Experiment with modern blueberry, frosting, and peach colour directions for Milque."
   >
 </svelte:head>
 
@@ -70,28 +136,28 @@ const oldTertiary = originalColours[1].value
         <h1
           class="max-w-3xl text-4xl font-medium leading-[1.08] tracking-[-0.045em] sm:text-6xl"
         >
-          From a colour sheet<br>
-          <span class="text-muted-foreground">to a place to return to.</span>
+          Three ingredients.<br>
+          <span class="text-muted-foreground">More ways to make them sing.</span>
         </h1>
         <p class="mt-6 max-w-2xl text-sm leading-7 text-muted-foreground">
-          The original palette had a lovely bakery vocabulary. Milque gives each colour
-          a clearer job, stronger contrast, and enough restraint for maps, panels,
-          menus, and forms to share one voice.
+          This is an open colour study for the Milque application. Every direction keeps
+          the original blueberry, frosting, and peach vocabulary, then shifts hue and
+          saturation to see which one feels most alive on the real interface surfaces.
         </p>
       </div>
       <div class="rounded-3xl border border-border bg-panel p-5">
         <p
           class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
         >
-          Current direction
+          How to read this
         </p>
-        <div class="mt-4 flex items-center gap-3">
-          <span class="size-3 rounded-full bg-primary"></span>
-          <span class="font-medium">Blueberry-led Milque</span>
-        </div>
-        <p class="mt-3 text-sm leading-6 text-muted-foreground">
-          Navy carries structure, toasted coral calls for attention, and frosting teal
-          keeps the interface light.
+        <p class="mt-4 text-sm leading-6">
+          The page itself uses the live Milque background tokens. Inside each study,
+          compare <span class="font-medium text-primary">canvas</span>,
+          <span class="font-medium text-primary">panel</span>,
+          <span class="font-medium text-primary">surface</span>, and
+          <span class="font-medium text-primary">raised</span>
+          from outside in.
         </p>
       </div>
     </section>
@@ -105,7 +171,7 @@ const oldTertiary = originalColours[1].value
             01 / Palette evolution
           </p>
           <h2 id="palette-heading" class="mt-2 text-2xl font-medium tracking-tight">
-            The same ingredients, better roles.
+            The source and the current translation.
           </h2>
         </div>
         <span class="hidden text-xs text-muted-foreground sm:block"
@@ -180,15 +246,178 @@ const oldTertiary = originalColours[1].value
       </div>
     </section>
 
-    <section class="mt-10" aria-labelledby="components-heading">
+    <section class="mt-12" aria-labelledby="experiments-heading">
+      <div class="mb-5 max-w-2xl">
+        <p
+          class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+        >
+          02 / Experimental directions
+        </p>
+        <h2 id="experiments-heading" class="mt-2 text-2xl font-medium tracking-tight">
+          Same palette family, different energy.
+        </h2>
+        <p class="mt-2 text-sm leading-6 text-muted-foreground">
+          Each specimen keeps the application background hierarchy intact. The coloured
+          controls are deliberately shown in the raised layer, where primary, secondary,
+          and tertiary roles have to earn their place.
+        </p>
+      </div>
+
+      <div class="grid gap-5 xl:grid-cols-2">
+        {#each colourVariants as variant}
+          <article
+            data-variant={variant.name}
+            class={`overflow-hidden rounded-3xl border bg-panel ${
+              variant.isCurrent ? 'border-primary/40 shadow-lg shadow-primary/5' : 'border-border'
+            }`}
+          >
+            <div
+              class="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-6"
+            >
+              <div>
+                <p
+                  class="text-[10px] font-semibold uppercase tracking-[0.18em] text-secondary"
+                >
+                  {variant.eyebrow}
+                </p>
+                <h3 class="mt-1 text-xl font-medium tracking-tight">{variant.name}</h3>
+                <p class="mt-2 max-w-md text-xs leading-5 text-muted-foreground">
+                  {variant.intent}
+                </p>
+              </div>
+              {#if variant.isCurrent}
+                <span
+                  class="rounded-full bg-primary px-3 py-1 text-[10px] uppercase tracking-wider text-primary-content"
+                >
+                  In use
+                </span>
+              {/if}
+            </div>
+
+            <div class="grid gap-4 p-5 sm:p-6">
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <div
+                    class="h-16 rounded-xl border border-black/10"
+                    style={`background:${variant.primary}`}
+                  ></div>
+                  <p class="mt-2 text-[10px] font-medium uppercase tracking-wider">
+                    Blueberry
+                  </p>
+                  <code class="text-[10px] text-muted-foreground"
+                    >{variant.primary}</code
+                  >
+                </div>
+                <div>
+                  <div
+                    class="h-16 rounded-xl border border-black/10"
+                    style={`background:${variant.secondary}`}
+                  ></div>
+                  <p class="mt-2 text-[10px] font-medium uppercase tracking-wider">
+                    Frosting
+                  </p>
+                  <code class="text-[10px] text-muted-foreground"
+                    >{variant.secondary}</code
+                  >
+                </div>
+                <div>
+                  <div
+                    class="h-16 rounded-xl border border-black/10"
+                    style={`background:${variant.tertiary}`}
+                  ></div>
+                  <p class="mt-2 text-[10px] font-medium uppercase tracking-wider">
+                    Peach
+                  </p>
+                  <code class="text-[10px] text-muted-foreground"
+                    >{variant.tertiary}</code
+                  >
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-border bg-canvas p-3">
+                <div class="mb-2 flex items-center justify-between px-1">
+                  <p
+                    class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    Canvas
+                  </p>
+                  <span class="text-[10px] text-muted-foreground">live token</span>
+                </div>
+                <div class="rounded-xl border border-border bg-panel p-3">
+                  <div class="mb-2 flex items-center justify-between">
+                    <p
+                      class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                    >
+                      Panel
+                    </p>
+                    <span
+                      class="size-2 rounded-full"
+                      style={`background:${variant.secondary}`}
+                    ></span>
+                  </div>
+                  <div class="rounded-lg border border-border bg-surface p-3">
+                    <div class="mb-2 flex items-center justify-between">
+                      <p
+                        class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
+                        Surface
+                      </p>
+                      <span class="text-[10px] text-muted-foreground">collection</span>
+                    </div>
+                    <div class="rounded-lg border border-border bg-raised p-3">
+                      <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="min-w-0">
+                          <p class="text-sm font-medium">Evening collection</p>
+                          <p class="mt-1 text-xs text-muted-foreground">
+                            Raised row · selected state
+                          </p>
+                        </div>
+                        <div class="flex shrink-0 gap-2">
+                          <span
+                            class="rounded-lg px-3 py-2 text-[10px] font-semibold"
+                            style={`background:${variant.primary};color:${variant.primaryContent}`}
+                            >Open</span
+                          >
+                          <span
+                            class="rounded-lg px-3 py-2 text-[10px] font-semibold"
+                            style={`background:${variant.tertiary};color:${variant.tertiaryContent}`}
+                            >Save</span
+                          >
+                        </div>
+                      </div>
+                      <div
+                        class="mt-4 flex items-center gap-3 text-xs text-muted-foreground"
+                      >
+                        <Clock class="size-4" style={`color:${variant.primary}`} />
+                        Tonight, 19:00 <span>·</span>
+                        <MapPin class="size-4" style={`color:${variant.secondary}`} />
+                        Central
+                      </div>
+                      <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-panel">
+                        <div
+                          class="h-full w-2/3 rounded-full"
+                          style={`background:${variant.secondary}`}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        {/each}
+      </div>
+    </section>
+
+    <section class="mt-12" aria-labelledby="components-heading">
       <div class="mb-4">
         <p
           class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
         >
-          02 / Component comparison
+          03 / Before and after
         </p>
         <h2 id="components-heading" class="mt-2 text-2xl font-medium tracking-tight">
-          Branding in context.
+          Branding in action.
         </h2>
       </div>
 
@@ -231,18 +460,20 @@ const oldTertiary = originalColours[1].value
                 Milque
               </p>
               <div class="flex flex-wrap gap-2">
-                <Button
-                  text="Open map"
-                  color="primary"
-                  size="sm"
-                  iconComponent={ArrowUpRight}
-                />
-                <Button
-                  text="Save place"
-                  color="accent"
-                  size="sm"
-                  iconComponent={Check}
-                />
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium"
+                  style="background:var(--color-primary);color:var(--color-primary-content)"
+                >
+                  Open map <ArrowUpRight class="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium"
+                  style="background:var(--color-tertiary);color:var(--color-tertiary-content)"
+                >
+                  Save place <Check class="size-3.5" />
+                </button>
               </div>
             </div>
           </div>
@@ -252,7 +483,7 @@ const oldTertiary = originalColours[1].value
           <div class="border-b border-border px-5 py-4">
             <h3 class="font-medium">A place card</h3>
             <p class="mt-1 text-xs text-muted-foreground">
-              Frosting teal now carries quiet surfaces.
+              Frosting teal carries quiet surfaces.
             </p>
           </div>
           <div class="p-5">
@@ -272,7 +503,7 @@ const oldTertiary = originalColours[1].value
               class="overflow-hidden rounded-2xl border border-border bg-secondary text-secondary-content"
             >
               <div class="p-4 text-sm font-medium">Milque route stop</div>
-              <div class="bg-panel/80 px-4 py-3 text-xs text-base-content">
+              <div class="bg-panel px-4 py-3 text-xs text-base-content">
                 7-Eleven · Tsim Sha Tsui
               </div>
             </div>
@@ -314,8 +545,8 @@ const oldTertiary = originalColours[1].value
     </section>
 
     <footer class="mt-10 border-t border-border pt-5 text-xs text-muted-foreground">
-      Milque keeps the original blueberry, frosting, and bakery warmth while assigning
-      each token a readable application role.
+      The experiments keep the original three colour families. The next step is to
+      choose the direction that best supports Milque's maps, panels, and actions.
     </footer>
   </div>
 </main>

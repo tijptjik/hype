@@ -140,10 +140,7 @@ import type {
   LayerEntityByProfile,
 } from '$lib/db/zod/schema/layer.types'
 
-type ResourceTypeWithChildren = Exclude<
-  HierarchicalResourceType,
-  'feature' | 'task'
->
+type ResourceTypeWithChildren = Exclude<HierarchicalResourceType, 'feature' | 'task'>
 
 /* ----------------- */
 // ADMIN CONTROLS
@@ -221,13 +218,9 @@ type AppContextState = {
   viewSorting: ViewSortingState
 }
 
-type RemoteListFn<Params, Result> = (
-  params: Params,
-) => Promise<ListResponse<Result>>
+type RemoteListFn<Params, Result> = (params: Params) => Promise<ListResponse<Result>>
 
-type RemoteGetFn<Params, Result> = (
-  params: Params,
-) => Promise<EntityResponse<Result>>
+type RemoteGetFn<Params, Result> = (params: Params) => Promise<EntityResponse<Result>>
 
 type OrganisationRemoteListFn = <P extends OrganisationProfile = OrganisationProfile>(
   params: OrganisationListParamsByProfile<P>,
@@ -290,7 +283,6 @@ type FeatureMembershipOverride = {
   row: import('$lib/db/zod/schema/user.types').UserFeature | null
   updatedAt: number
 }
-
 
 export class AppCtx {
   // Remote queries own transport caching and refreshes.
@@ -1368,8 +1360,8 @@ export class AppCtx {
       properties: JSON.parse(
         JSON.stringify(this.state.filters.feature.properties ?? {}),
       ),
-      neighbourhoods: [...this.placeCtx.state.filters.feature.neighbourhood.include],
-      excludeNeighbourhoods: [
+      divisionIds: [...this.placeCtx.state.filters.feature.neighbourhood.include],
+      excludeDivisionIds: [
         ...this.placeCtx.state.filters.feature.neighbourhood.exclude,
       ],
       ...overrides.filters,
@@ -2954,7 +2946,9 @@ export class AppCtx {
   ): Promise<unknown> => {
     if (!ref || ref === 'undefined') return undefined
     const remoteGet = this.remoteMap[resource]?.get as
-      | ((params: unknown) => import('$lib/context/featureQuery.types').ResourceDetailHandle['query'])
+      | ((
+          params: unknown,
+        ) => import('$lib/context/featureQuery.types').ResourceDetailHandle['query'])
       | undefined
     if (!remoteGet) return undefined
     const scope = this.getRoleScopeQueryKey()

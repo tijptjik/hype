@@ -674,7 +674,10 @@ $effect(() => {
 
 // Neighbourhood counts describe the filtered collection independently of the current camera.
 $effect(() => {
-  const input = appCtx.featureQueryInput({ limit: 1 })
+  const input = appCtx.featureQueryInput({
+    limit: 1,
+    filters: { divisionIds: [], excludeDivisionIds: [] },
+  })
   if (appCtx.isAdmin() || !appCtx.isInitialised) return
   if (!input.prisms?.layer?.length) {
     untrack(() => appCtx.cacheCtx.featureQueries.facets.clear())
@@ -689,7 +692,7 @@ $effect(() => {
 })
 
 $effect(() => {
-  const counts = appCtx.cacheCtx.featureQueries.facets.facets?.neighbourhoods ?? null
+  const counts = appCtx.cacheCtx.featureQueries.facets.facets?.divisions ?? null
   untrack(() => appCtx.placeCtx.setNeighbourhoodCounts(counts))
 })
 

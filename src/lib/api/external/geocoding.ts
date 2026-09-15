@@ -13,8 +13,6 @@ import {
   parseSubPremisesComponent,
 } from '$lib/utils/geocoding'
 import { translateText } from '$lib/api/external/translation'
-// DATA
-import neighbourhoods from '$lib/map/neighbourhoods.json'
 // TYPES
 import type { AddressProperties, AddressMeta } from '$lib/utils/address.types'
 import type { ParsedReverseGeocodeResult, ALSResult } from '$lib/utils/geocoding.types'
@@ -44,26 +42,11 @@ interface ReverseGeocodeResult {
 
 type ALSSuggestedAddressItem = NonNullable<ALSResult['SuggestedAddress']>[number]
 
-
 // TYPES
-type Neighbourhood = string
 type PlatformEnv = {
   PUBLIC_AZURE_TRANSLATION_REGION?: string
   AZURE_TRANSLATION_KEY?: string
 }
-type NeighbourhoodI18n = Record<
-  LocaleKey,
-  {
-    name: string
-    neighbourhood: string
-    district: string
-    area: string
-  }
->
-type Neighbourhoods = Record<Neighbourhood, Record<'i18n', NeighbourhoodI18n>>
-
-const neighourhoodsJson: Neighbourhoods = neighbourhoods
-
 function getPlatformEnv(): PlatformEnv | null {
   if (!('platform' in globalThis)) return null
 
@@ -77,44 +60,6 @@ function getPlatformEnv(): PlatformEnv | null {
     ).platform?.env ?? null
   )
 }
-
-/************
- * LOOKUPS
- ************/
-
-const neighbourhoodKeys = Object.keys(neighourhoodsJson)
-
-function getCanonicalSubNeighbourhoods(): Neighbourhood[] {
-  return Object.values(neighourhoodsJson).map(n => n.i18n.en.name)
-}
-
-function getCanonicalNeighbourhoods(): Neighbourhood[] {
-  return Array.from(
-    new Set(Object.values(neighourhoodsJson).map(n => n.i18n.en.neighbourhood)),
-  )
-}
-
-function getCanonicalDistricts(): string[] {
-  return Array.from(
-    new Set(Object.values(neighourhoodsJson).map(n => n.i18n.en.district)),
-  )
-}
-
-// Handle disambiguation of neighbourhoods with the same name, e.g. Ping Shan in Kwun Tong vs Yuen Long
-function _getKeyFromSubNeighbourhoodAndDistrict(
-  name: string,
-  district: string,
-): Neighbourhood {
-  if (neighbourhoodKeys.includes(`${name}, ${district}`)) {
-    return `${name}, ${district}`
-  }
-
-  return name
-}
-
-const canonicalSubNeighbourhoods = getCanonicalSubNeighbourhoods()
-const _canonicalNeighbourhoods = getCanonicalNeighbourhoods()
-const _canonicalDistricts = getCanonicalDistricts()
 
 /************
  * UTILS
@@ -142,41 +87,6 @@ function convertFromWebMercator(x: number, y: number): [number, number] {
   const lng = (x * 180) / 20037508.34
   const lat = (Math.atan(Math.exp((y * Math.PI) / 20037508.34)) * 360) / Math.PI - 90
   return [lng, lat]
-}
-
-/**
- * Get the district from a neighbourhood reference
- * @param neighbourhoodRef - The neighbourhood reference to get the district from
- * @param locale - The locale to get the district for
- * @param neighbourhood - The neighbourhood to get the district for (optional) - used to disambiguate neighbourhoods with the same name, e.g. Ping Shan in Kwun Tong vs Yuen Long
- * @returns The district, or null if the neighbourhood reference is not found
- */
-function getDistrictFromNeighbourhood(
-  neighbourhoodRef: string | null,
-  locale: LocaleKey = 'en',
-  _neighbourhoodRaw?: string | null,
-): string | null {
-  if (!neighbourhoodRef) return null
-  // Canonical neighbourhood names
-  const neighbourhoodNames = Object.keys(neighourhoodsJson) as Neighbourhood[]
-  const neighbourhood = neighbourhoodNames.find(
-    n => n.toLowerCase() === neighbourhoodRef.toLowerCase(),
-  )
-  return neighbourhood
-    ? neighourhoodsJson[neighbourhood].i18n[locale].district || null
-    : null
-}
-
-/**
- * Extract an English neighbourhood from an address
- * @param address - The address to extract the neighbourhood from
- * @returns The neighbourhood, or null if the neighbourhood is not found
- */
-export function extractNeighbourhoodFromAddress(address: string): string | null {
-  const neighbourhoodMatch = canonicalSubNeighbourhoods.find(n =>
-    address.toLowerCase().includes(n.toLowerCase()),
-  )
-  return neighbourhoodMatch ? neighbourhoodMatch : null
 }
 
 /************
@@ -274,42 +184,6 @@ export async function geoAddressLookup(geoAddressCode: string): Promise<ALSResul
  * PARSING
  ************/
 
-function parseReverseGeocodeNeighbourhood(neighbourhoodRaw: string | null): {
-  neighbourhood: string | null
-  discriminant: string | null
-} {
-  // Priorise the smallest neighbourhood name that matches the input.
-  // Examples:
-  //    "Ping Shan, Yuen Long", -> "Ping Shan"
-  //    "Tai Wai, Sha Tin", -> "Tai Wai"
-  //    "Clear Water Bay, Sai Kung", -> "Clear Water Bay"
-  //    "Central District", -> "Central"
-  //    "Prince Edward", -> "Prince Edward"
-  if (!neighbourhoodRaw) return { neighbourhood: null, discriminant: null }
-
-  // Split by comma and try each option until a match is found
-  const units = neighbourhoodRaw
-    .split(',')
-    .map(unit => unit.toLowerCase().replace('district', '').trim())
-
-  for (const unit of units) {
-    const neighbourhoodMatch = canonicalSubNeighbourhoods.find(n =>
-      unit.includes(n.toLowerCase()),
-    )
-    if (neighbourhoodMatch) {
-      return {
-        neighbourhood: neighbourhoodMatch,
-        discriminant: neighbourhoodRaw,
-      }
-    }
-  }
-
-  return {
-    neighbourhood: null,
-    discriminant: null,
-  }
-}
-
 /**
  * Process a reverse geocoding result
  * @param result - The reverse geocoding result to process
@@ -344,14 +218,9 @@ function processReverseGeocodeResult(
   )
   const distance = calculateDistance(lng, lat, resultLng, resultLat)
 
-  // Get district from neighbourhood (handle null neighbourhood)
-  const { neighbourhood } =
-    parseReverseGeocodeNeighbourhood(result.address.Neighborhood) ||
-    result.address.City ||
-    result.address.Subregion
-  const district = neighbourhood
-    ? getDistrictFromNeighbourhood(neighbourhood, 'en', result.address.Neighborhood)
-    : null
+  // Preserve provider address text; the division resolver owns hierarchy and membership.
+  const neighbourhood = result.address.Neighborhood
+  const district = result.address.Subregion
 
   // Create display address - ensure it exists
   const rawDisplayAddress = result.address.Match_addr
@@ -422,19 +291,8 @@ export async function processForwardGeocodeResult(
   const address = result.SuggestedAddress[0]
   const { PremisesAddress: pa } = address.Address
 
-  let neighbourhoodZhHant =
-    neighbourhoods[neighbourhood as keyof typeof neighbourhoods]?.i18n.zhHant
-      ?.neighbourhood || null
-  // Attempt with a disambiguated key (district code)
-  if (!neighbourhoodZhHant) {
-    const compositeKey = `${neighbourhood}, ${getNormalisedDistrict(
-      pa.EngPremisesAddress?.EngDistrict?.DcDistrict,
-      'en',
-    )}`
-    neighbourhoodZhHant =
-      neighbourhoods[compositeKey as keyof typeof neighbourhoods]?.i18n.zhHant
-        ?.neighbourhood || null
-  }
+  // Do not invent translated neighbourhoods from a separate static catalogue.
+  const neighbourhoodZhHant = null
 
   // Only generate display addresses if allowed
   const displayAddressEn = genDisplayAddress

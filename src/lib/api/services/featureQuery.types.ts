@@ -1,6 +1,6 @@
 // TYPES
 import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
-import type { Prisms } from '$lib/types'
+import type { LocaleKey, Prisms } from '$lib/types'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 
 /** Geographic membership for a bounded feature query; bounds use GeoJSON axis order. */
@@ -15,8 +15,7 @@ export type FeatureQueryFilters = {
   properties?: Record<string, Record<string, string[] | RangeFilterValue | boolean>>
   /** Stable SaanSeoi IDs at any level, including landform; matches any selected membership. */
   divisionIds?: string[]
-  neighbourhoods?: string[]
-  excludeNeighbourhoods?: string[]
+  excludeDivisionIds?: string[]
   list?: { userId?: string; listId: 'wishlist' | 'visited' }
   isVisitable?: boolean
   isIntangible?: boolean
@@ -43,7 +42,17 @@ export type FeatureQueryPage = {
   data: FeatureFromCollection[]
   totalCount: number | null
   nextCursor: { id: string; signature: string; value?: string | null } | null
-  facets: { neighbourhoods: Record<string, number> } | null
+  facets: { divisions: Record<string, DivisionFacet> } | null
   /** Current actor's membership state for returned features, including rows beyond bootstrap. */
   userFeatures?: import('$lib/db/zod/schema/user.types').UserFeature[]
+}
+
+/** One selected division, counted independently across all contained features. */
+export type DivisionFacet = {
+  id: string
+  level: number | null
+  category: string | null
+  class: string | null
+  count: number
+  i18n: Partial<Record<LocaleKey, { name: string }>>
 }

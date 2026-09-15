@@ -51,8 +51,7 @@ const inputSchema = z.object({
         )
         .optional(),
       divisionIds: strings.optional(),
-      neighbourhoods: strings.optional(),
-      excludeNeighbourhoods: strings.optional(),
+      excludeDivisionIds: strings.optional(),
       list: z
         .object({
           userId: z.string().min(1).max(200).optional(),

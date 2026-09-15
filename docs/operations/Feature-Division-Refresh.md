@@ -123,28 +123,33 @@ PRAGMA foreign_key_check;
 
 For a remote environment, apply the migrations and configure the appropriate
 SaanSeoi origin/key before deploying both the application and division-refresh
-Worker. The new application queries require migration 0083. The old Worker must
+Worker. The new application queries require migrations 0083 and 0084. The old Worker must
 not run against 0083, because its membership-bin columns have been removed.
 Pause the old schedule during that coordinated transition. Local execution does
 not deploy or activate a remote cron.
 
-## Compatibility and remaining UI work
+## Division filtering, counts and localization
+
+Migration 0084 removes the old `featureNeighbourhood` compatibility view. Apply it
+when upgrading an existing 0083 database; no division refresh is needed.
+
+Filters use `divisionIds` and `excludeDivisionIds`. Every selected membership is
+eligible, including macro-neighbourhoods, neighbourhoods and micro-neighbourhoods.
+Each `facets.divisions` entry is keyed by division ID and contains its level,
+category, class, localized registry names and distinct contained-feature count.
+The overall total is counted independently; parent and child counts must never
+be added together. Candidate memberships contribute neither filters nor counts.
+
+Selectors and navigation use these registry facets and the user's language
+preferences. Changing language preserves selected IDs. Missing translations use
+the shared name fallback. Selector counts ignore the current geographic selection
+and camera, while retaining authorization and other active filters.
 
 Authored/imported `featureI18n.addressProperties` remain source address data.
-They no longer drive division identity or count bins. `featureNeighbourhood` is a
-read-only compatibility view of each selected `neighbourhood` membership's English
-registry name, so features in a micro-neighbourhood still count toward its parent,
-`facets.neighbourhoods` retains the current response field name. Existing label
-selectors retain the static catalogue's parent-label expansion. New integrations
-should use `divisionIds` and registry names.
-
-The static neighbourhood navigation/map catalogue and legacy address lookup
-provider in `src/lib/api/external/geocoding.ts` are separate remaining consumers.
-Replacing those UI selections with registry IDs and switching forward address
-search to `/addresses/v1/geocode` require their own payload/UI migration. This
-change replaces automatic coordinate-to-division resolution, storage, filtering
-and counts; it does not rewrite source addresses or claim those UI/provider paths
-have already switched.
+They do not establish geographic identity. Static neighbourhood name inference,
+parent expansion and the static navigation catalogue have been removed. Address
+providers retain their own source text; coordinate resolution supplies canonical
+division membership and localized division labels.
 
 ## Verification
 

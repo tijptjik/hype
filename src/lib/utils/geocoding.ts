@@ -1,33 +1,17 @@
 // THIRD-PARTY
 import proj from 'proj4'
 // DATA
-import neighbourhoods from '$lib/map/neighbourhoods.json'
 import streetsData from '$lib/map/streets.json'
 // TYPES
 import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
 import type { LocaleKey } from '$lib/types'
 import type { ParsedReverseGeocodeResult } from '$lib/utils/geocoding.types'
 
-type NeighbourhoodI18n = {
-  name: string
-  neighbourhood: string
-  district: string
-  area: string
-}
-type NeighbourhoodEntry = {
-  i18n: {
-    en: NeighbourhoodI18n
-    zhHant?: NeighbourhoodI18n
-    zhHans?: NeighbourhoodI18n
-  }
-}
-type Neighbourhoods = Record<string, NeighbourhoodEntry>
 type StreetsData = {
   en?: string[]
   zhHant?: string[]
 }
 
-const neighbourhoodData = neighbourhoods as Neighbourhoods
 const streets = streetsData as StreetsData
 
 // Coordinate system definitions
@@ -309,7 +293,7 @@ export function applyAddressAbbreviations(address: string): string {
  * Intermediate parse result used to build ALS lookup queries and local fallback results.
  * This carries parser-only fields that do not belong in the canonical `addressProperties`
  * payload, such as `queryAddress`, `buildingNumbering`, `subpremisesRaw`, and
- * `neighbourhoodRef`.
+ * source address components.
  */
 export type ParsedAddressQueryComponents = {
   queryAddress: string
@@ -323,7 +307,6 @@ export type ParsedAddressQueryComponents = {
   subpremisesRaw: string | null
   macrohood: string | null
   neighbourhood: string | null
-  neighbourhoodRef: string | null
   district: string | null
   area: string | null
   rawAddress: string
@@ -373,59 +356,6 @@ function normalizeAddressToken(value: string): string {
   return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
 }
 
-function getNeighbourhoodI18n(
-  entry: NeighbourhoodEntry,
-  locale: LocaleKey,
-): NeighbourhoodI18n | undefined {
-  return entry.i18n[locale] ?? entry.i18n.en
-}
-
-function getCanonicalNeighbourhoodNames(locale: LocaleKey): string[] {
-  return Object.values(neighbourhoodData)
-    .map(entry => getNeighbourhoodI18n(entry, locale)?.name)
-    .filter((value): value is string => Boolean(value))
-}
-
-function getNeighbourhoodRef(
-  neighbourhood: string | null,
-  district: string | null,
-  locale: LocaleKey,
-): string | null {
-  if (!neighbourhood) return null
-
-  for (const [ref, entry] of Object.entries(neighbourhoodData)) {
-    const localized = getNeighbourhoodI18n(entry, locale)
-    if (!localized) continue
-
-    const sameNeighbourhood =
-      normalizeAddressToken(localized.name) === normalizeAddressToken(neighbourhood)
-    const sameDistrict =
-      !district ||
-      normalizeAddressToken(localized.district) === normalizeAddressToken(district)
-
-    if (sameNeighbourhood && sameDistrict) return ref
-  }
-
-  return neighbourhood
-}
-
-function getNeighbourhoodEntryByName(
-  neighbourhood: string | null,
-  locale: LocaleKey,
-): NeighbourhoodEntry | null {
-  if (!neighbourhood) return null
-
-  return (
-    Object.values(neighbourhoodData).find(entry => {
-      const localized = getNeighbourhoodI18n(entry, locale)
-      return (
-        localized &&
-        normalizeAddressToken(localized.name) === normalizeAddressToken(neighbourhood)
-      )
-    }) ?? null
-  )
-}
-
 /**
  * Finds a recognized whole address component without matching building-name substrings.
  * @param address Comma-separated address text.
@@ -439,29 +369,6 @@ function extractAddressComponent(
   for (const segment of address.split(',')) {
     const name = lookup.get(normalizeAddressToken(segment))
     if (name) return name
-  }
-
-  return null
-}
-
-function extractNeighbourhoodFromAddress(
-  address: string,
-  locale: LocaleKey,
-  isSmallToLarge: boolean,
-): string | null {
-  const segments = address
-    .split(',')
-    .map(segment => segment.trim())
-    .filter(Boolean)
-  const searchOrder = isSmallToLarge ? [...segments].reverse() : segments
-  const names = getCanonicalNeighbourhoodNames(locale)
-
-  for (const segment of searchOrder) {
-    const normalizedSegment = normalizeAddressToken(segment)
-    const match = names.find(name =>
-      normalizedSegment.includes(normalizeAddressToken(name)),
-    )
-    if (match) return match
   }
 
   return null
@@ -887,19 +794,11 @@ export function getAddressForQuery(
   const explicitDistrict = extractAddressComponent(cleanedAddress, districtLookup)
   cleanedAddress = removeDistrictForQuery(cleanedAddress, isLargeToSmall)
 
-  const neighbourhood = extractNeighbourhoodFromAddress(
-    cleanedAddress,
-    locale,
-    isSmallToLarge,
-  )
-  const neighbourhoodEntry = getNeighbourhoodEntryByName(neighbourhood, locale)
-  const inferredNeighbourhoodI18n = neighbourhoodEntry
-    ? getNeighbourhoodI18n(neighbourhoodEntry, locale)
-    : undefined
-  const district = explicitDistrict ?? inferredNeighbourhoodI18n?.district ?? null
-  const area = explicitRegion ?? inferredNeighbourhoodI18n?.area ?? null
-  const macrohood = inferredNeighbourhoodI18n?.neighbourhood ?? null
-  const neighbourhoodRef = getNeighbourhoodRef(neighbourhood, district, locale)
+  // Free-form address text cannot establish division membership; coordinates resolve it later.
+  const neighbourhood = null
+  const district = explicitDistrict
+  const area = explicitRegion
+  const macrohood = null
   const premises = subtractPremisesFromAddress(cleanedAddress)
   const lot = subtractLotFromAddress(premises.remainingAddress)
   const building = subtractBuildingFromAddress(lot.remainingAddress)
@@ -947,7 +846,6 @@ export function getAddressForQuery(
     subpremisesRaw: subpremises.subpremisesRaw,
     macrohood,
     neighbourhood,
-    neighbourhoodRef,
     district,
     area,
     rawAddress: trimmedAddress,
