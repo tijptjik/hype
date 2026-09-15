@@ -418,7 +418,7 @@ describe('division refresh', () => {
     expect(s.count('featureDivisionJob')).toBe(0)
   })
 
-  it('projects unique levels and a non-group landform leaf while retaining every membership', async () => {
+  it('prefers the administrative level-one branch while retaining every membership', async () => {
     const s = setup()
     s.add('a')
     const response = geocoded([
@@ -472,6 +472,13 @@ describe('division refresh', () => {
       landformLeafId: 'island',
     })
     expect(s.count('featureDivisionMembership')).toBe(10)
+    expect(
+      s.sqlite
+        .prepare(
+          "SELECT selected FROM featureDivisionMembership WHERE featureId='a' AND divisionId='city'",
+        )
+        .get()?.selected,
+    ).toBe(0)
     expect(s.count('divisionI18n')).toBe(10)
     expect(
       s.sqlite.prepare('SELECT sum(totalCount) AS n FROM featureCountRollup').get()?.n,

@@ -53,7 +53,7 @@ function setup(withOrphan = false) {
   stores.push(sqlite)
   const columns = Object.values(getTableColumns(feature))
     .filter(
-      column => !/^division(?:Id|Level[1-6]Id)$|^landformLeafId$/.test(column.name),
+      column => !/^division(?:LeafId|Level[1-6]Id)$|^landformLeafId$/.test(column.name),
     )
     .map(
       column =>
