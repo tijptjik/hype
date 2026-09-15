@@ -19,7 +19,7 @@ import type {
 // CONSTRAINTS
 /* -------- */
 
-export const constraints: Record<string, z.ZodType<any>> = {
+export const constraints: Record<string, z.ZodType> = {
   code: z
     .string()
     .min(1, { message: m.admin__validation_code_is_required() })
@@ -90,7 +90,7 @@ export const getDefaultConstraints = (
     | typeof hub
     | typeof hubI18n,
 ) => {
-  return Object.keys(table).reduce((acc: Record<string, any>, key) => {
+  return Object.keys(table).reduce((acc: Record<string, z.ZodType>, key) => {
     if (key in constraints) {
       acc[key] = constraints[key as keyof typeof constraints]
     }
@@ -116,7 +116,7 @@ export function createRequiredObjSchema<K extends string, V extends z.ZodType>(
 // TODO - It looks like this is stripping the validation messages for the default values
 // e.g. organisaiton.name should render as m.admin__validation_name_is_required() but instead renders "required".
 export const getLocales = (
-  model: z.ZodType<any>,
+  model: z.ZodType,
   requiredStringKeys: string[] = ['value', 'label'],
 ) =>
   z
@@ -132,15 +132,17 @@ export const getLocales = (
 
         // If i18n exists, validate only the locales that are present
         return Object.entries(i18nObject).every(([_locale, localeSpecificObject]) => {
-          if (!localeSpecificObject) {
+          if (!localeSpecificObject || typeof localeSpecificObject !== 'object') {
             return true
           }
 
+          const localeRecord = localeSpecificObject as Record<string, unknown>
+
           return requiredStringKeys.every(key => {
-            if (!(key in localeSpecificObject)) {
+            if (!(key in localeRecord)) {
               return true
             }
-            const value = localeSpecificObject[key]
+            const value = localeRecord[key]
             if (typeof value === 'string') {
               return value.trim() !== ''
             }
@@ -153,7 +155,7 @@ export const getLocales = (
       },
     )
 
-export const getUserRoles = (model: z.ZodType<any>) =>
+export const getUserRoles = <T extends { role?: unknown }>(model: z.ZodType<T>) =>
   z
     .array(model)
     .refine(schema => schema.length > 0, 'Add a User')
@@ -163,7 +165,7 @@ export const getUserRoles = (model: z.ZodType<any>) =>
     )
 
 // TODO - Test the addition / removal of maintainer roles while maintaining and / or removing the owner
-export const getMaintainerRoles = (model: z.ZodType<any>) =>
+export const getMaintainerRoles = <T extends { role?: unknown }>(model: z.ZodType<T>) =>
   z
     .array(model)
     .refine(schema => schema.length > 0, m.plain_top_dingo_strive())

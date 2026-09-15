@@ -190,7 +190,7 @@ export const update = async <T extends DbTable>(
   db: Database,
   table: T,
   data: Partial<InferInsertModel<T>>,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValue: Id,
 ): Promise<InferSelectModel<T>> => {
   if (Array.isArray(data)) {
@@ -226,7 +226,7 @@ export const updateMany = async <T extends DbTable>(
   db: Database,
   table: T,
   data: Partial<InferInsertModel<T>>[],
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValues: Id[],
 ): Promise<InferSelectModel<T>[]> => {
   if (!Array.isArray(data)) {
@@ -278,13 +278,11 @@ export function conflictUpdateAllExcept<
     ([col]) => !except.includes(col as keyof typeof table.$inferInsert),
   )
 
-  return updateColumns.reduce(
-    (acc, [colName, table]) => ({
-      ...acc,
-      [colName]: sql.raw(`excluded.${table.name}`),
-    }),
-    {},
-  ) as Omit<Record<keyof typeof table.$inferInsert, SQL>, E[number]>
+  const updates: Record<string, SQL> = {}
+  for (const [colName, column] of updateColumns) {
+    updates[colName] = sql.raw(`excluded.${column.name}`)
+  }
+  return updates as Omit<Record<keyof typeof table.$inferInsert, SQL>, E[number]>
 }
 
 /**
@@ -299,7 +297,7 @@ export const upsert = async <T extends DbTable>(
   db: Database,
   table: T,
   data: InferInsertModel<T>,
-  conflictColumns: SQLiteColumn<any>[],
+  conflictColumns: SQLiteColumn[],
   conflictUpdateAllExceptColumns: (keyof T['$inferInsert'])[] | [] = [],
 ): Promise<InferSelectModel<T>> => {
   if (Array.isArray(data)) {
@@ -395,7 +393,7 @@ export const upsertMany = async <T extends DbTable>(
 export const del = async <T extends DbTable>(
   db: Database,
   table: T,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValue: Id,
 ): Promise<InferSelectModel<T>> => {
   const [deletedEntity] = await db
@@ -421,7 +419,7 @@ export const del = async <T extends DbTable>(
 export const delMany = async <T extends DbTable>(
   db: Database,
   table: T,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValues: Id[],
 ): Promise<InferSelectModel<T>[]> => {
   const deletedEntities = (
@@ -454,7 +452,7 @@ export const delMany = async <T extends DbTable>(
 export const read = async <T extends DbTable>(
   db: Database,
   table: T,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValue: Id,
 ): Promise<InferSelectModel<T>> => {
   const [entity] = await db
@@ -481,7 +479,7 @@ export const read = async <T extends DbTable>(
 export const readMany = async <T extends DbTable>(
   db: Database,
   table: T,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValues: Id[],
 ): Promise<InferSelectModel<T>[]> => {
   const entities = (
@@ -610,9 +608,9 @@ export const updateRelated = async <T extends DbTable>(
   db: Database,
   table: T,
   data: Partial<InferInsertModel<T>>,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValue: Id,
-  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyColumn: SQLiteColumn,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>> => {
   if (Array.isArray(data)) {
@@ -650,9 +648,9 @@ export const updateManyRelated = async <T extends DbTable>(
   db: Database,
   table: T,
   data: Partial<InferInsertModel<T>>[],
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValues: Id[],
-  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyColumn: SQLiteColumn,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>[]> => {
   if (!Array.isArray(data)) {
@@ -708,7 +706,7 @@ export const replaceManyRelated = async <T extends DbTable>(
   db: Database,
   table: T,
   data: InferInsertModel<T>[],
-  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyColumn: SQLiteColumn,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>[]> => {
   if (!Array.isArray(data)) {
@@ -763,9 +761,9 @@ export const replaceManyRelated = async <T extends DbTable>(
 export const delRelated = async <T extends DbTable>(
   db: Database,
   table: T,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValue: Id,
-  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyColumn: SQLiteColumn,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>> => {
   const [deletedEntity] = await db
@@ -793,9 +791,9 @@ export const delRelated = async <T extends DbTable>(
 export const delManyRelated = async <T extends DbTable>(
   db: Database,
   table: T,
-  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyColumn: SQLiteColumn,
   foreignKeyValue: Id,
-  whereColumn?: SQLiteColumn<any>,
+  whereColumn?: SQLiteColumn,
   whereValues?: Id[],
 ): Promise<InferSelectModel<T>[]> => {
   const conditions = [eq(foreignKeyColumn, foreignKeyValue)]
@@ -852,9 +850,9 @@ export const delManyRelated = async <T extends DbTable>(
 export const readRelated = async <T extends DbTable>(
   db: Database,
   table: T,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValue: Id,
-  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyColumn: SQLiteColumn,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>> => {
   const [entity] = await db
@@ -883,9 +881,9 @@ export const readRelated = async <T extends DbTable>(
 export const readManyRelated = async <T extends DbTable>(
   db: Database,
   table: T,
-  whereColumn: SQLiteColumn<any>,
+  whereColumn: SQLiteColumn,
   whereValues: Id[],
-  foreignKeyColumn: SQLiteColumn<any>,
+  foreignKeyColumn: SQLiteColumn,
   foreignKeyValue: Id,
 ): Promise<InferSelectModel<T>[]> => {
   const entities = (

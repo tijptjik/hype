@@ -279,7 +279,7 @@ type CountResult = {
 
 const takeUniqueOrThrow = <T extends unknown[]>(values: T): T[number] => {
   if (values.length !== 1) throw new Error('Found non unique or absent value')
-  return values[0]!
+  return values[0] as T[number]
 }
 
 async function isEmpty(db: DrizzleD1Database, table: SQLiteTable) {

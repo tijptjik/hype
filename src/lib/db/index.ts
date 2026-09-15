@@ -35,8 +35,9 @@ import type {
   ResourceConfig,
   ResourceHierarchy,
   LocaleBundle,
+  Prisms,
 } from '../types'
-import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core'
+import type { SQLiteTableWithColumns, TableConfig } from 'drizzle-orm/sqlite-core'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 
@@ -195,7 +196,7 @@ export const getSlicedHierarchy = (
 // ═══════════════════════
 
 // Update getTable function
-const getTable = <T extends SQLiteTableWithColumns<any>>(
+const getTable = <T extends SQLiteTableWithColumns<TableConfig>>(
   slicedHierarchy: ResourceConfig[],
   index: number,
 ): T => slicedHierarchy[index].table as T
@@ -219,12 +220,12 @@ const getForeignKey = (slicedHierarchy: ResourceConfig[], index: number): string
  * @returns A Drizzle subquery.
  */
 const createLevelQuery = (
-  db: any,
+  db: Database,
   slicedHierarchy: ResourceHierarchy,
   levelUp: number,
-  prisms: any,
+  prisms: Partial<Prisms>,
 ) => {
-  const conditions = []
+  const conditions: SQL<unknown>[] = []
   const baseQuery = db
     .select({ id: getTable(slicedHierarchy, levelUp).id })
     .from(getTable(slicedHierarchy, levelUp))
@@ -316,9 +317,9 @@ const createLevelQuery = (
  * @returns An array of SQL conditions to be applied to the main query. Returns an empty array if no prisms are applicable or provided.
  */
 export const applyPrismConstraints = (
-  db: any,
+  db: Database,
   resource: HierarchicalResource,
-  prisms: any,
+  prisms: Partial<Prisms>,
 ) => {
   if (!Object.values(prisms).some(arr => Array.isArray(arr) && arr.length > 0))
     return []
@@ -437,9 +438,9 @@ function toFormLocaleRecord<T extends Record<string, unknown>>(
 
 // Helper function to safely transform i18n data
 export const transformI18nSafely = (
-  i18n: any[] | Record<string, any> | null | undefined,
-  fallback: any = null,
-): Record<string, any> | null => {
+  i18n: LocaleBundle[] | Record<string, LocaleBundle> | null | undefined,
+  fallback: Record<string, LocaleBundle> | null = null,
+): Record<string, LocaleBundle> | null => {
   if (!i18n) return fallback
 
   if (Array.isArray(i18n)) {
@@ -447,13 +448,13 @@ export const transformI18nSafely = (
   }
 
   // Already transformed or is a Record
-  const normalized = normalizeLocaleRecordEntries(i18n as Record<string, any>)
+  const normalized = normalizeLocaleRecordEntries(i18n)
   return toFormLocaleRecord(normalized)
 }
 
 // Helper function to check if an object is already a transformed locale map
 const isTransformedLocaleMap = <T extends LocaleBundle>(
-  value: any,
+  value: unknown,
 ): value is Record<Locale, T> => {
   // Check if it's an object (not array or null)
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -468,9 +469,16 @@ const isTransformedLocaleMap = <T extends LocaleBundle>(
   if (!allKeysAreLocales) return false
 
   // Check if all values have a 'locale' property matching their key
-  return keys.every(
-    key => value[key] && typeof value[key] === 'object' && value[key].locale === key,
-  )
+  const record = value as Record<string, unknown>
+  return keys.every(key => {
+    const entry = record[key]
+    return (
+      entry !== null &&
+      typeof entry === 'object' &&
+      'locale' in entry &&
+      (entry as { locale?: unknown }).locale === key
+    )
+  })
 }
 
 // T extends Translation ensures the generic type has the required lang property
@@ -527,7 +535,7 @@ type LocalizedOrderByParams = {
   fallbackColumn: AnyColumn
   baseTable: Table
   localizedSortColumns: Partial<Record<string, AnyColumn>>
-  i18nTable: SQLiteTableWithColumns<any>
+  i18nTable: SQLiteTableWithColumns<TableConfig>
   parentIdColumn: AnyColumn
   foreignKeyColumn: AnyColumn
   localeColumn: AnyColumn
@@ -564,12 +572,11 @@ export const toOrderByWithLocalizedFields = ({
     const value = sql`coalesce(${raw}, '')`
     if (cursor && conditions) {
       const comparison = resolvedSortOrder === 'desc' ? lt : gt
-      conditions.push(
-        or(
-          comparison(value, cursor.value ?? ''),
-          and(eq(value, cursor.value ?? ''), gt(parentIdColumn, cursor.id)),
-        )!,
+      const cursorCondition = or(
+        comparison(value, cursor.value ?? ''),
+        and(eq(value, cursor.value ?? ''), gt(parentIdColumn, cursor.id)),
       )
+      if (cursorCondition) conditions.push(cursorCondition)
     }
     return [
       resolvedSortOrder === 'desc' ? desc(value) : asc(value),
@@ -589,11 +596,8 @@ export const toOrderByWithLocalizedFields = ({
     return order(localizedValue)
   }
 
-  const sortColumn = baseTable[resolvedSortBy as keyof typeof baseTable]
-  if (!sortColumn) {
-    throw new Error(`Invalid sort column: ${resolvedSortBy}`)
-  }
-
+  const sortColumn =
+    baseTable[resolvedSortBy as keyof typeof baseTable] ?? fallbackColumn
   return order(sortColumn as AnyColumn)
 }
 
