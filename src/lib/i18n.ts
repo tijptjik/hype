@@ -1,6 +1,8 @@
 // THIRD PARTY
 import type { Locale as DateFnsLocale } from 'date-fns'
-import { enGB, zhCN, zhHK } from 'date-fns/locale'
+import { enGB } from 'date-fns/locale/en-GB'
+import { zhCN } from 'date-fns/locale/zh-CN'
+import { zhHK } from 'date-fns/locale/zh-HK'
 // I18N
 import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'

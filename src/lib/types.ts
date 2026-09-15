@@ -80,6 +80,7 @@ import type { Component, Snippet } from 'svelte'
 import type { RemoteFormIssue } from '@sveltejs/kit'
 import type { RequestEvent } from '@sveltejs/kit'
 import type { AdminCtx } from './context/admin.svelte'
+import type { AppCtx } from './context/app.svelte'
 import type { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type {
@@ -95,7 +96,11 @@ type OrganisationFormType = unknown
 type ProjectFormType = unknown
 type FeatureFormType = unknown
 type HubFormType = unknown
-import type { SQLiteTable, SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core'
+import type {
+  SQLiteTable,
+  SQLiteTableWithColumns,
+  TableConfig,
+} from 'drizzle-orm/sqlite-core'
 import type {
   SessionSession as BetterAuthSessionSession,
   SessionUser as BetterAuthSessionUser,
@@ -437,9 +442,9 @@ export type NavigableResource = Exclude<FirstClassResource, FirstClassResource.p
 
 export type ResourceConfig = {
   name: string
-  table: SQLiteTableWithColumns<any>
+  table: SQLiteTableWithColumns<TableConfig>
   parentName: string | null
-  parentTable: SQLiteTableWithColumns<any> | null
+  parentTable: SQLiteTableWithColumns<TableConfig> | null
   keyToParent: string | null
   keyToSelf: string
   depth: number
@@ -1100,7 +1105,7 @@ export type StatsCache = SvelteMap<
   FirstClassResource,
   SvelteMap<
     Id,
-    SvelteMap<Key, { value: any; type: 'boolean' | 'count' | 'mean' | 'sum' }>
+    SvelteMap<Key, { value: unknown; type: 'boolean' | 'count' | 'mean' | 'sum' }>
   >
 >
 
@@ -1318,7 +1323,7 @@ export type HeaderTaskActionsController = {
 
 export type ResourceEditorHeaderController = FormHeaderController &
   HeaderFormActionsController & {
-    setHeaderForEntity: (...args: any[]) => void
+    setHeaderForEntity: (...args: never[]) => void
     clearFormActions: () => void
   }
 
@@ -1556,7 +1561,7 @@ export type FormDataUpdaterForm<T> = {
     value: () => {
       data?: T
     }
-    set: (value: any) => void
+    set: (value: T) => void
   }
 }
 
@@ -2058,7 +2063,7 @@ export type OrganisationActionPermissions = {
   canDelete: boolean
 }
 
-export type LayerMetadata = {}
+export type LayerMetadata = Record<string, never>
 
 /* ----------------- */
 // FEATURES
@@ -2335,7 +2340,7 @@ export type ExtendedParams = {
 export type FieldProps = SectionProps &
   ExtendedParams & {
     values?: string[]
-    actions?: Record<string, (...args: any[]) => void>
+    actions?: Record<string, (...args: never[]) => void>
   }
 
 export type UserFieldProps = SectionProps & {
@@ -2370,7 +2375,7 @@ export type ListFieldProps = FieldPropsExtended & {
 // PROVIDERS
 
 export type ImageProviderProps = {
-  children: any
+  children: Snippet
   model: ImageProviderModel
 }
 
@@ -2438,7 +2443,7 @@ export type InputProps = {
   locale: LocaleExtended
   isTranslated?: boolean
   inputType?: 'text' | 'number' | 'email'
-  onchange: Function
+  onchange: (event: Event) => void
 }
 
 export type SelectProps = {
@@ -2450,7 +2455,7 @@ export type SelectProps = {
 
 export type DisplayFieldProps = {
   label: string
-  value: any
+  value: unknown
   justify?: 'start' | 'end'
   gridCell?: boolean
 }
@@ -2571,7 +2576,7 @@ export type EventCompanionSession = {
 
 // Define a type for the function argument to avoid self-reference
 export interface SelectedResourcesProps {
-  appCtx: any
+  appCtx: AppCtx
   resourceType: FirstClassResource | 'neighbourhood'
   resources: Resource[] | Neighbourhood[]
   selectedIds: Id[] | string[]
@@ -2654,7 +2659,7 @@ export type AppContextState = {
   }
   // Header state for unified header system
   header: {
-    icon: any | null
+    icon: Component<Record<string, unknown>> | null
     title: string
     facetTabs: Map<FacetType, string>
     actions: {
@@ -3125,7 +3130,7 @@ export type SvelteVirtualListProps = {
   /**
    * The complete array of items to be virtualized.
    */
-  items: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+  items: unknown[]
   /**
    * CSS class to apply to individual item containers.
    */
@@ -3138,7 +3143,7 @@ export type SvelteVirtualListProps = {
   /**
    * Svelte snippet function that defines how each item should be rendered. Receives the item and its index as arguments.
    */
-  renderItem: Snippet<[item: any, index: number]> // eslint-disable-line @typescript-eslint/no-explicit-any
+  renderItem: Snippet<[item: unknown, index: number]>
   /**
    * Base test ID for component elements to facilitate testing.
    */
@@ -3301,6 +3306,15 @@ export type FeatureQueryCachedEntity = {
   fetchedAt: number
   meta: FeatureQueryInput['meta']
   listMemberships?: Record<string, number>
+  /** Bounded native provenance reconnects restored map rows to refresh and optimistic updates. */
+  nativeSource?: FeatureQueryNativePage
+}
+
+/** Exact page ownership retained for fresh shared entities without duplicating remote state. */
+export type FeatureQueryNativePage = {
+  page: import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>
+  input: FeatureQueryInput
+  fetchedAt: number
 }
 
 /** Retained native handles for a previously visited query. */
@@ -3317,6 +3331,8 @@ export type FeatureQueryMatchContext = {
   ) => boolean | undefined
   organisationCode?: (id: string) => string | undefined
   projectCode?: (id: string) => string | undefined
+  layerProjectId?: (id: string) => string | undefined
+  projectOrganisationId?: (id: string) => string | undefined
 }
 
 /** Explicit recent list edits distinguish an optimistic removal from unknown membership. */

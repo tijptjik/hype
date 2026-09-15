@@ -91,6 +91,8 @@ export enum HierarchicalResourceSeq {
 
 export enum ResourceRefKey {
   hub = 'code',
+  // Hubs and organisations both use their code as the public resource key.
+  // biome-ignore lint/suspicious/noDuplicateEnumValues: intentional alias for the shared code key
   organisation = 'code',
   project = 'code',
   layer = 'id',
