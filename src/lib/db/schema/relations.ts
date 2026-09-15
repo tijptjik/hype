@@ -17,6 +17,8 @@ import {
   organisationProperty,
 } from './property'
 import { feature, featureI18n, featureProperty, featurePropertyI18n } from './feature'
+import { divisionDefinition, divisionI18n } from './division'
+import { featureDivisionMembership } from './featureDivision'
 import { image, featureImage } from './image'
 import { task, taskImage } from './task'
 
@@ -341,6 +343,11 @@ export const organisationPropertyRelations = relations(
  * Links feature to its translations, properties, images, and metadata
  */
 export const featureRelations = relations(feature, ({ one, many }) => ({
+  division: one(divisionDefinition, {
+    fields: [feature.divisionId],
+    references: [divisionDefinition.id],
+  }),
+  divisionMemberships: many(featureDivisionMembership),
   organisation: one(organisation, {
     fields: [feature.organisationId],
     references: [organisation.id],
@@ -580,5 +587,28 @@ export const hubUserStateRelations = relations(hubUserState, ({ one }) => ({
   user: one(user, {
     fields: [hubUserState.userId],
     references: [user.id],
+  }),
+}))
+
+/** Selected and candidate divisions retain their stable feature dependency. */
+export const featureDivisionMembershipRelations = relations(
+  featureDivisionMembership,
+  ({ one }) => ({
+    feature: one(feature, {
+      fields: [featureDivisionMembership.featureId],
+      references: [feature.id],
+    }),
+  }),
+)
+/** Localized names are read from the mirror without another SaanSeoi request. */
+export const divisionDefinitionRelations = relations(
+  divisionDefinition,
+  ({ many }) => ({ i18n: many(divisionI18n) }),
+)
+/** Each localized name belongs to exactly one stable division. */
+export const divisionI18nRelations = relations(divisionI18n, ({ one }) => ({
+  division: one(divisionDefinition, {
+    fields: [divisionI18n.divisionId],
+    references: [divisionDefinition.id],
   }),
 }))

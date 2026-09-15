@@ -4,6 +4,7 @@ import {
   index,
   integer,
   sqliteTable,
+  sqliteView,
   text,
   unique,
 } from 'drizzle-orm/sqlite-core'
@@ -37,16 +38,8 @@ export const featureSearchDocument = sqliteTable(
 // featureSearchFts is a contentless FTS5 virtual table owned by migration 0081.
 // Keeping it out of sqliteTable metadata prevents ordinary-table DDL generation.
 
-/** Trigger-maintained English neighbourhood identity used by filtering and facets. */
-export const featureNeighbourhood = sqliteTable(
-  'featureNeighbourhood',
-  {
-    featureId: text('featureId')
-      .primaryKey()
-      .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    neighbourhood: text('neighbourhood').notNull(),
-  },
-  table => [
-    index('feature_neighbourhood_lookup_idx').on(table.neighbourhood, table.featureId),
-  ],
-)
+/** Compatibility label view backed by the selected SaanSeoi leaf, not address text. */
+export const featureNeighbourhood = sqliteView('featureNeighbourhood', {
+  featureId: text('featureId').notNull(),
+  neighbourhood: text('neighbourhood').notNull(),
+}).existing()
