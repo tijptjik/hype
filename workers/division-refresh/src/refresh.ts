@@ -30,8 +30,6 @@ type State = {
 type Feature = { id: string; geometry: string }
 type Job = Feature & { generation: number; attempts: number }
 type RefreshDatabase = Pick<D1Database, 'prepare' | 'batch'>
-const BIN =
-  'json_array(organisationId,projectId,layerId,isPublished,isArchived,isDraft,isVisitable,isIntangible)'
 const FENCE = 'EXISTS(SELECT 1 FROM divisionRefresh WHERE id=1 AND lease=?)'
 
 /**
@@ -368,12 +366,61 @@ async function geocodeJobs(
         )
         writes.push(
           guarded(
-            `INSERT INTO featureDivisionMembership SELECT id,?,?,${BIN}
+            `INSERT INTO featureDivisionMembership SELECT id,?,?
           FROM feature WHERE id=? AND ${guard}`,
             [member.id, Number(selected.has(member.id)), job.id],
           ),
         )
       }
+      // Project only unique selections; overlapping branches remain in the membership index.
+      const chosen = [...members.values()].filter(member => selected.has(member.id))
+      const unique = (ids: string[]): string | null =>
+        ids.length === 1 ? ids[0] : null
+      const levels = Array.from({ length: 6 }, (_, index) =>
+        unique(
+          chosen
+            .filter(
+              member => member.level === index + 1 && member.category !== 'landform',
+            )
+            .map(member => member.id),
+        ),
+      )
+      const deepest = Math.max(
+        -1,
+        ...chosen
+          .filter(member => member.category !== 'landform')
+          .map(member => member.level ?? -1),
+      )
+      const divisionId = unique(
+        chosen
+          .filter(member => member.category !== 'landform' && member.level === deepest)
+          .map(member => member.id),
+      )
+      const landformLeafId = unique([
+        ...new Set(
+          (result?.landform.paths ?? [])
+            .map(path =>
+              [...path]
+                .reverse()
+                .find(
+                  id => members.get(id)?.class !== 'island_group' && selected.has(id),
+                ),
+            )
+            .filter((id): id is string => !!id),
+        ),
+      ])
+      writes.push(
+        guarded(
+          `UPDATE featureCountRevision SET revision=revision+1 WHERE id=1 AND ${guard}`,
+        ),
+      )
+      writes.push(
+        guarded(
+          `UPDATE feature SET divisionId=?,divisionLevel1Id=?,divisionLevel2Id=?,divisionLevel3Id=?,
+        divisionLevel4Id=?,divisionLevel5Id=?,divisionLevel6Id=?,landformLeafId=? WHERE id=? AND ${guard}`,
+          [divisionId, ...levels, landformLeafId, job.id],
+        ),
+      )
       writes.push(
         guarded(`DELETE FROM featureDivisionJob WHERE featureId=? AND ${guard}`, [
           job.id,
@@ -394,6 +441,9 @@ async function geocodeJobs(
     }
   }
   if (state.phase === 'geocode') {
+    // Remove definitions no longer referenced, after every affected feature has been resolved.
+    await statement(`DELETE FROM divisionDefinition WHERE NOT EXISTS(SELECT 1 FROM featureDivisionMembership m WHERE m.divisionId=divisionDefinition.id)
+      AND NOT EXISTS(SELECT 1 FROM featureDivisionJob) AND NOT EXISTS(SELECT 1 FROM divisionRefreshChange) AND ${FENCE}`).run()
     // A failed or concurrent new job prevents publication; the next tick resumes it.
     await statement(`UPDATE divisionRefresh SET appliedRelease=targetRelease,targetRelease=NULL,
       targetReleaseId=NULL,comparisonId=NULL,cursor=NULL,phase='idle'
