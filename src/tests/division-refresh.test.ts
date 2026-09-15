@@ -386,10 +386,11 @@ describe('division refresh', () => {
     s.sqlite.exec(`CREATE TRIGGER reject_resolution BEFORE INSERT ON featureDivisionMembership
       BEGIN SELECT RAISE(ABORT,'injected'); END;`)
     await s.tick(async () => Response.json(geocoded()))
-    expect(s.count('featureDivisionResolution')).toBe(0)
     expect(
       s.sqlite
-        .prepare("SELECT count(*) AS n FROM featureCountRollup WHERE divisionId != ''")
+        .prepare(
+          "SELECT count(*) AS n FROM featureCountRollup WHERE divisionLeafId != ''",
+        )
         .get()?.n,
     ).toBe(0)
     expect(s.count('featureDivisionJob')).toBe(1)
@@ -409,7 +410,9 @@ describe('division refresh', () => {
     expect(s.count('featureDivisionMembership')).toBe(2)
     expect(
       s.sqlite
-        .prepare("SELECT count(*) AS n FROM featureCountRollup WHERE divisionId != ''")
+        .prepare(
+          "SELECT count(*) AS n FROM featureCountRollup WHERE divisionLeafId != ''",
+        )
         .get()?.n,
     ).toBe(0)
     expect(s.count('featureDivisionJob')).toBe(0)
@@ -458,12 +461,12 @@ describe('division refresh', () => {
     expect(
       s.sqlite
         .prepare(
-          'SELECT divisionId,divisionLevel1Id,divisionLevel2Id,divisionLevel6Id,landformLeafId FROM feature',
+          'SELECT divisionLeafId,divisionLevel1Id,divisionLevel2Id,divisionLevel6Id,landformLeafId FROM feature',
         )
         .get(),
     ).toMatchObject({
-      divisionId: 'micro',
-      divisionLevel1Id: null,
+      divisionLeafId: 'micro',
+      divisionLevel1Id: 'area',
       divisionLevel2Id: 'district',
       divisionLevel6Id: 'micro',
       landformLeafId: 'island',
@@ -478,9 +481,13 @@ describe('division refresh', () => {
     )
     expect(
       s.sqlite
-        .prepare('SELECT divisionId,divisionLevel6Id,landformLeafId FROM feature')
+        .prepare('SELECT divisionLeafId,divisionLevel6Id,landformLeafId FROM feature')
         .get(),
-    ).toMatchObject({ divisionId: null, divisionLevel6Id: null, landformLeafId: null })
+    ).toMatchObject({
+      divisionLeafId: null,
+      divisionLevel6Id: null,
+      landformLeafId: null,
+    })
     expect(s.count('featureDivisionMembership')).toBe(0)
   })
 

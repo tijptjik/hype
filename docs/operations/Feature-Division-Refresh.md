@@ -11,11 +11,10 @@ validates and normalizes that response at its API boundary.
 | --- | --- |
 | `divisionDefinition` | Stable SaanSeoi identity, imported release and source classification/names |
 | `divisionI18n` | Locale, display name and complete supplied named values, including variants and aliases |
-| `feature.divisionId` | Unique deepest selected non-landform division |
-| `feature.divisionLevel1Id` … `divisionLevel6Id` | Nullable projections for fast level-specific filters/counts |
+| `feature.divisionLeafId` | Unique deepest canonical non-landform division |
+| `feature.divisionLevel1Id` … `divisionLevel6Id` | Canonical projections for fast level-specific filters/counts; level 1 prefers administrative over locality |
 | `feature.landformLeafId` | Unique selected landform leaf, excluding `island_group` |
-| `featureDivisionMembership` | All selected and candidate IDs, indexed by division for changes and arbitrary hierarchy filters |
-| `featureDivisionResolution` | Resolution status, source coordinates, pinned release and normalized result |
+| `featureDivisionMembership` | Canonical and non-canonical IDs, indexed by division for targeted changes and hierarchy filters |
 | `divisionRefresh`, `divisionRefreshChange`, `featureDivisionJob` | Checkpoint/lease, resumable change scans and retryable feature work |
 
 The mirror contains referenced divisions, including ancestors and ambiguous
@@ -25,12 +24,9 @@ work completes. No upstream membership polygons are retained after their change
 scan finishes.
 
 SaanSeoi defines levels **0–6**. The six feature projections represent levels 1–6;
-level 0 remains in the membership index. Levels are not unique hierarchy slots:
-area and city can both be level 1, and village/neighbourhood can both be level 5.
-A projection is populated only when exactly one selected division occupies that
-level. Null means absent or multiple valid selections. Ambiguous resolutions keep
-candidate memberships but select none. The deepest ID also stays null if multiple
-selected divisions share the deepest level. Never choose a branch by array order.
+level 0 remains in the membership index. HYPE uses the administrative branch when
+an equivalent locality and administrative division coexist at level 1. An ambiguous
+resolution keeps memberships but selects none. Never choose a branch by array order.
 
 The membership index is authoritative for arbitrary division queries. Use
 `filters.divisionIds` on the feature query API: it matches any supplied selected
@@ -120,7 +116,6 @@ SELECT * FROM divisionRefresh;
 SELECT count(*) AS pending, min(retryAt) AS nextRetry FROM featureDivisionJob;
 SELECT attempts, lastError, count(*) AS jobs
 FROM featureDivisionJob GROUP BY attempts, lastError;
-SELECT status, count(*) FROM featureDivisionResolution GROUP BY status;
 SELECT locale, count(*) FROM divisionI18n GROUP BY locale;
 SELECT count(*) FROM feature;
 SELECT sum(totalCount) FROM featureCountRollup;

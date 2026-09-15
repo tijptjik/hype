@@ -26,7 +26,10 @@ import type { Database } from '$lib/types'
 import type { FeatureQueryInput } from '$lib/api/services/featureQuery.types'
 
 vi.mock('$lib/api/services/feature', () => ({
-  getFeatureWithRelations: () => ({ division: { with: { i18n: true } }, divisionMemberships: { columns: { divisionId: true, selected: true } } }),
+  getFeatureWithRelations: () => ({
+    division: { with: { i18n: true } },
+    divisionMemberships: { columns: { divisionId: true, selected: true } },
+  }),
   toListResponseShape: async (result: unknown) => result,
 }))
 const stores: DatabaseSync[] = []
@@ -48,10 +51,14 @@ const input = (extra: Partial<FeatureQueryInput> = {}): FeatureQueryInput => ({
 function setup(withOrphan = false) {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
-  const columns = Object.values(getTableColumns(feature)).filter(column => !/^division(?:Id|Level[1-6]Id)$|^landformLeafId$/.test(column.name)).map(
-    column =>
-      `"${column.name}" ${column.getSQLType()}${column.primary ? ' PRIMARY KEY' : ''}`,
-  )
+  const columns = Object.values(getTableColumns(feature))
+    .filter(
+      column => !/^division(?:Id|Level[1-6]Id)$|^landformLeafId$/.test(column.name),
+    )
+    .map(
+      column =>
+        `"${column.name}" ${column.getSQLType()}${column.primary ? ' PRIMARY KEY' : ''}`,
+    )
   sqlite.exec(`CREATE TABLE feature (${columns.join(',')});
     CREATE TABLE featureI18n(featureId TEXT, locale TEXT, title TEXT, description TEXT, displayAddress TEXT, addressProperties TEXT, PRIMARY KEY(featureId,locale));
     CREATE TABLE featureProperty(featureId TEXT, propertyId TEXT, propertyValueId TEXT, value TEXT, PRIMARY KEY(featureId,propertyId));
@@ -110,10 +117,26 @@ function setup(withOrphan = false) {
       .prepare('INSERT INTO featureI18n VALUES(?, ?, ?, null, null, ?)')
       .run(id, 'en', title, JSON.stringify({ neighbourhood }))
     if (neighbourhood) {
-      sqlite.prepare('INSERT INTO divisionDefinition VALUES(?,?,?) ON CONFLICT(id) DO NOTHING')
-        .run(neighbourhood, 'r1', JSON.stringify({ level: 5, category: 'hood', class: 'neighbourhood', names: { en: { name: neighbourhood } } }))
-      sqlite.prepare('UPDATE feature SET divisionId=?,divisionLevel5Id=? WHERE id=?').run(neighbourhood, neighbourhood, id)
-      sqlite.prepare('INSERT INTO featureDivisionMembership VALUES(?,?,1)').run(id, neighbourhood)
+      sqlite
+        .prepare(
+          'INSERT INTO divisionDefinition VALUES(?,?,?) ON CONFLICT(id) DO NOTHING',
+        )
+        .run(
+          neighbourhood,
+          'r1',
+          JSON.stringify({
+            level: 5,
+            category: 'hood',
+            class: 'neighbourhood',
+            names: { en: { name: neighbourhood } },
+          }),
+        )
+      sqlite
+        .prepare('UPDATE feature SET divisionLeafId=?,divisionLevel5Id=? WHERE id=?')
+        .run(neighbourhood, neighbourhood, id)
+      sqlite
+        .prepare('INSERT INTO featureDivisionMembership VALUES(?,?,1)')
+        .run(id, neighbourhood)
     }
   }
   add('a', 'North 茶餐廳 100%', 'Central')
@@ -130,12 +153,23 @@ function setup(withOrphan = false) {
 describe('indexed feature queries', () => {
   it('filters selected stable division IDs without double-counting ancestors or candidates', async () => {
     const { db, sqlite } = setup()
-    sqlite.exec("INSERT INTO featureDivisionMembership VALUES('a','parent',1),('b','parent',1),('c','parent',0)")
-    const page = await queryFeaturePage(db, input({ filters: { divisionIds: ['parent', 'Central'] } }), base, hub)
+    sqlite.exec(
+      "INSERT INTO featureDivisionMembership VALUES('a','parent',1),('b','parent',1),('c','parent',0)",
+    )
+    const page = await queryFeaturePage(
+      db,
+      input({ filters: { divisionIds: ['parent', 'Central'] } }),
+      base,
+      hub,
+    )
     expect(page.data.map(row => row.id)).toEqual(['a', 'b'])
     expect(page.totalCount).toBe(2)
-    expect(page.data[0].division?.i18n).toEqual(expect.arrayContaining([expect.objectContaining({ locale: 'en', name: 'Central' })]))
-    expect(page.data[0].divisionId).toBe('Central')
+    expect(page.data[0].division?.i18n).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ locale: 'en', name: 'Central' }),
+      ]),
+    )
+    expect(page.data[0].divisionLeafId).toBe('Central')
   })
 
   it('keeps large viewport cursor identities fixed-size and bound to the query', async () => {
