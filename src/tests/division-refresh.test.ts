@@ -37,16 +37,28 @@ const member = (id: string) => ({
   level: 5,
   category: 'hood',
   class: 'neighbourhood',
-  names: { en: id },
+  names: { en: { name: id } },
 })
 const geocoded = (ids = ['village'], release = 'r2') => ({
-  data: {
-    status: 'resolved',
-    memberships: ids.map(member),
-    selectedAncestryIds: ids,
-    path: ids,
-    landform: { memberships: [], paths: [] },
-  },
+  jsonapi: { version: '1.1' },
+  data: [
+    {
+      type: 'geocoding-results',
+      id: 'lookup',
+      attributes: { status: 'resolved' },
+      relationships: { hood: { data: ids.map(id => ({ type: 'divisions', id })) } },
+    },
+  ],
+  included: ids.map(id => ({
+    type: 'divisions',
+    id,
+    attributes: {
+      category: 'hood',
+      class: 'neighbourhood',
+      level: 5,
+      i18n: { en: { name: id } },
+    },
+  })),
   meta: { release: { apiReleaseSet: release } },
 })
 const definition = (geometry = polygon) => ({
@@ -131,7 +143,7 @@ describe('division refresh', () => {
     const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
     await apiRead(
       { baseUrl: 'https://api.saanseoi.hk', token: 'test-key', fetcher },
-      '/api/v1/divisions/geocode',
+      '/divisions/v1/geocode',
       { lat: '5', lng: '5', apiReleaseSet: 'r2' },
       geocodeSchema,
     )
@@ -365,12 +377,7 @@ describe('division refresh', () => {
     await s.tick(async () =>
       Response.json({
         ...response,
-        data: {
-          ...response.data,
-          status: 'ambiguous',
-          path: null,
-          selectedAncestryIds: null,
-        },
+        data: [{ ...response.data[0], attributes: { status: 'ambiguous' } }],
       }),
     )
     expect(s.count('featureDivisionMembership')).toBe(2)
