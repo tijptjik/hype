@@ -56,15 +56,17 @@ END;
 INSERT INTO featureDivisionJob(featureId) SELECT id FROM feature WHERE true
 ON CONFLICT(featureId) DO UPDATE SET generation=generation+1,attempts=0,retryAt=0,lastError=NULL;
 
--- Retain the legacy label facade for existing UI consumers; its source is now the registry.
+-- Retain the legacy label facade for existing UI consumers; it matches selected neighbourhood memberships.
 DROP TRIGGER feature_neighbourhood_i18n_insert;
 DROP TRIGGER feature_neighbourhood_i18n_delete;
 DROP TRIGGER feature_neighbourhood_i18n_update;
 DROP TABLE featureNeighbourhood;
 CREATE VIEW featureNeighbourhood AS
-SELECT f.id AS featureId,i.name AS neighbourhood FROM feature f
-JOIN divisionI18n i ON i.divisionId=f.divisionLeafId AND i.locale='en'
-WHERE i.name IS NOT NULL;
+SELECT m.featureId,i.name AS neighbourhood FROM featureDivisionMembership m
+JOIN divisionDefinition d ON d.id=m.divisionId
+JOIN divisionI18n i ON i.divisionId=m.divisionId AND i.locale='en'
+WHERE m.selected=1 AND json_extract(d.attributes,'$.class')='neighbourhood'
+  AND i.name IS NOT NULL;
 DROP TRIGGER feature_count_entry_insert;
 DROP TRIGGER feature_count_entry_delete;
 DROP TRIGGER feature_count_entry_update;

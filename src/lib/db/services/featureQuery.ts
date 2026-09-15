@@ -453,14 +453,8 @@ export function buildFeatureRollupConditions(
   )
     return null
 
-  if (input.filters?.neighbourhoods?.length)
-    conditions.push(
-      sql`"feature"."divisionLeafId" in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.neighbourhoods))})))`,
-    )
-  if (input.filters?.excludeNeighbourhoods?.length)
-    conditions.push(
-      sql`"feature"."divisionLeafId" not in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.excludeNeighbourhoods))})))`,
-    )
+  if (input.filters?.neighbourhoods?.length) return null
+  if (input.filters?.excludeNeighbourhoods?.length) return null
   return conditions
 }
 

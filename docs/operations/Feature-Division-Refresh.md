@@ -132,7 +132,8 @@ not deploy or activate a remote cron.
 
 Authored/imported `featureI18n.addressProperties` remain source address data.
 They no longer drive division identity or count bins. `featureNeighbourhood` is a
-read-only compatibility view of the canonical leaf's English registry name, and
+read-only compatibility view of each selected `neighbourhood` membership's English
+registry name, so features in a micro-neighbourhood still count toward its parent,
 `facets.neighbourhoods` retains the current response field name. Existing label
 selectors retain the static catalogue's parent-label expansion. New integrations
 should use `divisionIds` and registry names.

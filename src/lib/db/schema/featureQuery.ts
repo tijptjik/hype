@@ -38,7 +38,7 @@ export const featureSearchDocument = sqliteTable(
 // featureSearchFts is a contentless FTS5 virtual table owned by migration 0081.
 // Keeping it out of sqliteTable metadata prevents ordinary-table DDL generation.
 
-/** Compatibility label view backed by the selected SaanSeoi leaf, not address text. */
+/** Compatibility label view backed by selected SaanSeoi neighbourhood memberships. */
 export const featureNeighbourhood = sqliteView('featureNeighbourhood', {
   featureId: text('featureId').notNull(),
   neighbourhood: text('neighbourhood').notNull(),

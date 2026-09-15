@@ -172,6 +172,35 @@ describe('indexed feature queries', () => {
     expect(page.data[0].divisionLeafId).toBe('Central')
   })
 
+  it('counts a micro-neighbourhood feature in its selected neighbourhood ancestor', async () => {
+    const { db, sqlite } = setup()
+    sqlite.prepare('INSERT INTO divisionDefinition VALUES(?,?,?)').run(
+      'micro-central',
+      'r1',
+      JSON.stringify({
+        level: 6,
+        category: 'hood',
+        class: 'microhood',
+        names: { en: { name: 'Micro Central' } },
+      }),
+    )
+    sqlite
+      .prepare('UPDATE feature SET divisionLeafId=?,divisionLevel6Id=? WHERE id=?')
+      .run('micro-central', 'micro-central', 'a')
+    sqlite
+      .prepare('INSERT INTO featureDivisionMembership VALUES(?,?,1)')
+      .run('a', 'micro-central')
+
+    const page = await queryFeaturePage(
+      db,
+      input({ filters: { neighbourhoods: ['Central'] } }),
+      base,
+      hub,
+    )
+    expect(page.data.map(row => row.id)).toEqual(['a', 'b'])
+    expect(page.facets?.neighbourhoods).toEqual({ Central: 2 })
+  })
+
   it('keeps large viewport cursor identities fixed-size and bound to the query', async () => {
     const query = input({
       excludeIds: Array.from({ length: 500 }, (_, index) => `feature-${index}`),
@@ -238,7 +267,7 @@ describe('indexed feature queries', () => {
     expect(statements.join('\n')).not.toContain('count(*)')
   })
 
-  it('sums maintained bins for common flag and neighbourhood counts', async () => {
+  it('uses selected neighbourhood memberships for neighbourhood counts', async () => {
     const { db, statements } = setup()
     const page = await queryFeaturePage(
       db,
@@ -248,15 +277,11 @@ describe('indexed feature queries', () => {
     )
     expect(page.totalCount).toBe(2)
     expect(page.facets?.neighbourhoods).toEqual({ Central: 2 })
-    expect(
-      statements.some(
-        statement =>
-          statement.includes('sum("feature"."totalCount")') &&
-          statement.includes('featureCountRollup'),
-      ),
-    ).toBe(true)
-    expect(statements.join('\n')).not.toContain('count(*)')
-    expect(statements.join('\n')).not.toContain('featureCountCache')
+    expect(statements.some(statement => statement.includes('featureCountRollup'))).toBe(
+      false,
+    )
+    expect(statements.join('\n')).toContain('featureNeighbourhood')
+    expect(statements.join('\n')).toContain('featureCountCache')
   })
 
   it('reuses a detailed count across pages, exclusions, ordering and client cache scopes', async () => {
@@ -476,7 +501,7 @@ describe('indexed feature queries', () => {
     expect(statements.some(statement => statement.includes('featureCountRollup'))).toBe(
       true,
     )
-    expect(statements.join('\n')).not.toContain('count(*)')
+    expect(statements.join('\n')).toContain('count(*)')
     const search = input({ q: 'Branch' })
     expect(
       (

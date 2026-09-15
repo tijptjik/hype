@@ -169,6 +169,7 @@ export default defineConfig({
       '**/src/lib/db/**', // Exclude database files that might keep connections open
       '**/src/hooks.server.ts', // Exclude server hooks
       '**/src/app.html',
+      '**/scripts/breadline/**/*.test.ts', // Bun-only SQLite tests run through breadline:db:test.
     ],
   },
 })

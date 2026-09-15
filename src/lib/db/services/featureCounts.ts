@@ -2,7 +2,6 @@
 import { and, eq, sql, type SQL } from 'drizzle-orm'
 // DB
 import { feature } from '$lib/db/schema/feature'
-import { divisionI18n } from '$lib/db/schema/division'
 import { featureNeighbourhood } from '$lib/db/schema/featureQuery'
 import {
   featureCountCache,
@@ -102,24 +101,16 @@ export async function getFeatureQueryCounts(
   source: SQL,
   rollupConditions: SQL[] | null,
 ): Promise<FeatureQueryCounts> {
-  if (rollupConditions) {
-    // The alias intentionally reuses the original authorized feature column predicates.
-    const groups = await retryBusyRead(() =>
-      db
-        .select({
-          neighbourhood: divisionI18n.name,
-          count: sql<number>`sum("feature"."totalCount")`,
-        })
-        .from(sql`${featureCountRollup} as "feature"`)
-        .leftJoin(
-          divisionI18n,
-          sql`${divisionI18n.divisionId} = "feature"."divisionLeafId" and ${divisionI18n.locale} = 'en'`,
-        )
-        .where(and(...rollupConditions))
-        .groupBy(divisionI18n.name),
-    )
-    return toFeatureQueryCounts(groups)
-  }
+  // The rollup has one row per feature, but neighbourhood facets are ancestor memberships.
+  // Use it only for the total; the compatibility view supplies exact facet memberships.
+  const rollupTotal = rollupConditions
+    ? await retryBusyRead(() =>
+        db
+          .select({ totalCount: sql<number>`coalesce(sum("feature"."totalCount"), 0)` })
+          .from(sql`${featureCountRollup} as "feature"`)
+          .where(and(...rollupConditions)),
+      )
+    : null
 
   const aggregate = db
     .select({
@@ -167,6 +158,7 @@ export async function getFeatureQueryCounts(
   if (cached[0]) return cached[0]
 
   const counts = toFeatureQueryCounts(await retryBusyRead(() => aggregate))
+  if (rollupTotal) counts.totalCount = Number(rollupTotal[0]?.totalCount ?? 0)
   // Publish only under the revisions observed before the aggregate, never a newer revision.
   try {
     await db.run(sql`insert into ${featureCountCache}

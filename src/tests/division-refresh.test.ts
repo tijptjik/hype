@@ -473,6 +473,10 @@ describe('division refresh', () => {
     })
     expect(s.count('featureDivisionMembership')).toBe(10)
     expect(
+      s.sqlite.prepare('SELECT neighbourhood FROM featureNeighbourhood').get()
+        ?.neighbourhood,
+    ).toBe('hood')
+    expect(
       s.sqlite
         .prepare(
           "SELECT selected FROM featureDivisionMembership WHERE featureId='a' AND divisionId='city'",
