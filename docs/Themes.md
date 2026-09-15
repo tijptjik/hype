@@ -5,15 +5,17 @@ Runtime `[data-theme]` scopes select the palette; `@theme inline` exposes utilit
 
 | Theme     | Identifier        | Appearance                           | Default            |
 | --------- | ----------------- | ------------------------------------ | ------------------ |
-| Nullspace | `hype-black`      | Pink, lavender and mint on true black | Explicit selection |
-| Nebula    | `hype-dark`       | Pink, lavender and mint on ink       | All other hubs     |
+| Nullspace | `hype-black`      | Pink, lavender and mint on true black | All other hubs     |
+| Nebula    | `hype-dark`       | Pink, lavender and mint on ink       | Explicit selection |
 | Oblivion  | `hype-light`      | Berry, violet and teal on pale lilac | Explicit selection |
-| Milque    | `breadline-light` | Coral, navy and teal on warm cream   | `breadline.hk`     |
-| Rye       | `breadline-dark`  | Coral, aqua and wheat on dark green  | Explicit selection |
+| Milque    | `breadline-light` | Peach-forward blue, teal and coral on warm cream | `breadline.hk`     |
+| Rye       | `breadline-dark`  | Aqua, salmon and sky blue on deep blue-green | Explicit selection |
 
-Breadline palettes draw from the coral, aqua and navy on
-https://hkfoodworks.com/breadline-app/. Milque deepens the coral for readable text;
-Rye uses lighter accents for contrast on dark surfaces.
+Breadline palettes draw from the blueberry, frosting blue and peachy orange on
+https://hkfoodworks.com/breadline-app/. Milque uses the Peach-forward direction for
+light mode: blueberry structure, frosting teal support, and peach coral emphasis. Rye
+keeps its own brighter aqua, salmon, and sky-blue order for dark surfaces. The source
+swatches and experiments are documented at `/themes/colours`.
 
 ## Tokens and selection
 
@@ -49,9 +51,21 @@ base rule: an inline utility can override a modifier still in `@layer components
 ## Preview
 
 - `/themes`: interactive component studio with local sample rows, search, selection,
-  a collection card, action buttons, status/progress and a five-palette comparison.
+  a collection card, action buttons, status/progress, a five-palette comparison, and
+  a local live colour sandbox.
+- `/themes/colours`: Milque colour study showing the original Breadline swatches,
+  revised semantic tokens, and side-by-side component applications.
 - `/admin/styles/button`: existing button showcase with a local theme picker.
 
 Preview selection is local and does not overwrite Settings. Navigation across the
 standalone studio uses full document navigation so the application bootstrap remains
 independent of sample data. No offline resource cache is required.
+
+## Settings hierarchy and map styles
+
+Theme is a peer of Language in Settings. Its UI subsection uses the palette picker;
+its Map subsection displays the registered public map styles using their rendered
+`/api/mapRenders/styles/{code}/asset` previews. An explicit map choice overrides the
+active project's style and persists in host-local browser storage as
+`hype-map-style`. Selecting the automatic option restores the active map's style.
+The UI palette and map style remain independent preferences.
