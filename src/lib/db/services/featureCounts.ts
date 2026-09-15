@@ -25,7 +25,6 @@ type FeatureQueryCounts = {
 /** The aggregate output shared by direct count queries and maintained rollup sums. */
 type FeatureCountGroup = { neighbourhood: string | null; count: number }
 
-
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -112,7 +111,10 @@ export async function getFeatureQueryCounts(
           count: sql<number>`sum("feature"."totalCount")`,
         })
         .from(sql`${featureCountRollup} as "feature"`)
-        .leftJoin(divisionI18n, sql`${divisionI18n.divisionId} = "feature"."divisionId" and ${divisionI18n.locale} = 'en'`)
+        .leftJoin(
+          divisionI18n,
+          sql`${divisionI18n.divisionId} = "feature"."divisionLeafId" and ${divisionI18n.locale} = 'en'`,
+        )
         .where(and(...rollupConditions))
         .groupBy(divisionI18n.name),
     )

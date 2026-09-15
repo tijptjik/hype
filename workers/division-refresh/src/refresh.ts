@@ -333,6 +333,24 @@ async function geocodeJobs(
       )
       if ([...selected].some(id => !members.has(id)))
         throw new Error('DIVISION_GEOCODE_MISSING_MEMBERSHIP')
+      // Equivalent level-one locality and administrative branches resolve to the
+      // administrative division for HYPE's canonical hierarchy.
+      const hasAdministrativeLevelOne = [...members.values()].some(
+        member =>
+          selected.has(member.id) &&
+          member.level === 1 &&
+          member.category === 'administrative',
+      )
+      const chosen = [...members.values()].filter(
+        member =>
+          selected.has(member.id) &&
+          !(
+            hasAdministrativeLevelOne &&
+            member.level === 1 &&
+            member.category === 'locality'
+          ),
+      )
+      const chosenIds = new Set(chosen.map(member => member.id))
       // Every mutation rechecks coordinates, job generation and worker ownership in one D1 batch.
       const guard = `EXISTS(SELECT 1 FROM feature f JOIN featureDivisionJob j ON j.featureId=f.id
         WHERE f.id=? AND f.geometry=? AND j.generation=?) AND ${FENCE}`
@@ -342,18 +360,6 @@ async function geocodeJobs(
         guarded(
           `DELETE FROM featureDivisionMembership WHERE featureId=? AND ${guard}`,
           [job.id],
-        ),
-        guarded(
-          `INSERT INTO featureDivisionResolution SELECT ?,?,?,?,? WHERE ${guard}
-          ON CONFLICT(featureId) DO UPDATE SET apiReleaseSet=excluded.apiReleaseSet,
-          geometry=excluded.geometry,status=excluded.status,result=excluded.result`,
-          [
-            job.id,
-            release,
-            job.geometry,
-            result?.status ?? 'unsupported_geometry',
-            JSON.stringify(result ?? {}),
-          ],
         ),
       ]
       for (const member of members.values()) {
@@ -368,12 +374,11 @@ async function geocodeJobs(
           guarded(
             `INSERT INTO featureDivisionMembership SELECT id,?,?
           FROM feature WHERE id=? AND ${guard}`,
-            [member.id, Number(selected.has(member.id)), job.id],
+            [member.id, Number(chosenIds.has(member.id)), job.id],
           ),
         )
       }
-      // Project only unique selections; overlapping branches remain in the membership index.
-      const chosen = [...members.values()].filter(member => selected.has(member.id))
+      // Project only canonical selections; non-canonical branches remain for invalidation.
       const unique = (ids: string[]): string | null =>
         ids.length === 1 ? ids[0] : null
       const levels = Array.from({ length: 6 }, (_, index) =>
@@ -391,7 +396,7 @@ async function geocodeJobs(
           .filter(member => member.category !== 'landform')
           .map(member => member.level ?? -1),
       )
-      const divisionId = unique(
+      const divisionLeafId = unique(
         chosen
           .filter(member => member.category !== 'landform' && member.level === deepest)
           .map(member => member.id),
@@ -416,9 +421,9 @@ async function geocodeJobs(
       )
       writes.push(
         guarded(
-          `UPDATE feature SET divisionId=?,divisionLevel1Id=?,divisionLevel2Id=?,divisionLevel3Id=?,
+          `UPDATE feature SET divisionLeafId=?,divisionLevel1Id=?,divisionLevel2Id=?,divisionLevel3Id=?,
         divisionLevel4Id=?,divisionLevel5Id=?,divisionLevel6Id=?,landformLeafId=? WHERE id=? AND ${guard}`,
-          [divisionId, ...levels, landformLeafId, job.id],
+          [divisionLeafId, ...levels, landformLeafId, job.id],
         ),
       )
       writes.push(

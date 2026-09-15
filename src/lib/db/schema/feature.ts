@@ -75,8 +75,8 @@ export const feature = sqliteTable(
     geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
     // Derived H3 membership is persisted with geometry and materialized by SQL triggers.
     spatialIndex: text('spatialIndex', { mode: 'json' }).$type<FeatureSpatialIndex>(),
-    // SaanSeoi selections; null means absent or multiple valid divisions at this level.
-    divisionId: text('divisionId').references(() => divisionDefinition.id),
+    // Canonical SaanSeoi selections; level 1 prefers the administrative branch.
+    divisionLeafId: text('divisionLeafId').references(() => divisionDefinition.id),
     divisionLevel1Id: text('divisionLevel1Id').references(() => divisionDefinition.id),
     divisionLevel2Id: text('divisionLevel2Id').references(() => divisionDefinition.id),
     divisionLevel3Id: text('divisionLevel3Id').references(() => divisionDefinition.id),
@@ -124,7 +124,7 @@ export const feature = sqliteTable(
       .notNull(),
   },
   table => [
-    index('feature_divisionId').on(table.divisionId, table.id),
+    index('feature_divisionLeafId').on(table.divisionLeafId, table.id),
     index('feature_divisionLevel1Id').on(table.divisionLevel1Id, table.id),
     index('feature_divisionLevel2Id').on(table.divisionLevel2Id, table.id),
     index('feature_divisionLevel3Id').on(table.divisionLevel3Id, table.id),

@@ -27,21 +27,7 @@ export const divisionRefreshChange = sqliteTable('divisionRefreshChange', {
   featureCursor: text('featureCursor').notNull().default(''),
 })
 
-/** Source coordinates and release accompany every authoritative resolution. */
-export const featureDivisionResolution = sqliteTable('featureDivisionResolution', {
-  featureId: text('featureId')
-    .primaryKey()
-    .references(() => feature.id, {
-      onDelete: 'cascade',
-      onUpdate: 'cascade',
-    }),
-  apiReleaseSet: text('apiReleaseSet').notNull(),
-  geometry: text('geometry').notNull(),
-  status: text('status').notNull(),
-  result: text('result', { mode: 'json' }).notNull(),
-})
-
-/** Candidate IDs permit future invalidation; only selected entries contribute counts. */
+/** Resolved and non-canonical IDs retain dependencies for targeted refreshes. */
 export const featureDivisionMembership = sqliteTable(
   'featureDivisionMembership',
   {

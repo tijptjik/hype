@@ -73,7 +73,9 @@ import type { FeatureListDBRaw } from '$lib/db/zod/schema/feature.types'
  */
 function expandNeighbourhoods(values: string[]): string[] {
   const subdivisions = buildNeighbourhoodSubdivisionMap('en')
-  return [...new Set(values.flatMap(value => [value, ...(subdivisions.get(value) ?? [])]))]
+  return [
+    ...new Set(values.flatMap(value => [value, ...(subdivisions.get(value) ?? [])])),
+  ]
 }
 
 /**
@@ -453,11 +455,11 @@ export function buildFeatureRollupConditions(
 
   if (input.filters?.neighbourhoods?.length)
     conditions.push(
-      sql`"feature"."divisionId" in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.neighbourhoods))})))`,
+      sql`"feature"."divisionLeafId" in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.neighbourhoods))})))`,
     )
   if (input.filters?.excludeNeighbourhoods?.length)
     conditions.push(
-      sql`"feature"."divisionId" not in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.excludeNeighbourhoods))})))`,
+      sql`"feature"."divisionLeafId" not in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.excludeNeighbourhoods))})))`,
     )
   return conditions
 }

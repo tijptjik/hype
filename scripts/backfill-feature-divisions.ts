@@ -81,7 +81,6 @@ try {
     if (pending.failed) throw new Error('Geocoding jobs failed and remain queued. Inspect featureDivisionJob.lastError; rerun after retryAt.')
     if (state.phase === 'idle' && !pending.count) {
       console.log(JSON.stringify({ complete: true, release: state.appliedRelease,
-        statuses: sqlite.query('SELECT status,count(*) AS count FROM featureDivisionResolution GROUP BY status').all(),
         divisions: sqlite.query('SELECT count(*) AS count FROM divisionDefinition').get(),
         names: sqlite.query('SELECT locale,count(*) AS count FROM divisionI18n GROUP BY locale').all(),
         foreignKeyViolations: sqlite.query('PRAGMA foreign_key_check').all().length,

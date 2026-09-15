@@ -344,7 +344,7 @@ export const organisationPropertyRelations = relations(
  */
 export const featureRelations = relations(feature, ({ one, many }) => ({
   division: one(divisionDefinition, {
-    fields: [feature.divisionId],
+    fields: [feature.divisionLeafId],
     references: [divisionDefinition.id],
   }),
   divisionMemberships: many(featureDivisionMembership),
