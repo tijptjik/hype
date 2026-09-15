@@ -1,0 +1,401 @@
+// @vitest-environment node
+// NODE
+import { DatabaseSync } from 'node:sqlite'
+import { readFileSync } from 'node:fs'
+// VITEST
+import { afterEach, describe, expect, it, vi } from 'vitest'
+// SERVICES
+import { refreshDivisions } from '../../workers/division-refresh/src/refresh'
+import {
+  apiRead,
+  covers,
+  geocodeSchema,
+  polygonSchema,
+} from '../../workers/division-refresh/src/api'
+// TYPES
+import type { D1Database } from '@cloudflare/workers-types'
+
+const stores: DatabaseSync[] = []
+afterEach(() => {
+  for (const db of stores.splice(0)) db.close()
+})
+const now = Date.UTC(2026, 8, 13)
+const polygon = {
+  type: 'Polygon',
+  coordinates: [
+    [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+      [0, 0],
+    ],
+  ],
+}
+const member = (id: string) => ({
+  id,
+  level: 5,
+  category: 'hood',
+  class: 'neighbourhood',
+  names: { en: id },
+})
+const geocoded = (ids = ['village'], release = 'r2') => ({
+  data: {
+    status: 'resolved',
+    memberships: ids.map(member),
+    selectedAncestryIds: ids,
+    path: ids,
+    landform: { memberships: [], paths: [] },
+  },
+  meta: { release: { apiReleaseSet: release } },
+})
+const definition = (geometry = polygon) => ({
+  divisionId: 'village',
+  apiReleaseSet: 'r2',
+  attributes: member('village'),
+  membershipGeometry: [{ geometry }],
+})
+const change = (overrides = {}) => ({
+  id: 'c1',
+  divisionId: 'village',
+  type: 'revision',
+  canAffectGeocodingMembership: true,
+  before: definition(),
+  after: definition(),
+  affectedDescendantIds: { before: [], after: [] },
+  ...overrides,
+})
+const page = (data = [change()], nextCursor: string | null = null) => ({
+  data,
+  meta: {
+    fromApiReleaseSet: { id: 'id1', code: 'r1' },
+    toApiReleaseSet: { id: 'id2', code: 'r2' },
+    comparisonId: 'comparison',
+    nextCursor,
+    membershipGeometry: 'stub',
+  },
+})
+
+/** Runs production statements and atomic D1 batches against real SQLite. */
+function setup() {
+  const sqlite = new DatabaseSync(':memory:')
+  stores.push(sqlite)
+  sqlite.exec(`PRAGMA foreign_keys=ON;
+    CREATE TABLE feature(id TEXT PRIMARY KEY, geometry TEXT NOT NULL,
+    organisationId TEXT DEFAULT 'org',projectId TEXT DEFAULT 'project',layerId TEXT DEFAULT 'layer',
+    isPublished INTEGER DEFAULT 1,isArchived INTEGER DEFAULT 0,isDraft INTEGER DEFAULT 0,
+    isVisitable INTEGER DEFAULT 1,isIntangible INTEGER DEFAULT 0);`)
+  sqlite.exec(readFileSync('migrations/0082_feature_division_refresh.sql', 'utf8'))
+  const prepare = (sql: string, values: unknown[] = []) => ({
+    bind: (...args: unknown[]) => prepare(sql, args),
+    first: async () => sqlite.prepare(sql).get(...(values as never[])) ?? null,
+    all: async () => ({
+      results: sqlite.prepare(sql).all(...(values as never[])),
+      success: true,
+    }),
+    run: async () => ({
+      success: true,
+      meta: {
+        changes: Number(sqlite.prepare(sql).run(...(values as never[])).changes),
+      },
+    }),
+  })
+  const db = {
+    prepare,
+    batch: async (statements: ReturnType<typeof prepare>[]) => {
+      sqlite.exec('BEGIN')
+      try {
+        const results = []
+        for (const statement of statements) results.push(await statement.run())
+        sqlite.exec('COMMIT')
+        return results
+      } catch (error) {
+        sqlite.exec('ROLLBACK')
+        throw error
+      }
+    },
+  } as unknown as D1Database
+  const add = (id: string, x = 5, y = 5) =>
+    sqlite
+      .prepare('INSERT INTO feature(id,geometry) VALUES(?,?)')
+      .run(id, JSON.stringify({ type: 'Point', coordinates: [x, y] }))
+  const tick = (fetcher: typeof fetch) =>
+    refreshDivisions(db, { baseUrl: 'https://api.saanseoi.hk', fetcher }, now)
+  const count = (table: string) =>
+    Number(sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n)
+  return { sqlite, db, add, tick, count }
+}
+
+describe('division refresh', () => {
+  it('uses the actual public API key header and pins the geocoding release', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
+    await apiRead(
+      { baseUrl: 'https://api.saanseoi.hk', token: 'test-key', fetcher },
+      '/api/v1/divisions/geocode',
+      { lat: '5', lng: '5', apiReleaseSet: 'r2' },
+      geocodeSchema,
+    )
+    expect(fetcher.mock.calls[0][1]).toMatchObject({
+      headers: { 'x-api-key': 'test-key' },
+      redirect: 'error',
+    })
+    expect(
+      new URL(String(fetcher.mock.calls[0][0])).searchParams.get('apiReleaseSet'),
+    ).toBe('r2')
+  })
+
+  it('rejects an upstream comparison that changes release during pagination', async () => {
+    const s = setup()
+    s.sqlite.exec(
+      "UPDATE divisionRefresh SET appliedRelease='r1',targetRelease='r2',targetReleaseId='id2',comparisonId='comparison',phase='changes',cursor='next'",
+    )
+    const result = page([])
+    result.meta.toApiReleaseSet.id = 'different'
+    await expect(s.tick(async () => Response.json(result))).rejects.toThrow(
+      'RELEASE_MISMATCH',
+    )
+    expect(
+      s.sqlite.prepare('SELECT cursor,appliedRelease FROM divisionRefresh').get(),
+    ).toMatchObject({ cursor: 'next', appliedRelease: 'r1' })
+  })
+
+  it('retries a geocode response for the wrong release without replacing membership', async () => {
+    const s = setup()
+    s.add('a')
+    await s.tick(async () => Response.json(geocoded()))
+    await s.tick(async () => Response.json(geocoded(['wrong'], 'r3')))
+    expect(s.count('featureDivisionMembership')).toBe(0)
+    expect(s.count('featureDivisionJob')).toBe(1)
+  })
+
+  it('adds spatial members across resumable candidate batches without touching outside features', async () => {
+    const s = setup()
+    for (let i = 0; i < 105; i++) s.add(String(i).padStart(3, '0'))
+    s.add('outside', 50, 50)
+    s.sqlite.exec(
+      "DELETE FROM featureDivisionJob; UPDATE divisionRefresh SET appliedRelease='r1',phase='changes'",
+    )
+    const fetcher = vi.fn<typeof fetch>(async () =>
+      Response.json(page([change({ type: 'addition', before: null })])),
+    )
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    expect(s.count('featureDivisionJob')).toBe(100)
+    expect(s.count('divisionRefreshChange')).toBe(1)
+    await s.tick(fetcher)
+    expect(s.count('featureDivisionJob')).toBe(105)
+    expect(s.count('divisionRefreshChange')).toBe(0)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  it('bootstraps once, counts unique division IDs and keeps scope moves and deletes exact', async () => {
+    const s = setup()
+    s.add('a')
+    s.add('b')
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    expect(
+      s.sqlite.prepare('SELECT appliedRelease,phase FROM divisionRefresh').get(),
+    ).toMatchObject({ appliedRelease: 'r2', phase: 'idle' })
+    expect(
+      s.sqlite.prepare('SELECT totalCount FROM featureDivisionCountRollup').get()
+        ?.totalCount,
+    ).toBe(2)
+    s.sqlite.exec("UPDATE feature SET layerId='other' WHERE id='a'")
+    expect(s.count('featureDivisionCountRollup')).toBe(2)
+    s.sqlite.exec("DELETE FROM feature WHERE id='a'")
+    expect(
+      s.sqlite.prepare('SELECT totalCount FROM featureDivisionCountRollup').get()
+        ?.totalCount,
+    ).toBe(1)
+    await s.tick(fetcher)
+    expect(fetcher).toHaveBeenCalledTimes(3)
+  })
+
+  it('rechecks new geometry on expansion while avoiding unaffected features', async () => {
+    const s = setup()
+    s.add('old', 20, 20)
+    s.add('new')
+    s.add('outside', 30, 30)
+    const first = vi.fn<typeof fetch>(async (url: URL | RequestInfo) =>
+      Response.json(
+        geocoded(
+          new URL(String(url)).searchParams.get('lng') === '20'
+            ? ['village']
+            : ['different'],
+          'r1',
+        ),
+      ),
+    )
+    await s.tick(first)
+    await s.tick(first)
+    s.sqlite.exec("UPDATE divisionRefresh SET checkedMonth='2026-08'")
+    const fetcher = vi.fn<typeof fetch>(async (url: URL | RequestInfo) =>
+      Response.json(String(url).includes('/changes') ? page() : geocoded()),
+    )
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    expect(
+      s.sqlite
+        .prepare('SELECT featureId FROM featureDivisionJob ORDER BY featureId')
+        .all(),
+    ).toEqual([{ featureId: 'new' }, { featureId: 'old' }])
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    expect(
+      s.sqlite.prepare('SELECT appliedRelease FROM divisionRefresh').get()
+        ?.appliedRelease,
+    ).toBe('r2')
+    expect(fetcher).toHaveBeenCalledTimes(3)
+  })
+
+  it('schedules deletions and transitive descendants without a spatial scan', async () => {
+    const s = setup()
+    s.add('a', 30, 30)
+    s.add('b', 40, 40)
+    await s.tick(async () => Response.json(geocoded(['child'], 'r1')))
+    await s.tick(async () => Response.json(geocoded(['child'], 'r1')))
+    s.sqlite.exec("UPDATE divisionRefresh SET checkedMonth='2026-08'")
+    const fetcher = vi.fn<typeof fetch>(async () =>
+      Response.json(
+        page([
+          change({
+            type: 'deletion',
+            after: null,
+            affectedDescendantIds: { before: ['child'], after: [] },
+          }),
+        ]),
+      ),
+    )
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    expect(s.count('featureDivisionJob')).toBe(2)
+  })
+
+  it('refreshes metadata without geocoding and pins pagination', async () => {
+    const s = setup()
+    s.sqlite.exec("UPDATE divisionRefresh SET appliedRelease='r1',phase='changes'")
+    const fetcher = vi.fn<typeof fetch>(async () =>
+      Response.json(page([change({ canAffectGeocodingMembership: false })], 'next')),
+    )
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    fetcher.mockImplementation(async () => Response.json(page([], null)))
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    const url = new URL(String(fetcher.mock.calls[1][0]))
+    expect(url.searchParams.get('toApiReleaseSet')).toBe('r2')
+    expect(url.searchParams.get('page[cursor]')).toBe('next')
+    expect(s.count('divisionDefinition')).toBe(1)
+    expect(
+      s.sqlite.prepare('SELECT appliedRelease FROM divisionRefresh').get()
+        ?.appliedRelease,
+    ).toBe('r2')
+  })
+
+  it('rejects stale coordinates and retains a newer job generation', async () => {
+    const s = setup()
+    s.add('a')
+    await s.tick(async () => Response.json(geocoded()))
+    await s.tick(async () => {
+      s.sqlite.exec(
+        `UPDATE feature SET geometry='{"type":"Point","coordinates":[8,8]}' WHERE id='a'`,
+      )
+      return Response.json(geocoded())
+    })
+    expect(s.count('featureDivisionMembership')).toBe(0)
+    expect(s.count('featureDivisionJob')).toBe(1)
+    expect(
+      s.sqlite.prepare('SELECT appliedRelease FROM divisionRefresh').get()
+        ?.appliedRelease,
+    ).toBeNull()
+    await s.tick(async () => Response.json(geocoded()))
+    expect(s.count('featureDivisionJob')).toBe(0)
+  })
+
+  it('keeps failed jobs durable and does not publish the target', async () => {
+    const s = setup()
+    s.add('a')
+    await s.tick(async () => Response.json(geocoded()))
+    await s.tick(async () => new Response('', { status: 503 }))
+    expect(
+      s.sqlite.prepare('SELECT attempts,retryAt FROM featureDivisionJob').get(),
+    ).toMatchObject({ attempts: 1, retryAt: now + 30000 })
+    expect(
+      s.sqlite.prepare('SELECT appliedRelease FROM divisionRefresh').get()
+        ?.appliedRelease,
+    ).toBeNull()
+  })
+
+  it('fences an expired owner even after an upstream response arrives', async () => {
+    const s = setup()
+    s.add('a')
+    await s.tick(async () => Response.json(geocoded()))
+    await s.tick(async () => {
+      s.sqlite.exec("UPDATE divisionRefresh SET lease='new-owner'")
+      return Response.json(geocoded())
+    })
+    expect(s.count('featureDivisionMembership')).toBe(0)
+    expect(s.sqlite.prepare('SELECT lease FROM divisionRefresh').get()?.lease).toBe(
+      'new-owner',
+    )
+  })
+
+  it('rolls back count deltas when membership publication fails', async () => {
+    const s = setup()
+    s.add('a')
+    await s.tick(async () => Response.json(geocoded()))
+    s.sqlite.exec(`CREATE TRIGGER reject_resolution BEFORE INSERT ON featureDivisionMembership
+      BEGIN SELECT RAISE(ABORT,'injected'); END;`)
+    await s.tick(async () => Response.json(geocoded()))
+    expect(s.count('featureDivisionResolution')).toBe(0)
+    expect(s.count('featureDivisionCountRollup')).toBe(0)
+    expect(s.count('featureDivisionJob')).toBe(1)
+  })
+
+  it('stores ambiguity without selecting both branches', async () => {
+    const s = setup()
+    s.add('a')
+    await s.tick(async () => Response.json(geocoded()))
+    const response = geocoded(['one', 'two'])
+    await s.tick(async () =>
+      Response.json({
+        ...response,
+        data: {
+          ...response.data,
+          status: 'ambiguous',
+          path: null,
+          selectedAncestryIds: null,
+        },
+      }),
+    )
+    expect(s.count('featureDivisionMembership')).toBe(2)
+    expect(s.count('featureDivisionCountRollup')).toBe(0)
+    expect(s.count('featureDivisionJob')).toBe(0)
+  })
+
+  it('includes polygon boundaries and excludes hole interiors', () => {
+    const geometry = polygonSchema.parse({
+      ...polygon,
+      coordinates: [
+        ...polygon.coordinates,
+        [
+          [2, 2],
+          [4, 2],
+          [4, 4],
+          [2, 4],
+          [2, 2],
+        ],
+      ],
+    })
+    expect(covers([0, 5], geometry)).toBe(true)
+    expect(covers([3, 3], geometry)).toBe(false)
+    expect(covers([2, 3], geometry)).toBe(true)
+    expect(covers([8, 8], geometry)).toBe(true)
+    expect(covers([20, 20], geometry)).toBe(false)
+  })
+})

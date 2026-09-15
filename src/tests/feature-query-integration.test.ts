@@ -16,6 +16,12 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
 import type { FeatureQueryPage } from '$lib/types'
 
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }))
+
+vi.mock('$lib/navigation', async importOriginal => {
+  const actual = await importOriginal<typeof import('$lib/navigation')>()
+  return { ...actual, navigate: navigateMock }
+})
 vi.mock('$lib/api/server/featureQueries.remote', () => ({
   getFeaturePage: withRemoteMeta(vi.fn(), 'query'),
 }))
@@ -126,6 +132,7 @@ async function settle(): Promise<void> {
 }
 
 beforeEach(() => {
+  navigateMock.mockReset()
   vi.mocked(getFeaturePage).mockReset()
 })
 afterEach(() => {
@@ -260,6 +267,45 @@ describe('map query integration', () => {
 })
 
 describe('paginated collection activation', () => {
+  it('activates a retained feature without waiting for a remote detail read', async () => {
+    const app = createApp()
+    const feature = row('cached-feature')
+    app.cache.feature.set(feature.id, feature)
+    const getFeatureById = vi.spyOn(app, 'getFeatureById')
+    const omni = createOmni(app)
+
+    await omni.initFeature(feature.id, {
+      focus: false,
+      openCard: true,
+      updateUrl: false,
+    })
+
+    expect(app.getActiveFeature()?.id).toBe(feature.id)
+    expect(getFeatureById).toHaveBeenCalledOnce()
+    expect(getFeatureById).toHaveBeenCalledWith(feature.id, false)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(omni.state.isCardOpen).toBe(true)
+  })
+
+  it('opens a route-hydrated feature without scheduling another URL update', async () => {
+    const app = createApp()
+    const feature = row('route-feature')
+    vi.spyOn(app, 'getFeatureById').mockResolvedValue(feature)
+    const omni = createOmni(app)
+
+    await omni.initFeature(feature.id, {
+      focus: false,
+      openCard: true,
+      updateUrl: false,
+    })
+
+    expect(app.getActiveFeature()?.id).toBe(feature.id)
+    expect(navigateMock).not.toHaveBeenCalled()
+
+    app.setActiveFeature(feature.id, { focus: true, openCard: false })
+    expect(navigateMock).toHaveBeenCalledOnce()
+  })
+
   it('activates a freshly retained feature outside the displayed map immediately', async () => {
     const app = createApp()
     const seed = controlledPage(),

@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs'
 import { THEMES, isThemeId, resolveTheme } from '../lib/themes/themes'
 
 describe('hub theme defaults', () => {
-  it('uses Nebula for other hubs and Milque for Breadline', () => {
-    expect(resolveTheme(undefined, 'hype.hk')).toBe('hype-dark')
+  it('uses Nullspace for other hubs and Milque for Breadline', () => {
+    expect(resolveTheme(undefined, 'hype.hk')).toBe('hype-black')
     expect(resolveTheme(undefined, 'breadline.hk')).toBe('breadline-light')
     expect(resolveTheme(undefined, 'WWW.BREADLINE.HK:443')).toBe('breadline-light')
-    expect(resolveTheme(undefined, 'breadline.hk.example.com')).toBe('hype-dark')
+    expect(resolveTheme(undefined, 'breadline.hk.example.com')).toBe('hype-black')
   })
   it('honours each explicit selection and rejects unknown cookie values', () => {
     for (const theme of THEMES) {
