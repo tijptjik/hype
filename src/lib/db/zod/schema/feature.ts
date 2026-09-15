@@ -82,35 +82,41 @@ import type { GeometryObject } from 'geojson'
 // 1. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
-export const FeatureBase = createSelectSchema(feature).extend({
-  geometry: z.custom<GeometryObject>(),
-  addressMeta: z.custom<AddressMeta>().default({}),
-})
+export const FeatureBase = createSelectSchema(feature)
+  .omit({ spatialIndex: true })
+  .extend({
+    geometry: z.custom<GeometryObject>(),
+    addressMeta: z.custom<AddressMeta>().default({}),
+  })
 
-export const FeatureInsert = createInsertSchema(feature).extend({
-  geometry: z.custom<GeometryObject>().prefault({
-    type: 'Point',
-    coordinates: [114.1693671540923, 22.319307515052614],
-  }),
-  addressMeta: z.custom<AddressMeta>().prefault({}),
-  isPublished: FormBoolean.default(false),
-  isPendingReview: FormBoolean.default(false),
-  isArchived: FormBoolean.default(false),
-  isDraft: FormBoolean.default(false),
-  isIntangible: FormBoolean.default(false),
-  isVisitable: FormBoolean.default(true),
-})
+export const FeatureInsert = createInsertSchema(feature)
+  .omit({ spatialIndex: true })
+  .extend({
+    geometry: z.custom<GeometryObject>().prefault({
+      type: 'Point',
+      coordinates: [114.1693671540923, 22.319307515052614],
+    }),
+    addressMeta: z.custom<AddressMeta>().prefault({}),
+    isPublished: FormBoolean.default(false),
+    isPendingReview: FormBoolean.default(false),
+    isArchived: FormBoolean.default(false),
+    isDraft: FormBoolean.default(false),
+    isIntangible: FormBoolean.default(false),
+    isVisitable: FormBoolean.default(true),
+  })
 
-export const FeatureUpdate = createUpdateSchema(feature).extend({
-  geometry: z.custom<GeometryObject>().optional(),
-  addressMeta: z.custom<AddressMeta>().optional(),
-  isPublished: FormBoolean.optional(),
-  isPendingReview: FormBoolean.optional(),
-  isArchived: FormBoolean.optional(),
-  isDraft: FormBoolean.optional(),
-  isIntangible: FormBoolean.optional(),
-  isVisitable: FormBoolean.optional(),
-})
+export const FeatureUpdate = createUpdateSchema(feature)
+  .omit({ spatialIndex: true })
+  .extend({
+    geometry: z.custom<GeometryObject>().optional(),
+    addressMeta: z.custom<AddressMeta>().optional(),
+    isPublished: FormBoolean.optional(),
+    isPendingReview: FormBoolean.optional(),
+    isArchived: FormBoolean.optional(),
+    isDraft: FormBoolean.optional(),
+    isIntangible: FormBoolean.optional(),
+    isVisitable: FormBoolean.optional(),
+  })
 
 export const FeatureI18nBase = createSelectSchema(featureI18n).extend({
   locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]),
