@@ -77,10 +77,12 @@ function expandNeighbourhoods(values: string[]): string[] {
 /**
  * Binds a cursor to every filter and authorization cache discriminator.
  * @param input - Query identity, excluding traversal position.
- * @returns Stable signature for a repeated request with the same payload.
+ * @returns Fixed-size SHA-256 signature for a repeated request with the same payload.
+ * @remarks The cursor carries only the digest, so large filters and viewport exclusions
+ * are transmitted once instead of being copied into every subsequent cursor.
  */
-export function featureQuerySignature(input: FeatureQueryInput): string {
-  return JSON.stringify({
+export async function featureQuerySignature(input: FeatureQueryInput): Promise<string> {
+  const identity = JSON.stringify({
     sorting: input.sorting ?? { sortBy: 'id', sortOrder: 'asc' },
     q: input.q ?? '',
     prisms: input.prisms ?? {},
@@ -89,6 +91,13 @@ export function featureQuerySignature(input: FeatureQueryInput): string {
     excludeIds: input.excludeIds ?? [],
     meta: input.meta,
   })
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(identity),
+  )
+  return [...new Uint8Array(digest)]
+    .map(value => value.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 /**
@@ -291,7 +300,7 @@ export function buildFeatureQueryConditions(
     conditions.push(eq(feature.isVisitable, filters.isVisitable))
   if (filters?.isIntangible !== undefined)
     conditions.push(eq(feature.isIntangible, filters.isIntangible))
-  if (filters?.list) {
+  if (filters?.list?.userId) {
     const listColumn =
       filters.list.listId === 'wishlist'
         ? userFeature.isWishlisted
@@ -303,7 +312,7 @@ export function buildFeatureQueryConditions(
           .select({ id: userFeature.featureId })
           .from(userFeature)
           .where(
-            and(eq(userFeature.userId, filters.list.userId!), eq(listColumn, true)),
+            and(eq(userFeature.userId, filters.list.userId), eq(listColumn, true)),
           ),
       ),
     )
@@ -492,18 +501,15 @@ export async function queryFeaturePage(
           .limit(1)}), '')`
       : sql<string>`${feature.id}`
   // Visit timestamps sort globally across all pages, with immutable IDs breaking ties.
-  if (input.cursor)
-    pageConditions.push(
-      isVisitedSort
-        ? or(
-            compare(sortValue, input.cursor.value ?? ''),
-            and(
-              eq(sortValue, input.cursor.value ?? ''),
-              gt(feature.id, input.cursor.id),
-            ),
-          )!
-        : compare(feature.id, input.cursor.id),
-    )
+  if (input.cursor) {
+    const cursorCondition = isVisitedSort
+      ? or(
+          compare(sortValue, input.cursor.value ?? ''),
+          and(eq(sortValue, input.cursor.value ?? ''), gt(feature.id, input.cursor.id)),
+        )
+      : compare(feature.id, input.cursor.id)
+    if (cursorCondition) pageConditions.push(cursorCondition)
+  }
 
   // Map discovery skips count work entirely; other views reuse rollups or revision-keyed totals.
   const [ids, counts] = await Promise.all([
@@ -573,7 +579,7 @@ export async function queryFeaturePage(
       ids.length > limit
         ? {
             id: pageIds[pageIds.length - 1],
-            signature: featureQuerySignature(input),
+            signature: await featureQuerySignature(input),
             ...(isVisitedSort ? { value: ids[limit - 1].sortValue } : {}),
           }
         : null,

@@ -21,6 +21,8 @@ import {
 } from '../schema'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
+// MAP
+import { createFeatureSpatialIndex } from '$lib/map/featureSpatial'
 // I18N
 import { normalizeI18nLocaleRecord, toLocaleKebab } from '$lib/i18n'
 // TYPES
@@ -100,6 +102,7 @@ export const createFeature = async (
 ): Promise<FeatureDB> =>
   (await insert(db, feature, {
     ...data,
+    spatialIndex: createFeatureSpatialIndex(data.geometry),
     addressMeta: data.addressMeta ?? {},
     isPublished: data.isPublished ?? false,
   })) as FeatureDB
@@ -345,9 +348,6 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   },
 ): Promise<ListResponse<TRow>> => {
   const startedAt = Date.now()
-  // Keyset pages advance using a unique immutable ID, independently of row offsets.
-  if (pagination?.afterId && pagination.afterValue === undefined)
-    conditions.push(gt(feature.id, pagination.afterId))
   const allConditions = [...conditions]
   const hubFilter = getFeatureHubFilter(db, opts)
 
@@ -377,8 +377,12 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
 
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
+  // Keep cursor predicates page-local so totals always describe the complete query.
+  const pageConditions = [...allConditions]
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    pageConditions.push(gt(feature.id, pagination.afterId))
   const orderBy = toOrderByWithLocalizedFields({
-    conditions,
+    conditions: pageConditions,
     cursor:
       pagination?.afterId && pagination.afterValue !== undefined
         ? { id: pagination.afterId, value: pagination.afterValue }
@@ -399,24 +403,27 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
     foreignKeyColumn: featureI18n.featureId,
     localeColumn: featureI18n.locale,
   })
-  const whereClause = allConditions.length > 0 ? and(...allConditions) : undefined
+  const whereClause = pageConditions.length > 0 ? and(...pageConditions) : undefined
+  const countWhereClause = allConditions.length > 0 ? and(...allConditions) : undefined
+  const pageLimit = pagination?.limit ?? undefined
 
-  const data = (await retryBusyRead(() =>
+  const pageRows = (await retryBusyRead(() =>
     db.query.feature.findMany({
       with: withRelations,
       where: whereClause,
-      limit: pagination?.limit ?? undefined,
+      limit: pageLimit === undefined ? undefined : pageLimit + 1,
       offset: pagination?.offset ?? undefined,
       orderBy,
     }),
   )) as unknown as TRow[]
+  const data = pageLimit === undefined ? pageRows : pageRows.slice(0, pageLimit)
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(feature)
   const totalRows = await retryBusyRead(() =>
-    whereClause ? countQuery.where(whereClause) : countQuery,
+    countWhereClause ? countQuery.where(countWhereClause) : countQuery,
   )
   const totalCount = Number(totalRows[0]?.count || 0)
   const offset = pagination?.offset ?? 0
-  const hasMore = offset + data.length < totalCount
+  const hasMore = pageLimit === undefined ? false : pageRows.length > pageLimit
 
   return {
     data,
@@ -662,7 +669,13 @@ export const updateFeatureByIdWithConcurrency = async (
 ): Promise<FeatureDB | undefined> => {
   const [updated] = await db
     .update(feature)
-    .set(params.data)
+    // Persist geometry and its derived memberships together; triggers update lookup rows.
+    .set({
+      ...params.data,
+      ...(params.data.geometry === undefined
+        ? {}
+        : { spatialIndex: createFeatureSpatialIndex(params.data.geometry) }),
+    })
     .where(and(eq(feature.id, params.id), eq(feature.modifiedAt, params.updatedAt)))
     .returning()
 
