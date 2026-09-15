@@ -12,7 +12,7 @@ import {
 import { getProjects } from './project.remote'
 import { getLayers } from './layer.remote'
 // TYPES
-import type { PanelResource, ResourcePage } from '$lib/types'
+import type { PanelResource, ResourcePage } from '$lib/api/services/resourcePage.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

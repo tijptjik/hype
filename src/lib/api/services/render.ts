@@ -7,7 +7,7 @@ import type {
   MapRenderAssetKind,
   MapRenderJob,
   MapRenderRemoteConfig,
-} from '$lib/types'
+} from '$lib/map/renders/render.types'
 
 type RemoteStage = 'preview' | 'production'
 

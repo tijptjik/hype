@@ -16,10 +16,15 @@ import {
 // TYPES
 import type {
   AssetAnalyticsBreakdownItem,
-  AssetAnalyticsLatencyTier,
   AssetAnalyticsSeriesKey,
-} from '$lib/types'
-import type { AssetAnalyticsWindowMetricsCardProps } from '../assetAnalyticsDashboard.types'
+} from '$lib/api/services/assetAnalytics.types'
+import type {
+  AssetAnalyticsWindowMetricsCardProps,
+} from '../assetAnalyticsDashboard.types'
+// TYPES
+
+type AssetAnalyticsLatencyTier = 'p50Ms' | 'p95Ms' | 'p99Ms'
+
 
 type LatencyBar = {
   key: AssetAnalyticsSeriesKey

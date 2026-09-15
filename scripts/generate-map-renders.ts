@@ -11,7 +11,7 @@ import type {
   MapRenderRemoteConfig,
   MapRenderJob,
   PreviewStage,
-} from '../src/lib/types'
+} from '$lib/map/renders/render.types'
 
 type MapRenderSubjectKind = 'styles' | 'layers' | 'projects'
 

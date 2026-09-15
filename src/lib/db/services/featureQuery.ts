@@ -37,7 +37,11 @@ import { getFeatureQueryCounts } from './featureCounts'
 import { chunkedInArray } from '$lib/utils/batch-query'
 import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
-import type { Database, FeatureQueryInput, FeatureQueryPage } from '$lib/types'
+import type { Database } from '$lib/types'
+import type {
+  FeatureQueryInput,
+  FeatureQueryPage,
+} from '$lib/api/services/featureQuery.types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { FeatureListDBRaw } from '$lib/db/zod/schema/feature.types'
 
@@ -63,15 +67,13 @@ import type { FeatureListDBRaw } from '$lib/db/zod/schema/feature.types'
 // +++ Query Predicates
 
 /**
- * Expands English neighbourhood identities to their known subdivisions.
+ * Expands legacy label selectors; new hierarchy filters use stable division IDs.
  * @param values - Selected neighbourhood labels.
  * @returns Unique exact persisted English labels.
  */
 function expandNeighbourhoods(values: string[]): string[] {
   const subdivisions = buildNeighbourhoodSubdivisionMap('en')
-  return [
-    ...new Set(values.flatMap(value => [value, ...(subdivisions.get(value) ?? [])])),
-  ]
+  return [...new Set(values.flatMap(value => [value, ...(subdivisions.get(value) ?? [])]))]
 }
 
 /**
@@ -113,7 +115,8 @@ export function buildFeatureQuerySource(input: FeatureQueryInput): SQL {
     input.spatial ||
     input.q ||
     input.filters?.list ||
-    input.filters?.neighbourhoods?.length
+    input.filters?.neighbourhoods?.length ||
+    input.filters?.divisionIds?.length
   return hasCandidates
     ? sql`${feature} indexed by feature_query_id_idx`
     : sql`${feature} indexed by feature_query_visibility_idx`
@@ -350,6 +353,12 @@ export function buildFeatureQueryConditions(
     )`)
   }
 
+  // Membership lookup uses one JSON bind and never doubles features across selected ancestors.
+  if (filters?.divisionIds?.length)
+    conditions.push(sql`${feature.id} in (
+      select featureId from featureDivisionMembership where selected=1
+      and divisionId in (select value from json_each(${JSON.stringify(filters.divisionIds)}))
+    )`)
   if (filters?.neighbourhoods?.length)
     conditions.push(
       inArray(
@@ -404,6 +413,7 @@ export function buildFeatureRollupConditions(
     input.q ||
     input.spatial ||
     input.filters?.list ||
+    input.filters?.divisionIds?.length ||
     serializeActivePropertyFilters(input.filters?.properties)
   )
     return null
@@ -443,11 +453,11 @@ export function buildFeatureRollupConditions(
 
   if (input.filters?.neighbourhoods?.length)
     conditions.push(
-      sql`"feature"."neighbourhood" in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.neighbourhoods))}))`,
+      sql`"feature"."divisionId" in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.neighbourhoods))})))`,
     )
   if (input.filters?.excludeNeighbourhoods?.length)
     conditions.push(
-      sql`"feature"."neighbourhood" not in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.excludeNeighbourhoods))}))`,
+      sql`"feature"."divisionId" not in (select divisionId from divisionI18n where locale='en' and name in (select value from json_each(${JSON.stringify(expandNeighbourhoods(input.filters.excludeNeighbourhoods))})))`,
     )
   return conditions
 }

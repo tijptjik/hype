@@ -14,9 +14,11 @@ import Categories from '$lib/bits/patterns/panels/sections/categories/Categories
 // ENUMS
 import { Panel as PanelType, PanelSide } from '$lib/enums'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
-import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
+import type {
+  useFilterPanelModel,
+} from '$lib/adapters/panels/useFilterPanelModel.svelte'
 
 // CONTEXT
 

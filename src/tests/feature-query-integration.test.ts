@@ -14,7 +14,7 @@ import { getFeaturePage } from '$lib/api/server/featureQueries.remote'
 import { getFeatureViewportQuery } from '$lib/map/featureSpatial'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
-import type { FeatureQueryPage } from '$lib/types'
+import type { FeatureQueryPage } from '$lib/api/services/featureQuery.types'
 
 const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }))
 

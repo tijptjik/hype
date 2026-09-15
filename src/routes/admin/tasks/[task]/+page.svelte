@@ -53,7 +53,9 @@ import ImageProvider from '$lib/providers/ImageProvider.svelte'
 // REMOTE
 import { getTask, reassignTaskLayer, reviewTask } from '$lib/api/server/tasks.remote'
 // TYPES
-import type { Id, Task, TaskType } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { Task } from '$lib/db/zod/schema/task.types'
+import type { TaskType } from '$lib/api/services/taskReview'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'

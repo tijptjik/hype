@@ -16,7 +16,9 @@ import {
   toggleGenAiField,
 } from '$lib/client/services/form'
 import { HubSubscriptionService } from '$lib/enums'
-import type { FormIssueLike, HubSubscriptionPlacement, LocaleKey } from '$lib/types'
+import type { FormIssueLike } from '$lib/client/services/form.types'
+import type { HubSubscriptionPlacement } from '$lib/api/services/hub.types'
+import type { LocaleKey } from '$lib/types'
 import FormSection from './FormSection.svelte'
 
 type IssueField = {

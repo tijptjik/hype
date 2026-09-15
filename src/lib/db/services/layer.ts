@@ -31,10 +31,10 @@ import type {
   Id,
   LocaleKey,
   Locale,
-  LayerMetadata,
   ListResponse,
   QueryParams,
 } from '$lib/types'
+import type { LayerMetadata } from '$lib/db/zod/schema/layerMetadata.types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {

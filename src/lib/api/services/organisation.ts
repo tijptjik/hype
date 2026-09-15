@@ -26,8 +26,8 @@ import { organisation, organisationProperty } from '$lib/db/schema/index'
 // ENUMS
 import { ImageContextResource } from '$lib/enums'
 // TYPES
+import type { CapabilityDefinitions } from '$lib/capabilities.types'
 import type {
-  CapabilityDefinitions,
   EntityResponse,
   Id,
   ListResponse,

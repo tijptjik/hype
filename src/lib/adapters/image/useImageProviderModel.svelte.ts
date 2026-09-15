@@ -8,7 +8,7 @@ import type {
   ImageCtxConstructorOptions,
   ImageProviderModel,
   ImageProviderSyncTarget,
-} from '$lib/types'
+} from '$lib/context/imageProvider.types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 
 /**

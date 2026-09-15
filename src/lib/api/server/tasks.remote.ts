@@ -65,14 +65,9 @@ import {
   toTaskPrisms,
 } from '$lib/api/services/task'
 // TYPES
-import type {
-  EntityResponse,
-  GuardedCommandContext,
-  GuardedFormContext,
-  Id,
-  ListResponse,
-  TaskDB,
-} from '$lib/types'
+import type { EntityResponse, Id, ListResponse } from '$lib/types'
+import type { GuardedCommandContext, GuardedFormContext } from '$lib/api/guarded.types'
+import type { TaskDB } from '$lib/db/zod/schema/task.types'
 import type {
   BeginMissingReportDraftInput,
   BeginNewFeatureDraftInput,

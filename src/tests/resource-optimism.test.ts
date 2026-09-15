@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { RemoteQuery } from '@sveltejs/kit'
-import type { ResourcePage, PanelResource, FeatureQueryPage } from '$lib/types'
+import type { ResourcePage, PanelResource } from '$lib/api/services/resourcePage.types'
+import type { FeatureQueryPage } from '$lib/api/services/featureQuery.types'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import { withRemoteMeta } from './remote-function-mock'
 vi.mock('$lib/api/server/resources.remote', () => ({
@@ -75,7 +76,7 @@ describe('native collection optimistic projections', () => {
     const cache = new CacheCtx()
     const collection = page([row('feature')])
     cache.featureCollection =
-      collection.query as unknown as import('$lib/types').FeatureCollectionHandle
+      collection.query as unknown as import('$lib/context/featureQuery.types').FeatureCollectionHandle
     cache.optimisticUpdates('feature', {
       meta: { id: 'feature' },
       data: { isPublished: false },

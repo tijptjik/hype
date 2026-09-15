@@ -15,7 +15,7 @@ import {
 } from './property'
 import { UserBasic } from '../user'
 // TYPES
-import type { LayerMetadata } from '$lib/types'
+import type { LayerMetadata } from '$lib/db/zod/schema/layerMetadata.types'
 
 /* ----------------- */
 // LAYER CORESCHEMAS

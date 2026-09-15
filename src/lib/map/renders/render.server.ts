@@ -18,7 +18,7 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureCollection, GeometryObject } from 'geojson'
 // HELPERS
 import { buildMapRenderJob } from './jobs.server'
-import type { MapRenderJob } from '../../types'
+import type { MapRenderJob } from '$lib/map/renders/render.types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

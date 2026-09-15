@@ -106,7 +106,9 @@ import {
   TextArea,
 } from '$lib/bits'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
-import type { HubOrganisationItem } from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types'
+import type {
+  HubOrganisationItem,
+} from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types'
 // ADAPTERS
 import { useImageProviderModel } from '$lib/adapters/image'
 // FACTORIES
@@ -137,18 +139,15 @@ import {
   specifierComponentTypes,
 } from '$lib/enums'
 // TYPES
+import type { Id, Locale, LocaleKey, UserRoleDisco } from '$lib/types'
+import type { User } from '$lib/db/zod/schema/user.types'
 import type {
-  Id,
-  Locale,
-  LocaleKey,
-  User,
-  UserRoleDisco,
   UserRoleFieldNameResolverForm,
   HubOrganisationFieldNameResolverForm,
   FormDataUpdaterForm,
-  HeaderTransitionSnapshot,
-  HubSubscriptionPlacement,
-} from '$lib/types'
+} from '$lib/client/services/form.types'
+import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
+import type { HubSubscriptionPlacement } from '$lib/api/services/hub.types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {

@@ -12,7 +12,7 @@ import type { Component } from 'svelte'
 // ENUMS
 import type { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { FacetType } from '$lib/types'
+import type { FacetType } from '$lib/context/facets'
 
 export const ADMIN_FACETS = {
   core: 'core',

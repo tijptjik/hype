@@ -34,7 +34,8 @@ import type {
   LayerSubmitData,
   LayerSubmitUpdatesParams,
 } from '$lib/db/zod/schema/layer.types'
-import type { FormDataUpdaterForm, Locale } from '$lib/types'
+import type { FormDataUpdaterForm } from '$lib/client/services/form.types'
+import type { Locale } from '$lib/types'
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import TypeIcon from 'virtual:icons/proicons/text'
 

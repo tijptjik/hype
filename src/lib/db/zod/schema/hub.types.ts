@@ -1,11 +1,9 @@
 import type { z } from 'zod'
+import type { EntityResponse, Locale, LocaleKey } from '$lib/types'
 import type {
-  EntityResponse,
   FormLocaleInput,
   FormLocaleSource,
-  Locale,
-  LocaleKey,
-} from '$lib/types'
+} from '$lib/client/services/formLocale.types'
 import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
   HubAdminProfileAPI,

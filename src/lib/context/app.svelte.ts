@@ -3,7 +3,11 @@ import {
   getDefaultLayerResources,
   getPinnedResource,
 } from '$lib/api/server/resources.remote'
-import type { PanelResourceType, PanelResource, ResourcePageInput } from '$lib/types'
+import type {
+  PanelResourceType,
+  PanelResource,
+  ResourcePageInput,
+} from '$lib/api/services/resourcePage.types'
 // DATA
 // NAVIGATION
 import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation'
@@ -57,43 +61,40 @@ import {
   supportedLocaleKeys,
 } from '$lib/enums'
 // GUARDS
-import { isTask } from '$lib/types'
+import { isTask } from '$lib/utils/resourceGuards'
 // TYPES
+import type { ActiveCollection } from '$lib/context/resourceCollection.types'
+import type { Cache } from '$lib/context/cache.types'
+import type { CollectionNavOptions } from '$lib/client/services/form.types'
 import type {
-  ActiveCollection,
-  AppContextState,
-  Cache,
-  CollectionNavOptions,
   Code,
   DeepPartial,
-  FacetType,
-  FilterState,
-  FilteredResources,
-  FilterTriState,
-  FeatureQueryChannel,
-  FeatureMembershipOverride,
-  FeatureQueryFilters,
-  FeatureQueryInput,
-  FeatureSpatialQuery,
   Id,
-  LayoutMode,
   Locale,
   LocaleKey,
   NavigableResource,
-  NewFeatureTask,
-  RangeFilterValue,
   Resource,
   ResourceContext,
-  ResourceTypeWithChildren,
   SessionUser,
-  Task,
   ListResponse,
-  RemoteMap,
-  RemoteListFn,
-  RemoteGetFn,
-  ResourceSortState,
   UserRoleDisco,
 } from '$lib/types'
+import type { FacetType } from '$lib/context/facets'
+import type {
+  FilterState,
+  FilteredResources,
+  ResourceSortState,
+} from '$lib/client/services/filters.types'
+import type { FilterTriState } from '$lib/client/services/viewFilters.types'
+import type { FeatureQueryChannel } from '$lib/context/featureQuery.types'
+import type {
+  FeatureQueryFilters,
+  FeatureQueryInput,
+  FeatureSpatialQuery,
+} from '$lib/api/services/featureQuery.types'
+import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
+import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
+import type { Task } from '$lib/db/zod/schema/task.types'
 import type { Image } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
@@ -113,6 +114,183 @@ import type { PlaceCtx } from './place.svelte'
 import type { ResponsiveCtx } from './responsive.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
+// TYPES
+import type { HierarchicalResourceType, Prisms, EntityResponse } from '$lib/types'
+import type { Component } from 'svelte'
+import type { ViewFilters } from '$lib/client/services/viewFilters.types'
+import type {
+  OrganisationProfile,
+  OrganisationListParamsByProfile,
+  OrganisationListByProfile,
+  OrganisationGetParamsByProfile,
+  OrganisationEntityByProfile,
+} from '$lib/db/zod/schema/organisation.types'
+import type {
+  HubProfile,
+  HubListParamsByProfile,
+  HubListByProfile,
+  HubGetParamsByProfile,
+  HubEntityByProfile,
+} from '$lib/db/zod/schema/hub.types'
+import type {
+  LayerProfile,
+  LayerListParamsByProfile,
+  LayerListByProfile,
+  LayerGetParamsByProfile,
+  LayerEntityByProfile,
+} from '$lib/db/zod/schema/layer.types'
+
+type ResourceTypeWithChildren = Exclude<
+  HierarchicalResourceType,
+  'feature' | 'task'
+>
+
+/* ----------------- */
+// ADMIN CONTROLS
+/* -------- */
+type LayoutMode = 'table' | 'list' | 'card'
+
+type ViewSortingState = Record<FirstClassResource, ResourceSortState>
+
+/* ----------------- */
+// CTX STATE :: APP
+/* -------- */
+
+type AppContextState = {
+  active: {
+    feature: FeatureFromCollection | Feature | null
+    collection: ActiveCollection | null
+  }
+  filters: FilterState
+  prisms: Prisms
+  resources: FilteredResources
+  userFeatures: {
+    wishlisted: UserFeature[]
+    visited: UserFeature[]
+  }
+  userLocation: {
+    coords: {
+      accuracy: number
+      altitude: number | null
+      altitudeAccuracy: number | null
+      heading: number | null
+      latitude: number
+      longitude: number
+      speed: number | null
+    }
+    timestamp: number
+  } | null
+  distancesFromUser: Record<Id, number>
+  nav: {
+    resourceType: NavigableResource | false
+    resourceRef: Id | false
+    facet: FacetType | false
+  }
+  panels: {
+    [key in Panel]: {
+      isOpen: boolean
+      isOpenVisually?: boolean
+      ctx?: {
+        username?: string | null
+        userData?: UserProfile | null
+        observePrisms?: boolean
+      }
+    }
+  }
+  // Header state for unified header system
+  header: {
+    icon: Component<Record<string, unknown>> | null
+    title: string
+    facetTabs: Map<FacetType, string>
+    actions: {
+      showAddButton: boolean
+      showSearch: boolean
+      showLayoutModes: boolean
+      showControlBarToggle: boolean
+      showFormActions: boolean
+    }
+  }
+  // UI state for each resource type
+  ui: {
+    isControlBarVisible: Record<NavigableResource, boolean>
+    layoutMode: Record<NavigableResource, LayoutMode>
+    isSearchFocused: Record<NavigableResource, boolean>
+  }
+  // TIER 3: VIEW FILTERS - Only affect current route/view
+  viewFilters: ViewFilters
+  viewSorting: ViewSortingState
+}
+
+type RemoteListFn<Params, Result> = (
+  params: Params,
+) => Promise<ListResponse<Result>>
+
+type RemoteGetFn<Params, Result> = (
+  params: Params,
+) => Promise<EntityResponse<Result>>
+
+type OrganisationRemoteListFn = <P extends OrganisationProfile = OrganisationProfile>(
+  params: OrganisationListParamsByProfile<P>,
+) => Promise<ListResponse<OrganisationListByProfile<P>>>
+
+type OrganisationRemoteGetFn = <P extends OrganisationProfile = OrganisationProfile>(
+  params: OrganisationGetParamsByProfile<P>,
+) => Promise<EntityResponse<OrganisationEntityByProfile<P>>>
+
+type HubRemoteListFn = <P extends HubProfile = HubProfile>(
+  params: HubListParamsByProfile<P>,
+) => Promise<ListResponse<HubListByProfile<P>>>
+
+type HubRemoteGetFn = <P extends HubProfile = HubProfile>(
+  params: HubGetParamsByProfile<P>,
+) => Promise<EntityResponse<HubEntityByProfile<P>>>
+
+type LayerRemoteListFn = <P extends LayerProfile = LayerProfile>(
+  params: LayerListParamsByProfile<P>,
+) => Promise<ListResponse<LayerListByProfile<P>>>
+
+type LayerRemoteGetFn = <P extends LayerProfile = LayerProfile>(
+  params: LayerGetParamsByProfile<P>,
+) => Promise<EntityResponse<LayerEntityByProfile<P>>>
+
+type RemoteMapEntry<
+  ListParams = unknown,
+  ListResult = unknown,
+  GetParams = unknown,
+  GetResult = unknown,
+> = {
+  list?: RemoteListFn<ListParams, ListResult>
+  get?: RemoteGetFn<GetParams, GetResult>
+}
+
+type RemoteMapEntryByResource = {
+  [FirstClassResource.organisation]: {
+    list?: OrganisationRemoteListFn
+    get?: OrganisationRemoteGetFn
+  }
+  [FirstClassResource.hub]: {
+    list?: HubRemoteListFn
+    get?: HubRemoteGetFn
+  }
+  [FirstClassResource.project]: RemoteMapEntry
+  [FirstClassResource.layer]: {
+    list?: LayerRemoteListFn
+    get?: LayerRemoteGetFn
+  }
+  [FirstClassResource.feature]: RemoteMapEntry
+  [FirstClassResource.task]: RemoteMapEntry
+  [FirstClassResource.property]: RemoteMapEntry
+  [FirstClassResource.user]: RemoteMapEntry
+}
+
+type RemoteMap = { [Key in FirstClassResource]: RemoteMapEntryByResource[Key] }
+
+/** Explicit recent list edits distinguish an optimistic removal from unknown membership. */
+type FeatureMembershipOverride = {
+  row: import('$lib/db/zod/schema/user.types').UserFeature | null
+  updatedAt: number
+}
+
 
 export class AppCtx {
   // Remote queries own transport caching and refreshes.
@@ -2776,7 +2954,7 @@ export class AppCtx {
   ): Promise<unknown> => {
     if (!ref || ref === 'undefined') return undefined
     const remoteGet = this.remoteMap[resource]?.get as
-      | ((params: unknown) => import('$lib/types').ResourceDetailHandle['query'])
+      | ((params: unknown) => import('$lib/context/featureQuery.types').ResourceDetailHandle['query'])
       | undefined
     if (!remoteGet) return undefined
     const scope = this.getRoleScopeQueryKey()

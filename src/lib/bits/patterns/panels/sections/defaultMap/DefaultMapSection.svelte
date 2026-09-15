@@ -5,13 +5,15 @@ import { getI18n } from '$lib/i18n'
 import { m } from '$lib/i18n'
 // API
 // CONTEXT
-import type { useDefaultMapSettingsModel } from '$lib/adapters/panels/useDefaultMapSettingsModel.svelte'
+import type {
+  useDefaultMapSettingsModel,
+} from '$lib/adapters/panels/useDefaultMapSettingsModel.svelte'
 // BITS
 import { Switch, cx } from '$lib/bits'
 // COMPONENTS
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 // CONTEXT
 

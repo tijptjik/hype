@@ -10,7 +10,7 @@ import Trophy from 'virtual:icons/proicons/trophy'
 import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 // CONTEXT
 

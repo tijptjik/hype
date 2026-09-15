@@ -11,13 +11,9 @@ import { updateFormData } from '$lib/client/services/form'
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type {
-  Locale,
-  LocaleExtended,
-  Id,
-  RangeFilterValue,
-  FormDataUpdaterForm,
-} from '$lib/types'
+import type { Locale, LocaleExtended, Id } from '$lib/types'
+import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
+import type { FormDataUpdaterForm } from '$lib/client/services/form.types'
 import type {
   Feature,
   FeatureFromCollection,

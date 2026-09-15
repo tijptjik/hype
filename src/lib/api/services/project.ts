@@ -1,5 +1,5 @@
 import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
-import type { CompactAncestorRow } from '$lib/types'
+import type { CompactAncestorRow } from '$lib/api/services/resourcePage.types'
 // DRIZZLE
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
 // CAPABILITIES

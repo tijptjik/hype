@@ -1,4 +1,5 @@
-import type { CapabilityI18nRoot, CapabilityKey, LocaleKey } from '$lib/types'
+import type { CapabilityI18nRoot, CapabilityKey } from '$lib/capabilities.types'
+import type { LocaleKey } from '$lib/types'
 
 export type CapabilitySearchOption = {
   id: CapabilityKey

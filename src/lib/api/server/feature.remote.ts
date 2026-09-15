@@ -76,14 +76,9 @@ import {
   RemoveFeatureSchema,
 } from '$lib/db/zod'
 // TYPES
-import type {
-  EntityResponse,
-  FeatureBulkStateResult,
-  GuardedCommandContext,
-  GuardedQueryContext,
-  Id,
-  ListResponse,
-} from '$lib/types'
+import type { EntityResponse, Id, ListResponse } from '$lib/types'
+import type { FeatureBulkStateResult } from '$lib/client/services/bulkEdit.types'
+import type { GuardedCommandContext, GuardedQueryContext } from '$lib/api/guarded.types'
 import type {
   FeatureCommandProbe,
   FeatureDB,

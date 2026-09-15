@@ -37,8 +37,10 @@ import type {
   HeaderProps,
 } from '$lib/bits/patterns/layout/header'
 import type { Component } from 'svelte'
-import type { FilterState } from '$lib/types'
-import type { HeaderTitleMenuItemConfig } from '$lib/bits/patterns/layout/header/header.types'
+import type { FilterState } from '$lib/client/services/filters.types'
+import type {
+  HeaderTitleMenuItemConfig,
+} from '$lib/bits/patterns/layout/header/header.types'
 
 // +++ Table Of Contents
 // ═══════════════════════

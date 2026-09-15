@@ -95,7 +95,9 @@ import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { RemoteFormOptions } from '$lib/factories.svelte'
 import type { LayerFacet } from '$lib/navigation'
-import type { ParentSectionProjectItem } from '$lib/bits/patterns/forms/formParentSection/formParentSection.types'
+import type {
+  ParentSectionProjectItem,
+} from '$lib/bits/patterns/forms/formParentSection/formParentSection.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {
   Layer,
@@ -103,7 +105,9 @@ import type {
   LayerPropertyPartialExtra,
   LayerSubmitData,
 } from '$lib/db/zod/schema/layer.types'
-import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib/types'
+import type { FormDataUpdaterForm } from '$lib/client/services/form.types'
+import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
+import type { Locale } from '$lib/types'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

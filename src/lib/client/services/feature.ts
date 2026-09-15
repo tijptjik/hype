@@ -4,7 +4,9 @@ import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
 import type { Point } from 'geojson'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { FeatureFieldSectionItem } from '$lib/bits/patterns/forms/formFeatureFieldsSection'
+import type {
+  FeatureFieldSectionItem,
+} from '$lib/bits/patterns/forms/formFeatureFieldsSection'
 import { sortFeatureProperties } from '$lib/client/services/property'
 import { upsertNewFeatureDraft } from '$lib/client/services/task'
 import { NewFeatureMode, OmniMode } from '$lib/enums'

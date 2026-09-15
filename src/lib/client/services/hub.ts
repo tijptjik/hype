@@ -16,17 +16,38 @@ import {
 // TYPES
 import type {
   HubOrganisationFieldNameResolverForm,
-  HubOrganisationHiddenInputAttrs,
-  HubLayerDefaultFieldNameResolverForm,
-  HubLayerDefaultHiddenInputAttrs,
-  Locale,
-} from '$lib/types'
+} from '$lib/client/services/form.types'
+import type { Locale } from '$lib/types'
 import type {
   Hub,
   HubBooleanField,
   HubFormInput,
   HubIdentityPatch,
 } from '$lib/db/zod/schema/hub.types'
+// TYPES
+
+type HubOrganisationHiddenInputAttrs = Record<string, unknown>
+
+type HubLayerDefaultFieldNameResolverForm = {
+  fields: {
+    data?: {
+      layerDefaults?: Array<{
+        hubId?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+        layerId?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+        isDefaultVisible?: {
+          as: (type: 'hidden', value: string) => Record<string, unknown>
+        }
+      }>
+    }
+  }
+}
+
+type HubLayerDefaultHiddenInputAttrs = Record<string, unknown>
+
 
 type HubFormLocale = HubFormInput['data']['i18n']['en']
 type HubFormRootForDefaults = {

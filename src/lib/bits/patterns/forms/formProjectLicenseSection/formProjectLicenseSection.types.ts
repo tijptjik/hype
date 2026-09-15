@@ -1,4 +1,4 @@
-import type { ProjectLicense } from '$lib/types'
+import type { ProjectLicense } from '$lib/db/zod/schema/projectLicense.types'
 import type { ProjectLicenseIntent } from '$lib/client/services/licence'
 
 export type FormProjectLicenseLeafMediaType = 'image' | 'text' | 'data'

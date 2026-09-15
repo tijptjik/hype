@@ -14,8 +14,11 @@ import type {
   GuardedFormContext,
   GuardedIssue,
   GuardedQueryContext,
-  SetupRequestEvent,
-} from '$lib/types'
+} from '$lib/api/guarded.types'
+// TYPES
+
+type SetupRequestEvent = Parameters<typeof setupRequestHandler>[0]
+
 
 // Only query definitions are shared here; results and authorization remain request-local.
 const refreshableQueries = new Set<RemoteQueryFunction<unknown, unknown>>()

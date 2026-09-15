@@ -14,7 +14,10 @@ import {
   TOP_WINDOW_SECTION_ORDER,
 } from './assetAnalyticsDashboard.utils'
 // TYPES
-import type { AssetAnalyticsSeriesKey, AssetAnalyticsWindowKey } from '$lib/types'
+import type {
+  AssetAnalyticsSeriesKey,
+  AssetAnalyticsWindowKey,
+} from '$lib/api/services/assetAnalytics.types'
 import type { AssetAnalyticsDashboardProps } from './assetAnalyticsDashboard.types'
 
 let { state: analyticsState }: AssetAnalyticsDashboardProps = $props()

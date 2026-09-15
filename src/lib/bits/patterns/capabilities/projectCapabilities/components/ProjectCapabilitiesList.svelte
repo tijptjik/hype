@@ -3,7 +3,7 @@ import { Card } from '$lib/bits/custom'
 import { Switch } from '$lib/bits/custom'
 import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
 import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
-import type { CapabilityKey } from '$lib/types'
+import type { CapabilityKey } from '$lib/capabilities.types'
 
 let {
   availableCapabilityKeys,

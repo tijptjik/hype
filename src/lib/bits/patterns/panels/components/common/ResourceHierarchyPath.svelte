@@ -4,7 +4,8 @@ import { getI18n } from '$lib/i18n'
 // CONTEXT
 import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
-import type { Organisation, Project } from '$lib/types'
+import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Project } from '$lib/db/zod/schema/project.types'
 
 const appCtx = getAppCtx()
 

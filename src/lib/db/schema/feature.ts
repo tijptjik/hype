@@ -1,5 +1,6 @@
 import {
   foreignKey,
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -8,6 +9,7 @@ import {
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
+import { divisionDefinition } from './division'
 import { organisation } from './organisation'
 import { project } from './project'
 import { layer } from './layer'
@@ -18,7 +20,8 @@ import { propertyValue } from './property'
 import { supportedLocales } from '../../enums'
 // TYPES
 import type { GeometryObject } from 'geojson'
-import type { AddressProperties, AddressMeta } from '../../types'
+import type { AddressProperties, AddressMeta } from '$lib/utils/address.types'
+import type { FeatureSpatialIndex } from '$lib/db/services/featureSpatial.types'
 
 /* ============================================================================
  * FEATURE MANAGEMENT
@@ -49,64 +52,121 @@ import type { AddressProperties, AddressMeta } from '../../types'
  * - NOT Visitable + Tangible: Delisted
  * - NOT Visitable + NOT Tangible: Delisted
  */
-export const feature = sqliteTable('feature', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
-  organisationId: text('organisationId')
-    .notNull()
-    .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  projectId: text('projectId')
-    .notNull()
-    .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  layerId: text('layerId')
-    .notNull()
-    .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  contributorId: text('contributorId').references(() => user.id, {
-    onDelete: 'set null',
-    onUpdate: 'cascade',
-  }),
+export const feature = sqliteTable(
+  'feature',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    organisationId: text('organisationId')
+      .notNull()
+      .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    contributorId: text('contributorId').references(() => user.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade',
+    }),
 
-  geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
-  // Address Metadata
-  addressMeta: text('addressMeta', {
-    mode: 'json',
-  })
-    .$type<AddressMeta>()
-    .default({}),
-  // True : Feature is shown in the User App
-  // False : Feature is only shown in the Admin Panel
-  isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
-  localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
-  publisherId: text('publisherId').references(() => user.id, {
-    onDelete: 'set null',
-    onUpdate: 'cascade',
-  }),
-  publishedAt: text('publishedAt'),
-  // False : Feature shows up everywhere in the Admin Panel
-  // True : Feature only shows up in the Review Queue
-  isPendingReview: integer('isPendingReview', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  // False : Feature may be shown in the Admin Panel
-  // True : Feature is considered deleted
-  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
-  // False : Feature is visible to regular feature queries.
-  // True : Feature remains hidden until its contribution draft is finalized.
-  isDraft: integer('isDraft', { mode: 'boolean' }).notNull().default(false),
-  localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
-  isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
-  isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(true),
-  visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
+    geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
+    // Derived H3 membership is persisted with geometry and materialized by SQL triggers.
+    spatialIndex: text('spatialIndex', { mode: 'json' }).$type<FeatureSpatialIndex>(),
+    // SaanSeoi selections; null means absent or multiple valid divisions at this level.
+    divisionId: text('divisionId').references(() => divisionDefinition.id),
+    divisionLevel1Id: text('divisionLevel1Id').references(() => divisionDefinition.id),
+    divisionLevel2Id: text('divisionLevel2Id').references(() => divisionDefinition.id),
+    divisionLevel3Id: text('divisionLevel3Id').references(() => divisionDefinition.id),
+    divisionLevel4Id: text('divisionLevel4Id').references(() => divisionDefinition.id),
+    divisionLevel5Id: text('divisionLevel5Id').references(() => divisionDefinition.id),
+    divisionLevel6Id: text('divisionLevel6Id').references(() => divisionDefinition.id),
+    landformLeafId: text('landformLeafId').references(() => divisionDefinition.id),
+    // Address Metadata
+    addressMeta: text('addressMeta', {
+      mode: 'json',
+    })
+      .$type<AddressMeta>()
+      .default({}),
+    // True : Feature is shown in the User App
+    // False : Feature is only shown in the Admin Panel
+    isPublished: integer('isPublished', { mode: 'boolean' }).notNull().default(false),
+    localIsPublished: integer('localIsPublished', { mode: 'boolean' }),
+    publisherId: text('publisherId').references(() => user.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade',
+    }),
+    publishedAt: text('publishedAt'),
+    // False : Feature shows up everywhere in the Admin Panel
+    // True : Feature only shows up in the Review Queue
+    isPendingReview: integer('isPendingReview', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    // False : Feature may be shown in the Admin Panel
+    // True : Feature is considered deleted
+    isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+    // False : Feature is visible to regular feature queries.
+    // True : Feature remains hidden until its contribution draft is finalized.
+    isDraft: integer('isDraft', { mode: 'boolean' }).notNull().default(false),
+    localIsArchived: integer('localIsArchived', { mode: 'boolean' }),
+    isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
+    isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(true),
+    visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
 
-  createdAt: text('createdAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .notNull(),
-  modifiedAt: text('modifiedAt')
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
-    .$onUpdate(() => new Date().toISOString())
-    .notNull(),
-})
+    createdAt: text('createdAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .notNull(),
+    modifiedAt: text('modifiedAt')
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString())
+      .notNull(),
+  },
+  table => [
+    index('feature_divisionId').on(table.divisionId, table.id),
+    index('feature_divisionLevel1Id').on(table.divisionLevel1Id, table.id),
+    index('feature_divisionLevel2Id').on(table.divisionLevel2Id, table.id),
+    index('feature_divisionLevel3Id').on(table.divisionLevel3Id, table.id),
+    index('feature_divisionLevel4Id').on(table.divisionLevel4Id, table.id),
+    index('feature_divisionLevel5Id').on(table.divisionLevel5Id, table.id),
+    index('feature_divisionLevel6Id').on(table.divisionLevel6Id, table.id),
+    index('feature_landformLeafId').on(table.landformLeafId, table.id),
+    index('feature_query_visibility_idx').on(
+      table.isDraft,
+      table.isPublished,
+      table.isArchived,
+      table.layerId,
+      table.organisationId,
+      table.projectId,
+      table.id,
+      table.isVisitable,
+      table.isIntangible,
+    ),
+    index('feature_query_layer_idx').on(
+      table.layerId,
+      table.isDraft,
+      table.isPublished,
+      table.isArchived,
+      table.id,
+      table.organisationId,
+      table.projectId,
+      table.isVisitable,
+      table.isIntangible,
+    ),
+    index('feature_query_id_idx').on(
+      table.id,
+      table.isDraft,
+      table.isPublished,
+      table.isArchived,
+      table.layerId,
+      table.organisationId,
+      table.projectId,
+      table.isVisitable,
+      table.isIntangible,
+    ),
+  ],
+)
 
 /**
  * Feature translations
@@ -169,7 +229,19 @@ export const featureProperty = sqliteTable(
     // set on the propertyValue table.
     value: text('value'),
   },
-  table => [primaryKey({ columns: [table.featureId, table.propertyId] })],
+  table => [
+    primaryKey({ columns: [table.featureId, table.propertyId] }),
+    index('feature_property_selection_idx').on(
+      table.propertyId,
+      table.propertyValueId,
+      table.featureId,
+    ),
+    index('feature_property_range_idx').on(
+      table.propertyId,
+      sql`CAST(${table.value} AS REAL)`,
+      table.featureId,
+    ),
+  ],
 )
 
 /**

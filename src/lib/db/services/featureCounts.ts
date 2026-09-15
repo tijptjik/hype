@@ -2,6 +2,7 @@
 import { and, eq, sql, type SQL } from 'drizzle-orm'
 // DB
 import { feature } from '$lib/db/schema/feature'
+import { divisionI18n } from '$lib/db/schema/division'
 import { featureNeighbourhood } from '$lib/db/schema/featureQuery'
 import {
   featureCountCache,
@@ -11,12 +12,19 @@ import {
 } from '$lib/db/schema/featureCount'
 import { isSqliteBusyError, retryBusyRead } from './sqlite'
 // TYPES
-import type {
-  Database,
-  FeatureCountGroup,
-  FeatureQueryCounts,
-  FeatureQueryInput,
-} from '$lib/types'
+import type { Database } from '$lib/types'
+import type { FeatureQueryInput } from '$lib/api/services/featureQuery.types'
+// TYPES
+
+/** Exact count metadata, stored together for an authorized feature-query fingerprint. */
+type FeatureQueryCounts = {
+  totalCount: number
+  facets: { neighbourhoods: Record<string, number> }
+}
+
+/** The aggregate output shared by direct count queries and maintained rollup sums. */
+type FeatureCountGroup = { neighbourhood: string | null; count: number }
+
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -63,7 +71,7 @@ async function fingerprintFeatureCountQuery(statement: {
   sql: string
   params: unknown[]
 }): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify({ version: 1, ...statement }))
+  const bytes = new TextEncoder().encode(JSON.stringify({ version: 2, ...statement }))
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   return [...new Uint8Array(digest)]
     .map(value => value.toString(16).padStart(2, '0'))
@@ -100,12 +108,13 @@ export async function getFeatureQueryCounts(
     const groups = await retryBusyRead(() =>
       db
         .select({
-          neighbourhood: sql<string>`"feature"."neighbourhood"`,
+          neighbourhood: divisionI18n.name,
           count: sql<number>`sum("feature"."totalCount")`,
         })
         .from(sql`${featureCountRollup} as "feature"`)
+        .leftJoin(divisionI18n, sql`${divisionI18n.divisionId} = "feature"."divisionId" and ${divisionI18n.locale} = 'en'`)
         .where(and(...rollupConditions))
-        .groupBy(sql`"feature"."neighbourhood"`),
+        .groupBy(divisionI18n.name),
     )
     return toFeatureQueryCounts(groups)
   }

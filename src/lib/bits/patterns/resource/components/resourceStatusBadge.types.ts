@@ -1,5 +1,5 @@
 import type { Component } from 'svelte'
-import type { Task } from '$lib/types'
+import type { Task } from '$lib/db/zod/schema/task.types'
 
 export type ResourceStatusBadgeTone = 'neutral' | 'warning' | 'success' | 'error'
 

@@ -1,5 +1,7 @@
 import type { z } from 'zod'
-import type { EntityResponse, FormLocaleInput, LayerMetadata } from '$lib/types'
+import type { EntityResponse } from '$lib/types'
+import type { FormLocaleInput } from '$lib/client/services/formLocale.types'
+import type { LayerMetadata } from '$lib/db/zod/schema/layerMetadata.types'
 import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
   LayerCompactProfileAPI,

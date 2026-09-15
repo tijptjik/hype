@@ -1,7 +1,7 @@
 import type { AvailableLanguageTag } from '../../lib/paraglide/runtime'
 import type { ParaglideLocals } from '@inlang/paraglide-sveltekit'
 import type { Auth, SessionSession, SessionUser } from '$lib/auth'
-import type { AssetRenderJob, MapRenderJob } from '$lib/types'
+import type { AssetRenderJob, MapRenderJob } from '$lib/map/renders/render.types'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { MiniflareD1Database } from 'miniflare'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'

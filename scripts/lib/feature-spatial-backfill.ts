@@ -1,7 +1,7 @@
 // MAP
 import { createFeatureSpatialIndex } from '../../src/lib/map/featureSpatial'
 // TYPES
-import type { FeatureSpatialBackfillRow } from '../../src/lib/types'
+import type { FeatureSpatialBackfillRow } from '$lib/db/services/featureSpatial.types'
 
 /**
  * Quotes a SQL text literal used by the Wrangler file/command interface.

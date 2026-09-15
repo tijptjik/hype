@@ -1,5 +1,6 @@
 import { organisation, project } from '$lib/db/schema'
-import type { AssetAnalyticsScope, Database, UserRoleDisco } from '$lib/types'
+import type { AssetAnalyticsScope } from '$lib/api/services/assetAnalytics.types'
+import type { Database, UserRoleDisco } from '$lib/types'
 import { autochunk, chunkedInArray } from '$lib/utils/batch-query'
 import { getScopedHubAdminIds, isCoreHubAdmin } from './hub'
 

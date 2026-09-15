@@ -1,10 +1,14 @@
 <script lang="ts">
 // ADAPTERS
 import { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
-import { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import {
+  useSavedFeatureListModel,
+} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
 import { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
 import { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
-import { useSettingsPanelModel } from '$lib/adapters/panels/useSettingsPanelModel.svelte'
+import {
+  useSettingsPanelModel,
+} from '$lib/adapters/panels/useSettingsPanelModel.svelte'
 import { getThemeModel } from '$lib/themes/theme.svelte'
 // SVELTE
 import { browser } from '$app/environment'
@@ -40,7 +44,9 @@ import { getActiveMapStyleCode } from '$lib/client/services/map'
 import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
 import Filters from '$lib/bits/patterns/filtersPanel/FiltersPanel.svelte'
 import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
-import { useResourcePanelModel } from '$lib/adapters/panels/useResourcePanelModel.svelte'
+import {
+  useResourcePanelModel,
+} from '$lib/adapters/panels/useResourcePanelModel.svelte'
 import Stars from '$lib/bits/patterns/starsPanel/StarsPanel.svelte'
 import Hub from '$lib/bits/patterns/hubPanel/HubPanel.svelte'
 // import Plan from '$lib/bits/patterns/planPanel/PlanPanel.svelte'
@@ -60,7 +66,7 @@ import {
 import { PageState } from '$lib/enums'
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types'
-import type { HubUserStateFlags } from '$lib/types'
+import type { HubUserStateFlags } from '$lib/api/services/hub.types'
 
 type AppRootProps = LayoutProps & {
   children: Snippet

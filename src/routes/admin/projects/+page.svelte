@@ -4,7 +4,9 @@ import { page } from '$app/state'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
-import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
+import {
+  createAdminIndexCardModel,
+} from '$lib/adapters/cards/createAdminIndexCardModel'
 // SERVICES
 import {
   createSortable,
@@ -28,7 +30,10 @@ import LanguagesIcon from 'virtual:icons/tabler/language'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import CopyleftIcon from 'virtual:icons/proicons/copyright'
 // TYPES
-import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
+import type { KeyMap } from '$lib/client/services/resourceCards.types'
+import type {
+  ResourceControlBarConfig,
+} from '$lib/client/services/resourceFilters.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 
 // CONFIG :: KEY MAP

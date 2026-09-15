@@ -1,7 +1,10 @@
 import { CompactAncestorsSchema } from './api'
 // I18N
 import { m } from '$lib/i18n'
-import type { ProjectLicense, ProjectLicenseRights } from '$lib/types'
+import type {
+  ProjectLicense,
+  ProjectLicenseRights,
+} from '$lib/db/zod/schema/projectLicense.types'
 import {
   createDefaultProjectLicense,
   normalizeProjectLicense,

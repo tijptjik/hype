@@ -28,9 +28,6 @@ import type {
   LocaleKey,
   QueryParams,
   ListResponse,
-  OrganisationProbe,
-  OrganisationUpdateProbe,
-  OrganisationCommandProbe,
 } from '$lib/types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type {
@@ -44,6 +41,29 @@ import type {
   OrganisationRoleDB,
   OrganisationRoleNew,
 } from '$lib/db/zod/schema/organisation.types'
+// TYPES
+import type { CapabilityDefinitions } from '$lib/capabilities.types'
+
+type OrganisationProbe = {
+  id: string
+  hubId: string | null
+  isPublished: boolean
+  isArchived: boolean
+}
+
+type OrganisationUpdateProbe = {
+  id: string
+  code: string
+  hubId: string | null
+  capabilities?: CapabilityDefinitions | null
+  modifiedAt: string
+}
+
+type OrganisationCommandProbe = {
+  id: string
+  hubId: string | null
+}
+
 
 // ═══════════════════════
 // TABLE OF CONTENTS

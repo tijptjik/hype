@@ -5,7 +5,7 @@ import { getUrlForResourceIndex } from '$lib/navigation'
 // ENUMS
 import type { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 // COMPONENTS
 import SectionHeaderRoot from './SectionHeaderRoot.svelte'
 import SectionHeaderTitle from './SectionHeaderTitle.svelte'

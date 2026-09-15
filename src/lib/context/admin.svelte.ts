@@ -13,7 +13,7 @@ import type { AppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import { FirstClassResource, type HierarchicalResource } from '$lib/enums'
 // GUARDS
-import { isTask } from '$lib/types'
+import { isTask } from '$lib/utils/resourceGuards'
 // CLIENT SERVICES
 import {
   getCachedFeatureSpecifierTranslation,
@@ -23,18 +23,22 @@ import {
 import type {
   ListResponse,
   Id,
-  FacetType,
-  Task,
   Code,
   Resource,
-  FilteredResources,
-  ViewFilters,
   LocaleKey,
-  FilterTriState,
   NavigableResource,
+} from '$lib/types'
+import type { FacetType } from '$lib/context/facets'
+import type { Task } from '$lib/db/zod/schema/task.types'
+import type {
+  FilteredResources,
   FilterState,
   ResourceSortState,
-} from '../types'
+} from '$lib/client/services/filters.types'
+import type {
+  ViewFilters,
+  FilterTriState,
+} from '$lib/client/services/viewFilters.types'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'

@@ -125,7 +125,10 @@ import { nanoid } from 'nanoid'
 // SCHEMA
 import { project } from '$lib/db/schema'
 // TYPES
-import type { Id, Prisms, ProjectAuthorizationField, QueryParams } from '$lib/types'
+import type { Id, Prisms, QueryParams } from '$lib/types'
+import type {
+  ProjectAuthorizationField,
+} from '$lib/api/services/authz/authorization.types'
 import type { ProjectAdminDBRaw, ProjectDB } from '$lib/db/zod/schema/project.types'
 import type { MapStyleResolvedDB } from '$lib/db/zod/schema/map.types'
 

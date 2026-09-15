@@ -4,8 +4,38 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 // SERVICES
 import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
-import type { Id, PlaceState, Ref } from '$lib/types'
+import type { Id, Ref } from '$lib/types'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+// TYPES
+
+/* ----------------- */
+// PLACECTX
+/* -------- */
+
+type PlaceState = {
+  filters: {
+    feature: {
+      neighbourhood: {
+        include: SvelteSet<Ref>
+        exclude: SvelteSet<Ref>
+      }
+    }
+  }
+  contains: {
+    feature: {
+      // Mapping neighbourhood name to feature ids
+      neighbourhood: SvelteMap<Ref, SvelteSet<Id>>
+      // Mapping district name to feature ids
+      // districts: Map<string, Id[]>;
+    }
+  }
+  counts: {
+    feature: {
+      neighbourhood: SvelteMap<Ref, number>
+    }
+  }
+}
+
 
 /**
  * PlaceCtx - Manages neighbourhood and place-related state and operations

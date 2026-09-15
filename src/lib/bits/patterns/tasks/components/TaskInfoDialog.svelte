@@ -9,7 +9,7 @@ import GhostIcon from 'virtual:icons/lucide/ghost'
 import TrashIcon from 'virtual:icons/proicons/delete'
 import XCircleIcon from 'virtual:icons/proicons/cancel-circle'
 import type { Component } from 'svelte'
-import type { TaskType } from '$lib/types'
+import type { TaskType } from '$lib/api/services/taskReview'
 
 type ActionDescriptor = {
   label: string

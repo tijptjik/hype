@@ -3,11 +3,13 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WantToVisitSection from '$lib/bits/patterns/panels/sections/wantToVisit/WantToVisitSection.svelte'
 import HaveVisitedSection from '$lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
-import { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import {
+  useSavedFeatureListModel,
+} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
 import { createFeatureQueryEffectRoot } from './fixtures/featureQueryHarness.svelte'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 const mocks = vi.hoisted(() => {
   const feature = {

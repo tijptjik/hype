@@ -2,7 +2,17 @@
 // CONTEXT
 import { setImageCtx } from '$lib/context/image.svelte'
 // TYPES
-import type { ImageProviderProps } from '$lib/types'
+import type { Snippet } from 'svelte'
+import type { ImageProviderModel } from '$lib/context/imageProvider.types'
+
+// PROVIDERS
+
+type ImageProviderProps = {
+  children: Snippet
+  model: ImageProviderModel
+}
+
+// TYPES
 
 let { children, model }: ImageProviderProps = $props()
 

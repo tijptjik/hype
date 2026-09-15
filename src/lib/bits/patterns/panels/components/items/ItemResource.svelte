@@ -18,7 +18,9 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // ENUMS
 import type { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { PanelProps, Neighbourhood, Resource } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { Neighbourhood } from '$lib/utils/geocoding.types'
+import type { Resource, ResourceContext } from '$lib/types'
 
 let pendingFocusRestoreKey: string | null = null
 
@@ -30,7 +32,7 @@ type Props = {
     id: string
     i18n?: Record<string, unknown> | null
   }
-  hierarchy?: { organisation?: unknown; project?: unknown; layer?: unknown }
+  hierarchy?: Pick<ResourceContext, 'organisation' | 'project' | 'layer'>
   selectedClass?: string
   isSelected: boolean
   alwaysShowDot?: boolean

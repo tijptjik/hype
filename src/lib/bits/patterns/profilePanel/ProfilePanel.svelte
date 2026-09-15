@@ -6,7 +6,9 @@ import { m } from '$lib/i18n'
 // BITS
 import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
 // ADAPTERS
-import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import type {
+  useProfilePanelModel,
+} from '$lib/adapters/panels/useProfilePanelModel.svelte'
 // COMPONENTS
 import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
 import ContributionStats from '$lib/bits/patterns/panels/sections/contributionStats/ContributionStatsSection.svelte'
@@ -21,7 +23,7 @@ import LinkedAccounts from '$lib/bits/patterns/panels/sections/linkedAccounts/Li
 // ENUMS
 import { Panel as PanelEnum, PanelSide } from '$lib/enums'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
 
 // CONTEXT

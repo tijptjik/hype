@@ -21,7 +21,8 @@ import { FirstClassResource, OmniMode } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { Id, RangeFilterValue } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
 import type { Property, PropertyValue } from '$lib/db/zod/schema/property.types'
 
 type ClassifierGroup = Awaited<

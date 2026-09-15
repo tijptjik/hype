@@ -78,13 +78,8 @@ import {
   PublishOrganisationSchema,
   RemoveOrganisationSchema,
 } from '$lib/db/zod'
-import type {
-  CapabilityDefinitions,
-  EntityResponse,
-  Id,
-  ListResponse,
-  RelationShape,
-} from '$lib/types'
+import type { CapabilityDefinitions } from '$lib/capabilities.types'
+import type { EntityResponse, Id, ListResponse, RelationShape } from '$lib/types'
 import type {
   OrganisationDB,
   OrganisationEntityByProfile,

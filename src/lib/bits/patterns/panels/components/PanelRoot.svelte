@@ -2,7 +2,7 @@
 import { fly, slide } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 import { PANEL_WIDTH } from '$lib/constants'
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type { Snippet } from 'svelte'
 
 type Props = PanelProps & {

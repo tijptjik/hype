@@ -1,4 +1,4 @@
-import type { CapabilityKey } from '$lib/types'
+import type { CapabilityKey } from '$lib/capabilities.types'
 import type { ProjectRoleCapabilities } from '$lib/db/zod/schema/project.types'
 
 export type UserCapabilityMatrixRow = {

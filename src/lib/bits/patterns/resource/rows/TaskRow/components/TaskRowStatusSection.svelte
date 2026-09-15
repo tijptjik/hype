@@ -1,6 +1,6 @@
 <script lang="ts">
 import ResourceTaskStatusBadge from '../../../components/ResourceTaskStatusBadge.svelte'
-import type { Task } from '$lib/types'
+import type { Task } from '$lib/db/zod/schema/task.types'
 
 let { entity }: { entity: Task } = $props()
 </script>

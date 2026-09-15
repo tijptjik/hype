@@ -32,7 +32,7 @@ import type {
   ProjectLicense,
   ProjectLicenseMediaType,
   ProjectLicenseRights,
-} from '$lib/types'
+} from '$lib/db/zod/schema/projectLicense.types'
 import type { LicenseCardCondition } from '$lib/bits/patterns/cards/licenseCard'
 import type {
   FormProjectLicenseCustomLabels,

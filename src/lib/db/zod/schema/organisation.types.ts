@@ -1,12 +1,11 @@
 import type { z } from 'zod'
+import type { CapabilityDefinitions } from '$lib/capabilities.types'
+import type { EntityResponse, Locale } from '$lib/types'
 import type {
-  CapabilityDefinitions,
-  EntityResponse,
   FormLocaleInput,
   FormLocaleSource,
-  Locale,
-  QueryWithOverride,
-} from '$lib/types'
+} from '$lib/client/services/formLocale.types'
+import type { QueryWithOverride } from '$lib/client/services/formRelations.types'
 import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
   OrganisationCompactProfileAPI,

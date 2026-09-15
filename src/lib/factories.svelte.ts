@@ -10,9 +10,41 @@ import type {
   RemoteQuery,
   RemoteQueryOverride,
 } from '@sveltejs/kit'
-import type { ConfigureFormResourceResultOptions, SubmitOutcome } from '$lib/types'
+
 import { onMount, tick, untrack } from 'svelte'
 import { v7 } from 'uuid'
+// TYPES
+
+type SubmitOutcome = {
+  success: boolean
+  result?: unknown
+  issues?: RemoteFormIssue[]
+  error?: string
+}
+
+type ConfigureFormResourceResultOptions<Input> = {
+  nameKey?: string
+  nameFallbackKey?: string
+  onSuccess?: () => void | Promise<void>
+  getEntity?: () => { data?: Record<string, unknown> | null } | null | undefined
+  refreshResource: (ctx: {
+    data: Input
+    success: boolean
+    issues?: RemoteFormIssue[]
+    error?: string
+    result?: unknown
+    shouldRedirect: boolean
+  }) => Promise<void>
+  shouldRedirect?: (ctx: {
+    data: Input
+    success: boolean
+    issues?: RemoteFormIssue[]
+    error?: string
+    result?: unknown
+  }) => boolean
+  onRedirect?: (ctx: { data: Input; success: boolean }) => void | Promise<void>
+}
+
 
 type Awaitable<T> = T | PromiseLike<T>
 

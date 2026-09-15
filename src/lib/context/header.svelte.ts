@@ -6,7 +6,7 @@ import type {
   HeaderFacetItem,
   HeaderFormActionsState,
   HeaderVisibilityOverrides,
-} from '$lib/types'
+} from '$lib/context/headerState.types'
 import type {
   HeaderButtonActionConfig,
   HeaderCrumb,

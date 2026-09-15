@@ -7,7 +7,8 @@ import { zhHK } from 'date-fns/locale/zh-HK'
 import * as runtime from '$lib/paraglide/runtime'
 import * as m from '$lib/paraglide/messages'
 // TYPES
-import type { Locale, LocaleKey, Neighbourhood } from '$lib/types'
+import type { Locale, LocaleKey } from '$lib/types'
+import type { Neighbourhood } from '$lib/utils/geocoding.types'
 import type { Resource } from '$lib/types'
 import type {
   PropertyValueI18nDB,

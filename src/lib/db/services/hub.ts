@@ -25,16 +25,7 @@ import {
 import { insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
-import type {
-  Database,
-  ListResponse,
-  Locale,
-  LocaleKey,
-  HubProbe,
-  HubUpdateProbe,
-  HubCommandProbe,
-  Id,
-} from '$lib/types'
+import type { Database, ListResponse, Locale, LocaleKey, Id } from '$lib/types'
 import { chunkedInArray } from '$lib/utils/batch-query'
 import type {
   HubDB,
@@ -46,6 +37,25 @@ import type {
   HubOptsExtended,
 } from '$lib/db/zod/schema/hub.types'
 import { hubEntityWithRelations } from '$lib/api/services/hub'
+// TYPES
+
+type HubProbe = {
+  id: string
+  code: string
+  isPublished: boolean
+  isArchived: boolean
+}
+
+type HubUpdateProbe = {
+  id: string
+  code: string
+  modifiedAt: string
+}
+
+type HubCommandProbe = {
+  id: string
+}
+
 
 // ═══════════════════════
 // TABLE OF CONTENTS

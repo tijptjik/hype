@@ -14,7 +14,10 @@ import {
   queryFeaturePage,
 } from '$lib/db/services/featureQuery'
 // TYPES
-import type { FeatureQueryInput, FeatureQueryPage } from '$lib/types'
+import type {
+  FeatureQueryInput,
+  FeatureQueryPage,
+} from '$lib/api/services/featureQuery.types'
 
 const strings = z.array(z.string().min(1).max(200)).max(1000)
 const range = z
@@ -47,6 +50,7 @@ const inputSchema = z.object({
           z.record(z.string().min(1).max(200), z.union([strings, range, z.boolean()])),
         )
         .optional(),
+      divisionIds: strings.optional(),
       neighbourhoods: strings.optional(),
       excludeNeighbourhoods: strings.optional(),
       list: z

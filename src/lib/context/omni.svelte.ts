@@ -24,22 +24,53 @@ import {
   PageState,
 } from '$lib/enums'
 // TYPES
-import type {
-  SearchResult,
-  Id,
-  ActiveCollection,
-  FeatureCardTransitionRect,
-  FeatureCardTransitionState,
-  OmniState,
-  Locale,
-  LocaleKey,
-  OmniCollectionDescriptor,
-  FeatureQueryInput,
-} from '$lib/types'
+import type { SearchResult, OmniCollectionDescriptor } from '$lib/context/omni.types'
+import type { Id, Locale, LocaleKey } from '$lib/types'
+import type { ActiveCollection } from '$lib/context/resourceCollection.types'
+import type { FeatureQueryInput } from '$lib/api/services/featureQuery.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { CardCtx } from './card.svelte'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+// TYPES
+
+type FeatureCardTransitionRect = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+type FeatureCardTransitionSourceKind = 'marker' | 'toggle' | 'none'
+
+type FeatureCardTransitionPhase = 'idle' | 'opening' | 'closing'
+
+type FeatureCardTransitionState = {
+  phase: FeatureCardTransitionPhase
+  sourceRect: FeatureCardTransitionRect | null
+  targetRect: FeatureCardTransitionRect | null
+  sourceRadiusPx: number
+  targetRadiusPx: number
+  sourceKind: FeatureCardTransitionSourceKind
+}
+
+/* ----------------- */
+// APP :: OMNIBAR
+/* -------- */
+
+type OmniState = {
+  // Mode -- search, navigation, or feature
+  mode: OmniMode
+  // Whether the results are shown
+  isTrayOpen: boolean
+  // Whether the card is open
+  isCardOpen: boolean
+  // The value of the search input
+  searchTerm: string
+  // The index of the focused result
+  focusedIndex: number
+}
+
 
 // CONSTANTS
 const MAX_RESULTS = 9

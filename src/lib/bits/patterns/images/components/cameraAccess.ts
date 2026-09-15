@@ -1,5 +1,8 @@
+
 // TYPES
-import type { CameraPermissionStatus } from '$lib/types'
+
+type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied'
+// TYPES
 
 export type CameraAccessState = {
   hasCameraDevice: boolean

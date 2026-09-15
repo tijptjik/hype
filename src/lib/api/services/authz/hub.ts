@@ -15,14 +15,12 @@ import { hasAuthenticatedSession } from './user'
 import type { SQL } from 'drizzle-orm'
 import type {
   AuthorizationDecision,
-  Database,
   HubAuthorizationAction,
   HubAuthorizationField,
   HubAuthorizeParams,
-  HubProfile,
-  Id,
-  UserRoleDisco,
-} from '$lib/types'
+} from '$lib/api/services/authz/authorization.types'
+import type { Database, Id, UserRoleDisco } from '$lib/types'
+import type { HubProfile } from '$lib/db/zod/schema/hub.types'
 import { chunkedInArray } from '$lib/utils/batch-query'
 
 // ═══════════════════════

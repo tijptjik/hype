@@ -22,7 +22,7 @@ import { toLinkedAccountSelector } from '$lib/auth/account-selector'
 import { m } from '$lib/i18n'
 
 // TYPES
-import type { LinkedAuthAccount as Account } from '$lib/types'
+import type { LinkedAuthAccount as Account } from '$lib/client/services/account.types'
 type Passkey = { id: string; name?: string; credentialID: string }
 type SocialProvider = 'facebook' | 'google' | 'wechat'
 type GuestAuthMode = 'create' | 'sign-in'

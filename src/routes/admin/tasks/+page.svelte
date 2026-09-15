@@ -20,8 +20,12 @@ import { m } from '$lib/i18n'
 import FunnelIcon from 'virtual:icons/proicons/filter'
 import TaskIcon from 'virtual:icons/proicons/archive'
 // TYPES
-import { reviewActions } from '$lib/types'
-import type { Id, ResourceControlBarConfig, Task } from '$lib/types'
+import { reviewActions } from '$lib/api/services/taskReview'
+import type { Id } from '$lib/types'
+import type {
+  ResourceControlBarConfig,
+} from '$lib/client/services/resourceFilters.types'
+import type { Task } from '$lib/db/zod/schema/task.types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
 

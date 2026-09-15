@@ -7,7 +7,7 @@ import { image } from './image'
 import { user } from './user'
 // ENUM
 import { ProjectRoleType, supportedLocales } from '../../enums'
-import type { ProjectLicense } from '../../types'
+import type { ProjectLicense } from '$lib/db/zod/schema/projectLicense.types'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,

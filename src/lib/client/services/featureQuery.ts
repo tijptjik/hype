@@ -1,3 +1,5 @@
+// LEGACY LABEL COMPATIBILITY
+import neighbourhoods from '$lib/map/neighbourhoods.json'
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -20,14 +22,13 @@ import { latLngToCell } from 'h3-js'
 // SERVICES
 import { getFeaturePointCoordinates } from '$lib/map/featureSpatial'
 // DATA
-import neighbourhoods from '$lib/map/neighbourhoods.json'
 // TYPES
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type {
   FeatureQueryFilters,
   FeatureQueryInput,
-  FeatureQueryMatchContext,
-} from '$lib/types'
+} from '$lib/api/services/featureQuery.types'
+import type { FeatureQueryMatchContext } from '$lib/context/featureQuery.types'
 
 /********************
  *  1. QUERY IDENTITY
@@ -88,9 +89,9 @@ export function featureListMembershipKey(
 // +++ Cached Matching
 
 /**
- * Expands neighbourhood selectors using the same English source names as the API.
- * @param names - Selected parent or leaf neighbourhood names.
- * @returns Unique raw neighbourhood names included by those selectors.
+ * Expands legacy label selectors; new hierarchy filters use stable division IDs.
+ * @param names - Selected parent or leaf compatibility labels.
+ * @returns Unique labels for the existing navigation catalogue.
  */
 export function expandFeatureNeighbourhoods(names: readonly string[]): string[] {
   const expanded = new Set(names)
@@ -183,7 +184,11 @@ export function matchesFeatureQuery(
     if (typeof filters?.[field] === 'boolean' && row[field] !== filters[field])
       return false
 
-  const neighbourhood = row.i18n?.en?.addressProperties?.neighbourhood
+  if (filters?.divisionIds?.length && !row.divisionMemberships?.some(member => member.selected && filters.divisionIds!.includes(member.divisionId)))
+    return false
+  const neighbourhood = row.division === undefined
+    ? row.i18n?.en?.addressProperties?.neighbourhood
+    : row.division?.i18n.find(value => value.locale === 'en')?.name
   if (
     filters?.neighbourhoods?.length &&
     (!neighbourhood ||

@@ -6,7 +6,7 @@ import { fade } from 'svelte/transition'
 import { Icon } from '$lib/bits'
 import { cx } from '$lib/bits/utils'
 // TYPES
-import type { FeatureCardWishlistActionDisplay } from '$lib/types'
+import type { FeatureCardWishlistActionDisplay } from '$lib/context/featureCard.types'
 // ICONS
 import Star from 'virtual:icons/proicons/star'
 // LOCAL

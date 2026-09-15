@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // TYPES
-import type { ALSResult } from '$lib/types'
+import type { ALSResult } from '$lib/utils/geocoding.types'
 
 const { mockTranslateText } = vi.hoisted(() => ({
   mockTranslateText: vi.fn(),

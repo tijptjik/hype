@@ -27,19 +27,49 @@ import { supportedLocaleKeys, HierarchicalResource } from '../enums'
 import type {
   Field,
   Resource,
-  ResourceDB,
   ResourceType,
   Locale,
   LocaleKey,
   Database,
-  ResourceConfig,
-  ResourceHierarchy,
-  LocaleBundle,
   Prisms,
-} from '../types'
+} from '$lib/types'
 import type { SQLiteTableWithColumns, TableConfig } from 'drizzle-orm/sqlite-core'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+// TYPES
+import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
+import type { ProjectDB } from '$lib/db/zod/schema/project.types'
+import type { LayerDB } from '$lib/db/zod/schema/layer.types'
+import type { FeatureDB } from '$lib/db/zod/schema/feature.types'
+import type { TaskDB } from '$lib/db/zod'
+import type { HubDB } from '$lib/db/zod/schema/hub.types'
+
+type ResourceConfig = {
+  name: string
+  table: SQLiteTableWithColumns<TableConfig>
+  parentName: string | null
+  parentTable: SQLiteTableWithColumns<TableConfig> | null
+  keyToParent: string | null
+  keyToSelf: string
+  depth: number
+}
+
+type ResourceHierarchy = ResourceConfig[]
+
+// Define the shape of a translation object
+interface LocaleBundle {
+  locale: Locale
+  [key: string]: unknown
+}
+
+type ResourceDB =
+  | OrganisationDB
+  | ProjectDB
+  | LayerDB
+  | FeatureDB
+  | TaskDB
+  | HubDB
+
 
 // ═══════════════════════
 // TABLE OF CONTENTS

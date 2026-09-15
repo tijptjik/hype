@@ -10,10 +10,19 @@ import {
   featureSpatialBackfillStatements,
 } from './lib/feature-spatial-backfill'
 // TYPES
-import type {
-  FeatureSpatialBackfillOptions,
-  FeatureSpatialBackfillRow,
-} from '../src/lib/types'
+import type { FeatureSpatialBackfillRow } from '$lib/db/services/featureSpatial.types'
+// TYPES
+
+/** Explicit target and bounded traversal for resumable spatial-index backfills. */
+type FeatureSpatialBackfillOptions = {
+  stage: 'local' | 'preview' | 'production'
+  remote: boolean
+  batchSize: number
+  maxBatches: number
+  afterId: string
+  dryRun: boolean
+}
+
 
 // +++ Table Of Contents
 // ═══════════════════════

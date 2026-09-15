@@ -7,7 +7,7 @@ import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
 
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type {
   AdminPreferenceCode,
   AdminPreferences,

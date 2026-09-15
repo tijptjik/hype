@@ -14,7 +14,7 @@ import { submitNewFeature as submitNewFeatureAPI } from '$lib/client/services/ta
 import { FeatureCardMode } from '$lib/enums'
 // TYPES
 import type { ImageUpload } from '$lib/db/zod/schema/image.types'
-import type { NewFeatureTask } from '$lib/types'
+import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
 // LOCAL
 import FeatureCardSubmitButton from './FeatureCardSubmitButton.svelte'
 

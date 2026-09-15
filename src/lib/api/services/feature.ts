@@ -172,6 +172,8 @@ function parseFeatureProfileWithFallback<T>(
  ************/
 
 const featureListRelations = {
+  division: { with: { i18n: true } },
+  divisionMemberships: { columns: { divisionId: true, selected: true } },
   i18n: true,
   properties: {
     with: {

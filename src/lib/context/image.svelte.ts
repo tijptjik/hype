@@ -28,7 +28,11 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
-import type { Id, ImageCtxConstructorOptions, ImageContextConfig } from '$lib/types'
+import type { Id } from '$lib/types'
+import type {
+  ImageCtxConstructorOptions,
+  ImageContextConfig,
+} from '$lib/context/imageProvider.types'
 import type {
   Image,
   ImageCtxEnvelope,

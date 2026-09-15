@@ -2,7 +2,7 @@ import {
   toCloudflareImageWorkerPath,
   toImageRawIntermediateWorkerPath,
 } from './delivery'
-import type { AssetRenderJob } from '../types'
+import type { AssetRenderJob } from '$lib/map/renders/render.types'
 
 const NON_DERIVATIVE_EXTENSIONS = new Set(['gif', 'svg'])
 const PRIORITY_PRERENDER_TRANSFORMATIONS = [

@@ -1,9 +1,8 @@
 import type { Snippet } from 'svelte'
+import type { NavigableResource, Resource } from '$lib/types'
 import type {
-  NavigableResource,
-  Resource,
   ResourceIndexRowSelectionState,
-} from '$lib/types'
+} from '$lib/client/services/bulkEdit.types'
 
 export type ResourceIndexProps<T extends Resource> = {
   resource: NavigableResource

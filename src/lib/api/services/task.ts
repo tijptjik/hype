@@ -38,10 +38,9 @@ import type {
   QueryParams,
   SessionUser,
   Id,
-  TaskDB,
-  TaskDBRaw,
   UserRoleDisco,
 } from '$lib/types'
+import type { TaskDB, TaskDBRaw } from '$lib/db/zod/schema/task.types'
 import type {
   TaskEditorLayerOption,
   TaskEntityByProfile,

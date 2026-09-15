@@ -39,14 +39,8 @@ import {
   updateImage as updateImageRecord,
 } from '$lib/db/services/image'
 // TYPES
-import type {
-  UserRoleDisco,
-  Database,
-  Id,
-  AssetRenderJob,
-  QueryParams,
-  SessionUser,
-} from '$lib/types'
+import type { UserRoleDisco, Database, Id, QueryParams, SessionUser } from '$lib/types'
+import type { AssetRenderJob } from '$lib/map/renders/render.types'
 import type {
   Image,
   ImageContextEnvelope,

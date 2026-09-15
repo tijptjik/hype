@@ -2,7 +2,9 @@
 import { m, toLocaleKey, translateI18nFields } from '$lib/i18n'
 // API
 import { createLayer, getLayer, getLayers } from '$lib/api/server/layer.remote'
-import { getProjectProperties as getProjectPropertiesRemote } from '$lib/api/server/property.remote'
+import {
+  getProjectProperties as getProjectPropertiesRemote,
+} from '$lib/api/server/property.remote'
 // CONTEXT
 import type { ImportCtx } from '$lib/context/import.svelte'
 // TYPES

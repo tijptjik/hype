@@ -16,15 +16,34 @@ import { translateText } from '$lib/api/external/translation'
 // DATA
 import neighbourhoods from '$lib/map/neighbourhoods.json'
 // TYPES
-import type {
-  AddressProperties,
-  AddressMeta,
-  ReverseGeocodeResult,
-  ParsedReverseGeocodeResult,
-  ALSResult,
-  ALSSuggestedAddressItem,
-  LocaleKey,
-} from '$lib/types'
+import type { AddressProperties, AddressMeta } from '$lib/utils/address.types'
+import type { ParsedReverseGeocodeResult, ALSResult } from '$lib/utils/geocoding.types'
+import type { LocaleKey } from '$lib/types'
+// TYPES
+
+interface ReverseGeocodeResult {
+  address: {
+    Street: string
+    Neighborhood: string | null
+    City: string
+    Subregion: string | null
+    State: string
+    Country: string | null
+    Match_addr: string
+    Loc_name: string
+  }
+  location: {
+    x: number
+    y: number
+    spatialReference: {
+      wkid: number
+      latestWkid: number
+    }
+  }
+}
+
+type ALSSuggestedAddressItem = NonNullable<ALSResult['SuggestedAddress']>[number]
+
 
 // TYPES
 type Neighbourhood = string

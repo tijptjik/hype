@@ -3,7 +3,7 @@
 import type { Snippet } from 'svelte'
 import { slide } from 'svelte/transition'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 type Props = {
   isOpen: boolean

@@ -53,7 +53,7 @@ import * as maplibregl from 'maplibre-gl'
 import type { Point as GeoJSONPoint } from 'geojson'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { StyleSpecification } from 'maplibre-gl'
-import type { FeatureQueryChannel } from '$lib/types'
+import type { FeatureQueryChannel } from '$lib/context/featureQuery.types'
 
 /**
  * Application map adapter. Context and route policy stay at this boundary;

@@ -16,15 +16,9 @@ import {
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { OmniCtx } from '$lib/context/omni.svelte'
-import type {
-  Code,
-  CollectionNavOptions,
-  Id,
-  NavigableResource,
-  Locale,
-  LocaleKey,
-  OmniCollectionDescriptor,
-} from '$lib/types'
+import type { Code, Id, NavigableResource, Locale, LocaleKey } from '$lib/types'
+import type { CollectionNavOptions } from '$lib/client/services/form.types'
+import type { OmniCollectionDescriptor } from '$lib/context/omni.types'
 import type { Image } from '$lib/db/zod/schema/image.types'
 import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'

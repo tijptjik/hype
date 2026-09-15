@@ -1,5 +1,6 @@
 import type { z } from 'zod'
-import type { FormIssueLike, Id, Locale, LocaleKey } from '$lib/types'
+import type { FormIssueLike } from '$lib/client/services/form.types'
+import type { Id, Locale, LocaleKey } from '$lib/types'
 import type {
   ProjectPropertyFormData,
   PropertyAdminProfileAPI,

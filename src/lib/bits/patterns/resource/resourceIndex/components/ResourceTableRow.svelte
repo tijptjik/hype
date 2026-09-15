@@ -1,6 +1,8 @@
 <script lang="ts" generics="T extends ResourceIndexEntity">
 import type { Snippet } from 'svelte'
-import type { ResourceIndexRowSelectionState } from '$lib/types'
+import type {
+  ResourceIndexRowSelectionState,
+} from '$lib/client/services/bulkEdit.types'
 
 type ResourceIndexEntity = { id: string }
 

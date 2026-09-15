@@ -3,7 +3,10 @@ import { untrack, onMount } from 'svelte'
 // REMOTE
 // TYPES
 import type { AppCtx } from './app.svelte'
-import type { PanelResource, PanelResourceType } from '$lib/types'
+import type {
+  PanelResource,
+  PanelResourceType,
+} from '$lib/api/services/resourcePage.types'
 
 /**
  * Connects a panel's find-ahead search and pinned selection to native query results.

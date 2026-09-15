@@ -15,11 +15,10 @@ import { getAddressForQuery, toLocalParseResult } from '$lib/utils/geocoding'
 import type { GeoLookupStatusCounts } from '$lib/client/services/import/features'
 import type {
   ALSResult,
-  AddressMeta,
-  AddressProperties,
-  LocaleKey,
   ParsedReverseGeocodeResultI18n,
-} from '$lib/types'
+} from '$lib/utils/geocoding.types'
+import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
+import type { LocaleKey } from '$lib/types'
 
 type Props = {
   startProcessing?: () => void

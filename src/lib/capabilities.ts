@@ -5,7 +5,7 @@ import type {
   CapabilityDefinitions,
   CapabilityI18nRoot,
   CapabilityKey,
-} from '$lib/types'
+} from '$lib/capabilities.types'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,

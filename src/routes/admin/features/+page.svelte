@@ -6,7 +6,9 @@ import { onMount, untrack } from 'svelte'
 import { debounce } from '@sillvva/utils'
 import { toast } from 'svelte-sonner'
 // ADAPTERS
-import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
+import {
+  createAdminIndexCardModel,
+} from '$lib/adapters/cards/createAdminIndexCardModel'
 // CONTEXT
 import { getAdminCtx } from '$lib/context/admin.svelte'
 import { getHeaderCtrl } from '$lib/context/header.svelte'
@@ -45,19 +47,36 @@ import CopyrightIcon from 'virtual:icons/proicons/copyright'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { FeatureRowModel } from '$lib/client/services/featureRows.types'
 import type {
-  FeatureRowModel,
   FeatureTextSearchWorkerRequest,
   FeatureTextSearchWorkerResponse,
-  FeatureBulkEditOption,
+} from '$lib/client/services/featureTextSearch.types'
+import type {
   FeatureBulkStateResult,
-  KeyMap,
-  ResourceControlBarConfig,
   ResourceIndexRowSelectionState,
   ResourceBulkEditProgress,
-  Resource,
-  LocaleKey,
-} from '$lib/types'
+} from '$lib/client/services/bulkEdit.types'
+import type { KeyMap } from '$lib/client/services/resourceCards.types'
+import type {
+  ResourceControlBarConfig,
+} from '$lib/client/services/resourceFilters.types'
+import type { Resource, LocaleKey } from '$lib/types'
+// TYPES
+import type { ResourceBulkEditOption } from '$lib/client/services/bulkEdit.types'
+
+type FeatureBulkStateField =
+  | 'isPublished'
+  | 'isArchived'
+  | 'isIntangible'
+  | 'isVisitable'
+
+type FeatureBulkEditOption = ResourceBulkEditOption & {
+  field: FeatureBulkStateField
+  state: boolean
+  pastTense: string
+}
+
 
 const BULK_FEATURE_UPDATE_CHUNK_SIZE = 100
 

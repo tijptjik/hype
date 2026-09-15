@@ -1,6 +1,6 @@
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { OmniCollection, OmniMode } from '$lib/enums'
-import type { SearchResult } from '$lib/types'
+import type { SearchResult } from '$lib/context/omni.types'
 import type { Snippet } from 'svelte'
 import type {
   OmnibarNavigationProps,

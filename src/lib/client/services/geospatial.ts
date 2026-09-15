@@ -6,12 +6,29 @@ import neighbourhoods from '$lib/map/neighbourhoods.json'
 import type { LngLatLike } from 'maplibre-gl'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type {
-  Locale,
-  LocaleKey,
-  NeighbourhoodResource,
-  NeighbourhoodJSON,
-} from '$lib/types'
+import type { Locale, LocaleKey } from '$lib/types'
+// TYPES
+import type { Ref } from '$lib/types'
+
+type NeighbourhoodJSON = Record<
+  Ref,
+  {
+    i18n: Record<LocaleKey, NeighbourhoodI18n>
+  }
+>
+
+type NeighbourhoodI18n = {
+  name: string
+  neighbourhood: string
+  area: string
+  district: string
+}
+
+type NeighbourhoodResource = {
+  id: Ref
+  i18n: Record<LocaleKey, NeighbourhoodI18n>
+}
+
 
 // ═══════════════════════
 // TABLE OF CONTENTS

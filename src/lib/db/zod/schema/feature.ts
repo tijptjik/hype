@@ -27,7 +27,7 @@ import { UserBasic } from './user'
 // ENUMS
 import { supportedLocales } from '$lib/enums'
 // TYPES
-import type { AddressMeta, AddressProperties } from '$lib/types'
+import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
 import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════
@@ -85,12 +85,21 @@ import type { GeometryObject } from 'geojson'
 export const FeatureBase = createSelectSchema(feature)
   .omit({ spatialIndex: true })
   .extend({
+    divisionId: z.string().nullish(),
+    divisionLevel1Id: z.string().nullish(),
+    divisionLevel2Id: z.string().nullish(),
+    divisionLevel3Id: z.string().nullish(),
+    divisionLevel4Id: z.string().nullish(),
+    divisionLevel5Id: z.string().nullish(),
+    divisionLevel6Id: z.string().nullish(),
+    landformLeafId: z.string().nullish(),
+
     geometry: z.custom<GeometryObject>(),
     addressMeta: z.custom<AddressMeta>().default({}),
   })
 
 export const FeatureInsert = createInsertSchema(feature)
-  .omit({ spatialIndex: true })
+  .omit({ spatialIndex: true, divisionId: true, divisionLevel1Id: true, divisionLevel2Id: true, divisionLevel3Id: true, divisionLevel4Id: true, divisionLevel5Id: true, divisionLevel6Id: true, landformLeafId: true })
   .extend({
     geometry: z.custom<GeometryObject>().prefault({
       type: 'Point',
@@ -106,7 +115,7 @@ export const FeatureInsert = createInsertSchema(feature)
   })
 
 export const FeatureUpdate = createUpdateSchema(feature)
-  .omit({ spatialIndex: true })
+  .omit({ spatialIndex: true, divisionId: true, divisionLevel1Id: true, divisionLevel2Id: true, divisionLevel3Id: true, divisionLevel4Id: true, divisionLevel5Id: true, divisionLevel6Id: true, landformLeafId: true })
   .extend({
     geometry: z.custom<GeometryObject>().optional(),
     addressMeta: z.custom<AddressMeta>().optional(),
@@ -204,6 +213,8 @@ export const UserFeatureInsert = createInsertSchema(userFeature)
 export const UserFeatureUpdate = createUpdateSchema(userFeature)
 
 export const FeatureListRow = FeatureBase.extend({
+  divisionMemberships: z.array(z.object({ divisionId: z.string(), selected: z.boolean() })).optional(),
+  division: z.object({ id: z.string(), i18n: z.array(z.object({ locale: z.string(), name: z.string().nullable() })) }).nullish(),
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
@@ -422,6 +433,15 @@ export const FeaturePropertyAPI = FeaturePropertyBase.extend({
 })
 
 const FeatureListFields = FeatureBase.pick({
+  divisionId: true,
+  divisionLevel1Id: true,
+  divisionLevel2Id: true,
+  divisionLevel3Id: true,
+  divisionLevel4Id: true,
+  divisionLevel5Id: true,
+  divisionLevel6Id: true,
+  landformLeafId: true,
+
   id: true,
   organisationId: true,
   projectId: true,
@@ -439,6 +459,8 @@ const FeatureListFields = FeatureBase.pick({
 })
 
 export const FeatureListProfileAPI = FeatureListFields.extend({
+  divisionMemberships: z.array(z.object({ divisionId: z.string(), selected: z.boolean() })).optional(),
+  division: z.object({ id: z.string(), i18n: z.array(z.object({ locale: z.string(), name: z.string().nullable() })) }).nullish(),
   i18n: getLocales(FeatureI18nBase),
   properties: z.array(FeaturePropertyCollectionAPI).default([]),
   image: ImageContextEnvelopeAPI.nullish(),

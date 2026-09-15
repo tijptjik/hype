@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import authorize from '$lib/api/services/authz'
-import type { AuthorizeParams, UserRoleDisco } from '$lib/types'
+import type { AuthorizeParams } from '$lib/api/services/authz/authorization.types'
+import type { UserRoleDisco } from '$lib/types'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 

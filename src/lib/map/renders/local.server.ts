@@ -15,7 +15,7 @@ import type {
   MapRenderRemoteConfig,
   MapRenderJob,
   PreviewStage,
-} from '../../types'
+} from '$lib/map/renders/render.types'
 import { launchChromiumBrowser, type LocalChromiumBrowser } from '../playwright.local'
 // HELPERS
 import {

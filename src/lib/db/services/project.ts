@@ -34,8 +34,8 @@ import { retryBusyRead } from './sqlite'
 // ZOD
 import { getProjectHubFilter } from './hub'
 // TYPES
+import type { CapabilityDefinitions } from '$lib/capabilities.types'
 import type {
-  CapabilityDefinitions,
   Id,
   Database,
   LocaleKey,

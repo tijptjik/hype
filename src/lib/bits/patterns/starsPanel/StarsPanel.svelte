@@ -13,9 +13,11 @@ import WantToVisit from '$lib/bits/patterns/panels/sections/wantToVisit/WantToVi
 import HaveVisited from '$lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
 import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
-import type { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import type {
+  useSavedFeatureListModel,
+} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
 
 // CONTEXT
 

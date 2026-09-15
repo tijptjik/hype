@@ -8,8 +8,8 @@ import type {
   OrganisationAuthorizationAction,
   ProjectAuthorizationAction,
   ProjectAuthorizeParams,
-  UserRoleDisco,
-} from '$lib/types'
+} from '$lib/api/services/authz/authorization.types'
+import type { UserRoleDisco } from '$lib/types'
 // I18N
 import { m } from '$lib/i18n'
 // ENUMS

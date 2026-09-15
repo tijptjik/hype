@@ -15,8 +15,10 @@ import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
 import { Panel as PanelEnum, PanelSide } from '$lib/enums'
 // TYPES
 import type { HubPolicyDialogProps } from '$lib/bits/patterns/policies'
-import type { HubPanelSubscriptionProps } from '$lib/bits/patterns/panels/hubPanelSubscription'
-import type { PanelProps } from '$lib/types'
+import type {
+  HubPanelSubscriptionProps,
+} from '$lib/bits/patterns/panels/hubPanelSubscription'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 

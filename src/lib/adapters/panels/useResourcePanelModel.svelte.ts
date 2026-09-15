@@ -24,7 +24,8 @@ import type {
   ResourcePanelRow,
   ResourcePanelSection,
 } from '$lib/bits/patterns/resourcePanel'
-import type { Resource, PanelResourceType } from '$lib/types'
+import type { Resource } from '$lib/types'
+import type { PanelResourceType } from '$lib/api/services/resourcePage.types'
 
 /**
  * Maps shared cache queries and selection/navigation intent into a render-only panel.

@@ -2,7 +2,7 @@
 import { Panel } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 /**
  * Adapts route-owned visibility and navigation state for a controlled panel shell.

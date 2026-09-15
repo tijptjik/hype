@@ -15,7 +15,7 @@ import {
 import type {
   AssetAnalyticsRankedImage,
   AssetAnalyticsRankedTransformation,
-} from '$lib/types'
+} from '$lib/api/services/assetAnalytics.types'
 import type {
   AssetAnalyticsDashboardWindowSectionKind,
   AssetAnalyticsRankedWindowSectionCardProps,

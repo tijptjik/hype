@@ -1,5 +1,6 @@
 // TYPES
-import type { UserRoleDisco, AuthorizationDecision } from '$lib/types'
+import type { UserRoleDisco } from '$lib/types'
+import type { AuthorizationDecision } from '$lib/api/services/authz/authorization.types'
 
 export type ImageAuthActor = {
   userId?: string | null

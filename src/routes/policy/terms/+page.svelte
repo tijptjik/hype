@@ -14,7 +14,7 @@ import {
   renderPolicyMarkdown,
 } from '$lib/services/policy'
 // TYPES
-import type { TitleEnvironmentLabel } from '$lib/types'
+import type { TitleEnvironmentLabel } from '$lib/bits/patterns/panels/panel.types'
 import type { PageProps } from './$types'
 
 let { data }: PageProps = $props()

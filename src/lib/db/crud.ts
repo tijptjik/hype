@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit'
 import { getTableName, and, inArray, eq, getTableColumns, sql } from 'drizzle-orm'
 import { chunkForD1, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
 // TYPES
-import type { Database, DbTable, Id } from '../types'
+import type { Database, DbTable, Id } from '$lib/types'
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { InferSelectModel, InferInsertModel, SQL } from 'drizzle-orm'
 

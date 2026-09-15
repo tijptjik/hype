@@ -7,7 +7,7 @@ import { filterPlaces } from '$lib/client/services/geospatial'
 import { OmniCollection } from '$lib/enums'
 // TYPES
 import type { AppCtx } from '$lib/context/app.svelte'
-import type { SearchResult } from '$lib/types'
+import type { SearchResult } from '$lib/context/omni.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { FeatureExtended } from '$lib/db/zod/schema/feature.types'
 

@@ -127,7 +127,9 @@ import { NEW_REF, NEW_TITLE } from '$lib/constants'
 import { FirstClassResource } from '$lib/enums'
 // TYPES
 import type { Point } from 'geojson'
-import type { FacetType, HeaderTransitionSnapshot, Id, Locale } from '$lib/types'
+import type { FacetType } from '$lib/context/facets'
+import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
+import type { Id, Locale } from '$lib/types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type {
   FeatureFormInput,
@@ -139,7 +141,9 @@ import type {
   ParentSectionOrganisationItem,
   ParentSectionProjectItem,
 } from '$lib/bits/patterns/forms/formParentSection'
-import type { ParentProjectRecord } from '$lib/bits/patterns/forms/formFeatureParentSection'
+import type {
+  ParentProjectRecord,
+} from '$lib/bits/patterns/forms/formFeatureParentSection'
 
 type FeaturePageState = FeatureGetState
 const noopHeaderAction = (): void => {}

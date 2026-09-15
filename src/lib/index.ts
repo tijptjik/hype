@@ -8,13 +8,12 @@ import type {
   FieldDiscriminator,
   Locale,
   LocaleExtended,
-  PreviewStage,
   Resource,
-  FormFieldDefinition,
-  Form,
-  FeatureForm,
-  Task,
-} from './types'
+} from '$lib/types'
+import type { PreviewStage } from '$lib/map/renders/render.types'
+import type { FormFieldDefinition } from '$lib/client/services/formFields.types'
+import type { Form, FeatureForm } from '$lib/client/services/form.types'
+import type { Task } from '$lib/db/zod/schema/task.types'
 
 export {
   ADMIN_PATH,

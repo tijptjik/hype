@@ -23,7 +23,9 @@ import LoaderCircle from 'virtual:icons/proicons/spinner'
 import RefreshCw from 'virtual:icons/proicons/arrow-sync'
 import Users from 'virtual:icons/proicons/person-multiple'
 // TYPES
-import type { AssetAnalyticsSummaryResult } from '$lib/types'
+import type {
+  AssetAnalyticsSummaryResult,
+} from '$lib/api/services/assetAnalytics.types'
 
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()

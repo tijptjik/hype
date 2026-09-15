@@ -7,8 +7,10 @@ import FilterBar from '$lib/bits/patterns/panels/components/common/FilterBar.sve
 import FilteredNeighbourhood from '$lib/bits/patterns/panels/components/items/FilteredNeighbourhood.svelte'
 import ResourceContainer from '$lib/bits/patterns/panels/components/common/ResourceContainer.svelte'
 // TYPES
-import type { PanelProps } from '$lib/types'
-import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type {
+  useFilterPanelModel,
+} from '$lib/adapters/panels/useFilterPanelModel.svelte'
 
 let {
   model,

@@ -1,6 +1,8 @@
 import { cx } from '$lib/bits/utils'
 import type { IndexCardProps } from '$lib/bits/patterns/cards/indexCard'
-import type { ResourceIndexRowSelectionState } from '$lib/types'
+import type {
+  ResourceIndexRowSelectionState,
+} from '$lib/client/services/bulkEdit.types'
 import type { RowVariant } from './row.types'
 
 type RowRootClassParams = {

@@ -181,3 +181,37 @@ This document defines the UI layering model for Bits components and how logic sh
   - `patterns/{patternType}/name.types.ts` for pattern public APIs.
 - Avoid adding new plain `types.ts` files outside internal `src/` primitive folders.
 - Existing inconsistent files can remain until touched; when editing or adding nearby types, migrate to this convention.
+
+## Type Ownership
+
+- Define a type used by one implementation near the top of that file, after imports.
+  Keep component-local props in the component. Do not export file-local types.
+- Share related domain contracts in a colocated `<domain>.types.ts` file. Import
+  directly from their owner; do not add a compatibility barrel in `src/lib/types.ts`.
+- Reserve `src/lib/types.ts` for foundational resource identities/unions, locale,
+  session, generic response, and TypeScript utility contracts. A high consumer count
+  does not override clear domain ownership.
+- Keep runtime constants and guards in implementation or constants modules. Use
+  `import type` for dependencies needed only by type declarations, including
+  constants referenced through `typeof`.
+- Browser-safe contracts must not import server code at runtime. Server-only
+  request contexts belong with the API; inferred request/remote signatures may use
+  type-only imports from their implementations.
+- Preserve schema/framework inference. Do not copy inferred entity shapes into
+  manually maintained interfaces or broaden types to suppress diagnostics.
+- Keep related contracts together when splitting them would add unnecessary hops.
+  Changes to nullability, optionality, accepted values, or API behavior require
+  separate implementation and validation from a relocation.
+
+### Legacy Contracts Requiring Separate Design
+
+- `client/services/form.types.ts` retains opaque `unknown` legacy form aliases.
+  Replacing these requires deciding which consumers use current remote forms and
+  which still expect store-backed forms; inventing a common interface would hide
+  this mismatch.
+- `client/services/fieldComponents.ts` retains the legacy constructor contract.
+  Migrating it to Svelte's `Component` requires checking the remaining constructor
+  consumers and snippets.
+- `utils/resourceGuards.ts` preserves the existing structural discriminators.
+  Tightening them requires resource-union fixtures and a policy for overlapping
+  resource shapes.

@@ -2,11 +2,11 @@ import type { z } from 'zod'
 import type {
   ApplyChangedRelationFieldParams,
   ChangedRelationResolution,
-  EntityResponse,
   ResolveChangedRelationParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
-} from '$lib/types'
+} from '$lib/client/services/formRelations.types'
+import type { EntityResponse } from '$lib/types'
 import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
 import type {
   ProjectCompactProfileAPI,

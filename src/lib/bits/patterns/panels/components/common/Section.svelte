@@ -7,7 +7,7 @@ import * as Panel from '$lib/bits/patterns/panels'
 // SERVICES
 import { navigateOnAdmin } from '$lib/navigation'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type { FirstClassResource } from '$lib/enums'
 
 // PROPS

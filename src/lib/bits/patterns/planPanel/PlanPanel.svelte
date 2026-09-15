@@ -29,7 +29,25 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { ProjectDetailProfile } from '$lib/db/zod/schema/project.types'
-import type { PanelProps, PlanScheduleStop } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+// TYPES
+import type { Id } from '$lib/types'
+
+type PlanScheduleStop = {
+  time: string
+  featureId: Id
+  title: string
+  author: string
+  addressLine: string
+  country: string | null
+  flag: string
+  imageUrl: string | null
+  latitude: number | null
+  longitude: number | null
+  distanceFromPreviousKm: number | null
+  distanceLabel: string
+}
+
 
 const appCtx = getAppCtx()
 

@@ -1,4 +1,5 @@
-import type { NavigableResource, ResourceSortConfig } from '$lib/types'
+import type { NavigableResource } from '$lib/types'
+import type { ResourceSortConfig } from '$lib/client/services/filters.types'
 
 export type ResourceSortControlProps = {
   resource: NavigableResource

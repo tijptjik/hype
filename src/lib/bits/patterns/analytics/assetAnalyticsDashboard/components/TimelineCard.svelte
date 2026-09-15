@@ -12,7 +12,10 @@ import {
   getAssetAnalyticsSeriesLabel,
 } from '../assetAnalyticsDashboard.utils'
 // TYPES
-import type { AssetAnalyticsSeriesKey, AssetAnalyticsTimeseriesPoint } from '$lib/types'
+import type {
+  AssetAnalyticsSeriesKey,
+  AssetAnalyticsTimeseriesPoint,
+} from '$lib/api/services/assetAnalytics.types'
 import type { AssetAnalyticsTimelineCardProps } from '../assetAnalyticsDashboard.types'
 
 type TimelineSegment = {

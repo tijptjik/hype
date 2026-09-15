@@ -1,7 +1,7 @@
 <script lang="ts">
 import LegacyMap from '$lib/bits/patterns/maps/Maplet.svelte'
 import { getAdminCtx } from '$lib/context/admin.svelte'
-import type { AddressMeta } from '$lib/types'
+import type { AddressMeta } from '$lib/utils/address.types'
 
 type Props = {
   coordinates: number[]

@@ -3,8 +3,13 @@ import { getI18n, m } from '$lib/i18n'
 // TYPES
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { HubSubscriptionModelParams } from '$lib/adapters/hub/useHubSubscriptionModel.svelte'
-import type { HubSubscriptionPlacement, HubUserStateFlags } from '$lib/types'
+import type {
+  HubSubscriptionModelParams,
+} from '$lib/adapters/hub/useHubSubscriptionModel.svelte'
+import type {
+  HubSubscriptionPlacement,
+  HubUserStateFlags,
+} from '$lib/api/services/hub.types'
 
 type HubSubscriptionI18n = Record<string, Record<string, string | null | undefined>>
 

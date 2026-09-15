@@ -79,13 +79,8 @@ import {
   ImageEnv,
 } from '$lib/enums'
 // TYPES
-import type {
-  Database,
-  EntityResponse,
-  GuardedQueryContext,
-  Id,
-  UserRoleDisco,
-} from '$lib/types'
+import type { Database, EntityResponse, Id, UserRoleDisco } from '$lib/types'
+import type { GuardedQueryContext } from '$lib/api/guarded.types'
 import type {
   CreateImageParams,
   FinalizeImageUploadLink,

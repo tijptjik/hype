@@ -21,7 +21,7 @@ import { m } from '$lib/i18n'
 import { getFeatureIdenticonUrl } from '$lib/client/services/image'
 // TYPES
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { FeatureRowStatMap } from '$lib/types'
+import type { FeatureRowStatMap } from '$lib/client/services/featureRows.types'
 import type { FeatureRowProps } from './featureRow.types'
 
 let {

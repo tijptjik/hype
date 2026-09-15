@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { toQueryConditions } from '$lib/api/services/organisation'
-import { overrideOrganisationEntityFromFormInput } from '$lib/client/services/organisation'
+import {
+  overrideOrganisationEntityFromFormInput,
+} from '$lib/client/services/organisation'
 import type { OrganisationFormInput } from '$lib/db/zod/schema/organisation.types'
 import type { SessionUser } from '$lib/types'
 

@@ -12,7 +12,8 @@ import { navigateOnAdminById } from '$lib/navigation'
 // ENUMS
 import { FirstClassResource } from '$lib/enums'
 // TYPES
-import type { Id, PanelProps } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 // COMPONENTS
 import ItemResource from './ItemResource.svelte'
 

@@ -3,7 +3,10 @@
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // ENUMS
-import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
+import {
+  classifierComponentTypes,
+  specifierComponentTypes,
+} from '$lib/client/services/fieldComponents'
 // I18N
 import { m } from '$lib/i18n'
 import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
@@ -130,9 +133,15 @@ import {
   ResourceViewer,
 } from '$lib/bits'
 
-import type { ParentSectionOrganisationItem } from '$lib/bits/patterns/forms/formParentSection'
-import type { MapStyleSelectionItem } from '$lib/bits/patterns/forms/formMapStyleSection'
-import type { UserCapabilityMatrixRow } from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
+import type {
+  ParentSectionOrganisationItem,
+} from '$lib/bits/patterns/forms/formParentSection'
+import type {
+  MapStyleSelectionItem,
+} from '$lib/bits/patterns/forms/formMapStyleSection'
+import type {
+  UserCapabilityMatrixRow,
+} from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
 import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
 // ADAPTERS
 import { useImageProviderModel } from '$lib/adapters/image'
@@ -166,19 +175,18 @@ import Type from 'virtual:icons/proicons/text'
 // ENUMS
 import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
 // TYPES
+import type { CapabilityDefinitions, CapabilityKey } from '$lib/capabilities.types'
 import type {
-  CapabilityDefinitions,
-  CapabilityKey,
   FormDataUpdaterForm,
-  HeaderTransitionSnapshot,
-  Locale,
-  ResourceContext,
   UserRoleFieldNameResolverForm,
-  Id,
+} from '$lib/client/services/form.types'
+import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
+import type { Locale, ResourceContext, Id } from '$lib/types'
+import type {
   ProjectLicense,
   ProjectLicenseRights,
   ProjectLicenseMediaType,
-} from '$lib/types'
+} from '$lib/db/zod/schema/projectLicense.types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { User } from '$lib/db/zod/schema/user.types'

@@ -14,7 +14,7 @@ import type { AdminCtx } from '$lib/context/admin.svelte'
 import type { AdminPreferenceCode } from '$lib/db/zod/schema/user.types'
 import type { AppCtx } from '$lib/context/app.svelte'
 import type { ThemeModel } from '$lib/themes/theme.svelte'
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 /**
  * Owns settings application/session wiring outside the rendering pattern.

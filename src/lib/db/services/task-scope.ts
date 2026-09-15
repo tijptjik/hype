@@ -5,7 +5,8 @@ import { and, eq, sql, type SQL } from 'drizzle-orm'
 // DB
 import { feature, organisation, project, task } from '$lib/db/schema'
 // TYPES
-import type { Database, TaskNew } from '$lib/types'
+import type { Database } from '$lib/types'
+import type { TaskNew } from '$lib/db/zod/schema/task.types'
 
 /**
  * Restricts persisted tasks to their feature's canonical project/organisation chain.

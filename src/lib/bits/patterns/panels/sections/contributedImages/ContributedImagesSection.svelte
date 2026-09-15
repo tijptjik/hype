@@ -17,7 +17,9 @@ import { getURLfromImage } from '$lib/client/services/image'
 import type { Id, ResourceContext } from '$lib/types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type { UserProfile } from '$lib/db/zod/schema/user.types'
-import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import type {
+  useProfilePanelModel,
+} from '$lib/adapters/panels/useProfilePanelModel.svelte'
 import { untrack } from 'svelte'
 
 // MAGICAL CONSTANTS

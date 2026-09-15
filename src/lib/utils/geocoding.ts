@@ -4,12 +4,9 @@ import proj from 'proj4'
 import neighbourhoods from '$lib/map/neighbourhoods.json'
 import streetsData from '$lib/map/streets.json'
 // TYPES
-import type {
-  AddressMeta,
-  AddressProperties,
-  LocaleKey,
-  ParsedReverseGeocodeResult,
-} from '$lib/types'
+import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
+import type { LocaleKey } from '$lib/types'
+import type { ParsedReverseGeocodeResult } from '$lib/utils/geocoding.types'
 
 type NeighbourhoodI18n = {
   name: string

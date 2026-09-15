@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { latLngToCell } from 'h3-js'
 import type { RemoteQuery } from '@sveltejs/kit'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { FeatureQueryInput, FeatureQueryPage } from '$lib/types'
+import type {
+  FeatureQueryInput,
+  FeatureQueryPage,
+} from '$lib/api/services/featureQuery.types'
 import { FeatureQuery, FeatureQueryRetention } from '$lib/context/feature-query.svelte'
 import { featureQueryKey, matchesFeatureQuery } from '$lib/client/services/featureQuery'
 

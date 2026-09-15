@@ -5,7 +5,7 @@ import AssetAnalyticsDashboard from '$lib/bits/patterns/analytics/assetAnalytics
 import type {
   AssetAnalyticsSummaryResult,
   AssetAnalyticsSummaryWindow,
-} from '$lib/types'
+} from '$lib/api/services/assetAnalytics.types'
 
 const getWindowToggleButtons = (label: string): HTMLButtonElement[] =>
   screen.getAllByRole('button', { name: `Last ${label}` }) as HTMLButtonElement[]

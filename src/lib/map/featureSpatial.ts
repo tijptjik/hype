@@ -8,7 +8,8 @@ import {
   UNITS,
 } from 'h3-js'
 // TYPES
-import type { FeatureSpatialIndex, FeatureSpatialQuery } from '$lib/types'
+import type { FeatureSpatialIndex } from '$lib/db/services/featureSpatial.types'
+import type { FeatureSpatialQuery } from '$lib/api/services/featureQuery.types'
 
 // +++ Table Of Contents
 // ═══════════════════════

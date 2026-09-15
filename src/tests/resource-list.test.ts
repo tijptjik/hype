@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { RemoteQuery } from '@sveltejs/kit'
-import type { ResourcePage, ResourcePageInput } from '$lib/types'
+import type {
+  ResourcePage,
+  ResourcePageInput,
+} from '$lib/api/services/resourcePage.types'
 import { ResourceList } from '$lib/context/resource-list.svelte'
 
 function controlledQuery() {

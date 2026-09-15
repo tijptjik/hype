@@ -18,9 +18,11 @@ import type {
   OmnibarResultSection,
 } from '$lib/bits/patterns/bars/omnibar'
 import type { DeepPartial, Locale, LocaleKey } from '$lib/types'
-import type { NewFeatureTask } from '$lib/types'
+import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
 // UTILS
-import { getOmnibarAvailableViewportHeight } from '$lib/bits/patterns/bars/omnibar/omnibar.utils'
+import {
+  getOmnibarAvailableViewportHeight,
+} from '$lib/bits/patterns/bars/omnibar/omnibar.utils'
 
 const COLLECTION_OPEN_DELAY_MS = 2000
 

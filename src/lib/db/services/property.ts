@@ -38,7 +38,7 @@ import { normalizeI18nLocaleRecord } from '$lib/i18n'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
-import type { Locale, Database, PropertyCatalogTarget } from '$lib/types'
+import type { Locale, Database } from '$lib/types'
 import type {
   Property,
   PropertyDB,
@@ -56,6 +56,14 @@ import type {
   ProjectPropertyForm,
 } from '$lib/db/zod/schema/property.types'
 import { retryBusyRead } from './sqlite'
+// TYPES
+
+/** Server-owned parent scope for an atomic property catalog save. */
+type PropertyCatalogTarget = {
+  scope: 'project' | 'hub' | 'organisation'
+  id: string
+}
+
 
 // ═══════════════════════
 // TABLE OF CONTENTS

@@ -1,15 +1,8 @@
 // Compatibility types copied from old $lib/types import section on feat/data-import.
 // Keep these local while the import feature is reviewed against the current schema.
-import type {
-  AddressMeta,
-  AddressProperties,
-  FieldComponentType,
-  FieldDiscriminator,
-  Id,
-  Locale,
-  LocaleKey,
-  Resource,
-} from '$lib/types'
+import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
+import type { FieldComponentType } from '$lib/client/services/fieldComponents'
+import type { FieldDiscriminator, Id, Locale, LocaleKey, Resource } from '$lib/types'
 import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type {
   Image,

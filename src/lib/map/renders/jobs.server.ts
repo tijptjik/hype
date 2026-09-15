@@ -1,5 +1,5 @@
 // TYPES
-import type { MapRenderAssetKind, MapRenderJob } from '../../types'
+import type { MapRenderAssetKind, MapRenderJob } from '$lib/map/renders/render.types'
 // HELPERS
 import { buildMapRenderObjectKey } from './storage.shared'
 

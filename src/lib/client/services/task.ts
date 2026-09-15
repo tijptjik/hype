@@ -10,7 +10,9 @@ import {
 // I18N
 import { m } from '$lib/i18n'
 // TYPES
-import type { DeepPartial, Id, NewFeatureTask, Task } from '$lib/types'
+import type { DeepPartial, Id } from '$lib/types'
+import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
+import type { Task } from '$lib/db/zod/schema/task.types'
 import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
 import type { ViewerRenderable } from '$lib/bits/patterns/images/images.types'
 import type {

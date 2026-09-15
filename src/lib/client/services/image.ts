@@ -24,12 +24,12 @@ import type { Feature } from '$lib/db/zod/schema/feature.types'
 import { FirstClassResource, ImageContextResource } from '$lib/enums'
 // TYPES
 import type { AdminCtx } from '$lib/context/admin.svelte'
+import type { Id } from '$lib/types'
 import type {
-  Id,
   ImageCtxConstructorOptions,
   NormalizedImageUploadAsset,
-  PreviewStage,
-} from '$lib/types'
+} from '$lib/context/imageProvider.types'
+import type { PreviewStage } from '$lib/map/renders/render.types'
 import type {
   GalleryObjectFit,
   ViewerRenderable,

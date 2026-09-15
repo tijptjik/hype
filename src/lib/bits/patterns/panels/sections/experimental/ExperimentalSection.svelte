@@ -9,9 +9,11 @@ import { Switch } from '$lib/bits'
 // COMPONENTS
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
-import type { useExperimentalSettingsModel } from '$lib/adapters/panels/useExperimentalSettingsModel.svelte'
+import type {
+  useExperimentalSettingsModel,
+} from '$lib/adapters/panels/useExperimentalSettingsModel.svelte'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 import type {
   ExperimentalFeatureConfig,
   UserExperimental,

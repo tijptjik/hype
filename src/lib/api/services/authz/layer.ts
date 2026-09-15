@@ -12,8 +12,8 @@ import { applyPrismConstraints } from '$lib/db'
 import { applyTriStateBooleanCondition } from '$lib/db/query'
 import { layer } from '$lib/db/schema'
 import { HierarchicalResource } from '$lib/enums'
+import type { AuthorizationDecision } from '$lib/api/services/authz/authorization.types'
 import type {
-  AuthorizationDecision,
   Database,
   Id,
   Prisms,

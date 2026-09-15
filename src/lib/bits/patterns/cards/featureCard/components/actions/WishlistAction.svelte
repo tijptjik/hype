@@ -15,7 +15,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 import type { UserFeature } from '$lib/db/zod/schema/user.types'
-import type { FeatureCardWishlistActionDisplay } from '$lib/types'
+import type { FeatureCardWishlistActionDisplay } from '$lib/context/featureCard.types'
 // LOCAL
 import WishlistActionDisplay from './WishlistActionDisplay.svelte'
 

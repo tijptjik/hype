@@ -14,7 +14,8 @@ import { getAppCtx } from '$lib/context/app.svelte'
 import ResourceHierarchyPath from '$lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
 // TYPES
 import type { Project } from '$lib/db/zod/schema/project.types'
-import type { PanelProps, ResourceContext } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { ResourceContext } from '$lib/types'
 
 const appCtx = getAppCtx()
 

@@ -2,7 +2,9 @@
 import { toLocaleKebab, toFormLocaleRecord } from '$lib/i18n'
 // ENUMS
 import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
-import { normalizeProjectLicense as normalizeSharedProjectLicense } from '$lib/client/services/licence'
+import {
+  normalizeProjectLicense as normalizeSharedProjectLicense,
+} from '$lib/client/services/licence'
 // CAPABILITIES
 import {
   normalizeProjectCapabilities,
@@ -14,13 +16,9 @@ import {
   overrideResourceListItemBoolean,
 } from '$lib/client/services/resource'
 // TYPES
-import type {
-  CapabilityDefinitions,
-  CapabilityKey,
-  Locale,
-  LocaleKey,
-  ProjectLicense,
-} from '$lib/types'
+import type { CapabilityDefinitions, CapabilityKey } from '$lib/capabilities.types'
+import type { Locale, LocaleKey } from '$lib/types'
+import type { ProjectLicense } from '$lib/db/zod/schema/projectLicense.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type { User } from '$lib/db/zod/schema/user.types'
 import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'

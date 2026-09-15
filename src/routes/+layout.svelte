@@ -30,7 +30,9 @@ import {
 // I18N
 import { getLocaleKey, m } from '$lib/i18n'
 // API
-import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
+import {
+  getMapResourceDeepLinkLayerIds,
+} from '$lib/client/services/mapResourceDeepLink'
 // CONTEXT
 import { setAppCtx } from '$lib/context/app.svelte'
 import { setPlaceCtx } from '$lib/context/place.svelte'

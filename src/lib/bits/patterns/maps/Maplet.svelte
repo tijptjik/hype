@@ -26,7 +26,8 @@ import type {
   Marker,
   MarkerDragEvent,
 } from 'maplibre-gl'
-import type { Id, AddressMeta } from '$lib/types'
+import type { Id } from '$lib/types'
+import type { AddressMeta } from '$lib/utils/address.types'
 import type { MapStyleCatalogKey } from '$lib/map/styles/catalog'
 type MapProps = {
   coordinates: number[]

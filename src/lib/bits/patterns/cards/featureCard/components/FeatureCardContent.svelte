@@ -18,7 +18,7 @@ import { getResponsiveCtx } from '$lib/context/responsive.svelte'
 import { getFPI18n, getI18n, m } from '$lib/i18n'
 // TYPES
 import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { FeatureCardPortalObstacle } from '$lib/types'
+import type { FeatureCardPortalObstacle } from '$lib/context/featureCard.types'
 import type { PropertyLayoutResult } from '../featureCard.types'
 // LOCAL
 import {

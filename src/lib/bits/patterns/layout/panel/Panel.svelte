@@ -9,7 +9,7 @@ import { getAppCtx } from '$lib/context/app.svelte'
 const appCtx = getAppCtx()
 
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 let {
   children,

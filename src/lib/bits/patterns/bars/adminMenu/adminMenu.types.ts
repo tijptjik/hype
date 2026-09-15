@@ -1,6 +1,6 @@
 // TYPES
 import type { Component } from 'svelte'
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 export interface AdminMenuItem {
   href: string

@@ -46,7 +46,19 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { ProjectDetailProfile } from '$lib/db/zod/schema/project.types'
-import type { PanelProps, PassportStamp } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+// TYPES
+import type { Id } from '$lib/types'
+
+type PassportStamp = {
+  featureId: Id
+  title: string
+  addressLine: string
+  country: string | null
+  flagCode: string | null
+  imageUrl: string | null
+}
+
 
 const appCtx = getAppCtx()
 const passportLayerIds = ['vli8hfmD-XEZ', '0bf1RYWdpaAt', 'lvWu_dCwiVZt'] as const

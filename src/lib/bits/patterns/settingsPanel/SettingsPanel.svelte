@@ -8,7 +8,9 @@ import { m } from '$lib/i18n'
 // BITS
 import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
 // ADAPTERS
-import type { useSettingsPanelModel } from '$lib/adapters/panels/useSettingsPanelModel.svelte'
+import type {
+  useSettingsPanelModel,
+} from '$lib/adapters/panels/useSettingsPanelModel.svelte'
 // AUTH
 
 // COMPONENTS
@@ -25,7 +27,7 @@ import Admin from '$lib/bits/patterns/panels/sections/admin/AdminSection.svelte'
 // ENUMS
 import { Panel as PanelEnum, PanelSide } from '$lib/enums'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 // CONTEXT
 let { model }: { model: ReturnType<typeof useSettingsPanelModel> } = $props()

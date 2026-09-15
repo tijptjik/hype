@@ -10,45 +10,240 @@ import { getAdminFacetActionLabel } from '$lib/navigation/facets'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { RemoteQuery, RemoteQueryOverride } from '@sveltejs/kit'
 import type {
-  AddUserRoleSelectionParams,
-  FormHeaderController,
-  FormTrimmedTextControlBlurParams,
   GenAiField,
-  GenAiStateResolverForm,
-  HeaderFormActionStatus,
   FormDataUpdaterForm,
-  FormSubmissionResultHandlerParams,
-  I18nTranslatableField,
-  RemoveUserRoleSelectionParams,
-  ResetLocaleFieldsParams,
-  ResolveDisplayUserRolesParams,
-  ResourceFormSubmissionResultParams,
-  SyncHeaderFormActionStatusParams,
-  TranslateLocaleIntoEmptyFieldsParams,
-  UserRoleHiddenInputAttrs,
-  UpdateUserRoleSelectionParams,
   UserRoleFieldNameResolverForm,
-  WireHeaderFormActionHandlersParams,
-  ResourceEditorHeaderController,
-  Locale,
-  LocaleKey,
-  FacetType,
   FormBooleanValue,
+} from '$lib/client/services/form.types'
+import type { Locale, LocaleKey } from '$lib/types'
+import type { FacetType } from '$lib/context/facets'
+import type {
   ResolveChangedRelationParams,
   ChangedRelationResolution,
   ApplyChangedRelationFieldParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
-  HeaderCtrlState,
-  HeaderTransitionSnapshot,
-  HeaderFacetItem,
-  ResolveOptimisticHeaderStatusParams,
-} from '$lib/types'
+} from '$lib/client/services/formRelations.types'
+import type { HeaderCtrlState, HeaderFacetItem } from '$lib/context/headerState.types'
+import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
 import type { User } from '$lib/db/zod/schema/user.types'
 import type {
   OrganisationGetState,
   OrganisationRoleUser,
 } from '$lib/db/zod/schema/organisation.types'
+// TYPES
+import type { RemoteFormIssue } from '@sveltejs/kit'
+import type { HeaderFormActionsState } from '$lib/context/headerState.types'
+
+type FormSubmissionResultHandlerParams = {
+  success: boolean
+  issues?: RemoteFormIssue[]
+  error?: string
+  onSuccess: () => void | Promise<void>
+  onError: (error: string) => void | Promise<void>
+  onInvalid: (issues: RemoteFormIssue[]) => void | Promise<void>
+  onFallback: () => void | Promise<void>
+}
+
+type FormHeaderController = {
+  setEditing: (isEditing: boolean) => void
+}
+
+type HeaderFormActionsController = {
+  setFormActions: (formActions: Partial<HeaderFormActionsState>) => void
+}
+
+type ResourceEditorHeaderController = FormHeaderController &
+  HeaderFormActionsController & {
+    setHeaderForEntity: (...args: never[]) => void
+    clearFormActions: () => void
+  }
+
+type HeaderFormActionHandlers = Pick<
+  HeaderFormActionsState,
+  'reset' | 'submit' | 'togglePublish' | 'toggleDelete'
+>
+
+type HeaderFormActionStatus = Pick<
+  HeaderFormActionsState,
+  | 'dirty'
+  | 'isSubmitting'
+  | 'hasIssues'
+  | 'isPublished'
+  | 'isDeleted'
+  | 'canEdit'
+  | 'disableEdit'
+  | 'canPublish'
+  | 'showDeleteAction'
+  | 'showPublishAction'
+>
+
+type WireHeaderFormActionHandlersParams = {
+  headerCtrl: HeaderFormActionsController
+  handlers: HeaderFormActionHandlers
+}
+
+type SyncHeaderFormActionStatusParams = {
+  headerCtrl: HeaderFormActionsController
+  status: HeaderFormActionStatus
+  lastSignature: string
+}
+
+type ResolveOptimisticHeaderStatusParams = {
+  isSettled: boolean
+  isImageFacetActive?: boolean
+  isNewRef?: boolean
+  dirty: boolean
+  isSubmitting: boolean
+  hasIssues: boolean
+  isPublished: boolean
+  isDeleted: boolean
+  canEdit: boolean
+  canPublish: boolean
+  showDeleteAction: boolean
+  showPublishAction: boolean
+  snapshot: HeaderTransitionSnapshot
+}
+
+type ResourceFormSubmissionResultParams = {
+  success: boolean
+  issues?: RemoteFormIssue[]
+  error?: string
+  nameKey: string
+  onSuccess?: () => void | Promise<void>
+  refreshResource: () => Promise<void>
+  locale?: Locale
+  formLocaleKey?: string
+  formLocaleValues?: Record<string, unknown>
+  resourceLocaleValues?: Record<string, unknown>
+  submittedValues?: Record<string, unknown>
+  invalidMessage?: string
+  fallbackErrorMessage?: string
+  successPrefix?: string
+}
+
+type UserRoleHiddenInputAttrs = Record<string, unknown>
+
+type I18nTranslatableField =
+  | 'name'
+  | 'nameShort'
+  | 'description'
+  | 'subscriptionBenefits'
+  | 'privacyPolicy'
+  | 'termsOfService'
+
+type GenAiStateResolverForm = {
+  fields: {
+    value: () => {
+      data?: {
+        i18n?: Record<
+          string,
+          {
+            titleGen?: FormBooleanValue
+            nameGen?: FormBooleanValue
+            nameShortGen?: FormBooleanValue
+            descriptionGen?: FormBooleanValue
+            subscriptionBenefitsGen?: FormBooleanValue
+            privacyPolicyGen?: FormBooleanValue
+            termsOfServiceGen?: FormBooleanValue
+          }
+        >
+      }
+    }
+  }
+}
+
+type FormTrimmedTextControlBlurParams = {
+  event: FocusEvent
+  value: string
+  setValue: (value: string) => void
+  onValueChange?: (value: string) => void
+  afterSync?: () => void
+}
+
+type AddUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  user: {
+    id: string
+    name?: string | null
+    image?: unknown
+    attribution?: string | null
+  }
+  defaultRole: string
+  foreignKey: string
+}
+
+type RemoveUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  userId: string
+}
+
+type UpdateUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  userId: string
+  role: string
+}
+
+type ResolveDisplayUserRolesParams<
+  TUserRole extends { userId: string; role: string },
+> = {
+  baseRoles: TUserRole[]
+  formUserRoles: Array<{ userId: string; role: string }>
+}
+
+type TranslateLocaleIntoEmptyFieldsParams<
+  TFormData extends {
+    i18n?: Record<
+      string,
+      {
+        name?: string
+        nameShort?: string
+        description?: string
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+      }
+    >
+  },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  sourceLocale: Locale
+  targetLocale: Locale
+  fields?: I18nTranslatableField[]
+}
+
+type ResetLocaleFieldsParams<
+  TFormData extends {
+    i18n?: Record<
+      string,
+      {
+        name?: string
+        nameShort?: string
+        description?: string
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+      }
+    >
+  },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  targetLocale: Locale
+  fields?: I18nTranslatableField[]
+}
+
 
 // +++ TOC
 // ═══════════════════════
@@ -548,7 +743,7 @@ export function createResourceFormConfig<Input>({
       ...((await submitUpdates(ctx)) ?? []),
       ...adminCtx.appCtx.cacheCtx.optimisticUpdates(
         resourceType,
-        ctx.data as import('$lib/types').ResourceOptimisticInput,
+        ctx.data as import('$lib/context/featureQuery.types').ResourceOptimisticInput,
       ),
     ],
     resourceResult: {

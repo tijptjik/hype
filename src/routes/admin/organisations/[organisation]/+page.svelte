@@ -127,18 +127,19 @@ import {
   ImageContextResource,
   OrganisationRoleType,
 } from '$lib/enums'
-import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
+import {
+  classifierComponentTypes,
+  specifierComponentTypes,
+} from '$lib/client/services/fieldComponents'
 // TYPES
+import type { Locale, Id } from '$lib/types'
+import type { User } from '$lib/db/zod/schema/user.types'
 import type {
-  Locale,
-  User,
   UserRoleFieldNameResolverForm,
   FormDataUpdaterForm,
-  Id,
-  CapabilityDefinitions,
-  CapabilityKey,
-  HeaderTransitionSnapshot,
-} from '$lib/types'
+} from '$lib/client/services/form.types'
+import type { CapabilityDefinitions, CapabilityKey } from '$lib/capabilities.types'
+import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
 import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Property } from '$lib/db/zod/schema/property.types'
 import type {

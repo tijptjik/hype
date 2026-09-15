@@ -15,9 +15,16 @@ import { getAppCtx } from '$lib/context/app.svelte'
 // TYPES
 import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 import type { UserFeature } from '$lib/db/zod/schema/user.types'
-import type { FeatureCardActionDisplay, FeatureCardVisitState } from '$lib/types'
+import type { FeatureCardActionDisplay } from '$lib/context/featureCard.types'
 // LOCAL
 import VisitActionDisplay from './VisitActionDisplay.svelte'
+// TYPES
+
+type FeatureCardVisitState = {
+  isVisited: boolean
+  visitedAt: string | null
+}
+
 
 interface Props {
   feature: Feature | UserContributedFeature

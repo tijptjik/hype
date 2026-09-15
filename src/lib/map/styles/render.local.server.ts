@@ -11,7 +11,7 @@ import type {
   MapRenderManifestEntry,
   MapRenderRemoteConfig,
   PreviewStage,
-} from '../../types'
+} from '$lib/map/renders/render.types'
 import { launchChromiumBrowser, type LocalChromiumBrowser } from '../playwright.local'
 import { buildMapStyleArtifacts } from './build'
 import { getMapStyleAssetRecord, type MapStyleKey } from './registry'

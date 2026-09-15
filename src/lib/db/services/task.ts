@@ -28,29 +28,67 @@ import { ImageContextResource } from '$lib/enums'
 // DB
 import { firstOrNull, toOrderByWithLocalizedFields } from '..'
 // TYPES
+import type { Database, Id, ListResponse, Locale, QueryParams } from '$lib/types'
 import type {
-  Database,
-  Id,
-  ListResponse,
-  Locale,
-  QueryParams,
-  TaskCreation,
   TaskDB,
   TaskDBRaw,
   TaskDBPartial,
   TaskNew,
-  TaskImageReviewCommit,
-  TaskImageReviewPlan,
-  TaskImageReviewRow,
+} from '$lib/db/zod/schema/task.types'
+import type {
   TaskFeatureReviewCommit,
-  TaskFeatureDraftFinalizationCommit,
   TaskReviewCommitContext,
-} from '$lib/types'
+} from '$lib/db/services/taskReview.types'
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
 import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
 // API SERVICES
 import { createUserContributedFeature } from '$lib/api/services/feature'
 import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+// TYPES
+import type { BaseTaskData, NewFeatureTask } from '$lib/api/services/taskCreation.types'
+import type { FeatureDB } from '$lib/db/zod/schema/feature.types'
+
+// Specific task types
+type ReportedMissingTask = BaseTaskData & {
+  type: 'reportedMissing'
+  featureId: Id
+  message?: string
+}
+
+type NewPhotoTask = BaseTaskData & {
+  type: 'newPhoto'
+  featureId: Id
+}
+
+// Union type for all task creation APIs
+type TaskCreation = NewFeatureTask | ReportedMissingTask | NewPhotoTask
+
+/* ----------------- */
+// TASKS
+/* -------- */
+
+type TaskImageReviewStatement = Parameters<Database['batch']>[0][number]
+
+type TaskImageReviewRow = {
+  imageId: string
+  intent: string | null
+  featureId: string | null
+}
+
+type TaskImageReviewPlan = {
+  statements: TaskImageReviewStatement[]
+  processedCount: number
+}
+
+type TaskImageReviewCommit = TaskReviewCommitContext & {
+  action: 'reject' | 'acceptAll' | 'acceptClassified'
+}
+
+type TaskFeatureDraftFinalizationCommit = {
+  task: Pick<TaskDB, 'id' | 'featureId' | 'contributorId' | 'modifiedAt'>
+  feature: Pick<FeatureDB, 'id' | 'modifiedAt'>
+}
+
 
 // ═══════════════════════
 // TABLE OF CONTENTS

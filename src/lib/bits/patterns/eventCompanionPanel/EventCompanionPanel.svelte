@@ -29,7 +29,11 @@ import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { ProjectDetailProfile } from '$lib/db/zod/schema/project.types'
-import type { EventCompanionPlatform, EventCompanionRole, PanelProps } from '$lib/types'
+import type {
+  EventCompanionPlatform,
+  EventCompanionRole,
+} from '$lib/context/companion.types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 const appCtx = getAppCtx()
 const eventCompanionLayerIds = ['vli8hfmD-XEZ', '0bf1RYWdpaAt', 'lvWu_dCwiVZt'] as const

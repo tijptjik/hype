@@ -13,7 +13,10 @@ import { getAdminCtx } from '$lib/context/admin.svelte'
 // ENUMS
 import { Panel } from '$lib/enums'
 // TYPES
-import type { Resource, ResourceIndexRowSelectionState } from '$lib/types'
+import type { Resource } from '$lib/types'
+import type {
+  ResourceIndexRowSelectionState,
+} from '$lib/client/services/bulkEdit.types'
 import type {
   ResourceIndexGridRow,
   ResourceIndexItem,

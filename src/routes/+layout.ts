@@ -2,7 +2,7 @@ import { getLocaleKey } from '$lib/i18n'
 import { getTitleEnvironmentLabel, resolveTitle } from '$lib/navigation/title'
 // TYPES
 import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { TitleEnvironmentLabel } from '$lib/types'
+import type { TitleEnvironmentLabel } from '$lib/bits/patterns/panels/panel.types'
 
 export const ssr = true
 export const prerender = false

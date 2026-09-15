@@ -23,12 +23,12 @@ import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 import FunnelIcon from 'virtual:icons/proicons/filter'
 // TYPES
+import type { NavigableResource } from '$lib/types'
+import type { ResourceBulkEditConfig } from '$lib/client/services/bulkEdit.types'
 import type {
-  NavigableResource,
-  ResourceBulkEditConfig,
   ResourceControlBarConfig,
-  ResourceSortConfig,
-} from '$lib/types'
+} from '$lib/client/services/resourceFilters.types'
+import type { ResourceSortConfig } from '$lib/client/services/filters.types'
 
 let {
   resource,

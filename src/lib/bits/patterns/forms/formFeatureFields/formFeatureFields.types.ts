@@ -1,6 +1,8 @@
 // BITS
 import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
-import type { FeatureFieldSectionItem } from '$lib/bits/patterns/forms/formFeatureFieldsSection'
+import type {
+  FeatureFieldSectionItem,
+} from '$lib/bits/patterns/forms/formFeatureFieldsSection'
 // TYPES
 import type { FeatureFormInput } from '$lib/db/zod/schema/feature.types'
 import type { Locale, LocaleKey } from '$lib/types'

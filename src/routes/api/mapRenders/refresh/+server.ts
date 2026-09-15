@@ -12,7 +12,7 @@ import {
   planLayerMapRenderRefreshJobs,
   planProjectMapRenderRefreshJobs,
 } from '$lib/map/renders/render.server'
-import type { MapRenderJob } from '$lib/types'
+import type { MapRenderJob } from '$lib/map/renders/render.types'
 import { getMapRenderQueue, getMapRenderRemoteConfig } from '$lib/api/services/render'
 
 // ═══════════════════════

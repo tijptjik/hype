@@ -22,10 +22,11 @@ import { listFeatures } from '$lib/db/services/feature'
 import { applyPrismConstraints } from '$lib/db'
 import { HierarchicalResource } from '$lib/enums'
 // TYPES
-import type { Database, FeatureQueryInput } from '$lib/types'
+import type { Database } from '$lib/types'
+import type { FeatureQueryInput } from '$lib/api/services/featureQuery.types'
 
 vi.mock('$lib/api/services/feature', () => ({
-  getFeatureWithRelations: () => ({}),
+  getFeatureWithRelations: () => ({ division: { with: { i18n: true } }, divisionMemberships: { columns: { divisionId: true, selected: true } } }),
   toListResponseShape: async (result: unknown) => result,
 }))
 const stores: DatabaseSync[] = []
@@ -47,7 +48,7 @@ const input = (extra: Partial<FeatureQueryInput> = {}): FeatureQueryInput => ({
 function setup(withOrphan = false) {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
-  const columns = Object.values(getTableColumns(feature)).map(
+  const columns = Object.values(getTableColumns(feature)).filter(column => !/^division(?:Id|Level[1-6]Id)$|^landformLeafId$/.test(column.name)).map(
     column =>
       `"${column.name}" ${column.getSQLType()}${column.primary ? ' PRIMARY KEY' : ''}`,
   )
@@ -72,6 +73,8 @@ function setup(withOrphan = false) {
   sqlite.exec(readFileSync('migrations/0079_feature_query_indexes.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0080_feature_count_cache.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0081_feature_search_fts.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0082_feature_division_refresh.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0083_feature_division_registry.sql', 'utf8'))
   const statements: string[] = []
   const prepare = (query: string, bindings: unknown[] = []) => ({
     bind: (...params: unknown[]) => prepare(query, params),
@@ -106,6 +109,12 @@ function setup(withOrphan = false) {
     sqlite
       .prepare('INSERT INTO featureI18n VALUES(?, ?, ?, null, null, ?)')
       .run(id, 'en', title, JSON.stringify({ neighbourhood }))
+    if (neighbourhood) {
+      sqlite.prepare('INSERT INTO divisionDefinition VALUES(?,?,?) ON CONFLICT(id) DO NOTHING')
+        .run(neighbourhood, 'r1', JSON.stringify({ level: 5, category: 'hood', class: 'neighbourhood', names: { en: { name: neighbourhood } } }))
+      sqlite.prepare('UPDATE feature SET divisionId=?,divisionLevel5Id=? WHERE id=?').run(neighbourhood, neighbourhood, id)
+      sqlite.prepare('INSERT INTO featureDivisionMembership VALUES(?,?,1)').run(id, neighbourhood)
+    }
   }
   add('a', 'North 茶餐廳 100%', 'Central')
   add('b', 'North cafe', 'Central')
@@ -119,6 +128,16 @@ function setup(withOrphan = false) {
 }
 
 describe('indexed feature queries', () => {
+  it('filters selected stable division IDs without double-counting ancestors or candidates', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec("INSERT INTO featureDivisionMembership VALUES('a','parent',1),('b','parent',1),('c','parent',0)")
+    const page = await queryFeaturePage(db, input({ filters: { divisionIds: ['parent', 'Central'] } }), base, hub)
+    expect(page.data.map(row => row.id)).toEqual(['a', 'b'])
+    expect(page.totalCount).toBe(2)
+    expect(page.data[0].division?.i18n).toEqual(expect.arrayContaining([expect.objectContaining({ locale: 'en', name: 'Central' })]))
+    expect(page.data[0].divisionId).toBe('Central')
+  })
+
   it('keeps large viewport cursor identities fixed-size and bound to the query', async () => {
     const query = input({
       excludeIds: Array.from({ length: 500 }, (_, index) => `feature-${index}`),
@@ -626,7 +645,7 @@ describe('indexed feature queries', () => {
     expect(authorized).toEqual(original)
   })
 
-  it('updates and removes search postings and neighbourhood facets with source changes', async () => {
+  it('updates search postings while division identity remains independent of address edits', async () => {
     const { db, sqlite } = setup()
     sqlite.exec(
       `UPDATE featureI18n SET title = 'Changed', addressProperties = '{"neighbourhood":"Wan Chai"}' WHERE featureId = 'a';`,
@@ -637,7 +656,7 @@ describe('indexed feature queries', () => {
     expect(
       (await queryFeaturePage(db, input({ q: 'Changed' }), base, hub)).facets
         ?.neighbourhoods,
-    ).toEqual({ 'Wan Chai': 1 })
+    ).toEqual({ Central: 1 })
     sqlite.exec(`DELETE FROM featureI18n WHERE featureId = 'a'`)
     expect(
       sqlite

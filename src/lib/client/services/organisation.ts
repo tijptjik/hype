@@ -10,7 +10,11 @@ import {
   overrideResourceListItemBoolean,
 } from '$lib/client/services/resource'
 // TYPES
-import type { CapabilityDefinition, CapabilityDefinitions, Locale } from '$lib/types'
+import type {
+  CapabilityDefinition,
+  CapabilityDefinitions,
+} from '$lib/capabilities.types'
+import type { Locale } from '$lib/types'
 import type {
   OrganisationBooleanField,
   OrganisationFormInput,

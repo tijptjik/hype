@@ -3,9 +3,14 @@ import type { RemoteQuery } from '@sveltejs/kit'
 import type {
   PanelResource,
   ResourcePage,
-  ResourcePageFactory,
   ResourcePageInput,
-} from '$lib/types'
+} from '$lib/api/services/resourcePage.types'
+// TYPES
+
+type ResourcePageFactory = (
+  input: ResourcePageInput,
+) => import('@sveltejs/kit').RemoteQuery<ResourcePage>
+
 
 /** Native query handles own page data; this controller owns traversal and retained handles. */
 export class ResourceList {

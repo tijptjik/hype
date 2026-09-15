@@ -21,14 +21,40 @@ import {
 import type { RemoteQuery } from '@sveltejs/kit'
 import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
 import type {
-  FeatureQueryCachedEntity,
-  FeatureQueryFactory,
-  FeatureQueryHistory,
   FeatureQueryInput,
-  FeatureQueryMatchContext,
-  FeatureQueryNativePage,
   FeatureQueryPage,
-} from '$lib/types'
+} from '$lib/api/services/featureQuery.types'
+import type { FeatureQueryMatchContext } from '$lib/context/featureQuery.types'
+// TYPES
+
+/** Native remote queries own page payloads and concurrent request deduplication. */
+type FeatureQueryFactory = (
+  input: FeatureQueryInput,
+) => import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>
+
+/** Retained feature payloads expire using the collection freshness window. */
+type FeatureQueryCachedEntity = {
+  row: FeatureFromCollection
+  fetchedAt: number
+  meta: FeatureQueryInput['meta']
+  listMemberships?: Record<string, number>
+  /** Bounded native provenance reconnects restored map rows to refresh and optimistic updates. */
+  nativeSource?: FeatureQueryNativePage
+}
+
+/** Exact page ownership retained for fresh shared entities without duplicating remote state. */
+type FeatureQueryNativePage = {
+  page: import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>
+  input: FeatureQueryInput
+  fetchedAt: number
+}
+
+/** Retained native handles for a previously visited query. */
+type FeatureQueryHistory = {
+  pages: import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>[]
+  fetchedAt: number
+}
+
 
 const FRESHNESS_MS = 60_000
 const MAX_RETAINED_ENTITIES = 2_000

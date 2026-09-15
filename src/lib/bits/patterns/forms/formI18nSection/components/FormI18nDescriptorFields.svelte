@@ -2,7 +2,8 @@
 import { m } from '$lib/i18n'
 import { getGenAiState, toggleGenAiField } from '$lib/client/services/form'
 import { TextArea, TextInput } from '$lib/bits/custom/form'
-import type { FormBooleanValue, GenAiField, LocaleKey } from '$lib/types'
+import type { FormBooleanValue, GenAiField } from '$lib/client/services/form.types'
+import type { LocaleKey } from '$lib/types'
 
 type DescriptorFieldConfig = {
   key: GenAiField

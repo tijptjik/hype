@@ -4,7 +4,7 @@ import type {
   CapabilityDefinition,
   CapabilityDefinitions,
   CapabilityKey,
-} from '$lib/types'
+} from '$lib/capabilities.types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE

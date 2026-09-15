@@ -14,7 +14,9 @@ import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronUp from 'virtual:icons/proicons/chevron-up'
 import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
-import type { useLanguageSettingsModel } from '$lib/adapters/panels/useLanguageSettingsModel.svelte'
+import type {
+  useLanguageSettingsModel,
+} from '$lib/adapters/panels/useLanguageSettingsModel.svelte'
 // ENUMS
 import {
   localeNames,
@@ -24,7 +26,8 @@ import {
   supportedLocaleKeys,
 } from '$lib/enums'
 // TYPES
-import type { PanelProps, Locale, LocaleKey } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { Locale, LocaleKey } from '$lib/types'
 import type { UserPreferences } from '$lib/db/zod/schema/user.types'
 
 // CONTEXT

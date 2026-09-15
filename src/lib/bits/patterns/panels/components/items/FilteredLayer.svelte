@@ -14,7 +14,7 @@ import ResourceHierarchyPath from '$lib/bits/patterns/panels/components/common/R
 import type { Layer } from '$lib/db/zod/schema/layer.types'
 import type { Organisation } from '$lib/db/zod/schema/organisation.types'
 import type { Project } from '$lib/db/zod/schema/project.types'
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
 
 // CONTEXT
 const appCtx = getAppCtx()

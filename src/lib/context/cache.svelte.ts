@@ -7,14 +7,16 @@ import { getFeaturePage } from '$lib/api/server/featureQueries.remote'
 import { ResourceList } from './resource-list.svelte'
 import { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'
 // TYPES
+import type { Cache } from '$lib/context/cache.types'
 import type {
-  Cache,
   PanelResourceType,
+  PanelResource,
+} from '$lib/api/services/resourcePage.types'
+import type {
   ResourceDetailHandle,
   ResourceOptimisticInput,
-  PanelResource,
   FeatureCollectionHandle,
-} from '$lib/types'
+} from '$lib/context/featureQuery.types'
 
 /** Session-local domain retention. SvelteKit owns active page payloads and request deduplication. */
 export class CacheCtx {

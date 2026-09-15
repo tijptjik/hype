@@ -7,8 +7,10 @@ import FilterBar from '$lib/bits/patterns/panels/components/common/FilterBar.sve
 import { Icon } from '$lib/bits'
 import Squares2x2 from 'virtual:icons/proicons/grid'
 // TYPES
-import type { PanelProps } from '$lib/types'
-import type { useSavedFeatureListModel } from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type {
+  useSavedFeatureListModel,
+} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
 
 let {
   model,
