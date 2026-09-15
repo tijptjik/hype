@@ -313,7 +313,7 @@ export async function uploadAndProcessImage(
 
 const DEFAULT_PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
 const DEFAULT_PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
-const DEFAULT_LOCAL_ASSET_BASE_URL = 'http://localhost:8788'
+const DEFAULT_LOCAL_ASSET_BASE_URL = 'http://assets.hype.localhost'
 
 const resolvePublicAssetBaseUrl = (): string => {
   const configuredBaseUrl =

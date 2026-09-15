@@ -114,14 +114,15 @@ export default defineConfig(async ({ command }) => ({
   // Enable build caching for CI environments
   cacheDir: '.svelte-kit/vite',
   server: {
-    port: 5173,
+    port: 5175,
     strictPort: true,
     hmr: {
-      port: 5173,
+      clientPort: 80,
     },
     allowedHosts: [
       'localhost',
       '127.0.0.1',
+      'hype.localhost',
       '0.0.0.0',
       '192.168.1.100',
       '192.168.1.100.traefik.me',

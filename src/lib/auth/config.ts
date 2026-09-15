@@ -78,6 +78,7 @@ export const authConfig = {
     'https://breadline.preview.hype.hk',
     // DEV
     'http://localhost:5173',
+    'http://hype.localhost',
     'https://dove-main-tapir.ngrok-free.app',
     'http://192.168.1.100.traefik.me:5173',
   ],

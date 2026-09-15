@@ -19,7 +19,7 @@ import { getMapStyleAssetRecord, type MapStyleKey } from './registry'
 // 2. HEADLESS RENDER CONFIG
 //    - getMapStyleRenderOrigin
 
-export const MAP_STYLE_RENDER_BASE_URL = 'http://localhost:5173'
+export const MAP_STYLE_RENDER_BASE_URL = 'http://hype.localhost'
 export const MAP_STYLE_RENDER_READY_SELECTOR =
   '#map-style-render-ready[data-ready="true"]'
 

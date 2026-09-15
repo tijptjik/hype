@@ -72,12 +72,12 @@ describe('resolveImageAssetBaseUrl', () => {
     )
   })
 
-  it('falls back to the local asset worker when a local app session is missing public asset env', () => {
+  it('falls back to the local asset domain when a local app session is missing public asset env', () => {
     publicEnv.PUBLIC_ASSET_BASE_URL = ''
     publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = ''
 
     expect(resolveImageAssetBaseUrl('local', 'http://localhost:5173')).toBe(
-      'http://localhost:8788',
+      'http://assets.hype.localhost',
     )
   })
 })

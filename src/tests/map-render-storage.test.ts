@@ -78,6 +78,6 @@ describe('map render storage helpers', () => {
       'https://preview.hype.hk',
     )
     expect(getMapStyleRenderOrigin('https://hype.hk')).toBe('https://hype.hk')
-    expect(getMapStyleRenderOrigin()).toBe('http://localhost:5173')
+    expect(getMapStyleRenderOrigin()).toBe('http://hype.localhost')
   })
 })

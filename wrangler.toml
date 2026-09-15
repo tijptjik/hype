@@ -90,9 +90,9 @@ PUBLIC_HUB_CODE = "core"
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
-PUBLIC_ORIGIN = "http://localhost:5173"
-PUBLIC_ASSET_BASE_URL = "http://localhost:8788"
-PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
+PUBLIC_ORIGIN = "http://hype.localhost"
+PUBLIC_ASSET_BASE_URL = "http://assets.hype.localhost"
+PUBLIC_PREVIEW_ASSET_BASE_URL = "http://hype.localhost"
 AUTH_EMAIL_FROM = "accounts@hype.hk"
 
 ########
@@ -284,7 +284,7 @@ custom_domain = true
 
 [dev]
 ip = "localhost"
-port = 5173
+port = 5175
 local_protocol = "http"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare's global network

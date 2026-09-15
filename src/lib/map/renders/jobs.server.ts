@@ -32,7 +32,7 @@ export const buildMapRenderUrl = (
 ): string => {
   const url = new URL(
     `/headless/map-${kind === 'projects' ? 'project' : 'layer'}-render/${identifier}`,
-    publicOrigin ?? 'http://localhost:5173',
+    publicOrigin ?? 'http://hype.localhost',
   )
 
   if (token) {
