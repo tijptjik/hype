@@ -1253,5 +1253,7 @@
   "theme_title": "主題",
   "theme_light": "淺色",
   "theme_dark": "深色",
-  "theme_description": "選擇讓你感到自在的配色。"
+  "theme_description": "選擇讓你感到自在的配色。",
+  "theme_map_title": "地圖",
+  "theme_map_automatic": "使用目前地圖的樣式"
 }

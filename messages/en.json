@@ -1253,5 +1253,7 @@
   "theme_title": "THEME",
   "theme_light": "Light",
   "theme_dark": "Dark",
-  "theme_description": "Choose the colours that feel like home."
+  "theme_description": "Choose the colours that feel like home.",
+  "theme_map_title": "Map",
+  "theme_map_automatic": "Use the active map’s style"
 }
