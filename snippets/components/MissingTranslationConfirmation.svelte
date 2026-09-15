@@ -8,7 +8,8 @@ import { Language, CheckCircle } from '@steeze-ui/heroicons'
 import { translateText } from '$lib/i18n'
 import { supportedLocales } from '$lib/enums'
 // TYPES
-import type { Locale, Resource, Form } from '$lib/types'
+import type { Locale, Resource } from '$lib/types'
+import type { Form } from '$lib/client/services/form.types'
 
 interface Props {
   form: Form

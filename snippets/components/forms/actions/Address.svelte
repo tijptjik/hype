@@ -6,7 +6,7 @@ import { Icon } from '$lib/bits'
 import MagnifyingGlass from 'virtual:icons/lucide/search'
 import GlobeAsiaAustralia from 'virtual:icons/lucide/globe-2'
 // TYPES
-import type { FeatureForm } from '$lib/types'
+import type { FeatureForm } from '$lib/client/services/form.types'
 import type { Point } from 'geojson'
 
 type AddressActionsProps = {

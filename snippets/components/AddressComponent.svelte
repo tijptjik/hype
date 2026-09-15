@@ -8,13 +8,10 @@ import DisplayField from '$lib/components/forms/fields/Display.svelte'
 // ENUMS
 import { supportedLocales } from '$lib/enums'
 // TYPES
-import type {
-  Locale,
-  SectionProps,
-  FormField,
-  FormFieldNested,
-  FeatureForm,
-} from '$lib/types'
+import type { Locale } from '$lib/types'
+import type { SectionProps } from '$lib/client/services/formProps.types'
+import type { FormField, FormFieldNested } from '$lib/client/services/formFields.types'
+import type { FeatureForm } from '$lib/client/services/form.types'
 
 // CONFIG
 const columnHeaders: Record<Locale, string> = {

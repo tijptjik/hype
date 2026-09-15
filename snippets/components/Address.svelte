@@ -12,20 +12,30 @@ import TextField from '$lib/components/forms/fields/Textarea.svelte'
 import ConfirmationBar from '$lib/components/forms/bars/MissingTranslationConfirmation.svelte'
 import TranslationBar from '$lib/components/forms/bars/Translation.svelte'
 // TYPES
+import type { Locale, Field, Resource } from '$lib/types'
+import type { SectionProps, FieldProps } from '$lib/client/services/formProps.types'
+import type { ParsedReverseGeocodeResult } from '$lib/utils/geocoding.types'
+import type { FeatureForm } from '$lib/client/services/form.types'
 import type {
-  Locale,
-  SectionProps,
-  Field,
-  TranslationStates,
-  Resource,
-  ParsedReverseGeocodeResult,
-  FeatureForm,
-  FieldProps,
   FormFieldDefinition,
   FormField,
-} from '$lib/types'
+} from '$lib/client/services/formFields.types'
 import type { Geometry, Point } from 'geojson'
 import type { Feature } from '$lib/db/zod/schema/feature.types'
+// TYPES
+
+/* ----------------- */
+// I18N
+/* -------- */
+
+interface TranslationState {
+  confirmed: boolean
+  translated: boolean
+  required: boolean
+}
+
+type TranslationStates = Record<Locale, TranslationState>
+
 
 // STATE : PROPS
 let sectionProps: SectionProps = $props()

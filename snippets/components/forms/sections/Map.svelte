@@ -8,7 +8,8 @@ import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
 // MAP
 import { getCoordinates } from '$lib/client/services/geospatial'
 // TYPES
-import type { SectionProps, FeatureForm } from '$lib/types'
+import type { SectionProps } from '$lib/client/services/formProps.types'
+import type { FeatureForm } from '$lib/client/services/form.types'
 import type { Point } from 'geojson'
 import type { LngLatLike } from 'maplibre-gl'
 

@@ -6,7 +6,8 @@ import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
 import { fade } from 'svelte/transition'
 // TYPES
 import type { Snippet } from 'svelte'
-import type { Form, FormField, FormFieldArray } from '$lib/types'
+import type { Form } from '$lib/client/services/form.types'
+import type { FormField, FormFieldArray } from '$lib/client/services/formFields.types'
 
 type HeaderProps = {
   title?: string

@@ -9,7 +9,7 @@ import GlobeAsiaAustralia from 'virtual:icons/lucide/globe-2'
 // TRANSITIONS
 import { fade } from 'svelte/transition'
 // TYPES
-import type { FeatureForm } from '$lib/types'
+import type { FeatureForm } from '$lib/client/services/form.types'
 import type { Point } from 'geojson'
 
 // CONFIG
