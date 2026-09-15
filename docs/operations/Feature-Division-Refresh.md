@@ -63,9 +63,8 @@ A five-minute Cron Trigger drains bounded work. Once per UTC calendar month, it
 requests changes from the last fully applied release to the latest release. The
 comparison ID, target release ID/code and page cursor are pinned while processing.
 Every geocode request uses the pinned target; checkpoints advance only when all
-changes and jobs finish. Unaffected features can retain an older resolution
-release: the completed comparison establishes that they did not need another
-lookup.
+changes and jobs finish. The completed comparison establishes which features need
+another lookup without retaining geocoding response logs.
 
 - Names and other non-membership metadata update the local mirror without geocoding.
 - Membership-affecting changes queue existing members and transitive dependent
@@ -82,11 +81,11 @@ boundaries and excluding hole interiors, in batches of 100 features.
 
 A four-minute fenced lease prevents overlapping owners from publishing results.
 Each job has a generation. Membership replacement, feature projections, count
-invalidation, resolution evidence and acknowledgement share an atomic D1 batch,
-which rechecks generation, coordinates and ownership. Geometry edits immediately
-clear old memberships/projections and enqueue the new location. Failed jobs retain
-errors and back off; they are never silently discarded. API calls have a deadline
-and response-size bound.
+invalidation and acknowledgement share an atomic D1 batch, which rechecks
+generation, coordinates and ownership. Geometry edits immediately clear old
+memberships/projections and enqueue the new location. Failed jobs retain errors and
+back off; they are never silently discarded. API calls have a deadline and
+response-size bound.
 
 ## Local migration and backfill
 
@@ -133,7 +132,7 @@ not deploy or activate a remote cron.
 
 Authored/imported `featureI18n.addressProperties` remain source address data.
 They no longer drive division identity or count bins. `featureNeighbourhood` is a
-read-only compatibility view of the selected leaf's English registry name, and
+read-only compatibility view of the canonical leaf's English registry name, and
 `facets.neighbourhoods` retains the current response field name. Existing label
 selectors retain the static catalogue's parent-label expansion. New integrations
 should use `divisionIds` and registry names.
@@ -167,8 +166,8 @@ The local HYPE database was backed up, migrated and processed against Atlas on
 - 1,814 features processed: 1,473 resolved, 337 ambiguous and 4 unsupported geometries.
 - No pending jobs; refresh phase `idle` with the release checkpoint applied.
 - 105 referenced divisions, with 105 English and 105 Traditional Chinese name rows.
-- No foreign-key violations, count-bin differences, stale coordinate resolutions,
-  selected ambiguous memberships, island-group leaves or unreferenced mirror entries.
+- No foreign-key violations, count-bin differences, selected ambiguous memberships,
+  island-group leaves or unreferenced mirror entries.
 - Source coordinates and `featureI18n` contents match the pre-migration backup.
 - 122 focused tests and the Worker typecheck passed; the application build passed.
 - The full Svelte check was not clean (1,020 errors across 185 files at that check);

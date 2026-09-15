@@ -23,7 +23,7 @@ CREATE TABLE divisionDefinition (
   apiReleaseSet TEXT NOT NULL,
   attributes TEXT NOT NULL
 );
--- Candidate memberships are retained too, so a later hierarchy change can resolve ambiguity.
+-- Canonical and non-canonical memberships are retained for targeted refreshes.
 CREATE TABLE featureDivisionMembership (
   featureId TEXT NOT NULL REFERENCES feature(id) ON DELETE CASCADE ON UPDATE CASCADE,
   divisionId TEXT NOT NULL,
