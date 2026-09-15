@@ -1,0 +1,252 @@
+{
+  "jsonapi": {
+    "version": "1.1"
+  },
+  "data": [
+    {
+      "type": "geocoding-results",
+      "id": "data-hk-divisions-2026-09-01.0:[114.16,22.28]",
+      "attributes": {
+        "status": "resolved",
+        "rank": 1,
+        "coordinates": [114.16, 22.28],
+        "match": {
+          "type": "reverse-geocoding"
+        }
+      },
+      "relationships": {
+        "administrative": {
+          "data": [
+            {
+              "type": "divisions",
+              "id": "b4f09a9f-4cba-4a7c-bf58-2e63bc2e913d"
+            },
+            {
+              "type": "divisions",
+              "id": "25cec859-44f3-5e1d-a72b-952f804e56ab"
+            },
+            {
+              "type": "divisions",
+              "id": "8d17afe0-5631-49c5-b86d-d53c5d4b2f9d"
+            }
+          ]
+        },
+        "locality": {
+          "data": [
+            {
+              "type": "divisions",
+              "id": "7f99b544-4e68-4574-98d8-ca4de48a0607"
+            }
+          ]
+        },
+        "hood": {
+          "data": [
+            {
+              "type": "divisions",
+              "id": "4ddde3cf-b6b2-47b7-8c0e-291a1e491c35"
+            }
+          ]
+        },
+        "landform": {
+          "data": [
+            {
+              "type": "divisions",
+              "id": "5999ed90-1c47-51e7-b79d-80f9251c1e01"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "divisions",
+      "id": "b4f09a9f-4cba-4a7c-bf58-2e63bc2e913d",
+      "attributes": {
+        "level": 0,
+        "class": "sar",
+        "category": "administrative",
+        "i18n": {
+          "en": {
+            "name": "Hong Kong",
+            "nameVariant": [
+              "Hong Kong",
+              "Hong Kong Special Administrative Region",
+              "HK",
+              "Hong Kong SAR"
+            ],
+            "nameAlts": [
+              "Hong Kong Special Administrative Region",
+              "HK",
+              "Hong Kong SAR"
+            ],
+            "nameRules": [
+              {
+                "value": "香港特別行政區 Hong Kong Special Administrative Region",
+                "variant": "official"
+              },
+              {
+                "value": "Hong Kong Special Administrative Region",
+                "variant": "official"
+              },
+              {
+                "value": "HK",
+                "variant": "short"
+              },
+              {
+                "value": "香港 Hong Kong",
+                "variant": "alternate"
+              }
+            ]
+          },
+          "zh-hant": {
+            "name": "香港",
+            "nameVariant": ["香港", "香港特別行政區"],
+            "nameAlts": ["香港特別行政區"],
+            "nameRules": [
+              {
+                "value": "香港特別行政區 Hong Kong Special Administrative Region",
+                "variant": "official"
+              },
+              {
+                "value": "香港特別行政區",
+                "variant": "official"
+              },
+              {
+                "value": "香港 Hong Kong",
+                "variant": "alternate"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "divisions",
+      "id": "25cec859-44f3-5e1d-a72b-952f804e56ab",
+      "attributes": {
+        "level": 1,
+        "class": "area",
+        "category": "administrative",
+        "i18n": {
+          "en": {
+            "name": "Hong Kong Island",
+            "nameVariant": ["Hong Kong Island"],
+            "nameAlts": null,
+            "nameRules": null
+          },
+          "zh-hant": {
+            "name": "香港島",
+            "nameVariant": ["香港島"],
+            "nameAlts": null,
+            "nameRules": null
+          }
+        }
+      }
+    },
+    {
+      "type": "divisions",
+      "id": "8d17afe0-5631-49c5-b86d-d53c5d4b2f9d",
+      "attributes": {
+        "level": 2,
+        "class": "district",
+        "category": "administrative",
+        "i18n": {
+          "en": {
+            "name": "Central and Western District",
+            "nameVariant": ["Central and Western District"],
+            "nameAlts": null,
+            "nameRules": null
+          },
+          "zh-hant": {
+            "name": "中西區",
+            "nameVariant": ["中西區"],
+            "nameAlts": null,
+            "nameRules": null
+          }
+        }
+      }
+    },
+    {
+      "type": "divisions",
+      "id": "7f99b544-4e68-4574-98d8-ca4de48a0607",
+      "attributes": {
+        "level": 1,
+        "class": "city",
+        "category": "locality",
+        "i18n": {
+          "en": {
+            "name": "Hong Kong",
+            "nameVariant": ["Hong Kong"],
+            "nameAlts": null,
+            "nameRules": null
+          },
+          "zh-hant": {
+            "name": "香港",
+            "nameVariant": ["香港", "中國香港特別行政區"],
+            "nameAlts": ["中國香港特別行政區"],
+            "nameRules": [
+              {
+                "value": "中國香港特別行政區",
+                "variant": "alternate"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "divisions",
+      "id": "4ddde3cf-b6b2-47b7-8c0e-291a1e491c35",
+      "attributes": {
+        "level": 4,
+        "class": "macrohood",
+        "category": "hood",
+        "i18n": {
+          "en": {
+            "name": "Central",
+            "nameVariant": ["Central"],
+            "nameAlts": null,
+            "nameRules": null
+          },
+          "zh-hant": {
+            "name": "中環",
+            "nameVariant": ["中環"],
+            "nameAlts": null,
+            "nameRules": null
+          }
+        }
+      }
+    },
+    {
+      "type": "divisions",
+      "id": "5999ed90-1c47-51e7-b79d-80f9251c1e01",
+      "attributes": {
+        "level": null,
+        "class": "major_island",
+        "category": "landform",
+        "i18n": {
+          "en": {
+            "name": "Hong Kong Island",
+            "nameVariant": null,
+            "nameAlts": null,
+            "nameRules": null
+          },
+          "zh-hant": {
+            "name": "香港島",
+            "nameVariant": null,
+            "nameAlts": null,
+            "nameRules": null
+          }
+        }
+      }
+    }
+  ],
+  "meta": {
+    "profile": "full",
+    "direction": "reverse",
+    "release": {
+      "apiReleaseSet": "data-hk-divisions-2026-09-01.0"
+    }
+  }
+}

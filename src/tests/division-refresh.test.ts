@@ -92,12 +92,16 @@ const page = (data = [change()], nextCursor: string | null = null) => ({
 function setup() {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
-  sqlite.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE feature(id TEXT PRIMARY KEY, geometry TEXT NOT NULL,
-    organisationId TEXT DEFAULT 'org',projectId TEXT DEFAULT 'project',layerId TEXT DEFAULT 'layer',
-    isPublished INTEGER DEFAULT 1,isArchived INTEGER DEFAULT 0,isDraft INTEGER DEFAULT 0,
-    isVisitable INTEGER DEFAULT 1,isIntangible INTEGER DEFAULT 0);`)
-  sqlite.exec(readFileSync('migrations/0082_feature_division_refresh.sql', 'utf8'))
+  sqlite.exec(readFileSync('src/tests/fixtures/feature-query-base.sql', 'utf8'))
+  for (const migration of [
+    '0078_feature_spatial_index',
+    '0079_feature_query_indexes',
+    '0080_feature_count_cache',
+    '0081_feature_search_fts',
+    '0082_feature_division_refresh',
+    '0083_feature_division_registry',
+  ])
+    sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
   const prepare = (sql: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => prepare(sql, args),
     first: async () => sqlite.prepare(sql).get(...(values as never[])) ?? null,
@@ -129,7 +133,9 @@ function setup() {
   } as unknown as D1Database
   const add = (id: string, x = 5, y = 5) =>
     sqlite
-      .prepare('INSERT INTO feature(id,geometry) VALUES(?,?)')
+      .prepare(
+        "INSERT INTO feature(id,geometry,organisationId,projectId,layerId) VALUES(?,?,'org-1','project-1','layer-1')",
+      )
       .run(id, JSON.stringify({ type: 'Point', coordinates: [x, y] }))
   const tick = (fetcher: typeof fetch) =>
     refreshDivisions(db, { baseUrl: 'https://api.saanseoi.hk', fetcher }, now)
@@ -139,6 +145,21 @@ function setup() {
 }
 
 describe('division refresh', () => {
+  it('accepts the retained live Atlas response and preserves separate hierarchy branches', () => {
+    const result = geocodeSchema.parse(
+      JSON.parse(
+        readFileSync('src/tests/fixtures/saanseoi-geocode-central.json', 'utf8'),
+      ),
+    )
+    expect(result.meta.release.apiReleaseSet).toBe('data-hk-divisions-2026-09-01.0')
+    expect(result.data.memberships.filter(member => member.level === 1)).toHaveLength(2)
+    expect(result.data.branches.administrative).toHaveLength(1)
+    expect(result.data.branches.locality).toHaveLength(1)
+    expect(
+      result.data.memberships.some(member => member.names.en?.name === 'Central'),
+    ).toBe(true)
+  })
+
   it('uses the actual public API key header and pins the geocoding release', async () => {
     const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
     await apiRead(
@@ -211,15 +232,13 @@ describe('division refresh', () => {
       s.sqlite.prepare('SELECT appliedRelease,phase FROM divisionRefresh').get(),
     ).toMatchObject({ appliedRelease: 'r2', phase: 'idle' })
     expect(
-      s.sqlite.prepare('SELECT totalCount FROM featureDivisionCountRollup').get()
-        ?.totalCount,
+      s.sqlite.prepare('SELECT totalCount FROM featureCountRollup').get()?.totalCount,
     ).toBe(2)
-    s.sqlite.exec("UPDATE feature SET layerId='other' WHERE id='a'")
-    expect(s.count('featureDivisionCountRollup')).toBe(2)
+    s.sqlite.exec("UPDATE feature SET layerId='layer-2' WHERE id='a'")
+    expect(s.count('featureCountRollup')).toBe(2)
     s.sqlite.exec("DELETE FROM feature WHERE id='a'")
     expect(
-      s.sqlite.prepare('SELECT totalCount FROM featureDivisionCountRollup').get()
-        ?.totalCount,
+      s.sqlite.prepare('SELECT totalCount FROM featureCountRollup').get()?.totalCount,
     ).toBe(1)
     await s.tick(fetcher)
     expect(fetcher).toHaveBeenCalledTimes(3)
@@ -289,6 +308,9 @@ describe('division refresh', () => {
 
   it('refreshes metadata without geocoding and pins pagination', async () => {
     const s = setup()
+    s.add('metadata-member')
+    await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
+    await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
     s.sqlite.exec("UPDATE divisionRefresh SET appliedRelease='r1',phase='changes'")
     const fetcher = vi.fn<typeof fetch>(async () =>
       Response.json(page([change({ canAffectGeocodingMembership: false })], 'next')),
@@ -365,7 +387,11 @@ describe('division refresh', () => {
       BEGIN SELECT RAISE(ABORT,'injected'); END;`)
     await s.tick(async () => Response.json(geocoded()))
     expect(s.count('featureDivisionResolution')).toBe(0)
-    expect(s.count('featureDivisionCountRollup')).toBe(0)
+    expect(
+      s.sqlite
+        .prepare("SELECT count(*) AS n FROM featureCountRollup WHERE divisionId != ''")
+        .get()?.n,
+    ).toBe(0)
     expect(s.count('featureDivisionJob')).toBe(1)
   })
 
@@ -381,8 +407,126 @@ describe('division refresh', () => {
       }),
     )
     expect(s.count('featureDivisionMembership')).toBe(2)
-    expect(s.count('featureDivisionCountRollup')).toBe(0)
+    expect(
+      s.sqlite
+        .prepare("SELECT count(*) AS n FROM featureCountRollup WHERE divisionId != ''")
+        .get()?.n,
+    ).toBe(0)
     expect(s.count('featureDivisionJob')).toBe(0)
+  })
+
+  it('projects unique levels and a non-group landform leaf while retaining every membership', async () => {
+    const s = setup()
+    s.add('a')
+    const response = geocoded([
+      'root',
+      'area',
+      'city',
+      'district',
+      'town',
+      'macro',
+      'hood',
+      'micro',
+      'group',
+      'island',
+    ])
+    const attributes = [
+      ['administrative', 'sar', 0],
+      ['administrative', 'area', 1],
+      ['locality', 'city', 1],
+      ['administrative', 'district', 2],
+      ['locality', 'town', 3],
+      ['hood', 'macrohood', 4],
+      ['hood', 'neighbourhood', 5],
+      ['hood', 'microhood', 6],
+      ['landform', 'island_group', null],
+      ['landform', 'major_island', null],
+    ]
+    response.included.forEach((resource, index) => {
+      Object.assign(resource.attributes, {
+        category: attributes[index][0],
+        class: attributes[index][1],
+        level: attributes[index][2],
+      })
+    })
+    Object.assign(response.data[0].relationships, {
+      landform: { data: ['group', 'island'].map(id => ({ type: 'divisions', id })) },
+    })
+    const fetcher = async () => Response.json(response)
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    expect(
+      s.sqlite
+        .prepare(
+          'SELECT divisionId,divisionLevel1Id,divisionLevel2Id,divisionLevel6Id,landformLeafId FROM feature',
+        )
+        .get(),
+    ).toMatchObject({
+      divisionId: 'micro',
+      divisionLevel1Id: null,
+      divisionLevel2Id: 'district',
+      divisionLevel6Id: 'micro',
+      landformLeafId: 'island',
+    })
+    expect(s.count('featureDivisionMembership')).toBe(10)
+    expect(s.count('divisionI18n')).toBe(10)
+    expect(
+      s.sqlite.prepare('SELECT sum(totalCount) AS n FROM featureCountRollup').get()?.n,
+    ).toBe(1)
+    s.sqlite.exec(
+      `UPDATE feature SET geometry='{"type":"Point","coordinates":[20,20]}'`,
+    )
+    expect(
+      s.sqlite
+        .prepare('SELECT divisionId,divisionLevel6Id,landformLeafId FROM feature')
+        .get(),
+    ).toMatchObject({ divisionId: null, divisionLevel6Id: null, landformLeafId: null })
+    expect(s.count('featureDivisionMembership')).toBe(0)
+  })
+
+  it('refreshes used names and variants without geocoding or mirroring unused divisions', async () => {
+    const s = setup()
+    s.add('a')
+    await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
+    await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
+    s.sqlite.exec("UPDATE divisionRefresh SET phase='changes'")
+    const renamed = change({
+      canAffectGeocodingMembership: false,
+      after: {
+        ...definition(),
+        attributes: {
+          ...member('village'),
+          names: {
+            en: { name: 'New name', nameAlts: ['Alias'] },
+            'zh-hant': { name: '新名' },
+          },
+        },
+      },
+    })
+    const unused = change({
+      id: 'unused-change',
+      divisionId: 'unused',
+      canAffectGeocodingMembership: false,
+    })
+    const fetcher = vi.fn<typeof fetch>(async () =>
+      Response.json(page([renamed, unused])),
+    )
+    await s.tick(fetcher)
+    for (let index = 0; index < 4; index++) await s.tick(fetcher)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(s.count('divisionDefinition')).toBe(1)
+    expect(
+      s.sqlite
+        .prepare("SELECT name,namedValues FROM divisionI18n WHERE locale='en'")
+        .get(),
+    ).toMatchObject({
+      name: 'New name',
+      namedValues: JSON.stringify({ name: 'New name', nameAlts: ['Alias'] }),
+    })
+    expect(
+      s.sqlite.prepare('SELECT neighbourhood FROM featureNeighbourhood').get()
+        ?.neighbourhood,
+    ).toBe('New name')
   })
 
   it('includes polygon boundaries and excludes hole interiors', () => {
