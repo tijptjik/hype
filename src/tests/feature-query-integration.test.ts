@@ -267,6 +267,41 @@ describe('map query integration', () => {
 })
 
 describe('paginated collection activation', () => {
+  it('preserves an explicitly delayed card opening across a mode change', async () => {
+    const app = createApp()
+    const feature = row('delayed-feature')
+    app.cache.feature.set(feature.id, feature)
+    const omni = createOmni(app)
+
+    await omni.initFeature(feature.id, {
+      focus: false,
+      openCard: true,
+      openCardDelay: 500,
+      updateUrl: false,
+    })
+
+    await vi.advanceTimersByTimeAsync(499)
+    expect(omni.state.isCardOpen).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(omni.state.isCardOpen).toBe(true)
+  })
+
+  it('keeps the card closed when selection disables opening', async () => {
+    const app = createApp()
+    const feature = row('closed-feature')
+    app.cache.feature.set(feature.id, feature)
+    const omni = createOmni(app)
+
+    await omni.initFeature(feature.id, {
+      focus: false,
+      openCard: false,
+      updateUrl: false,
+    })
+
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(omni.state.isCardOpen).toBe(false)
+  })
+
   it('activates a retained feature without waiting for a remote detail read', async () => {
     const app = createApp()
     const feature = row('cached-feature')
