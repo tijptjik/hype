@@ -1,5 +1,7 @@
 <script lang="ts">
 // SVELTE
+import { untrack } from 'svelte'
+// SVELTEKIT
 import { page } from '$app/state'
 // ADAPTERS
 import { useImageProviderModel } from '$lib/adapters/image'
@@ -93,23 +95,58 @@ const getCollectionDescriptorFromActiveCollection = (): ReturnType<
   }
 }
 
-const loadFeatureAndSetContext = async () => {
-  const id = page.params.id
-  if (!id) return
+/**
+ * Refreshes a card mounted from retained collection data.
+ * @param id - Feature id whose authoritative snapshot should replace the preview.
+ * @returns Nothing; stale results are discarded when route selection changes.
+ */
+function refreshFeatureSnapshot(id: string): void {
+  void appCtx
+    .getFeatureById(id)
+    .then(refreshedFeature => {
+      if (
+        !refreshedFeature ||
+        page.params.id !== id ||
+        featureId !== id ||
+        omniCtx.isIntentionallyClosing
+      ) {
+        return
+      }
 
+      feature = refreshedFeature as Feature
+    })
+    .catch(console.error)
+}
+
+/**
+ * Loads one route snapshot and aligns feature selection without rewriting that route.
+ * @param id - Feature id captured by the route effect.
+ * @param routeCollection - Collection descriptor captured from the same URL snapshot.
+ * @returns Completion after the current route context has been initialized.
+ */
+const loadFeatureAndSetContext = async (
+  id: string,
+  routeCollection: ReturnType<typeof getCollectionDescriptorFromSearchParams>,
+): Promise<void> => {
   if (omniCtx.isIntentionallyClosing) {
     return
   }
 
-  const routeCollection = getCollectionDescriptorFromSearchParams(page.url.searchParams)
   const isColdStart = omniCtx.isColdStart(id)
 
   // 1. Set featureId for consistency
   featureId = id
-  // 2. Load the fresh feature data
-  const loadedFeature = await appCtx.getFeatureById(id)
-  // 3. Update the feature state atomically
-  feature = loadedFeature as Feature
+  // 2. Mount retained map or collection data immediately; direct routes still
+  // wait for their first authoritative read because they have no cached row.
+  const cachedFeature = await appCtx.getFeatureById(id, false)
+  if (cachedFeature) {
+    feature = cachedFeature as Feature
+    refreshFeatureSnapshot(id)
+  } else {
+    const loadedFeature = await appCtx.getFeatureById(id)
+    if (page.params.id !== id || omniCtx.isIntentionallyClosing) return
+    feature = loadedFeature as Feature
+  }
 
   // Rehydrate collection-backed feature routes from the URL so collection
   // navigation survives refreshes and direct deep links.
@@ -118,6 +155,7 @@ const loadFeatureAndSetContext = async () => {
       activeFeatureId: id,
       focus: false,
       focusFeature: false,
+      updateUrl: false,
     })
 
     if (didInitCollection) {
@@ -147,21 +185,26 @@ const loadFeatureAndSetContext = async () => {
     // Prevent navigation since we're already on the feature page
     await omniCtx.initFeature(id, {
       focus: false,
+      updateUrl: false,
     })
   } else if (appCtx.getActiveFeature()?.id !== id) {
     appCtx.setActiveFeature(id, {
       focus: false,
       openCard: false,
+      updateUrl: false,
     })
   }
 }
 
 // Load feature in effect to avoid component hierarchy destruction
 $effect(() => {
-  if (!page.params.id) {
-    return
-  }
-  loadFeatureAndSetContext()
+  const id = page.params.id
+  if (!id) return
+
+  const routeCollection = getCollectionDescriptorFromSearchParams(page.url.searchParams)
+  untrack(() => {
+    void loadFeatureAndSetContext(id, routeCollection)
+  })
 })
 
 const imageProviderProps = $derived({

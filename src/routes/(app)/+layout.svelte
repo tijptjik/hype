@@ -247,7 +247,9 @@ beforeNavigate(({ from, to }) => {
   }
 })
 
-const activeMapStyleCode = $derived.by(() => getActiveMapStyleCode(appCtx))
+const activeMapStyleCode = $derived.by(
+  () => settingsModel.mapTheme ?? getActiveMapStyleCode(appCtx),
+)
 const MAP_GESTURE_SURFACE_SELECTOR = '[data-map-gesture-surface="true"]'
 
 // PROFILE PANEL SCROLL POSITION
