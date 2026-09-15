@@ -1049,8 +1049,11 @@ export class OmniCtx {
       optionsWithDefaults,
     )
 
-    // Set mode to feature
-    this.setMode(OmniMode.feature)
+    // Set mode to feature while preserving the selection's requested opening delay.
+    this.setMode(OmniMode.feature, {
+      openCard: optionsWithDefaults.openCard,
+      openCardDelay: optionsWithDefaults.openCardDelay,
+    })
   }
 
   /**
