@@ -110,6 +110,13 @@ export const geocodeSchema = z
         memberships: members.filter(member => referenced.has(member.id)),
         selectedAncestryIds:
           result.attributes.status === 'ambiguous' ? null : [...referenced],
+        // Preserve the source branches for hierarchy inspection without inventing cross-category parents.
+        branches: Object.fromEntries(
+          Object.keys(result.relationships).map(category => [
+            category,
+            paths(category),
+          ]),
+        ),
         path: null,
         landform: {
           memberships: members.filter(
