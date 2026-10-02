@@ -404,7 +404,7 @@ describe('submitted contribution edit guard', () => {
     const ctx = {
       user: { id: 'contributor', isAnonymous: false },
       userId: 'contributor',
-      event: {},
+      event: { locals: {} },
       db: createPublicScopeDb({
         id: 'task',
         contributorId: 'contributor',
@@ -435,7 +435,7 @@ describe('submitted contribution edit guard', () => {
     const ctx = {
       user: { id: 'contributor', isAnonymous: false },
       userId: 'contributor',
-      event: {},
+      event: { locals: {} },
       db: createPublicScopeDb({
         id: 'task',
         contributorId: 'contributor',
@@ -527,7 +527,7 @@ describe('public contribution target guard', () => {
           db: dbForScope([publicScope]),
           user: { id: 'contributor', isAnonymous: false },
           userId: 'contributor',
-          event: {},
+          event: { locals: {} },
         },
       ),
     ).resolves.toEqual({ data: { id: 'task' } })
@@ -552,7 +552,7 @@ describe('public contribution target guard', () => {
           db: dbForScope([]),
           user: { id: 'contributor', isAnonymous: false },
           userId: 'contributor',
-          event: {},
+          event: { locals: {} },
         },
       ),
     ).rejects.toMatchObject({
@@ -576,7 +576,7 @@ describe('public contribution target guard', () => {
           db: dbForScope([]),
           user: { id: 'contributor', isAnonymous: false },
           userId: 'contributor',
-          event: {},
+          event: { locals: {} },
         },
       ),
     ).rejects.toMatchObject({
@@ -600,7 +600,7 @@ describe('public contribution target guard', () => {
           db: dbForScope([publicScope]),
           user: { id: 'contributor', isAnonymous: false },
           userId: 'contributor',
-          event: {},
+          event: { locals: {} },
         },
       ),
     ).resolves.toEqual({ data: { id: 'task' } })

@@ -54,9 +54,11 @@ export const GET: RequestHandler = async ({ locals }) => {
       vars: maskPrivateValues(public_vars),
       secrets: Object.keys(secret_vars),
       // Anonymous requests have undefined session/user locals; enumerate objects only.
-      locals: Object.entries(locals).map(([key, value]) => ({
-        [key]: value !== null && typeof value === 'object' ? Object.keys(value) : [],
-      })),
+      locals: Object.entries(locals)
+        .filter(([key]) => key !== 'platform')
+        .map(([key, value]) => ({
+          [key]: value !== null && typeof value === 'object' ? Object.keys(value) : [],
+        })),
     })
   } catch (e) {
     // HEALTH : Request Error

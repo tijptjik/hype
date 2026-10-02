@@ -84,7 +84,7 @@ describe('remote guard wrappers', () => {
       expect(ctx.user.id).toBe('u-1')
       expect(Array.isArray(ctx.userRoles)).toBe(true)
       expect(ctx.db).toBeTruthy()
-      expect(ctx.event.locals).toEqual({ user: { id: 'u-1' } })
+      expect(ctx.event.locals).toMatchObject({ user: { id: 'u-1' } })
       return { ok: true }
     })
 

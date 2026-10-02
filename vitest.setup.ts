@@ -8,6 +8,13 @@ vi.mock('unique-names-generator', () => ({
   animals: [],
 }))
 
+// Explicit public env modules are generated at runtime in SvelteKit 3.
+vi.mock('$app/env/public', () => ({
+  PUBLIC_ASSET_BASE_URL: '',
+  PUBLIC_PREVIEW_ASSET_BASE_URL: '',
+  PUBLIC_RAW_ASSET_BASE_URL: '',
+}))
+
 // Mock requestAnimationFrame and related timing functions
 global.requestAnimationFrame = vi
   .fn()
