@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockVerifyUploadToken = vi.fn()
 
-vi.mock('$lib/images/auth', () => ({
+vi.mock('#lib/images/auth.js', () => ({
   verifyUploadToken: (...args: unknown[]) => mockVerifyUploadToken(...args),
 }))
 
@@ -69,8 +69,8 @@ describe('api image upload route', () => {
     const { POST } = await import('../routes/api/images/upload/+server')
     await expect(
       POST({
+        locals: { platform: { env: { AUTH_SECRET: 'secret', ASSET_RAW_DEV: bucket } } },
         request: createUploadRequest(),
-        platform: { env: { AUTH_SECRET: 'secret', ASSET_RAW_DEV: bucket } },
       } as never),
     ).rejects.toMatchObject({ status: 500 })
     expect(bucket.put).not.toHaveBeenCalled()
@@ -90,16 +90,18 @@ describe('api image upload route', () => {
 
     const { POST } = await import('../routes/api/images/upload/+server')
     const response = await POST({
+      locals: {
+        platform: {
+          env: {
+            AUTH_SECRET: 'secret',
+            ASSET_RAW_DEV: bucket,
+          },
+        },
+      },
       request: createUploadRequest({
         file,
         metadata: JSON.stringify({ credit: 'Photographer' }),
       }),
-      platform: {
-        env: {
-          AUTH_SECRET: 'secret',
-          ASSET_RAW_DEV: bucket,
-        },
-      },
     } as never)
 
     expect(response.status).toBe(200)
@@ -132,16 +134,18 @@ describe('api image upload route', () => {
 
     await expect(
       POST({
+        locals: {
+          platform: {
+            env: {
+              AUTH_SECRET: 'secret',
+              ASSET_RAW_DEV: bucket,
+            },
+          },
+        },
         request: createUploadRequest({
           file,
           metadata: '{invalid',
         }),
-        platform: {
-          env: {
-            AUTH_SECRET: 'secret',
-            ASSET_RAW_DEV: bucket,
-          },
-        },
       } as never),
     ).rejects.toMatchObject({
       status: 400,
@@ -174,13 +178,15 @@ describe('api image upload route', () => {
 
     await expect(
       POST({
-        request: createUploadRequest({ file }),
-        platform: {
-          env: {
-            AUTH_SECRET: 'secret',
-            ASSET_RAW_DEV: bucket,
+        locals: {
+          platform: {
+            env: {
+              AUTH_SECRET: 'secret',
+              ASSET_RAW_DEV: bucket,
+            },
           },
         },
+        request: createUploadRequest({ file }),
       } as never),
     ).rejects.toMatchObject({
       status: 500,
@@ -231,13 +237,15 @@ describe('api image upload route', () => {
 
       await expect(
         POST({
-          request: createUploadRequest({ file }),
-          platform: {
-            env: {
-              AUTH_SECRET: 'secret',
-              ASSET_RAW_DEV: bucket,
+          locals: {
+            platform: {
+              env: {
+                AUTH_SECRET: 'secret',
+                ASSET_RAW_DEV: bucket,
+              },
             },
           },
+          request: createUploadRequest({ file }),
         } as never),
       ).rejects.toMatchObject({
         status: 500,

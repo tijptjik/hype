@@ -32,7 +32,7 @@ const { ctx, authorize, queryPage, queryConditions, batchFactory } = vi.hoisted(
   queryConditions: vi.fn((..._args: unknown[]) => ({ conditions: ['authorized'] })),
   batchFactory: vi.fn(),
 }))
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedBatchQuery: (
     schema: { parse: (input: unknown) => unknown },
     handler: (inputs: unknown[], ctx: unknown) => Promise<(input: unknown) => unknown>,
@@ -45,20 +45,20 @@ vi.mock('$lib/api/server/remote', () => ({
     }, 'query_batch')
   },
 }))
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeFeatureListForContext: authorize,
   toAuthMessage: (message: string) => message,
 }))
-vi.mock('$lib/api/services/feature', () => ({
+vi.mock('#lib/api/services/feature.js', () => ({
   toQueryConditions: queryConditions,
   toRequestedListState: (state: unknown) => state,
 }))
-vi.mock('$lib/db/services/featureQuery', async original => ({
+vi.mock('#lib/db/services/featureQuery.js', async original => ({
   ...(await original<object>()),
   queryFeaturePage: queryPage,
 }))
-import { getFeaturePage } from '$lib/api/server/featureQueries.remote'
-import { featureQuerySignature } from '$lib/db/services/featureQuery'
+import { getFeaturePage } from '#lib/api/server/featureQueries.remote.js'
+import { featureQuerySignature } from '#lib/db/services/featureQuery.js'
 
 const input = { meta: { isAdminRequest: false, scope: 'cache' } }
 beforeEach(() => {

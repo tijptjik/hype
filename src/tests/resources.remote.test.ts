@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   layers: vi.fn(),
   batch: null as ResourceBatch | null,
 }))
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (
     schema: { parse: (input: unknown) => unknown },
     handler: (input: unknown, ctx: unknown) => unknown,
@@ -30,16 +30,16 @@ vi.mock('$lib/api/server/remote', () => ({
     return withRemoteMeta(() => {}, 'query')
   },
 }))
-vi.mock('$lib/api/server/organisation.remote', () => ({
+vi.mock('#lib/api/server/organisation.remote.js', () => ({
   getOrganisations: mocks.organisations,
   getOrganisationsWhichHaveLayers: mocks.organisations,
 }))
-vi.mock('$lib/api/server/project.remote', () => ({ getProjects: mocks.projects }))
-vi.mock('$lib/api/server/layer.remote', () => ({ getLayers: mocks.layers }))
+vi.mock('#lib/api/server/project.remote.js', () => ({ getProjects: mocks.projects }))
+vi.mock('#lib/api/server/layer.remote.js', () => ({ getLayers: mocks.layers }))
 import {
   getDefaultLayerResources,
   getResourcePage,
-} from '$lib/api/server/resources.remote'
+} from '#lib/api/server/resources.remote.js'
 
 const meta = { isAdminRequest: false, scope: 'user:hub:locale' }
 describe('compact resource page boundary', () => {

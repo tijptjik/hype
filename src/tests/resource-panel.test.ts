@@ -2,8 +2,8 @@
 import { writable } from 'svelte/store'
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import ResourceSection from '$lib/bits/patterns/resourcePanel/components/ResourceSection.svelte'
-import type { ResourcePanelSection } from '$lib/bits/patterns/resourcePanel'
+import ResourceSection from '#lib/bits/patterns/resourcePanel/components/ResourceSection.svelte'
+import type { ResourcePanelSection } from '#lib/bits/patterns/resourcePanel/index.js'
 
 // Geometry and FLIP are checked in Chromium; keep jsdom focused on the controls.
 vi.mock('@tanstack/svelte-virtual', () => ({

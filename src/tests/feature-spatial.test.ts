@@ -9,7 +9,7 @@ import {
   FEATURE_VIEWPORT_MAX_CELLS,
   getFeatureViewportQuery,
   isFeaturePointWithinBounds,
-} from '$lib/map/featureSpatial'
+} from '#lib/map/featureSpatial.js'
 
 describe('feature H3 membership', () => {
   it('computes every resolution directly even where geometric membership differs from an H3 parent', () => {

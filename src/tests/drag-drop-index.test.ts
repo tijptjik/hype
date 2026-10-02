@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DragDropState } from '@thisux/sveltednd'
-import { getDropIndex } from '$lib/client/services/dragDrop'
+import { getDropIndex } from '#lib/client/services/dragDrop.js'
 
 const ids = ['a', 'b', 'c', 'd']
 const state: DragDropState<{ id: string }> = {

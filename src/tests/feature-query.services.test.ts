@@ -8,8 +8,8 @@ import { drizzle } from 'drizzle-orm/d1'
 // VITEST
 import { afterEach, describe, expect, it, vi } from 'vitest'
 // DB
-import * as schema from '$lib/db/schema'
-import { feature, featureDivisionMembership } from '$lib/db/schema'
+import * as schema from '#lib/db/schema/index.js'
+import { feature, featureDivisionMembership } from '#lib/db/schema/index.js'
 import {
   buildFeatureQueryConditions,
   buildFeatureQuerySource,
@@ -17,15 +17,15 @@ import {
   buildFeatureRollupConditions,
   featureQuerySignature,
   queryFeaturePage,
-} from '$lib/db/services/featureQuery'
-import { listFeatures } from '$lib/db/services/feature'
-import { applyPrismConstraints } from '$lib/db'
-import { HierarchicalResource } from '$lib/enums'
+} from '#lib/db/services/featureQuery.js'
+import { listFeatures } from '#lib/db/services/feature.js'
+import { applyPrismConstraints } from '#lib/db/index.js'
+import { HierarchicalResource } from '#lib/enums.js'
 // TYPES
-import type { Database } from '$lib/types'
-import type { FeatureQueryInput } from '$lib/api/services/featureQuery.types'
+import type { Database } from '#lib/types.js'
+import type { FeatureQueryInput } from '#lib/api/services/featureQuery.types.js'
 
-vi.mock('$lib/api/services/feature', () => ({
+vi.mock('#lib/api/services/feature.js', () => ({
   getFeatureWithRelations: () => ({
     division: { with: { i18n: true } },
     divisionMemberships: { columns: { divisionId: true, selected: true } },
@@ -1105,7 +1105,7 @@ describe('indexed feature queries', () => {
 
 /** Extract ID-keyed totals while separate tests assert translated facet metadata. */
 function facetCounts(page: {
-  facets: import('$lib/api/services/featureQuery.types').FeatureQueryPage['facets']
+  facets: import('#lib/api/services/featureQuery.types.js').FeatureQueryPage['facets']
 }): Record<string, number> {
   return Object.fromEntries(
     Object.entries(page.facets?.divisions ?? {}).map(([id, facet]) => [

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { getActiveMapStyleCode } from '$lib/client/services/map'
-import type { AppCtx } from '$lib/context/app.svelte'
+import { getActiveMapStyleCode } from '#lib/client/services/map.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 
 type MapStyleProject = {
   id: string

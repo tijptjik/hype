@@ -5,7 +5,7 @@ import { promisify } from 'node:util'
 // VITEST
 import { describe, expect, it } from 'vitest'
 // MAP
-import { createFeatureSpatialIndex } from '$lib/map/featureSpatial'
+import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // BACKFILL
 import {
   featureSpatialBackfillSelect,

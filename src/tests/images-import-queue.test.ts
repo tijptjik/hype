@@ -1,32 +1,34 @@
 // TESTING
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('$lib/api/server/feature.remote', () => ({ getFeatureForImport: vi.fn() }))
-vi.mock('$lib/api/server/image.remote', () => ({
+vi.mock('#lib/api/server/feature.remote.js', () => ({ getFeatureForImport: vi.fn() }))
+vi.mock('#lib/api/server/image.remote.js', () => ({
   getFeatureCanonicalImageOccupancy: vi.fn(),
 }))
-vi.mock('$lib/api/server/organisation.remote', () => ({ getOrganisation: vi.fn() }))
-vi.mock('$lib/api/server/project.remote', () => ({ getProject: vi.fn() }))
-vi.mock('$lib/client/services/image', () => ({
+vi.mock('#lib/api/server/organisation.remote.js', () => ({ getOrganisation: vi.fn() }))
+vi.mock('#lib/api/server/project.remote.js', () => ({ getProject: vi.fn() }))
+vi.mock('#lib/client/services/image.js', () => ({
   calculateImageContentHash: vi.fn(),
   uploadAndProcessImage: vi.fn(),
 }))
-vi.mock('$lib/images/upload', () => ({ normalizeUploadFileForAssetPipeline: vi.fn() }))
+vi.mock('#lib/images/upload.js', () => ({
+  normalizeUploadFileForAssetPipeline: vi.fn(),
+}))
 
 // API
-import { getFeatureForImport } from '$lib/api/server/feature.remote'
-import { getFeatureCanonicalImageOccupancy } from '$lib/api/server/image.remote'
-import { getOrganisation } from '$lib/api/server/organisation.remote'
-import { getProject } from '$lib/api/server/project.remote'
+import { getFeatureForImport } from '#lib/api/server/feature.remote.js'
+import { getFeatureCanonicalImageOccupancy } from '#lib/api/server/image.remote.js'
+import { getOrganisation } from '#lib/api/server/organisation.remote.js'
+import { getProject } from '#lib/api/server/project.remote.js'
 // SERVICES
 import {
   calculateImageContentHash,
   uploadAndProcessImage,
-} from '$lib/client/services/image'
-import { handleImageDrop } from '$lib/client/services/import/images'
-import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
+} from '#lib/client/services/image.js'
+import { handleImageDrop } from '#lib/client/services/import/images.js'
+import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
 // TYPES
-import type { BatchUploadResult } from '$lib/client/services/import/types'
+import type { BatchUploadResult } from '#lib/client/services/import/types.js'
 
 beforeEach(() => {
   vi.useFakeTimers()

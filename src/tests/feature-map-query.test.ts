@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { latLngToCell } from 'h3-js'
-import type { RemoteQuery } from '@sveltejs/kit'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { RemoteQuery } from '$app/server'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type {
   FeatureQueryInput,
   FeatureQueryPage,
-} from '$lib/api/services/featureQuery.types'
-import { FeatureQuery, FeatureQueryRetention } from '$lib/context/feature-query.svelte'
-import { featureQueryKey } from '$lib/client/services/featureQuery'
+} from '#lib/api/services/featureQuery.types.js'
+import {
+  FeatureQuery,
+  FeatureQueryRetention,
+} from '#lib/context/feature-query.svelte.js'
+import { featureQueryKey } from '#lib/client/services/featureQuery.js'
 
 const meta = { isAdminRequest: false, scope: 'user-a:hub-a:en' }
 const pointA: [number, number] = [114.173, 22.278]

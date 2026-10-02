@@ -2,9 +2,9 @@
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { commitTaskFeatureReview } from '$lib/db/services/task'
-import type { Database } from '$lib/types'
-import type { TaskFeatureReviewCommit } from '$lib/db/services/taskReview.types'
+import { commitTaskFeatureReview } from '#lib/db/services/task.js'
+import type { Database } from '#lib/types.js'
+import type { TaskFeatureReviewCommit } from '#lib/db/services/taskReview.types.js'
 
 const stores: DatabaseSync[] = []
 afterEach(() => {

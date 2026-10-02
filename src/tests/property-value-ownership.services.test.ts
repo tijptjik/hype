@@ -2,10 +2,10 @@
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import * as schema from '$lib/db/schema'
-import { syncPropertyValues } from '$lib/db/services/property'
-import type { Database } from '$lib/types'
-import type { PropertyValue } from '$lib/db/zod/schema/property.types'
+import * as schema from '#lib/db/schema/index.js'
+import { syncPropertyValues } from '#lib/db/services/property.js'
+import type { Database } from '#lib/types.js'
+import type { PropertyValue } from '#lib/db/zod/schema/property.types.js'
 
 let sqlite: DatabaseSync
 let db: Database

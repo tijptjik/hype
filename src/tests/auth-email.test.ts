@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildAuthEmail } from '$lib/auth/email'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import { buildAuthEmail } from '#lib/auth/email.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
 const customHub = {
   code: 'city-signs',
@@ -44,7 +44,7 @@ describe('buildAuthEmail', () => {
       hub: {
         ...customHub,
         image: {
-          ctxType: 'hub' as import('$lib/enums').ImageContextResource.hub,
+          ctxType: 'hub' as import('#lib/enums.js').ImageContextResource.hub,
           ctxId: 'hub-1',
           image: {
             id: 'image-1',

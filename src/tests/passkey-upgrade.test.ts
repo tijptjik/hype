@@ -12,7 +12,7 @@ const authMocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('$lib/auth/client', () => ({
+vi.mock('#lib/auth/client.js', () => ({
   authClient: {
     changeEmail: authMocks.changeEmail,
     passkey: {
@@ -27,7 +27,7 @@ vi.mock('$lib/auth/client', () => ({
 import {
   completePasskeyAccountUpgrade,
   PasskeySessionRefreshError,
-} from '$lib/auth/passkey-upgrade'
+} from '#lib/auth/passkey-upgrade.js'
 
 describe('completePasskeyAccountUpgrade', () => {
   beforeEach(() => {

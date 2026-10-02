@@ -44,7 +44,7 @@ const {
   mockRetryBusyRead: vi.fn(async (operation: () => Promise<unknown>) => operation()),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -69,21 +69,21 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getPrisms: mockGetPrisms,
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
 const mockToPropertyResponseShape = vi.fn((row: unknown) => ({ row }))
 
-vi.mock('$lib/api/services/property', () => ({
+vi.mock('#lib/api/services/property.js', () => ({
   getPropertyQueryContext: mockGetPropertyQueryContext,
   propertyCollectionWithRelations: {},
   toPropertyPrismConditions: mockToPropertyPrismConditions,
   toPropertyResponseShape: mockToPropertyResponseShape,
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeProjectReadForProbe: mockAuthorizeProjectReadForProbe,
   authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
   authorizeOrganisationUpdateForSubmission:
@@ -92,7 +92,7 @@ vi.mock('$lib/api/services/authz', () => ({
   toAuthMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/db/services/property', () => ({
+vi.mock('#lib/db/services/property.js', () => ({
   createBaseProperty: mockCreateBaseProperty,
   createI18n: mockCreateI18n,
   createPropertyValues: mockCreatePropertyValues,
@@ -102,29 +102,29 @@ vi.mock('$lib/db/services/property', () => ({
   getProperty: mockLoadProperty,
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   probeProjectQuery: mockProbeProjectQuery,
 }))
 
-vi.mock('$lib/db/services/sqlite', () => ({
+vi.mock('#lib/db/services/sqlite.js', () => ({
   retryBusyRead: mockRetryBusyRead,
 }))
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   ListQueryParamsSchema: {},
   ProjectPropertiesQuery: {},
   ProjectPropertyFormData: {},
   ProjectPropertyValueFormData: {},
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/property.remote')>
+let remote: Awaited<typeof import('#lib/api/server/property.remote.js')>
 
 describe('property.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('$lib/api/server/property.remote')
+    remote = await import('#lib/api/server/property.remote.js')
     vi.clearAllMocks()
     mockToPropertyResponseShape.mockImplementation((row: unknown) => ({ row }))
     mockGuardedContext.mockResolvedValue({
@@ -411,7 +411,6 @@ describe('property.remote', () => {
       meta: {
         isAdminRequest: true,
         projectId: 'project-1',
-        requestPath: '/admin/properties',
       },
     })
   })

@@ -4,10 +4,10 @@ import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { hashPassword } from 'better-auth/crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getAuthForRequest } from '$lib/auth'
+import { getAuthForRequest } from '#lib/auth.js'
 
 // Role enrichment is separate from the authoritative account-state SQL under test.
-vi.mock('$lib/db/services/user', () => ({ getUserRoles: vi.fn(async () => []) }))
+vi.mock('#lib/db/services/user.js', () => ({ getUserRoles: vi.fn(async () => []) }))
 
 let sqlite: DatabaseSync
 let serial = 0

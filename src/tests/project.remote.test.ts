@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel query registration is isolated from this resource's authorization fixtures.
-vi.mock('$lib/api/server/resources.remote', () => ({}))
+vi.mock('#lib/api/server/resources.remote.js', () => ({}))
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -96,7 +96,7 @@ const {
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -145,12 +145,12 @@ vi.mock('$lib/api/server/remote', () => ({
     }, 'form'),
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getPrisms: vi.fn(() => ({ organisation: [], project: [], layer: [] })),
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -187,7 +187,7 @@ vi.mock('$lib/api/services', () => ({
   validateUniqueNonReservedCode: mockValidateUniqueNonReservedCode,
 }))
 
-vi.mock('$lib/api/services/project', () => ({
+vi.mock('#lib/api/services/project.js', () => ({
   getProjectWithRelations: vi.fn(() => ({})),
   normalizeSubmittedPropertyRanks: <
     T extends { type?: unknown; rank?: unknown; values?: unknown },
@@ -312,7 +312,7 @@ vi.mock('$lib/api/services/project', () => ({
   toRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeProjectAssignCapabilitiesForSubmission:
     mockAuthorizeProjectAssignCapabilitiesForSubmission,
   authorizeProjectCreateForSubmission: mockAuthorizeProjectCreateForSubmission,
@@ -355,7 +355,7 @@ vi.mock('$lib/api/services/authz', () => ({
   normalizeProjectI18nForFormInput: (i18n: unknown) => i18n ?? {},
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   createI18n: vi.fn(async () => undefined),
   createUserRoles: vi.fn(async () => undefined),
   createProject: vi.fn(async () => null),
@@ -390,7 +390,7 @@ vi.mock('$lib/db/services/project', () => ({
   updateProjectPublishedStateById: mockUpdateProjectPublishedStateById,
 }))
 
-vi.mock('$lib/db/services/property', () => ({
+vi.mock('#lib/db/services/property.js', () => ({
   createPropertiesWithRelated: vi.fn(async () => undefined),
   listResolvedProjectProperties: mockListResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject: vi.fn(async () => undefined),
@@ -399,11 +399,11 @@ vi.mock('$lib/db/services/property', () => ({
   updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
 }))
 
-vi.mock('$lib/db/services/layer', () => ({
+vi.mock('#lib/db/services/layer.js', () => ({
   syncProjectLayerPresentation: mockSyncProjectLayerPresentation,
 }))
 
-vi.mock('$lib/db/services/map', () => ({
+vi.mock('#lib/db/services/map.js', () => ({
   listMapStylesForProject: vi.fn(async () => []),
   getOrganisationMapStyleScope: vi.fn(async () => null),
   listMapStylesForScope: vi.fn(async () => []),
@@ -411,16 +411,16 @@ vi.mock('$lib/db/services/map', () => ({
   setProjectMapStyleByCode: mockSetProjectMapStyleByCode,
 }))
 
-vi.mock('$lib/i18n', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/i18n')>()
+vi.mock('#lib/i18n.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
   return {
     ...actual,
     toLocaleRecordFromOrganisationFormI18n: mockToLocaleRecordFromOrganisationFormI18n,
   }
 })
 
-vi.mock('$lib/db/zod', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/db/zod')>()
+vi.mock('#lib/db/zod/index.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/db/zod/index.js')>()
   return {
     ...actual,
     GetQueryParamsSchema: {},
@@ -433,9 +433,9 @@ vi.mock('$lib/db/zod', async importOriginal => {
   }
 })
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-let remote: Awaited<typeof import('$lib/api/server/project.remote')>
+let remote: Awaited<typeof import('#lib/api/server/project.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('project.remote')
 
 const buildUpdatePayload = (organisationId: string) => ({
@@ -462,7 +462,7 @@ const throwingInvalid = (message: string): never => {
 
 describe('project.remote form organisation move authz', () => {
   beforeAll(async () => {
-    remote = await import('$lib/api/server/project.remote')
+    remote = await import('#lib/api/server/project.remote.js')
   }, 15_000)
 
   beforeEach(async () => {

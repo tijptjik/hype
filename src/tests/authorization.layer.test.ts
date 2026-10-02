@@ -6,8 +6,8 @@ import {
   authorizeLayerPublishForSubmission,
   authorizeLayerReadForProbe,
   authorizeLayerUpdateForSubmission,
-} from '$lib/api/services/authz'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/api/services/authz/index.js'
+import type { UserRoleDisco } from '#lib/types.js'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const coreAdminRole = (): UserRoleDisco =>

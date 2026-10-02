@@ -2,7 +2,7 @@ import {
   getElevatedChromeXGutter,
   getOmnibarClearanceHeight,
   getOmnibarTopGutter,
-} from '$lib/bits/patterns/bars/omnibar/Omnibar.layout'
+} from '#lib/bits/patterns/bars/omnibar/Omnibar.layout.js'
 import { describe, expect, it } from 'vitest'
 
 describe('omnibar layout', () => {

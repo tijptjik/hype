@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { resolveAnalyticsScope } from '$lib/api/services/authz/analytics'
-import type { AssetAnalyticsScope } from '$lib/api/services/assetAnalytics.types'
-import type { UserRoleDisco } from '$lib/types'
+import { resolveAnalyticsScope } from '#lib/api/services/authz/analytics.js'
+import type { AssetAnalyticsScope } from '#lib/api/services/assetAnalytics.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 const scope = (overrides: Partial<AssetAnalyticsScope> = {}): AssetAnalyticsScope => ({
   scopePrefixes: [],

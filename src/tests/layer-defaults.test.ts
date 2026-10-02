@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CORE_DEFAULT_PROJECT_CODE,
   getInitialHubLayerDefaultIds,
-} from '$lib/client/services/layerDefaults'
+} from '#lib/client/services/layerDefaults.js'
 
 describe('initial hub layer defaults', () => {
   const projects = [

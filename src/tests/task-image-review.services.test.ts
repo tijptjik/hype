@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { archiveImages, publishImages } from '$lib/db/services/task'
-import type { Database } from '$lib/types'
+import { archiveImages, publishImages } from '#lib/db/services/task.js'
+import type { Database } from '#lib/types.js'
 
 /** Provides review rows including an image with no remaining feature assignment. */
 function setup() {

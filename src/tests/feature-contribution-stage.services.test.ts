@@ -10,15 +10,15 @@ const mocks = vi.hoisted(() => ({
   finalParse: vi.fn(value => value),
 }))
 
-vi.mock('$lib/db/services/feature', () => mocks)
-vi.mock('$lib/db/services/layer', () => mocks)
-vi.mock('$lib/db/zod/schema/feature', async importOriginal => ({
+vi.mock('#lib/db/services/feature.js', () => mocks)
+vi.mock('#lib/db/services/layer.js', () => mocks)
+vi.mock('#lib/db/zod/schema/feature.js', async importOriginal => ({
   ...(await importOriginal<object>()),
   FeatureDraftEntityFormData: { parse: mocks.draftParse },
   FeatureEntityFormData: { parse: mocks.finalParse },
 }))
 
-import { createUserContributedFeature } from '$lib/api/services/feature'
+import { createUserContributedFeature } from '#lib/api/services/feature.js'
 
 describe('feature contribution submission stage', () => {
   beforeEach(() => {

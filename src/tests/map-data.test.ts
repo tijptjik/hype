@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { searchAllAsync } from '$lib/map/data'
-import type { AppCtx } from '$lib/context/app.svelte'
+import { searchAllAsync } from '#lib/map/data.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 
 describe('map search data', () => {
   it('keeps generated feature titles visible in search results', async () => {

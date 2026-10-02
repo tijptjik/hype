@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, not, sql, type SQL } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { chunkedInArray } from '$lib/utils/batch-query'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 
 const records = sqliteTable('records', {
   id: text('id'),

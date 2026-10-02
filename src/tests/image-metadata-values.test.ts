@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 import {
   getCapturedAtFromMetadata,
   getCoordinatesFromMetadata,
-} from '$lib/utils/image-metadata'
-import { extractImageUploadMetadata } from '$lib/images/metadata'
+} from '#lib/utils/image-metadata.js'
+import { extractImageUploadMetadata } from '#lib/images/metadata.js'
 
 describe('image GPS metadata', () => {
   it('applies southern and western hemisphere references to unsigned coordinates', () => {

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   resolveHubActionPermissions,
   type HubAuthActor,
-} from '$lib/api/services/authz/hub'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/api/services/authz/hub.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({

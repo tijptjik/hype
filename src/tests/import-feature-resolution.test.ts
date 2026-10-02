@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { mergeFeatureData } from '$lib/client/services/import/features/resolution'
+import { mergeFeatureData } from '#lib/client/services/import/features/resolution.js'
 
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 
-vi.mock('$lib/api/server/feature.remote', () => ({
+vi.mock('#lib/api/server/feature.remote.js', () => ({
   featureForm: {},
   getFeatureForImport: vi.fn(),
 }))
 
-vi.mock('$lib/client/services/feature', () => ({
+vi.mock('#lib/client/services/feature.js', () => ({
   toFeatureFormInput: vi.fn(),
 }))
 

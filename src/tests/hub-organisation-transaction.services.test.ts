@@ -3,9 +3,9 @@ import { DatabaseSync } from 'node:sqlite'
 import { getTableColumns } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { syncOrganisations } from '$lib/db/services/hub'
-import { organisation } from '$lib/db/schema'
-import type { Database } from '$lib/types'
+import { syncOrganisations } from '#lib/db/services/hub.js'
+import { organisation } from '#lib/db/schema/index.js'
+import type { Database } from '#lib/types.js'
 
 let sqlite: DatabaseSync
 let db: Database

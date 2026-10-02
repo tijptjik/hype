@@ -6,7 +6,7 @@ import {
   LEGACY_HONG_KONG_TILEJSON_URL,
   resolveBasemapTileJsonUrl,
   SAANSEOI_HONG_KONG_TILEJSON_URL,
-} from '$lib/map/styles/source'
+} from '#lib/map/styles/source.js'
 
 describe('runtime basemap source policy', () => {
   it('falls back to the public legacy endpoint when no SaanSeoi key is configured', () => {

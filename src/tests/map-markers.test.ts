@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createMarkerRenderer } from '$lib/map/markers'
+import { createMarkerRenderer } from '#lib/map/markers.js'
 import {
   getMarkerRetentionBudget,
   isWithinMarkerRetentionPerimeter,
-} from '$lib/map/markerRetention'
+} from '#lib/map/markerRetention.js'
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 
 class TestMarker {
   static instances: TestMarker[] = []

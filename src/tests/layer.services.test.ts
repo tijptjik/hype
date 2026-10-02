@@ -3,7 +3,7 @@ import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core'
 import {
   hasOrganisationLayersCondition,
   hasProjectLayersCondition,
-} from '$lib/db/services/layer'
+} from '#lib/db/services/layer.js'
 
 const dialect = new SQLiteSyncDialect()
 

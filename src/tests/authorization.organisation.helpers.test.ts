@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   resolveOrganisationActionPermissions,
   type OrganisationAuthActor,
-} from '$lib/api/services/authz/organisation'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/api/services/authz/organisation.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({

@@ -1,15 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { RemoteQuery } from '@sveltejs/kit'
-import type { ResourcePage, PanelResource } from '$lib/api/services/resourcePage.types'
-import type { FeatureQueryPage } from '$lib/api/services/featureQuery.types'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { RemoteQuery } from '$app/server'
+import type {
+  ResourcePage,
+  PanelResource,
+} from '#lib/api/services/resourcePage.types.js'
+import type { FeatureQueryPage } from '#lib/api/services/featureQuery.types.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import { withRemoteMeta } from './remote-function-mock'
-vi.mock('$lib/api/server/resources.remote', () => ({
+vi.mock('#lib/api/server/resources.remote.js', () => ({
   getResourcePage: withRemoteMeta(vi.fn(), 'query'),
   getPinnedResource: withRemoteMeta(vi.fn(), 'query'),
 }))
-import { CacheCtx } from '$lib/context/cache.svelte'
-import { FeatureQuery } from '$lib/context/feature-query.svelte'
+import { CacheCtx } from '#lib/context/cache.svelte.js'
+import { FeatureQuery } from '#lib/context/feature-query.svelte.js'
 
 function page(data: PanelResource[]) {
   const value: ResourcePage = { data, nextCursor: null }
@@ -76,7 +79,7 @@ describe('native collection optimistic projections', () => {
     const cache = new CacheCtx()
     const collection = page([row('feature')])
     cache.featureCollection =
-      collection.query as unknown as import('$lib/context/featureQuery.types').FeatureCollectionHandle
+      collection.query as unknown as import('#lib/context/featureQuery.types.js').FeatureCollectionHandle
     cache.optimisticUpdates('feature', {
       meta: { id: 'feature' },
       data: { isPublished: false },

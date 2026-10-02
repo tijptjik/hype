@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getBreadcrumbs } from '$lib/navigation/admin'
-import { FirstClassResource, ResourcePath } from '$lib/enums'
-import type { AppCtx } from '$lib/context/app.svelte'
+import { getBreadcrumbs } from '#lib/navigation/admin.js'
+import { FirstClassResource, ResourcePath } from '#lib/enums.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 
 type Breadcrumb = { name: string; href: string }
 

@@ -1,7 +1,7 @@
 // THIRD-PARTY
 import { describe, expect, it } from 'vitest'
 // API
-import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
+import { getMapResourceDeepLinkLayerIds } from '#lib/client/services/mapResourceDeepLink.js'
 
 describe('map resource deep links', () => {
   const projects = [

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isScannerProbePath } from '$lib/utils/scannerProbe'
+import { isScannerProbePath } from '#lib/utils/scannerProbe.js'
 
 describe('isScannerProbePath', () => {
   it.each([

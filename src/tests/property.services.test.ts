@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   resetProjectPropertyLocale,
   translateProjectPropertyLocale,
-} from '$lib/client/services/property'
+} from '#lib/client/services/property.js'
 
 const { translateTextMock } = vi.hoisted(() => ({
   translateTextMock: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/translation.remote', () => ({
+vi.mock('#lib/api/server/translation.remote.js', () => ({
   translateText: translateTextMock,
 }))
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 
 let formEl: HTMLFormElement | undefined = $state()
 let revalidateCalls = $state(0)

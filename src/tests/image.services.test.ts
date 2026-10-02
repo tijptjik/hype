@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
 // API
-import { extractVersionFromImageUrl } from '$lib/client/services/image'
+import { extractVersionFromImageUrl } from '#lib/client/services/image.js'
 // DB
-import { getFeatureCanonicalImageOccupancy } from '$lib/db/services/image'
+import { getFeatureCanonicalImageOccupancy } from '#lib/db/services/image.js'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 
 describe('image service helpers', () => {
   it('extracts version numbers from Cloudflare image URLs', () => {

@@ -4,8 +4,12 @@ import { GET } from '../routes/api/health/+server'
 describe('health diagnostics', () => {
   it('handles unauthenticated request locals without failing', async () => {
     const response = await GET({
-      locals: { user: undefined, session: undefined, optional: null },
-      platform: { env: { ENVIRONMENT: 'local', PUBLIC_SAMPLE_KEY: 'secret-value' } },
+      locals: {
+        platform: { env: { ENVIRONMENT: 'local', PUBLIC_SAMPLE_KEY: 'secret-value' } },
+        user: undefined,
+        session: undefined,
+        optional: null,
+      },
     } as unknown as Parameters<typeof GET>[0])
     expect(response.status).toBe(200)
     const payload = await response.json()
@@ -15,7 +19,7 @@ describe('health diagnostics', () => {
 
   it('reports unavailable bindings explicitly', async () => {
     await expect(
-      GET({ locals: {}, platform: undefined } as unknown as Parameters<typeof GET>[0]),
+      GET({ locals: { platform: undefined } } as unknown as Parameters<typeof GET>[0]),
     ).rejects.toMatchObject({ status: 503 })
   })
 })

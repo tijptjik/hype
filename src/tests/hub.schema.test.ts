@@ -3,7 +3,7 @@ import {
   HubAdminProfileAPI,
   HubCardProfileAPI,
   HubDetailProfileAPI,
-} from '$lib/db/zod/schema/hub'
+} from '#lib/db/zod/schema/hub.js'
 
 describe('HubAdminProfileAPI', () => {
   it('preserves legalContactAddress in admin profile payloads', () => {

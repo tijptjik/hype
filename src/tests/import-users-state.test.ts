@@ -1,13 +1,13 @@
 // TESTING
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('$lib/api/server/user.remote', () => ({
+vi.mock('#lib/api/server/user.remote.js', () => ({
   getUser: vi.fn(),
   searchUsers: vi.fn(),
 }))
 
 // API
-import { searchUsers } from '$lib/api/server/user.remote'
+import { searchUsers } from '#lib/api/server/user.remote.js'
 // SERVICES
 import {
   validateUsers,
@@ -16,13 +16,13 @@ import {
   updateResolutionUserSearchResults,
   setUserResolution,
   removeUserResolution,
-} from '$lib/client/services/import/users'
+} from '#lib/client/services/import/users.js'
 // TYPES
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 import type {
   FeatureCSVColumn,
   UserValidationResult,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 function createContext() {
   let query = ''

@@ -2,7 +2,7 @@ import {
   getOmnibarRootClasses,
   getOmnibarSurfaceClasses,
   getOmnibarWidthContainerClasses,
-} from '$lib/bits/patterns/bars/omnibar/omnibar.styles'
+} from '#lib/bits/patterns/bars/omnibar/omnibar.styles.js'
 import { describe, expect, it } from 'vitest'
 
 describe('omnibar styles', () => {

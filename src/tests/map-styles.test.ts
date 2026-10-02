@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { getUserMarkerStyleVariant } from '$lib/map/markers'
+import { getUserMarkerStyleVariant } from '#lib/map/markers.js'
 import {
   buildCatalogMapStyle,
   buildMapStyle,
   getDefaultMapStyleKey,
   listMapStyleCatalog,
-} from '$lib/map/styles'
-import { getMapStyleRenderAssetPath } from '$lib/map/styles/render.shared'
+} from '#lib/map/styles/index.js'
+import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
 
 describe('map styles', () => {
   it('defaults to the Ghostery style', () => {

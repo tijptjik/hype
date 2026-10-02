@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSqliteBusyError } from '$lib/db/services/sqlite'
+import { isSqliteBusyError } from '#lib/db/services/sqlite.js'
 
 describe('D1 read retry detection', () => {
   it('recognises a busy SQLite error nested in a D1 object wrapper', () => {

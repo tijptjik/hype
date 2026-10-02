@@ -2,8 +2,8 @@
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createUserRoles, syncUserRoles } from '$lib/db/services/project'
-import type { Database } from '$lib/types'
+import { createUserRoles, syncUserRoles } from '#lib/db/services/project.js'
+import type { Database } from '#lib/types.js'
 
 let sqlite: DatabaseSync
 let db: Database

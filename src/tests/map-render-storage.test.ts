@@ -6,12 +6,12 @@ import {
   getMapRenderStage,
   getMapRenderStorageMode,
   resolveMapRenderAssetUrl,
-} from '$lib/map/renders/storage.shared'
+} from '#lib/map/renders/storage.shared.js'
 import {
   getMapStyleRenderObjectKey,
   getMapStyleRenderOrigin,
   resolveMapStyleRenderUrl,
-} from '$lib/map/styles/render.shared'
+} from '#lib/map/styles/render.shared.js'
 
 describe('map render storage helpers', () => {
   it('maps runtime environments to render stages', () => {

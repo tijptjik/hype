@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createPreviewableUploadFile,
   normalizeUploadFileForAssetPipeline,
-} from '$lib/images/upload'
+} from '#lib/images/upload.js'
 
 afterEach(() => {
   vi.restoreAllMocks()

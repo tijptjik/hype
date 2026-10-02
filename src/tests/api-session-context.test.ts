@@ -1,14 +1,14 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDatabase, getSessionOrError, setupRequestHandler } from '$lib/api'
+import { getDatabase, getSessionOrError, setupRequestHandler } from '#lib/api/index.js'
 
 const { mockClient, mockGetUserRoles } = vi.hoisted(() => ({
   mockClient: vi.fn(() => ({})),
   mockGetUserRoles: vi.fn(async () => []),
 }))
 
-vi.mock('$lib/db', () => ({ default: mockClient }))
-vi.mock('$lib/db/services/user', () => ({ getUserRoles: mockGetUserRoles }))
+vi.mock('#lib/db/index.js', () => ({ default: mockClient }))
+vi.mock('#lib/db/services/user.js', () => ({ getUserRoles: mockGetUserRoles }))
 
 describe('shared API session context', () => {
   beforeEach(() => vi.clearAllMocks())

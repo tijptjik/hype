@@ -1,9 +1,9 @@
 // I18N
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { supportedLocales, SupportedLocales } from '$lib/enums'
-import { getFPI18n, getI18n, normalizeI18nLocaleRecord, setLocale } from '$lib/i18n'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
-import type { FeatureProperty } from '$lib/db/zod/schema/feature.types'
+import { supportedLocales, SupportedLocales } from '#lib/enums.js'
+import { getFPI18n, getI18n, normalizeI18nLocaleRecord, setLocale } from '#lib/i18n.js'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
+import type { FeatureProperty } from '#lib/db/zod/schema/feature.types.js'
 // MESSAGE FILES
 import enMessages from '../../messages/en.json'
 import zhHantMessages from '../../messages/zh-hant.json'

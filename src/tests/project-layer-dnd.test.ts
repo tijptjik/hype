@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 import { render, fireEvent, cleanup } from '@testing-library/svelte/pure'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import FormProjectLayersSection from '$lib/bits/patterns/forms/formProjectLayersSection/FormProjectLayersSection.svelte'
+import FormProjectLayersSection from '#lib/bits/patterns/forms/formProjectLayersSection/FormProjectLayersSection.svelte'
 
-vi.mock('$lib/bits/core', async () => {
+vi.mock('#lib/bits/core/index.js', async () => {
   const { default: Component } = await import('./mocks/svelte-component.svelte')
   return { SimpleTooltip: Component }
 })
-vi.mock('$lib/bits/custom', async () => {
+vi.mock('#lib/bits/custom/index.js', async () => {
   const { default: Component } = await import('./mocks/svelte-component.svelte')
   return { Card: { Actions: Component }, SectionHeader: Component, Switch: Component }
 })
-vi.mock('$lib/bits/patterns/cards/resourceCard', async () => {
+vi.mock('#lib/bits/patterns/cards/resourceCard/index.js', async () => {
   const { default: Root } = await import('./mocks/svelte-component.svelte')
   return { ResourceCard: { Root, Body: Root } }
 })

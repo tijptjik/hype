@@ -2,8 +2,8 @@
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, expect, it } from 'vitest'
-import { createTaskImagesFromImageIds } from '$lib/db/services/image'
-import type { Database } from '$lib/types'
+import { createTaskImagesFromImageIds } from '#lib/db/services/image.js'
+import type { Database } from '#lib/types.js'
 
 describe('task image attachment', () => {
   it('handles empty input, duplicates, and retries within the SQL parameter budget', async () => {

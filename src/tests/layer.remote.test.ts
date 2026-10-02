@@ -2,12 +2,12 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel query registration is isolated from this resource's authorization fixtures.
-vi.mock('$lib/api/server/resources.remote', () => ({}))
+vi.mock('#lib/api/server/resources.remote.js', () => ({}))
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 // API
-import * as remote from '$lib/api/server/layer.remote'
-import { authorizeLayerUpdateForSubmission } from '$lib/api/services/authz/layer'
+import * as remote from '#lib/api/server/layer.remote.js'
+import { authorizeLayerUpdateForSubmission } from '#lib/api/services/authz/layer.js'
 
 type MockDecision = {
   allowed: boolean
@@ -108,7 +108,7 @@ const {
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -168,11 +168,11 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -204,8 +204,8 @@ vi.mock('$lib/api/services', () => ({
   }),
 }))
 
-vi.mock('$lib/api/services/layer', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/api/services/layer')>()
+vi.mock('#lib/api/services/layer.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/api/services/layer.js')>()
   return {
     ...actual,
     getLayerWithRelations: mockGetLayerWithRelations,
@@ -220,8 +220,8 @@ vi.mock('$lib/api/services/layer', async importOriginal => {
   }
 })
 
-vi.mock('$lib/api/services/authz', async importOriginal => ({
-  ...(await importOriginal<typeof import('$lib/api/services/authz')>()),
+vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/api/services/authz/index.js')>()),
   authorizeLayerCreateForSubmission: mockAuthorizeLayerCreateForSubmission,
   authorizeLayerDeleteForSubmission: mockAuthorizeLayerDeleteForSubmission,
   authorizeLayerListForContext: mockAuthorizeLayerListForContext,
@@ -246,7 +246,7 @@ vi.mock('$lib/api/services/authz', async importOriginal => ({
   toIssueDetailMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/db/services/layer', () => ({
+vi.mock('#lib/db/services/layer.js', () => ({
   createI18n: mockCreateI18n,
   createLayer: mockCreateLayer,
   getLayer: mockLoadLayer,
@@ -263,13 +263,13 @@ vi.mock('$lib/db/services/layer', () => ({
   updateLayerPublishedStateById: mockUpdateLayerPublishedStateById,
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   probeProjectForUpdate: mockProbeProjectForUpdate,
 }))
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   GetQueryParamsSchema: {},
   LayerFormData: { parse: (value: unknown) => value },
   ListQueryParamsSchema: {},
@@ -277,8 +277,8 @@ vi.mock('$lib/db/zod', () => ({
   RemoveLayerSchema: {},
 }))
 
-vi.mock('$lib/i18n', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/i18n')>()
+vi.mock('#lib/i18n.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
   return {
     ...actual,
     getLocale: vi.fn(() => 'en'),

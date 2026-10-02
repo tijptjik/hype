@@ -65,7 +65,7 @@ const {
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -112,7 +112,7 @@ vi.mock('$lib/api/server/remote', () => ({
     }, 'form'),
 }))
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   ListQueryParamsSchema: {},
   GetQueryParamsSchema: {},
   PublishHubSchema: {},
@@ -124,7 +124,7 @@ vi.mock('$lib/db/zod', () => ({
   },
 }))
 
-vi.mock('$lib/i18n', () => ({
+vi.mock('#lib/i18n.js', () => ({
   m: new Proxy(
     {},
     {
@@ -134,15 +134,15 @@ vi.mock('$lib/i18n', () => ({
   toLocaleRecordFromOrganisationFormI18n: mockToLocaleRecordFromOrganisationFormI18n,
 }))
 
-vi.mock('$lib/api/services/project', () => ({
+vi.mock('#lib/api/services/project.js', () => ({
   normalizeSubmittedPropertyRanks: <T>(properties: T[]) => properties,
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   isReservedCode: (_value: string) => false,
   toAuthMessage: (code: string) => code,
   toIssueDetailMessage: (code: string) => code,
@@ -177,7 +177,7 @@ vi.mock('$lib/api/services/authz', () => ({
   toHubListConditions: vi.fn(() => []),
 }))
 
-vi.mock('$lib/api/services/hub', () => ({
+vi.mock('#lib/api/services/hub.js', () => ({
   hubCollectionWithRelations: {},
   hubEntityWithRelations: {},
   toEntityResponseShape: vi.fn((row: unknown) => ({ data: row })),
@@ -193,7 +193,7 @@ vi.mock('$lib/api/services/hub', () => ({
   })),
 }))
 
-vi.mock('$lib/db/services/hub', () => ({
+vi.mock('#lib/db/services/hub.js', () => ({
   createHub: mockCreateHub,
   createI18n: mockCreateI18n,
   createUserRoles: mockCreateHubUserRoles,
@@ -223,11 +223,11 @@ vi.mock('$lib/db/services/hub', () => ({
 
 const mockSubscribeToSubstack = vi.fn(async () => ({ ok: true }))
 
-vi.mock('$lib/api/external/substack', () => ({
+vi.mock('#lib/api/external/substack.js', () => ({
   subscribeToSubstack: mockSubscribeToSubstack,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -264,12 +264,12 @@ vi.mock('$lib/api/services', () => ({
   validateUniqueNonReservedCode: mockValidateUniqueNonReservedCode,
 }))
 
-vi.mock('$lib/db/services/property', () => ({
+vi.mock('#lib/db/services/property.js', () => ({
   syncHubProperties: vi.fn(async () => undefined),
   syncHubGlobalProperties: vi.fn(async () => undefined),
 }))
 
-vi.mock('$lib/db/schema', () => ({
+vi.mock('#lib/db/schema/index.js', () => ({
   hub: {
     id: 'hub.id',
     code: 'hub.code',
@@ -288,7 +288,7 @@ vi.mock('$lib/db/schema', () => ({
   },
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/hub.remote')>
+let remote: Awaited<typeof import('#lib/api/server/hub.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('hub.remote')
 
 const buildDbForCreate = () => ({
@@ -323,7 +323,7 @@ const buildDbForUpdate = (params: {
 describe('hub.remote form image handling', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('$lib/api/server/hub.remote')
+    remote = await import('#lib/api/server/hub.remote.js')
     vi.clearAllMocks()
     mockAuthorizeHubCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })

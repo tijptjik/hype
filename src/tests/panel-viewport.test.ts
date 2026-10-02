@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { ResponsiveCtx } from '$lib/context/responsive.svelte'
-import { DUAL_PANEL_MIN_WIDTH } from '$lib/constants'
-import { Panel } from '$lib/enums'
+import { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import { DUAL_PANEL_MIN_WIDTH } from '#lib/constants.js'
+import { Panel } from '#lib/enums.js'
 
 describe('panel viewport guard', () => {
   it.each([

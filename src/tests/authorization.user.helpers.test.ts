@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { canAccessAdminPanel, canAccessAnalytics } from '$lib/api/services/authz/user'
-import type { UserRoleDisco } from '$lib/types'
+import {
+  canAccessAdminPanel,
+  canAccessAnalytics,
+} from '#lib/api/services/authz/user.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({

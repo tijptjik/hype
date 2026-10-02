@@ -3,8 +3,8 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { replaceManyRelated } from '$lib/db/crud'
-import type { Database } from '$lib/types'
+import { replaceManyRelated } from '#lib/db/crud.js'
+import type { Database } from '#lib/types.js'
 
 const roles = sqliteTable(
   'roles',

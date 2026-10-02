@@ -8,11 +8,11 @@ describe('route loads', () => {
     vi.unstubAllGlobals()
     vi.doUnmock('@sveltejs/kit')
     vi.doUnmock('drizzle-orm/d1')
-    vi.doUnmock('$lib/db/services/hub')
-    vi.doUnmock('$lib/navigation/title')
-    vi.doUnmock('$lib/images/storage')
-    vi.doUnmock('$lib/map/styles')
-    vi.doUnmock('$lib/map/styles/serve')
+    vi.doUnmock('#lib/db/services/hub.js')
+    vi.doUnmock('#lib/navigation/title.js')
+    vi.doUnmock('#lib/images/storage.js')
+    vi.doUnmock('#lib/map/styles/index.js')
+    vi.doUnmock('#lib/map/styles/serve.js')
   })
 
   it('URL-encodes usernames when redirecting to the profile panel', async () => {
@@ -54,23 +54,23 @@ describe('route loads', () => {
     vi.doMock('drizzle-orm/d1', () => ({
       drizzle: vi.fn(() => mockDb),
     }))
-    vi.doMock('$lib/db/services/hub', () => ({
+    vi.doMock('#lib/db/services/hub.js', () => ({
       getHubUserSubscriptionState: mockGetHubUserSubscriptionState,
     }))
-    vi.doMock('$lib/navigation/title', () => ({
+    vi.doMock('#lib/navigation/title.js', () => ({
       getTitleEnvironmentLabel: vi.fn(() => 'Preview'),
     }))
 
     const route = await import('../routes/+layout.server')
 
     const result = await route.load({
-      platform: {
-        env: {
-          DB: {},
-          ENVIRONMENT: 'preview',
-        },
-      },
       locals: {
+        platform: {
+          env: {
+            DB: {},
+            ENVIRONMENT: 'preview',
+          },
+        },
         user: { id: 'user-1' },
         hub: { id: 'hub-1' },
       },
@@ -100,11 +100,11 @@ describe('route loads', () => {
         throw thrown
       },
     }))
-    vi.doMock('$lib/map/styles', () => ({
+    vi.doMock('#lib/map/styles/index.js', () => ({
       isMapStyleKey: vi.fn(() => false),
     }))
     const serveMapStyleByKey = vi.fn()
-    vi.doMock('$lib/map/styles/serve', () => ({
+    vi.doMock('#lib/map/styles/serve.js', () => ({
       serveMapStyleByKey,
     }))
 
@@ -159,7 +159,7 @@ describe('route loads', () => {
       })),
     }
 
-    vi.doMock('$lib/images/storage', () => ({
+    vi.doMock('#lib/images/storage.js', () => ({
       getOriginalsBucketForStage: vi.fn(() => bucket),
       readManifestVersion: vi.fn(async () => 7),
       toImageStage: vi.fn(() => 'local'),
@@ -170,12 +170,14 @@ describe('route loads', () => {
     )
 
     const response = await route.GET({
+      locals: {
+        platform: {
+          env: {},
+        },
+      },
       params: {
         appEnv: 'local',
         path: 'v7/gallery/photo.jpg',
-      },
-      platform: {
-        env: {},
       },
     } as never)
 

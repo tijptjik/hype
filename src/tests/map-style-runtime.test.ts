@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { resolveRuntimeMapStyle } from '$lib/map/styles/runtime'
+import { resolveRuntimeMapStyle } from '#lib/map/styles/runtime.js'
 
 const style = {
   version: 8,

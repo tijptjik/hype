@@ -4,8 +4,8 @@ import { drizzle } from 'drizzle-orm/d1'
 import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { and, type SQL } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
-import { toOrderByWithLocalizedFields } from '$lib/db'
-import type { Database } from '$lib/types'
+import { toOrderByWithLocalizedFields } from '#lib/db/index.js'
+import type { Database } from '#lib/types.js'
 
 const resource = sqliteTable('resource', { id: text().primaryKey(), name: text() })
 const translations = sqliteTable('translation', {

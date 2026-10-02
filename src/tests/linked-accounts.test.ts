@@ -11,8 +11,8 @@ import {
 // TESTS
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import LinkedAccounts from '$lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
-import { m } from '$lib/i18n'
+import LinkedAccounts from '#lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
+import { m } from '#lib/i18n.js'
 
 const mocks = vi.hoisted(() => ({
   listAccounts: vi.fn(),
@@ -23,14 +23,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$app/state', () => ({ page: { url: new URL('https://hype.hk/') } }))
 // jsdom has no Web Animations API; transition timing is outside this selector test.
 vi.mock('svelte/transition', () => ({ slide: () => ({ duration: 0 }) }))
-vi.mock('$lib/auth/client', () => ({
+vi.mock('#lib/auth/client.js', () => ({
   authClient: { ...mocks, passkey: { listUserPasskeys: mocks.listUserPasskeys } },
   useSession: () =>
     writable({ data: { user: { id: 'user', email: 'user@example.com' } } }),
   signIn: {},
   signUp: {},
 }))
-vi.mock('$lib/auth/passkey-upgrade', () => ({
+vi.mock('#lib/auth/passkey-upgrade.js', () => ({
   completePasskeyAccountUpgrade: vi.fn(),
   PasskeyRegistrationError: class extends Error {},
   PasskeySessionRefreshError: class extends Error {},

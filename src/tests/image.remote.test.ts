@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import sharp from 'sharp'
 import { withRemoteMeta } from './remote-function-mock'
-import { createUploadedImage } from '$lib/db/services/image'
+import { createUploadedImage } from '#lib/db/services/image.js'
 
 const {
   mockAuthorizeImageList,
@@ -68,7 +68,7 @@ const {
   mockGetImageForContextType: vi.fn(
     async (
       ..._args: Parameters<
-        typeof import('$lib/db/services/image').getImageForContextType
+        typeof import('#lib/db/services/image.js').getImageForContextType
       >
     ) => [],
   ),
@@ -95,7 +95,7 @@ const {
   mockWaitUntil: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -114,13 +114,13 @@ vi.mock('$lib/api/server/remote', () => ({
   },
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeImageList: mockAuthorizeImageList,
   authorizeImageRead: mockAuthorizeImageRead,
   toAuthMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/api/services/image', () => ({
+vi.mock('#lib/api/services/image.js', () => ({
   assertPermissionsToCreateImage: mockAssertPermissionsToCreateImage,
   assertPermissionsToDeleteImage: mockAssertPermissionsToDeleteImage,
   assertPermissionsToUpdateImage: mockAssertPermissionsToUpdateImage,
@@ -134,7 +134,7 @@ vi.mock('$lib/api/services/image', () => ({
   updateImageForContext: mockUpdateImageForContext,
 }))
 
-vi.mock('$lib/db/services/image', () => ({
+vi.mock('#lib/db/services/image.js', () => ({
   createFeatureImage: mockCreateFeatureImage,
   createImage: mockCreateImageRecord,
   createUploadedImage: vi.fn(async () => mockCreateImageRecord()),
@@ -147,15 +147,15 @@ vi.mock('$lib/db/services/image', () => ({
   toImageListResponseShape: mockToImageListResponseShape,
 }))
 
-vi.mock('$lib/db/services/organisation', () => ({
+vi.mock('#lib/db/services/organisation.js', () => ({
   updateOrganisationById: mockUpdateOrganisationById,
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   updateProjectById: mockUpdateProjectById,
 }))
 
-vi.mock('$lib/db/services/user', () => ({
+vi.mock('#lib/db/services/user.js', () => ({
   getUserById: mockGetUserById,
 }))
 
@@ -171,12 +171,12 @@ vi.mock('coordinate-parser', () => ({
   },
 }))
 
-vi.mock('$lib/images/auth', () => ({
+vi.mock('#lib/images/auth.js', () => ({
   createUploadToken: vi.fn(async () => 'signed-upload-token'),
   verifyUploadToken: mockVerifyUploadToken,
 }))
 
-vi.mock('$lib/images/delivery', () => ({
+vi.mock('#lib/images/delivery.js', () => ({
   toImageRawIntermediateWorkerPath: vi.fn(
     ({ publicId, version }) => `/image/raw/h_2048,w_2048/v${version}/${publicId}`,
   ),
@@ -187,8 +187,8 @@ vi.mock('$lib/images/delivery', () => ({
   ]),
 }))
 
-vi.mock('$lib/images/storage', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/images/storage')>()
+vi.mock('#lib/images/storage.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/images/storage.js')>()
 
   return {
     ...actual,
@@ -198,9 +198,9 @@ vi.mock('$lib/images/storage', async importOriginal => {
   }
 })
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   AuthImageUploadSchema: {},
   DeleteImageSchema: {},
   FinalizeImageUploadSchema: {},
@@ -217,7 +217,7 @@ vi.mock('$lib/db/zod', () => ({
   UpdateImageSchema: {},
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/image.remote')>
+let remote: Awaited<typeof import('#lib/api/server/image.remote.js')>
 
 const buildDbWithContextRow = (row: Record<string, unknown>) => ({
   select: vi.fn(() => ({
@@ -255,7 +255,7 @@ const buildDbWithContextRow = (row: Record<string, unknown>) => ({
 describe('image.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('$lib/api/server/image.remote')
+    remote = await import('#lib/api/server/image.remote.js')
     vi.clearAllMocks()
     mockCreateImageRecord.mockReset()
     mockCreateImageRecord.mockResolvedValue({ id: 'img-1', publicId: null })
@@ -284,35 +284,37 @@ describe('image.remote', () => {
       isAdminRequest: true,
       event: {
         request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            ASSET_RAW_DEV: {
-              head: vi.fn(async () => null),
-              put: vi.fn(async () => undefined),
+        locals: {
+          platform: {
+            env: {
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              ASSET_RAW_DEV: {
+                head: vi.fn(async () => null),
+                put: vi.fn(async () => undefined),
+              },
+              ASSET_RAW_PREVIEW: {
+                head: vi.fn(async () => null),
+                put: vi.fn(async () => undefined),
+              },
+              ASSET_RAW_PRODUCTION: {
+                head: vi.fn(async () => null),
+                put: vi.fn(async () => undefined),
+              },
+              ASSET_PUBLIC_DEV: { put: vi.fn(async () => undefined), get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put: vi.fn(async () => undefined), get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: {
+                put: vi.fn(async () => undefined),
+                get: vi.fn(),
+              },
             },
-            ASSET_RAW_PREVIEW: {
-              head: vi.fn(async () => null),
-              put: vi.fn(async () => undefined),
-            },
-            ASSET_RAW_PRODUCTION: {
-              head: vi.fn(async () => null),
-              put: vi.fn(async () => undefined),
-            },
-            ASSET_PUBLIC_DEV: { put: vi.fn(async () => undefined), get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put: vi.fn(async () => undefined), get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: {
-              put: vi.fn(async () => undefined),
-              get: vi.fn(),
+            context: {
+              waitUntil: mockWaitUntil,
             },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })
@@ -431,7 +433,7 @@ describe('image.remote', () => {
       'task',
     )
     const conditions = mockGetImageForContextType.mock.calls[0][2]
-    const { task } = await import('$lib/db/schema')
+    const { task } = await import('#lib/db/schema/index.js')
     const { and } = await import('drizzle-orm')
     const query = drizzle({} as never)
       .select({ id: task.id })
@@ -791,24 +793,26 @@ describe('image.remote', () => {
       isAdminRequest: true,
       event: {
         request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            ENVIRONMENT: 'local',
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            ASSET_RAW_DEV: { head: vi.fn(async () => null) },
-            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null) },
-            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null) },
-            ASSET_PUBLIC_DEV: { put: vi.fn(), get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put: vi.fn(), get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put: vi.fn(), get: vi.fn() },
+        locals: {
+          platform: {
+            env: {
+              ENVIRONMENT: 'local',
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              ASSET_RAW_DEV: { head: vi.fn(async () => null) },
+              ASSET_RAW_PREVIEW: { head: vi.fn(async () => null) },
+              ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null) },
+              ASSET_PUBLIC_DEV: { put: vi.fn(), get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put: vi.fn(), get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: { put: vi.fn(), get: vi.fn() },
+            },
+            context: {
+              waitUntil: mockWaitUntil,
+            },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })
@@ -857,24 +861,26 @@ describe('image.remote', () => {
         isAdminRequest: true,
         event: {
           request: new Request('https://example.test'),
-          locals: { hub: null },
-          platform: {
-            env: {
-              AUTH_SECRET: 'secret',
-              CLOUDFLARE_ACCOUNT_ID: 'account-id',
-              R2_S3_ACCESS_KEY_ID: 'access-key',
-              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-              ASSET_RAW_DEV: { head, put },
-              ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
-              ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
-              ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+          locals: {
+            platform: {
+              env: {
+                AUTH_SECRET: 'secret',
+                CLOUDFLARE_ACCOUNT_ID: 'account-id',
+                R2_S3_ACCESS_KEY_ID: 'access-key',
+                R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+                PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+                ASSET_RAW_DEV: { head, put },
+                ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
+                ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
+                ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+                ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+                ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+              },
+              context: {
+                waitUntil: mockWaitUntil,
+              },
             },
-            context: {
-              waitUntil: mockWaitUntil,
-            },
+            hub: null,
           },
         },
       })
@@ -1052,40 +1058,42 @@ describe('image.remote', () => {
         event: {
           request: new Request('https://example.test'),
           fetch: globalThis.fetch,
-          locals: { hub: null },
-          platform: {
-            env: {
-              AUTH_SECRET: 'secret',
-              CLOUDFLARE_ACCOUNT_ID: 'account-id',
-              R2_S3_ACCESS_KEY_ID: 'access-key',
-              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-              ASSET_RAW_DEV: {
-                head,
-                put,
-                delete: deleteAssets,
-                list: vi.fn(async () => {
-                  throw new Error('list: Unspecified error (0)')
+          locals: {
+            platform: {
+              env: {
+                AUTH_SECRET: 'secret',
+                CLOUDFLARE_ACCOUNT_ID: 'account-id',
+                R2_S3_ACCESS_KEY_ID: 'access-key',
+                R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+                PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+                ASSET_RAW_DEV: {
+                  head,
+                  put,
+                  delete: deleteAssets,
+                  list: vi.fn(async () => {
+                    throw new Error('list: Unspecified error (0)')
+                  }),
+                },
+                ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
+                ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
+                ASSET_PUBLIC_DEV: {
+                  put,
+                  get: vi.fn(),
+                  delete: deleteAssets,
+                  list: vi.fn(async () => {
+                    throw new Error('list: Unspecified error (0)')
+                  }),
+                },
+                ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+                ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+              },
+              context: {
+                waitUntil: vi.fn((promise: Promise<unknown>) => {
+                  waitUntilPromises.push(promise)
                 }),
               },
-              ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
-              ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
-              ASSET_PUBLIC_DEV: {
-                put,
-                get: vi.fn(),
-                delete: deleteAssets,
-                list: vi.fn(async () => {
-                  throw new Error('list: Unspecified error (0)')
-                }),
-              },
-              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
             },
-            context: {
-              waitUntil: vi.fn((promise: Promise<unknown>) => {
-                waitUntilPromises.push(promise)
-              }),
-            },
+            hub: null,
           },
         },
       })
@@ -1300,25 +1308,27 @@ describe('image.remote', () => {
       isAdminRequest: true,
       event: {
         request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            ENVIRONMENT: 'local',
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-            ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
-            ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
-            ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
-            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+        locals: {
+          platform: {
+            env: {
+              ENVIRONMENT: 'local',
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+              ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+              ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
+              ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
+              ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+            },
+            context: {
+              waitUntil: mockWaitUntil,
+            },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })
@@ -1447,25 +1457,27 @@ describe('image.remote', () => {
       event: {
         request: new Request('https://example.test'),
         fetch: globalThis.fetch,
-        locals: { hub: null },
-        platform: {
-          env: {
-            ENVIRONMENT: 'local',
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-            ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
-            ASSET_RAW_PREVIEW: { get: previewGet, head: vi.fn(), put },
-            ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
-            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+        locals: {
+          platform: {
+            env: {
+              ENVIRONMENT: 'local',
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+              ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+              ASSET_RAW_PREVIEW: { get: previewGet, head: vi.fn(), put },
+              ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
+              ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+            },
+            context: {
+              waitUntil: mockWaitUntil,
+            },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })

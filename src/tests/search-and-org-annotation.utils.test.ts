@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest'
 import {
   getFirstEnabledResultButton,
   isSearchResultDisabled,
-} from '$lib/bits/custom/search/search.utils'
+} from '#lib/bits/custom/search/search.utils.js'
 import {
   isOrganisationSearchResultDisabled,
   toOrganisationSearchDisabledMeta,
   toOrganisationSearchDiscriminator,
-} from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.utils'
+} from '#lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.utils.js'
 
 describe('search utils', () => {
   it('uses the resultMap disabled selector when deciding selectability', () => {

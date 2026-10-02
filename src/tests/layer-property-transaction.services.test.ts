@@ -7,10 +7,10 @@ import {
   createProperties,
   syncProperties,
   updateProperties,
-} from '$lib/db/services/layer'
-import * as schema from '$lib/db/schema'
-import type { Database } from '$lib/types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/db/services/layer.js'
+import * as schema from '#lib/db/schema/index.js'
+import type { Database } from '#lib/types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 
 let sqlite: DatabaseSync
 let db: Database

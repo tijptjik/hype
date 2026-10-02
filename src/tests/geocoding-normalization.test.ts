@@ -11,7 +11,7 @@ import {
   removeArea,
   removeCountry,
   removeDistrict,
-} from '$lib/utils/geocoding'
+} from '#lib/utils/geocoding.js'
 
 describe('address component normalization', () => {
   it.each(['Hong Kong', 'H.K.', 'H.K.S.A.R.', '香港特區'])(

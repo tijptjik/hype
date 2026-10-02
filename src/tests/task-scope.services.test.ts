@@ -3,11 +3,16 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
-import * as schema from '$lib/db/schema'
-import { createTask, listTasks, loadTask, probeTaskQuery } from '$lib/db/services/task'
-import type { Database } from '$lib/types'
+import * as schema from '#lib/db/schema/index.js'
+import {
+  createTask,
+  listTasks,
+  loadTask,
+  probeTaskQuery,
+} from '#lib/db/services/task.js'
+import type { Database } from '#lib/types.js'
 
-vi.mock('$lib/db/services/hub', () => ({ getTaskHubFilter: () => undefined }))
+vi.mock('#lib/db/services/hub.js', () => ({ getTaskHubFilter: () => undefined }))
 
 describe('task feature scope integrity', () => {
   it('rejects spoofed task scope and isolates inconsistent persisted tasks', async () => {

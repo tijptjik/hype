@@ -1,7 +1,7 @@
 // THIRD-PARTY
 import { describe, expect, it } from 'vitest'
 // LIBRARY
-import { getSitemapPaths, renderSitemap, toSitemapPath } from '$lib/server/sitemap'
+import { getSitemapPaths, renderSitemap, toSitemapPath } from '#lib/server/sitemap.js'
 import { GET as getRobots } from '../routes/robots.txt/+server'
 
 describe('sitemap route discovery', () => {

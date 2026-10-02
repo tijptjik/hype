@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { filterPlaces, getDivisionName } from '$lib/client/services/geospatial'
-import { PlaceCtx } from '$lib/context/place.svelte'
-import { getI18n, setLocale } from '$lib/i18n'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import { filterPlaces, getDivisionName } from '#lib/client/services/geospatial.js'
+import { PlaceCtx } from '#lib/context/place.svelte.js'
+import { getI18n, setLocale } from '#lib/i18n.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 
 afterEach(async () => {
   await setLocale('en', { reload: false })

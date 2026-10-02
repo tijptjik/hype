@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { generateUsernameFromId } from '$lib/utils/username-generator.server'
+import { generateUsernameFromId } from '#lib/utils/username-generator.server.js'
 import { POST } from '../routes/api/auth/facebook/data-deletion/+server'
 
 // Collision retries need real seeded names rather than the global constant-name stub.
@@ -61,12 +61,12 @@ async function createEvent(): Promise<unknown> {
   form.set('signed_request', `${signature}.${payload}`)
 
   return {
+    locals: { platform: { env: { AUTH_FACEBOOK_SECRET: appSecret, DB: database } } },
     request: new Request('https://hype.example/api/auth/facebook/data-deletion', {
       method: 'POST',
       body: form,
     }),
     url: new URL('https://hype.example/api/auth/facebook/data-deletion'),
-    platform: { env: { AUTH_FACEBOOK_SECRET: appSecret, DB: database } },
   }
 }
 

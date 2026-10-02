@@ -5,7 +5,7 @@ vi.mock('$app/navigation', () => ({
 vi.mock('svelte-sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
-import { revalidateAfterSubmitAttempt } from '$lib/client/services/form'
+import { revalidateAfterSubmitAttempt } from '#lib/client/services/form.js'
 
 describe('submit-attempt UX', () => {
   it('revalidate-on-change runs only after a submit attempt', () => {

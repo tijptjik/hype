@@ -4,13 +4,13 @@ import {
   getNonTranslatableFeatureFieldItems,
   getTranslatableSpecifierProperties,
   toFeatureFormInput,
-} from '$lib/client/services/feature'
-import { normalizeFeaturePropertiesForLayer } from '$lib/api/services/feature'
-import { FeatureAdminProfileAPI } from '$lib/db/zod/schema/feature'
+} from '#lib/client/services/feature.js'
+import { normalizeFeaturePropertiesForLayer } from '#lib/api/services/feature.js'
+import { FeatureAdminProfileAPI } from '#lib/db/zod/schema/feature.js'
 
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
-vi.mock('$lib/client/services/task', () => ({
+vi.mock('#lib/client/services/task.js', () => ({
   upsertNewFeatureDraft: vi.fn(),
 }))
 

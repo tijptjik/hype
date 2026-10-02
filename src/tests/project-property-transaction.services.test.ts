@@ -10,10 +10,10 @@ import {
   upsertProjectProperties,
   syncHubProperties,
   syncOrganisationProperties,
-} from '$lib/db/services/property'
-import * as schema from '$lib/db/schema'
-import type { Database } from '$lib/types'
-import type { ProjectPropertyForm } from '$lib/db/zod/schema/property.types'
+} from '#lib/db/services/property.js'
+import * as schema from '#lib/db/schema/index.js'
+import type { Database } from '#lib/types.js'
+import type { ProjectPropertyForm } from '#lib/db/zod/schema/property.types.js'
 
 let sqlite: DatabaseSync
 let db: Database

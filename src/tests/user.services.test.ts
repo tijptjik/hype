@@ -5,13 +5,13 @@ import {
   toUserProfileResponseShape,
   toUserRelationsWithContributionConstraints,
   userEntityWithRelations,
-} from '$lib/api/services/user'
+} from '#lib/api/services/user.js'
 // DB
-import { getUserFeaturesByUserId } from '$lib/db/services/user'
-import { GetUserParamsSchema } from '$lib/db/zod/schema/user'
+import { getUserFeaturesByUserId } from '#lib/db/services/user.js'
+import { GetUserParamsSchema } from '#lib/db/zod/schema/user.js'
 // TYPES
-import type { UserRaw } from '$lib/db/zod/schema/user.types'
-import type { SessionUser } from '$lib/types'
+import type { UserRaw } from '#lib/db/zod/schema/user.types.js'
+import type { SessionUser } from '#lib/types.js'
 
 const contributedUser = {
   id: 'user-1',

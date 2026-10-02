@@ -2,9 +2,9 @@
 import { describe, expect, it } from 'vitest'
 import { createFeatureQueryEffectRoot } from './fixtures/featureQueryHarness.svelte'
 // ADAPTER
-import { useDefaultMapSettingsModel } from '$lib/adapters/panels/useDefaultMapSettingsModel.svelte'
+import { useDefaultMapSettingsModel } from '#lib/adapters/panels/useDefaultMapSettingsModel.svelte.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 
 describe('default map settings choices', () => {
   it('keeps the complete selection independent of an empty or filtered panel page', () => {

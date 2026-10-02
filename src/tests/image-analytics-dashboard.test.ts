@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import AssetAnalyticsDashboard from '$lib/bits/patterns/analytics/assetAnalyticsDashboard/AssetAnalyticsDashboard.svelte'
+import AssetAnalyticsDashboard from '#lib/bits/patterns/analytics/assetAnalyticsDashboard/AssetAnalyticsDashboard.svelte'
 import type {
   AssetAnalyticsSummaryResult,
   AssetAnalyticsSummaryWindow,
-} from '$lib/api/services/assetAnalytics.types'
+} from '#lib/api/services/assetAnalytics.types.js'
 
 const getWindowToggleButtons = (label: string): HTMLButtonElement[] =>
   screen.getAllByRole('button', { name: `Last ${label}` }) as HTMLButtonElement[]

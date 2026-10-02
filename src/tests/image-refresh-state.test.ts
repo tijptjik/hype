@@ -1,19 +1,19 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { ImageCtx } from '$lib/context/image.svelte'
+import { ImageCtx } from '#lib/context/image.svelte.js'
 import {
   deleteImage,
   setImagePublished,
   setImageIntent,
   rotateImage,
-} from '$lib/api/server/image.remote'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+} from '#lib/api/server/image.remote.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
-vi.mock('$lib/context/app.svelte', () => ({
+vi.mock('#lib/context/app.svelte.js', () => ({
   getAppCtx: () => ({ cache: { feature: new Map() } }),
 }))
-vi.mock('$lib/api/server/image.remote', async importOriginal => ({
-  ...(await importOriginal<typeof import('$lib/api/server/image.remote')>()),
+vi.mock('#lib/api/server/image.remote.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/api/server/image.remote.js')>()),
   deleteImage: vi.fn(),
   setImagePublished: vi.fn(),
   setImageIntent: vi.fn(),

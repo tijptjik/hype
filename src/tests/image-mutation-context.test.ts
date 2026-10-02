@@ -6,10 +6,10 @@ import {
   assertPermissionsToCreateImage,
   assertPermissionsToDeleteImage,
   assertPermissionsToUpdateImage,
-} from '$lib/api/services/image'
-import type { Database } from '$lib/types'
+} from '#lib/api/services/image.js'
+import type { Database } from '#lib/types.js'
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   getProjectForFeatureId: vi.fn(async () => ({ id: 'project' })),
 }))
 

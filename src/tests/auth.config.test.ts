@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { getTableColumns } from 'drizzle-orm'
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import { parseUserInput, parseUserOutput } from 'better-auth/db'
-import { getAuthForRequest } from '$lib/auth'
-import { authConfig } from '$lib/auth/config'
-import { account, user } from '$lib/db/schema/user'
+import { getAuthForRequest } from '#lib/auth.js'
+import { authConfig } from '#lib/auth/config.js'
+import { account, user } from '#lib/db/schema/user.js'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 
 describe('authConfig user.additionalFields', () => {

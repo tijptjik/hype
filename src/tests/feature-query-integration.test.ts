@@ -5,38 +5,38 @@ import {
   createFeatureQueryEffectRoot,
   createFeatureQueryPageSignal,
 } from './fixtures/featureQueryHarness.svelte'
-import type { RemoteQuery } from '@sveltejs/kit'
+import type { RemoteQuery } from '$app/server'
 import { withRemoteMeta } from './remote-function-mock'
-import { AppCtx } from '$lib/context/app.svelte'
-import { OmniCtx } from '$lib/context/omni.svelte'
-import { PlaceCtx } from '$lib/context/place.svelte'
-import { getFeaturePage } from '$lib/api/server/featureQueries.remote'
-import { getFeatureViewportQuery } from '$lib/map/featureSpatial'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
-import type { FeatureQueryPage } from '$lib/api/services/featureQuery.types'
+import { AppCtx } from '#lib/context/app.svelte.js'
+import { OmniCtx } from '#lib/context/omni.svelte.js'
+import { PlaceCtx } from '#lib/context/place.svelte.js'
+import { getFeaturePage } from '#lib/api/server/featureQueries.remote.js'
+import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import type { FeatureQueryPage } from '#lib/api/services/featureQuery.types.js'
 
 const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }))
 
-vi.mock('$lib/navigation', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/navigation')>()
+vi.mock('#lib/navigation/index.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/navigation/index.js')>()
   return { ...actual, navigate: navigateMock }
 })
-vi.mock('$lib/api/server/featureQueries.remote', () => ({
+vi.mock('#lib/api/server/featureQueries.remote.js', () => ({
   getFeaturePage: withRemoteMeta(vi.fn(), 'query'),
 }))
-vi.mock('$lib/api/server/feature.remote', () => ({
+vi.mock('#lib/api/server/feature.remote.js', () => ({
   getFeature: withRemoteMeta(vi.fn(), 'query'),
   getFeatures: withRemoteMeta(vi.fn(), 'query'),
 }))
-vi.mock('$lib', () => ({
+vi.mock('#lib', () => ({
   isMobile: () => false,
   API_PATH: '/api',
   ADMIN_PATH: '/admin',
   NEW_REF: 'new',
 }))
-vi.mock('$lib/map/data', () => ({ searchAllAsync: vi.fn(async () => []) }))
-vi.mock('$lib/map/markers', () => ({
+vi.mock('#lib/map/data.js', () => ({ searchAllAsync: vi.fn(async () => []) }))
+vi.mock('#lib/map/markers.js', () => ({
   addMarkerClass: vi.fn(),
   removeMarkerClass: vi.fn(),
 }))

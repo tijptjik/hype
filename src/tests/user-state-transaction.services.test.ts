@@ -6,8 +6,8 @@ import {
   removeUserFeatureListState,
   updateUserLayers,
   upsertUserFeatureState,
-} from '$lib/db/services/user'
-import type { Database } from '$lib/types'
+} from '#lib/db/services/user.js'
+import type { Database } from '#lib/types.js'
 
 let sqlite: DatabaseSync
 let db: Database

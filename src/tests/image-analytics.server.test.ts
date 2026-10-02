@@ -3,7 +3,7 @@ import {
   fetchAssetAnalyticsSummary,
   resolveAssetAnalyticsConfig,
   toAssetAnalyticsSummary,
-} from '$lib/api/services/analytics'
+} from '#lib/api/services/analytics.js'
 
 describe('asset analytics server helper', () => {
   it('normalizes fixed windows and nullable latency buckets from the worker payload', () => {

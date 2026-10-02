@@ -6,13 +6,13 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // DB
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
-import { user, session, verification } from '$lib/db/schema/user'
+import { user, session, verification } from '#lib/db/schema/user.js'
 // AUTH
-import { getAuthForRequest } from '$lib/auth'
-import { toLinkedAccountSelector } from '$lib/auth/account-selector'
+import { getAuthForRequest } from '#lib/auth.js'
+import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
 
 // Role enrichment is unrelated to account storage; all auth persistence uses Drizzle/D1.
-vi.mock('$lib/db/services/user', () => ({ getUserRoles: vi.fn(async () => []) }))
+vi.mock('#lib/db/services/user.js', () => ({ getUserRoles: vi.fn(async () => []) }))
 
 const previousMigration = readFileSync(
   'migrations/0076_better_auth_1_7_account_issuer.sql',

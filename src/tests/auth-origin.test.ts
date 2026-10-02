@@ -2,7 +2,7 @@
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { describe, expect, it, vi } from 'vitest'
-import { getAuthForRequest, getBaseUrlFromRequestHeaders } from '$lib/auth'
+import { getAuthForRequest, getBaseUrlFromRequestHeaders } from '#lib/auth.js'
 
 describe('authentication origin resolution', () => {
   it('uses the same host as hub routing, ignoring forwarded-host overrides', () => {

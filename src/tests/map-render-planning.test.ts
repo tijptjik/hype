@@ -9,16 +9,16 @@ const { mockGetFeatureWithRelations, mockListFeatures, mockToListResponseShape }
     mockToListResponseShape: vi.fn(async (value: unknown) => value),
   }))
 
-vi.mock('$lib/api/services/feature', () => ({
+vi.mock('#lib/api/services/feature.js', () => ({
   getFeatureWithRelations: mockGetFeatureWithRelations,
   toListResponseShape: mockToListResponseShape,
 }))
 
-vi.mock('$lib/db/services/feature', () => ({
+vi.mock('#lib/db/services/feature.js', () => ({
   listFeatures: mockListFeatures,
 }))
 
-import { planLayerMapRenderRefreshJobs } from '$lib/map/renders/render.server'
+import { planLayerMapRenderRefreshJobs } from '#lib/map/renders/render.server.js'
 
 type QueryStep = {
   result: unknown

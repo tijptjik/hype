@@ -3,9 +3,9 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { getTableColumns } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { image } from '$lib/db/schema'
-import { createUploadedImage, createFeatureImage } from '$lib/db/services/image'
-import type { Database } from '$lib/types'
+import { image } from '#lib/db/schema/index.js'
+import { createUploadedImage, createFeatureImage } from '#lib/db/services/image.js'
+import type { Database } from '#lib/types.js'
 
 describe('direct upload image identity', () => {
   it('converges concurrent confirmations and preserves existing moderation state', async () => {

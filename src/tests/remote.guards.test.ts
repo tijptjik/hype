@@ -46,7 +46,7 @@ vi.mock('$app/server', () => ({
   command: mockCommand,
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   setupRequestHandler: mockSetupRequestHandler,
 }))
 
@@ -55,15 +55,15 @@ import {
   guardedCommand,
   guardedForm,
   guardedQuery,
-} from '$lib/api/server/remote'
+} from '#lib/api/server/guarded.js'
 
 describe('remote guard wrappers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
     mockGetRequestEvent.mockReturnValue({
-      locals: { user: { id: 'u-1' } },
-      platform: { env: {} },
+      locals: { platform: { env: {} }, user: { id: 'u-1' } },
+
       request: { method: 'POST' },
     })
 
@@ -95,8 +95,8 @@ describe('remote guard wrappers', () => {
     expect(result).toEqual({ ok: true })
     expect(mockSetupRequestHandler).toHaveBeenCalledTimes(1)
     expect(mockSetupRequestHandler).toHaveBeenCalledWith({
-      locals: { user: { id: 'u-1' } },
-      platform: { env: {} },
+      locals: { platform: { env: {} }, user: { id: 'u-1' } },
+
       request: { method: 'POST' },
     })
   })

@@ -2,8 +2,8 @@
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { setProjectMapStyleByCode } from '$lib/db/services/map'
-import type { Database } from '$lib/types'
+import { setProjectMapStyleByCode } from '#lib/db/services/map.js'
+import type { Database } from '#lib/types.js'
 
 let sqlite: DatabaseSync
 let db: Database

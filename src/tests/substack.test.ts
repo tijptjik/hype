@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   normalizeSubstackSessionCookie,
   toSubstackSubscribeUrl,
-} from '$lib/api/external/substack.shared'
-import { subscribeToSubstack } from '$lib/api/external/substack'
+} from '#lib/api/external/substack.shared.js'
+import { subscribeToSubstack } from '#lib/api/external/substack.js'
 
 describe('normalizeSubstackSessionCookie', () => {
   it('extracts the cookie pair from a pasted set-cookie value', () => {

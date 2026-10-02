@@ -5,7 +5,7 @@ import {
   toCloudflareImageWorkerPath,
   toImageRawIntermediateWorkerPath,
   toImagePrerenderWorkerPaths,
-} from '$lib/images/delivery'
+} from '#lib/images/delivery.js'
 
 describe('image delivery helpers', () => {
   it('builds worker paths for transformed and normalized raw image requests', () => {

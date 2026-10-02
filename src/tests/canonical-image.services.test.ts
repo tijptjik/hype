@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { drizzle } from 'drizzle-orm/d1'
-import { updateFeatureImage } from '$lib/db/services/image'
-import { archiveImages, publishImages } from '$lib/db/services/task'
-import type { Database } from '$lib/types'
+import { updateFeatureImage } from '#lib/db/services/image.js'
+import { archiveImages, publishImages } from '#lib/db/services/task.js'
+import type { Database } from '#lib/types.js'
 
 const stores: DatabaseSync[] = []
 afterEach(() => {

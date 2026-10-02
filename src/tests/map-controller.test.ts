@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createMapController } from '$lib/map/controller'
+import { createMapController } from '#lib/map/controller.js'
 
 type FakeMap = {
   getCenter: () => { lng: number; lat: number }
@@ -49,11 +49,20 @@ describe('map controller', () => {
     })
     controller.flyTo({ center: [114.18, 22.33], zoom: 16 })
     controller.easeTo({ center: [114.19, 22.34], duration: 200 })
-    controller.fitBounds([[114.1, 22.2], [114.2, 22.4]], { duration: 0 })
+    controller.fitBounds(
+      [
+        [114.1, 22.2],
+        [114.2, 22.4],
+      ],
+      { duration: 0 },
+    )
     expect(map.flyTo).toHaveBeenCalledWith({ center: [114.18, 22.33], zoom: 16 })
     expect(map.easeTo).toHaveBeenCalledWith({ center: [114.19, 22.34], duration: 200 })
     expect(map.fitBounds).toHaveBeenCalledWith(
-      [[114.1, 22.2], [114.2, 22.4]],
+      [
+        [114.1, 22.2],
+        [114.2, 22.4],
+      ],
       { duration: 0 },
     )
 

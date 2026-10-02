@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import WishlistAction from '$lib/bits/patterns/cards/featureCard/components/actions/WishlistAction.svelte'
-import VisitAction from '$lib/bits/patterns/cards/featureCard/components/actions/VisitAction.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import WishlistAction from '#lib/bits/patterns/cards/featureCard/components/actions/WishlistAction.svelte'
+import VisitAction from '#lib/bits/patterns/cards/featureCard/components/actions/VisitAction.svelte'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 const mocks = vi.hoisted(() => ({
   app: {
@@ -15,23 +15,23 @@ const mocks = vi.hoisted(() => ({
   updates: vi.fn(),
 }))
 
-vi.mock('$lib/context/app.svelte', () => ({ getAppCtx: () => mocks.app }))
+vi.mock('#lib/context/app.svelte.js', () => ({ getAppCtx: () => mocks.app }))
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }))
-vi.mock('$lib/i18n', () => ({
+vi.mock('#lib/i18n.js', () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
   toDateFnsLocale: () => undefined,
 }))
-vi.mock('$lib/api/server/user.remote', () => ({
+vi.mock('#lib/api/server/user.remote.js', () => ({
   addUserFeatureToList: () => ({ updates: mocks.updates }),
   removeUserFeatureFromList: () => ({ updates: mocks.updates }),
   getUserFeatures: () => ({ withOverride: () => ({}) }),
 }))
 vi.mock(
-  '$lib/bits/patterns/cards/featureCard/components/actions/WishlistActionDisplay.svelte',
+  '#lib/bits/patterns/cards/featureCard/components/actions/WishlistActionDisplay.svelte',
   () => import('./mocks/SavedFeatureActionDisplay.svelte'),
 )
 vi.mock(
-  '$lib/bits/patterns/cards/featureCard/components/actions/VisitActionDisplay.svelte',
+  '#lib/bits/patterns/cards/featureCard/components/actions/VisitActionDisplay.svelte',
   () => import('./mocks/SavedFeatureActionDisplay.svelte'),
 )
 

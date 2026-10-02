@@ -3,7 +3,7 @@ import {
   authorizeFeatureCreateForSubmission,
   authorizeFeatureListForContext,
   authorizeFeatureReadForProbe,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 
 const guest = {
   user: { id: 'guest-1', isAnonymous: true, superAdmin: false },

@@ -2,13 +2,13 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel query registration is isolated from this resource's authorization fixtures.
-vi.mock('$lib/api/server/resources.remote', () => ({}))
+vi.mock('#lib/api/server/resources.remote.js', () => ({}))
 import { z } from 'zod'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 // API
-import * as remote from '$lib/api/server/feature.remote'
-import { authorizeFeatureUpdateForSubmission } from '$lib/api/services/authz/feature'
+import * as remote from '#lib/api/server/feature.remote.js'
+import { authorizeFeatureUpdateForSubmission } from '#lib/api/services/authz/feature.js'
 
 const {
   mockAuthorizeFeatureListForContext,
@@ -86,7 +86,7 @@ const {
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -170,11 +170,11 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -205,7 +205,7 @@ vi.mock('$lib/api/services', () => ({
   }),
 }))
 
-vi.mock('$lib/api/services/feature', () => ({
+vi.mock('#lib/api/services/feature.js', () => ({
   getFeatureWithRelations: mockGetFeatureWithRelations,
   toComparableFeatureProperties: mockToComparableFeatureProperties,
   toEntityResponseShape: mockToEntityResponseShape,
@@ -216,8 +216,8 @@ vi.mock('$lib/api/services/feature', () => ({
   toRequestedListState: mockToRequestedListState,
 }))
 
-vi.mock('$lib/api/services/authz', async importOriginal => ({
-  ...(await importOriginal<typeof import('$lib/api/services/authz')>()),
+vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/api/services/authz/index.js')>()),
   authorizeFeatureAdminReadForProbe: mockAuthorizeFeatureAdminReadForProbe,
   authorizeFeatureCreateForSubmission: mockAuthorizeFeatureCreateForSubmission,
   authorizeFeatureDeleteForSubmission: mockAuthorizeFeatureDeleteForSubmission,
@@ -242,7 +242,7 @@ vi.mock('$lib/api/services/authz', async importOriginal => ({
   toIssueDetailMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/db/services/feature', () => ({
+vi.mock('#lib/db/services/feature.js', () => ({
   createFeature: mockCreateFeature,
   createI18n: mockCreateI18n,
   createProperties: mockCreateProperties,
@@ -258,17 +258,17 @@ vi.mock('$lib/db/services/feature', () => ({
   updateProperties: mockUpdateProperties,
 }))
 
-vi.mock('$lib/db/services/layer', () => ({
+vi.mock('#lib/db/services/layer.js', () => ({
   probeLayerForUpdate: mockProbeLayerForUpdate,
 }))
 
-vi.mock('$lib/db/services/image', () => ({
+vi.mock('#lib/db/services/image.js', () => ({
   publishAllImagesWithPublicIntent: mockPublishAllImagesWithPublicIntent,
 }))
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   FeatureFormData: { parse: (value: unknown) => value },
   GetQueryParamsSchema: {},
   ListQueryParamsSchema: {},
@@ -276,12 +276,12 @@ vi.mock('$lib/db/zod', () => ({
   RemoveFeatureSchema: {},
 }))
 
-vi.mock('$lib/db/zod/form', () => ({
+vi.mock('#lib/db/zod/form.js', () => ({
   FormBoolean: z.coerce.boolean<boolean>(),
 }))
 
-vi.mock('$lib/i18n', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/i18n')>()
+vi.mock('#lib/i18n.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
   return {
     ...actual,
     getLocale: vi.fn(() => 'en'),

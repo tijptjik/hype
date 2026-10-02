@@ -3,9 +3,9 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, getTableColumns } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { image } from '$lib/db/schema'
-import { getImagesByIds } from '$lib/db/services/image'
-import type { Database } from '$lib/types'
+import { image } from '#lib/db/schema/index.js'
+import { getImagesByIds } from '#lib/db/services/image.js'
+import type { Database } from '#lib/types.js'
 
 describe('bounded image ID reads', () => {
   it('budgets filters, deduplicates input IDs, and retains shared assignments', async () => {

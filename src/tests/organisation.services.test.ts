@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { toQueryConditions } from '$lib/api/services/organisation'
-import {
-  overrideOrganisationEntityFromFormInput,
-} from '$lib/client/services/organisation'
-import type { OrganisationFormInput } from '$lib/db/zod/schema/organisation.types'
-import type { SessionUser } from '$lib/types'
+import { toQueryConditions } from '#lib/api/services/organisation.js'
+import { overrideOrganisationEntityFromFormInput } from '#lib/client/services/organisation.js'
+import type { OrganisationFormInput } from '#lib/db/zod/schema/organisation.types.js'
+import type { SessionUser } from '#lib/types.js'
 
 describe('organisation service overrides', () => {
   it('does not overwrite i18n/code/url when role-only submit payload omits them', () => {

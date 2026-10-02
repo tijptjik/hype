@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel and feature query registration is isolated from this resource's authorization fixtures.
-vi.mock('$lib/api/server/resources.remote', () => ({}))
-vi.mock('$lib/api/server/featureQueries.remote', () => ({}))
+vi.mock('#lib/api/server/resources.remote.js', () => ({}))
+vi.mock('#lib/api/server/featureQueries.remote.js', () => ({}))
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -108,14 +108,14 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   setupRequestHandler: mockSetupRequestHandler,
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/types', () => ({}))
+vi.mock('#lib/types.js', () => ({}))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   isReservedCode: (_value: string) => false,
   toAuthMessage: mockToAuthMessage,
   toIssueDetailMessage: (code: string) => code,
@@ -149,7 +149,7 @@ vi.mock('$lib/api/services/authz', () => ({
   },
 }))
 
-vi.mock('$lib/api/services/organisation', () => ({
+vi.mock('#lib/api/services/organisation.js', () => ({
   toQueryConditions: mockToQueryConditions,
   toLookupConditions: mockToLookupConditions,
   toRequestedListState: mockToRequestedListState,
@@ -169,11 +169,11 @@ vi.mock('$lib/api/services/organisation', () => ({
   ),
 }))
 
-vi.mock('$lib/api/services/project', () => ({
+vi.mock('#lib/api/services/project.js', () => ({
   normalizeSubmittedPropertyRanks: <T>(properties: T[]) => properties,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -210,7 +210,7 @@ vi.mock('$lib/api/services', () => ({
   validateUniqueNonReservedCode: mockValidateUniqueNonReservedCode,
 }))
 
-vi.mock('$lib/db/services/organisation', () => ({
+vi.mock('#lib/db/services/organisation.js', () => ({
   createI18n: vi.fn(),
   createOrganisation: vi.fn(),
   createUserRoles: vi.fn(),
@@ -239,19 +239,19 @@ vi.mock('$lib/db/services/organisation', () => ({
   toListResponseShape: vi.fn((value: unknown) => value),
 }))
 
-vi.mock('$lib/db/services/property', () => ({
+vi.mock('#lib/db/services/property.js', () => ({
   syncOrganisationProperties: vi.fn(async () => undefined),
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   cascadeOrganisationCapabilitiesToProjects:
     mockCascadeOrganisationCapabilitiesToProjects,
 }))
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/db/zod')>()
+vi.mock('#lib/db/zod/index.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/db/zod/index.js')>()
   return {
     ...actual,
     ListQueryParamsSchema: {},
@@ -262,7 +262,7 @@ vi.mock('$lib/db/zod', async importOriginal => {
   }
 })
 
-vi.mock('$lib/i18n', () => ({
+vi.mock('#lib/i18n.js', () => ({
   getLocale: vi.fn(() => 'en'),
   m: new Proxy(
     {},
@@ -273,13 +273,13 @@ vi.mock('$lib/i18n', () => ({
   toLocaleRecordFromOrganisationFormI18n: vi.fn(),
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/organisation.remote')>
+let remote: Awaited<typeof import('#lib/api/server/organisation.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('organisation.remote')
 
 describe('organisation.remote authz', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('$lib/api/server/organisation.remote')
+    remote = await import('#lib/api/server/organisation.remote.js')
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -563,7 +563,7 @@ describe('organisation.remote authz', () => {
   })
 
   it('organisationForm rejects stale writes when updatedAt is missing', async () => {
-    const organisationServices = await import('$lib/db/services/organisation')
+    const organisationServices = await import('#lib/db/services/organisation.js')
     vi.mocked(organisationServices.probeOrganisationForUpdate).mockResolvedValue({
       id: 'org-1',
       code: 'org-code',
@@ -594,7 +594,7 @@ describe('organisation.remote authz', () => {
   })
 
   it('organisationForm rejects role mutation when manage roles authz denies', async () => {
-    const organisationServices = await import('$lib/db/services/organisation')
+    const organisationServices = await import('#lib/db/services/organisation.js')
     vi.mocked(organisationServices.probeOrganisationForUpdate).mockResolvedValue({
       id: 'org-1',
       code: 'org-code',
@@ -658,7 +658,7 @@ describe('organisation.remote authz', () => {
   })
 
   it('organisationForm cascades capability removals to projects and project roles', async () => {
-    const organisationServices = await import('$lib/db/services/organisation')
+    const organisationServices = await import('#lib/db/services/organisation.js')
     const probeOrganisationForUpdate = vi.mocked(
       organisationServices.probeOrganisationForUpdate,
     )

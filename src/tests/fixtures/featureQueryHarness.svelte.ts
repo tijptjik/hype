@@ -1,4 +1,4 @@
-import type { FeatureQueryPage } from '$lib/api/services/featureQuery.types'
+import type { FeatureQueryPage } from '#lib/api/services/featureQuery.types.js'
 
 /**
  * Creates an effect owner for context integration tests without mounting application UI.

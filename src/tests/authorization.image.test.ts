@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { authorizeImageList, authorizeImageRead } from '$lib/api/services/authz/image'
+import {
+  authorizeImageList,
+  authorizeImageRead,
+} from '#lib/api/services/authz/image.js'
 
 describe('guest image visibility', () => {
   it.each([authorizeImageList, authorizeImageRead])(

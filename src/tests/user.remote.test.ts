@@ -38,23 +38,23 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   setupRequestHandler: mockSetupRequestHandler,
 }))
 
-vi.mock('$lib/types', () => ({}))
+vi.mock('#lib/types.js', () => ({}))
 
-vi.mock('$lib/enums', () => ({
+vi.mock('#lib/enums.js', () => ({
   HierarchicalResource: {
     feature: 'feature',
   },
 }))
 
-vi.mock('$lib/db', () => ({
+vi.mock('#lib/db/index.js', () => ({
   applyPrismConstraints: vi.fn(() => []),
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   toAuthMessage: mockToAuthMessage,
   canSearchUsers: (params: {
     superAdmin?: boolean | null
@@ -89,7 +89,7 @@ vi.mock('$lib/api/services/authz', () => ({
   },
 }))
 
-vi.mock('$lib/api/services/user', () => ({
+vi.mock('#lib/api/services/user.js', () => ({
   getUserQueryContext: vi.fn(() => ({ conditions: [] })),
   isPrivilegedArchivedSearchRequested: (state: { isArchived: boolean | null }) =>
     state.isArchived === true || state.isArchived === null,
@@ -162,7 +162,7 @@ vi.mock('$lib/api/services/user', () => ({
   userEntityWithRelations: {},
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
       const event = mockGetRequestEvent()
@@ -217,7 +217,7 @@ vi.mock('$lib/api/server/remote', () => ({
     }, 'query'),
 }))
 
-vi.mock('$lib/db/services/user', () => ({
+vi.mock('#lib/db/services/user.js', () => ({
   getUsersForHydration: mockGetUsersForHydration,
   searchUsersByConditions: mockSearchUsersByConditions,
   toUserSearchTextCondition: mockToUserSearchTextCondition,
@@ -231,11 +231,11 @@ vi.mock('$lib/db/services/user', () => ({
   upsertUserFeatureState: vi.fn(),
 }))
 
-vi.mock('$lib/db/services/hub', () => ({
+vi.mock('#lib/db/services/hub.js', () => ({
   getFeatureHubFilter: vi.fn(() => undefined),
 }))
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   AddUserFeatureToListSchema: {},
   GetUserFeaturesParamsSchema: {},
   GetUserLayersParamsSchema: {},
@@ -250,7 +250,7 @@ vi.mock('$lib/db/zod', () => ({
   UserSearchQueryParamsSchema: {},
 }))
 
-vi.mock('$lib/db/schema/index', () => ({
+vi.mock('#lib/db/schema/index.js', () => ({
   feature: {
     id: 'feature.id',
     organisationId: 'feature.organisationId',
@@ -301,12 +301,12 @@ vi.mock('drizzle-orm', () => ({
   }),
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/user.remote')>
+let remote: Awaited<typeof import('#lib/api/server/user.remote.js')>
 
 describe('user.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('$lib/api/server/user.remote')
+    remote = await import('#lib/api/server/user.remote.js')
     vi.clearAllMocks()
 
     mockGetRequestEvent.mockReturnValue({

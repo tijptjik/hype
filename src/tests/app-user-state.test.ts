@@ -1,20 +1,20 @@
 import { describe, expect, it, vi } from 'vitest'
 // CONTEXT
-import { AppCtx } from '$lib/context/app.svelte'
+import { AppCtx } from '#lib/context/app.svelte.js'
 // ENUMS
-import { FirstClassResource, Panel } from '$lib/enums'
+import { FirstClassResource, Panel } from '#lib/enums.js'
 // TYPES
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { CurrentUser } from '$lib/db/zod/schema/user.types'
-import type { PlaceCtx } from '$lib/context/place.svelte'
-import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { SessionUser } from '$lib/types'
-import type { UserFeature, UserProfile } from '$lib/db/zod/schema/user.types'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { CurrentUser } from '#lib/db/zod/schema/user.types.js'
+import type { PlaceCtx } from '#lib/context/place.svelte.js'
+import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { SessionUser } from '#lib/types.js'
+import type { UserFeature, UserProfile } from '#lib/db/zod/schema/user.types.js'
 
 /** Creates a promise whose completion is controlled by the test. */
 function createDeferred<T>(): {

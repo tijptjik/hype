@@ -4,7 +4,7 @@ import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { hashPassword } from 'better-auth/crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getAuthForRequest } from '$lib/auth'
+import { getAuthForRequest } from '#lib/auth.js'
 import { POST } from '../routes/api/account/password/+server'
 
 let sqlite: DatabaseSync

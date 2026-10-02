@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
-import { getResourcePanelShortName } from '$lib/adapters/panels/resourcePanelLabels'
-import { CompactAncestorsSchema } from '$lib/db/zod/schema/api'
+import { getResourcePanelShortName } from '#lib/adapters/panels/resourcePanelLabels.js'
+import { CompactAncestorsSchema } from '#lib/db/zod/schema/api.js'
 
 it('keeps joined short names and the authored All scope without loaded parent lists', () => {
   const ancestors = CompactAncestorsSchema.parse({

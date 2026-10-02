@@ -8,7 +8,7 @@ vi.mock('svelte-sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-vi.mock('$lib/navigation/admin', () => ({
+vi.mock('#lib/navigation/admin.js', () => ({
   navigateOnAdmin: navigateOnAdminMock,
   shouldRedirectToSubmittedCode: ({
     adminCtx,
@@ -50,19 +50,19 @@ vi.mock('$lib/navigation/admin', () => ({
   },
 }))
 
-vi.mock('$lib/navigation/facets', () => ({
+vi.mock('#lib/navigation/facets.js', () => ({
   getAdminFacetActionLabel: vi.fn(() => ''),
 }))
 
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 import {
   createCodeRefResourceResult,
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   resolveFacetTabsWithIssues,
   resolveDisplayUserRoles,
-} from '$lib/client/services/form'
-import type { AdminCtx } from '$lib/context/admin.svelte'
+} from '#lib/client/services/form.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
 
 describe('form helpers', () => {
   it('createCodeRefResourceResult wires success, redirect decision and navigation', async () => {

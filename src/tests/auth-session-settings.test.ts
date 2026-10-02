@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSessionSettings } from '$lib/auth/session-settings'
+import { parseSessionSettings } from '#lib/auth/session-settings.js'
 
 describe('session settings validation', () => {
   it.each(['null', '[]', 'true', '42', '"text"', '{"admin":true}'])(

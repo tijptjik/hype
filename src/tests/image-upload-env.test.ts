@@ -1,10 +1,22 @@
-import { env as publicEnv } from '$env/dynamic/public'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+const publicEnv = vi.hoisted(() => ({
+  PUBLIC_ASSET_BASE_URL: '',
+  PUBLIC_PREVIEW_ASSET_BASE_URL: '',
+}))
+vi.mock('$app/env/public', () => ({
+  get PUBLIC_ASSET_BASE_URL() {
+    return publicEnv.PUBLIC_ASSET_BASE_URL
+  },
+  get PUBLIC_PREVIEW_ASSET_BASE_URL() {
+    return publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL
+  },
+}))
 
 import {
   resolveImageAssetBaseUrl,
   resolveImageUploadEnv,
-} from '$lib/client/services/image'
+} from '#lib/client/services/image.js'
 
 describe('resolveImageUploadEnv', () => {
   it('uses the asset base URL for local app development', () => {

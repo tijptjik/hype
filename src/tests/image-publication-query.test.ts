@@ -3,12 +3,12 @@ import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { image, featureImage, taskImage } from '$lib/db/schema'
+import { image, featureImage, taskImage } from '#lib/db/schema/index.js'
 import {
   getImageEntityQueryContext,
   getImageQueryContext,
-} from '$lib/api/services/image'
-import { ImageContextResourceExtended } from '$lib/enums'
+} from '#lib/api/services/image.js'
+import { ImageContextResourceExtended } from '#lib/enums.js'
 
 describe('public image query filtering', () => {
   it.each([false, true])(

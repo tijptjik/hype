@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { toProjectFormInput } from '$lib/client/services/project'
-import { ProjectEntityFormData } from '$lib/db/zod/schema/project'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import { toProjectFormInput } from '#lib/client/services/project.js'
+import { ProjectEntityFormData } from '#lib/db/zod/schema/project.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 
 const layersSchema = ProjectEntityFormData.pick({ layers: true })
 

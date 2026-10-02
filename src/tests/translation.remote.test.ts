@@ -9,7 +9,7 @@ const { mockTranslateWithAzure, mockGuardedContext } = vi.hoisted(() => ({
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -27,24 +27,26 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api/external/translation', () => ({
+vi.mock('#lib/api/external/translation.js', () => ({
   translateText: mockTranslateWithAzure,
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/translation.remote')>
+let remote: Awaited<typeof import('#lib/api/server/translation.remote.js')>
 
 describe('translation.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('$lib/api/server/translation.remote')
+    remote = await import('#lib/api/server/translation.remote.js')
     vi.clearAllMocks()
     mockGuardedContext.mockResolvedValue({
       user: { id: 'u-1', isAnonymous: false },
       event: {
-        platform: {
-          env: {
-            AZURE_TRANSLATION_KEY: 'key-1',
-            PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+        locals: {
+          platform: {
+            env: {
+              AZURE_TRANSLATION_KEY: 'key-1',
+              PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+            },
           },
         },
       },
@@ -55,9 +57,11 @@ describe('translation.remote', () => {
     mockGuardedContext.mockResolvedValue({
       user: { id: 'u-1', isAnonymous: false },
       event: {
-        platform: {
-          env: {
-            PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+        locals: {
+          platform: {
+            env: {
+              PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+            },
           },
         },
       },
@@ -93,10 +97,12 @@ describe('translation.remote', () => {
     mockGuardedContext.mockResolvedValue({
       user: { id: 'guest-1', isAnonymous: true },
       event: {
-        platform: {
-          env: {
-            AZURE_TRANSLATION_KEY: 'key-1',
-            PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+        locals: {
+          platform: {
+            env: {
+              AZURE_TRANSLATION_KEY: 'key-1',
+              PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+            },
           },
         },
       },

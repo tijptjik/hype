@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createUploadToken, verifyUploadToken } from '$lib/images/auth'
+import { createUploadToken, verifyUploadToken } from '#lib/images/auth.js'
 
 afterEach(() => vi.restoreAllMocks())
 

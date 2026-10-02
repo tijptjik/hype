@@ -1,7 +1,7 @@
 import { SQL } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
-import { cleanupExpiredAnonymousUsers } from '$lib/auth/anonymous.server'
-import type { Database } from '$lib/types'
+import { cleanupExpiredAnonymousUsers } from '#lib/auth/anonymous.server.js'
+import type { Database } from '#lib/types.js'
 
 const containsDirectDateChunk = (value: unknown): boolean => {
   if (!(value instanceof SQL)) return false

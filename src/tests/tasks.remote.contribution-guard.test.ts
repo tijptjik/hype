@@ -19,7 +19,7 @@ const reviewMocks = vi.hoisted(() => ({
   createTaskWithDependencies: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => {
+vi.mock('#lib/api/server/guarded.js', () => {
   const withRemoteMetadata = (handler: unknown, type: 'command' | 'form' | 'query') =>
     Object.assign(handler as object, {
       __: { type, id: '', name: '' },
@@ -43,12 +43,12 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/i18n', () => ({ getLocale: vi.fn() }))
-vi.mock('$lib/api', () => ({ getValidQueryParams: vi.fn() }))
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/i18n.js', () => ({ getLocale: vi.fn() }))
+vi.mock('#lib/api/index.js', () => ({ getValidQueryParams: vi.fn() }))
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeTaskReadForProbe: reviewMocks.authorizeTaskReadForProbe,
 }))
-vi.mock('$lib/db/zod/schema/task', () => ({
+vi.mock('#lib/db/zod/schema/task.js', () => ({
   BeginMissingReportDraftSchema: {},
   BeginNewFeatureDraftSchema: {},
   BeginNewPhotosDraftSchema: {},
@@ -61,11 +61,11 @@ vi.mock('$lib/db/zod/schema/task', () => ({
   SubmitNewFeatureSchema: {},
   SubmitNewPhotosSchema: {},
 }))
-vi.mock('$lib/db/services/task', () => reviewMocks)
-vi.mock('$lib/db/services/feature', () => reviewMocks)
-vi.mock('$lib/db/services/layer', () => reviewMocks)
-vi.mock('$lib/api/services/feature', () => reviewMocks)
-vi.mock('$lib/api/services/task', () => ({
+vi.mock('#lib/db/services/task.js', () => reviewMocks)
+vi.mock('#lib/db/services/feature.js', () => reviewMocks)
+vi.mock('#lib/db/services/layer.js', () => reviewMocks)
+vi.mock('#lib/api/services/feature.js', () => reviewMocks)
+vi.mock('#lib/api/services/task.js', () => ({
   getTaskWithRelations: vi.fn(),
   toEntityResponseShape: vi.fn(task => task),
 }))
@@ -80,7 +80,7 @@ import {
   submitNewPhotos,
   reviewTask,
   reassignTaskLayer,
-} from '$lib/api/server/tasks.remote'
+} from '#lib/api/server/tasks.remote.js'
 
 const guestContext = { user: { isAnonymous: true } }
 const incompleteSessionContext = { user: {} }

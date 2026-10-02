@@ -1,15 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import WantToVisitSection from '$lib/bits/patterns/panels/sections/wantToVisit/WantToVisitSection.svelte'
-import HaveVisitedSection from '$lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
-import {
-  useSavedFeatureListModel,
-} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import WantToVisitSection from '#lib/bits/patterns/panels/sections/wantToVisit/WantToVisitSection.svelte'
+import HaveVisitedSection from '#lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
+import { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureListModel.svelte.js'
 import { createFeatureQueryEffectRoot } from './fixtures/featureQueryHarness.svelte'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 const mocks = vi.hoisted(() => {
   const feature = {
@@ -57,20 +55,20 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('$lib/context/app.svelte', () => ({ getAppCtx: () => mocks.app }))
-vi.mock('$lib/context/omni.svelte', () => ({ getOmniCtx: () => ({}) }))
+vi.mock('#lib/context/app.svelte.js', () => ({ getAppCtx: () => mocks.app }))
+vi.mock('#lib/context/omni.svelte.js', () => ({ getOmniCtx: () => ({}) }))
 vi.mock(
-  '$lib/bits/patterns/panels/components/common/Section.svelte',
+  '#lib/bits/patterns/panels/components/common/Section.svelte',
   () => import('./mocks/svelte-component.svelte'),
 )
-vi.mock('$lib/bits', async () => ({
+vi.mock('#lib/bits/index.js', async () => ({
   Icon: (await import('./mocks/svelte-component.svelte')).default,
 }))
-vi.mock('$lib/navigation', () => ({
+vi.mock('#lib/navigation/index.js', () => ({
   navigateToVisited: mocks.navigate,
   navigateToStarred: mocks.navigate,
 }))
-vi.mock('$lib/i18n', () => ({
+vi.mock('#lib/i18n.js', () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
   getI18n: (
     resource: { i18n?: { en?: Record<string, string> } } | undefined,
