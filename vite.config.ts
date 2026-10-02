@@ -367,7 +367,6 @@ const selectAdapter = () => {
           '/yongxing/',
         ],
       },
-      precompress: true,
     })
   }
 }
@@ -406,18 +405,17 @@ export default defineConfig(async ({ command }) => ({
           warning.code !== 'css-unused-selector',
       },
       preprocess: vitePreprocess(),
-      vitePlugin: {
-        // Required to avoid runes mode being enforce for all node_modules
-        // https://github.com/sveltejs/svelte/issues/9632#issuecomment-1825498213
-        dynamicCompileOptions({ filename }) {
-          if (filename.includes('node_modules')) {
-            return { runes: undefined } /* or false, check what works */
-          }
-        },
+      // Svelte plugin options are top-level in SvelteKit 3.
+
+      // Required to avoid runes mode being enforce for all node_modules
+      // https://github.com/sveltejs/svelte/issues/9632#issuecomment-1825498213
+      dynamicCompileOptions({ filename }) {
+        if (filename.includes('node_modules')) {
+          return { runes: undefined } /* or false, check what works */
+        }
       },
       adapter: selectAdapter(),
       csrf: { trustedOrigins: ['*'] },
-      env: { privatePrefix: 'PRIVATE', publicPrefix: 'PUBLIC' },
       experimental: { remoteFunctions: true },
     }),
     Icons({ compiler: 'svelte' }),

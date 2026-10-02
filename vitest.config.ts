@@ -11,7 +11,12 @@ const suppressedVitestConsoleLogPatterns = [
 
 export default defineConfig({
   logLevel: 'error',
-  plugins: [sveltekit()],
+  plugins: [
+    sveltekit({
+      experimental: { remoteFunctions: true },
+      compilerOptions: { experimental: { async: true } },
+    }),
+  ],
   define: {
     __SVELTEKIT_PATHS_BASE__: '""',
     __SVELTEKIT_PATHS_ASSETS__: '""',
@@ -21,11 +26,11 @@ export default defineConfig({
     conditions: ['browser'],
     alias: [
       {
-        find: /^\$lib$/,
+        find: /^#lib$/,
         replacement: resolve(configDirectory, 'src/tests/mocks/lib-root.ts'),
       },
       {
-        find: /^\$lib\/(.*)$/,
+        find: /^#lib\/(.*)$/,
         replacement: `${resolve(configDirectory, 'src/lib')}/$1`,
       },
       {
@@ -44,15 +49,11 @@ export default defineConfig({
         ),
       },
       {
-        find: '$env/static/public',
+        find: '$app/env/public',
         replacement: resolve(configDirectory, 'src/tests/mocks/env-static-public.ts'),
       },
       {
-        find: '$env/dynamic/public',
-        replacement: resolve(configDirectory, 'src/tests/mocks/env-dynamic-public.ts'),
-      },
-      {
-        find: '$lib/context/form.svelte',
+        find: '#lib/context/form.svelte.js',
         replacement: resolve(configDirectory, 'src/tests/mocks/form-context.ts'),
       },
       {
@@ -63,56 +64,56 @@ export default defineConfig({
         ),
       },
       {
-        find: '$lib/components/forms/fields/Property.svelte',
+        find: '#lib/components/forms/fields/Property.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Input.svelte',
+        find: '#lib/components/forms/fields/Input.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Textarea.svelte',
+        find: '#lib/components/forms/fields/Textarea.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Select.svelte',
+        find: '#lib/components/forms/fields/Select.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Range.svelte',
+        find: '#lib/components/forms/fields/Range.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Users.svelte',
+        find: '#lib/components/forms/fields/Users.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Toggle.svelte',
+        find: '#lib/components/forms/fields/Toggle.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Display.svelte',
+        find: '#lib/components/forms/fields/Display.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
