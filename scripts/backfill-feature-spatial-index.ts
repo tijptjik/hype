@@ -10,7 +10,7 @@ import {
   featureSpatialBackfillStatements,
 } from './lib/feature-spatial-backfill'
 // TYPES
-import type { FeatureSpatialBackfillRow } from '$lib/db/services/featureSpatial.types'
+import type { FeatureSpatialBackfillRow } from '#lib/db/services/featureSpatial.types.js'
 // TYPES
 
 /** Explicit target and bounded traversal for resumable spatial-index backfills. */

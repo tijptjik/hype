@@ -5,12 +5,12 @@ const PATCHED_QUERY_PATH =
   'node_modules/@sveltejs/kit/src/runtime/client/remote-functions/query/index.js'
 
 const EXPECTED_SNIPPETS = [
-  'await goto(result.redirect);\n\t\t\t\treturn;',
+  'await _goto(result.redirect);\n\t\t\t\treturn;',
   'return result._;',
 ]
 
 /**
- * Verifies that Bun applied the local SvelteKit query patch.
+ * Verifies that Bun applied the local SvelteKit 3 query patch.
  *
  * @returns Process exit code.
  * @remarks This intentionally checks installed package contents so stale

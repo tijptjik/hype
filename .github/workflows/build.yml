@@ -47,9 +47,9 @@ jobs:
           path: |
             .svelte-kit
             node_modules/.vite
-          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
+            ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
 
       - name: 'BUILD :: Application'
         if: steps.cache-build.outputs.cache-hit != 'true'

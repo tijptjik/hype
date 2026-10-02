@@ -56,9 +56,9 @@ jobs:
           path: |
             .svelte-kit
             node_modules/.vite
-          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
+            ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
 
       - name: 'BUILD :: Application (if cache miss)'
         if: steps.cache-build-preview.outputs.cache-hit != 'true'
@@ -143,14 +143,14 @@ jobs:
           path: |
             .svelte-kit
             node_modules/.vite
-          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
           restore-keys: |
             ${{ runner.os }}-build-
 
       - name: 'DEBUG :: Cache Status'
         run: |
           echo "Cache hit status: ${{ steps.cache-build.outputs.cache-hit }}"
-          echo "Cache key used: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}"
+          echo "Cache key used: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}"
           echo "Build directory exists: $(test -d .svelte-kit && echo 'yes' || echo 'no')"
           echo "Vite cache exists: $(test -d node_modules/.vite && echo 'yes' || echo 'no')"
           if [ -d .svelte-kit ]; then
@@ -169,7 +169,7 @@ jobs:
       - name: 'VERIFY :: Build Cache'
         if: steps.cache-build.outputs.cache-hit != 'true'
         run: |
-          echo "No exact build cache found for file hash ${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}"
+          echo "No exact build cache found for file hash ${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}"
           echo "Files changed since last build - rebuilding required"
           echo "Rebuilt application for production deployment"
 

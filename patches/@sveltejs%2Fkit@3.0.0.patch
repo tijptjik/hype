@@ -1,15 +1,14 @@
 diff --git a/src/runtime/client/remote-functions/query/index.js b/src/runtime/client/remote-functions/query/index.js
-index 3ea8ad479..56e411430 100644
 --- a/src/runtime/client/remote-functions/query/index.js
 +++ b/src/runtime/client/remote-functions/query/index.js
-@@ -30,7 +30,10 @@ export function query(id) {
- 
+@@ -31,7 +31,10 @@
  			if (result.redirect) {
- 				await goto(result.redirect);
+ 				// Use internal version to allow redirects to external URLs
+ 				await _goto(result.redirect);
 +				return;
  			}
 +
 +			return result._;
  		});
  	};
-
+ 
