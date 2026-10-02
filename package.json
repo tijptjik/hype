@@ -25,21 +25,21 @@
     "build:preview": "vite preview",
     "build:cf:prod": "CLOUDFLARE_ENV=production bun run build --mode production",
     "build:cf:preview": "CLOUDFLARE_ENV=preview bun run build --mode preview",
-    "db:dump:local": "TIMESTAMP=$(date +'%Y-%m-%dT%H:%M:%S') && OUTPUT_FILE=sql/backup/hype-db-local-${TIMESTAMP}.sql && DB_FILE=$(ls -t .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite 2>/dev/null | grep -v 'metadata.sqlite' | head -1) && sqlite3 \"$DB_FILE\" '.dump' > ${OUTPUT_FILE} && echo \"✅ Exported to ${OUTPUT_FILE}\" && sql/processing/sql_dump_to_ordered_backup.sh ${OUTPUT_FILE} sql/backup/hype-db-local-${TIMESTAMP}-ordered.sql && echo \"✅ Reordered to sql/backup/hype-db-local-${TIMESTAMP}-ordered.sql\"",
-    "db:dump:cf:preview": "TIMESTAMP=$(date +'%Y-%m-%dT%H:%M:%S') && OUTPUT_FILE=sql/backup/hype-db-preview-${TIMESTAMP}.sql && bunx wrangler d1 export hype-db-preview --remote --output=${OUTPUT_FILE} && echo \"✅ Exported to ${OUTPUT_FILE}\" && sql/processing/sql_dump_to_ordered_backup.sh ${OUTPUT_FILE} sql/backup/hype-db-preview-${TIMESTAMP}-ordered.sql && echo \"✅ Reordered to sql/backup/hype-db-preview-${TIMESTAMP}-ordered.sql\"",
-    "db:dump:cf:prod": "TIMESTAMP=$(date +'%Y-%m-%dT%H:%M:%S') && OUTPUT_FILE=sql/backup/hype-db-prod-${TIMESTAMP}.sql && bunx wrangler d1 export hype-db-prod --remote --output=${OUTPUT_FILE} && echo \"✅ Exported to ${OUTPUT_FILE}\" && sql/processing/sql_dump_to_ordered_backup.sh ${OUTPUT_FILE} sql/backup/hype-db-prod-${TIMESTAMP}-ordered.sql && echo \"✅ Reordered to sql/backup/hype-db-prod-${TIMESTAMP}-ordered.sql\"",
+    "db:dump:local": "TIMESTAMP=$(date +'%Y-%m-%dT%H:%M:%S') && OUTPUT_FILE=sql/backup/hype-db-local-${TIMESTAMP}.sql && DB_FILE=$(ls -t .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite 2>/dev/null | grep -v 'metadata.sqlite' | head -1) && sqlite3 \"$DB_FILE\" '.dump' > ${OUTPUT_FILE} && echo \"\u2705 Exported to ${OUTPUT_FILE}\" && sql/processing/sql_dump_to_ordered_backup.sh ${OUTPUT_FILE} sql/backup/hype-db-local-${TIMESTAMP}-ordered.sql && echo \"\u2705 Reordered to sql/backup/hype-db-local-${TIMESTAMP}-ordered.sql\"",
+    "db:dump:cf:preview": "TIMESTAMP=$(date +'%Y-%m-%dT%H:%M:%S') && OUTPUT_FILE=sql/backup/hype-db-preview-${TIMESTAMP}.sql && bunx wrangler d1 export hype-db-preview --remote --output=${OUTPUT_FILE} && echo \"\u2705 Exported to ${OUTPUT_FILE}\" && sql/processing/sql_dump_to_ordered_backup.sh ${OUTPUT_FILE} sql/backup/hype-db-preview-${TIMESTAMP}-ordered.sql && echo \"\u2705 Reordered to sql/backup/hype-db-preview-${TIMESTAMP}-ordered.sql\"",
+    "db:dump:cf:prod": "TIMESTAMP=$(date +'%Y-%m-%dT%H:%M:%S') && OUTPUT_FILE=sql/backup/hype-db-prod-${TIMESTAMP}.sql && bunx wrangler d1 export hype-db-prod --remote --output=${OUTPUT_FILE} && echo \"\u2705 Exported to ${OUTPUT_FILE}\" && sql/processing/sql_dump_to_ordered_backup.sh ${OUTPUT_FILE} sql/backup/hype-db-prod-${TIMESTAMP}-ordered.sql && echo \"\u2705 Reordered to sql/backup/hype-db-prod-${TIMESTAMP}-ordered.sql\"",
     "db:prepare:local": "bun run db:mirror:prod:to:local && bun run db:migration:run:local",
     "breadline:db:inspect": "bun --env-file=.dev.vars run scripts/breadline/inspect-source.ts",
     "breadline:db:sync": "bun --env-file=.dev.vars run scripts/breadline/sync-source.ts",
     "breadline:db:status": "bun run scripts/breadline/status.ts",
     "breadline:db:test": "bun test scripts/breadline",
-    "db:reset:local": "bunx wrangler d1 execute hype-db-local --file=sql/routines/reset_db.sql && echo \"✅ Local database reset complete\"",
-    "db:reset:preview": "bunx wrangler d1 execute hype-db-preview --remote --file=sql/routines/reset_db.sql && echo \"✅ Preview database reset complete\"",
-    "db:restore:latest:prod": "LATEST_FILE=$(ls -t sql/backup/hype-db-prod-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then sql/processing/restore_local_backup.sh \"$LATEST_FILE\"; else echo \"❌ No ordered prod backup files found\"; fi",
-    "db:restore:latest:prod:to:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-prod-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then bunx wrangler d1 execute hype-db-preview --remote --file=\"$LATEST_FILE\" && echo \"✅ Restored from $LATEST_FILE\"; else echo \"❌ No ordered prod backup files found\"; fi",
-    "db:restore:latest:local:to:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-local-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then bunx wrangler d1 execute hype-db-preview --remote --file=\"$LATEST_FILE\" && echo \"✅ Restored from $LATEST_FILE\"; else echo \"❌ No ordered local backup files found\"; fi",
-    "db:restore:latest:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-preview-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then sql/processing/restore_local_backup.sh \"$LATEST_FILE\"; else echo \"❌ No ordered preview backup files found\"; fi",
-    "db:seed:eln-test-tasks:local": "bunx wrangler d1 execute hype-db-local --file=sql/routines/reset_eln_test_tasks.sql && echo \"✅ ELN test tasks reset complete\"",
+    "db:reset:local": "bunx wrangler d1 execute hype-db-local --file=sql/routines/reset_db.sql && echo \"\u2705 Local database reset complete\"",
+    "db:reset:preview": "bunx wrangler d1 execute hype-db-preview --remote --file=sql/routines/reset_db.sql && echo \"\u2705 Preview database reset complete\"",
+    "db:restore:latest:prod": "LATEST_FILE=$(ls -t sql/backup/hype-db-prod-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then sql/processing/restore_local_backup.sh \"$LATEST_FILE\"; else echo \"\u274c No ordered prod backup files found\"; fi",
+    "db:restore:latest:prod:to:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-prod-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then bunx wrangler d1 execute hype-db-preview --remote --file=\"$LATEST_FILE\" && echo \"\u2705 Restored from $LATEST_FILE\"; else echo \"\u274c No ordered prod backup files found\"; fi",
+    "db:restore:latest:local:to:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-local-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then bunx wrangler d1 execute hype-db-preview --remote --file=\"$LATEST_FILE\" && echo \"\u2705 Restored from $LATEST_FILE\"; else echo \"\u274c No ordered local backup files found\"; fi",
+    "db:restore:latest:preview": "LATEST_FILE=$(ls -t sql/backup/hype-db-preview-*-ordered.sql 2>/dev/null | head -1) && if [ -n \"$LATEST_FILE\" ]; then sql/processing/restore_local_backup.sh \"$LATEST_FILE\"; else echo \"\u274c No ordered preview backup files found\"; fi",
+    "db:seed:eln-test-tasks:local": "bunx wrangler d1 execute hype-db-local --file=sql/routines/reset_eln_test_tasks.sql && echo \"\u2705 ELN test tasks reset complete\"",
     "db:migration:new": "drizzle-kit generate --name",
     "db:migration:new:empty": "drizzle-kit generate --custom --name",
     "db:migration:run:local": "bunx wrangler d1 migrations apply hype-db-local",
@@ -86,7 +86,7 @@
     "render:map:styles:init": "bun run i18n:build && bun run scripts/generate-map-style-renders.ts --force",
     "render:map:layers:init": "bun run scripts/generate-map-renders.ts layers --force",
     "render:map:projects:init": "bun run scripts/generate-map-renders.ts projects --force",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-check --tsconfig ./tsconfig.json --watch",
     "cs:add": "node ./node_modules/@changesets/cli/bin.js",
     "cs:version": "node ./node_modules/@changesets/cli/bin.js version",
@@ -228,6 +228,10 @@
   },
   "license": "FSL-1.1-MIT",
   "patchedDependencies": {
-    "@sveltejs/kit@2.70.3": "patches/@sveltejs%2Fkit@2.70.3.patch"
+    "@sveltejs/kit@3.0.0": "patches/@sveltejs%2Fkit@3.0.0.patch"
+  },
+  "imports": {
+    "#lib": "./src/lib/index.ts",
+    "#lib/*": "./src/lib/*"
   }
 }

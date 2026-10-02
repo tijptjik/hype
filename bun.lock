@@ -112,6 +112,9 @@
     "@sveltejs/kit",
     "workerd",
   ],
+  "patchedDependencies": {
+    "@sveltejs/kit@3.0.0": "patches/@sveltejs%2Fkit@3.0.0.patch",
+  },
   "overrides": {
     "kysely": "0.28.17",
   },
