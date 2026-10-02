@@ -56,7 +56,7 @@ const suppressOptimizedKyselyMigrationWarning = (): Plugin => ({
   },
 })
 
-// Build an SSR version of the app for Cloudflare, or a static version when targeting Android.
+// Build an SSR version of the app for Cloudflare, or a static web version when explicitly selected.
 const selectAdapter = () => {
   if (process.env.SVELTE_ADAPTER === 'static') {
     return adapterStatic({

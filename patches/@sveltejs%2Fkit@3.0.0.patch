@@ -1,14 +1,16 @@
 diff --git a/src/runtime/client/remote-functions/query/index.js b/src/runtime/client/remote-functions/query/index.js
 --- a/src/runtime/client/remote-functions/query/index.js
 +++ b/src/runtime/client/remote-functions/query/index.js
-@@ -31,7 +31,10 @@
- 			if (result.redirect) {
- 				// Use internal version to allow redirects to external URLs
- 				await _goto(result.redirect);
+@@ -33,0 +34 @@
 +				return;
- 			}
+@@ -34,0 +36,2 @@
 +
 +			return result._;
- 		});
- 	};
- 
+diff --git a/src/exports/vite/plugins/guard.js b/src/exports/vite/plugins/guard.js
+--- a/src/exports/vite/plugins/guard.js
++++ b/src/exports/vite/plugins/guard.js
+@@ -10,0 +11 @@
++	is_remote_module,
+@@ -108,0 +110,2 @@
++				// Remote modules are replaced with client stubs, including inside server directories.
++				if (kit.experimental.remoteFunctions && is_remote_module(id)) return;
