@@ -1,9 +1,9 @@
 <script lang="ts">
-import { intentDisplay } from '$lib/client/services/image'
-import { setImageIntent } from '$lib/api/server/image.remote'
-import { ImageContextResource } from '$lib/enums'
+import { intentDisplay } from '#lib/client/services/image.js'
+import { setImageIntent } from '#lib/api/server/image.remote.js'
+import { ImageContextResource } from '#lib/enums.js'
 // TYPES
-import type { Intent } from '$lib/db/zod/schema/image.types'
+import type { Intent } from '#lib/db/zod/schema/image.types.js'
 
 let {
   intent,

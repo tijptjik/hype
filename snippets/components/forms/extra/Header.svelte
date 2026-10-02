@@ -1,13 +1,13 @@
 <script lang="ts">
 // COMPONENTS
-import { Icon } from '$lib/bits'
-import Info from '$lib/components/forms/extra/Info.svelte'
+import { Icon } from '#lib/bits/index.js'
+import Info from '#lib/components/forms/extra/Info.svelte'
 import ExclamationTriangle from 'virtual:icons/lucide/triangle-alert'
 import { fade } from 'svelte/transition'
 // TYPES
 import type { Snippet } from 'svelte'
-import type { Form } from '$lib/client/services/form.types'
-import type { FormField, FormFieldArray } from '$lib/client/services/formFields.types'
+import type { Form } from '#lib/client/services/form.types.js'
+import type { FormField, FormFieldArray } from '#lib/client/services/formFields.types.js'
 
 type HeaderProps = {
   title?: string

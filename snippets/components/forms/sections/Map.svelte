@@ -1,15 +1,15 @@
 <script lang="ts">
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // SERVICES
-import { calculateDistance } from '$lib/utils/geocoding'
+import { calculateDistance } from '#lib/utils/geocoding.js'
 // COMPONENTS
-import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
+import Maplet from '#lib/bits/patterns/maps/Maplet.svelte'
 // MAP
-import { getCoordinates } from '$lib/client/services/geospatial'
+import { getCoordinates } from '#lib/client/services/geospatial.js'
 // TYPES
-import type { SectionProps } from '$lib/client/services/formProps.types'
-import type { FeatureForm } from '$lib/client/services/form.types'
+import type { SectionProps } from '#lib/client/services/formProps.types.js'
+import type { FeatureForm } from '#lib/client/services/form.types.js'
 import type { Point } from 'geojson'
 import type { LngLatLike } from 'maplibre-gl'
 

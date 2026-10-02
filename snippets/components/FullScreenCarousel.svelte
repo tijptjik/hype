@@ -3,25 +3,25 @@
 import { useSwipe, useTap } from 'svelte-gestures'
 // I18N
 // NAVIGATION
-import { addParamToUrl, removeParamFromUrl } from '$lib/navigation'
+import { addParamToUrl, removeParamFromUrl } from '#lib/navigation/index.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
 // BITS
-import { UserAttributionCard } from '$lib/bits'
+import { UserAttributionCard } from '#lib/bits/index.js'
 // COMPONENTS
 import Viewer from '../common/Viewer.svelte'
-import Counter from '$lib/components/featureCard/gallery/Counter.svelte'
+import Counter from '#lib/components/featureCard/gallery/Counter.svelte'
 // ICONS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import Camera from 'virtual:icons/lucide/camera'
 // UTILS
-import { PANEL_WIDTH } from '$lib/constants'
+import { PANEL_WIDTH } from '#lib/constants.js'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { SwipeCustomEvent, TapCustomEvent } from 'svelte-gestures'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 type Props = {
   feature: Feature

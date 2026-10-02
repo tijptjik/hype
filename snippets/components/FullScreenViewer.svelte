@@ -2,23 +2,23 @@
 // SVELTE
 import { page } from '$app/state'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // COMPONENTS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 import Viewer from '../common/Viewer.svelte'
 // ENUMS
-import { FirstClassResource, ImageContextResource } from '$lib/enums'
+import { FirstClassResource, ImageContextResource } from '#lib/enums.js'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 
 // CONTEXT
 let omniCtx = getOmniCtx()

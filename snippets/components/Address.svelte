@@ -1,27 +1,27 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/paraglide/messages'
+import { m } from '#lib/paraglide/messages/index.js'
 // LIB
-import { reverseGeocode } from '$lib/api/external/geocoding'
-import { supportedLocales } from '$lib/enums'
+import { reverseGeocode } from '#lib/api/external/geocoding.js'
+import { supportedLocales } from '#lib/enums.js'
 // COMPONENTS
-import Header from '$lib/components/forms/extra/Header.svelte'
-import Stats from '$lib/components/forms/stats/Address.svelte'
-import GeolocateAction from '$lib/components/forms/actions/Address.svelte'
-import TextField from '$lib/components/forms/fields/Textarea.svelte'
-import ConfirmationBar from '$lib/components/forms/bars/MissingTranslationConfirmation.svelte'
-import TranslationBar from '$lib/components/forms/bars/Translation.svelte'
+import Header from '#lib/components/forms/extra/Header.svelte'
+import Stats from '#lib/components/forms/stats/Address.svelte'
+import GeolocateAction from '#lib/components/forms/actions/Address.svelte'
+import TextField from '#lib/components/forms/fields/Textarea.svelte'
+import ConfirmationBar from '#lib/components/forms/bars/MissingTranslationConfirmation.svelte'
+import TranslationBar from '#lib/components/forms/bars/Translation.svelte'
 // TYPES
-import type { Locale, Field, Resource } from '$lib/types'
-import type { SectionProps, FieldProps } from '$lib/client/services/formProps.types'
-import type { ParsedReverseGeocodeResult } from '$lib/utils/geocoding.types'
-import type { FeatureForm } from '$lib/client/services/form.types'
+import type { Locale, Field, Resource } from '#lib/types.js'
+import type { SectionProps, FieldProps } from '#lib/client/services/formProps.types.js'
+import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
+import type { FeatureForm } from '#lib/client/services/form.types.js'
 import type {
   FormFieldDefinition,
   FormField,
-} from '$lib/client/services/formFields.types'
+} from '#lib/client/services/formFields.types.js'
 import type { Geometry, Point } from 'geojson'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 // TYPES
 
 /* ----------------- */

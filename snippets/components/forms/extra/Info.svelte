@@ -3,7 +3,7 @@
 import { onMount } from 'svelte'
 import Portal from 'svelte-portal'
 // ICONS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import InformationCircle from 'virtual:icons/lucide/info'
 import XMark from 'virtual:icons/lucide/x'
 // TYPES

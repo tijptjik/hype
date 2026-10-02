@@ -1,21 +1,21 @@
 <script lang="ts">
 import type { Component } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // UTILS
-import { formatDate } from '$lib'
+import { formatDate } from '#lib'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getMetadata } from '$lib/api/server/image.remote'
-import { getUserForAttribution } from '$lib/api/server/user.remote'
+import { getImageCtx } from '#lib/context/image.svelte.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getMetadata } from '#lib/api/server/image.remote.js'
+import { getUserForAttribution } from '#lib/api/server/user.remote.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import Camera from 'virtual:icons/lucide/camera'
 import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 // CONTEXT
 const imageCtx = getImageCtx()

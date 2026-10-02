@@ -1,26 +1,26 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // IMAGE
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '#lib/images/accept.js'
 // SERVICES
-import { getImageCtx } from '$lib/context/image.svelte'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 // BITS
-import { Icon, IconAnchor, UserAttributionCard } from '$lib/bits'
-import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
-import { LazyIconAnchor } from '$lib/bits/custom/icon'
+import { Icon, IconAnchor, UserAttributionCard } from '#lib/bits/index.js'
+import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
+import { LazyIconAnchor } from '#lib/bits/custom/icon/index.js'
 // COMPONENTS
-import PhotoFrame from '$lib/components/common/PhotoFrame.svelte'
+import PhotoFrame from '#lib/components/common/PhotoFrame.svelte'
 import Camera from 'virtual:icons/lucide/camera'
 import Photo from 'virtual:icons/lucide/image'
 import InformationCircle from 'virtual:icons/lucide/info'
 import Dropzone from 'svelte-file-dropzone'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
 import type { Snippet } from 'svelte'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 type Props = {
   LeftActions?: Snippet
