@@ -26,9 +26,7 @@ import {
   getImageWarmupPlan,
   IMAGE_WARMUP_ACCEPT_HEADER,
 } from '../../../src/lib/images/warmup'
-import {
-  toCloudflareImagesTransformDimensions,
-} from '../../../src/lib/images/cloudflare'
+import { toCloudflareImagesTransformDimensions } from '../../../src/lib/images/cloudflare'
 type ImageWarmupJob = Parameters<typeof getImageWarmupPlan>[0]['job']
 
 type ImageStage = 'local' | 'preview' | 'production'
