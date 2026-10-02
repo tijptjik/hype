@@ -1313,6 +1313,10 @@ $effect(() => {
         {capabilityLabelsByKey}
         formCapabilityFields={formCtx.form.fields.data
           .capabilities as CapabilityFormFields}
+        emptyCapabilitiesInputAttrs={formCtx.form.fields.data.capabilities.as(
+          'hidden',
+          '{}',
+        )}
         {shouldSubmitEmptyCapabilities}
         {capabilityIssues}
         {isRequiredInPreflight}

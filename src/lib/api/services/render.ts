@@ -105,6 +105,7 @@ export const serveMapRenderAsset = async (params: {
   notFoundMessage: string
 }): Promise<Response> => {
   if (isRemoteRenderStage(params.stage)) {
+    // Immutable renders live on the asset CDN; v3 requires explicit external redirects.
     throw redirect(
       307,
       resolveMapRenderAssetUrl(
@@ -116,6 +117,7 @@ export const serveMapRenderAsset = async (params: {
         },
         `/${params.objectKey}`,
       ),
+      { external: true },
     )
   }
 

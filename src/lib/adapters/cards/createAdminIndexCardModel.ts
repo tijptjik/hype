@@ -339,10 +339,12 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
     }
   }
 
-  const href =
+  const resourceUrl =
     resourceType != null && resourceType !== false
-      ? `${getUrlForResource(adminCtx, resourceType, entity.id)}${search}`
+      ? getUrlForResource(adminCtx, resourceType, entity.id)
       : null
+  // Unresolved resource refs must not produce a relative "null" route in Kit 3.
+  const href = resourceUrl == null ? null : `${resourceUrl}${search}`
 
   return {
     title,

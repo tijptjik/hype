@@ -942,7 +942,7 @@ function getPolicyTextareaAttrs(
   locale: LocaleKey,
   field: 'privacyPolicy' | 'termsOfService',
 ): Record<string, unknown> {
-  return getPolicyFields(locale)[field].as('textarea') as Record<string, unknown>
+  return getPolicyFields(locale)[field].as('text') as Record<string, unknown>
 }
 
 function getPolicyGenValue(

@@ -287,7 +287,7 @@ type FormId<Input> = Input extends { id: infer Id }
   : string | number
 
 export interface RemoteFormOptions<Input = RemoteFormInput> {
-  form: RemoteForm<Input, unknown>
+  form: RemoteForm<Input & RemoteFormInput, unknown>
   schema?: StandardSchemaV1<Input, unknown>
   key?: FormId<Input>
   data?: Input
@@ -339,7 +339,13 @@ export function configureForm<Input = RemoteFormInput>(
   const key = $derived(formKey ?? ((dataId ?? v7()) as FormId<Input>))
 
   const form = $derived(
-    schema ? remoteForm.for(key).preflight(schema) : remoteForm.for(key),
+    // Domain schemas may preprocess JSON strings into objects; adapt the native
+    // transport constraint here while retaining their input type for editor callbacks.
+    schema
+      ? remoteForm
+          .for(key)
+          .preflight(schema as StandardSchemaV1<Input & RemoteFormInput, unknown>)
+      : remoteForm.for(key),
   )
 
   let initial: FormData = $state.raw(
@@ -608,7 +614,7 @@ export function configureForm<Input = RemoteFormInput>(
     options: { preflightOnly?: boolean } = { preflightOnly: true },
   ): Promise<RemoteFormIssue[]> {
     const preflightOnly = options.preflightOnly ?? true
-    await form.validate({ includeUntouched: true, preflightOnly })
+    await form.validate({ all: true, preflightOnly })
     const nextIssues = form.fields.allIssues() ?? []
     const preflightIssues = preflightOnly
       ? nextIssues.filter(issue => !isServerIssue(issue))

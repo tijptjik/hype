@@ -1163,6 +1163,17 @@ const hiddenProjectCapabilityInputAttrs = $derived.by(() => {
     })
     .filter(Boolean) as Array<Record<string, unknown>>
 })
+/**
+ * Registers the JSON license input handled by the project's preprocessing schema.
+ * @returns Hidden attributes from this form's dynamically typed license field.
+ * @remarks The schema accepts serialized JSON and normalizes it into the license object.
+ */
+function getHiddenProjectLicenseAttrs(): Record<string, unknown> {
+  const as = formCtx.form.fields.data.license.as
+  if (typeof as !== 'function') return {}
+  return as('hidden', JSON.stringify(formProjectLicense)) as Record<string, unknown>
+}
+
 const hiddenProjectLayerInputAttrs = $derived.by(() => {
   const layerValues = getProjectLayerSubmitValues() ?? []
 
@@ -1173,7 +1184,7 @@ const hiddenProjectLayerInputAttrs = $derived.by(() => {
     const fields = formCtx.form.fields.data.layers[index]
     return [
       fields.id.as('hidden', layerId),
-      fields.rank.as('hidden', String(layer.rank ?? index)),
+      fields.rank.as('hidden', layer.rank ?? index),
       fields.isDefaultVisible.as('hidden', layer.isDefaultVisible ? 'true' : 'false'),
     ]
   })
@@ -2809,13 +2820,8 @@ $effect(() => {
 
     <div class="hidden" aria-hidden="true">
       {#if hasLicenseChanges}
-        <input
-          {...formCtx.form.fields.data.license.as(
-            'hidden',
-            JSON.stringify(formProjectLicense),
-          )}
-        >
-        <input {...formCtx.form.fields.meta.licenseTouched.as('hidden', 'true')}>
+        <input {...getHiddenProjectLicenseAttrs()}>
+        <input {...formCtx.form.fields.meta.licenseTouched.as('hidden', true)}>
       {/if}
       {#each hiddenProjectLayerInputAttrs as inputAttrs, index (index)}
         <input {...inputAttrs}>

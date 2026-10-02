@@ -6,6 +6,11 @@ import {
   resolveMapStyleRenderUrl,
 } from '#lib/map/styles/render.shared.js'
 
+/**
+ * Resolves the local bucket used for generated map style assets.
+ * @param platform - App-owned Worker binding bundle.
+ * @returns The available asset bucket.
+ */
 const getDevAssetBucket = (platform?: App.Platform): R2Bucket => {
   const bucket = platform?.env.ASSET_PUBLIC_DEV
 
@@ -16,6 +21,11 @@ const getDevAssetBucket = (platform?: App.Platform): R2Bucket => {
   return bucket
 }
 
+/**
+ * Serves a local style render or redirects to its immutable CDN asset.
+ * @param event - Route parameters and the request-owned Worker bindings.
+ * @returns The local PNG response, or an external redirect for deployed stages.
+ */
 export const GET: RequestHandler = async ({ params, locals }) => {
   const { platform } = locals
   const key = params.key
@@ -29,7 +39,10 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   const stage = platform?.env.ENVIRONMENT
 
   if (stage === 'preview' || stage === 'production') {
-    throw redirect(307, resolveMapStyleRenderUrl(stage, key, asset.hash))
+    // Immutable style renders live on the asset CDN rather than the application origin.
+    throw redirect(307, resolveMapStyleRenderUrl(stage, key, asset.hash), {
+      external: true,
+    })
   }
 
   const object = await getDevAssetBucket(platform).get(objectKey)
