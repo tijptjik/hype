@@ -1,5 +1,5 @@
 import { dev } from '$app/env'
-import { error, json, type RequestHandler } from '@sveltejs/kit'
+import { error, type RequestHandler } from '@sveltejs/kit'
 
 import { isMapStyleKey } from '#lib/map/styles/index.js'
 import { getMapRenderRemoteConfig } from '#lib/api/services/render.js'
@@ -101,7 +101,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
     await loadLocalRenderRuntime()
   const remoteConfig = getMapRenderRemoteConfig(platform)
 
-  return json({
+  return Response.json({
     key,
     exists: await doesMapStyleRenderExistLocally(key, { remoteConfig, stage: 'local' }),
     pending: isMapStyleRenderGenerationPendingLocally(key),
@@ -147,7 +147,7 @@ export const POST: RequestHandler = async ({ params, url, locals }) => {
     })
   }
 
-  return json({
+  return Response.json({
     key,
     exists,
     pending: !exists || pending,

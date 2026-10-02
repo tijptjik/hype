@@ -1,5 +1,5 @@
 // SVELTE
-import { error, json, type RequestHandler } from '@sveltejs/kit'
+import { error, type RequestHandler } from '@sveltejs/kit'
 // API
 import { verifyUploadToken } from '#lib/images/auth.js'
 import {
@@ -342,7 +342,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     writes,
   })
 
-  return json({
+  return Response.json({
     cdn: 'cloudflareR2',
     env: stage,
     cdnId: null,

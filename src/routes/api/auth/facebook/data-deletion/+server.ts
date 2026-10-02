@@ -1,5 +1,5 @@
 // SVELTEKIT
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 // AUTH
 import {
   createFacebookDeletionConfirmationCode,
@@ -155,7 +155,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
     await confirmation
   }
 
-  return json({
+  return Response.json({
     url: `${url.origin}/api/auth/facebook/data-deletion/status?code=${confirmationCode}`,
     confirmation_code: confirmationCode,
   })

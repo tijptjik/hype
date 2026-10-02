@@ -1,4 +1,4 @@
-import { error, json, type RequestHandler } from '@sveltejs/kit'
+import { error, type RequestHandler } from '@sveltejs/kit'
 
 // API
 import { getDatabaseWithoutAuth } from '#lib/api/index.js'
@@ -37,5 +37,5 @@ export const GET: RequestHandler = async ({ params, request, url, locals }) => {
     throw error(404, 'Layer preview data not found')
   }
 
-  return json(toMapRenderPayload(renderData))
+  return Response.json(toMapRenderPayload(renderData))
 }

@@ -1,4 +1,4 @@
-import { json, type RequestHandler } from '@sveltejs/kit'
+import type { RequestHandler } from '@sveltejs/kit'
 
 // API
 import { getDatabaseWithoutAuth } from '#lib/api/index.js'
@@ -141,7 +141,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
   )
 
   if (mode === 'plan') {
-    return json({
+    return Response.json({
       ok: true,
       mode,
       kinds,
@@ -173,7 +173,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
       },
     })
 
-    return json({
+    return Response.json({
       ok: true,
       mode,
       kinds,
@@ -190,7 +190,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
     await enqueueMapRenderJob(getMapRenderQueue(platform), job)
   }
 
-  return json({
+  return Response.json({
     ok: true,
     mode,
     kinds,

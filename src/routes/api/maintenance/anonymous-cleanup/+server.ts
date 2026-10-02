@@ -1,5 +1,5 @@
 // SVELTEKIT
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 // DB
 import client from '#lib/db/index.js'
 // AUTH
@@ -55,7 +55,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const db = client(platform.env.DB as unknown as MiniflareD1Database)
     const deletedCount = await cleanupExpiredAnonymousUsers(db)
-    return json({ deletedCount })
+    return Response.json({ deletedCount })
   } catch (cause) {
     console.error('[auth][anonymous-cleanup]', { outcome: 'failed', cause })
     throw error(500, 'Anonymous cleanup failed')

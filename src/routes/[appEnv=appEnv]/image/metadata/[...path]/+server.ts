@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import {
   readMetadataDocument,
   toImageStage,
@@ -51,5 +51,5 @@ export const GET = async ({ params, locals }) => {
 
   if (!document) throw error(404, 'Image metadata not found')
 
-  return json(toMetadataProfilePayload(document, normalizedProfile))
+  return Response.json(toMetadataProfilePayload(document, normalizedProfile))
 }
